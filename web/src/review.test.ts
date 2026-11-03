@@ -25,11 +25,11 @@ interface TwinCase {
   want: Record<string, number>;
 }
 
-// The SAME fixture core/review's TestTallyTwinFixture reads. Both surfaces derive the tally from item
-// outcomes rather than reading it off the wire, so nothing but a shared set of numbers stops them
-// drifting, and `covered` in particular is what a team reads as "how much of our checklist is
-// mechanised", so a client that bucketed not-automated differently would report a checklist as
-// answered when nobody had answered it.
+// core/review's TestTallyTwinFixture reads the SAME fixture. Both surfaces derive the tally from
+// item outcomes rather than reading it off the wire. So only a shared set of numbers stops them
+// drifting. A team reads `covered` in particular as "how much of our checklist is mechanised". A
+// client that bucketed not-automated differently would report a checklist as answered when nobody
+// had answered it.
 describe("tally — twinned with core/review via tally_twin.json", () => {
   const fixture = JSON.parse(
     readFileSync(join(here, "..", "..", "core", "review", "testdata", "tally_twin.json"), "utf8"),
@@ -91,9 +91,9 @@ describe("outcomeClass", () => {
     }
   });
 
-  // The one that matters most. An outcome this build has never heard of must not be styled as a pass,
-  // because guessing optimistically about a verdict we cannot interpret is the single guess that can
-  // report an unanswered question as answered.
+  // The one that matters most. An outcome this build has never heard of must not be styled as a pass.
+  // We cannot interpret that verdict, and an optimistic guess about it can report an unanswered
+  // question as answered.
   it("styles an unknown outcome as unknown, never as a pass", () => {
     expect(outcomeClass("covered-externally")).toBe("rv-unknown");
     expect(outcomeClass("covered-externally")).not.toBe(outcomeClass(OUTCOME_PASS));

@@ -62,7 +62,7 @@ describe("SnapshotRegistry", () => {
     expect(ingests[1]).toEqual({ snapshot: { uri: "mount://m/b.edn", overlay: conv }, snapshotId: "id1" });
     expect(await reg.recover(name, SnapshotUnavailable_Reason.STALE)).toBe(true);
     expect(updates).toEqual([{ snapshot: { name, uri: "mount://m/b.edn", overlay: conv } }]);
-    // control: a snapshot this page never ingested is left alone.
+    // As a control, a snapshot this page never ingested is left alone.
     expect(await reg.recover("snapshots/other", SnapshotUnavailable_Reason.MISSING)).toBe(false);
   });
 });

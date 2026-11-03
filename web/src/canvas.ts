@@ -28,9 +28,9 @@ export class CanvasComponent extends BaseComponent {
   private camera?: Camera;
   private overlay?: TextOverlay;
   private started = false;
-  // The sheet currently drawn (kept for the highlight join: specs -> primitive keys) and the
-  // active highlight specs. The specs persist across sheet redraws so highlights survive a
-  // re-render.
+  // sheet is the sheet currently drawn, kept for the highlight join from specs to primitive keys.
+  // highlights holds the active highlight specs. They persist across sheet redraws so highlights
+  // survive a re-render.
   private sheet?: DecodedSheet;
   private highlights: HighlightSpec[] = [];
 
@@ -218,7 +218,7 @@ export class CanvasComponent extends BaseComponent {
     const frame = (): void => {
       if (this.renderer && this.camera) {
         this.renderer.render(this.camera.matrix(), this.camera.viewRect());
-        // The overlay reads the same camera in the same tick, so text stays locked to geometry.
+        // The overlay reads the same camera in the same tick, so text moves with the geometry.
         this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr());
       }
       requestAnimationFrame(frame);

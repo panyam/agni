@@ -55,10 +55,10 @@ describe("layout persistence", () => {
 
 // The opening tab of every stack the boot layout builds.
 //
-// This asserts the setActive CALL and not the pixels, which is the same limit the resizeGroup
-// comment in dock.ts records, since a unit test here cannot see that a tab is actually on top. The
-// browser suite covers that half. What this catches is the cheap half, and the half that went
-// wrong, which is a stack gaining a second panel and nobody adding it to the setActive list.
+// This asserts the setActive CALL and not the pixels. A unit test here cannot see that a tab is
+// actually on top, and the resizeGroup comment in dock.ts records the same limit. The browser suite
+// covers that half. This test covers the cheap half, and that half went wrong once, when a stack
+// gained a second panel and nobody added it to the setActive list.
 describe("default layout opening tabs", () => {
   function fakeApi(): { api: any; added: string[]; activated: string[] } {
     const added: string[] = [];
@@ -87,7 +87,7 @@ describe("default layout opening tabs", () => {
     const { api, added, activated } = fakeApi();
     defaultLayout(api);
     // Each of these shares a tab strip with at least one sibling. A stack with no entry here opens
-    // on whichever panel happened to be added last, which is what this suite exists to prevent.
+    // on whichever panel happened to be added last, and this suite exists to prevent that.
     for (const id of ["canvas", "properties", "checks", "review", "query"]) {
       expect(added).toContain(id);
       expect(activated).toContain(id);
@@ -128,9 +128,9 @@ describe("panel registry", () => {
     expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
   });
 
-  // The secondary tier is gone. The layout tabs the crowding away rather than hiding panels behind
-  // a menu, so every registered panel is placed at boot. A future menu-only panel omits the flag,
-  // and this assertion is what makes that a deliberate act rather than an oversight.
+  // The secondary tier is gone. The layout puts crowded panels in tabs rather than hiding them
+  // behind a menu, so every registered panel is placed at boot. A future menu-only panel omits the
+  // flag. This assertion then fails, so adding one is a deliberate act rather than an oversight.
   it("places every registered panel at boot, with no menu-only tier", () => {
     const menuOnly = VIEWER_PANELS.filter((p) => !p.defaultOpen).map((p) => p.id);
     expect(menuOnly).toEqual([]);
@@ -178,8 +178,9 @@ describe("prunePanels", () => {
     expect(removed).toEqual(["files"]);
   });
 
-  // Properties replaced Details (agni issue 902). A layout saved before then names "details", and its
-  // hole is gone, so it would otherwise restore as an empty tab beside the Properties the reconcile adds.
+  // Properties replaced Details (agni issue 902). A layout saved before then names "details", and
+  // its hole is gone, so it would otherwise restore as an empty tab beside the Properties panel
+  // that the reconcile adds.
   it("closes a restored Details panel now that Properties replaced it", () => {
     const { api, removed } = fakeApi(["overview", "canvas", "details", "checks"]);
     prunePanels(api);
@@ -240,9 +241,10 @@ describe("reconcilePanels", () => {
     expect(added).toEqual(["properties"]);
   });
 
-  // The tier this used to cover (a newly-registered SECONDARY, menu-only) no longer has an instance
-  // to test with, since every panel is placed at boot. What survives is the rule that matters more,
-  // that a panel the user closed stays closed, told apart from a new one by the saved registry.
+  // This test used to cover a newly-registered SECONDARY panel, which was menu-only. That tier no
+  // longer has an instance to test with, since every panel is placed at boot. The test still covers
+  // a rule that matters more. A panel the user closed is not reopened, and the saved registry tells
+  // it apart from a new one.
   it("leaves a panel the user closed alone when it was in the saved registry", () => {
     const savedWithQuery = VIEWER_PANELS.map((p) => p.id);
     const { api, added } = fakeApi(openIds.filter((id) => id !== "query"));
@@ -282,10 +284,10 @@ function dockStub(open: string[] = []) {
 }
 
 describe("defaultLayout", () => {
-  // The arrangement is what this function is for, and nothing asserted it before. The previous
-  // test checked WHICH panels opened and not WHERE, so any reshuffle was invisible.
+  // This function exists to arrange the panels, and nothing asserted the arrangement before. The
+  // previous test checked WHICH panels opened and not WHERE, so any reshuffle was invisible.
   //
-  // Ordering carries meaning here. Each position is relative to the reference panel's GROUP, so
+  // Ordering matters here. Each position is relative to the reference panel's GROUP, so
   // query splitting the centre depends on both rails already existing; place it earlier and it
   // becomes a full-width strip under all three columns.
   it("builds the two rails, then splits the centre for query", () => {
@@ -420,7 +422,7 @@ describe("adoptPanel", () => {
     renderer.dispose?.();
     expect(park.contains(hole)).toBe(true);
 
-    // Reopening resolves the SAME element, so the island mounted in it stays live.
+    // Reopening resolves the SAME element, so the island mounted in it is still live.
     const reopened = adoptPanel(park, "rules");
     expect(reopened.element).toBe(hole);
 

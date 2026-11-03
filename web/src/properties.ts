@@ -1,11 +1,12 @@
 // The Properties panel's model: what is selected, at which level, and what the design says about it
 // (agni issue 902).
 //
-// A canvas click used to write a query into the query panel and run it, which mixed looking around
-// with asking a question and overwrote whatever the reader had typed. A click now selects, and this
-// module describes the selection from data the viewer already has: the design's own IR (one masked
-// GetDesign per open), the findings of the run on screen, and the datasheet join. Asking a question
-// about the selection is a separate act, an Ask row, which opens the served question in a query tab.
+// A canvas click used to write a query into the query panel and run it. That mixed looking around
+// with asking a question, and it overwrote whatever the reader had typed. A click now selects. This
+// module describes the selection from data already in the viewer, namely the design's own IR (one
+// masked GetDesign per open), the findings of the run on screen, and the datasheet join. Asking a
+// question about the selection is a separate act. An Ask row opens the served question in a query
+// tab.
 //
 // Selection is a hierarchy with something always selected. The design is the root, the sheet on
 // screen is under it, and an entity (a component, net, pin or bus) is under the sheet it was picked
@@ -25,14 +26,15 @@ export type Focus =
   | { level: "design" }
   | { level: "sheet"; sheetId: string }
   | { level: "entity"; sel: Selection; sheetId?: string; within?: Selection };
-// within is the area (agni issue 904) an entity was reached from, so its breadcrumb steps back out to
-// that area rather than to the sheet. An area itself is an entity focus whose selection is the area.
+// within is the area that an entity was reached from (agni issue 904), so its breadcrumb steps back
+// out to that area rather than to the sheet. An area itself is an entity focus whose selection is
+// the area.
 
 // PIN_SEP joins a component and a pin designator into one map key. A designator can contain any
-// printable character, and NUL is the one no reader writes.
+// printable character, and no reader writes NUL.
 const PIN_SEP = "\u0000";
 
-// PinNet is one of a component's pins and the net it lands on, "" when the pin is unconnected.
+// PinNet is one of a component's pins and the net it connects to, "" when the pin is unconnected.
 export interface PinNet {
   pin: string;
   name: string;
@@ -45,24 +47,25 @@ export interface Inventory {
   nets: Map<string, Net>;
   // pinsOf lists every connected pin of a component with its net, sorted by designator.
   pinsOf: Map<string, PinNet[]>;
-  // pinName maps ref + PIN_SEP + designator to the pin's functional name, what a datasheet calls it,
-  // as the engine's pin.name answers it (agni issue 1045). A name that only repeats the designator
-  // is left out, since it would say nothing beside it.
+  // pinName maps ref + PIN_SEP + designator to the pin's functional name, the name a datasheet
+  // uses. The engine's pin.name supplies it (agni issue 1045). A name that only repeats the
+  // designator is left out, since it would say nothing beside it.
   pinName: Map<string, string>;
-  // testPoints holds the components the engine classes as test points (component.class), which can
-  // come from conventions or a datasheet the IR's own tags do not show.
+  // testPoints holds the components that the engine classes as test points (component.class). That
+  // class can come from conventions or a datasheet, and the IR's own tags do not show either.
   testPoints: Set<string>;
   // buses holds each bus a reader recorded, by label: the constructs it was drawn as and the member
   // signals the reader could name. The netlist has no bus as such, so this is the read's own record.
   buses: Map<string, { constructs: string[]; members: string[] }>;
-  // unexpanded lists the hierarchical blocks the read left out, largest first, so the design level
-  // can say which ones every count above covers none of (agni issues 707, 717).
+  // unexpanded lists the hierarchical blocks the read left out, largest first. The design level
+  // names them, since no count above covers any of them (agni issues 707, 717).
   unexpanded: { name: string; instances: number }[];
 }
 
 // INVENTORY_PATHS is the read_mask for the one GetDesign Properties makes per open. It names the
-// fields the panel shows and nothing else, so provenance and section attributes stay on the server:
-// on the largest seed that is about 1.8 MB of JSON against 3.9 MB for the three collections whole.
+// fields the panel shows and nothing else, so provenance and section attributes are left on the
+// server. On the largest seed the masked answer is about 1.8 MB of JSON, against 3.9 MB for the
+// three collections whole.
 export const INVENTORY_PATHS = [
   "design.components.ref_des",
   "design.components.mpn",
@@ -86,15 +89,16 @@ export const INVENTORY_PATHS = [
 // byDesignator orders pin designators the way a datasheet does, so pin 2 sorts before pin 10.
 const byDesignator = new Intl.Collator(undefined, { numeric: true }).compare;
 
-// ServedFacts is what Properties asks the engine for once per design, rather than working out from the
-// IR: each pin's functional name (pin.name) and the test points (component.class). The engine applies
-// the part resolution and class evidence a reading of the IR alone would miss (agni issue 1045).
+// ServedFacts holds two facts that Properties asks the engine for once per design, rather than
+// working them out from the IR. They are each pin's functional name (pin.name) and the test points
+// (component.class). The engine applies part resolution and class evidence, and a reading of the IR
+// alone would miss both (agni issue 1045).
 export interface ServedFacts {
   pinNames: [ref: string, pin: string, name: string][];
   testPoints: string[];
 }
 
-// SERVED_QUERIES are the two questions ServedFacts holds the answers to, in that order.
+// SERVED_QUERIES are the two questions behind ServedFacts, in that order.
 export const SERVED_QUERIES = {
   pinNames: "pin.name(?r, ?p, ?name) => ?r, ?p, ?name",
   testPoints: 'component.class(?r, "test_point") => ?r',
@@ -132,9 +136,10 @@ export function inventoryFromDesign(d: Design, served: ServedFacts = { pinNames:
   return { components, nets, pinsOf, pinName, testPoints: new Set(served.testPoints), buses, unexpanded };
 }
 
-// Datasheet is the datasheet section's outcome. The three a reader acts on differently are kept
-// apart: nothing was asked (no corpus), the corpus was asked and has no spec for this part number,
-// or here is the spec. A part with no MPN is a fourth case, since there was nothing to look up.
+// Datasheet is the datasheet section's outcome. It keeps three outcomes apart, since a reader acts
+// on each differently. Nothing was asked (no corpus), the corpus was asked and has no spec for this
+// part number, or here is the spec. A part with no MPN is a fourth case, since there was nothing to
+// look up.
 export type Datasheet =
   | { kind: "no-corpus" }
   | { kind: "no-mpn" }
@@ -185,21 +190,23 @@ export interface PropertiesState {
   datasheet?: Datasheet;
   // report is the auto-layout conversion report, shown at the design level as Details showed it.
   report?: ConversionReport | null;
-  // ask is the selection the Ask rows ask about and the served questions for its kind, absent where
-  // nothing is selected that a question can bind.
+  // ask holds the selection for the Ask rows and the served questions for its kind. It is absent
+  // when nothing selected can be bound by a question.
   ask?: { sel: Selection; questions: EntityQueryItem[] };
   // sel is the selected entity, absent at the design and sheet levels.
   sel?: Selection;
-  // within is the area the selection sits in, so a reference followed from the panel stays inside it.
+  // within is the area the selection sits in, so a reference followed from the panel remains inside
+  // it.
   within?: Selection;
   // note explains a gap in what the panel can say, such as the inventory still loading.
   note?: string;
 }
 
-// SelectionChecks is what CheckDesign answered about the selection alone (agni issue 897): the
-// selected rules asked about one net, part or pin. asking is the wait, no-rules says nothing was
-// selected to ask, failed carries the engine's reason. notAsked are the rules the answer skipped with
-// the engine's reason for each, such as a rule that concludes about the design as a whole.
+// SelectionChecks is what CheckDesign answered about the selection alone (agni issue 897). The
+// selected rules are asked about one net, part or pin. asking is the wait, no-rules says nothing
+// was selected to ask, failed carries the engine's reason. notAsked lists the rules that the answer
+// skipped, with the engine's reason for each, such as a rule that concludes about the design as a
+// whole.
 export type SelectionChecks =
   | { state: "asking" }
   | { state: "no-rules" }
@@ -221,11 +228,11 @@ export interface PropertiesInput {
   drawn: { refs: string[]; nets: string[] } | null;
   // questions are the served questions about a selection, every kind's.
   questions: EntityQueryItem[];
-  // drawnOn is the sheets the selected entity is drawn on, as the engine located it: null while that
+  // drawnOn lists the sheets where the engine located the selected entity. It is null while that
   // answer is on its way, and absent where nobody asks (a host with no engine to ask).
   drawnOn?: string[] | null;
-  // checks is the selection's own check answer, absent where nobody asks (a host with no engine to
-  // ask, or a selection no scope covers, a bus), and the panel then lists the run's findings.
+  // checks is the selection's own check answer. It is absent where nobody asks, in a host with no
+  // engine to ask or for a bus, which no scope covers. The panel then lists the run's findings.
   checks?: SelectionChecks;
 }
 
@@ -314,8 +321,8 @@ function designView(input: PropertiesInput): Omit<PropertiesState, "crumbs"> {
     },
   ];
   // The blocks the read left out, each with what it holds. Only on a hierarchical read, since an
-  // empty group on every flat design would read as something to look at. The sentence saying what
-  // this means is the canvas strip's.
+  // empty group on every flat design would read as something to look at. The canvas strip says in a
+  // sentence what this means.
   const unexpanded = input.inventory?.unexpanded ?? [];
   if (unexpanded.length > 0) {
     groups.push({
@@ -348,8 +355,8 @@ function sheetView(input: PropertiesInput, sheetId: string): Omit<PropertiesStat
 // OUTCOME_ORDER puts what a reader acts on first: a failure, then a check that could not decide.
 const OUTCOME_ORDER = ["fail", "inconclusive"];
 
-// checksLine counts a selection's verdicts by outcome, worst first, with the words the checks panel
-// uses, and says when a rule was left out because it answers for the design as a whole.
+// checksLine counts a selection's verdicts by outcome, worst first, in the checks panel's words. It
+// says when a rule was left out because it answers for the design as a whole.
 function checksLine(c: SelectionChecks): string {
   switch (c.state) {
     case "asking":
@@ -494,8 +501,9 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
         groups: [
           {
             name: "members",
-            // A member the netlist also names is a net to walk to. One it does not is the bus's own
-            // name for a signal the read never connected, which is worth seeing rather than hiding.
+            // A member the netlist also names is a net to walk to. A member the netlist does not
+            // name is the bus's own name for a signal the read never connected. That is worth
+            // seeing rather than hiding.
             refs: (b?.members ?? []).map((m) =>
               inv?.nets.has(m) ? { label: m, target: { kind: "net", net: m } } : { label: m, detail: "no net by this name" },
             ),
@@ -513,8 +521,9 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
 // touches split into boundary and internal, its findings and its datasheet coverage.
 //
 // A net is never a member, since it may continue off the sheet. It is internal when every one of its
-// pins is in the area, through a member part or a member pin, and boundary otherwise, which is the
-// block's interface. A net wired through the area with none of its pins inside is boundary too.
+// pins is in the area, through a member part or a member pin. Otherwise it is boundary, and the
+// boundary nets are the block's interface. A net wired through the area with none of its pins
+// inside is boundary too.
 function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group): Pick<PropertiesState, "rows" | "groups" | "note" | "datasheet"> {
   const inv = input.inventory;
   const refs = [...(sel.refs ?? [])].sort(byDesignator);
@@ -544,8 +553,9 @@ function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group):
     const seeded = refs.filter((r) => input.datasheet?.parts.some((p) => p.refDes === r && p.spec)).length;
     rows.push({ label: "datasheets", value: input.datasheet.corpusConnected ? `${seeded} of ${refs.length} parts have a spec` : "no corpus connected" });
   }
-  // An auto-layout drawing placed every part itself, so what sits near what on it says nothing about
-  // the design, and an area drawn on one is a set the reader chose rather than a block of the board.
+  // An auto-layout drawing placed every part itself. On such a drawing, what sits near what says
+  // nothing about the design. An area drawn on one is a set the reader chose rather than a block of
+  // the board.
   const computed = reportLines(input.report) !== null;
   return {
     rows,
@@ -572,7 +582,7 @@ function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group):
 }
 
 // pinRef is a component's pin as a reference: the designator, its functional name when the part
-// type gives one, and the net it lands on.
+// type gives one, and the net it connects to.
 function pinRef(ref: string, p: PinNet): Ref {
   const detail = [p.name, p.net ? `→ ${p.net}` : "unconnected"].filter(Boolean).join(" ");
   return { label: p.pin, detail, target: { kind: "pin", ref, pin: p.pin } };
@@ -581,7 +591,7 @@ function pinRef(ref: string, p: PinNet): Ref {
 function componentRows(c: Component): Row[] {
   const rows: Row[] = [];
   if (c.mpn) rows.push({ label: "mpn", value: c.mpn });
-  // The value as the design wrote it ("10k"), which is what a reader compares against the drawing.
+  // The value as the design wrote it ("10k"), since a reader compares that against the drawing.
   const value = c.value?.input || (c.value?.value !== undefined ? `${c.value.value}${c.value.unit ? " " + c.value.unit : ""}` : "");
   if (value) rows.push({ label: "value", value });
   if (c.deviceClasses.length) {
@@ -638,7 +648,7 @@ function datasheetFor(c: Component, join: DatasheetJoin | null): Datasheet | und
 }
 
 // ReportLines is the conversion report as the design level shows it: a count per label, then the
-// components drawn as plain boxes and the ones whose symbol did not resolve, which need a
+// components drawn as plain boxes and the ones whose symbol did not resolve. Those need a
 // --symbol-path. Empty for a faithful drawing, which classifies nothing.
 export interface ReportLines {
   counts: string;

@@ -6,20 +6,20 @@ import { hasFile, parseUrl, type ViewerLocation } from "./router.js";
 import type { RenderMode } from "./viewer.js";
 
 // pageservice.ts answers ViewerPageService (protos/agni/v1/viewer/page.proto) over a ViewerPageAPI,
-// for any transport that can carry a method name and a protojson body (agni issue 1152). postMessage
-// carries them today (embed.ts); a server-held session and an MCP app host are the same pair
-// arriving another way (agni issues 1154, 1155), so neither needs a handler of its own.
+// for any transport that can carry a method name and a protojson body (agni issue 1152).
+// postMessage carries them today (embed.ts). A server-held session and an MCP app host send the
+// same pair another way (agni issues 1154, 1155), so neither needs a handler of its own.
 
-// PageDispatch answers one call. method is the rpc's name, bare ("LocateVerdict") or qualified as a
-// Connect path names it ("agni.v1.viewer.ViewerPageService/LocateVerdict", with or without a leading
-// slash), and body is the request in protojson. It resolves to the response in protojson and
-// rejects with a ConnectError: unimplemented for a method the service lacks, invalid_argument for a
-// body that does not parse or a request the page cannot act on.
+// PageDispatch answers one call. method is the rpc's name. It can be bare ("LocateVerdict") or
+// qualified as a Connect path ("agni.v1.viewer.ViewerPageService/LocateVerdict"), with or without a
+// leading slash. body is the request in protojson. It resolves to the response in protojson. It
+// rejects with a ConnectError, unimplemented for a method the service lacks and invalid_argument
+// for a body that does not parse or a request the page cannot act on.
 export type PageDispatch = (method: string, body: JsonValue | undefined) => Promise<JsonValue>;
 
 type Methods = typeof ViewerPageService.method;
-// PageImpl is one handler per rpc, so the service growing a method is a compile error here until it
-// is answered.
+// PageImpl is one handler per rpc, so a new method in the service is a compile error here until it
+// has a handler.
 type PageImpl = {
   [K in keyof Methods]: (req: MessageShape<Methods[K]["input"]>) => Promise<MessageInitShape<Methods[K]["output"]>>;
 };
@@ -67,9 +67,9 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
   };
 }
 
-// isLinkOnly says whether a call is ApplyLocation carrying a url and nothing else, the one request
-// the page takes from any origin, since loading the link would do the same (agni issue 1156). A body
-// that does not parse is not one.
+// isLinkOnly says whether a call is ApplyLocation carrying a url and nothing else. The page takes
+// that one request from any origin, since loading the link would do the same (agni issue 1156). A
+// body that does not parse is not one.
 export function isLinkOnly(method: string, body: JsonValue | undefined): boolean {
   const m = findMethod(method);
   if (m?.name !== "ApplyLocation") return false;
@@ -81,10 +81,10 @@ export function isLinkOnly(method: string, body: JsonValue | undefined): boolean
   }
 }
 
-// locationFromLink reads a viewer link as the location it addresses, keeping only what it sets, with
-// the parser the page reads its own address with. The link's host is not compared with the page's,
-// since a link minted for localhost names the same design on 127.0.0.1. A link to no design is
-// refused.
+// locationFromLink reads a viewer link as the location it addresses, keeping only what it sets. It
+// uses the same parser that reads the page's own address. The link's host is not compared with the
+// page's, since a link minted for localhost names the same design on 127.0.0.1. A link to no design
+// is refused.
 export function locationFromLink(url: string): Partial<ViewerLocation> {
   let u: URL;
   try {
@@ -135,9 +135,10 @@ export function locationToWire(loc: ViewerLocation): WireLocation {
   });
 }
 
-// locationFromWire reads a requested location, keeping only what it sets: an empty string, an empty
-// list, a zero and an unset optional are left out, which ViewerPageAPI.applyLocation reads as "leave
-// it as it is". A mode the viewer has no renderer for is refused rather than ignored.
+// locationFromWire reads a requested location, keeping only what it sets. It leaves out an empty
+// string, an empty list, a zero and an unset optional, and ViewerPageAPI.applyLocation reads each
+// absence as "leave it as it is". A mode the viewer has no renderer for is refused rather than
+// ignored.
 export function locationFromWire(w: WireLocation | undefined): Partial<ViewerLocation> {
   if (!w) return {};
   if (w.mode && !MODES.includes(w.mode as RenderMode)) {

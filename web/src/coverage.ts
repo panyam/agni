@@ -1,7 +1,7 @@
 // The interface-coverage panel's view-side types (WS9-041). The presenter fetches
-// GetInterfaceCoverage on design load and pushes a CoverageState; the panel renders the
-// per-interface signal matrix and emits an onLocate(net) intent when a signal is clicked, reusing
-// the same locate path a query cell or finding does.
+// GetInterfaceCoverage on design load and pushes a CoverageState. The panel renders the
+// per-interface signal matrix. A click on a signal emits an onLocate(net) intent, which goes down
+// the same locate path as a click on a query cell or a finding.
 import type { GetInterfaceCoverageResponse } from "./gen/agni/v1/webapi/checks_pb.js";
 
 // SignalCoverageItem is one required signal's coverage, mirroring the server's SignalCoverage.state values

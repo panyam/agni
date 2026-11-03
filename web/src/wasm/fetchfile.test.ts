@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { fetchFile, StalledError, type FetchStall } from "./fetchfile.js";
 
-// A fetch whose body sends `head` and then, on the attempts listed in `stallOn`, never sends the rest,
-// as a static host's transfer did on the deployed demo (agni issue 1002). It honours the abort signal
-// as a browser's fetch does.
+// A fetch whose body sends `head`. On the attempts listed in `stallOn` it never sends the rest, as a
+// static host's transfer did on the deployed demo (agni issue 1002). It honours the abort signal as a
+// browser's fetch does.
 function host(stallOn: number[], status = 200) {
   let calls = 0;
   const f = (async (_url: RequestInfo | URL, init?: RequestInit) => {

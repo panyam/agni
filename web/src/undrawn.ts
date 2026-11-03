@@ -5,8 +5,8 @@
 // every ref des, every wire and the title block, and those components are silently unclickable. A
 // reader seeing C1 ignore a click concludes "agni knows nothing about C1".
 
-// UndrawnPlacement is the client shape of geom.UndrawnPlacement: the placement, and the symbol it
-// asked for and did not get.
+// UndrawnPlacement is the client shape of geom.UndrawnPlacement. It names the placement, and the
+// symbol it asked for and did not get.
 export interface UndrawnPlacement {
   refDes: string;
   cellRef: string;
@@ -14,8 +14,8 @@ export interface UndrawnPlacement {
   sheetId: string;
 }
 
-// UndrawnNote is what the strip renders: how many placements were lost, and which libraries cost
-// them. Null when the drawing is complete.
+// UndrawnNote holds what the strip renders, how many placements were lost and which missing
+// libraries lost them. Null when the drawing is complete.
 export interface UndrawnNote {
   count: number;
   // libraries are the missing symbol references with a count each, worst first then alphabetical, so
@@ -41,9 +41,9 @@ export function undrawnNote(undrawn: UndrawnPlacement[] | undefined): UndrawnNot
   return { count: undrawn.length, libraries };
 }
 
-// undrawnStrip wraps the notice element, mirroring expectationCaptionStrip: it renders the note and
-// hides the element entirely when there is none, so a complete drawing carries no chrome. A null
-// element is a no-op.
+// undrawnStrip wraps the notice element, mirroring expectationCaptionStrip. It renders the note,
+// and it hides the element entirely when there is none, so a complete drawing shows no chrome. A
+// null element is a no-op.
 export function undrawnStrip(el: HTMLElement | null): (note: UndrawnNote | null) => void {
   return (note) => {
     if (!el) return;

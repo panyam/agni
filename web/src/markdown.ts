@@ -12,8 +12,8 @@ function isResolved(src: string): boolean {
 }
 
 // Rewrite relative image hrefs to the rule-doc route BEFORE rendering. walkTokens mutates the
-// parsed token, which survives changes to marked's renderer signatures. marked.use is global, so
-// this registers once at module load and applies to every marked caller.
+// parsed token, so the rewrite keeps working when marked changes its renderer signatures.
+// marked.use is global, so this registers once at module load and applies to every marked caller.
 marked.use({
   walkTokens(token) {
     if (token.type === "image" && token.href && !isResolved(token.href)) {

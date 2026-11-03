@@ -9,9 +9,9 @@ import type { Selection } from "./selection.js";
 export { LocateReason };
 
 // QueryRowItem is one answer row. cells align positionally with QueryResult.columns, and cites is
-// the row's provenance, shown on demand so the table stays narrow. cellSheets aligns with cells and
-// holds the sheet badges a navigable cell (component/net) can jump to (WS9-038), [] for a scalar or
-// unlocated cell.
+// the row's provenance, shown on demand so the table remains narrow. cellSheets aligns with cells and
+// holds the sheet badges that a navigable cell (component/net) can jump to (WS9-038). It is [] for a
+// scalar or unlocated cell.
 export interface QueryRowItem {
   cells: string[];
   cites: string[];
@@ -21,7 +21,7 @@ export interface QueryRowItem {
   // everywhere except a POLYMORPHIC column, where the answer set holds more than one sort of thing
   // and the column cannot say which. Read it through cellKind, never directly.
   cellKinds: string[];
-  // cellRefs aligns with cells and carries the other half of a cell's identity, which today means a
+  // cellRefs aligns with cells and holds the other half of a cell's identity, which today means a
   // pin cell's component. "" everywhere else.
   cellRefs: string[];
   // witnesses say how the row holds (agni issue 794), one per literal of the goal, and are empty
@@ -41,9 +41,9 @@ export interface WitnessItem {
   children: WitnessItem[];
 }
 
-// WitnessValue is one value of a witness, typed as a cell is: kind is "" for a scalar, and an entity
-// value carries what a cell click needs to locate it (its pin's component in ref, its sheets, and
-// why it cannot be drawn).
+// WitnessValue is one value of a witness, typed the way a cell is. kind is "" for a scalar. An entity
+// value holds what a cell click needs to locate it, namely its pin's component in ref, its sheets,
+// and why it cannot be drawn.
 export interface WitnessValue {
   text: string;
   kind: string;
@@ -54,9 +54,9 @@ export interface WitnessValue {
 
 // QueryResult is the panel's whole state. `ran` distinguishes "not run yet" (blank panel) from
 // "ran and matched nothing" (no results). `error` is the inline message for a bad query or an
-// unloadable design; when set, columns/rows are empty. `loading` gates the run button. columnKinds
-// aligns with columns ("component" | "net" | "" scalar) and decides which cells are clickable to
-// locate the entity in the canvas (WS9-038).
+// unloadable design. When it is set, columns/rows are empty. `loading` gates the run button.
+// columnKinds aligns with columns ("component" | "net" | "" scalar) and decides which cells are
+// clickable to locate the entity in the canvas (WS9-038).
 export interface QueryResult {
   columns: string[];
   columnKinds: string[];
@@ -67,23 +67,23 @@ export interface QueryResult {
   // total is how many rows the answer had when a limit cut it to rows (agni issue 896), and 0 when
   // rows is the whole answer. The panel then says how many it left out and offers the rest.
   total: number;
-  // errorAt is the line of query text a query that would not parse stopped on, with a caret under
-  // the place, as the engine drew it (TextPosition.caret), shown under the error. Absent for every
-  // other error.
+  // errorAt is set when a query would not parse. It holds the line of query text where parsing
+  // stopped, with a caret under the place, as the engine drew it (TextPosition.caret). The panel
+  // shows it under the error. It is absent for every other error.
   errorAt?: string;
   // witnessed says the answer was asked for witnesses (agni issue 794), so a row with none has none
   // to show, rather than none fetched yet.
   witnessed?: boolean;
 }
 
-// STARTING_POINT_LIMIT caps the rows a question about one picked entity asks for (agni issue 896), so
-// a click on a ground net carrying a thousand pins draws the first fifty fast and offers the rest
-// rather than waiting for all of them.
+// STARTING_POINT_LIMIT caps how many rows a question about one picked entity asks for (agni issue
+// 896). So a click on a ground net with a thousand pins draws the first fifty fast and offers the
+// rest, rather than waiting for all of them.
 export const STARTING_POINT_LIMIT = 50;
 
-// RelationItem is one entry in the relation picker (WS9-037). It holds the name, the arg labels a
-// template inserts as ?arg, a one-line summary (hover), a kind for grouping, and (WS14-005) the
-// reference markdown the panel renders on demand ("" when the relation has no doc yet).
+// RelationItem is one entry in the relation picker (WS9-037). It holds the name, the arg labels that
+// a template inserts as ?arg, a one-line summary (hover), a kind for grouping, and the reference
+// markdown that the panel renders on demand (WS14-005, "" when the relation has no doc yet).
 export interface RelationItem {
   name: string;
   args: string[];
@@ -92,10 +92,11 @@ export interface RelationItem {
   detail: string;
 }
 
-// RelationEntryItem is one place in the relation namespace as ListRelations describes it for a path
-// (agni issue 774): a module with its members one level deep, or a member with its signature, doc,
-// the argument names a template inserts, which argument types the engine inferred, and a derived
-// member's definition. The picker drills through these rather than a flat list.
+// RelationEntryItem is one place in the relation namespace, as ListRelations describes it for a path
+// (agni issue 774). It is either a module with its members one level deep, or a member. A member has
+// its signature, its doc, the argument names that a template inserts, the argument types that the
+// engine inferred, and a derived member's definition. The picker drills through these rather than a
+// flat list.
 export interface RelationEntryItem {
   path: string;
   // kind is "module", "base", "predicate" or "derived".
@@ -141,28 +142,28 @@ export function relationCrumbs(path: string): { label: string; path: string }[] 
 }
 
 // tierLabel is the picker's label for a relation's tier (Netlist, Board, ...), read off the flat
-// catalog by name, or "" for a module or a relation the catalog does not list.
+// catalog by name, or "" for a module or a relation that the catalog does not list.
 export function tierLabel(path: string, relations: readonly RelationItem[]): string {
   const r = relations.find((x) => x.name === path);
   return r ? (RELATION_KINDS.find((k) => k.key === r.kind)?.label ?? "") : "";
 }
 
-// ExampleItem is one starter query (WS14-002), holding a plain-language label, the datalog query a
-// click fills and runs, and the concept it teaches. The server orders them as a concept ladder.
+// ExampleItem is one starter query (WS14-002), holding a plain-language label, the datalog query that
+// a click fills and runs, and the concept it teaches. The server orders them as a concept ladder.
 export interface ExampleItem {
   label: string;
   query: string;
   teaches: string;
 }
 
-// QueryView is the command-down surface. The presenter (or the composition root, for the static
-// relation and example catalog) calls setState with each result, and setRelations/setExamples once
-// at boot. setLocateNote pushes the WS9-039 explanation shown when a cell click highlighted nothing
-// ("" to clear it). The presenter drives the note because only it knows whether the highlight
-// resolved.
+// QueryView is the command-down surface. The presenter calls setState with each result. The
+// presenter or the composition root calls setRelations/setExamples once at boot, for the static
+// relation and example catalog. setLocateNote pushes the WS9-039 explanation shown when a cell
+// click highlighted nothing ("" to clear it). The presenter drives the note because only it knows
+// whether the highlight resolved.
 export interface QueryView {
-  // setState pushes one tab's answer (agni issue 902). tab is the id the panel's onRun named, so an
-  // answer lands in the tab that asked even after the reader has moved to another. With no tab it
+  // setState pushes one tab's answer (agni issue 902). tab is the id that the panel's onRun named, so
+  // an answer goes to the tab that asked even after the reader has moved to another. With no tab it
   // goes to the tab in front.
   setState: (s: QueryResult, tab?: string) => void;
   // clearAnswers empties every tab's answer and keeps their questions, for a change that makes every
@@ -171,12 +172,12 @@ export interface QueryView {
   setRelations: (rels: RelationItem[]) => void;
   setExamples: (examples: ExampleItem[]) => void;
   setLocateNote: (message: string) => void;
-  // setQuery hands the panel a query written FOR the reader, with the values its variables are bound
-  // to (agni issue 793). It opens a tab holding the query and its binding chips and runs it, leaving
+  // setQuery hands the panel a query written FOR the reader, with the values bound to its variables
+  // (agni issue 793). It opens a tab holding the query and its binding chips and runs it, leaving
   // an editable query behind.
-  // opts names the tab and asks for the whole answer, which a question arriving by link wants (agni
-  // issue 634); without it the tab is numbered and shows a starting page of rows. arrived marks a
-  // question a link carried, whose answer then locates its one row or says where the answer is
+  // opts names the tab and asks for the whole answer, as a question arriving by link wants (agni
+  // issue 634). Without opts the tab is numbered and shows a starting page of rows. arrived marks a
+  // question that a link carried. Its answer then locates its one row or says where the answer is
   // (agni issue 1236, linkTarget).
   setQuery: (text: string, bindings?: Bindings, opts?: QueryOpts) => void;
   // setEntityQueries hands over the served questions about a selected entity, several per kind.
@@ -200,36 +201,37 @@ export interface QueryView {
   // before the catalog has arrived, so nothing offers a question that would run a guess.
   questionsFor: (kind: string) => EntityQueryItem[];
   // askAbout selects sel and opens a tab asking one served question about it, the kind's first when
-  // none is named. It is how Properties' Ask rows reach the query panel (agni issue 902).
+  // none is named. Properties' Ask rows reach the query panel through it (agni issue 902).
   askAbout: (sel: Selection, question?: EntityQueryItem) => void;
-  // setQuerySets lists the query sets the design's project keeps (agni issue 745), which the panel
-  // offers to open. Empty for a design in no project or one keeping none.
+  // setQuerySets lists the query sets that the design's project keeps (agni issue 745), and the panel
+  // offers to open them. Empty for a design in no project or one keeping none.
   setQuerySets: (sets: QuerySetItem[]) => void;
   // openSet opens one tab per query of a set, in the set's order, and asks the host to answer them
   // over one read through onRunSet.
   openSet: (set: QuerySet) => void;
 }
 
-// QuerySetItem is one set a project keeps: its name (the file's stem), the file, and the set.
+// QuerySetItem is one set that a project keeps, with its name (the file's stem), the file, and the
+// set.
 export interface QuerySetItem {
   name: string;
   source: string;
   set: QuerySet;
 }
 
-// SetTab is what one query of a set opens as: a tab named for the query, holding the set's preamble
-// and the query as one text, so editing and running the tab again asks what the set asked.
+// SetTab is the tab that one query of a set opens. It is named for the query and holds the set's
+// preamble and the query as one text, so editing and running the tab again asks what the set asked.
 export interface SetTab {
   title: string;
   text: string;
   bindings: Bindings;
-  // numbers names the bindings the set gives as numbers, which a chip spells bare (formatBinding). A
-  // number inside a list is named by its position, numberKey(name, i).
+  // numbers names the bindings that the set gives as numbers. A chip spells those bare
+  // (formatBinding). A number inside a list is named by its position, numberKey(name, i).
   numbers: string[];
 }
 
 // tabsFromSet turns a set into its tabs, in the set's order. A preamble is rules alone, so it joins
-// the query as the clauses before its goal, which is how a single query carries its own rules.
+// the query as the clauses before its goal. A single query holds its own rules the same way.
 export function tabsFromSet(set: QuerySet): SetTab[] {
   const preamble = set.preamble.trim().replace(/;\s*$/, "");
   return set.queries.map((q) => ({
@@ -244,8 +246,8 @@ export function tabsFromSet(set: QuerySet): SetTab[] {
   }));
 }
 
-// BindValue is what one variable is bound to in the panel, a value or a list of values the goal
-// answers for each of (agni issue 1121). Values are held as text, as the chips show them.
+// BindValue is what one variable is bound to in the panel. It is a value, or a list of values with
+// the goal answering for each one (agni issue 1121). Values are held as text, as the chips show them.
 export type BindValue = string | string[];
 export type Bindings = Record<string, BindValue>;
 
@@ -254,8 +256,8 @@ export function numberKey(name: string, i: number): string {
   return `${name}[${i}]`;
 }
 
-// wireBinding is how one chip's value travels in a RunQueryRequest. The panel binds text, so a list
-// travels as a list of text values.
+// wireBinding builds one chip's value for a RunQueryRequest. The panel binds text, so a list goes as
+// a list of text values.
 export function wireBinding(value: BindValue) {
   if (Array.isArray(value)) return { kind: { case: "list" as const, value: { values: value.map((v) => ({ kind: { case: "text" as const, value: v } })) } } };
   return { kind: { case: "text" as const, value } };
@@ -275,8 +277,8 @@ export function textBindings(b: { [name: string]: QueryValue }): Bindings {
 }
 
 // EntityQueryItem is one served question about a selected entity. label words it for an Ask row,
-// query is the datalog it runs, and binds names the variables the client binds from the selection
-// (see entityBindings in selection.ts).
+// query is the datalog it runs, and binds names the variables that the client binds from the
+// selection (see entityBindings in selection.ts).
 export interface EntityQueryItem {
   kind: string;
   label: string;
@@ -285,9 +287,9 @@ export interface EntityQueryItem {
   binds: string[];
 }
 
-// RELATION_KINDS is the group order + display label for the picker; a kind with no members renders no
-// group. Its keys are facts.KindOrder on the server, in order, which query.test.ts and core/facts
-// both hold to core/facts/testdata/kind_order.json (agni issue 1045); the client owns only the labels.
+// RELATION_KINDS is the group order + display label for the picker. A kind with no members renders no
+// group. Its keys are facts.KindOrder on the server, in order. query.test.ts and core/facts both hold
+// them to core/facts/testdata/kind_order.json (agni issue 1045). The client owns only the labels.
 export const RELATION_KINDS: readonly { key: string; label: string }[] = [
   { key: "netlist", label: "Netlist" },
   { key: "board", label: "Board" },
@@ -319,8 +321,9 @@ export interface QueryOpts {
   arrived?: boolean;
 }
 
-// LinkTarget is the cell a query link's answer locates on arrival, in the arguments a click on it
-// passes: subject is the cell, ref a pin cell's component, sheet the first sheet it is drawn on.
+// LinkTarget is the cell that a query link's answer locates on arrival. It holds the arguments that a
+// click on the cell passes. subject is the cell, ref a pin cell's component, and sheet the first
+// sheet it is drawn on.
 export interface LinkTarget {
   kind: string;
   subject: string;
@@ -329,11 +332,11 @@ export interface LinkTarget {
   reason: LocateReason;
 }
 
-// linkTarget is what a query link locates when it arrives (agni issue 1236): the first entity cell
-// of an answer holding exactly one row, on the first sheet it is drawn on, since a link lands on the
-// design's first sheet and the entity may be drawn nowhere on it. An answer of several rows locates
-// nothing, because the page cannot know which row the link meant, and the reader is told the answer
-// is in the Query panel instead.
+// linkTarget picks what a query link locates when it arrives (agni issue 1236). For an answer holding
+// exactly one row, that is the first entity cell, on the first sheet the cell is drawn on. A link
+// opens on the design's first sheet, and the entity may be drawn nowhere on it. An answer of several
+// rows locates nothing, because the page cannot know which row the link meant. The reader is told
+// the answer is in the Query panel instead.
 export function linkTarget(result: QueryResult): LinkTarget | null {
   if (result.loading || result.error || result.rows.length !== 1) return null;
   const row = result.rows[0];
@@ -346,8 +349,8 @@ export function linkTarget(result: QueryResult): LinkTarget | null {
   return null;
 }
 
-// linkNote is what the Query panel says once a query link's answer lands and locates nothing, so a
-// reader looking at the drawing learns where the answer went.
+// linkNote is what the Query panel says when a query link's answer arrives and locates nothing. A
+// reader looking at the drawing then learns where the answer went.
 export function linkNote(result: QueryResult): string {
   if (result.error) return "";
   const rows = result.total || result.rows.length;
@@ -357,8 +360,8 @@ export function linkNote(result: QueryResult): string {
 }
 
 // SearchItem is the served find-by-name query (agni issue 338) and the concept it leaves behind. A
-// search binds the variable `bind` names to `pattern` with {term} replaced by the escaped term
-// (agni issue 793), so the query text never changes. It is served rather than written here because
+// search binds `pattern` to the variable named by `bind`, with {term} replaced by the escaped term
+// (agni issue 793). So the query text never changes. It is served rather than written here because
 // it names `entity` and `str.match`, both defined in Go, and the pattern holds the (?i).
 export interface SearchItem {
   query: string;
@@ -368,7 +371,7 @@ export interface SearchItem {
 }
 
 // searchPattern turns what a reader TYPED into a regex that matches it literally, mirroring Go's
-// regexp.QuoteMeta. A design is full of names the regex engine would otherwise read as syntax
+// regexp.QuoteMeta. A design is full of names that the regex engine would otherwise read as syntax
 // (VDD+, USB_D-, DATA[7:0], VREF(A)), and a reader typing one of those means the characters. A
 // double quote is kept, since the pattern is bound as a value rather than spliced into a string
 // literal (agni issue 793).
@@ -376,16 +379,17 @@ export function searchPattern(term: string): string {
   return term.replace(/[\\.+*?()|[\]{}^$]/g, "\\$&");
 }
 
-// searchBindings is what a search binds: the served pattern with {term} replaced by the escaped
-// term. split/join rather than replace, because a replacement string reads `$&` and `$1` as syntax.
+// searchBindings returns a search's bindings, which hold the served pattern with {term} replaced by
+// the escaped term. It uses split/join rather than replace, because a replacement string reads `$&`
+// and `$1` as syntax.
 // The caller handles an empty term, and the panel refuses to run one rather than enumerate a whole
 // design into a table that renders every row.
 export function searchBindings(search: SearchItem, term: string): Record<string, string> {
   return { [search.bind]: search.pattern.split("{term}").join(searchPattern(term)) };
 }
 
-// bindingsInUse keeps the bindings whose variable the query text still names. A reader who edits a
-// bound variable out of the query has stopped asking about it, and the server refuses a binding the
+// bindingsInUse keeps each binding whose variable the query text still names. A reader who edits a
+// bound variable out of the query has stopped asking about it. The server refuses a binding that the
 // goal does not use.
 export function bindingsInUse(text: string, bindings: Bindings): Bindings {
   const out: Bindings = {};
@@ -398,8 +402,8 @@ export function bindingsInUse(text: string, bindings: Bindings): Bindings {
 // formatBinding spells one binding as the query would write the constant, for a chip or a tooltip.
 // The text goes between quotes as it is, since a query string takes no escapes (jaala v0.1.62), so a
 // search pattern's backslash shows once. A value with a bare quote has no spelling and is shown the
-// same way; it still binds, since a binding never travels as text. A number is spelled bare. Both
-// spellings are FormatBindings' in core/query, and query.test.ts and core/query read one fixture,
+// same way. It still binds, since a binding never travels as text. A number is spelled bare. Both
+// spellings come from FormatBindings in core/query. query.test.ts and core/query read one fixture,
 // testdata/binding_twin.json, so the chip and the CLI's document cannot drift (agni issue 1045).
 //
 // A list is spelled `?n in ["A", "B"]`, each value as a single one would be (agni issue 1121). number
@@ -453,8 +457,8 @@ export function resultFromResponse(
   };
 }
 
-// witnessItem reads one witness off the wire, its values through the response's entities as a cell
-// is read and its citations through the response's sources as a row's are (agni issue 916).
+// witnessItem reads one witness off the wire. It reads the values through the response's entities,
+// as a cell does, and the citations through the response's sources, as a row does (agni issue 916).
 function witnessItem(resp: RunQueryResponse, w: QueryWitness, resolveSheets: (ids: string[]) => SheetBadge[]): WitnessItem {
   return {
     relation: w.relation,
@@ -471,10 +475,10 @@ function witnessItem(resp: RunQueryResponse, w: QueryWitness, resolveSheets: (id
   };
 }
 
-// drawnSheets reads where one entity is drawn off a query answer naming it, the sheet ids its answer
-// entity carries, or none when the answer does not name it. Properties asks the find-by-name query
-// with the whole name anchored and reads the row of the right kind, since a part and a net can share
-// a name.
+// drawnSheets reads where one entity is drawn from a query answer that names it. It returns the sheet
+// ids on that answer entity, or none when the answer does not name it. Properties asks the
+// find-by-name query with the whole name anchored and reads the row of the right kind, since a part
+// and a net can share a name.
 export function drawnSheets(resp: RunQueryResponse, kind: string, name: string): string[] {
   for (const r of resp.rows) {
     for (let i = 0; i < r.cells.length; i++) {
@@ -519,10 +523,10 @@ export function reasonMessage(reason: LocateReason, kind: string, subject: strin
 }
 
 // compareNatural orders two names with their digit runs read as numbers, so R2 < R10 and U10.3 <
-// U10.12, text runs case-insensitively, and the plain strings breaking a tie. It is the engine's
-// ident.CompareNatural, the order Tabulate and every csv give a name column, and query.test.ts and
-// core/ident read one fixture, core/ident/testdata/natural_twin.json, so the panel's sort cannot
-// disagree with them (agni issue 1045).
+// U10.12, text runs case-insensitively, and the plain strings breaking a tie. It matches the
+// engine's ident.CompareNatural, which is the order Tabulate and every csv give a name column.
+// query.test.ts and core/ident read one fixture, core/ident/testdata/natural_twin.json, so the
+// panel's sort cannot disagree with them (agni issue 1045).
 export function compareNatural(x: string, y: string): number {
   const isDigit = (c: string) => c >= "0" && c <= "9";
   const run = (s: string, digits: boolean) => {

@@ -2,10 +2,10 @@ import { ScalarType, type DescField, type DescMessage, type DescMethod } from "@
 import { MethodOptions_IdempotencyLevel } from "@bufbuild/protobuf/wkt";
 
 // toolschema.ts turns a proto service's methods into the tools an agent calls, as
-// internal/viewerrooms/tools.go does in Go (agni issue 1154). The bridge declares the Go walk's tools
-// and refuses a tab's tool whose schema differs from that by a byte, so the two walks are held to one
-// fixture, internal/viewerrooms/testdata/viewer_tools.json. The mapping is the one mcpkit#1609 sets
-// out for protogen, which this file stands in for until protogen ships it.
+// internal/viewerrooms/tools.go does in Go (agni issue 1154). The bridge declares the Go walk's tools.
+// It refuses a tab's tool if that tool's schema differs from the Go walk's by a byte. So both walks
+// must match one fixture, internal/viewerrooms/testdata/viewer_tools.json. mcpkit#1609 sets out this
+// mapping for protogen, and this file stands in for protogen until protogen ships it.
 
 // JSONSchema is a JSON Schema as a plain object.
 export type JSONSchema = Record<string, unknown>;
@@ -20,8 +20,9 @@ export function readOnly(method: DescMethod): boolean {
   return method.idempotency === MethodOptions_IdempotencyLevel.NO_SIDE_EFFECTS;
 }
 
-// toolSchema is a tool's input schema: the request message's, with a required design beside its
-// fields, which the bridge maps to the room and the tab drops before it decodes the request.
+// toolSchema is a tool's input schema. It is the request message's schema plus a required design
+// beside the message's fields. The bridge maps that design to the room, and the tab drops it before
+// it decodes the request.
 export function toolSchema(method: DescMethod): JSONSchema {
   const s = messageSchema(method.input);
   (s.properties as JSONSchema).design = { type: "string" };
@@ -29,9 +30,9 @@ export function toolSchema(method: DescMethod): JSONSchema {
   return s;
 }
 
-// messageSchema is the JSON Schema of a message as protojson writes it: properties under their JSON
-// names, 64-bit integers as strings, bytes as base64, enums by name, the well-known types in their
-// own JSON forms, and nothing required.
+// messageSchema is the JSON Schema of a message as protojson writes it. Properties go under their
+// JSON names, 64-bit integers are strings, bytes are base64 and enums go by name. The well-known
+// types take their own JSON forms, and nothing is required.
 export function messageSchema(desc: DescMessage): JSONSchema {
   return walk(desc, new Set());
 }
@@ -79,7 +80,7 @@ function fieldSchema(f: DescField, visiting: Set<string>): JSONSchema {
   }
 }
 
-// element is one value of a field, so a list's element or a map's value.
+// element is one value of a field, meaning a list's element or a map's value.
 function element(
   kind: "scalar" | "enum" | "message",
   scalar: ScalarType | undefined,

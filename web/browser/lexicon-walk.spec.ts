@@ -1,6 +1,6 @@
-// Mission #1264's step 4 (agni issue 1267): the Lexicon panel on the MNT Reform motherboard, against a
-// real server. The rows Try shows are the rows `agni lexicon --try` writes for the same edit, and the
-// saved file is the candidate that command read. Apply then carries the edit to Properties.
+// Mission #1264's step 4 (agni issue 1267) walks the Lexicon panel on the MNT Reform motherboard,
+// against a real server. Try shows the rows `agni lexicon --try` writes for the same edit. The saved
+// file is the candidate that command read. Apply then shows the edit in Properties.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -16,7 +16,8 @@ const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const board = "tools/samples/boards/mnt-reform-motherboard30";
 const view = "/designs/boards/mnt-reform-motherboard30/reform2-motherboard30.kicad_sch/view";
 
-// cliTry is the two tables `agni lexicon --try` answers with, each as its rows' cells joined.
+// cliTry returns the two tables `agni lexicon --try` answers with. Each row's cells are joined into
+// one string.
 function cliTry(candidate: string): Record<string, string[]> {
   const home = mkdtempSync(join(tmpdir(), "agni-home-"));
   const out = execFileSync(agniBin(), ["lexicon", board, "--try", candidate, "--format", "json"], {

@@ -30,7 +30,8 @@ function harness() {
     availableLayouts: string[];
     undrawn?: { refDes: string; cellRef: string; libraryRef: string; sheetId: string }[];
     // Optional for the same reason undrawn is, and its absence is MEANINGFUL. A server that did not
-    // hash sends nothing, which is the unverifiable case rather than agreement (agni issue 392).
+    // hash sends nothing. That absence means the link is unverifiable, not that it agrees (agni
+    // issue 392).
     contentHash?: string;
     // Optional like undrawn: absent means the read left nothing out, and a server that predates the
     // field sends nothing (agni issue 717).
@@ -80,14 +81,16 @@ function harness() {
   const snaps = { ...fake, readBoard };
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
-  // Spies for the ports these tests assert on; every other port defaults to a no-op in
-  // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
-  // in a test that never mentions it. The spies are held separately so they keep their Mock type.
+  // These tests assert on a few ports, and these are spies for them. Every other port defaults to
+  // a no-op in stubQueryView. So adding a method to QueryView takes one edit there, and a test that
+  // never mentions the method does not fail at runtime. The spies are held separately so they keep
+  // their Mock type.
   const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn(), setQuerySets: vi.fn(), setQuery: vi.fn(), openSet: vi.fn() };
   // runQuery answers every query with one row naming the query it was asked, so a test can tell
-  // which answer landed where.
+  // which answer went where.
   const runQuery = vi.fn(async (req: { query: string }) => ({ columns: ["q"], columnKinds: [""], rows: [{ cells: [req.query] }], total: 0 }));
-  // A set's first query answers and its second could not be, the shape RunQueries reports.
+  // A set's first query gets an answer and its second gets none. RunQueries reports a partial set
+  // in this shape.
   const runQueries = vi.fn(async (req: { set: { queries: { name: string; query: string }[] } }) => ({
     results: [
       { name: req.set.queries[0].name, result: { columns: ["q"], columnKinds: [""], rows: [{ cells: [req.set.queries[0].query] }], total: 0 } },
@@ -190,8 +193,8 @@ function lastFindings(h: ReturnType<typeof harness>) {
   return calls[calls.length - 1][0];
 }
 
-// lastSpecs returns the HighlightSpec[] from the most recent canvas.setHighlights call, which is the
-// presenter's real output for a highlight, and both renderers are driven from it.
+// lastSpecs returns the HighlightSpec[] from the most recent canvas.setHighlights call. That array
+// is the presenter's real output for a highlight, and both renderers draw from it.
 function lastSpecs(h: ReturnType<typeof harness>) {
   const calls = h.canvas.setHighlights.mock.calls;
   return calls[calls.length - 1][0];
@@ -469,10 +472,10 @@ describe("ViewerPresenter", () => {
     }
   });
 
-  // Following a link is a question about ONE verdict, and answering it used to cost the whole
-  // catalog. A cold page load has an empty cache, so restore ran every selected rule (which defaults
-  // to every available rule) before it could resolve anything. On a real board that was 56 rules and
-  // about fifteen seconds, paid again on every click, because each click is a fresh page load.
+  // A followed link asks about ONE verdict, and answering it used to cost the whole catalog. A cold
+  // page load has an empty cache. So restore ran every selected rule before it could resolve
+  // anything, and the selection defaults to every available rule. On a real board that was 56 rules
+  // and about fifteen seconds. Every click cost that again, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
     function linkLoc(rule: string, subjects: string[] = []) {
       return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
@@ -564,10 +567,11 @@ describe("ViewerPresenter", () => {
     });
   });
 
-  // The CLI-to-viewer hop's revision guard (agni issue 392). `agni check --url-base` mints a link
-  // carrying the revision it ran against; a verdict id is derived from a rule name and a subject ref,
-  // so it resolves against an EDITED design just as readily and draws its proof on whatever now
-  // answers to that ref. Nothing else on screen can tell the reader that happened.
+  // These tests guard the revision on the hop from the CLI to the viewer (agni issue 392). `agni
+  // check --url-base` mints a link carrying the revision it ran against. A verdict id is derived from
+  // a rule name and a subject ref, so it resolves against an EDITED design just as readily. It then
+  // draws its proof on whatever now answers to that ref. Nothing else on screen can tell the reader
+  // that happened.
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
@@ -599,8 +603,9 @@ describe("ViewerPresenter", () => {
       expect(lastNote(h)).toMatchObject({ trust: "mismatch" });
     });
 
-    // The third state. A server that could not hash has not agreed with the link, and reporting
-    // nothing here would be the same silence the hash exists to break.
+    // This is the third state. A server that could not hash has not agreed with the link. The hash
+    // exists to break the silence about an edited design, and reporting nothing here would bring
+    // that silence back.
     it("reports an unverifiable link when the server sent no hash", async () => {
       const h = harness();
       servedHash(h, undefined);
@@ -671,7 +676,7 @@ describe("ViewerPresenter", () => {
   });
 
   // The query panel marks the badge pointing at the sheet on screen. That mark is only right if the
-  // presenter reports EVERY navigation, not just the ones a result cell started, so this pins the
+  // presenter reports EVERY navigation, including those no result cell started. So this pins the
   // wire rather than the mark. Navigating by any other route has to move it too.
   it("tells the query panel which sheet is on screen, on every navigation", async () => {
     const h = harness();
@@ -901,11 +906,11 @@ describe("ViewerPresenter", () => {
     await openAndCheck(h, "m", "board.edn");
 
     expect(h.getExpectations).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) }, { signal: expect.any(AbortSignal) });
-    // The caption (the non-anchored verdict) shows single-pin-net matched exactly; the pending row
-    // is excluded.
+    // The caption holds the non-anchored verdict. It shows single-pin-net matched exactly and
+    // leaves the pending row out.
     const capCalls = h.onExpectCaption.mock.calls;
     expect(capCalls[capCalls.length - 1][0]).toMatchObject({ pass: true, expected: 1, matched: 1, unexpected: 0, silent: false });
-    // The overlay (the anchored assertion) highlights matched subject STUB green.
+    // The overlay holds the anchored assertion, and it highlights matched subject STUB green.
     type Spec = { color?: string; nets?: string[] };
     const specs = h.canvas.setHighlights.mock.calls.flatMap((c: Spec[][]) => c[0]) as Spec[];
     expect(specs.find((s) => s?.color === "#22c55e")?.nets).toEqual(["STUB"]);
@@ -1076,11 +1081,11 @@ describe("ViewerPresenter", () => {
     await h.presenter.selectFinding("STUB");
     expect(lastControls(h).mode).toBe("svg"); // no mode hop: the overlay draws in place
     // Exact by kind. STUB is a net, so the focus spec lists it only under nets (not components).
-    // Focus stacks (WS9-017). The OTHER finding (TXP) keeps its outline, the focused net STUB
-    // drops out of the base and paints as a translucent PATH highlighter on top (WS9-040), so
-    // its marker is not muddied by an opaque underlay.
-    // The base is stamped as context so the focus reads as figure (agni issue 348); the focus layer
-    // names no color and inherits the default, which is what lets a user style still win.
+    // Focus stacks (WS9-017). TXP is the OTHER finding, and it keeps its outline. The focused net
+    // STUB drops out of the base and paints as a translucent PATH highlighter on top (WS9-040), so
+    // an opaque underlay does not muddy its marker.
+    // The base is stamped as context so the focus reads as figure (agni issue 348). The focus layer
+    // names no color and inherits the default, so a user style still wins.
     const stack = [
       { nets: ["TXP"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
       { nets: ["STUB"], shape: HighlightShape.PATH },
@@ -1107,8 +1112,8 @@ describe("ViewerPresenter", () => {
     await openAndCheck(h, "m", "board.edn");
     h.canvas.setHighlights.mockClear();
     await h.presenter.selectFinding("C1");
-    // A focused COMPONENT stays in the base (only a focused net is dropped), so C1 appears twice, once
-    // as muted context and once as the focus rect on top.
+    // Only a focused net is dropped from the base. A focused COMPONENT is kept, so C1 appears twice,
+    // once as muted context and once as the focus rect on top.
     expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
       { components: ["C1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
       { components: ["C1"], shape: HighlightShape.BOUNDING_RECT },
@@ -1159,7 +1164,7 @@ describe("on-demand checks (WS9)", () => {
 
   // agni issue 950: a rule this design cannot run is listed unavailable and left unticked, and the
   // Checks panel still names it with its reason, before any run, so it never reads as a clean board.
-  // A rule the reader unticked is not news and stays out.
+  // A rule the reader unticked is not news and is left out.
   it("names the rules this design cannot run, ticked or not, and leaves out a rule the reader unticked", async () => {
     const h = harness();
     h.listRules.mockResolvedValueOnce({
@@ -1321,12 +1326,12 @@ describe("board layer visibility (WS7-034)", () => {
   });
 });
 
-// Clearing the highlight field, which the viewer simply could not do (agni issue 348).
+// The viewer could not clear the highlight field at all until agni issue 348.
 //
-// setHighlights([]) was reachable from one place in the client, on opening a DIFFERENT
-// design, so once checks had run the field stayed on until the reader navigated away. Toggling the
-// focused row off is not a way to clear, because it restores the base layer, which is correct
-// for a toggle and is why the gap went unnoticed.
+// setHighlights([]) was reachable from one place in the client, on opening a DIFFERENT design. So
+// once checks had run, the field remained on until the reader navigated away. Toggling the focused
+// row off does not clear, because it restores the base layer. That is correct for a toggle, and it
+// hid the gap.
 describe("clearHighlights (agni issue 348)", () => {
   // Two component findings, so the field has something in it and a focus has a base to sit on.
   function seeded() {
@@ -1348,7 +1353,7 @@ describe("clearHighlights (agni issue 348)", () => {
 
     await h.presenter.clearHighlights();
     expect(lastSpecs(h)).toEqual([]);
-    // The panel has to agree, or the row stays lit while the drawing is bare.
+    // The panel has to agree, or the row is still lit while the drawing is bare.
     expect(lastFindings(h).selected).toBe("");
   });
 
@@ -1363,8 +1368,8 @@ describe("clearHighlights (agni issue 348)", () => {
   });
 
   it("leaves the toggle-off path alone: re-clicking a focused finding still restores the field", async () => {
-    // The regression guard for the fix. Clearing and toggling are different intents and must stay
-    // different. A toggle returns the reader to the overview, and only the clear turns it off.
+    // This guards the fix against regressing. Clearing and toggling are different intents and must
+    // remain different. A toggle returns the reader to the overview, and only the clear turns it off.
     const h = seeded();
     await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     await openAndCheck(h, "m", "d.edn");
@@ -1431,12 +1436,12 @@ describe("the hierarchical-read notice", () => {
   });
 });
 
-// The verdict cache holds a per-rule considered set, and what INVALIDATES it is the interesting
-// half. A verdict is keyed by rule name and a convention change is when rule names change,
-// so a surviving verdict can name a rule that no longer exists and answer for a subject nothing
-// re-examined. Reporting "this was checked" under a vocabulary nobody ran is the false coverage
-// claim verdicts exist to remove, which is why this is asserted rather than left to the mirror
-// between the two caches holding by inspection.
+// The verdict cache holds a per-rule considered set, and these tests are about invalidating it. A
+// verdict is keyed by rule name, and rule names change when the convention changes. So a surviving
+// verdict can name a rule that no longer exists, and answer for a subject nothing re-examined. It
+// would then report "this was checked" under a vocabulary nobody ran. Verdicts exist to remove that
+// false coverage claim. So the test asserts it, rather than trusting by inspection that the two
+// caches mirror each other.
 describe("the considered set is invalidated with the findings", () => {
   function withVerdicts(h: ReturnType<typeof harness>) {
     h.checkDesign.mockImplementation(async () => ({
@@ -1645,8 +1650,8 @@ describe("a query arriving by link", () => {
     expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true, arrived: true });
   });
 
-  // agni issue 1236: the answer lands in the Query panel, which a saved layout can leave behind
-  // another tab, so the link brings it forward. A trace link does the same for Trace.
+  // agni issue 1236: the answer appears in the Query panel. A saved layout can leave that panel
+  // behind another tab, so the link brings it forward. A trace link does the same for Trace.
   it("brings the panel its answer lands in forward", async () => {
     const h = harness();
     await h.presenter.restore(at({ query: "net.rail(?n) => ?n" }));
@@ -1681,8 +1686,8 @@ describe("a query arriving by link", () => {
     });
   });
 
-  // The picker asks under the open design's snapshot, which is how a project's own library lists
-  // beside the shipped one (agni issue 774), and under none before a design is open.
+  // The picker asks under the open design's snapshot, and under none before a design is open.
+  // Asking under the snapshot lists a project's own library beside the shipped one (agni issue 774).
   it("describes a place in the relation namespace under the open design's snapshot", async () => {
     const h = harness();
     await h.presenter.describeRelation(".");
@@ -1798,7 +1803,7 @@ describe("cancelling a check run", () => {
     expect(lastFindings(h).cancelled).toBe(false);
   });
 
-  // The page overlay would cover Cancel itself, and the lanes exist so the rest of the page stays
+  // The page overlay would cover Cancel itself. The lanes exist so the rest of the page is still
   // usable while rules run.
   it("raises no page overlay for a run, which would cover Cancel", async () => {
     const h = harness();

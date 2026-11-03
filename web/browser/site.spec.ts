@@ -5,8 +5,8 @@
 // page, since there is nothing else to answer.
 //
 // With AGNI_SITE_DIR set, the spec serves that already-built demo instead of building its own. The
-// docs workflow sets it, so the files checked are the files Pages publishes, and a seed the site
-// carries beyond the gate's two is opened as well.
+// docs workflow sets it, so the spec checks the files Pages publishes. It also opens any seed the
+// site carries beyond the gate's two.
 
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { agniBin } from "./agnibin.js";
@@ -32,8 +32,8 @@ let base = "";
 let out = "";
 const prebuilt = process.env.AGNI_SITE_DIR ? resolve(process.env.AGNI_SITE_DIR) : "";
 
-// seeded is every board the spec opens. The gate builds the first two; a prebuilt site that lists
-// another mount must carry it too, so the published demo is checked seed by seed.
+// seeded lists every board the spec opens. The gate builds the first two. A prebuilt site that
+// lists another mount must hold that board too, so the published demo is checked seed by seed.
 const seeded = [
   ["Sample Board", "gateway"],
   ["RoyalBlue54L Feather", "royalblue"],
@@ -116,7 +116,8 @@ describe("the static demo under /agni/demo/", () => {
       const log = record(page);
       await page.goto(base, { waitUntil: "networkidle" });
       expect(await page.locator(".st-link").count()).toBeGreaterThanOrEqual(2);
-      // The page's own styles applied, which a page served at the wrong root loses while still 200.
+      // The page's own styles applied. A page served at the wrong root loses them and still returns
+      // 200.
       expect(await page.evaluate(() => getComputedStyle(document.querySelector(".st-app")!).maxWidth)).toBe("860px");
       expect(await page.textContent(".st-private")).toContain("never uploaded");
       expect(log.failed).toEqual([]);
@@ -286,9 +287,10 @@ describe("the static demo under /agni/demo/", () => {
     });
   });
 
-  // The viewer runs the rules ListRules calls available, and ListRules called every datasheet-tier rule
-  // unavailable without a model, so the gateway's project params never reached a check in the page
-  // (agni issue 940). These two read the datasheet tier and fire on the gateway in the CLI.
+  // The viewer runs the rules that ListRules marks available. ListRules used to mark every
+  // datasheet-tier rule unavailable without a model, so the gateway's project params never reached
+  // a check in the page (agni issue 940). These two read the datasheet tier and fire on the gateway
+  // in the CLI.
   it("runs the gateway's datasheet-tier rules, which its project's params make available", async () => {
     await withPage(browser, async (page) => {
       await page.goto(base, { waitUntil: "domcontentloaded" });
@@ -312,8 +314,8 @@ describe("the static demo under /agni/demo/", () => {
       await expect.poll(() => page.locator("#drop-dialog").evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
       await page.locator(".drop-design-open").first().click();
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 60_000 }).toContain("faithful");
-      // A static host serves only the pages `agni site` wrote, so a dropped design's path rides in the
-      // query of the browser mount's one viewer page (agni issue 1072).
+      // A static host serves only the pages `agni site` wrote, so a dropped design's path goes in
+      // the query string of the browser mount's one viewer page (agni issue 1072).
       const at = new URL(page.url());
       expect(at.pathname).toBe(`${prefix}designs/local/view/`);
       expect(at.searchParams.get("d") ?? "").toMatch(/^drop-[a-z0-9]+\/companion-demo\.edn$/);

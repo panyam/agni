@@ -6,9 +6,10 @@ import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, type HighlightSpec } from "
 import { type Selection, sameSelection } from "./selection.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
-// SheetBadge locates a finding's subject on one sheet (WS9-024). The id drives showSheet and the
-// name is what the badge displays. The presenter fills badges only on a multi-sheet design, so a
-// single-sheet design pushes none and a panel needs no "is this design multi-sheet" rule of its own.
+// SheetBadge locates a finding's subject on one sheet (WS9-024). showSheet takes the id and the
+// badge displays the name. The presenter fills badges only on a multi-sheet design, so a
+// single-sheet design pushes none and a panel needs no "is this design multi-sheet" rule of its
+// own.
 export interface SheetBadge {
   id: string;
   name: string;
@@ -39,8 +40,9 @@ export interface WireContext {
 }
 
 // contextFromWire maps a finding's context entities to the client shape and PRESERVES ORDER,
-// because the order is the rule author's and matches the message (agni issue 349). A missing field
-// (a hand-built response or an older server) maps to [], meaning the message names only its subject.
+// because the order is the rule author's and matches the message (agni issue 349). A hand-built
+// response or an older server can omit the field. A missing field maps to [], meaning the message
+// names only its subject.
 export function contextFromWire(cs: WireContext[] | undefined): FindingContext[] {
   return (cs ?? []).map((c) => ({
     kind: c.subject?.kind ?? "",
@@ -74,15 +76,16 @@ export interface FindingItem {
   // ITS wires (WS9). Empty for a component/pin subject or a pinless net.
   netId: string;
   // busId is the source id (webapi Subject.bus_id, a KiCad uuid) for a kind="bus" subject, so a
-  // bus-not-modeled finding highlights its own drawn bus and two identically-labeled buses stay distinct
-  // instances (WS7-042b). Empty for every other subject kind.
+  // bus-not-modeled finding highlights its own drawn bus and two identically-labeled buses are
+  // distinct instances (WS7-042b). Empty for every other subject kind.
   busId: string;
   message: string;
   // inconclusive marks a RESULT the rule could not decide rather than a defect it found (agni issue
-  // 74). The rule ran with what it needed, examined this subject and could not conclude, so a consumer
-  // must never count it as a failure. It is per-subject and not a skip, which is a design-wide
-  // precondition decided around the rule. The message says what could not be resolved and what would
-  // resolve it. See docsite/content/architecture/web-picking.md#inconclusive-results.
+  // 74). The rule ran with what it needed, examined this subject and could not conclude, so a
+  // consumer must never count it as a failure. It is per-subject and it is not a skip. A skip is a
+  // design-wide precondition, decided around the rule. The message says what could not be resolved
+  // and what would resolve it. See
+  // docsite/content/architecture/web-picking.md#inconclusive-results.
   inconclusive: boolean;
   // context are the entities this finding's message NAMES but is not ABOUT (agni issue 349), each
   // with the part it plays. Empty when the message names only its subject, which is most of them. The
@@ -94,9 +97,9 @@ export interface FindingItem {
   // docsite/content/architecture/web-picking.md#context-entities.
   context: FindingContext[];
   sheets: SheetBadge[];
-  // locateReason (checks.Finding.locate_reason) says why clicking this finding may highlight nothing,
-  // computed server-side from the geometry (WS7-042c), e.g. BUS_NOT_DRAWN for a bus with no drawn wire.
-  // UNSPECIFIED (the default) means the subject is drawn and highlights.
+  // locateReason says why clicking this finding may highlight nothing, such as BUS_NOT_DRAWN for a
+  // bus with no drawn wire. It is checks.Finding.locate_reason, computed server-side from the
+  // geometry (WS7-042c). The default, UNSPECIFIED, means the subject is drawn and highlights.
   locateReason: LocateReason;
   // reportUrl opens an issue saying this finding looks wrong, built from a FindingFeedback, so it
   // names agni's rule and never anything from the design (agni issues 858, 1057). Absent before the
@@ -143,10 +146,11 @@ export interface FindingsState {
   // catalogError says why the rule catalog did not load, so an empty selection does not read as
   // "No rules selected." (agni issue 1117). Absent or "" when it loaded.
   catalogError?: string;
-  // skipped names the selected rules that could NOT run on this design, and why. A rule whose fact
-  // tier the design lacks (a board rule on a netlist, a datasheet rule with no corpus) is gated before it
-  // evaluates and produces no findings, so without this list an unanswered question reads as a clean
-  // board. This panel opens by default, so that misreading is the first thing most people would see.
+  // skipped names the selected rules that could NOT run on this design, and why. Some rules need a
+  // fact tier the design lacks, such as a board rule on a netlist or a datasheet rule with no
+  // corpus. Such a rule is gated before it evaluates and produces no findings. Without this list
+  // the unanswered question would read as a clean board, and this panel opens by default, so most
+  // people would see that misreading first.
   skipped: SkippedRuleItem[];
   // ruleSummaries maps a rule name to its catalog one-liner, shown as a group-header subtitle. A rule
   // absent from the map renders none.
@@ -159,13 +163,14 @@ export interface FindingsState {
 }
 
 // VerdictItem is the view-side shape of one verdict (the wire checks.Verdict without the proto
-// machinery). It is what a rule concluded about ONE subject, including the subjects it could not judge,
-// so unlike a FindingItem it exists for a PASS. Its subjects and context are HighlightSubjects, so the
-// same bucketing lights them up without a second code path.
+// machinery). It records what a rule concluded about ONE subject. A rule also records a verdict for
+// a subject it could not judge, and unlike a FindingItem a verdict exists for a PASS. Its subjects
+// and context are HighlightSubjects, so the same bucketing lights them up without a second code
+// path.
 export interface VerdictItem {
-  // id is the derived name, "<rule>:(<kind>:<ref>,...)", and the click target a CLI row or a filed
-  // link addresses. It stays stable when the ANSWER changes, so a link filed while a check passed still
-  // resolves once it starts failing.
+  // id is the derived name, "<rule>:(<kind>:<ref>,...)". A CLI row or a filed link addresses it as
+  // the click target. It does not change when the ANSWER changes, so a link filed while a check
+  // passed still resolves once it starts failing.
   id: string;
   rule: string;
   // outcome is the lower-case vocabulary word ("pass" | "fail" | "no-limit" | "not-considered" |
@@ -175,14 +180,14 @@ export interface VerdictItem {
   // relation rule carries two or three and all of them are the subject, so drawing only one as the
   // figure would show half of a clearance violation.
   subjects: HighlightSubject[];
-  // statement is the one-line proof, present on pass, fail and inconclusive. Empty where the verdict
-  // rests on nothing, which is the no-limit and not-considered case.
+  // statement is the one-line proof, present on pass, fail and inconclusive. It is empty on
+  // no-limit and not-considered, since those verdicts have nothing to prove.
   statement: string;
-  // terms are the labelled VALUES the statement rests on. They are not entities and nothing here is
-  // clickable, which is why they are kept apart from context.
+  // terms are the labelled VALUES behind the statement. They are not entities and are not
+  // clickable, so they are kept apart from context.
   terms: { label: string; value: string }[];
-  // context are the entities the proof names, typed, ordered and clickable. The hops of a pull-up
-  // path arrive here, so the drawing can show a proof rather than a subject.
+  // context lists the entities named in the proof, typed, ordered and clickable. The hops of a
+  // pull-up path arrive here, so the drawing can show a proof rather than a subject.
   context: FindingContext[];
   // reason is why a not-considered verdict could not be decided, in the rule author's words.
   reason: string;
@@ -200,9 +205,9 @@ export function verdictSubjectLabel(v: VerdictItem): string {
 }
 
 // outcomeWord decodes the wire enum to the vocabulary word. An unrecognised value becomes
-// "unspecified" rather than "", since a blank outcome would read as "nothing to report" about a subject
-// the rule did look at. It is service.OutcomeWord's spelling, held to it by
-// service/testdata/outcome_twin.json (agni issue 1045).
+// "unspecified" rather than "", since a blank outcome would read as "nothing to report" about a
+// subject the rule did look at. It spells each word as service.OutcomeWord does, and
+// service/testdata/outcome_twin.json holds the two together (agni issue 1045).
 export function outcomeWord(o: number | undefined): string {
   switch (o) {
     case 1:
@@ -230,9 +235,9 @@ export function verdictProofStack(v: VerdictItem, focus: HighlightSpec[]): Highl
 
 export interface FindingsView {
   setState: (s: FindingsState) => void;
-  // setFindingLocateNote shows (or clears with "") a server-authoritative note under the checks
-  // table when a clicked finding can't be located, such as a bus with no drawn wire (WS7-042c). Mirrors
-  // the query panel's setLocateNote.
+  // setFindingLocateNote shows a server-authoritative note under the checks table when a clicked
+  // finding can't be located, such as a bus with no drawn wire (WS7-042c). An empty note clears it.
+  // It mirrors the query panel's setLocateNote.
   setFindingLocateNote: (note: string) => void;
 }
 
@@ -240,10 +245,10 @@ export interface FindingsView {
 // (net/component/pin), exact via FindingItem.kind.
 export type FindingGroupAxis = "rule" | "category" | "severity" | "kind" | "profile";
 
-// UNRESOLVED_GROUP is where an inconclusive finding lands on the severity axis, instead of the
+// UNRESOLVED_GROUP is the severity-axis group for an inconclusive finding, used in place of the
 // severity it carries. The rule declined to decide, so filing it under "error" would group it with
-// defects (agni issue 350). Every other axis is unaffected, because an inconclusive result still has a
-// rule, a category, an entity kind and a profile.
+// defects (agni issue 350). Every other axis is unaffected, because an inconclusive result still
+// has a rule, a category, an entity kind and a profile.
 export const UNRESOLVED_GROUP = "unresolved";
 
 // groupFindings buckets findings by the chosen axis, preserving first-appearance order of values,
@@ -275,25 +280,25 @@ export function groupFindings(findings: FindingItem[], axis: FindingGroupAxis): 
 
 // CollapsedFinding folds every finding sharing findingKey into one row. head is the first-seen
 // representative and instances holds every folded finding (length >= 1). A rule that fires once per
-// entity with the SAME display fields (duplicate-net-name on N same-named nets) collapses to one row
-// with instances.length N. Each instance stays addressable as a click-to-locate sub-row, told apart by
-// its netId.
+// entity with the SAME display fields (duplicate-net-name on N same-named nets) collapses to one
+// row with instances.length N. Each instance is still addressable as a click-to-locate sub-row,
+// told apart by its netId.
 export interface CollapsedFinding {
   head: FindingItem;
   instances: FindingItem[];
 }
 
 // findingKey is the collapse identity of a finding, and the panel also keys a row's expand state on
-// it. Parts join with the NUL escape "\u0000" (written as the escape, never a literal NUL, so the
-// source stays text). NUL cannot appear in a rule, subject, pin or message, so distinct tuples never
-// collide. busId is included so two identically-labeled buses stay distinct rows that each locate their
-// own trunk (WS7-042b), and it is "" for every non-bus finding.
+// it. Parts join with the NUL escape "\u0000". The source writes the escape and never a literal
+// NUL, so the file is plain text. NUL cannot appear in a rule, subject, pin or message, so distinct
+// tuples never collide. busId is included so two identically-labeled buses are distinct rows and
+// each locates its own trunk (WS7-042b). It is "" for every non-bus finding.
 export function findingKey(f: FindingItem): string {
   return [f.rule, f.subject, f.pin, f.severity, f.message, f.busId].join("\u0000");
 }
 
 // collapseInstances groups adjacent-or-not findings by findingKey, preserving first-appearance
-// order of the representative. Every input finding lands in exactly one CollapsedFinding.
+// order of the representative. Every input finding goes into exactly one CollapsedFinding.
 export function collapseInstances(items: FindingItem[]): CollapsedFinding[] {
   const order: string[] = [];
   const by = new Map<string, CollapsedFinding>();
@@ -316,9 +321,9 @@ export type FindingSortKey = "severity" | "rule" | "subject";
 const SEV_RANK: Record<string, number> = { error: 0, warning: 1, info: 2 };
 
 // severityRank orders severities worst-first (unknown -1, error 0, warning 1, info 2), as the
-// engine's report does (core/results.SeverityRank): a severity this build does not recognise leads,
-// so a provider's custom level is never buried below the defects it may be worse than (agni issue
-// 1045). core/results/testdata/severity_twin.json holds the two to one order.
+// engine's report does (core/results.SeverityRank). An unrecognised severity comes first. A
+// provider's custom level may be worse than the defects, so it is never buried below them (agni
+// issue 1045). core/results/testdata/severity_twin.json holds the two to one order.
 export function severityRank(sev: string): number {
   return SEV_RANK[sev] ?? -1;
 }
@@ -326,7 +331,7 @@ export function severityRank(sev: string): number {
 // findingRank orders one finding for the severity column, as severityRank plus what a severity
 // string cannot say. An inconclusive result carries the severity the rule WOULD have reported, so
 // ranking by that string would sort it among real defects (agni issue 350). It ranks after every
-// severity instead, including an unrecognized one, so the defects stay together at the top.
+// severity instead, including an unrecognized one, so the defects are together at the top.
 export function findingRank(f: FindingItem): number {
   return f.inconclusive ? 4 : severityRank(f.severity);
 }
@@ -348,11 +353,11 @@ export function sortFindings(items: FindingItem[], key: FindingSortKey, dir: 1 |
   return [...items].sort(cmp);
 }
 
-// severitySections projects findings into worst-first [severity, count] tiers, the shape and order
-// of the engine report's sections (core/results.Pivot): severities by severityRank, ties by name, then
-// UNRESOLVED_GROUP holding every inconclusive finding. findings.test.ts and core/results read one
-// fixture, testdata/severity_twin.json, so the panel's ranking and the report's cannot drift (WS3-022,
-// agni issue 1045).
+// severitySections projects findings into worst-first [severity, count] tiers, in the shape and
+// order of the engine report's sections (core/results.Pivot). Severities sort by severityRank and
+// ties by name, and UNRESOLVED_GROUP comes last with every inconclusive finding. findings.test.ts
+// and core/results read one fixture, testdata/severity_twin.json, so the panel's ranking and the
+// report's cannot drift (WS3-022, agni issue 1045).
 export function severitySections(items: FindingItem[]): { severity: string; count: number }[] {
   const counts = new Map<string, number>();
   let unresolved = 0;
@@ -367,8 +372,8 @@ export function severitySections(items: FindingItem[]): { severity: string; coun
   return out;
 }
 
-// HighlightSubject is the minimal shape subjectsToSpecs needs, an entity ref, its kind, and (for a
-// pin) its pin designator. FindingItem satisfies it structurally, and so does a bare query result cell
+// HighlightSubject holds the minimum subjectsToSpecs needs, an entity ref, its kind, and a pin's
+// designator. FindingItem satisfies it structurally, and so does a bare query result cell
 // (WS9-038), so a query entity highlights through the same bucketing as a finding.
 export interface HighlightSubject {
   kind: string; // "net" | "component" | "pin" | "bus"
@@ -438,11 +443,12 @@ export function entitySpecs(kind: string, subject: string, pin = ""): HighlightS
   return subjectsToSpecs([{ kind, subject, pin }]);
 }
 
-// focusStack builds the two-layer highlight stack for a focused subject (WS9-040), the base findings
-// layer with each focused NET removed and the focus layer on top. A net's focus is a translucent PATH
-// highlighter (withFocusShape), and the net left in the opaque base would show through it. A focused
-// component or pin stays in the base, since its outline plus the focus bounding box read as added
-// emphasis. An empty focus (subject not found) leaves the base untouched.
+// focusStack builds the two-layer highlight stack for a focused subject (WS9-040), the base
+// findings layer with each focused NET removed and the focus layer on top. A net's focus is a
+// translucent PATH highlighter (withFocusShape), and the net left in the opaque base would show
+// through it. A focused component or pin is kept in the base, since its outline plus the focus
+// bounding box read as added emphasis. An empty focus (subject not found) leaves the base
+// untouched.
 //
 // `figures` is a LIST because a verdict's subject is a tuple (a clearance violation is about two nets).
 // A findings caller passes its one subject.
@@ -458,7 +464,8 @@ export function focusStack(findings: HighlightSubject[], figures: HighlightSubje
   // With no figure the base is the whole message, and muting it would dim the only layer on the sheet.
   if (focus.length === 0) return baseSpecs;
   // Otherwise stamp the base as CONTEXT, so it is a different hue from the focus (agni issue 348).
-  // The focus layer keeps the default color, so a style the reader set in the Highlight menu still wins.
+  // The focus layer keeps the default color, so the reader's style from the Highlight menu still
+  // wins.
   return [
     ...baseSpecs.map((s) => ({ ...s, color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA })),
     ...focus,
@@ -466,15 +473,16 @@ export function focusStack(findings: HighlightSubject[], figures: HighlightSubje
 }
 
 
-// What a selection is CHECKED for is a projection of the findings already computed (agni issue 259),
-// never a scoped re-run, which could disagree with the report beside it (C25) and redoes net solving
-// per click. Every Finding carries exactly one Subject, so grouping by subject PARTITIONS the findings.
-// See docsite/content/architecture/web-picking.md#what-is-already-known-about-a-selection.
+// The checks shown for a selection are a projection of the findings already computed (agni issue
+// 259). They are never a scoped re-run. A re-run could disagree with the report beside it (C25),
+// and it would redo net solving per click. Every Finding carries exactly one Subject, so grouping
+// by subject PARTITIONS the findings. See
+// docsite/content/architecture/web-picking.md#what-is-already-known-about-a-selection.
 
-// selectionFromFinding reads a finding as the thing it is about. It is the third producer of a
-// Selection, after a keyed element on the drawing and a result cell, so one identity rule
-// (sameSelection) decides for the canvas, the query table and the checks panel when two things are the
-// same net, including two nets that share a display name and differ only by netId.
+// selectionFromFinding reads a finding as the thing it is about. A keyed element on the drawing and
+// a result cell also produce a Selection, and this is the third producer. So one identity rule,
+// sameSelection, decides when two things are the same net, for the canvas, the query table and the
+// checks panel alike. It covers two nets that share a display name and differ only by netId.
 export function selectionFromFinding(f: FindingItem): Selection | null {
   switch (f.kind) {
     case "pin":
@@ -491,9 +499,9 @@ export function selectionFromFinding(f: FindingItem): Selection | null {
 }
 
 // findingsFor projects the findings owning any of the given subjects, in the order the pass
-// produced them. It takes a SET because a click is the one-subject case of the same question a query
-// answer, a sheet, a netclass or a diff's changed entities ask. A finding is returned ONCE however many
-// subjects it matches, so a query answering R1 on five nets reports R1's one finding once.
+// produced them. It takes a SET. A query answer, a sheet, a netclass and a diff's changed entities
+// all ask this question, and a click is its one-subject case. A finding is returned ONCE however
+// many subjects it matches, so a query answering R1 on five nets reports R1's one finding once.
 //
 // It answers OWNERSHIP, not mention. An entity named only in a finding's context (agni issue 349) does
 // not get that finding here, since context is not counted as a finding about itself.
@@ -506,8 +514,9 @@ export function findingsFor(findings: FindingItem[], selections: (Selection | nu
   });
 }
 
-// inArea reports whether a finding's subject is a member of an area (agni issue 904): one of its parts,
-// a pin of one of its parts or one of its loose pins, or a net drawn inside it.
+// inArea reports whether a finding's subject is a member of an area (agni issue 904). A member is
+// one of the area's parts, a pin of one of its parts, one of its loose pins, or a net drawn inside
+// it.
 function inArea(sel: Selection, area: Selection): boolean {
   switch (sel.kind) {
     case "component":
@@ -523,7 +532,7 @@ function inArea(sel: Selection, area: Selection): boolean {
 
 // SeverityTally counts a projection by severity, because "3 findings" and "3 errors" are different
 // news. `inconclusive` is counted apart and excluded from `total`, since an inconclusive result is
-// neither a pass nor a fail. It stays visible because a reader can act on it by supplying what was
+// neither a pass nor a fail. It is still shown because a reader can act on it by supplying what was
 // missing.
 export interface SeverityTally {
   error: number;

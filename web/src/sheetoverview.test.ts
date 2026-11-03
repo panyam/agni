@@ -34,7 +34,7 @@ describe("sheetTiles (WS9-025)", () => {
   });
 
   it("special-cases a single-sheet design to the total findings count", () => {
-    // Badges are empty for one-sheet designs (WS9-024), but everything lives
+    // Badges are empty for one-sheet designs (WS9-024), but everything is
     // on that sheet, so a badge-joined 0 would read as clean on a design with findings.
     const findings = [finding([]), finding([])];
     expect(sheetTiles([root], findings)).toEqual([{ id: "s1", name: "Root", parentId: "", count: 2, unresolved: 0, local: 2 }]);
@@ -73,7 +73,7 @@ describe("sheetTiles keeps inconclusive results out of the defect count", () => 
   });
 });
 
-// agni issue 1141: a KiCad design whose sub-sheets under different parents share a name.
+// A KiCad design whose sub-sheets under different parents share a name (agni issue 1141).
 describe("sheet labels", () => {
   const sheets = [sheet("/", "Root"), sheet("/Power", "Power", "/"), sheet("/Power/1", "1", "/Power"), sheet("/IO", "IO", "/"), sheet("/IO/1", "1", "/IO")];
 
@@ -88,8 +88,8 @@ describe("sheet labels", () => {
   });
 });
 
-// agni issue 1144: a finding counts on every sheet its subject is drawn on, and the tile also knows
-// how many of its defects are drawn there alone.
+// A finding counts on every sheet its subject is drawn on, and the tile also knows how many of its
+// defects are drawn there alone (agni issue 1144).
 describe("defects drawn on one sheet alone", () => {
   it("counts a finding on one sheet as local there and a spanning one as local nowhere", () => {
     const a = { id: "a", name: "A" };

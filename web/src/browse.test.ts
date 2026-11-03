@@ -12,13 +12,13 @@ import { join } from "node:path";
 // has one too. The tree, the preview driver, and the stage are each covered on their own, and
 // nothing until now asserted that browse.ts connects them.
 //
-// So this boots the REAL browse.ts against the REAL BrowsePage.html and walks the flow the ticket
-// names, which is to choose a design, see it previewed, open it. What it does not assert is how the
-// SVG looks, which needs a browser and stays on the successor issue.
+// So this boots the REAL browse.ts against the REAL BrowsePage.html and walks the ticket's flow. A
+// reader chooses a design, sees it previewed, and opens it. The test does not assert how the SVG
+// looks. That needs a browser and is left to the successor issue.
 
-// pageBody slices the shipped template's Body block, for the same reason composition.test.ts does:
-// the holes and their ids are the contract between the server-rendered page and browse.ts, and a
-// test carrying its own copy of the markup keeps passing after the page changes underneath it.
+// pageBody slices the shipped template's Body block, as composition.test.ts does. The holes and
+// their ids are the contract between the server-rendered page and browse.ts. A test holding its own
+// copy of the markup keeps passing after the page changes underneath it.
 function pageBody(): string {
   const src = readFileSync(join(process.cwd(), "templates/BrowsePage.html"), "utf8");
   const m = /\{\{ define "Body" \}\}([\s\S]*?)\n\{\{ end \}\}/.exec(src);
@@ -48,7 +48,7 @@ const REPLIES: Record<string, unknown> = {
   },
   // The wire form of a oneof is the FIELD name, not the client-side {case, value} pair that
   // connect-web decodes it into. Writing the decoded shape here yields an empty document and a
-  // blank preview, which is what this fixture did on its first run.
+  // blank preview. This fixture did exactly that on its first run.
   GetSheet: { svg: SHEET_SVG },
 };
 

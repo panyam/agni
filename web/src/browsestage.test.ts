@@ -35,8 +35,8 @@ describe("browseStage", () => {
   });
 
   // The inverse matters more. A failed load after a successful one must not leave the previous
-  // design's drawing sitting under an error message, which reads as "this design failed to render"
-  // while showing a picture of a different design.
+  // design's drawing under an error message. That page reads as "this design failed to render" and
+  // shows a picture of a different design.
   it("hides a previous drawing when a note replaces it", () => {
     h.stage.showSvg("<svg id='a'/>");
     h.stage.showNote("unknown mount", "error");

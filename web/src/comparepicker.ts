@@ -1,9 +1,9 @@
 // The compare picker is a modal file chooser for "compare the open design against this one"
 // (WS9-049 phase 3). It carries no armed mode and does not need the Files dock panel open.
 //
-// The picker reports a CHOSEN DESIGN, not "side B". The viewer holds one comparison, and a callback
-// meaning "a design to compare against" still fits if it grows to hold several (design A against
-// successive versions), where "set side B" would not.
+// The picker reports a CHOSEN DESIGN, not "side B". The viewer holds one comparison. It may grow to
+// hold several, design A against successive versions. A callback meaning "a design to compare
+// against" would still fit then, and "set side B" would not.
 import type { EventBus } from "@panyam/tsappkit";
 import type { SolidIsland } from "@panyam/tsappkit-solid";
 import { fileTreeIsland } from "./filetree.js";
@@ -14,8 +14,8 @@ export interface CompareTarget {
   path: string;
 }
 
-// ComparePicker is the modal's control surface. It is plain DOM chrome, like the panels menu, since
-// the tree island owns which files exist and whether the modal is showing is not presenter state.
+// ComparePicker is the modal's control surface. It is plain DOM chrome, like the panels menu. The
+// tree island owns which files exist, and the modal's visibility is not presenter state.
 export interface ComparePicker {
   // open shows the picker. exclude is the design already open (side A), greyed out in the list so
   // the user cannot start a comparison of a design against itself.
@@ -42,7 +42,7 @@ export function comparePickerIsland(
   const setOpen = (on: boolean): void => {
     open = on;
     host.classList.toggle("on", on);
-    // aria-hidden rather than display:none on the host, because the tree island inside must stay
+    // aria-hidden rather than display:none on the host, because the tree island inside must remain
     // mounted and measurable. The .on class drives visibility.
     host.setAttribute("aria-hidden", on ? "false" : "true");
   };
@@ -76,7 +76,7 @@ export function comparePickerIsland(
       open: (exclude) => {
         excluded = exclude;
         // Mark the open design as unavailable. The tree highlights its "active" file from the sheet
-        // state it is pushed, the same channel the work page uses.
+        // state pushed to it, the same channel the work page uses.
         tree.view.setState({ mount: exclude?.mount ?? "", path: exclude?.path ?? "", sheets: [], activeId: "" });
         setOpen(true);
       },

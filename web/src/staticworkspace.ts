@@ -1,11 +1,11 @@
-// The file trees' two listings on a static host (agni issue 978). A static site has no server to list
-// a mount, and the page's engine holds only the files it was given, so asking it which mounts exist
-// answers none and the Compare picker opened empty. `agni site` writes what the server's
-// WorkspaceService would answer instead: mounts.json, its ListMounts, and dirs/<mount>.json, its
-// ListDir of every folder in the mount, one folder's entries after another in one listing. This
-// answers ListMounts and ListDir from those files and passes every other request on. A mount the
-// site does not carry, such as the browser mount a dropped design is read from, is still the page
-// engine's to list.
+// The file trees' two listings on a static host (agni issue 978). A static site has no server to
+// list a mount, and the page's engine holds only the files it was given, so asking it which mounts
+// exist answers none and the Compare picker opened empty. `agni site` writes the answers the
+// server's WorkspaceService would give instead. mounts.json holds its ListMounts. dirs/<mount>.json
+// holds its ListDir of every folder in the mount, one folder's entries after another in one
+// listing. This answers ListMounts and ListDir from those files and passes every other request on.
+// The page engine still lists any mount the site does not carry, such as the browser mount that a
+// dropped design is read from.
 
 import { create, fromJson, toJsonString, type JsonValue } from "@bufbuild/protobuf";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
@@ -25,10 +25,11 @@ import {
 export type SiteRead = (path: string) => Promise<unknown>;
 
 // staticWorkspace answers WorkspaceService.ListMounts and ListDir from the files `agni site` wrote,
-// read through read, on the terms the server's ListMounts and ListDir use: entries in the server's
-// order, and with `opens` set, a folder or mount left out when nothing beneath it is a file of a
-// kind the caller opens. ListMounts adds the mounts next lists that the site does not carry, and a
-// ListDir in one of those goes to next, as does every other request. Each file is read once.
+// read through read. It follows the terms of the server's ListMounts and ListDir. Entries come in
+// the server's order. With `opens` set, a folder or mount is left out when nothing beneath it is a
+// file of a kind the caller opens. ListMounts adds the mounts next lists that the site does not
+// carry, and a ListDir in one of those goes to next, as does every other request. Each file is read
+// once.
 export function staticWorkspace(read: SiteRead, next: typeof globalThis.fetch): typeof globalThis.fetch {
   let mounts: Promise<ListMountsResponse> | undefined;
   const trees = new Map<string, Promise<DirEntry[]>>();
@@ -83,8 +84,8 @@ export function staticWorkspace(read: SiteRead, next: typeof globalThis.fetch): 
   };
 }
 
-// engineMounts is what next answers req with, the page engine's mounts, or none when it cannot say,
-// since a failure there must not hide the site's own.
+// engineMounts returns next's answer to req, the page engine's mounts. It returns none when next
+// cannot say, since a failure there must not hide the site's own.
 async function engineMounts(next: typeof globalThis.fetch, req: Request): Promise<ListMountsResponse> {
   try {
     const res = await next(req);
@@ -122,7 +123,7 @@ function answer(json: string): Response {
   return new Response(json, { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
-// refuse answers with a Connect error, so the client reports it as the server's would be.
+// refuse answers with a Connect error, so the client reports it as it would report the server's.
 function refuse(code: "not_found" | "unavailable", message: string): Response {
   return new Response(JSON.stringify({ code, message }), {
     status: code === "not_found" ? 404 : 503,

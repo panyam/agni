@@ -8,9 +8,9 @@ import { stubQueryView } from "./testviews.js";
 import type { TraceState } from "./trace.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 
-// harness builds a presenter with only what the trace path needs; every other collaborator is a stub
-// sufficient for openFile to complete. wireTrace off is the unwired-panel case, which must be a
-// no-op rather than a throw, since the presenter's view ports are optional by design.
+// harness builds a presenter with only what the trace path needs. Every other collaborator is a stub
+// that does just enough for openFile to complete. With wireTrace off the panel is unwired, and that
+// case must be a no-op rather than a throw, since the presenter's view ports are optional by design.
 function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: Mock<(loc: ViewerLocation) => void>; sheets?: string[] } = {}) {
   const wireTrace = opts.wireTrace !== false;
   const answer =
@@ -105,7 +105,7 @@ describe("trace presenter", () => {
   });
 
   // The route has to reach the canvas, or the panel is a text box that happens to sit beside a
-  // drawing. This is the assertion the whole PR exists for.
+  // drawing. The whole PR exists for this assertion.
   it("lights the route on the canvas", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");

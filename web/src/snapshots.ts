@@ -2,11 +2,11 @@
 // its files, so the page ingests each design it opens once and sends the snapshot's name with every
 // question about it.
 //
-// The page mints each snapshot's id itself and keeps its definition, because a host may not hold the
-// snapshot when a question arrives: a server evicts and restarts, and each browser worker holds only
-// what was ingested into it. A question answered NOT_FOUND or FAILED_PRECONDITION with a
-// SnapshotUnavailable detail is recovered here, by ingesting the snapshot again under its id or
-// updating it, and asked once more.
+// The page mints each snapshot's id itself and keeps its definition, because a host may not hold
+// the snapshot when a question arrives. A server evicts and restarts, and each browser worker holds
+// only what was ingested into it. A question can come back NOT_FOUND or FAILED_PRECONDITION with a
+// SnapshotUnavailable detail. This module then ingests the snapshot again under its id, or updates
+// it, and asks the question once more.
 import { Code, ConnectError, type Interceptor } from "@connectrpc/connect";
 import { toJsonString, type MessageInitShape } from "@bufbuild/protobuf";
 import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
@@ -21,30 +21,30 @@ import {
 type IngestInit = MessageInitShape<typeof IngestRequestSchema>;
 type UpdateInit = MessageInitShape<typeof UpdateSnapshotRequestSchema>;
 
-// SnapshotCalls is what a registry asks a host, the two SnapshotService methods it needs.
+// SnapshotCalls is the two SnapshotService methods that a registry calls on a host.
 export interface SnapshotCalls {
   ingest(req: IngestInit): Promise<Snapshot>;
   updateSnapshot(req: UpdateInit): Promise<Snapshot>;
 }
 
-// A Definition is what a page ingests: a design, the config its rule-running questions carry, and
-// whether its hierarchical netlist is read whole.
+// A Definition is what a page ingests. It names a design, the config for its rule-running
+// questions, and whether its hierarchical netlist is read whole.
 interface Definition {
   uri: string;
   overlay?: OverlayConfig;
   flattenHierarchy?: boolean;
 }
 
-// RegistryOptions are what every snapshot a page ingests shares.
+// RegistryOptions apply to every snapshot that a page ingests.
 export interface RegistryOptions {
   // flatten reads every design's hierarchical netlist whole (Snapshot.flatten_hierarchy, agni issue
-  // 1102). It is the page's, from its address (pageFlattens), so a design read under one choice
-  // is never asked about under the other.
+  // 1102). The page sets it from its address (pageFlattens), so a design read under one choice is
+  // never asked about under the other.
   flatten?: boolean;
 }
 
-// SnapshotSource names a design's snapshot under a config, which is all a presenter asks of the
-// registry.
+// SnapshotSource names a design's snapshot under a config. A presenter asks the registry for
+// nothing else.
 export interface SnapshotSource {
   of(uri: string, overlay?: OverlayConfig): Promise<string>;
   readBoard(uri: string, overlay?: OverlayConfig): Promise<Snapshot>;
@@ -54,9 +54,9 @@ export interface SnapshotSource {
 // be ingested again wherever it is missing.
 //
 // The viewer asks for a design's drawing under no overlay and runs its rules under the convention
-// the vocabulary bar shows, so one open design has up to two snapshots. Keeping them apart is what
-// keeps a change of convention from drawing every sheet again, since a drawing read under one
-// overlay is not reused under another.
+// the vocabulary bar shows, so one open design has up to two snapshots. A drawing read under one
+// overlay is not reused under another. With the two kept apart, a change of convention does not
+// draw every sheet again.
 export class SnapshotRegistry implements SnapshotSource {
   private readonly byKey = new Map<string, Promise<string>>();
   private readonly defs = new Map<string, Definition>(); // name -> definition
@@ -67,7 +67,7 @@ export class SnapshotRegistry implements SnapshotSource {
     private readonly options: RegistryOptions = {},
   ) {}
 
-  // def is the definition the page ingests uri under.
+  // def returns the definition that the page ingests uri under.
   private def(uri: string, overlay?: OverlayConfig): Definition {
     return this.options.flatten ? { uri, overlay, flattenHierarchy: true } : { uri, overlay };
   }
@@ -96,14 +96,15 @@ export class SnapshotRegistry implements SnapshotSource {
     return this.calls.ingest({ snapshot: this.def(uri, overlay), snapshotId: idOf(name), readBoard: true });
   }
 
-  // uriOf is the design a snapshot this page ingested names, or undefined for one it did not.
+  // uriOf returns the design that snapshot name names, if this page ingested it, and undefined
+  // otherwise.
   uriOf(name: string): string | undefined {
     return this.defs.get(name)?.uri;
   }
 
   // recover makes name answerable again: ingested under its id when the host lost it, updated when its
-  // files changed. It reports whether it did anything, which is false for a snapshot this page did not
-  // ingest.
+  // files changed. It reports whether it did anything. For a snapshot this page did not ingest, it
+  // does nothing and reports false.
   async recover(name: string, reason: SnapshotUnavailable_Reason): Promise<boolean> {
     const def = this.defs.get(name);
     if (!def) return false;

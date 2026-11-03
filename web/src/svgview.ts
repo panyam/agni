@@ -38,12 +38,12 @@ export class SvgView {
   // pan). The renderer keys every element, so the document is its own pick index and the browser
   // resolves the hit.
   onPick: ((sel: Selection) => void) | null = null;
-  // onPickEmpty fires when a click lands on nothing keyed (the paper, a label, the frame), which
-  // names the sheet itself rather than an entity on it (agni issue 902).
+  // onPickEmpty fires when a click hits nothing keyed, such as the paper, a label or the frame. That
+  // click names the sheet itself rather than an entity on it (agni issue 902).
   onPickEmpty: (() => void) | null = null;
-  // onArea fires when the reader Shift-drags a rectangle over the drawing, with the rectangle in client
-  // coordinates, and onToggle when they Shift-click an entity, to add it to the area or take it out
-  // (agni issue 904). A plain drag still pans and a plain click still picks.
+  // onArea fires when the reader Shift-drags a rectangle over the drawing, and passes the rectangle in
+  // client coordinates. onToggle fires when they Shift-click an entity, to add it to the area or take
+  // it out (agni issue 904). A plain drag still pans and a plain click still picks.
   onArea: ((r: ClientRect) => void) | null = null;
   onToggle: ((sel: Selection) => void) | null = null;
   // band is the rectangle drawn while a Shift-drag is under way, in the host's own space so it does not
@@ -56,14 +56,14 @@ export class SvgView {
     this.layer.style.position = "absolute";
     this.layer.style.left = "0";
     this.layer.style.top = "0";
-    // The base sheet document and, stacked exactly over it, the transparent highlight
-    // overlay. Both live inside the transformed layer so pan/zoom moves them as one; the
-    // server frames both documents identically (same width/height/viewBox), so a plain
-    // top-left stack aligns them. The overlay ignores pointer events, so input stays on the host.
+    // The base sheet document, with the transparent highlight overlay stacked exactly over it.
+    // Both live inside the transformed layer, so pan/zoom moves them as one. The server frames
+    // both documents identically (same width/height/viewBox), so a plain top-left stack aligns
+    // them. The overlay ignores pointer events, so input goes to the host.
     this.base = document.createElement("div");
     this.overlay = document.createElement("div");
-    // Named so a browser test asserting what the reader sees, or anyone in devtools looking at a
-    // wrong highlight, can find the highlight layer.
+    // Named so the highlight layer is easy to find, for a browser test asserting what the reader
+    // sees or for anyone in devtools looking at a wrong highlight.
     this.overlay.className = "highlight-overlay";
     this.overlay.style.position = "absolute";
     this.overlay.style.left = "0";
@@ -77,13 +77,13 @@ export class SvgView {
   }
 
   // setSvg injects a standalone SVG document and fits it to the host. It clears the highlight
-  // overlay, which described the previous document; the caller re-fetches one framed for the new
+  // overlay, which described the previous document. The caller re-fetches one framed for the new
   // sheet if highlights are active.
   setSvg(markup: string): void {
     this.base.innerHTML = markup;
     this.overlay.innerHTML = "";
-    // A new document arrives unframed, so the reader's camera on the PREVIOUS one does not carry
-    // over and the resize refit is live again.
+    // A new document arrives unframed. The reader's camera on the PREVIOUS one does not apply to
+    // it, and the resize refit is live again.
     this.touched = false;
     this.fit();
   }
@@ -196,8 +196,8 @@ export class SvgView {
   private observeResize(): void {
     if (typeof ResizeObserver === "undefined") return; // jsdom, and any non-browser host
     new ResizeObserver(() => {
-      // A parked (closed) dock panel measures 0x0; refitting to that would zero the scale and the
-      // drawing would never come back when the panel reopens. Same guard the canvas keeps.
+      // A parked (closed) dock panel measures 0x0. Refitting to that would zero the scale, and the
+      // drawing would never come back when the panel reopens. The canvas keeps the same guard.
       if (!this.host.clientWidth || !this.host.clientHeight) return;
       if (this.touched) return;
       this.fit();
@@ -269,7 +269,7 @@ export class SvgView {
     );
   }
 
-  // drawBand shows the rectangle a Shift-drag spans, positioned in the host's space.
+  // drawBand shows the rectangle that a Shift-drag spans, positioned in the host's space.
   private drawBand(r: ClientRect): void {
     if (!this.band) {
       this.band = document.createElement("div");

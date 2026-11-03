@@ -5,14 +5,15 @@
 // It runs in the gate with the rest of the suite, so a viewer change that breaks the walk fails on its
 // own PR. `make exercise-browser-review` runs this file alone and writes its steps as a markdown table
 // for the mission log (EXERCISE_OUT, which the target prints), headed unless HEADED=0. The walk takes
-// the viewer's review tour (web/src/reviewtour.ts): headed, the reader does each tour step while the
-// walk checks the result, and otherwise the walk does them through the tour's holes (walkguide.ts).
+// the viewer's review tour (web/src/reviewtour.ts). In a headed run the reader does each tour step
+// while the walk checks the result. Otherwise the walk does them through the tour's holes
+// (walkguide.ts).
 //
 // Every assertion is about structure (the picker matches the CLI, a click lights some of the drawing
 // and not all of it, a set opens one tab per query, the saved page matches the CLI's), never about
 // today's counts, so a fixture change does not fail the walk. The counts go in the table instead.
-// Each step records a row and the walk carries on past a broken one, so one run reports every broken
-// step; the test then fails naming them.
+// Each step records a row and the walk goes on past a broken one, so one run reports every broken
+// step. The test then fails and names them.
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { agniBin as builtAgni } from "./agnibin.js";
@@ -29,8 +30,8 @@ import { act, busy, intro, lastEvent, pause, pressedAt, stepByStep, tourAct } fr
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 // WALK_DESIGN picks the board. The gate walks the tutorial project's small synthetic gateway, and
-// `make exercise-browser-review` defaults to Jetson, Antmicro's baseboard in examples/jetson-project,
-// whose files `make -C examples/jetson-project board` copies in from the fetched samples corpus.
+// `make exercise-browser-review` defaults to Jetson, Antmicro's baseboard in examples/jetson-project.
+// `make -C examples/jetson-project board` copies its files in from the fetched samples corpus.
 const walks = {
   gateway: {
     mount: "tut",
@@ -124,12 +125,10 @@ async function checklistRan(page: Page): Promise<string> {
   return (await page.locator(".rv-summary").innerText()).replace(/\s+/g, " ").trim();
 }
 
-// normalise drops the line a saved page stamps with the time it was written, the only part two saves of
-// one run differ in.
-// openTab brings a query tab to the front. Choosing a tab is not what the walk measures, and a real
-// click on one depends on nothing being painted over it: in a headed run the tab strip, scrolled to its
-// far end by the set's last tab, timed out bringing the first one back (agni issue 1118). So the walk
-// scrolls the tab into view and clicks it in the page.
+// openTab brings a query tab to the front. The walk does not measure choosing a tab, and a real click
+// on a tab works only if nothing is painted over it. In a headed run the set's last tab scrolled the
+// tab strip to its far end, and the click that brought the first tab back timed out (agni issue
+// 1118). So the walk scrolls the tab into view and clicks it in the page.
 async function openTab(page: Page, title: string): Promise<void> {
   const tab = page.locator(`.query-tab-go[title="${title}"]`);
   await tab.waitFor({ timeout: 30_000 });
@@ -139,8 +138,9 @@ async function openTab(page: Page, title: string): Promise<void> {
   });
 }
 
-// why is the line of a failed step's error worth a table cell: Playwright's first line says only that
-// a call timed out, and the reason (what intercepted the click, what was not visible) is in its log.
+// why returns the part of a failed step's error worth a table cell. Playwright's first line says only
+// that a call timed out. The reason, such as what intercepted the click or what was not visible, is
+// in its log.
 function why(e: unknown): string {
   const text = (e instanceof Error ? e.message : String(e)).replace(/\u001b\[[0-9;]*m/g, "");
   const lines = text.split("\n").map((l) => l.trim()).filter((l) => l !== "");
@@ -148,6 +148,8 @@ function why(e: unknown): string {
   return reason && reason !== lines[0] ? `${lines[0]} (${reason.replace(/^-\s*/, "")})` : lines[0];
 }
 
+// normalise replaces each time a saved page stamps with "<time>". Two saves of one run differ only
+// in those stamps.
 const normalise = (html: string): string => html.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/g, "<time>");
 
 describe("the browser-review walk", () => {
@@ -164,8 +166,9 @@ describe("the browser-review walk", () => {
     });
 
     // The intro page stands in for the first stop, so "open" pauses there rather than over a blank page.
-    // A step that is one of the tour's (tour) stops with the tour's own panel instead of the walk's, and
-    // is timed from the reader's first press, so the table measures the viewer rather than the reader.
+    // A step that belongs to the tour (its `tour` option) stops with the tour's own panel instead of
+    // the walk's. It is timed from the reader's first press, so the table measures the viewer rather
+    // than the reader.
     // Its body may rename its row, since the reader chooses which checklist the first run is.
     const step = async (
       name: string,
@@ -270,9 +273,9 @@ describe("the browser-review walk", () => {
         return `${f ? `${f.rule} ${f.subject}` : "a finding"}: ${await lit(page, "the finding")}`;
       }, { tour: "click-finding" });
 
-      // The tour lets the reader open any set, the project's or a file (whose chooser the walk fills
-      // with the netlist audit). The rest of the walk reads the audit's tabs, so a reader who chose
-      // another set is followed by the walk opening the audit itself.
+      // The tour lets the reader open any set, the project's or a file. For a file, the walk fills the
+      // chooser with the netlist audit. The rest of the walk reads the audit's tabs, so if the reader
+      // chose another set, the walk then opens the audit itself.
       page.on("filechooser", (chooser) => void chooser.setFiles(auditSet));
       await step("open a query set", async () => {
         const queries = (readFileSync(auditSet, "utf8").match(/^ {2}- name:/gm) ?? []).length;
@@ -308,8 +311,8 @@ describe("the browser-review walk", () => {
         await act(page, () => openTab(page, "Parts on nets"));
         await page.locator(".query-row .query-locate").first().waitFor({ timeout: 30_000 });
         // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
-        // placed part. A part drawn on another sheet is selected without the canvas moving, and its
-        // cell's sheet chip is how a reader goes there, so the walk clicks that too.
+        // placed part. A part drawn on another sheet is selected without the canvas moving. A reader
+        // goes to that sheet through the cell's sheet chip, so the walk clicks that too.
         const first = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
         const mine = (await first.locator(".query-locate").innerText()).trim();
         await tourAct(page, "click-cell", () => first.locator(".query-locate").click());
@@ -344,9 +347,10 @@ describe("the browser-review walk", () => {
         return `"${question}" opened its own tab with ${await page.locator(".query-row").count()} rows`;
       }, { tour: "ask" });
 
-      // agni issue 904: a block of the sheet on screen, selected with a Shift-drag and asked about as one
-      // set. The block is the largest part drawn wholly on screen that covers at most a fortieth of the
-      // view, an IC rather than a board-wide connector, and what sits within three quarters of its size.
+      // The walk selects a block of the sheet on screen with a Shift-drag and asks about it as one set
+      // (agni issue 904). The block centres on the largest part drawn wholly on screen that covers at
+      // most a fortieth of the view, so an IC rather than a board-wide connector. It also takes in
+      // whatever sits within three quarters of that part's size.
       await step("select an area", async () => {
         const box = await page.evaluate(() => {
           const parts = new Map<string, DOMRect>();
@@ -385,18 +389,18 @@ describe("the browser-review walk", () => {
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
-        // The question binds the area's parts, so it answers the nets they reach out of the block; the
-        // panel also counts a net only a loose pin or a wire brings in. An Ask row starts at the first
-        // 50 rows, as every asked question does.
+        // The question binds the area's parts, so it answers the nets they reach out of the block. The
+        // panel also counts a net that only a loose pin or a wire brings in. An Ask row starts at the
+        // first 50 rows, as every asked question does.
         const rows = await page.locator(".query-row").count();
         if (rows === 0 && counts.components > 0) throw new Error("the area's parts reach no net outside it, which a block with parts always does");
         return `${counts.components} parts, ${counts.pins} loose pins: ${counts["boundary nets"]} boundary nets, ${counts["internal nets"]} internal; asked once, ${rows} rows${rows === 50 ? " (the first 50)" : ""}`;
       }, { tour: "select-area" });
 
       await step("save the report", async () => {
-        // Every checklist, since a page whose items carry no finding has no link to compare, and the
+        // Save every checklist. A page whose items carry no finding has no link to compare, and the
         // links are where the viewer and the CLI once disagreed (agni issue 1120).
-        // The first save is the tour's last step and the reader's; the walk saves the others.
+        // The first save is the tour's last step and the reader's. The walk saves the others.
         const saved: string[] = [];
         for (const [i, name] of checklists.entries()) {
           await runChecklist(page, name);

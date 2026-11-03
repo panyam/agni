@@ -205,8 +205,8 @@ describe("PATH highlighter alpha (WS9-040)", () => {
   });
 
   it("resolves a PATH spec as a translucent recolor of the net's primitives", () => {
-    // NET1 is wire primitive 0 in the fixture; PATH recolors it (like OUTLINE) at the
-    // translucent default, since the GL backend cannot widen 1px lines.
+    // NET1 is wire primitive 0 in the fixture. PATH recolors it at the translucent default, as
+    // OUTLINE does, since the GL backend cannot widen 1px lines.
     const [g] = resolveHighlights(keys, [{ nets: ["NET1"], shape: HighlightShape.PATH }]);
     expect(g.shape).toBe(HighlightShape.PATH);
     expect(g.alpha).toBe(0.4);

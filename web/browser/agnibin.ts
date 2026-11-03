@@ -1,9 +1,10 @@
 // The agni binary a spec runs to compare the page against the CLI.
 //
-// serve.ts builds it once per run and provides it. A config with no such setup (vitest.site.config.ts,
-// which tests a prebuilt demo) gets one built here instead, once per worker. Either way it is built
-// with the developer's own environment, never under a spec's empty HOME, which would point Go's build
-// cache at an empty directory and rebuild agni on every call (see serve.ts).
+// serve.ts builds it once per run and provides it. Some configs have no such setup, such as
+// vitest.site.config.ts, which tests a prebuilt demo. Those get one built here instead, once per
+// worker. Either way it is built with the developer's own environment, never under a spec's empty
+// HOME. An empty HOME would point Go's build cache at an empty directory and rebuild agni on every
+// call (see serve.ts).
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";

@@ -9,13 +9,14 @@ const source = (name: string) => readFileSync(join(here, name), "utf8");
 // code drops comments, so a comment explaining the split cannot trip the check or satisfy it.
 const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
-// What the interaction half holds: who is selected and focused, what is lit, the camera, the busy
-// state, the panel tabs. The document half must name none of it.
+// The interaction half holds who is selected and focused, what is lit, the camera, the busy state
+// and the panel tabs. The document half must name none of it.
 const INTERACTION_MODULES = ["./selection.js", "./highlights.js", "./highlightstyle.js", "./camera.js", "./busy.js", "./querytabs.js", "./viewer.js"];
 const INTERACTION_STATE = /\b(selectedSubject|selectedNetId|focusedVerdict|highlights|highlightStyle|viewMemory|busyDepth|tracedPins|ViewerPresenter)\b/;
 
-// agni issue 390: the dependency runs one way. Interaction reads the document; the document never
-// reads interaction, or the two halves form a cycle across what may become a WebAssembly boundary.
+// The dependency runs one way (agni issue 390). Interaction reads the document. The document never
+// reads interaction, or the two halves would form a cycle across what may become a WebAssembly
+// boundary.
 describe("the document half reads no interaction state", () => {
   it("imports no interaction module and names no interaction state", () => {
     const doc = code(source("document.ts"));
@@ -26,8 +27,8 @@ describe("the document half reads no interaction state", () => {
     expect(doc).not.toMatch(/\.tsx"/);
   });
 
-  // The positive control: the presenter does hold interaction state and does read the store, so the
-  // checks above can fail and the store is the one it uses.
+  // This is the positive control. The presenter does hold interaction state and does read the
+  // store, so the checks above can fail, and the store is the one it uses.
   it("is what the interaction half reads, and the patterns above match the interaction half", () => {
     const viewer = code(source("viewer.ts"));
     expect(viewer).toMatch(/from "\.\/document\.js"/);
@@ -36,7 +37,7 @@ describe("the document half reads no interaction state", () => {
   });
 });
 
-// The store works with no presenter at all: it loads a catalog and folds runs on its own.
+// The store works with no presenter at all. It loads a catalog and folds runs on its own.
 describe("DocumentStore on its own", () => {
   it("loads the catalog, runs only the rules it lacks, and folds each answer into one run", async () => {
     const doc = new DocumentStore();
@@ -69,8 +70,8 @@ describe("DocumentStore on its own", () => {
   });
 });
 
-// agni issue 717: a saved report is rendered from heldRun, which rebuilds the run rule by rule. What
-// the read left out belongs to the design rather than to a rule, so it must survive the rebuild
+// A saved report is rendered from heldRun, which rebuilds the run rule by rule (agni issue 717).
+// The read's omissions belong to the design rather than to a rule. They must survive the rebuild
 // whole, every entry and field, or the saved page reads as the whole design.
 describe("the held run keeps what the read left out", () => {
   it("carries every unexpanded block into the run a report is saved from", async () => {
@@ -94,8 +95,8 @@ describe("the held run keeps what the read left out", () => {
   });
 });
 
-// agni issue 1117: a failed run keeps its reason and the rules it left pending, and so does a failed
-// catalog, where both used to be swallowed by a bare catch.
+// A failed run keeps its reason and the rules it left pending, and so does a failed catalog (agni
+// issue 1117). A bare catch used to swallow both.
 describe("the store keeps why a request failed", () => {
   const listRules = vi.fn(async () => ({
     rules: ["a", "b"].map((name) => ({ name, severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" })),

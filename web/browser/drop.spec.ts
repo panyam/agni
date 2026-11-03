@@ -178,7 +178,7 @@ describe("dropping files on the Load page", () => {
       const row = page.locator(".ld-drop").first();
       await expect.poll(() => row.textContent(), { timeout: 30_000 }).toContain("tutorial-project");
       await row.locator(".ld-drop-delete").click();
-      // The delete is an IndexedDB transaction, which a navigation started before it commits aborts.
+      // The delete is an IndexedDB transaction. A navigation that starts before it commits aborts it.
       await expect.poll(() => page.locator(".ld-drop").count(), { timeout: 30_000 }).toBe(0);
       await page.goto(viewer, { waitUntil: "domcontentloaded" });
       const failed = page.locator("#load-failed");

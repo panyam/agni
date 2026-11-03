@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { labelAnchor, labelBaseline, overlayTransform, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight } from "./textoverlay.js";
 import type { Image } from "./packed.js";
 
-// The overlay's alignment mapping must mirror core/render/svg.go's justifyText so text lands the
-// same way the SVG oracle draws it.
+// The overlay's alignment mapping must mirror core/render/svg.go's justifyText, so the overlay puts
+// text where the SVG oracle draws it.
 describe("label alignment", () => {
   it("maps horizontal justify to text-anchor", () => {
     expect(labelAnchor("left center")).toBe("start");
@@ -32,9 +32,9 @@ describe("splitLabelLines", () => {
       { text: "c", y: 10 + 2 * step },
     ]);
   });
-  // A justify anchors the whole BLOCK. A bottom-anchored note grows UP from its anchor, and the
-  // tool that writes them places the NEXT note relative to that same bottom, so growing down
-  // instead lands a multi-line note on top of whatever sits below it.
+  // A justify anchors the whole BLOCK. A bottom-anchored note grows UP from its anchor. The tool
+  // that writes these notes places the NEXT note relative to that same bottom, so a multi-line note
+  // that grew down would cover whatever sits below it.
   it("grows a bottom-anchored block upward, leaving its LAST line on the anchor", () => {
     const step = 5 * lineHeight;
     expect(splitLabelLines("a\nb\nc", 10, 5, "left bottom")).toEqual([
@@ -118,17 +118,18 @@ describe("imageAttrs", () => {
 
   it("applies the shared bake multiplier to every coordinate", () => {
     const a = imageAttrs({ ...base, rotationDeg: 90 }, 0.5);
-    // Every geometry value halved so the image stays aligned with the rescaled labels.
+    // Every geometry value is halved, so the image is still aligned with the rescaled labels.
     expect(a).toMatchObject({ x: 10, y: -40, width: 20, height: 25 });
     expect(a.transform).toBe("rotate(90 20 -27.5)"); // center halved too
   });
 });
 
-// bakeDivisor guards the font-size clamp regression, where nanometer-scale fonts (~1.27e6 units) must
-// be divided down under the browser's SVG font-size cap, while already-small fonts stay untouched.
+// bakeDivisor guards the font-size clamp regression. Nanometer-scale fonts (~1.27e6 units) must be
+// divided down under the browser's SVG font-size cap, and already-small fonts must be left
+// untouched.
 describe("bakeDivisor", () => {
   it("shrinks a font-size that would exceed the browser clamp", () => {
-    // 1.27 mm in nanometer units; divided to land at the SAFE_FONT_UNITS target (2000).
+    // 1.27 mm in nanometer units, divided down to the SAFE_FONT_UNITS target (2000).
     expect(bakeDivisor(1_270_000)).toBeCloseTo(635);
   });
   it("leaves already-safe font sizes at a divisor of 1", () => {

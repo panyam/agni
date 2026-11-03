@@ -1,6 +1,6 @@
 // View-local affine camera. Maps sheet-local int32 vertex coordinates to clip space
 // [-1,1]. Only this matrix changes per frame; the geometry buffer is uploaded once and
-// stays static. The matrix is a pure pan+zoom affine (no rotation/shear):
+// never changes. The matrix is a pure pan+zoom affine (no rotation/shear):
 //
 //   clip.x = scaleX * world.x + tx
 //   clip.y = scaleY * world.y + ty
@@ -105,7 +105,7 @@ export class Camera {
     const worldBefore = this.pixelToWorld(cursorXPx, cursorYPx);
     this.worldPerPixel /= factor;
     const worldAfter = this.pixelToWorld(cursorXPx, cursorYPx);
-    // Shift center so the world point under the cursor stays fixed.
+    // Shift center so the world point under the cursor does not move.
     this.centerX += worldBefore.x - worldAfter.x;
     this.centerY += worldBefore.y - worldAfter.y;
   }

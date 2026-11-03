@@ -2,10 +2,10 @@
 // resolved to, and whether the answers on screen were computed under that project's config or under
 // the built-in catalog.
 //
-// Per-design config decides which rules run, and a findings list cannot say which config produced it.
-// A rule that never ran because a project did not ask for it looks exactly like a rule that ran and
-// found nothing, so the bar states whose rules are on screen. The convention bar does the same one
-// level down.
+// Per-design config decides which rules run, and a findings list cannot say which config produced
+// it. Imagine a project that did not ask for a rule. The rule never runs, and on screen it looks
+// exactly like a rule that ran and found nothing. So the bar states whose rules are on screen. The
+// convention bar does the same one level down.
 
 // ProjectState is what the bar renders.
 export interface ProjectState {
@@ -54,8 +54,8 @@ export function projectLabel(s: ProjectState): string {
 }
 
 // isOverridden reports whether the user chose the built-in catalog over this design's own project.
-// A design with no project is not overridden. The bar styles the overridden state so it stays
-// visible.
+// A design with no project is not overridden. The bar styles the overridden state so a reader
+// notices it.
 export function isOverridden(s: ProjectState): boolean {
   return s.plain;
 }

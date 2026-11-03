@@ -1,10 +1,10 @@
 // An AREA is a set of parts, pins and wires selected together on one sheet (agni issue 904), by
 // Shift-dragging a rectangle over the drawing or Shift-clicking entities in and out of it.
 //
-// What is inside is read off the rendered document, the same keyed elements a click picks, so forming
-// the set asks the server nothing. Nets are never members, because a net may continue off the sheet:
-// a net is classified from the area's pins instead, internal when every one of its pins is in the
-// area and boundary otherwise (properties.ts).
+// The members are read off the rendered document, from the keyed elements a click also picks, so
+// forming the set asks the server nothing. Nets are never members, because a net may continue off
+// the sheet. Instead a net is classified from the area's pins. It is internal when every one of its
+// pins is in the area, and boundary otherwise (properties.ts).
 
 import type { Selection } from "./selection.js";
 
@@ -29,7 +29,7 @@ export function emptyMembers(): Members {
   return { refs: [], pins: [], wires: [] };
 }
 
-// rectOf is the rectangle a drag from one corner to the other spans, whichever way it went.
+// rectOf returns the rectangle spanned by a drag from one corner to the other, whichever way it went.
 export function rectOf(x0: number, y0: number, x1: number, y1: number): ClientRect {
   return { left: Math.min(x0, x1), top: Math.min(y0, y1), right: Math.max(x0, x1), bottom: Math.max(y0, y1) };
 }
@@ -38,11 +38,11 @@ function inside(b: ClientRect, r: ClientRect): boolean {
   return b.left >= r.left && b.right <= r.right && b.top >= r.top && b.bottom <= r.bottom;
 }
 
-// membersIn is what lies wholly inside r on the drawing root. An entity drawn as several elements (a
-// part is one per symbol shape, a net one per wire) is inside only when all of its elements are, for
-// a part, and when any one wire element is, for a net, since a net's wires are its separate segments.
-// A pin of a part that is wholly inside is the part's, not listed apart. boxOf measures an element and
-// is the browser's own unless a test passes one, since jsdom has no layout.
+// membersIn returns what lies wholly inside r on the drawing root. A part is drawn as one element
+// per symbol shape, and it is inside only when all of them are. A net is drawn as one element per
+// wire, and it is inside when any one wire element is, since a net's wires are its separate segments.
+// A pin of a part that is wholly inside counts as the part's and is not listed apart. boxOf measures
+// an element. It is the browser's own unless a test passes one, since jsdom has no layout.
 export function membersIn(root: ParentNode, r: ClientRect, boxOf: (el: Element) => ClientRect = (el) => el.getBoundingClientRect()): Members {
   const parts = new Map<string, boolean>();
   for (const el of root.querySelectorAll('[data-kind="component"][data-ref]')) {
@@ -65,8 +65,9 @@ export function membersIn(root: ParentNode, r: ClientRect, boxOf: (el: Element) 
   return { refs: refs.sort(), pins: [...pins].sort(), wires: [...wires].sort() };
 }
 
-// toggle adds the entity a Shift-click names to the area or takes it out. A pin of a part already in
-// the area toggles the whole part, since the part holds it, and a bus is not an area member.
+// toggle adds the entity named by a Shift-click to the area, or takes it out. A pin of a part
+// already in the area toggles the whole part, since the part holds it, and a bus is not an area
+// member.
 export function toggle(m: Members, sel: Selection): Members {
   const flip = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v].sort());
   switch (sel.kind) {
@@ -89,9 +90,10 @@ export function size(m: Members): number {
   return m.refs.length + m.pins.length + m.wires.length;
 }
 
-// areaSelection is the Selection an area is everywhere a selection goes: the panel, the selection
-// bar, an Ask row. nets is every net the area touches, through a member part's pins, a member pin or
-// a wire, given pinNets (a part's pins and their nets) to reach a part's nets.
+// areaSelection turns an area into a Selection, for the panel, the selection bar, an Ask row and
+// anywhere else a selection goes. nets holds every net the area touches through a member part's pins,
+// a member pin or a wire. pinNets lists a part's pins and their nets, so the function can reach a
+// part's nets.
 export function areaSelection(m: Members, pinNets: (ref: string) => { pin: string; net: string }[]): Selection {
   const nets = new Set(m.wires);
   for (const ref of m.refs) for (const p of pinNets(ref)) if (p.net) nets.add(p.net);

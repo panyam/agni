@@ -16,8 +16,8 @@ import { SnapshotService } from "./gen/agni/v1/webapi/snapshot_pb.js";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 import { pageFlattens } from "./router.js";
 
-// engineFetch, when set, answers every client's requests in place of the network, which is how the
-// in-browser engine serves the same clients `agni serve` does (agni issue 178).
+// When engineFetch is set, it answers every client's requests in place of the network. The
+// in-browser engine uses it to serve the same clients `agni serve` does (agni issue 178).
 let engineFetch: typeof globalThis.fetch | undefined;
 
 // useEngineFetch routes every client created after it through f. Call it before the page builds its
@@ -26,8 +26,8 @@ export function useEngineFetch(f: typeof globalThis.fetch): void {
   engineFetch = f;
 }
 
-// timingMode is the page address's ?timing value: "" when absent, "explain" to ask for query plans
-// too, anything else for the timings alone (agni issue 914).
+// timingMode returns the page address's ?timing value. It is "" when absent. "explain" asks for
+// query plans too, and anything else asks for the timings alone (agni issue 914).
 export function timingMode(): string {
   try {
     const v = new URLSearchParams(globalThis.location?.search ?? "").get("timing");
@@ -41,10 +41,10 @@ export function timingMode(): string {
 // breakdown the engine sends back as "agni timing <rpc>: <RequestTiming as JSON>". The browser engine
 // answers it as a server does, so the same breakdown shows for a design read in the page.
 //
-// The logged JSON also carries `page`, the request's start and wall time on the page's clock, so the
-// time a request spent waiting outside the engine (queued behind a worker, or in transit) is the
-// difference from totalMicros (agni issue 968). A request that throws is logged with its `error`, since
-// its time counts as much as an answered one's.
+// The logged JSON also holds `page`, the request's start and wall time on the page's clock. A
+// request can wait outside the engine, queued behind a worker or in transit, and the wall time
+// minus totalMicros measures that wait (agni issue 968). A request that throws is logged with its
+// `error`, since its time counts as much as an answered one's.
 export function timingInterceptor(mode: string): Interceptor {
   return (next) => async (req) => {
     req.header.set("Agni-Timing", mode);
@@ -76,9 +76,9 @@ function withPage(t: string, page: { startMs: number; wallMs: number }): string 
 }
 
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the
-// app talks to the same origin that served it (the `agni serve` dev server). A question whose
-// snapshot the host no longer holds is recovered through the page's registry and asked again
-// (agni issue 1061), except on the transport the registry itself ingests through.
+// app talks to the same origin that served it (the `agni serve` dev server). Sometimes the host
+// no longer holds a question's snapshot. The page's registry then recovers the snapshot and the
+// question is asked again (agni issue 1061), except on the registry's own ingest transport.
 export function newTransport(baseUrl = "/", recover = true) {
   const mode = timingMode();
   const interceptors = mode ? [timingInterceptor(mode)] : [];

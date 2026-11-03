@@ -30,8 +30,8 @@ const site: Record<string, unknown> = {
   },
 };
 
-// engine is what the page's engine answers: the browser mount a dropped design is read from, and the
-// gateway, whose files the open design brought into it.
+// engine is what the page's engine answers. It lists two mounts. The browser mount `local` holds a
+// dropped design. The gateway is there because the open design brought its files into the engine.
 const engine: Record<string, unknown> = {
   ListMounts: {
     mounts: [

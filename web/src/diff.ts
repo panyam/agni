@@ -1,7 +1,7 @@
-// Pure logic for the visual diff (WS9-005). It turns a DiffDesignsResponse into the per-side
-// highlight layers each canvas draws, the legend the panel shows, and the sheet pairing the
-// selector offers. DiffPresenter makes the RPCs and the views render, so the side-filtering and
-// coloring rules test without a transport or a DOM.
+// Pure logic for the visual diff (WS9-005). It turns a DiffDesignsResponse into per-side highlight
+// layers for each canvas, a legend for the panel, and a sheet pairing for the selector.
+// DiffPresenter makes the RPCs and the views render, so the side-filtering and coloring rules can
+// be tested without a transport or a DOM.
 
 import type { HighlightSpec } from "./highlights.js";
 import type { DiffDesignsResponse, DiffReport } from "./gen/agni/v1/webapi/diff_pb.js";
@@ -49,7 +49,7 @@ const CLASS_ORDER = ["soft", "renamed", "changed", "hard", "new", "added", "dele
 // sideSpecs turns the response's highlight maps into one HighlightSpec per change class
 // present on the given side, colored from DIFF_COLORS, in CLASS_ORDER. Names are sorted so
 // the specs (and therefore the overlay requests) are deterministic. Returns [] when nothing
-// on this side changed, which the caller treats as "no overlay".
+// on this side changed, and the caller treats that as "no overlay".
 export function sideSpecs(
   componentStatus: Record<string, string>,
   netStatus: Record<string, string>,
@@ -76,7 +76,7 @@ export function sideSpecs(
   return specs;
 }
 
-// LegendEntry is one row of the diff legend: the change class, its display label, its
+// LegendEntry is one row of the diff legend. It holds the change class, its display label, its
 // swatch color, and how many entities carry it across the whole diff, not the visible sheet.
 export interface LegendEntry {
   cls: string;
@@ -130,11 +130,11 @@ export function itemPairs(item: ChangedItem, pairs: SheetPair[]): number[] {
   return out;
 }
 
-// ChangedItem is one row of the changes panel (WS9-006): a changed entity with its class,
-// its human detail line, and the sheets it lives on per side, from the response's sheet maps.
-// A side's list is empty when that side has no geometry or draws the entity on no sheet. key is
-// the entity's current name (a renamed net's NEW name, with oldName carrying the other), which
-// is also the highlight join key on the b side.
+// ChangedItem is one row of the changes panel (WS9-006). It holds a changed entity with its
+// class, its human detail line, and its sheets per side, from the response's sheet maps. A
+// side's list is empty when that side has no geometry or draws the entity on no sheet. key is
+// the entity's current name and also the highlight join key on the b side. For a renamed net
+// key is the NEW name and oldName holds the other.
 export interface ChangedItem {
   kind: "component" | "net";
   cls: string;
@@ -151,8 +151,8 @@ export function itemId(it: Pick<ChangedItem, "kind" | "key">): string {
   return `${it.kind}:${it.key}`;
 }
 
-// ITEM_CLASS_ORDER is the panel's group order, the order a reviewer triages in: components
-// first, then nets, with existence changes before modifications within each.
+// ITEM_CLASS_ORDER is the panel's group order. A reviewer triages components first, then
+// nets, with existence changes before modifications within each, and the groups follow that.
 export const ITEM_CLASS_ORDER = ["added", "removed", "changed", "new", "deleted", "renamed", "hard", "soft"] as const;
 
 type SheetIdsMap = DiffDesignsResponse["componentSheetsA"];
@@ -164,7 +164,7 @@ function sheetIds(m: SheetIdsMap, key: string): string[] {
 // changedItems flattens the response into the panel's rows, grouped in ITEM_CLASS_ORDER and
 // in report order within a class (the diff sorts components by ref_des and groups nets by
 // classification). A component's several changed fields fold into one row. A renamed net's
-// a-side sheets come from its OLD name, the name a's geometry carries.
+// a-side sheets come from its OLD name, since a's geometry uses that name.
 export function changedItems(resp: DiffDesignsResponse): ChangedItem[] {
   const r = resp.report;
   if (!r) return [];
@@ -231,8 +231,8 @@ export function ghostSpecs(componentStatus: Record<string, string>, netStatus: R
   return sideSpecs(comps, nets, "a");
 }
 
-// Frame is a sheet document's framed size in px (the SVG width/height attributes; the
-// renderer frames documents with a 1:1 viewBox).
+// Frame is a sheet document's framed size in px, read off the SVG width and height
+// attributes. The renderer frames documents with a 1:1 viewBox.
 export interface Frame {
   w: number;
   h: number;
@@ -249,7 +249,8 @@ export function svgFrame(markup: string): Frame | null {
 }
 
 // AlignmentVerdict says whether superimposing the two revisions on one canvas would be
-// truthful; reason (set only when not ok) is surfaced as the disabled toggle's explanation.
+// truthful. reason is set only when not ok, and the disabled toggle shows it as its
+// explanation.
 export interface AlignmentVerdict {
   ok: boolean;
   reason: string;
@@ -265,10 +266,10 @@ type PlacementMap = DiffDesignsResponse["sharedPlacementsA"];
 // checkAlignment is the WS9-007 overlay gate for one sheet pair. Both sides must exist, their
 // frames must match within FRAME_TOLERANCE, and the shared components placed on this pair must
 // sit within PLACEMENT_TOLERANCE of each other, normalized by the shared placements' own spread
-// because placement coordinates are geometry units, not frame px. With too few shared
-// placements on this pair (netlist-only sides, tiny sheets, a spread too small to normalize by)
-// it falls back to the frame verdict alone, so a same-tool re-export is not refused for a thin
-// sample.
+// because placement coordinates are geometry units, not frame px. It falls back to the frame
+// verdict alone when this pair has too few shared placements, as with netlist-only sides, tiny
+// sheets, or a spread too small to normalize by. A same-tool re-export is then not refused for a
+// thin sample.
 export function checkAlignment(
   pair: SheetPair,
   placementsA: PlacementMap,
@@ -303,8 +304,8 @@ export function checkAlignment(
   return { ok: true, reason: "" };
 }
 
-// SheetPair is one row of the sheet selector: the display name and the sheet id on each
-// side, "" where that side has no sheet of this name (an added or removed page).
+// SheetPair is one row of the sheet selector, with the display name and the sheet id on each
+// side. A side's id is "" where it has no sheet of this name, as for an added or removed page.
 export interface SheetPair {
   name: string;
   aId: string;

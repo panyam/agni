@@ -10,18 +10,18 @@
 
 import { chromium, type Browser, type Page } from "playwright-core";
 
-// launch opens a browser, or explains how to get one. playwright-core ships no installer of its
-// own, so the message names the command that actually fetches a browser.
 export const headed = process.env.HEADED === "1";
 
-// headedViewport is the page size a spec asks for: fixed headless, so layout assertions measure one
-// page, and the window's own size headed. A headed page larger than its window (1000 px tall on a
-// laptop whose window is shorter) left Chrome panning the view to whatever the spec clicked, so the
-// page seemed to jump up and down under the reader.
+// viewportFor is the page size a spec asks for. Headless it is fixed, so layout assertions measure
+// one page. Headed it is the window's own size. Imagine a headed page 1000 px tall on a laptop
+// whose window is shorter. Chrome panned the view to whatever the spec clicked, so the page seemed
+// to jump up and down under the reader.
 export function viewportFor(size: { width: number; height: number }): { width: number; height: number } | null {
   return headed ? null : size;
 }
 
+// launch opens a browser, or explains how to get one. playwright-core ships no installer of its
+// own, so the message names the command that actually fetches a browser.
 export async function launch(): Promise<Browser> {
   const slowMo = Number(process.env.SLOWMO ?? (headed ? 250 : 0)) || 0;
   try {
@@ -39,9 +39,10 @@ export async function launch(): Promise<Browser> {
 
 // withPage runs one body against a fresh page and always closes it.
 //
-// A page per assertion rather than one shared across the file, because these tests measure LAYOUT:
-// a previous test's scroll position, expanded badge strip or open drawer is exactly the kind of
-// leftover state that makes a geometry assertion pass for the wrong reason.
+// Each assertion gets its own page rather than one shared across the file, because these tests
+// measure LAYOUT. A previous test can leave a scroll position, an expanded badge strip or an open
+// drawer behind, and leftover state like that can make a geometry assertion pass for the wrong
+// reason.
 export async function withPage(browser: Browser, body: (page: Page) => Promise<void>): Promise<void> {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   try {

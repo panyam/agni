@@ -2,8 +2,8 @@ import type { JsonValue } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { isLinkOnly, type PageDispatch } from "./pageservice.js";
 
-// embed.ts is the postMessage transport for ViewerPageService (agni issue 1152): a parent page that
-// frames the viewer drives it without reloading it. A request is
+// embed.ts is the postMessage transport for ViewerPageService (agni issue 1152). A parent page frames
+// the viewer and drives it through this transport without reloading it. A request is
 //
 //   { agni: "agni-viewer/v1", id, method: "LocateVerdict", body: { id: "demo-pull-up:(net:SDA)" } }
 //
@@ -21,12 +21,12 @@ import { isLinkOnly, type PageDispatch } from "./pageservice.js";
 
 export const ENVELOPE = "agni-viewer/v1";
 
-// ACCEPTED marks the note a page posts the moment it takes a request, before the request is answered.
-// A report link waits a short while for a viewer to speak and loads the link if none does, and an
-// answer can take longer than that wait, since resolving a verdict link runs its rule (agni issue
-// 1271's CI, where a slow runner reloaded the viewer). The note tells the sender someone is working.
-// It is its own envelope so a sender that predates it, a report saved earlier, ignores it rather than
-// reading a reply with no ok in it as a refusal.
+// A page posts a note the moment it takes a request, before the request is answered, and ACCEPTED
+// marks that note. A report link waits a short while for a viewer to speak, and loads the link if none
+// does. An answer can take longer than that wait, since resolving a verdict link runs its rule (agni
+// issue 1271's CI, where a slow runner reloaded the viewer). The note tells the sender someone is
+// working. The note has its own envelope. A sender that predates it, such as a report saved earlier,
+// then ignores it rather than reading a reply with no ok in it as a refusal.
 export const ACCEPTED = "agni-viewer/v1/accepted";
 
 // PageRequest is one call from a host.
@@ -52,9 +52,9 @@ export function parseRequest(data: unknown): PageRequest | null {
   return { agni: ENVELOPE, id: d.id, method: d.method, body: d.body as JsonValue | undefined };
 }
 
-// originAllowed says whether a page at `origin` may drive this one: its own origin always, and
-// otherwise only an origin the server named (`agni serve --embed-origin`). An opaque origin ("null",
-// a sandboxed frame or a file) never matches.
+// originAllowed says whether a page at `origin` may drive this one. The page's own origin always
+// may. Otherwise only an origin the server named (`agni serve --embed-origin`) may. An opaque origin
+// never matches. A sandboxed frame or a file has one, spelled "null".
 export function originAllowed(origin: string, self: string, allowed: readonly string[]): boolean {
   if (origin === "null" || origin === "") return false;
   return origin === self || allowed.includes(origin);
@@ -65,8 +65,8 @@ export function embedOrigins(attr: string | undefined): string[] {
   return (attr ?? "").split(/\s+/).filter((o) => o !== "");
 }
 
-// HostWindow is the slice of a window the transport uses, so a test can stand two fakes in for the
-// page and its parent.
+// HostWindow is the part of a window that the transport uses, so a test can stand two fakes in for
+// the page and its parent.
 export interface HostWindow {
   addEventListener(type: "message", fn: (ev: MessageEvent) => void): void;
   removeEventListener(type: "message", fn: (ev: MessageEvent) => void): void;
@@ -78,9 +78,9 @@ export interface HostWindow {
 // the parent frame. A request from any other origin is answered permission_denied, so a host that is
 // not allowed learns why rather than waiting. It returns a function that stops listening.
 //
-// One request is taken from any origin, an opaque one included: ApplyLocation carrying only a url
-// (isLinkOnly), which a report opened from disk sends (agni issue 1156). Loading that link in the
-// viewer's window does the same, and any page holding the window can do that already. Its reply
+// One request is taken from any origin, an opaque one included. It is an ApplyLocation carrying only
+// a url (isLinkOnly), and a report opened from disk sends it (agni issue 1156). Loading that link in
+// the viewer's window does the same, and any page holding the window can do that already. Its reply
 // says only whether it worked, so the page tells such a sender nothing about the design.
 export function listenForHosts(win: HostWindow, dispatch: PageDispatch, allowed: readonly string[]): () => void {
   const self = win.location.origin;
@@ -89,7 +89,7 @@ export function listenForHosts(win: HostWindow, dispatch: PageDispatch, allowed:
     const req = parseRequest(ev.data);
     const source = ev.source as { postMessage(msg: unknown, targetOrigin: string): void } | null;
     if (!req || !source) return;
-    // An opaque origin cannot be named as a target, so its reply goes to "*", and carries no body.
+    // An opaque origin cannot be named as a target, so its reply goes to "*" and has no body.
     const reply = (r: PageReply) => source.postMessage(r, ev.origin === "null" ? "*" : ev.origin);
     const trusted = originAllowed(ev.origin, self, allowed);
     if (!trusted && !isLinkOnly(req.method, req.body)) {

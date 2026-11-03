@@ -92,9 +92,9 @@ describe("reasonMessage (unreadable schematic)", () => {
   });
 });
 
-// A search result is the one answer set whose rows are not all the same shape, so its cells carry
-// their own kinds (agni issue 338). resultFromResponse must keep them aligned with cells, including
-// for the rows a server sent none for.
+// Every answer set has rows of one shape, except a search result. So a search result's cells carry
+// their own kinds (agni issue 338). resultFromResponse must keep the kinds aligned with cells,
+// including for rows where the server sent no kind.
 describe("resultFromResponse cell kinds", () => {
   it("carries a per-row cell kind alongside the cells", () => {
     const resp = {
@@ -145,9 +145,9 @@ describe("cellKind", () => {
   });
 });
 
-// A design is full of names the regex engine would otherwise read as syntax. A reader typing one of
-// them means the characters, and a search that silently matched something else would be worse than
-// one that found nothing.
+// A design is full of names that the regex engine would otherwise read as syntax. A reader typing
+// one of them means the characters, and a search that silently matched something else would be
+// worse than one that found nothing.
 describe("searchPattern", () => {
   it("leaves an ordinary name alone, so the query stays readable in the box", () => {
     expect(searchPattern("CAN")).toBe("CAN");
@@ -264,8 +264,8 @@ describe("the relation picker's labels", () => {
   });
 });
 
-// Properties reads where a selected part or net is drawn off the find-by-name answer for its whole
-// name (agni issue 902).
+// Properties asks find-by-name about a selected part's or net's whole name, and reads where it is
+// drawn off that answer (agni issue 902).
 describe("drawnSheets", () => {
   // A part and a net sharing a name, as a find-by-name answer types them, row by row.
   const resp = create(RunQueryResponseSchema, {

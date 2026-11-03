@@ -1,7 +1,7 @@
 // The review panel's view-side types (WS9-052). A review RUN is a resource (WS9-053), so the presenter
 // lists the runs stored for the open design, creates new ones, and pushes a ReviewState the panel
-// renders. Clicking a finding emits onLocate, reusing the same locate path a query cell or a finding
-// already uses.
+// renders. Clicking a finding emits onLocate, which reuses the locate path of a query cell or a
+// finding.
 import type { CheckResults, ReviewManifest } from "./gen/agni/v1/checks/checks_pb.js";
 import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
 import { contextFromWire, type FindingItem } from "./findings.js";
@@ -25,8 +25,8 @@ export const OUTCOME_NEEDS_DATA = "needs-data";
 export const OUTCOME_INCONCLUSIVE = "inconclusive";
 
 // Tally counts item outcomes, mirroring core/review's Tally field for field. Both surfaces DERIVE it
-// from the item outcomes rather than reading it off the wire, and core/review/testdata/tally_twin.json
-// is the shared fixture that keeps them from drifting.
+// from the item outcomes rather than reading it off the wire. The shared fixture
+// core/review/testdata/tally_twin.json keeps them from drifting.
 export interface Tally {
   pass: number;
   fail: number;
@@ -70,8 +70,8 @@ export function tally(outcomes: string[]): Tally {
   return t;
 }
 
-// covered is the coverage axis, the number of items a mechanism exists for, which is everything
-// except not-automated. A team reads it as "how much of our checklist is mechanised", so an item
+// covered is the coverage axis. It counts each item that has a mechanism, so every item except
+// not-automated. A team reads it as "how much of our checklist is mechanised", so an item
 // awaiting a datasheet value or a design-intent declaration counts as COVERED, because a mechanism
 // ran and reported on it.
 export function covered(t: Tally): number {
@@ -107,7 +107,7 @@ export interface FindingExplain {
   note: string;
 }
 
-// findingKey names one finding of one item of one run, the key ReviewState.explained is held under.
+// findingKey names one finding of one item of one run. ReviewState.explained is keyed on it.
 export function findingKey(run: string, item: string, index: number): string {
   return `${run}\u0000${item}\u0000${index}`;
 }
@@ -119,7 +119,7 @@ export interface ReviewAreaView {
 
 // ReviewRunView is one stored run as the panel renders it. createdAt and producerVersion come from
 // the document's meta rather than being reconstructed, so an archived run says which build produced
-// it; design is what the run was about, and designHash is the revision identity that tells a reader
+// it. design names what the run was about. designHash is the revision identity, and it tells a reader
 // whether two runs describe the same bytes.
 export interface ReviewRunView {
   name: string;
@@ -132,9 +132,9 @@ export interface ReviewRunView {
 }
 
 // ChecklistOption is one manifest a user can run. A project's checklist carries its manifest as a
-// value, since the project declares it inline (agni issue 828), so running it needs no read. A file
-// found beside a design that belongs to no project carries only its ref, resolved through
-// GetReviewManifest when it runs.
+// value, since the project declares it inline (agni issue 828), so running it needs no read. A design
+// in no project can have a checklist file beside it. That option holds only the file's ref, and
+// GetReviewManifest resolves the ref when it runs.
 export interface ChecklistOption {
   ref: string;
   label: string;
@@ -162,7 +162,7 @@ export interface ReviewState {
   running: boolean;
   // storeConfigured is false when the engine keeps no review store: a server started without
   // --review-store, or the browser engine. A checklist still runs there, held by the page until the
-  // reader leaves it (agni issue 931), and the panel says so. It stays distinct from "no runs yet",
+  // reader leaves it (agni issue 931), and the panel says so. It is distinct from "no runs yet",
   // because one is a deployment that cannot keep runs and the other is a design nobody has reviewed.
   storeConfigured: boolean;
   // error is a message to show instead of results, "" when fine.
@@ -237,7 +237,7 @@ export function reviewFromWire(rv: Review): ReviewRunView {
           message: f.message,
           inconclusive: f.inconclusive ?? false,
           context: contextFromWire(f.context),
-          // Badged by id alone: the panel needs a sheet to open, and the label is the viewer's to look up.
+          // Badged by id alone. The panel needs a sheet to open, and the viewer looks up the label.
           sheets: (f.sheets ?? []).map((id) => ({ id, name: id })),
           locateReason: f.locateReason ?? LocateReason.UNSPECIFIED,
         })),
@@ -246,8 +246,8 @@ export function reviewFromWire(rv: Review): ReviewRunView {
   };
 }
 
-// itemQueries indexes a checklist's inline queries by item id. It reads the snapshot the run scored
-// rather than the checklist file, which may have changed since.
+// itemQueries indexes a checklist's inline queries by item id. It reads the snapshot that the run
+// scored, since the checklist file may have changed.
 function itemQueries(m: ReviewManifest | undefined): Map<string, ItemQuery> {
   const out = new Map<string, ItemQuery>();
   for (const a of m?.areas ?? []) {
@@ -297,8 +297,8 @@ const KNOWN_OUTCOMES = new Set(Object.keys(OUTCOME_LABEL));
 //
 // The mapping is an accessibility decision rather than styling. Only `pass` may look like a pass,
 // and everything else has to read as unfinished, because a question nobody answered must not score
-// as answered. An unknown outcome gets `rv-unknown`, styled like the unanswered group, since an
-// optimistic guess about a verdict this build does not understand is the one guess that can mislead.
+// as answered. An unknown outcome gets `rv-unknown`, styled like the unanswered group. This build
+// does not understand that verdict, and an optimistic guess about it can mislead.
 export function outcomeClass(outcome: string): string {
   if (!KNOWN_OUTCOMES.has(outcome)) return "rv-unknown";
   return "rv-" + outcome.replace(/[^a-z0-9]+/g, "-");

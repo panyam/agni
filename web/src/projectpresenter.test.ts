@@ -5,7 +5,7 @@ import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "./project.js";
 
-// A viewer harness wired with a ProjectService whose resolution the test controls. Everything else
+// A viewer harness wired with a ProjectService. The test controls how it resolves. Everything else
 // is stubbed to the minimum the presenter touches on open.
 function harness(
   resolve: unknown,
@@ -18,8 +18,9 @@ function harness(
   const listReviews = vi.fn(async () => ({ reviews: [] }));
   const createReview = vi.fn(async (_req: unknown) => ({ name: "reviews/r1" }));
   const getReviewManifest = vi.fn(async (_req: unknown) => ({ manifest: { name: "from a file" } }));
-  // ListChecklists answers from the project's COMPOSED config. By default that is what the resolved
-  // project declares itself; a test passes `listed` for a project that inherits more.
+  // ListChecklists answers from the project's COMPOSED config. By default that config holds only
+  // what the resolved project declares itself. A test passes `listed` for a project that inherits
+  // more.
   const declared = (resolve as { project?: { name?: string; config?: { checklists?: unknown[] } } })?.project;
   const listChecklists = vi.fn(async (_req: unknown) =>
     listed ?? { project: declared?.name ?? "", checklists: declared?.config?.checklists ?? [] });
@@ -73,7 +74,7 @@ function harness(
   return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir, createReview, getReviewManifest, listChecklists };
 }
 
-// last is the most recent state the bar was pushed, which is what a user is actually looking at.
+// last returns the most recent state pushed to the bar. A user is actually looking at that state.
 function last(onProject: ReturnType<typeof vi.fn>): ProjectState {
   const calls = onProject.mock.calls;
   if (calls.length === 0) throw new Error("the project bar was never pushed");
@@ -96,7 +97,7 @@ const inProject = {
   },
 };
 
-// refs is what a picker was last offered, which is what a user can actually choose.
+// refs returns what a picker was last offered. A user can actually choose only those.
 function refs(push: ReturnType<typeof vi.fn>, key: "choices" | "checklists"): string[] {
   const calls = push.mock.calls;
   for (let i = calls.length - 1; i >= 0; i--) {
@@ -122,7 +123,7 @@ describe("project resolution is visible", () => {
   });
 
   // The served viewer shows the file it was asked for; a silent swap has no browser equivalent. So
-  // the resolution is surfaced and acting on it stays the user's move.
+  // the resolution is surfaced and acting on it is left to the user.
   it("surfaces that the open file is a companion rather than the entry", async () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.kicad_pcb");
@@ -156,8 +157,8 @@ describe("the built-in catalog toggle", () => {
 
     await h.presenter.setPlainCatalog(true);
 
-    // Findings from one catalog beside the rule set of another is the drift the toggle exists
-    // to make visible, so both are recomposed.
+    // The toggle exists to make one drift visible, findings from one catalog shown beside the
+    // rule set of another. So both are recomposed.
     expect(h.listRules.mock.calls.length).toBeGreaterThan(rulesBefore);
     expect(h.checkDesign.mock.calls.length).toBeGreaterThan(checksBefore);
   });
@@ -233,8 +234,8 @@ describe("the config pickers offer one kind each", () => {
     expect(req.manifest.name).toBe("Gateway house checklist");
   });
 
-  // A profile is composed into the catalog, never selected as a vocabulary or run as a checklist, so
-  // there is no picker it is an answer to.
+  // A profile is composed into the catalog, never selected as a vocabulary or run as a checklist,
+  // so no picker offers it.
   it("offers profiles to neither picker", async () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.edn");

@@ -1,10 +1,11 @@
-// FindingFeedback is everything a "this looks wrong" report says about a finding (agni issues 858,
-// 1057): the rule's name when agni ships it, its severity, whether it was inconclusive, and the
-// engine's version. It has no field for the finding's subject, pin, message, context or sheets, or
-// for a rule a project wrote, whose name is the project's, so the issue it prefills cannot carry any
-// of them however it is built. The CLI's trial report (Go, feedback.Report) holds the same line.
+// FindingFeedback holds everything a "this looks wrong" report says about a finding (agni issues
+// 858, 1057). That is the rule's name when agni ships it, its severity, whether it was
+// inconclusive, and the engine's version. It has no field for the finding's subject, pin, message,
+// context or sheets. It has none for a rule a project wrote either, since that name is the
+// project's. So the issue it prefills cannot hold any of them however it is built. The CLI's trial
+// report (Go, feedback.Report) holds the same line.
 export interface FindingFeedback {
-  // rule is the shipped rule's name, "" for a rule the design's project or an overlay composed.
+  // rule is the shipped rule's name, "" for a rule that the design's project or an overlay composed.
   rule: string;
   severity: string;
   inconclusive: boolean;

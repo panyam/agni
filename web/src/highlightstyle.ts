@@ -52,8 +52,8 @@ export function saveHighlightStyle(storage: StyleStorage, style: HighlightStyle)
 // SHOW_ALL_KEY remembers whether this viewer draws every finding of a run at once (agni issue 356).
 export const SHOW_ALL_KEY = "agni-highlight-show-all";
 
-// loadShowAll reads the saved choice, false when nothing is saved or the store cannot be read, which
-// is the default: a run lights nothing until a finding is clicked.
+// loadShowAll reads the saved choice. It returns false, the default, when nothing is saved or the
+// store cannot be read, and a run then lights nothing until a finding is clicked.
 export function loadShowAll(storage: Pick<Storage, "getItem">): boolean {
   try {
     return storage.getItem(SHOW_ALL_KEY) === "1";

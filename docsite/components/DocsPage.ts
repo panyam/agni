@@ -1,12 +1,12 @@
-// DocsPage is the base client bundle loaded on a page that opts into a
-// playground (front-matter `playground: viewer`, injected by BasePage.html via
-// the gen.DocsPage.html include esbuild emits).
+// DocsPage is the base client bundle for a page that opts into a playground
+// with the front-matter `playground: viewer`. esbuild emits the
+// gen.DocsPage.html include, and BasePage.html injects the bundle through it.
 //
 // It hydrates the inline interactive tags on the page. Today that is
-// <agni-viewer> (a pan/zoom canvas over a build-time-baked design SVG). Once
-// the wasm-FS demo backend lands, the same hydration mounts <agni-query> /
-// <agni-diff> against the in-browser engine, mirroring how the notations docs
-// hydrate <notation>.
+// <agni-viewer>, a pan/zoom canvas over a design SVG baked at build time. Once
+// the wasm-FS demo backend ships, the same hydration will mount <agni-query> /
+// <agni-diff> against the in-browser engine, as the notations docs hydrate
+// <notation>.
 //
 // Built by build.mjs (esbuild) into static/js/gen/.
 

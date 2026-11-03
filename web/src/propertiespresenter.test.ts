@@ -192,8 +192,8 @@ describe("a selection's own checks", () => {
   });
 });
 
-// agni issue 918: a cancelled run ends the worker a selection's check was queued on, so a failed
-// answer is asked again when a run ends, and not on every other push.
+// agni issue 918: a selection's check can be queued on a worker, and a cancelled run ends that
+// worker. So a failed answer is asked again when a run ends, and not on every other push.
 describe("a selection's checks after a cancelled run", () => {
   it("asks a failed selection again when a run ends, and only then", async () => {
     let fail = true;

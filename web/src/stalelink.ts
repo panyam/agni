@@ -14,8 +14,9 @@ export type LinkTrust =
   // The link named a revision and this server read different bytes.
   | "mismatch";
 
-// StaleLinkNote is what the strip renders. Null when there is nothing to say, which covers both the
-// link that named no revision (nothing was claimed) and the link that matched (the claim held).
+// StaleLinkNote is what the strip renders. It is null when there is nothing to say. That covers a
+// link that named no revision, since nothing was claimed, and a link that matched, since the claim
+// held.
 export interface StaleLinkNote {
   trust: LinkTrust;
   // claimed and served are the SHORT forms, for a reader comparing two digests by eye. The full
@@ -33,8 +34,8 @@ export function shortHash(h: string): string {
 
 // staleLinkNote compares the revision a link claimed against the one this server read.
 //
-// claimed is the URL's ?hash= ("" when the link named none, which is what the CLI emits for a design
-// it could not hash). served is GetDesignResponse.content_hash ("" when the server could not hash).
+// claimed is the URL's ?hash=, and "" when the link named none. The CLI names none for a design it
+// could not hash. served is GetDesignResponse.content_hash ("" when the server could not hash).
 export function staleLinkNote(claimed: string, served: string): StaleLinkNote | null {
   if (!claimed) return null; // the link made no claim, so there is none to check
   if (!served) return { trust: "unverifiable", claimed: shortHash(claimed), served: "" };

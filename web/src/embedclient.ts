@@ -1,15 +1,16 @@
 import { ENVELOPE, type PageReply } from "./embed.js";
 
-// embedclient.ts is the parent's half of the postMessage transport (agni issue 1152), as a `fetch`
-// a Connect transport can send through, so a parent written in TypeScript drives a framed viewer with
-// the generated client:
+// embedclient.ts is the parent's half of the postMessage transport (agni issue 1152). It is a `fetch`
+// that a Connect transport can send through. So a parent written in TypeScript drives a framed viewer
+// with the generated client:
 //
 //   const transport = createConnectTransport({ baseUrl: "https://viewer.invalid", fetch: frameFetch(frame.contentWindow, viewerOrigin, window) });
 //   const page = createClient(ViewerPageService, transport);
 //   await page.locateVerdict({ id: "demo-pull-up:(net:SDA)" });
 //
-// The baseUrl is never fetched. Only unary calls in Connect's JSON form are carried, which is every
-// rpc ViewerPageService has; a parent in another language posts the envelope embed.ts describes.
+// The baseUrl is never fetched. The transport carries only unary calls in Connect's JSON form, and
+// every rpc of ViewerPageService is one. A parent in another language posts the envelope that
+// embed.ts describes.
 
 // FrameTarget is the framed viewer's window, as the parent sees it.
 export interface FrameTarget {

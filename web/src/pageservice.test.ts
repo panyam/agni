@@ -51,8 +51,8 @@ describe("ViewerLocation on the wire", () => {
     expect(locationFromWire(locationToWire(full()))).toEqual(want);
   });
 
-  // The census the round trip cannot be: a field added to the proto and not to the conversion reads
-  // as zero on both sides of the round trip, so this compares the two field lists themselves.
+  // The round trip cannot act as a census. A field added to the proto and not to the conversion
+  // reads as zero on both sides of the round trip. So this compares the two field lists themselves.
   it("names the same fields as the router's location, less isDir", () => {
     const wire = ViewerLocationSchema.fields.map((f) => f.localName).sort();
     const ts = Object.keys(full()).filter((k) => k !== "isDir").sort();

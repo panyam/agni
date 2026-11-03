@@ -19,37 +19,38 @@ export interface ViewerLocation {
   layout: string;
   symbols: boolean;
   // flatten reads the design's hierarchical netlist whole (Snapshot.flatten_hierarchy, agni issue
-  // 1102). It is a property of the page rather than of one question, since every snapshot the page
-  // ingests carries it (pageFlattens), so it rides every address the viewer writes.
+  // 1102). It is a property of the page rather than of one question. Every snapshot the page
+  // ingests is read with it (pageFlattens), so every address the viewer writes includes it.
   flatten: boolean;
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
-  // SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET /checks/<id>`
-  // would need a fixed-arity design identity, and `/designs/<mount>/<path...>/` has a variable-length
-  // path, so a two-segment verb suffix cannot be told from a folder without the trailing slash.
+  // It is SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET
+  // /checks/<id>` would need a fixed-arity design identity, and `/designs/<mount>/<path...>/` has a
+  // variable-length path, so a two-segment verb suffix cannot be told from a folder without the
+  // trailing slash.
   verdict: string;
   // hash is the design revision the LINK was computed against ("sha256:<hex>"), "" when it named
   // none. It qualifies `verdict` ("this verdict was concluded about these bytes") and means nothing
   // without one.
   //
-  // PROVENANCE the viewer checks and reports on, never one it mints, since a hash is worth comparing
-  // only because whoever wrote the link put it there.
+  // It is PROVENANCE. The viewer checks it and reports on it, and never mints one. A hash is worth
+  // comparing only because whoever wrote the link put it there.
   hash: string;
   // rule is the rule name behind `verdict`, "" when the link named none. Like `hash`, it means
   // nothing without the verdict.
   //
-  // A HINT rather than part of the address, so the viewer resolves the verdict by running one rule
-  // instead of the catalog (1.95s against 21.78s on a 3980-component board, paid per click). The
-  // verdict id stays the identity, so a link with no rule, including every saved report, still
-  // resolves by the full run.
+  // It is a HINT rather than part of the address. With it the viewer resolves the verdict by running
+  // one rule instead of the catalog (1.95s against 21.78s on a 3980-component board, on every click).
+  // The verdict id is still the identity. So a link with no rule still resolves by the full run, and
+  // so does every saved report.
   //
-  // Not derived from the id, deliberately. VerdictID is generated and never parsed, because its
-  // escaping is what lets a subject ref carry its own colons and commas.
+  // The rule is deliberately not derived from the id. VerdictID is generated and never parsed. Its
+  // escaping lets a subject ref hold its own colons and commas.
   rule: string;
   // subjects are the verdict's nets, parts and pins in check.SubjectParam's spelling (`net:SDA`,
-  // `pin:U7.3`), empty when the link named none (agni issue 897). Like `rule`, a HINT: the viewer
-  // asks that one rule about these subjects alone rather than running it over the whole design, and a
-  // link without them resolves by the whole rule. They mean nothing without the verdict.
+  // `pin:U7.3`), empty when the link named none (agni issue 897). Like `rule`, they are a HINT. The
+  // viewer asks that one rule about these subjects alone rather than running it over the whole design.
+  // A link without them resolves by the whole rule. They mean nothing without the verdict.
   subjects: string[];
   // trace is a pin-to-pin question the viewer should ask on arrival, "U1.3,J1.1", "" when none.
   //
@@ -73,11 +74,11 @@ export interface ViewerLocation {
   title: string;
   binds: string[];
   // set and q open one query of the design's project query sets by name (agni issue 634), so a
-  // link to a long query stays short and follows the set's current text. Both or neither.
+  // link to a long query is short and follows the set's current text. Both or neither.
   set: string;
   q: string;
   // against is a design to compare the open one against on arrival, as "<mount>/<path>", "" when
-  // none (agni issue 1126). It starts the Compare the picker starts, so `agni diff --server` and an
+  // none (agni issue 1126). It starts the same Compare as the picker, so `agni diff --server` and an
   // MCP diff answer can link to a comparison. Read on arrival and not written back, like `query`,
   // since the comparison is the reader's own from then on.
   against: string;
@@ -91,7 +92,8 @@ export interface ViewerLocation {
 // passes it to setBase before anything builds or reads a URL.
 let base = "/";
 
-// setBase sets the path every URL the router builds or reads sits under. It always ends in "/".
+// setBase sets the base path. The router builds and reads every URL under it. The path always ends
+// in "/".
 export function setBase(b: string): void {
   base = b.endsWith("/") ? b : `${b}/`;
 }
@@ -131,7 +133,7 @@ export type DesignPage = typeof VIEW_SEGMENT | typeof LOAD_SEGMENT;
 
 // DROP_PARAM carries a dropped design's path within the browser mount on a static host. Such a host
 // serves only the pages `agni site` wrote, so a design under designs/local/<drop>/... has no page of
-// its own there, and its path rides in the query of the browser mount's one page instead.
+// its own there. Its path goes in the query of the browser mount's one page instead.
 const DROP_PARAM = "d";
 
 // BROWSER_MOUNT is the mount dropped files go into, the same name as wasm/drop.ts's.
@@ -178,10 +180,11 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.symbols) params.set("sym", "1");
   if (loc.flatten) params.set(FLATTEN_PARAM, "1");
   if (loc.verdict) params.set("verdict", loc.verdict);
-  // Only alongside its verdict, or the address bar keeps asserting a provenance nothing on screen
-  // depends on.
+  // Only alongside its verdict, or the address bar keeps asserting a provenance that nothing on
+  // screen depends on.
   if (loc.verdict && loc.hash) params.set("hash", loc.hash);
-  // Only alongside its verdict, or the next run gets scoped to a rule nothing on screen asked about.
+  // Only alongside its verdict, or the next run gets scoped to a rule that nothing on screen asked
+  // about.
   if (loc.verdict && loc.rule) params.set("rule", loc.rule);
   if (loc.verdict) for (const sub of loc.subjects) params.append("subject", sub);
   if (loc.trace) params.set("trace", loc.trace);
@@ -222,9 +225,10 @@ export function withFlatten(url: string): string {
   return u.pathname + u.search;
 }
 
-// keepTiming carries the address's ?timing onto url, for a page that moves the reader to another of
+// keepTiming copies the address's ?timing onto url, for a page that moves the reader to another of
 // its own pages. The Load page hands its query to the viewer whole, so a drop opened with ?timing
-// keeps it through both (agni issue 914's timings, lost on a drop's way to its Load page until this).
+// keeps it through both. Until this, a drop lost agni issue 914's timings on its way to its Load
+// page.
 export function keepTiming(url: string, search: string): string {
   const t = new URLSearchParams(search).get("timing");
   if (t === null) return url;
@@ -336,8 +340,8 @@ export interface SubjectRef {
 
 // subjectFromParam reads check.SubjectParam's spelling, `net:NAME`, `component:REF` or `pin:REF.PIN`,
 // or answers null for one naming nothing a scope covers. The kind ends at the first colon and a pin
-// splits at its last dot, as on the Go side, which core/check/testdata/subject_param_twin.json holds
-// both readers to.
+// splits at its last dot, as on the Go side. core/check/testdata/subject_param_twin.json holds both
+// readers to the same answers.
 export function subjectFromParam(s: string): SubjectRef | null {
   const at = s.indexOf(":");
   if (at < 0) return null;
@@ -361,7 +365,7 @@ export function subjectParam(s: { kind: string; subject: string; pin: string }):
 // bindsFromLink reads a link's `bind` values, each `name=value` as `--bind` spells it, into the query
 // panel's chips. A quoted value is text with its quotes dropped, as ParseBinding reads it; a pair with
 // no name is skipped. A name given more than once is bound to the list of its values in link order
-// (agni issue 1121), and a name given once stays a single value.
+// (agni issue 1121), and a name given once is a single value.
 export function bindsFromLink(binds: string[]): Bindings {
   const seen = new Map<string, string[]>();
   for (const b of binds) {

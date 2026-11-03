@@ -1,6 +1,6 @@
 // The workbench's port onto pdf.js, types only. Loading pdfrender.ts reaches for DOMMatrix, which
 // jsdom lacks, so a file taking a value from it cannot load in a component test. The PORT lives here
-// and the IMPLEMENTATION in pdfrender.ts, which is why regionview.tsx is testable. See
+// and the IMPLEMENTATION in pdfrender.ts, so regionview.tsx is testable. See
 // docsite/content/architecture/web-client.md#a-library-that-cannot-load-is-a-component-that-cannot-be-tested.
 //
 // `import type` is erased at compile time, so re-exporting a pdf.js type does not load pdf.js.
@@ -20,8 +20,8 @@ export interface RenderedPage {
 }
 
 // PdfSource is everything the workbench asks of pdf.js. It opens a document, rasterizes one page,
-// and names the URL the source bytes come from. `realPdfSource` in pdfrender.ts is the shipped
-// implementation, passed in by the composition root.
+// and names the URL that serves the source bytes. `realPdfSource` in pdfrender.ts is the shipped
+// implementation, and the composition root passes it in.
 export interface PdfSource {
   loadPdf(url: string): Promise<PDFDocumentProxy>;
   renderPage(doc: PDFDocumentProxy, pageNumber: number, scale: number): Promise<RenderedPage>;

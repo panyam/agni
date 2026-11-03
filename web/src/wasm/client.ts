@@ -1,19 +1,19 @@
-// The page's side of the engine workers (agni issue 178). `fetch` is what a Connect transport takes in
+// The page's side of the engine workers (agni issue 178). A Connect transport takes a `fetch` in
 // place of the network's, so every generated client and every panel drives the in-browser engine
 // unchanged, and a design's bytes never leave the page. The workers and their protocol are goapplib's
-// wasmhost (agni issue 863); this module adds what is agni's, bringing each design's files in as the
-// page first names it, and sending one the browser cannot hold to the server.
+// wasmhost (agni issue 863). This module adds the agni parts. It brings each design's files in when
+// the page first names it, and it sends a design the browser cannot hold to the server.
 //
 // The engine runs as two lanes (agni issue 911), each its own worker over its own copy of the design.
 // Go's wasm build runs one thread per worker, so a request that runs the rule catalog holds its worker
 // for seconds on a large board, and on one worker a query asked meanwhile waited for all of it (#900).
 // The jobs lane takes the requests that run rules or compare designs, and the serve lane everything
-// else. Aborting a request on a lane ends that lane's worker and starts a fresh one, which is the only
-// way to stop a Go job that never yields.
+// else. Aborting a request on a lane ends that lane's worker and starts a fresh one. Nothing else
+// stops a Go job that never yields.
 //
 // A third lane, prepare, loads a design ahead of its checks (agni issue 1061). Each request there gets
-// a worker of its own that ends once it has answered, so the board's parse leaves its peak memory in
-// no worker that lives on, and the jobs worker restores the parsed board from the shared store. Jobs
+// a worker of its own that ends once it has answered, so no long-lived worker keeps the peak memory
+// of the board's parse. The jobs worker restores the parsed board from the shared store. Jobs
 // requests wait while a prepare is under way, so the two never parse one board side by side.
 import { startLane, startWorker, workerFetch, workerMemory, workerStats, addFiles, type Files, type Lane, type WorkerStats } from "@panyam/tsappkit/wasmhost";
 
@@ -40,8 +40,8 @@ export const JOB_RPCS: ReadonlySet<string> = new Set([
 // board goes to the prepare lane, on a worker that ends after it, and any other to the serve lane.
 export const INGEST = "agni.v1.webapi.SnapshotService/Ingest";
 
-// laneFor is the lane a request's URL goes to, by its Connect procedure (the last two path segments,
-// so a page served under a prefix routes the same). readBoard is an Ingest body's read_board.
+// laneFor picks a request's lane from its URL's Connect procedure (the last two path segments, so a
+// page served under a prefix routes the same). readBoard is an Ingest body's read_board.
 export function laneFor(url: URL, readBoard = false): LaneName {
   const procedure = procedureOf(url);
   if (procedure === INGEST && readBoard) return "prepare";
@@ -53,8 +53,8 @@ function procedureOf(url: URL): string {
 }
 
 // An EngineLane is one worker of the engine, replaced after an abort. Files reach the worker that is
-// current when they are added, and a replacement starts without them, so a caller tracking what a
-// lane holds keys it on `holder`.
+// current when they are added, and a replacement starts without them. So a caller that tracks a
+// lane's files keys them on `holder`.
 export interface EngineLane {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   // holder resolves to the lane's current worker, as an opaque identity.
@@ -63,13 +63,13 @@ export interface EngineLane {
   // TRANSFERRED, so it is empty here afterwards.
   add(holder: object, name: string, files: Files): Promise<void>;
   memoryBytes(): Promise<number>;
-  // stats is the worker's wasm memory and its live Go heap, collecting garbage first, which pauses
-  // the worker. For measuring; the lane's own limit asks the same at idle moments.
+  // stats is the worker's wasm memory and its live Go heap. It collects garbage first, and that
+  // pauses the worker. It is for measuring. The lane's own limit asks the same at idle moments.
   stats(): Promise<WorkerStats>;
   // begin is set on a lane that starts a worker per request (prepare). It resolves to that worker and
-  // the fetch to send the request on, which ends the worker once it has answered; release ends it
-  // for a request that is sent elsewhere instead. A caller bringing files in first uses this rather
-  // than holder, since the worker it fills is the one the request must reach.
+  // to the fetch for the request. That fetch ends the worker once it has answered. release ends the
+  // worker when the request is sent elsewhere instead. A caller bringing files in first uses begin
+  // rather than holder, since the request must reach the worker that the caller fills.
   begin?(): Promise<LaneRun>;
 }
 
@@ -83,10 +83,10 @@ export interface LaneRun {
 export interface WasmEngine {
   // fetch answers one request on its lane (laneFor), with the network's signature.
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  // add KEEPS files in a mount for every lane: they are copied into each lane's worker, and into any
-  // worker that replaces one, because nothing else can bring them back. It is for files that exist
-  // only in the page (agni issue 854); a design on the server comes in per lane, through
-  // mountingFetch. The buffers stay usable here.
+  // add KEEPS files in a mount for every lane. They are copied into each lane's worker, and into
+  // any worker that replaces one, because nothing else can bring them back. It is for files that
+  // exist only in the page (agni issue 854); a design on the server comes in per lane, through
+  // mountingFetch. The buffers are still usable here.
   add(name: string, files: Files): Promise<void>;
   lanes: Record<LaneName, EngineLane>;
   // memoryBytes is each lane's wasm memory, which never shrinks, so it is the peak so far.
@@ -102,24 +102,25 @@ export interface EngineAssets {
 }
 
 export interface EngineOptions {
-  // oneLane runs both kinds of request on one worker, as the engine did before #911. For measuring
-  // what the lanes buy; no page sets it.
+  // oneLane runs both kinds of request on one worker, as the engine did before #911. It is for
+  // measuring what the lanes save; no page sets it.
   oneLane?: boolean;
-  // serveMaxBytes is the serve lane's memory limit. Wasm memory never shrinks, so a worker that read
-  // a large design keeps the read's peak for the rest of the visit. Past the limit, once idle, the
-  // lane replaces the worker only when a fresh one would come back smaller (wouldShrink), and the
-  // fresh one restores the design from the browser's cache on its next request rather than reading
-  // it (agni issue 911). A worker whose live heap is most of its memory is kept however far past the
-  // limit it is, since its replacement would restore the same state, which is what made the Jetson
-  // seed replace its worker after every request (agni issue 974). Unset means no limit.
+  // serveMaxBytes is the serve lane's memory limit. Wasm memory never shrinks, so a worker that
+  // read a large design keeps the read's peak for the rest of the visit. Once the worker is past
+  // the limit and idle, the lane replaces it only when a fresh one would come back smaller
+  // (wouldShrink). The fresh one restores the design from the browser's cache on its next request
+  // rather than reading it (agni issue 911). A worker whose live heap is most of its memory is kept
+  // however far past the limit it is, since its replacement would restore the same state. Without
+  // that rule the Jetson seed replaced its worker after every request (agni issue 974). Unset means
+  // no limit.
   serveMaxBytes?: number;
   // serveShrinkRatio is wouldShrink's ratio for the serve lane, SHRINK_RATIO when unset. For measuring.
   serveShrinkRatio?: number;
   // onRestart hears that a lane replaced its worker for passing its limit, and what it held.
   onRestart?: (lane: LaneName, stats: WorkerStats) => void;
   // onServeStats hears every measurement the serve lane takes of an idle worker past its limit, and
-  // whether it replaces the worker. For measuring: a caller asking the worker itself at the same
-  // moment races the lane, which may end the worker under it.
+  // whether it replaces the worker. It is for measuring. A caller that asks the worker itself at
+  // the same moment races the lane, and the lane may end the worker under it.
   onServeStats?: (stats: WorkerStats, replaced: boolean) => void;
 }
 
@@ -129,7 +130,7 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
   const kept = new Map<string, Files>(); // mount -> path -> bytes, the page's own copy
   const keptIn = new WeakMap<object, Map<string, Set<string>>>(); // worker -> mount -> paths it was given
 
-  // ensureKept copies the kept files a worker has not been given into it.
+  // ensureKept copies into a worker every kept file it has not been given yet.
   const ensureKept = async (w: Worker) => {
     let given = keptIn.get(w);
     if (!given) keptIn.set(w, (given = new Map()));
@@ -248,14 +249,15 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
   };
 }
 
-// SHRINK_RATIO is how small a worker's live heap must be beside its memory before replacing it pays.
-// On the Jetson seed the serve worker holds 377 MB live in 971 MB after a fresh read (0.39), and 386 MB
-// in 545 MB once restored (0.71), so this sits between the two (make wasm-bench, agni issue 990).
+// SHRINK_RATIO is how small a worker's live heap must be beside its memory before replacing the
+// worker is worth it. On the Jetson seed the serve worker holds 377 MB live in 971 MB after a fresh
+// read (0.39), and 386 MB in 545 MB once restored (0.71). So the ratio is set between the two (make
+// wasm-bench, agni issue 990).
 export const SHRINK_RATIO = 0.55;
 
-// wouldShrink reports whether a fresh worker would come back smaller than this one: its live heap is
-// what a replacement restores, and its wasm memory is what it holds now, which never shrinks. A
-// worker that reports no heap (a wasm built against goapplib before 0.7.4) is kept, since nothing
+// wouldShrink reports whether a fresh worker would come back smaller than this one. A replacement
+// restores this worker's live heap. This worker holds its wasm memory now, and that never shrinks.
+// A worker that reports no heap (a wasm built against goapplib before 0.7.4) is kept, since nothing
 // says a replacement would be smaller (agni issue 990).
 export function wouldShrink(s: WorkerStats, ratio: number): boolean {
   return s.heap !== undefined && s.heap.heapAlloc < s.memoryBytes * ratio;
@@ -270,9 +272,10 @@ export interface DesignFiles {
   totalSize: bigint | number;
 }
 
-// WITHHELD_PREFIX starts the placeholder the serve worker is given in place of a design's board file
-// (agni issue 992), which the engine recognises (internal/wasmengine/withheld.go). The two spellings
-// are held together by internal/wasmengine/testdata/withheld_twin.json.
+// WITHHELD_PREFIX starts a placeholder. The serve worker is given the placeholder in place of a
+// design's board file (agni issue 992), and the engine recognises it
+// (internal/wasmengine/withheld.go). internal/wasmengine/testdata/withheld_twin.json holds the two
+// spellings together.
 export const WITHHELD_PREFIX = "\0agni withheld\n";
 
 // withheldPlaceholder is the placeholder for a held-back file whose content hash is sha256.
@@ -280,8 +283,8 @@ export function withheldPlaceholder(sha256: string): Uint8Array {
   return new TextEncoder().encode(`${WITHHELD_PREFIX}${sha256}\n`);
 }
 
-// asksForWithheld reports whether a worker's error response is the engine saying a question read a
-// file it was held back from: FAILED_PRECONDITION with a BlobsMissing detail, as Connect writes it.
+// asksForWithheld reports whether a worker's error response says a question read a held-back file.
+// The engine says so with FAILED_PRECONDITION and a BlobsMissing detail, as Connect writes it.
 async function asksForWithheld(resp: Response): Promise<boolean> {
   try {
     const body = (await resp.json()) as { code?: string; details?: { type?: string }[] };
@@ -324,34 +327,36 @@ export interface MountingOptions {
   onServer?: (f: ServerFallback) => void;
 }
 
-// mountingFetch is the engine's fetch with the design's files brought in first (agni issue 853), and
-// with each jobs request held while a prepare request is under way (agni issue 1061), so a Run checks
-// sent mid-load restores the board the prepare worker is about to store instead of parsing it too. A
-// design keeps its server URL under the in-browser engine: before a request reaches a lane, every
-// `mount://` URI in its body is listed through `source`, once per design, and the files that lane's
-// worker does not already hold, by hash, are fetched and added under the same mount name. Each lane
-// brings its own, and a lane's replacement worker brings them again, since it starts empty (#911).
+// mountingFetch is the engine's fetch. It brings the design's files in first (agni issue 853). It
+// also holds each jobs request while a prepare request is under way (agni issue 1061). So a Run
+// checks sent mid-load restores the board that the prepare worker is about to store, instead of
+// parsing it too. A design keeps its server URL under the in-browser engine. Before a request
+// reaches a lane, every `mount://` URI in its body is listed through `source`, once per design.
+// Then the lane's worker is given each file it does not already hold by hash, fetched and added
+// under the same mount name. Each lane brings its own files, and a lane's replacement worker brings
+// them again, since it starts empty (#911).
 //
-// A question names a snapshot rather than files (agni issue 1061). The page's Ingest of each snapshot
-// passes through here, so its files are the ones that Ingest named, and the Ingest is sent again to
-// any worker that is asked about the snapshot without holding it: each worker keeps its own, and a
-// replacement starts with none. Files reaching a worker rebuild its engine, which drops the snapshots
-// it held, so a worker given files is ingested again before its next question.
+// A question names a snapshot rather than files (agni issue 1061). The page's Ingest of each
+// snapshot passes through here, so a snapshot's files are the ones its Ingest named. Each worker
+// keeps its own snapshots, and a replacement starts with none. So the Ingest is sent again to any
+// worker asked about the snapshot without holding it. Files reaching a worker rebuild its engine,
+// and the rebuild drops the snapshots it held. So a worker given files is ingested again before its
+// next question.
 //
 // The serve lane is given a placeholder for a design's board file rather than its bytes (agni issue
-// 992), since a query, a coverage or a trace builds no board, and on Jetson the board is 85 of the 92
-// MB. A question there that reads the board after all, such as the Board sheet or a query naming a
-// board relation, is refused by the engine as reading a held-back file, and is sent again once the
-// files are in. The engine decides, because only it knows which questions read the board, and it
-// refuses every question once one has read around a placeholder, so none is answered from a design
-// missing its copper. The jobs and prepare lanes always get every file, since a rule run reads the
-// board.
+// 992), since a query, a coverage or a trace builds no board, and on Jetson the board is 85 of the
+// 92 MB. Some questions there read the board after all, such as the Board sheet or a query naming a
+// board relation. The engine refuses such a question as reading a held-back file, and the page
+// sends it again once the files are in. The engine decides, because only it knows which questions
+// read the board. Once one question has read around a placeholder, it refuses every question, so
+// none is answered from a design missing its copper. The jobs and prepare lanes always get every
+// file, since a rule run reads the board.
 //
 // A design whose file set is over `maxBytes`, or whose listing fails, is analysed by the server
 // instead, and `onServer` hears why once per design. Every later request naming it goes to the
 // network, so one design never has its answers split between two engines.
 //
-// The body is read as Connect JSON, which is what the viewer's transport sends. A binary body names
+// The body is read as Connect JSON, since the viewer's transport sends that. A binary body names
 // no URI this can see, so it goes to the worker as is.
 export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   const { engine, source, network } = o;
@@ -454,10 +459,11 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return set;
   };
 
-  // send answers req on its lane, bringing the design's files into the worker first unless they
-  // already live in the page (a browser mount, which every worker is given at start), and ingesting
-  // each snapshot it names that the worker does not hold. ingestOf is the snapshot req itself ingests.
-  // On the serve lane the board files are held back, and brought in when the engine says req read one.
+  // send answers req on its lane. First it brings the design's files into the worker, unless they
+  // already live in the page. A browser mount lives in the page, and every worker is given it at
+  // start. Then it ingests every snapshot named in req that the worker does not hold. ingestOf is
+  // the snapshot that req itself ingests. On the serve lane the board files are held back, and
+  // brought in when the engine says req read one.
   const send = async (req: Request, uris: Set<string>, bringFiles: boolean, name: LaneName, snaps: string[], ingestOf?: string): Promise<Response> => {
     const lane = engine.lanes[name];
     if (name === "jobs") await afterPrepares();
@@ -476,7 +482,7 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
       }
     }
     // A request cancelled while its files were on their way stops here, before any worker sees it,
-    // and the files it brought stay for the next one (agni issue 918).
+    // and the files it brought are kept for the next one (agni issue 918).
     if (req.signal.aborted) {
       run?.release();
       throw req.signal.reason ?? new DOMException("aborted", "AbortError");
@@ -501,8 +507,8 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     const again = req.clone();
     const resp = await ask(req);
     if (resp.ok || !(await asksForWithheld(resp.clone()))) return resp;
-    // The engine refuses every question once one has read a placeholder, so every design it holds
-    // one of gets its files, not only this request's.
+    // The engine refuses every question once one has read a placeholder. So every design with a
+    // placeholder in this worker gets its files, not only this request's design.
     await Promise.all([...new Set([...backs, ...uris])].map((u) => bring(u, lane, worker)));
     return ask(again);
   };
@@ -552,14 +558,15 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   };
 }
 
-// HELD marks a path a worker holds a placeholder of, in mountingFetch's record of what each holds.
+// HELD marks a path where a worker holds a placeholder, in mountingFetch's record of what each
+// worker holds.
 const HELD = "held ";
 
 // abortable rejects as soon as signal fires, whatever stage the request is in (agni issue 918). A
-// request waits on its design's files reaching the worker before the lane sees it, and only the lane
-// stops on the signal, so without this a Cancel pressed during that wait did nothing until every file
-// had arrived, 85 MB on the Jetson board. The work it leaves behind finishes harmlessly: the files
-// land in the worker for the next request, and the lane drops a request whose signal has fired.
+// request waits for its design's files to reach the worker before the lane sees it, and only the
+// lane stops on the signal. Without this, a Cancel pressed during that wait did nothing until every
+// file had arrived, 85 MB on the Jetson board. The work left behind finishes harmlessly. The files
+// reach the worker for the next request, and the lane drops a request whose signal has fired.
 export function abortable<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
   if (signal.aborted) {
     work.catch(() => undefined);

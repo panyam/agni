@@ -1,5 +1,6 @@
-// Builds the zips the drop tests and the public demo exercise hand to the page. Node builtins and
-// erasable TypeScript only, so exercise.mjs can import it with Node's own type stripping.
+// The drop tests and the public demo exercise hand zips to the page, and this file builds them. It
+// uses Node builtins and erasable TypeScript only, so exercise.mjs can import it with Node's own
+// type stripping.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";

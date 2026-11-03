@@ -64,9 +64,10 @@ type WorkspaceClient = Client<typeof WorkspaceService>;
 // GetSheet SheetFormat.
 export type RenderMode = "webgl" | "svg" | "native";
 
-// sheetToOpen is the sheet to open before focusing something drawn on `drawnOn`: none when the
-// shown sheet is one of them or nothing says where it is drawn, else the first. A finding, a review
-// finding and a verdict all choose this way, so the three land alike (agni issue 1151).
+// sheetToOpen picks the sheet to open before focusing something drawn on the sheets in `drawnOn`.
+// It returns none when the shown sheet is one of them or nothing says where the thing is drawn, and
+// else the first. A finding, a review finding and a verdict all choose this way, so the three behave
+// alike (agni issue 1151).
 function sheetToOpen(drawnOn: string[], current: string): string {
   if (drawnOn.length === 0 || drawnOn.includes(current)) return "";
   return drawnOn[0];
@@ -114,7 +115,7 @@ export interface RenderView {
 // the composition root. Each field is a command-down surface, which the presenter pushes state into
 // and never reads back from. A panel field is that panel's framework-neutral view interface, so the
 // presenter calls setState and never touches a DOM node or a Solid signal (C3). summary, report,
-// and location stay plain functions because their hosts are not islands.
+// and location are plain functions because their hosts are not islands.
 export interface ViewSink {
   // sheetNavs are the sheet-navigation surfaces (the sheet tabs today), kept in sync from this one
   // source, so a second surface joins without presenter changes.
@@ -155,9 +156,9 @@ export interface ViewSink {
   // compare starts a comparison of the open design against another, as picking it in the Compare
   // picker does, when a link arrives naming one (agni issue 1126). Optional like location, since a
   // host without the Compare chrome has no comparison to start.
-  // nearRenames carries a link's rename_approx, so the comparison's tables pair them as the diff did.
+  // nearRenames holds a link's rename_approx, so the comparison's tables pair them as the diff did.
   compare?: (against: { mount: string; path: string }, opts?: { nearRenames?: boolean }) => void;
-  // showPanel brings a panel's tab forward, for a link whose answer lands there rather than on the
+  // showPanel brings a panel's tab forward, for a link whose answer appears there rather than on the
   // drawing (agni issue 1236). A saved layout can leave a query link's answer behind the Trace tab.
   // Optional like compare, since a host without a dock shows every panel it has.
   showPanel?: (panel: "query" | "trace") => void;
@@ -193,8 +194,8 @@ export interface ViewSink {
   // saveReport no-ops when the host offers no download.
   download?: (file: SavedFile) => void;
   linkBase?: string;
-  // events reports what a reader did once the viewer has done it (viewerevents.ts), which a guided
-  // tour advances on. Optional; a host with no tour has nothing listening.
+  // events reports what a reader did, once the viewer has done it (viewerevents.ts). A guided tour
+  // advances on these events. Optional; a host with no tour has nothing listening.
   events?: EmitViewerEvent;
 }
 
@@ -211,8 +212,8 @@ export interface SavedFile {
 // navigator's view interface, and RenderView and never a DOM node or a Solid signal (C3). It runs
 // in-process TS because file, sheet and mode switches are low-frequency (C7).
 export class ViewerPresenter {
-  // doc is the document half (agni issue 390): what is true of the open design and its config. This
-  // class is the interaction half and reads it; document.ts reads nothing back.
+  // doc is the document half (agni issue 390). It holds what is true of the open design and its
+  // config. This class is the interaction half and reads it; document.ts reads nothing back.
   readonly doc = new DocumentStore();
   private currentSheet = "";
   // Default to SVG, since it renders faithfully (with text) for every design, where WebGL is
@@ -241,21 +242,21 @@ export class ViewerPresenter {
   private checksRunning = false;
   // checksAbort stops the run in flight (agni issue 918). On the browser engine aborting a request
   // ends the jobs lane's worker and starts a fresh one; on a server it cancels the request, whose
-  // context stops the run. checksCancelled says the last run was stopped, so the panel does not read
-  // what it left unanswered as clean, until the next run or design.
+  // context stops the run. checksCancelled says the last run was stopped, until the next run or
+  // design. The panel then does not read the rules the run left unanswered as clean.
   private checksAbort: AbortController | null = null;
   private checksCancelled = false;
   // reviewAbort stops a checklist run in flight, the same way.
   private reviewAbort: AbortController | null = null;
 
-  // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
-  // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
-  // stale id in the address bar would promise a drawing the canvas is no longer showing.
+  // focusedVerdict is the id currently drawn as a proof, "" when none. It goes into the URL, so a link
+  // reopens on the same proof. Anything that replaces the highlight clears it, since a stale id in
+  // the address bar would promise a drawing the canvas is no longer showing.
   private focusedVerdict = "";
   // linkHash is the design revision the viewer's URL claimed, "" when it claimed none.
   // designContentHash is the revision this server actually read, off GetDesign. The stale-link note
-  // is computed from the pair, kept apart rather than reduced to a boolean so the note can tell
-  // "different bytes" from "could not check".
+  // is computed from the pair. The two are kept apart rather than reduced to a boolean, so the note
+  // can tell "different bytes" from "could not check".
   //
   // linkHash outlives the focused verdict. The claim is about the DESIGN this viewer read, so it
   // still holds after the reader dismisses a proof and re-focuses it; opening a different design
@@ -313,14 +314,14 @@ export class ViewerPresenter {
     private readonly snaps: SnapshotSource = snapshots(),
   ) {}
 
-  // drawn is the open design's snapshot under no overlay, which every drawing question names, so a
+  // drawn is the open design's snapshot under no overlay. Every drawing question names it, so a
   // change of convention draws nothing again.
   private drawn(): Promise<string> {
     return this.snaps.of(artifactUri(this.doc.mount, this.doc.path));
   }
 
-  // checked is the open design's snapshot under the convention the page shows, which every
-  // rule-running question names. With no convention chosen it is the drawn one.
+  // checked is the open design's snapshot under the convention the page shows. Every rule-running
+  // question names it. With no convention chosen it is the drawn one.
   private checked(): Promise<string> {
     return this.snaps.of(artifactUri(this.doc.mount, this.doc.path), this.overlay());
   }
@@ -338,20 +339,21 @@ export class ViewerPresenter {
 
   // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the result
   // to the query panel. With no file open it reports that as the panel's error rather than calling
-  // the service. A parse error or an unloadable design comes back as InvalidArgument, whose message
-  // the panel shows inline rather than as a toast. The busy flag rides in the pushed result so the
+  // the service. A parse error or an unloadable design comes back as InvalidArgument, and the panel
+  // shows its message inline rather than as a toast. The pushed result includes the busy flag, so the
   // panel disables Run while a query runs.
   //
-  // bindings are the values the query's variables are bound to (agni issue 793), sent as text, a list
-  // as a list of text values (agni issue 1121). limit
-  // caps the rows (agni issue 896), 0 for the whole answer. tab names the query panel tab that asked
-  // (agni issue 902), and the answer goes back to it, "" meaning the tab in front.
+  // bindings holds the values bound to the query's variables (agni issue 793). Each is sent as text,
+  // and a list as a list of text values (agni issue 1121). limit caps the rows (agni issue 896), 0 for
+  // the whole answer. tab names the query panel tab that asked (agni issue 902), and the answer goes
+  // back to it. "" means the tab in front.
   //
   // answers holds each tab's answer as the engine sent it, so Save CSV tabulates the answer the
   // reader is looking at rather than running the query again (agni issues 898 and 956).
   private answers = new Map<string, RunQueryResponse>();
   // asked holds each tab's last question as it was sent, so a row opened later can ask the same
-  // question again with witnesses (agni issue 794): a query, or the one-query set a set's tab ran.
+  // question again with witnesses (agni issue 794). The question is a query, or the one-query set
+  // that a set's tab ran.
   private asked = new Map<string, { query: string; bindings: Record<string, ReturnType<typeof wireBinding>>; limit: number } | { set: QuerySet }>();
   // explaining holds the tabs whose witnessed answer is on its way, so opening a second row while the
   // first is pending asks nothing more.
@@ -366,9 +368,9 @@ export class ViewerPresenter {
     }
     push(emptyResult(true));
     try {
-      // The overlay goes here too, because the vocabulary bar names the convention the answers on
-      // screen were computed under, and a Query panel answering under the server's would contradict
-      // it (WS3-113).
+      // The overlay goes here too. The vocabulary bar names the convention behind the answers on
+      // screen, and a Query panel answering under the server's convention would contradict it
+      // (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, wireBinding(value)]));
       this.asked.set(tab, { query: text, bindings: wire, limit });
       const resp = await this.query.runQuery({ snapshot: await this.checked(), query: text, bindings: wire, limit });
@@ -376,14 +378,14 @@ export class ViewerPresenter {
       push(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids)));
     } catch (e) {
       this.answers.delete(tab);
-      // A query that would not parse carries where it stopped, as an error detail.
+      // A query that would not parse reports where it stopped, as an error detail.
       const at = e instanceof ConnectError ? e.findDetails(TextPositionSchema)[0] : undefined;
       push(errorResult(e instanceof Error ? e.message : String(e), at?.caret ?? ""));
     }
   }
 
   // loadQuerySets lists the query sets the design's project keeps (agni issue 745) for the query
-  // panel's Sets menu. A failure, or a later design opened meanwhile, leaves the menu with none
+  // panel's Sets menu. If the listing fails, or another design opens meanwhile, the menu shows none
   // rather than another design's sets.
   private async loadQuerySets(mount: string, path: string): Promise<void> {
     if (!this.views.query || !this.query) return;
@@ -432,7 +434,7 @@ export class ViewerPresenter {
 
   // explainQuery asks a tab's last question again with witnesses (agni issue 794), when the reader
   // opens a row to see how it holds, and replaces the tab's answer with the witnessed one. The rows
-  // are the same rows in the same order, so a row the reader opened stays open on its own tree. A
+  // are the same rows in the same order, so a row the reader opened remains open on its own tree. A
   // failure leaves the answer on screen as it was, with its citations.
   async explainQuery(tab: string): Promise<void> {
     const asked = this.asked.get(tab);
@@ -444,12 +446,12 @@ export class ViewerPresenter {
         "set" in asked
           ? (await this.query.runQueries({ snapshot, set: asked.set, witnesses: true })).results[0]?.result
           : await this.query.runQuery({ snapshot, query: asked.query, bindings: asked.bindings, limit: asked.limit, witnesses: true });
-      // A tab asked something else meanwhile, or closed, keeps the answer it has.
+      // If the tab asked something else meanwhile, or closed, it keeps the answer it has.
       if (!resp || this.asked.get(tab) !== asked) return;
       this.answers.set(tab, resp);
       this.views.query.setState(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids), true), tab);
     } catch {
-      // The rows and their citations stay as they were.
+      // The rows and their citations are left as they were.
     } finally {
       this.explaining.delete(tab);
     }
@@ -502,8 +504,8 @@ export class ViewerPresenter {
     }
   }
 
-  // locateArea lights every member of an area at once (agni issue 904): its parts, its loose pins and
-  // the nets with a wire inside it. The area lives on the sheet on screen, so nothing is opened.
+  // locateArea lights every member of an area at once (agni issue 904), meaning its parts, its loose
+  // pins and the nets with a wire inside it. The area is on the sheet on screen, so nothing is opened.
   async locateArea(area: Selection): Promise<void> {
     const subjects = areaSubjects(area);
     if (subjects.length === 0) return;
@@ -521,8 +523,8 @@ export class ViewerPresenter {
   }
 
   // explainReviewFinding works out how one finding of an inline-query checklist item holds (agni
-  // issue 1166), by asking the item's own query, read off the run's checklist snapshot, with the
-  // finding's subject bound and witnesses on. That is the binding a scoped rule run makes, so the rows
+  // issue 1166). It reads the item's own query off the run's checklist snapshot, and asks it with the
+  // finding's subject bound and witnesses on. A scoped rule run makes the same binding, so the rows
   // are the rule's own rows for that subject. A finding is asked once; a failure is shown and asked
   // again the next time it opens. A stored run can predate the open design's revision, so a subject
   // with no row says the finding no longer holds rather than showing nothing.
@@ -562,8 +564,8 @@ export class ViewerPresenter {
   // locateVerdict focuses ONE verdict by its derived id and draws its proof, with the verdict's
   // context as ground and its subject as the figure on top.
   //
-  // This is the CLI-to-viewer hop. A row printed by `agni check --verdicts` carries the same id
-  // this resolves, computed independently on both sides from the same fields. An unknown id draws
+  // This is the CLI-to-viewer hop. A row printed by `agni check --verdicts` shows the same id that
+  // this resolves. Both sides compute it independently from the same fields. An unknown id draws
   // nothing and returns false rather than clearing the canvas, because a stale or mistyped link
   // should leave what the reader was looking at alone.
   //
@@ -571,7 +573,7 @@ export class ViewerPresenter {
   // is absent, the same "not computed" state the findings list models.
   //
   // It opens a sheet the verdict is drawn on when the shown sheet has none of its subjects, the same
-  // choice selectFinding makes, so a link, a click and a page call land alike (agni issue 1151).
+  // choice selectFinding makes, so a link, a click and a page call behave alike (agni issue 1151).
   async locateVerdict(id: string): Promise<boolean> {
     const v = this.doc.findVerdict(id);
     if (!v) return false;
@@ -614,8 +616,8 @@ export class ViewerPresenter {
     return this.doc.sheets.map((s) => ({ id: s.id, name: s.name }));
   }
 
-  // resolveSheetForFinding is the sheet a Violations click or a verdict locate should open:
-  // wire badges first, then the same net/channel heuristics when EDIF carries no sheets.
+  // resolveSheetForFinding picks the sheet that a Violations click or a verdict locate should open.
+  // It tries wire badges first, then the same net/channel heuristics when EDIF has no sheets.
   private resolveSheetForFinding(f: FindingItem, explicit?: string): string {
     if (explicit) return explicit;
     if (f.sheets.length > 0) return sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet);
@@ -715,8 +717,8 @@ export class ViewerPresenter {
     const newFile = mount !== this.doc.mount || path !== this.doc.path;
     if (!keepLayout && newFile) this.currentLayout = "";
     // A different design retires the link's claim, since the hash described the bytes behind the
-    // OLD path. restore() re-sets it after this call, which is why it clears here rather than
-    // reading a location.
+    // OLD path. restore() re-sets it after this call, so this code clears it rather than reading a
+    // location.
     if (newFile) {
       this.linkHash = "";
       this.views.staleLinkNote(null);
@@ -796,7 +798,7 @@ export class ViewerPresenter {
   // restore reopens the viewer at a URL-derived location. It adopts the mode/layout/symbol knobs
   // from the location (so the design loads and renders in that view) and opens the file at the
   // requested sheet. Used on initial load and on browser back/forward, so a refresh or a shared
-  // link lands where you left off rather than on the empty shell. It sets the knobs directly (not
+  // link opens where you left off rather than on the empty shell. It sets the knobs directly (not
   // via setMode/setLayout) to avoid their re-render side effects, so the single openFile below does
   // one load and its native-unavailable guard still corrects an impossible mode.
   async restore(loc: ViewerLocation): Promise<void> {
@@ -812,7 +814,7 @@ export class ViewerPresenter {
     }
     // A verdict id in the link RUNS THE CHECKS before resolving it, a deliberate exception to
     // checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
-    // pasted link lands on "Press Run checks" and resolves nothing
+    // pasted link opens on "Press Run checks" and resolves nothing
     // (docsite/content/architecture/web-client.md#a-panel-that-works-on-click-can-still-be-broken-on-arrival).
     // The hash is adopted and reported BEFORE the checks run and the proof is drawn, so the warning
     // is on screen before the highlight it warns about.
@@ -821,23 +823,23 @@ export class ViewerPresenter {
     await this.arrive(loc);
   }
 
-  // arrive asks what a location carries beyond the design and its view: a verdict, a trace, a query,
-  // a set member, a comparison. restore calls it after opening the design and applyLocation on the
-  // design already open, so a cold link and a hot call ask alike. It answers whether the location's
-  // verdict resolved, false when it named none.
+  // arrive asks what a location holds beyond the design and its view, such as a verdict, a trace, a
+  // query, a set member or a comparison. restore calls it after opening the design, and
+  // applyLocation calls it on the design already open, so a cold link and a hot call ask alike. It
+  // answers whether the location's verdict resolved, false when it named none.
   private async arrive(loc: ViewerLocation): Promise<boolean> {
     let resolved = false;
     if (loc.verdict) resolved = await this.resolveVerdict(loc.verdict, loc.rule, loc.subjects);
-    // A trace link needs no run first, because it carries the QUESTION rather than a derived id, so
+    // A trace link needs no run first, because it holds the QUESTION rather than a derived id, so
     // the viewer just asks it.
     if (loc.trace) {
       const [from, to] = splitTraceParam(loc.trace);
       this.views.showPanel?.("trace");
       await this.runTrace(from, to, loc.traceHops);
     }
-    // A query link carries the question too (agni issue 634): the panel opens a tab holding it and
-    // asks it whole, as `agni query` did, and comes forward, since the answer lands there rather
-    // than on the drawing (agni issue 1236).
+    // A query link holds the question too (agni issue 634). The panel opens a tab holding it, asks it
+    // whole as `agni query` did, and comes forward, since the answer appears there rather than on
+    // the drawing (agni issue 1236).
     if (loc.query) {
       this.views.showPanel?.("query");
       this.views.query?.setQuery(loc.query, bindsFromLink(loc.binds), { title: loc.title, whole: true, arrived: true });
@@ -847,7 +849,7 @@ export class ViewerPresenter {
       await this.openSetMember(loc.set, loc.q);
     }
     // A diff link names the design to compare against (agni issue 1126), and the host starts the
-    // comparison its Compare picker starts. The open design itself is ignored, as the picker refuses
+    // same comparison as its Compare picker. The open design itself is ignored, as the picker refuses
     // it.
     const against = againstTarget(loc.against);
     if (against && !(against.mount === this.doc.mount && against.path === this.doc.path)) {
@@ -856,9 +858,9 @@ export class ViewerPresenter {
     return resolved;
   }
 
-  // resolveVerdict draws a verdict, running what it needs first when the page has not answered it:
-  // the one rule and subjects a link names, or the catalog when it names no rule, as a cold link
-  // does (runChecksForLink). A verdict already answered is drawn with no run.
+  // resolveVerdict draws a verdict. If the page has not answered it, it first runs the one rule and
+  // subjects a link names, or the catalog when the link names no rule, as a cold link does
+  // (runChecksForLink). A verdict already answered is drawn with no run.
   //
   // With no hints and no answer it runs nothing and answers false, since a page call that names a
   // bare unknown id is more likely mistyped than unanswered, and running the whole catalog to find
@@ -942,7 +944,7 @@ export class ViewerPresenter {
         return;
       }
     } catch {
-      // Falls through to the note: a link that cannot be followed says so.
+      // Falls through to the note, so a link that cannot be followed says so.
     }
     this.views.query.setLocateNote(`This link asks "${name}" from the query set "${setName}", which this design's project does not keep.`);
   }
@@ -999,9 +1001,9 @@ export class ViewerPresenter {
     this.pushRules();
   }
 
-  // pushRules reflects the current catalog + active selection + per-rule fired counts to the rules
-  // panel (the fired count comes from the finding cache, so a rule's badge shows how many findings
-  // it produced this run).
+  // pushRules reflects the current catalog, active selection and per-rule fired counts to the rules
+  // panel. The fired count comes from the finding cache, so a rule's badge shows how many findings it
+  // produced this run.
   private pushRules(): void {
     // fired counts only the currently selected rules, matching the checks panel, so a rule that ran
     // and was then deselected keeps its cached findings but drops out of the fired counts.
@@ -1027,12 +1029,14 @@ export class ViewerPresenter {
   // the board this was measured against, since each click is a fresh page load.
   //
   // A link that also names the verdict's subjects asks that rule about them alone (agni issue 897),
-  // and its answer is kept apart from the run, so the rule stays pending in the checks panel. When
-  // that answer lacks the verdict (a link from an older revision), the rule runs whole, as before.
+  // and its answer is kept apart from the run, so the rule remains pending in the checks panel. A
+  // link from an older revision can get an answer that lacks the verdict, and then the rule runs
+  // whole, as before.
   //
-  // An unnamed rule (an older or hand-typed link) or one the catalog does not have falls back to
-  // the full run, because the alternative is resolving nothing and reporting it as a stale link.
-  // The rest of the catalog stays PENDING afterwards; the reader who wants it presses Run.
+  // A link may name no rule, because it is older or hand-typed, or name a rule the catalog does not
+  // have. Either one falls back to the full run, because the alternative is resolving nothing and
+  // reporting it as a stale link. The rest of the catalog remains PENDING afterwards; the reader who
+  // wants it presses Run.
   private async runChecksForLink(rule: string, subjects: string[] = [], verdict = ""): Promise<void> {
     if (!rule || !this.doc.rulesByName.has(rule)) {
       await this.runChecks();
@@ -1066,11 +1070,11 @@ export class ViewerPresenter {
     return resp;
   }
 
-  // checkSelection is Properties' question about one selected net, part or pin: the selected rules,
-  // asked about it alone. It answers null when no rule is selected. notAsked are the rules the scope
-  // left out (SkippedRule.design_wide), which conclude about the whole design; a rule this design
-  // cannot run at all is the Checks panel's to report, and listing it per selection would bury the
-  // rest.
+  // checkSelection asks Properties' question about one selected net, part or pin. It asks the
+  // selected rules about that entity alone, and answers null when no rule is selected. notAsked
+  // lists the rules the scope left out (SkippedRule.design_wide), which conclude about the whole
+  // design. The Checks panel reports a rule this design cannot run at all, and listing it per
+  // selection would bury the rest.
   async checkSelection(sel: SubjectRef): Promise<{ resp: CheckDesignResponse; notAsked: { name: string; reason: string }[] } | null> {
     const rules = [...this.doc.selectedRules];
     if (rules.length === 0) return null;
@@ -1098,8 +1102,8 @@ export class ViewerPresenter {
     this.checksAbort = abort;
     this.checksCancelled = false;
     this.checksRunning = true;
-    // No page overlay: the Checks panel says the run is under way and offers Cancel, and the rest of
-    // the page stays usable, which is what the engine's separate lanes are for (agni issues 911, 918).
+    // No page overlay. The Checks panel says the run is under way and offers Cancel, and the rest of
+    // the page remains usable. The engine's separate lanes exist for that (agni issues 911, 918).
     this.pushFindings(); // reflect running=true (the Run button becomes Cancel)
     try {
       await this.runSelection(abort.signal);
@@ -1115,8 +1119,8 @@ export class ViewerPresenter {
     }
   }
 
-  // cancelChecks stops the run in flight (agni issue 918). The rules it had not answered stay pending,
-  // and what it had answered is kept, since each rule's answer arrives whole.
+  // cancelChecks stops the run in flight (agni issue 918). The rules it had not answered remain
+  // pending, and what it had answered is kept, since each rule's answer arrives whole.
   cancelChecks(): void {
     this.checksAbort?.abort();
   }
@@ -1131,8 +1135,8 @@ export class ViewerPresenter {
     await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
 
-  // assembleFindings rebuilds the visible list from the last run for the active ruleset (a
-  // stable rule-then-subject base order; the panel re-sorts), clears the focus, and pushes the checks,
+  // assembleFindings rebuilds the visible list from the last run for the active ruleset, in a stable
+  // rule-then-subject base order that the panel re-sorts. It clears the focus, and pushes the checks,
   // rules (fired counts), and overview (per-sheet counts) panels. It fetches nothing.
   private assembleFindings(): void {
     const selected = new Set(this.doc.selectedRules);
@@ -1146,10 +1150,10 @@ export class ViewerPresenter {
     this.pushOverview(); // per-sheet counts follow the same findings
   }
 
-  // pushFindings reflects the current findings + focus + selection to the checks panel, including
-  // the pending count (selected rules not yet run, which badges the Run button and tells "press
-  // Run" from "ran clean") and the rule catalog summaries (the per-rule one-liners the merged panel
-  // shows).
+  // pushFindings reflects the current findings, focus and selection to the checks panel. It includes
+  // the pending count, which counts the selected rules not yet run. That count badges the Run button
+  // and tells "press Run" from "ran clean". It also includes the rule catalog summaries, the per-rule
+  // one-liners that the merged panel shows.
   private pushFindings(): void {
     const pending = this.doc.selectedRules.filter((n) => !this.doc.ran(n)).length;
     // A failed run names the rules it left pending among those still selected and unanswered, so
@@ -1175,11 +1179,11 @@ export class ViewerPresenter {
       runError: failed && failedRules.length > 0 ? { message: failed.message, rules: failedRules } : undefined,
       catalogLoading: this.doc.catalogLoading,
       catalogError: this.doc.catalogError,
-      // The rules this design cannot run, which the catalog lists unavailable and leaves unticked
-      // (agni issue 950), with a selected rule a run skipped all the same. A rule the reader unticked
-      // themselves is not news, so it is left out. Named here, on the panel that opens by default,
-      // because an unanswered question otherwise reads as a clean board. Sorted so the list is stable
-      // across runs rather than following response order.
+      // These are the rules this design cannot run. The catalog lists them as unavailable and leaves
+      // them unticked (agni issue 950). A selected rule that a run skipped joins them all the same. A
+      // rule the reader unticked themselves is not news, so it is left out. The list is named here,
+      // on the panel that opens by default, because an unanswered question otherwise reads as a clean
+      // board. It is sorted, so it does not change between runs with the response order.
       skipped: [
         ...this.doc.rules.filter((r) => !r.available).map((r) => ({ rule: r.name, reason: r.unavailableReason })),
         ...this.doc.selectedRules
@@ -1227,8 +1231,8 @@ export class ViewerPresenter {
     this.pushFindings();
   }
 
-  // reportLinks is where a saved report's rows link back to: this viewer, under the page's own base.
-  // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
+  // reportLinks points a saved report's rows back at this viewer, under the page's own base. A
+  // dropped design exists only in this tab's worker, so a link to it would open nothing later.
   private reportLinks(): { withheld?: string; urlBase?: string; designUri?: string } {
     return this.doc.mount === BROWSER_MOUNT
       ? { withheld: "This design was opened from the reader's own files, which the browser keeps only in the tab that opened them, so a link to it would open nothing." }
@@ -1302,22 +1306,22 @@ export class ViewerPresenter {
   // the report, and a review run answer under one vocabulary.
 
 
-  // overlayConfig is overlay for a rule-running call the composition root makes on the page's behalf,
-  // such as the Tables panel running the checks over a comparison's side, so it checks under the
-  // convention the page shows.
+  // overlayConfig is the overlay for a rule-running call that the composition root makes on the
+  // page's behalf, such as the Tables panel running the checks over a comparison's side. That call
+  // then checks under the convention the page shows.
   overlayConfig(): OverlayConfig | undefined {
     return this.overlay();
   }
 
-  // overlay is what every rule-running call carries. Every call site that runs rules goes through
-  // it, so one that did not would stand out from its neighbours.
+  // overlay builds the overlay that every rule-running call sends. Every call site that runs rules
+  // goes through it, so one that did not would stand out from its neighbours.
   private overlay(): OverlayConfig | undefined {
     if (!this.doc.convention && !this.projectState.plain) return undefined;
     return create(OverlayConfigSchema, {
-      // The convention rides inside the shared AnalysisConfig, the same message a Project declares, so
-      // a config tier added there is one a request can carry without a second edit here.
+      // The convention goes inside the shared AnalysisConfig, the same message a Project declares. So
+      // a request can send any config tier added there, with no second edit here.
       config: { conventions: this.doc.convention ?? undefined },
-      // ignore_project is the "show me the built-in catalog" choice. It rides on every rule-running
+      // ignore_project is the "show me the built-in catalog" choice. It goes on every rule-running
       // request because each surface composes its own overlay, and a toggle that reached only some
       // would show findings from one catalog beside the rule set of another.
       ignoreProject: this.projectState.plain,
@@ -1425,14 +1429,14 @@ export class ViewerPresenter {
   }
 
   // reloadForConvention re-reads the rule CATALOG and drops the held run after the vocabulary
-  // changes. The catalog reload, dropping the run, and the
-  // query-result reset must happen together, since a request convention changes which rules EXIST
-  // (docsite/content/architecture/web-client.md, "Two caches for one answer will drift"). A client
+  // changes. The catalog reload, dropping the run, and the query-result reset must happen together.
+  // A request convention changes which rules EXIST (docsite/content/architecture/web-client.md, "Two
+  // caches for one answer will drift"). A client
   // that kept the old catalog would run none of the selected naming rules, which reads as a design
   // with no naming problems.
   private async reloadForConvention(): Promise<void> {
-    // A verdict is keyed by rule name, which is what a convention changes, so a surviving run could
-    // claim coverage for a rule nobody ran.
+    // A verdict is keyed by rule name, and a convention changes the rule names. So a surviving run
+    // could claim coverage for a rule nobody ran.
     this.doc.dropRun();
     this.focusedVerdict = "";
     // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
@@ -1513,12 +1517,12 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // pickerChoices are what the convention and checklist pickers offer, ONE LIST PER KIND. When the
-  // design resolves to a project that declares either, they are what the PROJECT declares: its named
-  // checklists, carried as values, and no convention files, since the project's conventions are a
+  // pickerChoices fills the convention and checklist pickers, ONE LIST PER KIND. When the design
+  // resolves to a project that declares either, the lists hold what the PROJECT declares. That means
+  // its named checklists, sent as values, and no convention files. The project's conventions are a
   // section of project.yaml that every run already composes (agni issue 828).
   //
-  // The kinds stay APART because a checklist and a naming convention are parsed by different rpcs,
+  // The kinds are kept APART because a checklist and a naming convention are parsed by different rpcs,
   // and offering a checklist in the vocabulary picker fails with a YAML error naming a field the
   // other schema has never heard of. Profiles appear in NEITHER, since a profile is composed into
   // the catalog rather than selected.
@@ -1577,7 +1581,7 @@ export class ViewerPresenter {
   }
 
   // createReview runs the chosen checklist against the open design and stores the result, then
-  // shows it. The manifest travels as a VALUE (C22): a project's checklist already is one, and a file
+  // shows it. The manifest is sent as a VALUE (C22). A project's checklist already is one. A file
   // beside the design is resolved server-side first (GetReviewManifest), because the browser holds a
   // ref and no filesystem.
   async createReview(): Promise<void> {
@@ -1604,8 +1608,8 @@ export class ViewerPresenter {
         snapshot: await this.checked(),
         manifest,
       };
-      // An engine that keeps no store still scores a checklist with validate_only (agni issue 931),
-      // the browser engine always among them, and this page holds the run instead of a store.
+      // An engine that keeps no store still scores a checklist with validate_only (agni issue 931).
+      // The browser engine is always one of these. This page then holds the run instead of a store.
       let created: Review;
       if (this.reviewState.storeConfigured) {
         try {
@@ -1618,10 +1622,10 @@ export class ViewerPresenter {
       } else {
         created = await this.reviews.createReview({ ...req, validateOnly: true }, { signal });
       }
-      // A run nothing stored has no name, so the page names it to tell its runs apart.
+      // An unstored run has no name, so the page names it to tell its runs apart.
       if (!created.name) created.name = `page/${++this.pageRuns}`;
       const run = reviewFromWire(created);
-      // A run nothing stored has no stored time, so the page labels it with when it scored it.
+      // An unstored run has no stored time, so the page labels it with when it scored it.
       if (!run.createdAt) run.createdAt = new Date().toISOString().replace(/\.\d+Z$/, "Z");
       this.reviewWire.set(created.name, created);
       // Prepend rather than refetch, since the new run is the newest and the server already handed
@@ -1643,7 +1647,7 @@ export class ViewerPresenter {
     }
   }
 
-  // checklistLabel is the picker's name for the chosen checklist, which is what a reader sees.
+  // checklistLabel is the picker's name for the chosen checklist, as a reader sees it.
   private checklistLabel(): string {
     const ref = this.reviewState.checklist;
     return this.checklistChoices.find((c) => c.ref === ref)?.label ?? ref;
@@ -1705,7 +1709,7 @@ export class ViewerPresenter {
       return;
     }
     view.setState(state);
-    // Recorded whatever the outcome, so a link can carry a NEGATIVE answer too.
+    // Recorded whatever the outcome, so a link can hold a NEGATIVE answer too.
     this.tracedPins = `${from.refDes}.${from.pin},${to.refDes}.${to.pin}`;
     this.tracedHops = hops;
     this.syncLocation();
@@ -1723,9 +1727,9 @@ export class ViewerPresenter {
   }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes
-  // it to the coverage panel, a no-op when the panel is unwired. A design with no detected
-  // interface (or a fetch failure) pushes an empty state, so the panel shows its empty message
-  // rather than stale coverage from the previous design.
+  // it to the coverage panel, a no-op when the panel is unwired. A design with no detected interface
+  // pushes an empty state, and so does a fetch failure. The panel then shows its empty message rather
+  // than stale coverage from the previous design.
   private async refreshCoverage(signal?: AbortSignal): Promise<void> {
     if (!this.views.coverage) return;
     if (!this.doc.mount || !this.doc.path) {
@@ -1741,9 +1745,9 @@ export class ViewerPresenter {
   }
 
   // refreshParts fetches the datasheet-params join for the open design (WS9-035) and pushes it to
-  // the parts panel, a no-op when the panel is unwired. A design with no joined specs (or a serve
-  // started without --params, or a fetch failure) pushes an empty state, so the panel shows its
-  // empty hint rather than stale parts from the previous design.
+  // the parts panel, a no-op when the panel is unwired. A design with no joined specs pushes an
+  // empty state, and so do a serve started without --params and a fetch failure. The panel then
+  // shows its empty hint rather than stale parts from the previous design.
   private async refreshParts(): Promise<void> {
     if (!this.views.parts) return;
     if (!this.doc.mount || !this.doc.path) {
@@ -1758,10 +1762,10 @@ export class ViewerPresenter {
     }
   }
 
-  // clearExpectations resets the expectations panel to empty and pushes it. Called on design load
-  // because the sidecar reconcile runs with the on-demand Run (refreshExpectations), so before the
-  // first Run the panel shows its neutral empty state instead of reconciling against zero findings,
-  // which would mislabel every non-pending expectation "missing".
+  // clearExpectations resets the expectations panel to empty and pushes it. It is called on design
+  // load, because the sidecar reconcile runs with the on-demand Run (refreshExpectations). So before
+  // the first Run the panel shows its neutral empty state. Reconciling against zero findings would
+  // mislabel every non-pending expectation "missing".
   private clearExpectations(): void {
     this.doc.expectations = [];
     this.doc.expectationFindings = [];
@@ -1823,7 +1827,7 @@ export class ViewerPresenter {
   }
 
   // pushExpectations reflects the conformance caption (WS9-045), the set-equality verdict and
-  // counts for a design with a sidecar, null (hidden) otherwise. It carries no highlight, because
+  // counts for a design with a sidecar, null (hidden) otherwise. It sets no highlight, because
   // refreshExpectations applies the anchored overlay once and a later focus change must not disturb
   // it.
   private pushExpectations(): void {
@@ -1863,9 +1867,9 @@ export class ViewerPresenter {
   }
 
   // refreshSvgOverlay fetches the highlight overlay for the current sheet and stacks it above the
-  // SVG document; no highlights (or a failed fetch) clears it instead. Called whenever the specs
-  // change or an SVG sheet (re)renders, because the overlay is framed per sheet and must be
-  // re-fetched with the base document.
+  // SVG document. With no highlights, or after a failed fetch, it clears the overlay instead. Called
+  // whenever the specs change or an SVG sheet (re)renders, because the overlay is framed per sheet
+  // and must be re-fetched with the base document.
   private async refreshSvgOverlay(): Promise<void> {
     if (this.mode !== "svg" || !this.currentSheet) return;
     if (this.highlights.length === 0) {
@@ -1922,11 +1926,11 @@ export class ViewerPresenter {
     return focused ? selectionFromFinding(focused) : null;
   }
 
-  // findFinding locates the focused finding by its per-instance id when given (a net id, or a bus
-  // id for a bus finding per WS7-042b; the two namespaces are disjoint), so one of two same-named
-  // nets or anonymous buses is picked; else by subject name. It falls back to the full-run
-  // expectation findings, since a subject can be clicked from the expectations panel with its rule
-  // deselected.
+  // findFinding locates the focused finding by its per-instance id when one is given, and else by
+  // subject name. The id is a net id, or a bus id for a bus finding (WS7-042b), and the two
+  // namespaces are disjoint. So the id picks one of two same-named nets or anonymous buses. It falls
+  // back to the full-run expectation findings, since a subject can be clicked from the expectations
+  // panel with its rule deselected.
   private findFinding(subject: string, id: string): FindingItem | undefined {
     const match = (f: FindingItem) => (id !== "" ? f.netId === id || f.busId === id : f.subject === subject);
     return this.findings.find(match) ?? this.doc.expectationFindings.find(match);
@@ -1943,7 +1947,7 @@ export class ViewerPresenter {
 
   // showAllFindings says whether the drawing shows every finding of the run at once (agni issue 356).
   // Off by default, since on a sheet with a few dozen findings the field lit most of the drawing in
-  // the focus colour before anything was clicked. The Sheets panel's per-sheet counts carry the
+  // the focus colour before anything was clicked. The Sheets panel's per-sheet counts give the
   // overview, and a clicked finding is drawn either way.
   private showAllFindings = false;
 
@@ -1953,8 +1957,8 @@ export class ViewerPresenter {
     return this.showAllFindings ? this.findings : [];
   }
 
-  // setShowAllFindings turns the run-wide field on or off and repaints: a focused finding over the
-  // field, or the field alone. Whatever else was located is replaced, as any repaint replaces it.
+  // setShowAllFindings turns the run-wide field on or off and repaints, with a focused finding over
+  // the field or the field alone. Whatever else was located is replaced, as any repaint replaces it.
   async setShowAllFindings(on: boolean): Promise<void> {
     if (this.showAllFindings === on) return;
     this.showAllFindings = on;
@@ -2044,7 +2048,7 @@ export class ViewerPresenter {
 
   // setBusyPhase updates the loader's label mid-load without touching the nesting count, so a
   // long openFile can report each stage (loading -> rendering -> running checks) while the overlay
-  // stays up. A no-op visually when nothing is busy.
+  // remains up. A no-op visually when nothing is busy.
   private setBusyPhase(label: string): void {
     this.render.setBusy(this.busyDepth > 0, label);
   }
@@ -2102,8 +2106,8 @@ function isStoreUnconfigured(e: unknown): boolean {
 
 
 
-// areaSubjects is an area's members as highlight subjects, a part per ref, a pin per loose pin and a
-// net per wire.
+// areaSubjects turns an area's members into highlight subjects. It makes a part per ref, a pin per
+// loose pin and a net per wire.
 export function areaSubjects(area: Selection): { kind: string; subject: string; pin: string }[] {
   const out = (area.refs ?? []).map((ref) => ({ kind: "component", subject: ref, pin: "" }));
   for (const key of area.pins ?? []) {

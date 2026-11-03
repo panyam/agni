@@ -1,9 +1,10 @@
 // The guided mode of the browser-review walk (agni issue 1118). The walk opens the viewer with its
-// review tour running (web/src/reviewtour.ts, `?tour=review&tourpace=host`), and each step a reader
-// takes in the viewer is a tour step. With the browser headed the READER does those steps: the walk
-// releases one, the page dims around the controls it needs, and the walk waits for the viewer to
-// report the step done. The steps the walk does on its own (open the design, compare with the CLI,
-// run `agni trial`) stop with a panel saying what they check, until the reader presses Next.
+// review tour running (web/src/reviewtour.ts, `?tour=review&tourpace=host`). Each step that a
+// reader takes in the viewer is a tour step. With the browser headed, the READER does those steps.
+// The walk releases one, the page dims around the controls it needs, and the walk waits for the
+// viewer to report the step done. The walk does some steps on its own. It opens the design,
+// compares with the CLI and runs `agni trial`. Each of those stops with a panel saying what it
+// checks, until the reader presses Next.
 //
 // STEP_BY_STEP=0 turns the reader's part off for a headed run that should play straight through, and
 // a headless run never stops, whatever STEP_BY_STEP says, since nobody is there to press Next and CI
@@ -71,11 +72,12 @@ the top left saying what they check; press <b>Next</b> there, or Enter.</p>
 // pause shows the panel for the next step and waits for Next. It removes the panel before returning,
 // so the panel never covers anything the step clicks.
 //
-// The page is FROZEN while a panel waits (agni issue 1118): a clear shield takes the clicks, and
-// scrolling and keys other than the ones that continue are swallowed, so the step runs on exactly the
-// page the walk left. A reader exploring between stops otherwise changed the selection, the zoom and
-// the scroll under the walk, and the next step clicked into a page it did not expect. The last stop,
-// "done", leaves the page open, so the viewer can be explored freely before Next closes it.
+// The page is FROZEN while a panel waits (agni issue 1118). A clear shield takes the clicks.
+// Scrolling is swallowed, and so is every key except the ones that continue, so the step runs on
+// the page exactly as the walk left it. A reader exploring between stops otherwise changed the
+// selection, the zoom and the scroll under the walk, and the next step clicked into a page it did
+// not expect. The last stop, "done", leaves the page open, so the viewer can be explored freely
+// before Next closes it.
 export async function pause(page: Page, step: string, previous: string, board?: string): Promise<void> {
   const text = explain(step, board);
   const explore = step === "done";
@@ -167,12 +169,12 @@ export async function pause(page: Page, step: string, previous: string, board?: 
   });
 }
 
-// While a step runs in a headed walk the page shows a loader and takes no clicks, because a step can
-// take several seconds on Jetson and a reader clicking in that time changes the page under the walk.
-// The walk's own clicks are real input too, so nothing at the browser level can tell them from a
-// reader's (Input.setIgnoreInputEvents drops both). Instead the loader is a shield the walk lifts
-// for each of its own actions (act) and raises again after, which also restores it after a
-// navigation replaces the page. A headless run shows nothing and pays nothing.
+// While a step runs in a headed walk the page shows a loader and takes no clicks, because a step
+// can take several seconds on Jetson and a reader clicking in that time changes the page under the
+// walk. The walk's own clicks are real input too, so nothing at the browser level can tell them
+// from a reader's (Input.setIgnoreInputEvents drops both). Instead the loader is a shield. The walk
+// lifts it for each of its own actions (act) and raises it again after. Raising it again also
+// restores it after a navigation replaces the page. A headless run shows nothing and costs nothing.
 const headed = process.env.HEADED === "1";
 let running = "";
 
@@ -188,8 +190,8 @@ export async function idle(page: Page): Promise<void> {
   await page.evaluate(() => document.getElementById("walk-busy")?.remove()).catch(() => {});
 }
 
-// act runs one of the walk's own page actions with the loader lifted, so the click lands on the
-// viewer rather than on the shield.
+// act runs one of the walk's own page actions with the loader lifted, so the click reaches the
+// viewer rather than the shield.
 export async function act<T>(page: Page, action: () => Promise<T>): Promise<T> {
   if (!headed || !running) return action();
   await page
@@ -208,8 +210,8 @@ export async function act<T>(page: Page, action: () => Promise<T>): Promise<T> {
 
 // trace records where the page and its window sit after each of the walk's actions, in a headed
 // run, to EXERCISE_OUT/headed-trace.txt. A view that jumps can move without the page scrolling at
-// all (the window re-fitted to the screen, or the visual viewport panned), which nothing measured
-// inside the page shows, so this is the evidence a report of one needs.
+// all, when the window re-fitted to the screen or the visual viewport panned. Nothing measured
+// inside the page shows that, so a report of a jump needs this trace as its evidence.
 async function trace(page: Page): Promise<void> {
   const out = process.env.EXERCISE_OUT;
   if (!out) return;
@@ -280,8 +282,8 @@ const tourState = (page: Page): Promise<TourState | null> =>
 // tourAct takes one of the tour's steps. It releases the step, so the page dims around the step's
 // controls, and then either waits for the reader to do it (stepByStep) or runs the walk's own
 // action, which reaches the controls only through the holes, as a reader would. Both end when the
-// viewer reports the step done and the tour moves on. A tour the reader left (Esc) makes the walk
-// carry on alone, so a reader can stop taking part without stopping the walk.
+// viewer reports the step done and the tour moves on. If the reader leaves the tour (Esc), the walk
+// carries on alone, so a reader can stop taking part without stopping the walk.
 //
 // holes is how many separate regions the released step must show, for a step that offers its control
 // in more than one place.
@@ -299,9 +301,10 @@ export async function tourAct(
   }
   if (at.step !== step) throw new Error(`the tour is on its "${at.step}" step where the walk expected "${step}"`);
   await page.evaluate(() => (globalThis as { __agniTour?: { release(): void } }).__agniTour?.release());
-  // A released step must cut a hole the reader can reach without scrolling, since the dimmed page takes
-  // no wheel. The walk's own clicks scroll their target into view first, so without this a step whose
-  // control sat below its panel's fold passed here and left a reader in front of a page with no way in.
+  // A released step must cut a hole that the reader can reach without scrolling, since the dimmed
+  // page takes no wheel. The walk's own clicks scroll their target into view first. Without this
+  // check, a step whose control sat below its panel's fold passed here, and a reader faced a page
+  // with no way in.
   await page
     .waitForFunction((n) => Number(document.querySelector<HTMLElement>(".tsappkit-tour")?.dataset.tourHoles ?? "0") >= n, holes, {
       timeout: 5_000,
@@ -350,8 +353,8 @@ export async function pressedAt(page: Page, step: string): Promise<number | unde
   return page.evaluate((s) => (globalThis as { __agniTour?: { pressed: Record<string, number> } }).__agniTour?.pressed[s], step);
 }
 
-// lastEvent is the payload of the viewer's latest event of a type since the tour started, which says
-// what the reader chose: which checklist, finding or cell.
+// lastEvent is the payload of the viewer's latest event of a type since the tour started. The
+// payload says which checklist, finding or cell the reader chose.
 export async function lastEvent<T>(page: Page, type: string): Promise<T | undefined> {
   return page.evaluate((t) => {
     const events = (globalThis as { __agniTour?: { events: { type: string; data: unknown }[] } }).__agniTour?.events ?? [];

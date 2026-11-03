@@ -10,7 +10,7 @@ export interface SheetsState {
 }
 
 // SheetsView is a navigation surface the presenter pushes SheetsState to (the top tabs and
-// the file tree both implement it), so every sheet UI stays in sync from one source.
+// the file tree both implement it), so every sheet UI is in sync from one source.
 export interface SheetsView {
   setState(s: SheetsState): void;
 }

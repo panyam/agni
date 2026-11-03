@@ -12,7 +12,8 @@ const table = (name: string, rows: string[][]) =>
 
 const answer: TableAnswer = { case: "check", value: create(CheckDesignResponseSchema, {}) };
 
-// harness's has is null for a source with no answer, since undefined would take the default.
+// harness's has is null for a source with no answer. It is null because undefined would take the
+// default.
 function harness(has: TableAnswer | null = answer) {
   const tabulated: Partial<TabulateRequest>[] = [];
   const encoded: Partial<EncodeTablesRequest>[] = [];

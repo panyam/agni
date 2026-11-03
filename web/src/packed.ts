@@ -154,7 +154,7 @@ function parsePrimitives(bytes: Uint8Array): Primitive[] {
 
 // toRenderable maps a decoded PackedSheet message into the renderer's upload-ready shape.
 // The RPC path (GetSheet) already holds a PackedSheet message, so it calls this directly;
-// decodePackedSheet is the binary-blob entry point (used by the decode tests) on top of it.
+// decodePackedSheet is the binary-blob entry point built on top of it, and the decode tests use it.
 export function toRenderable(msg: PackedSheet): DecodedSheet {
   return {
     sheetId: msg.sheetId,
@@ -189,8 +189,9 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
   };
 }
 
-// bytesToBase64 encodes raw image bytes for a data URI. Chunked so a large image does not blow
-// the argument limit of String.fromCharCode(...spread). btoa is available in browsers and Node.
+// bytesToBase64 encodes raw image bytes for a data URI. It works in chunks, so a large image does
+// not exceed the argument limit of String.fromCharCode(...spread). btoa is available in browsers
+// and Node.
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunk = 0x8000;

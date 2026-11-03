@@ -154,8 +154,8 @@ describe("router", () => {
 });
 
 describe("a trace in the URL", () => {
-  // The question round-trips, which is what makes a link from the CLI and a link the panel put in
-  // the address bar the same kind of thing.
+  // The question round-trips. So a link from the CLI and a link that the panel put in the address
+  // bar are the same kind of thing.
   it("round-trips the pins and the radius", () => {
     const loc = { ...emptyLocation(), mount: "m", path: "b.edn", trace: "U1.3,J1.1", traceHops: 3 };
     const back = parseUrl(...splitHref(locationToUrl(loc)));
@@ -163,7 +163,7 @@ describe("a trace in the URL", () => {
     expect(back.traceHops).toBe(3);
   });
 
-  // The radius is only in the URL when it was pinned, so an ordinary link stays short.
+  // The radius is only in the URL when it was pinned, so an ordinary link is short.
   it("omits the radius when the question used the default", () => {
     const url = locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", trace: "U1.3,J1.1", traceHops: 0 });
     expect(url).toContain("trace=U1.3%2CJ1.1");
@@ -187,7 +187,7 @@ describe("a trace in the URL", () => {
 });
 
 describe("a comparison in the URL (agni issue 1126)", () => {
-  // The link core/report.DiffURL writes escapes the slashes, and the router reads it back whole.
+  // core/report.DiffURL writes a link that escapes the slashes, and the router reads it back whole.
   it("reads the design to compare against from the link agni diff --server prints", () => {
     const loc = parseUrl("/designs/tut/designs/gateway/gateway.edn/view", "?against=tut%2Fdesigns%2Fgateway%2Fgateway-rev-c.edn");
     expect(loc.path).toBe("designs/gateway/gateway.edn");
@@ -215,7 +215,7 @@ describe("a comparison in the URL (agni issue 1126)", () => {
   });
 });
 
-// splitHref splits a built URL back into the pathname+search pair parseUrl takes.
+// splitHref splits a built URL back into the pathname+search pair that parseUrl takes.
 function splitHref(url: string): [string, string] {
   const i = url.indexOf("?");
   return i < 0 ? [url, ""] : [url.slice(0, i), url.slice(i)];
@@ -241,8 +241,8 @@ describe("the router under a base path, on a static host (agni issue 856)", () =
   });
 });
 
-// agni issue 1072: a design's Load page sits beside its viewer, at the same address with the other
-// verb, and carries the same query.
+// A design's Load page sits beside its viewer, at the same address with the other verb, and has the
+// same query (agni issue 1072).
 describe("the Load page's address", () => {
   it("reads a /load address as the design it names, with its query", () => {
     const l = parseUrl("/designs/m/boards/b.edn/load", "?verdict=v1&rule=r");
@@ -272,7 +272,7 @@ describe("the Load page's address", () => {
     expect(hasFile(parseUrl("/designs/local/load/", ""))).toBe(false);
   });
 
-  // A static host serves only the pages `agni site` wrote, so a dropped design's path rides in the
+  // A static host serves only the pages `agni site` wrote, so a dropped design's path goes in the
   // query of the browser mount's one page.
   it("puts a dropped design's path in the query on a static host, and reads it back", () => {
     setBase("/agni/demo/");
@@ -298,8 +298,8 @@ describe("the Load page's address", () => {
   });
 });
 
-// agni issue 634: a query link carries the question, its title and its bindings, or one query of a
-// project set by name, and reads back as it was written.
+// A query link carries the question, its title and its bindings, or one query of a project set by
+// name. It reads back as it was written (agni issue 634).
 describe("query links", () => {
   const reparse = (u: string) => {
     const at = u.indexOf("?");
@@ -321,7 +321,7 @@ describe("query links", () => {
     expect(bindsFromLink(["net=GND", 't="3"', "=x", "v=3.3"])).toEqual({ net: "GND", t: "3", v: "3.3" });
   });
 
-  // agni issue 1121: a variable bound to a list repeats its name, one bind per value.
+  // A variable bound to a list repeats its name, one bind per value (agni issue 1121).
   it("reads a name given more than once as a list in link order, and one given once as a value", () => {
     expect(bindsFromLink(["net=I2C_SDA", "r=R1", 'net="I2C_SCL"'])).toEqual({ net: ["I2C_SDA", "I2C_SCL"], r: "R1" });
   });
@@ -336,8 +336,8 @@ describe("query links", () => {
   });
 });
 
-// agni issue 897: a verdict link names its subjects in check.SubjectParam's spelling, which the Go
-// side writes and both sides read, held to one answer by the twin fixture.
+// A verdict link names its subjects in check.SubjectParam's spelling (agni issue 897). The Go side
+// writes that spelling and both sides read it, and the twin fixture holds them to one answer.
 describe("a verdict link's subjects", () => {
   it("reads the twin's subjects as the Go side does, and refuses what it refuses", () => {
     const twin = JSON.parse(readFileSync(join(process.cwd(), "../core/check/testdata/subject_param_twin.json"), "utf8")) as {

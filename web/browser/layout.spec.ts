@@ -2,18 +2,18 @@
 //
 // jsdom has no layout engine. Every element reports a zero-sized box, `elementFromPoint` answers
 // nothing useful, and no CSS rule has any effect. So the 700-odd unit tests can prove what the
-// panels RENDER and can prove nothing about what a reader can SEE, and a CSS bug shipped through a
-// fully green suite (agni issue 337: a badge strip painting over the two columns beside it, on a
-// table whose fixed layout does not clip).
+// panels RENDER and can prove nothing about what a reader can SEE. A CSS bug once shipped through a
+// fully green suite (agni issue 337). A badge strip painted over the two columns beside it, on a
+// table whose fixed layout does not clip.
 //
 // This file is deliberately small. A browser test is slow, flaky by nature and expensive to debug,
-// so it earns its place only where pixels are the claim. Anything assertable in jsdom belongs in
-// `src/*.test.ts` instead, and that is where it should be added.
+// so it belongs here only where pixels are the claim. Anything assertable in jsdom belongs in
+// `src/*.test.ts` instead, and should be added there.
 //
 // The technique matters as much as the coverage. `getBoundingClientRect` reports layout position and
-// knows nothing about clipping, so a child of a scrolling cell reports coordinates far outside that
-// cell while being perfectly contained on screen: reading those numbers as "it overflows" is wrong
-// in the safe direction, which is the worst kind. Ask the document what is actually painted at a
+// knows nothing about clipping. A child of a scrolling cell can report coordinates far outside that
+// cell while it is perfectly contained on screen. Reading those numbers as "it overflows" is wrong
+// in the safe direction, the worst kind of wrong. Ask the document what is actually painted at a
 // point instead (see `paintedAt`).
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
@@ -56,10 +56,10 @@ async function search(page: Page, term: string): Promise<void> {
 // the answer belongs to `probe` or to something else. This is the question a reader's eye asks, and
 // the one a rectangle cannot answer.
 // `fromLeft`, when given, probes that many pixels inside the element's left edge instead of at its
-// centre. Bleed from the element to the LEFT lands at the boundary and fades out well before the
-// middle: measured on a squeezed name column, the escaping chip reached 66px past its own cell while
-// the neighbouring column was 301px wide, so a centre probe sat 84px clear of the damage and
-// reported everything fine. The first version of this file did exactly that.
+// centre. Bleed from the element to the LEFT starts at the boundary and fades out well before the
+// middle. On a squeezed name column, the escaping chip measured 66px past its own cell while the
+// neighbouring column was 301px wide. So a centre probe sat 84px clear of the damage and reported
+// everything fine. The first version of this file did exactly that.
 async function paintedAt(page: Page, probeSel: string, opts: { fromLeft?: number } = {}): Promise<{ ownedByProbe: boolean; painted: string }> {
   return page.evaluate(
     ({ sel, fromLeft }) => {
@@ -79,15 +79,15 @@ async function paintedAt(page: Page, probeSel: string, opts: { fromLeft?: number
 
 describe("query results table", () => {
   // agni issue 337. The table is fixed-layout, which keeps the columns equal and makes a dragged
-  // width stick, and fixed layout does NOT clip: a cell whose content will not wrap draws straight
+  // width stick, and fixed layout does NOT clip. A cell whose content will not wrap draws straight
   // over the columns to its right. On a 21-sheet design the badge strip on a ground net was one
   // nowrap line whose last chip sat 1927px past its own cell.
   //
   // The public fixtures top out at three sheets, so the size of that content cannot be reproduced
-  // here. The CONDITION can: dragging the name column down to its 48px minimum leaves a name and a
-  // badge strip with nowhere to go, which is the same squeeze from the other direction. Without
-  // that squeeze this test passes with the containment rules deleted entirely, which is how the
-  // first version of it was written and what mutating the CSS revealed.
+  // here. The CONDITION can. Dragging the name column down to its 48px minimum leaves a name and a
+  // badge strip with nowhere to go, the same squeeze from the other direction. Without that squeeze
+  // this test passes with the containment rules deleted entirely. The first version of it was
+  // written that way, and mutating the CSS revealed it.
   it("never paints a cell's content over the column beside it", async () => {
     await withPage(browser, async (page) => {
       await page.setViewportSize({ width: 700, height: 1000 });
@@ -136,8 +136,8 @@ describe("query results table", () => {
   }, 90_000);
 
   // agni issue 341. The mark tells a reader which of a net's sheets they are looking at. A mark
-  // nobody can see is worse than no mark, because the unmarked strip reads as being somewhere else,
-  // so what matters is not that the class is applied but that the chip is painted.
+  // nobody can see is worse than no mark, because the unmarked strip reads as being somewhere else.
+  // So the test asserts that the chip is painted, and an applied class alone is not enough.
   it("paints the current-sheet badge where it can be seen", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
@@ -166,8 +166,8 @@ describe("query results table", () => {
     });
   }, 90_000);
 
-  // agni issue 259. The count is the one number a reviewer might act on, so it has to be legible
-  // rather than merely present in the DOM.
+  // agni issue 259. A reviewer might act on the count, so it has to be legible rather than merely
+  // present in the DOM.
   it("shows the findings count for a selection without anything covering it", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
@@ -180,20 +180,21 @@ describe("query results table", () => {
       const hit = await paintedAt(page, count);
       expect(hit.ownedByProbe).toBe(true);
 
-      // Before any run it must say so rather than report a clean entity, which is the claim the
-      // whole affordance risks over-stating.
+      // Before any run it must say so rather than report a clean entity. The whole affordance risks
+      // over-stating that claim.
       const label = await page.locator(`${count} .query-findings-label`).innerText();
       expect(label).toBe("not checked yet");
-      // The caveat is the part a reader must not miss, so what is asserted is that it OCCUPIES
-      // SPACE and is painted, not that it exists.
+      // A reader must not miss the caveat, so the test asserts that it OCCUPIES SPACE and is
+      // painted, not merely that it exists.
       //
-      // innerText is no good for this and looked like it was: for an element CSS has hidden, the
-      // spec says innerText falls back to textContent, so a `display: none` caveat reads back its
-      // full string and the assertion passes. Found by mutating the rule and watching the test stay
-      // green.
+      // innerText is no good for this, though it looked fine. For an element hidden by CSS, the
+      // spec says innerText falls back to textContent. So a `display: none` caveat reads back its
+      // full string and the assertion passes. Mutating the rule and watching the test stay green
+      // found this.
       const caveat = `${count} .query-findings-caveat`;
-      // The rules this design cannot run ride with it (agni issue 950), named so a clean count is never
-      // read as a full one. They are the ones the Checks panel lists, so the count is read from there.
+      // The caveat also counts the rules this design cannot run (agni issue 950), so a clean count
+      // is never read as a full one. The Checks panel lists those rules, so the count is read from
+      // there.
       const cannot = await page.locator(".checks-skipped-list li").count();
       expect(cannot, "the Checks panel names no rule this bare schematic cannot run").toBeGreaterThan(0);
       expect(await page.locator(caveat).textContent()).toBe(`selected rules, this subject only · ${cannot} rule(s) could not run`);
@@ -204,11 +205,11 @@ describe("query results table", () => {
   }, 90_000);
 });
 
-// A pin is the one entity whose identity does not fit in a table cell, so it is worth one browser
-// assertion that the whole path holds: server types the column, carries the ref, client renders a
-// link, and clicking it selects a pin rather than a thing called "5".
+// Of all entities, only a pin has an identity that does not fit in a table cell. So one browser
+// assertion checks that the whole path holds. The server types the column and carries the ref, the
+// client renders a link, and clicking it selects a pin rather than a thing called "5".
 //
-// jsdom covers each half of that. What it cannot see is the link being drawn at all.
+// jsdom covers each half of that. It cannot see whether the link is drawn at all.
 describe("pin cells", () => {
   it("draws a pin result as a link and walks from it", async () => {
     await withPage(browser, async (page) => {
@@ -224,8 +225,8 @@ describe("pin cells", () => {
       await pinLink.click();
       await page.waitForSelector(".query-selection-kind", { timeout: 30_000 });
       // Lowercased because innerText reports RENDERED text and this label is uppercased by CSS, so
-      // it reads back "PIN". textContent would say "pin"; neither is wrong, they answer different
-      // questions, and here the DOM's answer is the one being asserted.
+      // it reads back "PIN". textContent would say "pin". Neither is wrong, since they answer
+      // different questions, and here the test asserts the DOM's answer.
       expect((await page.locator(".query-selection-kind").innerText()).toLowerCase()).toBe("pin");
       // Both halves, joined: a pin that lost its component would read as a bare designator here.
       expect(await page.locator(".query-selection-name").innerText()).toMatch(/^.+\..+$/);
@@ -235,25 +236,24 @@ describe("pin cells", () => {
 
 // agni issue 348: the focused finding was painted in the same color as the field it sits in.
 //
-// Both layers went out with no color, so both resolved to DEFAULT_HIGHLIGHT_COLOR and the entire
-// distinction between "the thing I clicked" and "the other eleven on this sheet" was carried by
-// alpha and shape within one hue. The unit tests can prove the presenter EMITS two different specs
-// and the Go tests can prove the renderer HONORS them, and neither can prove that two colors reach
-// the page: that needs a real client stamping a real spec, a real server rendering it, and a real
-// browser painting the result.
+// Both layers went out with no color, so both resolved to DEFAULT_HIGHLIGHT_COLOR. Only alpha and
+// shape within one hue told "the thing I clicked" from "the other eleven on this sheet". The unit
+// tests can prove the presenter EMITS two different specs, and the Go tests can prove the renderer
+// HONORS them. Neither can prove that two colors reach the page. That needs a real client stamping
+// a real spec, a real server rendering it, and a real browser painting the result.
 //
-// Asserted on distinct stroke colors in the overlay the reader is looking at, not on the spec. The
-// spec assertion lives in src/findings.test.ts and would pass with the whole SVG path broken.
+// The test asserts distinct stroke colors in the overlay on the reader's screen, not on the spec.
+// The spec assertion lives in src/findings.test.ts and would pass with the whole SVG path broken.
 describe("highlight layers", () => {
   it("paints the focused finding in a different color from the rest of the field", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
 
-      // SVG mode: the overlay is a served document in the DOM, so its paint is inspectable. WebGL
-      // resolves specs into buffers with nothing to read back short of pixels.
+      // SVG mode, because there the overlay is a served document in the DOM and its paint is
+      // inspectable. WebGL resolves specs into buffers with nothing to read back short of pixels.
       await page.click(`.render-mode .mode-btn:has-text("SVG")`);
-      // Scoped to #svg-view: the diff panel builds two more SvgViews, and their overlays are empty
-      // and hidden, so an unscoped selector waits forever on the wrong one.
+      // Scoped to #svg-view, because the diff panel builds two more SvgViews. Their overlays are
+      // empty and hidden, so an unscoped selector waits forever on the wrong one.
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
 
       // The field is opt-in (agni issue 356), so the reader turns it on in the Highlight menu.
@@ -271,13 +271,14 @@ describe("highlight layers", () => {
       // A DRAWN subject, chosen deliberately. Four of this design's findings are dangling-endpoint,
       // whose subject is a coordinate pair rather than an entity, so their focus layer matches
       // nothing and paints nothing. Clicking one of those makes this test go green for the wrong
-      // reason: one layer on the page, one color, no way to tell a shared hue from a missing layer.
+      // reason. The page would show one layer and one color, with no way to tell a shared hue from
+      // a missing layer.
       const focus = page.locator(".check-locate", { hasText: "DATA0" }).first();
       await expect.poll(() => focus.count(), { timeout: 30_000 }).toBeGreaterThan(0);
       await focus.click();
 
       const strokes = await page.evaluate(async () => {
-        // The overlay is fetched per focus, so give the round-trip a moment to land.
+        // The overlay is fetched per focus, so give the round-trip a moment to finish.
         for (let i = 0; i < 60; i++) {
           const found = new Set<string>();
           for (const el of document.querySelectorAll("#svg-view .highlight-overlay svg *")) {
@@ -312,7 +313,8 @@ describe("the run-wide field", () => {
       await page.click(".checks-run");
       await page.waitForSelector(".check-locate", { timeout: 30_000 });
       expect(await page.locator(".check-locate").count()).toBeGreaterThan(1);
-      // Give a field the same time a focus takes to land, so an empty overlay is not just a slow one.
+      // Give a field the same time a focus takes to arrive, so an empty overlay is not just a slow
+      // one.
       await page.waitForTimeout(1500);
       expect(await page.locator("#svg-view .highlight-overlay svg *").count()).toBe(0);
 
@@ -326,10 +328,10 @@ describe("the run-wide field", () => {
 
 // agni issue 354: the notice that says the drawing in front of you is incomplete.
 //
-// It is here rather than in jsdom for the reason issue 337 was: a full-width strip over the canvas
-// has neighbours, and jsdom reports every box as zero-sized so it cannot see one painting over
-// another. The first version of this strip sat at top:8px and covered the render-mode buttons and the
-// element readout completely. The unit tests were green throughout.
+// It is here rather than in jsdom for the same reason as issue 337. A full-width strip over the
+// canvas has neighbours, and jsdom reports every box as zero-sized so it cannot see one painting
+// over another. The first version of this strip sat at top:8px and covered the render-mode buttons
+// and the element readout completely. The unit tests were green throughout.
 describe("the incomplete-drawing notice", () => {
   it("appears for a design whose symbols did not resolve, without covering the controls", async () => {
     await withPage(browser, async (page) => {
@@ -341,9 +343,9 @@ describe("the incomplete-drawing notice", () => {
       await note.waitFor({ timeout: 30_000 });
       expect(await note.textContent()).toContain("missinglib:MCU");
 
-      // Boxes, not appearance: the strip must not cover the render-mode buttons or the readout. Both
-      // sit in the first ~43px of the canvas, which is why the strip clears them rather than starting
-      // at the top edge.
+      // This checks boxes, not appearance. The strip must not cover the render-mode buttons or the
+      // readout. Both sit in the first ~43px of the canvas, so the strip clears them rather than
+      // starting at the top edge.
       const overlaps = await page.evaluate(() => {
         const box = (sel: string) => {
           const el = document.querySelector(sel);
@@ -374,14 +376,15 @@ describe("the incomplete-drawing notice", () => {
 
 // agni issue 717: the notice that says the read left hierarchical blocks out.
 //
-// It is asserted by its painted box for the reason the incomplete-drawing notice is: an element with
-// the right class and text can still be zero-sized, hidden behind the canvas, or painted over the
-// controls, and jsdom sees none of that. The sentence is the server's, so it is compared whole.
+// It is asserted by its painted box, for the same reason as the incomplete-drawing notice. An
+// element with the right class and text can still be zero-sized, hidden behind the canvas, or
+// painted over the controls, and jsdom sees none of that. The sentence is the server's, so it is
+// compared whole.
 describe("the hierarchical-read notice", () => {
   const sentence =
     "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.";
 
-  // agni issue 1102: the strip's button re-opens the design read whole, which the engine answers
+  // agni issue 1102: the strip's button re-opens the design read whole. The engine then answers
   // with no unexpanded cell, so the strip is gone. The visible strip before the click is the control.
   it("reads every block when asked, and then has nothing left to say", async () => {
     await withPage(browser, async (page) => {
@@ -414,9 +417,9 @@ describe("the hierarchical-read notice", () => {
           !!a && !!x && !(a.r <= x.l || x.r <= a.l || a.b <= x.t || x.b <= a.t);
         const n = box(".hierarchy-note");
         const canvas = box("#view");
-        // What the browser would paint at the note's centre, which is the note (or its text) only
+        // What the browser would paint at the note's centre. That is the note (or its text) only
         // when nothing sits on top of it. The notes take no pointer events, so a hit test skips
-        // them; they take them for the one test and are put back.
+        // them. They take pointer events for this one test and are then put back.
         const el = document.querySelector<HTMLElement>(".hierarchy-note")!;
         const stack = el.parentElement as HTMLElement;
         el.style.pointerEvents = stack.style.pointerEvents = "auto";
@@ -441,7 +444,7 @@ describe("the hierarchical-read notice", () => {
   }, 120_000);
 
   it("stays hidden for a flat design", async () => {
-    // The control: a strip shown on every open would satisfy every assertion above.
+    // The control. A strip shown on every open would satisfy every assertion above.
     await withPage(browser, async (page) => {
       await openViewer(page, "edif", "basic.edn");
       await page.waitForTimeout(1500);
@@ -453,9 +456,9 @@ describe("the hierarchical-read notice", () => {
 
 // agni issue 350. A severity mark is an empty span styled into a dot, and an INLINE span ignores
 // width and height, so the dot measured 0x0 from the day WS9 moved it out of the old grid row into a
-// table cell. Every unit test passed throughout: the class was on the element, the element was in
-// the DOM, and nothing was painted. That is this file's whole reason to exist, and it is why the two
-// marks are asserted by their PAINTED SIZE rather than by their class.
+// table cell. Every unit test passed throughout. The class was on the element, the element was in
+// the DOM, and nothing was painted. This file exists for bugs like that one, so the two marks are
+// asserted by their PAINTED SIZE rather than by their class.
 describe("the checks table's severity marks", () => {
   it("paints a defect's dot and an undecided row's mark, and does not paint them the same", async () => {
     await withPage(browser, async (page) => {
@@ -479,7 +482,7 @@ describe("the checks table's severity marks", () => {
         expect(d.h).toBeGreaterThan(0);
       }
 
-      // The undecided row takes a "?" instead, and it is the only one: this fixture reports three
+      // The undecided row takes a "?" instead, and it is the only one. This fixture reports three
       // defects and one inconclusive result.
       const marks = await boxes(".check-sev .sev-unresolved");
       expect(marks.length).toBe(1);
@@ -491,10 +494,10 @@ describe("the checks table's severity marks", () => {
 });
 
 // agni issue 902. A click on the drawing selects, and Properties describes the selection. jsdom can
-// prove the panel renders a state, and only a browser can prove a real click on a painted part lands
-// there, that the panel is on screen rather than present and hidden, and that the query box the reader
-// typed in is untouched. The design is opened as a FOLDER, the spelling whose datasheet read failed
-// with invalid_argument on every open until agni issue 736.
+// prove the panel renders a state. Only a browser can prove that a real click on a painted part
+// reaches Properties, that the panel is on screen rather than present and hidden, and that the
+// reader's text in the query box is untouched. The design is opened as a FOLDER. Until agni issue
+// 736, that spelling's datasheet read failed with invalid_argument on every open.
 describe("Properties", () => {
   it("describes a clicked part, keeps the typed query, and asks about it from Ask", async () => {
     await withPage(browser, async (page) => {
@@ -513,7 +516,7 @@ describe("Properties", () => {
       expect(await page.locator('[data-component="properties"] .pr-title').innerText()).toBe("U1");
       expect((await paintedAt(page, '[data-component="properties"] .pr-title')).ownedByProbe).toBe(true);
       // The tutorial project seeds U1's part number, so the datasheet line names a spec rather than
-      // reporting no corpus, which is what the folder spelling showed before agni issue 736.
+      // reporting no corpus. The folder spelling reported no corpus before agni issue 736.
       await page.waitForFunction(() => /parameters/.test(document.querySelector(".pr-datasheet")?.textContent ?? ""), null, {
         timeout: 30_000,
       });
@@ -614,9 +617,9 @@ describe("Properties", () => {
   }, 90_000);
 });
 
-// agni issue 1030. A checklist run in the Review panel saves as the page `agni review --format html`
-// writes, through the same rpc. The download is read back, so this proves a reader gets the page and
-// not merely that a button exists.
+// agni issue 1030. A checklist run in the Review panel saves as the same page that `agni review
+// --format html` writes, through the same rpc. The download is read back, so this proves a reader
+// gets the page and not merely that a button exists.
 describe("Review", () => {
   it("runs a checklist and saves it as the checklist page", async () => {
     await withPage(browser, async (page) => {
@@ -644,8 +647,8 @@ describe("Review", () => {
     });
   }, 120_000);
 
-  // agni issue 1166. A finding of an inline-query item opens onto how it holds, asked of the engine
-  // with the project's own library, which only a served design carries.
+  // agni issue 1166. A finding of an inline-query item opens onto how it holds. The page asks the
+  // engine with the project's own library, and only a served design has that library.
   it("opens a query item's finding onto how it holds", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");
@@ -674,8 +677,9 @@ describe("Review", () => {
 // agni issue 759. The boot layout's sizes, which only a browser can measure. The Query panel opened at
 // a fifth of the dock's height, too short for a single result row under its tab strip and query box,
 // so the #845 walk and these specs enlarged it by hand before they could click one. The Checks
-// table's headers wrapped a letter per line in the east rail. And Changes, re-added beside the diff
-// after a reader closed it, never took its rail width, because a panel-level setSize is dropped.
+// table's headers wrapped a letter per line in the east rail. And a reader could close Changes, and
+// when it was re-added beside the diff it never took its rail width, because a panel-level setSize
+// is dropped.
 // agni issue 1236. A query link opened the design on its first sheet with nothing drawn, and its
 // answer sat in the Query panel, behind whichever tab the reader's saved layout had in front. jsdom
 // has no dock, so only a browser shows which tab a reader is looking at.
@@ -692,7 +696,7 @@ describe("a query link", () => {
       return !!tab?.classList.contains("active-tab");
     }, title);
   // traceInFront leaves the reader's saved layout with Trace in front of Query, as a reader who last
-  // traced a pin has it. The reload is the positive control: without it the test could pass on a
+  // traced a pin has it. The reload is the positive control. Without it the test could pass on a
   // layout that never kept the choice.
   const traceInFront = async (page: Page) => {
     await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
@@ -708,8 +712,8 @@ describe("a query link", () => {
       await page.goto(linkTo("component.class(?r, ?c) => ?r", ["r=R101"]), { waitUntil: "networkidle" });
       await page.waitForSelector(".query-row", { timeout: 30_000 });
       await expect.poll(() => inFront(page, "Query"), { timeout: 10_000 }).toBe(true);
-      // R101 is drawn on the sub-sheet alone, so the located cell's badge being the current one says
-      // the drawing moved off the root sheet the link opened on.
+      // R101 is drawn on the sub-sheet alone. If the located cell's badge is the current one, the
+      // drawing moved off the root sheet that the link opened on.
       await expect.poll(() => page.locator(".query-locate.on").allInnerTexts(), { timeout: 30_000 }).toEqual(["R101"]);
       await expect.poll(() => page.locator(".query-row .sheet-badge.on").count(), { timeout: 30_000 }).toBe(1);
     });
@@ -792,12 +796,13 @@ describe("the default dock", () => {
       await page.click(".panels-btn");
       await page.click(".panels-reset");
       await expect.poll(() => hasTab("Rules")).toBe(1);
-      // Within a few pixels: at boot the dock is resized once more after the layout applies (the
-      // header settles) and dockview shares that out, so boot lands a little under the 320px asked for.
+      // Within a few pixels. At boot the dock is resized once more after the layout applies (the
+      // header settles), and dockview shares that out. So the boot height comes out a little under
+      // the 320px asked for.
       await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
       expect(await page.inputValue("textarea.query-text"), "the query box keeps what was typed").toBe('component.class(?c, "resistor") => ?c');
 
-      // The default is what the browser keeps now, so a reload opens it rather than the old arrangement.
+      // The browser now keeps the default, so a reload opens it rather than the old arrangement.
       await page.reload({ waitUntil: "networkidle" });
       await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
       await expect.poll(() => hasTab("Rules")).toBe(1);
@@ -805,8 +810,9 @@ describe("the default dock", () => {
     });
   }, 90_000);
 
-  // agni issue 774. The relation picker drills the namespace inside the drawer, which sits off-screen
-  // until opened, so only a browser shows that the definition a reader drills to is on screen.
+  // agni issue 774. The relation picker drills the namespace inside the drawer, which sits
+  // off-screen until opened, so only a browser shows that the definition is on screen once a reader
+  // drills to it.
   it("drills the relation picker to a library member's definition, on screen", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway/gateway.edn");
@@ -911,7 +917,7 @@ describe("the trace pickers", () => {
 });
 
 // agni issue 1133: a rule group's docs link sits on the header's line, beside the count, where jsdom
-// can say it exists and cannot say where it lands. The first version wrapped under the name, and the
+// can say it exists and cannot say where it sits. The first version wrapped under the name, and the
 // next was pushed to the row's far end by the toggle growing into the line.
 describe("a rule group's docs link", () => {
   it("sits beside the group's count, on the same line", async () => {

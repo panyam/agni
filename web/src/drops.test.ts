@@ -3,8 +3,8 @@ import { dropOf, memoryDropStore } from "./drops.js";
 
 const bytes = (s: string) => new TextEncoder().encode(s);
 
-// agni issue 1072: a drop is kept by id with every file under it, its design.yaml included, so the
-// viewer reads after a navigation what the drop page proposed from.
+// agni issue 1072: a drop is kept by id with every file under it, its design.yaml included. So after
+// a navigation the viewer reads the same files the drop page proposed from.
 describe("kept drops", () => {
   it("names the drop a browser-mount path belongs to, overlay included", () => {
     expect(dropOf("drop-abc/gateway/gateway.edn")).toBe("drop-abc");

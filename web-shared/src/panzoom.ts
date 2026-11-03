@@ -15,7 +15,7 @@ export interface PanZoom {
 
 // WHEEL_ZOOM_K converts a wheel delta into an exponent. An exponential curve makes zoom scale-free,
 // so the same delta multiplies the scale by the same factor at 20% or 400%, and zooming in then back
-// out by an equal delta lands exactly where you started.
+// out by an equal delta returns exactly to where you started.
 export const WHEEL_ZOOM_K = 0.001;
 
 export function wheelZoomFactor(deltaY: number): number {

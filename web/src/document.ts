@@ -1,10 +1,11 @@
-// The document store holds what is true of the open design and the configuration it is checked
-// under, whatever the reader is doing (agni issue 390): which design, its sheets and the layouts it
-// offers, the rule catalog and the active ruleset, the held check run, the expectation sidecar and the
-// naming convention. ViewerPresenter holds the interaction half (selection, focus, highlights, camera,
-// busy state, panel tabs) and reads this one; nothing here reads interaction state, and
-// document.test.ts holds that direction, since a cycle between the two halves is what would stop the
-// document half from running on the other side of a WebAssembly boundary later.
+// The document store holds what is true of the open design, whatever the reader is doing (agni
+// issue 390), and the configuration the design is checked under. It holds the design, its sheets
+// and the layouts it offers, the rule catalog and the active ruleset, the held check run, the
+// expectation sidecar and the naming convention. ViewerPresenter holds the interaction half
+// (selection, focus, highlights, camera, busy state, panel tabs) and reads this one. Nothing here
+// reads interaction state, and document.test.ts holds that direction. A cycle between the two
+// halves would stop the document half from running on the other side of a WebAssembly boundary
+// later.
 import { create } from "@bufbuild/protobuf";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
@@ -25,14 +26,14 @@ export class DocumentStore {
   path = "";
   // sheets are the design's sheets in the server's order.
   sheets: SheetRef[] = [];
-  // summary is the one-line description of the design the top bar shows.
+  // summary is the one-line description of the design, shown in the top bar.
   summary = "";
   // availableLayouts are the geometry layouts this design can be drawn in, and nativeAvailable
   // whether the native renderer can draw it.
   availableLayouts: string[] = [];
   nativeAvailable = false;
-  // designContentHash is the revision this server actually read, off GetDesign, which the stale-link
-  // note compares with the revision a link claimed.
+  // designContentHash is the revision this server actually read, taken off GetDesign. The
+  // stale-link note compares it with the revision a link claimed.
   designContentHash = "";
 
   // catalogLoading is true while the open design's rule catalog has not arrived. A new design sets it
@@ -40,33 +41,34 @@ export class DocumentStore {
   // selectedRules is empty or still the previous design's (agni 868). It starts true, because before
   // the first design opens there is no catalog either, and a push in that window must not offer Run.
   catalogLoading = true;
-  // rules is the catalog for the open design (ListRules), and selectedRules the active ruleset the
-  // user has checked, the subset CheckDesign runs. It defaults to every available rule so a design
-  // opens showing all runnable checks. Group-by/filter/search are the panel's own view state.
+  // rules is the catalog for the open design (ListRules). selectedRules is the active ruleset, the
+  // subset the user has checked, and CheckDesign runs that subset. It defaults to every available
+  // rule so a design opens showing all runnable checks. Group-by/filter/search are the panel's own
+  // view state.
   rules: RuleItem[] = [];
   selectedRules: string[] = [];
   // rulesByName indexes the catalog for the finding->category lookup (findings carry only the rule
   // name on the wire).
   rulesByName = new Map<string, RuleItem>();
-  // run is what the reader has run on this design: the rules asked for and the engine's answers, as
-  // sent (agni issue 390). It is the panel's one copy of a check, so the findings, the considered set,
-  // the skipped rules, a saved report and the Tables panel all read it, and a new design or a
-  // convention change drops it in one place, where four per-rule caches each had to be cleared and
-  // one was missed. Run asks only for the selected rules it lacks and folds the answer in, so a
-  // repeated Run costs nothing; asking for the whole selection again cost Jetson 0.3 to 0.8 s in the
-  // browser for an answer already on screen. null until a run.
+  // run holds what the reader has run on this design, the rules asked for and the engine's answers
+  // as sent (agni issue 390). It is the panel's one copy of a check. The findings, the considered
+  // set, the skipped rules, a saved report and the Tables panel all read it. A new design or a
+  // convention change drops it in one place. Before, four per-rule caches each had to be cleared,
+  // and one was missed. Run asks only for the selected rules it lacks and folds the answer in, so a
+  // repeated Run costs nothing. Asking for the whole selection again cost Jetson 0.3 to 0.8 s in
+  // the browser for an answer already on screen. null until a run.
   run: { rules: Set<string>; resp: CheckDesignResponse } | null = null;
-  // runError says why the last run failed and which rules it asked for, which it left pending
-  // (agni issue 1117), null when the last run did not fail. Without it a failed run reads as a Run
-  // never pressed, and a stale or lost snapshot, a worker that died, a budget the server enforced and
-  // a geometry-only file with no netlist all look the same.
+  // runError says why the last run failed and which rules it asked for. The run left those rules
+  // pending (agni issue 1117). runError is null when the last run did not fail. Without it a failed
+  // run reads as a Run never pressed. A stale or lost snapshot, a worker that died, a budget the
+  // server enforced and a geometry-only file with no netlist would all look the same.
   runError: { message: string; rules: string[] } | null = null;
   // catalogError says why ListRules failed, "" when it answered, so an empty catalog is not read as
   // a design with no rules (agni issue 1117).
   catalogError = "";
 
-  // expectations are the design's expectation sidecar entries, expectationFindings the findings the
-  // full run produced for reconciling against them, and hasSidecar whether the design has one.
+  // expectations are the design's expectation sidecar entries. expectationFindings holds the full
+  // run's findings, for reconciling against them. hasSidecar says whether the design has a sidecar.
   expectations: RuleExpectationItem[] = [];
   expectationFindings: FindingItem[] = [];
   hasSidecar = false;
@@ -75,16 +77,18 @@ export class DocumentStore {
   // server's default applies. conventionRef is the ref it was resolved from, so the UI can name it.
   convention: NamingConvention | null = null;
   conventionRef = "";
-  // engineVersion is the build answering, off ListRules, which a finding's report link names.
+  // engineVersion names the build that answered, taken off ListRules. A finding's report link names
+  // it.
   engineVersion = "";
 
-  // scoped holds verdicts answered for some subjects alone (agni issue 897): a selection's checks in
-  // Properties, or a link that named its verdict's subjects. They are kept APART from `run`, which
-  // holds whole rules, because a rule answered for one net is not that rule's answer for the design,
-  // and folding it in would show the checks panel a subset as the whole. Dropped with the run.
+  // scoped holds verdicts answered for some subjects alone (agni issue 897). They come from a
+  // selection's checks in Properties, or from a link that named its verdict's subjects. `run` holds
+  // whole rules, so these are kept APART from it. A rule answered for one net is not that rule's
+  // answer for the design, and folding it in would show the checks panel a subset as the whole.
+  // Dropped with the run.
   scoped: CheckDesignResponse["verdicts"] = [];
   // scopedFindings holds findings from scoped runs (a verdict link, Properties), for sheet badges
-  // and locate; kept apart from the run's findings for the same reason as scoped verdicts.
+  // and locate. They are kept apart from the run's findings for the same reason as scoped verdicts.
   scopedFindings: FindingItem[] = [];
 
   // keepScoped adds a scoped answer's verdicts, each id once, the newest answer winning.
@@ -115,7 +119,7 @@ export class DocumentStore {
     return v ? verdictItem(v) : undefined;
   }
 
-  // ran reports whether the last run answered a rule, which is what separates "ran clean" from
+  // ran reports whether the last run answered a rule. That answer separates "ran clean" from
   // "press Run".
   ran(rule: string): boolean {
     return this.run?.rules.has(rule) ?? false;
@@ -152,8 +156,8 @@ export class DocumentStore {
   }
 
   // heldRun is the selection's part of the last run as one CheckDesignResponse, rule by rule in the
-  // catalog's order, or undefined until every selected rule has run. A saved report, a saved csv and the Tables panel
-  // all start from it, so none of them runs a rule.
+  // catalog's order, or undefined until every selected rule has run. A saved report, a saved csv
+  // and the Tables panel all start from it, so none of them runs a rule.
   heldRun(): { names: string[]; run: CheckDesignResponse } | undefined {
     const selected = new Set(this.selectedRules);
     // Catalog order, which is the order one run over the selection returns its findings in.
@@ -165,8 +169,8 @@ export class DocumentStore {
       findings: names.flatMap((n) => r.findings.filter((f) => f.rule === n)),
       verdicts: names.flatMap((n) => r.verdicts.filter((v) => v.rule === n)),
       skipped: r.skipped.filter((sk) => selected.has(sk.name)),
-      // What the read left out is a property of the design rather than of a rule, so it travels whole
-      // and a saved report states it (agni issue 717).
+      // The read's omissions belong to the design rather than to a rule, so they travel whole and a
+      // saved report states them (agni issue 717).
       unexpandedHierarchy: r.unexpandedHierarchy ?? [],
     });
     return { names, run };
@@ -179,8 +183,9 @@ export class DocumentStore {
     return this.selectedRules.flatMap((name) => vs.filter((v) => v.rule === name).map(verdictItem));
   }
 
-  // panelVerdictList is what the Checks panel shows: the run's considered set plus scoped answers
-  // for selected rules, so a report link that resolved via checkScoped still has a row to select.
+  // panelVerdictList lists what the Checks panel shows, the run's considered set plus scoped
+  // answers for selected rules, so a report link that resolved via checkScoped still has a row to
+  // select.
   panelVerdictList(): VerdictItem[] {
     const base = this.verdictList();
     const seen = new Set(base.map((v) => v.id));
@@ -196,7 +201,7 @@ export class DocumentStore {
   // engine reads a file with no netlist as an invalid argument and says so in its message.
   //
   // signal stops the request (agni issue 918). A stopped run folds in nothing, so the rules it was
-  // asked for stay pending, and it is no failure, since the reader stopped it.
+  // asked for are still pending. It is no failure, since the reader stopped it.
   async runMissing(checks: Pick<CheckClient, "checkDesign">, snapshot: () => Promise<string>, signal?: AbortSignal): Promise<void> {
     this.runError = null;
     const missing = this.selectedRules.filter((n) => !this.ran(n));
@@ -221,9 +226,10 @@ export class DocumentStore {
     }
   }
 
-  // loadCatalog fetches the rule catalog a check of snapshot would run (ListRules) and defaults the
-  // active ruleset to every available rule. A failure leaves an empty catalog and the reason on
-  // catalogError, which both panels show (agni issue 1117), rather than erroring the open.
+  // loadCatalog fetches the rule catalog through ListRules, the rules a check of snapshot would
+  // run. It defaults the active ruleset to every available rule. A failure leaves an empty catalog
+  // and the reason on catalogError, which both panels show (agni issue 1117), rather than erroring
+  // the open.
   async loadCatalog(checks: Pick<CheckClient, "listRules">, snapshot: () => Promise<string>): Promise<void> {
     try {
       const resp = await checks.listRules({ snapshot: await snapshot() });
@@ -258,8 +264,8 @@ export function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// verdictItem is one wire verdict as the panel shows it: its outcome as a word, its subjects, and the
-// statement and terms its witness rests on.
+// verdictItem is one wire verdict as the panel shows it, with its outcome as a word, its subjects,
+// and its witness's statement and terms.
 export function verdictItem(v: CheckDesignResponse["verdicts"][number]): VerdictItem {
   return {
     id: v.id,

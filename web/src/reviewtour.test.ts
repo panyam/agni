@@ -17,9 +17,9 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-// A step can only advance on an event the viewer reports, so each one the tour waits on has to be
-// emitted somewhere in the app. Without this a renamed or dropped emit leaves a step that never
-// advances, which only the browser walk would show.
+// A step can only advance on an event the viewer reports, so every event the tour waits on has to
+// be emitted somewhere in the app. Without this a renamed or dropped emit leaves a step that never
+// advances, and only the browser walk would show it.
 describe("every review tour step is tourable", () => {
   const src = readdirSync(__dirname)
     .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f) && f !== "viewerevents.ts" && f !== "reviewtour.ts")
@@ -28,7 +28,7 @@ describe("every review tour step is tourable", () => {
   const emitted = (name: string) => new RegExp(`(emit|events)\\??\\.?\\(\\s*"${name.replace(".", "\\.")}"`).test(src);
 
   it("finds the emits it looks for", () => {
-    // Positive control: a pattern matching nothing would pass every step below.
+    // This is the positive control. A pattern matching nothing would pass every step below.
     expect(emitted("checks.ran")).toBe(true);
     expect(emitted("no.such.event")).toBe(false);
   });

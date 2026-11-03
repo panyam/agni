@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCEPTED, ENVELOPE } from "./embed.js";
 
-// The script every saved HTML report carries (core/report/viewerlink.js), run in a page holding one
-// report link, against a stand-in for the viewer window it finds by name.
+// Every saved HTML report carries the script core/report/viewerlink.js. These tests run it in a page
+// holding one report link. The script finds the viewer window by name, and a stand-in plays it.
 const SCRIPT = readFileSync(join(process.cwd(), "..", "core", "report", "viewerlink.js"), "utf8");
 const VIEWER = "http://127.0.0.1:8080/designs/kicad/d.kicad_sch/view";
 const LINK = VIEWER + "?verdict=x&rule=r";
@@ -46,9 +46,9 @@ describe("a report link beside an open viewer", () => {
     expect(w.location.href).toBe(LINK);
   });
 
-  // A viewer resolving a verdict link runs its rule before it answers, which on a slow machine takes
-  // longer than the first wait, so the viewer says it has the request and the link is not loaded over
-  // it (agni issue 1271's CI).
+  // A viewer resolving a verdict link runs its rule before it answers. On a slow machine that takes
+  // longer than the first wait. So the viewer says it has the request, and the link does not load
+  // over it (agni issue 1271's CI).
   it("waits for a viewer that has taken the request, however long its answer takes", () => {
     vi.useFakeTimers();
     const w = viewerWindow();

@@ -2,9 +2,9 @@ import { defineConfig } from "vitest/config";
 
 // The browser suite. It runs inside `make testall`, and has its own config rather than its own gate.
 //
-// It is separate from vitest.config.ts because it needs a real server and a real Chromium, which the
-// unit run must not: `make test` has to stay something you can run on any machine in a few seconds.
-// Separate config, same gate.
+// It is separate from vitest.config.ts because it needs a real server and a real Chromium. The unit
+// run must need neither, because `make test` has to run on any machine in a few seconds. Separate
+// config, same gate.
 //
 // It was outside the gate until PR 629, on the argument that a machine without a browser would
 // go red for a reason unrelated to the change. v0.2.0 then shipped a viewer whose query surface

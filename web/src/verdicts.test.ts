@@ -72,8 +72,8 @@ describe("outcomeWord", () => {
     ]);
   });
 
-  // A blank outcome would read as "nothing to report" about a subject the rule did look at, which is
-  // the silence this whole layer exists to remove.
+  // A blank outcome would read as "nothing to report" about a subject the rule did look at. This
+  // whole layer exists to remove that silence.
   it("never renders a blank", () => {
     for (const o of [undefined, 0, 99]) expect(outcomeWord(o)).toBe("unspecified");
   });

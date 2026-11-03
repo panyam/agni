@@ -75,7 +75,8 @@ describe("highlightMenu", () => {
   });
 });
 
-// agni issue 356: whether a run lights every finding at once is the reader's choice, off by default.
+// The reader chooses whether a run lights every finding at once, and it is off by default (agni
+// issue 356).
 describe("Show every finding", () => {
   const mountMenu = (storage: ReturnType<typeof memStorage>, onShowAll?: (on: boolean) => void) => {
     const host = document.createElement("div");

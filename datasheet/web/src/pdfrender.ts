@@ -33,7 +33,7 @@ export async function renderPage(doc: PDFDocumentProxy, pageNumber: number, scal
   return { pageNumber, canvas, widthPts: unscaled.width, heightPts: unscaled.height, scale };
 }
 
-// rawDatasheetUrl builds the same-origin URL the raw endpoint serves the source PDF at
+// rawDatasheetUrl builds the same-origin URL of the source PDF on the raw endpoint
 // (/datasheets/raw/<mount>/<path...>), each segment percent-encoded to match the server's decode.
 export function rawDatasheetUrl(mount: string, path: string): string {
   const segs = [mount, ...path.split("/")].filter((s) => s !== "").map(encodeURIComponent);

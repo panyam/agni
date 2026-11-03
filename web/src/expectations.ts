@@ -25,10 +25,11 @@ export interface RuleExpectationItem {
 
 export type ExpectationStatus = "matched" | "partial" | "missing" | "pending" | "unexpected";
 
-// ExpectationRow is one reconciled rule: its status, the rule's catalog one-liner (so a row reads
-// as an assertion rather than a bare name, WS9-020), the subjects expected, the subjects that actually
-// fired, and the sidecar's why note. For an `unexpected` row `expected` is empty and `why` is ""
-// (no sidecar entry exists to narrate it); for a `missing` row `actual` is empty.
+// ExpectationRow is one reconciled rule. It holds the status, the rule's catalog one-liner, the
+// subjects expected, the subjects that actually fired, and the sidecar's why note. The one-liner
+// makes a row read as an assertion rather than a bare name (WS9-020). For an `unexpected` row
+// `expected` is empty and `why` is "", since no sidecar entry exists to narrate it. For a `missing`
+// row `actual` is empty.
 export interface ExpectationRow {
   rule: string;
   status: ExpectationStatus;
@@ -43,10 +44,10 @@ export interface ExpectationRow {
 
 // reconcile joins expectations against the actual findings into per-rule rows. Expectations keep
 // their given order (the server sorts fires then pending); unexpected rules follow, sorted. A
-// pending expectation stays `pending` even if its rule now fires, with `actual` filled so the author
-// sees the cue to turn it into a hard expectation. summaryFor
-// resolves a rule name to its catalog one-liner (the caller holds the ListRules catalog); it
-// defaults to none so pure-logic callers need not wire it.
+// pending expectation is still `pending` even if its rule now fires. Its `actual` is filled so the
+// author sees the cue to turn it into a hard expectation. summaryFor resolves a rule name to its
+// catalog one-liner, from the ListRules catalog the caller holds. It defaults to none so pure-logic
+// callers need not wire it.
 export function reconcile(
   expectations: RuleExpectationItem[],
   findings: FindingItem[],
@@ -96,7 +97,7 @@ function sameSubjects(a: string[], b: string[]): boolean {
 
 // STATUS_COLOR maps a reconcile status to its overlay color (WS9-045). Only statuses with a subject
 // that FIRED (matched/partial/unexpected) have a finding, hence a kind to highlight, so missing and
-// pending live in the caption instead.
+// pending appear in the caption instead.
 const STATUS_COLOR: Record<ExpectationStatus, string> = {
   matched: "#22c55e", // green: expected and fired exactly
   partial: "#f97316", // orange: fired, but not the exact expected subject set
@@ -107,8 +108,8 @@ const STATUS_COLOR: Record<ExpectationStatus, string> = {
 
 // expectationSpecs turns the ANCHORED half of the reconcile into status-colored highlight specs
 // (WS9-045), bucketing the subjects that fired for each status color. Kind (net/component/pin) comes
-// from the findings, so a missing subject has no kind and stays in the caption. It reuses
-// subjectsToSpecs, the bucketing findings highlighting uses, and only adds the color.
+// from the findings, so a missing subject has no kind and remains in the caption. It reuses
+// subjectsToSpecs, which buckets subjects for findings highlighting, and only adds the color.
 export function expectationSpecs(rows: ExpectationRow[], findings: FindingItem[]): HighlightSpec[] {
   const statusOf = new Map<string, ExpectationStatus>();
   for (const r of rows) for (const s of r.actual) statusOf.set(`${r.rule} ${s}`, r.status);

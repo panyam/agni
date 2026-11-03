@@ -51,8 +51,8 @@ const design = create(DesignSchema, {
   inputDiagnostics: { unmodeledBuses: [{ label: "D[1:0]", kind: "bus_alias", members: ["VIN", "D0"] }] },
 });
 
-// SERVED is what the engine answers SERVED_QUERIES with on that design: pin.name off each part type,
-// a name that repeats the designator included, and the one test point.
+// SERVED holds the engine's answers to SERVED_QUERIES on that design. It has pin.name off each part
+// type, including a name that repeats the designator, and the one test point.
 const SERVED: ServedFacts = {
   pinNames: [
     ["J1", "1", "VIN"],
@@ -89,7 +89,7 @@ function finding(over: Partial<FindingItem>): FindingItem {
   } as FindingItem;
 }
 
-// ran is a completed run of three rules, which is what lets a count read as a count.
+// ran is a completed run of three rules. A completed run lets a count read as a count.
 function ran(findings: FindingItem[]): FindingsState {
   return { findings, verdicts: [], focusedVerdict: "", selected: "", ruleCount: 3, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "" };
 }
@@ -280,8 +280,8 @@ describe("reportLines", () => {
   });
 });
 
-// agni issue 897: a selected net, part or pin shows the selected rules' answer about it alone, which
-// the presenter asks CheckDesign for.
+// agni issue 897: the presenter asks CheckDesign what the selected rules say about a selected net,
+// part or pin alone, and the panel shows that answer.
 describe("a selection's own checks", () => {
   const verdict = (rule: string, outcome: string, statement = ""): VerdictItem => ({
     id: `${rule}:(net:VIN)`,

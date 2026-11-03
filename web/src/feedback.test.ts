@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { feedbackIssueURL, findingFeedback } from "./feedback.js";
 import { DocumentStore } from "./document.js";
 
-// A finding as the panel holds it, every field a design supplies filled with a name to look for.
+// A finding as the panel holds it. Each field that comes from the design holds a name to look for.
 const finding = {
   rule: "i2c-pull-up",
   severity: "error",

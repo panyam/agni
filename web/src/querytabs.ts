@@ -1,10 +1,11 @@
 // The query panel's tabs (agni issue 902). A question asked about a selection, from Properties' Ask
 // rows or the panel's own selection bar, opens a tab of its own, so it never overwrites a query the
-// reader was writing, and several answers stay open side by side. The tabs are the panel's own strip
-// rather than dockview tabs, so a query tab never lands in a saved dock layout.
+// reader was writing, and several answers can be open side by side. The tabs are the panel's own
+// strip rather than dockview tabs, so a query tab never ends up in a saved dock layout.
 //
-// This module is the strip's model, pure so the panel and its tests share one set of rules: what a
-// tab is called, which tab an action leaves active, and that one tab always remains.
+// This module is the strip's model. It is pure, so the panel and its tests share one set of rules.
+// The rules say what a tab is called, which tab an action leaves active, and that one tab always
+// remains.
 
 import { type Bindings, LocateReason } from "./query.js";
 import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
@@ -20,14 +21,14 @@ export interface Located {
   pin?: string;
 }
 
-// QueryTab is one tab's own question. The answer to it lives with the host, keyed by id, because the
-// host is what the presenter pushes answers to.
+// QueryTab is one tab's own question. The host holds the answer to it, keyed by id, because the
+// presenter pushes answers to the host.
 export interface QueryTab {
   id: string;
   title: string;
   text: string;
   bindings: Bindings;
-  // lastRun is the question the answer on screen is for, so "show all" asks the same one again
+  // lastRun is the question behind the answer on screen, so "show all" asks the same one again
   // without its limit even after the reader has started editing the box.
   lastRun: { text: string; bindings: Bindings };
   located?: Located;
@@ -93,7 +94,7 @@ export function openTab(strip: TabStrip, tab: QueryTab): TabStrip {
 
 // closeTab removes a tab. The last tab never closes, since the panel always shows one. Closing the
 // tab in front brings forward its right-hand neighbour, or its left one at the end of the strip,
-// which is what a browser does.
+// as a browser does.
 export function closeTab(strip: TabStrip, id: string): TabStrip {
   if (strip.tabs.length <= 1) return strip;
   const at = strip.tabs.findIndex((t) => t.id === id);
