@@ -3,10 +3,10 @@
 // gen.DocsPage.html include, and BasePage.html injects the bundle through it.
 //
 // It hydrates the inline interactive tags on the page. Today that is
-// <agni-viewer>, a pan/zoom canvas over a design SVG baked at build time. Once
-// the wasm-FS demo backend ships, the same hydration will mount <agni-query> /
-// <agni-diff> against the in-browser engine, as the notations docs hydrate
-// <notation>.
+// <agni-viewer>, a pan/zoom canvas over a design SVG baked at build time. The
+// in-browser engine has shipped (mission #851), and the docsite does not use it
+// yet. The planned next step is the same hydration mounting <agni-query> /
+// <agni-diff> against that engine, as the notations docs hydrate <notation>.
 //
 // Built by build.mjs (esbuild) into static/js/gen/.
 
