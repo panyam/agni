@@ -7,6 +7,7 @@
 package webapi
 
 import (
+	checks "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -1677,11 +1678,189 @@ func (x *ComponentReport) GetLabel() string {
 	return ""
 }
 
+// LocateSubjectsRequest names the entities to locate in one snapshot.
+type LocateSubjectsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// subjects are the entities to locate, each as a finding names one. A part and a net join the
+	// drawing by ref-des and net NAME, so an EDIF schematic and an ODB++ board, which share no net id,
+	// still answer. A pin locates on the sheets that draw its unit, so U1's pin 5 answers U1B's sheet
+	// and not U1A's. A net_id narrows a net to one of two that share a name, where the schematic
+	// stamps ids on its wires.
+	Subjects []*checks.Subject `protobuf:"bytes,2,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	// board adds the board sheet ("board") for a part with a footprint, a pin with a pad, and a net
+	// with copper or a pad. Unset, the board is not read.
+	Board         bool `protobuf:"varint,3,opt,name=board,proto3" json:"board,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LocateSubjectsRequest) Reset() {
+	*x = LocateSubjectsRequest{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LocateSubjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LocateSubjectsRequest) ProtoMessage() {}
+
+func (x *LocateSubjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LocateSubjectsRequest.ProtoReflect.Descriptor instead.
+func (*LocateSubjectsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *LocateSubjectsRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
+func (x *LocateSubjectsRequest) GetSubjects() []*checks.Subject {
+	if x != nil {
+		return x.Subjects
+	}
+	return nil
+}
+
+func (x *LocateSubjectsRequest) GetBoard() bool {
+	if x != nil {
+		return x.Board
+	}
+	return false
+}
+
+// LocateSubjectsResponse answers each subject in request order.
+type LocateSubjectsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subjects      []*SubjectSheets       `protobuf:"bytes,1,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LocateSubjectsResponse) Reset() {
+	*x = LocateSubjectsResponse{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LocateSubjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LocateSubjectsResponse) ProtoMessage() {}
+
+func (x *LocateSubjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LocateSubjectsResponse.ProtoReflect.Descriptor instead.
+func (*LocateSubjectsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *LocateSubjectsResponse) GetSubjects() []*SubjectSheets {
+	if x != nil {
+		return x.Subjects
+	}
+	return nil
+}
+
+// SubjectSheets is where one subject is drawn.
+type SubjectSheets struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Subject *checks.Subject        `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	// sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+	// and then "board". Empty means drawn nowhere, and locate_reason says why.
+	SheetIds []string `protobuf:"bytes,2,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
+	// locate_reason is UNSPECIFIED when sheet_ids is not empty.
+	LocateReason  checks.LocateReason `protobuf:"varint,3,opt,name=locate_reason,json=locateReason,proto3,enum=agni.v1.checks.LocateReason" json:"locate_reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubjectSheets) Reset() {
+	*x = SubjectSheets{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubjectSheets) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubjectSheets) ProtoMessage() {}
+
+func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubjectSheets.ProtoReflect.Descriptor instead.
+func (*SubjectSheets) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SubjectSheets) GetSubject() *checks.Subject {
+	if x != nil {
+		return x.Subject
+	}
+	return nil
+}
+
+func (x *SubjectSheets) GetSheetIds() []string {
+	if x != nil {
+		return x.SheetIds
+	}
+	return nil
+}
+
+func (x *SubjectSheets) GetLocateReason() checks.LocateReason {
+	if x != nil {
+		return x.LocateReason
+	}
+	return checks.LocateReason(0)
+}
+
 var File_agni_v1_webapi_design_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x17agni/v1/geom/geom.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\x1a google/protobuf/field_mask.proto\"K\n" +
+	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x17agni/v1/geom/geom.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\x1a google/protobuf/field_mask.proto\"K\n" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
@@ -1784,7 +1963,17 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\fdevice_class\x18\x03 \x01(\tR\vdeviceClass\x12\x12\n" +
 	"\x04cell\x18\x04 \x01(\tR\x04cell\x12\x12\n" +
 	"\x04kind\x18\x05 \x01(\tR\x04kind\x12\x14\n" +
-	"\x05label\x18\x06 \x01(\tR\x05label*s\n" +
+	"\x05label\x18\x06 \x01(\tR\x05label\"~\n" +
+	"\x15LocateSubjectsRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x123\n" +
+	"\bsubjects\x18\x02 \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjects\x12\x14\n" +
+	"\x05board\x18\x03 \x01(\bR\x05board\"S\n" +
+	"\x16LocateSubjectsResponse\x129\n" +
+	"\bsubjects\x18\x01 \x03(\v2\x1d.agni.v1.webapi.SubjectSheetsR\bsubjects\"\xa2\x01\n" +
+	"\rSubjectSheets\x121\n" +
+	"\asubject\x18\x01 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x12\x1b\n" +
+	"\tsheet_ids\x18\x02 \x03(\tR\bsheetIds\x12A\n" +
+	"\rlocate_reason\x18\x03 \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\flocateReason*s\n" +
 	"\vSheetFormat\x12\x1c\n" +
 	"\x18SHEET_FORMAT_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SHEET_FORMAT_PACKED\x10\x01\x12\x14\n" +
@@ -1798,12 +1987,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x19TRACE_OUTCOME_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14TRACE_OUTCOME_ROUTED\x10\x01\x12\x1a\n" +
 	"\x16TRACE_OUTCOME_NO_ROUTE\x10\x02\x12\x1c\n" +
-	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\xcd\x03\n" +
+	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\xae\x04\n" +
 	"\rDesignService\x12P\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a!.agni.v1.webapi.GetDesignResponse\x12M\n" +
 	"\bGetSheet\x12\x1f.agni.v1.webapi.GetSheetRequest\x1a .agni.v1.webapi.GetSheetResponse\x12_\n" +
 	"\x0eHighlightSheet\x12%.agni.v1.webapi.HighlightSheetRequest\x1a&.agni.v1.webapi.HighlightSheetResponse\x12b\n" +
-	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponse\x12V\n" +
+	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponse\x12_\n" +
+	"\x0eLocateSubjects\x12%.agni.v1.webapi.LocateSubjectsRequest\x1a&.agni.v1.webapi.LocateSubjectsResponse\x12V\n" +
 	"\vTraceDesign\x12\".agni.v1.webapi.TraceDesignRequest\x1a#.agni.v1.webapi.TraceDesignResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
@@ -1819,7 +2009,7 @@ func file_agni_v1_webapi_design_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(SheetFormat)(0),                // 0: agni.v1.webapi.SheetFormat
 	(SymbolSource)(0),               // 1: agni.v1.webapi.SymbolSource
@@ -1843,27 +2033,32 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*TraceStub)(nil),               // 19: agni.v1.webapi.TraceStub
 	(*ConversionReport)(nil),        // 20: agni.v1.webapi.ConversionReport
 	(*ComponentReport)(nil),         // 21: agni.v1.webapi.ComponentReport
-	(*fieldmaskpb.FieldMask)(nil),   // 22: google.protobuf.FieldMask
-	(*geom.UndrawnPlacement)(nil),   // 23: agni.v1.geom.UndrawnPlacement
-	(*ir.UnexpandedHierarchy)(nil),  // 24: agni.v1.ir.UnexpandedHierarchy
-	(*ir.Design)(nil),               // 25: agni.v1.ir.Design
-	(*geom.PackedSheet)(nil),        // 26: agni.v1.geom.PackedSheet
-	(*geom.HighlightSpec)(nil),      // 27: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 28: agni.v1.geom.PackedHighlight
+	(*LocateSubjectsRequest)(nil),   // 22: agni.v1.webapi.LocateSubjectsRequest
+	(*LocateSubjectsResponse)(nil),  // 23: agni.v1.webapi.LocateSubjectsResponse
+	(*SubjectSheets)(nil),           // 24: agni.v1.webapi.SubjectSheets
+	(*fieldmaskpb.FieldMask)(nil),   // 25: google.protobuf.FieldMask
+	(*geom.UndrawnPlacement)(nil),   // 26: agni.v1.geom.UndrawnPlacement
+	(*ir.UnexpandedHierarchy)(nil),  // 27: agni.v1.ir.UnexpandedHierarchy
+	(*ir.Design)(nil),               // 28: agni.v1.ir.Design
+	(*geom.PackedSheet)(nil),        // 29: agni.v1.geom.PackedSheet
+	(*geom.HighlightSpec)(nil),      // 30: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 31: agni.v1.geom.PackedHighlight
+	(*checks.Subject)(nil),          // 32: agni.v1.checks.Subject
+	(checks.LocateReason)(0),        // 33: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	22, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
-	23, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	25, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
+	26, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
 	3,  // 2: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	24, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	25, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
+	27, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	28, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
 	0,  // 5: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
 	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	26, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	29, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
 	1,  // 8: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	0,  // 9: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	27, // 10: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	28, // 11: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	30, // 10: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	31, // 11: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
 	1,  // 12: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	20, // 13: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
 	13, // 14: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
@@ -1877,21 +2072,27 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	13, // 22: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
 	19, // 23: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
 	21, // 24: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	4,  // 25: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 26: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 27: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	10, // 28: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	12, // 29: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	5,  // 30: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 31: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 32: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	11, // 33: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	14, // 34: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	30, // [30:35] is the sub-list for method output_type
-	25, // [25:30] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	32, // 25: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
+	24, // 26: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
+	32, // 27: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
+	33, // 28: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
+	4,  // 29: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 30: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 31: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 32: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	22, // 33: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	12, // 34: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	5,  // 35: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 36: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 37: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 38: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	23, // 39: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	14, // 40: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	35, // [35:41] is the sub-list for method output_type
+	29, // [29:35] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }
@@ -1913,7 +2114,7 @@ func file_agni_v1_webapi_design_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

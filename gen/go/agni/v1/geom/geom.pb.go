@@ -244,6 +244,67 @@ func (WireGeometry_Kind) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{12, 0}
 }
 
+// Flag is the outline a label is drawn inside. KiCad draws a global label in a box whose
+// ends show the signal's direction, an arrow out for an output and arrows both ways for a
+// bidirectional signal.
+type Label_Flag int32
+
+const (
+	Label_FLAG_NONE          Label_Flag = 0 // text alone, as for a local label
+	Label_FLAG_PASSIVE       Label_Flag = 1 // a plain box
+	Label_FLAG_INPUT         Label_Flag = 2 // an arrow into the connection
+	Label_FLAG_OUTPUT        Label_Flag = 3 // an arrow out of it
+	Label_FLAG_BIDIRECTIONAL Label_Flag = 4 // arrows both ways
+	Label_FLAG_TRI_STATE     Label_Flag = 5 // drawn as bidirectional
+)
+
+// Enum value maps for Label_Flag.
+var (
+	Label_Flag_name = map[int32]string{
+		0: "FLAG_NONE",
+		1: "FLAG_PASSIVE",
+		2: "FLAG_INPUT",
+		3: "FLAG_OUTPUT",
+		4: "FLAG_BIDIRECTIONAL",
+		5: "FLAG_TRI_STATE",
+	}
+	Label_Flag_value = map[string]int32{
+		"FLAG_NONE":          0,
+		"FLAG_PASSIVE":       1,
+		"FLAG_INPUT":         2,
+		"FLAG_OUTPUT":        3,
+		"FLAG_BIDIRECTIONAL": 4,
+		"FLAG_TRI_STATE":     5,
+	}
+)
+
+func (x Label_Flag) Enum() *Label_Flag {
+	p := new(Label_Flag)
+	*p = x
+	return p
+}
+
+func (x Label_Flag) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Label_Flag) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_geom_geom_proto_enumTypes[4].Descriptor()
+}
+
+func (Label_Flag) Type() protoreflect.EnumType {
+	return &file_agni_v1_geom_geom_proto_enumTypes[4]
+}
+
+func (x Label_Flag) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Label_Flag.Descriptor instead.
+func (Label_Flag) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{13, 0}
+}
+
 // Provenance links a geometry node back to its source (schematic file + EDIF internal
 // id). source_id is the EDIF rename &id. It is the robust join key to the IR, since it is
 // identical across the .edn netlist and the .eds schematic.
@@ -601,8 +662,12 @@ type PinPoint struct {
 	// the pins in a real export set this.
 	NumberOrigin  *Point `protobuf:"bytes,8,opt,name=number_origin,json=numberOrigin,proto3" json:"number_origin,omitempty"`
 	NumberJustify string `protobuf:"bytes,9,opt,name=number_justify,json=numberJustify,proto3" json:"number_justify,omitempty"` // pin number alignment, canonical "<h> <v>"; empty with number_origin
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The angle of the pin's name and number in the symbol's own frame, in degrees counter-clockwise.
+	// A renderer adds the placement's rotation to it, as it does for a field. KiCad runs a vertical
+	// pin's text along the pin, at 90. Zero for every pin of a format that does not set it.
+	TextRotationDeg int32 `protobuf:"varint,10,opt,name=text_rotation_deg,json=textRotationDeg,proto3" json:"text_rotation_deg,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PinPoint) Reset() {
@@ -696,6 +761,13 @@ func (x *PinPoint) GetNumberJustify() string {
 		return x.NumberJustify
 	}
 	return ""
+}
+
+func (x *PinPoint) GetTextRotationDeg() int32 {
+	if x != nil {
+		return x.TextRotationDeg
+	}
+	return 0
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -1109,7 +1181,11 @@ type SymbolPlacement struct {
 	// select it and then ask a question about a part that does not exist. On a schematic, a reader
 	// often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
 	// not click.
-	NetAnchor     string      `protobuf:"bytes,7,opt,name=net_anchor,json=netAnchor,proto3" json:"net_anchor,omitempty"`
+	NetAnchor string `protobuf:"bytes,7,opt,name=net_anchor,json=netAnchor,proto3" json:"net_anchor,omitempty"`
+	// The part is drawn on the schematic and left off the board (do not populate). KiCad marks one
+	// with a cross over its body, and both backends draw that cross. A format with no such flag
+	// leaves it false.
+	Dnp           bool        `protobuf:"varint,8,opt,name=dnp,proto3" json:"dnp,omitempty"`
 	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"` // source_id = EDIF instance &id (the unique join key)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1192,6 +1268,13 @@ func (x *SymbolPlacement) GetNetAnchor() string {
 		return x.NetAnchor
 	}
 	return ""
+}
+
+func (x *SymbolPlacement) GetDnp() bool {
+	if x != nil {
+		return x.Dnp
+	}
+	return false
 }
 
 func (x *SymbolPlacement) GetProv() *Provenance {
@@ -1336,8 +1419,15 @@ type Label struct {
 	// {left,center,right} and v in {top,middle,bottom}. Either token may be omitted, and then
 	// defaults to centered. Each reader maps its native codes onto this (EDIF LOWERLEFT ->
 	// "left bottom"; KiCad "left bottom").
-	Justify       string `protobuf:"bytes,4,opt,name=justify,proto3" json:"justify,omitempty"`
-	RotationDeg   int32  `protobuf:"varint,5,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees counter-clockwise
+	Justify     string     `protobuf:"bytes,4,opt,name=justify,proto3" json:"justify,omitempty"`
+	RotationDeg int32      `protobuf:"varint,5,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees counter-clockwise
+	Flag        Label_Flag `protobuf:"varint,6,opt,name=flag,proto3,enum=agni.v1.geom.Label_Flag" json:"flag,omitempty"`
+	// Where the label meets its wire, when a reader set the text apart from it. KiCad draws a
+	// label's text a little off its connect point, so its reader places origin where the text
+	// goes and keeps the connect point here. A flag's outline starts from it. Nil when the text
+	// sits on the connect point, so a consumer joining a label to its wire reads anchor first and
+	// origin otherwise.
+	Anchor        *Point `protobuf:"bytes,7,opt,name=anchor,proto3" json:"anchor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1405,6 +1495,20 @@ func (x *Label) GetRotationDeg() int32 {
 		return x.RotationDeg
 	}
 	return 0
+}
+
+func (x *Label) GetFlag() Label_Flag {
+	if x != nil {
+		return x.Flag
+	}
+	return Label_FLAG_NONE
+}
+
+func (x *Label) GetAnchor() *Point {
+	if x != nil {
+		return x.Anchor
+	}
+	return nil
 }
 
 // SheetGeometry is one schematic page/sheet (tier 1, logical).
@@ -2003,7 +2107,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fFILL_OUTLINE\x10\x01\x12\x13\n" +
 	"\x0fFILL_BACKGROUND\x10\x02\x12\x0e\n" +
 	"\n" +
-	"FILL_COLOR\x10\x03\"\xc8\x02\n" +
+	"FILL_COLOR\x10\x03\"\xf4\x02\n" +
 	"\bPinPoint\x12\x19\n" +
 	"\bport_ref\x18\x01 \x01(\tR\aportRef\x12%\n" +
 	"\x03loc\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x03loc\x12\x1b\n" +
@@ -2013,7 +2117,9 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\x04name\x18\x06 \x01(\tR\x04name\x12\x16\n" +
 	"\x06height\x18\a \x01(\x03R\x06height\x128\n" +
 	"\rnumber_origin\x18\b \x01(\v2\x13.agni.v1.geom.PointR\fnumberOrigin\x12%\n" +
-	"\x0enumber_justify\x18\t \x01(\tR\rnumberJustify\"\xe4\x01\n" +
+	"\x0enumber_justify\x18\t \x01(\tR\rnumberJustify\x12*\n" +
+	"\x11text_rotation_deg\x18\n" +
+	" \x01(\x05R\x0ftextRotationDeg\"\xe4\x01\n" +
 	"\x05Asset\x12,\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x18.agni.v1.geom.Asset.KindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12,\n" +
@@ -2052,7 +2158,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\ajustify\x18\x04 \x01(\tR\ajustify\x12\x16\n" +
 	"\x06height\x18\x05 \x01(\x03R\x06height\x12!\n" +
 	"\frotation_deg\x18\x06 \x01(\x05R\vrotationDeg\x12\x18\n" +
-	"\avisible\x18\a \x01(\bR\avisible\"\xb2\x02\n" +
+	"\avisible\x18\a \x01(\bR\avisible\"\xc4\x02\n" +
 	"\x0fSymbolPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x19\n" +
 	"\bcell_ref\x18\x02 \x01(\tR\acellRef\x12\x1f\n" +
@@ -2062,7 +2168,8 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\bview_ref\x18\x05 \x01(\tR\aviewRef\x12+\n" +
 	"\x06fields\x18\x06 \x03(\v2\x13.agni.v1.geom.FieldR\x06fields\x12\x1d\n" +
 	"\n" +
-	"net_anchor\x18\a \x01(\tR\tnetAnchor\x12,\n" +
+	"net_anchor\x18\a \x01(\tR\tnetAnchor\x12\x10\n" +
+	"\x03dnp\x18\b \x01(\bR\x03dnp\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"7\n" +
 	"\bPolyline\x12+\n" +
 	"\x06points\x18\x01 \x03(\v2\x13.agni.v1.geom.PointR\x06points\"\x9f\x02\n" +
@@ -2076,13 +2183,23 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\x10KIND_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tKIND_WIRE\x10\x01\x12\f\n" +
 	"\bKIND_BUS\x10\x02\x12\x12\n" +
-	"\x0eKIND_BUS_ENTRY\x10\x03\"\x9d\x01\n" +
+	"\x0eKIND_BUS_ENTRY\x10\x03\"\xee\x02\n" +
 	"\x05Label\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12+\n" +
 	"\x06origin\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x06origin\x12\x16\n" +
 	"\x06height\x18\x03 \x01(\x03R\x06height\x12\x18\n" +
 	"\ajustify\x18\x04 \x01(\tR\ajustify\x12!\n" +
-	"\frotation_deg\x18\x05 \x01(\x05R\vrotationDeg\"\x88\x04\n" +
+	"\frotation_deg\x18\x05 \x01(\x05R\vrotationDeg\x12,\n" +
+	"\x04flag\x18\x06 \x01(\x0e2\x18.agni.v1.geom.Label.FlagR\x04flag\x12+\n" +
+	"\x06anchor\x18\a \x01(\v2\x13.agni.v1.geom.PointR\x06anchor\"t\n" +
+	"\x04Flag\x12\r\n" +
+	"\tFLAG_NONE\x10\x00\x12\x10\n" +
+	"\fFLAG_PASSIVE\x10\x01\x12\x0e\n" +
+	"\n" +
+	"FLAG_INPUT\x10\x02\x12\x0f\n" +
+	"\vFLAG_OUTPUT\x10\x03\x12\x16\n" +
+	"\x12FLAG_BIDIRECTIONAL\x10\x04\x12\x12\n" +
+	"\x0eFLAG_TRI_STATE\x10\x05\"\x88\x04\n" +
 	"\rSheetGeometry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
@@ -2143,83 +2260,86 @@ func file_agni_v1_geom_geom_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_agni_v1_geom_geom_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_agni_v1_geom_geom_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agni_v1_geom_geom_proto_goTypes = []any{
 	(Shape_Kind)(0),                // 0: agni.v1.geom.Shape.Kind
 	(Shape_Fill)(0),                // 1: agni.v1.geom.Shape.Fill
 	(Asset_Kind)(0),                // 2: agni.v1.geom.Asset.Kind
 	(WireGeometry_Kind)(0),         // 3: agni.v1.geom.WireGeometry.Kind
-	(*Provenance)(nil),             // 4: agni.v1.geom.Provenance
-	(*Point)(nil),                  // 5: agni.v1.geom.Point
-	(*BBox)(nil),                   // 6: agni.v1.geom.BBox
-	(*Transform)(nil),              // 7: agni.v1.geom.Transform
-	(*Shape)(nil),                  // 8: agni.v1.geom.Shape
-	(*PinPoint)(nil),               // 9: agni.v1.geom.PinPoint
-	(*Asset)(nil),                  // 10: agni.v1.geom.Asset
-	(*Image)(nil),                  // 11: agni.v1.geom.Image
-	(*SymbolDef)(nil),              // 12: agni.v1.geom.SymbolDef
-	(*Field)(nil),                  // 13: agni.v1.geom.Field
-	(*SymbolPlacement)(nil),        // 14: agni.v1.geom.SymbolPlacement
-	(*Polyline)(nil),               // 15: agni.v1.geom.Polyline
-	(*WireGeometry)(nil),           // 16: agni.v1.geom.WireGeometry
-	(*Label)(nil),                  // 17: agni.v1.geom.Label
-	(*SheetGeometry)(nil),          // 18: agni.v1.geom.SheetGeometry
-	(*TitleBlock)(nil),             // 19: agni.v1.geom.TitleBlock
-	(*KeyValue)(nil),               // 20: agni.v1.geom.KeyValue
-	(*SchematicGeometry)(nil),      // 21: agni.v1.geom.SchematicGeometry
-	(*BackAnnotatedPlacement)(nil), // 22: agni.v1.geom.BackAnnotatedPlacement
-	(*UndrawnPlacement)(nil),       // 23: agni.v1.geom.UndrawnPlacement
+	(Label_Flag)(0),                // 4: agni.v1.geom.Label.Flag
+	(*Provenance)(nil),             // 5: agni.v1.geom.Provenance
+	(*Point)(nil),                  // 6: agni.v1.geom.Point
+	(*BBox)(nil),                   // 7: agni.v1.geom.BBox
+	(*Transform)(nil),              // 8: agni.v1.geom.Transform
+	(*Shape)(nil),                  // 9: agni.v1.geom.Shape
+	(*PinPoint)(nil),               // 10: agni.v1.geom.PinPoint
+	(*Asset)(nil),                  // 11: agni.v1.geom.Asset
+	(*Image)(nil),                  // 12: agni.v1.geom.Image
+	(*SymbolDef)(nil),              // 13: agni.v1.geom.SymbolDef
+	(*Field)(nil),                  // 14: agni.v1.geom.Field
+	(*SymbolPlacement)(nil),        // 15: agni.v1.geom.SymbolPlacement
+	(*Polyline)(nil),               // 16: agni.v1.geom.Polyline
+	(*WireGeometry)(nil),           // 17: agni.v1.geom.WireGeometry
+	(*Label)(nil),                  // 18: agni.v1.geom.Label
+	(*SheetGeometry)(nil),          // 19: agni.v1.geom.SheetGeometry
+	(*TitleBlock)(nil),             // 20: agni.v1.geom.TitleBlock
+	(*KeyValue)(nil),               // 21: agni.v1.geom.KeyValue
+	(*SchematicGeometry)(nil),      // 22: agni.v1.geom.SchematicGeometry
+	(*BackAnnotatedPlacement)(nil), // 23: agni.v1.geom.BackAnnotatedPlacement
+	(*UndrawnPlacement)(nil),       // 24: agni.v1.geom.UndrawnPlacement
 }
 var file_agni_v1_geom_geom_proto_depIdxs = []int32{
-	5,  // 0: agni.v1.geom.BBox.min:type_name -> agni.v1.geom.Point
-	5,  // 1: agni.v1.geom.BBox.max:type_name -> agni.v1.geom.Point
-	5,  // 2: agni.v1.geom.Transform.origin:type_name -> agni.v1.geom.Point
+	6,  // 0: agni.v1.geom.BBox.min:type_name -> agni.v1.geom.Point
+	6,  // 1: agni.v1.geom.BBox.max:type_name -> agni.v1.geom.Point
+	6,  // 2: agni.v1.geom.Transform.origin:type_name -> agni.v1.geom.Point
 	0,  // 3: agni.v1.geom.Shape.kind:type_name -> agni.v1.geom.Shape.Kind
-	5,  // 4: agni.v1.geom.Shape.points:type_name -> agni.v1.geom.Point
+	6,  // 4: agni.v1.geom.Shape.points:type_name -> agni.v1.geom.Point
 	1,  // 5: agni.v1.geom.Shape.fill:type_name -> agni.v1.geom.Shape.Fill
-	5,  // 6: agni.v1.geom.PinPoint.loc:type_name -> agni.v1.geom.Point
-	5,  // 7: agni.v1.geom.PinPoint.label_origin:type_name -> agni.v1.geom.Point
-	5,  // 8: agni.v1.geom.PinPoint.number_origin:type_name -> agni.v1.geom.Point
+	6,  // 6: agni.v1.geom.PinPoint.loc:type_name -> agni.v1.geom.Point
+	6,  // 7: agni.v1.geom.PinPoint.label_origin:type_name -> agni.v1.geom.Point
+	6,  // 8: agni.v1.geom.PinPoint.number_origin:type_name -> agni.v1.geom.Point
 	2,  // 9: agni.v1.geom.Asset.kind:type_name -> agni.v1.geom.Asset.Kind
-	4,  // 10: agni.v1.geom.Asset.prov:type_name -> agni.v1.geom.Provenance
-	6,  // 11: agni.v1.geom.Image.bbox:type_name -> agni.v1.geom.BBox
-	10, // 12: agni.v1.geom.Image.asset:type_name -> agni.v1.geom.Asset
-	6,  // 13: agni.v1.geom.SymbolDef.bbox:type_name -> agni.v1.geom.BBox
-	8,  // 14: agni.v1.geom.SymbolDef.shapes:type_name -> agni.v1.geom.Shape
-	9,  // 15: agni.v1.geom.SymbolDef.pins:type_name -> agni.v1.geom.PinPoint
-	17, // 16: agni.v1.geom.SymbolDef.annotations:type_name -> agni.v1.geom.Label
-	10, // 17: agni.v1.geom.SymbolDef.asset:type_name -> agni.v1.geom.Asset
-	11, // 18: agni.v1.geom.SymbolDef.images:type_name -> agni.v1.geom.Image
-	4,  // 19: agni.v1.geom.SymbolDef.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 20: agni.v1.geom.Field.origin:type_name -> agni.v1.geom.Point
-	7,  // 21: agni.v1.geom.SymbolPlacement.transform:type_name -> agni.v1.geom.Transform
-	13, // 22: agni.v1.geom.SymbolPlacement.fields:type_name -> agni.v1.geom.Field
-	4,  // 23: agni.v1.geom.SymbolPlacement.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 24: agni.v1.geom.Polyline.points:type_name -> agni.v1.geom.Point
-	15, // 25: agni.v1.geom.WireGeometry.polylines:type_name -> agni.v1.geom.Polyline
+	5,  // 10: agni.v1.geom.Asset.prov:type_name -> agni.v1.geom.Provenance
+	7,  // 11: agni.v1.geom.Image.bbox:type_name -> agni.v1.geom.BBox
+	11, // 12: agni.v1.geom.Image.asset:type_name -> agni.v1.geom.Asset
+	7,  // 13: agni.v1.geom.SymbolDef.bbox:type_name -> agni.v1.geom.BBox
+	9,  // 14: agni.v1.geom.SymbolDef.shapes:type_name -> agni.v1.geom.Shape
+	10, // 15: agni.v1.geom.SymbolDef.pins:type_name -> agni.v1.geom.PinPoint
+	18, // 16: agni.v1.geom.SymbolDef.annotations:type_name -> agni.v1.geom.Label
+	11, // 17: agni.v1.geom.SymbolDef.asset:type_name -> agni.v1.geom.Asset
+	12, // 18: agni.v1.geom.SymbolDef.images:type_name -> agni.v1.geom.Image
+	5,  // 19: agni.v1.geom.SymbolDef.prov:type_name -> agni.v1.geom.Provenance
+	6,  // 20: agni.v1.geom.Field.origin:type_name -> agni.v1.geom.Point
+	8,  // 21: agni.v1.geom.SymbolPlacement.transform:type_name -> agni.v1.geom.Transform
+	14, // 22: agni.v1.geom.SymbolPlacement.fields:type_name -> agni.v1.geom.Field
+	5,  // 23: agni.v1.geom.SymbolPlacement.prov:type_name -> agni.v1.geom.Provenance
+	6,  // 24: agni.v1.geom.Polyline.points:type_name -> agni.v1.geom.Point
+	16, // 25: agni.v1.geom.WireGeometry.polylines:type_name -> agni.v1.geom.Polyline
 	3,  // 26: agni.v1.geom.WireGeometry.kind:type_name -> agni.v1.geom.WireGeometry.Kind
-	4,  // 27: agni.v1.geom.WireGeometry.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 28: agni.v1.geom.Label.origin:type_name -> agni.v1.geom.Point
-	6,  // 29: agni.v1.geom.SheetGeometry.size:type_name -> agni.v1.geom.BBox
-	14, // 30: agni.v1.geom.SheetGeometry.placements:type_name -> agni.v1.geom.SymbolPlacement
-	16, // 31: agni.v1.geom.SheetGeometry.wires:type_name -> agni.v1.geom.WireGeometry
-	17, // 32: agni.v1.geom.SheetGeometry.labels:type_name -> agni.v1.geom.Label
-	8,  // 33: agni.v1.geom.SheetGeometry.shapes:type_name -> agni.v1.geom.Shape
-	19, // 34: agni.v1.geom.SheetGeometry.title_block:type_name -> agni.v1.geom.TitleBlock
-	11, // 35: agni.v1.geom.SheetGeometry.images:type_name -> agni.v1.geom.Image
-	4,  // 36: agni.v1.geom.SheetGeometry.prov:type_name -> agni.v1.geom.Provenance
-	20, // 37: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
-	12, // 38: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
-	18, // 39: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
-	23, // 40: agni.v1.geom.SchematicGeometry.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
-	22, // 41: agni.v1.geom.SchematicGeometry.back_annotated:type_name -> agni.v1.geom.BackAnnotatedPlacement
-	4,  // 42: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
-	43, // [43:43] is the sub-list for method output_type
-	43, // [43:43] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	5,  // 27: agni.v1.geom.WireGeometry.prov:type_name -> agni.v1.geom.Provenance
+	6,  // 28: agni.v1.geom.Label.origin:type_name -> agni.v1.geom.Point
+	4,  // 29: agni.v1.geom.Label.flag:type_name -> agni.v1.geom.Label.Flag
+	6,  // 30: agni.v1.geom.Label.anchor:type_name -> agni.v1.geom.Point
+	7,  // 31: agni.v1.geom.SheetGeometry.size:type_name -> agni.v1.geom.BBox
+	15, // 32: agni.v1.geom.SheetGeometry.placements:type_name -> agni.v1.geom.SymbolPlacement
+	17, // 33: agni.v1.geom.SheetGeometry.wires:type_name -> agni.v1.geom.WireGeometry
+	18, // 34: agni.v1.geom.SheetGeometry.labels:type_name -> agni.v1.geom.Label
+	9,  // 35: agni.v1.geom.SheetGeometry.shapes:type_name -> agni.v1.geom.Shape
+	20, // 36: agni.v1.geom.SheetGeometry.title_block:type_name -> agni.v1.geom.TitleBlock
+	12, // 37: agni.v1.geom.SheetGeometry.images:type_name -> agni.v1.geom.Image
+	5,  // 38: agni.v1.geom.SheetGeometry.prov:type_name -> agni.v1.geom.Provenance
+	21, // 39: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
+	13, // 40: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
+	19, // 41: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
+	24, // 42: agni.v1.geom.SchematicGeometry.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	23, // 43: agni.v1.geom.SchematicGeometry.back_annotated:type_name -> agni.v1.geom.BackAnnotatedPlacement
+	5,  // 44: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
+	45, // [45:45] is the sub-list for method output_type
+	45, // [45:45] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_proto_init() }
@@ -2232,7 +2352,7 @@ func file_agni_v1_geom_geom_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_proto_rawDesc), len(file_agni_v1_geom_geom_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,

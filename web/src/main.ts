@@ -46,7 +46,7 @@ import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
 import { appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withFlatten, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
-import { LocateReason, drawnSheets, searchPattern } from "./query.js";
+import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
@@ -54,7 +54,7 @@ import { staleLinkStrip } from "./stalelink.js";
 import { hierarchyStrip } from "./hierarchy.js";
 import { selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
-import { PropertiesPresenter } from "./propertiespresenter.js";
+import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
 import { pageApi, type ViewerPageAPI } from "./pageapi.js";
 import { pageDispatcher } from "./pageservice.js";
@@ -435,22 +435,21 @@ class AppRoot extends BaseComponent {
         trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
       },
     });
-    // The engine says where a selected part or net is drawn. It answers the served find-by-name
-    // query, anchored to the whole name, and each entity in a query answer names the sheets it is
-    // drawn on. Before the catalog arrives there is no template, and the panel lists no sheets.
-    let findByName: { query: string; bind: string } | null = null;
+    // The engine says where a selected part or net is drawn (LocateSubjects, agni issue 1325). It
+    // adds the board only while the board is on screen, since this worker has read the board then, and
+    // asking on a schematic would read a large board for one panel row (agni issue 943).
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
       getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
       drawn: () => drawnOnSheet(svgEl),
       drawnOn: async (uri, sel) => {
-        if (!findByName) return [];
-        const name = sel.kind === "net" ? (sel.net ?? "") : (sel.ref ?? "");
-        const resp = await queryClient().runQuery({
+        const subject = subjectOf(sel);
+        if (!subject) return [];
+        const resp = await designClient().locateSubjects({
           snapshot: await snapshots().of(uri, presenter.overlayConfig()),
-          query: findByName.query,
-          bindings: { [findByName.bind]: { kind: { case: "text", value: `^${searchPattern(name)}$` } } },
+          subjects: [subject],
+          board: propertiesPresenter.activeSheetId() === "board",
         });
-        return drawnSheets(resp, sel.kind, name);
+        return resp.subjects[0]?.sheetIds ?? [];
       },
       ask: async (uri, query) => {
         const resp = await queryClient().runQuery({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), query, omitLocations: true });
@@ -607,7 +606,6 @@ class AppRoot extends BaseComponent {
         // with no search mode, since the template names relations only the server defines.
         const sq = r.searchQuery;
         query.view.setSearch(sq ? { query: sq.query, teaches: sq.teaches, bind: sq.bind, pattern: sq.pattern } : null);
-        findByName = sq ? { query: sq.query, bind: sq.bind } : null;
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs, here only the top tab strip

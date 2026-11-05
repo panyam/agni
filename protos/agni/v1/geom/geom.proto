@@ -99,6 +99,10 @@ message PinPoint {
   // the pins in a real export set this.
   Point number_origin = 8;
   string number_justify = 9; // pin number alignment, canonical "<h> <v>"; empty with number_origin
+  // The angle of the pin's name and number in the symbol's own frame, in degrees counter-clockwise.
+  // A renderer adds the placement's rotation to it, as it does for a field. KiCad runs a vertical
+  // pin's text along the pin, at 90. Zero for every pin of a format that does not set it.
+  int32 text_rotation_deg = 10;
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -197,6 +201,10 @@ message SymbolPlacement {
   // often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
   // not click.
   string net_anchor = 7;
+  // The part is drawn on the schematic and left off the board (do not populate). KiCad marks one
+  // with a cross over its body, and both backends draw that cross. A format with no such flag
+  // leaves it false.
+  bool dnp = 8;
   Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
 }
 
@@ -239,6 +247,24 @@ message Label {
   // "left bottom"; KiCad "left bottom").
   string justify = 4;
   int32 rotation_deg = 5;  // degrees counter-clockwise
+  // Flag is the outline a label is drawn inside. KiCad draws a global label in a box whose
+  // ends show the signal's direction, an arrow out for an output and arrows both ways for a
+  // bidirectional signal.
+  enum Flag {
+    FLAG_NONE = 0;           // text alone, as for a local label
+    FLAG_PASSIVE = 1;        // a plain box
+    FLAG_INPUT = 2;          // an arrow into the connection
+    FLAG_OUTPUT = 3;         // an arrow out of it
+    FLAG_BIDIRECTIONAL = 4;  // arrows both ways
+    FLAG_TRI_STATE = 5;      // drawn as bidirectional
+  }
+  Flag flag = 6;
+  // Where the label meets its wire, when a reader set the text apart from it. KiCad draws a
+  // label's text a little off its connect point, so its reader places origin where the text
+  // goes and keeps the connect point here. A flag's outline starts from it. Nil when the text
+  // sits on the connect point, so a consumer joining a label to its wire reads anchor first and
+  // origin otherwise.
+  Point anchor = 7;
 }
 
 // SheetGeometry is one schematic page/sheet (tier 1, logical).

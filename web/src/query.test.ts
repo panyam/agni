@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason, linkTarget, linkNote, type QueryResult, type QueryRowItem } from "./query.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason, linkTarget, linkNote, type QueryResult, type QueryRowItem } from "./query.js";
 import { probedOneAnswer, resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -266,32 +266,6 @@ describe("the relation picker's labels", () => {
 
 // Properties asks find-by-name about a selected part's or net's whole name, and reads where it is
 // drawn off that answer (agni issue 902).
-describe("drawnSheets", () => {
-  // A part and a net sharing a name, as a find-by-name answer types them, row by row.
-  const resp = create(RunQueryResponseSchema, {
-    columns: ["name", "kind"],
-    columnKinds: ["", ""],
-    rows: [
-      { cells: ["VBUS", "component"], cellKinds: ["component", ""], cellEntity: [1, 0] },
-      { cells: ["VBUS", "net"], cellKinds: ["net", ""], cellEntity: [2, 0] },
-    ],
-    entities: [
-      { kind: "component", ref: "VBUS", sheetIds: ["s1"] },
-      { kind: "net", ref: "VBUS", sheetIds: ["s2", "s3"] },
-    ],
-  });
-
-  it("reads the sheets off the row of the kind asked about", () => {
-    expect(drawnSheets(resp, "net", "VBUS")).toEqual(["s2", "s3"]);
-    expect(drawnSheets(resp, "component", "VBUS")).toEqual(["s1"]);
-  });
-
-  it("is none when the answer does not name it", () => {
-    expect(drawnSheets(resp, "net", "GND")).toEqual([]);
-  });
-});
-
-// agni issue 745: a set opens as one tab per query.
 describe("tabsFromSet", () => {
   it("names each tab for its query, joins the preamble to it, and keeps the set's order and bindings", () => {
     const set = create(QuerySetSchema, {

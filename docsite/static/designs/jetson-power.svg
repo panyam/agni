@@ -378,27 +378,33 @@
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="88.4,431.9 760.9,431.9"/>
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="1206.0,88.4 1206.0,620.6"/>
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="88.4,620.6 1593.0,620.6"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="1414.0,485.1 1416.4,487.5 1418.9,485.1 1416.4,482.7 1414.0,485.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="543.2,843.1 545.6,845.5 548.0,845.5 548.0,840.7 545.6,840.7 543.2,843.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="296.4,335.1 294.0,332.7 291.6,332.7 291.6,337.5 294.0,337.5 296.4,335.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="968.9,485.1 966.5,482.7 964.1,485.1 966.5,487.5 968.9,485.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="1414.0,344.8 1416.4,347.2 1418.9,344.8 1416.4,342.4 1414.0,344.8"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="968.9,344.8 966.5,342.4 964.1,344.8 966.5,347.2 968.9,344.8"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1399.5,431.9 1399.5,436.7 1404.3,436.7 1399.5,441.6 1394.7,436.7 1399.5,436.7" data-kind="net" data-net="GND"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1319.2,823.8 1322.1,818.9" data-kind="net" data-net="+1V8"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1322.1,818.9 1325.0,823.8" data-kind="net" data-net="+1V8"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1322.1,828.6 1322.1,818.9" data-kind="net" data-net="+1V8"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1336.6,843.1 1344.4,843.1 1344.4,828.1" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1346.3,826.2 1346.3,830.1" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1346.3,831.5" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1346.3,835.4" data-kind="component" data-ref="Q16"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1349.2,831.5 1349.2,835.4 1346.3,833.4" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1346.3,838.8 1346.3,836.8" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1346.3,838.8 1346.3,840.7" data-kind="component" data-ref="Q16"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1355.5,840.7 1359.8,840.7 1359.8,828.1 1359.8,826.2 1355.5,826.2" data-kind="component" data-ref="Q16"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,818.9 1356.0,828.1 1346.3,828.1" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1356.0,838.8 1346.3,838.8" data-kind="component" data-ref="Q16"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,848.0 1356.0,833.4 1346.3,833.4" data-kind="component" data-ref="Q16"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1359.8,831.5 1357.9,834.4 1361.8,834.4 1359.8,831.5" data-kind="component" data-ref="Q16"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1361.8,831.5 1357.9,831.5" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1319.2,823.8 1322.1,818.9" data-kind="net" data-net="+1V8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1322.1,818.9 1325.0,823.8" data-kind="net" data-net="+1V8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1322.1,828.6 1322.1,818.9" data-kind="net" data-net="+1V8"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1351.1" cy="833.4" r="12.6" data-kind="component" data-ref="Q16"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1356.0" cy="826.2" r="0.5" data-kind="component" data-ref="Q16"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1356.0" cy="838.8" r="0.5" data-kind="component" data-ref="Q16"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1356.0" cy="840.7" r="0.5" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1336.6,843.1 1344.4,843.1 1344.4,828.1" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1346.3,826.2 1346.3,830.1" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1346.3,831.5" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1346.3,835.4" data-kind="component" data-ref="Q16"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1346.3,833.4 1349.2,831.5 1349.2,835.4 1346.3,833.4" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1346.3,838.8 1346.3,836.8" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1346.3,838.8 1346.3,840.7" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1355.5,840.7 1359.8,840.7 1359.8,828.1 1359.8,826.2 1355.5,826.2" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,818.9 1356.0,828.1 1346.3,828.1" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,838.8 1346.3,838.8" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,848.0 1356.0,833.4 1346.3,833.4" data-kind="component" data-ref="Q16"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1359.8,831.5 1357.9,834.4 1361.8,834.4 1359.8,831.5" data-kind="component" data-ref="Q16"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1361.8,831.5 1357.9,831.5" data-kind="component" data-ref="Q16"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1331.8,843.1 1341.4,843.1" data-kind="component" data-ref="Q16"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,814.1 1356.0,823.8" data-kind="component" data-ref="Q16"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,852.8 1356.0,843.1" data-kind="component" data-ref="Q16"/>
@@ -411,23 +417,23 @@
 <rect fill="none" stroke="#222222" stroke-width="0.8" x="946.2" y="821.4" width="6.8" height="14.5" data-kind="component" data-ref="R17"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="949.6,838.3 949.6,835.9" data-kind="component" data-ref="R17"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="949.6,818.9 949.6,821.4" data-kind="component" data-ref="R17"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,364.2 1380.2,356.4 1365.2,356.4" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1363.2,354.5 1367.1,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1370.5,354.5 1368.5,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1370.5,354.5 1372.4,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,354.5 1373.9,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,354.5 1377.7,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1370.5,345.8 1372.4,348.7 1368.5,348.7 1370.5,345.8" data-kind="component" data-ref="Q24"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1377.7,345.3 1377.7,340.9 1365.2,340.9 1363.2,340.9 1363.2,345.3" data-kind="component" data-ref="Q24"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,344.8 1365.2,344.8 1365.2,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,344.8 1375.8,354.5" data-kind="component" data-ref="Q24"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1385.0,344.8 1370.5,344.8 1370.5,354.5" data-kind="component" data-ref="Q24"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1371.4,340.9 1368.5,339.0 1368.5,342.9 1371.4,340.9" data-kind="component" data-ref="Q24"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1371.4,339.0 1371.4,342.9" data-kind="component" data-ref="Q24"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1370.5" cy="349.6" r="12.6" data-kind="component" data-ref="Q24"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1363.2" cy="344.8" r="0.5" data-kind="component" data-ref="Q24"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1375.8" cy="344.8" r="0.5" data-kind="component" data-ref="Q24"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1377.7" cy="344.8" r="0.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,364.2 1380.2,356.4 1365.2,356.4" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1363.2,354.5 1367.1,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1370.5,354.5 1368.5,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1370.5,354.5 1372.4,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,354.5 1373.9,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,354.5 1377.7,354.5" data-kind="component" data-ref="Q24"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1370.5,345.8 1372.4,348.7 1368.5,348.7 1370.5,345.8" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1377.7,345.3 1377.7,340.9 1365.2,340.9 1363.2,340.9 1363.2,345.3" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,344.8 1365.2,344.8 1365.2,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,344.8 1375.8,354.5" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1385.0,344.8 1370.5,344.8 1370.5,354.5" data-kind="component" data-ref="Q24"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1371.4,340.9 1368.5,339.0 1368.5,342.9 1371.4,340.9" data-kind="component" data-ref="Q24"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1371.4,339.0 1371.4,342.9" data-kind="component" data-ref="Q24"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,369.0 1380.2,359.3" data-kind="component" data-ref="Q24"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1351.1,344.8 1360.8,344.8" data-kind="component" data-ref="Q24"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1389.8,344.8 1380.2,344.8" data-kind="component" data-ref="Q24"/>
@@ -459,23 +465,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.3,538.3 1365.6,538.3" data-kind="component" data-ref="U64"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.3,548.0 1365.6,548.0" data-kind="component" data-ref="U64"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.3,557.7 1365.6,557.7" data-kind="component" data-ref="U64"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,504.5 1085.0,496.7 1070.0,496.7" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1068.1,494.8 1072.0,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,494.8 1073.4,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,494.8 1077.3,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,494.8 1078.7,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,494.8 1082.6,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,486.1 1077.3,489.0 1073.4,489.0 1075.4,486.1" data-kind="component" data-ref="Q23"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,485.6 1082.6,481.2 1070.0,481.2 1068.1,481.2 1068.1,485.6" data-kind="component" data-ref="Q23"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,485.1 1070.0,485.1 1070.0,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,485.1 1080.7,494.8" data-kind="component" data-ref="Q23"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,485.1 1075.4,485.1 1075.4,494.8" data-kind="component" data-ref="Q23"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,481.2 1073.4,479.3 1073.4,483.2 1076.3,481.2" data-kind="component" data-ref="Q23"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1076.3,479.3 1076.3,483.2" data-kind="component" data-ref="Q23"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1075.4" cy="489.9" r="12.6" data-kind="component" data-ref="Q23"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1068.1" cy="485.1" r="0.5" data-kind="component" data-ref="Q23"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1080.7" cy="485.1" r="0.5" data-kind="component" data-ref="Q23"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1082.6" cy="485.1" r="0.5" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,504.5 1085.0,496.7 1070.0,496.7" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1068.1,494.8 1072.0,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,494.8 1073.4,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,494.8 1077.3,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,494.8 1078.7,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,494.8 1082.6,494.8" data-kind="component" data-ref="Q23"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,486.1 1077.3,489.0 1073.4,489.0 1075.4,486.1" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,485.6 1082.6,481.2 1070.0,481.2 1068.1,481.2 1068.1,485.6" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,485.1 1070.0,485.1 1070.0,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,485.1 1080.7,494.8" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,485.1 1075.4,485.1 1075.4,494.8" data-kind="component" data-ref="Q23"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,481.2 1073.4,479.3 1073.4,483.2 1076.3,481.2" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1076.3,479.3 1076.3,483.2" data-kind="component" data-ref="Q23"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,509.3 1085.0,499.6" data-kind="component" data-ref="Q23"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1056.0,485.1 1065.7,485.1" data-kind="component" data-ref="Q23"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1094.7,485.1 1085.0,485.1" data-kind="component" data-ref="Q23"/>
@@ -531,26 +537,26 @@
 <rect fill="none" stroke="#222222" stroke-width="0.8" x="482.7" y="530.1" width="14.5" height="6.8" data-kind="component" data-ref="R63"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="480.3,533.5 482.7,533.5" data-kind="component" data-ref="R63"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="499.6,533.5 497.2,533.5" data-kind="component" data-ref="R63"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1353.1,756.0 1356.0,751.2" data-kind="net" data-net="+5V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1356.0,751.2 1358.9,756.0" data-kind="net" data-net="+5V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1356.0,760.9 1356.0,751.2" data-kind="net" data-net="+5V"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,165.8 1085.0,158.0 1070.0,158.0" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1068.1,156.1 1072.0,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,156.1 1073.4,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,156.1 1077.3,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,156.1 1078.7,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,156.1 1082.6,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,147.4 1077.3,150.3 1073.4,150.3 1075.4,147.4" data-kind="component" data-ref="Q39"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,146.9 1082.6,142.6 1070.0,142.6 1068.1,142.6 1068.1,146.9" data-kind="component" data-ref="Q39"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,146.4 1070.0,146.4 1070.0,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,146.4 1080.7,156.1" data-kind="component" data-ref="Q39"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,146.4 1075.4,146.4 1075.4,156.1" data-kind="component" data-ref="Q39"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,142.6 1073.4,140.6 1073.4,144.5 1076.3,142.6" data-kind="component" data-ref="Q39"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1076.3,140.6 1076.3,144.5" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1353.1,756.0 1356.0,751.2" data-kind="net" data-net="+5V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,751.2 1358.9,756.0" data-kind="net" data-net="+5V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,760.9 1356.0,751.2" data-kind="net" data-net="+5V"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1075.4" cy="151.3" r="12.6" data-kind="component" data-ref="Q39"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1068.1" cy="146.4" r="0.5" data-kind="component" data-ref="Q39"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1080.7" cy="146.4" r="0.5" data-kind="component" data-ref="Q39"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1082.6" cy="146.4" r="0.5" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,165.8 1085.0,158.0 1070.0,158.0" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1068.1,156.1 1072.0,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,156.1 1073.4,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,156.1 1077.3,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,156.1 1078.7,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,156.1 1082.6,156.1" data-kind="component" data-ref="Q39"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,147.4 1077.3,150.3 1073.4,150.3 1075.4,147.4" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,146.9 1082.6,142.6 1070.0,142.6 1068.1,142.6 1068.1,146.9" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,146.4 1070.0,146.4 1070.0,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,146.4 1080.7,156.1" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,146.4 1075.4,146.4 1075.4,156.1" data-kind="component" data-ref="Q39"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,142.6 1073.4,140.6 1073.4,144.5 1076.3,142.6" data-kind="component" data-ref="Q39"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1076.3,140.6 1076.3,144.5" data-kind="component" data-ref="Q39"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,170.6 1085.0,161.0" data-kind="component" data-ref="Q39"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1056.0,146.4 1065.7,146.4" data-kind="component" data-ref="Q39"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1094.7,146.4 1085.0,146.4" data-kind="component" data-ref="Q39"/>
@@ -586,23 +592,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="460.9,277.1 460.9,279.5" data-kind="component" data-ref="D55"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="460.9,296.4 460.9,294.0" data-kind="component" data-ref="D55"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,364.2 373.8,369.0 378.7,369.0 373.8,373.8 369.0,369.0 373.8,369.0" data-kind="net" data-net="GND"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1457.6,843.1 1465.3,843.1 1465.3,828.1" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1467.2,826.2 1467.2,830.1" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1467.2,831.5" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1467.2,835.4" data-kind="component" data-ref="Q4"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1470.1,831.5 1470.1,835.4 1467.2,833.4" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1467.2,838.8 1467.2,836.8" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1467.2,838.8 1467.2,840.7" data-kind="component" data-ref="Q4"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.4,840.7 1480.8,840.7 1480.8,828.1 1480.8,826.2 1476.4,826.2" data-kind="component" data-ref="Q4"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,818.9 1476.9,828.1 1467.2,828.1" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1476.9,838.8 1467.2,838.8" data-kind="component" data-ref="Q4"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,848.0 1476.9,833.4 1467.2,833.4" data-kind="component" data-ref="Q4"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1480.8,831.5 1478.8,834.4 1482.7,834.4 1480.8,831.5" data-kind="component" data-ref="Q4"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1482.7,831.5 1478.8,831.5" data-kind="component" data-ref="Q4"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1472.1" cy="833.4" r="12.6" data-kind="component" data-ref="Q4"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1476.9" cy="826.2" r="0.5" data-kind="component" data-ref="Q4"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1476.9" cy="838.8" r="0.5" data-kind="component" data-ref="Q4"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1476.9" cy="840.7" r="0.5" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1457.6,843.1 1465.3,843.1 1465.3,828.1" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1467.2,826.2 1467.2,830.1" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1467.2,831.5" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1467.2,835.4" data-kind="component" data-ref="Q4"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1467.2,833.4 1470.1,831.5 1470.1,835.4 1467.2,833.4" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1467.2,838.8 1467.2,836.8" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1467.2,838.8 1467.2,840.7" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.4,840.7 1480.8,840.7 1480.8,828.1 1480.8,826.2 1476.4,826.2" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,818.9 1476.9,828.1 1467.2,828.1" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,838.8 1467.2,838.8" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,848.0 1476.9,833.4 1467.2,833.4" data-kind="component" data-ref="Q4"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1480.8,831.5 1478.8,834.4 1482.7,834.4 1480.8,831.5" data-kind="component" data-ref="Q4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1482.7,831.5 1478.8,831.5" data-kind="component" data-ref="Q4"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1452.7,843.1 1462.4,843.1" data-kind="component" data-ref="Q4"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,814.1 1476.9,823.8" data-kind="component" data-ref="Q4"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,852.8 1476.9,843.1" data-kind="component" data-ref="Q4"/>
@@ -622,23 +628,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1027.0,838.3 1027.0,835.9" data-kind="component" data-ref="R64"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1027.0,818.9 1027.0,821.4" data-kind="component" data-ref="R64"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1002.8,281.9 1002.8,286.7 1007.6,286.7 1002.8,291.6 997.9,286.7 1002.8,286.7" data-kind="net" data-net="GND"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="354.5,335.1 362.2,335.1 362.2,320.1" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="364.2,318.2 364.2,322.1" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="364.2,325.4 364.2,323.5" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="364.2,325.4 364.2,327.4" data-kind="component" data-ref="Q6"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="364.2,325.4 367.1,323.5 367.1,327.4 364.2,325.4" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="364.2,330.8 364.2,328.8" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="364.2,330.8 364.2,332.7" data-kind="component" data-ref="Q6"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.3,332.7 377.7,332.7 377.7,320.1 377.7,318.2 373.3,318.2" data-kind="component" data-ref="Q6"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,310.9 373.8,320.1 364.2,320.1" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="373.8,330.8 364.2,330.8" data-kind="component" data-ref="Q6"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,340.0 373.8,325.4 364.2,325.4" data-kind="component" data-ref="Q6"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="377.7,323.5 375.8,326.4 379.6,326.4 377.7,323.5" data-kind="component" data-ref="Q6"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="379.6,323.5 375.8,323.5" data-kind="component" data-ref="Q6"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="369.0" cy="325.4" r="12.6" data-kind="component" data-ref="Q6"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="373.8" cy="318.2" r="0.5" data-kind="component" data-ref="Q6"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="373.8" cy="330.8" r="0.5" data-kind="component" data-ref="Q6"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="373.8" cy="332.7" r="0.5" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="354.5,335.1 362.2,335.1 362.2,320.1" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,318.2 364.2,322.1" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,325.4 364.2,323.5" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,325.4 364.2,327.4" data-kind="component" data-ref="Q6"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="364.2,325.4 367.1,323.5 367.1,327.4 364.2,325.4" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,330.8 364.2,328.8" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,330.8 364.2,332.7" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.3,332.7 377.7,332.7 377.7,320.1 377.7,318.2 373.3,318.2" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,310.9 373.8,320.1 364.2,320.1" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,330.8 364.2,330.8" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,340.0 373.8,325.4 364.2,325.4" data-kind="component" data-ref="Q6"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="377.7,323.5 375.8,326.4 379.6,326.4 377.7,323.5" data-kind="component" data-ref="Q6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="379.6,323.5 375.8,323.5" data-kind="component" data-ref="Q6"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="349.6,335.1 359.3,335.1" data-kind="component" data-ref="Q6"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,306.1 373.8,315.8" data-kind="component" data-ref="Q6"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,344.8 373.8,335.1" data-kind="component" data-ref="Q6"/>
@@ -671,23 +677,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="461.9,546.1 450.3,546.1" data-kind="component" data-ref="C75"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="456.1,557.7 456.1,549.9" data-kind="component" data-ref="C75"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="456.1,538.3 456.1,546.1" data-kind="component" data-ref="C75"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,364.2 1085.0,356.4 1070.0,356.4" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1068.1,354.5 1072.0,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,354.5 1073.4,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,354.5 1077.3,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,354.5 1078.7,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,354.5 1082.6,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,345.8 1077.3,348.7 1073.4,348.7 1075.4,345.8" data-kind="component" data-ref="Q5"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,345.3 1082.6,340.9 1070.0,340.9 1068.1,340.9 1068.1,345.3" data-kind="component" data-ref="Q5"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,344.8 1070.0,344.8 1070.0,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,344.8 1080.7,354.5" data-kind="component" data-ref="Q5"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,344.8 1075.4,344.8 1075.4,354.5" data-kind="component" data-ref="Q5"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,340.9 1073.4,339.0 1073.4,342.9 1076.3,340.9" data-kind="component" data-ref="Q5"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1076.3,339.0 1076.3,342.9" data-kind="component" data-ref="Q5"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1075.4" cy="349.6" r="12.6" data-kind="component" data-ref="Q5"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1068.1" cy="344.8" r="0.5" data-kind="component" data-ref="Q5"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1080.7" cy="344.8" r="0.5" data-kind="component" data-ref="Q5"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1082.6" cy="344.8" r="0.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,364.2 1085.0,356.4 1070.0,356.4" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1068.1,354.5 1072.0,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,354.5 1073.4,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,354.5 1077.3,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,354.5 1078.7,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,354.5 1082.6,354.5" data-kind="component" data-ref="Q5"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,345.8 1077.3,348.7 1073.4,348.7 1075.4,345.8" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,345.3 1082.6,340.9 1070.0,340.9 1068.1,340.9 1068.1,345.3" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,344.8 1070.0,344.8 1070.0,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,344.8 1080.7,354.5" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,344.8 1075.4,344.8 1075.4,354.5" data-kind="component" data-ref="Q5"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,340.9 1073.4,339.0 1073.4,342.9 1076.3,340.9" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1076.3,339.0 1076.3,342.9" data-kind="component" data-ref="Q5"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,369.0 1085.0,359.3" data-kind="component" data-ref="Q5"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1056.0,344.8 1065.7,344.8" data-kind="component" data-ref="Q5"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1094.7,344.8 1085.0,344.8" data-kind="component" data-ref="Q5"/>
@@ -784,9 +790,9 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="989.2,260.6 977.6,260.6" data-kind="component" data-ref="C30"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="983.4,272.2 983.4,264.5" data-kind="component" data-ref="C30"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="983.4,252.9 983.4,260.6" data-kind="component" data-ref="C30"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1440.1,823.8 1443.0,818.9" data-kind="net" data-net="+1V15"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1443.0,818.9 1446.0,823.8" data-kind="net" data-net="+1V15"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1443.0,828.6 1443.0,818.9" data-kind="net" data-net="+1V15"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1440.1,823.8 1443.0,818.9" data-kind="net" data-net="+1V15"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1443.0,818.9 1446.0,823.8" data-kind="net" data-net="+1V15"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1443.0,828.6 1443.0,818.9" data-kind="net" data-net="+1V15"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,802.0 1476.9,806.8" data-kind="component" data-ref="D40"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,792.3 1476.9,797.2" data-kind="component" data-ref="D40"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1468.2,804.9 1470.1,804.9 1468.2,804.9 1468.2,803.0 1468.2,804.9 1472.1,801.0" data-kind="component" data-ref="D40"/>
@@ -795,26 +801,26 @@
 <polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1473.0,796.7 1480.8,796.7 1476.9,802.5 1473.0,796.7" data-kind="component" data-ref="D40"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,809.3 1476.9,806.8" data-kind="component" data-ref="D40"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,789.9 1476.9,792.3" data-kind="component" data-ref="D40"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1474.0,756.0 1476.9,751.2" data-kind="net" data-net="+5V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1476.9,751.2 1479.8,756.0" data-kind="net" data-net="+5V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1476.9,760.9 1476.9,751.2" data-kind="net" data-net="+5V"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,281.9 373.8,274.2 388.8,274.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="390.8,272.2 386.9,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="383.5,272.2 385.4,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="383.5,272.2 381.6,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="378.2,272.2 380.1,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="378.2,272.2 376.2,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="383.5,263.5 381.6,266.4 385.4,266.4 383.5,263.5" data-kind="component" data-ref="Q9"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="376.2,263.0 376.2,258.7 388.8,258.7 390.8,258.7 390.8,263.0" data-kind="component" data-ref="Q9"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="398.0,262.6 388.8,262.6 388.8,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="378.2,262.6 378.2,272.2" data-kind="component" data-ref="Q9"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="369.0,262.6 383.5,262.6 383.5,272.2" data-kind="component" data-ref="Q9"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="382.5,258.7 385.4,256.7 385.4,260.6 382.5,258.7" data-kind="component" data-ref="Q9"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="382.5,256.7 382.5,260.6" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1474.0,756.0 1476.9,751.2" data-kind="net" data-net="+5V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,751.2 1479.8,756.0" data-kind="net" data-net="+5V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1476.9,760.9 1476.9,751.2" data-kind="net" data-net="+5V"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="383.5" cy="267.4" r="12.6" data-kind="component" data-ref="Q9"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="390.8" cy="262.6" r="0.5" data-kind="component" data-ref="Q9"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="378.2" cy="262.6" r="0.5" data-kind="component" data-ref="Q9"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="376.2" cy="262.6" r="0.5" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,281.9 373.8,274.2 388.8,274.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="390.8,272.2 386.9,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="383.5,272.2 385.4,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="383.5,272.2 381.6,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="378.2,272.2 380.1,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="378.2,272.2 376.2,272.2" data-kind="component" data-ref="Q9"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="383.5,263.5 381.6,266.4 385.4,266.4 383.5,263.5" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="376.2,263.0 376.2,258.7 388.8,258.7 390.8,258.7 390.8,263.0" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="398.0,262.6 388.8,262.6 388.8,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="378.2,262.6 378.2,272.2" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="369.0,262.6 383.5,262.6 383.5,272.2" data-kind="component" data-ref="Q9"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="382.5,258.7 385.4,256.7 385.4,260.6 382.5,258.7" data-kind="component" data-ref="Q9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="382.5,256.7 382.5,260.6" data-kind="component" data-ref="Q9"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="373.8,286.7 373.8,277.1" data-kind="component" data-ref="Q9"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="402.9,262.6 393.2,262.6" data-kind="component" data-ref="Q9"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="364.2,262.6 373.8,262.6" data-kind="component" data-ref="Q9"/>
@@ -862,23 +868,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1104.4,281.9 1104.4,274.2" data-kind="component" data-ref="C34"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1104.4,262.6 1104.4,270.3" data-kind="component" data-ref="C34"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,872.2 1356.0,877.0 1360.8,877.0 1356.0,881.8 1351.1,877.0 1356.0,877.0" data-kind="net" data-net="GND"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,504.5 1380.2,496.7 1365.2,496.7" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1363.2,494.8 1367.1,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1370.5,494.8 1368.5,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1370.5,494.8 1372.4,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,494.8 1373.9,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,494.8 1377.7,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1370.5,486.1 1372.4,489.0 1368.5,489.0 1370.5,486.1" data-kind="component" data-ref="Q25"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1377.7,485.6 1377.7,481.2 1365.2,481.2 1363.2,481.2 1363.2,485.6" data-kind="component" data-ref="Q25"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,485.1 1365.2,485.1 1365.2,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1375.8,485.1 1375.8,494.8" data-kind="component" data-ref="Q25"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1385.0,485.1 1370.5,485.1 1370.5,494.8" data-kind="component" data-ref="Q25"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1371.4,481.2 1368.5,479.3 1368.5,483.2 1371.4,481.2" data-kind="component" data-ref="Q25"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1371.4,479.3 1371.4,483.2" data-kind="component" data-ref="Q25"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1370.5" cy="489.9" r="12.6" data-kind="component" data-ref="Q25"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1363.2" cy="485.1" r="0.5" data-kind="component" data-ref="Q25"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1375.8" cy="485.1" r="0.5" data-kind="component" data-ref="Q25"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1377.7" cy="485.1" r="0.5" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,504.5 1380.2,496.7 1365.2,496.7" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1363.2,494.8 1367.1,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1370.5,494.8 1368.5,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1370.5,494.8 1372.4,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,494.8 1373.9,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,494.8 1377.7,494.8" data-kind="component" data-ref="Q25"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1370.5,486.1 1372.4,489.0 1368.5,489.0 1370.5,486.1" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1377.7,485.6 1377.7,481.2 1365.2,481.2 1363.2,481.2 1363.2,485.6" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1356.0,485.1 1365.2,485.1 1365.2,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1375.8,485.1 1375.8,494.8" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1385.0,485.1 1370.5,485.1 1370.5,494.8" data-kind="component" data-ref="Q25"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1371.4,481.2 1368.5,479.3 1368.5,483.2 1371.4,481.2" data-kind="component" data-ref="Q25"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1371.4,479.3 1371.4,483.2" data-kind="component" data-ref="Q25"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.2,509.3 1380.2,499.6" data-kind="component" data-ref="Q25"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1351.1,485.1 1360.8,485.1" data-kind="component" data-ref="Q25"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1389.8,485.1 1380.2,485.1" data-kind="component" data-ref="Q25"/>
@@ -892,9 +898,9 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="913.8,727.0 910.9,722.2" data-kind="net" data-net="SYS_VIN_HV"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="910.9,722.2 908.0,727.0" data-kind="net" data-net="SYS_VIN_HV"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="910.9,731.8 910.9,722.2" data-kind="net" data-net="SYS_VIN_HV"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1101.5,727.0 1104.4,722.2" data-kind="net" data-net="+5V_AON"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1104.4,722.2 1107.3,727.0" data-kind="net" data-net="+5V_AON"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1104.4,731.8 1104.4,722.2" data-kind="net" data-net="+5V_AON"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1101.5,727.0 1104.4,722.2" data-kind="net" data-net="+5V_AON"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1104.4,722.2 1107.3,727.0" data-kind="net" data-net="+5V_AON"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1104.4,731.8 1104.4,722.2" data-kind="net" data-net="+5V_AON"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1068.6,727.0 1065.7,722.2" data-kind="net" data-net="+5V_SOM"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1065.7,722.2 1062.8,727.0" data-kind="net" data-net="+5V_SOM"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1065.7,731.8 1065.7,722.2" data-kind="net" data-net="+5V_SOM"/>
@@ -911,23 +917,23 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1249.5,736.7 1259.2,736.7" data-kind="component" data-ref="TP98"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1322.1,872.2 1322.1,877.0 1326.9,877.0 1322.1,881.8 1317.3,877.0 1322.1,877.0" data-kind="net" data-net="GND"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1104.4,281.9 1104.4,286.7 1109.2,286.7 1104.4,291.6 1099.5,286.7 1104.4,286.7" data-kind="net" data-net="GND"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,214.2 1085.0,206.4 1070.0,206.4" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1068.1,204.5 1072.0,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,204.5 1073.4,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1075.4,204.5 1077.3,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,204.5 1078.7,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,204.5 1082.6,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,195.8 1077.3,198.7 1073.4,198.7 1075.4,195.8" data-kind="component" data-ref="Q2"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,195.3 1082.6,190.9 1070.0,190.9 1068.1,190.9 1068.1,195.3" data-kind="component" data-ref="Q2"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,194.8 1070.0,194.8 1070.0,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1080.7,194.8 1080.7,204.5" data-kind="component" data-ref="Q2"/>
-<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,194.8 1075.4,194.8 1075.4,204.5" data-kind="component" data-ref="Q2"/>
-<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,190.9 1073.4,189.0 1073.4,192.9 1076.3,190.9" data-kind="component" data-ref="Q2"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="1076.3,189.0 1076.3,192.9" data-kind="component" data-ref="Q2"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1075.4" cy="199.7" r="12.6" data-kind="component" data-ref="Q2"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1068.1" cy="194.8" r="0.5" data-kind="component" data-ref="Q2"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1080.7" cy="194.8" r="0.5" data-kind="component" data-ref="Q2"/>
 <circle fill="#fdf6d0" stroke="#222222" stroke-width="0.8" cx="1082.6" cy="194.8" r="0.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,214.2 1085.0,206.4 1070.0,206.4" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1068.1,204.5 1072.0,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,204.5 1073.4,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1075.4,204.5 1077.3,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,204.5 1078.7,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,204.5 1082.6,204.5" data-kind="component" data-ref="Q2"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1075.4,195.8 1077.3,198.7 1073.4,198.7 1075.4,195.8" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1082.6,195.3 1082.6,190.9 1070.0,190.9 1068.1,190.9 1068.1,195.3" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1060.8,194.8 1070.0,194.8 1070.0,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1080.7,194.8 1080.7,204.5" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1089.9,194.8 1075.4,194.8 1075.4,204.5" data-kind="component" data-ref="Q2"/>
+<polygon fill="#222222" stroke="#222222" stroke-width="0.8" points="1076.3,190.9 1073.4,189.0 1073.4,192.9 1076.3,190.9" data-kind="component" data-ref="Q2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1076.3,189.0 1076.3,192.9" data-kind="component" data-ref="Q2"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1085.0,219.0 1085.0,209.3" data-kind="component" data-ref="Q2"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1056.0,194.8 1065.7,194.8" data-kind="component" data-ref="Q2"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1094.7,194.8 1085.0,194.8" data-kind="component" data-ref="Q2"/>
@@ -987,243 +993,183 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="989.2,550.9 977.6,550.9" data-kind="component" data-ref="C240"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="983.4,562.5 983.4,554.8" data-kind="component" data-ref="C240"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="983.4,543.2 983.4,550.9" data-kind="component" data-ref="C240"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="869.2,727.0 872.2,722.2" data-kind="net" data-net="+12V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="872.2,722.2 875.1,727.0" data-kind="net" data-net="+12V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="872.2,731.8 872.2,722.2" data-kind="net" data-net="+12V"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="259.6,252.9 262.6,248.0" data-kind="net" data-net="+5V_AON"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="262.6,248.0 265.5,252.9" data-kind="net" data-net="+5V_AON"/>
-<polygon fill="#fdf6d0" stroke="#222222" stroke-width="0.8" points="262.6,257.7 262.6,248.0" data-kind="net" data-net="+5V_AON"/>
-<text x="1331.8" y="849.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1331.8" y="843.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">G</text>
-<text x="1356.0" y="820.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1356.0" y="814.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">D</text>
-<text x="1356.0" y="859.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1356.0" y="852.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">S</text>
-<text x="1249.5" y="820.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="814.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1380.2" y="375.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1380.2 375.8)">4</text>
-<text x="1380.2" y="369.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1380.2 369.0)">G</text>
-<text x="1351.1" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1351.1 351.6)">5</text>
-<text x="1351.1" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1351.1 344.8)">D</text>
-<text x="1389.8" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 351.6)">1</text>
-<text x="1389.8" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 344.8)">S</text>
-<text x="1389.8" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 351.6)">2</text>
-<text x="1389.8" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 344.8)">S</text>
-<text x="1389.8" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 351.6)">3</text>
-<text x="1389.8" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 344.8)">S</text>
-<text x="1012.5" y="545.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1012.5" y="538.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">IN</text>
-<text x="1012.5" y="554.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1012.5" y="548.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CTL</text>
-<text x="1012.5" y="564.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1012.5" y="557.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1080.2" y="545.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="1080.2" y="538.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
-<text x="1080.2" y="554.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="1080.2" y="548.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GATE</text>
-<text x="1080.2" y="564.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="1080.2" y="557.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">STAT</text>
-<text x="1307.6" y="545.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1307.6" y="538.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">IN</text>
-<text x="1307.6" y="554.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1307.6" y="548.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CTL</text>
-<text x="1307.6" y="564.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1307.6" y="557.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1375.3" y="545.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="1375.3" y="538.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
-<text x="1375.3" y="554.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="1375.3" y="548.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GATE</text>
-<text x="1375.3" y="564.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="1375.3" y="557.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">STAT</text>
-<text x="1085.0" y="516.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1085.0 516.1)">4</text>
-<text x="1085.0" y="509.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1085.0 509.3)">G</text>
-<text x="1056.0" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1056.0 491.9)">5</text>
-<text x="1056.0" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1056.0 485.1)">D</text>
-<text x="1094.7" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 491.9)">1</text>
-<text x="1094.7" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 485.1)">S</text>
-<text x="1094.7" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 491.9)">2</text>
-<text x="1094.7" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 485.1)">S</text>
-<text x="1094.7" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 491.9)">3</text>
-<text x="1094.7" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 485.1)">S</text>
-<text x="533.5" y="535.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="533.5" y="528.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">+3V3_AON</text>
-<text x="1012.5" y="254.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1012.5" y="248.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">IN</text>
-<text x="1012.5" y="264.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1012.5" y="257.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CTL</text>
-<text x="1012.5" y="274.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1012.5" y="267.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1080.2" y="254.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="1080.2" y="248.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
-<text x="1080.2" y="264.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="1080.2" y="257.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GATE</text>
-<text x="1080.2" y="274.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="1080.2" y="267.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">STAT</text>
-<text x="354.5" y="540.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="354.5" y="533.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VIN</text>
-<text x="354.5" y="549.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="354.5" y="543.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">EN</text>
-<text x="393.2" y="559.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="393.2" y="552.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">NC</text>
-<text x="431.9" y="540.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="431.9" y="533.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VOUT</text>
-<text x="431.9" y="549.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="431.9" y="543.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1085.0" y="177.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1085.0 177.4)">4</text>
-<text x="1085.0" y="170.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1085.0 170.6)">G</text>
-<text x="1056.0" y="153.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1056.0 153.2)">5</text>
-<text x="1056.0" y="146.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1056.0 146.4)">D</text>
-<text x="1094.7" y="153.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 153.2)">1</text>
-<text x="1094.7" y="146.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 146.4)">S</text>
-<text x="1094.7" y="153.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 153.2)">2</text>
-<text x="1094.7" y="146.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 146.4)">S</text>
-<text x="1094.7" y="153.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 153.2)">3</text>
-<text x="1094.7" y="146.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 146.4)">S</text>
-<text x="1138.2" y="196.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1138.2" y="190.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1452.7" y="849.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1452.7" y="843.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">G</text>
-<text x="1476.9" y="820.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1476.9" y="814.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">D</text>
-<text x="1476.9" y="859.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1476.9" y="852.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">S</text>
-<text x="1012.5" y="404.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1012.5" y="398.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">IN</text>
-<text x="1012.5" y="414.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1012.5" y="407.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CTL</text>
-<text x="1012.5" y="424.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1012.5" y="417.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1080.2" y="404.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="1080.2" y="398.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
-<text x="1080.2" y="414.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="1080.2" y="407.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GATE</text>
-<text x="1080.2" y="424.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="1080.2" y="417.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">STAT</text>
-<text x="1249.5" y="811.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="804.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="349.6" y="341.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="349.6" y="335.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">G</text>
-<text x="373.8" y="312.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="373.8" y="306.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">D</text>
-<text x="373.8" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="373.8" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">S</text>
-<text x="1249.5" y="753.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="746.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1186.6" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1186.6" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">+3V3_AON</text>
-<text x="1085.0" y="375.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1085.0 375.8)">4</text>
-<text x="1085.0" y="369.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1085.0 369.0)">G</text>
-<text x="1056.0" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1056.0 351.6)">5</text>
-<text x="1056.0" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1056.0 344.8)">D</text>
-<text x="1094.7" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 351.6)">1</text>
-<text x="1094.7" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 344.8)">S</text>
-<text x="1094.7" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 351.6)">2</text>
-<text x="1094.7" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 344.8)">S</text>
-<text x="1094.7" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 351.6)">3</text>
-<text x="1094.7" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 344.8)">S</text>
-<text x="949.6" y="196.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="949.6" y="190.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="460.9" y="264.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="460.9" y="257.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="988.3" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="988.3" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="562.5" y="816.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="562.5" y="809.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="949.6" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="949.6" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1249.5" y="791.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="785.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1244.7" y="332.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1244.7" y="325.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1438.2" y="849.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1438.2" y="843.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1249.5" y="801.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="794.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="877.0" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="877.0" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="877.0" y="211.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="877.0" y="204.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
-<text x="877.0" y="220.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="877.0" y="214.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">3</text>
-<text x="838.3" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="838.3" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">4</text>
-<text x="838.3" y="211.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="838.3" y="204.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">5</text>
-<text x="838.3" y="220.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="838.3" y="214.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">6</text>
-<text x="267.4" y="530.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="267.4" y="523.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1249.5" y="782.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="775.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="373.8" y="293.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 373.8 293.5)">4</text>
-<text x="373.8" y="286.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 373.8 286.7)">G</text>
-<text x="402.9" y="269.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 402.9 269.3)">5</text>
-<text x="402.9" y="262.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 402.9 262.6)">D</text>
-<text x="364.2" y="269.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 364.2 269.3)">1</text>
-<text x="364.2" y="262.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 364.2 262.6)">S</text>
-<text x="364.2" y="269.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 364.2 269.3)">2</text>
-<text x="364.2" y="262.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 364.2 262.6)">S</text>
-<text x="364.2" y="269.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 364.2 269.3)">3</text>
-<text x="364.2" y="262.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 364.2 262.6)">S</text>
-<text x="1249.5" y="772.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="765.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1022.1" y="351.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1022.1 351.6)">1</text>
-<text x="1022.1" y="344.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1022.1 344.8)">1</text>
-<text x="1027.0" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1027.0" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1380.2" y="516.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1380.2 516.1)">4</text>
-<text x="1380.2" y="509.3" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1380.2 509.3)">G</text>
-<text x="1351.1" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1351.1 491.9)">5</text>
-<text x="1351.1" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1351.1 485.1)">D</text>
-<text x="1389.8" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 491.9)">1</text>
-<text x="1389.8" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 485.1)">S</text>
-<text x="1389.8" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 491.9)">2</text>
-<text x="1389.8" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 485.1)">S</text>
-<text x="1389.8" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1389.8 491.9)">3</text>
-<text x="1389.8" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1389.8 485.1)">S</text>
-<text x="1027.0" y="491.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1027.0 491.9)">1</text>
-<text x="1027.0" y="485.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1027.0 485.1)">1</text>
-<text x="910.9" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="910.9" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1065.7" y="738.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1065.7" y="731.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
-<text x="1249.5" y="743.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="736.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1085.0" y="225.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1085.0 225.8)">4</text>
-<text x="1085.0" y="219.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1085.0 219.0)">G</text>
-<text x="1056.0" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1056.0 201.6)">5</text>
-<text x="1056.0" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1056.0 194.8)">D</text>
-<text x="1094.7" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 201.6)">1</text>
-<text x="1094.7" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 194.8)">S</text>
-<text x="1094.7" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 201.6)">2</text>
-<text x="1094.7" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 194.8)">S</text>
-<text x="1094.7" y="201.6" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b" transform="rotate(-90 1094.7 201.6)">3</text>
-<text x="1094.7" y="194.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a" transform="rotate(-90 1094.7 194.8)">S</text>
-<text x="1249.5" y="840.2" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="833.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1307.6" y="404.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1307.6" y="398.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">IN</text>
-<text x="1307.6" y="414.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
-<text x="1307.6" y="407.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CTL</text>
-<text x="1307.6" y="424.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
-<text x="1307.6" y="417.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
-<text x="1375.3" y="404.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
-<text x="1375.3" y="398.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
-<text x="1375.3" y="414.5" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
-<text x="1375.3" y="407.7" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GATE</text>
-<text x="1375.3" y="424.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
-<text x="1375.3" y="417.4" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">STAT</text>
-<text x="1249.5" y="762.8" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1249.5" y="756.0" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="1317.3" y="849.9" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
-<text x="1317.3" y="843.1" font-size="4.8" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
-<text x="470.6" y="533.5" font-size="4.8" text-anchor="start" dominant-baseline="text-before-edge" fill="#555555">3V3_LDO</text>
-<text x="1414.0" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
-<text x="548.0" y="843.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">~{VDDIN_PWR_BAD}</text>
-<text x="296.4" y="335.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">VIN_PWR_ON</text>
-<text x="968.9" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
-<text x="1414.0" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
-<text x="968.9" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="869.2,727.0 872.2,722.2" data-kind="net" data-net="+12V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="872.2,722.2 875.1,727.0" data-kind="net" data-net="+12V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="872.2,731.8 872.2,722.2" data-kind="net" data-net="+12V"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="259.6,252.9 262.6,248.0" data-kind="net" data-net="+5V_AON"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="262.6,248.0 265.5,252.9" data-kind="net" data-net="+5V_AON"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="262.6,257.7 262.6,248.0" data-kind="net" data-net="+5V_AON"/>
+<text x="1336.6" y="844.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1336.6" y="841.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">G</text>
+<text x="1357.3" y="818.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1357.3 818.9)">3</text>
+<text x="1354.6" y="818.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1354.6 818.9)">D</text>
+<text x="1357.3" y="848.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1357.3 848.0)">2</text>
+<text x="1354.6" y="848.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1354.6 848.0)">S</text>
+<text x="1254.4" y="812.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1381.5" y="364.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1381.5 364.2)">4</text>
+<text x="1378.8" y="364.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1378.8 364.2)">G</text>
+<text x="1356.0" y="346.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1356.0" y="343.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1385.0" y="346.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1385.0" y="343.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1017.3" y="537.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1024.1" y="538.3" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">IN</text>
+<text x="1017.3" y="546.6" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="1024.1" y="548.0" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">CTL</text>
+<text x="1017.3" y="556.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="1024.1" y="557.7" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1075.4" y="537.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1068.6" y="538.3" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
+<text x="1075.4" y="546.6" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="1068.6" y="548.0" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GATE</text>
+<text x="1075.4" y="556.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="1068.6" y="557.7" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">STAT</text>
+<text x="1312.4" y="537.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1319.2" y="538.3" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">IN</text>
+<text x="1312.4" y="546.6" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="1319.2" y="548.0" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">CTL</text>
+<text x="1312.4" y="556.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="1319.2" y="557.7" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1370.5" y="537.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1363.7" y="538.3" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
+<text x="1370.5" y="546.6" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="1363.7" y="548.0" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GATE</text>
+<text x="1370.5" y="556.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="1363.7" y="557.7" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">STAT</text>
+<text x="1086.4" y="504.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1086.4 504.5)">4</text>
+<text x="1083.7" y="504.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1083.7 504.5)">G</text>
+<text x="1060.8" y="486.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1060.8" y="483.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1089.9" y="486.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1089.9" y="483.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1017.3" y="246.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1024.1" y="248.0" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">IN</text>
+<text x="1017.3" y="256.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="1024.1" y="257.7" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">CTL</text>
+<text x="1017.3" y="266.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="1024.1" y="267.4" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1075.4" y="246.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1068.6" y="248.0" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
+<text x="1075.4" y="256.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="1068.6" y="257.7" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GATE</text>
+<text x="1075.4" y="266.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="1068.6" y="267.4" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">STAT</text>
+<text x="359.3" y="532.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="366.1" y="533.5" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">VIN</text>
+<text x="359.3" y="541.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="366.1" y="543.2" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">EN</text>
+<text x="427.0" y="532.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="420.3" y="533.5" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">VOUT</text>
+<text x="427.0" y="541.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="420.3" y="543.2" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1086.4" y="165.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1086.4 165.8)">4</text>
+<text x="1083.7" y="165.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1083.7 165.8)">G</text>
+<text x="1060.8" y="147.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1060.8" y="145.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1089.9" y="147.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1089.9" y="145.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1457.6" y="844.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1457.6" y="841.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">G</text>
+<text x="1478.3" y="818.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1478.3 818.9)">3</text>
+<text x="1475.6" y="818.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1475.6 818.9)">D</text>
+<text x="1478.3" y="848.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1478.3 848.0)">2</text>
+<text x="1475.6" y="848.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1475.6 848.0)">S</text>
+<text x="1017.3" y="396.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1024.1" y="398.0" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">IN</text>
+<text x="1017.3" y="406.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="1024.1" y="407.7" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">CTL</text>
+<text x="1017.3" y="416.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="1024.1" y="417.4" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1075.4" y="396.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1068.6" y="398.0" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
+<text x="1075.4" y="406.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="1068.6" y="407.7" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GATE</text>
+<text x="1075.4" y="416.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="1068.6" y="417.4" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">STAT</text>
+<text x="1254.4" y="803.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="354.5" y="336.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="354.5" y="333.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">G</text>
+<text x="375.2" y="310.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 375.2 310.9)">3</text>
+<text x="372.5" y="310.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 372.5 310.9)">D</text>
+<text x="375.2" y="340.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 375.2 340.0)">2</text>
+<text x="372.5" y="340.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 372.5 340.0)">S</text>
+<text x="1254.4" y="745.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1086.4" y="364.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1086.4 364.2)">4</text>
+<text x="1083.7" y="364.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1083.7 364.2)">G</text>
+<text x="1060.8" y="346.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1060.8" y="343.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1089.9" y="346.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1089.9" y="343.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1254.4" y="783.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1433.4" y="841.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1254.4" y="793.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="872.2" y="193.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="872.2" y="203.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="872.2" y="212.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="843.1" y="193.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="843.1" y="203.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="843.1" y="212.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1254.4" y="774.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="375.2" y="281.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 375.2 281.9)">4</text>
+<text x="372.5" y="281.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 372.5 281.9)">G</text>
+<text x="398.0" y="263.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="398.0" y="261.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="369.0" y="263.9" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="369.0" y="261.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1254.4" y="764.4" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1020.8" y="340.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b" transform="rotate(-90 1020.8 340.0)">1</text>
+<text x="1381.5" y="504.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1381.5 504.5)">4</text>
+<text x="1378.8" y="504.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1378.8 504.5)">G</text>
+<text x="1356.0" y="486.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1356.0" y="483.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1385.0" y="486.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1385.0" y="483.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1025.6" y="480.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b" transform="rotate(-90 1025.6 480.3)">1</text>
+<text x="1254.4" y="735.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1086.4" y="214.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b" transform="rotate(-90 1086.4 214.2)">4</text>
+<text x="1083.7" y="214.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a" transform="rotate(-90 1083.7 214.2)">G</text>
+<text x="1060.8" y="196.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">5</text>
+<text x="1060.8" y="193.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">D</text>
+<text x="1089.9" y="196.2" font-size="4.8" text-anchor="middle" dominant-baseline="text-before-edge" fill="#8a6d3b">1</text>
+<text x="1089.9" y="193.5" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#2a7d5a">S</text>
+<text x="1254.4" y="832.1" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1312.4" y="396.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1319.2" y="398.0" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">IN</text>
+<text x="1312.4" y="406.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">3</text>
+<text x="1319.2" y="407.7" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">CTL</text>
+<text x="1312.4" y="416.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">2</text>
+<text x="1319.2" y="417.4" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="1370.5" y="396.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">6</text>
+<text x="1363.7" y="398.0" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">SENSE</text>
+<text x="1370.5" y="406.3" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">5</text>
+<text x="1363.7" y="407.7" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">GATE</text>
+<text x="1370.5" y="416.0" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">4</text>
+<text x="1363.7" y="417.4" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#2a7d5a">STAT</text>
+<text x="1254.4" y="754.7" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<text x="1312.4" y="841.8" font-size="4.8" text-anchor="middle" dominant-baseline="text-after-edge" fill="#8a6d3b">1</text>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,414.5 989.2,410.6" data-kind="component" data-ref="C38"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,410.6 989.2,414.5" data-kind="component" data-ref="C38"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1022.1,567.4 1070.5,528.6" data-kind="component" data-ref="U62"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1022.1,528.6 1070.5,567.4" data-kind="component" data-ref="U62"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1060.8,504.5 1089.9,477.4" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1060.8,477.4 1089.9,504.5" data-kind="component" data-ref="Q23"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1098.6,564.4 1110.2,560.6" data-kind="component" data-ref="C262"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1098.6,560.6 1110.2,564.4" data-kind="component" data-ref="C262"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1022.1,427.0 1070.5,388.3" data-kind="component" data-ref="U61"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1022.1,388.3 1070.5,427.0" data-kind="component" data-ref="U61"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1098.6,424.1 1110.2,420.3" data-kind="component" data-ref="C261"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1098.6,420.3 1110.2,424.1" data-kind="component" data-ref="C261"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1060.8,364.2 1089.9,337.1" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1060.8,337.1 1089.9,364.2" data-kind="component" data-ref="Q5"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,554.8 989.2,550.9" data-kind="component" data-ref="C240"/>
+<polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,550.9 989.2,554.8" data-kind="component" data-ref="C240"/>
+<text x="470.6" y="532.2" font-size="4.8" text-anchor="end" dominant-baseline="text-after-edge" fill="#555555">3V3_LDO</text>
+<text x="1419.6" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
+<text x="542.4" y="843.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">~{VDDIN_PWR_BAD}</text>
+<text x="290.9" y="335.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">VIN_PWR_ON</text>
+<text x="963.4" y="485.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
+<text x="1419.6" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
+<text x="963.4" y="344.8" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
 <text x="256.7" y="189.0" font-size="9.7" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">SoM Medium voltage power switch</text>
 <text x="562.5" y="514.1" font-size="4.8" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">3V3</text>
 <text x="562.5" y="519.9" font-size="4.8" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">@200mA</text>

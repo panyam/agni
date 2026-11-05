@@ -93,7 +93,7 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			if pin.LabelOrigin == nil {
 				continue
 			}
-			lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
+			lx, ly, lrot, lj := pinTextAt(pl.Transform, pin, pin.LabelOrigin, pin.Justify)
 			// Resolved here rather than left to add(), because the number offset below needs it.
 			h := pin.Height
 			if h <= 0 {
@@ -102,13 +102,12 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			// The number takes its own origin when the source places it apart from the name,
 			// otherwise it stacks a line below the name (Y-up, so -h). Mirrors the SVG backend.
 			// Without the offset the overlay draws the name over the number.
-			nx, ny, nj := lp.X, lp.Y-int64(float64(h)*1.4), pin.Justify
+			nx, ny, nrot, nj := lx, ly-int64(float64(h)*1.4), lrot, lj
 			if pin.NumberOrigin != nil {
-				np := geomath.ApplyTransform(pl.Transform, pin.NumberOrigin)
-				nx, ny, nj = np.X, np.Y, pin.NumberJustify
+				nx, ny, nrot, nj = pinTextAt(pl.Transform, pin, pin.NumberOrigin, pin.NumberJustify)
 			}
-			add(nx, ny, pin.PortRef, h, rot, nj, style.Ruler, 0)
-			add(lp.X, lp.Y, pin.Name, h, rot, pin.Justify, style.PinName, 0)
+			add(nx, ny, pin.PortRef, h, nrot, nj, style.Ruler, 0)
+			add(lx, ly, pin.Name, h, lrot, lj, style.PinName, 0)
 		}
 	}
 	// Worksheet furniture text: zone-ruler numbers/letters and the title-block fields.

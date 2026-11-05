@@ -43,6 +43,9 @@ const (
 	// DesignServiceGetLayoutReportProcedure is the fully-qualified name of the DesignService's
 	// GetLayoutReport RPC.
 	DesignServiceGetLayoutReportProcedure = "/agni.v1.webapi.DesignService/GetLayoutReport"
+	// DesignServiceLocateSubjectsProcedure is the fully-qualified name of the DesignService's
+	// LocateSubjects RPC.
+	DesignServiceLocateSubjectsProcedure = "/agni.v1.webapi.DesignService/LocateSubjects"
 	// DesignServiceTraceDesignProcedure is the fully-qualified name of the DesignService's TraceDesign
 	// RPC.
 	DesignServiceTraceDesignProcedure = "/agni.v1.webapi.DesignService/TraceDesign"
@@ -73,6 +76,11 @@ type DesignServiceClient interface {
 	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
 	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
+	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
+	// answers from the snapshot's schematic, and from its board only when the request asks, since
+	// reading a large board costs seconds (agni issue 943).
+	LocateSubjects(context.Context, *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error)
 	// TraceDesign walks from one pin to another through the series parts between them, and returns
 	// the route. The route lists each part crossed with its own pin on both sides, each net passed
 	// through, and the other parts on those nets. `agni trace` prints the same answer. So a route read
@@ -121,6 +129,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 			connect.WithClientOptions(opts...),
 		),
+		locateSubjects: connect.NewClient[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse](
+			httpClient,
+			baseURL+DesignServiceLocateSubjectsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("LocateSubjects")),
+			connect.WithClientOptions(opts...),
+		),
 		traceDesign: connect.NewClient[webapi.TraceDesignRequest, webapi.TraceDesignResponse](
 			httpClient,
 			baseURL+DesignServiceTraceDesignProcedure,
@@ -136,6 +150,7 @@ type designServiceClient struct {
 	getSheet        *connect.Client[webapi.GetSheetRequest, webapi.GetSheetResponse]
 	highlightSheet  *connect.Client[webapi.HighlightSheetRequest, webapi.HighlightSheetResponse]
 	getLayoutReport *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
+	locateSubjects  *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
 	traceDesign     *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
 }
 
@@ -157,6 +172,11 @@ func (c *designServiceClient) HighlightSheet(ctx context.Context, req *connect.R
 // GetLayoutReport calls agni.v1.webapi.DesignService.GetLayoutReport.
 func (c *designServiceClient) GetLayoutReport(ctx context.Context, req *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return c.getLayoutReport.CallUnary(ctx, req)
+}
+
+// LocateSubjects calls agni.v1.webapi.DesignService.LocateSubjects.
+func (c *designServiceClient) LocateSubjects(ctx context.Context, req *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
+	return c.locateSubjects.CallUnary(ctx, req)
 }
 
 // TraceDesign calls agni.v1.webapi.DesignService.TraceDesign.
@@ -189,6 +209,11 @@ type DesignServiceHandler interface {
 	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
 	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
+	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
+	// answers from the snapshot's schematic, and from its board only when the request asks, since
+	// reading a large board costs seconds (agni issue 943).
+	LocateSubjects(context.Context, *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error)
 	// TraceDesign walks from one pin to another through the series parts between them, and returns
 	// the route. The route lists each part crossed with its own pin on both sides, each net passed
 	// through, and the other parts on those nets. `agni trace` prints the same answer. So a route read
@@ -233,6 +258,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceLocateSubjectsHandler := connect.NewUnaryHandler(
+		DesignServiceLocateSubjectsProcedure,
+		svc.LocateSubjects,
+		connect.WithSchema(designServiceMethods.ByName("LocateSubjects")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceTraceDesignHandler := connect.NewUnaryHandler(
 		DesignServiceTraceDesignProcedure,
 		svc.TraceDesign,
@@ -249,6 +280,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceHighlightSheetHandler.ServeHTTP(w, r)
 		case DesignServiceGetLayoutReportProcedure:
 			designServiceGetLayoutReportHandler.ServeHTTP(w, r)
+		case DesignServiceLocateSubjectsProcedure:
+			designServiceLocateSubjectsHandler.ServeHTTP(w, r)
 		case DesignServiceTraceDesignProcedure:
 			designServiceTraceDesignHandler.ServeHTTP(w, r)
 		default:
@@ -274,6 +307,10 @@ func (UnimplementedDesignServiceHandler) HighlightSheet(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetLayoutReport is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) LocateSubjects(context.Context, *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.LocateSubjects is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {

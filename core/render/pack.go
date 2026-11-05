@@ -34,6 +34,8 @@ const (
 	// group space. A bus trunk/entry tessellates to true-width triangle quads because GL cannot
 	// stroke a line wider than 1px, the same reason copper is quads.
 	groupBus uint8 = 12
+	// groupDNP is the cross over a do-not-populate part (agni 1344), true-width quads like a bus.
+	groupDNP uint8 = 13
 )
 
 // busWidthNm is the world-space (nanometer) width of a bus trunk/entry on the WebGL canvas. GL
@@ -44,9 +46,9 @@ const busWidthNm = 300_000
 
 // schematicGroupColors is the packed-sheet palette indexed by group constant. A plain sheet
 // carries only the schematic groups (0-4). A sheet that packed a bus extends the slice to groupBus,
-// leaving the board slots (5-11) empty. Bus-less sheets keep the shorter slice so their packed bytes
-// are unchanged.
-func schematicGroupColors(style Style, hasBus bool) []string {
+// and one that crossed out a part extends it to groupDNP, leaving the board slots (5-11) empty.
+// Other sheets keep the shorter slice so their packed bytes are unchanged.
+func schematicGroupColors(style Style, hasBus, hasDNP bool) []string {
 	colors := []string{
 		groupSymbol: style.Symbol,
 		groupWire:   style.Wire,
@@ -54,10 +56,19 @@ func schematicGroupColors(style Style, hasBus bool) []string {
 		groupFree:   style.Free,
 		groupFrame:  style.Frame,
 	}
-	if hasBus {
-		full := make([]string, groupBus+1)
+	if hasBus || hasDNP {
+		n := groupBus + 1
+		if hasDNP {
+			n = groupDNP + 1
+		}
+		full := make([]string, n)
 		copy(full, colors)
-		full[groupBus] = style.Bus
+		if hasBus {
+			full[groupBus] = style.Bus
+		}
+		if hasDNP {
+			full[groupDNP] = style.DNP
+		}
 		colors = full
 	}
 	return colors
@@ -88,7 +99,7 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 	for _, fp := range worksheetLines(g, sheet) {
 		add(fp.kind, groupFrame, "", "", "", fp.pts)
 	}
-	hasBus := false
+	hasBus, hasDNP := false, false
 	for _, w := range sheet.Wires {
 		switch w.GetKind() {
 		case geom.WireGeometry_KIND_BUS, geom.WireGeometry_KIND_BUS_ENTRY:
@@ -116,6 +127,13 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		kind, pts := shapeVerts(s)
 		add(kind, groupFree, "", "", "", pts)
 	}
+	// The outline around a flagged label, which the SVG backend draws beside the label's text.
+	def := defaultTextHeight(g, sheet)
+	for _, l := range sheet.Labels {
+		if pts := flagOutline(l, labelHeight(l, def)); pts != nil {
+			add(primLineStrip, groupFree, "", "", "", xy(pts))
+		}
+	}
 	for _, pl := range sheet.Placements {
 		sym := symbolFor(syms, pl)
 		if sym == nil {
@@ -129,6 +147,12 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 			wp := geomath.PlacePin(pl.Transform, pin)
 			if wp != nil {
 				add(primPoints, groupPin, pl.RefDes, "", pin.PortRef, [][2]int64{{wp.X, wp.Y}})
+			}
+		}
+		if a, b, ok := dnpCross(sym, pl); ok {
+			hasDNP = true
+			for _, d := range [][2]*geom.Point{a, b} {
+				add(primTriangles, groupDNP, pl.RefDes, "", "", quadPts(d[0].X, d[0].Y, d[1].X, d[1].Y, busWidthNm))
 			}
 		}
 	}
@@ -176,7 +200,7 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		LayoutVersion: packLayoutVersion,
 		FontFamily:    style.Font,
 		// Indexed by group so the mapping can't drift from the group constants.
-		GroupColors:     schematicGroupColors(style, hasBus),
+		GroupColors:     schematicGroupColors(style, hasBus, hasDNP),
 		BackgroundColor: style.Page,
 		OriginX:         ox,
 		OriginY:         oy,

@@ -1,0 +1,9 @@
+# Nineteen parts of Antmicro's Jetson AGX Thor baseboard, cut by `make cut` in the project folder.
+# `entry` is the root schematic, which walks the two cut sheets. `companions` is the board, the copper
+# the walk's board pane draws, never a second netlist.
+name: jetson-cut
+title: Jetson AGX Thor baseboard, cut for the cross-probe walk
+extends: ../../project.yaml
+entry: jetson-cut.kicad_sch
+companions:
+  - jetson-cut.kicad_pcb

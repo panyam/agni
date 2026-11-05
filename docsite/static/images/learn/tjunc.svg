@@ -62,8 +62,8 @@
 <rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="384.7" y="370.1" width="10.9" height="27.4" data-kind="component" data-ref="R3"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="390.2,363.2 390.2,370.1" data-kind="component" data-ref="R3"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="390.2,404.3 390.2,397.4" data-kind="component" data-ref="R3"/>
-<text x="309.4" y="309.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">BUS</text>
-<text x="390.2" y="363.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">TAP</text>
+<text x="309.4" y="307.5" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">BUS</text>
+<text x="390.2" y="361.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">TAP</text>
 <text x="293.2" y="282.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R1</text>
 <text x="454.8" y="282.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R2</text>
 <text x="374.0" y="379.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R3</text>

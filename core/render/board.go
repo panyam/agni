@@ -136,14 +136,14 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	// the text so labels remain legible. Each element records its source layer in data-layer, so
 	// client-side CSS sets per-layer visibility here as it does for the copper strata.
 	if len(b.GetGraphics()) > 0 {
-		c.Group(svg.A("class", "silk"))
+		c.Group(append([]svg.Attr{svg.A("class", "silk")}, pk.passThrough()...)...)
 		for _, gr := range b.GetGraphics() {
 			if gr.GetShape() == nil {
 				continue
 			}
 			w := math.Max(float64(gr.GetWidth())*scale, strokePx)
 			c.Group(svg.A("data-layer", gr.GetLayer()))
-			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, style.Silk, pk.component(gr.GetRefDes())...)
+			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, style.Silk)
 			c.GroupEnd()
 		}
 		c.GroupEnd()
@@ -152,7 +152,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	// Silkscreen and legend text (ref-des, value, free title-block text) in board coordinates.
 	// Rotation negates for the Y-down screen like a pad, and anchor and font-size follow the
 	// authored justify and height.
-	c.Group(svg.A("class", "labels"))
+	c.Group(append([]svg.Attr{svg.A("class", "labels")}, pk.passThrough()...)...)
 	for _, t := range boardLabels(b) {
 		if t.GetAt() == nil {
 			continue
@@ -163,7 +163,6 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			svg.F("x", x), svg.F("y", y), svg.A("fill", style.Field), svg.F("font-size", fontPx),
 			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),
 		}
-		attrs = append(attrs, pk.component(t.GetRefDes())...)
 		if rot := -t.GetRotationDeg(); rot != 0 {
 			attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, x, y)))
 		}

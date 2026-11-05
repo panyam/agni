@@ -66,8 +66,6 @@ func TestBoardPickTargetsKeyEveryPickableElement(t *testing.T) {
 		"rect component ref=C9",              // the numberless pad keys as its part
 		"circle net net=SDA",                 // via ring
 		"circle net net=SDA",                 // via drill, drawn over the ring
-		"polyline component ref=C9",          // C9's silkscreen
-		"text component ref=C9",              // C9's designator
 	}
 	for _, w := range want {
 		i := indexOf(got, w)
@@ -149,4 +147,51 @@ func parseF(t *testing.T, s string) float64 {
 		t.Fatal(err)
 	}
 	return v
+}
+
+// TestBoardArtworkPassesClicksThrough holds the silkscreen and the designators unkeyed and
+// transparent to the pointer, so a designator lying over a neighbour's pad leaves the pad to pick
+// its own pin (agni issue 1347).
+func TestBoardArtworkPassesClicksThrough(t *testing.T) {
+	doc := BoardSVG(pickBoard(), WithPickTargets())
+	for cls, holds := range map[string]string{"silk": "<polyline", "labels": ">C9</text>"} {
+		open, body := svgGroup(t, doc, cls)
+		if !strings.Contains(open, `pointer-events="none"`) {
+			t.Errorf("%s group must pass clicks through: %s", cls, open)
+		}
+		if !strings.Contains(body, holds) {
+			t.Fatalf("%s group holds no %s, so the test checks nothing", cls, holds)
+		}
+		if strings.Contains(body, "data-kind") {
+			t.Errorf("%s group must carry no pick keys", cls)
+		}
+	}
+	if strings.Contains(BoardSVG(pickBoard()), "pointer-events") {
+		t.Error("an unkeyed board must not set pointer-events")
+	}
+}
+
+// svgGroup returns the opening tag of the <g> with class cls and everything up to its matching
+// </g>, counting nested groups.
+func svgGroup(t *testing.T, doc, cls string) (open, body string) {
+	t.Helper()
+	start := strings.Index(doc, `<g class="`+cls+`"`)
+	if start < 0 {
+		t.Fatalf("no %s group", cls)
+	}
+	open = doc[start : start+strings.Index(doc[start:], ">")+1]
+	depth := 0
+	for i := start; i < len(doc); i++ {
+		switch {
+		case strings.HasPrefix(doc[i:], "<g ") || strings.HasPrefix(doc[i:], "<g>"):
+			depth++
+		case strings.HasPrefix(doc[i:], "</g>"):
+			depth--
+			if depth == 0 {
+				return open, doc[start:i]
+			}
+		}
+	}
+	t.Fatalf("%s group never closes", cls)
+	return "", ""
 }

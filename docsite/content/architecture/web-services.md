@@ -59,6 +59,7 @@ dropped files already reach it through its `local` mount.
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
 | Design | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
+| Design | LocateSubjects | which sheets draw each named part, pin, net or bus, the board added on request, with a reason for one drawn nowhere (agni issue 1325) |
 | Design | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
 | Lexicon | GetLexicon | the effective naming lexicon of a snapshot's read, every pattern, exclusion, prefix, family and switch with where it came from, and the whole lexicon stated as a convention, the same answer `agni lexicon` prints. A request's `candidate` lists that convention instead, so an editor never merges one itself. `convention` is the convention as written, rules included, and an editor has to start from it |
 | Lexicon | ExplainNet | one net's stamped roles with their reasons, and every net-name pattern its name matches, exclusions included |

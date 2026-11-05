@@ -88,7 +88,7 @@ class Shape(_message.Message):
     def __init__(self, kind: _Optional[_Union[Shape.Kind, str]] = ..., points: _Optional[_Iterable[_Union[Point, _Mapping]]] = ..., radius: _Optional[int] = ..., figure_group: _Optional[str] = ..., fill: _Optional[_Union[Shape.Fill, str]] = ..., fill_color: _Optional[str] = ...) -> None: ...
 
 class PinPoint(_message.Message):
-    __slots__ = ("port_ref", "loc", "source_id", "label_origin", "justify", "name", "height", "number_origin", "number_justify")
+    __slots__ = ("port_ref", "loc", "source_id", "label_origin", "justify", "name", "height", "number_origin", "number_justify", "text_rotation_deg")
     PORT_REF_FIELD_NUMBER: _ClassVar[int]
     LOC_FIELD_NUMBER: _ClassVar[int]
     SOURCE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -98,6 +98,7 @@ class PinPoint(_message.Message):
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     NUMBER_ORIGIN_FIELD_NUMBER: _ClassVar[int]
     NUMBER_JUSTIFY_FIELD_NUMBER: _ClassVar[int]
+    TEXT_ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
     port_ref: str
     loc: Point
     source_id: str
@@ -107,7 +108,8 @@ class PinPoint(_message.Message):
     height: int
     number_origin: Point
     number_justify: str
-    def __init__(self, port_ref: _Optional[str] = ..., loc: _Optional[_Union[Point, _Mapping]] = ..., source_id: _Optional[str] = ..., label_origin: _Optional[_Union[Point, _Mapping]] = ..., justify: _Optional[str] = ..., name: _Optional[str] = ..., height: _Optional[int] = ..., number_origin: _Optional[_Union[Point, _Mapping]] = ..., number_justify: _Optional[str] = ...) -> None: ...
+    text_rotation_deg: int
+    def __init__(self, port_ref: _Optional[str] = ..., loc: _Optional[_Union[Point, _Mapping]] = ..., source_id: _Optional[str] = ..., label_origin: _Optional[_Union[Point, _Mapping]] = ..., justify: _Optional[str] = ..., name: _Optional[str] = ..., height: _Optional[int] = ..., number_origin: _Optional[_Union[Point, _Mapping]] = ..., number_justify: _Optional[str] = ..., text_rotation_deg: _Optional[int] = ...) -> None: ...
 
 class Asset(_message.Message):
     __slots__ = ("kind", "id", "prov", "placeholder")
@@ -190,7 +192,7 @@ class Field(_message.Message):
     def __init__(self, name: _Optional[str] = ..., value: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., justify: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., visible: _Optional[bool] = ...) -> None: ...
 
 class SymbolPlacement(_message.Message):
-    __slots__ = ("ref_des", "cell_ref", "library_ref", "transform", "view_ref", "fields", "net_anchor", "prov")
+    __slots__ = ("ref_des", "cell_ref", "library_ref", "transform", "view_ref", "fields", "net_anchor", "dnp", "prov")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     CELL_REF_FIELD_NUMBER: _ClassVar[int]
     LIBRARY_REF_FIELD_NUMBER: _ClassVar[int]
@@ -198,6 +200,7 @@ class SymbolPlacement(_message.Message):
     VIEW_REF_FIELD_NUMBER: _ClassVar[int]
     FIELDS_FIELD_NUMBER: _ClassVar[int]
     NET_ANCHOR_FIELD_NUMBER: _ClassVar[int]
+    DNP_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     cell_ref: str
@@ -206,8 +209,9 @@ class SymbolPlacement(_message.Message):
     view_ref: str
     fields: _containers.RepeatedCompositeFieldContainer[Field]
     net_anchor: str
+    dnp: bool
     prov: Provenance
-    def __init__(self, ref_des: _Optional[str] = ..., cell_ref: _Optional[str] = ..., library_ref: _Optional[str] = ..., transform: _Optional[_Union[Transform, _Mapping]] = ..., view_ref: _Optional[str] = ..., fields: _Optional[_Iterable[_Union[Field, _Mapping]]] = ..., net_anchor: _Optional[str] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, ref_des: _Optional[str] = ..., cell_ref: _Optional[str] = ..., library_ref: _Optional[str] = ..., transform: _Optional[_Union[Transform, _Mapping]] = ..., view_ref: _Optional[str] = ..., fields: _Optional[_Iterable[_Union[Field, _Mapping]]] = ..., net_anchor: _Optional[str] = ..., dnp: _Optional[bool] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Polyline(_message.Message):
     __slots__ = ("points",)
@@ -240,18 +244,36 @@ class WireGeometry(_message.Message):
     def __init__(self, net: _Optional[str] = ..., net_id: _Optional[str] = ..., polylines: _Optional[_Iterable[_Union[Polyline, _Mapping]]] = ..., kind: _Optional[_Union[WireGeometry.Kind, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Label(_message.Message):
-    __slots__ = ("text", "origin", "height", "justify", "rotation_deg")
+    __slots__ = ("text", "origin", "height", "justify", "rotation_deg", "flag", "anchor")
+    class Flag(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        FLAG_NONE: _ClassVar[Label.Flag]
+        FLAG_PASSIVE: _ClassVar[Label.Flag]
+        FLAG_INPUT: _ClassVar[Label.Flag]
+        FLAG_OUTPUT: _ClassVar[Label.Flag]
+        FLAG_BIDIRECTIONAL: _ClassVar[Label.Flag]
+        FLAG_TRI_STATE: _ClassVar[Label.Flag]
+    FLAG_NONE: Label.Flag
+    FLAG_PASSIVE: Label.Flag
+    FLAG_INPUT: Label.Flag
+    FLAG_OUTPUT: Label.Flag
+    FLAG_BIDIRECTIONAL: Label.Flag
+    FLAG_TRI_STATE: Label.Flag
     TEXT_FIELD_NUMBER: _ClassVar[int]
     ORIGIN_FIELD_NUMBER: _ClassVar[int]
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     JUSTIFY_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
+    FLAG_FIELD_NUMBER: _ClassVar[int]
+    ANCHOR_FIELD_NUMBER: _ClassVar[int]
     text: str
     origin: Point
     height: int
     justify: str
     rotation_deg: int
-    def __init__(self, text: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., height: _Optional[int] = ..., justify: _Optional[str] = ..., rotation_deg: _Optional[int] = ...) -> None: ...
+    flag: Label.Flag
+    anchor: Point
+    def __init__(self, text: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., height: _Optional[int] = ..., justify: _Optional[str] = ..., rotation_deg: _Optional[int] = ..., flag: _Optional[_Union[Label.Flag, str]] = ..., anchor: _Optional[_Union[Point, _Mapping]] = ...) -> None: ...
 
 class SheetGeometry(_message.Message):
     __slots__ = ("id", "name", "parent_id", "size", "placements", "wires", "labels", "shapes", "title_block", "images", "suppress_worksheet", "prov")

@@ -46,9 +46,13 @@ The board view picks with the same `Selection` and the same priority (agni issue
   mechanical hole, keys as its footprint, since a pin needs both halves.
 - A track, a via and a zone each pick their net. A via's drill hole draws over its ring, so the
   hole carries the key too.
-- A footprint's silkscreen, fab graphics and designator text pick the part. Its body is an invisible
-  rect over its pads' bounds, drawn above the zones and under the copper. A click between two pads
-  then picks the part, and a pad or a track drawn over the body still wins where it is drawn.
+- A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
+  copper. A click between two pads then picks the part, and a pad or a track drawn over the body
+  still wins where it is drawn.
+- **The silkscreen and the designators pass clicks through** (`pointer-events="none"`), and carry no
+  key. On a dense board a designator lies over its neighbour's pads. On Jetson, C123's designator
+  covers C133's pads, and while board text was keyed a click on C133's pad picked C123 (agni issue
+  1347). The schematic leaves its labels unkeyed for the same reason.
 - **A net's tracks share one keyed group per layer.** Tracks are most of a board's elements. A key on
   each line grew Jetson's board SVG from 8.3 MB to 12.1 MB, and one per group grows it to 9.5 MB. So
   `selectionFromElement` reads the nearest keyed element, walking up from the hit and stopping at the
@@ -80,10 +84,15 @@ A located query cell selects too, and so does a finding clicked in the Checks or
 panel follows a walk through an answer or a run.
 
 **Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
-link to it. No rpc answers "where is this drawn" on its own, but every entity in a query answer
-carries the sheets it is drawn on. So the viewer asks the served find-by-name query with the whole
-name anchored (`drawnSheets`). A part and a net can share a name, so the viewer reads the row of the
-right kind. Properties lists a bus by its members instead, and reads them off the IR's record of the
+link to it, from `DesignService.LocateSubjects` (agni issue 1325). That rpc and a check run's
+findings read one index, so a subject locates where its finding badges. A pin answers the sheets
+that draw its unit, so U1's pin 5 answers U1B's sheet. The board sheet joins when the request asks
+for it, by ref-des and net name, since an EDIF schematic and an ODB++ job share no net id. The
+viewer asks for it while the board is on screen, because the board is read then, and asking from a
+schematic would read a large board for one panel row (agni issue 943). A check run that read the
+board badges its findings with the board sheet too (#142's WS7-034). Before 1325 the viewer asked
+the find-by-name query and read the sheets off the answer's entity, and a query never reads the
+board. Properties lists a bus by its members instead, and reads them off the IR's record of the
 bus (`InputDiagnostics.unmodeled_buses`). The `bus` relation records only the construct the format
 reader saw, and nothing about its members.
 

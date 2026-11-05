@@ -23,6 +23,19 @@ export function exitCode(rows: readonly Row[]): number {
   return rows.some((r) => r.status === "fail") ? 1 : 0;
 }
 
+// waitedOn decides a step's status when the step may be waiting on the ticket that builds it. A walk
+// written ahead of its mission lists, per step, the tickets it waits on (agni issue 1323). A waiting
+// step that fails is "not available" and names them, so the walk runs in the gate before the
+// mission is done. A waiting step that PASSES fails the walk, so the PR that made it pass also
+// drops the wait, and a later break in it is a failure again. A step that waits on nothing is
+// "ok" or "fail".
+export function waitedOn(passed: boolean, waitsOn: readonly string[], detail: string): { status: Status; detail: string } {
+  const on = waitsOn.join(", ");
+  if (waitsOn.length === 0) return { status: passed ? "ok" : "fail", detail };
+  if (passed) return { status: "fail", detail: `passes, so the walk should stop waiting on ${on}: ${detail}` };
+  return { status: "not available", detail: `waits on ${on}: ${detail}` };
+}
+
 // RequestKind splits a page's requests into three kinds, the way the mission reads them. Analysis
 // calls are one kind, and a static site and a dropped design must never make them. Files fetched
 // for a seeded design are the second, and the page's own assets are the third.

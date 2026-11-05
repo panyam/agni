@@ -21,13 +21,24 @@ func (k boardPickKeys) net(name string) []svg.Attr {
 	return []svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", name)}
 }
 
-// component keys a footprint's own artwork, its silkscreen, fab graphics and designator text.
-// Free board artwork has no ref and names nothing.
+// component keys a footprint's body rect, and a pad with no number. Free board artwork has no
+// ref and names nothing.
 func (k boardPickKeys) component(ref string) []svg.Attr {
 	if !k.on || ref == "" {
 		return nil
 	}
 	return []svg.Attr{svg.AEsc("data-kind", "component"), svg.AEsc("data-ref", ref)}
+}
+
+// passThrough lets a click through the silkscreen and the designators to the copper and body
+// rects under them. On a dense board a part's designator or fab outline lies over its neighbour's
+// pads, and a keyed label there picked the neighbour (agni issue 1347). The schematic leaves its
+// labels unkeyed for the same reason. A part still picks from its body rect.
+func (k boardPickKeys) passThrough() []svg.Attr {
+	if !k.on {
+		return nil
+	}
+	return []svg.Attr{svg.A("pointer-events", "none")}
 }
 
 // pad keys a pad as a pin of its footprint, the pad number being the pin designator that

@@ -264,6 +264,28 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	if len(scoped.(*webapi.CheckDesignResponse).GetVerdicts()) == 0 {
 		t.Fatalf("CheckDesign about %s:%s: no verdicts, so two empty answers would compare equal", subject.GetKind(), subject.GetRef())
 	}
+	// Where a selection is drawn, the board included, is the same answer on either host (agni issue
+	// 1325), so a click on one pane opens the same sheet of the other whichever engine runs the page.
+	var locateSubjects []*checkspb.Subject
+	for _, v := range whole.Msg.GetVerdicts() {
+		if len(locateSubjects) == 8 {
+			break
+		}
+		locateSubjects = append(locateSubjects, v.GetSubjects()...)
+	}
+	located := ask("LocateSubjects", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.LocateSubjects(ctx, connect.NewRequest(&webapi.LocateSubjectsRequest{Snapshot: snapOn(c), Subjects: locateSubjects, Board: true}))
+		return msgOf(r, err)
+	})
+	drawn := 0
+	for _, s := range located.(*webapi.LocateSubjectsResponse).GetSubjects() {
+		if len(s.GetSheetIds()) > 0 {
+			drawn++
+		}
+	}
+	if drawn == 0 {
+		t.Fatal("LocateSubjects: no subject drawn anywhere, so two empty answers would compare equal")
+	}
 	// How the design's names were read is the same question on either host (agni issue 1266).
 	lx := ask("GetLexicon", func(c parityClients) (proto.Message, error) {
 		r, err := c.lex.GetLexicon(ctx, connect.NewRequest(&webapi.GetLexiconRequest{Snapshot: snapOn(c)}))

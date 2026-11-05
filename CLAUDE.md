@@ -1275,7 +1275,12 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several may be active at once, one per worktree. #1194
+and the command that exercises it. Several may be active at once, one per worktree. #1321
+`mission_cross_probe` (find a schematic part on the board beside you, and back) is active, and `make
+exercise-cross-probe` is its exercise. Its walk runs in the gate on a cut of Jetson
+(`examples/cross-probe-project`) and names, per step, the tickets it waits on. A waiting step that
+passes FAILS the walk, so the PR that makes a step pass also removes its wait in
+`web/browser/cross-probe-walk.spec.ts`. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni
@@ -1305,7 +1310,10 @@ the slowest file fetch, and a timed-out open names the files still pending (agni
 `merged: true` via the API, never `gofmt -w` a directory). It covers the shell traps that have lost
 real work. It also covers what agni ADDS to the PR body shape that the `start-pr` skill defines.
 agni adds the circuit and a hardware primer ahead of the reviewer's guide, the docsite pages that
-the prerequisite block names, and the fixture-only rule for rendering captures. The general skeleton
+the prerequisite block names, and the fixture-only rule for rendering captures. **A rendering
+before/after also carries a third frame from the format's native tool** (kicad-cli, xschem, Lepton,
+gerbv) wherever one exists, because that frame is what finds the gaps nobody was looking for. The
+general skeleton
 lives in the skill, so do not copy it back into this repo.
 
 **There are four ways to be told a thing worked when it did not. All were hit in one sitting, and
