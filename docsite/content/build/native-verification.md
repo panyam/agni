@@ -129,5 +129,7 @@ established without one.
    pin-to-net partition, placements, every pad's board position, vias and track widths on all five.
    The export changes three things on the way out, and the test allows for each. It drops mechanical
    and graphical parts, it writes the drilled pad of a dropped part as a via, and it merges pads of
-   one part that share a name. agni's ODB++ reader also misses a via on no net, since it builds vias
-   from `eda/data`, which lists none.
+   one part that share a name. A via on no net has no `eda/data` subnet in Altium's export, so
+   agni's ODB++ reader also reads a drill hit whose `.drill` attribute says via when no subnet claims
+   it. A unit test holds every pad of a part at any angle and side to its stored board position,
+   since the five boards only place bottom parts at 180 degrees.
