@@ -2,9 +2,11 @@
 
 ### What it means
 
-Two track segments on the same copper layer belong to different nets, and
-their copper edges come too close. The edge distance is the centerline distance minus half of each
-width. Too close means under the minimum clearance the board declares. When the board declares
+Copper of two different nets on the same layer comes too close: a track against a track, a track
+against a pour, or a pour against a pour. A track's edge distance is its centerline distance minus
+half its width. A pour's edge is its outline and the edge of each of its holes, so a track in a
+pour's clearance hole measures against the hole's edge. Copper lying wholly inside another net's
+pour is a short, reported with a gap below zero. Too close means under the minimum clearance the board declares. When the board declares
 none, the floor is 0.127mm (5mil), the loosest mainstream fab's minimum spacing (the corpus JLCPCB
 rules).
 
@@ -26,22 +28,32 @@ The floor follows track-width's posture. A board that declares its own minimum i
 KiCad's own DRC epsilon. The distance between two diagonal tracks is not a whole number of
 nanometres, so copper routed exactly at the minimum measures a nanometre or two under it.
 
-The rule measures segment against segment on one layer only, because pad and zone clearances need
-pad-shape geometry facts that do not exist yet, and same-net spacing is not a defect. The pairwise
-walk is O(S²) with an early bounding-box reject. That is fine at corpus scale (hundreds of
-segments), and BenchmarkCopperClearance documents where a spatial index (WS3-004) becomes
-necessary. The rule gives one verdict per net PAIR, naming both nets. The finding's subject is the
+The rule measures tracks and pours on one layer, and same-net spacing is not a defect. A pour is
+the copper a board file stores as copper, which Allegro, Altium, IPC-2581 and ODB++ boards carry
+(agni issues 1357, 1410). A KiCad board stores the outline a zone is filled from and not the fill,
+so its zones are not measured; its ODB++ export is. A gap to a pour's edge may sit up to 0.005mm
+under the floor, because a file writes a pour's curved edge as short straight runs that cut inside
+the curve by up to that much, KiCad's own arc tolerance. Pads and vias are not measured yet.
+
+Tracks are swept in x order per layer (agni issue 963). A plane can have tens of thousands of
+edges, so pour edges sit in a 1mm grid per layer instead, and each track looks only at the cells
+within its reach. On Jetson's ODB++ export, with 523,591 pour edges, the rule takes about 0.75s.
+BenchmarkCopperClearance tracks the cost. The rule gives one verdict per net PAIR, naming both nets. The finding's subject is the
 alphabetically first net, with the other as context, and its message names both and the worst gap.
 
 ### Query structure
 
 the pairwise spatial join, which the Phase-1 AST does not express:
 
-    select (S1, S2) in board.segments x board.segments
+    select (S1, S2) in (board.segments + board.pour_edges) x (board.segments + board.pour_edges)
       where net(S1) != net(S2) and layer(S1) == layer(S2)
-        and edge_distance(S1, S2) < floor - 0.0005mm
+        and edge_distance(S1, S2) < floor - tolerance(S1, S2)
+    union
+    select (T, P) where T is a track or pour lying inside pour P of another net
 
-where floor is the declared minimum clearance, else 0.127mm.
+where tolerance is 0.005mm when either side is a pour edge and 0.0005mm otherwise.
+
+The floor is the declared minimum clearance, else 0.127mm.
 
 Reads: board.copper, board.rules. Tier P. Primitives: select, geometry-distance (candidate primitive,
 not yet in the AST, and this rule is its evidence).

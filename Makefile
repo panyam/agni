@@ -221,6 +221,7 @@ oracle: samples-oracle odb-oracle
 odb-oracle: samples-oracle
 	./hack/fetch_samples.sh odb-kicad
 	AGNI_ODB_ORACLE=1 $(GO) test ./readers/formats/ -run TestODBOracleCorpus -count=1 -v
+	AGNI_ODB_ORACLE=1 $(GO) test ./stdlib/rules/builtin/ -run TestPourClearanceFindsKiCadsZonePairs -count=1 -v
 
 # Engine (Go) tests. The example modules have their own go.mod; see examples-test.
 test:
