@@ -1165,7 +1165,7 @@
 <polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,550.9 989.2,554.8" data-kind="component" data-ref="C240"/>
 <text x="470.6" y="532.2" font-size="4.8" text-anchor="end" dominant-baseline="text-after-edge" fill="#555555">3V3_LDO</text>
 <text x="1419.6" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
-<text x="542.4" y="843.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">~{VDDIN_PWR_BAD}</text>
+<text x="542.4" y="843.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555"><tspan text-decoration="overline">VDDIN_PWR_BAD</tspan></text>
 <text x="290.9" y="335.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">VIN_PWR_ON</text>
 <text x="963.4" y="485.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
 <text x="1419.6" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>

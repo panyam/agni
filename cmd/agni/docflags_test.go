@@ -29,6 +29,7 @@ var docFlagExceptions = map[string]string{
 	"--exclude-standard": "git ls-files",
 	"--dump":             "hack/fixture_copies_check.sh",
 	"--noEmit":           "tsc",
+	"--origin":           "gerbv, which build/native-verification.md says refuses a negative one",
 	"--dangerously-load-development-channels": "claude, Claude Code's flag for loading a channel server such as rooms-channel (agni issue 1173)",
 	"--pdf2doc":    "agnids, the datasheet service built from the datasheet module (agni issue 744)",
 	"--corpus":     "agnids, the datasheet service, a separate binary: it names the published corpus `agnids serve` answers PartSpecService from (agni issue 749)",

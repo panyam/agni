@@ -8,6 +8,9 @@ import (
 	"github.com/panyam/agni/internal/geomath"
 )
 
+// orient-codes.eds places U1-U8 at R0 R90 R180 R270 MX MY MXR90 MYR90. EDIF has no comment
+// syntax, so the fixture cannot say so itself.
+//
 // TestEveryOrientationCodePlacesPinsByTheSpec places one three-pin part at each of EDIF's eight
 // orientation codes and holds each pin's drawn connect point to the code's matrix. The matrices
 // are the EDIF 2 0 0 definitions, as docsite/content/reference/edif-schematic-primer.md section 7

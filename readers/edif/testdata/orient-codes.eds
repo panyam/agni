@@ -1,8 +1,6 @@
 (edif ORIENTCODES
   (edifVersion 2 0 0)
   (edifLevel 0)
-  ; One three-pin part, which no turn or flip maps onto itself, placed once per EDIF orientation
-  ; code: U1-U8 are R0 R90 R180 R270 MX MY MXR90 MYR90 (agni issue 1344).
   (library L
     (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
     (cell (rename &c "Tri")
