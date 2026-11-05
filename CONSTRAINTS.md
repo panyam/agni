@@ -238,13 +238,20 @@ reconciles its concepts against the map before adding fields (the drift trigger)
 surface) ships with a runnable example under `examples/`, following
 [examples/CONVENTIONS.md](examples/CONVENTIONS.md): a demokit walkthrough whose narration
 lives in a sidecar `walkthrough.md`, reading only bundled synthetic fixtures, in its own Go
-module so demokit and its terminal-UI deps stay out of the engine's go.mod.
+module so demokit and its terminal-UI deps stay out of the engine's go.mod. A reader of a vendor
+format whose files only the vendor's tool can write may instead read a public board from a pinned
+agni-samples artifact under `tools/samples/`.
 **Why:** the examples are executable docs and a second consumer of the public API, which
 exercises that API from outside the engine and gives every feature a legible entry point. Per-example modules
-preserve the shippable-engine goal (the engine `go.mod` is kept lean, C1).
+preserve the shippable-engine goal (the engine `go.mod` is kept lean, C1). Nobody can author a
+synthetic Allegro `.brd` without Allegro or a writer of our own, so that reader's example reads the
+BeagleBone AI, which is public, licensed for redistribution, and fetched by checksum rather than
+committed (agni issue 1350).
 **Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
-`go.mod`; examples read fixtures from `examples/common/designs/` only (synthetic and
-redistributable, never a real board, C5). Five directories owe no `walkthrough.md` and are not
+`go.mod`; examples read fixtures from `examples/common/designs/` (synthetic and
+redistributable, never a private board, C5), or, for a vendor format with no synthetic fixture, a
+board from an artifact `hack/samples.pin` names. Such an example's test fails rather than skips
+when the artifact is absent, and its `examples-test` run fetches it first. Five directories owe no `walkthrough.md` and are not
 exceptions to the rule so much as not capabilities. `examples/common` is the shared harness the
 walkthroughs run on, `examples/tutorial-project` is the fixture the docsite tutorial runs on, and
 `examples/extension` and `examples/extension-template` demonstrate the extension POINTS (C18) rather
