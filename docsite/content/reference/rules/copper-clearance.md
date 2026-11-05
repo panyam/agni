@@ -43,9 +43,12 @@ under the floor, because a file writes a pour's curved edge as short straight ru
 the curve by up to that much, KiCad's own arc tolerance. Pads and vias are not measured yet.
 
 Tracks are swept in x order per layer (agni issue 963). A plane can have tens of thousands of
-edges, so pour edges sit in a 1mm grid per layer instead, and each track looks only at the cells
-within its reach. On Jetson's ODB++ export, with 523,591 pour edges, the rule takes about 0.75s.
-BenchmarkCopperClearance tracks the cost. The rule gives one verdict per net PAIR, naming both nets. The finding's subject is the
+edges, so pour edges sit in a 1mm grid per layer instead, bucketed by net, and each track looks
+only at the cells within its reach, stepping over a pour's own edges in one move. On Jetson's
+ODB++ export, with 523,591 pour edges, the rule takes about 0.3s, and about 0.22s on the BeagleBone
+AI's twelve layers of planes. A board with no pours, such as any KiCad board, pays nothing for
+them. BenchmarkCopperClearance and BenchmarkCopperClearancePlane track the cost, and
+TestAPlaneCostsTheRuleABoundedAmountOfWork holds the work on a plane board to a budget. The rule gives one verdict per net PAIR, naming both nets. The finding's subject is the
 alphabetically first net, with the other as context, and its message names both and the worst gap.
 
 ### Query structure

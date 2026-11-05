@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"math"
@@ -78,6 +79,15 @@ var copperClearance = &check.Rule{
 // its outline and holes, and copper wholly inside another net's pour is a short. A net with no
 // track and no pour appears in no pair, so a net present only as vias and pads is never measured.
 func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	vs, _ := copperClearanceWork(ctx, m)
+	return vs
+}
+
+// copperClearanceWork is the rule's body. It also returns the work it did, every candidate pair or
+// edge it looked at, so a test can hold the rule to a work budget the way the ESD plans are held to
+// theirs (agni 1410). A budget on time would vary with the machine; this does not.
+func copperClearanceWork(ctx context.Context, m check.Model) ([]check.Verdict, int64) {
+	var work int64
 	floor, floorDesc := floorFor(m, "clearance")
 	// idx is a segment's place in the board's own order, which decides ties below.
 	type flatSeg struct {
@@ -88,7 +98,19 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		shape                  int  // the pour an edge belongs to, numbered across the board
 		minX, maxX, minY, maxY int64
 	}
-	var segs []flatSeg
+	// Sized up front: a plane adds tens of thousands of edges, and regrowing the slice was a tenth of
+	// the rule's time on the BeagleBone AI.
+	n := 0
+	for _, bn := range m.BoardNets() {
+		n += len(bn.Segments)
+		for _, sh := range bn.Shapes {
+			n += len(sh.Outline)
+			for _, h := range sh.Holes {
+				n += len(h)
+			}
+		}
+	}
+	segs := make([]flatSeg, 0, n)
 	addSeg := func(net string, s check.BoardSeg, edge bool, shape int) {
 		segs = append(segs, flatSeg{
 			net: net, s: s, idx: len(segs), edge: edge, shape: shape,
@@ -150,6 +172,7 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 	var order []pairKey
 	// measure is one segment pair, a before b in board order.
 	measure := func(a, b *flatSeg) {
+		work++
 		if a.net == b.net || !bboxNear(a.s, b.s, floor) {
 			return // too far apart to be worth measuring, so this pair is not a subject
 		}
@@ -258,59 +281,126 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 	// another net's edges only where the two pours' boxes come within reach. Asked about some nets,
 	// only the pairs one of them is in are measured, as the sweep does.
 	if len(segs) > tracks {
-		type cell struct {
-			layer string
-			x, y  int64
+		// Nets and layers by number, so the grid's keys are integers.
+		netNo, layerNo := map[string]int32{}, map[string]int32{}
+		number := func(m map[string]int32, k string) int32 {
+			n, ok := m[k]
+			if !ok {
+				n = int32(len(m)) // #nosec G115 -- a board has far fewer nets or layers than 2^31
+				m[k] = n
+			}
+			return n
 		}
-		// A cell's edges are bucketed by net, so a query passes over its own net's edges, most of a
-		// plane's, without visiting them.
-		grid := map[cell]map[string][]int{}
+		netOf := make([]int32, len(segs))
+		for i := range segs {
+			netOf[i] = number(netNo, segs[i].net)
+		}
 		cellOf := func(v int64) int64 {
 			if v < 0 {
 				return (v - pourGridNm + 1) / pourGridNm
 			}
 			return v / pourGridNm
 		}
+		type cellKey struct {
+			layer int32
+			x, y  int64
+		}
+		// The grid is one array of (cell, net, edge) entries, sorted, with each cell's span found
+		// through one map. Within a cell the entries run net by net, and runEnd says where an entry's
+		// net run ends, so a query steps over its own net's edges, most of a plane's, in one step.
+		type entry struct {
+			cell cellKey
+			net  int32
+			seg  int32
+		}
+		var entries []entry
+		type rowKey struct {
+			shape int
+			row   int64
+		}
+		rows := map[rowKey][]int32{} // each pour's edges per grid row, for the containment ray
 		for i := tracks; i < len(segs); i++ {
 			e := &segs[i]
+			ly := number(layerNo, e.s.Layer)
 			for x := cellOf(e.minX); x <= cellOf(e.maxX); x++ {
 				for y := cellOf(e.minY); y <= cellOf(e.maxY); y++ {
-					c := cell{e.s.Layer, x, y}
-					if grid[c] == nil {
-						grid[c] = map[string][]int{}
-					}
-					grid[c][e.net] = append(grid[c][e.net], i)
+					entries = append(entries, entry{cellKey{ly, x, y}, netOf[i], int32(i)}) // #nosec G115 -- a board has far fewer than 2^31 segments
 				}
 			}
+			for y := cellOf(e.minY); y <= cellOf(e.maxY); y++ {
+				rows[rowKey{e.shape, y}] = append(rows[rowKey{e.shape, y}], int32(i)) // #nosec G115 -- as above
+			}
+		}
+		slices.SortFunc(entries, func(a, b entry) int {
+			if c := cmp.Compare(a.cell.layer, b.cell.layer); c != 0 {
+				return c
+			}
+			if c := cmp.Compare(a.cell.x, b.cell.x); c != 0 {
+				return c
+			}
+			if c := cmp.Compare(a.cell.y, b.cell.y); c != 0 {
+				return c
+			}
+			if c := cmp.Compare(a.net, b.net); c != 0 {
+				return c
+			}
+			return cmp.Compare(a.seg, b.seg)
+		})
+		span := map[cellKey][2]int{}
+		runEnd := make([]int, len(entries))
+		for k := 0; k < len(entries); {
+			c := entries[k].cell
+			start := k
+			for k < len(entries) && entries[k].cell == c {
+				run := k
+				for k < len(entries) && entries[k].cell == c && entries[k].net == entries[run].net {
+					k++
+				}
+				for r := run; r < k; r++ {
+					runEnd[r] = k
+				}
+			}
+			span[c] = [2]int{start, k}
 		}
 		wanted := func(a, b string) bool {
 			return scope == nil || scope.Covers(check.NetNameEntity(a)) || scope.Covers(check.NetNameEntity(b))
 		}
-		seen := map[int]int{} // edge -> the last query that met it, so an edge in two cells is measured once
-		query := 0
+		seen := make([]int32, len(segs)) // the last query that met each edge, so an edge in two cells is measured once
+		var query int32
 		near := func(f *flatSeg, skip func(e *flatSeg) bool) {
 			query++
+			fn := netOf[f.idx]
+			ly, ok := layerNo[f.s.Layer]
+			if !ok {
+				return // no pour on this layer
+			}
 			reach := floor + f.s.Width/2 + 1
 			for x := cellOf(f.minX - reach); x <= cellOf(f.maxX+reach); x++ {
 				for y := cellOf(f.minY - reach); y <= cellOf(f.maxY+reach); y++ {
-					for net, ids := range grid[cell{f.s.Layer, x, y}] {
-						if net == f.net || !wanted(f.net, net) {
+					sp, ok := span[cellKey{ly, x, y}]
+					if !ok {
+						continue
+					}
+					for k := sp[0]; k < sp[1]; {
+						en := entries[k]
+						if en.net == fn || !wanted(f.net, segs[en.seg].net) {
+							k = runEnd[k]
 							continue
 						}
-						for _, i := range ids {
-							if seen[i] == query {
-								continue
-							}
-							seen[i] = query
-							e := &segs[i]
-							if skip(e) {
-								continue
-							}
-							if f.idx < e.idx {
-								measure(f, e)
-							} else {
-								measure(e, f)
-							}
+						k++
+						work++
+						if seen[en.seg] == query {
+							continue
+						}
+						seen[en.seg] = query
+						e := &segs[en.seg]
+						if skip(e) {
+							continue
+						}
+						if f.idx < e.idx {
+							measure(f, e)
+						} else {
+							measure(e, f)
 						}
 					}
 				}
@@ -323,34 +413,32 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		// measured from the edge earlier in board order.
 		for i := tracks; i < len(segs); i++ {
 			f := &segs[i]
-			near(f, func(e *flatSeg) bool { return e.idx < f.idx || e.idx < tracks })
+			near(f, func(e *flatSeg) bool { return e.idx < f.idx })
 		}
 		// Copper that lies wholly inside another net's pour crosses none of its edges, so no query
 		// above meets it, and it is a short all the same. A point is inside a pour's copper when a ray
 		// from it to the right crosses the pour's edges, outline and holes together, an odd number of
-		// times. The ray's row of cells holds every edge it can cross. A track is tested by its
-		// midpoint and a pour by its first point.
+		// times. The pour's edges in the ray's row of the grid are every edge it can cross. A track is
+		// tested by its midpoint and a pour by its first point.
 		inside := func(px, py int64, shape int) bool {
-			pb := pours[shape]
-			query++
 			crossings := 0
-			for x := cellOf(px); x <= cellOf(pb.maxX); x++ {
-				for _, i := range grid[cell{pb.layer, x, cellOf(py)}][pb.net] {
-					e := &segs[i]
-					if e.shape != shape || seen[i] == query {
-						continue
-					}
-					seen[i] = query
-					if rayCrosses(e.s.A, e.s.B, px, py) {
-						crossings++
-					}
+			for _, i := range rows[rowKey{shape, cellOf(py)}] {
+				e := &segs[i]
+				work++
+				if e.maxX > px && rayCrosses(e.s.A, e.s.B, px, py) {
+					crossings++
 				}
 			}
 			return crossings%2 == 1
 		}
+		poursOn := map[string][]int{}
+		for shape, pb := range pours {
+			poursOn[pb.layer] = append(poursOn[pb.layer], shape)
+		}
 		test := func(net, layer string, x, y, gap int64, at *geom.Point) {
-			for shape, pb := range pours {
-				if pb.net == net || pb.layer != layer || x < pb.minX || x > pb.maxX || y < pb.minY || y > pb.maxY || !wanted(net, pb.net) {
+			for _, shape := range poursOn[layer] {
+				pb := pours[shape]
+				if pb.net == net || x < pb.minX || x > pb.maxX || y < pb.minY || y > pb.maxY || !wanted(net, pb.net) {
 					continue
 				}
 				if inside(x, y, shape) {
@@ -431,7 +519,7 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		}
 		out = append(out, v)
 	}
-	return out
+	return out, work
 }
 
 // bboxNear is the cheap reject. It reports whether two segments' bounding boxes, inflated
