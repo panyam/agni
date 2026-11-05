@@ -85,8 +85,8 @@ func (ix planeIndex) cuts(layer, net string) bool {
 func drawStackLayer(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, l *geom.PadstackLayer, fr sheetFrame, color string, cut bool, keys ...svg.Attr) {
 	if a := l.GetAntipad(); cut && a != nil {
 		ring := &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: a.GetShape(), Size: a.GetSize()}
-		drawPadWith(c, pl, ring, fr, svg.A("fill", "none"), svg.A("stroke", color), svg.F("stroke-width", strokePx),
-			svg.A("stroke-dasharray", "2 1.5"), svg.A("pointer-events", "none"))
+		drawPadWith(c, pl, ring, fr, svg.A("fill", "none"), svg.A("stroke", color), svg.F("stroke-width", 2*strokePx),
+			svg.A("stroke-dasharray", "3 2"), svg.A("pointer-events", "none"))
 	}
 	if p := l.GetPad(); p != nil {
 		land := &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: p.GetShape(), Size: p.GetSize()}
