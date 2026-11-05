@@ -19,8 +19,9 @@
 // `make exercise-walk` tells the walk which of the tickets it waits on are closed (CLOSED_TICKETS,
 // hack/closed_tickets.sh), so a row whose tickets have all closed must pass. The gate walks the
 // cut of Jetson (examples/cross-probe-project) from R119, an LED's resistor whose walk widens over
-// three hops. `make exercise-walk WALK_DESIGN=jetson` walks the whole board from R352, an I2C2 pull-up
-// whose second hop crosses the level translator U80 by its A2/B2 pin pair alone. The run writes
+// three hops. `make exercise-walk WALK_DESIGN=jetson` walks the whole board from R361, the fitted
+// pull-up on the 3.3 V side of the connector I2C bus, whose second hop crosses the level translator
+// U80 by its B4/A4 pin pair alone. The run writes
 // the step table and a screenshot per step to EXERCISE_OUT.
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -51,7 +52,7 @@ const walks = {
     path: "designs/jetson",
     file: "examples/jetson-project/designs/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
-    start: "R352",
+    start: "R361",
     sheet: "SoM_IO",
     paired: "U80",
   },

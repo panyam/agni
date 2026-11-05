@@ -243,4 +243,5 @@ since a translator channel carries the signal as a resistor does, and the `serie
 only when named in `through`. On a part with pairs, an unpaired pin such as a supply or an enable
 carries no signal across, so the walk crosses nothing from it. Only the crossed channel is marked
 crossed, so the walk can come back across the part's other channels. The `all` walk ignores pairs.
-On Jetson, the walk from the I2C2 pull-up R352 crosses the translator U80 from A2 to B2 alone.
+On Jetson, the walk from R361, a pull-up on the connector I2C bus's 3.3 V side, crosses the
+translator U80 from B4 to A4 alone, onto `I2C5_SDA_1V8`.
