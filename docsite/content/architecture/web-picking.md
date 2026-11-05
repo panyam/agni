@@ -46,9 +46,13 @@ The board view picks with the same `Selection` and the same priority (agni issue
   mechanical hole, keys as its footprint, since a pin needs both halves.
 - A track, a via and a zone each pick their net. A via's drill hole draws over its ring, so the
   hole carries the key too.
-- A footprint's silkscreen, fab graphics and designator text pick the part. Its body is an invisible
-  rect over its pads' bounds, drawn above the zones and under the copper. A click between two pads
-  then picks the part, and a pad or a track drawn over the body still wins where it is drawn.
+- A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
+  copper. A click between two pads then picks the part, and a pad or a track drawn over the body
+  still wins where it is drawn.
+- **The silkscreen and the designators pass clicks through** (`pointer-events="none"`), and carry no
+  key. On a dense board a designator lies over its neighbour's pads. On Jetson, C123's designator
+  covers C133's pads, and while board text was keyed a click on C133's pad picked C123 (agni issue
+  1347). The schematic leaves its labels unkeyed for the same reason.
 - **A net's tracks share one keyed group per layer.** Tracks are most of a board's elements. A key on
   each line grew Jetson's board SVG from 8.3 MB to 12.1 MB, and one per group grows it to 9.5 MB. So
   `selectionFromElement` reads the nearest keyed element, walking up from the hit and stopping at the
