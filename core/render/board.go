@@ -143,7 +143,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			}
 			w := math.Max(float64(gr.GetWidth())*scale, strokePx)
 			c.Group(svg.A("data-layer", gr.GetLayer()))
-			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, style.Silk)
+			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, boardArtColor(style, gr.GetLayer()))
 			c.GroupEnd()
 		}
 		c.GroupEnd()
@@ -158,9 +158,9 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			continue
 		}
 		x, y := tx(t.GetAt().X), ty(t.GetAt().Y)
-		fontPx := math.Max(float64(boardTextHeight(t))*scale, boardTextMinPx)
+		fontPx := math.Max(float64(boardTextEm(t))*scale, boardTextMinPx)
 		attrs := []svg.Attr{
-			svg.F("x", x), svg.F("y", y), svg.A("fill", style.Field), svg.F("font-size", fontPx),
+			svg.F("x", x), svg.F("y", y), svg.A("fill", boardTextColor(style, t.GetLayer())), svg.F("font-size", fontPx),
 			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),
 		}
 		if tf := boardTextTransform(-t.GetRotationDeg(), t.GetMirror(), x, y); tf != "" {
@@ -236,6 +236,39 @@ const boardDesignatorGap = 1_000_000
 // literal, become spaces) for the single-line label backends.
 func boardTextLine(t *geom.BoardText) string {
 	return strings.NewReplacer("\n", " ", `\n`, " ").Replace(t.GetText())
+}
+
+// capHeightEm is a capital letter's height as a fraction of the font size in SchematicFontStack's
+// faces (Arial's is 1467 of 2048 units). A board text's size is its glyph height, as KiCad draws it,
+// and an SVG font-size is the em, so the renderers draw the em at height/capHeightEm. Drawn as the
+// em, a 1 mm designator came out about 0.72 mm tall (agni issue 1366).
+const capHeightEm = 0.716
+
+// boardTextEm is the font size, in source units, that draws a board text's glyphs at its height.
+func boardTextEm(t *geom.BoardText) int64 {
+	return int64(math.Round(float64(boardTextHeight(t)) / capHeightEm))
+}
+
+// boardTextColor is the colour a board text draws in, its layer's, as KiCad colours text by layer.
+// Silkscreen text draws in the silk colour and fab text in the fab colour. Text on any other layer,
+// or none, such as a designator added for a board with no silkscreen, draws in the field colour.
+func boardTextColor(s Style, layer string) string {
+	switch {
+	case strings.HasSuffix(layer, ".SilkS"):
+		return s.Silk
+	case strings.HasSuffix(layer, ".Fab"):
+		return s.Fab
+	}
+	return s.Field
+}
+
+// boardArtColor is the colour a footprint graphic draws in, the fab colour on a fab layer and the
+// silk colour otherwise (silkscreen and courtyard).
+func boardArtColor(s Style, layer string) string {
+	if strings.HasSuffix(layer, ".Fab") {
+		return s.Fab
+	}
+	return s.Silk
 }
 
 // boardTextHeight returns a text's glyph height in source units, falling back to 1mm when

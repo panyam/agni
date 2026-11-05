@@ -33,7 +33,8 @@ type Style struct {
 	CopperBack   string // B.Cu
 	CopperInner  string // any other signal layer
 	Via          string // via rings + through-hole pad lands
-	Silk         string // silkscreen / fab body-outline graphics (WS7)
+	Silk         string // silkscreen graphics and text (WS7)
+	Fab          string // fab-layer graphics and text, such as body outlines and values (agni issue 1366)
 
 	// Font is the default font-family for all text, a CSS family list rather than one face
 	// (see SchematicFontStack). There is no per-element font.
@@ -109,6 +110,7 @@ var DefaultStyle = Style{
 	CopperInner:    "#8a8a8a",
 	Via:            "#9aa0a6",
 	Silk:           "#7a7f88",
+	Fab:            "#b4b8bf",
 	TitleBlockFill: "#fffef8",
 	Font:           SchematicFontStack,
 }
@@ -136,6 +138,7 @@ var DarkStyle = Style{
 	CopperInner:    "#9aa0a6",
 	Via:            "#c0c6cc",
 	Silk:           "#aab0bb",
+	Fab:            "#6b717c",
 	TitleBlockFill: "#1a1a1a",
 	Font:           SchematicFontStack,
 }
