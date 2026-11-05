@@ -43,7 +43,10 @@ type walkRule struct {
 	// throughRails lets the walk pass through a rail-named net that is not bus-like, as trace does,
 	// so a series walk follows a signal through a fuse on VBUS.
 	throughRails bool
-	cross        func(m Model, ref string, nets, pins int) (bool, string)
+	// pairs makes a crossing from a paired pin (Model.ThroughPartner) exit through its partner alone,
+	// and crossPairs crosses such a part whatever cross says.
+	pairs, crossPairs bool
+	cross             func(m Model, ref string, nets, pins int) (bool, string)
 }
 
 var walkRules = []walkRule{
@@ -54,6 +57,7 @@ var walkRules = []walkRule{
 			Summary: "Crosses the two-terminal series parts agni trace crosses (resistors, inductors, ferrites, fuses, net ties), and like trace it passes through a rail-named node, so it follows a signal through them.",
 		},
 		throughRails: true,
+		pairs:        true,
 		cross: func(m Model, ref string, nets, _ int) (bool, string) {
 			c := m.ComponentClass(ref)
 			if passClass(c) && nets == 2 {
@@ -66,8 +70,10 @@ var walkRules = []walkRule{
 		WalkKind: WalkKind{
 			Name:    "small-parts",
 			Title:   "Small parts",
-			Summary: fmt.Sprintf("Crosses any part with up to %d connected pins, capacitors and diodes included, and stops at ICs, connectors and rails.", smallPartPins),
+			Summary: fmt.Sprintf("Crosses any part with up to %d connected pins, capacitors and diodes included, and an IC's paired pins such as a level translator's A2 and B2. Stops at other ICs, connectors and rails.", smallPartPins),
 		},
+		pairs:      true,
+		crossPairs: true,
 		cross: func(m Model, ref string, _, pins int) (bool, string) {
 			switch c := m.ComponentClass(ref); {
 			case c == ClassConnector:
@@ -212,6 +218,21 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 
 	visited := map[*ir.Net]bool{}
 	crossed := map[string]bool{from.RefDes: true}
+	crossedPin := map[string]bool{}
+	pairedPart := map[string]bool{}
+	hasPairs := func(ref string) bool {
+		known, ok := pairedPart[ref]
+		if !ok {
+			for _, pc := range ix.conns[ref] {
+				if _, p := m.ThroughPartner(ref, pc.pin); p {
+					known = true
+					break
+				}
+			}
+			pairedPart[ref] = known
+		}
+		return known
+	}
 	through1 := map[string]bool{}
 	for _, t := range through {
 		through1[t] = true
@@ -241,15 +262,29 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 		for _, n := range frontier {
 			for _, c := range n.Connections {
 				ref := c.ComponentRef
-				if crossed[ref] || IsVirtualRef(ref) {
+				if crossed[ref] || crossedPin[ref+"\x00"+c.PinRef] || IsVirtualRef(ref) {
 					continue
 				}
 				pcs := ix.conns[ref]
+				// A pin with a through partner (a translator's A2 and B2) carries one signal across the
+				// part, so the walk follows that pin alone rather than every pin of the part.
+				partner, paired := "", false
+				if rule.pairs {
+					partner, paired = m.ThroughPartner(ref, c.PinRef)
+					// On a part with through pairs, an unpaired pin (a supply, a ground, an enable)
+					// carries no signal across, so the walk crosses nothing from it.
+					if !paired && hasPairs(ref) {
+						continue
+					}
+				}
 				ok, why := through1[ref], ""
 				if !ok {
-					if !m.IsFitted(ref) {
+					switch {
+					case !m.IsFitted(ref):
 						why = "not fitted"
-					} else {
+					case paired && rule.crossPairs:
+						ok = true
+					default:
 						ok, why = rule.cross(m, ref, ix.netCount(ref), len(pcs))
 					}
 				}
@@ -262,10 +297,15 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 					}
 					continue
 				}
-				crossed[ref] = true
 				route[n] = append(route[n], ref)
+				if paired {
+					// Only this channel is crossed, so the part's other channels stay open to the walk.
+					crossedPin[ref+"\x00"+c.PinRef], crossedPin[ref+"\x00"+partner] = true, true
+				} else {
+					crossed[ref] = true
+				}
 				for _, pc := range pcs {
-					if pc.net == n {
+					if pc.net == n || (paired && pc.pin != partner) {
 						continue
 					}
 					if visited[pc.net] {
@@ -276,7 +316,7 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 						if i, ok := index[pc.net]; ok {
 							w.Nets[i].AlsoEntered = append(w.Nets[i].AlsoEntered, TraceCross{
 								RefDes: ref, Class: string(m.ComponentClass(ref)),
-								EnterPin: c.PinRef, ExitPin: pc.pin, FromNet: n.Name, ToNet: pc.net.Name,
+								EnterPin: c.PinRef, ExitPin: pc.pin, FromNet: n.Name, ToNet: pc.net.Name, Paired: paired,
 							})
 						}
 						continue
@@ -289,7 +329,7 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 					added++
 					if add(hop, pc.net, TraceCross{
 						RefDes: ref, Class: string(m.ComponentClass(ref)),
-						EnterPin: c.PinRef, ExitPin: pc.pin, FromNet: n.Name, ToNet: pc.net.Name,
+						EnterPin: c.PinRef, ExitPin: pc.pin, FromNet: n.Name, ToNet: pc.net.Name, Paired: paired,
 					}) {
 						next = append(next, pc.net)
 					}

@@ -25,6 +25,7 @@ type irModel struct {
 	// read off connections (agni issue 975), so a pin named by two nets is listed once.
 	pinListed map[string]bool
 	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
+	pinNamed  map[string][]string         // "refdes\x00NAME" (upper case) -> the designators so named
 	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
 	unfitted  map[string]bool             // ref-des the design marks do-not-populate
 	pins      []PinInst                   // every part-type pin of every component, dedup by designator
@@ -98,6 +99,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		pinDir:    map[string]ir.PinDirection{},
 		pinListed: map[string]bool{},
 		pinName:   map[string]string{},
+		pinNamed:  map[string][]string{},
 		pinConn:   map[string]bool{},
 		pinNet:    map[string]string{},
 		connected: map[string]bool{},
@@ -149,6 +151,10 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 					m.pins = append(m.pins, PinInst{Component: c, Designator: pin.Designator})
 				}
 				m.pinDir[key] = pin.Direction
+				if _, named := m.pinName[key]; !named && pin.Name != "" {
+					nk := c.RefDes + "\x00" + strings.ToUpper(strings.TrimSpace(pin.Name))
+					m.pinNamed[nk] = append(m.pinNamed[nk], pin.Designator)
+				}
 				m.pinName[key] = pin.Name
 				if pin.Direction == ir.PinDirection_PIN_DIRECTION_NO_CONNECT {
 					m.ncChannel = true
@@ -439,6 +445,23 @@ func (m *irModel) PinRole(refDes, pin string) PinRole {
 // Model interface because the datasheet pin join leads with the NAME, since a designator is the pin's
 // position in one package and the same die in another body renumbers it.
 func (m *irModel) PinName(refDes, pin string) string { return m.pinName[refDes+"\x00"+pin] }
+
+// ThroughPartner returns the pin that carries this pin's signal across its part, by the lexicon's
+// through pairs (agni issue 1338), and ok=false when it has none. The partner is the part's one pin
+// named as the pair says. A name two pins share answers none, since which of them carries the signal
+// cannot be told. A connector has no partner, since its two sides are two boards.
+func (m *irModel) ThroughPartner(refDes, pin string) (string, bool) {
+	name := m.pinName[refDes+"\x00"+pin]
+	if name == "" || m.ComponentClass(refDes) == ClassConnector {
+		return "", false
+	}
+	for _, partner := range m.lexicon().RoleVocab().ThroughPartners(name) {
+		if ds := m.pinNamed[refDes+"\x00"+strings.ToUpper(partner)]; len(ds) == 1 && ds[0] != pin {
+			return ds[0], true
+		}
+	}
+	return "", false
+}
 
 // IsPinlessPart reports whether a component's part type is known and declares no pins (see
 // model.Model). A component with no resolved part type is not pinless, since its pins are unknown.

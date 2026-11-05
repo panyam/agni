@@ -18,7 +18,8 @@ type LexiconEntry struct {
 	Vocabulary string
 	// Kind is "pattern", "exclude", "prefix", "exclude_prefix", "family", "pair", "unit", "key" or
 	// "switch". A "key" entry is one attribute key or do-not-populate value under "attribute.<list>".
-	// A pair's Value is its two suffixes joined by "=" (see DiffPairEntry). A unit's Value is the unit
+	// A pair's Value is its two suffixes, or two pin-name templates, joined by "=" (see DiffPairEntry
+	// and PinPairEntry). A unit's Value is the unit
 	// of a bare number on the class, under the vocabulary "value_unit.<class>".
 	Kind  string
 	Value string
@@ -124,6 +125,9 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		add(nv.path, "pattern", nv.over.GetPatterns(), true, false)
 		add(nv.path, "exclude", nv.over.GetExclude(), true, false)
 	}
+	// The through pairs come after the last pin vocabulary.
+	add("pin.through_pair", "pair", pinPairEntries(base.GetPin().GetThroughPair()), false, over.GetPin().GetThroughPair().GetReplace())
+	add("pin.through_pair", "pair", pinPairEntries(over.GetPin().GetThroughPair()), true, false)
 	for _, ak := range attributeLists(base, over) {
 		add(ak.path, "key", ak.base.GetKeys(), false, ak.over.GetReplace())
 		add(ak.path, "key", ak.over.GetKeys(), true, false)
@@ -172,6 +176,24 @@ func DiffPairEntry(p *configpb.DiffSuffix) string { return p.GetPositive() + "="
 func ParseDiffPairEntry(s string) *configpb.DiffSuffix {
 	pos, neg, _ := strings.Cut(s, "=")
 	return &configpb.DiffSuffix{Positive: pos, Negative: neg}
+}
+
+// PinPairEntry spells a through pair as a LexiconEntry's value, "A{n}=B{n}". ParsePinPairEntry reads
+// it back.
+func PinPairEntry(p *configpb.PinPair) string { return p.GetA() + "=" + p.GetB() }
+
+// ParsePinPairEntry reads a value PinPairEntry wrote.
+func ParsePinPairEntry(s string) *configpb.PinPair {
+	a, b, _ := strings.Cut(s, "=")
+	return &configpb.PinPair{A: a, B: b}
+}
+
+func pinPairEntries(v *configpb.PinPairVocab) []string {
+	out := make([]string, 0, len(v.GetPairs()))
+	for _, p := range v.GetPairs() {
+		out = append(out, PinPairEntry(p))
+	}
+	return out
 }
 
 func diffPairEntries(v *configpb.DiffPairVocab) []string {
@@ -251,6 +273,7 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		lists[nv.path] = &configpb.VocabPatterns{Replace: true}
 	}
 	out.Net.DiffPair = &configpb.DiffPairVocab{Replace: true}
+	out.Pin.ThroughPair = &configpb.PinPairVocab{Replace: true}
 	out.ValueUnit = map[string]string{}
 	keys := map[string]*configpb.AttributeKeys{}
 	for _, ak := range attributeLists(nil, nil) {
@@ -278,6 +301,10 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		}
 		if e.Kind == "unit" {
 			out.ValueUnit[strings.TrimPrefix(e.Vocabulary, "value_unit.")] = e.Value
+			continue
+		}
+		if e.Kind == "pair" && e.Vocabulary == "pin.through_pair" {
+			out.Pin.ThroughPair.Pairs = append(out.Pin.ThroughPair.Pairs, ParsePinPairEntry(e.Value))
 			continue
 		}
 		if e.Kind == "pair" {

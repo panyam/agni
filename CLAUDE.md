@@ -1358,7 +1358,11 @@ passes FAILS the walk, so the PR that makes a step pass also removes its wait in
 `web/browser/cross-probe-walk.spec.ts`. The make target also asks GitHub which of those tickets are
 closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a
 ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
-read its steps "not available". The gate runs offline and skips that half. #1194
+read its steps "not available". The gate runs offline and skips that half.
+#1337 `mission_walk` (click one part and walk outwards) is open, and `make exercise-walk` is its
+exercise (agni 1338). Each step has an engine row that asks `WalkDesign` and a viewer row that
+waits on #1341 or #1340 by the names `web/browser/walk-mission.spec.ts` lists, and the gate walks
+the cut from R119. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni

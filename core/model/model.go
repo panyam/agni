@@ -104,6 +104,10 @@ type Model interface {
 	// ships in a different package. The name is die-relative, so a datasheet join leads with it; see
 	// param.ResolvePin for the precedence.
 	PinName(refDes, pin string) string
+	// ThroughPartner is the pin that carries this pin's signal across its part, such as a level
+	// translator's B2 for its A2, read from the naming lexicon's through pairs. ok is false when the
+	// pin pairs with none (agni issue 1338).
+	ThroughPartner(refDes, pin string) (string, bool)
 	// IsPinlessPart reports whether a component resolves to a part type that declares no pins, as a
 	// mounting hole, a logo or a module's assembly symbol does (agni issue 937). False when the read
 	// does not carry the component's part type, since its pins are then unknown rather than absent.

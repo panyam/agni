@@ -186,7 +186,8 @@ func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
 }
 
 // WalkColumns is the walk table's header. through, enter_pin and exit_pin say how the walk first
-// entered the net, and also_through names the parts that crossed into it later. parts lists the other parts on it, and parts_elided how many more the list left out.
+// entered the net, paired says whether it crossed as a through pair, and also_through names the
+// parts that crossed into it later. parts lists the other parts on it, and parts_elided how many more the list left out.
 var WalkColumns = []webapi.TableColumn{
 	{Name: "hop", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
 	{Name: "net", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
@@ -194,6 +195,7 @@ var WalkColumns = []webapi.TableColumn{
 	{Name: "through", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
 	{Name: "enter_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
 	{Name: "exit_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "paired"},
 	{Name: "also_through", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
 	{Name: "ended"},
 	{Name: "parts", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
@@ -225,7 +227,7 @@ func WalkTables(w *webapi.Walk) []*webapi.Table {
 		}
 		r := []string{
 			strconv.Itoa(int(n.GetHop())), n.GetNet().GetName(), e.GetFromNet(), e.GetRefDes(), e.GetEnterPin(), e.GetExitPin(),
-			strings.Join(also, rpt.MultiValueSep), n.GetEnded(), strings.Join(parts, rpt.MultiValueSep), strconv.Itoa(int(n.GetNet().GetStubsElided())),
+			strconv.FormatBool(e.GetPaired()), strings.Join(also, rpt.MultiValueSep), n.GetEnded(), strings.Join(parts, rpt.MultiValueSep), strconv.Itoa(int(n.GetNet().GetStubsElided())),
 		}
 		kinds := make([]string, len(WalkColumns))
 		kinds[1], kinds[3] = check.KindNet, check.KindComponent

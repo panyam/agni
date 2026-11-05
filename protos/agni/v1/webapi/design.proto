@@ -337,6 +337,9 @@ message TraceCross {
   string exit_pin = 4;
   string from_net = 5;
   string to_net = 6;
+  // paired marks a walk's crossing from one pin of a through pair to its partner alone, such as a
+  // level translator's A2 to B2 (agni issue 1338). A trace never sets it.
+  bool paired = 7;
 }
 
 // TraceNet is one net on the route, with what else sits on it.

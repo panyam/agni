@@ -164,6 +164,9 @@ lexicon:
     cathode:   { patterns: ["^NEG$"] }
     feedback:  { patterns: ["^FDBK[0-9]*$"] }
     switching: { patterns: ["^HSD[0-9]*$"] }
+    through_pair:
+      pairs:
+        - { a: "IO{n}_L", b: "IO{n}_H" }  # A{n}/B{n}, {n}A/{n}Y, SDA1/SDA2 and SCL1/SCL2 by default
 ```
 
 Patterns are RE2, matched case-insensitively against the **leaf** of a hierarchical name, so
@@ -226,6 +229,12 @@ rather than its leaf, so a pin named `A/K` is not read. A `diff_pair` entry name
 rather than a pattern, because a rule has to work out the complement of a name. Its suffixes match
 at the end of the whole net name without regard to case, the longest positive suffix wins, and the
 complement keeps the name's casing, so `usb_p` expects `usb_n`.
+
+A `through_pair` entry names two pins that carry one signal across a part, such as a level
+translator's `A2` and `B2`. `agni walk` crosses such a part from one pin of a pair to its partner
+alone, rather than through every pin (agni issue 1338). `{n}` stands for a channel number and
+appears in both names or neither, and a name matches whole, without regard to case. A pair holds only
+on a part that has exactly one pin of the partner's name, and never on a connector.
 
 The engine ships its defaults for these same six vocabularies in this same schema. There is no
 separate list of built-ins to consult.

@@ -69,6 +69,9 @@ type TraceCross struct {
 	ExitPin  string `json:"exit_pin,omitempty"`
 	FromNet  string `json:"from_net"`
 	ToNet    string `json:"to_net"`
+	// Paired marks a walk's crossing from one pin of a through pair to its partner alone, such as a
+	// level translator's A2 to B2. A trace never sets it.
+	Paired bool `json:"paired,omitempty"`
 }
 
 // TraceStub is a part on one of the route's nets. The route does not pass through it.

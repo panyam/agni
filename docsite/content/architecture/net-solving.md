@@ -233,3 +233,14 @@ in `through` crosses it on the next ask. The series walk passes through a rail-n
 widened through a 3V3 rail would list every part the rail feeds. A branch that stops at a rail or a
 ground says so in `ended`, rather than leaving the net out. A do-not-populate part is never crossed
 unless named. Each net carries the sheets it is drawn on, as a trace's nets do.
+
+A level translator or a buffer carries one signal per channel, so crossing it to every pin would
+walk from one I2C line onto the next bus over. The naming lexicon's `pin.through_pair` pairs such
+pins by name (`A{n}` with `B{n}`, `{n}A` with `{n}Y`, `SDA1` with `SDA2`), and `Model.ThroughPartner`
+answers a pin's partner. A walk that crosses a part from a paired pin goes on through the partner
+alone, and marks the crossing `paired`. The `small-parts` walk crosses such a part on its own,
+since a translator channel carries the signal as a resistor does, and the `series` walk crosses one
+only when named in `through`. On a part with pairs, an unpaired pin such as a supply or an enable
+carries no signal across, so the walk crosses nothing from it. Only the crossed channel is marked
+crossed, so the walk can come back across the part's other channels. The `all` walk ignores pairs.
+On Jetson, the walk from the I2C2 pull-up R352 crosses the translator U80 from A2 to B2 alone.

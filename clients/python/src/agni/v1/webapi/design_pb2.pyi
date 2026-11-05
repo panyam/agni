@@ -216,19 +216,21 @@ class TraceEnd(_message.Message):
     def __init__(self, endpoint: _Optional[_Union[TraceEndpoint, _Mapping]] = ..., pin_name: _Optional[str] = ..., net: _Optional[str] = ..., sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class TraceCross(_message.Message):
-    __slots__ = ("ref_des", "enter_pin", "exit_pin", "from_net", "to_net")
+    __slots__ = ("ref_des", "enter_pin", "exit_pin", "from_net", "to_net", "paired")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     CLASS_FIELD_NUMBER: _ClassVar[int]
     ENTER_PIN_FIELD_NUMBER: _ClassVar[int]
     EXIT_PIN_FIELD_NUMBER: _ClassVar[int]
     FROM_NET_FIELD_NUMBER: _ClassVar[int]
     TO_NET_FIELD_NUMBER: _ClassVar[int]
+    PAIRED_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     enter_pin: str
     exit_pin: str
     from_net: str
     to_net: str
-    def __init__(self, ref_des: _Optional[str] = ..., enter_pin: _Optional[str] = ..., exit_pin: _Optional[str] = ..., from_net: _Optional[str] = ..., to_net: _Optional[str] = ..., **kwargs) -> None: ...
+    paired: bool
+    def __init__(self, ref_des: _Optional[str] = ..., enter_pin: _Optional[str] = ..., exit_pin: _Optional[str] = ..., from_net: _Optional[str] = ..., to_net: _Optional[str] = ..., paired: _Optional[bool] = ..., **kwargs) -> None: ...
 
 class TraceNet(_message.Message):
     __slots__ = ("name", "stubs", "stubs_elided", "bus_like", "sheet_ids")

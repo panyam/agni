@@ -23,7 +23,7 @@ interface Group {
 }
 
 function kindsOf(vocabulary: string): string[] {
-  if (vocabulary === "net.diff_pair") return ["pair"];
+  if (vocabulary === "net.diff_pair" || vocabulary === "pin.through_pair") return ["pair"];
   if (vocabulary.startsWith("value_unit.")) return ["unit"];
   if (vocabulary.startsWith("attribute.")) return ["key"];
   return vocabulary.startsWith("class.") ? ["pattern", "family", "prefix", "exclude_prefix"] : ["pattern", "exclude"];
