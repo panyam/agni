@@ -79,3 +79,21 @@ func TestCycleNoteSaysWhatTheWalkLeftOut(t *testing.T) {
 		}
 	}
 }
+
+// TestMissingFileNoteNamesTheFile covers agni issue 1399. An OrCAD block keeps its pages in a file of
+// its own, and a copy of the design without that file has no instance count to give, so the note
+// names the block and the file it records.
+func TestMissingFileNoteNamesTheFile(t *testing.T) {
+	missing := ir.UnexpandedReason_UNEXPANDED_REASON_FILE_MISSING
+	block := func(name, file string) *ir.UnexpandedHierarchy {
+		return &ir.UnexpandedHierarchy{Name: name, Kind: "orcad_block", Reason: missing, Prov: &ir.Provenance{NativeId: file}}
+	}
+	one := []*ir.UnexpandedHierarchy{block("IMU", `.\MPU9250\MPU9250.DSN`)}
+	if got, want := HierarchyNote("mount://m/CLAYR6.DSN", one), `CLAYR6.DSN is hierarchical and 1 of its blocks could not be read, because its file is missing (IMU: .\MPU9250\MPU9250.DSN). Counts and checks leave its contents out.`; got != want {
+		t.Errorf("one missing:\n got %q\nwant %q", got, want)
+	}
+	two := []*ir.UnexpandedHierarchy{block("WiFi", `.\ESP8622EX\ESP8266EX.DSN`), block("IMU", `.\MPU9250\MPU9250.DSN`)}
+	if got, want := HierarchyNote("CLAYR6.DSN", two), `CLAYR6.DSN is hierarchical and 2 of its blocks could not be read, because their files are missing (IMU: .\MPU9250\MPU9250.DSN, WiFi: .\ESP8622EX\ESP8266EX.DSN). Counts and checks leave their contents out.`; got != want {
+		t.Errorf("two missing:\n got %q\nwant %q", got, want)
+	}
+}

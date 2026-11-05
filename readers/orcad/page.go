@@ -1,0 +1,240 @@
+package orcad
+
+import "fmt"
+
+// point is a page position in Capture's units of 10 mil. A placed pin records its own absolute
+// position, so connectivity needs no symbol transform.
+type point struct{ x, y int32 }
+
+// wire is a scalar wire. net keys the page's net table.
+type wire struct {
+	net  uint32
+	a, b point
+}
+
+// placedPin is one pin of a placed part. index is the 1-based symbol slot, and a negative index
+// marks the pin as explicitly not connected. net is the page net the pin names itself, or 0. Most
+// pins leave it 0 and join their net through a wire; a pin on no wire can name one this way.
+type placedPin struct {
+	index int16
+	at    point
+	net   uint32
+}
+
+// placedPart is a part on a page (type 13).
+type placedPart struct {
+	db       uint32 // matched by an occurrence's target
+	cacheKey string // the LibraryPart, such as "RESISTOR.Normal"
+	ref      string // the placement's own designator, often the "R?" template
+	value    string
+	props    map[string]string
+	pins     []placedPin
+	pkg      string // the Package
+	unit     int    // the device within the package
+}
+
+// block is a hierarchical block on a page (type 12). Its pins sit at absolute positions, in the
+// order of its interface's pin names.
+type block struct {
+	db       uint32
+	ref      string
+	file     string // the block's design, relative to this page's design
+	folder   string // the schematic folder within that design
+	pinNames []string
+	pins     []placedPin
+}
+
+// symbolKind says what a named page symbol joins.
+type symbolKind int
+
+const (
+	symPort    symbolKind = iota // a hierarchical port: joins the block pin of the same name
+	symGlobal                    // a power symbol: joins every net of its name in the design
+	symOffPage                   // an off-page connector: joins its name within the schematic
+)
+
+// pageSymbol is a port, power symbol or off-page connector, by the net name it carries. lo and hi
+// are the corners of its stored bounding box, in absolute page units. The symbol's connection point
+// lies on that box, at the middle of an edge, so a wire end inside the box is the wire it connects
+// to. A corner is never the connection point, and a wire passing beside the symbol can end on one.
+type pageSymbol struct {
+	kind   symbolKind
+	name   string
+	lo, hi point
+}
+
+func (s pageSymbol) covers(p point) bool {
+	if p.x < s.lo.x || p.x > s.hi.x || p.y < s.lo.y || p.y > s.hi.y {
+		return false
+	}
+	corner := (p.x == s.lo.x || p.x == s.hi.x) && (p.y == s.lo.y || p.y == s.hi.y)
+	return !corner
+}
+
+// page is one schematic page (type 10).
+type page struct {
+	name    string
+	netName map[uint32][]string // net table: a wire's net id to the names recorded for it
+	wires   []wire
+	parts   []placedPart
+	blocks  []block
+	symbols []pageSymbol
+}
+
+func parsePage(b []byte, lib *library) (*page, error) {
+	c := &cursor{b: b}
+	f := c.frame()
+	if c.err == nil && f.typ != typePage {
+		return nil, fmt.Errorf("page stream opens with a type-%d structure", f.typ)
+	}
+	pg := &page{name: c.lzt(), netName: map[uint32][]string{}}
+	c.lzt() // page size
+	c.skip(pageSettingsSize)
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- { // title blocks
+		c.skipFrame()
+	}
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- { // net records: style, not connectivity
+		c.skip(13)
+		c.lzt()
+		c.skip(16)
+	}
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- { // net groups: a bus's members
+		c.skip(13)
+		c.lzt()
+		c.skip(16)
+		c.skip(4 * int(c.u16()))
+	}
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		name := c.lzt()
+		id := c.u32()
+		pg.netName[id] = append(pg.netName[id], name)
+	}
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		wf := c.frame()
+		c.u32() // the wire's own id
+		w := wire{net: c.u32()}
+		c.u32() // colour
+		w.a = point{c.i32(), c.i32()}
+		w.b = point{c.i32(), c.i32()}
+		if c.err == nil && wf.typ == typeWireScalar {
+			pg.wires = append(pg.wires, w)
+		}
+		if c.err == nil {
+			c.p = wf.end()
+		}
+	}
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		pf := c.frame()
+		switch {
+		case c.err != nil:
+		case pf.typ == typePart:
+			if p := readPart(c, pf, lib); c.err == nil {
+				pg.parts = append(pg.parts, p)
+			}
+		case pf.typ == typeBlock:
+			if bl := readBlock(c, pf, lib); c.err == nil {
+				pg.blocks = append(pg.blocks, bl)
+			}
+		default:
+			c.fail("placed list holds a type-%d structure", pf.typ)
+		}
+		if c.err == nil {
+			c.p = pf.end()
+		}
+	}
+	for _, list := range []struct {
+		kind    symbolKind
+		trailer int
+	}{{symPort, 0}, {symGlobal, 5}, {symOffPage, 5}} {
+		for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+			sf := c.frame()
+			sym := pageSymbol{kind: list.kind, name: lib.str(c.u32())}
+			c.u32()   // source library
+			c.lzt()   // the symbol's cache name
+			c.u32()   // db id
+			c.skip(4) // the anchor, y first
+			y2, x2, x1, y1 := c.i16(), c.i16(), c.i16(), c.i16()
+			sym.lo = point{int32(min(x1, x2)), int32(min(y1, y2))}
+			sym.hi = point{int32(max(x1, x2)), int32(max(y1, y2))}
+			if c.err == nil {
+				pg.symbols = append(pg.symbols, sym)
+				c.p = sf.end() + list.trailer
+			}
+		}
+	}
+	if c.err != nil {
+		return nil, c.err
+	}
+	return pg, nil
+}
+
+func readPart(c *cursor, f frame, lib *library) placedPart {
+	c.u32()
+	c.u32() // source library
+	p := placedPart{cacheKey: c.lzt(), db: c.u32(), props: lib.props(f.props)}
+	c.skip(12) // bounding box, position
+	c.skip(4)  // colour, orientation, part index and byte
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		c.skipFrame() // displayed properties
+	}
+	c.skip(1)
+	p.ref = c.lzt()
+	p.value = lib.str(c.u32())
+	c.skip(10)
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		pf := c.frame()
+		pin := placedPin{index: c.i16(), at: point{int32(c.i16()), int32(c.i16())}}
+		c.u32() // a wire the pin touches
+		pin.net = c.u32()
+		if c.err == nil {
+			p.pins = append(p.pins, pin)
+			c.p = pf.end()
+		}
+	}
+	p.pkg = c.lzt()
+	p.unit = int(c.u16())
+	return p
+}
+
+// readBlock reads a hierarchical block. Its interface is an inline LibraryPart whose pins name the
+// block's pins. At the second-to-last prefix stop come the designator, the block's schematic folder
+// and its design's path (string indices, the path relative to this design and "" for a folder of
+// this design), and then the pin positions.
+func readBlock(c *cursor, f frame, lib *library) block {
+	c.u32() // name
+	c.u32() // source library
+	c.lzt()
+	bl := block{db: c.u32()}
+	c.skip(14) // anchor, bounding box, position, colour, orientation
+	c.skip(2)
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		c.skipFrame()
+	}
+	if c.u8() != typeLibraryPart && c.err == nil {
+		c.fail("block has no inline interface")
+	}
+	iface := c.frame()
+	if c.err == nil {
+		for _, p := range symbolPins(c.b, iface) {
+			bl.pinNames = append(bl.pinNames, p.name)
+		}
+	}
+	if len(f.stops) < 2 {
+		c.fail("block has %d prefix stops", len(f.stops))
+		return bl
+	}
+	c.p = f.stops[len(f.stops)-2]
+	bl.ref = c.lzt()
+	bl.folder = lib.str(c.u32())
+	bl.file = lib.str(c.u32())
+	c.skip(6)
+	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
+		pf := c.frame()
+		pin := placedPin{index: c.i16(), at: point{int32(c.i16()), int32(c.i16())}}
+		if c.err == nil {
+			bl.pins = append(bl.pins, pin)
+			c.p = pf.end()
+		}
+	}
+	return bl
+}

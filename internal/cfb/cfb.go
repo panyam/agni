@@ -1,4 +1,8 @@
-package altium
+// Package cfb reads a Microsoft Compound File Binary container, after Microsoft's published
+// [MS-CFB] specification. Altium's .PcbDoc and OrCAD Capture's .DSN are both compound files: a
+// small file system of storages (folders) and streams (files) inside one file. The package reads
+// streams and lists storages, and never writes.
+package cfb
 
 import (
 	"bytes"
@@ -8,10 +12,8 @@ import (
 	"unicode/utf16"
 )
 
-// cfb is a Microsoft Compound File Binary container read whole from memory, after Microsoft's
-// published [MS-CFB] specification. A .PcbDoc is one: a small file system of storages (folders)
-// and streams (files). The reader only reads streams; it never writes.
-type cfb struct {
+// File is a compound file read whole from memory.
+type File struct {
 	b          []byte
 	sector     int // sector size: 512 (version 3) or 4096 (version 4)
 	mini       int // mini sector size, 64
@@ -37,13 +39,13 @@ const (
 	cfbNone = 0xFFFFFFFF // no sibling or child
 )
 
-var cfbSignature = []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
+var signature = []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 
-// openCFB reads a compound file's header, sector allocation tables and directory. Every chain is
+// Open reads a compound file's header, sector allocation tables and directory. Every chain is
 // bounded by the number of sectors the file holds, so a damaged file stops with an error rather
-// than looping.
-func openCFB(b []byte) (*cfb, error) {
-	if len(b) < 512 || !bytes.Equal(b[:8], cfbSignature) {
+// than looping. b is kept, not copied.
+func Open(b []byte) (*File, error) {
+	if len(b) < 512 || !bytes.Equal(b[:8], signature) {
 		return nil, fmt.Errorf("not a compound file (no CFB signature)")
 	}
 	shift, miniShift := binary.LittleEndian.Uint16(b[0x1E:]), binary.LittleEndian.Uint16(b[0x20:])
@@ -53,7 +55,7 @@ func openCFB(b []byte) (*cfb, error) {
 	if miniShift != 6 {
 		return nil, fmt.Errorf("compound file mini sector shift %d, want 6", miniShift)
 	}
-	c := &cfb{b: b, sector: 1 << shift, mini: 1 << miniShift, cutoff: binary.LittleEndian.Uint32(b[0x38:])}
+	c := &File{b: b, sector: 1 << shift, mini: 1 << miniShift, cutoff: binary.LittleEndian.Uint32(b[0x38:])}
 
 	// The FAT's own sectors are listed by the DIFAT: 109 entries in the header, then a chain of
 	// DIFAT sectors whose last word points at the next.
@@ -146,16 +148,16 @@ func openCFB(b []byte) (*cfb, error) {
 
 // size is an entry's byte length. No stream can be longer than the file holding it, so a larger
 // declared size marks a damaged file.
-func (c *cfb) size(e cfbEntry) (int64, error) {
+func (c *File) size(e cfbEntry) (int64, error) {
 	if e.size > uint64(len(c.b)) {
 		return 0, fmt.Errorf("compound file entry %q declares %d bytes in a %d-byte file", e.name, e.size, len(c.b))
 	}
 	return int64(e.size), nil // #nosec G115 -- bounded by the file's length just above
 }
 
-func (c *cfb) sectors() int { return len(c.b)/c.sector - 1 }
+func (c *File) sectors() int { return len(c.b)/c.sector - 1 }
 
-func (c *cfb) sectorBytes(s uint32) ([]byte, error) {
+func (c *File) sectorBytes(s uint32) ([]byte, error) {
 	off := (int64(s) + 1) * int64(c.sector)
 	if s >= cfbFree-4 || off+int64(c.sector) > int64(len(c.b)) {
 		return nil, fmt.Errorf("compound file sector %d is outside the file", s)
@@ -164,7 +166,7 @@ func (c *cfb) sectorBytes(s uint32) ([]byte, error) {
 }
 
 // chain concatenates the sectors of a FAT chain from start, cut to size when size is not negative.
-func (c *cfb) chain(start uint32, size int64) ([]byte, error) {
+func (c *File) chain(start uint32, size int64) ([]byte, error) {
 	var out []byte
 	for s, n := start, 0; s != cfbEnd && s != cfbFree; n++ {
 		if n > c.sectors() {
@@ -189,7 +191,7 @@ func (c *cfb) chain(start uint32, size int64) ([]byte, error) {
 	return out, nil
 }
 
-func (c *cfb) miniChain(start uint32, size int64) ([]byte, error) {
+func (c *File) miniChain(start uint32, size int64) ([]byte, error) {
 	out := make([]byte, 0, size)
 	for s, n := start, 0; s != cfbEnd && s != cfbFree && int64(len(out)) < size; n++ {
 		if n > len(c.minifat) {
@@ -208,9 +210,15 @@ func (c *cfb) miniChain(start uint32, size int64) ([]byte, error) {
 	return out[:size], nil
 }
 
-// stream returns the bytes of the stream at a slash-separated path, such as "Board6/Data". Names
-// compare without regard to case, as the format does. ok is false when no stream has that path.
-func (c *cfb) stream(path string) (data []byte, ok bool, err error) {
+// IsCompoundFile reports whether b starts with the compound-file signature.
+func IsCompoundFile(b []byte) bool {
+	return len(b) >= len(signature) && bytes.Equal(b[:len(signature)], signature)
+}
+
+// Stream returns the bytes of the stream at a slash-separated path, such as "Board6/Data". Names
+// compare without regard to case, as the format does. ok is false when no stream has that path,
+// and err is set only when the stream exists and its sectors cannot be read.
+func (c *File) Stream(path string) (data []byte, ok bool, err error) {
 	dir := uint32(0)
 	parts := strings.Split(path, "/")
 	for i, part := range parts {
@@ -248,7 +256,7 @@ func (c *cfb) stream(path string) (data []byte, ok bool, err error) {
 
 // find searches the sibling tree rooted at idx for name. The tree is red-black ordered by a key
 // that is not plain string order, so every node is visited; a depth bound guards a damaged file.
-func (c *cfb) find(idx uint32, name string, depth int) (uint32, bool) {
+func (c *File) find(idx uint32, name string, depth int) (uint32, bool) {
 	if idx == cfbNone || int(idx) >= len(c.entries) || depth > len(c.entries) {
 		return 0, false
 	}
@@ -260,4 +268,32 @@ func (c *cfb) find(idx uint32, name string, depth int) (uint32, bool) {
 		return i, true
 	}
 	return c.find(e.right, name, depth+1)
+}
+
+// Children lists the names of the entries directly inside the storage at a slash-separated path,
+// in the order the directory's sibling tree yields them. "" names the root. ok is false when no
+// storage has that path. A caller that needs a stable order sorts the names itself.
+func (c *File) Children(path string) (names []string, ok bool) {
+	dir := uint32(0)
+	if path != "" {
+		for _, part := range strings.Split(path, "/") {
+			idx, found := c.find(c.entries[dir].child, part, 0)
+			if !found || c.entries[idx].kind != 1 {
+				return nil, false
+			}
+			dir = idx
+		}
+	}
+	c.walk(c.entries[dir].child, 0, func(e cfbEntry) { names = append(names, e.name) })
+	return names, true
+}
+
+func (c *File) walk(idx uint32, depth int, visit func(cfbEntry)) {
+	if idx == cfbNone || int(idx) >= len(c.entries) || depth > len(c.entries) {
+		return
+	}
+	e := c.entries[idx]
+	c.walk(e.left, depth+1, visit)
+	visit(e)
+	c.walk(e.right, depth+1, visit)
 }

@@ -2,6 +2,7 @@ package altium
 
 import (
 	"fmt"
+	"github.com/panyam/agni/internal/cfb"
 	"github.com/panyam/agni/internal/latin1"
 	"strconv"
 	"strings"
@@ -100,10 +101,10 @@ func index16(v uint16) int {
 	return int(v)
 }
 
-func decode(c *cfb) (*pcb, error) {
+func decode(c *cfb.File) (*pcb, error) {
 	p := &pcb{}
 	read := func(name string, required bool) ([]byte, error) {
-		b, ok, err := c.stream(name + "/Data")
+		b, ok, err := c.Stream(name + "/Data")
 		if err != nil {
 			return nil, err
 		}

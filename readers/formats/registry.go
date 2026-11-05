@@ -120,6 +120,7 @@ func init() {
 	registerODB()
 	registerAllegro()
 	registerAltium()
+	registerOrCAD()
 }
 
 // readKicadProject merges the sibling .kicad_sch and .kicad_pcb that share the .kicad_pro's stem

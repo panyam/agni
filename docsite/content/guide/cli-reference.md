@@ -712,6 +712,15 @@ schematic parameters, its part number and description among them, which an ODB++
 check of the `.PcbDoc` can recognise parts a check of the export cannot. Assembly variants live in
 the project file and are not read.
 
+An OrCAD Capture design (`.DSN`) reads as a netlist, so `agni check design.DSN` needs no export from
+Capture. A block that keeps its pages in a `.DSN` of its own is opened by the path the design records
+for it, relative to the design, so the block files stay where the design expects them. The read is
+always flattened. Each part takes the designator Capture annotated across the hierarchy, and the board
+carries the same one. A block whose file is missing is named in a note, and the design reads
+without it. A pin flagged not connected reads on no net. Only Capture's modern format is read, and a
+design in the legacy format is refused with its version named. SPECCTRA router files share the
+extension and are plain text, so agni refuses one as SPECCTRA. The schematic is not drawn yet (agni issue 1400).
+
 A schematic that references external symbols resolves them by one of three routes, in the order they
 are searched: its own `sym-lib-table` for a KiCad project, the `symbols` libraries its design and project
 descriptors name, and any `--symbol-path` directory. A design

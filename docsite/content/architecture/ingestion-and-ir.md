@@ -13,7 +13,7 @@ The reader layer is heterogeneous by necessity, because the formats are. Entries
 
 | Format class | Examples | Reader approach |
 |---|---|---|
-| Binary natives | Cadence Allegro `.brd` (16.6, 17.2); Altium Designer `.PcbDoc` (binary) | a binary deserializer over a reverse-engineered layout (inside a Microsoft compound file for Altium), held to an extract or export the vendor's tool wrote from the same board |
+| Binary natives | Cadence Allegro `.brd` (16.6, 17.2); Altium Designer `.PcbDoc` (binary); OrCAD Capture `.DSN` | a binary deserializer over a reverse-engineered layout (inside a Microsoft compound file for Altium and Capture), held to an extract, export or netlist the vendor's tool wrote from the same design |
 | Text grammars | EDIF, KiCad s-expr, xschem, gEDA, Telesis; SPICE, IBIS, Touchstone (planned) | hand-written Go parsers |
 | XML | IPC-2581 | Go's `encoding/xml` |
 | Record/tabular | ODB++ | custom record reader over the job's directory tree, and an XML stream reader for ODB++X (ODX) that fills the same structures |

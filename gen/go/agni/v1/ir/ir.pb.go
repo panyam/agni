@@ -122,6 +122,10 @@ const (
 	// UNEXPANDED_REASON_CYCLE is a block that a flattened read refused to enter, because the block
 	// places itself, directly or through the blocks it places (agni issue 1102).
 	UnexpandedReason_UNEXPANDED_REASON_CYCLE UnexpandedReason = 2
+	// UNEXPANDED_REASON_FILE_MISSING is a block whose pages live in another file that the read could
+	// not open. An OrCAD Capture block names its own .DSN, and a copy of the design without that file
+	// reads the block as nothing (agni issue 1399).
+	UnexpandedReason_UNEXPANDED_REASON_FILE_MISSING UnexpandedReason = 3
 )
 
 // Enum value maps for UnexpandedReason.
@@ -130,11 +134,13 @@ var (
 		0: "UNEXPANDED_REASON_UNSPECIFIED",
 		1: "UNEXPANDED_REASON_NOT_WALKED",
 		2: "UNEXPANDED_REASON_CYCLE",
+		3: "UNEXPANDED_REASON_FILE_MISSING",
 	}
 	UnexpandedReason_value = map[string]int32{
-		"UNEXPANDED_REASON_UNSPECIFIED": 0,
-		"UNEXPANDED_REASON_NOT_WALKED":  1,
-		"UNEXPANDED_REASON_CYCLE":       2,
+		"UNEXPANDED_REASON_UNSPECIFIED":  0,
+		"UNEXPANDED_REASON_NOT_WALKED":   1,
+		"UNEXPANDED_REASON_CYCLE":        2,
+		"UNEXPANDED_REASON_FILE_MISSING": 3,
 	}
 )
 
@@ -3410,11 +3416,12 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x16PIN_DIRECTION_TRISTATE\x10\t\x12 \n" +
 	"\x1cPIN_DIRECTION_OPEN_COLLECTOR\x10\n" +
 	"\x12\x1e\n" +
-	"\x1aPIN_DIRECTION_OPEN_EMITTER\x10\v*t\n" +
+	"\x1aPIN_DIRECTION_OPEN_EMITTER\x10\v*\x98\x01\n" +
 	"\x10UnexpandedReason\x12!\n" +
 	"\x1dUNEXPANDED_REASON_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cUNEXPANDED_REASON_NOT_WALKED\x10\x01\x12\x1b\n" +
-	"\x17UNEXPANDED_REASON_CYCLE\x10\x02*j\n" +
+	"\x17UNEXPANDED_REASON_CYCLE\x10\x02\x12\"\n" +
+	"\x1eUNEXPANDED_REASON_FILE_MISSING\x10\x03*j\n" +
 	"\vClassSource\x12\x1c\n" +
 	"\x18CLASS_SOURCE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CLASS_SOURCE_CONVENTION\x10\x01\x12\x1a\n" +

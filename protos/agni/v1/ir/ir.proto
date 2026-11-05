@@ -273,6 +273,10 @@ enum UnexpandedReason {
   // UNEXPANDED_REASON_CYCLE is a block that a flattened read refused to enter, because the block
   // places itself, directly or through the blocks it places (agni issue 1102).
   UNEXPANDED_REASON_CYCLE = 2;
+  // UNEXPANDED_REASON_FILE_MISSING is a block whose pages live in another file that the read could
+  // not open. An OrCAD Capture block names its own .DSN, and a copy of the design without that file
+  // reads the block as nothing (agni issue 1399).
+  UNEXPANDED_REASON_FILE_MISSING = 3;
 }
 
 // UnannotatedComponent is one placeholder designator and every placement that uses it. It is keyed
