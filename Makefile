@@ -200,7 +200,7 @@ samples:
 # than `samples` alone, because a test whose corpus is absent skips, and a skipped test is a test that
 # proves nothing (agni issue 591). 19MB against tutorial-board's 3MB, fetched once per pin bump.
 samples-oracle:
-	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium
+	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro
 
 # The KiCad reader cross-check against real boards: read a design's schematic our way, read the same
 # design's .kicad_pcb for the netlist KiCad itself resolved, and require the two to agree on which
