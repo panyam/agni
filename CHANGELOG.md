@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-05
+
+agni opens Altium Designer `.PcbDoc` boards (PR 1391) and Cadence Allegro 16.6 and 17.2 `.brd` boards
+(PR 1365, 1394) with no export step, and reads ODB++X (PR 1379). It also cross-probes between a
+schematic and its board. A sheet opens beside the canvas, a pick on one is found on the others
+(PR 1364, 1375), and a board view turns and flips to match the board on the bench (PR 1378). An
+undeclared board attaches from the Sheets panel and saves to `design.yaml` (PR 1395, 1398). KiCad
+schematics and board text draw much closer to kicad-cli (PR 1345, 1348, 1363, 1387, 1390). Nothing
+breaks. The full write-up is [RELEASES/v0.5.0.md](RELEASES/v0.5.0.md).
+
 ## [0.4.0] - 2026-11-02
 
 How agni reads a board's names is now one lexicon a person can see and change. `agni lexicon` and a

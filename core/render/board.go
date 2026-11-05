@@ -51,7 +51,8 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			if z.GetOutline() == nil {
 				continue
 			}
-			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)),
+			// data-layer lets the zone hide with its copper layer as well as with the Zones row.
+			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)), svg.A("data-layer", z.GetLayer()),
 				svg.A("fill", copperColor(style, z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none")},
 				pk.net(z.GetNet())...)...)
 		}
@@ -164,6 +165,10 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 		}
 		if tf := boardTextTransform(-t.GetRotationDeg(), t.GetMirror(), x, y); tf != "" {
 			attrs = append(attrs, svg.A("transform", tf))
+		}
+		// A text on a layer hides with it. A designator the renderer added has no layer and always draws.
+		if t.GetLayer() != "" {
+			attrs = append(attrs, svg.A("data-layer", t.GetLayer()))
 		}
 		c.Text(boardTextLine(t), attrs...)
 	}

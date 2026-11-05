@@ -2,7 +2,6 @@ package render
 
 import (
 	"math"
-	"strings"
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -21,12 +20,15 @@ const (
 	groupBoardEdge        uint8 = 5  // outline (Edge.Cuts)
 	groupBoardCopperFront uint8 = 6  // F.Cu segments, front SMD pads, front zone outlines
 	groupBoardCopperBack  uint8 = 7  // B.Cu likewise
-	groupBoardCopperInner uint8 = 8  // any other signal layer
+	groupBoardCopperInner uint8 = 8  // an inner layer past the group limit (maxBoardGroups)
 	groupBoardThrough     uint8 = 9  // via barrels + through-hole pad lands
 	groupBoardHole        uint8 = 10 // drill fills, page-colored, drawn last so they punch out
-	groupBoardSilk        uint8 = 11 // silkscreen and courtyard graphics (WS7)
-	groupBoardFab         uint8 = 12 // fab-layer graphics, such as body outlines (agni issue 1366)
+	groupBoardSilk        uint8 = 11 // a silkscreen or courtyard layer past the group limit
+	groupBoardFab         uint8 = 12 // a fab layer past the group limit (agni issue 1366)
 
+	// boardGroupCount is the first group planBoardStrata hands out. Each inner copper layer, each
+	// copper layer's zones and each graphics layer gets a group from there up (agni 1351), and
+	// BoardLayerRow.groups names them.
 	boardGroupCount = 13
 )
 
@@ -41,6 +43,7 @@ const viaSegments = 16
 // See docsite/content/architecture/geometry-and-rendering.md#board-geometry-sidecar.
 func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	style := resolveStyle(opts)
+	strata := planBoardStrata(b, style)
 
 	var c primCollector
 	add := c.Add
@@ -52,7 +55,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		if z.GetOutline() == nil {
 			continue
 		}
-		add(primLineLoop, copperGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
+		add(primLineLoop, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
 	}
 	for _, nc := range b.GetNets() {
 		for _, s := range nc.GetSegments() {
@@ -65,7 +68,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
 				tris = append(tris, quadPts(pts[i-1].X, pts[i-1].Y, pts[i].X, pts[i].Y, s.GetWidth())...)
 			}
-			add(primTriangles, copperGroup(s.GetLayer()), "", nc.GetNet(), "", tris)
+			add(primTriangles, strata.copperGroup(s.GetLayer()), "", nc.GetNet(), "", tris)
 		}
 		for _, v := range nc.GetVias() {
 			if v.GetAt() == nil {
@@ -112,11 +115,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		if len(pts) == 0 {
 			continue
 		}
-		group := groupBoardSilk
-		if strings.HasSuffix(gr.GetLayer(), ".Fab") {
-			group = groupBoardFab
-		}
-		add(kind, group, gr.GetRefDes(), "", "", pts)
+		add(kind, strata.artGroup(gr.GetLayer()), gr.GetRefDes(), "", "", pts)
 	}
 
 	vertices, records, keys, ox, oy := c.build()
@@ -133,6 +132,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			Text: boardTextLine(t), Height: num.Int32(boardTextEm(t)),
 			RotationDeg: int32(math.Round(t.GetRotationDeg())),
 			Justify:     justifyWord(t), Color: boardTextColor(style, t.GetLayer()),
+			Group: uint32(strata.art[t.GetLayer()]),
 		})
 	}
 
@@ -140,7 +140,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		SheetId:         "board",
 		LayoutVersion:   packLayoutVersion,
 		FontFamily:      style.Font,
-		GroupColors:     boardGroupColors(style),
+		GroupColors:     strata.colors,
 		BackgroundColor: style.Page,
 		OriginX:         ox,
 		OriginY:         oy,
@@ -169,18 +169,6 @@ func boardGroupColors(style Style) []string {
 	colors[groupBoardSilk] = style.Silk
 	colors[groupBoardFab] = style.Fab
 	return colors
-}
-
-// copperGroup maps a layer name to its board group.
-func copperGroup(layer string) uint8 {
-	switch layerSide(layer) {
-	case "front":
-		return groupBoardCopperFront
-	case "back":
-		return groupBoardCopperBack
-	default:
-		return groupBoardCopperInner
-	}
 }
 
 // quadPts returns a track segment as a filled quad (two triangles) at true width, floored to

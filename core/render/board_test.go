@@ -46,7 +46,7 @@ func TestBoardSVGStrata(t *testing.T) {
 			t.Errorf("missing stratum %s", cls)
 		}
 	}
-	if strings.Index(got, `data-layer="B.Cu"`) > strings.Index(got, `data-layer="F.Cu"`) {
+	if strings.Index(got, `class="copper-back" data-layer="B.Cu"`) > strings.Index(got, `class="copper-front" data-layer="F.Cu"`) {
 		t.Error("back copper must draw before front copper")
 	}
 	for _, pl := range b.GetPlacements() {
@@ -202,8 +202,9 @@ func TestPackBoard(t *testing.T) {
 		t.Error("drilled fixture must emit page-colored hole fills")
 	}
 	// The fixture's silk graphics (R1 fp_line + fp_circle, the free gr_line) pack as outline
-	// primitives in the silk group.
-	if groups[groupBoardSilk] == 0 {
+	// primitives in the silk layer's own group.
+	silk := boardRow(t, BoardLayers(b), "F.SilkS")
+	if groups[uint8(silk.GetGroups()[0])] == 0 {
 		t.Errorf("no silk graphics packed: %v", groups)
 	}
 	// Keys: SIG copper joins by net; R1's pads join by (ref_des, number).
@@ -219,8 +220,8 @@ func TestPackBoard(t *testing.T) {
 	if sigCopper < 2 || r1Pads != 2 {
 		t.Errorf("keys: SIG copper=%d (want >=2), R1 pads=%d (want 2)", sigCopper, r1Pads)
 	}
-	if got := ps.GetGroupColors(); len(got) != boardGroupCount || got[groupBoardCopperFront] != DefaultStyle.CopperFront ||
-		got[groupBoardHole] != DefaultStyle.Page || got[groupBoardSilk] != DefaultStyle.Silk {
+	if got := ps.GetGroupColors(); len(got) <= int(silk.GetGroups()[0]) || got[groupBoardCopperFront] != DefaultStyle.CopperFront ||
+		got[groupBoardHole] != DefaultStyle.Page || got[silk.GetGroups()[0]] != DefaultStyle.Silk {
 		t.Errorf("group colors not Style-indexed: %v", got)
 	}
 	// The highlight join works unchanged over the board keys.

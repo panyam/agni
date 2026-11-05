@@ -6,8 +6,6 @@ import type { ControlsState } from "./controls.js";
 const base: ControlsState = {
   mode: "svg",
   nativeAvailable: false,
-  board: false,
-  boardLayers: "all",
   hasHighlights: false,
 };
 
@@ -17,7 +15,6 @@ function mount(over: Partial<ControlsState> = {}, staticHost = false) {
   document.body.appendChild(el);
   const bar = controlBarIsland(el, null, {
     onMode: vi.fn(),
-    onBoardLayers: vi.fn(),
     onClearHighlights,
   }, { staticHost });
   bar.island.activate();

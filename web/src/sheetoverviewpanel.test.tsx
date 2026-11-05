@@ -179,3 +179,55 @@ describe("opening a sheet beside the canvas", () => {
     expect(el.querySelectorAll(".sheet-tile-beside").length).toBe(0);
   });
 });
+
+// agni 1351: the Board tile lists the board's layers while the board is shown.
+describe("the Board tile's layers", () => {
+  const rows = [
+    { name: "F.Cu", kind: "copper", side: "front", color: "#c83434", svgSelector: "", groups: [] },
+    { name: "In1.Cu", kind: "copper", side: "inner", color: "#8a6d3b", svgSelector: "", groups: [] },
+  ] as unknown as OverviewState["boardLayers"];
+  function mountLayers() {
+    const layers = { onToggle: vi.fn(), onSolo: vi.fn(), onPreset: vi.fn() };
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const { island, view } = sheetOverviewPanelIsland(el, null, { onSelect: vi.fn(), layers });
+    island.activate();
+    const tiles = [mkTile({ id: "s1", name: "Root", count: 0, unresolved: 0 }), mkTile({ id: "board", name: "Board", count: 0, unresolved: 0 })];
+    return { el, view, layers, tiles };
+  }
+
+  it("shows a checkbox per layer under the Board tile, unchecked when hidden", () => {
+    const { el, view, tiles } = mountLayers();
+    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: ["In1.Cu"] }));
+    const boxes = [...el.querySelectorAll<HTMLInputElement>(".board-layer-row input")];
+    expect([...el.querySelectorAll(".board-layer-name")].map((n) => n.textContent)).toEqual(["F.Cu", "In1.Cu"]);
+    expect(boxes.map((b) => b.checked)).toEqual([true, false]);
+  });
+
+  it("lists no layers while a schematic sheet is shown", () => {
+    const { el, view, tiles } = mountLayers();
+    view.setState(state({ tiles, activeId: "s1", boardLayers: rows, hiddenLayers: [] }));
+    expect(el.querySelector(".board-layers")).toBeNull();
+  });
+
+  it("toggles on a click, shows one alone on a double-click, and applies a preset", () => {
+    const { el, view, layers, tiles } = mountLayers();
+    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: [] }));
+    el.querySelectorAll<HTMLInputElement>(".board-layer-row input")[1].click();
+    expect(layers.onToggle).toHaveBeenCalledWith("In1.Cu");
+    expect(layers.onSolo).not.toHaveBeenCalled();
+    // The second click of a double-click shows the row alone, even on a row drawn again between the
+    // two clicks.
+    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: ["In1.Cu"] }));
+    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 2 }));
+    expect(layers.onSolo).toHaveBeenCalledWith("F.Cu");
+    expect(layers.onToggle).toHaveBeenCalledTimes(1);
+    // A key press on the checkbox arrives as a click with detail 0, and toggles.
+    el.querySelectorAll(".board-layer-row")[1].dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
+    expect(layers.onToggle).toHaveBeenLastCalledWith("In1.Cu");
+    expect(layers.onSolo).toHaveBeenCalledTimes(1);
+    const back = [...el.querySelectorAll<HTMLButtonElement>(".board-layer-preset")].find((b) => b.textContent === "Back");
+    back!.click();
+    expect(layers.onPreset).toHaveBeenCalledWith("back");
+  });
+});

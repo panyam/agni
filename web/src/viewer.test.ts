@@ -1290,8 +1290,14 @@ describe("sheet overview push (WS9-025)", () => {
   });
 });
 
-describe("board layer visibility (WS7-034)", () => {
-  it("offers the selector only on the board sheet and applies the choice as a view command", async () => {
+describe("board layer visibility (agni 1351)", () => {
+  const rows = [
+    { name: "F.Cu", kind: "copper", side: "front", color: "#c83434", svgSelector: '[data-layer="F.Cu"]', groups: [6] },
+    { name: "In1.Cu", kind: "copper", side: "inner", color: "#8a6d3b", svgSelector: '[data-layer="In1.Cu"]', groups: [13] },
+    { name: "B.Cu", kind: "copper", side: "back", color: "#3050c8", svgSelector: '[data-layer="B.Cu"]', groups: [7] },
+    { name: "Edge", kind: "edge", side: "", color: "#8a6d3b", svgSelector: ".edge", groups: [5] },
+  ];
+  function boardHarness() {
     const h = harness();
     h.getDesign.mockImplementation(async (req: { layout?: string }) => ({
       name: "B",
@@ -1306,22 +1312,61 @@ describe("board layer visibility (WS7-034)", () => {
       nativeAvailable: false,
       availableLayouts: ["grid"],
     }));
+    h.getSheet.mockImplementation(async (req: { sheet?: string }) =>
+      req.sheet === "board"
+        ? ({ content: { case: "packed", value: { sheetId: "board" } }, boardLayers: rows } as never)
+        : { content: { case: "packed", value: { sheetId: "graph" } } },
+    );
+    const kept = new Map<string, string[]>();
+    const store = { load: vi.fn((m: string, p: string) => kept.get(`${m}/${p}`) ?? null), save: vi.fn((m: string, p: string, hidden: string[]) => kept.set(`${m}/${p}`, hidden)) };
+    h.presenter.layerStore = store;
+    return { ...h, kept, store };
+  }
+  const lastCall = (f: ReturnType<typeof vi.fn>) => f.mock.calls[f.mock.calls.length - 1];
+  const lastHidden = (h: ReturnType<typeof harness>) => [...lastCall(h.render.setBoardLayers as ReturnType<typeof vi.fn>)[1]].sort();
+  const lastOverview = (h: ReturnType<typeof harness>) => lastCall(h.onOverview)[0];
+
+  it("lists the board's layers under the Board tile and hides a preset's rows", async () => {
+    const h = boardHarness();
     await h.presenter.openFile("m", "x.kicad_pcb");
-    expect(lastControls(h).board).toBe(false); // the graph sheet opened first
-
     await h.presenter.showSheet("board");
-    expect(lastControls(h).board).toBe(true);
-    expect(h.render.setBoardLayers).toHaveBeenCalledWith("all"); // restored on entry
+    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith(rows, new Set());
+    expect(lastOverview(h).boardLayers.map((r: { name: string }) => r.name)).toEqual(["F.Cu", "In1.Cu", "B.Cu", "Edge"]);
 
-    h.presenter.setBoardLayers("front");
-    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith("front");
-    expect(lastControls(h).boardLayers).toBe("front");
+    h.presenter.presetBoardLayers("front");
+    expect(lastHidden(h)).toEqual(["B.Cu", "In1.Cu"]);
+    expect(lastOverview(h).hiddenLayers.sort()).toEqual(["B.Cu", "In1.Cu"]);
 
-    // The choice sticks across a sheet round-trip.
+    h.presenter.soloBoardLayer("In1.Cu");
+    expect(lastHidden(h)).toEqual(["B.Cu", "Edge", "F.Cu"]);
+    h.presenter.toggleBoardLayer("Edge");
+    expect(lastHidden(h)).toEqual(["B.Cu", "F.Cu"]);
+    h.presenter.presetBoardLayers("all");
+    expect(lastHidden(h)).toEqual([]);
+  });
+
+  it("keeps the choice across a sheet round trip and clears it for a schematic", async () => {
+    const h = boardHarness();
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    h.presenter.presetBoardLayers("back");
     await h.presenter.showSheet("graph");
-    expect(lastControls(h).board).toBe(false);
+    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith([], new Set());
     await h.presenter.showSheet("board");
-    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith("front");
+    expect(lastHidden(h)).toEqual(["F.Cu", "In1.Cu"]);
+  });
+
+  it("keeps each design's choice in its store", async () => {
+    const h = boardHarness();
+    h.kept.set("m/y.kicad_pcb", ["In1.Cu"]);
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    h.presenter.presetBoardLayers("back");
+    expect(h.store.save).toHaveBeenLastCalledWith("m", "x.kicad_pcb", ["F.Cu", "In1.Cu"]);
+
+    await h.presenter.openFile("m", "y.kicad_pcb");
+    await h.presenter.showSheet("board");
+    expect(lastHidden(h)).toEqual(["In1.Cu"]);
   });
 });
 

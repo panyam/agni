@@ -52,7 +52,7 @@ import { BOARD_PARAM, appBase, currentLocation, hasFile, locationToUrl, pageFlat
 import { pickBoard } from "./boardpicker.js";
 import { overlayPath, showDeclared } from "./declareboard.js";
 import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
-import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
+import { layerHiding, storageLayers } from "./boardlayers.js";
 import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
@@ -197,13 +197,18 @@ class AppRoot extends BaseComponent {
         if (mode === "webgl") canvas.setView(view as ReturnType<typeof canvas.getView> & object);
         else svgView.setView(view as ReturnType<typeof svgView.getView>);
       },
-      // Board layer visibility (WS7-034/035) toggles CSS classes over BoardSVG's classed strata
-      // and hides packed groups on the WebGL canvas (the packed board's back/front strata).
-      setBoardLayers: (side) => {
-        svgEl.classList.remove("board-front", "board-back");
-        if (side === "front" || side === "back") svgEl.classList.add(`board-${side}`);
-        const hidden = side === "front" ? [GROUP_BOARD_COPPER_BACK] : side === "back" ? [GROUP_BOARD_COPPER_FRONT] : [];
-        canvas.setHiddenGroups(hidden);
+      // Board layer visibility (agni 1351) writes one style rule per hidden row over the SVG host,
+      // and hides the rows' packed groups on the WebGL canvas.
+      setBoardLayers: (rows, hidden) => {
+        const h = layerHiding(rows, hidden, "#svg-view");
+        let style = document.getElementById("board-layer-style");
+        if (!style) {
+          style = document.createElement("style");
+          style.id = "board-layer-style";
+          document.head.appendChild(style);
+        }
+        style.textContent = h.css;
+        canvas.setHiddenGroups(h.groups);
       },
     };
     // The visual diff (WS9-005) is two SvgViews that mirror each other's pan and zoom. setView fires
@@ -331,7 +336,6 @@ class AppRoot extends BaseComponent {
     // up.
     const controls = controlBarIsland(controlsEl, this._eventBus, {
       onMode: (mode) => void presenter.setMode(mode),
-      onBoardLayers: (side) => presenter.setBoardLayers(side),
       onClearHighlights: () => void presenter.clearHighlights(),
     }, { staticHost: onStaticHost });
     // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
@@ -375,6 +379,12 @@ class AppRoot extends BaseComponent {
     const sheetOverview = sheetOverviewPanelIsland(sheetOverviewEl, this._eventBus, {
       onSelect: (sheetId) => void presenter.showSheet(sheetId),
       onOpenBeside: (sheetId) => void sheetViews.open(sheetId),
+      // The Board tile's layer rows (agni 1351).
+      layers: {
+        onToggle: (name) => presenter.toggleBoardLayer(name),
+        onSolo: (name) => presenter.soloBoardLayer(name),
+        onPreset: (preset) => presenter.presetBoardLayers(preset),
+      },
       // A board the design does not declare is attached by opening the page again with ?board=
       // (agni issue 1367), so every snapshot the page ingests reads it and a link keeps it.
       board: {
@@ -811,6 +821,8 @@ class AppRoot extends BaseComponent {
       workspaceClient(),
       projectClient(),
     );
+    // A design's hidden board layers are kept in this browser (agni 1351), as a board view's turn is.
+    presenter.layerStore = storageLayers(() => window.localStorage);
     this.presenter = presenter;
 
     // WS9-044 added the highlight-style dropdown. Apply any saved style at boot, then update the

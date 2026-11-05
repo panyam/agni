@@ -58,9 +58,11 @@ The board view picks with the same `Selection` and the same priority (agni issue
   `selectionFromElement` reads the nearest keyed element, walking up from the hit and stopping at the
   drawing's `<svg>`. An area counts a grouped net when any one of its lines lies inside, as a
   schematic net counts by its wires.
-- **A hidden side picks nothing.** The body rects split into `picks-front` and `picks-back` by the
-  side the part sits on, and the layer control's CSS hides them with that side's copper.
-  `elementFromPoint` skips a `display: none` element, so a part on the hidden side cannot be picked.
+- **A hidden layer picks nothing.** The Board entry in the Sheets panel lists the board's layers
+  (agni 1351). Hiding a row writes a `display: none` rule for that row's `svg_selector`, and
+  `elementFromPoint` skips a `display: none` element, so a click there reaches what lies beneath or
+  nothing. The body rects split into `picks-front` and `picks-back` by the side the part sits on, and
+  the F.Cu and B.Cu rows name them, so a part hides with its side's copper.
 
 A via or a short track at fit zoom is a few pixels across. A mouse event carries whole-pixel
 coordinates, so a click can miss a via that a fractional probe hits. The reader zooms in to pick one,

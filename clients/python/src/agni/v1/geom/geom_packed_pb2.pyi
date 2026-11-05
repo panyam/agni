@@ -102,7 +102,7 @@ class TextRun(_message.Message):
     def __init__(self, text: _Optional[str] = ..., kind: _Optional[_Union[TextRun.Kind, str]] = ...) -> None: ...
 
 class PackedLabel(_message.Message):
-    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width", "runs")
+    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width", "runs", "group")
     X_FIELD_NUMBER: _ClassVar[int]
     Y_FIELD_NUMBER: _ClassVar[int]
     TEXT_FIELD_NUMBER: _ClassVar[int]
@@ -112,6 +112,7 @@ class PackedLabel(_message.Message):
     COLOR_FIELD_NUMBER: _ClassVar[int]
     MAX_WIDTH_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
+    GROUP_FIELD_NUMBER: _ClassVar[int]
     x: int
     y: int
     text: str
@@ -121,7 +122,8 @@ class PackedLabel(_message.Message):
     color: str
     max_width: int
     runs: _containers.RepeatedCompositeFieldContainer[TextRun]
-    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ...) -> None: ...
+    group: int
+    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ..., group: _Optional[int] = ...) -> None: ...
 
 class PackedImage(_message.Message):
     __slots__ = ("x", "y", "w", "h", "mime", "data", "rotation_deg", "mirror")
@@ -170,3 +172,19 @@ class PackedSheet(_message.Message):
     background_color: str
     images: _containers.RepeatedCompositeFieldContainer[PackedImage]
     def __init__(self, sheet_id: _Optional[str] = ..., layout_version: _Optional[int] = ..., origin_x: _Optional[int] = ..., origin_y: _Optional[int] = ..., vertices: _Optional[bytes] = ..., primitives: _Optional[bytes] = ..., keys: _Optional[_Iterable[_Union[PrimitiveKey, _Mapping]]] = ..., labels: _Optional[_Iterable[_Union[PackedLabel, _Mapping]]] = ..., font_family: _Optional[str] = ..., group_colors: _Optional[_Iterable[str]] = ..., background_color: _Optional[str] = ..., images: _Optional[_Iterable[_Union[PackedImage, _Mapping]]] = ...) -> None: ...
+
+class BoardLayerRow(_message.Message):
+    __slots__ = ("name", "kind", "side", "color", "svg_selector", "groups")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    COLOR_FIELD_NUMBER: _ClassVar[int]
+    SVG_SELECTOR_FIELD_NUMBER: _ClassVar[int]
+    GROUPS_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    kind: str
+    side: str
+    color: str
+    svg_selector: str
+    groups: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., side: _Optional[str] = ..., color: _Optional[str] = ..., svg_selector: _Optional[str] = ..., groups: _Optional[_Iterable[int]] = ...) -> None: ...

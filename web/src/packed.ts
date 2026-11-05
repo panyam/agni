@@ -85,6 +85,9 @@ export interface Label {
   // runs is the text split by its markup, as the engine split it (geom.PackedLabel.runs). Empty
   // means the text draws as one plain run.
   runs: TextRun[];
+  // group is the primitive group the label hides with (geom.PackedLabel.group), 0 or absent for a
+  // label that always draws.
+  group?: number;
 }
 
 // TextRun is one piece of a label in one style. kind is geom.TextRun.Kind: 0 plain, 1 overbar,
@@ -186,6 +189,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
       color: l.color,
       maxWidth: l.maxWidth,
       runs: l.runs.map((r) => ({ text: r.text, kind: r.kind })),
+      group: l.group,
     })),
     images: msg.images.map((im) => ({
       x: im.x,

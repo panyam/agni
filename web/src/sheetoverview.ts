@@ -4,6 +4,7 @@
 
 import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem } from "./findings.js";
+import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // SheetTile is one row of the overview, a sheet and how many current findings live on it. A zero
 // count draws no badge, so only a sheet with something on it carries a number (agni issue 1132).
@@ -37,6 +38,10 @@ export interface OverviewState {
   activeId: string;
   ruleCount: number;
   ranCount: number;
+  // boardLayers are the board's layer rows (agni 1351), which the Board tile lists while the board
+  // is shown, and hiddenLayers names the rows hidden. Both are empty before the board is drawn.
+  boardLayers?: BoardLayerRow[];
+  hiddenLayers?: string[];
 }
 
 // OverviewView is the command-down surface the presenter pushes OverviewState to.

@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import type { RenderMode } from "./viewer.js";
@@ -13,12 +13,11 @@ const MODES: { mode: RenderMode; label: string }[] = [
 // Controls renders the render-mode buttons and the other toggles from ControlsState. It offers no
 // layout or symbol-source choice. A design draws as its schematic does, or on agni's default layout
 // with a note saying why (GetDesignResponse.drawing_note). `?layout=` and `?symbols=` still choose
-// one from the address, for experiments. Everything derives from the signal, so the presenter drives it by pushing state,
-// and every click or selection emits an intent up.
+// one from the address, for experiments. Everything derives from the signal, so the presenter drives
+// it by pushing state, and every click or selection emits an intent up.
 function Controls(props: {
   state: () => ControlsState;
   onMode: (m: RenderMode) => void;
-  onBoardLayers: (side: string) => void;
   onClearHighlights: () => void;
   staticHost: boolean;
 }) {
@@ -48,16 +47,6 @@ function Controls(props: {
           )}
         </For>
       </div>
-      <Show when={props.state().board}>
-        <select
-          class="layout-select"
-          title="board layer visibility"
-          value={props.state().boardLayers}
-          onChange={(e) => props.onBoardLayers(e.currentTarget.value)}
-        >
-          <For each={["all", "front", "back"]}>{(s) => <option value={s}>{s} layers</option>}</For>
-        </select>
-      </Show>
       {/* Always rendered, and disabled when there is nothing to clear, because a control that
           appears on a state change has to be discovered twice (agni issue 348). */}
       <button
@@ -79,7 +68,6 @@ export function controlBarIsland(
   eventBus: EventBus | null,
   handlers: {
     onMode: (m: RenderMode) => void;
-    onBoardLayers: (side: string) => void;
     onClearHighlights: () => void;
   },
   opts: { staticHost?: boolean } = {},
@@ -87,8 +75,6 @@ export function controlBarIsland(
   const [state, setState] = signalView<ControlsState>({
     mode: "svg",
     nativeAvailable: false,
-    board: false,
-    boardLayers: "all",
     hasHighlights: false,
   });
   const island = new SolidIsland(
@@ -98,7 +84,6 @@ export function controlBarIsland(
       <Controls
         state={state}
         onMode={handlers.onMode}
-        onBoardLayers={handlers.onBoardLayers}
         onClearHighlights={handlers.onClearHighlights}
         staticHost={opts.staticHost ?? false}
       />

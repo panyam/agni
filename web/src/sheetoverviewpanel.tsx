@@ -3,6 +3,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import type { OverviewState, OverviewView, SheetTile } from "./sheetoverview.js";
 import { type SheetNode, sheetForest } from "./sheettree.js";
+import type { LayerPreset } from "./boardlayers.js";
 
 // SheetOverviewPanel is the birds-eye sheet list (WS9-025), one tile per sheet with its violation
 // count and the shown sheet marked active. Clicking a tile navigates (the WS9-024 showSheet path).
@@ -18,7 +19,69 @@ export interface BoardControl {
   onSave?: () => void;
 }
 
-function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl }) {
+// LayerControl is the panel's part in board layer visibility (agni 1351). The Board tile lists the
+// board's layers while the board is shown. A click on a row toggles it and a double-click shows it
+// alone.
+export interface LayerControl {
+  onToggle: (name: string) => void;
+  onSolo: (name: string) => void;
+  onPreset: (preset: LayerPreset) => void;
+}
+
+const PRESETS: { preset: LayerPreset; label: string; title: string }[] = [
+  { preset: "all", label: "All", title: "show every layer" },
+  { preset: "none", label: "None", title: "hide every layer" },
+  { preset: "front", label: "Front", title: "show the front side: its layers, the edge, the through copper and the zones" },
+  { preset: "back", label: "Back", title: "show the back side: its layers, the edge, the through copper and the zones" },
+];
+
+function BoardLayers(props: { state: () => OverviewState; layers: LayerControl; depth: number }) {
+  const hidden = createMemo(() => new Set(props.state().hiddenLayers ?? []));
+  return (
+    <div class="board-layers" style={{ "padding-left": `${(props.depth + 1) * 12}px` }}>
+      <div class="board-layer-presets" role="group" aria-label="board layer presets">
+        <For each={PRESETS}>
+          {(p) => (
+            <button type="button" class="mode-btn board-layer-preset" title={p.title} onClick={() => props.layers.onPreset(p.preset)}>
+              {p.label}
+            </button>
+          )}
+        </For>
+      </div>
+      <ul class="board-layer-rows" aria-label="board layers">
+        <For each={props.state().boardLayers ?? []}>
+          {(r) => (
+            <li>
+              {/*
+                One click handler for the whole row, the checkbox included, read by the browser's own
+                click count. The panel draws its rows again on every state push, so a dblclick
+                handler or two handlers racing a redraw lost the second click (agni 1351). A key
+                press on the checkbox arrives as a click with detail 0 and toggles.
+              */}
+              <div
+                class="board-layer-row"
+                title={`${r.name}: double-click to show it alone`}
+                onClick={(e) => (e.detail >= 2 ? props.layers.onSolo(r.name) : props.layers.onToggle(r.name))}
+              >
+                <input type="checkbox" checked={!hidden().has(r.name)} aria-label={r.name} />
+                <span class="board-layer-swatch" style={{ background: r.color }} />
+                <span class="board-layer-name">{r.name}</span>
+              </div>
+            </li>
+          )}
+        </For>
+      </ul>
+    </div>
+  );
+}
+
+function SheetOverviewPanel(props: {
+  state: () => OverviewState;
+  onSelect: (sheetId: string) => void;
+  onOpenBeside?: (sheetId: string) => void;
+  board?: BoardControl;
+  layers?: LayerControl;
+}) {
   const forest = createMemo(() => sheetForest(props.state().tiles));
   const [folded, setFolded] = createSignal(new Set<string>());
   const toggle = (id: string) =>
@@ -93,6 +156,9 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
             </button>
           </Show>
         </div>
+        <Show when={t.id === "board" && props.layers && props.state().activeId === "board" && (props.state().boardLayers ?? []).length > 0}>
+          <BoardLayers state={props.state} layers={props.layers!} depth={p.depth} />
+        </Show>
         <Show when={parent && !folded().has(t.id)}>
           <ul class="sheet-tiles">
             <For each={p.node.children}>{(c) => <Tile node={c} depth={p.depth + 1} />}</For>
@@ -161,13 +227,13 @@ export function defectsTitle(t: SheetTile): string {
 export function sheetOverviewPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl },
+  handlers: { onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl; layers?: LayerControl },
 ): { island: SolidIsland; view: OverviewView } {
   const [state, setState] = signalView<OverviewState>({ tiles: [], activeId: "", ruleCount: 0, ranCount: 0 });
   const island = new SolidIsland(
     "sheet-overview",
     el,
-    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} onOpenBeside={handlers.onOpenBeside} board={handlers.board} />,
+    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} onOpenBeside={handlers.onOpenBeside} board={handlers.board} layers={handlers.layers} />,
     eventBus,
   );
   return { island, view: { setState } };
