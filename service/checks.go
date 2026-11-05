@@ -239,7 +239,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	}
 	g, unreadable := locateGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")
-	annotateRunSheets(resp, g, m, unreadable)
+	annotateRunSheets(resp, g, m, unreadable, runBoardIndex(ctx, LoaderOr(snap, s.loader), snap.BoardRead(), m))
 	endLocate()
 	return resp, nil
 }

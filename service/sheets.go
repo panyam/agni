@@ -6,6 +6,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/geomath"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -36,6 +37,9 @@ type LocateSource interface {
 // which is the file's default layout. So the ids join the SheetRefs GetDesign returned.
 type sheetIndex struct {
 	comps map[string][]string // ref_des -> sheet ids, in sheet order
+	// pins maps pinKey(ref, pin) to the sheets whose placement of ref draws that pin. A multi-unit
+	// part draws each unit on its own sheet, so U1's pin 5 answers U1B's sheet (agni issue 1325).
+	pins  map[string][]string
 	nets  map[string][]string // net KEY -> sheet ids, in sheet order (a spanning net lists each)
 	buses map[string][]string // bus name -> sheet ids where a KIND_BUS wire of that name is drawn (WS7-042c)
 	// wireIDs says the geometry stamps a net id on its wires. Only then does a net subject's id have
@@ -44,6 +48,9 @@ type sheetIndex struct {
 	// unreadable says the schematic failed to read, so an entity it would have drawn reads as
 	// SCHEMATIC_UNREADABLE rather than NO_GEOMETRY (agni issue 1230).
 	unreadable bool
+	// board, when set, adds the board sheet after the schematic's for a subject the board draws, so
+	// a finding badges the board and a viewer can open it (agni issue 1325, #142's WS7-034).
+	board *boardIndex
 }
 
 // undrawn returns r, unless the schematic could not be read. Then the run cannot know that a subject
@@ -78,7 +85,8 @@ func netKey(id, name string) string {
 // exports and formats without the attribute. Components and pins use the geometry alone, since
 // placements always exist.
 func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
-	ix := sheetIndex{comps: map[string][]string{}, nets: map[string][]string{}, buses: map[string][]string{}}
+	ix := sheetIndex{comps: map[string][]string{}, pins: map[string][]string{}, nets: map[string][]string{}, buses: map[string][]string{}}
+	syms := geomath.IndexSymbols(g)
 	appendOnce := func(m map[string][]string, key, sheetID string) {
 		if key == "" {
 			return
@@ -91,6 +99,14 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 	for _, sh := range g.GetSheets() {
 		for _, pl := range sh.GetPlacements() {
 			appendOnce(ix.comps, pl.GetRefDes(), sh.GetId())
+			if pl.GetRefDes() == "" || pl.GetNetAnchor() != "" {
+				continue
+			}
+			if sym := syms.SymbolFor(pl); sym != nil {
+				for _, pin := range sym.GetPins() {
+					appendOnce(ix.pins, pinKey(pl.GetRefDes(), pin.GetPortRef()), sh.GetId())
+				}
+			}
 		}
 		for _, w := range sh.GetWires() {
 			// A bus (WS7-042c) indexes under its own name-keyed map, gated on the bus kind. So a bus
@@ -129,7 +145,22 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 // subject's ref is its component's ref_des, so it locates through the placement. An unknown subject
 // gets nil, which a consumer treats the same as "no geometry".
 func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
+	got := ix.schematicSheetsFor(s)
+	if ix.board.draws(s) {
+		got = append(append([]string(nil), got...), boardSheetID)
+	}
+	return got
+}
+
+// schematicSheetsFor is sheetsFor over the schematic alone. A pin answers the sheets that draw its
+// unit, and falls back to its part's when no placed symbol names the pin, such as an unresolved one.
+func (ix sheetIndex) schematicSheetsFor(s *checkspb.Subject) []string {
 	switch s.GetKind() {
+	case check.KindPin:
+		if got, ok := ix.pins[pinKey(s.GetRef(), s.GetPin())]; ok {
+			return got
+		}
+		return ix.comps[s.GetRef()]
 	case check.KindNet:
 		if got, ok := ix.nets[netKey(s.GetNetId(), s.GetRef())]; ok || ix.wireIDs {
 			return got
@@ -168,16 +199,18 @@ func locateReasonProto(code string) checkspb.LocateReason {
 // the pass is a no-op, and findings keep empty sheets, which the viewer handles. A net-only channel,
 // with the design set and the geometry nil, still annotates net subjects.
 func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource) {
-	annotateSheets(findings, g, m, false)
+	annotateSheets(findings, g, m, false, nil)
 }
 
-// annotateSheets is AnnotateSheets for a run that knows whether its schematic failed to read.
-func annotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource, unreadable bool) {
-	if !unreadable && g == nil && (m == nil || len(m.Nets()) == 0) {
+// annotateSheets is AnnotateSheets for a run that knows whether its schematic failed to read, and
+// that adds the board sheet from board when the run read one.
+func annotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource, unreadable bool, board *boardIndex) {
+	if !unreadable && g == nil && board == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
 	ix := indexSheets(g, m)
 	ix.unreadable = unreadable
+	ix.board = board
 	ix.annotateFindings(findings, m)
 }
 
@@ -185,15 +218,16 @@ func annotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 // verdict gets the sheets that draw its subjects, so a viewer opens one before drawing the proof. A
 // passing verdict has no finding to borrow them from, and it gets them too (agni issue 1151).
 func AnnotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource) {
-	annotateRunSheets(resp, g, m, false)
+	annotateRunSheets(resp, g, m, false, nil)
 }
 
-func annotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource, unreadable bool) {
-	if !unreadable && g == nil && (m == nil || len(m.Nets()) == 0) {
+func annotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource, unreadable bool, board *boardIndex) {
+	if !unreadable && g == nil && board == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
 	ix := indexSheets(g, m)
 	ix.unreadable = unreadable
+	ix.board = board
 	ix.annotateFindings(resp.GetFindings(), m)
 	for _, v := range resp.GetVerdicts() {
 		v.Sheets = ix.sheetsForAll(v.GetSubjects())
@@ -223,21 +257,24 @@ func (ix sheetIndex) annotateFindings(findings []*checkspb.Finding, m LocateSour
 		if len(f.Sheets) > 0 {
 			continue // drawn somewhere, so UNSPECIFIED is correct and the viewer highlights
 		}
-		// Nothing to locate, so say WHY. Some buses map to no drawn bus, such as a bus_alias, an EDIF
-		// array, or a hierarchical bus port with no wire on the shown sheet. Such a bus gets its own
-		// reason (WS7-042c). A bus is never in the netlist, so the general classifier would call
-		// every one NOT_IN_DESIGN.
-		if f.GetSubject().GetKind() == check.KindBus {
-			f.LocateReason = checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
-			continue
-		}
-		// With no source there is nothing to ask, so the subject keeps UNSPECIFIED rather than being
-		// guessed at.
-		if m == nil {
-			continue
-		}
-		f.LocateReason = ix.undrawn(locateReasonProto(check.LocateReason(m, f.GetSubject().GetKind(), f.GetSubject().GetRef())))
+		f.LocateReason = ix.reasonFor(f.GetSubject(), m)
 	}
+}
+
+// reasonFor says why a subject that sheetsFor placed nowhere is undrawn.
+func (ix sheetIndex) reasonFor(s *checkspb.Subject, m LocateSource) checkspb.LocateReason {
+	// Some buses map to no drawn bus, such as a bus_alias, an EDIF array, or a hierarchical bus port
+	// with no wire on the shown sheet. Such a bus gets its own reason (WS7-042c). A bus is never in
+	// the netlist, so the general classifier would call every one NOT_IN_DESIGN.
+	if s.GetKind() == check.KindBus {
+		return checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
+	}
+	// With no source there is nothing to ask, so the subject keeps UNSPECIFIED rather than being
+	// guessed at.
+	if m == nil {
+		return checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+	}
+	return ix.undrawn(locateReasonProto(check.LocateReason(m, s.GetKind(), s.GetRef())))
 }
 
 // AnnotateTraceSheets fills a trace's per-net and per-endpoint sheet ids, the same way

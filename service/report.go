@@ -66,7 +66,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	}
 	rep := CheckReportProto(u.String(), findings, rules)
 	g, unreadable := locateGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
-	annotateReport(rep, g, m, unreadable)
+	annotateReport(rep, g, m, unreadable, runBoardIndex(ctx, LoaderOr(snap, s.loader), snap.BoardRead(), m))
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
 }
 
@@ -77,15 +77,15 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 // copies of the walk. With both g and d nil it is a no-op and findings keep empty sheets, as with
 // AnnotateSheets. A net-only channel (design set, geometry nil) still annotates net subjects.
 func AnnotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource) {
-	annotateReport(rep, g, m, false)
+	annotateReport(rep, g, m, false, nil)
 }
 
-func annotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource, unreadable bool) {
+func annotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource, unreadable bool, board *boardIndex) {
 	var all []*checkspb.Finding
 	for _, sec := range rep.GetSections() {
 		for _, rg := range sec.GetRules() {
 			all = append(all, rg.GetFindings()...)
 		}
 	}
-	annotateSheets(all, g, m, unreadable)
+	annotateSheets(all, g, m, unreadable, board)
 }
