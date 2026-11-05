@@ -75,13 +75,3 @@ func TestABlockCutShortIsAnError(t *testing.T) {
 		t.Errorf("unknown tag: err %v", err)
 	}
 }
-
-func TestCopperNamesFollowTheContract(t *testing.T) {
-	got := []string{copperName(0, 4), copperName(1, 4), copperName(2, 4), copperName(3, 4), copperName(0, 1)}
-	want := []string{"F.Cu", "In1.Cu", "In2.Cu", "B.Cu", "F.Cu"}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("copperName %d: %q, want %q", i, got[i], want[i])
-		}
-	}
-}

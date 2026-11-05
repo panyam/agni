@@ -2,6 +2,7 @@ package altium
 
 import (
 	"fmt"
+	"github.com/panyam/agni/internal/latin1"
 	"strconv"
 	"strings"
 )
@@ -206,7 +207,7 @@ func (p *pcb) readPads(read reader) error {
 	for _, r := range recs {
 		var name string
 		if s := r.subs[0]; len(s) > 0 && int(s[0]) <= len(s)-1 {
-			name = strings.TrimSpace(latin1(s[1 : 1+int(s[0])]))
+			name = strings.TrimSpace(latin1.Decode(s[1 : 1+int(s[0])]))
 		}
 		g := field(r.subs[4])
 		pd := pad{
@@ -326,7 +327,7 @@ func (p *pcb) readTexts(read reader) error {
 		if s, ok := ws[g.u32(115)]; ok && len(g) >= 119 {
 			t.s = s
 		} else if s := r.subs[1]; len(s) > 0 && int(s[0]) <= len(s)-1 {
-			t.s = latin1(s[1 : 1+int(s[0])])
+			t.s = latin1.Decode(s[1 : 1+int(s[0])])
 		}
 		t.s = strings.ReplaceAll(t.s, "\r\n", "\n")
 		if t.comp >= 0 && t.comp < len(p.comps) {

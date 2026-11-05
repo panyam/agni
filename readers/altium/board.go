@@ -1,7 +1,8 @@
 package altium
 
 import (
-	"fmt"
+	"github.com/panyam/agni/internal/boardlayer"
+	"github.com/panyam/agni/internal/geomath"
 	"math"
 	"strconv"
 	"strings"
@@ -10,17 +11,6 @@ import (
 )
 
 func itoa(i int) string { return strconv.Itoa(i) }
-
-// copperName names copper layer i of n: the first is F.Cu, the last B.Cu, and inner ones In1.Cu on.
-func copperName(i, n int) string {
-	switch {
-	case i == 0:
-		return "F.Cu"
-	case i == n-1:
-		return "B.Cu"
-	}
-	return fmt.Sprintf("In%d.Cu", i)
-}
 
 type boardBuilder struct {
 	p      *pcb
@@ -45,7 +35,7 @@ func (p *pcb) toBoard(src string) (*geom.BoardGeometry, error) {
 		b.byName["PLANE"+itoa(i)] = 38 + i
 	}
 	for i, id := range p.stack {
-		name := copperName(i, len(p.stack))
+		name := boardlayer.CopperName(i, len(p.stack))
 		b.copper[id] = name
 		kind := "signal"
 		if id >= 39 && id <= 54 {
@@ -156,7 +146,7 @@ func (b *boardBuilder) placements() {
 		if bottom {
 			side, rot = "B.Cu", -rot
 		}
-		rot = normDeg(rot)
+		rot = geomath.NormDeg(rot)
 		cx, cy := c.p.length("X"), c.p.length("Y")
 		pl := &geom.ComponentPlacement{
 			RefDes: c.ref, At: b.pt(cx, cy), RotationDeg: rot, Layer: side, Mirror: bottom,
@@ -173,7 +163,7 @@ func (b *boardBuilder) placements() {
 			gp := &geom.Pad{
 				Number:      pd.name,
 				At:          &geom.Point{X: int64(math.Round(dx*co - dy*s)), Y: int64(math.Round(dx*s + dy*co))},
-				RotationDeg: normDeg(angle),
+				RotationDeg: geomath.NormDeg(angle),
 				Size:        &geom.Point{X: nm(pd.w), Y: nm(pd.h)},
 				Shape:       padShape(pd),
 				Drill:       nm(pd.hole),
@@ -346,7 +336,7 @@ func (b *boardBuilder) art() {
 			continue
 		}
 		b.g.Texts = append(b.g.Texts, &geom.BoardText{
-			Text: t.s, At: b.pt(t.x, t.y), RotationDeg: normDeg(t.rot), Height: nm(t.height),
+			Text: t.s, At: b.pt(t.x, t.y), RotationDeg: geomath.NormDeg(t.rot), Height: nm(t.height),
 			Layer: layer, Mirror: t.mirror, RefDes: ref(t.comp), Kind: kind,
 		})
 	}
@@ -366,13 +356,4 @@ func (b *boardBuilder) hidden(t text) bool {
 		return strings.EqualFold(c["COMMENTON"], "FALSE")
 	}
 	return false
-}
-
-// normDeg folds an angle into [0, 360).
-func normDeg(d float64) float64 {
-	d = math.Mod(d, 360)
-	if d < 0 {
-		d += 360
-	}
-	return d
 }

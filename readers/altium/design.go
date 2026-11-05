@@ -1,6 +1,7 @@
 package altium
 
 import (
+	"github.com/panyam/agni/internal/boardlayer"
 	"path"
 	"strings"
 
@@ -123,7 +124,7 @@ func (p *pcb) toDesign(src string) *ir.Design {
 		if id >= 39 && id <= 54 {
 			fn = ir.LayerFunction_LAYER_FUNCTION_PLANE
 		}
-		layer := &ir.Layer{Name: copperName(i, len(p.stack)), Index: int32(i), Function: fn, Attributes: map[string]string{}, Prov: prov()} // #nosec G115 -- at most 82 layer ids
+		layer := &ir.Layer{Name: boardlayer.CopperName(i, len(p.stack)), Index: int32(i), Function: fn, Attributes: map[string]string{}, Prov: prov()} // #nosec G115 -- at most 82 layer ids
 		putAttr(layer.Attributes, "altium_layer", p.board.layerName(id))
 		d.Layers = append(d.Layers, layer)
 	}

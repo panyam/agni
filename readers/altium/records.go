@@ -3,6 +3,7 @@ package altium
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/panyam/agni/internal/latin1"
 	"math"
 	"strconv"
 	"strings"
@@ -39,7 +40,7 @@ func parseProps(b []byte) ([]props, error) {
 
 func propsOf(b []byte) props {
 	p := props{}
-	for _, tok := range strings.Split(strings.TrimRight(latin1(b), "\x00"), "|") {
+	for _, tok := range strings.Split(strings.TrimRight(latin1.Decode(b), "\x00"), "|") {
 		k, v, ok := strings.Cut(tok, "=")
 		if !ok {
 			continue
@@ -170,12 +171,4 @@ func parseWideStrings(b []byte) (map[uint32]string, error) {
 		off += n
 	}
 	return out, nil
-}
-
-func latin1(b []byte) string {
-	r := make([]rune, len(b))
-	for i, c := range b {
-		r[i] = rune(c)
-	}
-	return string(r)
 }

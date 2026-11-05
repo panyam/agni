@@ -30,6 +30,10 @@ var allowedDuplicateBodies = map[string]string{
 		"sort-a-map's-keys idiom; two copies cannot disagree about anything",
 	"core/check/naming/naming.go:Load + internal/expect/expect.go:Load": "read a file and hand the " +
 		"bytes to this package's own Parse; the shared shape is the idiom, and each parses a different type",
+	"readers/allegro/allegro.go:Read + readers/altium/altium.go:Read": "a reader's entry point: load " +
+		"this package's own file format, then build the design from it; each loads a different format",
+	"readers/allegro/allegro.go:ReadBoardGeometry + readers/altium/altium.go:ReadBoardGeometry": "a " +
+		"reader's entry point: load this package's own file format, then build the board from it",
 }
 
 const minDuplicateLines = 6

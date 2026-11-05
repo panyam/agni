@@ -118,3 +118,12 @@ func ComposePlacement(at *geom.Point, rotationDeg float64, mirror bool, offset *
 	}
 	return &geom.Point{X: at.X + int64(rx), Y: at.Y + int64(ry)}
 }
+
+// NormDeg folds an angle in degrees into [0, 360).
+func NormDeg(d float64) float64 {
+	d = math.Mod(d, 360)
+	if d < 0 {
+		d += 360
+	}
+	return d
+}
