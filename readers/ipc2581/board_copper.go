@@ -35,6 +35,10 @@ type cPadEl struct {
 	Location ptEl      `xml:"Location"`
 	PrimRef  primRefEl `xml:"StandardPrimitiveRef"`
 	UserRef  primRefEl `xml:"UserPrimitiveRef"`
+	// Padstack names the padstack the land belongs to, and PinRef the component pin, which a via's
+	// land lacks (agni 1356).
+	Padstack string   `xml:"padstackDefRef,attr"`
+	PinRef   pinRefEl `xml:"PinRef"`
 }
 
 // primID returns the pad's primitive id. It prefers a standard-dictionary reference and falls
@@ -123,7 +127,7 @@ func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 // copperNets groups routed copper by net into NetCopper, with each track step a TrackSegment (an
 // arc step keeps its curve) and vias from drilled holes. Sorted by net name for
 // deterministic output, mirroring the KiCad producer.
-func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) []*geom.NetCopper {
+func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape, stacks *padstackIndex) []*geom.NetCopper {
 	widths := f.lineWidths(nmPerUnit)
 	padSize := f.copperPadIndex(nmPerUnit, prims) // (net,x,y) -> annular pad radius source
 	spans := f.layerSpans()                       // drill-layer name -> (from,to) copper layers
@@ -159,7 +163,7 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) 
 				if size == 0 {
 					size = drill // no co-located pad: annular reads as zero ring, still a placed via
 				}
-				via := &geom.Via{At: at, Size: size, Drill: drill}
+				via := &geom.Via{At: at, Size: size, Drill: drill, Padstack: stacks.via[padKey(s.Net, at)]}
 				if sp, ok := spans[lf.LayerRef]; ok {
 					via.LayerFrom, via.LayerTo = normalizeSide(sp[0]), normalizeSide(sp[1])
 				}
@@ -364,4 +368,69 @@ func attr(e xml.StartElement, name string) string {
 
 func attrF(e xml.StartElement, name string) float64 {
 	return parseFloat(attr(e, name))
+}
+
+// padstackIndex is the board's padstacks rebuilt from its per-layer lands, and which entry each pin
+// and via uses (agni 1356). IPC-2581 can define a padstack in a PadStackDef, but Allegro's export
+// names one on each land and defines none. So each copper layer's lands are gathered by the
+// padstack they name. A bottom part's lands go into an entry of their own, since its padstack is
+// turned over.
+type padstackIndex struct {
+	entries []*geom.Padstack
+	pin     map[[2]string]string // (ref-des, pin) -> entry id
+	via     map[string]string    // padKey(net, at) -> entry id
+}
+
+func (f *ipcGeomFile) padstacks(nmPerUnit float64, prims map[string]primShape) *padstackIndex {
+	ix := &padstackIndex{pin: map[[2]string]string{}, via: map[string]string{}}
+	bottom := map[string]bool{}
+	for _, c := range f.Comps {
+		bottom[c.RefDes] = normalizeSide(c.LayerRef) == "B.Cu"
+	}
+	copper := f.copperLayers()
+	lands := map[string]map[string]*geom.PadShape{} // entry id -> layer -> land
+	byID := map[string]*geom.Padstack{}
+	for _, lf := range f.Features {
+		if !copper[lf.LayerRef] {
+			continue
+		}
+		layer := normalizeSide(lf.LayerRef)
+		for _, s := range lf.Sets {
+			for _, pads := range [][]cPadEl{s.Pads, s.FeatPads} {
+				for _, pd := range pads {
+					if pd.Padstack == "" {
+						continue
+					}
+					id := pd.Padstack
+					if bottom[pd.PinRef.ComponentRef] {
+						id += "@bottom"
+					}
+					if pd.PinRef.ComponentRef != "" {
+						ix.pin[[2]string{pd.PinRef.ComponentRef, pd.PinRef.Pin}] = id
+					} else {
+						ix.via[padKey(s.Net, ptNm(pd.Location, nmPerUnit))] = id
+					}
+					if byID[id] == nil {
+						byID[id] = &geom.Padstack{Id: id, Name: pd.Padstack}
+						lands[id] = map[string]*geom.PadShape{}
+						ix.entries = append(ix.entries, byID[id])
+					}
+					p, ok := prims[pd.primID()]
+					if _, have := lands[id][layer]; ok && !have {
+						lands[id][layer] = &geom.PadShape{Shape: p.shape, Size: &geom.Point{X: p.sizeX, Y: p.sizeY}}
+					}
+				}
+			}
+		}
+	}
+	// Each entry lists its layers in the stackup's order.
+	for _, ps := range ix.entries {
+		for _, l := range f.Layers {
+			if land, ok := lands[ps.Id][normalizeSide(l.Name)]; ok {
+				ps.Layers = append(ps.Layers, &geom.PadstackLayer{Layer: normalizeSide(l.Name), Pad: land})
+			}
+		}
+	}
+	sort.Slice(ix.entries, func(i, j int) bool { return ix.entries[i].Id < ix.entries[j].Id })
+	return ix
 }

@@ -23,6 +23,9 @@ import (
 //   - Routed copper, as lines and arcs, grouped by the net eda/data assigns each feature. An arc
 //     keeps its curve as a mid point (agni 1358); a full circle becomes two half arcs.
 //   - Vias, each a drill hit and its copper lands.
+//   - Each pin's and via's lands on every copper layer, as padstacks (agni 1356). ODB++ names no
+//     padstack, so one is a set of lands, and a land the job leaves out, as Allegro leaves out a
+//     pad nothing on its layer joins, is not in it.
 //   - Copper surfaces on a net, as zones. Each island keeps its outline and drops its holes.
 //   - Silkscreen and fabrication lines and text.
 //
@@ -59,6 +62,9 @@ type boardBuilder struct {
 	pads     map[string]map[[2]int64]int // copper pads by layer and micron position, built by padAt
 	users    map[string]symbolShape
 	g        *geom.BoardGeometry
+	// stackIDs holds each padstack entry's id by its lands, so pins and vias with the same lands
+	// share one entry (agni 1356).
+	stackIDs map[string]string
 }
 
 func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
@@ -68,6 +74,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 		byUpper:  map[string]matrixLayer{},
 		features: map[string]*featuresFile{},
 		featNet:  map[string]map[int]netRef{},
+		stackIDs: map[string]string{},
 		g:        &geom.BoardGeometry{DesignRef: p.jobName(src), UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}},
 	}
 	for _, l := range p.matrix.layers {
@@ -305,10 +312,12 @@ func (b *boardBuilder) placements() error {
 			for ti, t := range c.pins {
 				pad := &geom.Pad{Number: t.name, At: localOffset(c.at, t.at, rot, c.back), Net: b.p.eda.netName(t.net)}
 				through := pkg != nil && t.num >= 0 && t.num < len(pkg.pins) && pkg.pins[t.num].typ == "T"
-				others, err := b.padShape(pad, pads[letter][[2]int{ci, ti}], sideLayer, t.at, &through)
+				lands := map[string]*geom.PadShape{}
+				others, err := b.padShape(pad, pads[letter][[2]int{ci, ti}], sideLayer, t.at, &through, lands)
 				if err != nil {
 					return err
 				}
+				pad.Padstack = b.stackEntry(lands)
 				switch {
 				case through:
 					pad.Layers = []string{"*.Cu"}
@@ -333,7 +342,7 @@ func (b *boardBuilder) placements() error {
 // package said. eda/data may not tie a drill hit to the pin, as for a non-plated hole on a drill
 // layer of its own. For a through-hole or copperless pad, padShape then finds the hit by the pin's
 // position.
-func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at pt, through *bool) (others []string, err error) {
+func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at pt, through *bool, lands map[string]*geom.PadShape) (others []string, err error) {
 	var best, surface *feature
 	var bestFF *featuresFile
 	for _, f := range fids {
@@ -361,6 +370,7 @@ func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at 
 			if best == nil || b.names[upper] == sideLayer {
 				best, bestFF = feat, ff
 			}
+			b.addLand(lands, b.names[upper], b.symbol(ff, feat.sym))
 		case ml.isCopper() && feat.kind == featSurface:
 			if surface == nil || b.names[upper] == sideLayer {
 				surface = feat
@@ -654,6 +664,7 @@ func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 			}
 			v := &geom.Via{}
 			have := false
+			lands := map[string]*geom.PadShape{}
 			for _, f := range s.fids {
 				upper := b.edaLayer(f.layer)
 				ml, ok := b.byUpper[upper]
@@ -682,6 +693,7 @@ func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 					if v.At == nil {
 						v.At = gp(feat.a)
 					}
+					b.addLand(lands, b.names[upper], b.symbol(ff, feat.sym))
 					if w > v.Size {
 						v.Size = w
 					}
@@ -693,6 +705,7 @@ func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 			if v.LayerFrom == "" {
 				v.LayerFrom, v.LayerTo = "F.Cu", "B.Cu"
 			}
+			v.Padstack = b.stackEntry(lands)
 			nc := get(name)
 			nc.Vias = append(nc.Vias, v)
 		}
@@ -911,4 +924,40 @@ func closedPolyline(pts []pt) *geom.Polyline {
 		pl.Points = append(pl.Points, gp(pts[0]))
 	}
 	return pl
+}
+
+// addLand records a pin's or via's land on one copper layer. The first land on a layer stands.
+func (b *boardBuilder) addLand(lands map[string]*geom.PadShape, layer string, s symbolShape) {
+	if lands == nil || layer == "" || lands[layer] != nil || s.shape == "" {
+		return
+	}
+	lands[layer] = &geom.PadShape{Shape: s.shape, Size: &geom.Point{X: s.w, Y: s.h}}
+}
+
+// stackEntry finds or writes the padstack entry for a pin's or via's lands, and returns its id
+// (agni 1356). ODB++ has no padstacks, only each layer's features, so an entry is a set of lands,
+// numbered in the order the job first uses it, and it carries no name. The lands are already on
+// the layers the part sits on, so a bottom part's set is an entry of its own.
+func (b *boardBuilder) stackEntry(lands map[string]*geom.PadShape) string {
+	if len(lands) == 0 {
+		return ""
+	}
+	var layers []*geom.PadstackLayer
+	var sig strings.Builder
+	for _, l := range b.g.Layers {
+		if land := lands[l.Name]; land != nil && l.Kind == "signal" {
+			layers = append(layers, &geom.PadstackLayer{Layer: l.Name, Pad: land})
+			fmt.Fprintf(&sig, "%s %s %d %d;", l.Name, land.Shape, land.Size.X, land.Size.Y)
+		}
+	}
+	if len(layers) == 0 {
+		return ""
+	}
+	if id, ok := b.stackIDs[sig.String()]; ok {
+		return id
+	}
+	id := fmt.Sprintf("padstack-%d", len(b.stackIDs)+1)
+	b.stackIDs[sig.String()] = id
+	b.g.Padstacks = append(b.g.Padstacks, &geom.Padstack{Id: id, Layers: layers})
+	return id
 }

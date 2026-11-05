@@ -32,6 +32,8 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	fr := frameBoard(b)
 	tx, ty, scale := fr.tx, fr.ty, fr.scale
 	pk := boardPickKeys{on: style.PickTargets}
+	stacks := padstacksOf(b)
+	planes := planesOf(b)
 
 	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
 	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
@@ -88,11 +90,29 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 				c.GroupEnd()
 			}
 		}
-		// Pads that live only on this layer (SMD); through-hole pads draw once, below.
+		// Pads that live only on this layer (SMD); through-hole pads draw once, below. A pad or via
+		// with a padstack draws its land on each layer instead, and its antipad where the layer is
+		// a plane it does not join (agni 1356).
 		for _, pl := range b.GetPlacements() {
 			for _, pad := range pl.GetPads() {
+				if st := stacks.of(pad.GetPadstack()); st != nil {
+					if l := st.on(ly); l != nil {
+						drawStackLayer(c, pl, pad, l, fr, color, planes.cuts(ly, pad.GetNet()), pk.pad(pl, pad)...)
+					}
+					continue
+				}
 				if padSide(pad) == layerSide(ly) {
 					drawPad(c, pl, pad, fr, color, style, pk.pad(pl, pad)...)
+				}
+			}
+		}
+		for _, nc := range b.GetNets() {
+			for _, v := range nc.GetVias() {
+				if st := stacks.of(v.GetPadstack()); st != nil && v.GetAt() != nil {
+					if l := st.on(ly); l != nil {
+						at := &geom.Pad{At: v.GetAt()}
+						drawStackLayer(c, &geom.ComponentPlacement{At: &geom.Point{}}, at, l, fr, color, planes.cuts(ly, nc.GetNet()), pk.net(nc.GetNet())...)
+					}
 				}
 			}
 		}
@@ -109,6 +129,11 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			cx, cy := tx(v.GetAt().X), ty(v.GetAt().Y)
 			// The drill hole draws over the ring, so it carries the net too, or a click in it misses.
 			keys := pk.net(nc.GetNet())
+			if stacks.of(v.GetPadstack()) != nil {
+				// The lands are on their layers, so the through copper is the plated barrel alone.
+				drawBarrel(c, cx, cy, float64(v.GetDrill())*scale, style, keys...)
+				continue
+			}
 			c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetSize())*scale/2, strokePx)),
 				svg.A("fill", style.Via)}, keys...)...)
 			c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetDrill())*scale/2, strokePx/2)),
@@ -117,6 +142,13 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	}
 	for _, pl := range b.GetPlacements() {
 		for _, pad := range pl.GetPads() {
+			if stacks.of(pad.GetPadstack()) != nil {
+				if pad.GetDrill() > 0 {
+					wx, wy := padWorld(pl, pad)
+					drawBarrel(c, tx(wx), ty(wy), float64(pad.GetDrill())*scale, style, pk.pad(pl, pad)...)
+				}
+				continue
+			}
 			if padSide(pad) == "through" {
 				drawPad(c, pl, pad, fr, style.Via, style, pk.pad(pl, pad)...)
 			}
@@ -435,12 +467,23 @@ func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 // cumulative with the footprint's, so drawPad does NOT compose it with the placement again. It
 // only negates it for the Y-flip. A drilled pad gets a page-colored hole.
 func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style, keys ...svg.Attr) {
+	drawPadWith(c, pl, pad, fr, append([]svg.Attr{svg.A("fill", color)}, keys...)...)
+	if pad.GetDrill() > 0 {
+		wx, wy := padWorld(pl, pad)
+		cx, cy := fr.tx(wx), fr.ty(wy)
+		c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
+			svg.A("fill", style.Page)}, keys...)...)
+	}
+}
+
+// drawPadWith draws a pad's outline shape with the caller's paint, a fill for a land or a stroke
+// for an antipad.
+func drawPadWith(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, attrs ...svg.Attr) {
 	wx, wy := padWorld(pl, pad)
 	cx, cy := fr.tx(wx), fr.ty(wy)
 	w := math.Max(float64(pad.GetSize().GetX())*fr.scale, strokePx)
 	h := math.Max(float64(pad.GetSize().GetY())*fr.scale, strokePx)
 	rot := -pad.GetRotationDeg()
-	attrs := append([]svg.Attr{svg.A("fill", color)}, keys...)
 	if rot != 0 {
 		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, cx, cy)))
 	}
@@ -455,10 +498,6 @@ func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheet
 		c.El("rect", append([]svg.Attr{svg.F("x", cx-w/2), svg.F("y", cy-h/2), svg.F("width", w), svg.F("height", h)}, attrs...)...)
 	default: // "rect" and anything unknown
 		c.El("rect", append([]svg.Attr{svg.F("x", cx-w/2), svg.F("y", cy-h/2), svg.F("width", w), svg.F("height", h)}, attrs...)...)
-	}
-	if pad.GetDrill() > 0 {
-		c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
-			svg.A("fill", style.Page)}, keys...)...)
 	}
 }
 
@@ -532,13 +571,29 @@ func copperLayersBackToFront(b *geom.BoardGeometry) []string {
 			used[s.GetLayer()] = true
 		}
 	}
+	stacks := padstacksOf(b)
 	for _, pl := range b.GetPlacements() {
 		for _, pad := range pl.GetPads() {
+			if st := stacks.of(pad.GetPadstack()); st != nil {
+				for _, ly := range st.layers() {
+					used[ly] = true
+				}
+				continue
+			}
 			side := padSide(pad)
 			if side == "front" {
 				used["F.Cu"] = true
 			} else if side == "back" {
 				used["B.Cu"] = true
+			}
+		}
+	}
+	for _, nc := range b.GetNets() {
+		for _, v := range nc.GetVias() {
+			if st := stacks.of(v.GetPadstack()); st != nil {
+				for _, ly := range st.layers() {
+					used[ly] = true
+				}
 			}
 		}
 	}

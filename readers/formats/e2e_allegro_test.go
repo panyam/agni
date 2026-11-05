@@ -1,6 +1,7 @@
 package formats
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -201,4 +202,77 @@ func boardPoint(pl *geom.ComponentPlacement, local *geom.Point) (float64, float6
 		x = -x
 	}
 	return float64(pl.GetAt().GetX()) + x, float64(pl.GetAt().GetY()) + y
+}
+
+// TestAllegroPadstacksMatchTheExtract holds every padstack the board read to the rows Allegro's
+// extract lists for it, layer by layer: the regular pad, the thermal relief and the antipad, by
+// shape and by size (agni 1356). The extract names the copper layers by their Allegro names, in
+// stackup order, between the technical rows, so the n-th copper row is the board's n-th layer.
+func TestAllegroPadstacksMatchTheExtract(t *testing.T) {
+	_, g, x := readAllegroSample(t)
+	byID := map[string]*geom.Padstack{}
+	for _, ps := range g.GetPadstacks() {
+		byID[ps.GetId()] = ps
+	}
+	// The extract's shape words, as the reader spells them.
+	word := map[string]string{"CIRCLE": "circle", "SQUARE": "rect", "RECTANGLE": "rect", "OBLONG_X": "oval", "OBLONG_Y": "oval", "SHAPE": "custom", "OCTAGON": "octagon"}
+	sizeOK := func(got *geom.Point, w, h float64) bool {
+		return got != nil && math.Abs(float64(got.GetX())-w*25400) <= 1000 && math.Abs(float64(got.GetY())-h*25400) <= 1000
+	}
+	check := func(what string, got *geom.PadShape, want extractPadShape) string {
+		if want.shape == "" {
+			if got != nil {
+				return fmt.Sprintf("%s %s %v, the extract has none", what, got.GetShape(), got.GetSize())
+			}
+			return ""
+		}
+		if got == nil {
+			return fmt.Sprintf("%s missing, the extract has %s %gx%g", what, want.shape, want.w, want.h)
+		}
+		if got.GetShape() != word[want.shape] || !sizeOK(got.GetSize(), want.w, want.h) {
+			return fmt.Sprintf("%s %s %d×%d nm, the extract has %s %gx%g mil", what, got.GetShape(), got.GetSize().GetX(), got.GetSize().GetY(), want.shape, want.w, want.h)
+		}
+		return ""
+	}
+	layer := map[string]int{} // the copper row's position within its padstack
+	var compared, stacks int
+	seen := map[string]bool{}
+	for _, r := range x.padRows {
+		if r.layer == "internal_pad_def" || strings.HasPrefix(r.layer, "~") {
+			continue
+		}
+		i := layer[r.padstack]
+		layer[r.padstack]++
+		ps := byID[r.padstack]
+		if ps == nil {
+			continue // a padstack no pad or via on the board uses
+		}
+		if !seen[r.padstack] {
+			seen[r.padstack] = true
+			stacks++
+		}
+		if i >= len(g.GetLayers()) {
+			t.Fatalf("%s lists more copper rows than the board's %d layers", r.padstack, len(g.GetLayers()))
+		}
+		name := g.GetLayers()[i].GetName()
+		var got *geom.PadstackLayer
+		for _, l := range ps.GetLayers() {
+			if l.GetLayer() == name {
+				got = l
+			}
+		}
+		if got == nil {
+			got = &geom.PadstackLayer{}
+		}
+		for _, msg := range []string{check("pad", got.GetPad(), r.pad), check("thermal", got.GetThermal(), r.thermal), check("antipad", got.GetAntipad(), r.antipad)} {
+			if msg != "" {
+				t.Errorf("%s on %s (%s): %s", r.padstack, name, r.layer, msg)
+			}
+		}
+		compared++
+	}
+	t.Logf("compared %d copper rows of %d padstacks", compared, stacks)
+	if stacks < 50 || compared < 500 {
+		t.Fatalf("compared %d rows of %d padstacks, too few to mean anything", compared, stacks)
+	}
 }

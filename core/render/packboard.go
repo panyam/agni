@@ -44,6 +44,8 @@ const viaSegments = 16
 func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	style := resolveStyle(opts)
 	strata := planBoardStrata(b, style)
+	stacks := padstacksOf(b)
+	planes := planesOf(b)
 
 	var c primCollector
 	add := c.Add
@@ -74,6 +76,18 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			if v.GetAt() == nil {
 				continue
 			}
+			// A via with a padstack packs its land into each layer's group (agni 1356), and only its
+			// hole stays with the through copper.
+			if st := stacks.of(v.GetPadstack()); st != nil {
+				at := &geom.Pad{At: v.GetAt()}
+				for _, l := range st.ps.GetLayers() {
+					packStackLayer(add, strata.copperGroup(l.GetLayer()), v.GetAt().X, v.GetAt().Y, at, l, planes.cuts(l.GetLayer(), nc.GetNet()), "", nc.GetNet(), "")
+				}
+				if v.GetDrill() > 0 {
+					add(primTriangles, groupBoardHole, "", "", "", diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetDrill())/2))
+				}
+				continue
+			}
 			add(primTriangles, groupBoardThrough, "", nc.GetNet(), "",
 				diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetSize())/2))
 			if v.GetDrill() > 0 {
@@ -85,6 +99,15 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	for _, pl := range b.GetPlacements() {
 		for _, pad := range pl.GetPads() {
 			wx, wy := padWorld(pl, pad)
+			if st := stacks.of(pad.GetPadstack()); st != nil {
+				for _, l := range st.ps.GetLayers() {
+					packStackLayer(add, strata.copperGroup(l.GetLayer()), wx, wy, pad, l, planes.cuts(l.GetLayer(), pad.GetNet()), pl.GetRefDes(), pad.GetNet(), pad.GetNumber())
+				}
+				if pad.GetDrill() > 0 {
+					add(primTriangles, groupBoardHole, "", "", "", diskPts(wx, wy, float64(pad.GetDrill())/2))
+				}
+				continue
+			}
 			group := groupBoardThrough
 			switch padSide(pad) {
 			case "front":
@@ -169,6 +192,42 @@ func boardGroupColors(style Style) []string {
 	colors[groupBoardSilk] = style.Silk
 	colors[groupBoardFab] = style.Fab
 	return colors
+}
+
+// packStackLayer packs a padstack's land on one layer as filled triangles, keyed as the pad or via
+// is, and its antipad as an unkeyed outline where cut says the layer clears around it.
+func packStackLayer(add func(kind, group uint8, ref, net, pin string, pts [][2]int64), group uint8, wx, wy int64, pad *geom.Pad, l *geom.PadstackLayer, cut bool, ref, net, pin string) {
+	if a := l.GetAntipad(); cut && a != nil {
+		ring := &geom.Pad{RotationDeg: pad.GetRotationDeg(), Shape: a.GetShape(), Size: a.GetSize()}
+		add(primLineLoop, group, "", "", "", outlinePts(wx, wy, ring))
+	}
+	if p := l.GetPad(); p != nil {
+		land := &geom.Pad{RotationDeg: pad.GetRotationDeg(), Shape: p.GetShape(), Size: p.GetSize()}
+		if p.GetShape() == "circle" {
+			add(primTriangles, group, ref, net, pin, diskPts(wx, wy, float64(p.GetSize().GetX())/2))
+		} else {
+			add(primTriangles, group, ref, net, pin, padQuadPts(wx, wy, land))
+		}
+	}
+}
+
+// outlinePts is a pad shape's outline as a closed loop, a circle for a circle and the rotated
+// rectangle of its extent otherwise.
+func outlinePts(cx, cy int64, pad *geom.Pad) [][2]int64 {
+	if pad.GetShape() == "circle" {
+		r := float64(pad.GetSize().GetX()) / 2
+		pts := make([][2]int64, 0, viaSegments)
+		for i := 0; i < viaSegments; i++ {
+			a := 2 * math.Pi * float64(i) / viaSegments
+			pts = append(pts, [2]int64{cx + int64(r*math.Cos(a)), cy + int64(r*math.Sin(a))})
+		}
+		return pts
+	}
+	q := padQuadPts(cx, cy, pad)
+	if len(q) < 6 {
+		return nil
+	}
+	return [][2]int64{q[0], q[1], q[2], q[4]}
 }
 
 // quadPts returns a track segment as a filled quad (two triangles) at true width, floored to

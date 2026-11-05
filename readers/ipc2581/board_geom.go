@@ -21,10 +21,11 @@ import (
 // stackup table, and component placements with their pads. Pads resolve through the padstack
 // def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
 // through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular, and each records its
-// layer span. It emits silkscreen/fab body graphics, composing a package's
+// layer span. Each pin's and via's lands on every copper layer are gathered into padstacks by the
+// padstack each land names (agni 1356). It emits silkscreen/fab body graphics, composing a package's
 // Marking/Outline/AssemblyDrawing per placement. It emits copper plane/pour fills as zones with
-// their authored outline (WS1-031). Non-via copper lands are NOT emitted yet, and fill cutouts
-// drop per the C6 zone bound. Emitted coordinates are integer nanometers (unit_nm=1), matching
+// their authored outline (WS1-031). A PadStackDef is not read, since the export that names padstacks
+// on its lands defines none. Fill cutouts, which hold the antipads, drop per the C6 zone bound. Emitted coordinates are integer nanometers (unit_nm=1), matching
 // the KiCad producer so downstream consumers see one frame.
 //
 // IPC-2581 is Y-up like the geom contract, so coordinates map directly with no Y negation.
@@ -213,8 +214,10 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 
 	prims := f.primitives(nmPerUnit)
 	pkgPins := f.packagePins()
-	g.Placements = append(g.Placements, f.placements(src, nmPerUnit, prims, pkgPins)...)
-	g.Nets = f.copperNets(nmPerUnit, prims)
+	stacks := f.padstacks(nmPerUnit, prims)
+	g.Placements = append(g.Placements, f.placements(src, nmPerUnit, prims, pkgPins, stacks)...)
+	g.Nets = f.copperNets(nmPerUnit, prims, stacks)
+	g.Padstacks = stacks.entries
 	g.Graphics = f.graphics(nmPerUnit)
 	g.Zones = f.zones(nmPerUnit)
 	return g
@@ -343,7 +346,7 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 // package's pin list and the primitive dictionary into a flattened Pad. That collapses the
 // def/instance split into the contract's inline pad form. Sorted by ref_des for deterministic
 // output.
-func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl) []*geom.ComponentPlacement {
+func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl, stacks *padstackIndex) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
 	for _, c := range f.Comps {
 		if skipRefDes(c.RefDes) {
@@ -369,6 +372,8 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 				Size:   &geom.Point{X: p.sizeX, Y: p.sizeY},
 				Shape:  p.shape,
 				Layers: []string{side},
+				// The padstack the pin's lands name, when the file names one (agni 1356).
+				Padstack: stacks.pin[[2]string{c.RefDes, pin.Number}],
 			})
 		}
 		out = append(out, pl)

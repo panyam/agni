@@ -8,7 +8,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class BoardGeometry(_message.Message):
-    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "prov")
+    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "padstacks", "prov")
     DESIGN_REF_FIELD_NUMBER: _ClassVar[int]
     UNIT_NM_FIELD_NUMBER: _ClassVar[int]
     LAYERS_FIELD_NUMBER: _ClassVar[int]
@@ -18,6 +18,7 @@ class BoardGeometry(_message.Message):
     ZONES_FIELD_NUMBER: _ClassVar[int]
     TEXTS_FIELD_NUMBER: _ClassVar[int]
     GRAPHICS_FIELD_NUMBER: _ClassVar[int]
+    PADSTACKS_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     design_ref: str
     unit_nm: int
@@ -28,8 +29,9 @@ class BoardGeometry(_message.Message):
     zones: _containers.RepeatedCompositeFieldContainer[Zone]
     texts: _containers.RepeatedCompositeFieldContainer[BoardText]
     graphics: _containers.RepeatedCompositeFieldContainer[BoardGraphic]
+    padstacks: _containers.RepeatedCompositeFieldContainer[Padstack]
     prov: _geom_pb2.Provenance
-    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class BoardText(_message.Message):
     __slots__ = ("text", "at", "rotation_deg", "height", "layer", "mirror", "justify", "ref_des", "kind")
@@ -100,7 +102,7 @@ class ComponentPlacement(_message.Message):
     def __init__(self, ref_des: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., layer: _Optional[str] = ..., pads: _Optional[_Iterable[_Union[Pad, _Mapping]]] = ..., mirror: _Optional[bool] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class Pad(_message.Message):
-    __slots__ = ("number", "at", "rotation_deg", "size", "shape", "layers", "drill", "net")
+    __slots__ = ("number", "at", "rotation_deg", "size", "shape", "layers", "drill", "net", "padstack")
     NUMBER_FIELD_NUMBER: _ClassVar[int]
     AT_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
@@ -109,6 +111,7 @@ class Pad(_message.Message):
     LAYERS_FIELD_NUMBER: _ClassVar[int]
     DRILL_FIELD_NUMBER: _ClassVar[int]
     NET_FIELD_NUMBER: _ClassVar[int]
+    PADSTACK_FIELD_NUMBER: _ClassVar[int]
     number: str
     at: _geom_pb2.Point
     rotation_deg: float
@@ -117,7 +120,38 @@ class Pad(_message.Message):
     layers: _containers.RepeatedScalarFieldContainer[str]
     drill: int
     net: str
-    def __init__(self, number: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., shape: _Optional[str] = ..., layers: _Optional[_Iterable[str]] = ..., drill: _Optional[int] = ..., net: _Optional[str] = ...) -> None: ...
+    padstack: str
+    def __init__(self, number: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., shape: _Optional[str] = ..., layers: _Optional[_Iterable[str]] = ..., drill: _Optional[int] = ..., net: _Optional[str] = ..., padstack: _Optional[str] = ...) -> None: ...
+
+class Padstack(_message.Message):
+    __slots__ = ("id", "name", "layers")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    LAYERS_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    layers: _containers.RepeatedCompositeFieldContainer[PadstackLayer]
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., layers: _Optional[_Iterable[_Union[PadstackLayer, _Mapping]]] = ...) -> None: ...
+
+class PadstackLayer(_message.Message):
+    __slots__ = ("layer", "pad", "thermal", "antipad")
+    LAYER_FIELD_NUMBER: _ClassVar[int]
+    PAD_FIELD_NUMBER: _ClassVar[int]
+    THERMAL_FIELD_NUMBER: _ClassVar[int]
+    ANTIPAD_FIELD_NUMBER: _ClassVar[int]
+    layer: str
+    pad: PadShape
+    thermal: PadShape
+    antipad: PadShape
+    def __init__(self, layer: _Optional[str] = ..., pad: _Optional[_Union[PadShape, _Mapping]] = ..., thermal: _Optional[_Union[PadShape, _Mapping]] = ..., antipad: _Optional[_Union[PadShape, _Mapping]] = ...) -> None: ...
+
+class PadShape(_message.Message):
+    __slots__ = ("shape", "size")
+    SHAPE_FIELD_NUMBER: _ClassVar[int]
+    SIZE_FIELD_NUMBER: _ClassVar[int]
+    shape: str
+    size: _geom_pb2.Point
+    def __init__(self, shape: _Optional[str] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ...) -> None: ...
 
 class NetCopper(_message.Message):
     __slots__ = ("net", "segments", "vias")
@@ -144,18 +178,20 @@ class TrackSegment(_message.Message):
     def __init__(self, a: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., b: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., width: _Optional[int] = ..., layer: _Optional[str] = ..., mid: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ...) -> None: ...
 
 class Via(_message.Message):
-    __slots__ = ("at", "size", "drill", "layer_from", "layer_to")
+    __slots__ = ("at", "size", "drill", "layer_from", "layer_to", "padstack")
     AT_FIELD_NUMBER: _ClassVar[int]
     SIZE_FIELD_NUMBER: _ClassVar[int]
     DRILL_FIELD_NUMBER: _ClassVar[int]
     LAYER_FROM_FIELD_NUMBER: _ClassVar[int]
     LAYER_TO_FIELD_NUMBER: _ClassVar[int]
+    PADSTACK_FIELD_NUMBER: _ClassVar[int]
     at: _geom_pb2.Point
     size: int
     drill: int
     layer_from: str
     layer_to: str
-    def __init__(self, at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., size: _Optional[int] = ..., drill: _Optional[int] = ..., layer_from: _Optional[str] = ..., layer_to: _Optional[str] = ...) -> None: ...
+    padstack: str
+    def __init__(self, at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., size: _Optional[int] = ..., drill: _Optional[int] = ..., layer_from: _Optional[str] = ..., layer_to: _Optional[str] = ..., padstack: _Optional[str] = ...) -> None: ...
 
 class Zone(_message.Message):
     __slots__ = ("net", "layer", "outline")
