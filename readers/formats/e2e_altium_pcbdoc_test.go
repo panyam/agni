@@ -231,10 +231,8 @@ func compareAltiumBoards(t *testing.T, pg, og *geom.BoardGeometry) {
 		}
 		viasMatched++
 	}
-	// agni's ODB++ reader builds vias from eda/data's VIA subnets, and Altium's export lists no via on
-	// no net there although it drills the hole. So an unnetted .PcbDoc via may have no partner.
 	for i, p := range pv {
-		if !used[i] && p.net != "" {
+		if !used[i] {
 			t.Errorf("via at (%d, %d) nm on %q is in the .PcbDoc and not in the export", p.x, p.y, p.net)
 		}
 	}

@@ -358,3 +358,19 @@ func TestFindRootPrefersTheShallowestJob(t *testing.T) {
 		t.Errorf("FindRoot = %q, %v, want outer", root, err)
 	}
 }
+
+// A drill hit's .drill attribute says plated, non-plated or via. A via-marked hit is read as a via
+// even when no eda/data subnet claims it, which is how Altium exports a via on no net.
+func TestADrillHitMarkedViaIsKnown(t *testing.T) {
+	ff, err := parseFeatures([]byte("UNITS=INCH\n$0 r10\n@0 .geometry\n@1 .drill\n&0 VIA\n#\nP 1 1 0 P 0 0 ;0=0,1=2\nP 2 2 0 P 0 0 ;1=0\nP 3 3 0 P 0 0\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ff.features) != 3 {
+		t.Fatalf("read %d features, want 3", len(ff.features))
+	}
+	got := []bool{ff.features[0].via, ff.features[1].via, ff.features[2].via}
+	if !got[0] || got[1] || got[2] {
+		t.Errorf("via flags %v, want only the first hit (.drill=2) marked", got)
+	}
+}

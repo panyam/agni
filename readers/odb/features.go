@@ -3,6 +3,7 @@ package odb
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -35,6 +36,7 @@ type feature struct {
 	text     string
 	textH    int64       // a text record's glyph height
 	islands  [][]contour // a surface's islands, each its outline then its holes
+	via      bool        // a drill hit whose .drill attribute says via
 }
 
 // contour is one closed path of a surface, its arcs already flattened.
@@ -55,6 +57,7 @@ type symbolRef struct {
 type featuresFile struct {
 	symbols  []symbolRef
 	features []feature
+	drillTag int // the index the @ table gives the .drill attribute, or -1
 }
 
 // arcSegments is how many straight pieces an arc becomes. The geom contract has no arc primitive for
@@ -65,12 +68,12 @@ const arcSegments = 16
 // takes its index. So the ids eda/data uses still point at the right feature.
 func parseFeatures(b []byte) (*featuresFile, error) {
 	u := unitsOf(b)
-	ff := &featuresFile{}
+	ff := &featuresFile{drillTag: -1}
 	var surf *feature
 	var cont *contour
 	var lastPt pt
 	err := lines(b, func(n int, line string) error {
-		w, _ := fields(line)
+		w, attrs := fields(line)
 		if len(w) == 0 {
 			return nil
 		}
@@ -143,7 +146,16 @@ func parseFeatures(b []byte) (*featuresFile, error) {
 				ff.symbols = append(ff.symbols, symbolRef{name: w[1], nm: su})
 			}
 			return nil
-		case strings.HasPrefix(head, "@"), strings.HasPrefix(head, "&"), strings.Contains(head, "="):
+		case strings.HasPrefix(head, "@"):
+			// "@<n> <name>" numbers a feature attribute. The drill layer's .drill says whether a hit
+			// is plated, non-plated or a via.
+			if len(w) >= 2 && w[1] == ".drill" {
+				if i, err := strconv.Atoi(head[1:]); err == nil {
+					ff.drillTag = i
+				}
+			}
+			return nil
+		case strings.HasPrefix(head, "&"), strings.Contains(head, "="):
 			return nil
 		case head == "F", head == "U":
 			return nil
@@ -156,6 +168,7 @@ func parseFeatures(b []byte) (*featuresFile, error) {
 			surf = &f
 			return nil
 		}
+		f.via = ff.drillTag >= 0 && attrValue(attrs, ff.drillTag) == "2"
 		ff.features = append(ff.features, f)
 		return nil
 	})
@@ -166,6 +179,18 @@ func parseFeatures(b []byte) (*featuresFile, error) {
 		return nil, fmt.Errorf("odb: features: a surface never ends (no SE)")
 	}
 	return ff, nil
+}
+
+// attrValue is the value a feature's attribute list ("0=1,1=2") gives attribute n, or "". An option
+// attribute's value is the index of its option, and .drill's options are plated, non_plated, via.
+func attrValue(attrs string, n int) string {
+	want := strconv.Itoa(n)
+	for _, kv := range strings.Split(attrs, ",") {
+		if k, v, ok := strings.Cut(strings.TrimSpace(kv), "="); ok && k == want {
+			return v
+		}
+	}
+	return ""
 }
 
 // parseFeature reads one L, P, A, T, B or S record.
