@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/num"
+	"path"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -187,6 +189,31 @@ func availableLayouts(path string) []string {
 	return out
 }
 
+// drawingNote says why a file's sheets are a computed layout and which file would draw them, or ""
+// when the file carries its own drawing. The viewer hides its layout picker, so this sentence is how
+// a reader learns that the sheet is agni's layout rather than the designer's.
+func drawingNote(file string) string {
+	if formats.HasFaithful(file) {
+		return ""
+	}
+	name := path.Base(file)
+	if by := formats.DrawnByExts(file); len(by) > 0 {
+		return fmt.Sprintf("agni laid these sheets out itself, because %s holds no schematic drawing. Open the design's %s, or name it as a companion in design.yaml, to see the sheets as they were drawn.", name, orList(by))
+	}
+	return fmt.Sprintf("agni laid these sheets out itself, because %s holds no schematic drawing. agni reads drawn sheets from a %s file, and a design.yaml can name one beside it as a companion.", name, orList(formats.DrawingExts()))
+}
+
+// orList joins items as "a", "a or b", or "a, b or c".
+func orList(items []string) string {
+	switch len(items) {
+	case 0:
+		return ""
+	case 1:
+		return items[0]
+	}
+	return strings.Join(items[:len(items)-1], ", ") + " or " + items[len(items)-1]
+}
+
 // layoutForFile picks the effective layout. That is the requested one if the file has it, else the
 // default. The default is faithful when the file carries geometry, and otherwise the default
 // auto-layout.
@@ -278,7 +305,8 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 		// Taken straight off the geometry, which computed it with the renderer's own resolution. A
 		// render that lost its symbols still draws every ref des and wire, so without this the
 		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
-		Undrawn: g.GetUndrawn(),
+		Undrawn:     g.GetUndrawn(),
+		DrawingNote: drawingNote(gu.Path),
 	}
 	// A hash failure is not a read failure. ContentHash goes empty and the rest of the response is
 	// still sent. DesignRef.content_hash documents this case for a producer that did not hash. So

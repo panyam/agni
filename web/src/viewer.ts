@@ -26,6 +26,7 @@ import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationIt
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { hierarchyNote } from "./hierarchy.js";
+import { drawingNote } from "./drawingnote.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
@@ -144,6 +145,10 @@ export interface ViewSink {
   // null for a design read whole (agni issues 707, 717). The drawing and the counts look complete
   // either way, so this is the only thing on screen that says they cover the top level alone.
   hierarchyNote: (note: string | null) => void;
+  // drawingNote receives the server's sentence saying agni laid the shown sheet out itself and which
+  // file would draw it, or null on a drawn sheet or the board. The viewer offers no layout picker,
+  // so this is how a reader learns the drawing is not the designer's.
+  drawingNote: (note: string | null) => void;
   // rules receives the rule catalog + active selection.
   rules: RulesView;
   // report receives the auto-layout conversion report, or null to hide the panel (the
@@ -232,6 +237,9 @@ export class ViewerPresenter {
   // attachedBoard is the board the page attaches to its design, kept so every address it writes keeps
   // it (agni issue 1367). The page's snapshots read it from the address at boot.
   private attachedBoard = "";
+  // servedDrawingNote is the open design's GetDesignResponse.drawing_note, shown on each sheet but
+  // the board.
+  private servedDrawingNote = "";
 
   // findings holds the rule findings for the open design, and selectedSubject the one the user
   // clicked (highlighted in the viewer), "" for none.
@@ -711,10 +719,6 @@ export class ViewerPresenter {
     this.views.controls.setState({
       mode: this.mode,
       nativeAvailable: this.doc.nativeAvailable,
-      layouts: this.doc.availableLayouts,
-      layout: this.currentLayout,
-      providedSymbols: this.doc.availableLayouts.includes("faithful"),
-      faithfulSymbols: this.faithfulSymbols,
       board: this.currentSheet === "board",
       boardLayers: this.boardLayers,
       hasHighlights: this.highlights.length > 0,
@@ -773,6 +777,7 @@ export class ViewerPresenter {
       // trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
       this.views.hierarchyNote(hierarchyNote(d.hierarchyNote));
+      this.servedDrawingNote = d.drawingNote ?? "";
       // "" means the server could not hash the file, and it MUST NOT be read as agreement with a
       // link that named a revision; staleLinkNote keeps it a third state.
       this.doc.designContentHash = d.contentHash ?? "";
@@ -2006,6 +2011,7 @@ export class ViewerPresenter {
   // it does, fall back to the always-available SVG render rather than leaving an error on screen.
   async showSheet(sheetId: string): Promise<void> {
     this.currentSheet = sheetId;
+    this.views.drawingNote(drawingNote(this.servedDrawingNote, sheetId));
     // The query panel marks the badge pointing at the sheet on screen, so it has to hear about
     // EVERY navigation and not only the ones a result cell started. Navigating by the sheet tabs
     // would otherwise leave the mark on the sheet the reader has left.

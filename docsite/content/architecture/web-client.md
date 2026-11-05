@@ -90,6 +90,18 @@ drop store under `.agni-overlay/`, as the Load page writes a proposal, and opens
 without `?board=`. A served design's folder belongs to whoever runs the server. So there the page
 shows the text, and the reader commits it.
 
+## A design with no drawing opens on agni's layout
+
+Say someone opens a bare `.edn`, or a `.kicad_pcb` with no schematic beside it. Neither holds a
+drawing, so the viewer draws the parts on agni's default layout, and the result looks nothing like
+the designer's sheets. The viewer offers no layout picker, so the page has to say why. `GetDesign`
+sends `drawing_note`, a sentence naming the file that would draw the sheets, such as the `.eds`
+beside an `.edn`. The format registry holds that pairing as `Format.DrawnBy`, so the page keeps no
+list of formats. The strip shows the sentence on every sheet but the board, which draws itself.
+
+`?layout=` and `?symbols=` still pick an auto-layout or the symbol source from the address, for
+comparing the layouts by hand. The CLI's `--layout` is unchanged.
+
 ## Traps that ship green
 
 **A panel's derived rows must be MEMOIZED, or selecting a row rebuilds the whole panel.** Solid's

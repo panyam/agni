@@ -36,6 +36,7 @@ function harness() {
     // Optional like undrawn: absent means the read left nothing out, and a server that predates the
     // field sends nothing (agni issue 717).
     hierarchyNote?: string;
+    drawingNote?: string;
   };
   const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
     name: "D",
@@ -125,6 +126,7 @@ function harness() {
   const onUndrawnNote = vi.fn();
   const onStaleLinkNote = vi.fn();
   const onHierarchyNote = vi.fn();
+  const onDrawingNote = vi.fn();
   const onRules = vi.fn();
   const onReport = vi.fn();
   const onLocation = vi.fn();
@@ -140,6 +142,7 @@ function harness() {
     undrawnNote: onUndrawnNote,
     staleLinkNote: onStaleLinkNote,
     hierarchyNote: onHierarchyNote,
+    drawingNote: onDrawingNote,
     rules: { setState: onRules },
     report: onReport,
     location: onLocation,
@@ -151,7 +154,7 @@ function harness() {
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel };
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -252,8 +255,6 @@ describe("ViewerPresenter", () => {
     const h = harness();
     await h.presenter.openFile("m", "board.eds");
     expect(h.getSheet.mock.calls[0][0].symbols).toBe(SymbolSource.FAITHFUL);
-    expect(lastControls(h).providedSymbols).toBe(true); // availableLayouts has "faithful"
-    expect(lastControls(h).faithfulSymbols).toBe(true);
   });
 
   it("keeps GLYPH symbols for a netlist-only design (no faithful layout)", async () => {
@@ -264,8 +265,6 @@ describe("ViewerPresenter", () => {
     });
     await h.presenter.openFile("m", "netlist.edn");
     expect(h.getSheet.mock.calls[0][0].symbols).toBe(SymbolSource.GLYPH);
-    expect(lastControls(h).providedSymbols).toBe(false);
-    expect(lastControls(h).faithfulSymbols).toBe(false);
   });
 
   it("toggling the symbol source off re-requests the sheet with SymbolSource.GLYPH", async () => {
@@ -276,7 +275,6 @@ describe("ViewerPresenter", () => {
     await h.presenter.setSymbols(false);
     const c = h.getSheet.mock.calls;
     expect(c[c.length - 1][0].symbols).toBe(SymbolSource.GLYPH);
-    expect(lastControls(h).faithfulSymbols).toBe(false);
   });
 
   it("setSymbols to the current value is a no-op", async () => {
@@ -378,7 +376,8 @@ describe("ViewerPresenter", () => {
     // The new design is requested with no layout, so the server's effective default
     // (faithful, per the fake's empty->faithful echo) wins over the previous grid choice.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("");
-    expect(lastControls(h).layout).toBe("faithful");
+    const shown = h.getSheet.mock.calls;
+    expect(shown[shown.length - 1][0].layout).toBe("faithful");
   });
 
   it("re-opening the same design keeps the chosen layout", async () => {
@@ -400,7 +399,6 @@ describe("ViewerPresenter", () => {
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls;
     expect(gs[gs.length - 1][0].layout).toBe("grid"); // sheet render uses the new layout
-    expect(lastControls(h).layout).toBe("grid");
   });
 
   it("setLayout to the current layout is a no-op", async () => {
@@ -658,7 +656,8 @@ describe("ViewerPresenter", () => {
     await h.presenter.setMode("native");
     const last = lastControls(h);
     expect(last.mode).toBe("native");
-    expect(last.layout).toBe("faithful"); // native forced the layout back to faithful
+    const opened = h.getDesign.mock.calls;
+    expect(opened[opened.length - 1][0].layout).toBe("faithful"); // native forced the layout back to faithful
   });
 
   it("running checks runs the default selection and pushes the findings", async () => {
@@ -1431,6 +1430,37 @@ describe("the hierarchical-read notice", () => {
     const h = harness();
     await h.presenter.openFile("edif", "basic.edn");
     const calls = h.onHierarchyNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[calls.length - 1][0]).toBeNull();
+  });
+});
+
+// The viewer offers no layout picker, so a computed layout says why it is one. The note shows on a
+// computed sheet and leaves the board alone, since the board draws itself.
+describe("the computed-layout notice", () => {
+  const sentence = "agni laid these sheets out itself, because x.kicad_pcb holds no schematic drawing.";
+  const reply = {
+    name: "TEST", layout: "grid", sourceFormat: "kicad", componentCount: 1, netCount: 0,
+    sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }], nativeAvailable: false, availableLayouts: ["grid"],
+    drawingNote: sentence,
+  };
+
+  it("shows the served sentence on the computed sheet and clears it on the board", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue(reply);
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    const calls = h.onDrawingNote.mock.calls;
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+    await h.presenter.showSheet("board");
+    expect(calls[calls.length - 1][0]).toBeNull();
+    await h.presenter.showSheet("s1");
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+  });
+
+  it("pushes null for a drawn design", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    const calls = h.onDrawingNote.mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     expect(calls[calls.length - 1][0]).toBeNull();
   });

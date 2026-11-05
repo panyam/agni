@@ -26,7 +26,7 @@ func init() {
 	// registers separately below. Extension matching is case-insensitive (lowerExt), so .EDF
 	// resolves here too.
 	for _, ext := range []string{".edn", ".edf", ".edif"} {
-		Register(&Format{Ext: ext, Name: "edif", Design: readEDIF})
+		Register(&Format{Ext: ext, Name: "edif", Design: readEDIF, DrawnBy: []string{".eds"}})
 	}
 	Register(&Format{
 		Ext:  ".eds",
@@ -74,8 +74,9 @@ func init() {
 		},
 	})
 	Register(&Format{
-		Ext:  ".kicad_pcb",
-		Name: "kicad",
+		Ext:     ".kicad_pcb",
+		Name:    "kicad",
+		DrawnBy: []string{".kicad_sch"},
 		Design: func(l *Loader, path string) (*ir.Design, error) {
 			f, err := l.Open(path)
 			if err != nil {

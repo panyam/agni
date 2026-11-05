@@ -402,6 +402,11 @@ type GetDesignResponse struct {
 	// stderr note and both HTML reports use the same wording. The server sends it whole, so the
 	// viewer's strip renders it and does not compose a second copy.
 	HierarchyNote string `protobuf:"bytes,13,opt,name=hierarchy_note,json=hierarchyNote,proto3" json:"hierarchy_note,omitempty"`
+	// drawing_note is a sentence saying why the sheets are a computed layout, and which file would
+	// draw them as the designer did. It is "" when the geometry tier carries its own drawing. The
+	// server writes it from the format registry (formats.Format.DrawnBy), so the viewer shows it as
+	// sent and keeps no list of formats.
+	DrawingNote   string `protobuf:"bytes,14,opt,name=drawing_note,json=drawingNote,proto3" json:"drawing_note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -523,6 +528,13 @@ func (x *GetDesignResponse) GetDesign() *ir.Design {
 func (x *GetDesignResponse) GetHierarchyNote() string {
 	if x != nil {
 		return x.HierarchyNote
+	}
+	return ""
+}
+
+func (x *GetDesignResponse) GetDrawingNote() string {
+	if x != nil {
+		return x.DrawingNote
 	}
 	return ""
 }
@@ -1870,7 +1882,7 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x127\n" +
 	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
 	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
-	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\xb8\x04\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\xdb\x04\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -1885,7 +1897,8 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	" \x01(\tR\vcontentHash\x12R\n" +
 	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x12*\n" +
 	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\x12%\n" +
-	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\"\xe3\x01\n" +
+	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\x12!\n" +
+	"\fdrawing_note\x18\x0e \x01(\tR\vdrawingNote\"\xe3\x01\n" +
 	"\x0fGetSheetRequest\x12\x1a\n" +
 	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +

@@ -454,6 +454,36 @@ describe("the hierarchical-read notice", () => {
   }, 120_000);
 });
 
+// The viewer offers no layout picker. A netlist with no drawing opens on agni's default layout, and
+// a painted strip says why and names the file that would draw it. A drawn design shows neither the
+// strip nor a picker.
+describe("the computed-layout notice", () => {
+  it("is painted on a netlist with no drawing, and the page offers no layout picker", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "edif", "basic.edn");
+      const note = page.locator(".drawing-note.on");
+      await note.waitFor({ state: "visible", timeout: 30_000 });
+      expect((await note.textContent())?.trim()).toBe(
+        "agni laid these sheets out itself, because basic.edn holds no schematic drawing. Open the design's .eds, or name it as a companion in design.yaml, to see the sheets as they were drawn.",
+      );
+      const box = await note.boundingBox();
+      expect(box && box.width > 0 && box.height > 0, "the notice has no painted box").toBe(true);
+      expect(await page.locator('select[title="geometry layout"]').count()).toBe(0);
+      expect(await page.locator(".symbols-toggle").count()).toBe(0);
+    });
+  }, 120_000);
+
+  it("stays hidden on a drawn design", async () => {
+    // The control. A strip shown on every open would satisfy the test above.
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+      await page.waitForTimeout(1500);
+      expect(await page.locator(".drawing-note.on").count()).toBe(0);
+      expect(await page.locator('select[title="geometry layout"]').count()).toBe(0);
+    });
+  }, 120_000);
+});
+
 // agni issue 350. A severity mark is an empty span styled into a dot, and an INLINE span ignores
 // width and height, so the dot measured 0x0 from the day WS9 moved it out of the old grid row into a
 // table cell. Every unit test passed throughout. The class was on the element, the element was in

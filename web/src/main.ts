@@ -59,6 +59,7 @@ import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
 import { hierarchyStrip } from "./hierarchy.js";
+import { drawingStrip } from "./drawingnote.js";
 import { selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
@@ -162,6 +163,7 @@ class AppRoot extends BaseComponent {
       document.getElementById("hierarchy-note"),
       pageFlattens(window.location.search) ? undefined : () => window.location.assign(withFlatten(window.location.pathname + window.location.search)),
     );
+    const setDrawingNote = drawingStrip(document.getElementById("drawing-note"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
@@ -329,8 +331,6 @@ class AppRoot extends BaseComponent {
     // up.
     const controls = controlBarIsland(controlsEl, this._eventBus, {
       onMode: (mode) => void presenter.setMode(mode),
-      onLayout: (layout) => void presenter.setLayout(layout),
-      onSymbols: (faithful) => void presenter.setSymbols(faithful),
       onBoardLayers: (side) => presenter.setBoardLayers(side),
       onClearHighlights: () => void presenter.clearHighlights(),
     }, { staticHost: onStaticHost });
@@ -764,6 +764,7 @@ class AppRoot extends BaseComponent {
         undrawnNote: setUndrawnNote,
         staleLinkNote: setStaleLinkNote,
         hierarchyNote: setHierarchyNote,
+        drawingNote: setDrawingNote,
         rules: rules.view,
         report: (report) => propertiesPresenter.setReport(report),
         // A saved report goes to the visitor's machine as a download, and its rows link back to this
