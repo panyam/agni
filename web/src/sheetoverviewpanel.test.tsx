@@ -215,14 +215,16 @@ describe("the Board tile's layers", () => {
     view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: [] }));
     el.querySelectorAll<HTMLInputElement>(".board-layer-row input")[1].click();
     expect(layers.onToggle).toHaveBeenCalledWith("In1.Cu");
-    // Two presses on one row show it alone, even when the row is drawn again between them.
-    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: ["F.Cu"] }));
     expect(layers.onSolo).not.toHaveBeenCalled();
-    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    // The second click of a double-click shows the row alone, even on a row drawn again between the
+    // two clicks.
+    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: ["In1.Cu"] }));
+    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 2 }));
     expect(layers.onSolo).toHaveBeenCalledWith("F.Cu");
-    // A press on another row starts again.
-    el.querySelectorAll(".board-layer-row")[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(layers.onToggle).toHaveBeenCalledTimes(1);
+    // A key press on the checkbox arrives as a click with detail 0, and toggles.
+    el.querySelectorAll(".board-layer-row")[1].dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
+    expect(layers.onToggle).toHaveBeenLastCalledWith("In1.Cu");
     expect(layers.onSolo).toHaveBeenCalledTimes(1);
     const back = [...el.querySelectorAll<HTMLButtonElement>(".board-layer-preset")].find((b) => b.textContent === "Back");
     back!.click();

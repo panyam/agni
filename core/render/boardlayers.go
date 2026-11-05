@@ -146,7 +146,8 @@ func BoardLayers(b *geom.BoardGeometry, opts ...Option) []*geom.BoardLayerRow {
 
 // copperStack lists the copper layers that carry tracks, pads or zones, front first. It orders
 // them by the layer table whatever a layer's kind, so a power plane sits in the stack where the
-// board puts it. A layer the table lacks goes last, by name.
+// board puts it. A layer the table lacks goes last, by name. F.Cu leads and B.Cu ends whatever the
+// table says, since KiCad 9 lists B.Cu after the inner layers but a reader may not.
 func copperStack(b *geom.BoardGeometry) []string {
 	used := map[string]bool{}
 	for _, ly := range copperLayersBackToFront(b) {
@@ -157,15 +158,30 @@ func copperStack(b *geom.BoardGeometry) []string {
 			used[z.GetLayer()] = true
 		}
 	}
-	return byLayerTable(b, used)
+	out := byLayerTable(b, used)
+	sort.SliceStable(out, func(i, j int) bool { return copperRank(out[i]) < copperRank(out[j]) })
+	return out
 }
 
-// byLayerTable sorts a set of layer names by their number in the board's layer table, and a name
-// the table lacks after the rest, by name.
+func copperRank(layer string) int {
+	switch layerSide(layer) {
+	case "front":
+		return 0
+	case "back":
+		return 2
+	}
+	return 1
+}
+
+// byLayerTable sorts a set of layer names by where the board's layer table lists them, and a name
+// the table lacks after the rest, by name. The table's order is the stackup's, and a layer's number
+// is not: KiCad 9 numbers F.Cu 0, B.Cu 2 and In1.Cu 4.
 func byLayerTable(b *geom.BoardGeometry, set map[string]bool) []string {
-	num := map[string]int32{}
-	for _, l := range b.GetLayers() {
-		num[l.GetName()] = l.GetNumber()
+	num := map[string]int{}
+	for i, l := range b.GetLayers() {
+		if _, seen := num[l.GetName()]; !seen {
+			num[l.GetName()] = i
+		}
 	}
 	out := make([]string, 0, len(set))
 	for ly := range set {

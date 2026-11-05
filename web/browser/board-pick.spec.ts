@@ -216,6 +216,13 @@ describe("hiding a board layer", () => {
       await page.waitForFunction(() => document.querySelector('#svg-view [data-layer="F.Cu"]')!.getClientRects().length === 0, null, { timeout: 30_000 });
       const shown = await page.$$eval(".board-layer-row", (rs) => rs.filter((r) => (r.querySelector("input") as HTMLInputElement).checked).map((r) => r.textContent!.trim()));
       expect(shown).toEqual(["B.Cu"]);
+
+      // A double-click on a hidden row shows it alone too. Its first click shows the row and draws
+      // the panel again, and on Jetson the old handler then hid every layer.
+      await page.locator(".board-layer-row", { hasText: "In1.Cu" }).dblclick();
+      await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length > 0, track, { timeout: 30_000 });
+      const alone = await page.$$eval(".board-layer-row", (rs) => rs.filter((r) => (r.querySelector("input") as HTMLInputElement).checked).map((r) => r.textContent!.trim()));
+      expect(alone).toEqual(["In1.Cu"]);
     });
   }, 90_000);
 });
