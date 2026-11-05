@@ -159,7 +159,6 @@ type odxParser struct {
 	poly    *contour // the POLYGON being read
 	inHole  bool
 	lastPt  pt
-	polys   *[]contour // where a finished POLYGON goes outside a CAD_S (the profile)
 	profile []contour
 	inProf  bool
 }
@@ -596,9 +595,10 @@ func (ps *odxParser) job() (*parsedJob, error) {
 
 	// The two sides, in the order componentLayers lists them, so a TOP subnet's component number
 	// indexes the side the board builder reads it from.
-	names, back := m.componentLayers()
-	if len(names) == 0 {
-		names, back = []string{"comp_+_top", "comp_+_bot"}, []bool{false, true}
+	// A file that lists no component layer still has a front and a back.
+	_, back := m.componentLayers()
+	if len(back) == 0 {
+		back = []bool{false, true}
 	}
 	sideOf := map[bool]int{}
 	for i, b := range back {
