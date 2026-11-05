@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-05
+
+agni reads OrCAD Capture designs, a `.DSN` and every block it keeps in a file of its own, flattened
+under the designators its board carries (PR 1405), and draws their pages (PR 1412). So a Capture
+schematic opens beside its Allegro board with no export step. Each board layer shows and hides
+(PR 1402, 1403), each copper layer keeps its own pad shape (PR 1408), and filled copper reads as
+copper under its net (PR 1411, 1414). `agni walk` walks outwards from a part hop by hop (PR 1409).
+Nothing breaks. The full write-up is [RELEASES/v0.6.0.md](RELEASES/v0.6.0.md).
+
 ## [0.5.0] - 2026-11-05
 
 agni opens Altium Designer `.PcbDoc` boards (PR 1391) and Cadence Allegro 16.6 and 17.2 `.brd` boards
