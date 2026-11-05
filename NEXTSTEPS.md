@@ -21,8 +21,8 @@ exercise run on the mission issue.
   tickets closed. A Sheets tile opens a sheet in a view beside the canvas (#1375), a pick in one view
   finds the part in the others through `DesignService.LocateSubjects` (#1364), and a board view turns,
   flips and shows the board from underneath (#1378). `make exercise-cross-probe HEADED=0
-  WALK_DESIGN=jetson` is the exercise. It passes every step at `fa79698e` with #1384, which names the
-  board view's turn controls as the walk reads them. Ready next are #1366 (board text sizes and
+  WALK_DESIGN=jetson` is the exercise, and it works at `a66eeef4`, every step passing on Jetson.
+  It still has to pass on an EDIF + ODB++ design and beside a real board. Ready next are #1366 (board text sizes and
   colours, against kicad-cli), #1367 (add a board to an open design) and #1382 (an EDIF + ODB++ design
   for the walk). #1374 (a selected pin lights nothing) is in progress elsewhere.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 3 of 4
