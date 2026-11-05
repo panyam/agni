@@ -84,10 +84,15 @@ A located query cell selects too, and so does a finding clicked in the Checks or
 panel follows a walk through an answer or a run.
 
 **Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
-link to it. No rpc answers "where is this drawn" on its own, but every entity in a query answer
-carries the sheets it is drawn on. So the viewer asks the served find-by-name query with the whole
-name anchored (`drawnSheets`). A part and a net can share a name, so the viewer reads the row of the
-right kind. Properties lists a bus by its members instead, and reads them off the IR's record of the
+link to it, from `DesignService.LocateSubjects` (agni issue 1325). That rpc and a check run's
+findings read one index, so a subject locates where its finding badges. A pin answers the sheets
+that draw its unit, so U1's pin 5 answers U1B's sheet. The board sheet joins when the request asks
+for it, by ref-des and net name, since an EDIF schematic and an ODB++ job share no net id. The
+viewer asks for it while the board is on screen, because the board is read then, and asking from a
+schematic would read a large board for one panel row (agni issue 943). A check run that read the
+board badges its findings with the board sheet too (#142's WS7-034). Before 1325 the viewer asked
+the find-by-name query and read the sheets off the answer's entity, and a query never reads the
+board. Properties lists a bus by its members instead, and reads them off the IR's record of the
 bus (`InputDiagnostics.unmodeled_buses`). The `bus` relation records only the construct the format
 reader saw, and nothing about its members.
 

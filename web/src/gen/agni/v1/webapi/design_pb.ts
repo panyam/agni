@@ -4,6 +4,8 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { LocateReason, Subject } from "../checks/checks_pb";
+import { file_agni_v1_checks_checks } from "../checks/checks_pb";
 import type { UndrawnPlacement } from "../geom/geom_pb";
 import { file_agni_v1_geom_geom } from "../geom/geom_pb";
 import type { HighlightSpec, PackedHighlight, PackedSheet } from "../geom/geom_packed_pb";
@@ -18,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIp0BChBHZXREZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg4KBmxheW91dBgBIAEoCRItCglyZWFkX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEgwKBG5ldHMYBSADKAkSDwoHcmVmX2RlcxgGIAMoCUoECAIQA0oECAMQBFIDdXJpUghhc19uYW1lZCKVAwoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgLIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRIiCgZkZXNpZ24YDCABKAsyEi5hZ25pLnYxLmlyLkRlc2lnbhIWCg5oaWVyYXJjaHlfbm90ZRgNIAEoCSK5AQoPR2V0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlSgQIBRAGSgQIBhAHUgN1cmlSCGFzX25hbWVkIlkKEEdldFNoZWV0UmVzcG9uc2USKwoGcGFja2VkGAEgASgLMhkuYWduaS52MS5nZW9tLlBhY2tlZFNoZWV0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCLrAQoVSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAggASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRItCgdzeW1ib2xzGAMgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgEIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAUgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWNKBAgGEAdKBAgHEAhSA3VyaVIIYXNfbmFtZWQiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJ0ChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgCEANKBAgDEARSA3VyaVIIYXNfbmFtZWQiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKnAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAYgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFSgQIARACSgQIBRAGUgN1cmlSCGFzX25hbWVkIi0KDVRyYWNlRW5kcG9pbnQSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkiOwoTVHJhY2VEZXNpZ25SZXNwb25zZRIkCgV0cmFjZRgBIAEoCzIVLmFnbmkudjEud2ViYXBpLlRyYWNlIvsBCgVUcmFjZRImCgRmcm9tGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSJAoCdG8YAiABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBItCgdvdXRjb21lGAMgASgOMhwuYWduaS52MS53ZWJhcGkuVHJhY2VPdXRjb21lEg4KBnJlYXNvbhgEIAEoCRIOCgZyYWRpdXMYBSABKAUSLQoJY3Jvc3NpbmdzGAYgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcxImCgRuZXRzGAcgAygLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQibQoIVHJhY2VFbmQSLwoIZW5kcG9pbnQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EhAKCHBpbl9uYW1lGAIgASgJEgsKA25ldBgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkifQoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgSEQoJc2hlZXRfaWRzGAUgAygJIjgKCVRyYWNlU3R1YhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCRINCgVjbGFzcxgDIAEoCSJHChBDb252ZXJzaW9uUmVwb3J0EjMKCmNvbXBvbmVudHMYASADKAsyHy5hZ25pLnYxLndlYmFwaS5Db21wb25lbnRSZXBvcnQicwoPQ29tcG9uZW50UmVwb3J0Eg8KB3JlZl9kZXMYASABKAkSDgoGc3ltYm9sGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRIMCgRjZWxsGAQgASgJEgwKBGtpbmQYBSABKAkSDQoFbGFiZWwYBiABKAkqcwoLU2hlZXRGb3JtYXQSHAoYU0hFRVRfRk9STUFUX1VOU1BFQ0lGSUVEEAASFwoTU0hFRVRfRk9STUFUX1BBQ0tFRBABEhQKEFNIRUVUX0ZPUk1BVF9TVkcQAhIXChNTSEVFVF9GT1JNQVRfTkFUSVZFEAMqYgoMU3ltYm9sU291cmNlEh0KGVNZTUJPTF9TT1VSQ0VfVU5TUEVDSUZJRUQQABIXChNTWU1CT0xfU09VUkNFX0dMWVBIEAESGgoWU1lNQk9MX1NPVVJDRV9GQUlUSEZVTBACKoEBCgxUcmFjZU91dGNvbWUSHQoZVFJBQ0VfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhgKFFRSQUNFX09VVENPTUVfUk9VVEVEEAESGgoWVFJBQ0VfT1VUQ09NRV9OT19ST1VURRACEhwKGFRSQUNFX09VVENPTUVfVU5SRVNPTFZFRBADMs0DCg1EZXNpZ25TZXJ2aWNlElAKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaIS5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXNwb25zZRJNCghHZXRTaGVldBIfLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVzcG9uc2USXwoOSGlnaGxpZ2h0U2hlZXQSJS5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlc3BvbnNlEmIKD0dldExheW91dFJlcG9ydBImLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXNwb25zZRJWCgtUcmFjZURlc2lnbhIiLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIp0BChBHZXREZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg4KBmxheW91dBgBIAEoCRItCglyZWFkX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEgwKBG5ldHMYBSADKAkSDwoHcmVmX2RlcxgGIAMoCUoECAIQA0oECAMQBFIDdXJpUghhc19uYW1lZCKVAwoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgLIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRIiCgZkZXNpZ24YDCABKAsyEi5hZ25pLnYxLmlyLkRlc2lnbhIWCg5oaWVyYXJjaHlfbm90ZRgNIAEoCSK5AQoPR2V0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlSgQIBRAGSgQIBhAHUgN1cmlSCGFzX25hbWVkIlkKEEdldFNoZWV0UmVzcG9uc2USKwoGcGFja2VkGAEgASgLMhkuYWduaS52MS5nZW9tLlBhY2tlZFNoZWV0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCLrAQoVSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAggASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRItCgdzeW1ib2xzGAMgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgEIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAUgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWNKBAgGEAdKBAgHEAhSA3VyaVIIYXNfbmFtZWQiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJ0ChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgCEANKBAgDEARSA3VyaVIIYXNfbmFtZWQiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKnAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAYgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFSgQIARACSgQIBRAGUgN1cmlSCGFzX25hbWVkIi0KDVRyYWNlRW5kcG9pbnQSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkiOwoTVHJhY2VEZXNpZ25SZXNwb25zZRIkCgV0cmFjZRgBIAEoCzIVLmFnbmkudjEud2ViYXBpLlRyYWNlIvsBCgVUcmFjZRImCgRmcm9tGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSJAoCdG8YAiABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBItCgdvdXRjb21lGAMgASgOMhwuYWduaS52MS53ZWJhcGkuVHJhY2VPdXRjb21lEg4KBnJlYXNvbhgEIAEoCRIOCgZyYWRpdXMYBSABKAUSLQoJY3Jvc3NpbmdzGAYgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcxImCgRuZXRzGAcgAygLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQibQoIVHJhY2VFbmQSLwoIZW5kcG9pbnQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EhAKCHBpbl9uYW1lGAIgASgJEgsKA25ldBgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkifQoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgSEQoJc2hlZXRfaWRzGAUgAygJIjgKCVRyYWNlU3R1YhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCRINCgVjbGFzcxgDIAEoCSJHChBDb252ZXJzaW9uUmVwb3J0EjMKCmNvbXBvbmVudHMYASADKAsyHy5hZ25pLnYxLndlYmFwaS5Db21wb25lbnRSZXBvcnQicwoPQ29tcG9uZW50UmVwb3J0Eg8KB3JlZl9kZXMYASABKAkSDgoGc3ltYm9sGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRIMCgRjZWxsGAQgASgJEgwKBGtpbmQYBSABKAkSDQoFbGFiZWwYBiABKAkiYwoVTG9jYXRlU3ViamVjdHNSZXF1ZXN0EhAKCHNuYXBzaG90GAEgASgJEikKCHN1YmplY3RzGAIgAygLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBINCgVib2FyZBgDIAEoCCJJChZMb2NhdGVTdWJqZWN0c1Jlc3BvbnNlEi8KCHN1YmplY3RzGAEgAygLMh0uYWduaS52MS53ZWJhcGkuU3ViamVjdFNoZWV0cyKBAQoNU3ViamVjdFNoZWV0cxIoCgdzdWJqZWN0GAEgASgLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBIRCglzaGVldF9pZHMYAiADKAkSMwoNbG9jYXRlX3JlYXNvbhgDIAEoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbipzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIqgQEKDFRyYWNlT3V0Y29tZRIdChlUUkFDRV9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGAoUVFJBQ0VfT1VUQ09NRV9ST1VURUQQARIaChZUUkFDRV9PVVRDT01FX05PX1JPVVRFEAISHAoYVFJBQ0VfT1VUQ09NRV9VTlJFU09MVkVEEAMyrgQKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlEl8KDkxvY2F0ZVN1YmplY3RzEiUuYWduaS52MS53ZWJhcGkuTG9jYXRlU3ViamVjdHNSZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuTG9jYXRlU3ViamVjdHNSZXNwb25zZRJWCgtUcmFjZURlc2lnbhIiLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -835,6 +837,99 @@ export const ComponentReportSchema: GenMessage<ComponentReport> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_design, 18);
 
 /**
+ * LocateSubjectsRequest names the entities to locate in one snapshot.
+ *
+ * @generated from message agni.v1.webapi.LocateSubjectsRequest
+ */
+export type LocateSubjectsRequest = Message<"agni.v1.webapi.LocateSubjectsRequest"> & {
+  /**
+   * snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 1;
+   */
+  snapshot: string;
+
+  /**
+   * subjects are the entities to locate, each as a finding names one. A part and a net join the
+   * drawing by ref-des and net NAME, so an EDIF schematic and an ODB++ board, which share no net id,
+   * still answer. A pin locates on the sheets that draw its unit, so U1's pin 5 answers U1B's sheet
+   * and not U1A's. A net_id narrows a net to one of two that share a name, where the schematic
+   * stamps ids on its wires.
+   *
+   * @generated from field: repeated agni.v1.checks.Subject subjects = 2;
+   */
+  subjects: Subject[];
+
+  /**
+   * board adds the board sheet ("board") for a part with a footprint, a pin with a pad, and a net
+   * with copper or a pad. Unset, the board is not read.
+   *
+   * @generated from field: bool board = 3;
+   */
+  board: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.LocateSubjectsRequest.
+ * Use `create(LocateSubjectsRequestSchema)` to create a new message.
+ */
+export const LocateSubjectsRequestSchema: GenMessage<LocateSubjectsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 19);
+
+/**
+ * LocateSubjectsResponse answers each subject in request order.
+ *
+ * @generated from message agni.v1.webapi.LocateSubjectsResponse
+ */
+export type LocateSubjectsResponse = Message<"agni.v1.webapi.LocateSubjectsResponse"> & {
+  /**
+   * @generated from field: repeated agni.v1.webapi.SubjectSheets subjects = 1;
+   */
+  subjects: SubjectSheets[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.LocateSubjectsResponse.
+ * Use `create(LocateSubjectsResponseSchema)` to create a new message.
+ */
+export const LocateSubjectsResponseSchema: GenMessage<LocateSubjectsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 20);
+
+/**
+ * SubjectSheets is where one subject is drawn.
+ *
+ * @generated from message agni.v1.webapi.SubjectSheets
+ */
+export type SubjectSheets = Message<"agni.v1.webapi.SubjectSheets"> & {
+  /**
+   * @generated from field: agni.v1.checks.Subject subject = 1;
+   */
+  subject?: Subject | undefined;
+
+  /**
+   * sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+   * and then "board". Empty means drawn nowhere, and locate_reason says why.
+   *
+   * @generated from field: repeated string sheet_ids = 2;
+   */
+  sheetIds: string[];
+
+  /**
+   * locate_reason is UNSPECIFIED when sheet_ids is not empty.
+   *
+   * @generated from field: agni.v1.checks.LocateReason locate_reason = 3;
+   */
+  locateReason: LocateReason;
+};
+
+/**
+ * Describes the message agni.v1.webapi.SubjectSheets.
+ * Use `create(SubjectSheetsSchema)` to create a new message.
+ */
+export const SubjectSheetsSchema: GenMessage<SubjectSheets> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 21);
+
+/**
  * SheetFormat selects which renderer draws a sheet. It is a separate axis from
  * GetSheetRequest.layout, which picks faithful or auto-layout geometry. layout chooses the
  * geometry, and format chooses how it is rendered.
@@ -1018,6 +1113,19 @@ export const DesignService: GenService<{
     methodKind: "unary";
     input: typeof GetLayoutReportRequestSchema;
     output: typeof GetLayoutReportResponseSchema;
+  },
+  /**
+   * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
+   * viewer opens one of them for a selection that came from another pane, a finding or a link. It
+   * answers from the snapshot's schematic, and from its board only when the request asks, since
+   * reading a large board costs seconds (agni issue 943).
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.LocateSubjects
+   */
+  locateSubjects: {
+    methodKind: "unary";
+    input: typeof LocateSubjectsRequestSchema;
+    output: typeof LocateSubjectsResponseSchema;
   },
   /**
    * TraceDesign walks from one pin to another through the series parts between them, and returns

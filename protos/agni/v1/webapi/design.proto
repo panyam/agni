@@ -4,6 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/checks/checks.proto";
 import "agni/v1/geom/geom.proto";
 import "agni/v1/geom/geom_packed.proto";
 import "agni/v1/ir/ir.proto";
@@ -43,6 +44,12 @@ service DesignService {
   // or an unresolved fallback. It uses the same symbol source as the render, so it describes what
   // the viewer shows. It points at --symbol-path when provided symbols do not resolve.
   rpc GetLayoutReport(GetLayoutReportRequest) returns (GetLayoutReportResponse);
+
+  // LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
+  // viewer opens one of them for a selection that came from another pane, a finding or a link. It
+  // answers from the snapshot's schematic, and from its board only when the request asks, since
+  // reading a large board costs seconds (agni issue 943).
+  rpc LocateSubjects(LocateSubjectsRequest) returns (LocateSubjectsResponse);
 
   // TraceDesign walks from one pin to another through the series parts between them, and returns
   // the route. The route lists each part crossed with its own pin on both sides, each net passed
@@ -354,4 +361,34 @@ message ComponentReport {
   // anything else by its kind. The engine decides it in graph.ComponentReport.Label (agni issue
   // 1045). So the CLI's summary and the viewer's Properties group one report alike.
   string label = 6;
+}
+
+// LocateSubjectsRequest names the entities to locate in one snapshot.
+message LocateSubjectsRequest {
+  // snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 1;
+  // subjects are the entities to locate, each as a finding names one. A part and a net join the
+  // drawing by ref-des and net NAME, so an EDIF schematic and an ODB++ board, which share no net id,
+  // still answer. A pin locates on the sheets that draw its unit, so U1's pin 5 answers U1B's sheet
+  // and not U1A's. A net_id narrows a net to one of two that share a name, where the schematic
+  // stamps ids on its wires.
+  repeated agni.v1.checks.Subject subjects = 2;
+  // board adds the board sheet ("board") for a part with a footprint, a pin with a pad, and a net
+  // with copper or a pad. Unset, the board is not read.
+  bool board = 3;
+}
+
+// LocateSubjectsResponse answers each subject in request order.
+message LocateSubjectsResponse {
+  repeated SubjectSheets subjects = 1;
+}
+
+// SubjectSheets is where one subject is drawn.
+message SubjectSheets {
+  agni.v1.checks.Subject subject = 1;
+  // sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+  // and then "board". Empty means drawn nowhere, and locate_reason says why.
+  repeated string sheet_ids = 2;
+  // locate_reason is UNSPECIFIED when sheet_ids is not empty.
+  agni.v1.checks.LocateReason locate_reason = 3;
 }

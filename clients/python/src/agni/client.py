@@ -220,6 +220,11 @@ class Client:
         message, or ``**{"from": ...}``."""
         return self.call("DesignService", "TraceDesign", request, **fields)  # type: ignore[return-value]
 
+    def locate_subjects(self, request: Optional[design_pb2.LocateSubjectsRequest] = None, **fields) -> design_pb2.LocateSubjectsResponse:
+        """The sheets that draw each of ``subjects``, a pin on its own unit's sheet, with ``board=True``
+        adding the board sheet. Connect only."""
+        return self.call("DesignService", "LocateSubjects", request, **fields)  # type: ignore[return-value]
+
     def get_layout_report(self, request: Optional[design_pb2.GetLayoutReportRequest] = None, **fields) -> design_pb2.GetLayoutReportResponse:
         return self.call("DesignService", "GetLayoutReport", request, **fields)  # type: ignore[return-value]
 

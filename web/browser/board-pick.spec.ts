@@ -134,6 +134,32 @@ describe("picking the board", () => {
     });
   }, 90_000);
 
+  // A part picked on the board lists every sheet that draws it, the schematic's and the board
+  // (agni issue 1325), so a reader can open the schematic from the copper.
+  it("lists the schematic sheet and the board for a part picked on the board", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(`${base()}/designs/tut/designs/gateway/view`, { waitUntil: "networkidle" });
+      // Exactly "Board", since gateway's schematic sheet is called "Sample Board".
+      await page.locator(".sheet-tile", { hasText: /^\s*Board\s*$/ }).first().click();
+      await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
+      // The first front part whose body has a point clear of its pads at fit zoom.
+      const refs = await page.$$eval("#svg-view .picks-front [data-ref]", (rs) => rs.map((r) => r.getAttribute("data-ref")!));
+      let picked = "";
+      for (const ref of refs) {
+        const at = await clearPoint(page, `#svg-view .picks-front [data-ref="${ref}"]`, "component").catch(() => null);
+        if (!at) continue;
+        await clickAndRead(page, at, ref);
+        picked = ref;
+        break;
+      }
+      expect(picked, `none of ${refs.length} front parts has a body clear of its pads`).not.toBe("");
+      const sheets = '[data-component="properties"] .pr-group[data-group="sheets"] .pr-ref-sheet';
+      await page.waitForFunction((sel) => document.querySelectorAll(sel).length >= 2, sheets, { timeout: 30_000 });
+      const names = await page.$$eval(sheets, (bs) => bs.map((b) => (b.textContent ?? "").trim()));
+      expect(names).toEqual(["Sample Board", "Board"]);
+    });
+  }, 90_000);
+
   it("stops picking a back part once the back is hidden", async () => {
     await withPage(browser, async (page) => {
       await openBoard(page);

@@ -475,22 +475,6 @@ function witnessItem(resp: RunQueryResponse, w: QueryWitness, resolveSheets: (id
   };
 }
 
-// drawnSheets reads where one entity is drawn from a query answer that names it. It returns the sheet
-// ids on that answer entity, or none when the answer does not name it. Properties asks the
-// find-by-name query with the whole name anchored and reads the row of the right kind, since a part
-// and a net can share a name.
-export function drawnSheets(resp: RunQueryResponse, kind: string, name: string): string[] {
-  for (const r of resp.rows) {
-    for (let i = 0; i < r.cells.length; i++) {
-      const k = r.cellKinds?.[i] || resp.columnKinds?.[i] || "";
-      if (k !== kind || r.cells[i] !== name) continue;
-      const n = r.cellEntity?.[i] ?? 0;
-      return n > 0 ? [...(resp.entities?.[n - 1]?.sheetIds ?? [])] : [];
-    }
-  }
-  return [];
-}
-
 // errorResult wraps a failure message (a parse error, or an unloadable design) as panel state, with
 // the caret line for a parse error when there is one.
 export function errorResult(message: string, errorAt = ""): QueryResult {
