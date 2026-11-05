@@ -14,11 +14,13 @@
 // value and its device type; pin names and pin use codes are not read yet (agni issue 1361). The
 // board geometry carries the copper layer stack renamed into the contract's F.Cu/In<n>.Cu/B.Cu
 // vocabulary, placements with footprint-local pads sized from the first copper layer of their
-// padstack, ETCH tracks with their arcs kept as arcs, vias with their span, zone boundary
+// padstack, each padstack's pad, thermal relief and antipad on every copper layer (agni 1356),
+// ETCH tracks with their arcs kept as arcs, vias with their span, zone boundary
 // outlines with their nets, the board outline, and silkscreen and assembly graphics and text. A
 // board with no outline of its own takes the outline rectangle of a placed mechanical symbol. A pad
-// Allegro draws as a shape symbol reads as custom, with no outline. Per-layer pad shapes, antipads
-// and thermal reliefs (1356), computed fills, plane voids and standalone copper shapes (1357),
+// Allegro draws as a shape symbol reads as custom, with no outline. A pad's offset within its
+// padstack, the flash a thermal relief names, computed fills, plane voids and standalone copper
+// shapes (1357),
 // constraint sets (1359), match groups (1360), keepouts and teardrops are not kept. Coordinates are
 // integer nanometres (unit_nm=1), in Allegro's own Y-up frame.
 package allegro

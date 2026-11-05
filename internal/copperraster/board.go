@@ -13,6 +13,9 @@ import (
 // order lists the board's copper layers top to bottom, so a via's span and a through pad ("*.Cu")
 // resolve to the layers they cross. Zones are not drawn.
 //
+// A pad or via that names a padstack is drawn on each layer from that layer's land, and on no layer
+// where the padstack has none (agni 1356). Otherwise a pad on the layer is drawn from its own shape.
+//
 // A pad is drawn from its shape word at its board position, composed as the contract defines it:
 // world = at + M(R(rotation) * local), with M mirroring X on a mirrored placement. A shape the
 // contract has no outline for (custom, octagon, chamfered) is drawn as its rectangle extent.
@@ -28,6 +31,10 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 	at, ok := idx[layer]
 	if !ok {
 		return
+	}
+	stacks := map[string]*geom.Padstack{}
+	for _, ps := range g.GetPadstacks() {
+		stacks[ps.GetId()] = ps
 	}
 	for _, nc := range g.GetNets() {
 		for _, s := range nc.GetSegments() {
@@ -45,6 +52,13 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 			if !okf || !okt {
 				from, to = 0, len(order)-1
 			}
+			if ps := stacks[v.GetPadstack()]; ps != nil {
+				if land := LandOn(ps, layer); land != nil {
+					drawShape(lands, float64(v.GetAt().GetX())*scale, float64(v.GetAt().GetY())*scale, land.GetShape(),
+						float64(land.GetSize().GetX())*scale, float64(land.GetSize().GetY())*scale, 0)
+				}
+				continue
+			}
 			if at >= min(from, to) && at <= max(from, to) {
 				lands.Disc(float64(v.GetAt().GetX())*scale, float64(v.GetAt().GetY())*scale, float64(v.GetSize())*scale)
 			}
@@ -52,6 +66,12 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 	}
 	for _, pl := range g.GetPlacements() {
 		for _, pad := range pl.GetPads() {
+			if ps := stacks[pad.GetPadstack()]; ps != nil {
+				if land := LandOn(ps, layer); land != nil {
+					drawPad(lands, pl, &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: land.GetShape(), Size: land.GetSize()}, scale)
+				}
+				continue
+			}
 			if !padOn(pad, layer) || pad.GetSize() == nil {
 				continue
 			}
@@ -81,8 +101,11 @@ func drawPad(b *Bitmap, pl *geom.ComponentPlacement, pad *geom.Pad, scale float6
 	}
 	cx := (float64(pl.GetAt().GetX()) + x) * scale
 	cy := (float64(pl.GetAt().GetY()) + y) * scale
-	w, h := float64(pad.GetSize().GetX())*scale, float64(pad.GetSize().GetY())*scale
-	switch pad.GetShape() {
+	drawShape(b, cx, cy, pad.GetShape(), float64(pad.GetSize().GetX())*scale, float64(pad.GetSize().GetY())*scale, angle)
+}
+
+func drawShape(b *Bitmap, cx, cy float64, shape string, w, h, angle float64) {
+	switch shape {
 	case "circle":
 		b.Disc(cx, cy, math.Min(w, h))
 	case "oval":
@@ -90,6 +113,16 @@ func drawPad(b *Bitmap, pl *geom.ComponentPlacement, pad *geom.Pad, scale float6
 	default:
 		b.Rect(cx, cy, w, h, angle)
 	}
+}
+
+// LandOn is a padstack's land on one copper layer, or nil where it has none.
+func LandOn(ps *geom.Padstack, layer string) *geom.PadShape {
+	for _, l := range ps.GetLayers() {
+		if l.GetLayer() == layer {
+			return l.GetPad()
+		}
+	}
+	return nil
 }
 
 // DrawBoardOutline strokes the board outline into b at the given width in nanometres. Allegro plots

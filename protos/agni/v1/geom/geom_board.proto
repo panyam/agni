@@ -20,7 +20,9 @@ import "agni/v1/geom/geom.proto";
 //
 // Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6. Zone fill polygons, teardrops,
 // and 3D model references are not kept. Zones keep their authored outline only. Arc tracks are
-// kept as arcs (TrackSegment.mid); arcs in outlines and zones are approximated by chords.
+// kept as arcs (TrackSegment.mid); arcs in outlines and zones are approximated by chords. A
+// padstack keeps each copper layer's land, and Allegro's its thermal relief and antipad, by extent
+// and shape word; a custom shape keeps no outline.
 
 // BoardGeometry is the root, with one message per board. It is the layout analogue of
 // SchematicGeometry. Coordinates are Points in raw source units, unit_nm nanometers per unit.
@@ -35,6 +37,7 @@ message BoardGeometry {
   repeated Zone zones = 7;                      // copper pours, outline only
   repeated BoardText texts = 8;                 // silkscreen/legend + free text (WS7)
   repeated BoardGraphic graphics = 9;           // silkscreen/fab body outlines + free graphics (WS7)
+  repeated Padstack padstacks = 10;             // per-layer pad shapes, named by Pad and Via (agni 1356)
   Provenance prov = 16;
 }
 
@@ -129,6 +132,44 @@ message Pad {
   repeated string layers = 6; // layer names, wildcards as printed ("*.Cu")
   int64 drill = 7;            // drill diameter, 0 for SMD
   string net = 8;
+  // padstack names the BoardGeometry.padstacks entry that holds this pad's shape on each copper
+  // layer (agni 1356). "" when the reader read none, and then shape and size are the pad's only
+  // land. shape and size stay set either way, as the land on the pad's first layer.
+  string padstack = 9;
+}
+
+// Padstack is a pad's shape on each copper layer, as the board has it (agni 1356). A through-hole
+// pad is often larger on the outer layers than on the inner ones, and a plane layer cuts an
+// antipad around a hole whose net it does not join.
+//
+// layers name the board's own copper layers AS PLACED. A part on the bottom turns its padstack
+// over, so a reader that shares a padstack across sides writes a second entry for the bottom with
+// its layers reversed, and the consumer never mirrors one itself. id is that entry's key, unique in
+// the board. name is the source's padstack name, shared by both entries, or "" when the source
+// names none (ODB++).
+message Padstack {
+  string id = 1;
+  string name = 2;
+  repeated PadstackLayer layers = 3;
+}
+
+// PadstackLayer is a padstack on one copper layer. pad is the land, unset where the padstack has
+// none on this layer. thermal and antipad are PROVISIONAL (C9): only the Allegro reader fills them.
+// IPC-2581 and ODB++ express both as cut-outs in the plane polygon instead, which agni 1357 reads.
+// thermal is the relief's outer extent where the pad joins a plane, and antipad the clearance
+// where it does not.
+message PadstackLayer {
+  string layer = 1;
+  PadShape pad = 2;
+  PadShape thermal = 3;
+  PadShape antipad = 4;
+}
+
+// PadShape is one shape of a padstack, centred on the pad and turned with it. shape is the source
+// word, as Pad.shape spells it, and size its extent in source units.
+message PadShape {
+  string shape = 1;
+  Point size = 2;
 }
 
 // NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
@@ -161,6 +202,8 @@ message Via {
   int64 drill = 3;   // hole diameter
   string layer_from = 4;
   string layer_to = 5;
+  // padstack names the via's BoardGeometry.padstacks entry, as Pad.padstack does (agni 1356).
+  string padstack = 6;
 }
 
 // Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the

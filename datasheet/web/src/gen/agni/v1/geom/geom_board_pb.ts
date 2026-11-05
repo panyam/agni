@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_board.proto.
  */
 export const file_agni_v1_geom_geom_board: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIokDCg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlIq8BCglCb2FyZFRleHQSDAoEdGV4dBgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDgoGaGVpZ2h0GAQgASgDEg0KBWxheWVyGAUgASgJEg4KBm1pcnJvchgGIAEoCBIPCgdqdXN0aWZ5GAcgASgJEg8KB3JlZl9kZXMYCCABKAkSDAoEa2luZBgJIAEoCSJhCgxCb2FyZEdyYXBoaWMSIgoFc2hhcGUYASABKAsyEy5hZ25pLnYxLmdlb20uU2hhcGUSDQoFbGF5ZXIYAiABKAkSDwoHcmVmX2RlcxgDIAEoCRINCgV3aWR0aBgEIAEoAyI4CgpCb2FyZExheWVyEg4KBm51bWJlchgBIAEoBRIMCgRuYW1lGAIgASgJEgwKBGtpbmQYAyABKAkiNQoMQm9hcmRPdXRsaW5lEiUKBXBhdGhzGAEgAygLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lIsQBChJDb21wb25lbnRQbGFjZW1lbnQSDwoHcmVmX2RlcxgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDQoFbGF5ZXIYBCABKAkSHwoEcGFkcxgFIAMoCzIRLmFnbmkudjEuZ2VvbS5QYWQSDgoGbWlycm9yGAYgASgIEiYKBHByb3YYECABKAsyGC5hZ25pLnYxLmdlb20uUHJvdmVuYW5jZSKqAQoDUGFkEg4KBm51bWJlchgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESIQoEc2l6ZRgEIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBINCgVzaGFwZRgFIAEoCRIOCgZsYXllcnMYBiADKAkSDQoFZHJpbGwYByABKAMSCwoDbmV0GAggASgJImcKCU5ldENvcHBlchILCgNuZXQYASABKAkSLAoIc2VnbWVudHMYAiADKAsyGi5hZ25pLnYxLmdlb20uVHJhY2tTZWdtZW50Eh8KBHZpYXMYAyADKAsyES5hZ25pLnYxLmdlb20uVmlhIo4BCgxUcmFja1NlZ21lbnQSHgoBYRgBIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIeCgFiGAIgASgLMhMuYWduaS52MS5nZW9tLlBvaW50Eg0KBXdpZHRoGAMgASgDEg0KBWxheWVyGAQgASgJEiAKA21pZBgFIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCJpCgNWaWESHwoCYXQYASABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDAoEc2l6ZRgCIAEoAxINCgVkcmlsbBgDIAEoAxISCgpsYXllcl9mcm9tGAQgASgJEhAKCGxheWVyX3RvGAUgASgJIksKBFpvbmUSCwoDbmV0GAEgASgJEg0KBWxheWVyGAIgASgJEicKB291dGxpbmUYAyABKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmVCLFoqZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9nZW9tYgZwcm90bzM", [file_agni_v1_geom_geom]);
+  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIrQDCg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSKQoJcGFkc3RhY2tzGAogAygLMhYuYWduaS52MS5nZW9tLlBhZHN0YWNrEiYKBHByb3YYECABKAsyGC5hZ25pLnYxLmdlb20uUHJvdmVuYW5jZSKvAQoJQm9hcmRUZXh0EgwKBHRleHQYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg4KBmhlaWdodBgEIAEoAxINCgVsYXllchgFIAEoCRIOCgZtaXJyb3IYBiABKAgSDwoHanVzdGlmeRgHIAEoCRIPCgdyZWZfZGVzGAggASgJEgwKBGtpbmQYCSABKAkiYQoMQm9hcmRHcmFwaGljEiIKBXNoYXBlGAEgASgLMhMuYWduaS52MS5nZW9tLlNoYXBlEg0KBWxheWVyGAIgASgJEg8KB3JlZl9kZXMYAyABKAkSDQoFd2lkdGgYBCABKAMiOAoKQm9hcmRMYXllchIOCgZudW1iZXIYASABKAUSDAoEbmFtZRgCIAEoCRIMCgRraW5kGAMgASgJIjUKDEJvYXJkT3V0bGluZRIlCgVwYXRocxgBIAMoCzIWLmFnbmkudjEuZ2VvbS5Qb2x5bGluZSLEAQoSQ29tcG9uZW50UGxhY2VtZW50Eg8KB3JlZl9kZXMYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg0KBWxheWVyGAQgASgJEh8KBHBhZHMYBSADKAsyES5hZ25pLnYxLmdlb20uUGFkEg4KBm1pcnJvchgGIAEoCBImCgRwcm92GBAgASgLMhguYWduaS52MS5nZW9tLlByb3ZlbmFuY2UivAEKA1BhZBIOCgZudW1iZXIYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEiEKBHNpemUYBCABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFc2hhcGUYBSABKAkSDgoGbGF5ZXJzGAYgAygJEg0KBWRyaWxsGAcgASgDEgsKA25ldBgIIAEoCRIQCghwYWRzdGFjaxgJIAEoCSJRCghQYWRzdGFjaxIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEisKBmxheWVycxgDIAMoCzIbLmFnbmkudjEuZ2VvbS5QYWRzdGFja0xheWVyIpUBCg1QYWRzdGFja0xheWVyEg0KBWxheWVyGAEgASgJEiMKA3BhZBgCIAEoCzIWLmFnbmkudjEuZ2VvbS5QYWRTaGFwZRInCgd0aGVybWFsGAMgASgLMhYuYWduaS52MS5nZW9tLlBhZFNoYXBlEicKB2FudGlwYWQYBCABKAsyFi5hZ25pLnYxLmdlb20uUGFkU2hhcGUiPAoIUGFkU2hhcGUSDQoFc2hhcGUYASABKAkSIQoEc2l6ZRgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCJnCglOZXRDb3BwZXISCwoDbmV0GAEgASgJEiwKCHNlZ21lbnRzGAIgAygLMhouYWduaS52MS5nZW9tLlRyYWNrU2VnbWVudBIfCgR2aWFzGAMgAygLMhEuYWduaS52MS5nZW9tLlZpYSKOAQoMVHJhY2tTZWdtZW50Eh4KAWEYASABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSHgoBYhgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBINCgV3aWR0aBgDIAEoAxINCgVsYXllchgEIAEoCRIgCgNtaWQYBSABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQiewoDVmlhEh8KAmF0GAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EgwKBHNpemUYAiABKAMSDQoFZHJpbGwYAyABKAMSEgoKbGF5ZXJfZnJvbRgEIAEoCRIQCghsYXllcl90bxgFIAEoCRIQCghwYWRzdGFjaxgGIAEoCSJLCgRab25lEgsKA25ldBgBIAEoCRINCgVsYXllchgCIAEoCRInCgdvdXRsaW5lGAMgASgLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lQixaKmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZ2VvbWIGcHJvdG8z", [file_agni_v1_geom_geom]);
 
 /**
  * BoardGeometry is the root, with one message per board. It is the layout analogue of
@@ -84,6 +84,13 @@ export type BoardGeometry = Message<"agni.v1.geom.BoardGeometry"> & {
    * @generated from field: repeated agni.v1.geom.BoardGraphic graphics = 9;
    */
   graphics: BoardGraphic[];
+
+  /**
+   * per-layer pad shapes, named by Pad and Via (agni 1356)
+   *
+   * @generated from field: repeated agni.v1.geom.Padstack padstacks = 10;
+   */
+  padstacks: Padstack[];
 
   /**
    * @generated from field: agni.v1.geom.Provenance prov = 16;
@@ -416,6 +423,15 @@ export type Pad = Message<"agni.v1.geom.Pad"> & {
    * @generated from field: string net = 8;
    */
   net: string;
+
+  /**
+   * padstack names the BoardGeometry.padstacks entry that holds this pad's shape on each copper
+   * layer (agni 1356). "" when the reader read none, and then shape and size are the pad's only
+   * land. shape and size stay set either way, as the land on the pad's first layer.
+   *
+   * @generated from field: string padstack = 9;
+   */
+  padstack: string;
 };
 
 /**
@@ -424,6 +440,106 @@ export type Pad = Message<"agni.v1.geom.Pad"> & {
  */
 export const PadSchema: GenMessage<Pad> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 6);
+
+/**
+ * Padstack is a pad's shape on each copper layer, as the board has it (agni 1356). A through-hole
+ * pad is often larger on the outer layers than on the inner ones, and a plane layer cuts an
+ * antipad around a hole whose net it does not join.
+ *
+ * layers name the board's own copper layers AS PLACED. A part on the bottom turns its padstack
+ * over, so a reader that shares a padstack across sides writes a second entry for the bottom with
+ * its layers reversed, and the consumer never mirrors one itself. id is that entry's key, unique in
+ * the board. name is the source's padstack name, shared by both entries, or "" when the source
+ * names none (ODB++).
+ *
+ * @generated from message agni.v1.geom.Padstack
+ */
+export type Padstack = Message<"agni.v1.geom.Padstack"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated agni.v1.geom.PadstackLayer layers = 3;
+   */
+  layers: PadstackLayer[];
+};
+
+/**
+ * Describes the message agni.v1.geom.Padstack.
+ * Use `create(PadstackSchema)` to create a new message.
+ */
+export const PadstackSchema: GenMessage<Padstack> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 7);
+
+/**
+ * PadstackLayer is a padstack on one copper layer. pad is the land, unset where the padstack has
+ * none on this layer. thermal and antipad are PROVISIONAL (C9): only the Allegro reader fills them.
+ * IPC-2581 and ODB++ express both as cut-outs in the plane polygon instead, which agni 1357 reads.
+ * thermal is the relief's outer extent where the pad joins a plane, and antipad the clearance
+ * where it does not.
+ *
+ * @generated from message agni.v1.geom.PadstackLayer
+ */
+export type PadstackLayer = Message<"agni.v1.geom.PadstackLayer"> & {
+  /**
+   * @generated from field: string layer = 1;
+   */
+  layer: string;
+
+  /**
+   * @generated from field: agni.v1.geom.PadShape pad = 2;
+   */
+  pad?: PadShape | undefined;
+
+  /**
+   * @generated from field: agni.v1.geom.PadShape thermal = 3;
+   */
+  thermal?: PadShape | undefined;
+
+  /**
+   * @generated from field: agni.v1.geom.PadShape antipad = 4;
+   */
+  antipad?: PadShape | undefined;
+};
+
+/**
+ * Describes the message agni.v1.geom.PadstackLayer.
+ * Use `create(PadstackLayerSchema)` to create a new message.
+ */
+export const PadstackLayerSchema: GenMessage<PadstackLayer> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 8);
+
+/**
+ * PadShape is one shape of a padstack, centred on the pad and turned with it. shape is the source
+ * word, as Pad.shape spells it, and size its extent in source units.
+ *
+ * @generated from message agni.v1.geom.PadShape
+ */
+export type PadShape = Message<"agni.v1.geom.PadShape"> & {
+  /**
+   * @generated from field: string shape = 1;
+   */
+  shape: string;
+
+  /**
+   * @generated from field: agni.v1.geom.Point size = 2;
+   */
+  size?: Point | undefined;
+};
+
+/**
+ * Describes the message agni.v1.geom.PadShape.
+ * Use `create(PadShapeSchema)` to create a new message.
+ */
+export const PadShapeSchema: GenMessage<PadShape> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 9);
 
 /**
  * NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
@@ -456,7 +572,7 @@ export type NetCopper = Message<"agni.v1.geom.NetCopper"> & {
  * Use `create(NetCopperSchema)` to create a new message.
  */
 export const NetCopperSchema: GenMessage<NetCopper> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 7);
+  messageDesc(file_agni_v1_geom_geom_board, 10);
 
 /**
  * TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
@@ -503,7 +619,7 @@ export type TrackSegment = Message<"agni.v1.geom.TrackSegment"> & {
  * Use `create(TrackSegmentSchema)` to create a new message.
  */
 export const TrackSegmentSchema: GenMessage<TrackSegment> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 8);
+  messageDesc(file_agni_v1_geom_geom_board, 11);
 
 /**
  * Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
@@ -540,6 +656,13 @@ export type Via = Message<"agni.v1.geom.Via"> & {
    * @generated from field: string layer_to = 5;
    */
   layerTo: string;
+
+  /**
+   * padstack names the via's BoardGeometry.padstacks entry, as Pad.padstack does (agni 1356).
+   *
+   * @generated from field: string padstack = 6;
+   */
+  padstack: string;
 };
 
 /**
@@ -547,7 +670,7 @@ export type Via = Message<"agni.v1.geom.Via"> & {
  * Use `create(ViaSchema)` to create a new message.
  */
 export const ViaSchema: GenMessage<Via> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 9);
+  messageDesc(file_agni_v1_geom_geom_board, 12);
 
 /**
  * Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
@@ -578,5 +701,5 @@ export type Zone = Message<"agni.v1.geom.Zone"> & {
  * Use `create(ZoneSchema)` to create a new message.
  */
 export const ZoneSchema: GenMessage<Zone> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 10);
+  messageDesc(file_agni_v1_geom_geom_board, 13);
 

@@ -20,6 +20,21 @@ type allegroExtract struct {
 	pinAt map[string][2]float64 // "<ref>.<pin number>" -> board position in mils
 	// widths holds every ETCH line and arc width the extract lists, in thousandths of a mil.
 	widths map[int64]bool
+	// padRows are the padstack rows, one per padstack and layer, in the extract's order.
+	padRows []extractPadRow
+}
+
+// extractPadRow is one padstack on one layer: its regular pad, thermal relief and antipad, each as
+// the extract's shape word and its width and height in mils.
+type extractPadRow struct {
+	padstack, layer string
+	pad, thermal    extractPadShape
+	antipad         extractPadShape
+}
+
+type extractPadShape struct {
+	shape string
+	w, h  float64
 }
 
 type extractComp struct {
@@ -97,6 +112,16 @@ func readAllegroExtract(t *testing.T, path string) *allegroExtract {
 					x.widths[int64(math.Round(extractNum(t, w)*1000))] = true
 				}
 			}
+		case "PAD_NAME":
+			// The technical rows (~DRILL, ~TSM) put words in the size columns, so only the copper
+			// rows are read.
+			if strings.HasPrefix(row["LAYER"], "~") {
+				continue
+			}
+			shape := func(prefix string) extractPadShape {
+				return extractPadShape{shape: row[prefix+"SHAPE1"], w: extractNum(t, row[prefix+"WIDTH"]), h: extractNum(t, row[prefix+"HGHT"])}
+			}
+			x.padRows = append(x.padRows, extractPadRow{padstack: row["PAD_NAME"], layer: row["LAYER"], pad: shape("PAD"), thermal: shape("TREL"), antipad: shape("APAD")})
 		case "VIA_X":
 			x.vias = append(x.vias, extractVia{x: extractNum(t, row["VIA_X"]), y: extractNum(t, row["VIA_Y"]), net: row["NET_NAME"]})
 		}

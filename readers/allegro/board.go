@@ -3,6 +3,7 @@ package allegro
 import (
 	"fmt"
 	"math"
+	"slices"
 
 	"sort"
 
@@ -126,7 +127,7 @@ func (p *board) toBoard(src string) (*geom.BoardGeometry, error) {
 		}
 		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: l.name, Kind: kind}) // #nosec G115 -- a layer index fits a subclass byte
 	}
-	b := &boardBuilder{p: p, g: g, layers: layers, src: src}
+	b := &boardBuilder{p: p, g: g, layers: layers, src: src, stacks: map[stackKey]string{}}
 	b.outline()
 	b.placements()
 	b.copper()
@@ -140,6 +141,14 @@ type boardBuilder struct {
 	g      *geom.BoardGeometry
 	layers []copperLayer
 	src    string
+	// stacks holds the id of each padstack entry written, by its 0x1C and side, so a padstack
+	// shared by many pads is written once per side.
+	stacks map[stackKey]string
+}
+
+type stackKey struct {
+	off    int
+	bottom bool
 }
 
 func (b *boardBuilder) copperLayer(sub byte) string {
@@ -343,6 +352,7 @@ func (b *boardBuilder) pad(placedPad int, bottom bool) *geom.Pad {
 	}
 	st := b.padstack(ps)
 	pad.Shape, pad.Size, pad.Drill = st.shape, st.size, st.drill
+	pad.Padstack = b.stackEntry(ps, bottom)
 	switch {
 	case st.count > 1:
 		pad.Layers = []string{"*.Cu"}
@@ -389,6 +399,72 @@ func (b *boardBuilder) padstack(off int) stack {
 	}
 	st.drill = p.nm(float64(drill))
 	return st
+}
+
+// Slots within one copper layer's components, in the order a 0x1C holds them.
+const (
+	antipadSlot = 0
+	thermalSlot = 1
+)
+
+// stackEntry writes the padstack at off into the board's padstack table, once per side, and
+// returns the entry's id. Each spanned copper layer contributes its pad, thermal relief and antipad
+// (agni 1356). A part on the bottom turns the padstack over, so its entry takes the layers in
+// reverse and its id gains "@bottom".
+func (b *boardBuilder) stackEntry(off int, bottom bool) string {
+	key := stackKey{off, bottom}
+	if id, ok := b.stacks[key]; ok {
+		return id
+	}
+	p := b.p
+	l := p.l
+	name := p.str(p.u32(off, 12))
+	id := name
+	if id == "" {
+		id = fmt.Sprintf("padstack@%x", off)
+	}
+	if bottom {
+		id += "@bottom"
+	}
+	ps := &geom.Padstack{Id: id, Name: name}
+	start, count := int(p.b[off+3]), int(le16(p.b, off+l.psCount))
+	slot := func(i, k int) *geom.PadShape {
+		c := off + l.psHeader + l.psComp*(l.psFixed+i*l.psPerLayer+k)
+		shape := padShape(p.b[c])
+		if shape == "" {
+			return nil
+		}
+		return &geom.PadShape{Shape: shape, Size: &geom.Point{X: p.nm(float64(p.i32(c, l.psW))), Y: p.nm(float64(p.i32(c, l.psW+4)))}}
+	}
+	for i := 0; i < count; i++ {
+		idx := start + i
+		if bottom {
+			idx = len(b.layers) - 1 - idx
+		}
+		if idx < 0 || idx >= len(b.layers) {
+			continue
+		}
+		name := b.layers[idx].name
+		ly := &geom.PadstackLayer{Layer: name, Pad: slot(i, padSlot), Thermal: slot(i, thermalSlot), Antipad: slot(i, antipadSlot)}
+		if ly.Pad != nil || ly.Thermal != nil || ly.Antipad != nil {
+			ps.Layers = append(ps.Layers, ly)
+		}
+	}
+	if bottom {
+		slices.SortStableFunc(ps.Layers, func(a, c *geom.PadstackLayer) int { return b.layerIndex(a.Layer) - b.layerIndex(c.Layer) })
+	}
+	b.g.Padstacks = append(b.g.Padstacks, ps)
+	b.stacks[key] = id
+	return id
+}
+
+func (b *boardBuilder) layerIndex(name string) int {
+	for i, l := range b.layers {
+		if l.name == name {
+			return i
+		}
+	}
+	return len(b.layers)
 }
 
 // padShape maps an Allegro pad shape code to the contract's shape word. A shape the renderer has no
@@ -493,6 +569,7 @@ func (b *boardBuilder) via(off int, nc *geom.NetCopper) {
 	if ps, ok := p.at(p.u32(off, p.l.viaPadstack), tagPadstack); ok {
 		st := b.padstack(ps)
 		v.Drill = st.drill
+		v.Padstack = b.stackEntry(ps, false)
 		if st.size != nil {
 			v.Size = st.size.GetX()
 		}

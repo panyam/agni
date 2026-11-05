@@ -35,6 +35,7 @@ type BoardGeometry struct {
 	Zones         []*Zone                `protobuf:"bytes,7,rep,name=zones,proto3" json:"zones,omitempty"`                          // copper pours, outline only
 	Texts         []*BoardText           `protobuf:"bytes,8,rep,name=texts,proto3" json:"texts,omitempty"`                          // silkscreen/legend + free text (WS7)
 	Graphics      []*BoardGraphic        `protobuf:"bytes,9,rep,name=graphics,proto3" json:"graphics,omitempty"`                    // silkscreen/fab body outlines + free graphics (WS7)
+	Padstacks     []*Padstack            `protobuf:"bytes,10,rep,name=padstacks,proto3" json:"padstacks,omitempty"`                 // per-layer pad shapes, named by Pad and Via (agni 1356)
 	Prov          *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -129,6 +130,13 @@ func (x *BoardGeometry) GetTexts() []*BoardText {
 func (x *BoardGeometry) GetGraphics() []*BoardGraphic {
 	if x != nil {
 		return x.Graphics
+	}
+	return nil
+}
+
+func (x *BoardGeometry) GetPadstacks() []*Padstack {
+	if x != nil {
+		return x.Padstacks
 	}
 	return nil
 }
@@ -556,15 +564,19 @@ func (x *ComponentPlacement) GetProv() *Provenance {
 // ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin. net is the
 // connected net's name, "" for an unconnected pad.
 type Pad struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Number        string                 `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
-	At            *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`
-	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees CCW in the footprint's own frame
-	Size          *Point                 `protobuf:"bytes,4,opt,name=size,proto3" json:"size,omitempty"`                                    // bounding extents (x = width, y = height)
-	Shape         string                 `protobuf:"bytes,5,opt,name=shape,proto3" json:"shape,omitempty"`                                  // source word, verbatim: "rect", "roundrect", "circle", "oval", ...
-	Layers        []string               `protobuf:"bytes,6,rep,name=layers,proto3" json:"layers,omitempty"`                                // layer names, wildcards as printed ("*.Cu")
-	Drill         int64                  `protobuf:"varint,7,opt,name=drill,proto3" json:"drill,omitempty"`                                 // drill diameter, 0 for SMD
-	Net           string                 `protobuf:"bytes,8,opt,name=net,proto3" json:"net,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Number      string                 `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
+	At          *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`
+	RotationDeg float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees CCW in the footprint's own frame
+	Size        *Point                 `protobuf:"bytes,4,opt,name=size,proto3" json:"size,omitempty"`                                    // bounding extents (x = width, y = height)
+	Shape       string                 `protobuf:"bytes,5,opt,name=shape,proto3" json:"shape,omitempty"`                                  // source word, verbatim: "rect", "roundrect", "circle", "oval", ...
+	Layers      []string               `protobuf:"bytes,6,rep,name=layers,proto3" json:"layers,omitempty"`                                // layer names, wildcards as printed ("*.Cu")
+	Drill       int64                  `protobuf:"varint,7,opt,name=drill,proto3" json:"drill,omitempty"`                                 // drill diameter, 0 for SMD
+	Net         string                 `protobuf:"bytes,8,opt,name=net,proto3" json:"net,omitempty"`
+	// padstack names the BoardGeometry.padstacks entry that holds this pad's shape on each copper
+	// layer (agni 1356). "" when the reader read none, and then shape and size are the pad's only
+	// land. shape and size stay set either way, as the land on the pad's first layer.
+	Padstack      string `protobuf:"bytes,9,opt,name=padstack,proto3" json:"padstack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -655,6 +667,209 @@ func (x *Pad) GetNet() string {
 	return ""
 }
 
+func (x *Pad) GetPadstack() string {
+	if x != nil {
+		return x.Padstack
+	}
+	return ""
+}
+
+// Padstack is a pad's shape on each copper layer, as the board has it (agni 1356). A through-hole
+// pad is often larger on the outer layers than on the inner ones, and a plane layer cuts an
+// antipad around a hole whose net it does not join.
+//
+// layers name the board's own copper layers AS PLACED. A part on the bottom turns its padstack
+// over, so a reader that shares a padstack across sides writes a second entry for the bottom with
+// its layers reversed, and the consumer never mirrors one itself. id is that entry's key, unique in
+// the board. name is the source's padstack name, shared by both entries, or "" when the source
+// names none (ODB++).
+type Padstack struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Layers        []*PadstackLayer       `protobuf:"bytes,3,rep,name=layers,proto3" json:"layers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Padstack) Reset() {
+	*x = Padstack{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Padstack) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Padstack) ProtoMessage() {}
+
+func (x *Padstack) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Padstack.ProtoReflect.Descriptor instead.
+func (*Padstack) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Padstack) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Padstack) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Padstack) GetLayers() []*PadstackLayer {
+	if x != nil {
+		return x.Layers
+	}
+	return nil
+}
+
+// PadstackLayer is a padstack on one copper layer. pad is the land, unset where the padstack has
+// none on this layer. thermal and antipad are PROVISIONAL (C9): only the Allegro reader fills them.
+// IPC-2581 and ODB++ express both as cut-outs in the plane polygon instead, which agni 1357 reads.
+// thermal is the relief's outer extent where the pad joins a plane, and antipad the clearance
+// where it does not.
+type PadstackLayer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Layer         string                 `protobuf:"bytes,1,opt,name=layer,proto3" json:"layer,omitempty"`
+	Pad           *PadShape              `protobuf:"bytes,2,opt,name=pad,proto3" json:"pad,omitempty"`
+	Thermal       *PadShape              `protobuf:"bytes,3,opt,name=thermal,proto3" json:"thermal,omitempty"`
+	Antipad       *PadShape              `protobuf:"bytes,4,opt,name=antipad,proto3" json:"antipad,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PadstackLayer) Reset() {
+	*x = PadstackLayer{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PadstackLayer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PadstackLayer) ProtoMessage() {}
+
+func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PadstackLayer.ProtoReflect.Descriptor instead.
+func (*PadstackLayer) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PadstackLayer) GetLayer() string {
+	if x != nil {
+		return x.Layer
+	}
+	return ""
+}
+
+func (x *PadstackLayer) GetPad() *PadShape {
+	if x != nil {
+		return x.Pad
+	}
+	return nil
+}
+
+func (x *PadstackLayer) GetThermal() *PadShape {
+	if x != nil {
+		return x.Thermal
+	}
+	return nil
+}
+
+func (x *PadstackLayer) GetAntipad() *PadShape {
+	if x != nil {
+		return x.Antipad
+	}
+	return nil
+}
+
+// PadShape is one shape of a padstack, centred on the pad and turned with it. shape is the source
+// word, as Pad.shape spells it, and size its extent in source units.
+type PadShape struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Shape         string                 `protobuf:"bytes,1,opt,name=shape,proto3" json:"shape,omitempty"`
+	Size          *Point                 `protobuf:"bytes,2,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PadShape) Reset() {
+	*x = PadShape{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PadShape) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PadShape) ProtoMessage() {}
+
+func (x *PadShape) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PadShape.ProtoReflect.Descriptor instead.
+func (*PadShape) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PadShape) GetShape() string {
+	if x != nil {
+		return x.Shape
+	}
+	return ""
+}
+
+func (x *PadShape) GetSize() *Point {
+	if x != nil {
+		return x.Size
+	}
+	return nil
+}
+
 // NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
 // so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
 // side.
@@ -669,7 +884,7 @@ type NetCopper struct {
 
 func (x *NetCopper) Reset() {
 	*x = NetCopper{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -681,7 +896,7 @@ func (x *NetCopper) String() string {
 func (*NetCopper) ProtoMessage() {}
 
 func (x *NetCopper) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +909,7 @@ func (x *NetCopper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetCopper.ProtoReflect.Descriptor instead.
 func (*NetCopper) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *NetCopper) GetNet() string {
@@ -736,7 +951,7 @@ type TrackSegment struct {
 
 func (x *TrackSegment) Reset() {
 	*x = TrackSegment{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -748,7 +963,7 @@ func (x *TrackSegment) String() string {
 func (*TrackSegment) ProtoMessage() {}
 
 func (x *TrackSegment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -761,7 +976,7 @@ func (x *TrackSegment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackSegment.ProtoReflect.Descriptor instead.
 func (*TrackSegment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TrackSegment) GetA() *Point {
@@ -802,19 +1017,21 @@ func (x *TrackSegment) GetMid() *Point {
 // Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
 // through via spans "F.Cu".."B.Cu". Blind and buried vias narrow the pair.
 type Via struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	At            *Point                 `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
-	Size          int64                  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`   // annular pad diameter
-	Drill         int64                  `protobuf:"varint,3,opt,name=drill,proto3" json:"drill,omitempty"` // hole diameter
-	LayerFrom     string                 `protobuf:"bytes,4,opt,name=layer_from,json=layerFrom,proto3" json:"layer_from,omitempty"`
-	LayerTo       string                 `protobuf:"bytes,5,opt,name=layer_to,json=layerTo,proto3" json:"layer_to,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	At        *Point                 `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
+	Size      int64                  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`   // annular pad diameter
+	Drill     int64                  `protobuf:"varint,3,opt,name=drill,proto3" json:"drill,omitempty"` // hole diameter
+	LayerFrom string                 `protobuf:"bytes,4,opt,name=layer_from,json=layerFrom,proto3" json:"layer_from,omitempty"`
+	LayerTo   string                 `protobuf:"bytes,5,opt,name=layer_to,json=layerTo,proto3" json:"layer_to,omitempty"`
+	// padstack names the via's BoardGeometry.padstacks entry, as Pad.padstack does (agni 1356).
+	Padstack      string `protobuf:"bytes,6,opt,name=padstack,proto3" json:"padstack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Via) Reset() {
 	*x = Via{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -826,7 +1043,7 @@ func (x *Via) String() string {
 func (*Via) ProtoMessage() {}
 
 func (x *Via) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -839,7 +1056,7 @@ func (x *Via) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Via.ProtoReflect.Descriptor instead.
 func (*Via) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Via) GetAt() *Point {
@@ -877,6 +1094,13 @@ func (x *Via) GetLayerTo() string {
 	return ""
 }
 
+func (x *Via) GetPadstack() string {
+	if x != nil {
+		return x.Padstack
+	}
+	return ""
+}
+
 // Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
 // polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
 // it again, or a later tier will hold it, per the C6 bound above.
@@ -891,7 +1115,7 @@ type Zone struct {
 
 func (x *Zone) Reset() {
 	*x = Zone{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +1127,7 @@ func (x *Zone) String() string {
 func (*Zone) ProtoMessage() {}
 
 func (x *Zone) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -916,7 +1140,7 @@ func (x *Zone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Zone.ProtoReflect.Descriptor instead.
 func (*Zone) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Zone) GetNet() string {
@@ -944,7 +1168,7 @@ var File_agni_v1_geom_geom_board_proto protoreflect.FileDescriptor
 
 const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\xdd\x03\n" +
+	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\x93\x04\n" +
 	"\rBoardGeometry\x12\x1d\n" +
 	"\n" +
 	"design_ref\x18\x01 \x01(\tR\tdesignRef\x12\x17\n" +
@@ -957,7 +1181,9 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x04nets\x18\x06 \x03(\v2\x17.agni.v1.geom.NetCopperR\x04nets\x12(\n" +
 	"\x05zones\x18\a \x03(\v2\x12.agni.v1.geom.ZoneR\x05zones\x12-\n" +
 	"\x05texts\x18\b \x03(\v2\x17.agni.v1.geom.BoardTextR\x05texts\x126\n" +
-	"\bgraphics\x18\t \x03(\v2\x1a.agni.v1.geom.BoardGraphicR\bgraphics\x12,\n" +
+	"\bgraphics\x18\t \x03(\v2\x1a.agni.v1.geom.BoardGraphicR\bgraphics\x124\n" +
+	"\tpadstacks\x18\n" +
+	" \x03(\v2\x16.agni.v1.geom.PadstackR\tpadstacks\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xf4\x01\n" +
 	"\tBoardText\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12#\n" +
@@ -988,7 +1214,7 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x05layer\x18\x04 \x01(\tR\x05layer\x12%\n" +
 	"\x04pads\x18\x05 \x03(\v2\x11.agni.v1.geom.PadR\x04pads\x12\x16\n" +
 	"\x06mirror\x18\x06 \x01(\bR\x06mirror\x12,\n" +
-	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xe4\x01\n" +
+	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\x80\x02\n" +
 	"\x03Pad\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\tR\x06number\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -997,7 +1223,20 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x05shape\x18\x05 \x01(\tR\x05shape\x12\x16\n" +
 	"\x06layers\x18\x06 \x03(\tR\x06layers\x12\x14\n" +
 	"\x05drill\x18\a \x01(\x03R\x05drill\x12\x10\n" +
-	"\x03net\x18\b \x01(\tR\x03net\"|\n" +
+	"\x03net\x18\b \x01(\tR\x03net\x12\x1a\n" +
+	"\bpadstack\x18\t \x01(\tR\bpadstack\"c\n" +
+	"\bPadstack\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x123\n" +
+	"\x06layers\x18\x03 \x03(\v2\x1b.agni.v1.geom.PadstackLayerR\x06layers\"\xb3\x01\n" +
+	"\rPadstackLayer\x12\x14\n" +
+	"\x05layer\x18\x01 \x01(\tR\x05layer\x12(\n" +
+	"\x03pad\x18\x02 \x01(\v2\x16.agni.v1.geom.PadShapeR\x03pad\x120\n" +
+	"\athermal\x18\x03 \x01(\v2\x16.agni.v1.geom.PadShapeR\athermal\x120\n" +
+	"\aantipad\x18\x04 \x01(\v2\x16.agni.v1.geom.PadShapeR\aantipad\"I\n" +
+	"\bPadShape\x12\x14\n" +
+	"\x05shape\x18\x01 \x01(\tR\x05shape\x12'\n" +
+	"\x04size\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x04size\"|\n" +
 	"\tNetCopper\x12\x10\n" +
 	"\x03net\x18\x01 \x01(\tR\x03net\x126\n" +
 	"\bsegments\x18\x02 \x03(\v2\x1a.agni.v1.geom.TrackSegmentR\bsegments\x12%\n" +
@@ -1007,14 +1246,15 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x01b\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x01b\x12\x14\n" +
 	"\x05width\x18\x03 \x01(\x03R\x05width\x12\x14\n" +
 	"\x05layer\x18\x04 \x01(\tR\x05layer\x12%\n" +
-	"\x03mid\x18\x05 \x01(\v2\x13.agni.v1.geom.PointR\x03mid\"\x8e\x01\n" +
+	"\x03mid\x18\x05 \x01(\v2\x13.agni.v1.geom.PointR\x03mid\"\xaa\x01\n" +
 	"\x03Via\x12#\n" +
 	"\x02at\x18\x01 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12\x12\n" +
 	"\x04size\x18\x02 \x01(\x03R\x04size\x12\x14\n" +
 	"\x05drill\x18\x03 \x01(\x03R\x05drill\x12\x1d\n" +
 	"\n" +
 	"layer_from\x18\x04 \x01(\tR\tlayerFrom\x12\x19\n" +
-	"\blayer_to\x18\x05 \x01(\tR\alayerTo\"`\n" +
+	"\blayer_to\x18\x05 \x01(\tR\alayerTo\x12\x1a\n" +
+	"\bpadstack\x18\x06 \x01(\tR\bpadstack\"`\n" +
 	"\x04Zone\x12\x10\n" +
 	"\x03net\x18\x01 \x01(\tR\x03net\x12\x14\n" +
 	"\x05layer\x18\x02 \x01(\tR\x05layer\x120\n" +
@@ -1032,7 +1272,7 @@ func file_agni_v1_geom_geom_board_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_board_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardGeometry)(nil),      // 0: agni.v1.geom.BoardGeometry
 	(*BoardText)(nil),          // 1: agni.v1.geom.BoardText
@@ -1041,44 +1281,53 @@ var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardOutline)(nil),       // 4: agni.v1.geom.BoardOutline
 	(*ComponentPlacement)(nil), // 5: agni.v1.geom.ComponentPlacement
 	(*Pad)(nil),                // 6: agni.v1.geom.Pad
-	(*NetCopper)(nil),          // 7: agni.v1.geom.NetCopper
-	(*TrackSegment)(nil),       // 8: agni.v1.geom.TrackSegment
-	(*Via)(nil),                // 9: agni.v1.geom.Via
-	(*Zone)(nil),               // 10: agni.v1.geom.Zone
-	(*Provenance)(nil),         // 11: agni.v1.geom.Provenance
-	(*Point)(nil),              // 12: agni.v1.geom.Point
-	(*Shape)(nil),              // 13: agni.v1.geom.Shape
-	(*Polyline)(nil),           // 14: agni.v1.geom.Polyline
+	(*Padstack)(nil),           // 7: agni.v1.geom.Padstack
+	(*PadstackLayer)(nil),      // 8: agni.v1.geom.PadstackLayer
+	(*PadShape)(nil),           // 9: agni.v1.geom.PadShape
+	(*NetCopper)(nil),          // 10: agni.v1.geom.NetCopper
+	(*TrackSegment)(nil),       // 11: agni.v1.geom.TrackSegment
+	(*Via)(nil),                // 12: agni.v1.geom.Via
+	(*Zone)(nil),               // 13: agni.v1.geom.Zone
+	(*Provenance)(nil),         // 14: agni.v1.geom.Provenance
+	(*Point)(nil),              // 15: agni.v1.geom.Point
+	(*Shape)(nil),              // 16: agni.v1.geom.Shape
+	(*Polyline)(nil),           // 17: agni.v1.geom.Polyline
 }
 var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.BoardGeometry.layers:type_name -> agni.v1.geom.BoardLayer
 	4,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
 	5,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
-	7,  // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
-	10, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
+	10, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
+	13, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
 	1,  // 5: agni.v1.geom.BoardGeometry.texts:type_name -> agni.v1.geom.BoardText
 	2,  // 6: agni.v1.geom.BoardGeometry.graphics:type_name -> agni.v1.geom.BoardGraphic
-	11, // 7: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
-	12, // 8: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
-	13, // 9: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
-	14, // 10: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
-	12, // 11: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
-	6,  // 12: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
-	11, // 13: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
-	12, // 14: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
-	12, // 15: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
-	8,  // 16: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	9,  // 17: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	12, // 18: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	12, // 19: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	12, // 20: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	12, // 21: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	14, // 22: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	7,  // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
+	14, // 8: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
+	15, // 9: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
+	16, // 10: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
+	17, // 11: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
+	15, // 12: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
+	6,  // 13: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
+	14, // 14: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
+	15, // 15: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
+	15, // 16: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
+	8,  // 17: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
+	9,  // 18: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
+	9,  // 19: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
+	9,  // 20: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
+	15, // 21: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
+	11, // 22: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	12, // 23: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	15, // 24: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	15, // 25: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	15, // 26: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	15, // 27: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	17, // 28: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }
@@ -1093,7 +1342,7 @@ func file_agni_v1_geom_geom_board_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_board_proto_rawDesc), len(file_agni_v1_geom_geom_board_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
