@@ -34,6 +34,7 @@ first six end to end in one tour.
 | 16 | [odb-verification/](odb-verification/) | Check a layout handed off as ODB++ against the schematic it was drawn from: read the job's netlist and board, run the checks (copper included), and diff the layout against the schematic netlist. The walkthrough form of `agni check <job>` and `agni diff <schematic> <job>`. | ready |
 | 17 | [lexicon/](lexicon/) | How a design's names are read: every pattern of the naming vocabulary with where it came from, why one net has its roles, and what a different convention would change (`LexiconService`). The walkthrough form of `agni lexicon`. | ready |
 | 18 | [allegro-board/](allegro-board/) | Read a Cadence Allegro `.brd` with no export from Allegro: the netlist, the board geometry, and the checks with the copper rules. The one example that reads a real board, the public BeagleBone AI from the samples corpus, since nobody can author a synthetic Allegro board (CONSTRAINTS C10). The walkthrough form of `agni check <board>.brd`. | ready |
+| 19 | [altium-board/](altium-board/) | Read an Altium Designer `.PcbDoc` with no export from Altium: the netlist with the board's own designators and each part's schematic parameters, the board geometry, and the checks with the copper rules. It reads the public foxBMS master board from the samples corpus (CONSTRAINTS C10). The walkthrough form of `agni check <board>.PcbDoc`. | ready |
 
 A first read should start with `whole-enchilada` for the tour, then use rungs 1-13 to go deep
 on each step.

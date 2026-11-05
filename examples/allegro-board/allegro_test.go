@@ -26,13 +26,13 @@ func TestTheSampleBoardReadsAndChecks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lines := boardLines(g)
+	lines := common.BoardLines(g)
 	for _, want := range []string{"F.Cu In1.Cu", "In10.Cu B.Cu", "263 on top, 453 on the bottom", "1789 vias"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("board summary lacks %q:\n%s", want, lines)
 		}
 	}
-	tally := ruleTally(check.RunBackground(check.NewModel(d, check.WithBoard(g)), check.BuiltinRules()))
+	tally := common.RuleTally(check.RunBackground(check.NewModel(d, check.WithBoard(g)), check.BuiltinRules()))
 	if !strings.Contains(tally, "track-width") {
 		t.Errorf("the checks never reached the copper, so track-width did not run:\n%s", tally)
 	}
