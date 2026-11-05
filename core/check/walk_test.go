@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -204,5 +206,126 @@ func TestWalkKindsAreListedWithASummary(t *testing.T) {
 		if k.Name == "" || k.Title == "" || k.Summary == "" {
 			t.Errorf("kind %+v lacks a name, title or summary", k)
 		}
+	}
+}
+
+// translatorFixture is a 1.8 V I2C bus through a two-channel level translator U5 to a 3.3 V bus:
+//
+//	R1:  SDA_1V8 -> +1V8 (the pull-up)
+//	U5:  A1 SCL_1V8, A2 SDA_1V8, B1 SCL_3V3, B2 SDA_3V3, VCCA +1V8, VCCB +3V3, GND, OE +1V8
+//	R5:  SDA_3V3 -> +3V3 (the 3.3 V side's pull-up)
+//	U6:  a sensor on the 3.3 V bus (six pins)
+func translatorFixture() *ir.Design {
+	lib := &ir.PartLibrary{Name: "lib", Parts: []*ir.PartType{
+		{Name: "TXS", Pins: []*ir.Pin{
+			{Designator: "1", Name: "A1"}, {Designator: "2", Name: "A2"}, {Designator: "3", Name: "B1"}, {Designator: "4", Name: "B2"},
+			{Designator: "5", Name: "VCCA"}, {Designator: "6", Name: "VCCB"}, {Designator: "7", Name: "GND"}, {Designator: "8", Name: "OE"},
+		}},
+	}}
+	comp := func(ref, part string) *ir.Component {
+		c := &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
+		if part != "" {
+			c.Sections = []*ir.ComponentSection{{PartRef: part, LibraryRef: "lib"}}
+		}
+		return c
+	}
+	return &ir.Design{
+		Libraries:  []*ir.PartLibrary{lib},
+		Components: []*ir.Component{comp("R1", ""), comp("U5", "TXS"), comp("R5", ""), comp("U6", "")},
+		Nets: []*ir.Net{
+			tnet("SDA_1V8", "R1.1", "U5.2"),
+			tnet("SCL_1V8", "U5.1"),
+			tnet("+1V8", "R1.2", "U5.5", "U5.8"),
+			tnet("SDA_3V3", "U5.4", "R5.1", "U6.1"),
+			tnet("SCL_3V3", "U5.3", "U6.2"),
+			tnet("+3V3", "U5.6", "R5.2", "U6.3"),
+			tnet("GND", "U5.7", "U6.4"),
+			tnet("INT", "U6.5"),
+			tnet("ADDR", "U6.6"),
+		},
+	}
+}
+
+func TestSmallPartsWalkFollowsATranslatorsPinPair(t *testing.T) {
+	w, err := WalkFrom(NewModel(translatorFixture()), Endpoint{RefDes: "R1"}, "small-parts", 2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// U5 is an eight-pin IC, so only its A2/B2 pair carries the walk on, into SDA_3V3 alone.
+	if got, want := hopNets(w), "1:SDA_1V8 1:+1V8(rail) 2:SDA_3V3"; got != want {
+		t.Errorf("nets = %s, want %s", got, want)
+	}
+	if e := w.Nets[2].Entered; e.RefDes != "U5" || e.EnterPin != "2" || e.ExitPin != "4" || !e.Paired {
+		t.Errorf("SDA_3V3 was entered by %+v, want U5 pin 2 --> pin 4, paired", e)
+	}
+	if _, refused := boundaryOf(w)["U5"]; refused {
+		t.Errorf("U5 is on the boundary though its pair was crossed: %v", w.Boundary)
+	}
+}
+
+func TestEveryPartWalkStillCrossesEveryPin(t *testing.T) {
+	w, err := WalkFrom(NewModel(translatorFixture()), Endpoint{RefDes: "R1"}, "all", 2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"2:SCL_1V8", "2:SDA_3V3", "2:SCL_3V3", "2:+3V3(rail)", "2:GND(ground)"} {
+		if !strings.Contains(hopNets(w), want) {
+			t.Errorf("the all walk lacks %s: %s", want, hopNets(w))
+		}
+	}
+}
+
+func TestThroughANamedTranslatorFollowsItsPair(t *testing.T) {
+	w, err := WalkFrom(NewModel(translatorFixture()), Endpoint{RefDes: "R1"}, "series", 2, []string{"U5"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := hopNets(w), "1:SDA_1V8 1:+1V8 2:SDA_3V3"; got != want {
+		t.Errorf("nets = %s, want %s: naming U5 should cross its pair, not every pin", got, want)
+	}
+	// Without the pair, the series walk refuses U5 as it refuses any IC.
+	plain, err := WalkFrom(NewModel(translatorFixture()), Endpoint{RefDes: "R1"}, "series", 2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(hopNets(plain), "SDA_3V3") || boundaryOf(plain)["U5"] != "an ic is not a series part" {
+		t.Errorf("the series walk crossed U5 unasked: %s, boundary %v", hopNets(plain), plain.Boundary)
+	}
+}
+
+func TestAProjectThatTurnsPairsOffWalksAsBefore(t *testing.T) {
+	v, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{ThroughPair: &configpb.PinPairVocab{Replace: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewModel(translatorFixture(), WithLexicon(&classify.Lexicon{Role: v}))
+	w, err := WalkFrom(m, Endpoint{RefDes: "R1"}, "small-parts", 2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(hopNets(w), "SDA_3V3") || boundaryOf(w)["U5"] != "8 connected pins" {
+		t.Errorf("with no pairs, U5 should stop the walk for its pins: %s, boundary %v", hopNets(w), w.Boundary)
+	}
+}
+
+// Crossing a translator by one channel leaves its other channels open. R7 joins the 3.3 V SDA and
+// SCL, so the walk comes back to U5 on B1 and crosses to A1.
+func TestATranslatorsOtherChannelsStayOpen(t *testing.T) {
+	d := translatorFixture()
+	d.Components = append(d.Components, &ir.Component{RefDes: "R7", Prov: &ir.Provenance{SourceFile: "t"}})
+	for _, n := range d.Nets {
+		switch n.Name {
+		case "SDA_3V3":
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: "R7", PinRef: "1"})
+		case "SCL_3V3":
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: "R7", PinRef: "2"})
+		}
+	}
+	w, err := WalkFrom(NewModel(d), Endpoint{RefDes: "R1"}, "small-parts", 4, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(hopNets(w), "3:SCL_3V3") || !strings.Contains(hopNets(w), "4:SCL_1V8") {
+		t.Errorf("nets = %s, want SCL_3V3 at hop 3 through R7 and SCL_1V8 at hop 4 through U5's B1/A1", hopNets(w))
 	}
 }

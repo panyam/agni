@@ -106,7 +106,7 @@ class DiffSuffix(_message.Message):
     def __init__(self, positive: _Optional[str] = ..., negative: _Optional[str] = ...) -> None: ...
 
 class PinNameVocab(_message.Message):
-    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad", "anode", "cathode", "feedback", "switching")
+    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad", "anode", "cathode", "feedback", "switching", "through_pair")
     SUPPLY_FIELD_NUMBER: _ClassVar[int]
     GATE_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
@@ -116,6 +116,7 @@ class PinNameVocab(_message.Message):
     CATHODE_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
     SWITCHING_FIELD_NUMBER: _ClassVar[int]
+    THROUGH_PAIR_FIELD_NUMBER: _ClassVar[int]
     supply: VocabPatterns
     gate: VocabPatterns
     source: VocabPatterns
@@ -125,7 +126,24 @@ class PinNameVocab(_message.Message):
     cathode: VocabPatterns
     feedback: VocabPatterns
     switching: VocabPatterns
-    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ..., anode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., cathode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
+    through_pair: PinPairVocab
+    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ..., anode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., cathode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., through_pair: _Optional[_Union[PinPairVocab, _Mapping]] = ...) -> None: ...
+
+class PinPairVocab(_message.Message):
+    __slots__ = ("pairs", "replace")
+    PAIRS_FIELD_NUMBER: _ClassVar[int]
+    REPLACE_FIELD_NUMBER: _ClassVar[int]
+    pairs: _containers.RepeatedCompositeFieldContainer[PinPair]
+    replace: bool
+    def __init__(self, pairs: _Optional[_Iterable[_Union[PinPair, _Mapping]]] = ..., replace: _Optional[bool] = ...) -> None: ...
+
+class PinPair(_message.Message):
+    __slots__ = ("a", "b")
+    A_FIELD_NUMBER: _ClassVar[int]
+    B_FIELD_NUMBER: _ClassVar[int]
+    a: str
+    b: str
+    def __init__(self, a: _Optional[str] = ..., b: _Optional[str] = ...) -> None: ...
 
 class VocabPatterns(_message.Message):
     __slots__ = ("patterns", "replace", "exclude")

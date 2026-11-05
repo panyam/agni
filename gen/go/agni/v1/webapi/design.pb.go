@@ -1334,13 +1334,16 @@ func (x *TraceEnd) GetSheetIds() []string {
 
 // TraceCross is one series element crossed on the route, with its own pins on each side.
 type TraceCross struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
-	Class         string                 `protobuf:"bytes,2,opt,name=class,proto3" json:"class,omitempty"`
-	EnterPin      string                 `protobuf:"bytes,3,opt,name=enter_pin,json=enterPin,proto3" json:"enter_pin,omitempty"`
-	ExitPin       string                 `protobuf:"bytes,4,opt,name=exit_pin,json=exitPin,proto3" json:"exit_pin,omitempty"`
-	FromNet       string                 `protobuf:"bytes,5,opt,name=from_net,json=fromNet,proto3" json:"from_net,omitempty"`
-	ToNet         string                 `protobuf:"bytes,6,opt,name=to_net,json=toNet,proto3" json:"to_net,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	RefDes   string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Class    string                 `protobuf:"bytes,2,opt,name=class,proto3" json:"class,omitempty"`
+	EnterPin string                 `protobuf:"bytes,3,opt,name=enter_pin,json=enterPin,proto3" json:"enter_pin,omitempty"`
+	ExitPin  string                 `protobuf:"bytes,4,opt,name=exit_pin,json=exitPin,proto3" json:"exit_pin,omitempty"`
+	FromNet  string                 `protobuf:"bytes,5,opt,name=from_net,json=fromNet,proto3" json:"from_net,omitempty"`
+	ToNet    string                 `protobuf:"bytes,6,opt,name=to_net,json=toNet,proto3" json:"to_net,omitempty"`
+	// paired marks a walk's crossing from one pin of a through pair to its partner alone, such as a
+	// level translator's A2 to B2 (agni issue 1338). A trace never sets it.
+	Paired        bool `protobuf:"varint,7,opt,name=paired,proto3" json:"paired,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1415,6 +1418,13 @@ func (x *TraceCross) GetToNet() string {
 		return x.ToNet
 	}
 	return ""
+}
+
+func (x *TraceCross) GetPaired() bool {
+	if x != nil {
+		return x.Paired
+	}
+	return false
 }
 
 // TraceNet is one net on the route, with what else sits on it.
@@ -2541,7 +2551,7 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bendpoint\x18\x01 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\bendpoint\x12\x19\n" +
 	"\bpin_name\x18\x02 \x01(\tR\apinName\x12\x10\n" +
 	"\x03net\x18\x03 \x01(\tR\x03net\x12\x1b\n" +
-	"\tsheet_ids\x18\x04 \x03(\tR\bsheetIds\"\xa5\x01\n" +
+	"\tsheet_ids\x18\x04 \x03(\tR\bsheetIds\"\xbd\x01\n" +
 	"\n" +
 	"TraceCross\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n" +
@@ -2549,7 +2559,8 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\tenter_pin\x18\x03 \x01(\tR\benterPin\x12\x19\n" +
 	"\bexit_pin\x18\x04 \x01(\tR\aexitPin\x12\x19\n" +
 	"\bfrom_net\x18\x05 \x01(\tR\afromNet\x12\x15\n" +
-	"\x06to_net\x18\x06 \x01(\tR\x05toNet\"\xaa\x01\n" +
+	"\x06to_net\x18\x06 \x01(\tR\x05toNet\x12\x16\n" +
+	"\x06paired\x18\a \x01(\bR\x06paired\"\xaa\x01\n" +
 	"\bTraceNet\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12/\n" +
 	"\x05stubs\x18\x02 \x03(\v2\x19.agni.v1.webapi.TraceStubR\x05stubs\x12!\n" +

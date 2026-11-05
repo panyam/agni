@@ -25,7 +25,7 @@ func TraceProto(t check.Trace) *webapi.Trace {
 	for _, c := range t.Crossings {
 		p.Crossings = append(p.Crossings, &webapi.TraceCross{
 			RefDes: c.RefDes, Class: c.Class, EnterPin: c.EnterPin, ExitPin: c.ExitPin,
-			FromNet: c.FromNet, ToNet: c.ToNet,
+			FromNet: c.FromNet, ToNet: c.ToNet, Paired: c.Paired,
 		})
 	}
 	for _, n := range t.Nets {
@@ -50,7 +50,7 @@ func TraceFromProto(p *webapi.Trace) check.Trace {
 	for _, c := range p.GetCrossings() {
 		t.Crossings = append(t.Crossings, check.TraceCross{
 			RefDes: c.GetRefDes(), Class: c.GetClass(), EnterPin: c.GetEnterPin(),
-			ExitPin: c.GetExitPin(), FromNet: c.GetFromNet(), ToNet: c.GetToNet(),
+			ExitPin: c.GetExitPin(), FromNet: c.GetFromNet(), ToNet: c.GetToNet(), Paired: c.GetPaired(),
 		})
 	}
 	for _, n := range p.GetNets() {

@@ -149,6 +149,24 @@ message PinNameVocab {
   // net vocabularies of the same names. A pin name has no rail prefix to end in _FB.
   VocabPatterns feedback = 8;
   VocabPatterns switching = 9;
+  // through_pair names pins that carry one signal across a part, such as a level translator's A2 and
+  // B2 or a buffer's 1A and 1Y (agni issue 1338). A walk crossing a part from one pin of a pair
+  // goes on through its partner alone, rather than through every pin of the part.
+  PinPairVocab through_pair = 10;
+}
+
+// PinPairVocab is the pin pairs a project adds to the built-ins, or with replace, the whole set.
+message PinPairVocab {
+  repeated PinPair pairs = 1;
+  bool replace = 2;
+}
+
+// PinPair is two pin-name templates, matched without regard to case. "{n}" stands for a channel
+// number and must appear in both or neither, so "A{n}" and "B{n}" pair A2 with B2, and "SDA1" and
+// "SDA2" pair those two names alone.
+message PinPair {
+  string a = 1;
+  string b = 2;
 }
 
 // VocabPatterns is one vocabulary override. Its patterns are RE2, case-insensitive, and matched on

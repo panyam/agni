@@ -18,7 +18,7 @@ func fullWalk() check.Walk {
 			Hop:         2,
 			Net:         check.TraceNet{Name: "SDA_TP", Stubs: []check.TraceStub{{RefDes: "TP1", Pin: "1", Class: "test_point"}}, StubsElided: 1, BusLike: true},
 			Entered:     check.TraceCross{RefDes: "R2", Class: "resistor", EnterPin: "1", ExitPin: "2", FromNet: "SDA", ToNet: "SDA_TP"},
-			AlsoEntered: []check.TraceCross{{RefDes: "C2", Class: "capacitor", EnterPin: "1", ExitPin: "2", FromNet: "X", ToNet: "SDA_TP"}},
+			AlsoEntered: []check.TraceCross{{RefDes: "C2", Class: "capacitor", EnterPin: "1", ExitPin: "2", FromNet: "X", ToNet: "SDA_TP", Paired: true}},
 			Ended:       "rail",
 		}},
 		Boundary: []check.WalkBoundary{{RefDes: "U1", Class: "ic", Hop: 1, Net: "SDA", Reason: "5 connected pins"}},

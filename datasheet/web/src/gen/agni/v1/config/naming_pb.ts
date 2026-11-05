@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUijwMKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRJACgp2YWx1ZV91bml0GAQgAygLMiwuYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbi5WYWx1ZVVuaXRFbnRyeRIxCglhdHRyaWJ1dGUYBSABKAsyHi5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVWb2NhYhpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBGjAKDlZhbHVlVW5pdEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiyQEKDkF0dHJpYnV0ZVZvY2FiEioKA21wbhgBIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVLZXlzEioKA2RucBgDIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSMQoKZG5wX3ZhbHVlcxgEIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMiLgoNQXR0cmlidXRlS2V5cxIMCgRrZXlzGAEgAygJEg8KB3JlcGxhY2UYAiABKAgiuwQKDE5ldE5hbWVWb2NhYhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIwCglzd2l0Y2hpbmcYBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi4KB2NvbnRyb2wYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjEKCmdhdGVfZHJpdmUYBiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEioKA2kyYxgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKAobaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zGAggASgISACIAQESMQoKbm9fY29ubmVjdBgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJZGlmZl9wYWlyGAogASgLMh0uYWduaS52MS5jb25maWcuRGlmZlBhaXJWb2NhYhIuCgd2b2x0YWdlGAsgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJuc0IeChxfaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zIksKDURpZmZQYWlyVm9jYWISKQoFcGFpcnMYASADKAsyGi5hZ25pLnYxLmNvbmZpZy5EaWZmU3VmZml4Eg8KB3JlcGxhY2UYAiABKAgiMAoKRGlmZlN1ZmZpeBIQCghwb3NpdGl2ZRgBIAEoCRIQCghuZWdhdGl2ZRgCIAEoCSK8AwoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMgoLZXhwb3NlZF9wYWQYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEiwKBWFub2RlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjYXRob2RlGAcgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgIIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAkgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJtCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkSGAoQZXhjbHVkZV9wcmVmaXhlcxgGIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUijwMKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRJACgp2YWx1ZV91bml0GAQgAygLMiwuYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbi5WYWx1ZVVuaXRFbnRyeRIxCglhdHRyaWJ1dGUYBSABKAsyHi5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVWb2NhYhpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBGjAKDlZhbHVlVW5pdEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiyQEKDkF0dHJpYnV0ZVZvY2FiEioKA21wbhgBIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVLZXlzEioKA2RucBgDIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSMQoKZG5wX3ZhbHVlcxgEIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMiLgoNQXR0cmlidXRlS2V5cxIMCgRrZXlzGAEgAygJEg8KB3JlcGxhY2UYAiABKAgiuwQKDE5ldE5hbWVWb2NhYhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIwCglzd2l0Y2hpbmcYBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi4KB2NvbnRyb2wYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjEKCmdhdGVfZHJpdmUYBiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEioKA2kyYxgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKAobaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zGAggASgISACIAQESMQoKbm9fY29ubmVjdBgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJZGlmZl9wYWlyGAogASgLMh0uYWduaS52MS5jb25maWcuRGlmZlBhaXJWb2NhYhIuCgd2b2x0YWdlGAsgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJuc0IeChxfaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zIksKDURpZmZQYWlyVm9jYWISKQoFcGFpcnMYASADKAsyGi5hZ25pLnYxLmNvbmZpZy5EaWZmU3VmZml4Eg8KB3JlcGxhY2UYAiABKAgiMAoKRGlmZlN1ZmZpeBIQCghwb3NpdGl2ZRgBIAEoCRIQCghuZWdhdGl2ZRgCIAEoCSLwAwoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMgoLZXhwb3NlZF9wYWQYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEiwKBWFub2RlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjYXRob2RlGAcgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgIIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAkgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIyCgx0aHJvdWdoX3BhaXIYCiABKAsyHC5hZ25pLnYxLmNvbmZpZy5QaW5QYWlyVm9jYWIiRwoMUGluUGFpclZvY2FiEiYKBXBhaXJzGAEgAygLMhcuYWduaS52MS5jb25maWcuUGluUGFpchIPCgdyZXBsYWNlGAIgASgIIh8KB1BpblBhaXISCQoBYRgBIAEoCRIJCgFiGAIgASgJIkMKDVZvY2FiUGF0dGVybnMSEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCBIPCgdleGNsdWRlGAQgAygJIm0KCkNsYXNzVm9jYWISEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCBIQCghwcmVmaXhlcxgDIAMoCRIQCghmYW1pbGllcxgFIAMoCRIYChBleGNsdWRlX3ByZWZpeGVzGAYgAygJImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
 
 /**
  * This file defines an operator's naming policy. The engine and the wire both use this ONE schema.
@@ -400,6 +400,15 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
    * @generated from field: agni.v1.config.VocabPatterns switching = 9;
    */
   switching?: VocabPatterns | undefined;
+
+  /**
+   * through_pair names pins that carry one signal across a part, such as a level translator's A2 and
+   * B2 or a buffer's 1A and 1Y (agni issue 1338). A walk crossing a part from one pin of a pair
+   * goes on through its partner alone, rather than through every pin of the part.
+   *
+   * @generated from field: agni.v1.config.PinPairVocab through_pair = 10;
+   */
+  throughPair?: PinPairVocab | undefined;
 };
 
 /**
@@ -408,6 +417,56 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
  */
 export const PinNameVocabSchema: GenMessage<PinNameVocab> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_naming, 7);
+
+/**
+ * PinPairVocab is the pin pairs a project adds to the built-ins, or with replace, the whole set.
+ *
+ * @generated from message agni.v1.config.PinPairVocab
+ */
+export type PinPairVocab = Message<"agni.v1.config.PinPairVocab"> & {
+  /**
+   * @generated from field: repeated agni.v1.config.PinPair pairs = 1;
+   */
+  pairs: PinPair[];
+
+  /**
+   * @generated from field: bool replace = 2;
+   */
+  replace: boolean;
+};
+
+/**
+ * Describes the message agni.v1.config.PinPairVocab.
+ * Use `create(PinPairVocabSchema)` to create a new message.
+ */
+export const PinPairVocabSchema: GenMessage<PinPairVocab> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 8);
+
+/**
+ * PinPair is two pin-name templates, matched without regard to case. "{n}" stands for a channel
+ * number and must appear in both or neither, so "A{n}" and "B{n}" pair A2 with B2, and "SDA1" and
+ * "SDA2" pair those two names alone.
+ *
+ * @generated from message agni.v1.config.PinPair
+ */
+export type PinPair = Message<"agni.v1.config.PinPair"> & {
+  /**
+   * @generated from field: string a = 1;
+   */
+  a: string;
+
+  /**
+   * @generated from field: string b = 2;
+   */
+  b: string;
+};
+
+/**
+ * Describes the message agni.v1.config.PinPair.
+ * Use `create(PinPairSchema)` to create a new message.
+ */
+export const PinPairSchema: GenMessage<PinPair> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 9);
 
 /**
  * VocabPatterns is one vocabulary override. Its patterns are RE2, case-insensitive, and matched on
@@ -442,7 +501,7 @@ export type VocabPatterns = Message<"agni.v1.config.VocabPatterns"> & {
  * Use `create(VocabPatternsSchema)` to create a new message.
  */
 export const VocabPatternsSchema: GenMessage<VocabPatterns> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 8);
+  messageDesc(file_agni_v1_config_naming, 10);
 
 /**
  * ClassVocab is one component class's override. patterns and replace mean what they mean on
@@ -499,7 +558,7 @@ export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
  * Use `create(ClassVocabSchema)` to create a new message.
  */
 export const ClassVocabSchema: GenMessage<ClassVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 9);
+  messageDesc(file_agni_v1_config_naming, 11);
 
 /**
  * NamingRule is one convention rule. A net name FIRES when it matches none of `allow`. Names matching
@@ -550,5 +609,5 @@ export type NamingRule = Message<"agni.v1.config.NamingRule"> & {
  * Use `create(NamingRuleSchema)` to create a new message.
  */
 export const NamingRuleSchema: GenMessage<NamingRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 10);
+  messageDesc(file_agni_v1_config_naming, 12);
 

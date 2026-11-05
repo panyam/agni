@@ -98,3 +98,26 @@ export async function centredIn(page: Page, el: string, host: string): Promise<b
   );
 }
 
+// extent is the box around every element a selector matches, so a part is measured whole rather
+// than by its first pin or label.
+export async function extent(page: Page, sel: string): Promise<{ x: number; y: number; width: number; height: number } | null> {
+  return page.evaluate((sel) => {
+    const rs = [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 || r.height > 0);
+    if (rs.length === 0) return null;
+    const x = Math.min(...rs.map((r) => r.left)), y = Math.min(...rs.map((r) => r.top));
+    return { x, y, width: Math.max(...rs.map((r) => r.right)) - x, height: Math.max(...rs.map((r) => r.bottom)) - y };
+  }, sel);
+}
+
+// zoomTo zooms the canvas in on an element with the wheel, as a reader would, until it is a
+// comfortable size to click.
+export async function zoomTo(page: Page, el: string): Promise<void> {
+  for (let i = 0; i < 12; i++) {
+    const b = await extent(page, el);
+    if (!b) throw new Error(`${el} is not drawn`);
+    if (Math.min(b.width, b.height) >= 40) return;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(150);
+  }
+}

@@ -28,7 +28,7 @@ func fullTrace() check.Trace {
 		Radius:  7,
 		Crossings: []check.TraceCross{
 			{RefDes: "R1", Class: "resistor", EnterPin: "2", ExitPin: "1", FromNet: "I2C_SDA", ToNet: "MID"},
-			{RefDes: "FB2", Class: "ferrite", EnterPin: "1", ExitPin: "2", FromNet: "MID", ToNet: "VCC"},
+			{RefDes: "FB2", Class: "ferrite", EnterPin: "1", ExitPin: "2", FromNet: "MID", ToNet: "VCC", Paired: true},
 		},
 		Nets: []check.TraceNet{
 			{
@@ -97,7 +97,7 @@ func TestTraceFieldCensus(t *testing.T) {
 	}
 	census(check.Trace{}, []string{"Crossings", "From", "Nets", "Outcome", "Radius", "Reason", "To"}, nil, "check.Trace")
 	census(check.TraceEnd{}, []string{"Endpoint", "Net", "PinName"}, nil, "check.TraceEnd")
-	census(check.TraceCross{}, []string{"Class", "EnterPin", "ExitPin", "FromNet", "RefDes", "ToNet"}, nil, "check.TraceCross")
+	census(check.TraceCross{}, []string{"Class", "EnterPin", "ExitPin", "FromNet", "Paired", "RefDes", "ToNet"}, nil, "check.TraceCross")
 	census(check.TraceNet{}, []string{"BusLike", "Name", "Stubs", "StubsElided"}, nil, "check.TraceNet")
 	census(check.TraceStub{}, []string{"Class", "Pin", "RefDes"}, nil, "check.TraceStub")
 	census(check.Endpoint{}, []string{"Pin", "RefDes"}, nil, "check.Endpoint")

@@ -106,6 +106,8 @@ type RoleVocab struct {
 	attrs attrVocab
 	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
 	inferRail bool
+	// throughPairs are PinNameVocab.through_pair's templates, compiled.
+	throughPairs []pinPair
 }
 
 // vocab is one compiled vocabulary. A name is in it when a pattern matches and no exclusion does.
@@ -203,6 +205,12 @@ func defaultLexicon() *configpb.NamingLexicon {
 			// A regulator's own pins, with an optional prefix and bank number (SW1, FB2, BUCK1_FB).
 			Feedback:  vp(`(^|_)(FB|VFB|FEEDBACK|VSENSE|SENSE|SNS)[0-9]*$`),
 			Switching: vp(`(^|_)(SW|BOOT|PHASE|LX)[0-9]*$`),
+			// Pins that carry one signal across a part (agni 1338). A{n} and B{n} name a level
+			// translator's two sides (TXS0104, 74LVC245), {n}A and {n}Y a buffer's input and output
+			// (74LVC2G07), and SDA1/SDA2 and SCL1/SCL2 an I2C translator's (PCA9306).
+			ThroughPair: &configpb.PinPairVocab{Pairs: []*configpb.PinPair{
+				{A: "A{n}", B: "B{n}"}, {A: "{n}A", B: "{n}Y"}, {A: "SDA1", B: "SDA2"}, {A: "SCL1", B: "SCL2"},
+			}},
 		},
 	}
 }
@@ -405,6 +413,13 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 			return nil, fmt.Errorf("diff_pair: a pair needs both a positive and a negative suffix, got %q and %q", p.GetPositive(), p.GetNegative())
 		}
 	}
+	for _, p := range pin.GetThroughPair().GetPairs() {
+		pp, err := compilePinPair(p)
+		if err != nil {
+			return nil, fmt.Errorf("through_pair: %w", err)
+		}
+		v.throughPairs = append(v.throughPairs, pp)
+	}
 	v.inferRail = net.GetInferRailFromSupplyPins()
 	v.attrs = buildAttrVocab(merged.GetAttribute())
 	return v, nil
@@ -442,8 +457,9 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			ExposedPad: mergeVocab(bp.GetExposedPad(), op.GetExposedPad()),
 			Anode:      mergeVocab(bp.GetAnode(), op.GetAnode()),
 			Cathode:    mergeVocab(bp.GetCathode(), op.GetCathode()),
-			Feedback:   mergeVocab(bp.GetFeedback(), op.GetFeedback()),
-			Switching:  mergeVocab(bp.GetSwitching(), op.GetSwitching()),
+			Feedback:    mergeVocab(bp.GetFeedback(), op.GetFeedback()),
+			Switching:   mergeVocab(bp.GetSwitching(), op.GetSwitching()),
+			ThroughPair: mergePinPairs(bp.GetThroughPair(), op.GetThroughPair()),
 		},
 	}
 	if on != nil && on.InferRailFromSupplyPins != nil {
@@ -482,6 +498,71 @@ func mergeDiffPairs(base, over *configpb.DiffPairVocab) *configpb.DiffPairVocab 
 		return over
 	}
 	return &configpb.DiffPairVocab{Pairs: append(append([]*configpb.DiffSuffix{}, base.GetPairs()...), over.GetPairs()...)}
+}
+
+// mergePinPairs is mergeVocab for the through pairs.
+func mergePinPairs(base, over *configpb.PinPairVocab) *configpb.PinPairVocab {
+	if over == nil {
+		return base
+	}
+	if over.GetReplace() {
+		return over
+	}
+	return &configpb.PinPairVocab{Pairs: append(append([]*configpb.PinPair{}, base.GetPairs()...), over.GetPairs()...)}
+}
+
+// pinPair is one through pair, compiled. Each side matches a whole pin name, and a "{n}" in the
+// template captures the channel number the other side is spelled with.
+type pinPair struct {
+	src  *configpb.PinPair
+	a, b *regexp.Regexp
+}
+
+func compilePinPair(p *configpb.PinPair) (pinPair, error) {
+	a, b := p.GetA(), p.GetB()
+	if a == "" || b == "" {
+		return pinPair{}, fmt.Errorf("a pair needs both names, got %q and %q", a, b)
+	}
+	if strings.Contains(a, "{n}") != strings.Contains(b, "{n}") {
+		return pinPair{}, fmt.Errorf("%q and %q: {n} must appear in both names or neither", a, b)
+	}
+	re := func(t string) *regexp.Regexp {
+		head, tail, _ := strings.Cut(t, "{n}")
+		pat := regexp.QuoteMeta(head)
+		if strings.Contains(t, "{n}") {
+			pat += `(\d+)` + regexp.QuoteMeta(tail)
+		}
+		return regexp.MustCompile(`(?i)^` + pat + `$`)
+	}
+	return pinPair{src: p, a: re(a), b: re(b)}, nil
+}
+
+// spell writes a template with its channel number.
+func spell(t, n string) string { return strings.Replace(t, "{n}", n, 1) }
+
+// ThroughPartners returns the pin names that carry a pin's signal across its part, from the through
+// pairs, in the order the pairs are listed. A name on neither side of any pair answers none. The
+// caller looks the names up among the part's own pins, since a pair only holds where the part has
+// both.
+func (v *RoleVocab) ThroughPartners(name string) []string {
+	var out []string
+	name = strings.TrimSpace(name)
+	for _, p := range v.throughPairs {
+		if m := p.a.FindStringSubmatch(name); m != nil {
+			out = append(out, spell(p.src.GetB(), at(m, 1)))
+		}
+		if m := p.b.FindStringSubmatch(name); m != nil {
+			out = append(out, spell(p.src.GetA(), at(m, 1)))
+		}
+	}
+	return out
+}
+
+func at(m []string, i int) string {
+	if i < len(m) {
+		return m[i]
+	}
+	return ""
 }
 
 // compileVocab compiles one vocabulary's patterns and exclusions, case-insensitively.

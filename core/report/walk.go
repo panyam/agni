@@ -7,6 +7,14 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
+// pairNote marks a crossing that followed a through pair rather than every pin of the part.
+func pairNote(c check.TraceCross) string {
+	if c.Paired {
+		return " (paired)"
+	}
+	return ""
+}
+
 // WriteWalkText renders a walk for a person, hop by hop. Each net says how the walk entered it and
 // what else sits on it, a net the walk stopped at says why, and the parts it did not cross come last
 // with their reasons.
@@ -29,11 +37,11 @@ func WriteWalkText(w io.Writer, wk check.Walk) {
 		e := n.Entered
 		how := fmt.Sprintf("from %s pin %s", e.RefDes, e.ExitPin)
 		if e.FromNet != "" {
-			how = fmt.Sprintf("through %s%s pin %s --> pin %s, from %s", e.RefDes, classNote(e.Class), e.EnterPin, e.ExitPin, e.FromNet)
+			how = fmt.Sprintf("through %s%s pin %s --> pin %s%s, from %s", e.RefDes, classNote(e.Class), e.EnterPin, e.ExitPin, pairNote(e), e.FromNet)
 		}
 		fmt.Fprintf(w, "  net %s   (%s)\n", n.Net.Name, how)
 		for _, a := range n.AlsoEntered {
-			fmt.Fprintf(w, "      also through %s%s pin %s --> pin %s, from %s\n", a.RefDes, classNote(a.Class), a.EnterPin, a.ExitPin, a.FromNet)
+			fmt.Fprintf(w, "      also through %s%s pin %s --> pin %s%s, from %s\n", a.RefDes, classNote(a.Class), a.EnterPin, a.ExitPin, pairNote(a), a.FromNet)
 		}
 		if n.Ended != "" {
 			fmt.Fprintf(w, "      ends here: %s\n", n.Ended)
