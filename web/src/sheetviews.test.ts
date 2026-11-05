@@ -60,10 +60,13 @@ describe("the sheet views beside the canvas", () => {
     const b = await views.open("board");
     const c = await views.open("s1");
     for (const p of [a, b, c]) p.link = "locked";
-    const v = { tx: 12, ty: -3, scale: 4 };
-    a.view.onViewChange?.(v);
-    expect(b.view.getView()).toEqual(v);
-    expect(c.view.getView()).not.toEqual(v);
+    const cBefore = c.view.getView();
+    a.view.setView({ tx: 12, ty: -3, scale: 4 });
+    a.view.onViewChange?.(a.view.getView());
+    // A locked peer takes the drawing point at the centre and the zoom, which line up two views of
+    // one sheet whatever their sizes or orientations (agni issue 1327).
+    expect(b.view.getCentre()).toEqual(a.view.getCentre());
+    expect(c.view.getView()).toEqual(cBefore);
   });
 
   it("forgets a view the dock closes", async () => {

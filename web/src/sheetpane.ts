@@ -10,6 +10,42 @@ import { SvgView, type SvgViewState } from "./svgview.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
+import { UPRIGHT, flip, rotateBy, type Orientation } from "./orient.js";
+import { orderStrata } from "./boardstrata.js";
+
+// ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
+// board again comes back the way the bench has it (agni issue 1327). bottom draws the board from
+// underneath, the back copper nearest.
+export interface ViewTurn {
+  orientation: Orientation;
+  bottom: boolean;
+}
+
+// turnKey names a sheet's kept turn in storage, by the design's mount and path and the sheet.
+export function turnKey(mount: string, path: string, sheetId: string): string {
+  return `agni-sheetview-turn:${mount}/${path}:${sheetId}`;
+}
+
+// parseTurn reads a kept turn back, and returns null for anything that is not one, such as a value
+// an older page wrote under the same key.
+export function parseTurn(text: string | null): ViewTurn | null {
+  if (!text) return null;
+  try {
+    const v = JSON.parse(text) as { orientation?: Partial<Orientation>; bottom?: unknown };
+    const o = v.orientation;
+    if (!o || ![0, 90, 180, 270].includes(o.rot as number) || typeof o.flipH !== "boolean" || typeof o.flipV !== "boolean") return null;
+    return { orientation: { rot: o.rot as Orientation["rot"], flipH: o.flipH, flipV: o.flipV }, bottom: v.bottom === true };
+  } catch {
+    return null;
+  }
+}
+
+// TurnStore keeps a sheet's turn. The page backs it with localStorage, and a page with no storage
+// keeps nothing, so a view opens upright.
+export interface TurnStore {
+  load(sheetId: string): ViewTurn | null;
+  save(sheetId: string, turn: ViewTurn): void;
+}
 
 export const BOARD_SHEET = "board";
 
@@ -32,6 +68,8 @@ export interface SheetPaneDeps {
   onClose: (pane: SheetPane) => void;
   // onOpened hears each sheet the pane draws, so the dock tab can carry its name.
   onOpened: (pane: SheetPane) => void;
+  // turns keeps each sheet's turn for the open design.
+  turns?: TurnStore;
 }
 
 export class SheetPane {
@@ -42,6 +80,8 @@ export class SheetPane {
   private readonly host: HTMLElement;
   private readonly picker: HTMLSelectElement;
   private readonly layers: HTMLSelectElement;
+  private readonly bottomButton: HTMLButtonElement;
+  private turn: ViewTurn = { orientation: UPRIGHT, bottom: false };
   private readonly linkSelect: HTMLSelectElement;
   private readonly also: HTMLElement;
   private sel: Selection | null = null;
@@ -76,6 +116,31 @@ export class SheetPane {
     this.linkSelect.addEventListener("change", () => {
       this.link = this.linkSelect.value as Link;
     });
+    // Each turn control names its action in data-action, which the cross-probe walk and the view's
+    // own tests click by (web/browser/cross-probe-walk.spec.ts).
+    const button = (cls: string, action: string, text: string, title: string, act: () => void): HTMLButtonElement => {
+      const b = el("button", `mode-btn ${cls}`) as HTMLButtonElement;
+      b.type = "button";
+      b.dataset.action = action;
+      b.textContent = text;
+      b.title = title;
+      b.addEventListener("click", act);
+      return b;
+    };
+    const rotate = button("sheetview-rotate", "rotate", "⟳ 90°", "turn this view a quarter turn clockwise", () =>
+      this.setTurn({ ...this.turn, orientation: rotateBy(this.turn.orientation) }),
+    );
+    const flipH = button("sheetview-flip-h", "flip-h", "⇆", "flip this view left to right", () =>
+      this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") }),
+    );
+    const flipV = button("sheetview-flip-v", "flip-v", "⇅", "flip this view top to bottom", () =>
+      this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "v") }),
+    );
+    // The bottom view turns the board over left to right and draws its back copper nearest, as the
+    // board looks from underneath.
+    this.bottomButton = button("sheetview-bottom", "bottom", "Bottom", "look at the board from underneath", () =>
+      this.setTurn({ orientation: flip(this.turn.orientation, "h"), bottom: !this.turn.bottom }),
+    );
     const float = el("button", "mode-btn sheetview-float") as HTMLButtonElement;
     float.type = "button";
     float.textContent = "Float";
@@ -85,7 +150,7 @@ export class SheetPane {
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, this.layers, this.linkSelect, float, close);
+    bar.append(this.picker, this.layers, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close);
     this.also = el("div", "sheetview-also");
     this.host = el("div", "sheetview-canvas");
     this.element.append(bar, this.also, this.host);
@@ -113,10 +178,13 @@ export class SheetPane {
       this.also.textContent = `could not draw this sheet: ${String(e)}`;
     }
     if (n !== this.drawing) return;
+    this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT, bottom: false };
     this.view.setSvg(svg);
     this.deps.onOpened(this);
     this.applyLayers();
+    this.applyTurn();
     this.layers.style.display = sheetId === BOARD_SHEET ? "" : "none";
+    this.bottomButton.style.display = sheetId === BOARD_SHEET ? "" : "none";
     await this.paint(false);
   }
 
@@ -195,6 +263,30 @@ export class SheetPane {
     const sheets = this.deps.sheets();
     this.picker.replaceChildren(...sheets.map((s) => new Option(s.name || s.id, s.id, false, s.id === this.sheet)));
     this.picker.value = this.sheet;
+  }
+
+  // turnOf is how the view is turned now.
+  turnOf(): ViewTurn {
+    return this.turn;
+  }
+
+  // setTurn turns the view, keeps the turn for this sheet, and keeps the point at the view's centre
+  // where it is.
+  setTurn(turn: ViewTurn): void {
+    this.turn = turn;
+    if (this.sheet) this.deps.turns?.save(this.sheet, turn);
+    this.applyTurn();
+  }
+
+  private applyTurn(): void {
+    const svg = this.host.querySelector("svg");
+    if (svg) orderStrata(svg, this.sheet === BOARD_SHEET && this.turn.bottom);
+    this.bottomButton.classList.toggle("active", this.turn.bottom);
+    // The view states how it is turned, for a walk or a test to read without decoding a transform.
+    // data-side is the side of the board nearest the reader, "back" in the bottom view.
+    this.element.dataset.rotation = String(this.turn.orientation.rot);
+    this.element.dataset.side = this.turn.bottom ? "back" : "front";
+    this.view.setOrientation(this.turn.orientation);
   }
 
   private applyLayers(): void {

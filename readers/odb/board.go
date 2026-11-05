@@ -136,6 +136,14 @@ func (b *boardBuilder) layerFeatures(upper string) (*featuresFile, error) {
 	if ff, ok := b.features[upper]; ok {
 		return ff, nil
 	}
+	if b.p.odx != nil {
+		ff := b.p.odx.layers[upper]
+		if ff == nil {
+			ff = &featuresFile{}
+		}
+		b.features[upper] = ff
+		return ff, nil
+	}
 	raw, err := b.p.readOptional(b.p.layerFile(upper, "features"))
 	if err != nil {
 		return nil, err
@@ -175,49 +183,69 @@ func (b *boardBuilder) userSymbol(name string) symbolShape {
 		b.users = map[string]symbolShape{}
 	}
 	out := symbolShape{shape: name}
-	if raw, err := b.p.readOptional(path.Join("symbols", strings.ToLower(name), "features")); err == nil && raw != nil {
-		if ff, err := parseFeatures(raw); err == nil {
-			var pts []pt
-			for i := range ff.features {
-				f := &ff.features[i]
-				half := int64(0)
-				if f.sym >= 0 && f.sym < len(ff.symbols) {
-					if s := parseSymbol(ff.symbols[f.sym]); s.w > 0 || s.h > 0 {
-						half = max(s.w, s.h) / 2
-					}
+	if ff := b.userFeatures(name); ff != nil {
+		var pts []pt
+		for i := range ff.features {
+			f := &ff.features[i]
+			half := int64(0)
+			if f.sym >= 0 && f.sym < len(ff.symbols) {
+				if s := parseSymbol(ff.symbols[f.sym]); s.w > 0 || s.h > 0 {
+					half = max(s.w, s.h) / 2
 				}
-				switch f.kind {
-				case featLine, featArc:
-					for _, p := range []pt{f.a, f.b} {
-						pts = append(pts, pt{p.x - half, p.y - half}, pt{p.x + half, p.y + half})
-					}
-				case featPad:
-					pts = append(pts, pt{f.a.x - half, f.a.y - half}, pt{f.a.x + half, f.a.y + half})
-				case featSurface:
-					for _, isl := range f.islands {
-						for _, c := range isl {
-							pts = append(pts, c.pts...)
-						}
+			}
+			switch f.kind {
+			case featLine, featArc:
+				for _, p := range []pt{f.a, f.b} {
+					pts = append(pts, pt{p.x - half, p.y - half}, pt{p.x + half, p.y + half})
+				}
+			case featPad:
+				pts = append(pts, pt{f.a.x - half, f.a.y - half}, pt{f.a.x + half, f.a.y + half})
+			case featSurface:
+				for _, isl := range f.islands {
+					for _, c := range isl {
+						pts = append(pts, c.pts...)
 					}
 				}
 			}
-			if w, h := extent(pts); w > 0 || h > 0 {
-				out = symbolShape{w: w, h: h, shape: "custom"}
-			}
+		}
+		if w, h := extent(pts); w > 0 || h > 0 {
+			out = symbolShape{w: w, h: h, shape: "custom"}
 		}
 	}
 	b.users[name] = out
 	return out
 }
 
-func (b *boardBuilder) outline() error {
-	raw, err := b.p.readOptional(b.p.stepFile("profile"))
+// userFeatures returns the features a user symbol draws, or nil when the job does not define it.
+func (b *boardBuilder) userFeatures(name string) *featuresFile {
+	if b.p.odx != nil {
+		return b.p.odx.symbols[strings.ToLower(name)]
+	}
+	raw, err := b.p.readOptional(path.Join("symbols", strings.ToLower(name), "features"))
 	if err != nil || raw == nil {
-		return err
+		return nil
 	}
 	ff, err := parseFeatures(raw)
 	if err != nil {
-		return fmt.Errorf("profile: %w", err)
+		return nil
+	}
+	return ff
+}
+
+func (b *boardBuilder) outline() error {
+	ff := &featuresFile{}
+	if b.p.odx != nil {
+		if b.p.odx.profile != nil {
+			ff = b.p.odx.profile
+		}
+	} else {
+		raw, err := b.p.readOptional(b.p.stepFile("profile"))
+		if err != nil || raw == nil {
+			return err
+		}
+		if ff, err = parseFeatures(raw); err != nil {
+			return fmt.Errorf("profile: %w", err)
+		}
 	}
 	out := &geom.BoardOutline{}
 	for _, f := range ff.features {

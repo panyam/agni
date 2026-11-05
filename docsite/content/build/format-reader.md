@@ -117,25 +117,29 @@ extension is registered before suspecting the reader.
 ## Ambiguous extensions get sniffed
 
 Some extensions are shared across formats. `.sch` is xschem, gEDA gschem, or legacy KiCad, and
-`.xml` might be IPC-2581 or something else. The registry entry names the format optimistically and
-the adapter sniffs the file header before committing to a reader. IPC-2581 peeks the first bytes
-for its root element (`readers/formats/registry.go`):
+`.xml` is IPC-2581 or ODB++X (ODX, ODB++ written as one XML file). The registry entry names the
+format optimistically and the adapter sniffs the file header before committing to a reader. The
+`.xml` adapter reads the root element past the prolog and any comments
+(`readers/formats/registry.go`, agni issue 1372):
 
 ```go
-func readIPC2581(l *Loader, path string) (*ir.Design, error) {
-    f, err := l.Open(path)
-    if err != nil {
-        return nil, err
+func sniffXML(br *bufio.Reader, path string) (xmlKind, error) {
+    head, _ := br.Peek(4096)
+    switch root := xmlRootName(head); root {
+    case "IPC-2581":
+        return xmlIPC2581, nil
+    case "ODX":
+        return xmlODX, nil
+    case "":
+        return xmlUnknown, fmt.Errorf("%q: not an IPC-2581 or ODB++X file (no root element in its first 4KB)", path)
+    default:
+        return xmlUnknown, fmt.Errorf("%q: not an IPC-2581 or ODB++X file (root element <%s>)", path, root)
     }
-    defer f.Close()
-    br := bufio.NewReader(f)
-    head, _ := br.Peek(1024)
-    if !bytes.Contains(head, []byte("IPC-2581")) {
-        return nil, fmt.Errorf("%q: not an IPC-2581 file (no IPC-2581 root element)", path)
-    }
-    return ipc2581.Read(br, path)
 }
 ```
+
+A root it does not know is refused with its name, so neither reader is chosen by the extension
+alone. The netlist read and the board read sniff alike.
 
 The `.sch` adapter sniffs the same way, dispatching to the xschem or gEDA reader by header.
 

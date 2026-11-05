@@ -18,23 +18,43 @@ mission's queue, and the order lives in GitHub labels and blocked-by links rathe
 exercise run on the mission issue.
 
 - **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 7 of 12
-  closed. `make exercise-cross-probe` last ran at `be1510d0` and passes four of its five steps on
-  Jetson. Step 3 (turn the board over) waits on #1327, which another session has in PR #1378.
-  #1382 needs a decision first. The only public EDIF design with its board is Clay R6, whose board
-  is an Allegro `.brd` rather than ODB++. Either reword the mission's done-when to "an EDIF design on
-  its Cadence board", or wait for an ODB++ export. Leaning to the first, which waits on #1350.
-- **#1194 `mission_pin_functions`**, 7 of 8 closed. #1342 is its last ticket, on branch
-  `fix/trial-site-pinmap-pin-1342` with #1374, and its fix makes `agni trial` count KiCad designs.
-  After it merges, re-run `make exercise-pin-functions`. The mission then waits on a team's
-  clean-room run (`guide/trying-agni.md`), whose `agni trial` report becomes its next tickets.
-- **#1353** (open an Altium or Allegro board with no export step), 2 of 4 closed. #1349 (`.PcbDoc`)
-  and #1350 (`.brd`) are its readers. agni-samples now carries Allegro boards and Cadence exports to
-  check them against.
-- **#1264** (how agni reads your board's names), 11 of 11 closed. It closes once an audit confirms the
-  lexicon holds every built-in rule's name heuristics, and once its exercise's output is right by eye.
-- **#1176 `mission_shared_viewer_rooms`**, not active. #1173 is `waiting` on a multi-user deployment.
-- **Candidates**, not missions yet: moving a house netlist audit off its spreadsheet (#1093), and more
-  viewer tours in the shape of `web/src/reviewtour.ts`.
+  tickets closed. A Sheets tile opens a sheet in a view beside the canvas (#1375), a pick in one view
+  finds the part in the others through `DesignService.LocateSubjects` (#1364), and a board view turns,
+  flips and shows the board from underneath (#1378). `make exercise-cross-probe HEADED=0
+  WALK_DESIGN=jetson` is the exercise. It passes every step at `fa79698e` with #1384, which names the
+  board view's turn controls as the walk reads them. Ready next are #1366 (board text sizes and
+  colours, against kicad-cli) and #1367 (add a board to an open design). #1382 (an EDIF design for the
+  walk) needs a decision first. The only public EDIF design with its board is Clay R6, whose board is
+  an Allegro `.brd` rather than ODB++, so either the done-when becomes "an EDIF design on its Cadence
+  board", which then waits on #1350, or the mission waits for an ODB++ export. #1374 (a selected pin
+  lights nothing) is in PR #1385.
+- **#1353** (open an Altium or Allegro board with no export step), 1 of 4 closed. #1349, the Altium
+  `.PcbDoc` reader, is next.
+- **#1264** (see, explain and change how agni reads your board's names), 11 of 11 tickets closed,
+  exercise last run at `014819c5` (works on the MNT Reform motherboard). Nothing is ready. It closes
+  once an audit confirms that the lexicon holds every built-in rule's name heuristics, and once the
+  exercise's output is right by eye. If the audit finds a heuristic outside the lexicon, that
+  heuristic becomes a ticket here.
+- **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
+  datasheet), 7 of 8 tickets closed (#1342 is in PR #1385, which makes `agni trial` count KiCad designs), exercise last run at `aba62b48` (works on the fixtures), 20 PRs
+  merged since, so re-run `make exercise-pin-functions` before a team starts. It waits
+  on a team's clean-room run on their own board. The team runs the three commands in
+  `guide/trying-agni.md`'s "Signing off a pin map in a clean room" and sends back the `agni trial`
+  report. Their findings become its next tickets. #1198 left one choice open. Should
+  `service.ShippedRules` name the fixed `intent/io-map-*` rules? The trial now counts them under
+  project rules.
+- **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
+  0 of 1 and not active. #1173 holds the multi-user half and is `waiting` until someone runs agni
+  serve for more than one person. The mission has no exercise yet; its first PR writes one.
+- **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
+  `guide/older-comparison-tools.md` its first page. Its reproducer still names its rail `RAIL_3V3`,
+  and the default vocabulary does not read that name.
+- **Candidate**: more tours of the viewer. Each would tour another workflow the way
+  `web/src/reviewtour.ts` tours a review. Work on each starts with the viewer events, since the
+  tour advances on them.
+- This run: the cross-probe PRs above, the board's pick keys (#1343, #1354), and CI split into four
+  parallel jobs (#1381), which `build/the-gate.md` describes. Sheet views and popout windows were
+  scoped. Popouts are #1369, `waiting`, with what blocks them on the issue.
 
 ## Open, ranked
 

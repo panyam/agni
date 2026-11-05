@@ -23,6 +23,7 @@ expensive to rediscover.
 | Geometry, rendering, the web viewer | `architecture/geometry-and-rendering.md`, `architecture/web-app.md` |
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Moving an open viewer from a parent page, a saved report or an agent (`--viewer-rooms`) | `architecture/viewer-control.md`, `build/embedding-the-viewer.md` |
+| A sheet view beside the canvas, cross-probing a part between schematic and board, turning a board view | `architecture/web-client.md` ("Sheet views are panels made at run time"), `architecture/web-picking.md` ("Picking the board") |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
 | A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the seven forms), `core/ident`'s package comment |
@@ -178,6 +179,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   and `OVERLAY_DIR` on `dockserve`, `NATIVE_DOCKER_MOUNTS` on `natup`, and `DATASHEET_DIR` on the
   datasheet targets. If a workflow only exists as a wrapper in someone's local Makefile, this repo
   is missing a target.
+- **A relative path in `agni.yaml` resolves beside the file**, not against the working directory,
+  so `agni stats mount://boards/...` reads the same from a subfolder of the checkout (agni 1373).
 - **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
   `--mount` shuts the file out. `make serve MOUNTS=` hands the mount table back to the file.
 - **`agni.yaml` wants a `web_dir` or `--server self` cannot run outside a checkout.** The lookup falls
@@ -513,6 +516,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   fails to read answers `LOCATE_REASON_SCHEMATIC_UNREADABLE` rather than `NO_GEOMETRY`, and the CLI
   warns once. A companion once fell one `)` short, and every part read as drawn nowhere, with only
   `render` saying why.
+- **ODB++X (ODX) is ODB++ in one XML file rooted at `<ODX>`, and it fills the job reader's own
+  `parsedJob`** (agni 1372, `readers/odb/odx.go`), so its netlist and board come out of the job
+  code. `.xml` is sniffed by root element. ODX names a pin by its NUMBER, since NAME can be a
+  placeholder such as `un_1`. Allegro writes `encoding = "ISO-8859-1"` with spaces, which Go's
+  decoder ignores, so `odxDecoded` reads the declaration itself. `TestODXReadsAsItsIPC2581Twin`
+  holds parasdr's two Allegro exports (cadence-exports) to each other.
 - **An ODB++ job is a DIRECTORY, entered by its `matrix/matrix` file** (agni 1250, `readers/odb`).
   The registry keys that path as `.odb++` (`lowerExt`), `.tgz` and `.zip` read the whole job from
   one archive, and the CLI and the proposer turn a job folder into its matrix entry. A host
@@ -533,7 +542,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   values. A pad is footprint-local and Allegro mirrors X before rotating, so a bottom part's angle is
   negated for the contract's rotate-then-mirror. A placed pad's net goes through its 0x04 net
   assignment, never straight to a 0x1B. Another release is refused by name (#1355), and an Eagle
-  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code.
+  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
+  (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
+  since Allegro drops a pad nothing on its layer connects to (#1356).
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out
@@ -668,6 +679,21 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the angle, and the contract's composer mirrors once. No rule reads a pad's position, so the bug
   shipped. Only the board view and `TestODBReadsAsItsKiCadSource` (pad positions against kicad-cli's
   own export) see it.
+- **Where a part, pin or net is drawn is `DesignService.LocateSubjects`** (agni 1325). It and a check
+  run's findings read one index, so a subject locates where its finding badges. A pin answers the
+  sheets that draw its own unit. The board sheet joins only when the request sets `board`, by
+  ref-des and net NAME (an EDIF schematic and an ODB++ job share no net id), through a small index
+  that the design cache keeps per board. The caching loader's `Board` returns a COPY, 385 MB on
+  Jetson, so a new per-click caller goes through `boardIndexFor`, never `Board`. A run whose model
+  read the board badges its findings with `"board"` after the schematic sheets.
+- **kicad-cli is the oracle for a render, and two fixture traps make it draw less than KiCad would.**
+  A hand-written fixture's schematic often has an empty `(lib_symbols)` cache and keeps its symbols
+  in a `.kicad_sym`, and `design.yaml` names that library for agni. Eeschema plots from that cache alone, so
+  kicad-cli draws the labels and wires with no symbol bodies. Copy the library's symbols into a
+  SCRATCH copy as `<lib>:<name>`. Gateway's Edge.Cuts outline is a filled `gr_rect`, which plots over
+  the copper, so export the copper and silk layers without Edge.Cuts. Export from a scratch copy in
+  any case, since kicad-cli writes a `.kicad_prl` beside the board. A text is mirrored exactly when
+  its effects say `(justify mirror)`, which kicad-cli confirmed on a back footprint that names none.
 - **KiCad names a local label by its sheet path**, so a root-sheet net is `/SCL`, and every finding,
   query answer and link names it that way. `render --highlight net=SCL` matches nothing and still
   reports a highlight (#1225), so spell a hand-typed subject as `check` prints it.
@@ -969,8 +995,8 @@ it. `.github/dependabot.yml` lists every module directory (examples by glob) and
 updates, because a bump that touched the root alone left every nested module stale and failed this
 check (PR 782). A new module outside `examples/` needs a line there.
 
-**`make testall` is the full gate, and CI runs exactly it**, as its two halves `testall-core` and
-`browser-test` in parallel jobs (agni 1147). Read `docsite/content/build/the-gate.md` before
+**`make testall` is the full gate, and CI runs exactly it**, as four parallel jobs, `testall-test`,
+`testall-scan`, `testall-docs` and `browser-test` (agni 1147). `testall-core` is the first three. Read `docsite/content/build/the-gate.md` before
 trusting a run. It lists three ways to misread the gate. A wrapper can report its own status rather
 than make's and turn red green, there is a commit-first ordering rule, and there is a per-clone
 `pnpm install`. It also lists one way a fine tree reads RED. A stray `agni serve` on :8080 fails

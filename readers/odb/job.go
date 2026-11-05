@@ -79,6 +79,9 @@ func (j *job) layerFile(layer, file string) string {
 // `features.z` in the Unix compress format Valor-lineage tools write. It also decompresses a gzipped
 // member (`.gz`).
 func (j *job) read(name string) ([]byte, error) {
+	if j.fsys == nil {
+		return nil, fmt.Errorf("%s: %w", name, fs.ErrNotExist)
+	}
 	for _, cand := range []string{name, strings.ToLower(name)} {
 		b, err := fs.ReadFile(j.fsys, cand)
 		if err == nil {

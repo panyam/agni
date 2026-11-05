@@ -2,8 +2,11 @@
 title: Running the gate
 ---
 
-`make testall` is the full gate. CI runs its two halves, `make testall-core` and `make browser-test`,
-as parallel jobs, and together they are exactly `testall`. Green means ship-ready. It also lies
+`make testall` is the full gate. CI runs it as four parallel jobs, `make testall-test`, `make
+testall-scan`, `make testall-docs` and `make browser-test`, and together they are exactly `testall`.
+`testall-core` is the first three. The split is only about wall time. The scanners and the tutorial
+captures took about two and a half minutes each, in one job with the tests, so a PR waited for all of
+them in a row. Green means ship-ready. It also lies
 to you in three specific ways, and most of this page is about them.
 
 ```mermaid

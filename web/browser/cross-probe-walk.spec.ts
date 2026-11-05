@@ -11,9 +11,11 @@
 // opens beside it in a sheet view ([data-sheetview]) from its tile in Sheets. A view may be docked
 // anywhere or floating, at any size, so the walk asks only that each is on screen. A pick in one
 // lights the same part or net in the other and centres it there. Clicks land by point, as a reader's
-// do, at a point clear of pads and neighbours (picks.ts). Step 3 still waits on #1327, which adds the
-// board view's rotate and flip, and the walk expects it to name them as below:
-// - the board view's controls data-action="rotate" (a quarter turn) and data-action="flip"
+// do, at a point clear of pads and neighbours (picks.ts). Step 3 turns the board view as #1327 (PR
+// 1378) built it, through these names:
+// - the board view's controls data-action="rotate" (a quarter turn) and data-action="bottom" (the
+//   board turned over, seen from underneath). data-action="flip-h" and "flip-v" mirror the view
+//   without turning the board over.
 // - the view states its view as data-rotation (degrees) and data-side ("front" or "back")
 // A ticket that names them differently changes them here in the same PR.
 //
@@ -291,19 +293,23 @@ describe("the cross-probe walk", () => {
         return `picked on ${part.sheet}, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
       });
 
-      await step("turn the board over", { waitsOn: ["#1327"], needs: [`click ${part.ref}`] }, async () => {
+      await step("turn the board over", { needs: [`click ${part.ref}`] }, async () => {
         const board = page.locator(PANE).first();
-        for (const a of ["rotate", "flip"]) {
+        for (const a of ["rotate", "bottom"]) {
           if ((await board.locator(`[data-action="${a}"]`).count()) === 0) throw new Error(`the board view has no data-action="${a}" control`);
         }
         await board.locator('[data-action="rotate"]').click({ timeout: 10_000 });
-        await board.locator('[data-action="flip"]').click({ timeout: 10_000 });
+        await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
         expect(await board.getAttribute("data-rotation")).toBe("90");
         expect(await board.getAttribute("data-side")).toBe("back");
         return `turned 90 and viewed from the back, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
       });
 
       await step(`click ${footprint.ref} on the board`, { needs: ["two views"] }, async () => {
+        // TP76 is on the front, and the bottom view draws the back copper over it, as the board looks
+        // from underneath. So a reader turns the board back over to reach it.
+        const board = page.locator(PANE).first();
+        if ((await board.getAttribute("data-side")) === "back") await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
         // The board view is still zoomed in on the last part, so a reader zooms out to find this one
         // and back in to click it.
         await findIn(page, BOARD, footprintOf(footprint.ref));

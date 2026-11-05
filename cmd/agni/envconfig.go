@@ -73,9 +73,33 @@ func loadEnvConfig(cwd string, getenv func(string) string) (envConfig, string, e
 		if err := dec.Decode(&cfg); err != nil {
 			return envConfig{}, path, fmt.Errorf("%s: %w", path, err)
 		}
+		cfg.anchor(dir)
 		return cfg, path, nil
 	}
 	return envConfig{}, "", nil
+}
+
+// anchor resolves each relative path in the file against dir, the folder holding the file. A
+// command run from a subfolder finds the file by walking up, so a path that resolved against the
+// working directory would name a folder that does not exist there (agni issue 1373). An absolute
+// path and a URI are left as written.
+func (c *envConfig) anchor(dir string) {
+	for n, p := range c.Mounts {
+		c.Mounts[n] = anchorPath(dir, p)
+	}
+	for i, p := range c.SymbolPaths {
+		c.SymbolPaths[i] = anchorPath(dir, p)
+	}
+	if c.WebDir != "" {
+		c.WebDir = anchorPath(dir, c.WebDir)
+	}
+}
+
+func anchorPath(dir, p string) string {
+	if p == "" || filepath.IsAbs(p) || strings.Contains(p, "://") {
+		return p
+	}
+	return filepath.Join(dir, p)
 }
 
 // envConfigSearch is the directory list, nearest first.

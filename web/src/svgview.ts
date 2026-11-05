@@ -6,6 +6,7 @@
 import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { pickAt, type Selection } from "./selection.js";
 import { rectOf, type ClientRect } from "./area.js";
+import { UPRIGHT, orientBox, orientCss, orientPoint, orientedSize, unorientPoint, type Orientation, type Point } from "./orient.js";
 
 // CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a
 // click rather than a pan.
@@ -21,6 +22,10 @@ export interface SvgViewState {
 
 export class SvgView {
   private readonly layer: HTMLDivElement;
+  // orient turns the drawing within the layer (agni issue 1327), so pan and zoom stay a translate and
+  // a scale over the oriented drawing.
+  private readonly orient: HTMLDivElement;
+  private orientation: Orientation = UPRIGHT;
   private readonly base: HTMLDivElement;
   private readonly overlay: HTMLDivElement;
   private tx = 0;
@@ -69,8 +74,11 @@ export class SvgView {
     this.overlay.style.left = "0";
     this.overlay.style.top = "0";
     this.overlay.style.pointerEvents = "none";
-    this.layer.appendChild(this.base);
-    this.layer.appendChild(this.overlay);
+    this.orient = document.createElement("div");
+    this.orient.style.transformOrigin = "0 0";
+    this.orient.appendChild(this.base);
+    this.orient.appendChild(this.overlay);
+    this.layer.appendChild(this.orient);
     host.appendChild(this.layer);
     this.bindInput();
     this.observeResize();
@@ -82,6 +90,7 @@ export class SvgView {
   setSvg(markup: string): void {
     this.base.innerHTML = markup;
     this.overlay.innerHTML = "";
+    this.applyOrientation();
     // A new document arrives unframed. The reader's camera on the PREVIOUS one does not apply to
     // it, and the resize refit is live again.
     this.touched = false;
@@ -156,7 +165,9 @@ export class SvgView {
     if (!box) return null;
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
-    const v = computeReveal(box, hw, hh);
+    const { w, h } = this.docSize();
+    const ob = orientBox(this.orientation, w, h, { x: box.x, y: box.y, w: box.w, h: box.h });
+    const v = computeReveal(ob, hw, hh);
     this.setView(v);
     // A revealed view holds still as a navigated one does. Otherwise the next resize, such as a
     // panel opening beside it, refits the sheet and throws the reveal away (agni issue 1326).
@@ -181,13 +192,61 @@ export class SvgView {
     this.layer.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.scale})`;
   }
 
-  // fit scales the SVG to contain within the host and centers it.
+  // getOrientation and setOrientation turn the drawing. A view the reader has moved keeps the point
+  // at its centre where it is, and a fresh one refits.
+  getOrientation(): Orientation {
+    return this.orientation;
+  }
+
+  setOrientation(o: Orientation): void {
+    const centre = this.touched ? this.getCentre() : null;
+    this.orientation = o;
+    this.applyOrientation();
+    if (centre) this.setCentre(centre.at, centre.scale);
+    else this.fit();
+  }
+
+  // getCentre is the drawing point at the middle of the view, in the drawing's own coordinates, and
+  // the zoom. setCentre puts a drawing point at the middle at a zoom. Two views locked together
+  // exchange these rather than a translate, so they line up whatever their sizes or orientations.
+  getCentre(): { at: Point; scale: number } {
+    const hw = this.host.clientWidth || 1;
+    const hh = this.host.clientHeight || 1;
+    const { w, h } = this.docSize();
+    const o = { x: (hw / 2 - this.tx) / this.scale, y: (hh / 2 - this.ty) / this.scale };
+    return { at: unorientPoint(this.orientation, w, h, o), scale: this.scale };
+  }
+
+  setCentre(at: Point, scale: number): void {
+    const hw = this.host.clientWidth || 1;
+    const hh = this.host.clientHeight || 1;
+    const { w, h } = this.docSize();
+    const o = orientPoint(this.orientation, w, h, at);
+    this.scale = scale;
+    this.tx = hw / 2 - o.x * scale;
+    this.ty = hh / 2 - o.y * scale;
+    this.touched = true;
+    this.apply();
+  }
+
+  private applyOrientation(): void {
+    const { w, h } = this.docSize();
+    this.orient.style.transform = orientCss(this.orientation, w, h);
+  }
+
+  private docSize(): { w: number; h: number } {
+    const svg = this.base.querySelector("svg");
+    return { w: svgLen(svg, "width") || 1, h: svgLen(svg, "height") || 1 };
+  }
+
+  // fit scales the oriented SVG to contain within the host and centers it.
   private fit(): void {
     const svg = this.base.querySelector("svg");
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
-    const sw = svgLen(svg, "width") || hw;
-    const sh = svgLen(svg, "height") || hh;
+    const turned = orientedSize(this.orientation, svgLen(svg, "width") || hw, svgLen(svg, "height") || hh);
+    const sw = turned.w;
+    const sh = turned.h;
     this.scale = Math.min(hw / sw, hh / sh) || 1;
     this.tx = (hw - sw * this.scale) / 2;
     this.ty = (hh - sh * this.scale) / 2;

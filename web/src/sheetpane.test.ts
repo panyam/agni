@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { SheetPane, type SheetPaneDeps } from "./sheetpane.js";
+import { SheetPane, parseTurn, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 
@@ -132,5 +132,75 @@ describe("a sheet view", () => {
     layers.value = "front";
     layers.dispatchEvent(new Event("change"));
     expect(p.element.querySelector(".sheetview-canvas")!.classList.contains("board-front")).toBe(true);
+  });
+});
+
+describe("turning a sheet view", () => {
+  function turned(saved: Record<string, string> = {}) {
+    const store = new Map(Object.entries(saved));
+    const t = pane([]);
+    t.deps.turns = {
+      load: (id) => parseTurn(store.get(id) ?? null),
+      save: (id, turn) => void store.set(id, JSON.stringify(turn)),
+    };
+    return { ...t, store };
+  }
+  const orientOf = (p: SheetPane) => (p.element.querySelector(".sheetview-canvas > div > div") as HTMLElement).style.transform;
+
+  it("turns and flips the drawing, and keeps the turn for the sheet", async () => {
+    const { p, store } = turned();
+    await p.open("board");
+    (p.element.querySelector(".sheetview-rotate") as HTMLButtonElement).click();
+    (p.element.querySelector(".sheetview-flip-h") as HTMLButtonElement).click();
+    expect(p.turnOf().orientation).toEqual({ rot: 90, flipH: false, flipV: true });
+    expect(orientOf(p)).toContain("rotate(90deg)");
+    expect(parseTurn(store.get("board") ?? null)?.orientation.rot).toBe(90);
+  });
+
+  it("opens a sheet the way it was last turned", async () => {
+    const { p } = turned({ board: JSON.stringify({ orientation: { rot: 270, flipH: true, flipV: false }, bottom: true }) });
+    await p.open("board");
+    expect(p.turnOf()).toEqual({ orientation: { rot: 270, flipH: true, flipV: false }, bottom: true });
+    expect(orientOf(p)).toContain("rotate(270deg)");
+  });
+
+  it("turns the board over left to right and draws it from below in a bottom view", async () => {
+    const { p, deps } = turned();
+    deps.render = async () => `<svg width="100" height="100"><g class="copper-back"></g><g class="copper-front"></g><g class="labels"></g></svg>`;
+    await p.open("board");
+    (p.element.querySelector(".sheetview-bottom") as HTMLButtonElement).click();
+    expect(p.turnOf()).toEqual({ orientation: { rot: 0, flipH: true, flipV: false }, bottom: true });
+    const groups = () => [...p.element.querySelector(".sheetview-canvas svg")!.children].map((g) => g.getAttribute("class"));
+    expect(groups()).toEqual(["copper-front", "copper-back", "labels"]);
+    (p.element.querySelector(".sheetview-bottom") as HTMLButtonElement).click();
+    expect(groups()).toEqual(["copper-back", "copper-front", "labels"]);
+  });
+
+  it("offers the bottom view on the board alone", async () => {
+    const { p } = turned();
+    await p.open("s1");
+    expect((p.element.querySelector(".sheetview-bottom") as HTMLElement).style.display).toBe("none");
+  });
+
+  it("reads back only a turn it wrote", () => {
+    expect(parseTurn(null)).toBeNull();
+    expect(parseTurn("{not json")).toBeNull();
+    expect(parseTurn(JSON.stringify({ orientation: { rot: 45, flipH: false, flipV: false } }))).toBeNull();
+    expect(parseTurn(JSON.stringify({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true }))).toEqual({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true });
+  });
+});
+
+// The cross-probe walk turns a board view by these names and reads its turn back from them
+// (web/browser/cross-probe-walk.spec.ts).
+describe("the names a turned view answers to", () => {
+  it("names each turn control, and states its rotation and the side nearest the reader", async () => {
+    const { p } = pane([]);
+    await p.open("board");
+    const act = (a: string) => p.element.querySelector(`[data-action="${a}"]`) as HTMLButtonElement;
+    for (const a of ["rotate", "flip-h", "flip-v", "bottom"]) expect(act(a), a).not.toBeNull();
+    expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["0", "front"]);
+    act("rotate").click();
+    act("bottom").click();
+    expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["90", "back"]);
   });
 });

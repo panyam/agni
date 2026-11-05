@@ -1,0 +1,128 @@
+<?xml version = "1.0" encoding = "ISO-8859-1"?>
+<!-- A two-sided board in ODB++X, the single-file XML form of ODB++, written by hand for odx_test.go. -->
+<ODX>
+  <ODX_CAD>
+    <ODX_HEADER TITLE = "ODB++X-BAREBOARD Rev. V2" SOURCE = "hand-written" VERSION = "4.1"/>
+    <CAD_DATA>
+      <CAD_DATA_HEADER UNITS = "METRIC" THICKNESS = "1.6"/>
+      <CAD_LAYER_LIST>
+        <CAD_LAYER NAME = "comp_+_top" CONTEXT = "BOARD" TYPE = "COMPONENTS" SIDE = "TOP" POLARITY = "P"/>
+        <CAD_LAYER NAME = "top" CONTEXT = "BOARD" TYPE = "SIGNAL" SIDE = "TOP" POLARITY = "P"/>
+        <CAD_LAYER NAME = "bottom" CONTEXT = "BOARD" TYPE = "SIGNAL" SIDE = "BOTTOM" POLARITY = "P"/>
+        <CAD_LAYER NAME = "comp_+_bot" CONTEXT = "BOARD" TYPE = "COMPONENTS" SIDE = "BOTTOM" POLARITY = "P"/>
+        <CAD_LAYER NAME = "drill" CONTEXT = "BOARD" TYPE = "DRILL" SIDE = "NONE" POLARITY = "P"/>
+      </CAD_LAYER_LIST>
+      <CAD_STEP_LIST>
+        <CAD_STEP NAME = "pcb">
+          <CAD_PROFILE>
+            <POLYGON>
+              <OB X="0" Y="0"/>
+              <OS X="40" Y="0"/>
+              <OS X="40" Y="20"/>
+              <OS X="0" Y="20"/>
+              <OS X="0" Y="0"/>
+              <OE/>
+            </POLYGON>
+          </CAD_PROFILE>
+          <CAD_PACKAGE_LIST>
+            <CAD_PACKAGE NAME = "R0402">
+              <CAD_PIN_LIST>
+                <CAD_PIN NUMBER = "1" NAME = "1" TYPE = "SURFACE"><LOCATION X="-0.5" Y="0"/></CAD_PIN>
+                <CAD_PIN NUMBER = "2" NAME = "2" TYPE = "SURFACE"><LOCATION X="0.5" Y="0"/></CAD_PIN>
+              </CAD_PIN_LIST>
+            </CAD_PACKAGE>
+            <CAD_PACKAGE NAME = "HOLE1">
+              <CAD_PIN_LIST>
+                <CAD_PIN NUMBER = "1" NAME = "un_1" TYPE = "THRU"><LOCATION X="0" Y="0"/></CAD_PIN>
+              </CAD_PIN_LIST>
+            </CAD_PACKAGE>
+          </CAD_PACKAGE_LIST>
+          <CAD_COMPONENT_LIST>
+            <CAD_COMPONENT NAME = "R1" PACKAGE = "R0402" PART = "10µR" SIDE = "TOP" ANGLE = "90.00" MIRROR = "NO">
+              <CAD_PRP_LIST><CAD_PRP NAME = "VALUE" TEXT = "10R"/></CAD_PRP_LIST>
+              <LOCATION X="10" Y="10"/>
+            </CAD_COMPONENT>
+            <CAD_COMPONENT NAME = "R2" PACKAGE = "R0402" PART = "RES" SIDE = "BOTTOM" ANGLE = "0.00" MIRROR = "NO">
+              <LOCATION X="20" Y="10"/>
+            </CAD_COMPONENT>
+            <CAD_COMPONENT NAME = "J1" PACKAGE = "HOLE1" PART = "PIN" SIDE = "TOP" ANGLE = "0.00" MIRROR = "NO">
+              <LOCATION X="30" Y="10"/>
+            </CAD_COMPONENT>
+          </CAD_COMPONENT_LIST>
+          <CAD_LNET_LIST>
+            <CAD_LNET NAME = "N1"><CAD_LNP_LIST>
+              <CAD_LNP C = "R1" P = "1" T = "1"/>
+              <CAD_LNP C = "R2" P = "2" T = "2"/>
+            </CAD_LNP_LIST></CAD_LNET>
+            <CAD_LNET NAME = "N2"><CAD_LNP_LIST>
+              <CAD_LNP C = "R1" P = "2" T = "2"/>
+              <CAD_LNP C = "J1" P = "1" T = "un_1"/>
+            </CAD_LNP_LIST></CAD_LNET>
+            <CAD_LNET NAME = "$NONE$"><CAD_LNP_LIST>
+              <CAD_LNP C = "R2" P = "1" T = "1"/>
+            </CAD_LNP_LIST></CAD_LNET>
+          </CAD_LNET_LIST>
+          <CAD_LYR_F_LIST>
+            <CAD_LYR_F LYR_NAME = "top">
+              <CAD_SET NET = "" USAGE = "NONE" GEOM = ""/>
+              <CAD_SET NET = "N1" GEOM = "R0402" USAGE = "TOEPRINT"/>
+              <CAD_SET POL = "P"/>
+              <CAD_P X="10" Y="10.5" SYM = "rect0.6x0.5" PIN = "R1:1"/>
+              <CAD_SET NET = "N2"/>
+              <CAD_P X="10" Y="9.5" SYM = "rect0.6x0.5" PIN = "R1:2"/>
+              <CAD_P X="30" Y="10" SYM = "r1.6" PIN = "J1:1"/>
+              <CAD_SET NET = "N1" GEOM = "VIA_300" USAGE = "VIA"/>
+              <CAD_P X="15" Y="10.5" SYM = "r0.6"/>
+              <CAD_SET GEOM = "" USAGE = "NONE" SYM = "r0.2"/>
+              <CAD_L XS="10" YS="10.5" XE="15" YE="10.5"/>
+              <CAD_SET NET = "N2"/>
+              <CAD_A XS="10" YS="9.5" XE="30" YE="9.5" XC="20" YC="9.5" CW = "YES"/>
+            </CAD_LYR_F>
+            <CAD_LYR_F LYR_NAME = "bottom">
+              <CAD_SET NET = "" USAGE = "NONE" GEOM = ""/>
+              <CAD_SET GEOM = "R0402" USAGE = "TOEPRINT"/>
+              <CAD_P X="20.5" Y="10" SYM = "rect0.5x0.6" PIN = "R2:1"/>
+              <CAD_SET NET = "N1"/>
+              <CAD_P X="19.5" Y="10" SYM = "rect0.5x0.6" PIN = "R2:2"/>
+              <CAD_SET NET = "N2"/>
+              <CAD_P X="30" Y="10" SYM = "r1.6" PIN = "J1:1"/>
+              <CAD_SET NET = "N1" GEOM = "VIA_300" USAGE = "VIA"/>
+              <CAD_P X="15" Y="10.5" SYM = "r0.6"/>
+              <CAD_SET GEOM = "" USAGE = "NONE" SYM = "r0.25"/>
+              <CAD_L XS="15" YS="10.5" XE="19.5" YE="10"/>
+              <CAD_SET NET = "N2"/>
+              <CAD_S>
+                <ISLAND>
+                  <POLYGON>
+                    <OB X="2" Y="2"/>
+                    <OS X="8" Y="2"/>
+                    <OS X="8" Y="8"/>
+                    <OS X="2" Y="8"/>
+                    <OS X="2" Y="2"/>
+                    <OE/>
+                  </POLYGON>
+                </ISLAND>
+                <HOLE>
+                  <POLYGON>
+                    <OB X="4" Y="4"/>
+                    <OS X="5" Y="4"/>
+                    <OS X="5" Y="5"/>
+                    <OS X="4" Y="4"/>
+                    <OE/>
+                  </POLYGON>
+                </HOLE>
+              </CAD_S>
+            </CAD_LYR_F>
+            <CAD_LYR_F LYR_NAME = "drill">
+              <CAD_SET NET = "" USAGE = "NONE" GEOM = "" PLT = "YES"/>
+              <CAD_SET NET = "N2" GEOM = "HOLE1"/>
+              <CAD_P X="30" Y="10" SYM = "r1" PIN = "J1:1"/>
+              <CAD_SET NET = "N1" GEOM = "VIA_300"/>
+              <CAD_P X="15" Y="10.5" SYM = "r0.3"/>
+            </CAD_LYR_F>
+          </CAD_LYR_F_LIST>
+        </CAD_STEP>
+      </CAD_STEP_LIST>
+    </CAD_DATA>
+  </ODX_CAD>
+</ODX>

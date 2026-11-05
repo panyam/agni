@@ -3,6 +3,7 @@ package kicad
 import (
 	"bytes"
 	"math"
+	"os"
 	"strings"
 	"testing"
 
@@ -94,9 +95,12 @@ func TestBoardGeometryText(t *testing.T) {
 			t.Errorf("placeholder ref-des must not emit silk text")
 		}
 	}
-	// J1 is on B.Cu: its silk text is marked mirrored (back side).
-	if j := byKind["reference|J1"]; j == nil || !j.Mirror {
-		t.Errorf("J1 reference text = %+v, want mirror=true (B.Cu)", j)
+	// J1 is on B.Cu, but its Reference names no layer and no (justify mirror), so KiCad draws it
+	// unmirrored. kicad-cli's export of this fixture reads "J1" the right way round from the front, and
+	// a text is mirrored exactly when its effects say so (agni issue 1327). A real board writes
+	// (justify mirror) on every back-side field (TestBackFieldsReadMirroredOnARealBoard).
+	if j := byKind["reference|J1"]; j == nil || j.Mirror {
+		t.Errorf("J1 reference text = %+v, want mirror=false, as kicad-cli draws it", j)
 	}
 	// gr_text: absolute board coordinates (no placement compose), justify mirror -> mirror,
 	// authored text kept verbatim (the reader stores the raw string; flattening the newline
@@ -414,5 +418,36 @@ func TestBoardTextAnglesMatchKiCad(t *testing.T) {
 				t.Errorf("%s: %s rotation = %g, KiCad draws %g", c.fixture, tx.Text, tx.RotationDeg, want)
 			}
 		}
+	}
+}
+
+// A real board marks every back-side field (justify mirror), so reading the flag from the text alone
+// still mirrors each one (agni issue 1327). Jetson has hundreds of parts on the back.
+func TestBackFieldsReadMirroredOnARealBoard(t *testing.T) {
+	const p = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
+	f, err := os.Open(p)
+	if err != nil {
+		t.Fatalf("%s: %v (make samples-oracle fetches the boards)", p, err)
+	}
+	defer f.Close()
+	b, err := ReadBoardGeometry(f, "jetson.kicad_pcb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, unmirrored := 0, 0
+	for _, txt := range b.GetTexts() {
+		if txt.GetRefDes() == "" || !strings.HasPrefix(txt.GetLayer(), "B.") {
+			continue
+		}
+		back++
+		if !txt.GetMirror() {
+			unmirrored++
+		}
+	}
+	if back < 100 {
+		t.Fatalf("Jetson reads %d back-side fields, so the test checks almost nothing", back)
+	}
+	if unmirrored > 0 {
+		t.Errorf("%d of %d back-side fields read unmirrored", unmirrored, back)
 	}
 }
