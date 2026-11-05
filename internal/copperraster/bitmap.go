@@ -11,6 +11,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"sort"
 )
 
 // Bitmap is one layer's copper on a grid of square pixels, Res nanometres a side, whose pixel (0, 0)
@@ -20,6 +21,9 @@ type Bitmap struct {
 	X0, Y0 int64
 	Res    int64
 	bits   []uint64
+	// erasing makes every drawing call clear the pixels it covers instead of setting them, which is
+	// how a film's clear polarity cuts a pour (agni 1357).
+	erasing bool
 }
 
 // New makes an empty bitmap covering the box from (minX, minY) to (maxX, maxY) in nanometres.
@@ -31,6 +35,10 @@ func New(minX, minY, maxX, maxY, res int64) *Bitmap {
 
 func (b *Bitmap) set(x, y int) {
 	i := y*b.W + x
+	if b.erasing {
+		b.bits[i/64] &^= 1 << (uint(i) % 64)
+		return
+	}
 	b.bits[i/64] |= 1 << (uint(i) % 64)
 }
 
@@ -200,4 +208,55 @@ func Diff(want, got *Bitmap) image.Image {
 		}
 	}
 	return img
+}
+
+// Rings fills the region inside rings by the even-odd rule, so a ring inside another is a hole
+// (agni 1357). Each ring is closed, its points in nanometres. A pixel is copper when its centre is
+// inside. It scans row by row, so a plane of thousands of holes costs one pass over its edges per
+// row rather than one per pixel.
+//
+// on false clears the region instead, as a film's clear polarity does.
+func (b *Bitmap) Rings(rings [][][2]float64, on bool) {
+	minY, maxY := math.Inf(1), math.Inf(-1)
+	for _, r := range rings {
+		for _, p := range r {
+			minY, maxY = math.Min(minY, p[1]), math.Max(maxY, p[1])
+		}
+	}
+	if minY > maxY {
+		return
+	}
+	res := float64(b.Res)
+	py0 := max(0, int(math.Floor((minY-float64(b.Y0))/res)))
+	py1 := min(b.H-1, int(math.Ceil((maxY-float64(b.Y0))/res)))
+	var xs []float64
+	for py := py0; py <= py1; py++ {
+		cy := float64(b.Y0) + (float64(py)+0.5)*res
+		xs = xs[:0]
+		for _, r := range rings {
+			for i := range r {
+				a, c := r[i], r[(i+1)%len(r)]
+				if (a[1] > cy) != (c[1] > cy) {
+					xs = append(xs, a[0]+(cy-a[1])*(c[0]-a[0])/(c[1]-a[1]))
+				}
+			}
+		}
+		sort.Float64s(xs)
+		for i := 0; i+1 < len(xs); i += 2 {
+			px0 := max(0, int(math.Ceil((xs[i]-float64(b.X0))/res-0.5)))
+			px1 := min(b.W-1, int(math.Floor((xs[i+1]-float64(b.X0))/res-0.5)))
+			for px := px0; px <= px1; px++ {
+				if on {
+					b.set(px, py)
+				} else {
+					b.unset(px, py)
+				}
+			}
+		}
+	}
+}
+
+func (b *Bitmap) unset(x, y int) {
+	i := y*b.W + x
+	b.bits[i/64] &^= 1 << (uint(i) % 64)
 }

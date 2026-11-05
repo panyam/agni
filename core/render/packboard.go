@@ -60,6 +60,13 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		add(primLineLoop, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
 	}
 	for _, nc := range b.GetNets() {
+		// Filled copper as triangles, with its holes left out (agni 1357). The packer
+		// triangulates once, so every renderer draws the same fill.
+		for _, sh := range nc.GetShapes() {
+			if tris := shapeTris(sh); len(tris) > 0 {
+				add(primTriangles, strata.pourGroup(sh.GetLayer()), "", nc.GetNet(), "", tris)
+			}
+		}
 		for _, s := range nc.GetSegments() {
 			if s.GetA() == nil || s.GetB() == nil {
 				continue
@@ -192,6 +199,44 @@ func boardGroupColors(style Style) []string {
 	colors[groupBoardSilk] = style.Silk
 	colors[groupBoardFab] = style.Fab
 	return colors
+}
+
+// shapeTris triangulates a copper shape, its outline less its holes, by earcut. The vertices are
+// relative to the shape's first point while earcut runs, so float64 keeps them exact on a board
+// metres across.
+func shapeTris(sh *geom.CopperShape) [][2]int64 {
+	pts := sh.GetOutline().GetPoints()
+	if len(pts) < 3 {
+		return nil
+	}
+	ox, oy := pts[0].GetX(), pts[0].GetY()
+	var flat []float64
+	var all []*geom.Point
+	addRing := func(ring []*geom.Point) {
+		// A ring that repeats its first point at the end closes on itself, which earcut does not want.
+		if n := len(ring); n > 1 && ring[0].GetX() == ring[n-1].GetX() && ring[0].GetY() == ring[n-1].GetY() {
+			ring = ring[:n-1]
+		}
+		for _, p := range ring {
+			flat = append(flat, float64(p.GetX()-ox), float64(p.GetY()-oy))
+			all = append(all, p)
+		}
+	}
+	addRing(pts)
+	var holes []int
+	for _, h := range sh.GetHoles() {
+		if len(h.GetPoints()) < 3 {
+			continue
+		}
+		holes = append(holes, len(all))
+		addRing(h.GetPoints())
+	}
+	idx := geomath.Earcut(flat, holes)
+	out := make([][2]int64, 0, len(idx))
+	for _, i := range idx {
+		out = append(out, [2]int64{all[i].GetX(), all[i].GetY()})
+	}
+	return out
 }
 
 // packStackLayer packs a padstack's land on one layer as filled triangles, keyed as the pad or via

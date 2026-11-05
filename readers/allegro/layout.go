@@ -51,6 +51,8 @@ type layout struct {
 	segWidth   int // a line's or arc's width; start, end, centre and radius follow from it
 	graphSegs  int // a graphic's (0x14) first segment
 	shapeSegs  int // a shape's (0x28) first segment
+	shapeVoids int // a shape's first void (0x34), the word before its first segment
+	voidSegs   int // a void's first segment
 	shapeTable int // a shape's table (0x2C)
 	tablePtr1  int // a table's (0x2C) pointer array
 
@@ -92,7 +94,7 @@ var layout172 = &layout{
 	ppNextInFp: 24, ppParentFp: 28, ppPad: 36,
 	padRot:    40,
 	netAssign: 28,
-	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeTable: 52, tablePtr1: 28,
+	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
 	rectCoords: 24,
 	viaX:       32, viaPadstack: 44,
@@ -124,7 +126,7 @@ var layout166 = &layout{
 	ppNextInFp: 20, ppParentFp: 24, ppPad: 32,
 	padRot:    36,
 	netAssign: 24,
-	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeTable: 48, tablePtr1: 20,
+	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
 	rectCoords: 20,
 	viaX:       24, viaPadstack: 36,

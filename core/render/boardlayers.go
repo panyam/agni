@@ -14,6 +14,7 @@ import (
 type boardStrata struct {
 	copper map[string]uint8 // copper layer -> its tracks' group
 	zone   map[string]uint8 // copper layer -> its zones' group
+	pour   map[string]uint8 // copper layer -> its copper shapes' group (agni 1357)
 	art    map[string]uint8 // graphics layer -> its graphics' and text's group
 	colors []string         // indexed by group
 	rows   []*geom.BoardLayerRow
@@ -24,7 +25,7 @@ type boardStrata struct {
 const maxBoardGroups = 256
 
 func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
-	s := &boardStrata{copper: map[string]uint8{}, zone: map[string]uint8{}, art: map[string]uint8{}}
+	s := &boardStrata{copper: map[string]uint8{}, zone: map[string]uint8{}, pour: map[string]uint8{}, art: map[string]uint8{}}
 	s.colors = boardGroupColors(style)
 	alloc := func(fallback uint8, color string) uint8 {
 		if len(s.colors) >= maxBoardGroups {
@@ -41,6 +42,12 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 			zoned[z.GetLayer()] = true
 		}
 	}
+	poured := map[string]bool{}
+	for _, nc := range b.GetNets() {
+		for _, sh := range nc.GetShapes() {
+			poured[sh.GetLayer()] = true
+		}
+	}
 	for _, ly := range stack {
 		color := copperColor(style, ly)
 		switch layerSide(ly) {
@@ -54,6 +61,9 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 		if zoned[ly] {
 			s.zone[ly] = alloc(s.copper[ly], color)
 		}
+		if poured[ly] {
+			s.pour[ly] = alloc(s.copper[ly], color)
+		}
 	}
 	for _, ly := range artLayers(b) {
 		fallback := groupBoardSilk
@@ -66,6 +76,9 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 	for _, ly := range stack {
 		groups := []uint32{uint32(s.copper[ly])}
 		if g, ok := s.zone[ly]; ok {
+			groups = append(groups, uint32(g))
+		}
+		if g, ok := s.pour[ly]; ok {
 			groups = append(groups, uint32(g))
 		}
 		sel := layerSelector(ly)
@@ -87,6 +100,16 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 	if hasThrough(b) {
 		s.rows = append(s.rows, &geom.BoardLayerRow{Name: "Through", Kind: "through", Color: style.Via,
 			SvgSelector: ".through", Groups: []uint32{uint32(groupBoardThrough), uint32(groupBoardHole)}})
+	}
+	if len(s.pour) > 0 {
+		var groups []uint32
+		for _, ly := range stack {
+			if g, ok := s.pour[ly]; ok {
+				groups = append(groups, uint32(g))
+			}
+		}
+		s.rows = append(s.rows, &geom.BoardLayerRow{Name: "Pours", Kind: "pours", Color: style.CopperFront,
+			SvgSelector: ".pour", Groups: groups})
 	}
 	if len(s.zone) > 0 {
 		var groups []uint32
@@ -118,6 +141,13 @@ func (s *boardStrata) copperGroup(layer string) uint8 {
 		return g
 	}
 	return groupBoardCopperInner
+}
+
+func (s *boardStrata) pourGroup(layer string) uint8 {
+	if g, ok := s.pour[layer]; ok {
+		return g
+	}
+	return s.copperGroup(layer)
 }
 
 func (s *boardStrata) zoneGroup(layer string) uint8 {

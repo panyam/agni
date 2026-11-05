@@ -36,7 +36,7 @@ func newBoardIndex(b *geom.BoardGeometry) *boardIndex {
 		}
 	}
 	for _, nc := range b.GetNets() {
-		if nc.GetNet() != "" && (len(nc.GetSegments()) > 0 || len(nc.GetVias()) > 0) {
+		if nc.GetNet() != "" && (len(nc.GetSegments()) > 0 || len(nc.GetVias()) > 0 || len(nc.GetShapes()) > 0) {
 			ix.nets[nc.GetNet()] = true
 		}
 	}

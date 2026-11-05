@@ -3,6 +3,7 @@ package formats
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -196,6 +197,55 @@ func TestSampleBoardArcTracksReadAsArcs(t *testing.T) {
 		}
 		if want < 100 || got != want {
 			t.Errorf("%s: read %d arc tracks, the file has %d", name, got, want)
+		}
+	}
+}
+
+// TestSampleBoardZonesOnSeveralLayersReadOnEach holds Jetson's zones to the file, counting one zone
+// for every layer each zone names (agni 1357). Many of its zones sit on more than one copper layer,
+// keepouts on all ten among them, and its zones on In3.Cu, In6.Cu and In8.Cu exist only that way.
+func TestSampleBoardZonesOnSeveralLayersReadOnEach(t *testing.T) {
+	path := "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)
+	}
+	// Each top-level zone names its layers on a line of its own, as (layer "X") or
+	// (layers "X" "Y" ...), before its polygon.
+	layerLine := regexp.MustCompile(`(?m)^\t\t\(layers?((?:\s+"[^"]+")+)\s*\)`)
+	want, multi := 0, 0
+	byLayer := map[string]int{}
+	for _, block := range strings.Split(string(src), "\n\t(zone\n")[1:] {
+		if end := strings.Index(block, "\n\t("); end >= 0 {
+			block = block[:end]
+		}
+		m := layerLine.FindStringSubmatch(block)
+		if m == nil {
+			t.Fatalf("a zone names no layer: %.200s", block)
+		}
+		names := regexp.MustCompile(`"([^"]+)"`).FindAllStringSubmatch(m[1], -1)
+		want += len(names)
+		if len(names) > 1 {
+			multi++
+		}
+		for _, n := range names {
+			byLayer[n[1]]++
+		}
+	}
+	g, err := (&Loader{}).BoardGeometry(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int{}
+	for _, z := range g.GetZones() {
+		got[z.GetLayer()]++
+	}
+	if multi < 10 || len(g.GetZones()) != want {
+		t.Errorf("read %d zones; the file's zones name %d layers in all, %d of them on several", len(g.GetZones()), want, multi)
+	}
+	for _, ly := range []string{"In3.Cu", "In6.Cu", "In8.Cu"} {
+		if got[ly] == 0 || got[ly] != byLayer[ly] {
+			t.Errorf("%s: read %d zones, the file names it in %d", ly, got[ly], byLayer[ly])
 		}
 	}
 }

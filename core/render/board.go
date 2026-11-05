@@ -71,6 +71,15 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	for _, ly := range copperLayersBackToFront(b) {
 		c.Group(svg.A("class", "copper-"+layerSide(ly)), svg.A("data-layer", ly))
 		color := copperColor(style, ly)
+		// Filled copper first, so the tracks and lands on it draw over it (agni 1357).
+		for _, nc := range b.GetNets() {
+			for _, sh := range nc.GetShapes() {
+				if sh.GetLayer() == ly {
+					c.El("path", append([]svg.Attr{svg.A("class", "pour"), svg.A("d", shapePathD(sh, fr)),
+						svg.A("fill", color), svg.A("fill-rule", "evenodd")}, pk.net(nc.GetNet())...)...)
+				}
+			}
+		}
 		for _, nc := range b.GetNets() {
 			// A net's tracks on this layer share one keyed group rather than a key per line. Tracks
 			// are most of a board's elements, and a key on each grew Jetson's board by a third.
@@ -570,6 +579,9 @@ func copperLayersBackToFront(b *geom.BoardGeometry) []string {
 		for _, s := range nc.GetSegments() {
 			used[s.GetLayer()] = true
 		}
+		for _, sh := range nc.GetShapes() {
+			used[sh.GetLayer()] = true
+		}
 	}
 	stacks := padstacksOf(b)
 	for _, pl := range b.GetPlacements() {
@@ -628,4 +640,25 @@ func splitByLayer[T any](layerOf func(T) string, items []T) (front, back, inner 
 		}
 	}
 	return front, back, inner
+}
+
+// shapePathD is a copper shape's outline and holes as one SVG path, each ring a closed subpath, for
+// an even-odd fill that leaves the holes empty.
+func shapePathD(sh *geom.CopperShape, fr sheetFrame) string {
+	var d strings.Builder
+	ring := func(pl *geom.Polyline) {
+		for i, p := range pl.GetPoints() {
+			cmd := "L"
+			if i == 0 {
+				cmd = "M"
+			}
+			fmt.Fprintf(&d, "%s%.1f %.1f ", cmd, fr.tx(p.GetX()), fr.ty(p.GetY()))
+		}
+		d.WriteString("Z ")
+	}
+	ring(sh.GetOutline())
+	for _, h := range sh.GetHoles() {
+		ring(h)
+	}
+	return strings.TrimSpace(d.String())
 }

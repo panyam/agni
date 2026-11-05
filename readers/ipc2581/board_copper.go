@@ -143,9 +143,20 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape, 
 		return nc
 	}
 
+	copper := f.copperLayers()
 	for _, lf := range f.Features {
 		layer := normalizeSide(lf.LayerRef)
 		for _, s := range lf.Sets {
+			// A Set-direct Contour on a copper layer is a pour or plane, copper as etched, with its
+			// cutouts as holes (agni 1357). On a fab, mask or silk layer it is drawing geometry.
+			if copper[lf.LayerRef] {
+				for _, c := range s.Fills {
+					if sh := copperShape(c, layer, nmPerUnit); sh != nil {
+						nc := get(s.Net)
+						nc.Shapes = append(nc.Shapes, sh)
+					}
+				}
+			}
 			if s.Net == "" {
 				continue
 			}
@@ -206,30 +217,20 @@ func (f *ipcGeomFile) layerSpans() map[string][2]string {
 	return m
 }
 
-// zones emits each Set's copper plane/pour fill (a Set-direct Contour) as a geom.Zone with its
-// net, layer, and authored outline polygon. The C6 zone bound drops cutouts (holes in the fill),
-// so consumers regenerate the fill or a later tier supplies it. Sorted for a deterministic
-// artifact.
-func (f *ipcGeomFile) zones(nmPerUnit float64) []*geom.Zone {
-	copper := f.copperLayers()
-	var out []*geom.Zone
-	for _, lf := range f.Features {
-		if !copper[lf.LayerRef] {
-			continue // a Zone is copper; DOCUMENT/mask/silk Contours are drawing geometry, not pours
-		}
-		layer := normalizeSide(lf.LayerRef)
-		for _, s := range lf.Sets {
-			for _, c := range s.Fills {
-				pl := polyline(c.Polygon, nmPerUnit)
-				if pl == nil {
-					continue
-				}
-				out = append(out, &geom.Zone{Net: s.Net, Layer: layer, Outline: pl})
-			}
+// copperShape is a contour's polygon as a copper shape on layer, with each cutout a hole, or nil
+// for a degenerate polygon.
+func copperShape(c contourEl, layer string, nmPerUnit float64) *geom.CopperShape {
+	outline := polyline(c.Polygon, nmPerUnit)
+	if outline == nil {
+		return nil
+	}
+	sh := &geom.CopperShape{Layer: layer, Outline: outline}
+	for _, cut := range c.Cutouts {
+		if h := polyline(cut, nmPerUnit); h != nil {
+			sh.Holes = append(sh.Holes, h)
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Net < out[j].Net })
-	return out
+	return sh
 }
 
 // lineWidths resolves the LineDesc dictionaries into a width lookup keyed by id.

@@ -53,13 +53,14 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", board.Path(), err)
 		}
-		segs, vias := 0, 0
+		segs, vias, pours := 0, 0, 0
 		for _, nc := range b.GetNets() {
 			segs += len(nc.GetSegments())
 			vias += len(nc.GetVias())
+			pours += len(nc.GetShapes())
 		}
-		fmt.Printf("Board %q: %d layers, %d placements, %d routed nets (%d segments, %d vias), %d zones.\n",
-			b.GetDesignRef(), len(b.GetLayers()), len(b.GetPlacements()), len(b.GetNets()), segs, vias, len(b.GetZones()))
+		fmt.Printf("Board %q: %d layers, %d placements, %d routed nets (%d segments, %d vias, %d pours), %d zones.\n",
+			b.GetDesignRef(), len(b.GetLayers()), len(b.GetPlacements()), len(b.GetNets()), segs, vias, pours, len(b.GetZones()))
 		return nil
 	})
 

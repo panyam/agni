@@ -73,7 +73,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 	}
 	g.Nets = netCopper(root, netName)
 	for _, z := range root.Children("zone") {
-		if zone := zoneOutline(z, netName); zone != nil {
+		for _, zone := range zoneOutlines(z, netName) {
 			g.Zones = append(g.Zones, zone)
 		}
 	}
@@ -693,9 +693,11 @@ func copperNet(ref *node, netName map[string]string) string {
 	return "" // a number the table does not know means no net
 }
 
-// zoneOutline extracts one zone's authored polygon. A zone on no net (a keepout) keeps
-// net="", since it is real copper geometry even though it joins to nothing.
-func zoneOutline(z *node, netName map[string]string) *geom.Zone {
+// zoneOutlines extracts a zone's authored polygon, once for each layer the zone names. A zone can
+// sit on several copper layers at once, `(layers "In1.Cu" "In3.Cu")`, and each layer then gets
+// the same outline (agni 1357). A zone on no net (a keepout) keeps net="", since it is real
+// geometry even though it joins to nothing.
+func zoneOutlines(z *node, netName map[string]string) []*geom.Zone {
 	poly := z.Child("polygon")
 	if poly == nil {
 		return nil
@@ -704,19 +706,30 @@ func zoneOutline(z *node, netName map[string]string) *geom.Zone {
 	if pts == nil {
 		return nil
 	}
-	zone := &geom.Zone{Outline: &geom.Polyline{}}
+	var net string
 	if nn := z.Child("net_name"); nn != nil {
-		zone.Net = atomOf(nn.Arg(1))
+		net = atomOf(nn.Arg(1))
 	} else {
-		zone.Net = copperNet(z.Child("net"), netName)
+		net = copperNet(z.Child("net"), netName)
 	}
+	var layers []string
 	if l := z.Child("layer"); l != nil {
-		zone.Layer = atomOf(l.Arg(1))
+		layers = append(layers, atomOf(l.Arg(1)))
 	} else if ls := z.Child("layers"); ls != nil {
-		zone.Layer = atomOf(ls.Arg(1))
+		for _, l := range ls.Kids[1:] { // Kids[0] is the "layers" head atom
+			layers = append(layers, atomOf(l))
+		}
 	}
+	if len(layers) == 0 {
+		layers = []string{""}
+	}
+	var outline []*geom.Point
 	for _, xy := range pts.Children("xy") {
-		zone.Outline.Points = append(zone.Outline.Points, pcbPoint(xy))
+		outline = append(outline, pcbPoint(xy))
 	}
-	return zone
+	out := make([]*geom.Zone, 0, len(layers))
+	for _, ly := range layers {
+		out = append(out, &geom.Zone{Net: net, Layer: ly, Outline: &geom.Polyline{Points: outline}})
+	}
+	return out
 }

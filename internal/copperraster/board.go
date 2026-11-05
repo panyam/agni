@@ -9,7 +9,8 @@ import (
 )
 
 // DrawBoardLayer draws one copper layer of a board's geometry: the tracks on it into tracks, and
-// every via whose span covers it and every pad on it into lands. The two may be the same bitmap.
+// every via whose span covers it, every pad on it and every filled copper shape on it into lands.
+// The two may be the same bitmap.
 // order lists the board's copper layers top to bottom, so a via's span and a through pad ("*.Cu")
 // resolve to the layers they cross. Zones are not drawn.
 //
@@ -36,6 +37,7 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 	for _, ps := range g.GetPadstacks() {
 		stacks[ps.GetId()] = ps
 	}
+
 	for _, nc := range g.GetNets() {
 		for _, s := range nc.GetSegments() {
 			if s.GetLayer() != layer {
@@ -46,6 +48,11 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 					float64(pts[i].GetX())*scale, float64(pts[i].GetY())*scale, float64(s.GetWidth())*scale)
 			}
 		}
+		for _, sh := range nc.GetShapes() {
+			if sh.GetLayer() == layer {
+				lands.Rings(shapeRings(sh, scale), true)
+			}
+		}
 		for _, v := range nc.GetVias() {
 			from, okf := idx[v.GetLayerFrom()]
 			to, okt := idx[v.GetLayerTo()]
@@ -53,9 +60,9 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 				from, to = 0, len(order)-1
 			}
 			if ps := stacks[v.GetPadstack()]; ps != nil {
+				vx, vy := float64(v.GetAt().GetX())*scale, float64(v.GetAt().GetY())*scale
 				if land := LandOn(ps, layer); land != nil {
-					drawShape(lands, float64(v.GetAt().GetX())*scale, float64(v.GetAt().GetY())*scale, land.GetShape(),
-						float64(land.GetSize().GetX())*scale, float64(land.GetSize().GetY())*scale, 0)
+					drawShape(lands, vx, vy, land.GetShape(), float64(land.GetSize().GetX())*scale, float64(land.GetSize().GetY())*scale, 0)
 				}
 				continue
 			}
@@ -140,4 +147,20 @@ func DrawBoardOutline(g *geom.BoardGeometry, width float64, b *Bitmap) {
 				float64(pts[i].GetX())*scale, float64(pts[i].GetY())*scale, width)
 		}
 	}
+}
+
+// shapeRings is a copper shape's outline and holes as rings in nanometres, for an even-odd fill.
+func shapeRings(sh *geom.CopperShape, scale float64) [][][2]float64 {
+	ring := func(pl *geom.Polyline) [][2]float64 {
+		out := make([][2]float64, 0, len(pl.GetPoints()))
+		for _, p := range pl.GetPoints() {
+			out = append(out, [2]float64{float64(p.GetX()) * scale, float64(p.GetY()) * scale})
+		}
+		return out
+	}
+	rings := [][][2]float64{ring(sh.GetOutline())}
+	for _, h := range sh.GetHoles() {
+		rings = append(rings, ring(h))
+	}
+	return rings
 }

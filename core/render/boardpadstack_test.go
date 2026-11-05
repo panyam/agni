@@ -19,8 +19,8 @@ func stackBoard() *geom.BoardGeometry {
 			Layers: []string{"*.Cu"}, Drill: 800_000, Net: net, Padstack: "TH20"}
 	}
 	return &geom.BoardGeometry{
-		UnitNm: 1,
-		Layers: []*geom.BoardLayer{{Number: 0, Name: "F.Cu", Kind: "signal"}, {Number: 1, Name: "In1.Cu", Kind: "signal"}, {Number: 2, Name: "In2.Cu", Kind: "power"}, {Number: 3, Name: "B.Cu", Kind: "signal"}},
+		UnitNm:  1,
+		Layers:  []*geom.BoardLayer{{Number: 0, Name: "F.Cu", Kind: "signal"}, {Number: 1, Name: "In1.Cu", Kind: "signal"}, {Number: 2, Name: "In2.Cu", Kind: "power"}, {Number: 3, Name: "B.Cu", Kind: "signal"}},
 		Outline: &geom.BoardOutline{Paths: []*geom.Polyline{{Points: []*geom.Point{{X: -5_000_000, Y: -5_000_000}, {X: 15_000_000, Y: -5_000_000}, {X: 15_000_000, Y: 5_000_000}, {X: -5_000_000, Y: 5_000_000}, {X: -5_000_000, Y: -5_000_000}}}}},
 		Padstacks: []*geom.Padstack{{Id: "TH20", Name: "TH20", Layers: []*geom.PadstackLayer{
 			{Layer: "F.Cu", Pad: circle(2_000_000)},
@@ -29,7 +29,7 @@ func stackBoard() *geom.BoardGeometry {
 			{Layer: "B.Cu", Pad: circle(2_000_000)},
 		}}},
 		Placements: []*geom.ComponentPlacement{{RefDes: "J1", At: &geom.Point{}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", "SIG", 0), pad("2", "GND", 10_000_000)}}},
-		Zones: []*geom.Zone{{Net: "GND", Layer: "In2.Cu", Outline: &geom.Polyline{Points: []*geom.Point{{X: -4_000_000, Y: -4_000_000}, {X: 14_000_000, Y: -4_000_000}, {X: 14_000_000, Y: 4_000_000}, {X: -4_000_000, Y: 4_000_000}}}}},
+		Zones:      []*geom.Zone{{Net: "GND", Layer: "In2.Cu", Outline: &geom.Polyline{Points: []*geom.Point{{X: -4_000_000, Y: -4_000_000}, {X: 14_000_000, Y: -4_000_000}, {X: 14_000_000, Y: 4_000_000}, {X: -4_000_000, Y: 4_000_000}}}}},
 	}
 }
 

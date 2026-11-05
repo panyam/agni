@@ -34,6 +34,13 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) strin
 					svg.F("stroke-width", copperStrokePx(s.GetWidth(), fr.scale)+highlightStrokePx),
 					svg.A("stroke-linecap", "round"))
 			}
+			// A net's pours light as a tinted fill under an outline, so a plane reads as part of its
+			// net without hiding the copper drawn on it (agni 1357).
+			for _, sh := range nc.GetShapes() {
+				c.El("path", svg.A("d", shapePathD(sh, fr)), svg.A("fill", color), svg.F("fill-opacity", alpha*0.35),
+					svg.A("fill-rule", "evenodd"), svg.A("stroke", color), svg.F("stroke-opacity", alpha),
+					svg.F("stroke-width", highlightStrokePx/2))
+			}
 			for _, v := range nc.GetVias() {
 				if v.GetAt() == nil {
 					continue

@@ -74,6 +74,7 @@ const (
 	tagText       = 0x30
 	tagStrGraphic = 0x31
 	tagPlacedPad  = 0x32
+	tagVoid       = 0x34
 	tagVia        = 0x33
 	tagDefTable   = 0x36
 	tagPtrArray   = 0x37

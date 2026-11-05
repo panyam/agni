@@ -143,13 +143,14 @@ func BoardLines(g *geom.BoardGeometry) string {
 			top++
 		}
 	}
-	segs, vias := 0, 0
+	segs, vias, pours := 0, 0, 0
 	for _, nc := range g.GetNets() {
 		segs += len(nc.GetSegments())
 		vias += len(nc.GetVias())
+		pours += len(nc.GetShapes())
 	}
-	return fmt.Sprintf("copper layers: %s\nparts:         %d on top, %d on the bottom\ncopper:        %d track segments and %d vias on %d nets, %d zones",
-		strings.Join(names, " "), top, bottom, segs, vias, len(g.GetNets()), len(g.GetZones()))
+	return fmt.Sprintf("copper layers: %s\nparts:         %d on top, %d on the bottom\ncopper:        %d track segments, %d vias and %d pours on %d nets, %d zones",
+		strings.Join(names, " "), top, bottom, segs, vias, pours, len(g.GetNets()), len(g.GetZones()))
 }
 
 // RuleTally counts findings per rule, most first. A real board yields hundreds of findings, and a

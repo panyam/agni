@@ -14,8 +14,9 @@ type Film struct {
 	// Etch is the copper layer the film plots, from Allegro's "G04 Layer: ETCH/<name>" header line,
 	// or "" when the film names none.
 	Etch string
-	// Regions and Clear count what was left undrawn: filled regions, and anything drawn with clear
-	// polarity (the voids cut into a pour).
+	// Regions counts the filled regions drawn, and Clear the draws, flashes and regions made with
+	// clear polarity. A clear one erases the copper under it, as Allegro cuts a pour's voids
+	// (agni 1357).
 	Regions, Clear int
 	// Draws and Flashes count what was drawn.
 	Draws, Flashes int
@@ -58,6 +59,8 @@ type gerber struct {
 	interp      int     // 1 linear, 2 clockwise, 3 counter-clockwise
 	multiQuad   bool
 	region      bool
+	contour     [][2]float64   // the region contour being drawn
+	contours    [][][2]float64 // the region's finished contours
 	dark        bool
 	fsSeen      bool
 	sawEnd      bool
@@ -246,10 +249,11 @@ func (g *gerber) word(w string) error {
 		return nil
 	case w == "G36":
 		g.region = true
+		g.contour, g.contours = nil, nil
 		return nil
 	case w == "G37":
 		g.region = false
-		g.film.Regions++
+		g.fillRegion()
 		return nil
 	case w == "G75":
 		g.multiQuad = true
@@ -324,6 +328,9 @@ func (g *gerber) operation(w string) error {
 	}
 	switch d {
 	case "02", "2":
+		if g.region {
+			g.closeContour()
+		}
 	case "01", "1":
 		g.draw(x, y, i, j)
 	case "03", "3":
@@ -347,17 +354,19 @@ func (g *gerber) coord(s string) float64 {
 }
 
 func (g *gerber) draw(x, y, i, j float64) {
-	if g.region || !g.dark {
-		if !g.region {
-			g.film.Clear++
+	if g.region {
+		if len(g.contour) == 0 {
+			g.contour = append(g.contour, [2]float64{g.x, g.y})
 		}
+		g.contour = append(g.contour, g.arcPoints(x, y, i, j)...)
 		return
 	}
+	defer g.polarity()()
 	a := g.apertures[g.cur]
 	width := math.Min(a.w, a.h)
 	g.film.Draws++
 	if g.interp == 1 {
-		g.tracks.Line(g.x, g.y, x, y, width)
+		g.stroke(g.x, g.y, x, y, width)
 		return
 	}
 	cx, cy := g.x+i, g.y+j
@@ -379,31 +388,106 @@ func (g *gerber) draw(x, y, i, j float64) {
 		if k == n {
 			qx, qy = x, y
 		}
-		g.tracks.Line(px, py, qx, qy, width)
+		g.stroke(px, py, qx, qy, width)
 		px, py = qx, qy
 	}
 }
 
 func (g *gerber) flash(x, y float64) {
-	if g.region || !g.dark {
-		if !g.region {
-			g.film.Clear++
-		}
+	if g.region {
 		return
 	}
+	defer g.polarity()()
 	a := g.apertures[g.cur]
 	g.film.Flashes++
+	flashInto(g.lands, a, x, y)
+	if !g.dark && g.tracks != g.lands {
+		flashInto(g.tracks, a, x, y)
+	}
+}
+
+// stroke draws a dark line into tracks, and a clear one out of both bitmaps.
+func (g *gerber) stroke(ax, ay, bx, by, width float64) {
+	g.tracks.Line(ax, ay, bx, by, width)
+	if !g.dark && g.tracks != g.lands {
+		g.lands.Line(ax, ay, bx, by, width)
+	}
+}
+
+func flashInto(b *Bitmap, a aperture, x, y float64) {
 	switch a.shape {
 	case 'C':
-		g.lands.Disc(x, y, a.w)
+		b.Disc(x, y, a.w)
 	case 'R':
-		g.lands.Rect(x, y, a.w, a.h, 0)
+		b.Rect(x, y, a.w, a.h, 0)
 	case 'O':
-		g.lands.Oval(x, y, a.w, a.h, 0)
+		b.Oval(x, y, a.w, a.h, 0)
 	case 'M':
 		s, c := math.Sincos(a.rotation * math.Pi / 180)
-		g.lands.Rect(x+a.mx*c-a.my*s, y+a.mx*s+a.my*c, a.w, a.h, a.rotation)
+		b.Rect(x+a.mx*c-a.my*s, y+a.mx*s+a.my*c, a.w, a.h, a.rotation)
 	case 'P':
-		g.lands.Polygon(x, y, a.poly)
+		b.Polygon(x, y, a.poly)
 	}
+}
+
+// arcPoints is the points a draw from the current point to (x, y) passes through after the start:
+// the end alone for a line, and a point every tenth of a radian for an arc.
+func (g *gerber) arcPoints(x, y, i, j float64) [][2]float64 {
+	if g.interp == 1 {
+		return [][2]float64{{x, y}}
+	}
+	cx, cy := g.x+i, g.y+j
+	r := math.Hypot(g.x-cx, g.y-cy)
+	start := math.Atan2(g.y-cy, g.x-cx)
+	sweep := math.Atan2(y-cy, x-cx) - start
+	if g.interp == 3 && sweep <= 0 {
+		sweep += 2 * math.Pi
+	}
+	if g.interp == 2 && sweep >= 0 {
+		sweep -= 2 * math.Pi
+	}
+	n := max(1, int(math.Ceil(math.Abs(sweep)/0.1)))
+	pts := make([][2]float64, 0, n)
+	for k := 1; k < n; k++ {
+		ang := start + sweep*float64(k)/float64(n)
+		pts = append(pts, [2]float64{cx + r*math.Cos(ang), cy + r*math.Sin(ang)})
+	}
+	return append(pts, [2]float64{x, y})
+}
+
+func (g *gerber) closeContour() {
+	if len(g.contour) >= 3 {
+		g.contours = append(g.contours, g.contour)
+	}
+	g.contour = nil
+}
+
+// fillRegion fills each contour of the region just ended. A dark region is copper, drawn into
+// lands. A clear region erases whatever was drawn under it, in both bitmaps, which is how a film
+// cuts a pour's voids.
+func (g *gerber) fillRegion() {
+	g.closeContour()
+	for _, c := range g.contours {
+		g.film.Regions++
+		if !g.dark {
+			g.film.Clear++
+		}
+		g.lands.Rings([][][2]float64{c}, g.dark)
+		if !g.dark && g.tracks != g.lands {
+			g.tracks.Rings([][][2]float64{c}, false)
+		}
+	}
+	g.contours = nil
+}
+
+// polarity sets both bitmaps erasing while the polarity is clear, and returns the call that sets
+// them back. A clear draw or flash cuts the copper under it in either bitmap, since a void cuts a
+// track as surely as a pad.
+func (g *gerber) polarity() func() {
+	if g.dark {
+		return func() {}
+	}
+	g.film.Clear++
+	g.tracks.erasing, g.lands.erasing = true, true
+	return func() { g.tracks.erasing, g.lands.erasing = false, false }
 }
