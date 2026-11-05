@@ -144,3 +144,23 @@ func TestLayerSelectorQuotesTheName(t *testing.T) {
 		t.Errorf("selector %s", got)
 	}
 }
+
+// KiCad 9 numbers F.Cu 0, B.Cu 2 and the inner layers from 4, and lists them in stackup order. The
+// rows follow the table's order, not the numbers (Jetson read F.Cu, B.Cu, In1.Cu at first).
+func TestBoardLayersFollowTheTableNotTheNumbers(t *testing.T) {
+	seg := func(layer string) *geom.TrackSegment {
+		return &geom.TrackSegment{A: &geom.Point{X: 0, Y: 0}, B: &geom.Point{X: 1_000_000, Y: 0}, Width: 100_000, Layer: layer}
+	}
+	b := &geom.BoardGeometry{
+		Layers: []*geom.BoardLayer{{Number: 0, Name: "F.Cu", Kind: "signal"}, {Number: 4, Name: "In1.Cu", Kind: "signal"}, {Number: 6, Name: "In2.Cu", Kind: "power"}, {Number: 2, Name: "B.Cu", Kind: "signal"}, {Number: 5, Name: "F.SilkS", Kind: "user"}, {Number: 7, Name: "B.SilkS", Kind: "user"}},
+		Nets:   []*geom.NetCopper{{Net: "N", Segments: []*geom.TrackSegment{seg("B.Cu"), seg("In2.Cu"), seg("F.Cu"), seg("In1.Cu")}}},
+		Graphics: []*geom.BoardGraphic{
+			{Layer: "B.SilkS", Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{{X: 0, Y: 0}, {X: 1, Y: 1}}}},
+			{Layer: "F.SilkS", Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{{X: 0, Y: 0}, {X: 1, Y: 1}}}},
+		},
+	}
+	want := "F.Cu In1.Cu In2.Cu B.Cu F.SilkS B.SilkS"
+	if got := strings.Join(rowNames(BoardLayers(b)), " "); got != want {
+		t.Errorf("rows %q, want %q", got, want)
+	}
+}
