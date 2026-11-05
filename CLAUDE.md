@@ -701,6 +701,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the copper, so export the copper and silk layers without Edge.Cuts. Export from a scratch copy in
   any case, since kicad-cli writes a `.kicad_prl` beside the board. A text is mirrored exactly when
   its effects say `(justify mirror)`, which kicad-cli confirmed on a back footprint that names none.
+- **A label's text is also its net's name, so KiCad markup is drawn and never stripped** (agni 1344).
+  `~{RESET}`, `V_{OUT}` and `{slash}` stay in the text; `SchematicGeometry.text_markup` says the
+  text is KiCad's, `core/render/markupRuns` splits it, and the packer sends the runs to the overlay
+  in `PackedLabel.runs`, so the viewer never parses markup itself. A placed pin's alternate rides on
+  `SymbolPlacement.pin_names`. A new s-expression a fixture uses must go in `census/manifests.go` or
+  `TestFixtureCensus` fails, and EDIF has no comment syntax, so a `;` note in a `.eds` fixture reads
+  as a construct. gEDA's oracle is Lepton in the `agni-native` image (`docker run --rm
+  --entrypoint sh agni-native -c 'lepton-netlist -g geda ...'`), which held its mirror-then-turn
+  order to 24 pins; `lepton-cli export` writes text as outlines, so a text angle is checked by eye.
 - **KiCad names a local label by its sheet path**, so a root-sheet net is `/SCL`, and every finding,
   query answer and link names it that way. `render --highlight net=SCL` matches nothing and still
   reports a highlight (#1225), so spell a hand-typed subject as `check` prints it.
