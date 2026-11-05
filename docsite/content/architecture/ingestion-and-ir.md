@@ -3,7 +3,7 @@ title: "Ingestion and the neutral IR"
 description: "How designs in many formats are read into one neutral representation, and what that representation is."
 ---
 
-Hardware design files come in many formats: Altium and Cadence binaries, IPC-2581 and ODB++ interchange files, KiCad s-expressions, netlists, SPICE. Each vendor spells the same ideas differently. Agni has readers for EDIF, KiCad, IPC-2581, ODB++, xschem, gEDA and Telesis today. They normalize these formats into one neutral intermediate representation (IR), and everything else works from that. This page covers how the reading works and what the IR looks like once a design is in it.
+Hardware design files come in many formats: Altium and Cadence binaries, IPC-2581 and ODB++ interchange files, KiCad s-expressions, netlists, SPICE. Each vendor spells the same ideas differently. Agni has readers for EDIF, KiCad, IPC-2581, ODB++, Cadence Allegro boards, xschem, gEDA and Telesis today. They normalize these formats into one neutral intermediate representation (IR), and everything else works from that. This page covers how the reading works and what the IR looks like once a design is in it.
 
 ## Many readers, one IR
 
@@ -13,7 +13,7 @@ The reader layer is heterogeneous by necessity, because the formats are. Entries
 
 | Format class | Examples | Reader approach |
 |---|---|---|
-| Binary natives | Altium, Cadence Allegro (planned) | Wrap a vendor extractor, or a binary deserializer |
+| Binary natives | Cadence Allegro `.brd` (17.2); Altium (planned) | a binary deserializer over a reverse-engineered layout, held to an extract the vendor's tool wrote from the same board |
 | Text grammars | EDIF, KiCad s-expr, xschem, gEDA, Telesis; SPICE, IBIS, Touchstone (planned) | hand-written Go parsers |
 | XML | IPC-2581 | Go's `encoding/xml` |
 | Record/tabular | ODB++ | custom record reader over the job's directory tree |
@@ -164,7 +164,7 @@ Declining also means a placeholder is not a *claimed* designator, so two symbols
 
 In return, a reader that KEEPS unannotated parts has to say so. The parts are drawn and connected, so by the time the IR reaches a rule they look like ordinary components with odd names. The reader is the only layer that ever knew. `internal/refdes.Unannotated` builds the diagnostic from the same predicate, so the reader that keeps them cannot group them by a rule of its own.
 
-The format decides which half a reader is on, not the reader's taste, so the shipped answer is uniform. `kicad` (board), `ipc2581` and `odb` skip, and `edif`, `kicad` (schematic), `geda` and `xschem` keep and report. For a new reader, ask first which half it is on. The two halves are mutually exclusive, and doing both would report a part the design does not contain.
+The format decides which half a reader is on, not the reader's taste, so the shipped answer is uniform. `kicad` (board), `ipc2581`, `odb` and `allegro` skip, and `edif`, `kicad` (schematic), `geda` and `xschem` keep and report. For a new reader, ask first which half it is on. The two halves are mutually exclusive, and doing both would report a part the design does not contain.
 
 **Do not assume a reader groups by designator, because they disagree and the diagnostic must not.** `internal/refdes.Unannotated` groups by designator *before* it walks sections, so every spelling produces one entry per placeholder carrying every placement, and "2 parts are still called `R?`" means the same thing everywhere.
 

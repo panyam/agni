@@ -4,6 +4,7 @@
 # Usage: hack/fetch_samples.sh <artifact> [<artifact> ...]
 #   artifacts: tutorial-board (schematics, one board) | oracle-corpus (both views, every board)
 #              | odb-altium (Altium-written ODB++ jobs) | odb-kicad (kicad-cli's ODB++ export of each board)
+#              | allegro (Allegro boards with an extract Allegro wrote from each)
 #
 # EVERY failure path here exits non-zero. That is the whole design. A test that reads a board which
 # quietly failed to download does not fail, it passes over an empty set, and
@@ -55,7 +56,9 @@ for name in "${needed[@]}"; do
   file="$name-$version.tar.gz"
   url="https://github.com/$repo/releases/download/$version/$file"
   echo "fetch_samples: $file"
-  curl -sfL --retry 3 --retry-delay 2 -o "$tmp/$file" "$url" || {
+  # --retry-all-errors also retries a transfer cut off part way, which plain --retry does not, and a
+  # release asset fresh off its upload is served slowly enough for that to happen (agni 1350).
+  curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "$tmp/$file" "$url" || {
     echo "fetch_samples: download failed: $url" >&2; exit 1; }
 
   got=$(shasum -a 256 "$tmp/$file" | cut -d' ' -f1)

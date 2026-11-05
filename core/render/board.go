@@ -253,6 +253,28 @@ func svgAnchor(t *geom.BoardText) string {
 	}
 }
 
+// nearOutline reports whether a point lies within the board outline's extent, grown by a fifth of
+// its larger side, or answers true for every point on a board with no outline. Designers park a
+// label they have no room for well off the board (29 ref-des on the BeagleBone AI sit 300 mm away),
+// and framing on it shrinks the board to a sliver while the text floor keeps the labels large.
+func nearOutline(b *geom.BoardGeometry) func(*geom.Point) bool {
+	var ob geomath.Bounds
+	for _, p := range b.GetOutline().GetPaths() {
+		for _, pt := range p.Points {
+			ob.Add(pt)
+		}
+	}
+	if !ob.Valid() {
+		return func(*geom.Point) bool { return true }
+	}
+	x0, y0 := ob.Min()
+	x1, y1 := ob.Max()
+	m := max(x1-x0, y1-y0) / 5
+	return func(p *geom.Point) bool {
+		return p.GetX() >= x0-m && p.GetX() <= x1+m && p.GetY() >= y0-m && p.GetY() <= y1+m
+	}
+}
+
 // frameBoard maps board nanometers into the shared pixel space, bounding over the outline,
 // copper, pads (world positions), zones, texts and graphics. It returns a sheetFrame, as SheetSVG
 // does, so highlight overlays composite exactly.
@@ -284,8 +306,11 @@ func frameBoard(b *geom.BoardGeometry) sheetFrame {
 			bounds.Add(pt)
 		}
 	}
+	near := nearOutline(b)
 	for _, t := range b.GetTexts() {
-		bounds.Add(t.GetAt())
+		if near(t.GetAt()) {
+			bounds.Add(t.GetAt())
+		}
 	}
 	for _, gr := range b.GetGraphics() {
 		for _, p := range gr.GetShape().GetPoints() {

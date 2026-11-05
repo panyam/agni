@@ -121,6 +121,12 @@ fixtures or a design that is redistributable under a license that permits it. Ne
 in `common/designs/` and are reached through `common.Load` / `common.ReadFixture(name)` /
 `common.Designs()`.
 
+One exception follows from CONSTRAINTS C10. A reader of a vendor format whose files only the
+vendor's tool can write has no synthetic fixture, since writing one would need that tool or a
+writer of our own. Its example defaults to a public board from the pinned agni-samples corpus
+under `tools/samples/`, which `make samples-oracle` fetches. `allegro-board` is the one example
+of this.
+
 ## 6. Modules
 
 Each example and `common` is its own Go module with local `replace` directives (mcpkit

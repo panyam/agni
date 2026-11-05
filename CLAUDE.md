@@ -520,6 +520,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `/USB_Hub/VBUS` and a schematic-against-layout diff reports it renamed. KiCad's exporter also
   leaves out a footprint marked `exclude_from_pos_files`, and nets copper by what touches, so a
   planted short moves a track onto the other net (demo-board).
+- **An Allegro `.brd` is read in binary, for 17.2 alone** (agni 1350, `readers/allegro`). The format
+  has no published spec; the layouts come from KiCad's reverse-engineered notes and were checked on
+  the BeagleBone AI, and `e2e_allegro_test.go` holds that board to the extract Allegro wrote from it
+  (`allegro` samples artifact): nets as a partition, every pin's board position, vias, widths and
+  values. A pad is footprint-local and Allegro mirrors X before rotating, so a bottom part's angle is
+  negated for the contract's rotate-then-mirror. A placed pad's net goes through its 0x04 net
+  assignment, never straight to a 0x1B. Another release is refused by name (#1355), and an Eagle
+  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out
