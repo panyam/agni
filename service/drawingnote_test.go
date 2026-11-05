@@ -20,12 +20,13 @@ func TestDrawingNoteNamesWhatWouldDrawTheDesign(t *testing.T) {
 		{"x.edn", []string{"x.edn holds no schematic drawing", "Open the design's .eds"}},
 		{"x.edf", []string{"Open the design's .eds"}},
 		{"b.kicad_pcb", []string{"b.kicad_pcb holds no schematic drawing", "Open the design's .kicad_sch"}},
-		{"j.tel", []string{"j.tel holds no schematic drawing", "from a .eds,", ".kicad_sch or .sch file", "as a companion"}},
+		{"j.tel", []string{"j.tel holds no schematic drawing", "from a .dsn, .eds,", ".kicad_sch or .sch file", "as a companion"}},
 		{"board.PcbDoc", []string{"board.PcbDoc holds no schematic drawing", "as a companion"}},
 		{"BeagleBone-AI.brd", []string{"as a companion"}},
 		{"x.eds", nil},
 		{"x.kicad_sch", nil},
 		{"x.kicad_pro", nil},
+		{"CLAYR6.DSN", nil},
 	}
 	for _, c := range cases {
 		got := drawingNote("designs/" + c.file)
