@@ -282,6 +282,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `GetComponentParams` did too, until 749. `readDesignWithConfig` returns the overlay that the read
   already composed. A non-service command should get a tier from that overlay rather than resolving
   the project a second time.
+- **kicad-cli's own SVG is an oracle for where KiCad draws text** (agni 1344). `sch export svg`
+  writes every run as an invisible `<text>` at its BASELINE, half a glyph below its centre, with its
+  anchor, and its rotation on the enclosing `<g transform="rotate(a x y)">` about a pivot that need
+  not be the run's own point. kicad-cli draws only the library symbols a sheet embeds, so a fixture
+  whose symbols live in a `.kicad_sym` (the tutorial gateway) needs them embedded in a scratch copy
+  first. A rendering PR shows kicad-cli's frame beside ours (CONTRIBUTING.md).
 - `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
   `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
   The image carries xschem, Lepton and gerbv and NOT KiCad, so `kicad-cli` for an oracle comes from a
@@ -646,7 +652,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   instances and per-sheet segments rather than resolved nets. One real board holds both files. It
   measured 3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so
   nets inflate by 183%. A design that ships only a `.eds` can be rendered and queried, and its
-  counts must never be compared against a design read from a netlist.
+  counts must never be compared against a design read from a netlist. `formats.Format.DrawnNetlist`
+  marks such a format, and `GetDesign` withholds counts only for one. A KiCad, xschem or gEDA
+  schematic is its design's netlist and reports counts; until agni 1342 `agni trial` read every KiCad
+  design as 0 components.
 - **A saved report's link waits 2 s for an open viewer to speak, then loads the link** (agni 1156).
   The viewer posts `agni-viewer/v1/accepted` the moment it takes a request and the report then waits
   for the answer, since resolving a verdict link runs its rule (#1271, where a slow CI runner
@@ -750,7 +759,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `review --coverage`. The report replaces the drawing rather than being a format of it, so the flag
   that names the drawing's file has nothing to write. It exits 0 having written nothing.
 - **`-o/--out` writes the `--format` output to a file** on `check`, `review`, `trace` and `query`.
-  `-` means stdout and is the default, so nothing that omits it changed. It is distinct from
+  `-` means stdout and is the default, so nothing that omits it changed. The file is created at once,
+  so a bad path fails early, and removed when the run wrote nothing, so a refused run leaves no
+  empty file and announces none (agni 1342). It is distinct from
   `--results-out`, which writes the check-result DOCUMENT that `agni results` re-renders. The
   written-file note goes to stderr, so `-o` composes with a pipe.
 - **The `--verdicts` list caps NON-ACTIONABLE rows at twenty per rule**, states the elided count, and
@@ -1351,7 +1362,10 @@ Five more that cost a session time:
 
 - **Undo a red-check by restoring a copy of the file, never with `git checkout <file>`.** The checkout
   also throws away the uncommitted change under test, and the next run passes over nothing. Copy the
-  file aside before breaking it.
+  file aside before breaking it, and restore it in a command of its own. Chained after the test with
+  `&&`, the restore is skipped when the broken file fails to build, and the next backup copies the
+  broken file. Removing a call that is a package's last use of an import breaks the build the same
+  way, so disable it in place (`&& false`) rather than deleting it.
 - **`go test -cpuprofile` leaves `<pkg>.test`, a 30 MB binary, in the working directory**, untracked and
   not ignored. Delete it before staging, and never `git add -A`.
 - **A baseline run of `main`'s web code relinks `node_modules`.** Stashing a branch's `web/` and
