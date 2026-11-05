@@ -36,10 +36,10 @@
 </g>
 </g>
 <g class="labels">
-<text x="440.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">R1</text>
-<text x="640.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">10k</text>
-<text x="1040.0" y="690.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">J1</text>
-<text x="1040.0" y="890.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">CONN</text>
-<text x="790.0" y="190.0" fill="#1560bd" font-size="100.0" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)">Demo Board</text>
+<text x="440.0" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central">R1</text>
+<text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central">10k</text>
+<text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central">J1</text>
+<text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central">CONN</text>
+<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)">Demo Board</text>
 </g>
 </svg>
