@@ -12,6 +12,7 @@ bin/
 # Built example binaries (rebuilt by `make testall`; never commit them)
 examples/render-board/render-board
 examples/validate/validate
+examples/orcad-design/orcad-design
 
 # Built docsite binary (rebuilt by `make`/`go run`; never commit it)
 docsite/docsite
