@@ -392,10 +392,48 @@ export function panelsMenu(host: HTMLElement, api: DockviewApi, storage?: Layout
 // createViewerDock boots the dock. It restores the saved layout when there is one, falling back to
 // the default when it fails to apply (a corrupt or incompatible save), then persists every layout
 // change. The page is light-only, so the theme class is fixed and there is no theme observer.
+// SHEET_VIEW_PREFIX marks a sheet view's panel id (agni issue 1326). A sheet view is made at run time
+// for one sheet of the open design, so it is not in VIEWER_PANELS and has no hole in the page. A
+// saved layout that names one restores without it, since prunePanels drops every id the registry
+// lacks. A reader opens one, and the next page opens none.
+export const SHEET_VIEW_PREFIX = "sheetview-";
+
+// sheetViews holds each open sheet view's element and what to do when the dock closes it, keyed by
+// panel id, for the dock's component factory to hand over.
+const sheetViews = new Map<string, { element: HTMLElement; closed: () => void }>();
+
+function sheetViewRenderer(id: string, doc: Document): IContentRenderer {
+  const v = sheetViews.get(id);
+  return {
+    element: v?.element ?? doc.createElement("div"),
+    init: () => {},
+    dispose: () => {
+      sheetViews.delete(id);
+      v?.closed();
+    },
+  };
+}
+
+// addSheetView docks a sheet view. The first opens to the right of the canvas, and a later one tabs
+// with the last sheet view still open, so views gather in one group until the reader moves them.
+// closed runs when the dock closes the panel, from its tab or from the view's own Close.
+export function addSheetView(api: DockviewApi, id: string, title: string, element: HTMLElement, closed: () => void): void {
+  sheetViews.set(id, { element, closed });
+  const open = api.panels.filter((p) => p.id.startsWith(SHEET_VIEW_PREFIX) && p.id !== id);
+  const last = open[open.length - 1];
+  api.addPanel({
+    id,
+    component: "sheetview",
+    title,
+    position: last ? { direction: "within", referencePanel: last.id } : { direction: "right", referencePanel: "canvas" },
+  });
+}
+
 export function createViewerDock(container: HTMLElement, park: HTMLElement, menuHost: HTMLElement, storage: LayoutStorage): DockviewApi {
   container.classList.add("dockview-theme-light");
   const component = new DockviewComponent(container, {
-    createComponent: (options) => adoptPanel(park, options.name),
+    createComponent: (options) =>
+      options.id.startsWith(SHEET_VIEW_PREFIX) ? sheetViewRenderer(options.id, container.ownerDocument) : adoptPanel(park, options.name),
     // "always" keeps every panel's content element attached (hidden) when its tab is not in
     // front. The default ("onlyWhenVisible") DETACHES hidden tab content, and AppRoot resolves
     // every island hole by id at boot, so a hole in a background tab (Rules behind Checks, or any

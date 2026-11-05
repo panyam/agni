@@ -198,6 +198,14 @@ describe("prunePanels", () => {
   it("tolerates an api that reports no panels", () => {
     expect(() => prunePanels({ removePanel: () => {} } as never)).not.toThrow();
   });
+
+  // A sheet view is opened for one sheet of the open design (agni issue 1326), so a restored layout
+  // never brings one back.
+  it("drops a sheet view from a restored layout", () => {
+    const { api, removed } = fakeApi(["canvas", "sheetview-3"]);
+    prunePanels(api as never);
+    expect(removed).toEqual(["sheetview-3"]);
+  });
 });
 
 describe("reconcilePanels", () => {

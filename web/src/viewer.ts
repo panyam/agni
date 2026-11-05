@@ -29,6 +29,7 @@ import { hierarchyNote } from "./hierarchy.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
+import { chooseSheet } from "./sheetfollow.js";
 import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
@@ -69,8 +70,7 @@ export type RenderMode = "webgl" | "svg" | "native";
 // else the first. A finding, a review finding and a verdict all choose this way, so the three behave
 // alike (agni issue 1151).
 function sheetToOpen(drawnOn: string[], current: string): string {
-  if (drawnOn.length === 0 || drawnOn.includes(current)) return "";
-  return drawnOn[0];
+  return chooseSheet(current, drawnOn).open;
 }
 
 function formatFor(mode: RenderMode): SheetFormat {
@@ -318,6 +318,28 @@ export class ViewerPresenter {
   // change of convention draws nothing again.
   private drawn(): Promise<string> {
     return this.snaps.of(artifactUri(this.doc.mount, this.doc.path));
+  }
+
+  // drawing says how a sheet view draws a sheet of the open design so it matches the canvas, the
+  // snapshot, layout and symbol source the canvas uses (agni issue 1326).
+  drawing(): { snapshot: Promise<string>; layout: string; symbols: SymbolSource } {
+    return { snapshot: this.drawn(), layout: this.currentLayout, symbols: this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH };
+  }
+
+  // sheetRefs lists the open design's sheets in the server's order, for a sheet view's picker.
+  sheetRefs(): SheetRef[] {
+    return this.doc.sheets;
+  }
+
+  // currentSheetId is the sheet on the canvas.
+  currentSheetId(): string {
+    return this.currentSheet;
+  }
+
+  // focusSpecs is the highlight a located entity gets on the canvas, so a sheet view paints a
+  // selection the same way.
+  focusSpecs(kind: string, subject: string, pin = ""): HighlightSpec[] {
+    return withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
   }
 
   // checked is the open design's snapshot under the convention the page shows. Every rule-running

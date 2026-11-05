@@ -42,7 +42,10 @@ import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { browserDropStore, dropOf } from "./drops.js";
 import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
-import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
+import { createViewerDock, openDiffPanel, closeDiffPanel, addSheetView } from "./dock.js";
+import { SheetViews } from "./sheetviews.js";
+import { chooseSheet } from "./sheetfollow.js";
+import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
 import { appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withFlatten, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
@@ -367,6 +370,7 @@ class AppRoot extends BaseComponent {
     // sheet.
     const sheetOverview = sheetOverviewPanelIsland(sheetOverviewEl, this._eventBus, {
       onSelect: (sheetId) => void presenter.showSheet(sheetId),
+      onOpenBeside: (sheetId) => void sheetViews.open(sheetId),
     });
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.
@@ -466,12 +470,81 @@ class AppRoot extends BaseComponent {
       // The trace pickers list the parts and pins Properties has already read.
       onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
       // Under --viewer-rooms the tab lets agents in, and it tells them what the reader selected.
-      onSelect: (focus) => roomTab?.select(focus),
+      onSelect: (focus) => {
+        roomTab?.select(focus);
+        // Every sheet view hears the selection (agni issue 1326). The view it was picked in lights it
+        // where it is, and the others follow it as their link says.
+        const from = pickedIn;
+        pickedIn = "";
+        void sheetViews.follow(focus.level === "entity" ? focus.sel : null, from);
+      },
     });
     const locateSelection = (sel: Selection) =>
       sel.kind === "area"
         ? void presenter.locateArea(sel)
         : void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+    // Sheet views (agni issue 1326) draw sheets of the open design beside the canvas, each with its own
+    // sheet and camera. One opens only when the reader asks, from a tile in the Sheets panel.
+    // pickedIn names the view a pick came from, for the selection hook above.
+    let pickedIn = "";
+    const drawnOnFor = async (sel: Selection, board: boolean): Promise<string[]> => {
+      const subject = subjectOf(sel);
+      if (!subject) return [];
+      const resp = await designClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects: [subject], board });
+      return resp.subjects[0]?.sheetIds ?? [];
+    };
+    // followOnCanvas moves the canvas to a pick made in a sheet view, by the rule a view follows, and
+    // centres on it. A pick on the canvas itself does not move the canvas.
+    const followOnCanvas = async (sel: Selection): Promise<void> => {
+      const current = presenter.currentSheetId();
+      const { open } = chooseSheet(current, await drawnOnFor(sel, current === "board"));
+      if (open) await presenter.showSheet(open);
+      if (sel.kind === "area") await presenter.locateArea(sel);
+      else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+      svgView.revealOverlay();
+    };
+    const sheetViews = new SheetViews(
+      {
+        add: (id, title, element, closed) => dockApi && addSheetView(dockApi, id, title, element, closed),
+        setTitle: (id, title) => dockApi?.getPanel(id)?.api.setTitle(title),
+        float: (id) => {
+          const panel = dockApi?.getPanel(id);
+          if (panel) dockApi?.addFloatingGroup(panel);
+        },
+        close: (id) => {
+          const panel = dockApi?.getPanel(id);
+          if (panel) dockApi?.removePanel(panel);
+        },
+      },
+      {
+        sheets: () => presenter.sheetRefs().map((s) => ({ id: s.id, name: s.name })),
+        render: async (sheetId) => {
+          const d = presenter.drawing();
+          const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG });
+          return resp.content.case === "svg" ? resp.content.value : "";
+        },
+        overlay: async (sheetId, specs) => {
+          const d = presenter.drawing();
+          const resp = await designClient().highlightSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG, specs });
+          return resp.content.case === "svg" ? resp.content.value : "";
+        },
+        drawnOn: drawnOnFor,
+        specs: (sel) =>
+          sel.kind === "area" ? [] : presenter.focusSpecs(sel.kind, sel.kind === "net" ? (sel.net ?? "") : sel.kind === "bus" ? (sel.busId ?? "") : (sel.ref ?? ""), sel.pin),
+      },
+      {
+        onPick: (pane, sel) => {
+          pickedIn = pane.id;
+          propertiesPresenter.select({ level: "entity", sel, sheetId: pane.sheet });
+          void followOnCanvas(sel);
+          if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+        },
+        onPickEmpty: (pane) => {
+          pickedIn = pane.id;
+          propertiesPresenter.select({ level: "sheet", sheetId: pane.sheet });
+        },
+      },
+    );
     // An area is selected by Shift-dragging over the drawing or Shift-clicking entities in and out of
     // it (agni issue 904). It is a Selection like any other from here on, so Properties describes it,
     // the drawing lights its members and its Ask rows bind the whole set.
