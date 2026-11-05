@@ -99,6 +99,10 @@ message PinPoint {
   // the pins in a real export set this.
   Point number_origin = 8;
   string number_justify = 9; // pin number alignment, canonical "<h> <v>"; empty with number_origin
+  // The angle of the pin's name and number in the symbol's own frame, in degrees counter-clockwise.
+  // A renderer adds the placement's rotation to it, as it does for a field. KiCad runs a vertical
+  // pin's text along the pin, at 90. Zero for every pin of a format that does not set it.
+  int32 text_rotation_deg = 10;
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -197,6 +201,10 @@ message SymbolPlacement {
   // often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
   // not click.
   string net_anchor = 7;
+  // The part is drawn on the schematic and left off the board (do not populate). KiCad marks one
+  // with a cross over its body, and both backends draw that cross. A format with no such flag
+  // leaves it false.
+  bool dnp = 8;
   Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
 }
 

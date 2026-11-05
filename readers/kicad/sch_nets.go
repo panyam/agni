@@ -575,7 +575,7 @@ func symPinsByUnit(libSym *node) libPinsByUnit {
 	for _, sub := range libSym.Children("symbol") {
 		u := unitOfSubSymbol(atomOf(sub.Arg(1)))
 		for _, pn := range sub.Children("pin") {
-			if p := kicadPin(pn, false); p != nil && p.PortRef != "" {
+			if p := kicadPin(pn, pinText{}); p != nil && p.PortRef != "" {
 				name := ""
 				if nm := pn.Child("name"); nm != nil && atomOf(nm.Arg(1)) != "~" {
 					name = atomOf(nm.Arg(1))

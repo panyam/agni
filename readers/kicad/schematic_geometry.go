@@ -462,7 +462,7 @@ func symbolDefsOfAs(libSym *node, libID, src string) []*geom.SymbolDef {
 // is the unit number. So a placement's (unit N) selects the right bank via view_ref (WS1-007).
 func symbolDefsOf(libSym *node, src string) []*geom.SymbolDef {
 	libID := atomOf(libSym.Arg(1))
-	showNum := !hideFlag(libSym.Child("pin_numbers"))
+	text := pinTextOf(libSym)
 	type bucket struct {
 		shapes []*geom.Shape
 		pins   []*geom.PinPoint
@@ -478,7 +478,7 @@ func symbolDefsOf(libSym *node, src string) []*geom.SymbolDef {
 		}
 		b.shapes = append(b.shapes, kicadShapes(sub, libPt)...)
 		for _, pn := range sub.Children("pin") {
-			if p := kicadPin(pn, showNum); p != nil {
+			if p := kicadPin(pn, text); p != nil {
 				b.pins = append(b.pins, p)
 			}
 			if leg := kicadPinLeg(pn); leg != nil {
@@ -502,6 +502,7 @@ func symbolDefsOf(libSym *node, src string) []*geom.SymbolDef {
 				sd.Pins = append(sd.Pins, b.pins...)
 			}
 		}
+		sd.Shapes = backgroundFirst(sd.Shapes)
 		return sd
 	}
 
@@ -538,29 +539,55 @@ func unitOfSubSymbol(id string) int {
 }
 
 // kicadShapes converts a node's graphic primitives (rectangle/polyline/circle/arc) into geom
-// shapes, using conv to place points. Lib symbol graphics pass libPt (Y-up, no flip); sheet
-// graphics pass sheetPt (Y-down -> flip).
+// shapes in file order, using conv to place points. Lib symbol graphics pass libPt (Y-up, no
+// flip); sheet graphics pass sheetPt (Y-down -> flip).
 func kicadShapes(n *node, conv func(*node) *geom.Point) []*geom.Shape {
 	var out []*geom.Shape
 	shape := func(kind geom.Shape_Kind, src *node, pts []*geom.Point, radius int64) *geom.Shape {
 		fill, color := kicadFill(src)
 		return &geom.Shape{Kind: kind, Fill: fill, FillColor: color, Points: pts, Radius: radius}
 	}
-	for _, r := range n.Children("rectangle") {
-		out = append(out, shape(geom.Shape_KIND_RECT, r, []*geom.Point{conv(r.Child("start")), conv(r.Child("end"))}, 0))
-	}
-	for _, pl := range n.Children("polyline") {
-		out = append(out, shape(geom.Shape_KIND_POLYLINE, pl, xyPoints(pl.Child("pts"), conv), 0))
-	}
-	for _, c := range n.Children("circle") {
-		var radius int64
-		if rn := c.Child("radius"); rn != nil {
-			radius = mmToNm(atomOf(rn.Arg(1)))
+	for _, k := range n.Kids {
+		switch k.Head() {
+		case "rectangle":
+			out = append(out, shape(geom.Shape_KIND_RECT, k, []*geom.Point{conv(k.Child("start")), conv(k.Child("end"))}, 0))
+		case "polyline":
+			s := shape(geom.Shape_KIND_POLYLINE, k, xyPoints(k.Child("pts"), conv), 0)
+			// A two-point line encloses nothing, so KiCad draws only its stroke, whatever fill it
+			// names. Q5's channel segments say background, and kept as fills they sort under the
+			// circle's fill again.
+			if len(s.Points) < 3 {
+				s.Fill, s.FillColor = geom.Shape_FILL_UNSPECIFIED, ""
+			}
+			out = append(out, s)
+		case "circle":
+			var radius int64
+			if rn := k.Child("radius"); rn != nil {
+				radius = mmToNm(atomOf(rn.Arg(1)))
+			}
+			out = append(out, shape(geom.Shape_KIND_CIRCLE, k, []*geom.Point{conv(k.Child("center"))}, radius))
+		case "arc":
+			out = append(out, shape(geom.Shape_KIND_ARC, k, []*geom.Point{conv(k.Child("start")), conv(k.Child("mid")), conv(k.Child("end"))}, 0))
 		}
-		out = append(out, shape(geom.Shape_KIND_CIRCLE, c, []*geom.Point{conv(c.Child("center"))}, radius))
 	}
-	for _, a := range n.Children("arc") {
-		out = append(out, shape(geom.Shape_KIND_ARC, a, []*geom.Point{conv(a.Child("start")), conv(a.Child("mid")), conv(a.Child("end"))}, 0))
+	return out
+}
+
+// backgroundFirst moves every background-filled shape ahead of the rest, keeping file order
+// within each group. KiCad paints a symbol's body fills on a layer under its lines, so a
+// transistor's filled circle sits beneath the channel drawn inside it (agni 1344). Drawn in file
+// order, the circle's fill covers them.
+func backgroundFirst(shapes []*geom.Shape) []*geom.Shape {
+	out := make([]*geom.Shape, 0, len(shapes))
+	for _, s := range shapes {
+		if s.Fill == geom.Shape_FILL_BACKGROUND {
+			out = append(out, s)
+		}
+	}
+	for _, s := range shapes {
+		if s.Fill != geom.Shape_FILL_BACKGROUND {
+			out = append(out, s)
+		}
 	}
 	return out
 }
@@ -631,29 +658,122 @@ func sheetShapes(root *node) []*geom.Shape {
 	return out
 }
 
-// kicadPin reads a pin's connect point. KiCad's (pin ... (at x y ang) (number "N")) places
-// the connection at (at); the pin number joins to ir.Pin.designator via port_ref. port_ref is
-// always set (it is a join key); the pin-number label is placed only when showNum is true
-// (the lib symbol does not hide pin numbers), so passives/power that hide numbers draw without them.
-func kicadPin(pn *node, showNum bool) *geom.PinPoint {
+// pinText is a lib symbol's pin text settings: whether its pins show their numbers and names,
+// and how far past a pin's inner end its name sits. The zero value shows nothing, for a read that
+// wants connect points alone.
+type pinText struct {
+	numbers, names bool
+	offset         int64 // nm; 0 puts the name above the pin line, as KiCad does
+}
+
+// kicadPinNameOffset is KiCad's default (pin_names (offset ...)), 0.508 mm.
+const kicadPinNameOffset = 508_000
+
+// pinTextGap is how far a pin's number or name sits off the pin line, in nm: KiCad's 4 mil text
+// margin plus a 10 mil pen, where kicad-cli puts them.
+const pinTextGap = 355_600
+
+// pinTextOf reads a lib symbol's (pin_numbers ...) and (pin_names ...) settings.
+func pinTextOf(libSym *node) pinText {
+	pt := pinText{numbers: !hideFlag(libSym.Child("pin_numbers")), offset: kicadPinNameOffset}
+	pn := libSym.Child("pin_names")
+	pt.names = !hideFlag(pn)
+	if pn != nil {
+		if o := pn.Child("offset"); o != nil {
+			pt.offset = mmToNm(atomOf(o.Arg(1)))
+		}
+	}
+	return pt
+}
+
+// kicadPin reads one lib pin's connect point and, as text allows, where its name and number go.
+// KiCad lays the text out from the pin itself. With a name offset, the name sits that far past
+// the pin's inner end, inside the body, and the number sits above the middle of the pin line.
+// With an offset of 0, the name sits above the middle of the line and the number below it. A
+// vertical pin's text runs along the pin (text_rotation_deg 90), so "above" is its left.
+func kicadPin(pn *node, text pinText) *geom.PinPoint {
 	at := pn.Child("at")
 	if at == nil {
 		return nil
 	}
 	pp := &geom.PinPoint{Loc: libPt(at)}
-	if num := pn.Child("number"); num != nil {
+	num := pn.Child("number")
+	if num != nil {
 		pp.PortRef = atomOf(num.Arg(1))
 		pp.SourceId = pp.PortRef
-		if showNum {
-			pp.LabelOrigin = pp.Loc
-		}
 	}
 	if nm := pn.Child("name"); nm != nil {
 		if n := atomOf(nm.Arg(1)); n != "~" { // "~" is KiCad's "no name"
 			pp.Name = n
 		}
 	}
+	if hideFlag(pn) {
+		return pp
+	}
+	showNum := text.numbers && pp.PortRef != ""
+	showName := text.names && pp.Name != ""
+	if !showNum && !showName {
+		return pp
+	}
+	pp.Height = pinFontHeight(pn)
+	deg, _ := strconv.ParseFloat(atomOf(at.Arg(3)), 64)
+	rad := deg * math.Pi / 180
+	dx, dy := math.Cos(rad), math.Sin(rad)
+	var length float64
+	if ln := pn.Child("length"); ln != nil {
+		length = float64(mmToNm(atomOf(ln.Arg(1))))
+	}
+	// The text frame runs along x for a horizontal pin and along y for a vertical one, and its
+	// "up" is a quarter turn counter-clockwise from that.
+	tx, ty, ux, uy := 1.0, 0.0, 0.0, 1.0
+	if math.Abs(dy) > math.Abs(dx) {
+		pp.TextRotationDeg = 90
+		tx, ty, ux, uy = 0, 1, -1, 0
+	}
+	at2 := func(x, y float64) *geom.Point {
+		return &geom.Point{X: pp.Loc.X + int64(math.Round(x)), Y: pp.Loc.Y + int64(math.Round(y))}
+	}
+	midX, midY := dx*length/2, dy*length/2
+	gap := float64(pinTextGap)
+	above := at2(midX+ux*gap, midY+uy*gap)
+	below := at2(midX-ux*gap, midY-uy*gap)
+	if text.offset > 0 || !showName {
+		if showName {
+			in := length + float64(text.offset)
+			pp.LabelOrigin = at2(dx*in, dy*in)
+			pp.Justify = "left middle"
+			if dx*tx+dy*ty < 0 {
+				pp.Justify = "right middle"
+			}
+		}
+		if showNum {
+			pp.NumberOrigin, pp.NumberJustify = above, "center bottom"
+		}
+	} else {
+		pp.LabelOrigin, pp.Justify = above, "center bottom"
+		if showNum {
+			pp.NumberOrigin, pp.NumberJustify = below, "center top"
+		}
+	}
+	// The renderer draws a pin's text only from its name origin, so a pin showing its number
+	// alone anchors the name there too, and the name is empty.
+	if pp.LabelOrigin == nil {
+		pp.LabelOrigin, pp.Justify = pp.NumberOrigin, pp.NumberJustify
+		pp.Name = ""
+	}
 	return pp
+}
+
+// pinFontHeight is the glyph height of a pin's name, or of its number when the name states none.
+func pinFontHeight(pn *node) int64 {
+	for _, k := range []string{"name", "number"} {
+		if e := pn.Child(k); e != nil {
+			if sz := e.Child("effects").Child("font").Child("size"); sz != nil {
+				return mmToNm(atomOf(sz.Arg(1)))
+			}
+		}
+	}
+	return 0
 }
 
 // kicadPinLeg builds the pin leg, the stub line from the pin's connection point (at) into the
@@ -735,14 +855,19 @@ func fieldHidden(p *node) bool {
 	return atomOf(h.Arg(1)) != "no"
 }
 
-// hideFlag reports whether a lib-symbol (pin_numbers ...) / (pin_names ...) node hides its
-// text. Both carry (hide yes) when the part suppresses that text (typical for passives).
+// hideFlag reports whether a lib-symbol (pin_numbers ...) / (pin_names ...) node, or a single
+// (pin ...), hides its text. KiCad 8 writes (hide yes), and KiCad 6 and 7 a bare hide atom.
 func hideFlag(n *node) bool {
 	if n == nil {
 		return false
 	}
 	if h := n.Child("hide"); h != nil {
 		return atomOf(h.Arg(1)) != "no"
+	}
+	for _, k := range n.Kids[1:] {
+		if !k.IsList && k.Atom == "hide" {
+			return true
+		}
 	}
 	return false
 }
@@ -771,6 +896,8 @@ func placementOf(ps *node, src string) *geom.SymbolPlacement {
 		Transform: kicadTransform(ps),
 		Fields:    fieldsOf(ps),
 		Prov:      &geom.Provenance{SourceFile: src, SourceId: uuidOf(ps)},
+		// The same (dnp yes) token the netlist read keeps in the part's attributes.
+		Dnp: atomOf(ps.Child("dnp").Arg(1)) == "yes",
 	}
 	pl.CellRef = symbolKey(ps)
 	return pl

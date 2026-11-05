@@ -43,6 +43,8 @@ export const GROUP_BOARD_SILK = 11;
 // Bus trunk/entry (WS7-042), mirroring core/render/pack.go groupBus. It sits after the board
 // strata in the shared flat group space and draws as true-width triangle quads (GL can't stroke >1px).
 export const GROUP_BUS = 12;
+// The cross over a do-not-populate part (agni 1344), mirroring core/render/pack.go groupDNP.
+export const GROUP_DNP = 13;
 
 // Width of one packed primitive record in bytes.
 export const PRIMITIVE_RECORD_SIZE = 12;

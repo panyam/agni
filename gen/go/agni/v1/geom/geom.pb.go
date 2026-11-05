@@ -601,8 +601,12 @@ type PinPoint struct {
 	// the pins in a real export set this.
 	NumberOrigin  *Point `protobuf:"bytes,8,opt,name=number_origin,json=numberOrigin,proto3" json:"number_origin,omitempty"`
 	NumberJustify string `protobuf:"bytes,9,opt,name=number_justify,json=numberJustify,proto3" json:"number_justify,omitempty"` // pin number alignment, canonical "<h> <v>"; empty with number_origin
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The angle of the pin's name and number in the symbol's own frame, in degrees counter-clockwise.
+	// A renderer adds the placement's rotation to it, as it does for a field. KiCad runs a vertical
+	// pin's text along the pin, at 90. Zero for every pin of a format that does not set it.
+	TextRotationDeg int32 `protobuf:"varint,10,opt,name=text_rotation_deg,json=textRotationDeg,proto3" json:"text_rotation_deg,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PinPoint) Reset() {
@@ -696,6 +700,13 @@ func (x *PinPoint) GetNumberJustify() string {
 		return x.NumberJustify
 	}
 	return ""
+}
+
+func (x *PinPoint) GetTextRotationDeg() int32 {
+	if x != nil {
+		return x.TextRotationDeg
+	}
+	return 0
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -1109,7 +1120,11 @@ type SymbolPlacement struct {
 	// select it and then ask a question about a part that does not exist. On a schematic, a reader
 	// often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
 	// not click.
-	NetAnchor     string      `protobuf:"bytes,7,opt,name=net_anchor,json=netAnchor,proto3" json:"net_anchor,omitempty"`
+	NetAnchor string `protobuf:"bytes,7,opt,name=net_anchor,json=netAnchor,proto3" json:"net_anchor,omitempty"`
+	// The part is drawn on the schematic and left off the board (do not populate). KiCad marks one
+	// with a cross over its body, and both backends draw that cross. A format with no such flag
+	// leaves it false.
+	Dnp           bool        `protobuf:"varint,8,opt,name=dnp,proto3" json:"dnp,omitempty"`
 	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"` // source_id = EDIF instance &id (the unique join key)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1192,6 +1207,13 @@ func (x *SymbolPlacement) GetNetAnchor() string {
 		return x.NetAnchor
 	}
 	return ""
+}
+
+func (x *SymbolPlacement) GetDnp() bool {
+	if x != nil {
+		return x.Dnp
+	}
+	return false
 }
 
 func (x *SymbolPlacement) GetProv() *Provenance {
@@ -2003,7 +2025,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fFILL_OUTLINE\x10\x01\x12\x13\n" +
 	"\x0fFILL_BACKGROUND\x10\x02\x12\x0e\n" +
 	"\n" +
-	"FILL_COLOR\x10\x03\"\xc8\x02\n" +
+	"FILL_COLOR\x10\x03\"\xf4\x02\n" +
 	"\bPinPoint\x12\x19\n" +
 	"\bport_ref\x18\x01 \x01(\tR\aportRef\x12%\n" +
 	"\x03loc\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x03loc\x12\x1b\n" +
@@ -2013,7 +2035,9 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\x04name\x18\x06 \x01(\tR\x04name\x12\x16\n" +
 	"\x06height\x18\a \x01(\x03R\x06height\x128\n" +
 	"\rnumber_origin\x18\b \x01(\v2\x13.agni.v1.geom.PointR\fnumberOrigin\x12%\n" +
-	"\x0enumber_justify\x18\t \x01(\tR\rnumberJustify\"\xe4\x01\n" +
+	"\x0enumber_justify\x18\t \x01(\tR\rnumberJustify\x12*\n" +
+	"\x11text_rotation_deg\x18\n" +
+	" \x01(\x05R\x0ftextRotationDeg\"\xe4\x01\n" +
 	"\x05Asset\x12,\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x18.agni.v1.geom.Asset.KindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12,\n" +
@@ -2052,7 +2076,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\ajustify\x18\x04 \x01(\tR\ajustify\x12\x16\n" +
 	"\x06height\x18\x05 \x01(\x03R\x06height\x12!\n" +
 	"\frotation_deg\x18\x06 \x01(\x05R\vrotationDeg\x12\x18\n" +
-	"\avisible\x18\a \x01(\bR\avisible\"\xb2\x02\n" +
+	"\avisible\x18\a \x01(\bR\avisible\"\xc4\x02\n" +
 	"\x0fSymbolPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x19\n" +
 	"\bcell_ref\x18\x02 \x01(\tR\acellRef\x12\x1f\n" +
@@ -2062,7 +2086,8 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\bview_ref\x18\x05 \x01(\tR\aviewRef\x12+\n" +
 	"\x06fields\x18\x06 \x03(\v2\x13.agni.v1.geom.FieldR\x06fields\x12\x1d\n" +
 	"\n" +
-	"net_anchor\x18\a \x01(\tR\tnetAnchor\x12,\n" +
+	"net_anchor\x18\a \x01(\tR\tnetAnchor\x12\x10\n" +
+	"\x03dnp\x18\b \x01(\bR\x03dnp\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"7\n" +
 	"\bPolyline\x12+\n" +
 	"\x06points\x18\x01 \x03(\v2\x13.agni.v1.geom.PointR\x06points\"\x9f\x02\n" +

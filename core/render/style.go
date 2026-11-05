@@ -11,6 +11,7 @@ type Style struct {
 	Pin    string // pin connect dots
 	Frame  string // worksheet frame + zone-ruler tick lines
 	Free   string // sheet-level free graphics (junction dots, no-connects, notes)
+	DNP    string // the cross over a do-not-populate part (agni 1344)
 
 	// Text colors.
 	Field      string // ref-des / value / custom placement fields
@@ -61,6 +62,8 @@ func (s Style) GroupColor(group uint8) string {
 		return s.Wire
 	case groupBus:
 		return s.Bus
+	case groupDNP:
+		return s.DNP
 	case groupPin:
 		return s.Pin
 	case groupFree:
@@ -96,6 +99,7 @@ var DefaultStyle = Style{
 	Ruler:          "#8a6d3b",
 	PinName:        "#2a7d5a",
 	Free:           "#333333",
+	DNP:            "#d42020",
 	ShapeFill:      "#fdf6d0",
 	Page:           "#fdfdfb",
 	BoardOutline:   "#8a6d3b",
@@ -117,6 +121,7 @@ var DarkStyle = Style{
 	Pin:            "#f87171",
 	Frame:          "#b0895a",
 	Free:           "#bbbbbb",
+	DNP:            "#f87171",
 	Field:          "#7aa2f7",
 	Label:          "#aaaaaa",
 	Annotation:     "#dddddd",
