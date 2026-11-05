@@ -303,7 +303,7 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 		RotationDeg: angle,
 		Height:      height,
 		Layer:       atomOf(n.Child("layer").Arg(1)),
-		Mirror:      back || mirror,
+		Mirror:      mirror,
 		Justify:     justify,
 		RefDes:      ref,
 		Kind:        kind,

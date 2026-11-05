@@ -3,8 +3,9 @@
 // turned, that back-side text reads mirrored from the front and the right way round from below, and
 // that a view opened again after a reload comes back turned.
 //
-// The board is readers/kicad/testdata/board.kicad_pcb. J1 sits on the back with its designator and a
-// "Demo Board" legend on the back silkscreen, and R1 sits on the front.
+// The board is readers/kicad/testdata/board.kicad_pcb. Its "Demo Board" legend is back silkscreen
+// marked (justify mirror), and R1 sits on the front. kicad-cli draws the legend mirrored from the
+// front and R1 the right way round, and the reverse with --mirror.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -55,11 +56,11 @@ describe("turning a board view", () => {
   it("draws back text mirrored from the front, and the right way round from below", async () => {
     await withPage(browser, async (page) => {
       await openBoardView(page);
-      expect(await mirrored(page, "J1")).toBe(true);
+      expect(await mirrored(page, "Demo Board")).toBe(true);
       expect(await mirrored(page, "R1")).toBe(false);
 
       await page.locator(`${PANE} .sheetview-bottom`).click();
-      expect(await mirrored(page, "J1")).toBe(false);
+      expect(await mirrored(page, "Demo Board")).toBe(false);
       expect(await mirrored(page, "R1")).toBe(true);
       const order = await page.$$eval(`${PANE} .sheetview-canvas svg > g`, (gs) => gs.map((g) => g.getAttribute("class") ?? ""));
       expect(order.indexOf("copper-back")).toBeGreaterThan(order.indexOf("copper-front"));
