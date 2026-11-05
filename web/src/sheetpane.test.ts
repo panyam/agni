@@ -189,3 +189,18 @@ describe("turning a sheet view", () => {
     expect(parseTurn(JSON.stringify({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true }))).toEqual({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true });
   });
 });
+
+// The cross-probe walk turns a board view by these names and reads its turn back from them
+// (web/browser/cross-probe-walk.spec.ts).
+describe("the names a turned view answers to", () => {
+  it("names each turn control, and states its rotation and the side nearest the reader", async () => {
+    const { p } = pane([]);
+    await p.open("board");
+    const act = (a: string) => p.element.querySelector(`[data-action="${a}"]`) as HTMLButtonElement;
+    for (const a of ["rotate", "flip-h", "flip-v", "bottom"]) expect(act(a), a).not.toBeNull();
+    expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["0", "front"]);
+    act("rotate").click();
+    act("bottom").click();
+    expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["90", "back"]);
+  });
+});
