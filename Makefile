@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -392,6 +392,22 @@ exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT) && rm -f $(EXERCISE_OUT)/headed-trace.txt
 	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
+
+# The cross-probe mission's exercise (#1321, agni issue 1323): open a design's schematic and board as
+# two linked views, click a part in one and find it in the other, and turn the board over. Each step names the
+# tickets it waits on, so a step the viewer cannot do yet reads "not available" rather than failing,
+# and the gate walks the same spec on examples/cross-probe-project's cut of Jetson. It writes the step
+# table and a screenshot per step to $(EXERCISE_OUT), headed unless HEADED=0. WALK_DESIGN=jetson (the
+# default) walks the whole board, and WALK_DESIGN=cut the gate's cut.
+#   make exercise-cross-probe
+#   make exercise-cross-probe HEADED=0
+#   make exercise-cross-probe WALK_DESIGN=cut
+exercise-cross-probe: HEADED ?= 1
+exercise-cross-probe: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT)
+	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/cross-probe.md 2>/dev/null; exit $$status
 
 # The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
 # one design through an MCP client, as the calls a model would make, over `agni serve --mcp` on a free
