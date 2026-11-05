@@ -43,7 +43,7 @@ type walkRule struct {
 	// throughRails lets the walk pass through a rail-named net that is not bus-like, as trace does,
 	// so a series walk follows a signal through a fuse on VBUS.
 	throughRails bool
-	cross  func(m Model, ref string, nets, pins int) (bool, string)
+	cross        func(m Model, ref string, nets, pins int) (bool, string)
 }
 
 var walkRules = []walkRule{
@@ -107,14 +107,17 @@ func walkRuleOf(name string) (walkRule, bool) {
 	return walkRule{}, false
 }
 
-// WalkNet is one net a walk reached. Entered says how. On a hop-1 net it is the start part's own pin,
+// WalkNet is one net a walk reached. Entered says how it was first reached. On a hop-1 net it is the start part's own pin,
 // with an empty FromNet. Ended says why the walk goes no further from this net ("ground", "rail",
 // "global", or a fan-out), and is empty when the net was expanded or lies at the radius.
 type WalkNet struct {
 	Hop     int        `json:"hop"`
 	Net     TraceNet   `json:"net"`
 	Entered TraceCross `json:"entered"`
-	Ended   string     `json:"ended,omitempty"`
+	// AlsoEntered lists the later crossings into this net, by parts that reached it after Entered
+	// did, such as a crystal's second load capacitor into GND.
+	AlsoEntered []TraceCross `json:"also_entered,omitempty"`
+	Ended       string       `json:"ended,omitempty"`
 }
 
 // WalkBoundary is a part on a reached net that the walk did not cross, with the reason. A reader
@@ -216,7 +219,9 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 	boundary := map[string]bool{}
 	route := map[*ir.Net][]string{}
 	var reached []*ir.Net
+	index := map[*ir.Net]int{}
 	add := func(hop int, n *ir.Net, c TraceCross) bool {
+		index[n] = len(w.Nets)
 		visited[n] = true
 		route[n] = append(route[n], c.RefDes)
 		reached = append(reached, n)
@@ -264,9 +269,16 @@ func WalkFrom(m Model, from Endpoint, kind string, hops int, through []string) (
 						continue
 					}
 					if visited[pc.net] {
-						// Reached already, so this crossing adds no net. The part still leaves the
-						// net's list of other parts, as it would had it entered the net.
+						// Reached already, so this crossing adds no net. The net records it as a further
+						// way in, and the part leaves the net's list of other parts. A net the cap left
+						// out has no entry to record it on.
 						route[pc.net] = append(route[pc.net], ref)
+						if i, ok := index[pc.net]; ok {
+							w.Nets[i].AlsoEntered = append(w.Nets[i].AlsoEntered, TraceCross{
+								RefDes: ref, Class: string(m.ComponentClass(ref)),
+								EnterPin: c.PinRef, ExitPin: pc.pin, FromNet: n.Name, ToNet: pc.net.Name,
+							})
+						}
 						continue
 					}
 					if rule.netCap > 0 && added >= rule.netCap {

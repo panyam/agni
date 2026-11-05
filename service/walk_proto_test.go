@@ -15,10 +15,11 @@ func fullWalk() check.Walk {
 		Radius: 3,
 		Reason: "a reason",
 		Nets: []check.WalkNet{{
-			Hop:     2,
-			Net:     check.TraceNet{Name: "SDA_TP", Stubs: []check.TraceStub{{RefDes: "TP1", Pin: "1", Class: "test_point"}}, StubsElided: 1, BusLike: true},
-			Entered: check.TraceCross{RefDes: "R2", Class: "resistor", EnterPin: "1", ExitPin: "2", FromNet: "SDA", ToNet: "SDA_TP"},
-			Ended:   "rail",
+			Hop:         2,
+			Net:         check.TraceNet{Name: "SDA_TP", Stubs: []check.TraceStub{{RefDes: "TP1", Pin: "1", Class: "test_point"}}, StubsElided: 1, BusLike: true},
+			Entered:     check.TraceCross{RefDes: "R2", Class: "resistor", EnterPin: "1", ExitPin: "2", FromNet: "SDA", ToNet: "SDA_TP"},
+			AlsoEntered: []check.TraceCross{{RefDes: "C2", Class: "capacitor", EnterPin: "1", ExitPin: "2", FromNet: "X", ToNet: "SDA_TP"}},
+			Ended:       "rail",
 		}},
 		Boundary: []check.WalkBoundary{{RefDes: "U1", Class: "ic", Hop: 1, Net: "SDA", Reason: "5 connected pins"}},
 		Elided:   []check.WalkElided{{Hop: 2, Nets: 5}},
@@ -48,7 +49,7 @@ func TestWalkFieldCensus(t *testing.T) {
 		}
 	}
 	census(check.Walk{}, "From", "Kind", "Radius", "Reason", "Nets", "Boundary", "Elided")
-	census(check.WalkNet{}, "Hop", "Net", "Entered", "Ended")
+	census(check.WalkNet{}, "Hop", "Net", "Entered", "AlsoEntered", "Ended")
 	census(check.WalkBoundary{}, "RefDes", "Class", "Hop", "Net", "Reason")
 	census(check.WalkElided{}, "Hop", "Nets")
 }

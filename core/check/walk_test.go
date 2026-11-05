@@ -108,6 +108,9 @@ func TestSmallPartsWalkCrossesPassivesAndStopsAtICsAndConnectors(t *testing.T) {
 		if got := strings.Join(on, " "); strings.Contains(got, "C2") || !strings.Contains(got, "C1") {
 			t.Errorf("GND lists %q, want C1 and not C2", got)
 		}
+		if len(n.AlsoEntered) != 1 || n.AlsoEntered[0].RefDes != "C2" || n.AlsoEntered[0].FromNet != "SDA_TP" {
+			t.Errorf("GND's further ways in = %+v, want C2 from SDA_TP", n.AlsoEntered)
+		}
 	}
 }
 

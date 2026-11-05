@@ -21,9 +21,10 @@ func WalkProto(w check.Walk) *webapi.Walk {
 		Reason: w.Reason,
 	}
 	for _, n := range w.Nets {
-		one := TraceProto(check.Trace{Nets: []check.TraceNet{n.Net}, Crossings: []check.TraceCross{n.Entered}})
+		one := TraceProto(check.Trace{Nets: []check.TraceNet{n.Net}, Crossings: append([]check.TraceCross{n.Entered}, n.AlsoEntered...)})
 		p.Nets = append(p.Nets, &webapi.WalkNet{
-			Hop: num.Int32(n.Hop), Net: one.GetNets()[0], Entered: one.GetCrossings()[0], Ended: n.Ended,
+			Hop: num.Int32(n.Hop), Net: one.GetNets()[0], Entered: one.GetCrossings()[0],
+			AlsoEntered: one.GetCrossings()[1:], Ended: n.Ended,
 		})
 	}
 	for _, b := range w.Boundary {
@@ -46,8 +47,12 @@ func WalkFromProto(p *webapi.Walk) check.Walk {
 		Reason: p.GetReason(),
 	}
 	for _, n := range p.GetNets() {
-		one := TraceFromProto(&webapi.Trace{Nets: []*webapi.TraceNet{n.GetNet()}, Crossings: []*webapi.TraceCross{n.GetEntered()}})
-		w.Nets = append(w.Nets, check.WalkNet{Hop: int(n.GetHop()), Net: one.Nets[0], Entered: one.Crossings[0], Ended: n.GetEnded()})
+		one := TraceFromProto(&webapi.Trace{Nets: []*webapi.TraceNet{n.GetNet()}, Crossings: append([]*webapi.TraceCross{n.GetEntered()}, n.GetAlsoEntered()...)})
+		wn := check.WalkNet{Hop: int(n.GetHop()), Net: one.Nets[0], Entered: one.Crossings[0], Ended: n.GetEnded()}
+		if len(one.Crossings) > 1 {
+			wn.AlsoEntered = one.Crossings[1:]
+		}
+		w.Nets = append(w.Nets, wn)
 	}
 	for _, b := range p.GetBoundary() {
 		w.Boundary = append(w.Boundary, check.WalkBoundary{

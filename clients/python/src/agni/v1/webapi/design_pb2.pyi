@@ -281,16 +281,18 @@ class Walk(_message.Message):
     def __init__(self, kind: _Optional[str] = ..., radius: _Optional[int] = ..., reason: _Optional[str] = ..., nets: _Optional[_Iterable[_Union[WalkNet, _Mapping]]] = ..., boundary: _Optional[_Iterable[_Union[WalkBoundary, _Mapping]]] = ..., elided: _Optional[_Iterable[_Union[WalkElided, _Mapping]]] = ..., **kwargs) -> None: ...
 
 class WalkNet(_message.Message):
-    __slots__ = ("hop", "net", "entered", "ended")
+    __slots__ = ("hop", "net", "entered", "ended", "also_entered")
     HOP_FIELD_NUMBER: _ClassVar[int]
     NET_FIELD_NUMBER: _ClassVar[int]
     ENTERED_FIELD_NUMBER: _ClassVar[int]
     ENDED_FIELD_NUMBER: _ClassVar[int]
+    ALSO_ENTERED_FIELD_NUMBER: _ClassVar[int]
     hop: int
     net: TraceNet
     entered: TraceCross
     ended: str
-    def __init__(self, hop: _Optional[int] = ..., net: _Optional[_Union[TraceNet, _Mapping]] = ..., entered: _Optional[_Union[TraceCross, _Mapping]] = ..., ended: _Optional[str] = ...) -> None: ...
+    also_entered: _containers.RepeatedCompositeFieldContainer[TraceCross]
+    def __init__(self, hop: _Optional[int] = ..., net: _Optional[_Union[TraceNet, _Mapping]] = ..., entered: _Optional[_Union[TraceCross, _Mapping]] = ..., ended: _Optional[str] = ..., also_entered: _Optional[_Iterable[_Union[TraceCross, _Mapping]]] = ...) -> None: ...
 
 class WalkBoundary(_message.Message):
     __slots__ = ("ref_des", "hop", "net", "reason")

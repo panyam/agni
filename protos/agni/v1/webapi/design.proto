@@ -405,6 +405,9 @@ message WalkNet {
   // ended says why the walk went no further from this net: "ground", "rail", "global", or a
   // fan-out. Empty when the net was walked through or lies at the radius.
   string ended = 4;
+  // also_entered lists the later crossings into this net, by parts that reached it after `entered`
+  // did, such as a crystal's second load capacitor into GND. A viewer lights those parts too.
+  repeated TraceCross also_entered = 5;
 }
 
 // WalkBoundary is a part the walk did not cross, and why. Naming it in `through` crosses it.

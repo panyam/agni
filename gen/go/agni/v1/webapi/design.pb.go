@@ -1741,7 +1741,10 @@ type WalkNet struct {
 	Entered *TraceCross `protobuf:"bytes,3,opt,name=entered,proto3" json:"entered,omitempty"`
 	// ended says why the walk went no further from this net: "ground", "rail", "global", or a
 	// fan-out. Empty when the net was walked through or lies at the radius.
-	Ended         string `protobuf:"bytes,4,opt,name=ended,proto3" json:"ended,omitempty"`
+	Ended string `protobuf:"bytes,4,opt,name=ended,proto3" json:"ended,omitempty"`
+	// also_entered lists the later crossings into this net, by parts that reached it after `entered`
+	// did, such as a crystal's second load capacitor into GND. A viewer lights those parts too.
+	AlsoEntered   []*TraceCross `protobuf:"bytes,5,rep,name=also_entered,json=alsoEntered,proto3" json:"also_entered,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1802,6 +1805,13 @@ func (x *WalkNet) GetEnded() string {
 		return x.Ended
 	}
 	return ""
+}
+
+func (x *WalkNet) GetAlsoEntered() []*TraceCross {
+	if x != nil {
+		return x.AlsoEntered
+	}
+	return nil
 }
 
 // WalkBoundary is a part the walk did not cross, and why. Naming it in `through` crosses it.
@@ -2561,12 +2571,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12+\n" +
 	"\x04nets\x18\x05 \x03(\v2\x17.agni.v1.webapi.WalkNetR\x04nets\x128\n" +
 	"\bboundary\x18\x06 \x03(\v2\x1c.agni.v1.webapi.WalkBoundaryR\bboundary\x122\n" +
-	"\x06elided\x18\a \x03(\v2\x1a.agni.v1.webapi.WalkElidedR\x06elided\"\x93\x01\n" +
+	"\x06elided\x18\a \x03(\v2\x1a.agni.v1.webapi.WalkElidedR\x06elided\"\xd2\x01\n" +
 	"\aWalkNet\x12\x10\n" +
 	"\x03hop\x18\x01 \x01(\x05R\x03hop\x12*\n" +
 	"\x03net\x18\x02 \x01(\v2\x18.agni.v1.webapi.TraceNetR\x03net\x124\n" +
 	"\aentered\x18\x03 \x01(\v2\x1a.agni.v1.webapi.TraceCrossR\aentered\x12\x14\n" +
-	"\x05ended\x18\x04 \x01(\tR\x05ended\"y\n" +
+	"\x05ended\x18\x04 \x01(\tR\x05ended\x12=\n" +
+	"\falso_entered\x18\x05 \x03(\v2\x1a.agni.v1.webapi.TraceCrossR\valsoEntered\"y\n" +
 	"\fWalkBoundary\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n" +
 	"\x05class\x18\x02 \x01(\tR\x05class\x12\x10\n" +
@@ -2728,33 +2739,34 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	24, // 30: agni.v1.webapi.Walk.elided:type_name -> agni.v1.webapi.WalkElided
 	18, // 31: agni.v1.webapi.WalkNet.net:type_name -> agni.v1.webapi.TraceNet
 	17, // 32: agni.v1.webapi.WalkNet.entered:type_name -> agni.v1.webapi.TraceCross
-	27, // 33: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
-	30, // 34: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	42, // 35: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
-	33, // 36: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
-	42, // 37: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
-	43, // 38: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
-	4,  // 39: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 40: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 41: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	10, // 42: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	31, // 43: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
-	12, // 44: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	19, // 45: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
-	25, // 46: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
-	5,  // 47: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 48: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 49: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	11, // 50: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	32, // 51: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
-	14, // 52: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	20, // 53: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
-	26, // 54: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
-	47, // [47:55] is the sub-list for method output_type
-	39, // [39:47] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	17, // 33: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
+	27, // 34: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
+	30, // 35: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	42, // 36: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
+	33, // 37: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
+	42, // 38: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
+	43, // 39: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
+	4,  // 40: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 41: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 42: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 43: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	31, // 44: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	12, // 45: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	19, // 46: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
+	25, // 47: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
+	5,  // 48: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 49: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 50: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 51: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	32, // 52: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	14, // 53: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	20, // 54: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
+	26, // 55: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
+	48, // [48:56] is the sub-list for method output_type
+	40, // [40:48] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }

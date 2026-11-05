@@ -32,6 +32,9 @@ func WriteWalkText(w io.Writer, wk check.Walk) {
 			how = fmt.Sprintf("through %s%s pin %s --> pin %s, from %s", e.RefDes, classNote(e.Class), e.EnterPin, e.ExitPin, e.FromNet)
 		}
 		fmt.Fprintf(w, "  net %s   (%s)\n", n.Net.Name, how)
+		for _, a := range n.AlsoEntered {
+			fmt.Fprintf(w, "      also through %s%s pin %s --> pin %s, from %s\n", a.RefDes, classNote(a.Class), a.EnterPin, a.ExitPin, a.FromNet)
+		}
 		if n.Ended != "" {
 			fmt.Fprintf(w, "      ends here: %s\n", n.Ended)
 		}
