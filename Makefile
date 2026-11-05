@@ -404,7 +404,8 @@ exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 # tickets it waits on, so a step the viewer cannot do yet reads "not available" rather than failing,
 # and the gate walks the same spec on examples/cross-probe-project's cut of Jetson. It writes the step
 # table and a screenshot per step to $(EXERCISE_OUT), headed unless HEADED=0. WALK_DESIGN=jetson (the
-# default) walks the whole board, and WALK_DESIGN=cut the gate's cut.
+# default) walks the whole board, and WALK_DESIGN=cut the gate's cut. It asks GitHub which tickets the
+# steps wait on are closed (hack/closed_tickets.sh), and a step waiting only on closed ones must pass.
 #   make exercise-cross-probe
 #   make exercise-cross-probe HEADED=0
 #   make exercise-cross-probe WALK_DESIGN=cut
@@ -412,7 +413,7 @@ exercise-cross-probe: HEADED ?= 1
 exercise-cross-probe: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
 	mkdir -p $(EXERCISE_OUT)
-	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
+	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/cross-probe-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/cross-probe.md 2>/dev/null; exit $$status
 
 # The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
