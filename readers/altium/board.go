@@ -342,11 +342,30 @@ func (b *boardBuilder) art() {
 		case t.comment:
 			kind = "value"
 		}
+		if b.hidden(t) {
+			continue
+		}
 		b.g.Texts = append(b.g.Texts, &geom.BoardText{
 			Text: t.s, At: b.pt(t.x, t.y), RotationDeg: normDeg(t.rot), Height: nm(t.height),
 			Layer: layer, Mirror: t.mirror, RefDes: ref(t.comp), Kind: kind,
 		})
 	}
+}
+
+// hidden reports whether a part's designator or comment text is switched off, as Altium hides it
+// when the part's NAMEON or COMMENTON is false.
+func (b *boardBuilder) hidden(t text) bool {
+	if t.comp < 0 || t.comp >= len(b.p.comps) {
+		return false
+	}
+	c := b.p.comps[t.comp].p
+	switch {
+	case t.designator:
+		return strings.EqualFold(c["NAMEON"], "FALSE")
+	case t.comment:
+		return strings.EqualFold(c["COMMENTON"], "FALSE")
+	}
+	return false
 }
 
 // normDeg folds an angle into [0, 360).
