@@ -5,7 +5,11 @@
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+
+const odbFolder = join(resolve(fileURLToPath(new URL("../..", import.meta.url))), "examples", "common", "designs", "odb");
 
 const base = (): string => inject("baseUrl");
 
@@ -60,4 +64,43 @@ describe("attaching a board the design does not declare", () => {
       });
     }, 180_000);
   }
+});
+
+describe("saving an attached board to the design's design.yaml", () => {
+  it("shows a served design's descriptor for the reader to commit", async () => {
+    await withPage(browser, async (page) => {
+      await open(page, `?board=${BOARD}`);
+      await page.locator(".sheet-board-save").click();
+      const text = page.locator(".board-declared-yaml");
+      await text.waitFor({ timeout: 30_000 });
+      expect(await text.inputValue()).toBe("name: gateway\nentry: gateway.edn\ncompanions:\n  - gateway-layout/matrix/matrix\n");
+      expect(await page.locator(".board-declared .board-picker-where").innerText()).toContain("common/odb/design.yaml");
+      // The page wrote nothing, so the design still reads without the board once ?board= is gone.
+      await page.locator(".board-declared-close").click();
+      await open(page);
+      expect(await tiles(page)).not.toContain("Board");
+    });
+  }, 120_000);
+
+  it("writes a dropped design's descriptor, and the design then reads the board with no ?board=", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
+      await page.setInputFiles("#drop-folder-input", odbFolder);
+      const dialog = page.locator("#drop-dialog");
+      await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
+      await dialog.locator(".drop-design", { has: page.locator(".drop-design-name", { hasText: /^gateway\s+\(/ }) }).locator(".drop-design-open").click();
+      await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+      const viewer = new URL(page.url());
+      expect(viewer.pathname).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
+      expect(await tiles(page)).not.toContain("Board");
+
+      const folder = viewer.pathname.replace(/^.*\/designs\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
+      await page.goto(`${viewer.origin}${viewer.pathname}?engine=wasm&board=${folder}/gateway-layout/matrix/matrix`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
+      await Promise.all([page.waitForURL((u) => !u.searchParams.has("board"), { timeout: 30_000 }), page.locator(".sheet-board-save").click()]);
+      await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
+      expect(await page.locator(".sheet-board-attached").count()).toBe(0);
+    });
+  }, 180_000);
 });

@@ -560,4 +560,11 @@ func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
 	if ids := located.GetSubjects()[0].GetSheetIds(); len(ids) == 0 || ids[len(ids)-1] != "board" {
 		t.Errorf("U1 locates on %v, want the board among its sheets", ids)
 	}
+	declared := ask("DeclareCompanion", func(c parityClients) (proto.Message, error) {
+		r, err := c.ws.DeclareCompanion(ctx, connect.NewRequest(&webapi.DeclareCompanionRequest{DesignUri: def.GetUri(), CompanionUri: def.GetBoardUri()}))
+		return msgOf(r, err)
+	}).(*webapi.DeclareCompanionResponse)
+	if !strings.Contains(declared.GetDesignYaml(), "- gateway-layout/matrix/matrix") {
+		t.Errorf("DeclareCompanion answers\n%s\nwith no companion for the attached job", declared.GetDesignYaml())
+	}
 }

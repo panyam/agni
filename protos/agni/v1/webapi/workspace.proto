@@ -47,6 +47,13 @@ service WorkspaceService {
   // the server does not guess again. Each proposal includes the `design.yaml` that would declare
   // it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
   rpc ProposeDesigns(ProposeDesignsRequest) returns (ProposeDesignsResponse);
+
+  // DeclareCompanion answers the design.yaml that declares a file as one of a design's companions,
+  // such as a board a page attached with Snapshot.board_uri (agni issue 1367). It writes nothing.
+  // A host whose mount a page can write, such as the browser's drop mount, saves the text, and on
+  // any other the reader commits it. An existing descriptor keeps its comments and other keys, and
+  // a new one names the design's entry and extends a project.yaml above it.
+  rpc DeclareCompanion(DeclareCompanionRequest) returns (DeclareCompanionResponse);
 }
 
 // Mount is one configured root folder. Clients reference it by name in later calls. root is a
@@ -188,6 +195,27 @@ message DesignFile {
   // the drawing (agni issue 992). A host answering a question that reads no board then need not
   // hold it.
   bool board = 4;
+}
+
+message DeclareCompanionRequest {
+  // design_uri is the design's entry file, "mount://<mount>/<path>", as the page opened it.
+  string design_uri = 1;
+  // companion_uri is the file to declare, in the same mount and inside the design's folder, since a
+  // descriptor's companions stay inside it. An ODB++ job is named by its matrix/matrix entry.
+  string companion_uri = 2;
+}
+
+message DeclareCompanionResponse {
+  // descriptor_uri is the design.yaml to write, beside the design's entry.
+  string descriptor_uri = 1;
+  // design_yaml is the descriptor's whole text with the companion declared, already checked as a
+  // design descriptor. It equals the file as it is when the companion is declared already.
+  string design_yaml = 2;
+  // existed says a descriptor was there before, so the text is an edit of it rather than a new file.
+  bool existed = 3;
+  // changed says the text differs from the descriptor as it is, false when it declared the
+  // companion already.
+  bool changed = 4;
 }
 
 message ProposeDesignsRequest {

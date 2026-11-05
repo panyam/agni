@@ -101,6 +101,26 @@ class DesignFile(_message.Message):
     board: bool
     def __init__(self, path: _Optional[str] = ..., size: _Optional[int] = ..., sha256: _Optional[str] = ..., board: _Optional[bool] = ...) -> None: ...
 
+class DeclareCompanionRequest(_message.Message):
+    __slots__ = ("design_uri", "companion_uri")
+    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
+    COMPANION_URI_FIELD_NUMBER: _ClassVar[int]
+    design_uri: str
+    companion_uri: str
+    def __init__(self, design_uri: _Optional[str] = ..., companion_uri: _Optional[str] = ...) -> None: ...
+
+class DeclareCompanionResponse(_message.Message):
+    __slots__ = ("descriptor_uri", "design_yaml", "existed", "changed")
+    DESCRIPTOR_URI_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_YAML_FIELD_NUMBER: _ClassVar[int]
+    EXISTED_FIELD_NUMBER: _ClassVar[int]
+    CHANGED_FIELD_NUMBER: _ClassVar[int]
+    descriptor_uri: str
+    design_yaml: str
+    existed: bool
+    changed: bool
+    def __init__(self, descriptor_uri: _Optional[str] = ..., design_yaml: _Optional[str] = ..., existed: _Optional[bool] = ..., changed: _Optional[bool] = ...) -> None: ...
+
 class ProposeDesignsRequest(_message.Message):
     __slots__ = ("uri",)
     URI_FIELD_NUMBER: _ClassVar[int]

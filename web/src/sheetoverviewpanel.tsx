@@ -14,6 +14,8 @@ export interface BoardControl {
   attached: string;
   onPick: () => void;
   onClear: () => void;
+  // onSave writes the attached board into the design's design.yaml, or shows the text to write.
+  onSave?: () => void;
 }
 
 function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl }) {
@@ -119,6 +121,11 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
               <button type="button" class="mode-btn sheet-board-pick" onClick={() => b().onPick()}>
                 Change…
               </button>
+              <Show when={b().onSave}>
+                <button type="button" class="mode-btn sheet-board-save" title="declare this board in the design's design.yaml" onClick={() => b().onSave?.()}>
+                  Save to design.yaml
+                </button>
+              </Show>
               <button type="button" class="mode-btn sheet-board-clear" title="read the board the design declares, if any" onClick={() => b().onClear()}>
                 Use the design's own
               </button>

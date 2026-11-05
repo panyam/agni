@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from agni.v1.webapi import project_pb2 as agni_dot_v1_dot_webapi_dot_project__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1e\x61gni/v1/webapi/workspace.proto\x12\x0e\x61gni.v1.webapi\x1a\x1c\x61gni/v1/webapi/project.proto\"A\n\x05Mount\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\"I\n\x11ListMountsRequest\x12.\n\x05opens\x18\x02 \x03(\x0e\x32\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\x08\x01\x10\x02\"h\n\x12ListMountsResponse\x12-\n\x06mounts\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.MountR\x06mounts\x12#\n\rpruned_mounts\x18\x02 \x01(\x05R\x0cprunedMounts\"\xaa\x01\n\x08\x44irEntry\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n\x06is_dir\x18\x02 \x01(\x08R\x05isDir\x12\x16\n\x06\x66ormat\x18\x03 \x01(\tR\x06\x66ormat\x12\x10\n\x03uri\x18\x04 \x01(\tR\x03uri\x12,\n\x04kind\x18\x05 \x01(\x0e\x32\x18.agni.v1.webapi.FileKindR\x04kind\x12\x1b\n\tboard_uri\x18\x06 \x01(\tR\x08\x62oardUri\"y\n\x0eListDirRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12.\n\x05opens\x18\x03 \x03(\x0e\x32\x18.agni.v1.webapi.FileKindR\x05opens\x12\x1f\n\x0bmark_boards\x18\x04 \x01(\x08R\nmarkBoardsJ\x04\x08\x02\x10\x03\"E\n\x0fListDirResponse\x12\x32\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.DirEntryR\x07\x65ntries\"*\n\x16ListDesignFilesRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x80\x01\n\x17ListDesignFilesResponse\x12\x14\n\x05mount\x18\x01 \x01(\tR\x05mount\x12\x30\n\x05\x66iles\x18\x02 \x03(\x0b\x32\x1a.agni.v1.webapi.DesignFileR\x05\x66iles\x12\x1d\n\ntotal_size\x18\x03 \x01(\x03R\ttotalSize\"b\n\nDesignFile\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n\x04size\x18\x02 \x01(\x03R\x04size\x12\x16\n\x06sha256\x18\x03 \x01(\tR\x06sha256\x12\x14\n\x05\x62oard\x18\x04 \x01(\x08R\x05\x62oard\")\n\x15ProposeDesignsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\xa0\x01\n\x16ProposeDesignsResponse\x12\x38\n\x07\x64\x65signs\x18\x01 \x03(\x0b\x32\x1e.agni.v1.webapi.ProposedDesignR\x07\x64\x65signs\x12\x32\n\x06unread\x18\x02 \x03(\x0b\x32\x1a.agni.v1.webapi.UnreadFileR\x06unread\x12\x18\n\x07support\x18\x03 \x03(\tR\x07support\"\xbf\x01\n\x0eProposedDesign\x12\x16\n\x06\x66older\x18\x01 \x01(\tR\x06\x66older\x12.\n\x06\x64\x65sign\x18\x02 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65sign\x12\x1f\n\x0b\x64\x65sign_yaml\x18\x03 \x01(\tR\ndesignYaml\x12\x14\n\x05\x66iles\x18\x04 \x03(\tR\x05\x66iles\x12\x12\n\x04note\x18\x05 \x01(\tR\x04note\x12\x1a\n\x08\x64\x65\x63lared\x18\x06 \x01(\x08R\x08\x64\x65\x63lared\"8\n\nUnreadFile\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason*T\n\x08\x46ileKind\x12\x19\n\x15\x46ILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n\x10\x46ILE_KIND_DESIGN\x10\x01\x12\x17\n\x13\x46ILE_KIND_DATASHEET\x10\x02\x32\xf8\x02\n\x10WorkspaceService\x12S\n\nListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n\x07ListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12\x62\n\x0fListDesignFiles\x12&.agni.v1.webapi.ListDesignFilesRequest\x1a\'.agni.v1.webapi.ListDesignFilesResponse\x12_\n\x0eProposeDesigns\x12%.agni.v1.webapi.ProposeDesignsRequest\x1a&.agni.v1.webapi.ProposeDesignsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1e\x61gni/v1/webapi/workspace.proto\x12\x0e\x61gni.v1.webapi\x1a\x1c\x61gni/v1/webapi/project.proto\"A\n\x05Mount\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\"I\n\x11ListMountsRequest\x12.\n\x05opens\x18\x02 \x03(\x0e\x32\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\x08\x01\x10\x02\"h\n\x12ListMountsResponse\x12-\n\x06mounts\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.MountR\x06mounts\x12#\n\rpruned_mounts\x18\x02 \x01(\x05R\x0cprunedMounts\"\xaa\x01\n\x08\x44irEntry\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n\x06is_dir\x18\x02 \x01(\x08R\x05isDir\x12\x16\n\x06\x66ormat\x18\x03 \x01(\tR\x06\x66ormat\x12\x10\n\x03uri\x18\x04 \x01(\tR\x03uri\x12,\n\x04kind\x18\x05 \x01(\x0e\x32\x18.agni.v1.webapi.FileKindR\x04kind\x12\x1b\n\tboard_uri\x18\x06 \x01(\tR\x08\x62oardUri\"y\n\x0eListDirRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\x12.\n\x05opens\x18\x03 \x03(\x0e\x32\x18.agni.v1.webapi.FileKindR\x05opens\x12\x1f\n\x0bmark_boards\x18\x04 \x01(\x08R\nmarkBoardsJ\x04\x08\x02\x10\x03\"E\n\x0fListDirResponse\x12\x32\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.DirEntryR\x07\x65ntries\"*\n\x16ListDesignFilesRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\x80\x01\n\x17ListDesignFilesResponse\x12\x14\n\x05mount\x18\x01 \x01(\tR\x05mount\x12\x30\n\x05\x66iles\x18\x02 \x03(\x0b\x32\x1a.agni.v1.webapi.DesignFileR\x05\x66iles\x12\x1d\n\ntotal_size\x18\x03 \x01(\x03R\ttotalSize\"b\n\nDesignFile\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n\x04size\x18\x02 \x01(\x03R\x04size\x12\x16\n\x06sha256\x18\x03 \x01(\tR\x06sha256\x12\x14\n\x05\x62oard\x18\x04 \x01(\x08R\x05\x62oard\"]\n\x17\x44\x65\x63lareCompanionRequest\x12\x1d\n\ndesign_uri\x18\x01 \x01(\tR\tdesignUri\x12#\n\rcompanion_uri\x18\x02 \x01(\tR\x0c\x63ompanionUri\"\x96\x01\n\x18\x44\x65\x63lareCompanionResponse\x12%\n\x0e\x64\x65scriptor_uri\x18\x01 \x01(\tR\rdescriptorUri\x12\x1f\n\x0b\x64\x65sign_yaml\x18\x02 \x01(\tR\ndesignYaml\x12\x18\n\x07\x65xisted\x18\x03 \x01(\x08R\x07\x65xisted\x12\x18\n\x07\x63hanged\x18\x04 \x01(\x08R\x07\x63hanged\")\n\x15ProposeDesignsRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"\xa0\x01\n\x16ProposeDesignsResponse\x12\x38\n\x07\x64\x65signs\x18\x01 \x03(\x0b\x32\x1e.agni.v1.webapi.ProposedDesignR\x07\x64\x65signs\x12\x32\n\x06unread\x18\x02 \x03(\x0b\x32\x1a.agni.v1.webapi.UnreadFileR\x06unread\x12\x18\n\x07support\x18\x03 \x03(\tR\x07support\"\xbf\x01\n\x0eProposedDesign\x12\x16\n\x06\x66older\x18\x01 \x01(\tR\x06\x66older\x12.\n\x06\x64\x65sign\x18\x02 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65sign\x12\x1f\n\x0b\x64\x65sign_yaml\x18\x03 \x01(\tR\ndesignYaml\x12\x14\n\x05\x66iles\x18\x04 \x03(\tR\x05\x66iles\x12\x12\n\x04note\x18\x05 \x01(\tR\x04note\x12\x1a\n\x08\x64\x65\x63lared\x18\x06 \x01(\x08R\x08\x64\x65\x63lared\"8\n\nUnreadFile\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason*T\n\x08\x46ileKind\x12\x19\n\x15\x46ILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n\x10\x46ILE_KIND_DESIGN\x10\x01\x12\x17\n\x13\x46ILE_KIND_DATASHEET\x10\x02\x32\xdf\x03\n\x10WorkspaceService\x12S\n\nListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n\x07ListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12\x62\n\x0fListDesignFiles\x12&.agni.v1.webapi.ListDesignFilesRequest\x1a\'.agni.v1.webapi.ListDesignFilesResponse\x12_\n\x0eProposeDesigns\x12%.agni.v1.webapi.ProposeDesignsRequest\x1a&.agni.v1.webapi.ProposeDesignsResponse\x12\x65\n\x10\x44\x65\x63lareCompanion\x12\'.agni.v1.webapi.DeclareCompanionRequest\x1a(.agni.v1.webapi.DeclareCompanionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,8 +33,8 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.workspace_pb
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_FILEKIND']._serialized_start=1428
-  _globals['_FILEKIND']._serialized_end=1512
+  _globals['_FILEKIND']._serialized_start=1676
+  _globals['_FILEKIND']._serialized_end=1760
   _globals['_MOUNT']._serialized_start=80
   _globals['_MOUNT']._serialized_end=145
   _globals['_LISTMOUNTSREQUEST']._serialized_start=147
@@ -53,14 +53,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LISTDESIGNFILESRESPONSE']._serialized_end=868
   _globals['_DESIGNFILE']._serialized_start=870
   _globals['_DESIGNFILE']._serialized_end=968
-  _globals['_PROPOSEDESIGNSREQUEST']._serialized_start=970
-  _globals['_PROPOSEDESIGNSREQUEST']._serialized_end=1011
-  _globals['_PROPOSEDESIGNSRESPONSE']._serialized_start=1014
-  _globals['_PROPOSEDESIGNSRESPONSE']._serialized_end=1174
-  _globals['_PROPOSEDDESIGN']._serialized_start=1177
-  _globals['_PROPOSEDDESIGN']._serialized_end=1368
-  _globals['_UNREADFILE']._serialized_start=1370
-  _globals['_UNREADFILE']._serialized_end=1426
-  _globals['_WORKSPACESERVICE']._serialized_start=1515
-  _globals['_WORKSPACESERVICE']._serialized_end=1891
+  _globals['_DECLARECOMPANIONREQUEST']._serialized_start=970
+  _globals['_DECLARECOMPANIONREQUEST']._serialized_end=1063
+  _globals['_DECLARECOMPANIONRESPONSE']._serialized_start=1066
+  _globals['_DECLARECOMPANIONRESPONSE']._serialized_end=1216
+  _globals['_PROPOSEDESIGNSREQUEST']._serialized_start=1218
+  _globals['_PROPOSEDESIGNSREQUEST']._serialized_end=1259
+  _globals['_PROPOSEDESIGNSRESPONSE']._serialized_start=1262
+  _globals['_PROPOSEDESIGNSRESPONSE']._serialized_end=1422
+  _globals['_PROPOSEDDESIGN']._serialized_start=1425
+  _globals['_PROPOSEDDESIGN']._serialized_end=1616
+  _globals['_UNREADFILE']._serialized_start=1618
+  _globals['_UNREADFILE']._serialized_end=1674
+  _globals['_WORKSPACESERVICE']._serialized_start=1763
+  _globals['_WORKSPACESERVICE']._serialized_end=2242
 # @@protoc_insertion_point(module_scope)
