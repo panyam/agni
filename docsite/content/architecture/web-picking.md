@@ -36,6 +36,32 @@ search result and a finding row produce one value.
 - **Entity keys are design data, so they are escaped** (`svg.AEsc`). Attribute values are written
   verbatim otherwise, and the viewer mounts this document with `innerHTML`.
 
+### Picking the board
+
+The board view picks with the same `Selection` and the same priority (agni issue 1324). Under
+`render.WithPickTargets`, `BoardSVG` keys each element as the schematic does.
+
+- A pad is a pin of its footprint. Its pad number is the pin designator, and `HighlightBoardSVG`
+  matches a pin on that same pair. The pad also carries `data-net`. A pad with no number, such as a
+  mechanical hole, keys as its footprint, since a pin needs both halves.
+- A track, a via and a zone each pick their net. A via's drill hole draws over its ring, so the
+  hole carries the key too.
+- A footprint's silkscreen, fab graphics and designator text pick the part. Its body is an invisible
+  rect over its pads' bounds, drawn above the zones and under the copper. A click between two pads
+  then picks the part, and a pad or a track drawn over the body still wins where it is drawn.
+- **A net's tracks share one keyed group per layer.** Tracks are most of a board's elements. A key on
+  each line grew Jetson's board SVG from 8.3 MB to 12.1 MB, and one per group grows it to 9.5 MB. So
+  `selectionFromElement` reads the nearest keyed element, walking up from the hit and stopping at the
+  drawing's `<svg>`. An area counts a grouped net when any one of its lines lies inside, as a
+  schematic net counts by its wires.
+- **A hidden side picks nothing.** The body rects split into `picks-front` and `picks-back` by the
+  side the part sits on, and the layer control's CSS hides them with that side's copper.
+  `elementFromPoint` skips a `display: none` element, so a part on the hidden side cannot be picked.
+
+A via or a short track at fit zoom is a few pixels across. A mouse event carries whole-pixel
+coordinates, so a click can miss a via that a fractional probe hits. The reader zooms in to pick one,
+and `web/browser/board-pick.spec.ts` searches whole-pixel points for that reason.
+
 ### Selecting is not asking
 
 A click selects the entity under it, and the Properties panel describes it (agni issue 902). A click

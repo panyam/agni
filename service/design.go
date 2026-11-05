@@ -412,7 +412,9 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 		}
 		if f := req.GetFormat(); f == webapi.SheetFormat_SHEET_FORMAT_SVG || f == webapi.SheetFormat_SHEET_FORMAT_NATIVE {
 			return &webapi.GetSheetResponse{
-				Content: &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()))},
+				// The served viewer picks on the board as on a sheet, so the board carries the same
+				// keys (render.Style.PickTargets).
+				Content: &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets())},
 			}, nil
 		}
 		return &webapi.GetSheetResponse{
