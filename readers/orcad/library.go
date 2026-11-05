@@ -14,7 +14,25 @@ const minVersionMajor = 3
 type library struct {
 	major, minor uint16
 	strs         []string
-	root         string // the root schematic folder under Views
+	root         string  // the root schematic folder under Views
+	fonts        []int32 // each font's height as Windows stores it, lfHeight, 1-based in use
+}
+
+// fontHeight is font i's text height in Capture's units, where i is 1-based and 0 is the design's
+// default, its first font. lfHeight is negative and counts device pixels at 96 to the inch, and a
+// Capture unit is a hundredth of an inch.
+func (l *library) fontHeight(i int) int64 {
+	if len(l.fonts) == 0 {
+		return 0
+	}
+	if i < 1 || i > len(l.fonts) {
+		i = 1
+	}
+	h := int64(l.fonts[i-1])
+	if h < 0 {
+		h = -h
+	}
+	return h * 100 / 96
 }
 
 // str is string i of the table. An index past the table is "", as Capture writes 0 for none.
@@ -63,7 +81,11 @@ func parseLibrary(b []byte) (*library, error) {
 	if fonts < 1 {
 		c.fail("font count %d", fonts)
 	}
-	c.skip(logfontSize * (fonts - 1))
+	for i := 0; i < fonts-1 && c.err == nil; i++ {
+		start := c.p
+		l.fonts = append(l.fonts, c.i32())
+		c.p = start + logfontSize
+	}
 	c.skip(2 * int(c.u16())) // the design template's font assignments
 	c.skip(8)
 	for i := 0; i < 8; i++ { // the eight named part fields

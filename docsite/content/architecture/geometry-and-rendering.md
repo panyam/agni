@@ -169,6 +169,30 @@ KiCad uses two coordinate frames, and conflating them is the trap.
 
 The cheap correctness signal for the transform math is the pin-on-wire coincidence rate. That rate is the fraction of placed pin connect-points that fall on wire endpoints. It is not sensitive to rotation *direction* on symmetric 2-pin parts (the pins just swap), so the asymmetric symbol bodies need an eyeball check too.
 
+## OrCAD Capture coordinate conventions
+
+Capture draws symbols and pages in one frame, Y down, in units of a hundredth of an inch, so `unit_nm`
+is 254000. The reader negates every Y, the symbol's and the page's alike, so a quarter turn reads
+anticlockwise in the contract with no change to its count.
+
+A placement stores the corner of its symbol's box and a quarter-turn count, and Capture turns the
+symbol inside that box. So a turn moves the corner the transform starts from. A connection point
+(x, y) in a symbol w wide and h tall lands at (x, y), (y, w−x), (w−x, h−y) or (h−y, x) from the
+stored corner, for 0 to 3 turns. The page also stores every placed pin's own position. So the
+reader's transform is checked against the file itself. `TestEveryPlacedPinLandsWhereThePageStoresIt`
+puts each of Clay R6's 573 pins through `geomath.PlacePin` and needs each to land exactly where the
+page says. A mirror bit is read as the format notes describe it, flipping x to w−x before the turn,
+and no public design checks it, because Clay R6 places nothing mirrored.
+
+A power symbol, port or off-page connector stores an anchor as well as a box, and the two can differ.
+A supply's anchor sits above its box, so the symbol is placed from the box's corner, never the anchor.
+`TestEveryPowerSymbolAndPortConnectsAtAWireEnd` holds each one's connection point to a wire end or a
+pin on its page. A title block stores its position from the page's bottom-right corner.
+
+Capture stores no junction dots, so the reader draws one wherever three wire ends meet or a wire ends
+on another's span. A part shows its pins' names and numbers as the last two bytes of its cached
+record say. Bit 0 shows the names and bit 2 hides the numbers, so a resistor shows neither.
+
 ## Render-fidelity fields
 
 These were added to the contract so a reader-produced sheet renders like the source tool.
@@ -194,6 +218,7 @@ into it (CONSTRAINTS C1). No consumer needs to know how any format writes a powe
 | xschem | a label symbol (`gnd`, `vdd`, `vss`, `lab_pin`, `lab_wire`, `ipin`, `opin`, `iopin`), named by its `lab` property | every other symbol |
 | gEDA | a power symbol (`gnd`, `vcc`, `vdd`, `vss` and the `<rail>-plus-N` and `<rail>-minus-N` rails), named by the instance `net=`, else the symbol's own `net=`, else the conventional supply for the family (`GND`, `VCC`, `VDD`, `VSS`) | every other symbol |
 | EDIF `.eds` | a placement with no designator whose cell name, or one of whose field values, is a net on the same sheet | a no-connect, a sheet port, and every placement that has a designator |
+| OrCAD Capture `.DSN` | a power symbol, port or off-page connector, named by the net of the first wire that ends inside its stored box | one that touches no wire reaching a pin |
 
 The anchor is a net name and joins the netlist by name, the way `WireGeometry.net` does. Each
 reader takes it from the same fact its netlist side uses, so the glyph's key and the net it joins

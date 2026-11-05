@@ -13,15 +13,21 @@
 //
 // Fidelity: lossy-bounded. The netlist is every placed part, named by its occurrence designator
 // where the design has one, flattened through every block the design places. A pin joins a net
-// through the wire its stored position sits on, through another pin at the same point, or through
-// a PACK_SHORT group of its part. Ports, power symbols and off-page connectors join through the net
-// name of the wire they sit on: a power name joins across the design, a port joins its block's pin,
-// and any other name joins within its schematic folder. A net takes the shallowest name it carries,
-// qualified by its block path when another net shares the name. A net with no name takes Capture's
-// generated N-number. Buses, bus entries, no-connect markers (an explicitly unconnected pin reads
-// as unconnected), CIS variants and schematic geometry (agni issue 1400) are not read. Only the
-// modern format family is read (major version 3 and up; Clay R6's Capture 16.6 wrote 3.2), and a
-// legacy design is refused with its version named.
+// through the wire its stored position sits on, another pin at the same point, the net id it
+// stores, or a PACK_SHORT group of its part. A port, power symbol or off-page connector joins the
+// wire ends inside its stored box: a power name joins across the design, a port joins its block's
+// pin, and an off-page name joins within its schematic folder. A net takes the shallowest name it
+// carries, qualified by its block path when another net shares the name, and a net with no name
+// takes an N-number from its wire's id. The geometry is one sheet per page, each block's page
+// under the page that places it, with every part's symbol, its displayed fields and its pins'
+// names and numbers as the part shows them, every wire and net alias, power symbols, ports and
+// off-page connectors with their names, block rectangles with their pins, computed junction dots,
+// and the title block. Ellipses that are not circles and beziers are drawn as chords. A mirrored
+// placement is read as the format notes describe it, and no public design checks it. Buses join no
+// net, and bus entries, no-connect markers (an explicitly unconnected pin reads as unconnected),
+// bitmaps, OLE objects, CIS variants and net names that match Capture's own (agni issue 1406) are
+// not read. Only the modern format family is read (major version 3 and up; Clay R6's Capture 16.6
+// wrote 3.2), and a legacy design is refused with its version named.
 package orcad
 
 import (
