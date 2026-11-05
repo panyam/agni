@@ -1267,7 +1267,12 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several may be active at once, one per worktree. #1194
+and the command that exercises it. Several may be active at once, one per worktree. #1321
+`mission_cross_probe` (find a schematic part on the board beside you, and back) is active, and `make
+exercise-cross-probe` is its exercise. Its walk runs in the gate on a cut of Jetson
+(`examples/cross-probe-project`) and names, per step, the tickets it waits on. A waiting step that
+passes FAILS the walk, so the PR that makes a step pass also removes its wait in
+`web/browser/cross-probe-walk.spec.ts`. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni

@@ -1,0 +1,255 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "f569b0be-0afd-48b7-93ee-28582a4c645c")
+	(paper "A3")
+	(title_block
+		(title "Antmicro Baseboard for Jetson AGX Thor")
+		(date "2026-02-17")
+		(rev "1.1.0")
+		(company "Antmicro Ltd")
+		(comment 1 "www.antmicro.com")
+	)
+	(lib_symbols)
+	(sheet
+		(at 331.47 158.75)
+		(size 34.29 40.64)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "12c19ba5-8fdc-4775-a33b-e8b1ade01b0a")
+		(property "Sheetname" "USB Debug, PD"
+			(at 331.47 158.0384 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "usb_debug_pd.kicad_sch"
+			(at 331.47 199.3396 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "I2C_{SYS}{I2C}" input
+			(at 331.47 181.61 180)
+			(uuid "a49480ce-61c9-4816-a7a3-183cf99013dc")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SPI_{HUB_DEBUG}{SPI}" input
+			(at 331.47 179.07 180)
+			(uuid "b79134fe-e0c7-4c40-9fd5-f2168af6c1f6")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "UART3_DEBUG{UART}" bidirectional
+			(at 331.47 176.53 180)
+			(uuid "543c20c0-42d0-4d1d-b598-0e2a5149b876")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBC1_CTL0" output
+			(at 331.47 163.83 180)
+			(uuid "7158998b-eb74-416c-b9d7-a2123f8b3d0d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBC1_CTL1" output
+			(at 331.47 161.29 180)
+			(uuid "6b741a16-2603-4453-b9ef-f5ee078da230")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBC1_FLIP" output
+			(at 331.47 166.37 180)
+			(uuid "3da4b765-aa94-437c-a80e-4487cf1effbb")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBC_HPD" output
+			(at 331.47 171.45 180)
+			(uuid "6dcb3c17-5c59-4e01-a618-4048daff6380")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBPD2_HV" bidirectional
+			(at 331.47 186.69 180)
+			(uuid "b66ac4ab-3b63-4b42-811f-d47cd1a334fc")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "~{PDC_I2C1_IRQ}" output
+			(at 331.47 196.85 180)
+			(uuid "2879bf6a-4e2d-4e07-9345-2efd109c4681")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "~{RESET}" input
+			(at 331.47 191.77 180)
+			(uuid "6c4db461-255b-44a5-9d9c-4c49f60e6c8d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USBC1_5V_PEN" output
+			(at 331.47 168.91 180)
+			(uuid "2c51b9fc-817a-488c-b3e5-6d0d99488784")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "jetson-agx-thor-baseboard"
+				(path "/f569b0be-0afd-48b7-93ee-28582a4c645c"
+					(page "9")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 66.04 241.3)
+		(size 34.29 21.59)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "18ddd5dc-52e2-402c-b2e2-8bb33f110eab")
+		(property "Sheetname" "Power"
+			(at 66.04 240.5884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 66.04 264.1096 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "USBPD1_HV" bidirectional
+			(at 100.33 256.54 0)
+			(uuid "b873920e-6038-47ec-a9b4-e9c6e38bc530")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "USBPD2_HV" bidirectional
+			(at 100.33 259.08 0)
+			(uuid "2d6a1556-3014-45a0-97a7-ac8d9acc1039")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VIN_PWR_ON" input
+			(at 100.33 243.84 0)
+			(uuid "c66ac0d6-48fb-447c-8c05-1b0ef37300f1")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "~{VDDIN_PWR_BAD}" output
+			(at 100.33 246.38 0)
+			(uuid "16f9ea02-e653-4849-a6a5-3b23525f76ee")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "jetson-agx-thor-baseboard"
+				(path "/f569b0be-0afd-48b7-93ee-28582a4c645c"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

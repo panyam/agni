@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, pendingFiles, slowestFetch, sumSplits, table, type Row } from "../browser/exercise-report.js";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, pendingFiles, slowestFetch, sumSplits, table, waitedOn, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -165,5 +165,20 @@ describe("splitting a request between loading and answering", () => {
     expect(s.outsideMs).toBeUndefined();
     expect(s.load).toEqual(["restore.design 300 ms"]);
     expect(s.cache).toBe("design=store");
+  });
+});
+
+describe("a step that waits on the ticket that builds it", () => {
+  it("passes or fails on its own when it waits on nothing", () => {
+    expect(waitedOn(true, [], "lit 4")).toEqual({ status: "ok", detail: "lit 4" });
+    expect(waitedOn(false, [], "no pane")).toEqual({ status: "fail", detail: "no pane" });
+  });
+  it("is not available while its ticket is open, and fails the walk once it passes", () => {
+    expect(waitedOn(false, ["#1326"], "no board pane")).toEqual({ status: "not available", detail: "waits on #1326: no board pane" });
+    const passed = waitedOn(true, ["#1325", "#1326"], "ringed");
+    expect(passed.status).toBe("fail");
+    expect(passed.detail).toContain("stop waiting on #1325, #1326");
+    expect(exitCode([{ step: "s", design: "d", ...passed }])).toBe(1);
+    expect(exitCode([{ step: "s", design: "d", ...waitedOn(false, ["#1326"], "x") }])).toBe(0);
   });
 });
