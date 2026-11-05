@@ -26,6 +26,7 @@ var docFlagExceptions = map[string]string{
 	"--layers":           "kicad-cli",
 	"--quit":             "kicad-cli",
 	"--svg":              "kicad-cli",
+	"--origin":           "gerbv, which refuses a negative one (build/native-verification.md)",
 	"--exclude-standard": "git ls-files",
 	"--dump":             "hack/fixture_copies_check.sh",
 	"--noEmit":           "tsc",

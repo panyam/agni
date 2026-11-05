@@ -2,6 +2,7 @@ package render
 
 import (
 	"math"
+	"strings"
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -22,9 +23,10 @@ const (
 	groupBoardCopperInner uint8 = 8  // any other signal layer
 	groupBoardThrough     uint8 = 9  // via barrels + through-hole pad lands
 	groupBoardHole        uint8 = 10 // drill fills, page-colored, drawn last so they punch out
-	groupBoardSilk        uint8 = 11 // silkscreen / fab body-outline graphics (WS7)
+	groupBoardSilk        uint8 = 11 // silkscreen and courtyard graphics (WS7)
+	groupBoardFab         uint8 = 12 // fab-layer graphics, such as body outlines (agni issue 1366)
 
-	boardGroupCount = 12
+	boardGroupCount = 13
 )
 
 // viaSegments tessellates round barrels, drills and circle pads. It is fixed in the packer
@@ -104,7 +106,11 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		if len(pts) == 0 {
 			continue
 		}
-		add(kind, groupBoardSilk, gr.GetRefDes(), "", "", pts)
+		group := groupBoardSilk
+		if strings.HasSuffix(gr.GetLayer(), ".Fab") {
+			group = groupBoardFab
+		}
+		add(kind, group, gr.GetRefDes(), "", "", pts)
 	}
 
 	vertices, records, keys, ox, oy := c.build()
@@ -118,9 +124,9 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		}
 		labels = append(labels, &geom.PackedLabel{
 			X: num.Int32(t.GetAt().X - ox), Y: num.Int32(t.GetAt().Y - oy),
-			Text: boardTextLine(t), Height: num.Int32(boardTextHeight(t)),
+			Text: boardTextLine(t), Height: num.Int32(boardTextEm(t)),
 			RotationDeg: int32(math.Round(t.GetRotationDeg())),
-			Justify:     justifyWord(t), Color: style.Field,
+			Justify:     justifyWord(t), Color: boardTextColor(style, t.GetLayer()),
 		})
 	}
 
@@ -155,6 +161,7 @@ func boardGroupColors(style Style) []string {
 	colors[groupBoardThrough] = style.Via
 	colors[groupBoardHole] = style.Page
 	colors[groupBoardSilk] = style.Silk
+	colors[groupBoardFab] = style.Fab
 	return colors
 }
 

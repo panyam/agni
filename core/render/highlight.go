@@ -376,13 +376,14 @@ func (b framedBox) circle() (cx, cy, r float64) {
 }
 
 // framedBounds resolves an entity's world geometry to its framing box and circle. The pad
-// is 10% of the raw bbox's larger side with a floor of 8 world units, so a zero-area
-// entity (a single pin) still gets a visible frame. The formula is TWINNED with
+// is 10% of the raw bbox's larger side, and at least minPad and 8 world units. A zero-area
+// entity (a single pin) frames by the floor alone, and 8 units of a nanometre sheet draws as
+// nothing, so the caller passes minPad scaled to its drawing (agni issue 1374). The formula is TWINNED with
 // entityFrame in web/src/highlights.ts, and highlight_test.go and highlights.test.ts assert
 // the same numbers on both sides, so change them together. Shapes with a radius (circles, arcs)
 // expand each point by it, exact for circles and conservative for arcs. ok is false for an
 // entity with no geometry.
-func framedBounds(e *highlightEntity) (framedBox, bool) {
+func framedBounds(e *highlightEntity, minPad float64) (framedBox, bool) {
 	minX, minY := math.Inf(1), math.Inf(1)
 	maxX, maxY := math.Inf(-1), math.Inf(-1)
 	add := func(x, y, r float64) {
@@ -408,7 +409,7 @@ func framedBounds(e *highlightEntity) (framedBox, bool) {
 		return framedBox{}, false
 	}
 	w, h := maxX-minX, maxY-minY
-	pad := max(8, 0.1*max(w, h))
+	pad := max(8, minPad, 0.1*max(w, h))
 	// Explicit sqrt, not math.Hypot, because mul/add/sqrt are correctly rounded IEEE ops in
 	// both Go and JS and JS engines do not guarantee a correctly rounded Math.hypot. The
 	// twinned fixtures assert exact equality across backends.
@@ -417,6 +418,10 @@ func framedBounds(e *highlightEntity) (framedBox, bool) {
 		cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, r: math.Sqrt(w/2*(w/2)+h/2*(h/2)) + pad,
 	}, true
 }
+
+// pointPadPx is the least pad, in pixels, around a framed entity in the SVG, so a picked pin reads
+// as a dot a few pixels across rather than a rect with no size (agni issue 1374).
+const pointPadPx = 4
 
 // worldToPx maps fractional world coordinates (padded bounds) through the frame's affine
 // int64 maps. tx is linear so tx(x) = tx(0) + x*scale, and ty flips Y so
@@ -432,7 +437,7 @@ type boundingRectStrategy struct{}
 func (boundingRectStrategy) normAlpha(a float32) float64 { return highlightFillAlpha(a) }
 
 func (boundingRectStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
-	b, ok := framedBounds(e)
+	b, ok := framedBounds(e, pointPadPx/fr.scale)
 	if !ok {
 		return
 	}
@@ -449,7 +454,7 @@ type boundingCircleStrategy struct{}
 func (boundingCircleStrategy) normAlpha(a float32) float64 { return highlightFillAlpha(a) }
 
 func (boundingCircleStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
-	b, ok := framedBounds(e)
+	b, ok := framedBounds(e, pointPadPx/fr.scale)
 	if !ok {
 		return
 	}

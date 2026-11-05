@@ -36,7 +36,8 @@ func init() {
 		// with a netlist and faithful geometry. Wiring the netlist reader makes it queryable,
 		// checkable and diffable. Its netlist counts drawn instances and per-sheet segments, so its
 		// counts are not comparable with an .edn read.
-		Design: readEDIF,
+		Design:       readEDIF,
+		DrawnNetlist: true,
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
 			f, err := l.Open(path)
 			if err != nil {

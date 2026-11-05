@@ -224,3 +224,27 @@ func TestOutFileNoteIsAbsolute(t *testing.T) {
 		t.Errorf("note names the wrong file: %q", got)
 	}
 }
+
+// A run refused before it writes leaves no -o file and names none. `check --table pin_map` on a
+// design with no pin map printed "wrote" and left an empty file until agni issue 1342, since -o
+// created the file before the run knew it had nothing to write.
+func TestARefusedRunLeavesNoOutFile(t *testing.T) {
+	freshWorkspace(t)
+	p := filepath.Join(t.TempDir(), "pins.csv")
+	var stderr bytes.Buffer
+	cmd := checkCmd()
+	cmd.SilenceUsage, cmd.SilenceErrors = true, true // as the root command sets them
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"--verdicts", "--format", "csv", "--table", "pin_map", "-o", p, outFileFixture})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "pin_map") {
+		t.Fatalf("the run should refuse a pin_map table on a design with no pin map, got %v", err)
+	}
+	if _, statErr := os.Stat(p); !os.IsNotExist(statErr) {
+		t.Errorf("a refused run left %s behind (%v)", p, statErr)
+	}
+	if strings.Contains(stderr.String(), "wrote") {
+		t.Errorf("a refused run announced a file: %q", stderr.String())
+	}
+}

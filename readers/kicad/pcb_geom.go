@@ -293,6 +293,9 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 		return nil
 	}
 	height, justify, mirror := effectsOf(n)
+	if height == 0 {
+		height = fieldDefaultHeight
+	}
 	angle := rotOf(local)
 	if !isUnlocked(n, local) {
 		angle = keepUpright(angle)
@@ -302,7 +305,7 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 		At:          geomath.ComposePlacement(pcbPoint(fpAt), placementAngle(fpAt, back), back, footprintLocal(pcbPoint(local), back)),
 		RotationDeg: angle,
 		Height:      height,
-		Layer:       atomOf(n.Child("layer").Arg(1)),
+		Layer:       fieldLayer(atomOf(n.Child("layer").Arg(1)), kind),
 		Mirror:      mirror,
 		Justify:     justify,
 		RefDes:      ref,
@@ -357,6 +360,26 @@ func effectsOf(n *node) (height int64, justify string, mirror bool) {
 		}
 	}
 	return height, justify, mirror
+}
+
+// fieldDefaultHeight is the glyph height KiCad draws a footprint field at when its effects give no
+// size, 1.27 mm. kicad-cli 10.0.6 draws the fixture's default fields that tall (agni issue 1366).
+const fieldDefaultHeight = 1_270_000
+
+// fieldLayer is the layer KiCad draws a footprint field on when the field names none. A Reference
+// goes on the front silkscreen and a Value on the front fab layer, even on a back footprint, as
+// kicad-cli draws the fixture's J1 (agni issue 1366). A field that names its layer keeps it.
+func fieldLayer(layer, kind string) string {
+	if layer != "" {
+		return layer
+	}
+	switch kind {
+	case "reference":
+		return "F.SilkS"
+	case "value":
+		return "F.Fab"
+	}
+	return ""
 }
 
 // keepUpright folds a footprint text's glyph angle into (-90, 90] by half turns, so text on

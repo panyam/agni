@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/panyam/agni/readers/formats"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -331,17 +332,19 @@ func seedDesigns(dir, mount string) ([]seededDesign, error) {
 	var out []seededDesign
 	// One example per folder, the design that folder's design.yaml would declare. A KiCad project
 	// folder often holds sheets that nothing references. Each would propose as a design of its own,
-	// and they would crowd the list with fragments of the board.
+	// and they would crowd the list with fragments of the board. An archive is the exception. The
+	// proposer keeps only an archive holding an ODB++ job, which is a whole design in one file, so a
+	// folder of jobs lists every one, as `agni serve` does (agni issue 1342).
 	listed := map[string]bool{}
 	for _, pd := range resp.GetDesigns() {
-		if listed[pd.GetFolder()] {
-			continue
-		}
-		listed[pd.GetFolder()] = true
 		target := pd.GetDesign().GetEntryUri()
 		if target == "" {
 			target = pd.GetDesign().GetUri()
 		}
+		if listed[pd.GetFolder()] && !formats.IsArchive(target) {
+			continue
+		}
+		listed[pd.GetFolder()] = true
 		rel := strings.TrimPrefix(target, "mount://"+mount)
 		rel = strings.TrimPrefix(rel, "/")
 		if rel == "" {

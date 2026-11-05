@@ -232,3 +232,48 @@ func TestATrialWithNoIOMapReportsNoPinMap(t *testing.T) {
 		t.Errorf("a design with no IO map reported one: %+v", rep.PinMap)
 	}
 }
+
+// A KiCad schematic is its design's netlist, so the report counts its parts and nets as `agni
+// stats` does. It read 0 and 0 for every KiCad design until agni issue 1342, since GetDesign
+// withheld the counts of any file that is both a drawing and its own netlist.
+func TestATrialCountsAKiCadDesign(t *testing.T) {
+	freshWorkspace(t)
+	const path = "testdata/conformance/showcase.passes.kicad_sch"
+	uri, err := cliArgURI(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := runTrial(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := newLoader().ReadDesign(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Components) == 0 || len(d.Nets) == 0 {
+		t.Fatalf("the fixture read %d parts and %d nets, so the test proves nothing", len(d.Components), len(d.Nets))
+	}
+	if rep.Shape.Components != len(d.Components) || rep.Shape.Nets != len(d.Nets) || rep.Shape.Format != "kicad-sch" {
+		t.Errorf("the report says %s, %d components, %d nets; the read gives kicad-sch, %d and %d",
+			rep.Shape.Format, rep.Shape.Components, rep.Shape.Nets, len(d.Components), len(d.Nets))
+	}
+}
+
+// A design that fails to read has no counts, and the report says so rather than printing zeros that
+// read as an empty design.
+func TestATrialThatCannotReadTheDesignSaysSo(t *testing.T) {
+	freshWorkspace(t)
+	uri, err := cliArgURI(filepath.Join(t.TempDir(), "absent.kicad_sch"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := runTrial(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	md := rep.Markdown()
+	if !strings.Contains(md, "Design: not read") || strings.Contains(md, "0 components") {
+		t.Errorf("a design that failed to read reported:\n%s", md)
+	}
+}
