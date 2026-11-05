@@ -150,8 +150,9 @@ func TestReadsAnODXBoard(t *testing.T) {
 	if strings.Join(segs, " ") != "F.Cu/200000 B.Cu/250000" {
 		t.Errorf("N1 segments = %v, want one per side, each as wide as the CAD_SET symbol before it", segs)
 	}
-	if n2 := nets["N2"]; n2 == nil || len(n2.GetSegments()) != arcSegments {
-		t.Errorf("N2 copper = %v, want the arc flattened into %d segments", n2, arcSegments)
+	if n2 := nets["N2"]; n2 == nil || len(n2.GetSegments()) != 1 || n2.GetSegments()[0].GetMid().GetX() != 20e6 ||
+		n2.GetSegments()[0].GetMid().GetY() != 19.5e6 {
+		t.Errorf("N2 copper = %v, want one arc from (10, 9.5) to (30, 9.5) through (20, 19.5)", n2)
 	}
 	// The surface takes N2 from the CAD_SET before it. It is a zone, and its hole is dropped, as a
 	// job's zones drop theirs.

@@ -10,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // ReadBoardGeometry parses the board-geometry sidecar out of the ODB++ job rooted at fsys.
@@ -19,8 +20,8 @@ import (
 //   - The layer stack.
 //   - Component placements with their pads. Each pad's shape and size come from the copper feature
 //     eda/data ties to its toeprint, and its drill from the drill layer.
-//   - Routed copper, as lines and as arcs approximated by polylines, grouped by the net eda/data
-//     assigns each feature.
+//   - Routed copper, as lines and arcs, grouped by the net eda/data assigns each feature. An arc
+//     keeps its curve as a mid point (agni 1358); a full circle becomes two half arcs.
 //   - Vias, each a drill hit and its copper lands.
 //   - Copper surfaces on a net, as zones. Each island keeps its outline and drops its holes.
 //   - Silkscreen and fabrication lines and text.
@@ -604,9 +605,9 @@ func (b *boardBuilder) copper() error {
 			case featArc:
 				nc := get(ref.net)
 				w := b.symbol(ff, f.sym).width()
-				pts := flattenArc(f.a, f.b, f.center, f.cw)
-				for k := 1; k < len(pts); k++ {
-					nc.Segments = append(nc.Segments, &geom.TrackSegment{A: gp(pts[k-1]), B: gp(pts[k]), Width: w, Layer: layer})
+				for _, a := range geomath.CenterArc(float64(f.a.x), float64(f.a.y), float64(f.b.x), float64(f.b.y),
+					float64(f.center.x), float64(f.center.y), f.cw) {
+					nc.Segments = append(nc.Segments, &geom.TrackSegment{A: arcPoint(a.S), Mid: arcPoint(a.M), B: arcPoint(a.E), Width: w, Layer: layer})
 				}
 			case featSurface:
 				for _, isl := range f.islands {
@@ -886,6 +887,10 @@ func normDeg(d float64) float64 {
 }
 
 func gp(p pt) *geom.Point { return &geom.Point{X: p.x, Y: p.y} }
+
+func arcPoint(p [2]float64) *geom.Point {
+	return &geom.Point{X: int64(math.Round(p[0])), Y: int64(math.Round(p[1]))}
+}
 
 func polyShape(pts []pt) *geom.Shape {
 	s := &geom.Shape{Kind: geom.Shape_KIND_POLYLINE}

@@ -15,7 +15,7 @@
 // comment as Value, and its schematic parameters (Part Number among them) from PrimitiveParameters.
 // Assembly variants live in the project file and are not read. The board geometry carries the
 // copper stack in physical order, renamed into the contract's F.Cu/In<n>.Cu/B.Cu vocabulary, every
-// placement with footprint-local pads sized from the top copper, tracks, arcs as chords, vias,
+// placement with footprint-local pads sized from the top copper, tracks, arc tracks as arcs, vias,
 // polygon pour outlines with their nets, the board outline, and silkscreen lines, arcs and text.
 // Poured copper, a graphical component's copper (a layer marker), fills, per-layer pad stacks,
 // mechanical layers, rules and classes are not kept, and a drilled pad no part owns is kept as a via.

@@ -2,10 +2,12 @@ package allegro
 
 import (
 	"fmt"
+	"math"
+
+	"sort"
+
 	"github.com/panyam/agni/internal/boardlayer"
 	"github.com/panyam/agni/internal/geomath"
-	"math"
-	"sort"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
@@ -447,11 +449,40 @@ func (b *boardBuilder) track(off int, nc *geom.NetCopper) {
 	if layer == "" {
 		return
 	}
-	b.segments(p.u32(off, p.l.trackSegs), p.u32(off, 4), func(pts []*geom.Point, width int64) {
-		for i := 1; i < len(pts); i++ {
-			nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i-1], B: pts[i], Width: width, Layer: layer})
+	p.chain(p.u32(off, p.l.trackSegs), p.u32(off, 4), next8, func(seg int) {
+		w := p.l.segWidth
+		width := p.nm(float64(p.u32(seg, w)))
+		switch p.b[seg] {
+		case tagLineH, tagLineD, tagLineV:
+			nc.Segments = append(nc.Segments, &geom.TrackSegment{
+				A: b.pt(p.i32(seg, w+4), p.i32(seg, w+8)), B: b.pt(p.i32(seg, w+12), p.i32(seg, w+16)), Width: width, Layer: layer,
+			})
+		case tagArc:
+			for _, a := range b.arcPieces(seg) {
+				nc.Segments = append(nc.Segments, &geom.TrackSegment{A: a[0], Mid: a[1], B: a[2], Width: width, Layer: layer})
+			}
 		}
 	})
+}
+
+// arcPieces reads an arc block as the start, mid and end of each arc a TrackSegment holds: one arc,
+// or two half circles for a full circle (geomath.CenterArc). An arc with no usable radius comes
+// back as its chord with no mid, as arc() draws it.
+func (b *boardBuilder) arcPieces(off int) [][3]*geom.Point {
+	p := b.p
+	s, e, c := p.l.arcStart(), p.l.arcEnd(), p.l.arcCentre()
+	sx, sy := float64(p.i32(off, s)), float64(p.i32(off, s+4))
+	ex, ey := float64(p.i32(off, e)), float64(p.i32(off, e+4))
+	cx, cy, r := p.float(off, c), p.float(off, c+8), p.float(off, c+16)
+	if math.IsNaN(cx) || math.IsNaN(cy) || math.IsNaN(r) || r <= 0 {
+		return [][3]*geom.Point{{b.pt(int32(sx), int32(sy)), nil, b.pt(int32(ex), int32(ey))}}
+	}
+	at := func(q [2]float64) *geom.Point { return &geom.Point{X: p.nm(q[0]), Y: p.nm(q[1])} }
+	var out [][3]*geom.Point
+	for _, a := range geomath.CenterArc(sx, sy, ex, ey, cx, cy, p.b[off+3]&0x40 != 0) {
+		out = append(out, [3]*geom.Point{at(a.S), at(a.M), at(a.E)})
+	}
+	return out
 }
 
 // via adds a via, sized by its padstack's land on the first spanned layer. A padstack spanning one

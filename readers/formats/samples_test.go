@@ -2,6 +2,7 @@ package formats
 
 import (
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -162,5 +163,39 @@ func TestSampleBoardPartIdentitySurvivesEmit(t *testing.T) {
 	}
 	if lost != 0 {
 		t.Errorf("%d of %d part number(s) lost through the EDIF emit", lost, len(want))
+	}
+}
+
+// TestSampleBoardArcTracksReadAsArcs holds each sample board's arc tracks to its file: every
+// top-level (arc ...) is one track segment with a mid point, so a curved trace is never split into
+// chords and never dropped (agni issue 1358). The counts come from the files themselves.
+func TestSampleBoardArcTracksReadAsArcs(t *testing.T) {
+	arcNode := regexp.MustCompile(`(?m)^\s*\(arc(\s*$|\s+\()`)
+	for _, name := range []string{
+		"jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb",
+		"mnt-reform-motherboard30/reform2-motherboard30.kicad_pcb",
+		"cynthion/cynthion.kicad_pcb",
+	} {
+		path := "../../tools/samples/boards/" + name
+		src, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)
+		}
+		want := len(arcNode.FindAll(src, -1))
+		g, err := (&Loader{}).BoardGeometry(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := 0
+		for _, nc := range g.GetNets() {
+			for _, s := range nc.GetSegments() {
+				if s.GetMid() != nil {
+					got++
+				}
+			}
+		}
+		if want < 100 || got != want {
+			t.Errorf("%s: read %d arc tracks, the file has %d", name, got, want)
+		}
 	}
 }

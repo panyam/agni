@@ -350,9 +350,10 @@ func TestFootprintUserLayerArtIsNotDrawn(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryArcTrackAndSlot reads a curved trace as copper and a slotted hole as its narrow
-// width. Both read as nothing until agni issues 1260 and 1268's cross-check: an (arc ...) track was
-// never read, and (drill oval w h) parsed its "oval" keyword as the size.
+// TestBoardGeometryArcTrackAndSlot reads a curved trace as one arc segment and a slotted hole as its
+// narrow width. Both read as nothing until agni issues 1260 and 1268's cross-check: an (arc ...)
+// track was never read, and (drill oval w h) parsed its "oval" keyword as the size. Until agni 1358
+// the arc read as 16 chords.
 func TestBoardGeometryArcTrackAndSlot(t *testing.T) {
 	g, err := ReadBoardGeometry(bytes.NewReader(readFixture(t, "board_arc_slot.kicad_pcb")), "board_arc_slot.kicad_pcb")
 	if err != nil {
@@ -362,12 +363,15 @@ func TestBoardGeometryArcTrackAndSlot(t *testing.T) {
 		t.Fatalf("nets = %v, want the arc's copper on SHLD", g.GetNets())
 	}
 	segs := g.GetNets()[0].GetSegments()
-	if len(segs) != 16 || segs[0].GetWidth() != 200_000 || segs[0].GetLayer() != "F.Cu" {
-		t.Fatalf("arc segments = %d (first %v), want 16 pieces 0.2mm wide on F.Cu", len(segs), segs[0])
+	if len(segs) != 1 || segs[0].GetWidth() != 200_000 || segs[0].GetLayer() != "F.Cu" {
+		t.Fatalf("arc segments = %v, want one arc 0.2mm wide on F.Cu", segs)
 	}
-	first, last := segs[0].GetA(), segs[len(segs)-1].GetB()
-	if first.GetX() != 10_000_000 || first.GetY() != -10_000_000 || last.GetX() != 14_000_000 || last.GetY() != -10_000_000 {
-		t.Errorf("arc runs %v to %v, want (10,-10)mm to (14,-10)mm", first, last)
+	a, m, e := segs[0].GetA(), segs[0].GetMid(), segs[0].GetB()
+	if a.GetX() != 10_000_000 || a.GetY() != -10_000_000 || e.GetX() != 14_000_000 || e.GetY() != -10_000_000 {
+		t.Errorf("arc runs %v to %v, want (10,-10)mm to (14,-10)mm", a, e)
+	}
+	if m.GetX() != 12_000_000 || m.GetY() != -12_000_000 {
+		t.Errorf("arc mid = %v, want the file's (12,-12)mm", m)
 	}
 	pads := g.GetPlacements()[0].GetPads()
 	if len(pads) != 1 || pads[0].GetDrill() != 600_000 {

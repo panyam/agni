@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // DrawBoardLayer draws one copper layer of a board's geometry: the tracks on it into tracks, and
@@ -30,9 +31,12 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 	}
 	for _, nc := range g.GetNets() {
 		for _, s := range nc.GetSegments() {
-			if s.GetLayer() == layer {
-				tracks.Line(float64(s.GetA().GetX())*scale, float64(s.GetA().GetY())*scale,
-					float64(s.GetB().GetX())*scale, float64(s.GetB().GetY())*scale, float64(s.GetWidth())*scale)
+			if s.GetLayer() != layer {
+				continue
+			}
+			for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
+				tracks.Line(float64(pts[i-1].GetX())*scale, float64(pts[i-1].GetY())*scale,
+					float64(pts[i].GetX())*scale, float64(pts[i].GetY())*scale, float64(s.GetWidth())*scale)
 			}
 		}
 		for _, v := range nc.GetVias() {

@@ -19,8 +19,8 @@ import (
 //
 // Fidelity: lossy-bounded (C6). This producer emits the board outline (Profile), the layer
 // stackup table, and component placements with their pads. Pads resolve through the padstack
-// def/instance indirection. It also emits routed copper. Tracks have their arcs approximated
-// as polylines. Vias are drilled holes with the co-located pad as annular, and each records its
+// def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
+// through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular, and each records its
 // layer span. It emits silkscreen/fab body graphics, composing a package's
 // Marking/Outline/AssemblyDrawing per placement. It emits copper plane/pour fills as zones with
 // their authored outline (WS1-031). Non-via copper lands are NOT emitted yet, and fill cutouts

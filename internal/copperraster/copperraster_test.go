@@ -1,8 +1,11 @@
 package copperraster
 
 import (
+	"math"
 	"strings"
 	"testing"
+
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
 const mil = 25400.0
@@ -111,5 +114,27 @@ func TestOverlapAndCovered(t *testing.T) {
 	}
 	if c := Covered(a, Union(a, b)); c != 1 {
 		t.Errorf("a union covers %.3f of its part, want all", c)
+	}
+}
+
+// TestABoardArcDrawsAlongTheCurve draws a quarter-circle track of radius 0.5 inch about (0.5, 0.5)
+// inch and checks the copper at the arc's mid point, and none at its chord's.
+func TestABoardArcDrawsAlongTheCurve(t *testing.T) {
+	const in = int64(1000 * mil)
+	half := float64(in) / 2
+	m := in/2 + int64(math.Round(half*math.Sqrt2/2))
+	g := &geom.BoardGeometry{UnitNm: 1, Nets: []*geom.NetCopper{{Net: "N", Segments: []*geom.TrackSegment{{
+		A:     &geom.Point{X: in, Y: in / 2},
+		Mid:   &geom.Point{X: m, Y: m},
+		B:     &geom.Point{X: in / 2, Y: in},
+		Width: 10 * mil, Layer: "F.Cu",
+	}}}}}
+	tracks := grid()
+	DrawBoardLayer(g, "F.Cu", []string{"F.Cu"}, tracks, tracks)
+	if !tracks.Get(854, 854) {
+		t.Error("no copper at the arc's mid point (0.854, 0.854) in")
+	}
+	if tracks.Get(750, 750) {
+		t.Error("copper at the chord's mid point (0.75, 0.75) in, so the arc drew as its chord")
 	}
 }

@@ -718,13 +718,18 @@ func (x *NetCopper) GetVias() []*Via {
 	return nil
 }
 
-// TrackSegment is one straight copper run on one layer.
+// TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
+// arc sets mid to a point on the curve between a and b, so the run is the circular arc through
+// a, mid and b, as geom.Shape spells an arc (agni issue 1358). A consumer that cannot draw a curve
+// reads the path through geomath.TrackPath, because a and b alone are the chord across the arc.
+// A full circle has no single mid point, so a reader splits one into two arcs.
 type TrackSegment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	A             *Point                 `protobuf:"bytes,1,opt,name=a,proto3" json:"a,omitempty"`
 	B             *Point                 `protobuf:"bytes,2,opt,name=b,proto3" json:"b,omitempty"`
 	Width         int64                  `protobuf:"varint,3,opt,name=width,proto3" json:"width,omitempty"` // trace width in source units
 	Layer         string                 `protobuf:"bytes,4,opt,name=layer,proto3" json:"layer,omitempty"`
+	Mid           *Point                 `protobuf:"bytes,5,opt,name=mid,proto3" json:"mid,omitempty"` // a point on the arc between a and b; unset for a straight run
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -785,6 +790,13 @@ func (x *TrackSegment) GetLayer() string {
 		return x.Layer
 	}
 	return ""
+}
+
+func (x *TrackSegment) GetMid() *Point {
+	if x != nil {
+		return x.Mid
+	}
+	return nil
 }
 
 // Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
@@ -989,12 +1001,13 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\tNetCopper\x12\x10\n" +
 	"\x03net\x18\x01 \x01(\tR\x03net\x126\n" +
 	"\bsegments\x18\x02 \x03(\v2\x1a.agni.v1.geom.TrackSegmentR\bsegments\x12%\n" +
-	"\x04vias\x18\x03 \x03(\v2\x11.agni.v1.geom.ViaR\x04vias\"\x80\x01\n" +
+	"\x04vias\x18\x03 \x03(\v2\x11.agni.v1.geom.ViaR\x04vias\"\xa7\x01\n" +
 	"\fTrackSegment\x12!\n" +
 	"\x01a\x18\x01 \x01(\v2\x13.agni.v1.geom.PointR\x01a\x12!\n" +
 	"\x01b\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x01b\x12\x14\n" +
 	"\x05width\x18\x03 \x01(\x03R\x05width\x12\x14\n" +
-	"\x05layer\x18\x04 \x01(\tR\x05layer\"\x8e\x01\n" +
+	"\x05layer\x18\x04 \x01(\tR\x05layer\x12%\n" +
+	"\x03mid\x18\x05 \x01(\v2\x13.agni.v1.geom.PointR\x03mid\"\x8e\x01\n" +
 	"\x03Via\x12#\n" +
 	"\x02at\x18\x01 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12\x12\n" +
 	"\x04size\x18\x02 \x01(\x03R\x04size\x12\x14\n" +
@@ -1058,13 +1071,14 @@ var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	9,  // 17: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
 	12, // 18: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
 	12, // 19: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	12, // 20: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	14, // 21: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	12, // 20: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	12, // 21: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	14, // 22: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	23, // [23:23] is the sub-list for method output_type
+	23, // [23:23] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }

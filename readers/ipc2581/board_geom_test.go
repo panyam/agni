@@ -2,6 +2,7 @@ package ipc2581
 
 import (
 	"bytes"
+	"math"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -283,7 +284,7 @@ func netCopperByName(g *geom.BoardGeometry, net string) *geom.NetCopper {
 }
 
 // TestBoardGeometryCopper checks that a routed track becomes TrackSegments with widths, with its
-// arc step approximated as arcSegments chords. It also checks that a drilled VIA hole becomes a
+// arc step kept as one arc through its mid point (agni 1358). It also checks that a drilled VIA hole becomes a
 // Via, and the Via's annular is the co-located copper pad minus the drill.
 func TestBoardGeometryCopper(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
@@ -291,9 +292,13 @@ func TestBoardGeometryCopper(t *testing.T) {
 	if gnd == nil {
 		t.Fatalf("no GND copper; nets = %v", g.Nets)
 	}
-	// begin + one straight step (1 seg) + one arc step (arcSegments chords) = 1 + arcSegments segments.
-	if want := 1 + arcSegments; len(gnd.Segments) != want {
-		t.Errorf("GND segments = %d, want %d (1 straight + %d-chord arc)", len(gnd.Segments), want, arcSegments)
+	// begin + one straight step + one arc step = one line and one arc.
+	if len(gnd.Segments) != 2 {
+		t.Fatalf("GND segments = %v, want one straight run and one arc", gnd.Segments)
+	}
+	if s := gnd.Segments[1]; s.Mid == nil || s.A.X != 4_000_000 || s.A.Y != 1_000_000 || s.B.X != 5_000_000 || s.B.Y != 2_000_000 ||
+		math.Abs(float64(s.Mid.X)-(4e6+1e6*math.Sqrt2/2)) > 1 || math.Abs(float64(s.Mid.Y)-(2e6-1e6*math.Sqrt2/2)) > 1 {
+		t.Errorf("GND arc = %v, want (4,1)mm to (5,2)mm counter-clockwise about (4,2)mm, mid at -45 degrees", s)
 	}
 	s0 := gnd.Segments[0]
 	if s0.Width != 200_000 || s0.Layer != "F.Cu" {

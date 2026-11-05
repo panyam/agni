@@ -1,6 +1,7 @@
 package check
 
 import (
+	"math"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -47,5 +48,29 @@ func TestWithBoardAttachesTheBoardTier(t *testing.T) {
 	// The netlist half is unaffected by the board half.
 	if m.ComponentMPN("U1") != "" || len(m.Pins()) != 1 {
 		t.Errorf("attaching a board changed the netlist facts: pins %d", len(m.Pins()))
+	}
+}
+
+// TestAnArcTrackReachesTheRulesAsItsChords holds the board tier to the curve. A rule measuring an
+// arc by its a and b alone would measure the chord across it, 2.9 mm inside this quarter circle.
+func TestAnArcTrackReachesTheRulesAsItsChords(t *testing.T) {
+	bg := &geom.BoardGeometry{Nets: []*geom.NetCopper{{Net: "+5V", Segments: []*geom.TrackSegment{{
+		A: &geom.Point{X: 10e6, Y: 0}, Mid: &geom.Point{X: 7_071_068, Y: 7_071_068}, B: &geom.Point{X: 0, Y: 10e6},
+		Width: 250_000, Layer: "F.Cu",
+	}}}}}
+	m := NewModel(supplyDesign("+5V", false, ""), WithBoard(bg))
+	segs := m.BoardNets()[0].Segments
+	if len(segs) < 10 {
+		t.Fatalf("the arc reached the model as %d segments, want its chords", len(segs))
+	}
+	for _, s := range segs {
+		for _, p := range []*geom.Point{s.A, s.B} {
+			if r := math.Hypot(float64(p.GetX()), float64(p.GetY())); math.Abs(r-10e6) > 2 {
+				t.Errorf("a chord ends %.0f nm from the center, want on the 10 mm circle", r)
+			}
+		}
+		if s.Width != 250_000 || s.Layer != "F.Cu" {
+			t.Errorf("chord = %+v, want the arc's width and layer", s)
+		}
 	}
 }

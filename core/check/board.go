@@ -2,6 +2,7 @@ package check
 
 import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // The board tier of the Model (WS3-008) holds net-grouped views over the board-geometry
@@ -28,8 +29,13 @@ func (m *irModel) attachBoard() {
 	m.hasBoard = true
 	for _, nc := range bg.Nets {
 		bn := BoardNet{Net: nc.Net}
+		// An arc track becomes the chords of geomath.TrackPath, so the width and clearance rules,
+		// which measure straight runs, see the curve rather than the chord across it.
 		for _, s := range nc.Segments {
-			bn.Segments = append(bn.Segments, BoardSeg{Layer: s.Layer, A: s.A, B: s.B, Width: s.Width})
+			pts := geomath.TrackPath(s)
+			for i := 1; i < len(pts); i++ {
+				bn.Segments = append(bn.Segments, BoardSeg{Layer: s.Layer, A: pts[i-1], B: pts[i], Width: s.Width})
+			}
 		}
 		for _, v := range nc.Vias {
 			bn.Vias = append(bn.Vias, BoardVia{At: v.At, Size: v.Size, Drill: v.Drill})
