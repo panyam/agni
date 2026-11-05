@@ -417,11 +417,13 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 			return &webapi.GetSheetResponse{
 				// The served viewer picks on the board as on a sheet, so the board carries the same
 				// keys (render.Style.PickTargets).
-				Content: &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets())},
+				Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets())},
+				BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
 			}, nil
 		}
 		return &webapi.GetSheetResponse{
-			Content: &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, render.WithStyle(s.styleOrDefault()))},
+			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, render.WithStyle(s.styleOrDefault()))},
+			BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
 		}, nil
 	}
 	// Native renders the tool's own faithful pages, so its sheet selection comes from the faithful

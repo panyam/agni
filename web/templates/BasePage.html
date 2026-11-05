@@ -361,6 +361,11 @@
     /* agni issue 1367: the Sheets panel's board control and its picker */
     .sheet-board { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 8px 8px; font-size: 12px; color: #555; }
     .sheet-board-attached { overflow-wrap: anywhere; }
+    .board-layers { padding: 2px 8px 6px; font-size: 12px; }
+    .board-layer-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+    .board-layer-rows { list-style: none; margin: 0; padding: 0; }
+    .board-layer-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; cursor: pointer; user-select: none; }
+    .board-layer-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.25); }
     .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 1000; display: flex; align-items: center; justify-content: center; }
     .board-picker { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 12px; width: min(520px, 90vw); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
     .board-picker-title { font-weight: bold; }

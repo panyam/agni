@@ -10,8 +10,6 @@ const base: ControlsState = {
   layout: "faithful",
   providedSymbols: false,
   faithfulSymbols: false,
-  board: false,
-  boardLayers: "all",
   hasHighlights: false,
 };
 
@@ -23,7 +21,6 @@ function mount(over: Partial<ControlsState> = {}, staticHost = false) {
     onMode: vi.fn(),
     onLayout: vi.fn(),
     onSymbols: vi.fn(),
-    onBoardLayers: vi.fn(),
     onClearHighlights,
   }, { staticHost });
   bar.island.activate();

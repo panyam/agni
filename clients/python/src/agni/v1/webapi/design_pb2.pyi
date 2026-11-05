@@ -112,12 +112,14 @@ class GetSheetRequest(_message.Message):
     def __init__(self, snapshot: _Optional[str] = ..., sheet: _Optional[str] = ..., layout: _Optional[str] = ..., format: _Optional[_Union[SheetFormat, str]] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ...) -> None: ...
 
 class GetSheetResponse(_message.Message):
-    __slots__ = ("packed", "svg")
+    __slots__ = ("packed", "svg", "board_layers")
     PACKED_FIELD_NUMBER: _ClassVar[int]
     SVG_FIELD_NUMBER: _ClassVar[int]
+    BOARD_LAYERS_FIELD_NUMBER: _ClassVar[int]
     packed: _geom_packed_pb2.PackedSheet
     svg: str
-    def __init__(self, packed: _Optional[_Union[_geom_packed_pb2.PackedSheet, _Mapping]] = ..., svg: _Optional[str] = ...) -> None: ...
+    board_layers: _containers.RepeatedCompositeFieldContainer[_geom_packed_pb2.BoardLayerRow]
+    def __init__(self, packed: _Optional[_Union[_geom_packed_pb2.PackedSheet, _Mapping]] = ..., svg: _Optional[str] = ..., board_layers: _Optional[_Iterable[_Union[_geom_packed_pb2.BoardLayerRow, _Mapping]]] = ...) -> None: ...
 
 class HighlightSheetRequest(_message.Message):
     __slots__ = ("snapshot", "sheet", "layout", "symbols", "format", "specs")

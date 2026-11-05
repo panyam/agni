@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_packed.proto.
  */
 export const file_agni_v1_geom_geom_packed: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJsCgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJIiYKBlBpblJlZhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCSLYAQoNSGlnaGxpZ2h0U3BlYxISCgpjb21wb25lbnRzGAEgAygJEgwKBG5ldHMYAiADKAkSIgoEcGlucxgDIAMoCzIULmFnbmkudjEuZ2VvbS5QaW5SZWYSDwoHbmV0X2lkcxgIIAMoCRIPCgdidXNfaWRzGAkgAygJEg0KBWNvbG9yGAQgASgJEg0KBWFscGhhGAUgASgCEisKBXNoYXBlGAYgASgOMhwuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNoYXBlEhQKDHN0cm9rZV9zY2FsZRgHIAEoAiKuAQoPUGFja2VkSGlnaGxpZ2h0EjMKBmdyb3VwcxgBIAMoCzIjLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHQuR3JvdXAaZgoFR3JvdXASDQoFY29sb3IYASABKAkSDQoFYWxwaGEYAiABKAISEgoKcHJpbWl0aXZlcxgDIAMoDRIrCgVzaGFwZRgEIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZSKVAQoHVGV4dFJ1bhIMCgR0ZXh0GAEgASgJEigKBGtpbmQYAiABKA4yGi5hZ25pLnYxLmdlb20uVGV4dFJ1bi5LaW5kIlIKBEtpbmQSDgoKS0lORF9QTEFJThAAEhAKDEtJTkRfT1ZFUkJBUhABEhIKDktJTkRfU1VCU0NSSVBUEAISFAoQS0lORF9TVVBFUlNDUklQVBADIq8BCgtQYWNrZWRMYWJlbBIJCgF4GAEgASgFEgkKAXkYAiABKAUSDAoEdGV4dBgDIAEoCRIOCgZoZWlnaHQYBCABKAUSFAoMcm90YXRpb25fZGVnGAUgASgFEg8KB2p1c3RpZnkYBiABKAkSDQoFY29sb3IYByABKAkSEQoJbWF4X3dpZHRoGAggASgFEiMKBHJ1bnMYCSADKAsyFS5hZ25pLnYxLmdlb20uVGV4dFJ1biJ7CgtQYWNrZWRJbWFnZRIJCgF4GAEgASgFEgkKAXkYAiABKAUSCQoBdxgDIAEoBRIJCgFoGAQgASgFEgwKBG1pbWUYBSABKAkSDAoEZGF0YRgGIAEoDBIUCgxyb3RhdGlvbl9kZWcYByABKAUSDgoGbWlycm9yGAggASgIIsYCCgtQYWNrZWRTaGVldBIQCghzaGVldF9pZBgBIAEoCRIWCg5sYXlvdXRfdmVyc2lvbhgCIAEoBRIQCghvcmlnaW5feBgDIAEoAxIQCghvcmlnaW5feRgEIAEoAxIQCgh2ZXJ0aWNlcxgFIAEoDBISCgpwcmltaXRpdmVzGAYgASgMEigKBGtleXMYByADKAsyGi5hZ25pLnYxLmdlb20uUHJpbWl0aXZlS2V5EikKBmxhYmVscxgIIAMoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRMYWJlbBITCgtmb250X2ZhbWlseRgJIAEoCRIUCgxncm91cF9jb2xvcnMYCiADKAkSGAoQYmFja2dyb3VuZF9jb2xvchgLIAEoCRIpCgZpbWFnZXMYDCADKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkSW1hZ2UqsAEKDkhpZ2hsaWdodFNoYXBlEh8KG0hJR0hMSUdIVF9TSEFQRV9VTlNQRUNJRklFRBAAEhsKF0hJR0hMSUdIVF9TSEFQRV9PVVRMSU5FEAESIQodSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX1JFQ1QQAhIjCh9ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfQ0lSQ0xFEAMSGAoUSElHSExJR0hUX1NIQVBFX1BBVEgQBEIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw");
+  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJsCgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJIiYKBlBpblJlZhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCSLYAQoNSGlnaGxpZ2h0U3BlYxISCgpjb21wb25lbnRzGAEgAygJEgwKBG5ldHMYAiADKAkSIgoEcGlucxgDIAMoCzIULmFnbmkudjEuZ2VvbS5QaW5SZWYSDwoHbmV0X2lkcxgIIAMoCRIPCgdidXNfaWRzGAkgAygJEg0KBWNvbG9yGAQgASgJEg0KBWFscGhhGAUgASgCEisKBXNoYXBlGAYgASgOMhwuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNoYXBlEhQKDHN0cm9rZV9zY2FsZRgHIAEoAiKuAQoPUGFja2VkSGlnaGxpZ2h0EjMKBmdyb3VwcxgBIAMoCzIjLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHQuR3JvdXAaZgoFR3JvdXASDQoFY29sb3IYASABKAkSDQoFYWxwaGEYAiABKAISEgoKcHJpbWl0aXZlcxgDIAMoDRIrCgVzaGFwZRgEIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZSKVAQoHVGV4dFJ1bhIMCgR0ZXh0GAEgASgJEigKBGtpbmQYAiABKA4yGi5hZ25pLnYxLmdlb20uVGV4dFJ1bi5LaW5kIlIKBEtpbmQSDgoKS0lORF9QTEFJThAAEhAKDEtJTkRfT1ZFUkJBUhABEhIKDktJTkRfU1VCU0NSSVBUEAISFAoQS0lORF9TVVBFUlNDUklQVBADIr4BCgtQYWNrZWRMYWJlbBIJCgF4GAEgASgFEgkKAXkYAiABKAUSDAoEdGV4dBgDIAEoCRIOCgZoZWlnaHQYBCABKAUSFAoMcm90YXRpb25fZGVnGAUgASgFEg8KB2p1c3RpZnkYBiABKAkSDQoFY29sb3IYByABKAkSEQoJbWF4X3dpZHRoGAggASgFEiMKBHJ1bnMYCSADKAsyFS5hZ25pLnYxLmdlb20uVGV4dFJ1bhINCgVncm91cBgKIAEoDSJ7CgtQYWNrZWRJbWFnZRIJCgF4GAEgASgFEgkKAXkYAiABKAUSCQoBdxgDIAEoBRIJCgFoGAQgASgFEgwKBG1pbWUYBSABKAkSDAoEZGF0YRgGIAEoDBIUCgxyb3RhdGlvbl9kZWcYByABKAUSDgoGbWlycm9yGAggASgIIsYCCgtQYWNrZWRTaGVldBIQCghzaGVldF9pZBgBIAEoCRIWCg5sYXlvdXRfdmVyc2lvbhgCIAEoBRIQCghvcmlnaW5feBgDIAEoAxIQCghvcmlnaW5feRgEIAEoAxIQCgh2ZXJ0aWNlcxgFIAEoDBISCgpwcmltaXRpdmVzGAYgASgMEigKBGtleXMYByADKAsyGi5hZ25pLnYxLmdlb20uUHJpbWl0aXZlS2V5EikKBmxhYmVscxgIIAMoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRMYWJlbBITCgtmb250X2ZhbWlseRgJIAEoCRIUCgxncm91cF9jb2xvcnMYCiADKAkSGAoQYmFja2dyb3VuZF9jb2xvchgLIAEoCRIpCgZpbWFnZXMYDCADKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkSW1hZ2UibgoNQm9hcmRMYXllclJvdxIMCgRuYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSDAoEc2lkZRgDIAEoCRINCgVjb2xvchgEIAEoCRIUCgxzdmdfc2VsZWN0b3IYBSABKAkSDgoGZ3JvdXBzGAYgAygNKrABCg5IaWdobGlnaHRTaGFwZRIfChtISUdITElHSFRfU0hBUEVfVU5TUEVDSUZJRUQQABIbChdISUdITElHSFRfU0hBUEVfT1VUTElORRABEiEKHUhJR0hMSUdIVF9TSEFQRV9CT1VORElOR19SRUNUEAISIwofSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX0NJUkNMRRADEhgKFEhJR0hMSUdIVF9TSEFQRV9QQVRIEARCLFoqZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9nZW9tYgZwcm90bzM");
 
 /**
  * PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
@@ -385,13 +385,22 @@ export type PackedLabel = Message<"agni.v1.geom.PackedLabel"> & {
    * runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
    * to `text`. Empty means `text` draws as one plain run.
    *
+   * @generated from field: repeated agni.v1.geom.TextRun runs = 9;
+   */
+  runs: TextRun[];
+
+  /**
+   * group is the primitive group the label hides with, so a board's silkscreen text hides with its
+   * layer (agni 1351). 0 means the label belongs to no group and always draws, as every schematic
+   * label does.
+   *
    * There is no font field yet. Every renderer draws one font (monospace, matching the SVG
    * backend), and the geom IR has no per-text font. Add `string font` here once a reader
    * populates per-element font on the IR. It is an additive change, so waiting loses nothing.
    *
-   * @generated from field: repeated agni.v1.geom.TextRun runs = 9;
+   * @generated from field: uint32 group = 10;
    */
-  runs: TextRun[];
+  group: number;
 };
 
 /**
@@ -578,6 +587,68 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
  */
 export const PackedSheetSchema: GenMessage<PackedSheet> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_packed, 7);
+
+/**
+ * BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes
+ * under the Board entry in its Sheets panel (agni 1351). The rows come in the order a reader
+ * expects, copper in stackup order from the front, then the edge, the through copper, the zones,
+ * and the graphics layers. Only a layer the geometry draws gets a row.
+ *
+ * A row says how to hide it in each renderer, so the client knows nothing about how a board is
+ * drawn. svg_selector matches every element of the row in render.BoardSVG's output, and groups
+ * lists the PackedSheet primitive groups of the row in render.PackBoard's output. A client hides a
+ * row by hiding both. An element can belong to two rows, as a zone on In1.Cu does, and it stays
+ * hidden while either row is hidden.
+ *
+ * @generated from message agni.v1.geom.BoardLayerRow
+ */
+export type BoardLayerRow = Message<"agni.v1.geom.BoardLayerRow"> & {
+  /**
+   * name is the layer's own name ("F.Cu", "In1.Cu", "F.SilkS"), or "Edge", "Through" or "Zones"
+   * for the three rows that hold no single layer.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * kind is "copper", "edge", "through", "zones", "silk", "fab", "courtyard" or "graphic".
+   *
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * side is "front", "back" or "inner", or "" for a row that belongs to both sides.
+   *
+   * @generated from field: string side = 3;
+   */
+  side: string;
+
+  /**
+   * color is the row's swatch, the colour both renderers draw it in. "#rrggbb".
+   *
+   * @generated from field: string color = 4;
+   */
+  color: string;
+
+  /**
+   * @generated from field: string svg_selector = 5;
+   */
+  svgSelector: string;
+
+  /**
+   * @generated from field: repeated uint32 groups = 6;
+   */
+  groups: number[];
+};
+
+/**
+ * Describes the message agni.v1.geom.BoardLayerRow.
+ * Use `create(BoardLayerRowSchema)` to create a new message.
+ */
+export const BoardLayerRowSchema: GenMessage<BoardLayerRow> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 8);
 
 /**
  * HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).

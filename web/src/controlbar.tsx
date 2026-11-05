@@ -18,7 +18,6 @@ function Controls(props: {
   onMode: (m: RenderMode) => void;
   onLayout: (l: string) => void;
   onSymbols: (faithful: boolean) => void;
-  onBoardLayers: (side: string) => void;
   onClearHighlights: () => void;
   staticHost: boolean;
 }) {
@@ -73,16 +72,6 @@ function Controls(props: {
           Provided symbols
         </label>
       </Show>
-      <Show when={props.state().board}>
-        <select
-          class="layout-select"
-          title="board layer visibility"
-          value={props.state().boardLayers}
-          onChange={(e) => props.onBoardLayers(e.currentTarget.value)}
-        >
-          <For each={["all", "front", "back"]}>{(s) => <option value={s}>{s} layers</option>}</For>
-        </select>
-      </Show>
       {/* Always rendered, and disabled when there is nothing to clear, because a control that
           appears on a state change has to be discovered twice (agni issue 348). */}
       <button
@@ -106,7 +95,6 @@ export function controlBarIsland(
     onMode: (m: RenderMode) => void;
     onLayout: (l: string) => void;
     onSymbols: (faithful: boolean) => void;
-    onBoardLayers: (side: string) => void;
     onClearHighlights: () => void;
   },
   opts: { staticHost?: boolean } = {},
@@ -118,8 +106,6 @@ export function controlBarIsland(
     layout: "",
     providedSymbols: false,
     faithfulSymbols: false,
-    board: false,
-    boardLayers: "all",
     hasHighlights: false,
   });
   const island = new SolidIsland(
@@ -131,7 +117,6 @@ export function controlBarIsland(
         onMode={handlers.onMode}
         onLayout={handlers.onLayout}
         onSymbols={handlers.onSymbols}
-        onBoardLayers={handlers.onBoardLayers}
         onClearHighlights={handlers.onClearHighlights}
         staticHost={opts.staticHost ?? false}
       />

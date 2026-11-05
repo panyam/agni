@@ -209,8 +209,24 @@ export class TextOverlay {
         if (l.rotationDeg) t.setAttribute("transform", `rotate(${l.rotationDeg} ${x} ${line.y})`);
         if (l.runs.length > 0 && !l.text.includes("\n")) appendRuns(t, l.runs);
         else t.textContent = line.text;
+        if (l.group) t.setAttribute("data-group", String(l.group));
         this.svg.appendChild(t);
       }
+    }
+    this.applyHidden();
+  }
+
+  // setHiddenGroups hides the text of hidden primitive groups, so a board's silkscreen text hides
+  // with its layer as its graphics do (agni 1351). It is kept across setContent.
+  setHiddenGroups(groups: Iterable<number>): void {
+    this.hidden = new Set(groups);
+    this.applyHidden();
+  }
+  private hidden = new Set<number>();
+
+  private applyHidden(): void {
+    for (const el of this.svg.querySelectorAll<SVGElement>("[data-group]")) {
+      el.style.display = this.hidden.has(Number(el.getAttribute("data-group"))) ? "none" : "";
     }
   }
 

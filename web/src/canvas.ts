@@ -57,6 +57,7 @@ export class CanvasComponent extends BaseComponent {
   setHiddenGroups(groups: Iterable<number>): void {
     this.hidden = [...groups];
     this.renderer?.setHiddenGroups(this.hidden);
+    this.overlay?.setHiddenGroups(this.hidden);
   }
   private hidden: number[] = [];
 
@@ -78,6 +79,7 @@ export class CanvasComponent extends BaseComponent {
     this.renderer.setHiddenGroups(this.hidden);
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
     this.overlay ??= this.makeOverlay();
+    this.overlay?.setHiddenGroups(this.hidden);
     this.overlay?.setContent(sheet.images, sheet.labels, sheet.fontFamily);
     this.applyHighlights(); // highlights chosen before this sheet was (re)drawn are reapplied
     this.resize();

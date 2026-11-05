@@ -542,7 +542,11 @@ type PackedLabel struct {
 	// (textLength) rather than spilling past the box, matching the SVG backend.
 	// runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
 	// to `text`. Empty means `text` draws as one plain run.
-	Runs          []*TextRun `protobuf:"bytes,9,rep,name=runs,proto3" json:"runs,omitempty"`
+	Runs []*TextRun `protobuf:"bytes,9,rep,name=runs,proto3" json:"runs,omitempty"`
+	// group is the primitive group the label hides with, so a board's silkscreen text hides with its
+	// layer (agni 1351). 0 means the label belongs to no group and always draws, as every schematic
+	// label does.
+	Group         uint32 `protobuf:"varint,10,opt,name=group,proto3" json:"group,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -638,6 +642,13 @@ func (x *PackedLabel) GetRuns() []*TextRun {
 		return x.Runs
 	}
 	return nil
+}
+
+func (x *PackedLabel) GetGroup() uint32 {
+	if x != nil {
+		return x.Group
+	}
+	return 0
 }
 
 // PackedImage is one raster image positioned in sheet-relative world coordinates (rebased by
@@ -894,6 +905,105 @@ func (x *PackedSheet) GetImages() []*PackedImage {
 	return nil
 }
 
+// BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes
+// under the Board entry in its Sheets panel (agni 1351). The rows come in the order a reader
+// expects, copper in stackup order from the front, then the edge, the through copper, the zones,
+// and the graphics layers. Only a layer the geometry draws gets a row.
+//
+// A row says how to hide it in each renderer, so the client knows nothing about how a board is
+// drawn. svg_selector matches every element of the row in render.BoardSVG's output, and groups
+// lists the PackedSheet primitive groups of the row in render.PackBoard's output. A client hides a
+// row by hiding both. An element can belong to two rows, as a zone on In1.Cu does, and it stays
+// hidden while either row is hidden.
+type BoardLayerRow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the layer's own name ("F.Cu", "In1.Cu", "F.SilkS"), or "Edge", "Through" or "Zones"
+	// for the three rows that hold no single layer.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// kind is "copper", "edge", "through", "zones", "silk", "fab", "courtyard" or "graphic".
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// side is "front", "back" or "inner", or "" for a row that belongs to both sides.
+	Side string `protobuf:"bytes,3,opt,name=side,proto3" json:"side,omitempty"`
+	// color is the row's swatch, the colour both renderers draw it in. "#rrggbb".
+	Color         string   `protobuf:"bytes,4,opt,name=color,proto3" json:"color,omitempty"`
+	SvgSelector   string   `protobuf:"bytes,5,opt,name=svg_selector,json=svgSelector,proto3" json:"svg_selector,omitempty"`
+	Groups        []uint32 `protobuf:"varint,6,rep,packed,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BoardLayerRow) Reset() {
+	*x = BoardLayerRow{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardLayerRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardLayerRow) ProtoMessage() {}
+
+func (x *BoardLayerRow) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardLayerRow.ProtoReflect.Descriptor instead.
+func (*BoardLayerRow) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *BoardLayerRow) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *BoardLayerRow) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *BoardLayerRow) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
+}
+
+func (x *BoardLayerRow) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *BoardLayerRow) GetSvgSelector() string {
+	if x != nil {
+		return x.SvgSelector
+	}
+	return ""
+}
+
+func (x *BoardLayerRow) GetGroups() []uint32 {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
 type PackedHighlight_Group struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Color      string                 `protobuf:"bytes,1,opt,name=color,proto3" json:"color,omitempty"`                   // "#rrggbb"; empty means the renderer's default
@@ -909,7 +1019,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -921,7 +1031,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1009,7 +1119,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"KIND_PLAIN\x10\x00\x12\x10\n" +
 	"\fKIND_OVERBAR\x10\x01\x12\x12\n" +
 	"\x0eKIND_SUBSCRIPT\x10\x02\x12\x14\n" +
-	"\x10KIND_SUPERSCRIPT\x10\x03\"\xf0\x01\n" +
+	"\x10KIND_SUPERSCRIPT\x10\x03\"\x86\x02\n" +
 	"\vPackedLabel\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\x12\n" +
@@ -1019,7 +1129,9 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\ajustify\x18\x06 \x01(\tR\ajustify\x12\x14\n" +
 	"\x05color\x18\a \x01(\tR\x05color\x12\x1b\n" +
 	"\tmax_width\x18\b \x01(\x05R\bmaxWidth\x12)\n" +
-	"\x04runs\x18\t \x03(\v2\x15.agni.v1.geom.TextRunR\x04runs\"\xa8\x01\n" +
+	"\x04runs\x18\t \x03(\v2\x15.agni.v1.geom.TextRunR\x04runs\x12\x14\n" +
+	"\x05group\x18\n" +
+	" \x01(\rR\x05group\"\xa8\x01\n" +
 	"\vPackedImage\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\f\n" +
@@ -1045,7 +1157,14 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\fgroup_colors\x18\n" +
 	" \x03(\tR\vgroupColors\x12)\n" +
 	"\x10background_color\x18\v \x01(\tR\x0fbackgroundColor\x121\n" +
-	"\x06images\x18\f \x03(\v2\x19.agni.v1.geom.PackedImageR\x06images*\xb0\x01\n" +
+	"\x06images\x18\f \x03(\v2\x19.agni.v1.geom.PackedImageR\x06images\"\x9c\x01\n" +
+	"\rBoardLayerRow\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04side\x18\x03 \x01(\tR\x04side\x12\x14\n" +
+	"\x05color\x18\x04 \x01(\tR\x05color\x12!\n" +
+	"\fsvg_selector\x18\x05 \x01(\tR\vsvgSelector\x12\x16\n" +
+	"\x06groups\x18\x06 \x03(\rR\x06groups*\xb0\x01\n" +
 	"\x0eHighlightShape\x12\x1f\n" +
 	"\x1bHIGHLIGHT_SHAPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17HIGHLIGHT_SHAPE_OUTLINE\x10\x01\x12!\n" +
@@ -1066,7 +1185,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -1078,12 +1197,13 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*PackedLabel)(nil),           // 7: agni.v1.geom.PackedLabel
 	(*PackedImage)(nil),           // 8: agni.v1.geom.PackedImage
 	(*PackedSheet)(nil),           // 9: agni.v1.geom.PackedSheet
-	(*PackedHighlight_Group)(nil), // 10: agni.v1.geom.PackedHighlight.Group
+	(*BoardLayerRow)(nil),         // 10: agni.v1.geom.BoardLayerRow
+	(*PackedHighlight_Group)(nil), // 11: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	10, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	11, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
 	2,  // 5: agni.v1.geom.PackedSheet.keys:type_name -> agni.v1.geom.PrimitiveKey
@@ -1108,7 +1228,7 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

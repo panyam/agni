@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1080.0" viewBox="0 0 1680.0 1080.0" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif">
 <rect x="0.0" y="0.0" width="1680.0" height="1080.0" fill="#fdfdfb"/>
 <g class="zones-front">
-<polygon points="90.0,90.0 1490.0,90.0 1490.0,990.0 90.0,990.0" fill="#c83434" fill-opacity="0.2" stroke="none"/>
+<polygon points="90.0,90.0 1490.0,90.0 1490.0,990.0 90.0,990.0" data-layer="F.Cu" fill="#c83434" fill-opacity="0.2" stroke="none"/>
 </g>
 <g class="copper-back" data-layer="B.Cu">
 <line x1="790.0" y1="640.0" x2="1040.0" y2="790.0" stroke="#3050c8" stroke-width="12.5" stroke-linecap="round"/>
@@ -36,10 +36,10 @@
 </g>
 </g>
 <g class="labels">
-<text x="440.0" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central">R1</text>
-<text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central">10k</text>
-<text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central">J1</text>
-<text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central">CONN</text>
-<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)">Demo Board</text>
+<text x="440.0" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">R1</text>
+<text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">10k</text>
+<text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">J1</text>
+<text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">CONN</text>
+<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)" data-layer="B.SilkS">Demo Board</text>
 </g>
 </svg>
