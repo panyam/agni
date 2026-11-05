@@ -1,6 +1,11 @@
 package kicad
 
 import (
+	"bufio"
+	"bytes"
+	"math"
+	"strconv"
+	"strings"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -43,5 +48,63 @@ func TestDoNotPopulateReachesThePlacement(t *testing.T) {
 		if pl.Dnp != want {
 			t.Errorf("%s dnp = %v, want %v", ref, pl.Dnp, want)
 		}
+	}
+}
+
+// KiCad draws an arrow at a hierarchical label's connect point. orient-labels.kicad_sch has an
+// input label at each angle, and every corner of each arrow must be kicad-cli's.
+func TestHierarchicalLabelArrowsMatchKiCad(t *testing.T) {
+	g := readSheetGeometry(t, "orient-labels.kicad_sch")
+	type xy struct{ x, y float64 }
+	var ours [][]xy
+	for _, s := range g.Sheets[0].Shapes {
+		if s.Kind != geom.Shape_KIND_POLYLINE {
+			continue
+		}
+		var pts []xy
+		for _, p := range s.Points {
+			pts = append(pts, xy{float64(p.X) / 1e6, -float64(p.Y) / 1e6})
+		}
+		ours = append(ours, pts)
+	}
+	rows := 0
+	sc := bufio.NewScanner(bytes.NewReader(readFixture(t, "orient-labels.kicad-arrows.txt")))
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "#") || line == "" {
+			continue
+		}
+		rows++
+		f := strings.Split(line, "\t")
+		var want []xy
+		for _, c := range f[1:] {
+			a, b, _ := strings.Cut(c, ",")
+			x, _ := strconv.ParseFloat(a, 64)
+			y, _ := strconv.ParseFloat(b, 64)
+			want = append(want, xy{x, y})
+		}
+		found := false
+		for _, o := range ours {
+			if len(o) < len(want) {
+				continue
+			}
+			ok := true
+			for i, w := range want {
+				if math.Hypot(o[i].x-w.x, o[i].y-w.y) > 0.005 {
+					ok = false
+					break
+				}
+			}
+			if ok {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("%s: no arrow of ours has kicad-cli's corners %v", f[0], want)
+		}
+	}
+	if rows != 4 {
+		t.Fatalf("read %d kicad-cli arrows, want 4", rows)
 	}
 }

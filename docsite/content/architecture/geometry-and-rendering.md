@@ -268,6 +268,14 @@ KiCad states neither position, so its reader lays them out by KiCad's own rule (
 
 A KiCad shape's fill type is the file's, and its colour is the theme's. `background` means the theme's symbol-body colour, which is `Style.ShapeFill` here and pale yellow in KiCad. KiCad paints every body fill on a layer under the symbol's lines. So the reader puts a symbol's background-filled shapes ahead of its other shapes, keeping file order within each group. A transistor whose body is a filled circle otherwise covers the channel drawn inside it. A two-point line encloses nothing, so the reader drops its fill whatever type it names.
 
+### A KiCad label's text sits off its wire
+
+KiCad keeps schematic text readable, so a label at 180 reads left to right and one at 270 reads bottom to top. The file's justify is already the justify of the run as read, so `(at x y 180)` with `(justify right)` ends at its anchor and runs left. The reader therefore hands the renderer 0 or 90, never 180 or 270. Handing it 180 turned the run upright a second time, flipped that justify, and ran the label across its wire.
+
+KiCad also draws a label's text a little away from where it meets its wire, and the distance depends on the label's kind. A local label is lifted by its text offset plus the pen, 0.27 heights. A hierarchical label or a sheet pin moves along its reading direction by one text width plus the offset, 1.15 heights, to leave room for its arrow. A global label moves along it by a margin of 0.375 heights, plus three quarters of a height when its flag has an arrow at the wire end. The reader places `Label.origin` where the text goes and keeps the wire point in `Label.anchor`, so a consumer joining a label to its wire reads `anchor` first. `orient-labels.kicad_sch` puts every kind at every angle, and `TestLabelTextSitsWhereKiCadDrawsIt` holds each run to kicad-cli's export.
+
+A global label is drawn inside a flag whose ends show the signal's direction (`Label.flag`). The renderer draws the outline from `anchor` with KiCad's shape, and sizes its length from its own text width rather than KiCad's stroke font, so the box fits the text a reader sees. `TestGlobalLabelFlagsStartWhereKiCadDrawsThem` holds the wire end of every flag to kicad-cli's corners.
+
 ### A do-not-populate part is crossed out
 
 `SymbolPlacement.dnp` marks a part that the schematic draws and the board leaves unfitted, read from KiCad's `(dnp yes)`. Both backends draw KiCad's red cross over the part's body, which is its artwork without the pin legs. The netlist keeps the same flag in the part's attributes, where `component.dnp` reads it.

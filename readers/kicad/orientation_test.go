@@ -67,7 +67,11 @@ func TestEveryDrawnPinStartsItsOwnLabelledWire(t *testing.T) {
 	labelAt := map[pt]string{}
 	for _, sh := range g.Sheets {
 		for _, l := range sh.Labels {
-			labelAt[key(l.Origin)] = l.Text
+			at := l.Origin
+			if l.Anchor != nil {
+				at = l.Anchor
+			}
+			labelAt[key(at)] = l.Text
 		}
 	}
 	// Each wire runs from a pin to its label, so the end that is not the label is the pin.

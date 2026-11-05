@@ -247,6 +247,24 @@ message Label {
   // "left bottom"; KiCad "left bottom").
   string justify = 4;
   int32 rotation_deg = 5;  // degrees counter-clockwise
+  // Flag is the outline a label is drawn inside. KiCad draws a global label in a box whose
+  // ends show the signal's direction, an arrow out for an output and arrows both ways for a
+  // bidirectional signal.
+  enum Flag {
+    FLAG_NONE = 0;           // text alone, as for a local label
+    FLAG_PASSIVE = 1;        // a plain box
+    FLAG_INPUT = 2;          // an arrow into the connection
+    FLAG_OUTPUT = 3;         // an arrow out of it
+    FLAG_BIDIRECTIONAL = 4;  // arrows both ways
+    FLAG_TRI_STATE = 5;      // drawn as bidirectional
+  }
+  Flag flag = 6;
+  // Where the label meets its wire, when a reader set the text apart from it. KiCad draws a
+  // label's text a little off its connect point, so its reader places origin where the text
+  // goes and keeps the connect point here. A flag's outline starts from it. Nil when the text
+  // sits on the connect point, so a consumer joining a label to its wire reads anchor first and
+  // origin otherwise.
+  Point anchor = 7;
 }
 
 // SheetGeometry is one schematic page/sheet (tier 1, logical).

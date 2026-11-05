@@ -244,18 +244,36 @@ class WireGeometry(_message.Message):
     def __init__(self, net: _Optional[str] = ..., net_id: _Optional[str] = ..., polylines: _Optional[_Iterable[_Union[Polyline, _Mapping]]] = ..., kind: _Optional[_Union[WireGeometry.Kind, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Label(_message.Message):
-    __slots__ = ("text", "origin", "height", "justify", "rotation_deg")
+    __slots__ = ("text", "origin", "height", "justify", "rotation_deg", "flag", "anchor")
+    class Flag(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        FLAG_NONE: _ClassVar[Label.Flag]
+        FLAG_PASSIVE: _ClassVar[Label.Flag]
+        FLAG_INPUT: _ClassVar[Label.Flag]
+        FLAG_OUTPUT: _ClassVar[Label.Flag]
+        FLAG_BIDIRECTIONAL: _ClassVar[Label.Flag]
+        FLAG_TRI_STATE: _ClassVar[Label.Flag]
+    FLAG_NONE: Label.Flag
+    FLAG_PASSIVE: Label.Flag
+    FLAG_INPUT: Label.Flag
+    FLAG_OUTPUT: Label.Flag
+    FLAG_BIDIRECTIONAL: Label.Flag
+    FLAG_TRI_STATE: Label.Flag
     TEXT_FIELD_NUMBER: _ClassVar[int]
     ORIGIN_FIELD_NUMBER: _ClassVar[int]
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     JUSTIFY_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
+    FLAG_FIELD_NUMBER: _ClassVar[int]
+    ANCHOR_FIELD_NUMBER: _ClassVar[int]
     text: str
     origin: Point
     height: int
     justify: str
     rotation_deg: int
-    def __init__(self, text: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., height: _Optional[int] = ..., justify: _Optional[str] = ..., rotation_deg: _Optional[int] = ...) -> None: ...
+    flag: Label.Flag
+    anchor: Point
+    def __init__(self, text: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., height: _Optional[int] = ..., justify: _Optional[str] = ..., rotation_deg: _Optional[int] = ..., flag: _Optional[_Union[Label.Flag, str]] = ..., anchor: _Optional[_Union[Point, _Mapping]] = ...) -> None: ...
 
 class SheetGeometry(_message.Message):
     __slots__ = ("id", "name", "parent_id", "size", "placements", "wires", "labels", "shapes", "title_block", "images", "suppress_worksheet", "prov")

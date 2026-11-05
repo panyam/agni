@@ -163,7 +163,7 @@ func sheetOf(root *node, src string, wireNetOf func(uuid string) netgraph.NetRef
 		}
 	}
 	sh.Labels = append(sh.Labels, labelsOf(root)...)
-	sh.Shapes = sheetShapes(root)
+	sh.Shapes = append(sheetShapes(root), hierLabelArrows(root)...)
 	for _, im := range root.Children("image") {
 		if img := kicadImage(im, src); img != nil {
 			sh.Images = append(sh.Images, img)
@@ -289,7 +289,11 @@ func appendSubSheet(sh *geom.SheetGeometry, sub *node) {
 		}
 		sh.Shapes = append(sh.Shapes, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{loc}})
 		if name := atomOf(pin.Arg(1)); name != "" {
-			sh.Labels = append(sh.Labels, &geom.Label{Text: name, Origin: loc, Height: fontSize(pin), Justify: kicadJustify(pin)})
+			l := &geom.Label{Text: name, Origin: loc, Height: fontSize(pin), Justify: kicadJustify(pin)}
+			deg, _ := strconv.ParseFloat(atomOf(pin.Child("at").Arg(3)), 64)
+			l.RotationDeg = geomRotation(readableLabelAngle(deg))
+			shiftHierLabel(l)
+			sh.Labels = append(sh.Labels, l)
 		}
 	}
 }
@@ -949,15 +953,163 @@ func labelsOf(root *node) []*geom.Label {
 				continue
 			}
 			l := &geom.Label{Text: atomOf(n.Arg(1)), Origin: origin, Height: fontSize(n), Justify: kicadJustify(n)}
-			if a := at.Arg(3); a != nil {
-				if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
-					l.RotationDeg = geomRotation(deg)
-				}
+			deg, _ := strconv.ParseFloat(atomOf(at.Arg(3)), 64)
+			l.RotationDeg = geomRotation(readableLabelAngle(deg))
+			switch tag {
+			case "global_label":
+				placeGlobalLabel(l, n, deg)
+			case "label":
+				liftLocalLabel(l)
+			case "hierarchical_label":
+				shiftHierLabel(l)
 			}
 			out = append(out, l)
 		}
 	}
 	return out
+}
+
+// readableLabelAngle is the angle KiCad draws a sheet label or text at. KiCad keeps schematic
+// text readable, so a label at 180 reads left to right and one at 270 reads bottom to top, and
+// the file's justify is already the justify of the run as read. So (at x y 180) with (justify
+// right) ends at its anchor and runs left. Handing the renderer 180 turned the run upright a
+// second time and flipped that justify, so the label ran over its wire (agni 1344).
+func readableLabelAngle(deg float64) float64 {
+	switch normDeg(deg) {
+	case 90, 270:
+		return 90
+	}
+	return 0
+}
+
+// liftLocalLabel moves a local label's text off its wire, as kicad-cli draws it. KiCad lifts
+// the run by its text offset, 0.15 heights, plus the pen, which on Jetson measured 0.343 mm at
+// a 1.27 mm height. The lift is along the run's up, so a vertical label moves left.
+func liftLocalLabel(l *geom.Label) {
+	h := float64(l.Height)
+	if h == 0 {
+		h = 1_270_000
+	}
+	d := int64(math.Round((0.15 + 0.12) * h))
+	l.Anchor = l.Origin
+	if l.RotationDeg != 0 {
+		l.Origin = &geom.Point{X: l.Origin.X - d, Y: l.Origin.Y}
+		return
+	}
+	l.Origin = &geom.Point{X: l.Origin.X, Y: l.Origin.Y + d}
+}
+
+// shiftHierLabel moves a hierarchical label's or a sheet pin's text along the way it reads,
+// away from its connect point, as kicad-cli draws it. KiCad leaves room for the pin's arrow, one
+// text width plus the text offset (1.15 heights, 1.46 mm on Jetson). A left-justified run moves
+// forward and a right-justified one back.
+func shiftHierLabel(l *geom.Label) {
+	h := float64(l.Height)
+	if h == 0 {
+		h = 1_270_000
+	}
+	d := int64(math.Round(1.15 * h))
+	switch {
+	case strings.HasPrefix(l.Justify, "right"):
+		d = -d
+	case !strings.HasPrefix(l.Justify, "left"):
+		return
+	}
+	l.Anchor = l.Origin
+	if l.RotationDeg != 0 {
+		l.Origin = &geom.Point{X: l.Origin.X, Y: l.Origin.Y + d}
+		return
+	}
+	l.Origin = &geom.Point{X: l.Origin.X + d, Y: l.Origin.Y}
+}
+
+// hierArrows are KiCad's hierarchical label outlines (TemplateIN_HN and its siblings in
+// sch_label.cpp), in half text heights, for a label running toward -x from its connect point at
+// 0 with y down. kicad-cli draws the input one exactly this way on orient-labels.kicad_sch.
+var hierArrows = map[string][][2]float64{
+	"input":         {{0, 0}, {-1, -1}, {-2, -1}, {-2, 1}, {-1, 1}, {0, 0}},
+	"output":        {{-2, 0}, {-1, 1}, {0, 1}, {0, -1}, {-1, -1}, {-2, 0}},
+	"bidirectional": {{0, 0}, {-1, -1}, {-2, 0}, {-1, 1}, {0, 0}},
+	"tri_state":     {{0, 0}, {-1, -1}, {-2, 0}, {-1, 1}, {0, 0}},
+	"passive":       {{0, -1}, {-2, -1}, {-2, 1}, {0, 1}, {0, -1}},
+}
+
+// hierLabelArrows is the arrow KiCad draws at each hierarchical label's connect point, as sheet
+// shapes. Its size follows the text height alone, so the reader can place it and no renderer
+// has to know it.
+func hierLabelArrows(root *node) []*geom.Shape {
+	var out []*geom.Shape
+	for _, n := range root.Children("hierarchical_label") {
+		at := n.Child("at")
+		o := sheetPt(at)
+		tmpl, ok := hierArrows[atomOf(n.Child("shape").Arg(1))]
+		if o == nil || !ok {
+			continue
+		}
+		half := float64(fontSize(n)) / 2
+		if half == 0 {
+			half = 635_000
+		}
+		deg, _ := strconv.ParseFloat(atomOf(at.Arg(3)), 64)
+		// The template runs toward 180. Turn it to the label's own angle, counter-clockwise as
+		// seen, in the Y-up sheet. KiCad draws 270 as 90 mirrored along the pin, not turned a
+		// further half turn, as kicad-cli's arrows show.
+		down := normDeg(deg) == 270
+		if down {
+			deg = 90
+		}
+		r := (deg - 180) * math.Pi / 180
+		c, sn := math.Cos(r), math.Sin(r)
+		pts := make([]*geom.Point, 0, len(tmpl))
+		for _, p := range tmpl {
+			x, y := p[0]*half, -p[1]*half
+			px, py := x*c-y*sn, x*sn+y*c
+			if down {
+				py = -py
+			}
+			pts = append(pts, &geom.Point{X: o.X + int64(math.Round(px)), Y: o.Y + int64(math.Round(py))})
+		}
+		out = append(out, &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts})
+	}
+	return out
+}
+
+// globalLabelFlags maps KiCad's (shape ...) on a global label to the flag drawn around it.
+var globalLabelFlags = map[string]geom.Label_Flag{
+	"input":         geom.Label_FLAG_INPUT,
+	"output":        geom.Label_FLAG_OUTPUT,
+	"bidirectional": geom.Label_FLAG_BIDIRECTIONAL,
+	"tri_state":     geom.Label_FLAG_TRI_STATE,
+	"passive":       geom.Label_FLAG_PASSIVE,
+}
+
+// kicadLabelMargin is KiCad's default label box margin, as a fraction of the text height.
+const kicadLabelMargin = 0.375
+
+// placeGlobalLabel moves a global label's text off its connect point, as kicad-cli draws it, and
+// records the flag drawn around it. The text starts a margin past the connect point along the
+// direction the label runs, plus three quarters of its height for a flag with an arrow at the
+// wire end. deg is the label's angle as written, which says which way it runs from the wire.
+func placeGlobalLabel(l *geom.Label, n *node, deg float64) {
+	flag, ok := globalLabelFlags[atomOf(n.Child("shape").Arg(1))]
+	if !ok {
+		flag = geom.Label_FLAG_PASSIVE
+	}
+	h := float64(l.Height)
+	if h == 0 {
+		h = 1_270_000
+	}
+	away := kicadLabelMargin * h
+	switch flag {
+	case geom.Label_FLAG_INPUT, geom.Label_FLAG_BIDIRECTIONAL, geom.Label_FLAG_TRI_STATE:
+		away += 0.75 * h
+	}
+	// KiCad's angle is counter-clockwise as seen, and the sheet is Y-up here.
+	rad := deg * math.Pi / 180
+	dx, dy := math.Cos(rad), math.Sin(rad)
+	l.Flag = flag
+	l.Anchor = l.Origin
+	l.Origin = &geom.Point{X: l.Origin.X + int64(math.Round(dx*away)), Y: l.Origin.Y + int64(math.Round(dy*away))}
 }
 
 // kicadJustify maps a node's (effects (justify ...)) onto the canonical geom convention,
