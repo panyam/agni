@@ -1297,7 +1297,10 @@ the slowest file fetch, and a timed-out open names the files still pending (agni
 `merged: true` via the API, never `gofmt -w` a directory). It covers the shell traps that have lost
 real work. It also covers what agni ADDS to the PR body shape that the `start-pr` skill defines.
 agni adds the circuit and a hardware primer ahead of the reviewer's guide, the docsite pages that
-the prerequisite block names, and the fixture-only rule for rendering captures. The general skeleton
+the prerequisite block names, and the fixture-only rule for rendering captures. **A rendering
+before/after also carries a third frame from the format's native tool** (kicad-cli, xschem, Lepton,
+gerbv) wherever one exists, because that frame is what finds the gaps nobody was looking for. The
+general skeleton
 lives in the skill, so do not copy it back into this repo.
 
 **There are four ways to be told a thing worked when it did not. All were hit in one sitting, and

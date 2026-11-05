@@ -354,3 +354,12 @@ changes, the circuit, the hardware primer, prerequisite knowledge, then the revi
   commit is in `main`'s history. If you add it after the merge, it lives only on the PR's branch
   (GitHub deletes a merged branch, so pushing recreates it). That branch then has to be kept, or the
   image eventually stops resolving.
+- **A rendering before/after carries a third frame, from the format's own tool, whenever one
+  exists.** That means `kicad-cli sch export svg` or `pcb export svg` for KiCad, xschem and Lepton
+  for their schematics through `make natrender`, and gerbv for Gerbers. Render the same fixture
+  three ways (`main`, the branch, the native tool) and lay them side by side. The native frame is
+  the oracle, and it shows gaps the change never touched. In agni 1345 the native frame was there
+  to confirm a rotation fix, and it showed three more defects, empty transistor bodies, pin names
+  across their pins and no DNP crosses, which became agni 1348. Say in the PR what the native frame
+  still draws differently, and file what is left. A format with no native tool on the machine says
+  so rather than dropping the frame silently.

@@ -103,20 +103,20 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 					svg.A("fill", "none"), svg.A("pointer-events", "all")}, pinKeys(pl, pin.PortRef)...)...)
 			}
 			if pin.LabelOrigin != nil {
-				lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
 				// Sized from the source like every other run, with labelFont's sheet default when
 				// the format states no height.
 				px := labelFont(pin.Height, def, scale)
+				lx, ly, lrot, lj := pinTextAt(pl.Transform, pin, pin.LabelOrigin, pin.Justify)
 				// The name draws at label_origin. The NUMBER draws at its own origin when the
 				// source places the two separately, and otherwise stacks a line off the name.
-				nx, ny, nj := tx(lp.X), ty(lp.Y)+px*1.4, pin.Justify
+				nx, ny, nrot, nj := tx(lx), ty(ly)+px*1.4, lrot, lj
 				if pin.NumberOrigin != nil {
-					np := geomath.ApplyTransform(pl.Transform, pin.NumberOrigin)
-					nx, ny, nj = tx(np.X), ty(np.Y), pin.NumberJustify
+					wx, wy, r, j := pinTextAt(pl.Transform, pin, pin.NumberOrigin, pin.NumberJustify)
+					nx, ny, nrot, nj = tx(wx), ty(wy), r, j
 				}
-				drawText(c, pin.PortRef, nx, ny, px, nj, rot, style.Ruler, 0)
+				drawText(c, pin.PortRef, nx, ny, px, nj, nrot, style.Ruler, 0)
 				if pin.Name != "" {
-					drawText(c, pin.Name, tx(lp.X), ty(lp.Y), px, pin.Justify, rot, style.PinName, 0)
+					drawText(c, pin.Name, tx(lx), ty(ly), px, lj, lrot, style.PinName, 0)
 				}
 			}
 		}
@@ -126,6 +126,16 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			}
 			wp := geomath.ApplyTransform(pl.Transform, a.Origin)
 			drawText(c, a.Text, tx(wp.X), ty(wp.Y), labelFont(a.Height, def, scale), a.Justify, rot, style.Annotation, boxWidthPx(sym, scale))
+		}
+	}
+
+	// The cross over a do-not-populate part, over its text as KiCad draws it.
+	for _, pl := range sheet.Placements {
+		if a, b, ok := dnpCross(symbolFor(syms, pl), pl); ok {
+			for _, d := range [][2]*geom.Point{a, b} {
+				c.El("polyline", append([]svg.Attr{svg.A("fill", "none"), svg.A("stroke", style.DNP),
+					svg.F("stroke-width", busStrokePx), svg.A("points", points(d[:], tx, ty))}, symbolKeys(pl)...)...)
+			}
 		}
 	}
 
