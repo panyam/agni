@@ -127,7 +127,11 @@ func openCFB(b []byte) (*cfb, error) {
 	// Streams under the cutoff live in the mini stream, the root entry's own data, allocated in
 	// 64-byte mini sectors by the mini FAT.
 	root := c.entries[0]
-	if c.ministream, err = c.chain(root.start, int64(root.size)); err != nil {
+	rootSize, err := c.size(root)
+	if err != nil {
+		return nil, err
+	}
+	if c.ministream, err = c.chain(root.start, rootSize); err != nil {
 		return nil, fmt.Errorf("compound file mini stream: %w", err)
 	}
 	mf, err := c.chain(binary.LittleEndian.Uint32(b[0x3C:]), -1)
@@ -138,6 +142,15 @@ func openCFB(b []byte) (*cfb, error) {
 		c.minifat = append(c.minifat, binary.LittleEndian.Uint32(mf[i:]))
 	}
 	return c, nil
+}
+
+// size is an entry's byte length. No stream can be longer than the file holding it, so a larger
+// declared size marks a damaged file.
+func (c *cfb) size(e cfbEntry) (int64, error) {
+	if e.size > uint64(len(c.b)) {
+		return 0, fmt.Errorf("compound file entry %q declares %d bytes in a %d-byte file", e.name, e.size, len(c.b))
+	}
+	return int64(e.size), nil // #nosec G115 -- bounded by the file's length just above
 }
 
 func (c *cfb) sectors() int { return len(c.b)/c.sector - 1 }
@@ -216,10 +229,14 @@ func (c *cfb) stream(path string) (data []byte, ok bool, err error) {
 		if e.kind != 2 {
 			return nil, false, nil
 		}
+		n, err := c.size(e)
+		if err != nil {
+			return nil, true, err
+		}
 		if e.size < uint64(c.cutoff) {
-			data, err = c.miniChain(e.start, int64(e.size))
+			data, err = c.miniChain(e.start, n)
 		} else {
-			data, err = c.chain(e.start, int64(e.size))
+			data, err = c.chain(e.start, n)
 		}
 		if err != nil {
 			return nil, true, fmt.Errorf("stream %s: %w", path, err)
