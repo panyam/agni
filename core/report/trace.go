@@ -58,6 +58,11 @@ func writeTraceNet(w io.Writer, n check.TraceNet) {
 		rail = "   (a rail or plane: a route may end here, never pass through)"
 	}
 	fmt.Fprintf(w, "  net %s%s\n", n.Name, rail)
+	writeNetParts(w, n)
+}
+
+// writeNetParts prints what else sits on a net, probe points first.
+func writeNetParts(w io.Writer, n check.TraceNet) {
 	var probes, others []string
 	for _, s := range n.Stubs {
 		if s.Class == string(check.ClassTestPoint) {

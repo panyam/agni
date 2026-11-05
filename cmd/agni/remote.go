@@ -107,6 +107,9 @@ type (
 	traceAPI interface {
 		TraceDesign(context.Context, *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error)
 	}
+	walkAPI interface {
+		WalkDesign(context.Context, *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error)
+	}
 	reviewAPI interface {
 		CreateReview(context.Context, *webapi.CreateReviewRequest) (*webapi.Review, error)
 		RenderReviewReport(context.Context, *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error)
@@ -329,6 +332,14 @@ func (r *remoteServer) trace() traceAPI {
 
 func (r remoteTrace) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
 	return unary(ctx, r.c.TraceDesign, req)
+}
+
+func (r *remoteServer) walk() walkAPI {
+	return remoteTrace{webapiconnect.NewDesignServiceClient(r.http, r.url)}
+}
+
+func (r remoteTrace) WalkDesign(ctx context.Context, req *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error) {
+	return unary(ctx, r.c.WalkDesign, req)
 }
 
 type remoteReview struct {

@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -167,6 +167,11 @@ seccheck:
 # .gitleaks.toml, so a real secret of the same shape is still reported.
 secrets:
 	$(GO) run $(GITLEAKS) detect --source . --config .gitleaks.toml --redact
+
+# binaries-check fails on a tracked compiled executable or a file over 5 MB, after its own self-test.
+binaries-check:
+	hack/check_no_binaries_test.sh
+	hack/check_no_binaries.sh
 
 # Every scanner, vulncheck included. lint, seccheck and secrets also run in the gate (testall).
 audit: lint seccheck secrets vulncheck
@@ -591,7 +596,7 @@ testall-core: testall-test testall-scan testall-docs
 testall-test: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check
 
 # testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
-testall-scan: vet lint seccheck secrets
+testall-scan: vet lint seccheck secrets binaries-check
 
 # testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
 # match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its

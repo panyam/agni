@@ -210,3 +210,26 @@ Two radii elsewhere are search budgets and are wide on purpose. `agni trace` sea
 default and prints the radius with its answer, since a route eight crossings long is still the
 route. The `net.reaches` relation searches the whole series neighbourhood (100 hops), because "what is
 connected to what through passives" is a topology question and not a claim about protection.
+
+## Walking outwards from a part
+
+A trace needs both ends. On a large board a reader often knows one part and wants to see what is
+around it, so `agni walk` and `DesignService.WalkDesign` start from a part or one pin and widen hop
+by hop (agni issue 1339). Hop 1 is the start's own nets. Each later hop crosses the parts on the
+previous hop's nets into their other nets, and records the part and its pin on each side.
+
+Which parts a hop crosses depends on the question, so the walk has kinds, and `ListWalkKinds` lists
+them for a viewer to offer.
+
+| Kind | Crosses | Stops at | Answers |
+|---|---|---|---|
+| `series` | the series pass elements a trace crosses, when the part touches two nets | grounds, global nets and fan-outs over 16, as trace does | what a signal passes through |
+| `small-parts` | any fitted part with up to four connected pins, capacitors and diodes included | ICs, connectors, rails and grounds | the circuit around a part |
+| `all` | every fitted part, 64 new nets a hop at most, with the rest counted | rails and grounds | the raw neighbourhood |
+
+A part the kind refuses is listed once with its reason, at the first hop that met it, and naming it
+in `through` crosses it on the next ask. The series walk passes through a rail-named node such as
+`VBUS_PROT`, as a trace does, so the two agree. The other kinds stop at a rail, because a walk that
+widened through a 3V3 rail would list every part the rail feeds. A branch that stops at a rail or a
+ground says so in `ended`, rather than leaving the net out. A do-not-populate part is never crossed
+unless named. Each net carries the sheets it is drawn on, as a trace's nets do.

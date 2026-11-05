@@ -244,6 +244,97 @@ class TraceNet(_message.Message):
     sheet_ids: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, name: _Optional[str] = ..., stubs: _Optional[_Iterable[_Union[TraceStub, _Mapping]]] = ..., stubs_elided: _Optional[int] = ..., bus_like: _Optional[bool] = ..., sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class WalkDesignRequest(_message.Message):
+    __slots__ = ("snapshot", "kind", "hops", "through")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    FROM_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    HOPS_FIELD_NUMBER: _ClassVar[int]
+    THROUGH_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    kind: str
+    hops: int
+    through: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, snapshot: _Optional[str] = ..., kind: _Optional[str] = ..., hops: _Optional[int] = ..., through: _Optional[_Iterable[str]] = ..., **kwargs) -> None: ...
+
+class WalkDesignResponse(_message.Message):
+    __slots__ = ("walk",)
+    WALK_FIELD_NUMBER: _ClassVar[int]
+    walk: Walk
+    def __init__(self, walk: _Optional[_Union[Walk, _Mapping]] = ...) -> None: ...
+
+class Walk(_message.Message):
+    __slots__ = ("kind", "radius", "reason", "nets", "boundary", "elided")
+    FROM_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    RADIUS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    BOUNDARY_FIELD_NUMBER: _ClassVar[int]
+    ELIDED_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    radius: int
+    reason: str
+    nets: _containers.RepeatedCompositeFieldContainer[WalkNet]
+    boundary: _containers.RepeatedCompositeFieldContainer[WalkBoundary]
+    elided: _containers.RepeatedCompositeFieldContainer[WalkElided]
+    def __init__(self, kind: _Optional[str] = ..., radius: _Optional[int] = ..., reason: _Optional[str] = ..., nets: _Optional[_Iterable[_Union[WalkNet, _Mapping]]] = ..., boundary: _Optional[_Iterable[_Union[WalkBoundary, _Mapping]]] = ..., elided: _Optional[_Iterable[_Union[WalkElided, _Mapping]]] = ..., **kwargs) -> None: ...
+
+class WalkNet(_message.Message):
+    __slots__ = ("hop", "net", "entered", "ended", "also_entered")
+    HOP_FIELD_NUMBER: _ClassVar[int]
+    NET_FIELD_NUMBER: _ClassVar[int]
+    ENTERED_FIELD_NUMBER: _ClassVar[int]
+    ENDED_FIELD_NUMBER: _ClassVar[int]
+    ALSO_ENTERED_FIELD_NUMBER: _ClassVar[int]
+    hop: int
+    net: TraceNet
+    entered: TraceCross
+    ended: str
+    also_entered: _containers.RepeatedCompositeFieldContainer[TraceCross]
+    def __init__(self, hop: _Optional[int] = ..., net: _Optional[_Union[TraceNet, _Mapping]] = ..., entered: _Optional[_Union[TraceCross, _Mapping]] = ..., ended: _Optional[str] = ..., also_entered: _Optional[_Iterable[_Union[TraceCross, _Mapping]]] = ...) -> None: ...
+
+class WalkBoundary(_message.Message):
+    __slots__ = ("ref_des", "hop", "net", "reason")
+    REF_DES_FIELD_NUMBER: _ClassVar[int]
+    CLASS_FIELD_NUMBER: _ClassVar[int]
+    HOP_FIELD_NUMBER: _ClassVar[int]
+    NET_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    ref_des: str
+    hop: int
+    net: str
+    reason: str
+    def __init__(self, ref_des: _Optional[str] = ..., hop: _Optional[int] = ..., net: _Optional[str] = ..., reason: _Optional[str] = ..., **kwargs) -> None: ...
+
+class WalkElided(_message.Message):
+    __slots__ = ("hop", "nets")
+    HOP_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    hop: int
+    nets: int
+    def __init__(self, hop: _Optional[int] = ..., nets: _Optional[int] = ...) -> None: ...
+
+class ListWalkKindsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListWalkKindsResponse(_message.Message):
+    __slots__ = ("kinds",)
+    KINDS_FIELD_NUMBER: _ClassVar[int]
+    kinds: _containers.RepeatedCompositeFieldContainer[WalkKind]
+    def __init__(self, kinds: _Optional[_Iterable[_Union[WalkKind, _Mapping]]] = ...) -> None: ...
+
+class WalkKind(_message.Message):
+    __slots__ = ("name", "title", "summary")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    title: str
+    summary: str
+    def __init__(self, name: _Optional[str] = ..., title: _Optional[str] = ..., summary: _Optional[str] = ...) -> None: ...
+
 class TraceStub(_message.Message):
     __slots__ = ("ref_des", "pin")
     REF_DES_FIELD_NUMBER: _ClassVar[int]

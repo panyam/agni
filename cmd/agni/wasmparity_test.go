@@ -286,6 +286,27 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	if drawn == 0 {
 		t.Fatal("LocateSubjects: no subject drawn anywhere, so two empty answers would compare equal")
 	}
+	// A walk outwards from a part is the same answer on either host (agni issue 1339). It starts
+	// from the first part a verdict names, so it runs on every design this test reads.
+	var start string
+	for _, v := range whole.Msg.GetVerdicts() {
+		for _, sub := range v.GetSubjects() {
+			if start == "" && (sub.GetKind() == "component" || sub.GetKind() == "pin") {
+				start = sub.GetRef()
+			}
+		}
+	}
+	if start == "" {
+		t.Fatal("no verdict names a part, so there is nothing to walk from")
+	}
+	walked := ask("WalkDesign from "+start, func(c parityClients) (proto.Message, error) {
+		r, err := c.design.WalkDesign(ctx, connect.NewRequest(&webapi.WalkDesignRequest{Snapshot: snapOn(c),
+			From: &webapi.TraceEndpoint{RefDes: start}, Kind: "small-parts", Hops: 3}))
+		return msgOf(r, err)
+	})
+	if w := walked.(*webapi.WalkDesignResponse).GetWalk(); len(w.GetNets()) == 0 {
+		t.Fatalf("WalkDesign from %s reached no net (%s), so two empty walks would compare equal", start, w.GetReason())
+	}
 	// How the design's names were read is the same question on either host (agni issue 1266).
 	lx := ask("GetLexicon", func(c parityClients) (proto.Message, error) {
 		r, err := c.lex.GetLexicon(ctx, connect.NewRequest(&webapi.GetLexiconRequest{Snapshot: snapOn(c)}))

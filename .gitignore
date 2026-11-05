@@ -10,6 +10,7 @@ bin/
 .claude/worktrees/
 
 # Built example binaries (rebuilt by `make testall`; never commit them)
+examples/orcad-design/orcad-design
 examples/render-board/render-board
 examples/validate/validate
 
