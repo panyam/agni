@@ -57,6 +57,15 @@ panel from the ones above.
   Two sheets have different frames, so the schematic and the board never share a camera.
 - **A view floats** through dockview's floating groups. With the `always` renderer its content then
   sits in a `dv-render-overlay-float` element, not inside the floating group's own container.
+- **A view turns** to match the board on the bench (agni issue 1327). It rotates by quarter turns and
+  flips either way, which gives the board's eight orientations (`web/src/orient.ts`). The orientation
+  is a CSS transform on an element between the pan and zoom layer and the drawing, turning about the
+  drawing's centre. So pan and zoom stay a translate and a scale, and the browser hit-tests through the
+  turn. Fit and reveal map their boxes through it. **The bottom view** flips the board left to right
+  and redraws its strata with the back copper nearest (`orderStrata` in `web/src/boardstrata.ts`). A
+  sheet's turn is kept per design and sheet in `localStorage`, so a board view opened again comes back
+  turned. Locked views exchange the drawing point at their centre and the zoom (`getCentre`), so a top
+  view and a bottom view of one board stay over the same spot.
 
 ## Traps that ship green
 
