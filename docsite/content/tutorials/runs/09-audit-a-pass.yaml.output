@@ -1,4 +1,4 @@
-#agni-run 76ef137df27d4934
+#agni-run aa2751069ac581a5
 i2c-pull-up  28 fail, 26 pass
     pass  /CSI/SCL_CAM0                        /CSI/SCL_CAM0 reaches rail /CSI/CSIA_I2C_VCC
                                                through R390
