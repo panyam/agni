@@ -357,7 +357,7 @@ func TestHighlightEntityFraming(t *testing.T) {
 		if len(ents) != 1 {
 			t.Fatalf("%s: entities = %d, want 1", tc.name, len(ents))
 		}
-		fb, ok := framedBounds(ents[0])
+		fb, ok := framedBounds(ents[0], 0)
 		if !ok {
 			t.Fatalf("%s: no bounds", tc.name)
 		}

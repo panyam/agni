@@ -48,6 +48,7 @@ type Format struct {
     Design   func(l *Loader, path string) (*ir.Design, error)              // netlist; nil if none
     Geometry func(l *Loader, path string) (*geom.SchematicGeometry, error) // faithful schematic; nil if none
     Board    func(l *Loader, path string) (*geom.BoardGeometry, error)     // board layout; nil if none
+    DrawnNetlist bool // the netlist counts what the drawing draws, so its counts say nothing
 }
 ```
 
@@ -55,6 +56,12 @@ The three reader fields are capabilities. A nil field means the format lacks tha
 plain netlist format sets only `Design`. A schematic format that also carries drawable geometry
 sets `Design` and `Geometry`. A board format sets `Board`. `.eds` is dual-capability (`Design`
 plus `Geometry`), and `.kicad_pcb` and the IPC-2581 extensions show the `Board` case.
+
+Set `DrawnNetlist` only when the format's netlist counts the drawing rather than the design.
+`.eds` sets it, because an EDIF schematic export nets per-sheet segments that nothing joins. A
+design read from such a file then reports no part or net counts, in the viewer or in `agni
+trial`. A KiCad, xschem or gEDA schematic is its design's netlist and leaves it false, so it
+reports its counts (agni issue 1342).
 
 For a built-in reader, add the registration to `readers/formats/registry.go`'s `init`. A
 netlist-only format needs one adapter that opens the file and hands the bytes to your pure `Read`:

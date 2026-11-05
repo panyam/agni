@@ -266,3 +266,11 @@ describe("per-instance net id matching (WS9)", () => {
     expect(g.entities).toHaveLength(2);
   });
 });
+
+describe("framing a point (agni issue 1374)", () => {
+  it("pads a zero-size entity by the caller's floor when it beats the 8-unit one", () => {
+    const f = entityFrame(5, 5, 5, 5, 20);
+    expect([f.minX, f.minY, f.maxX, f.maxY]).toEqual([-15, -15, 25, 25]);
+    expect(entityFrame(5, 5, 5, 5).maxX).toBe(13);
+  });
+});

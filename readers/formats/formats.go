@@ -55,6 +55,12 @@ type Format struct {
 	// carries no board layout. Consumers that want a board-aware check Model use
 	// Loader.BoardGeometry and tolerate its absence.
 	Board func(l *Loader, path string) (*geom.BoardGeometry, error)
+	// DrawnNetlist marks a format whose netlist counts what its drawing draws rather than the
+	// design's parts and nets. An EDIF schematic export (.eds) is one: it nets per-sheet segments
+	// that nothing joins, so one board read 5219 components and 4572 nets off its .eds against 3980
+	// and 1617 off its .edn. A design read from such a file reports no counts. A KiCad, xschem or
+	// gEDA schematic is its design's netlist and leaves this false (agni issue 1342).
+	DrawnNetlist bool
 }
 
 // byExt is the registry. The built-in entries are defined in registry.go; an out-of-module
@@ -119,6 +125,13 @@ func HasFaithful(name string) bool {
 func HasBoard(name string) bool {
 	f := ByExt(name)
 	return f != nil && f.Board != nil
+}
+
+// DrawnNetlist reports whether a file's format nets what its drawing draws (Format.DrawnNetlist),
+// so its counts say nothing about the design. An unknown extension reports false.
+func DrawnNetlist(name string) bool {
+	f := ByExt(name)
+	return f != nil && f.DrawnNetlist
 }
 
 // NetlistExts returns the sorted extensions with a netlist reader, for error text and help.

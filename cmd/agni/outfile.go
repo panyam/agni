@@ -26,8 +26,9 @@ func outFileFlag(cmd *cobra.Command, out *string) {
 // only because the root command sets SilenceUsage and SilenceErrors. Cobra's usage and error text
 // then cannot appear in the middle of a report.
 //
-// It creates the file, so a caller resolves anything that can refuse the run (--server) BEFORE
-// calling it, or a refused run still announces "wrote <file>" over an empty one (agni issue 637).
+// It creates the file at once, so a path that cannot be written fails the run before any work.
+// A run refused before it writes anything, such as `check --table pin_map` on a design with no pin
+// map, then has its empty file removed and announces none (agni issues 637 and 1342).
 //
 // The written-file note goes to STDERR, matching render, so `-o` composes with a pipe.
 func redirectOut(cmd *cobra.Command, out string) (func(), error) {
@@ -38,11 +39,28 @@ func redirectOut(cmd *cobra.Command, out string) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd.SetOut(f)
+	w := &countingFile{f: f}
+	cmd.SetOut(w)
 	return func() {
 		f.Close()
+		if w.n == 0 {
+			_ = os.Remove(out)
+			return
+		}
 		fmt.Fprintf(cmd.ErrOrStderr(), "wrote %s\n", absForNote(out))
 	}, nil
+}
+
+// countingFile counts what is written to it, so the closer can tell a run that wrote nothing.
+type countingFile struct {
+	f *os.File
+	n int
+}
+
+func (w *countingFile) Write(p []byte) (int, error) {
+	n, err := w.f.Write(p)
+	w.n += n
+	return n, err
 }
 
 // absForNote is the path to PRINT for a file just written. It is absolute because a terminal
