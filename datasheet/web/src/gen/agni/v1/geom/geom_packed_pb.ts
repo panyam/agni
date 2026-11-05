@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_packed.proto.
  */
 export const file_agni_v1_geom_geom_packed: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJsCgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJIiYKBlBpblJlZhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCSLYAQoNSGlnaGxpZ2h0U3BlYxISCgpjb21wb25lbnRzGAEgAygJEgwKBG5ldHMYAiADKAkSIgoEcGlucxgDIAMoCzIULmFnbmkudjEuZ2VvbS5QaW5SZWYSDwoHbmV0X2lkcxgIIAMoCRIPCgdidXNfaWRzGAkgAygJEg0KBWNvbG9yGAQgASgJEg0KBWFscGhhGAUgASgCEisKBXNoYXBlGAYgASgOMhwuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNoYXBlEhQKDHN0cm9rZV9zY2FsZRgHIAEoAiKuAQoPUGFja2VkSGlnaGxpZ2h0EjMKBmdyb3VwcxgBIAMoCzIjLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHQuR3JvdXAaZgoFR3JvdXASDQoFY29sb3IYASABKAkSDQoFYWxwaGEYAiABKAISEgoKcHJpbWl0aXZlcxgDIAMoDRIrCgVzaGFwZRgEIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZSKKAQoLUGFja2VkTGFiZWwSCQoBeBgBIAEoBRIJCgF5GAIgASgFEgwKBHRleHQYAyABKAkSDgoGaGVpZ2h0GAQgASgFEhQKDHJvdGF0aW9uX2RlZxgFIAEoBRIPCgdqdXN0aWZ5GAYgASgJEg0KBWNvbG9yGAcgASgJEhEKCW1heF93aWR0aBgIIAEoBSJ7CgtQYWNrZWRJbWFnZRIJCgF4GAEgASgFEgkKAXkYAiABKAUSCQoBdxgDIAEoBRIJCgFoGAQgASgFEgwKBG1pbWUYBSABKAkSDAoEZGF0YRgGIAEoDBIUCgxyb3RhdGlvbl9kZWcYByABKAUSDgoGbWlycm9yGAggASgIIsYCCgtQYWNrZWRTaGVldBIQCghzaGVldF9pZBgBIAEoCRIWCg5sYXlvdXRfdmVyc2lvbhgCIAEoBRIQCghvcmlnaW5feBgDIAEoAxIQCghvcmlnaW5feRgEIAEoAxIQCgh2ZXJ0aWNlcxgFIAEoDBISCgpwcmltaXRpdmVzGAYgASgMEigKBGtleXMYByADKAsyGi5hZ25pLnYxLmdlb20uUHJpbWl0aXZlS2V5EikKBmxhYmVscxgIIAMoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRMYWJlbBITCgtmb250X2ZhbWlseRgJIAEoCRIUCgxncm91cF9jb2xvcnMYCiADKAkSGAoQYmFja2dyb3VuZF9jb2xvchgLIAEoCRIpCgZpbWFnZXMYDCADKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkSW1hZ2UqsAEKDkhpZ2hsaWdodFNoYXBlEh8KG0hJR0hMSUdIVF9TSEFQRV9VTlNQRUNJRklFRBAAEhsKF0hJR0hMSUdIVF9TSEFQRV9PVVRMSU5FEAESIQodSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX1JFQ1QQAhIjCh9ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfQ0lSQ0xFEAMSGAoUSElHSExJR0hUX1NIQVBFX1BBVEgQBEIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw");
+  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJsCgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJIiYKBlBpblJlZhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCSLYAQoNSGlnaGxpZ2h0U3BlYxISCgpjb21wb25lbnRzGAEgAygJEgwKBG5ldHMYAiADKAkSIgoEcGlucxgDIAMoCzIULmFnbmkudjEuZ2VvbS5QaW5SZWYSDwoHbmV0X2lkcxgIIAMoCRIPCgdidXNfaWRzGAkgAygJEg0KBWNvbG9yGAQgASgJEg0KBWFscGhhGAUgASgCEisKBXNoYXBlGAYgASgOMhwuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNoYXBlEhQKDHN0cm9rZV9zY2FsZRgHIAEoAiKuAQoPUGFja2VkSGlnaGxpZ2h0EjMKBmdyb3VwcxgBIAMoCzIjLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHQuR3JvdXAaZgoFR3JvdXASDQoFY29sb3IYASABKAkSDQoFYWxwaGEYAiABKAISEgoKcHJpbWl0aXZlcxgDIAMoDRIrCgVzaGFwZRgEIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZSKVAQoHVGV4dFJ1bhIMCgR0ZXh0GAEgASgJEigKBGtpbmQYAiABKA4yGi5hZ25pLnYxLmdlb20uVGV4dFJ1bi5LaW5kIlIKBEtpbmQSDgoKS0lORF9QTEFJThAAEhAKDEtJTkRfT1ZFUkJBUhABEhIKDktJTkRfU1VCU0NSSVBUEAISFAoQS0lORF9TVVBFUlNDUklQVBADIq8BCgtQYWNrZWRMYWJlbBIJCgF4GAEgASgFEgkKAXkYAiABKAUSDAoEdGV4dBgDIAEoCRIOCgZoZWlnaHQYBCABKAUSFAoMcm90YXRpb25fZGVnGAUgASgFEg8KB2p1c3RpZnkYBiABKAkSDQoFY29sb3IYByABKAkSEQoJbWF4X3dpZHRoGAggASgFEiMKBHJ1bnMYCSADKAsyFS5hZ25pLnYxLmdlb20uVGV4dFJ1biJ7CgtQYWNrZWRJbWFnZRIJCgF4GAEgASgFEgkKAXkYAiABKAUSCQoBdxgDIAEoBRIJCgFoGAQgASgFEgwKBG1pbWUYBSABKAkSDAoEZGF0YRgGIAEoDBIUCgxyb3RhdGlvbl9kZWcYByABKAUSDgoGbWlycm9yGAggASgIIsYCCgtQYWNrZWRTaGVldBIQCghzaGVldF9pZBgBIAEoCRIWCg5sYXlvdXRfdmVyc2lvbhgCIAEoBRIQCghvcmlnaW5feBgDIAEoAxIQCghvcmlnaW5feRgEIAEoAxIQCgh2ZXJ0aWNlcxgFIAEoDBISCgpwcmltaXRpdmVzGAYgASgMEigKBGtleXMYByADKAsyGi5hZ25pLnYxLmdlb20uUHJpbWl0aXZlS2V5EikKBmxhYmVscxgIIAMoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRMYWJlbBITCgtmb250X2ZhbWlseRgJIAEoCRIUCgxncm91cF9jb2xvcnMYCiADKAkSGAoQYmFja2dyb3VuZF9jb2xvchgLIAEoCRIpCgZpbWFnZXMYDCADKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkSW1hZ2UqsAEKDkhpZ2hsaWdodFNoYXBlEh8KG0hJR0hMSUdIVF9TSEFQRV9VTlNQRUNJRklFRBAAEhsKF0hJR0hMSUdIVF9TSEFQRV9PVVRMSU5FEAESIQodSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX1JFQ1QQAhIjCh9ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfQ0lSQ0xFEAMSGAoUSElHSExJR0hUX1NIQVBFX1BBVEgQBEIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw");
 
 /**
  * PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
@@ -268,7 +268,62 @@ export const PackedHighlight_GroupSchema: GenMessage<PackedHighlight_Group> = /*
  * architecture/geometry-and-rendering.md). The server computes the world position and the
  * color with the SVG backend's transform math, so the overlay and the SVG oracle agree. The
  * browser only maps world->screen with the view camera. O(labels), and structured like keys.
+ * TextRun is one piece of a label that draws in one style. The engine splits a label by its
+ * markup, so the SVG backend and the overlay draw it alike without parsing it again.
  *
+ * @generated from message agni.v1.geom.TextRun
+ */
+export type TextRun = Message<"agni.v1.geom.TextRun"> & {
+  /**
+   * @generated from field: string text = 1;
+   */
+  text: string;
+
+  /**
+   * @generated from field: agni.v1.geom.TextRun.Kind kind = 2;
+   */
+  kind: TextRun_Kind;
+};
+
+/**
+ * Describes the message agni.v1.geom.TextRun.
+ * Use `create(TextRunSchema)` to create a new message.
+ */
+export const TextRunSchema: GenMessage<TextRun> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 4);
+
+/**
+ * @generated from enum agni.v1.geom.TextRun.Kind
+ */
+export enum TextRun_Kind {
+  /**
+   * @generated from enum value: KIND_PLAIN = 0;
+   */
+  PLAIN = 0,
+
+  /**
+   * @generated from enum value: KIND_OVERBAR = 1;
+   */
+  OVERBAR = 1,
+
+  /**
+   * @generated from enum value: KIND_SUBSCRIPT = 2;
+   */
+  SUBSCRIPT = 2,
+
+  /**
+   * @generated from enum value: KIND_SUPERSCRIPT = 3;
+   */
+  SUPERSCRIPT = 3,
+}
+
+/**
+ * Describes the enum agni.v1.geom.TextRun.Kind.
+ */
+export const TextRun_KindSchema: GenEnum<TextRun_Kind> = /*@__PURE__*/
+  enumDesc(file_agni_v1_geom_geom_packed, 4, 0);
+
+/**
  * @generated from message agni.v1.geom.PackedLabel
  */
 export type PackedLabel = Message<"agni.v1.geom.PackedLabel"> & {
@@ -323,6 +378,20 @@ export type PackedLabel = Message<"agni.v1.geom.PackedLabel"> & {
    * @generated from field: int32 max_width = 8;
    */
   maxWidth: number;
+
+  /**
+   * caption gets its box width here; the overlay squeezes glyphs to fit
+   * (textLength) rather than spilling past the box, matching the SVG backend.
+   * runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
+   * to `text`. Empty means `text` draws as one plain run.
+   *
+   * There is no font field yet. Every renderer draws one font (monospace, matching the SVG
+   * backend), and the geom IR has no per-text font. Add `string font` here once a reader
+   * populates per-element font on the IR. It is an additive change, so waiting loses nothing.
+   *
+   * @generated from field: repeated agni.v1.geom.TextRun runs = 9;
+   */
+  runs: TextRun[];
 };
 
 /**
@@ -330,7 +399,7 @@ export type PackedLabel = Message<"agni.v1.geom.PackedLabel"> & {
  * Use `create(PackedLabelSchema)` to create a new message.
  */
 export const PackedLabelSchema: GenMessage<PackedLabel> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_packed, 4);
+  messageDesc(file_agni_v1_geom_geom_packed, 5);
 
 /**
  * PackedImage is one raster image positioned in sheet-relative world coordinates (rebased by
@@ -407,7 +476,7 @@ export type PackedImage = Message<"agni.v1.geom.PackedImage"> & {
  * Use `create(PackedImageSchema)` to create a new message.
  */
 export const PackedImageSchema: GenMessage<PackedImage> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_packed, 5);
+  messageDesc(file_agni_v1_geom_geom_packed, 6);
 
 /**
  * PackedSheet is the GPU-upload form of one sheet's vertex geometry. Coordinates are
@@ -508,7 +577,7 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
  * Use `create(PackedSheetSchema)` to create a new message.
  */
 export const PackedSheetSchema: GenMessage<PackedSheet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_packed, 6);
+  messageDesc(file_agni_v1_geom_geom_packed, 7);
 
 /**
  * HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).

@@ -114,9 +114,9 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 					wx, wy, r, j := pinTextAt(pl.Transform, pin, pin.NumberOrigin, pin.NumberJustify)
 					nx, ny, nrot, nj = tx(wx), ty(wy), r, j
 				}
-				drawText(c, pin.PortRef, nx, ny, px, nj, nrot, style.Ruler, 0)
-				if pin.Name != "" {
-					drawText(c, pin.Name, tx(lx), ty(ly), px, lj, lrot, style.PinName, 0)
+				drawText(c, pin.PortRef, "", nx, ny, px, nj, nrot, style.Ruler, 0)
+				if name := pinName(pl, pin); name != "" {
+					drawText(c, name, g.GetTextMarkup(), tx(lx), ty(ly), px, lj, lrot, style.PinName, 0)
 				}
 			}
 		}
@@ -125,7 +125,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 				continue
 			}
 			wp := geomath.ApplyTransform(pl.Transform, a.Origin)
-			drawText(c, a.Text, tx(wp.X), ty(wp.Y), labelFont(a.Height, def, scale), a.Justify, rot, style.Annotation, boxWidthPx(sym, scale))
+			drawText(c, a.Text, g.GetTextMarkup(), tx(wp.X), ty(wp.Y), labelFont(a.Height, def, scale), a.Justify, rot, style.Annotation, boxWidthPx(sym, scale))
 		}
 	}
 
@@ -150,7 +150,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 		if f, ok := fit[l]; ok {
 			fontPx *= f
 		}
-		drawText(c, l.Text, tx(l.Origin.X), ty(l.Origin.Y), fontPx, l.Justify, l.RotationDeg, style.Label, 0)
+		drawText(c, l.Text, g.GetTextMarkup(), tx(l.Origin.X), ty(l.Origin.Y), fontPx, l.Justify, l.RotationDeg, style.Label, 0)
 		if pts := flagOutline(l, labelHeight(l, def)); pts != nil {
 			c.El("polyline", svg.A("fill", "none"), svg.A("stroke", style.Free), svg.F("stroke-width", strokePx),
 				svg.A("points", points(pts, tx, ty)))
@@ -165,7 +165,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			if !f.Visible || f.Origin == nil {
 				continue
 			}
-			drawText(c, f.Value, tx(f.Origin.X), ty(f.Origin.Y), labelFont(f.Height, def, scale), f.Justify, rot+f.RotationDeg, style.Field, 0)
+			drawText(c, f.Value, g.GetTextMarkup(), tx(f.Origin.X), ty(f.Origin.Y), labelFont(f.Height, def, scale), f.Justify, rot+f.RotationDeg, style.Field, 0)
 		}
 	}
 }
@@ -563,11 +563,12 @@ func labelFont(h int64, def int64, scale float64) float64 {
 }
 
 // drawText emits one text run at pixel (x,y). When content has newlines, drawText stacks the
-// lines around the anchor that blockTop picks. EDIF %10% escapes decode to real newlines. rotDeg
+// lines around the anchor that blockTop picks. EDIF %10% escapes decode to real newlines. markup
+// names the geometry's text markup (SchematicGeometry.text_markup), drawn by drawTextLine. rotDeg
 // is a CCW Y-up angle and equals the SVG rotate() angle, because the Y-flip and the handedness
 // swap it induces cancel. Callers pass a placement's rotation combined with the text's own angle,
 // and a zero angle emits no transform.
-func drawText(c *svg.Canvas, content string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
+func drawText(c *svg.Canvas, content, markup string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
 	if i := strings.IndexByte(content, '\n'); i >= 0 {
 		lines := strings.Split(content, "\n")
 		step := fontPx * lineHeight
@@ -575,12 +576,13 @@ func drawText(c *svg.Canvas, content string, x, y, fontPx float64, justify strin
 		// way the FINAL justify says, so resolve it here exactly as drawTextLine will.
 		_, j := readableText(rotDeg, justify)
 		top := blockTop(y, len(lines), j, step)
+		// Markup draws on a single line only, as the overlay draws it (collectLabels).
 		for n, line := range lines {
-			drawTextLine(c, line, x, top+float64(n)*step, fontPx, justify, rotDeg, fill, maxWidthPx)
+			drawTextLine(c, line, "", x, top+float64(n)*step, fontPx, justify, rotDeg, fill, maxWidthPx)
 		}
 		return
 	}
-	drawTextLine(c, content, x, y, fontPx, justify, rotDeg, fill, maxWidthPx)
+	drawTextLine(c, content, markup, x, y, fontPx, justify, rotDeg, fill, maxWidthPx)
 }
 
 // blockTop is the y of a multi-line block's FIRST line, given the anchor y its justify names.
@@ -604,7 +606,9 @@ func blockTop(y float64, lines int, justify string, step float64) float64 {
 }
 
 // drawTextLine draws one line of text; drawText handles multi-line splitting.
-func drawTextLine(c *svg.Canvas, content string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
+func drawTextLine(c *svg.Canvas, content, markup string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
+	runs := markupRuns(markup, content)
+	content = runsText(runs, content)
 	rotDeg, justify = readableText(rotDeg, justify)
 	anchor, baseline := justifyText(justify)
 	attrs := []svg.Attr{
@@ -624,7 +628,39 @@ func drawTextLine(c *svg.Canvas, content string, x, y, fontPx float64, justify s
 	if a := normDeg(rotDeg); a != 0 {
 		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%g %.1f %.1f)", a, x, y)))
 	}
-	c.Text(content, attrs...)
+	if runs == nil {
+		c.Text(content, attrs...)
+		return
+	}
+	c.TextSpans(markupSpans(runs), attrs...)
+}
+
+// markupSpans draws each run as a tspan. KiCad draws an overbar as a line over the run, and a
+// subscript or superscript smaller and off the baseline.
+func markupSpans(runs []textRun) []svg.Span {
+	out := make([]svg.Span, 0, len(runs))
+	for _, r := range runs {
+		sp := svg.Span{Content: r.text}
+		switch r.kind {
+		case geom.TextRun_KIND_OVERBAR:
+			sp.Attrs = []svg.Attr{svg.A("text-decoration", "overline")}
+		case geom.TextRun_KIND_SUBSCRIPT:
+			sp.Attrs = []svg.Attr{svg.A("baseline-shift", "sub"), svg.A("font-size", "70%")}
+		case geom.TextRun_KIND_SUPERSCRIPT:
+			sp.Attrs = []svg.Attr{svg.A("baseline-shift", "super"), svg.A("font-size", "70%")}
+		}
+		out = append(out, sp)
+	}
+	return out
+}
+
+// pinName is the name a pin draws with on one placement, the alternate the placement picks when it
+// picks one (SymbolPlacement.pin_names), and otherwise the symbol's.
+func pinName(pl *geom.SymbolPlacement, pin *geom.PinPoint) string {
+	if n, ok := pl.GetPinNames()[pin.GetPortRef()]; ok {
+		return n
+	}
+	return pin.GetName()
 }
 
 // boxWidthPx is a symbol's caption-width budget in pixels: its body-box width mapped through the

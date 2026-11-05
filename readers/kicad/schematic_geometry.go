@@ -85,10 +85,11 @@ func externalSymbolDefs(root *node, have []*geom.SymbolDef, syms *symLibCache, s
 // no parent; ReadSchematicHierarchy assigns hierarchical ids.
 func extractSchGeom(root *node, src string) *geom.SchematicGeometry {
 	g := &geom.SchematicGeometry{
-		UnitNm:    1,
-		DesignRef: titleOf(root),
-		Symbols:   symbolsOf(root, src),
-		Prov:      &geom.Provenance{SourceFile: src},
+		UnitNm:     1,
+		TextMarkup: "kicad",
+		DesignRef:  titleOf(root),
+		Symbols:    symbolsOf(root, src),
+		Prov:       &geom.Provenance{SourceFile: src},
 	}
 	single := solveWireNets(root, sheetScope{src: src})
 	sh := sheetOf(root, src, func(uuid string) netgraph.NetRef { return single[uuid] })
@@ -366,7 +367,7 @@ func ReadSchematicHierarchy(rootName string, rootContent []byte, open func(relPa
 // ReadSchematicGeometryWithSymbols for the openSym contract.
 func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open, openSym func(string) ([]byte, error)) (*geom.SchematicGeometry, error) {
 	w := &hierGeomWalker{
-		g:        &geom.SchematicGeometry{UnitNm: 1, Prov: &geom.Provenance{SourceFile: rootName}},
+		g:        &geom.SchematicGeometry{UnitNm: 1, TextMarkup: "kicad", Prov: &geom.Provenance{SourceFile: rootName}},
 		symByKey: map[string]bool{},
 		syms:     newSymLibCache(openSym),
 		// One combined net solve for the whole tree (WS1-022), so every sheet's wires get the
@@ -909,7 +910,26 @@ func placementOf(ps *node, src string) *geom.SymbolPlacement {
 		Dnp: atomOf(ps.Child("dnp").Arg(1)) == "yes",
 	}
 	pl.CellRef = symbolKey(ps)
+	pl.PinNames = alternatePins(ps)
 	return pl
+}
+
+// alternatePins reads the alternate function a placed part picks for a pin,
+// `(pin "G39" (uuid ...) (alternate "CAN0_DIN"))`, keyed by the pin's number. kicad-cli draws that
+// name where the library's goes (agni issue 1344). It returns nil when the part picks none.
+func alternatePins(ps *node) map[string]string {
+	var out map[string]string
+	for _, p := range ps.Children("pin") {
+		alt := atomOf(p.Child("alternate").Arg(1))
+		if alt == "" {
+			continue
+		}
+		if out == nil {
+			out = map[string]string{}
+		}
+		out[atomOf(p.Arg(1))] = alt
+	}
+	return out
 }
 
 // kicadTransform maps a KiCad (at x y angle) plus optional (mirror x|y) onto the neutral

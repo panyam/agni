@@ -171,6 +171,7 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 			Justify:     pl.justify,
 			Color:       pl.color,
 			MaxWidth:    num.Int32(pl.maxWidth),
+			Runs:        packedRuns(pl.runs),
 		})
 	}
 
@@ -255,6 +256,19 @@ func xy(pts []*geom.Point) [][2]int64 {
 	out := make([][2]int64, 0, len(pts))
 	for _, p := range pts {
 		out = append(out, [2]int64{p.X, p.Y})
+	}
+	return out
+}
+
+// packedRuns carries a label's markup runs to the overlay, so it draws them as the SVG backend
+// does without parsing the markup again.
+func packedRuns(runs []textRun) []*geom.TextRun {
+	if runs == nil {
+		return nil
+	}
+	out := make([]*geom.TextRun, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, &geom.TextRun{Text: r.text, Kind: r.kind})
 	}
 	return out
 }

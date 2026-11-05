@@ -11,6 +11,26 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // update() multiplies the CSS scale back by it. The clamp ignores a CSS scale, so geometry is unchanged.
 const SAFE_FONT_UNITS = 2000;
 
+// appendRuns writes a label's markup runs into its <text> as <tspan>s, styled as core/render/svg.go's
+// markupSpans styles them: an overbar as an overline, and a subscript or superscript smaller and
+// off the baseline. A plain run is a bare text node.
+export function appendRuns(t: Element, runs: { text: string; kind: number }[]): void {
+  for (const r of runs) {
+    if (r.kind === 0) {
+      t.appendChild(document.createTextNode(r.text));
+      continue;
+    }
+    const s = document.createElementNS(SVGNS, "tspan");
+    if (r.kind === 1) s.setAttribute("text-decoration", "overline");
+    else {
+      s.setAttribute("baseline-shift", r.kind === 2 ? "sub" : "super");
+      s.setAttribute("font-size", "70%");
+    }
+    s.textContent = r.text;
+    t.appendChild(s);
+  }
+}
+
 // bakeDivisor picks the per-sheet divisor that brings the largest font-size near SAFE_FONT_UNITS.
 // It never goes below 1, so a sheet already under the clamp is baked unchanged.
 export function bakeDivisor(maxFontUnits: number): number {
@@ -187,7 +207,8 @@ export class TextOverlay {
         // Rotation is per-label and static, in world CCW degrees. The baked Y-down space makes SVG's
         // clockwise-positive rotate() match, as in the SVG backend.
         if (l.rotationDeg) t.setAttribute("transform", `rotate(${l.rotationDeg} ${x} ${line.y})`);
-        t.textContent = line.text;
+        if (l.runs.length > 0 && !l.text.includes("\n")) appendRuns(t, l.runs);
+        else t.textContent = line.text;
         this.svg.appendChild(t);
       }
     }

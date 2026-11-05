@@ -205,6 +205,11 @@ message SymbolPlacement {
   // with a cross over its body, and both backends draw that cross. A format with no such flag
   // leaves it false.
   bool dnp = 8;
+  // pin_names replaces a pin's drawn name on this placement, keyed by the pin's number
+  // (PinPoint.port_ref). KiCad lets a placed part pick one of a pin's alternate functions,
+  // `(pin "G39" (alternate "CAN0_DIN"))`, and draws that name where the library's would go (agni
+  // issue 1344). A pin with no entry draws its symbol's name.
+  map<string, string> pin_names = 9;
   Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
 }
 
@@ -354,6 +359,12 @@ message SchematicGeometry {
   // A reader uses this list to audit which drawn labels were replaced. Empty when the file
   // back-annotates nothing, or nothing it back-annotates differs from the page.
   repeated BackAnnotatedPlacement back_annotated = 6;
+  // text_markup names the markup the geometry's text is written in, so a renderer knows to draw
+  // it rather than print it (agni issue 1344). "kicad" is KiCad's: `~{X}` draws X with an overbar,
+  // `_{X}` as a subscript, `^{X}` as a superscript, and `{slash}` and its siblings draw the
+  // character they escape. Empty means plain text, and a renderer prints it as written. The text
+  // itself is unchanged, since a net label's text is also the net's name.
+  string text_markup = 7;
   Provenance prov = 16;
 }
 

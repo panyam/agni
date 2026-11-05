@@ -192,7 +192,14 @@ class Field(_message.Message):
     def __init__(self, name: _Optional[str] = ..., value: _Optional[str] = ..., origin: _Optional[_Union[Point, _Mapping]] = ..., justify: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., visible: _Optional[bool] = ...) -> None: ...
 
 class SymbolPlacement(_message.Message):
-    __slots__ = ("ref_des", "cell_ref", "library_ref", "transform", "view_ref", "fields", "net_anchor", "dnp", "prov")
+    __slots__ = ("ref_des", "cell_ref", "library_ref", "transform", "view_ref", "fields", "net_anchor", "dnp", "pin_names", "prov")
+    class PinNamesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     CELL_REF_FIELD_NUMBER: _ClassVar[int]
     LIBRARY_REF_FIELD_NUMBER: _ClassVar[int]
@@ -201,6 +208,7 @@ class SymbolPlacement(_message.Message):
     FIELDS_FIELD_NUMBER: _ClassVar[int]
     NET_ANCHOR_FIELD_NUMBER: _ClassVar[int]
     DNP_FIELD_NUMBER: _ClassVar[int]
+    PIN_NAMES_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     cell_ref: str
@@ -210,8 +218,9 @@ class SymbolPlacement(_message.Message):
     fields: _containers.RepeatedCompositeFieldContainer[Field]
     net_anchor: str
     dnp: bool
+    pin_names: _containers.ScalarMap[str, str]
     prov: Provenance
-    def __init__(self, ref_des: _Optional[str] = ..., cell_ref: _Optional[str] = ..., library_ref: _Optional[str] = ..., transform: _Optional[_Union[Transform, _Mapping]] = ..., view_ref: _Optional[str] = ..., fields: _Optional[_Iterable[_Union[Field, _Mapping]]] = ..., net_anchor: _Optional[str] = ..., dnp: _Optional[bool] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, ref_des: _Optional[str] = ..., cell_ref: _Optional[str] = ..., library_ref: _Optional[str] = ..., transform: _Optional[_Union[Transform, _Mapping]] = ..., view_ref: _Optional[str] = ..., fields: _Optional[_Iterable[_Union[Field, _Mapping]]] = ..., net_anchor: _Optional[str] = ..., dnp: _Optional[bool] = ..., pin_names: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Polyline(_message.Message):
     __slots__ = ("points",)
@@ -328,13 +337,14 @@ class KeyValue(_message.Message):
     def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class SchematicGeometry(_message.Message):
-    __slots__ = ("design_ref", "unit_nm", "symbols", "sheets", "undrawn", "back_annotated", "prov")
+    __slots__ = ("design_ref", "unit_nm", "symbols", "sheets", "undrawn", "back_annotated", "text_markup", "prov")
     DESIGN_REF_FIELD_NUMBER: _ClassVar[int]
     UNIT_NM_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     SHEETS_FIELD_NUMBER: _ClassVar[int]
     UNDRAWN_FIELD_NUMBER: _ClassVar[int]
     BACK_ANNOTATED_FIELD_NUMBER: _ClassVar[int]
+    TEXT_MARKUP_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     design_ref: str
     unit_nm: int
@@ -342,8 +352,9 @@ class SchematicGeometry(_message.Message):
     sheets: _containers.RepeatedCompositeFieldContainer[SheetGeometry]
     undrawn: _containers.RepeatedCompositeFieldContainer[UndrawnPlacement]
     back_annotated: _containers.RepeatedCompositeFieldContainer[BackAnnotatedPlacement]
+    text_markup: str
     prov: Provenance
-    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., symbols: _Optional[_Iterable[_Union[SymbolDef, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[SheetGeometry, _Mapping]]] = ..., undrawn: _Optional[_Iterable[_Union[UndrawnPlacement, _Mapping]]] = ..., back_annotated: _Optional[_Iterable[_Union[BackAnnotatedPlacement, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., symbols: _Optional[_Iterable[_Union[SymbolDef, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[SheetGeometry, _Mapping]]] = ..., undrawn: _Optional[_Iterable[_Union[UndrawnPlacement, _Mapping]]] = ..., back_annotated: _Optional[_Iterable[_Union[BackAnnotatedPlacement, _Mapping]]] = ..., text_markup: _Optional[str] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class BackAnnotatedPlacement(_message.Message):
     __slots__ = ("ref_des", "drawn_ref_des", "sheet_id")

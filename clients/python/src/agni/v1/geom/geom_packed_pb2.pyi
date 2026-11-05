@@ -83,8 +83,26 @@ class PackedHighlight(_message.Message):
     groups: _containers.RepeatedCompositeFieldContainer[PackedHighlight.Group]
     def __init__(self, groups: _Optional[_Iterable[_Union[PackedHighlight.Group, _Mapping]]] = ...) -> None: ...
 
+class TextRun(_message.Message):
+    __slots__ = ("text", "kind")
+    class Kind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        KIND_PLAIN: _ClassVar[TextRun.Kind]
+        KIND_OVERBAR: _ClassVar[TextRun.Kind]
+        KIND_SUBSCRIPT: _ClassVar[TextRun.Kind]
+        KIND_SUPERSCRIPT: _ClassVar[TextRun.Kind]
+    KIND_PLAIN: TextRun.Kind
+    KIND_OVERBAR: TextRun.Kind
+    KIND_SUBSCRIPT: TextRun.Kind
+    KIND_SUPERSCRIPT: TextRun.Kind
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    kind: TextRun.Kind
+    def __init__(self, text: _Optional[str] = ..., kind: _Optional[_Union[TextRun.Kind, str]] = ...) -> None: ...
+
 class PackedLabel(_message.Message):
-    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width")
+    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width", "runs")
     X_FIELD_NUMBER: _ClassVar[int]
     Y_FIELD_NUMBER: _ClassVar[int]
     TEXT_FIELD_NUMBER: _ClassVar[int]
@@ -93,6 +111,7 @@ class PackedLabel(_message.Message):
     JUSTIFY_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
     MAX_WIDTH_FIELD_NUMBER: _ClassVar[int]
+    RUNS_FIELD_NUMBER: _ClassVar[int]
     x: int
     y: int
     text: str
@@ -101,7 +120,8 @@ class PackedLabel(_message.Message):
     justify: str
     color: str
     max_width: int
-    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ...) -> None: ...
+    runs: _containers.RepeatedCompositeFieldContainer[TextRun]
+    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ...) -> None: ...
 
 class PackedImage(_message.Message):
     __slots__ = ("x", "y", "w", "h", "mime", "data", "rotation_deg", "mirror")

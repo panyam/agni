@@ -92,6 +92,58 @@ func (HighlightShape) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{0}
 }
 
+type TextRun_Kind int32
+
+const (
+	TextRun_KIND_PLAIN       TextRun_Kind = 0
+	TextRun_KIND_OVERBAR     TextRun_Kind = 1
+	TextRun_KIND_SUBSCRIPT   TextRun_Kind = 2
+	TextRun_KIND_SUPERSCRIPT TextRun_Kind = 3
+)
+
+// Enum value maps for TextRun_Kind.
+var (
+	TextRun_Kind_name = map[int32]string{
+		0: "KIND_PLAIN",
+		1: "KIND_OVERBAR",
+		2: "KIND_SUBSCRIPT",
+		3: "KIND_SUPERSCRIPT",
+	}
+	TextRun_Kind_value = map[string]int32{
+		"KIND_PLAIN":       0,
+		"KIND_OVERBAR":     1,
+		"KIND_SUBSCRIPT":   2,
+		"KIND_SUPERSCRIPT": 3,
+	}
+)
+
+func (x TextRun_Kind) Enum() *TextRun_Kind {
+	p := new(TextRun_Kind)
+	*p = x
+	return p
+}
+
+func (x TextRun_Kind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TextRun_Kind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_geom_geom_packed_proto_enumTypes[1].Descriptor()
+}
+
+func (TextRun_Kind) Type() protoreflect.EnumType {
+	return &file_agni_v1_geom_geom_packed_proto_enumTypes[1]
+}
+
+func (x TextRun_Kind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TextRun_Kind.Descriptor instead.
+func (TextRun_Kind) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{4, 0}
+}
+
 // PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
 // element it belongs to, for view-local picking/highlight.
 type PrimitiveKey struct {
@@ -422,23 +474,82 @@ func (x *PackedHighlight) GetGroups() []*PackedHighlight_Group {
 // architecture/geometry-and-rendering.md). The server computes the world position and the
 // color with the SVG backend's transform math, so the overlay and the SVG oracle agree. The
 // browser only maps world->screen with the view camera. O(labels), and structured like keys.
-type PackedLabel struct {
+// TextRun is one piece of a label that draws in one style. The engine splits a label by its
+// markup, so the SVG backend and the overlay draw it alike without parsing it again.
+type TextRun struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	X             int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"` // sheet-relative world origin (rebased, like the vertex blob)
-	Y             int32                  `protobuf:"varint,2,opt,name=y,proto3" json:"y,omitempty"`
-	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
-	Height        int32                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                              // text height in world units; the camera scales it to pixels
-	RotationDeg   int32                  `protobuf:"varint,5,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees counter-clockwise (Y-up); 0/90/180/270 typical
-	Justify       string                 `protobuf:"bytes,6,opt,name=justify,proto3" json:"justify,omitempty"`                             // canonical "<h> <v>" alignment (see geom.Label.justify)
-	Color         string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`                                 // "#rrggbb", chosen server-side to match the SVG oracle
-	MaxWidth      int32                  `protobuf:"varint,8,opt,name=max_width,json=maxWidth,proto3" json:"max_width,omitempty"`          // world-space width to condense the run into (0 = unbounded). A symbol
+	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	Kind          TextRun_Kind           `protobuf:"varint,2,opt,name=kind,proto3,enum=agni.v1.geom.TextRun_Kind" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TextRun) Reset() {
+	*x = TextRun{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TextRun) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TextRun) ProtoMessage() {}
+
+func (x *TextRun) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TextRun.ProtoReflect.Descriptor instead.
+func (*TextRun) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TextRun) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *TextRun) GetKind() TextRun_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return TextRun_KIND_PLAIN
+}
+
+type PackedLabel struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	X           int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"` // sheet-relative world origin (rebased, like the vertex blob)
+	Y           int32                  `protobuf:"varint,2,opt,name=y,proto3" json:"y,omitempty"`
+	Text        string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	Height      int32                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                              // text height in world units; the camera scales it to pixels
+	RotationDeg int32                  `protobuf:"varint,5,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees counter-clockwise (Y-up); 0/90/180/270 typical
+	Justify     string                 `protobuf:"bytes,6,opt,name=justify,proto3" json:"justify,omitempty"`                             // canonical "<h> <v>" alignment (see geom.Label.justify)
+	Color       string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`                                 // "#rrggbb", chosen server-side to match the SVG oracle
+	MaxWidth    int32                  `protobuf:"varint,8,opt,name=max_width,json=maxWidth,proto3" json:"max_width,omitempty"`          // world-space width to condense the run into (0 = unbounded). A symbol
+	// caption gets its box width here; the overlay squeezes glyphs to fit
+	// (textLength) rather than spilling past the box, matching the SVG backend.
+	// runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
+	// to `text`. Empty means `text` draws as one plain run.
+	Runs          []*TextRun `protobuf:"bytes,9,rep,name=runs,proto3" json:"runs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PackedLabel) Reset() {
 	*x = PackedLabel{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[4]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +561,7 @@ func (x *PackedLabel) String() string {
 func (*PackedLabel) ProtoMessage() {}
 
 func (x *PackedLabel) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[4]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +574,7 @@ func (x *PackedLabel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PackedLabel.ProtoReflect.Descriptor instead.
 func (*PackedLabel) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PackedLabel) GetX() int32 {
@@ -522,6 +633,13 @@ func (x *PackedLabel) GetMaxWidth() int32 {
 	return 0
 }
 
+func (x *PackedLabel) GetRuns() []*TextRun {
+	if x != nil {
+		return x.Runs
+	}
+	return nil
+}
+
 // PackedImage is one raster image positioned in sheet-relative world coordinates (rebased by
 // origin_x/origin_y, like PackedLabel and the vertex blob). A GPU line pipeline draws no
 // raster, so images go in the same overlay above the geometry as text. The browser positions
@@ -546,7 +664,7 @@ type PackedImage struct {
 
 func (x *PackedImage) Reset() {
 	*x = PackedImage{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[5]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -558,7 +676,7 @@ func (x *PackedImage) String() string {
 func (*PackedImage) ProtoMessage() {}
 
 func (x *PackedImage) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[5]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -571,7 +689,7 @@ func (x *PackedImage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PackedImage.ProtoReflect.Descriptor instead.
 func (*PackedImage) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PackedImage) GetX() int32 {
@@ -664,7 +782,7 @@ type PackedSheet struct {
 
 func (x *PackedSheet) Reset() {
 	*x = PackedSheet{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[6]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -676,7 +794,7 @@ func (x *PackedSheet) String() string {
 func (*PackedSheet) ProtoMessage() {}
 
 func (x *PackedSheet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[6]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -689,7 +807,7 @@ func (x *PackedSheet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PackedSheet.ProtoReflect.Descriptor instead.
 func (*PackedSheet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PackedSheet) GetSheetId() string {
@@ -791,7 +909,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -803,7 +921,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +1000,16 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\n" +
 	"primitives\x18\x03 \x03(\rR\n" +
 	"primitives\x122\n" +
-	"\x05shape\x18\x04 \x01(\x0e2\x1c.agni.v1.geom.HighlightShapeR\x05shape\"\xc5\x01\n" +
+	"\x05shape\x18\x04 \x01(\x0e2\x1c.agni.v1.geom.HighlightShapeR\x05shape\"\xa1\x01\n" +
+	"\aTextRun\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\x12.\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x1a.agni.v1.geom.TextRun.KindR\x04kind\"R\n" +
+	"\x04Kind\x12\x0e\n" +
+	"\n" +
+	"KIND_PLAIN\x10\x00\x12\x10\n" +
+	"\fKIND_OVERBAR\x10\x01\x12\x12\n" +
+	"\x0eKIND_SUBSCRIPT\x10\x02\x12\x14\n" +
+	"\x10KIND_SUPERSCRIPT\x10\x03\"\xf0\x01\n" +
 	"\vPackedLabel\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\x12\n" +
@@ -891,7 +1018,8 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\frotation_deg\x18\x05 \x01(\x05R\vrotationDeg\x12\x18\n" +
 	"\ajustify\x18\x06 \x01(\tR\ajustify\x12\x14\n" +
 	"\x05color\x18\a \x01(\tR\x05color\x12\x1b\n" +
-	"\tmax_width\x18\b \x01(\x05R\bmaxWidth\"\xa8\x01\n" +
+	"\tmax_width\x18\b \x01(\x05R\bmaxWidth\x12)\n" +
+	"\x04runs\x18\t \x03(\v2\x15.agni.v1.geom.TextRunR\x04runs\"\xa8\x01\n" +
 	"\vPackedImage\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\f\n" +
@@ -937,32 +1065,36 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_packed_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
-	(*PrimitiveKey)(nil),          // 1: agni.v1.geom.PrimitiveKey
-	(*PinRef)(nil),                // 2: agni.v1.geom.PinRef
-	(*HighlightSpec)(nil),         // 3: agni.v1.geom.HighlightSpec
-	(*PackedHighlight)(nil),       // 4: agni.v1.geom.PackedHighlight
-	(*PackedLabel)(nil),           // 5: agni.v1.geom.PackedLabel
-	(*PackedImage)(nil),           // 6: agni.v1.geom.PackedImage
-	(*PackedSheet)(nil),           // 7: agni.v1.geom.PackedSheet
-	(*PackedHighlight_Group)(nil), // 8: agni.v1.geom.PackedHighlight.Group
+	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
+	(*PrimitiveKey)(nil),          // 2: agni.v1.geom.PrimitiveKey
+	(*PinRef)(nil),                // 3: agni.v1.geom.PinRef
+	(*HighlightSpec)(nil),         // 4: agni.v1.geom.HighlightSpec
+	(*PackedHighlight)(nil),       // 5: agni.v1.geom.PackedHighlight
+	(*TextRun)(nil),               // 6: agni.v1.geom.TextRun
+	(*PackedLabel)(nil),           // 7: agni.v1.geom.PackedLabel
+	(*PackedImage)(nil),           // 8: agni.v1.geom.PackedImage
+	(*PackedSheet)(nil),           // 9: agni.v1.geom.PackedSheet
+	(*PackedHighlight_Group)(nil), // 10: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
-	2, // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
-	0, // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	8, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
-	1, // 3: agni.v1.geom.PackedSheet.keys:type_name -> agni.v1.geom.PrimitiveKey
-	5, // 4: agni.v1.geom.PackedSheet.labels:type_name -> agni.v1.geom.PackedLabel
-	6, // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
-	0, // 6: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
+	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
+	10, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
+	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
+	2,  // 5: agni.v1.geom.PackedSheet.keys:type_name -> agni.v1.geom.PrimitiveKey
+	7,  // 6: agni.v1.geom.PackedSheet.labels:type_name -> agni.v1.geom.PackedLabel
+	8,  // 7: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
+	0,  // 8: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -975,8 +1107,8 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   8,
+			NumEnums:      2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
