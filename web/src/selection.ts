@@ -111,9 +111,23 @@ const PROBES: [number, number][] = [
 export function pickAt(doc: Document, clientX: number, clientY: number): Selection | null {
   const seen: (Selection | null)[] = [];
   for (const [dx, dy] of PROBES) {
-    seen.push(selectionFromElement(doc.elementFromPoint(clientX + dx, clientY + dy)));
+    const x = clientX + dx, y = clientY + dy;
+    seen.push(selectionFromElement(underPour(doc, doc.elementFromPoint(x, y), x, y)));
   }
   return bestOf(seen);
+}
+
+// underPour is the element a click picks when the topmost one is a pour. A pour fills a whole
+// plane, so a board that has one draws it over every footprint body on its side and every one under
+// an inner plane, and a click between a part's pads would then pick the plane. The part's body is
+// still under the click, and it is what a reader aims at there, so it wins. A pour elsewhere still
+// picks its net, and a pad or a track drawn over a body still wins (agni issue 1382).
+function underPour(doc: Document, hit: Element | null, x: number, y: number): Element | null {
+  if (!hit?.closest(".pour") || typeof doc.elementsFromPoint !== "function") return hit;
+  for (const e of doc.elementsFromPoint(x, y)) {
+    if (keyedFrom(e)?.getAttribute("data-kind") === "component") return e;
+  }
+  return hit;
 }
 
 // The SERVER writes the presets (query.EntityQueries), and entityBindings gives one the values of

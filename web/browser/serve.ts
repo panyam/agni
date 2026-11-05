@@ -74,6 +74,8 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "common=examples/common/designs",
       // The fetched boards, for the naming walk on the MNT Reform motherboard (agni issue 1267).
       "--mount", "boards=tools/samples/boards",
+      // Clay R6, the cross-probe walk's OrCAD design on its Allegro board (agni issue 1382).
+      "--mount", "cadence=tools/samples/cadence",
       // A store, so the Review panel can run a checklist and save it (agni issue 1030). Fresh per run,
       // so no spec sees another run's reviews.
       "--review-store", mkdtempSync(join(tmpdir(), "agni-browser-reviews-")),

@@ -230,6 +230,25 @@ func pinPoint(sp symPin, num string, height int64) *geom.PinPoint {
 	return pp
 }
 
+// artworkBox is a symbol's extent as drawn, its shapes and pins with each circle's radius. Capture's
+// stored box can leave part of the drawing out, as a test point's circle above its box, and a
+// viewer that frames a part by its box would frame it off its drawing.
+func artworkBox(sd *geom.SymbolDef) *geom.BBox {
+	b := geomath.SymbolBBox(sd)
+	if b == nil {
+		return nil
+	}
+	for _, sh := range sd.Shapes {
+		if sh.GetKind() != geom.Shape_KIND_CIRCLE || len(sh.Points) == 0 {
+			continue
+		}
+		c, r := sh.Points[0], sh.GetRadius()
+		b.Min.X, b.Min.Y = min(b.Min.X, c.X-r), min(b.Min.Y, c.Y-r)
+		b.Max.X, b.Max.Y = max(b.Max.X, c.X+r), max(b.Max.Y, c.Y+r)
+	}
+	return b
+}
+
 // cellRef names a placed part's symbol for one unit of one package. A unit's pins are numbered
 // by its own device, so two units of a part are two symbols.
 func cellRef(part placedPart) string {
@@ -255,10 +274,7 @@ func (f *flattener) geometry(top *dsn) *geom.SchematicGeometry {
 
 func (f *flattener) sheet(g *geom.SchematicGeometry, v visit, defs map[string]bool) *geom.SheetGeometry {
 	d, pg := v.d, v.pg
-	name := pg.name
-	if v.bpath != "" {
-		name = strings.TrimPrefix(v.bpath, "/") + " " + pg.name
-	}
+	name := v.sheet[strings.LastIndexByte(v.sheet, '/')+1:]
 	s := &geom.SheetGeometry{
 		Id:       v.sheet,
 		Name:     name,
@@ -280,7 +296,6 @@ func (f *flattener) sheet(g *geom.SchematicGeometry, v visit, defs map[string]bo
 			defs[lib+"\x00"+key] = true
 			shapes, labels := symbolShapes(lp.draw, lp.pins)
 			sd := &geom.SymbolDef{CellRef: key, LibraryRef: lib, Shapes: shapes, Annotations: labels,
-				Bbox: &geom.BBox{Min: gp(point{lp.draw.box[0].x, lp.draw.box[1].y}), Max: gp(point{lp.draw.box[1].x, lp.draw.box[0].y})},
 				Prov: &geom.Provenance{SourceFile: d.name, SourceId: part.cacheKey}}
 			var numbers []string
 			if pl.pkg != nil && part.unit < len(pl.pkg.devices) {
@@ -303,6 +318,7 @@ func (f *flattener) sheet(g *geom.SchematicGeometry, v visit, defs map[string]bo
 				}
 				sd.Pins = append(sd.Pins, pp)
 			}
+			sd.Bbox = artworkBox(sd)
 			g.Symbols = append(g.Symbols, sd)
 		}
 		sp := &geom.SymbolPlacement{
@@ -379,9 +395,10 @@ func (f *flattener) sheet(g *geom.SchematicGeometry, v visit, defs map[string]bo
 		if !defs[lib+"\x00"+key] {
 			defs[lib+"\x00"+key] = true
 			shapes, labels := symbolShapes(cs.draw, cs.pins)
-			g.Symbols = append(g.Symbols, &geom.SymbolDef{CellRef: key, LibraryRef: lib, Shapes: shapes, Annotations: labels,
-				Bbox: &geom.BBox{Min: gp(point{cs.draw.box[0].x, cs.draw.box[1].y}), Max: gp(point{cs.draw.box[1].x, cs.draw.box[0].y})},
-				Prov: &geom.Provenance{SourceFile: d.name, SourceId: sym.symbol}})
+			sd := &geom.SymbolDef{CellRef: key, LibraryRef: lib, Shapes: shapes, Annotations: labels,
+				Prov: &geom.Provenance{SourceFile: d.name, SourceId: sym.symbol}}
+			sd.Bbox = artworkBox(sd)
+			g.Symbols = append(g.Symbols, sd)
 		}
 		sp := &geom.SymbolPlacement{
 			CellRef:    key,

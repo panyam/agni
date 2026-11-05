@@ -276,11 +276,20 @@ func TestOrCADDrawsEveryClayPageAndJoinsItsNetlist(t *testing.T) {
 	if len(sheets) != 11 {
 		t.Fatalf("%d sheets, want Clay's top page and its ten blocks", len(sheets))
 	}
+	// A sheet's id is its block path, as KiCad's are, and its name the path's last part.
 	root := sheets[0].GetId()
+	if root != "/PAGE1" || sheets[0].GetName() != "PAGE1" {
+		t.Errorf("the top page is %q named %q, want /PAGE1 named PAGE1", root, sheets[0].GetName())
+	}
+	ids := map[string]string{}
 	for _, s := range sheets[1:] {
+		ids[s.GetId()] = s.GetName()
 		if s.GetParentId() != root {
 			t.Errorf("sheet %q has parent %q, want the top page %q", s.GetName(), s.GetParentId(), root)
 		}
+	}
+	if ids["/IMU"] != "IMU" || ids["/uC"] != "uC" {
+		t.Errorf("block sheets %v, want /IMU named IMU and /uC named uC among them", ids)
 	}
 	if u := g.GetUndrawn(); len(u) != 0 {
 		t.Errorf("%d placements did not draw: %v", len(u), u)
