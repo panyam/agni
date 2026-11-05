@@ -130,14 +130,16 @@ export class SvgView {
   // overlay, or nothing drawn on this sheet).
   revealOverlay(): SvgViewState | null {
     let box: RevealBox | null = null;
-    for (const svg of this.overlay.querySelectorAll(":scope > svg")) {
+    // Each drawn element is measured on its own. An <svg>'s own getBBox leaves out a child with no
+    // size, and a pin's highlight is a point, a box with no size (agni issue 1326). computeReveal
+    // frames a point with its minimum extent.
+    for (const el of this.overlay.querySelectorAll(":scope > svg > *")) {
       let b: { x: number; y: number; width: number; height: number };
       try {
-        b = (svg as SVGGraphicsElement).getBBox();
+        b = (el as SVGGraphicsElement).getBBox();
       } catch {
         continue; // detached/unrendered SVG (jsdom, display:none) has nothing to measure
       }
-      if (b.width <= 0 && b.height <= 0) continue;
       if (!box) {
         box = { x: b.x, y: b.y, w: b.width, h: b.height };
       } else {

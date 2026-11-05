@@ -149,6 +149,20 @@ describe("a sheet view beside the canvas", () => {
         { timeout: 30_000 },
       );
       expect(await centredIn(page, `${PANE} .picks-front [data-ref="${onSheet.ref}"]`, `${PANE} .sheetview-canvas`)).toBe(true);
+
+      // A pad picked on the board centres its pin on the schematic. A pin's highlight is a point, and
+      // a point used to reveal nothing.
+      const pad = `${PANE} [data-kind="pin"][data-ref="${onSheet.ref}"]`;
+      const pin = await page.$eval(pad, (e) => e.getAttribute("data-pin")!);
+      await page.mouse.click(...(Object.values(await centreOf(page, `${pad}[data-pin="${pin}"]`)) as [number, number]));
+      await picked(page, `${onSheet.ref}.${pin}`);
+      const pinOnSheet = `#svg-view [data-kind="pin"][data-ref="${onSheet.ref}"][data-pin="${pin}"]`;
+      await page.waitForFunction((sel) => {
+        const e = document.querySelector(sel)!.getBoundingClientRect();
+        const h = document.querySelector("#svg-view")!.getBoundingClientRect();
+        const cx = e.left + e.width / 2, cy = e.top + e.height / 2;
+        return Math.abs(cx - (h.left + h.width / 2)) < h.width / 10 && Math.abs(cy - (h.top + h.height / 2)) < h.height / 10;
+      }, pinOnSheet, { timeout: 30_000 });
     });
   }, 120_000);
 
