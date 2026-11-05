@@ -1272,7 +1272,10 @@ and the command that exercises it. Several may be active at once, one per worktr
 exercise-cross-probe` is its exercise. Its walk runs in the gate on a cut of Jetson
 (`examples/cross-probe-project`) and names, per step, the tickets it waits on. A waiting step that
 passes FAILS the walk, so the PR that makes a step pass also removes its wait in
-`web/browser/cross-probe-walk.spec.ts`. #1194
+`web/browser/cross-probe-walk.spec.ts`. The make target also asks GitHub which of those tickets are
+closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a
+ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
+read its steps "not available". The gate runs offline and skips that half. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni
