@@ -277,7 +277,14 @@ type DirEntry struct {
 	// file no page opens. The server sends it, so "what is a datasheet" has one definition. The
 	// browser used to decide by extension. That put a second copy of the rule in TypeScript, and
 	// nothing could notice when it disagreed with the server.
-	Kind          FileKind `protobuf:"varint,5,opt,name=kind,proto3,enum=agni.v1.webapi.FileKind" json:"kind,omitempty"`
+	Kind FileKind `protobuf:"varint,5,opt,name=kind,proto3,enum=agni.v1.webapi.FileKind" json:"kind,omitempty"`
+	// board_uri is what to attach as a design's board (Snapshot.board_uri) when this entry is one, and
+	// empty otherwise. It is set only when ListDirRequest.mark_boards asks. A file a board reader opens
+	// is its own uri. A directory holding an ODB++ job answers its matrix/matrix entry, the file a
+	// reader enters the job by, since a loader reads exactly the artifact it is handed. The server
+	// decides both, as it decides kind, so no client keeps a list of board formats or knows a job's
+	// layout.
+	BoardUri      string `protobuf:"bytes,6,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -347,6 +354,13 @@ func (x *DirEntry) GetKind() FileKind {
 	return FileKind_FILE_KIND_UNSPECIFIED
 }
 
+func (x *DirEntry) GetBoardUri() string {
+	if x != nil {
+		return x.BoardUri
+	}
+	return ""
+}
+
 type ListDirRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
@@ -363,7 +377,11 @@ type ListDirRequest struct {
 	// Answering it costs a bounded walk of each subtree. The walk may fail to settle a directory,
 	// because it reached its bound or the adapter failed. That directory is kept. A folder shown
 	// wrongly costs a click, and a folder hidden wrongly costs a file.
-	Opens         []FileKind `protobuf:"varint,3,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
+	Opens []FileKind `protobuf:"varint,3,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
+	// mark_boards sets DirEntry.board_uri on each entry the viewer can attach as a design's board, for a
+	// picker that asks for one (agni issue 1367). Marking a directory costs one listing of it, so it is
+	// off unless asked.
+	MarkBoards    bool `protobuf:"varint,4,opt,name=mark_boards,json=markBoards,proto3" json:"mark_boards,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -410,6 +428,13 @@ func (x *ListDirRequest) GetOpens() []FileKind {
 		return x.Opens
 	}
 	return nil
+}
+
+func (x *ListDirRequest) GetMarkBoards() bool {
+	if x != nil {
+		return x.MarkBoards
+	}
+	return false
 }
 
 type ListDirResponse struct {
@@ -912,16 +937,19 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"h\n" +
 	"\x12ListMountsResponse\x12-\n" +
 	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\x12#\n" +
-	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"\x8d\x01\n" +
+	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"\xaa\x01\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
 	"\x06format\x18\x03 \x01(\tR\x06format\x12\x10\n" +
 	"\x03uri\x18\x04 \x01(\tR\x03uri\x12,\n" +
-	"\x04kind\x18\x05 \x01(\x0e2\x18.agni.v1.webapi.FileKindR\x04kind\"X\n" +
+	"\x04kind\x18\x05 \x01(\x0e2\x18.agni.v1.webapi.FileKindR\x04kind\x12\x1b\n" +
+	"\tboard_uri\x18\x06 \x01(\tR\bboardUri\"y\n" +
 	"\x0eListDirRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x12.\n" +
-	"\x05opens\x18\x03 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x02\x10\x03\"E\n" +
+	"\x05opens\x18\x03 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opens\x12\x1f\n" +
+	"\vmark_boards\x18\x04 \x01(\bR\n" +
+	"markBoardsJ\x04\b\x02\x10\x03\"E\n" +
 	"\x0fListDirResponse\x122\n" +
 	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries\"*\n" +
 	"\x16ListDesignFilesRequest\x12\x10\n" +

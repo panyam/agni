@@ -358,6 +358,19 @@
     .sheetview-also:empty { display: none; }
     .sheetview-chip { font: inherit; font-size: 12px; margin-left: 4px; border: 1px solid #bbb; border-radius: 10px; background: #f6f6f6; padding: 0 8px; cursor: pointer; }
     .sheetview-canvas { position: relative; flex: 1 1 auto; overflow: hidden; }
+    /* agni issue 1367: the Sheets panel's board control and its picker */
+    .sheet-board { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 8px 8px; font-size: 12px; color: #555; }
+    .sheet-board-attached { overflow-wrap: anywhere; }
+    .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .board-picker { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 12px; width: min(520px, 90vw); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+    .board-picker-title { font-weight: bold; }
+    .board-picker-where { color: #555; overflow-wrap: anywhere; }
+    .board-picker-rows { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1 1 auto; }
+    .board-picker-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+    .board-picker-enter { border: none; background: none; color: #1560bd; cursor: pointer; font: inherit; padding: 0; text-align: left; flex: 1 1 auto; }
+    .board-picker-name { flex: 1 1 auto; }
+    .board-picker-note { color: #777; }
+    .board-picker-cancel { align-self: flex-end; }
     .sheet-tile-beside { border: none; background: none; cursor: pointer; color: #777; padding: 2px 6px; font: inherit; }
     .sheet-tile-beside:hover { color: #1560bd; }
     .diff-ph { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: #999; background: #fafafa; z-index: 4; }

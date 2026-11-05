@@ -229,6 +229,9 @@ export class ViewerPresenter {
   // flattened is whether this page reads hierarchical netlists whole, kept so every address it writes
   // says so too (agni issue 1102).
   private flattened = false;
+  // attachedBoard is the board the page attaches to its design, kept so every address it writes keeps
+  // it (agni issue 1367). The page's snapshots read it from the address at boot.
+  private attachedBoard = "";
 
   // findings holds the rule findings for the open design, and selectedSubject the one the user
   // clicked (highlighted in the viewer), "" for none.
@@ -828,6 +831,7 @@ export class ViewerPresenter {
     this.currentLayout = loc.layout; // empty -> server picks the effective layout, as on a fresh open
     this.faithfulSymbols = loc.symbols;
     this.flattened = loc.flatten;
+    this.attachedBoard = loc.board ?? "";
     const sameFile = loc.mount === this.doc.mount && loc.path === this.doc.path && !loc.isDir;
     if (!sameFile) {
       await this.openFile(loc.mount, loc.path, loc.sheet, true);
@@ -982,6 +986,7 @@ export class ViewerPresenter {
       layout: this.currentLayout,
       symbols: this.faithfulSymbols,
       flatten: this.flattened,
+      board: this.attachedBoard,
       verdict: this.focusedVerdict,
       hash: this.linkHash,
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by

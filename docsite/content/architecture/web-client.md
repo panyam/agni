@@ -67,6 +67,20 @@ panel from the ones above.
   turned. Locked views exchange the drawing point at their centre and the zoom (`getCentre`), so a top
   view and a bottom view of one board stay over the same spot.
 
+## A board the design does not declare
+
+A design that declares no board, or the wrong one, gets one from "Use a board…" in the Sheets panel
+(agni issue 1367). The picker lists the design's mount with `ListDirRequest.mark_boards`, so the
+server marks what can be a board. `DirEntry.board_uri` is the file itself, or an ODB++ job folder's
+`matrix/matrix` entry, since a loader reads exactly the artifact it is handed. Picking one opens the
+page again with `?board=<mount>/<path>`, and the snapshot registry then sets `boardUri` on every
+snapshot the page ingests, as `?flatten=1` sets `flattenHierarchy`. So the board sheet, its sheet
+view, `LocateSubjects` and the board-tier rules all read it, and a link or a reload keeps it. The
+browser engine needs nothing extra, because `mountingFetch` lists every `mount://` URI in an
+ingest's body, `boardUri` included, and brings in that board's files. The board belongs to the
+page, not the design, so the CLI and CI never see it. Saving it to `design.yaml` is the second half
+of #1367.
+
 ## Traps that ship green
 
 **A panel's derived rows must be MEMOIZED, or selecting a row rebuilds the whole panel.** Solid's

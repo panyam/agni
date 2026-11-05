@@ -69,6 +69,9 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "jetson=examples/jetson-project",
       // The cross-probe walk's cut of Jetson, schematic and board (agni issue 1323).
       "--mount", "probe=examples/cross-probe-project",
+      // The shared example designs, for an EDIF netlist whose ODB++ board it does not declare (agni
+      // issue 1367): odb/gateway.edn beside odb/gateway-layout.
+      "--mount", "common=examples/common/designs",
       // The fetched boards, for the naming walk on the MNT Reform motherboard (agni issue 1267).
       "--mount", "boards=tools/samples/boards",
       // A store, so the Review panel can run a checklist and save it (agni issue 1030). Fresh per run,

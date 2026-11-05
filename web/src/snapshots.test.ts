@@ -6,7 +6,7 @@ import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } 
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 
 // A registry over recorded SnapshotService calls, minting ids in order.
-function registry(options: { flatten?: boolean } = {}) {
+function registry(options: { flatten?: boolean; board?: string } = {}) {
   const ingests: unknown[] = [];
   const updates: unknown[] = [];
   let n = 0;
@@ -64,6 +64,27 @@ describe("SnapshotRegistry", () => {
     expect(updates).toEqual([{ snapshot: { name, uri: "mount://m/b.edn", overlay: conv } }]);
     // As a control, a snapshot this page never ingested is left alone.
     expect(await reg.recover("snapshots/other", SnapshotUnavailable_Reason.MISSING)).toBe(false);
+  });
+});
+
+describe("SnapshotRegistry on a page attaching a board", () => {
+  it("names the board on every ingest, board read and recovery (agni issue 1367)", async () => {
+    const { reg, ingests, updates } = registry({ board: "mount://m/odb/gateway-layout" });
+    const name = await reg.of("mount://m/odb/gateway.edn");
+    await reg.readBoard("mount://m/odb/gateway.edn");
+    await reg.recover(name, SnapshotUnavailable_Reason.STALE);
+    const def = { uri: "mount://m/odb/gateway.edn", overlay: undefined, boardUri: "mount://m/odb/gateway-layout" };
+    expect(ingests).toEqual([
+      { snapshot: def, snapshotId: "id1" },
+      { snapshot: def, snapshotId: "id1", readBoard: true },
+    ]);
+    expect(updates).toEqual([{ snapshot: { name, ...def } }]);
+  });
+
+  it("names no board when the page attaches none", async () => {
+    const { reg, ingests } = registry();
+    await reg.of("mount://m/x.edn");
+    expect(ingests).toEqual([{ snapshot: { uri: "mount://m/x.edn", overlay: undefined }, snapshotId: "id1" }]);
   });
 });
 

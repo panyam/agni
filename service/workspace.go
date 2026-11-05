@@ -146,6 +146,25 @@ const (
 // It answers true when it cannot finish (a bound reached, a cancelled request, a directory the
 // adapter refuses). A folder wrongly shown costs a click and a folder wrongly hidden costs a file,
 // so the uncertain answer is the visible one.
+// isODBJob reports whether a directory holds an ODB++ job, a matrix/matrix file. A board reader
+// enters the job by that file, and the directory names the job (agni issue 1250).
+func (s *WorkspaceService) isODBJob(ctx context.Context, dir artifact.URI) bool {
+	m, err := dir.Join("matrix")
+	if err != nil {
+		return false
+	}
+	entries, err := s.ws.ListDir(ctx, m)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.Name == "matrix" && !e.IsDir {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u artifact.URI, opens map[webapi.FileKind]bool, depth int, budget *int) bool {
 	if depth > pruneMaxDepth || *budget <= 0 || ctx.Err() != nil {
 		return true
@@ -215,10 +234,19 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 			continue
 		}
 		if de.IsDir {
-			if opens != nil && !s.hasOpenableFile(ctx, entry, opens, 1, &pruneBudget) {
+			// An ODB++ job is a design entered by its matrix/matrix file, whose name gives no kind, so
+			// the subtree walk alone would prune every job folder (agni issue 1367).
+			job := (req.GetMarkBoards() || opens[webapi.FileKind_FILE_KIND_DESIGN]) && s.isODBJob(ctx, entry)
+			if opens != nil && !(job && opens[webapi.FileKind_FILE_KIND_DESIGN]) && !s.hasOpenableFile(ctx, entry, opens, 1, &pruneBudget) {
 				continue
 			}
-			dirs = append(dirs, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), IsDir: true})
+			d := &webapi.DirEntry{Name: de.Name, Uri: entry.String(), IsDir: true}
+			if req.GetMarkBoards() && job {
+				if m, err := entry.Join("matrix", "matrix"); err == nil {
+					d.BoardUri = m.String()
+				}
+			}
+			dirs = append(dirs, d)
 			continue
 		}
 		// Every non-dotfile is listed with the kind of client that opens it (UNSPECIFIED when
@@ -229,6 +257,9 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 			Format: FormatForExt(de.Name),
 			Kind:   KindForName(de.Name),
 		})
+		if req.GetMarkBoards() && formats.HasBoard(de.Name) {
+			files[len(files)-1].BoardUri = entry.String()
+		}
 	}
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })

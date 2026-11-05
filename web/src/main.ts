@@ -48,7 +48,9 @@ import { parseTurn, turnKey } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
-import { appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withFlatten, type ViewerLocation } from "./router.js";
+import { BOARD_PARAM, appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withBoard, withFlatten, type ViewerLocation } from "./router.js";
+import { pickBoard } from "./boardpicker.js";
+import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
@@ -372,6 +374,22 @@ class AppRoot extends BaseComponent {
     const sheetOverview = sheetOverviewPanelIsland(sheetOverviewEl, this._eventBus, {
       onSelect: (sheetId) => void presenter.showSheet(sheetId),
       onOpenBeside: (sheetId) => void sheetViews.open(sheetId),
+      // A board the design does not declare is attached by opening the page again with ?board=
+      // (agni issue 1367), so every snapshot the page ingests reads it and a link keeps it.
+      board: {
+        attached: new URLSearchParams(window.location.search).get(BOARD_PARAM) ?? "",
+        onPick: async () => {
+          const here = currentLocation();
+          const dir = here.path.includes("/") ? here.path.slice(0, here.path.lastIndexOf("/")) : "";
+          const start = `mount://${here.mount}${dir ? `/${dir}` : ""}`;
+          const uri = await pickBoard(document, start, async (u) => {
+            const resp = await workspaceClient().listDir({ uri: u, markBoards: true, opens: [FileKind.DESIGN] });
+            return resp.entries.map((e) => ({ name: e.name, uri: e.uri, isDir: e.isDir, boardUri: e.boardUri }));
+          });
+          if (uri) window.location.assign(withBoard(window.location.pathname + window.location.search, uri.replace(/^mount:\/\//, "")));
+        },
+        onClear: () => window.location.assign(withBoard(window.location.pathname + window.location.search, "")),
+      },
     });
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.

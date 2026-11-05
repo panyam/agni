@@ -497,3 +497,67 @@ func firstDifference(a, b proto.Message) string {
 	hiA, hiB := min(i+4, len(la)), min(i+4, len(lb))
 	return fmt.Sprintf("served, from line %d:\n%s\nwasm, from line %d:\n%s", lo+1, strings.Join(la[lo:hiA], "\n"), lo+1, strings.Join(lb[lo:hiB], "\n"))
 }
+
+// A design with a board the request attaches answers alike on both hosts (agni issue 1367). The
+// design is an EDIF netlist beside its ODB++ job, which no design.yaml pairs, so the board reaches
+// the engine through Snapshot.board_uri alone.
+func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "common", "designs", "odb"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng, err := wasmengine.New(fshost.Mount{Name: "odb", FS: memCopy(t, root)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	served := newParityClients(t, servedParityMux(t, []mounts.Mount{{Name: "odb", Root: root}}))
+	wasm := newParityClients(t, eng.Handler)
+	ctx := context.Background()
+	def := &webapi.Snapshot{Uri: "mount://odb/gateway.edn", BoardUri: "mount://odb/gateway-layout/matrix/matrix"}
+	snapOn := map[webapiconnect.SnapshotServiceClient]string{}
+	for _, c := range []parityClients{served, wasm} {
+		s, err := c.snap.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: def}))
+		if err != nil {
+			t.Fatalf("Ingest: %v", err)
+		}
+		snapOn[c.snap] = s.Msg.GetName()
+	}
+	ask := func(name string, call func(parityClients) (proto.Message, error)) proto.Message {
+		t.Helper()
+		a, errA := call(served)
+		b, errB := call(wasm)
+		if errA != nil || errB != nil {
+			t.Fatalf("%s: served err %v, wasm err %v", name, errA, errB)
+		}
+		if !proto.Equal(a, b) {
+			t.Errorf("%s: the wasm engine answers differently from the server:\n%s", name, firstDifference(a, b))
+		}
+		return a
+	}
+	got := ask("GetDesign", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snapOn[c.snap]}))
+		return msgOf(r, err)
+	}).(*webapi.GetDesignResponse)
+	board := false
+	for _, s := range got.GetSheets() {
+		board = board || s.GetId() == "board"
+	}
+	if !board {
+		t.Fatalf("GetDesign lists %v, with no board sheet for the attached job", got.GetSheets())
+	}
+	svg := ask("GetSheet board", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snapOn[c.snap], Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}))
+		return msgOf(r, err)
+	}).(*webapi.GetSheetResponse).GetSvg()
+	if !strings.Contains(svg, `data-kind="pin"`) {
+		t.Fatalf("the attached board draws %d bytes with no pads, so two empty boards would compare equal", len(svg))
+	}
+	located := ask("LocateSubjects", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.LocateSubjects(ctx, connect.NewRequest(&webapi.LocateSubjectsRequest{Snapshot: snapOn[c.snap],
+			Subjects: []*checkspb.Subject{{Kind: "component", Ref: "U1"}}, Board: true}))
+		return msgOf(r, err)
+	}).(*webapi.LocateSubjectsResponse)
+	if ids := located.GetSubjects()[0].GetSheetIds(); len(ids) == 0 || ids[len(ids)-1] != "board" {
+		t.Errorf("U1 locates on %v, want the board among its sheets", ids)
+	}
+}

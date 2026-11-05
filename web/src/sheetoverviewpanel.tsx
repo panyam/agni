@@ -8,7 +8,15 @@ import { type SheetNode, sheetForest } from "./sheettree.js";
 // count and the shown sheet marked active. Clicking a tile navigates (the WS9-024 showSheet path).
 // A hierarchical design's sheets nest under their parents, as the file tree nests them, and a
 // parent folds (agni issue 1141). A flat design is one level, which draws as the plain list it was.
-function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void }) {
+// BoardControl is the panel's part in attaching a board to the design (agni issue 1367). attached is
+// the board the page attaches, "<mount>/<path>", or "" for the design's own.
+export interface BoardControl {
+  attached: string;
+  onPick: () => void;
+  onClear: () => void;
+}
+
+function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl }) {
   const forest = createMemo(() => sheetForest(props.state().tiles));
   const [folded, setFolded] = createSignal(new Set<string>());
   const toggle = (id: string) =>
@@ -94,6 +102,30 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
 
   return (
     <Show when={props.state().tiles.length > 0} fallback={<div class="findings-empty">No design open.</div>}>
+      <Show when={props.board}>
+        {(b) => (
+          <div class="sheet-board">
+            <Show
+              when={b().attached}
+              fallback={
+                <button type="button" class="mode-btn sheet-board-pick" title="attach a board this design does not declare" onClick={() => b().onPick()}>
+                  Use a board…
+                </button>
+              }
+            >
+              <span class="sheet-board-attached" title="this page attaches this board; the design does not declare it">
+                board: {b().attached}
+              </span>
+              <button type="button" class="mode-btn sheet-board-pick" onClick={() => b().onPick()}>
+                Change…
+              </button>
+              <button type="button" class="mode-btn sheet-board-clear" title="read the board the design declares, if any" onClick={() => b().onClear()}>
+                Use the design's own
+              </button>
+            </Show>
+          </div>
+        )}
+      </Show>
       <ul class="sheet-tiles">
         <For each={forest()}>{(n) => <Tile node={n} depth={0} />}</For>
       </ul>
@@ -122,13 +154,13 @@ export function defectsTitle(t: SheetTile): string {
 export function sheetOverviewPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void },
+  handlers: { onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void; board?: BoardControl },
 ): { island: SolidIsland; view: OverviewView } {
   const [state, setState] = signalView<OverviewState>({ tiles: [], activeId: "", ruleCount: 0, ranCount: 0 });
   const island = new SolidIsland(
     "sheet-overview",
     el,
-    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} onOpenBeside={handlers.onOpenBeside} />,
+    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} onOpenBeside={handlers.onOpenBeside} board={handlers.board} />,
     eventBus,
   );
   return { island, view: { setState } };
