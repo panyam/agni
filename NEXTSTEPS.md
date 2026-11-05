@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-05, at `344c03c3`.
+Last pruned 2026-11-05, at `76bdb29c`.
 
 ## At a glance
 
@@ -25,8 +25,11 @@ exercise run on the mission issue.
   board view's turn controls as the walk reads them. Ready next are #1366 (board text sizes and
   colours, against kicad-cli), #1367 (add a board to an open design) and #1382 (an EDIF + ODB++ design
   for the walk). #1374 (a selected pin lights nothing) is in progress elsewhere.
-- **#1353** (open an Altium or Allegro board with no export step), 1 of 4 closed. #1349, the Altium
-  `.PcbDoc` reader, is next.
+- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 3 of 4
+  closed. agni reads Allegro 17.2 boards (#1365) and holds their copper to Allegro's own films
+  (#1380). `make exercise-allegro` is the Allegro half, last run at `76bdb29c` (works). #1349, the
+  Altium `.PcbDoc` reader, is next. Six more Allegro boards (agni-samples v0.1.7) wait on #1355's
+  other releases. BeagleBone AI-64 is 17.2 and reads today.
 - **#1264** (see, explain and change how agni reads your board's names), 11 of 11 tickets closed,
   exercise last run at `014819c5` (works on the MNT Reform motherboard). Nothing is ready. It closes
   once an audit confirms that the lexicon holds every built-in rule's name heuristics, and once the
@@ -49,9 +52,9 @@ exercise run on the mission issue.
 - **Candidate**: more tours of the viewer. Each would tour another workflow the way
   `web/src/reviewtour.ts` tours a review. Work on each starts with the viewer events, since the
   tour advances on them.
-- This run: the cross-probe PRs above, the board's pick keys (#1343, #1354), and CI split into four
-  parallel jobs (#1381), which `build/the-gate.md` describes. Sheet views and popout windows were
-  scoped. Popouts are #1369, `waiting`, with what blocks them on the issue.
+- This run: the Allegro reader (#1365), its copper check against Allegro's films (#1380), C10
+  amended to let a vendor-format example read a public samples board, and agni-samples v0.1.6 and
+  v0.1.9. The cross-probe and CI-split notes from the previous run still hold.
 
 ## Open, ranked
 
