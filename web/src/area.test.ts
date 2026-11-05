@@ -49,6 +49,22 @@ describe("what an area holds", () => {
   it("takes a net whose wire is inside, and none whose wire runs out", () => {
     expect(membersIn(root, r, boxOf).wires).toEqual(["VIN"]);
   });
+
+  // The board keys a net's tracks on one group whose box spans the whole net, so a track inside
+  // the area counts though the group's box runs out of it.
+  it("takes a board net when one of its grouped tracks is inside", () => {
+    const board = document.createElement("div");
+    const add = (net: string, boxes: [number, number, number, number][]) => {
+      const g = board.appendChild(document.createElement("g"));
+      g.setAttribute("data-kind", "net");
+      g.setAttribute("data-net", net);
+      g.setAttribute("data-box", "0,0,500,500");
+      for (const b of boxes) g.appendChild(document.createElement("line")).setAttribute("data-box", b.join(","));
+    };
+    add("SDA", [[10, 10, 20, 11], [200, 200, 300, 201]]);
+    add("SCL", [[150, 150, 160, 151]]);
+    expect(membersIn(board, r, boxOf).wires).toEqual(["SDA"]);
+  });
 });
 
 describe("toggling an area", () => {

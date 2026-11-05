@@ -47,7 +47,8 @@ type Style struct {
 	// plus a wide invisible companion stroke per wire. Off by default because a pin has no drawn
 	// element of its own, so the targets are ADDED elements, one per pin, and on a large sheet
 	// they are the biggest single contributor to document size. Only the served viewer asks for
-	// them. See docsite/content/architecture/web-picking.md.
+	// them. On a board it keys every pad, track, via, zone and footprint graphic, and adds one
+	// invisible rect per footprint (BoardSVG). See docsite/content/architecture/web-picking.md.
 	PickTargets bool
 }
 

@@ -30,6 +30,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	style := resolveStyle(opts)
 	fr := frameBoard(b)
 	tx, ty, scale := fr.tx, fr.ty, fr.scale
+	pk := boardPickKeys{on: style.PickTargets}
 
 	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
 	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
@@ -49,10 +50,17 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			if z.GetOutline() == nil {
 				continue
 			}
-			c.El("polygon", svg.A("points", points(z.GetOutline().Points, tx, ty)),
-				svg.A("fill", copperColor(style, z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none"))
+			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)),
+				svg.A("fill", copperColor(style, z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none")},
+				pk.net(z.GetNet())...)...)
 		}
 		c.GroupEnd()
+	}
+
+	// Each footprint's body is an invisible pick rect over its pads, above the zones and under the
+	// copper, so a pad or a track drawn over the body still wins where it is drawn.
+	if style.PickTargets {
+		drawFootprintPicks(c, b, fr)
 	}
 
 	// Copper per layer, back-most first (higher KiCad layer number = further back).
@@ -60,21 +68,31 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 		c.Group(svg.A("class", "copper-"+layerSide(ly)), svg.A("data-layer", ly))
 		color := copperColor(style, ly)
 		for _, nc := range b.GetNets() {
+			// A net's tracks on this layer share one keyed group rather than a key per line. Tracks
+			// are most of a board's elements, and a key on each grew Jetson's board by a third.
+			keys, grouped := pk.net(nc.GetNet()), false
 			for _, s := range nc.GetSegments() {
 				if s.GetLayer() != ly || s.GetA() == nil || s.GetB() == nil {
 					continue
+				}
+				if len(keys) > 0 && !grouped {
+					c.Group(keys...)
+					grouped = true
 				}
 				c.El("line", svg.F("x1", tx(s.GetA().X)), svg.F("y1", ty(s.GetA().Y)),
 					svg.F("x2", tx(s.GetB().X)), svg.F("y2", ty(s.GetB().Y)),
 					svg.A("stroke", color), svg.F("stroke-width", copperStrokePx(s.GetWidth(), scale)),
 					svg.A("stroke-linecap", "round"))
 			}
+			if grouped {
+				c.GroupEnd()
+			}
 		}
 		// Pads that live only on this layer (SMD); through-hole pads draw once, below.
 		for _, pl := range b.GetPlacements() {
 			for _, pad := range pl.GetPads() {
 				if padSide(pad) == layerSide(ly) {
-					drawPad(c, pl, pad, fr, color, style)
+					drawPad(c, pl, pad, fr, color, style, pk.pad(pl, pad)...)
 				}
 			}
 		}
@@ -89,16 +107,18 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 				continue
 			}
 			cx, cy := tx(v.GetAt().X), ty(v.GetAt().Y)
-			c.El("circle", svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetSize())*scale/2, strokePx)),
-				svg.A("fill", style.Via))
-			c.El("circle", svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetDrill())*scale/2, strokePx/2)),
-				svg.A("fill", style.Page))
+			// The drill hole draws over the ring, so it carries the net too, or a click in it misses.
+			keys := pk.net(nc.GetNet())
+			c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetSize())*scale/2, strokePx)),
+				svg.A("fill", style.Via)}, keys...)...)
+			c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(v.GetDrill())*scale/2, strokePx/2)),
+				svg.A("fill", style.Page)}, keys...)...)
 		}
 	}
 	for _, pl := range b.GetPlacements() {
 		for _, pad := range pl.GetPads() {
 			if padSide(pad) == "through" {
-				drawPad(c, pl, pad, fr, style.Via, style)
+				drawPad(c, pl, pad, fr, style.Via, style, pk.pad(pl, pad)...)
 			}
 		}
 	}
@@ -123,7 +143,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			}
 			w := math.Max(float64(gr.GetWidth())*scale, strokePx)
 			c.Group(svg.A("data-layer", gr.GetLayer()))
-			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, style.Silk)
+			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, style.Silk, pk.component(gr.GetRefDes())...)
 			c.GroupEnd()
 		}
 		c.GroupEnd()
@@ -143,6 +163,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			svg.F("x", x), svg.F("y", y), svg.A("fill", style.Field), svg.F("font-size", fontPx),
 			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),
 		}
+		attrs = append(attrs, pk.component(t.GetRefDes())...)
 		if rot := -t.GetRotationDeg(); rot != 0 {
 			attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, x, y)))
 		}
@@ -301,13 +322,13 @@ func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 // circle as a circle. It rotates by the pad's own angle verbatim. KiCad stores that angle
 // cumulative with the footprint's, so drawPad does NOT compose it with the placement again. It
 // only negates it for the Y-flip. A drilled pad gets a page-colored hole.
-func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style) {
+func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style, keys ...svg.Attr) {
 	wx, wy := padWorld(pl, pad)
 	cx, cy := fr.tx(wx), fr.ty(wy)
 	w := math.Max(float64(pad.GetSize().GetX())*fr.scale, strokePx)
 	h := math.Max(float64(pad.GetSize().GetY())*fr.scale, strokePx)
 	rot := -pad.GetRotationDeg()
-	attrs := []svg.Attr{svg.A("fill", color)}
+	attrs := append([]svg.Attr{svg.A("fill", color)}, keys...)
 	if rot != 0 {
 		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, cx, cy)))
 	}
@@ -324,8 +345,8 @@ func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheet
 		c.El("rect", append([]svg.Attr{svg.F("x", cx-w/2), svg.F("y", cy-h/2), svg.F("width", w), svg.F("height", h)}, attrs...)...)
 	}
 	if pad.GetDrill() > 0 {
-		c.El("circle", svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
-			svg.A("fill", style.Page))
+		c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
+			svg.A("fill", style.Page)}, keys...)...)
 	}
 }
 

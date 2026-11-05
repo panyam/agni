@@ -23,6 +23,23 @@ describe("reading a keyed element", () => {
     expect(selectionFromElement(null)).toBeNull();
   });
 
+  // The board keys a net's tracks on one group, so a track line answers with its group's net.
+  it("reads the key off the nearest keyed ancestor inside the drawing", () => {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    const g = svg.appendChild(document.createElementNS(NS, "g"));
+    g.setAttribute("data-kind", "net");
+    g.setAttribute("data-net", "SDA");
+    const line = g.appendChild(document.createElementNS(NS, "line"));
+    expect(selectionFromElement(line)).toEqual({ kind: "net", net: "SDA", netId: "" });
+
+    const button = document.createElement("button");
+    button.setAttribute("data-kind", "net");
+    button.setAttribute("data-net", "GND");
+    const icon = button.appendChild(document.createElementNS(NS, "svg")).appendChild(document.createElementNS(NS, "path"));
+    expect(selectionFromElement(icon)).toBeNull();
+  });
+
   it("refuses a keyed element that is missing its identity", () => {
     expect(selectionFromElement(el({ "data-kind": "pin", "data-ref": "U7" }))).toBeNull();
     expect(selectionFromElement(el({ "data-kind": "component" }))).toBeNull();

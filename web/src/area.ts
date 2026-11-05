@@ -60,7 +60,9 @@ export function membersIn(root: ParentNode, r: ClientRect, boxOf: (el: Element) 
   const wires = new Set<string>();
   for (const el of root.querySelectorAll('[data-kind="net"][data-net]')) {
     const net = el.getAttribute("data-net") ?? "";
-    if (net && inside(boxOf(el), r)) wires.add(net);
+    // A board keys a net's tracks on one group, so each track inside it is a wire of its own.
+    const segs = el.tagName.toLowerCase() === "g" ? [...el.children] : [el];
+    if (net && segs.some((s) => inside(boxOf(s), r))) wires.add(net);
   }
   return { refs: refs.sort(), pins: [...pins].sort(), wires: [...wires].sort() };
 }

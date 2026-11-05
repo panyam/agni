@@ -353,8 +353,8 @@
     /* WS7-034 render controls float inside the canvas panel (they configure only the render) */
     .canvas-toolbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6; background: rgba(255, 255, 255, 0.92); border: 1px solid #ccc; border-radius: 6px; padding: 2px 8px; }
     /* WS7-034 board layer visibility: the CSS side of BoardSVG's classed strata */
-    .board-front .copper-back, .board-front .zones-back { display: none; }
-    .board-back .copper-front, .board-back .zones-front { display: none; }
+    .board-front .copper-back, .board-front .zones-back, .board-front .picks-back { display: none; }
+    .board-back .copper-front, .board-back .zones-front, .board-back .picks-front { display: none; }
     /* WS9-025 sheet overview: name tiles with violation-count badges */
     .sheet-tiles { list-style: none; margin: 0; padding: 0; }
     .sheet-tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: 1px solid transparent; background: none; font: inherit; color: inherit; padding: 5px 8px; border-radius: 4px; cursor: pointer; }

@@ -38,7 +38,11 @@ const PRIORITY: SelectionKind[] = ["pin", "component", "bus", "net"];
 
 // selectionFromElement reads one keyed element, or null for an unkeyed one (the page rect, a label,
 // a highlight overlay). The renderer writes these attributes; see core/render/svg.go's entityKeys.
-export function selectionFromElement(el: Element | null): Selection | null {
+// The key may sit on an ancestor, since the board keys each net's tracks on one group
+// (core/render/board.go), so the nearest keyed element inside the drawing answers. The walk stops
+// at the drawing's <svg>, because the panels key HTML buttons with data-kind too.
+export function selectionFromElement(hit: Element | null): Selection | null {
+  const el = keyedFrom(hit);
   const kind = el?.getAttribute("data-kind");
   if (!el || !kind) return null;
   switch (kind) {
@@ -63,6 +67,14 @@ export function selectionFromElement(el: Element | null): Selection | null {
     default:
       return null;
   }
+}
+
+function keyedFrom(hit: Element | null): Element | null {
+  for (let e = hit; e; e = e.parentElement) {
+    if (e.hasAttribute("data-kind")) return e;
+    if (e.tagName.toLowerCase() === "svg") return null;
+  }
+  return null;
 }
 
 // bestOf picks the most specific selection among overlapping candidates, in probe order so a tie
