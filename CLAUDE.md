@@ -78,7 +78,8 @@ mkdocs tree that was folded into `docsite/content/` with audience-first names.
 Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`,
 `core/diff`, `core/facts`, `core/query`, `core/model`, `core/classify`, `core/ident`, and others).
 Format readers under **`readers/`** (`readers/edif`, `readers/kicad`, `readers/ipc2581`,
-`readers/xschem`, `readers/geda`, `readers/telesis`, plus `readers/formats`, the registry/Loader).
+`readers/xschem`, `readers/geda`, `readers/telesis`, `readers/orcad`, plus `readers/formats`, the
+registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
 (`stdlib/rules/builtin/rule_*.go`, `stdlib/rules/datalog`, `stdlib/rules/intent`,
 `stdlib/relations`, `stdlib/profiles`). The datasheet contract in **`core/param`** (the PartSpec the
@@ -550,13 +551,26 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (#1355), and an Eagle `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
   (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
   since Allegro drops a pad nothing on its layer connects to (#1356).
-- **An Altium `.PcbDoc` is a Microsoft compound file** (agni 1349, `readers/altium`, with its own
-  MS-CFB reader). `TestAltiumPcbDocMatchesItsODBExport` holds the five foxBMS boards (`altium`
+- **An Altium `.PcbDoc` is a Microsoft compound file** (agni 1349, `readers/altium`, over the
+  MS-CFB reader in `internal/cfb`). `TestAltiumPcbDocMatchesItsODBExport` holds the five foxBMS boards (`altium`
   samples artifact) to their ODB++ jobs (`odb-altium`). The board designator is the designator TEXT,
   not `SOURCEDESIGNATOR`, which repeats across a multi-channel design's channels. Pads are stored at
   board positions, so the reader solves their footprint-local ones. Copper a polygon pour or a
   graphical component drew is left out, as Altium's export leaves it. Part numbers come from the
   `PrimitiveParameters` stream, and some parts spell the key `PartNumber`, now an MPN alias.
+- **An OrCAD Capture `.DSN` is a compound file too, and agni reads it flattened** (agni 1399,
+  `readers/orcad`, over the shared `internal/cfb`). A block keeps its pages in a `.DSN` of its own,
+  named by a path relative to its parent (`.\MPU9250\MPU9250.DSN`), and the Loader's opener matches
+  it without case. The `Library` stream's absolute `E:\...` paths are never followed. Parts take their
+  designators from the root's `Hierarchy` stream, since a placed part's own field can still say `C?`.
+  A pin joins the wire its stored position sits on. A port, power symbol or off-page connector joins
+  the wire ends inside its stored box, never at a corner. A folder with a port named like one of its
+  power symbols binds that power net to the port. Clay's charger block puts GND on the board's
+  GND_EARTH that way. A part's `PACK_SHORT` joins its pins, and a pin's own stored net id joins it
+  even when the pin is flagged no-connect. `TestOrCADReadsAsClaysNetlist` holds Clay R6 to
+  `pstxnet.dat` with only the seven `NC` pins listed, and `TestOrCADJoinsClaysBoard` holds it to
+  `CLAYR6.brd` by designator. Net NAMES are not yet Capture's, since `pstxnet.dat` cuts them at 31
+  characters and numbers unnamed nets from ids the reader has not decoded.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out

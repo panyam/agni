@@ -124,8 +124,8 @@ in `common/designs/` and are reached through `common.Load` / `common.ReadFixture
 One exception follows from CONSTRAINTS C10. A reader of a vendor format whose files only the
 vendor's tool can write has no synthetic fixture, since writing one would need that tool or a
 writer of our own. Its example defaults to a public board from the pinned agni-samples corpus
-under `tools/samples/`, which `make samples-oracle` fetches. `allegro-board` and `altium-board`
-are the two examples of this.
+under `tools/samples/`, which `make samples-oracle` fetches. `allegro-board`, `altium-board` and
+`orcad-design` are the examples of this.
 
 ## 6. Modules
 

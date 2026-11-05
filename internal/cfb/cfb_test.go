@@ -1,8 +1,9 @@
-package altium
+package cfb
 
 import (
 	"bytes"
 	"encoding/binary"
+	"sort"
 	"strings"
 	"testing"
 	"unicode/utf16"
@@ -15,7 +16,7 @@ func buildCFB(big, small []byte) []byte {
 	const sec = 512
 	put32 := func(b []byte, off int, v uint32) { binary.LittleEndian.PutUint32(b[off:], v) }
 	hdr := make([]byte, sec)
-	copy(hdr, cfbSignature)
+	copy(hdr, signature)
 	binary.LittleEndian.PutUint16(hdr[0x18:], 0x3E)
 	binary.LittleEndian.PutUint16(hdr[0x1A:], 3)
 	binary.LittleEndian.PutUint16(hdr[0x1C:], 0xFFFE)
@@ -98,46 +99,67 @@ func buildCFB(big, small []byte) []byte {
 func TestACompoundFileReadsBothKindsOfStream(t *testing.T) {
 	big := bytes.Repeat([]byte("0123456789"), 500)
 	small := []byte(strings.Repeat("ab", 50))
-	c, err := openCFB(buildCFB(big, small))
+	c, err := Open(buildCFB(big, small))
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok, err := c.stream("Big")
+	got, ok, err := c.Stream("Big")
 	if err != nil || !ok || !bytes.Equal(got, big) {
 		t.Errorf("Big: %d bytes, found %v, err %v; want the 5,000 bytes written", len(got), ok, err)
 	}
-	got, ok, err = c.stream("s/data") // names compare without case
+	got, ok, err = c.Stream("s/data") // names compare without case
 	if err != nil || !ok || !bytes.Equal(got, small) {
 		t.Errorf("S/Data: %q, found %v, err %v; want the 100 bytes written", got, ok, err)
 	}
-	if _, ok, _ := c.stream("S/Missing"); ok {
+	if _, ok, _ := c.Stream("S/Missing"); ok {
 		t.Error("a missing stream was found")
 	}
-	if _, ok, _ := c.stream("Big/Data"); ok {
+	if _, ok, _ := c.Stream("Big/Data"); ok {
 		t.Error("a stream was opened as a storage")
 	}
 }
 
 func TestADamagedCompoundFileIsAnError(t *testing.T) {
 	good := buildCFB(bytes.Repeat([]byte("x"), 5000), []byte("small"))
-	if _, err := openCFB([]byte("not a compound file at all, and long enough")); err == nil {
+	if _, err := Open([]byte("not a compound file at all, and long enough")); err == nil {
 		t.Error("a non-CFB file opened")
 	}
 	cut := good[:len(good)-1024] // the big stream's last sectors are gone
-	c, err := openCFB(cut)
+	c, err := Open(cut)
 	if err != nil {
 		t.Fatalf("the header and directory are intact, so it should open: %v", err)
 	}
-	if _, _, err := c.stream("Big"); err == nil {
+	if _, _, err := c.Stream("Big"); err == nil {
 		t.Error("a stream whose sectors are past the end of the file read without an error")
 	}
 	loop := append([]byte{}, good...)
 	binary.LittleEndian.PutUint32(loop[512+4*8:], 4) // the big stream's last sector points back at its first
-	c, err = openCFB(loop)
+	c, err = Open(loop)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := c.stream("Big"); err == nil {
+	if _, _, err := c.Stream("Big"); err == nil {
 		t.Error("a sector chain that loops read without an error")
+	}
+}
+
+func TestAStorageListsItsChildren(t *testing.T) {
+	c, err := Open(buildCFB(bytes.Repeat([]byte("x"), 5000), []byte("small")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, ok := c.Children("")
+	sort.Strings(root)
+	if !ok || strings.Join(root, ",") != "Big,S" {
+		t.Errorf("root lists %q (found %v), want Big and S", root, ok)
+	}
+	if got, ok := c.Children("s"); !ok || strings.Join(got, ",") != "Data" {
+		t.Errorf("S lists %q (found %v), want Data", got, ok)
+	}
+	if _, ok := c.Children("Big"); ok {
+		t.Error("a stream was listed as a storage")
+	}
+	if _, ok := c.Children("Missing"); ok {
+		t.Error("a missing storage was listed")
 	}
 }

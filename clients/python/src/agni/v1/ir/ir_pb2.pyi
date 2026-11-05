@@ -27,6 +27,7 @@ class UnexpandedReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     UNEXPANDED_REASON_UNSPECIFIED: _ClassVar[UnexpandedReason]
     UNEXPANDED_REASON_NOT_WALKED: _ClassVar[UnexpandedReason]
     UNEXPANDED_REASON_CYCLE: _ClassVar[UnexpandedReason]
+    UNEXPANDED_REASON_FILE_MISSING: _ClassVar[UnexpandedReason]
 
 class ClassSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -75,6 +76,7 @@ PIN_DIRECTION_OPEN_EMITTER: PinDirection
 UNEXPANDED_REASON_UNSPECIFIED: UnexpandedReason
 UNEXPANDED_REASON_NOT_WALKED: UnexpandedReason
 UNEXPANDED_REASON_CYCLE: UnexpandedReason
+UNEXPANDED_REASON_FILE_MISSING: UnexpandedReason
 CLASS_SOURCE_UNSPECIFIED: ClassSource
 CLASS_SOURCE_CONVENTION: ClassSource
 CLASS_SOURCE_DATASHEET: ClassSource

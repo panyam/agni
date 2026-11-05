@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/panyam/agni/internal/cfb"
+
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -53,7 +55,7 @@ func load(r io.Reader, sourceFile string) (*pcb, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := openCFB(b)
+	c, err := cfb.Open(b)
 	if err != nil {
 		return nil, fmt.Errorf("%q: %w; an ASCII .PcbDoc is not read yet", sourceFile, err)
 	}
