@@ -958,8 +958,8 @@ it. `.github/dependabot.yml` lists every module directory (examples by glob) and
 updates, because a bump that touched the root alone left every nested module stale and failed this
 check (PR 782). A new module outside `examples/` needs a line there.
 
-**`make testall` is the full gate, and CI runs exactly it**, as its two halves `testall-core` and
-`browser-test` in parallel jobs (agni 1147). Read `docsite/content/build/the-gate.md` before
+**`make testall` is the full gate, and CI runs exactly it**, as four parallel jobs, `testall-test`,
+`testall-scan`, `testall-docs` and `browser-test` (agni 1147). `testall-core` is the first three. Read `docsite/content/build/the-gate.md` before
 trusting a run. It lists three ways to misread the gate. A wrapper can report its own status rather
 than make's and turn red green, there is a commit-first ordering rule, and there is a per-clone
 `pnpm install`. It also lists one way a fine tree reads RED. A stray `agni serve` on :8080 fails

@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -574,9 +574,23 @@ catalog-docs-check: catalog-docs
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
 testall: testall-core browser-test
 
-# testall-core is the gate without the browser suite. CI runs the two as parallel jobs, so the gate
-# takes as long as the longer half rather than both (agni issue 1147); `make testall` still runs both.
-testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+# testall-core is the gate without the browser suite. CI runs it as three jobs beside browser-test,
+# so the gate takes as long as the slowest of the four rather than all of them in a row (agni issue
+# 1147). `make testall` still runs every target here, in the order below.
+testall-core: testall-test testall-scan testall-docs
+
+# testall-test builds and tests the engine, the examples, the web bundle and the Python client, and
+# checks every committed tree that a generator writes. tidyall-check comes first, so "updates to go.mod
+# needed" is diagnosed there rather than as a later examples-test failure.
+testall-test: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check
+
+# testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
+testall-scan: vet lint seccheck secrets
+
+# testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
+# match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its
+# own.
+testall-docs: samples-oracle catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
