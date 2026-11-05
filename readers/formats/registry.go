@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/readers/geda"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
+	"github.com/panyam/agni/readers/odb"
 	"github.com/panyam/agni/readers/telesis"
 	"github.com/panyam/agni/readers/xschem"
 )
@@ -112,8 +113,8 @@ func init() {
 	// properties and no geometry at all. So Geometry and Board are nil, and the design renders
 	// through auto-layout like any other netlist-only source.
 	Register(&Format{Ext: ".tel", Name: "telesis", Design: readTelesis})
-	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
-	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
+	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readXML, Board: readXMLBoard})
+	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readXML, Board: readXMLBoard})
 	registerODB()
 	registerAllegro()
 }
@@ -252,37 +253,71 @@ func readEDIF(l *Loader, path string) (*ir.Design, error) {
 	return edif.ReadWith(f, path, edif.Options{FlattenHierarchy: l != nil && l.FlattenHierarchy})
 }
 
-// readIPC2581 reads an IPC-2581 file. .xml is ambiguous, so sniff for the IPC-2581 root
-// before committing to that reader.
-func readIPC2581(l *Loader, path string) (*ir.Design, error) {
+// .xml is ambiguous, so readXML and readXMLBoard read the root element before committing to a
+// reader. <IPC-2581> goes to the IPC-2581 reader and <ODX> to the ODB++ reader (agni issue 1372).
+// Any other root is refused with its name, so neither reader is chosen by the extension alone.
+func readXML(l *Loader, path string) (*ir.Design, error) {
 	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	br := bufio.NewReader(f)
-	head, _ := br.Peek(1024)
-	if !bytes.Contains(head, []byte("IPC-2581")) {
-		return nil, fmt.Errorf("%q: not an IPC-2581 file (no IPC-2581 root element)", path)
+	switch kind, err := sniffXML(br, path); kind {
+	case xmlIPC2581:
+		return ipc2581.Read(br, path)
+	case xmlODX:
+		return odb.ReadODX(br, path)
+	default:
+		return nil, err
 	}
-	return ipc2581.Read(br, path)
 }
 
-// readIPC2581Board reads the board-geometry sidecar from an IPC-2581 file, sniffing the same
-// ambiguous .xml root as readIPC2581 before committing to the reader.
-func readIPC2581Board(l *Loader, path string) (*geom.BoardGeometry, error) {
+// readXMLBoard reads the board-geometry sidecar from an .xml file, sniffing its root as readXML
+// does.
+func readXMLBoard(l *Loader, path string) (*geom.BoardGeometry, error) {
 	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	br := bufio.NewReader(f)
-	head, _ := br.Peek(1024)
-	if !bytes.Contains(head, []byte("IPC-2581")) {
-		return nil, fmt.Errorf("%q: not an IPC-2581 file (no IPC-2581 root element)", path)
+	switch kind, err := sniffXML(br, path); kind {
+	case xmlIPC2581:
+		return ipc2581.ReadBoardGeometry(br, path)
+	case xmlODX:
+		return odb.ReadODXBoardGeometry(br, path)
+	default:
+		return nil, err
 	}
-	return ipc2581.ReadBoardGeometry(br, path)
 }
+
+type xmlKind int
+
+const (
+	xmlUnknown xmlKind = iota
+	xmlIPC2581
+	xmlODX
+)
+
+// sniffXML names the format of an .xml file from its root element. It peeks, so br still reads from
+// the start. An unknown root answers xmlUnknown and an error that names the root.
+func sniffXML(br *bufio.Reader, path string) (xmlKind, error) {
+	head, _ := br.Peek(4096)
+	switch root := xmlRootName(head); root {
+	case "IPC-2581":
+		return xmlIPC2581, nil
+	case "ODX":
+		return xmlODX, nil
+	case "":
+		return xmlUnknown, fmt.Errorf("%q: not an IPC-2581 or ODB++X file (no root element in its first 4KB)", path)
+	default:
+		return xmlUnknown, fmt.Errorf("%q: not an IPC-2581 or ODB++X file (root element <%s>)", path, root)
+	}
+}
+
+// xmlRootName is the first element's name in head, past the prolog and any comments.
+func xmlRootName(head []byte) string { return odb.XMLRoot(head) }
 
 // readTelesis reads a flat Telesis netlist. The extension is unambiguous, so unlike .sch and .xml
 // there is nothing to sniff.

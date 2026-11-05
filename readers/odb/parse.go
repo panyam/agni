@@ -15,6 +15,15 @@ type parsedJob struct {
 	sides   [][]component // one slice per component layer, in componentLayers order
 	sideTop []bool        // whether each side is the front
 	info    map[string]string
+	odx     *odxTier // set for an ODX file, whose features arrive parsed rather than as files
+}
+
+// odxTier holds what an ODX file carries in place of a job's per-layer files. Its maps are keyed by
+// the upper-cased layer name and the lower-cased symbol name.
+type odxTier struct {
+	profile *featuresFile
+	layers  map[string]*featuresFile
+	symbols map[string]*featuresFile
 }
 
 // parseJob opens a job and reads the files both the netlist and the board need.
@@ -70,7 +79,8 @@ func (p *parsedJob) allComponents() []*component {
 
 // jobName returns the job's name as misc/info states it. Altium writes no misc/info. For a job
 // without one, jobName returns the name of the folder or archive the job came in. So
-// `boards/master-odb/matrix/matrix` and `master.odb.zip` are both "master".
+// `boards/master-odb/matrix/matrix` and `master.odb.zip` are both "master", and an ODX file
+// `board.xml` is "board".
 func (p *parsedJob) jobName(src string) string {
 	if n := p.info["JOB_NAME"]; n != "" {
 		return n
@@ -81,7 +91,7 @@ func (p *parsedJob) jobName(src string) string {
 	}
 	name := path.Base(src)
 	low := strings.ToLower(name)
-	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".tar"} {
+	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".tar", ".xml"} {
 		if strings.HasSuffix(low, ext) {
 			name, low = name[:len(name)-len(ext)], low[:len(low)-len(ext)]
 			break
