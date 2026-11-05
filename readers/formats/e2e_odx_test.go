@@ -1,6 +1,8 @@
 package formats
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,6 +32,18 @@ func TestXMLChoosesItsReaderByRoot(t *testing.T) {
 		if _, err := l.BoardGeometry(path); err != nil {
 			t.Errorf("%s board: %v", path, err)
 		}
+	}
+
+	prefixed := filepath.Join(t.TempDir(), "prefixed.xml")
+	ipc, err := os.ReadFile("../ipc2581/testdata/board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(prefixed, []byte(strings.Replace(strings.Replace(string(ipc), "<IPC-2581", "<ns:IPC-2581", 1), "</IPC-2581>", "</ns:IPC-2581>", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sniffXML(bufio.NewReader(bytes.NewReader(mustRead(t, prefixed))), prefixed); err != nil {
+		t.Errorf("a namespace-prefixed IPC-2581 root: %v", err)
 	}
 
 	other := filepath.Join(t.TempDir(), "drawing.xml")
@@ -163,4 +177,13 @@ func TestODXReadsAsItsIPC2581Twin(t *testing.T) {
 	if vias != 420 || segs == 0 {
 		t.Errorf("ODX copper holds %d vias and %d segments, want 420 vias and some track", vias, segs)
 	}
+}
+
+func mustRead(t *testing.T, path string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

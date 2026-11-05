@@ -316,8 +316,15 @@ func sniffXML(br *bufio.Reader, path string) (xmlKind, error) {
 	}
 }
 
-// xmlRootName is the first element's name in head, past the prolog and any comments.
-func xmlRootName(head []byte) string { return odb.XMLRoot(head) }
+// xmlRootName is the first element's local name in head, past the prolog and any comments, so a
+// root written with a namespace prefix (`<ns:IPC-2581>`) is still named.
+func xmlRootName(head []byte) string {
+	root := odb.XMLRoot(head)
+	if i := strings.LastIndexByte(root, ':'); i >= 0 {
+		root = root[i+1:]
+	}
+	return root
+}
 
 // readTelesis reads a flat Telesis netlist. The extension is unambiguous, so unlike .sch and .xml
 // there is nothing to sniff.
