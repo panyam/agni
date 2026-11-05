@@ -127,6 +127,13 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		kind, pts := shapeVerts(s)
 		add(kind, groupFree, "", "", "", pts)
 	}
+	// The outline around a flagged label, which the SVG backend draws beside the label's text.
+	def := defaultTextHeight(g, sheet)
+	for _, l := range sheet.Labels {
+		if pts := flagOutline(l, labelHeight(l, def)); pts != nil {
+			add(primLineStrip, groupFree, "", "", "", xy(pts))
+		}
+	}
 	for _, pl := range sheet.Placements {
 		sym := symbolFor(syms, pl)
 		if sym == nil {

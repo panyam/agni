@@ -378,6 +378,12 @@
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="88.4,431.9 760.9,431.9"/>
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="1206.0,88.4 1206.0,620.6"/>
 <polyline fill="none" stroke="#333333" stroke-width="0.8" points="88.4,620.6 1593.0,620.6"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="1414.0,485.1 1416.4,487.5 1418.9,485.1 1416.4,482.7 1414.0,485.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="543.2,843.1 545.6,845.5 548.0,845.5 548.0,840.7 545.6,840.7 543.2,843.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="296.4,335.1 294.0,332.7 291.6,332.7 291.6,337.5 294.0,337.5 296.4,335.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="968.9,485.1 966.5,482.7 964.1,485.1 966.5,487.5 968.9,485.1"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="1414.0,344.8 1416.4,347.2 1418.9,344.8 1416.4,342.4 1414.0,344.8"/>
+<polyline fill="none" stroke="#333333" stroke-width="0.8" points="968.9,344.8 966.5,342.4 964.1,344.8 966.5,347.2 968.9,344.8"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1399.5,431.9 1399.5,436.7 1404.3,436.7 1399.5,441.6 1394.7,436.7 1399.5,436.7" data-kind="net" data-net="GND"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1319.2,823.8 1322.1,818.9" data-kind="net" data-net="+1V8"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="1322.1,818.9 1325.0,823.8" data-kind="net" data-net="+1V8"/>
@@ -1157,13 +1163,13 @@
 <polyline fill="none" stroke="#d42020" stroke-width="2.4" points="1060.8,337.1 1089.9,364.2" data-kind="component" data-ref="Q5"/>
 <polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,554.8 989.2,550.9" data-kind="component" data-ref="C240"/>
 <polyline fill="none" stroke="#d42020" stroke-width="2.4" points="977.6,550.9 989.2,554.8" data-kind="component" data-ref="C240"/>
-<text x="470.6" y="533.5" font-size="4.8" text-anchor="start" dominant-baseline="text-before-edge" fill="#555555">3V3_LDO</text>
-<text x="1414.0" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
-<text x="548.0" y="843.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">~{VDDIN_PWR_BAD}</text>
-<text x="296.4" y="335.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">VIN_PWR_ON</text>
-<text x="968.9" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
-<text x="1414.0" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
-<text x="968.9" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
+<text x="470.6" y="532.2" font-size="4.8" text-anchor="end" dominant-baseline="text-after-edge" fill="#555555">3V3_LDO</text>
+<text x="1419.6" y="485.1" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
+<text x="542.4" y="843.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">~{VDDIN_PWR_BAD}</text>
+<text x="290.9" y="335.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">VIN_PWR_ON</text>
+<text x="963.4" y="485.1" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">USBPD2_HV</text>
+<text x="1419.6" y="344.8" font-size="4.8" text-anchor="start" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
+<text x="963.4" y="344.8" font-size="4.8" text-anchor="end" dominant-baseline="central" fill="#555555">USBPD1_HV</text>
 <text x="256.7" y="189.0" font-size="9.7" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">SoM Medium voltage power switch</text>
 <text x="562.5" y="514.1" font-size="4.8" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">3V3</text>
 <text x="562.5" y="519.9" font-size="4.8" text-anchor="start" dominant-baseline="text-after-edge" fill="#555555">@200mA</text>

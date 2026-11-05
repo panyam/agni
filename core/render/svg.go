@@ -151,6 +151,10 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			fontPx *= f
 		}
 		drawText(c, l.Text, tx(l.Origin.X), ty(l.Origin.Y), fontPx, l.Justify, l.RotationDeg, style.Label, 0)
+		if pts := flagOutline(l, labelHeight(l, def)); pts != nil {
+			c.El("polyline", svg.A("fill", "none"), svg.A("stroke", style.Free), svg.F("stroke-width", strokePx),
+				svg.A("points", points(pts, tx, ty)))
+		}
 	}
 	// Placement text fields (ref-des, value, custom), each at its own position and justify.
 	// KiCad rotates a field with its parent symbol, so the placement rotation adds to the field's

@@ -170,8 +170,12 @@ func TestReadSchematicGeometryLabels(t *testing.T) {
 	if net == nil {
 		t.Fatal("label NET1 not found")
 	}
-	if net.Origin.X != 60_960_000 || net.Origin.Y != -40_640_000 {
-		t.Errorf("NET1 origin = (%d,%d), want (60960000,-40640000)", net.Origin.X, net.Origin.Y)
+	// The label meets its wire at anchor, and KiCad lifts its text off the wire by 0.27 heights.
+	if net.GetAnchor().GetX() != 60_960_000 || net.GetAnchor().GetY() != -40_640_000 {
+		t.Errorf("NET1 anchor = %v, want (60960000,-40640000)", net.GetAnchor())
+	}
+	if net.Origin.X != 60_960_000 || net.Origin.Y != -40_640_000+342_900 {
+		t.Errorf("NET1 origin = (%d,%d), want (60960000,-40297100)", net.Origin.X, net.Origin.Y)
 	}
 	if net.Height != 1_270_000 {
 		t.Errorf("NET1 height = %d, want 1270000 (1.27mm)", net.Height)

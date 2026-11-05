@@ -1,0 +1,19 @@
+# kicad-cli 10.0.6 sch export svg of orient-labels.kicad_sch: every label's text run
+# as content, x mm, y mm (page, y down), text-anchor, rotation. Written once and committed.
+GLOB_0	42.0688	92.1658	start	0
+GLOB_180	120.4912	92.1658	end	0
+GLOB_270	163.2858	92.8688	end	-90
+GLOB_90	82.0058	90.0112	start	-90
+HIER_0	42.1005	61.5950	start	0
+HIER_180	120.4595	61.5950	end	0
+HIER_270	163.1950	62.4205	end	-90
+HIER_90	81.9150	59.4995	start	-90
+LOC_0	40.6400	30.7657	start	0
+LOC_180	121.9200	30.7657	end	0
+LOC_270	162.8457	30.4800	end	-90
+LOC_90	81.5657	30.4800	start	-90
+SHAPE_BIDIRECTIONAL	120.4912	122.6458	end	0
+SHAPE_INPUT	39.2112	122.6458	end	0
+SHAPE_OUTPUT	80.8037	122.6458	end	0
+SHAPE_PASSIVE	202.7237	122.6458	end	0
+SHAPE_TRI_STATE	161.1312	122.6458	end	0
