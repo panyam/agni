@@ -17,6 +17,8 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
+import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { type LayerPreset, type LayerStore, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emptyLocation, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
@@ -103,11 +105,10 @@ export interface RenderView {
   // (no sheet drawn yet in that renderer).
   getView(mode: RenderMode): unknown;
   setView(mode: RenderMode, view: unknown): void;
-  // setBoardLayers applies board layer visibility ("all" | "front" | "back") to the shown document
-  // (WS7-034). It is a pure view concern, since BoardSVG stratifies into classed groups and the
-  // host toggles CSS classes with no re-render. A schematic document has no such classes, so the
-  // setting is harmless there.
-  setBoardLayers(side: string): void;
+  // setBoardLayers hides the board's hidden layer rows in the shown document (agni 1351). It is a
+  // pure view concern, since each row names the SVG elements and the packed groups that draw it,
+  // so the host hides them with no re-render. A schematic document matches none of them.
+  setBoardLayers(rows: BoardLayerRow[], hidden: ReadonlySet<string>): void;
 }
 
 // ViewSink bundles every view surface the presenter pushes state to (WS9-019), one typed object
@@ -699,12 +700,20 @@ export class ViewerPresenter {
       activeId,
       ruleCount: this.doc.selectedRules.length,
       ranCount: this.doc.selectedRules.filter((n) => this.doc.ran(n)).length,
+      boardLayers: this.boardRows,
+      hiddenLayers: [...this.hiddenLayers],
     });
   }
 
-  // boardLayers is the board layer-visibility setting, kept across sheet switches so
-  // returning to the board restores the chosen view.
-  private boardLayers = "all";
+  // boardRows are the board's layer rows, from the last board GetSheet. hiddenLayers names the rows
+  // hidden, kept across sheet switches and, through layerStore, across visits to the design.
+  // layersFor is the design the hidden set was loaded for, so opening another design loads its own.
+  private boardRows: BoardLayerRow[] = [];
+  private hiddenLayers = new Set<string>();
+  private layersFor = "";
+  // layerStore keeps a design's hidden layers in this browser. The composition root sets it, and
+  // a presenter without one keeps the choice for the page alone.
+  layerStore: LayerStore | null = null;
 
   // pushControls reflects the current renderer/native/layout state to the control bar.
   private pushControls(): void {
@@ -715,18 +724,40 @@ export class ViewerPresenter {
       layout: this.currentLayout,
       providedSymbols: this.doc.availableLayouts.includes("faithful"),
       faithfulSymbols: this.faithfulSymbols,
-      board: this.currentSheet === "board",
-      boardLayers: this.boardLayers,
       hasHighlights: this.highlights.length > 0,
     });
   }
 
-  // setBoardLayers adopts a layer-visibility choice for the board sheet (WS7-034), a CSS toggle on
-  // the shown document with no re-render.
-  setBoardLayers(side: string): void {
-    this.boardLayers = side;
-    this.render.setBoardLayers(side);
-    this.pushControls();
+  // toggleBoardLayer, soloBoardLayer and presetBoardLayers change which board layers are shown (agni
+  // 1351). Each applies to the shown document with no re-render and is kept for the design.
+  toggleBoardLayer(name: string): void {
+    this.setHiddenLayers(toggled(this.hiddenLayers, name));
+  }
+
+  soloBoardLayer(name: string): void {
+    this.setHiddenLayers(soloHidden(this.boardRows, name));
+  }
+
+  presetBoardLayers(preset: LayerPreset): void {
+    this.setHiddenLayers(presetHidden(this.boardRows, preset));
+  }
+
+  private setHiddenLayers(hidden: Set<string>): void {
+    this.hiddenLayers = hidden;
+    this.layerStore?.save(this.doc.mount, this.doc.path, [...hidden].sort());
+    if (this.currentSheet === "board") this.render.setBoardLayers(this.boardRows, this.hiddenLayers);
+    this.pushOverview();
+  }
+
+  // adoptBoardRows takes a board's rows from its sheet and loads the design's kept choice the first
+  // time the design's board is drawn.
+  private adoptBoardRows(rows: BoardLayerRow[]): void {
+    this.boardRows = rows;
+    const key = `${this.doc.mount}/${this.doc.path}`;
+    if (this.layersFor !== key) {
+      this.layersFor = key;
+      this.hiddenLayers = new Set(this.layerStore?.load(this.doc.mount, this.doc.path) ?? []);
+    }
   }
 
   // openFile loads a design, populates the sheet navigator, reports whether NATIVE is available for
@@ -2052,7 +2083,15 @@ export class ViewerPresenter {
     this.shownMode = this.mode;
     this.pushSheets(sheetId);
     this.pushControls(); // the board flag follows the shown sheet
-    if (sheetId === "board") this.render.setBoardLayers(this.boardLayers); // restore the chosen view
+    if (sheetId === "board") {
+      // restore the chosen view
+      this.adoptBoardRows(resp.boardLayers);
+      this.render.setBoardLayers(this.boardRows, this.hiddenLayers);
+      this.pushOverview(sheetId);
+    } else {
+      // A schematic draws every layer row, so no rule meant for the board reaches it.
+      this.render.setBoardLayers([], new Set());
+    }
     // Re-stack the highlight overlay for the freshly drawn sheet (showSvg cleared the old
     // one); a no-op in WebGL mode (the canvas reapplies its specs itself) or with no specs.
     await this.refreshSvgOverlay();

@@ -234,5 +234,9 @@ page has the full argument.
   failure.
 - `--theme` selects the render palette on the server for both renderers, since the packed payload
   carries the group colors, so WebGL and SVG draw identical colors.
-- Board layer visibility is client-side in both renderers, through CSS strata and draw-loop skips,
-  never a render parameter.
+- Board layer visibility is client-side in both renderers, never a render parameter. The board
+  sheet's `GetSheet` answer lists its layers as `BoardLayerRow`s (agni 1351). Each row names the
+  SVG elements that draw it (`svg_selector`) and the packed groups (`groups`). So the viewer hides a
+  row with one CSS rule or a draw-loop skip, and knows nothing about how a board is drawn. The
+  Sheets panel lists the rows under the Board entry, and the viewer keeps a design's hidden rows in
+  browser storage.

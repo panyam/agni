@@ -200,6 +200,9 @@ message GetSheetResponse {
     agni.v1.geom.PackedSheet packed = 1; // tier-2 contract (C8), for the WebGL viewer
     string svg = 2;                        // standalone SVG document
   }
+  // board_layers lists the board sheet's layers, for either format (agni 1351). It is empty for a
+  // schematic sheet.
+  repeated agni.v1.geom.BoardLayerRow board_layers = 3;
 }
 
 message HighlightSheetRequest {

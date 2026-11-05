@@ -12,10 +12,6 @@ export interface ControlsState {
   // is offered); faithfulSymbols is whether that toggle is on.
   providedSymbols: boolean;
   faithfulSymbols: boolean;
-  // board is whether the shown sheet is the physical board (WS7-034), which offers the
-  // layer-visibility selector; boardLayers is its value ("all" | "front" | "back").
-  board: boolean;
-  boardLayers: string;
   // hasHighlights is whether anything is currently lit, so the clear control can disable itself
   // rather than offering an action with no effect (agni issue 348).
   hasHighlights: boolean;

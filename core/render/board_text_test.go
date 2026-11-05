@@ -107,7 +107,7 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 			t.Errorf("packed labels %v, want %q", labels, want)
 		}
 	}
-	if got := p.GetGroupColors()[groupBoardFab]; got != DefaultStyle.Fab {
+	if got := p.GetGroupColors()[boardRow(t, BoardLayers(b), "F.Fab").GetGroups()[0]]; got != DefaultStyle.Fab {
 		t.Errorf("the packed fab group draws in %q, want %q", got, DefaultStyle.Fab)
 	}
 }

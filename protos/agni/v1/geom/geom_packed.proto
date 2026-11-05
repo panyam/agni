@@ -151,6 +151,10 @@ message PackedLabel {
   // runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
   // to `text`. Empty means `text` draws as one plain run.
   repeated TextRun runs = 9;
+  // group is the primitive group the label hides with, so a board's silkscreen text hides with its
+  // layer (agni 1351). 0 means the label belongs to no group and always draws, as every schematic
+  // label does.
+  uint32 group = 10;
   // There is no font field yet. Every renderer draws one font (monospace, matching the SVG
   // backend), and the geom IR has no per-text font. Add `string font` here once a reader
   // populates per-element font on the IR. It is an additive change, so waiting loses nothing.
@@ -202,4 +206,28 @@ message PackedSheet {
   // Sheet-level raster images (logos, notes), rebased to origin_x/origin_y; drawn by the
   // overlay above the geometry. O(images), and structured like labels.
   repeated PackedImage images = 12;
+}
+
+// BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes
+// under the Board entry in its Sheets panel (agni 1351). The rows come in the order a reader
+// expects, copper in stackup order from the front, then the edge, the through copper, the zones,
+// and the graphics layers. Only a layer the geometry draws gets a row.
+//
+// A row says how to hide it in each renderer, so the client knows nothing about how a board is
+// drawn. svg_selector matches every element of the row in render.BoardSVG's output, and groups
+// lists the PackedSheet primitive groups of the row in render.PackBoard's output. A client hides a
+// row by hiding both. An element can belong to two rows, as a zone on In1.Cu does, and it stays
+// hidden while either row is hidden.
+message BoardLayerRow {
+  // name is the layer's own name ("F.Cu", "In1.Cu", "F.SilkS"), or "Edge", "Through" or "Zones"
+  // for the three rows that hold no single layer.
+  string name = 1;
+  // kind is "copper", "edge", "through", "zones", "silk", "fab", "courtyard" or "graphic".
+  string kind = 2;
+  // side is "front", "back" or "inner", or "" for a row that belongs to both sides.
+  string side = 3;
+  // color is the row's swatch, the colour both renderers draw it in. "#rrggbb".
+  string color = 4;
+  string svg_selector = 5;
+  repeated uint32 groups = 6;
 }

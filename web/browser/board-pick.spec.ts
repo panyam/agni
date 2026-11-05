@@ -168,10 +168,47 @@ describe("picking the board", () => {
       const at = await clearPoint(page, back, "component");
       await clickAndRead(page, at, ref);
 
-      await page.selectOption('select[title="board layer visibility"]', "front");
+      await page.locator(".board-layer-preset", { hasText: /^Front$/ }).click();
       await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length === 0, back, { timeout: 30_000 });
       const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest(".picks-back") !== null, at);
       expect(hit).toBe(false);
+    });
+  }, 90_000);
+});
+
+// A hidden layer draws nothing and takes no clicks (agni 1351). board_inner.kicad_pcb has a track
+// on In1.Cu alone, with nothing else under it.
+describe("hiding a board layer", () => {
+  it("hides one inner layer, which then picks nothing, and keeps the choice for the design", async () => {
+    await withPage(browser, async (page) => {
+      const track = '#svg-view .copper-inner[data-layer="In1.Cu"] g[data-kind="net"] > line';
+      const open = async () => {
+        await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
+        await page.waitForSelector('#svg-view [data-layer="In1.Cu"]', { state: "attached", timeout: 30_000 });
+      };
+      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view`, { waitUntil: "networkidle" });
+      await open();
+      const net = await page.$eval(track, (el) => el.parentElement!.getAttribute("data-net")!);
+      const at = await clearPoint(page, track, "net");
+      // The positive control. Shown, the track picks its net.
+      await clickAndRead(page, at, net);
+
+      await page.locator(".board-layer-row", { hasText: "In1.Cu" }).locator("input").click();
+      await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length === 0, track, { timeout: 30_000 });
+      const reached = (p: { x: number; y: number }) =>
+        page.evaluate(({ x, y }) => {
+          const nets = [-5, 0, 5].flatMap((dx) => [-5, 0, 5].map((dy) => document.elementFromPoint(x + dx, y + dy)?.closest("[data-net]")?.getAttribute("data-net") ?? ""));
+          return [...new Set(nets.filter((n) => n !== ""))];
+        }, p);
+      expect(await reached(at)).toEqual([]);
+      // The other inner layer still draws.
+      expect(await page.$eval('#svg-view [data-layer="In2.Cu"]', (el) => el.getClientRects().length > 0)).toBe(true);
+
+      // The design keeps the choice through a reload.
+      await page.reload({ waitUntil: "networkidle" });
+      await open();
+      expect(await page.locator(".board-layer-row", { hasText: "In1.Cu" }).locator("input").isChecked()).toBe(false);
+      expect(await page.$eval(track, (el) => el.getClientRects().length)).toBe(0);
     });
   }, 90_000);
 });
