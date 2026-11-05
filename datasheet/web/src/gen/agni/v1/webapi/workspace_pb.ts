@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSKAAQoIRGlyRW50cnkSDAoEbmFtZRgBIAEoCRIOCgZpc19kaXIYAiABKAgSDgoGZm9ybWF0GAMgASgJEgsKA3VyaRgEIAEoCRImCgRraW5kGAUgASgOMhguYWduaS52MS53ZWJhcGkuRmlsZUtpbmQSEQoJYm9hcmRfdXJpGAYgASgJImEKDkxpc3REaXJSZXF1ZXN0EgsKA3VyaRgBIAEoCRInCgVvcGVucxgDIAMoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kEhMKC21hcmtfYm9hcmRzGAQgASgISgQIAhADIjwKD0xpc3REaXJSZXNwb25zZRIpCgdlbnRyaWVzGAEgAygLMhguYWduaS52MS53ZWJhcGkuRGlyRW50cnkiJQoWTGlzdERlc2lnbkZpbGVzUmVxdWVzdBILCgN1cmkYASABKAkiZwoXTGlzdERlc2lnbkZpbGVzUmVzcG9uc2USDQoFbW91bnQYASABKAkSKQoFZmlsZXMYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5EZXNpZ25GaWxlEhIKCnRvdGFsX3NpemUYAyABKAMiRwoKRGVzaWduRmlsZRIMCgRwYXRoGAEgASgJEgwKBHNpemUYAiABKAMSDgoGc2hhMjU2GAMgASgJEg0KBWJvYXJkGAQgASgIIiQKFVByb3Bvc2VEZXNpZ25zUmVxdWVzdBILCgN1cmkYASABKAkihgEKFlByb3Bvc2VEZXNpZ25zUmVzcG9uc2USLwoHZGVzaWducxgBIAMoCzIeLmFnbmkudjEud2ViYXBpLlByb3Bvc2VkRGVzaWduEioKBnVucmVhZBgCIAMoCzIaLmFnbmkudjEud2ViYXBpLlVucmVhZEZpbGUSDwoHc3VwcG9ydBgDIAMoCSKMAQoOUHJvcG9zZWREZXNpZ24SDgoGZm9sZGVyGAEgASgJEiYKBmRlc2lnbhgCIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhITCgtkZXNpZ25feWFtbBgDIAEoCRINCgVmaWxlcxgEIAMoCRIMCgRub3RlGAUgASgJEhAKCGRlY2xhcmVkGAYgASgIIioKClVucmVhZEZpbGUSDAoEcGF0aBgBIAEoCRIOCgZyZWFzb24YAiABKAkqVAoIRmlsZUtpbmQSGQoVRklMRV9LSU5EX1VOU1BFQ0lGSUVEEAASFAoQRklMRV9LSU5EX0RFU0lHThABEhcKE0ZJTEVfS0lORF9EQVRBU0hFRVQQAjL4AgoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlEmIKD0xpc3REZXNpZ25GaWxlcxImLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXNwb25zZRJfCg5Qcm9wb3NlRGVzaWducxIlLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_project]);
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSKAAQoIRGlyRW50cnkSDAoEbmFtZRgBIAEoCRIOCgZpc19kaXIYAiABKAgSDgoGZm9ybWF0GAMgASgJEgsKA3VyaRgEIAEoCRImCgRraW5kGAUgASgOMhguYWduaS52MS53ZWJhcGkuRmlsZUtpbmQSEQoJYm9hcmRfdXJpGAYgASgJImEKDkxpc3REaXJSZXF1ZXN0EgsKA3VyaRgBIAEoCRInCgVvcGVucxgDIAMoDjIYLmFnbmkudjEud2ViYXBpLkZpbGVLaW5kEhMKC21hcmtfYm9hcmRzGAQgASgISgQIAhADIjwKD0xpc3REaXJSZXNwb25zZRIpCgdlbnRyaWVzGAEgAygLMhguYWduaS52MS53ZWJhcGkuRGlyRW50cnkiJQoWTGlzdERlc2lnbkZpbGVzUmVxdWVzdBILCgN1cmkYASABKAkiZwoXTGlzdERlc2lnbkZpbGVzUmVzcG9uc2USDQoFbW91bnQYASABKAkSKQoFZmlsZXMYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5EZXNpZ25GaWxlEhIKCnRvdGFsX3NpemUYAyABKAMiRwoKRGVzaWduRmlsZRIMCgRwYXRoGAEgASgJEgwKBHNpemUYAiABKAMSDgoGc2hhMjU2GAMgASgJEg0KBWJvYXJkGAQgASgIIkQKF0RlY2xhcmVDb21wYW5pb25SZXF1ZXN0EhIKCmRlc2lnbl91cmkYASABKAkSFQoNY29tcGFuaW9uX3VyaRgCIAEoCSJpChhEZWNsYXJlQ29tcGFuaW9uUmVzcG9uc2USFgoOZGVzY3JpcHRvcl91cmkYASABKAkSEwoLZGVzaWduX3lhbWwYAiABKAkSDwoHZXhpc3RlZBgDIAEoCBIPCgdjaGFuZ2VkGAQgASgIIiQKFVByb3Bvc2VEZXNpZ25zUmVxdWVzdBILCgN1cmkYASABKAkihgEKFlByb3Bvc2VEZXNpZ25zUmVzcG9uc2USLwoHZGVzaWducxgBIAMoCzIeLmFnbmkudjEud2ViYXBpLlByb3Bvc2VkRGVzaWduEioKBnVucmVhZBgCIAMoCzIaLmFnbmkudjEud2ViYXBpLlVucmVhZEZpbGUSDwoHc3VwcG9ydBgDIAMoCSKMAQoOUHJvcG9zZWREZXNpZ24SDgoGZm9sZGVyGAEgASgJEiYKBmRlc2lnbhgCIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhITCgtkZXNpZ25feWFtbBgDIAEoCRINCgVmaWxlcxgEIAMoCRIMCgRub3RlGAUgASgJEhAKCGRlY2xhcmVkGAYgASgIIioKClVucmVhZEZpbGUSDAoEcGF0aBgBIAEoCRIOCgZyZWFzb24YAiABKAkqVAoIRmlsZUtpbmQSGQoVRklMRV9LSU5EX1VOU1BFQ0lGSUVEEAASFAoQRklMRV9LSU5EX0RFU0lHThABEhcKE0ZJTEVfS0lORF9EQVRBU0hFRVQQAjLfAwoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlEmIKD0xpc3REZXNpZ25GaWxlcxImLmFnbmkudjEud2ViYXBpLkxpc3REZXNpZ25GaWxlc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXNwb25zZRJfCg5Qcm9wb3NlRGVzaWducxIlLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLlByb3Bvc2VEZXNpZ25zUmVzcG9uc2USZQoQRGVjbGFyZUNvbXBhbmlvbhInLmFnbmkudjEud2ViYXBpLkRlY2xhcmVDb21wYW5pb25SZXF1ZXN0GiguYWduaS52MS53ZWJhcGkuRGVjbGFyZUNvbXBhbmlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_project]);
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls. root is a
@@ -336,6 +336,75 @@ export const DesignFileSchema: GenMessage<DesignFile> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_workspace, 8);
 
 /**
+ * @generated from message agni.v1.webapi.DeclareCompanionRequest
+ */
+export type DeclareCompanionRequest = Message<"agni.v1.webapi.DeclareCompanionRequest"> & {
+  /**
+   * design_uri is the design's entry file, "mount://<mount>/<path>", as the page opened it.
+   *
+   * @generated from field: string design_uri = 1;
+   */
+  designUri: string;
+
+  /**
+   * companion_uri is the file to declare, in the same mount and inside the design's folder, since a
+   * descriptor's companions stay inside it. An ODB++ job is named by its matrix/matrix entry.
+   *
+   * @generated from field: string companion_uri = 2;
+   */
+  companionUri: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DeclareCompanionRequest.
+ * Use `create(DeclareCompanionRequestSchema)` to create a new message.
+ */
+export const DeclareCompanionRequestSchema: GenMessage<DeclareCompanionRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 9);
+
+/**
+ * @generated from message agni.v1.webapi.DeclareCompanionResponse
+ */
+export type DeclareCompanionResponse = Message<"agni.v1.webapi.DeclareCompanionResponse"> & {
+  /**
+   * descriptor_uri is the design.yaml to write, beside the design's entry.
+   *
+   * @generated from field: string descriptor_uri = 1;
+   */
+  descriptorUri: string;
+
+  /**
+   * design_yaml is the descriptor's whole text with the companion declared, already checked as a
+   * design descriptor. It equals the file as it is when the companion is declared already.
+   *
+   * @generated from field: string design_yaml = 2;
+   */
+  designYaml: string;
+
+  /**
+   * existed says a descriptor was there before, so the text is an edit of it rather than a new file.
+   *
+   * @generated from field: bool existed = 3;
+   */
+  existed: boolean;
+
+  /**
+   * changed says the text differs from the descriptor as it is, false when it declared the
+   * companion already.
+   *
+   * @generated from field: bool changed = 4;
+   */
+  changed: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DeclareCompanionResponse.
+ * Use `create(DeclareCompanionResponseSchema)` to create a new message.
+ */
+export const DeclareCompanionResponseSchema: GenMessage<DeclareCompanionResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_workspace, 10);
+
+/**
  * @generated from message agni.v1.webapi.ProposeDesignsRequest
  */
 export type ProposeDesignsRequest = Message<"agni.v1.webapi.ProposeDesignsRequest"> & {
@@ -353,7 +422,7 @@ export type ProposeDesignsRequest = Message<"agni.v1.webapi.ProposeDesignsReques
  * Use `create(ProposeDesignsRequestSchema)` to create a new message.
  */
 export const ProposeDesignsRequestSchema: GenMessage<ProposeDesignsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 9);
+  messageDesc(file_agni_v1_webapi_workspace, 11);
 
 /**
  * @generated from message agni.v1.webapi.ProposeDesignsResponse
@@ -387,7 +456,7 @@ export type ProposeDesignsResponse = Message<"agni.v1.webapi.ProposeDesignsRespo
  * Use `create(ProposeDesignsResponseSchema)` to create a new message.
  */
 export const ProposeDesignsResponseSchema: GenMessage<ProposeDesignsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 10);
+  messageDesc(file_agni_v1_webapi_workspace, 12);
 
 /**
  * ProposedDesign is one design a folder's files make.
@@ -447,7 +516,7 @@ export type ProposedDesign = Message<"agni.v1.webapi.ProposedDesign"> & {
  * Use `create(ProposedDesignSchema)` to create a new message.
  */
 export const ProposedDesignSchema: GenMessage<ProposedDesign> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 11);
+  messageDesc(file_agni_v1_webapi_workspace, 13);
 
 /**
  * UnreadFile is a file no proposed design reads.
@@ -471,7 +540,7 @@ export type UnreadFile = Message<"agni.v1.webapi.UnreadFile"> & {
  * Use `create(UnreadFileSchema)` to create a new message.
  */
 export const UnreadFileSchema: GenMessage<UnreadFile> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_workspace, 12);
+  messageDesc(file_agni_v1_webapi_workspace, 14);
 
 /**
  * FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
@@ -580,6 +649,20 @@ export const WorkspaceService: GenService<{
     methodKind: "unary";
     input: typeof ProposeDesignsRequestSchema;
     output: typeof ProposeDesignsResponseSchema;
+  },
+  /**
+   * DeclareCompanion answers the design.yaml that declares a file as one of a design's companions,
+   * such as a board a page attached with Snapshot.board_uri (agni issue 1367). It writes nothing.
+   * A host whose mount a page can write, such as the browser's drop mount, saves the text, and on
+   * any other the reader commits it. An existing descriptor keeps its comments and other keys, and
+   * a new one names the design's entry and extends a project.yaml above it.
+   *
+   * @generated from rpc agni.v1.webapi.WorkspaceService.DeclareCompanion
+   */
+  declareCompanion: {
+    methodKind: "unary";
+    input: typeof DeclareCompanionRequestSchema;
+    output: typeof DeclareCompanionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_workspace, 0);

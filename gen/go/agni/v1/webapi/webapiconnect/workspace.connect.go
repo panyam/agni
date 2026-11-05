@@ -45,6 +45,9 @@ const (
 	// WorkspaceServiceProposeDesignsProcedure is the fully-qualified name of the WorkspaceService's
 	// ProposeDesigns RPC.
 	WorkspaceServiceProposeDesignsProcedure = "/agni.v1.webapi.WorkspaceService/ProposeDesigns"
+	// WorkspaceServiceDeclareCompanionProcedure is the fully-qualified name of the WorkspaceService's
+	// DeclareCompanion RPC.
+	WorkspaceServiceDeclareCompanionProcedure = "/agni.v1.webapi.WorkspaceService/DeclareCompanion"
 )
 
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
@@ -74,6 +77,12 @@ type WorkspaceServiceClient interface {
 	// the server does not guess again. Each proposal includes the `design.yaml` that would declare
 	// it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
 	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
+	// DeclareCompanion answers the design.yaml that declares a file as one of a design's companions,
+	// such as a board a page attached with Snapshot.board_uri (agni issue 1367). It writes nothing.
+	// A host whose mount a page can write, such as the browser's drop mount, saves the text, and on
+	// any other the reader commits it. An existing descriptor keeps its comments and other keys, and
+	// a new one names the design's entry and extends a project.yaml above it.
+	DeclareCompanion(context.Context, *connect.Request[webapi.DeclareCompanionRequest]) (*connect.Response[webapi.DeclareCompanionResponse], error)
 }
 
 // NewWorkspaceServiceClient constructs a client for the agni.v1.webapi.WorkspaceService service. By
@@ -111,15 +120,22 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("ProposeDesigns")),
 			connect.WithClientOptions(opts...),
 		),
+		declareCompanion: connect.NewClient[webapi.DeclareCompanionRequest, webapi.DeclareCompanionResponse](
+			httpClient,
+			baseURL+WorkspaceServiceDeclareCompanionProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("DeclareCompanion")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
-	listMounts      *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
-	listDir         *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
-	listDesignFiles *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
-	proposeDesigns  *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
+	listMounts       *connect.Client[webapi.ListMountsRequest, webapi.ListMountsResponse]
+	listDir          *connect.Client[webapi.ListDirRequest, webapi.ListDirResponse]
+	listDesignFiles  *connect.Client[webapi.ListDesignFilesRequest, webapi.ListDesignFilesResponse]
+	proposeDesigns   *connect.Client[webapi.ProposeDesignsRequest, webapi.ProposeDesignsResponse]
+	declareCompanion *connect.Client[webapi.DeclareCompanionRequest, webapi.DeclareCompanionResponse]
 }
 
 // ListMounts calls agni.v1.webapi.WorkspaceService.ListMounts.
@@ -140,6 +156,11 @@ func (c *workspaceServiceClient) ListDesignFiles(ctx context.Context, req *conne
 // ProposeDesigns calls agni.v1.webapi.WorkspaceService.ProposeDesigns.
 func (c *workspaceServiceClient) ProposeDesigns(ctx context.Context, req *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error) {
 	return c.proposeDesigns.CallUnary(ctx, req)
+}
+
+// DeclareCompanion calls agni.v1.webapi.WorkspaceService.DeclareCompanion.
+func (c *workspaceServiceClient) DeclareCompanion(ctx context.Context, req *connect.Request[webapi.DeclareCompanionRequest]) (*connect.Response[webapi.DeclareCompanionResponse], error) {
+	return c.declareCompanion.CallUnary(ctx, req)
 }
 
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
@@ -169,6 +190,12 @@ type WorkspaceServiceHandler interface {
 	// the server does not guess again. Each proposal includes the `design.yaml` that would declare
 	// it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
 	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
+	// DeclareCompanion answers the design.yaml that declares a file as one of a design's companions,
+	// such as a board a page attached with Snapshot.board_uri (agni issue 1367). It writes nothing.
+	// A host whose mount a page can write, such as the browser's drop mount, saves the text, and on
+	// any other the reader commits it. An existing descriptor keeps its comments and other keys, and
+	// a new one names the design's entry and extends a project.yaml above it.
+	DeclareCompanion(context.Context, *connect.Request[webapi.DeclareCompanionRequest]) (*connect.Response[webapi.DeclareCompanionResponse], error)
 }
 
 // NewWorkspaceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -202,6 +229,12 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("ProposeDesigns")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceDeclareCompanionHandler := connect.NewUnaryHandler(
+		WorkspaceServiceDeclareCompanionProcedure,
+		svc.DeclareCompanion,
+		connect.WithSchema(workspaceServiceMethods.ByName("DeclareCompanion")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkspaceServiceListMountsProcedure:
@@ -212,6 +245,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 			workspaceServiceListDesignFilesHandler.ServeHTTP(w, r)
 		case WorkspaceServiceProposeDesignsProcedure:
 			workspaceServiceProposeDesignsHandler.ServeHTTP(w, r)
+		case WorkspaceServiceDeclareCompanionProcedure:
+			workspaceServiceDeclareCompanionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -235,4 +270,8 @@ func (UnimplementedWorkspaceServiceHandler) ListDesignFiles(context.Context, *co
 
 func (UnimplementedWorkspaceServiceHandler) ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.ProposeDesigns is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) DeclareCompanion(context.Context, *connect.Request[webapi.DeclareCompanionRequest]) (*connect.Response[webapi.DeclareCompanionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.WorkspaceService.DeclareCompanion is not implemented"))
 }

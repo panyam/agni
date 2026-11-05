@@ -133,6 +133,14 @@ func (a *Workspace) ListDesignFiles(ctx context.Context, req *connect.Request[we
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Workspace) DeclareCompanion(ctx context.Context, req *connect.Request[webapi.DeclareCompanionRequest]) (*connect.Response[webapi.DeclareCompanionResponse], error) {
+	resp, err := a.svc.DeclareCompanion(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Workspace) ProposeDesigns(ctx context.Context, req *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error) {
 	resp, err := a.svc.ProposeDesigns(ctx, req.Msg)
 	if err != nil {

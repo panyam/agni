@@ -50,6 +50,7 @@ import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
 import { BOARD_PARAM, appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withBoard, withFlatten, type ViewerLocation } from "./router.js";
 import { pickBoard } from "./boardpicker.js";
+import { overlayPath, showDeclared } from "./declareboard.js";
 import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason } from "./query.js";
@@ -389,6 +390,27 @@ class AppRoot extends BaseComponent {
           if (uri) window.location.assign(withBoard(window.location.pathname + window.location.search, uri.replace(/^mount:\/\//, "")));
         },
         onClear: () => window.location.assign(withBoard(window.location.pathname + window.location.search, "")),
+        // Saving asks the server for the descriptor's text. A drop's is written into the drop store,
+        // and the page opens again reading it; a served design's is shown for the reader to commit.
+        onSave: async () => {
+          const here = currentLocation();
+          const board = new URLSearchParams(window.location.search).get(BOARD_PARAM) ?? "";
+          let d;
+          try {
+            d = await workspaceClient().declareCompanion({ designUri: `mount://${here.mount}/${here.path}`, companionUri: `mount://${board}` });
+          } catch (e) {
+            showEngineNote(`Could not declare the board: ${e instanceof Error ? e.message : String(e)}`);
+            return;
+          }
+          const key = overlayPath(d.descriptorUri, BROWSER_MOUNT);
+          const id = dropOf(here.path);
+          if (key && id) {
+            if (d.changed) await drops.put(id, { [key]: new TextEncoder().encode(d.designYaml) });
+            window.location.assign(withBoard(window.location.pathname + window.location.search, ""));
+            return;
+          }
+          await showDeclared(document, d);
+        },
       },
     });
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates

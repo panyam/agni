@@ -78,8 +78,17 @@ snapshot the page ingests, as `?flatten=1` sets `flattenHierarchy`. So the board
 view, `LocateSubjects` and the board-tier rules all read it, and a link or a reload keeps it. The
 browser engine needs nothing extra, because `mountingFetch` lists every `mount://` URI in an
 ingest's body, `boardUri` included, and brings in that board's files. The board belongs to the
-page, not the design, so the CLI and CI never see it. Saving it to `design.yaml` is the second half
-of #1367.
+page, not the design, so the CLI and CI never see it.
+
+"Save to design.yaml" moves the board from the page to the design. The page asks
+`WorkspaceService.DeclareCompanion` for the descriptor's text, and the server writes nothing. An
+existing `design.yaml` is edited as a YAML node tree, so its comments and other keys survive. A new
+one names the design as `ProposeDesigns` would, and extends the nearest `project.yaml`, since a design
+under a project that names none fails to load. A board outside the design's folder is refused,
+because a descriptor's companions stay inside it. In the drop mount the page writes the text into the
+drop store under `.agni-overlay/`, as the Load page writes a proposal, and opens the design again
+without `?board=`. A served design's folder belongs to whoever runs the server. So there the page
+shows the text, and the reader commits it.
 
 ## Traps that ship green
 
