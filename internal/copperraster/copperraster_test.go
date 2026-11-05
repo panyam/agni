@@ -39,15 +39,27 @@ func TestAFilmDrawsItsTracksAndFlashes(t *testing.T) {
 	}
 }
 
-func TestRegionsAndClearCopperAreLeftOut(t *testing.T) {
+// A dark region fills its area, and a clear region or a clear draw erases what lies under it, which
+// is how Allegro plots a pour and its voids (agni 1357).
+func TestARegionFillsAndAClearRegionCutsIt(t *testing.T) {
 	b := grid()
 	f, err := DrawGerber(strings.NewReader(film(
-		"%ADD10C,.01*%\nG54D10*\nG36*\nX0Y0D02*\nX50000Y0D01*\nX50000Y50000D01*\nG37*\n%LPC*%\nX10000Y10000D02*\nX40000Y10000D01*\n%LPD*%\n")), b, b)
+		"%ADD10C,.01*%\nG54D10*\nG36*\nX0Y0D02*\nX50000Y0D01*\nX50000Y50000D01*\nX0Y50000D01*\nX0Y0D01*\nG37*\n"+
+			"%LPC*%\nG36*\nX10000Y10000D02*\nX20000Y10000D01*\nX20000Y20000D01*\nX10000Y20000D01*\nX10000Y10000D01*\nG37*\n"+
+			"X30000Y30000D02*\nX40000Y30000D01*\n%LPD*%\n")), b, b)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b.Count() != 0 || f.Regions != 1 || f.Clear != 1 {
-		t.Errorf("drew %d pixels and counted %+v, want nothing drawn, one region and one clear draw", b.Count(), f)
+	if f.Regions != 2 || f.Clear != 2 {
+		t.Errorf("counted %+v, want two regions and two clear operations", f)
+	}
+	// The grid is a mil a pixel, so the 0.5 in square is 500 pixels a side and the void 100.
+	// The clear draw along y = 0.3 in cuts a 10 mil line out of the square too.
+	if !b.Get(250, 400) || b.Get(150, 150) || b.Get(350, 300) {
+		t.Errorf("the square is copper at (250, 400) %v, the void at (150, 150) %v and the clear draw at (350, 300) %v", b.Get(250, 400), b.Get(150, 150), b.Get(350, 300))
+	}
+	if n, want := b.Count(), 500*500-100*100-100*10; n < want-2000 || n > want+2000 {
+		t.Errorf("drew %d pixels, want about %d", n, want)
 	}
 }
 

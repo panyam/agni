@@ -154,14 +154,26 @@ class PadShape(_message.Message):
     def __init__(self, shape: _Optional[str] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ...) -> None: ...
 
 class NetCopper(_message.Message):
-    __slots__ = ("net", "segments", "vias")
+    __slots__ = ("net", "segments", "vias", "shapes")
     NET_FIELD_NUMBER: _ClassVar[int]
     SEGMENTS_FIELD_NUMBER: _ClassVar[int]
     VIAS_FIELD_NUMBER: _ClassVar[int]
+    SHAPES_FIELD_NUMBER: _ClassVar[int]
     net: str
     segments: _containers.RepeatedCompositeFieldContainer[TrackSegment]
     vias: _containers.RepeatedCompositeFieldContainer[Via]
-    def __init__(self, net: _Optional[str] = ..., segments: _Optional[_Iterable[_Union[TrackSegment, _Mapping]]] = ..., vias: _Optional[_Iterable[_Union[Via, _Mapping]]] = ...) -> None: ...
+    shapes: _containers.RepeatedCompositeFieldContainer[CopperShape]
+    def __init__(self, net: _Optional[str] = ..., segments: _Optional[_Iterable[_Union[TrackSegment, _Mapping]]] = ..., vias: _Optional[_Iterable[_Union[Via, _Mapping]]] = ..., shapes: _Optional[_Iterable[_Union[CopperShape, _Mapping]]] = ...) -> None: ...
+
+class CopperShape(_message.Message):
+    __slots__ = ("layer", "outline", "holes")
+    LAYER_FIELD_NUMBER: _ClassVar[int]
+    OUTLINE_FIELD_NUMBER: _ClassVar[int]
+    HOLES_FIELD_NUMBER: _ClassVar[int]
+    layer: str
+    outline: _geom_pb2.Polyline
+    holes: _containers.RepeatedCompositeFieldContainer[_geom_pb2.Polyline]
+    def __init__(self, layer: _Optional[str] = ..., outline: _Optional[_Union[_geom_pb2.Polyline, _Mapping]] = ..., holes: _Optional[_Iterable[_Union[_geom_pb2.Polyline, _Mapping]]] = ...) -> None: ...
 
 class TrackSegment(_message.Message):
     __slots__ = ("a", "b", "width", "layer", "mid")

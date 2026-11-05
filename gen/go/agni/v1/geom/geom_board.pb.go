@@ -870,14 +870,16 @@ func (x *PadShape) GetSize() *Point {
 	return nil
 }
 
-// NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
-// so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
-// side.
+// NetCopper is the copper of one net, with its track segments, vias and filled shapes. They are
+// grouped so a consumer joins per-net geometry by name. WireGeometry uses the same key on the
+// schematic side. Pads are copper too and sit on their placements. Copper on no net (a logo, an
+// island) is the NetCopper whose net is "".
 type NetCopper struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Net           string                 `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"` // joins to ir.Net.name
 	Segments      []*TrackSegment        `protobuf:"bytes,2,rep,name=segments,proto3" json:"segments,omitempty"`
 	Vias          []*Via                 `protobuf:"bytes,3,rep,name=vias,proto3" json:"vias,omitempty"`
+	Shapes        []*CopperShape         `protobuf:"bytes,4,rep,name=shapes,proto3" json:"shapes,omitempty"` // filled copper polygons (agni 1357)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -933,6 +935,78 @@ func (x *NetCopper) GetVias() []*Via {
 	return nil
 }
 
+func (x *NetCopper) GetShapes() []*CopperShape {
+	if x != nil {
+		return x.Shapes
+	}
+	return nil
+}
+
+// CopperShape is a filled copper polygon on one layer, as the board is etched (agni 1357). It is
+// the physical copper, which a zone is not. A plane is one shape whose holes are its clearances and
+// the gaps between its thermal spokes, and a pour on a signal layer is another. outline is the
+// shape's boundary and each hole a region inside it with no copper. Both are closed, and arcs are
+// approximated by chords.
+type CopperShape struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Layer         string                 `protobuf:"bytes,1,opt,name=layer,proto3" json:"layer,omitempty"`
+	Outline       *Polyline              `protobuf:"bytes,2,opt,name=outline,proto3" json:"outline,omitempty"`
+	Holes         []*Polyline            `protobuf:"bytes,3,rep,name=holes,proto3" json:"holes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CopperShape) Reset() {
+	*x = CopperShape{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CopperShape) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CopperShape) ProtoMessage() {}
+
+func (x *CopperShape) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CopperShape.ProtoReflect.Descriptor instead.
+func (*CopperShape) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CopperShape) GetLayer() string {
+	if x != nil {
+		return x.Layer
+	}
+	return ""
+}
+
+func (x *CopperShape) GetOutline() *Polyline {
+	if x != nil {
+		return x.Outline
+	}
+	return nil
+}
+
+func (x *CopperShape) GetHoles() []*Polyline {
+	if x != nil {
+		return x.Holes
+	}
+	return nil
+}
+
 // TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
 // arc sets mid to a point on the curve between a and b, so the run is the circular arc through
 // a, mid and b, as geom.Shape spells an arc (agni issue 1358). A consumer that cannot draw a curve
@@ -951,7 +1025,7 @@ type TrackSegment struct {
 
 func (x *TrackSegment) Reset() {
 	*x = TrackSegment{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -963,7 +1037,7 @@ func (x *TrackSegment) String() string {
 func (*TrackSegment) ProtoMessage() {}
 
 func (x *TrackSegment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -976,7 +1050,7 @@ func (x *TrackSegment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackSegment.ProtoReflect.Descriptor instead.
 func (*TrackSegment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TrackSegment) GetA() *Point {
@@ -1031,7 +1105,7 @@ type Via struct {
 
 func (x *Via) Reset() {
 	*x = Via{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1117,7 @@ func (x *Via) String() string {
 func (*Via) ProtoMessage() {}
 
 func (x *Via) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1130,7 @@ func (x *Via) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Via.ProtoReflect.Descriptor instead.
 func (*Via) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Via) GetAt() *Point {
@@ -1101,9 +1175,11 @@ func (x *Via) GetPadstack() string {
 	return ""
 }
 
-// Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
-// polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
-// it again, or a later tier will hold it, per the C6 bound above.
+// Zone is a region the designer drew to be filled with a net's copper, with its net, its layer, and
+// its AUTHORED outline (KiCad's zone, Allegro's shape boundary). It states intent, not copper. The
+// outline overlaps other nets' tracks, which the fill clears. A fill the source stores as copper is
+// a NetCopper shape (agni 1357), and a fill the tool computes again is not kept, per the C6 bound
+// above.
 type Zone struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Net           string                 `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`
@@ -1115,7 +1191,7 @@ type Zone struct {
 
 func (x *Zone) Reset() {
 	*x = Zone{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1127,7 +1203,7 @@ func (x *Zone) String() string {
 func (*Zone) ProtoMessage() {}
 
 func (x *Zone) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1140,7 +1216,7 @@ func (x *Zone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Zone.ProtoReflect.Descriptor instead.
 func (*Zone) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Zone) GetNet() string {
@@ -1236,11 +1312,16 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\aantipad\x18\x04 \x01(\v2\x16.agni.v1.geom.PadShapeR\aantipad\"I\n" +
 	"\bPadShape\x12\x14\n" +
 	"\x05shape\x18\x01 \x01(\tR\x05shape\x12'\n" +
-	"\x04size\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x04size\"|\n" +
+	"\x04size\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x04size\"\xaf\x01\n" +
 	"\tNetCopper\x12\x10\n" +
 	"\x03net\x18\x01 \x01(\tR\x03net\x126\n" +
 	"\bsegments\x18\x02 \x03(\v2\x1a.agni.v1.geom.TrackSegmentR\bsegments\x12%\n" +
-	"\x04vias\x18\x03 \x03(\v2\x11.agni.v1.geom.ViaR\x04vias\"\xa7\x01\n" +
+	"\x04vias\x18\x03 \x03(\v2\x11.agni.v1.geom.ViaR\x04vias\x121\n" +
+	"\x06shapes\x18\x04 \x03(\v2\x19.agni.v1.geom.CopperShapeR\x06shapes\"\x83\x01\n" +
+	"\vCopperShape\x12\x14\n" +
+	"\x05layer\x18\x01 \x01(\tR\x05layer\x120\n" +
+	"\aoutline\x18\x02 \x01(\v2\x16.agni.v1.geom.PolylineR\aoutline\x12,\n" +
+	"\x05holes\x18\x03 \x03(\v2\x16.agni.v1.geom.PolylineR\x05holes\"\xa7\x01\n" +
 	"\fTrackSegment\x12!\n" +
 	"\x01a\x18\x01 \x01(\v2\x13.agni.v1.geom.PointR\x01a\x12!\n" +
 	"\x01b\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x01b\x12\x14\n" +
@@ -1272,7 +1353,7 @@ func file_agni_v1_geom_geom_board_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_board_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardGeometry)(nil),      // 0: agni.v1.geom.BoardGeometry
 	(*BoardText)(nil),          // 1: agni.v1.geom.BoardText
@@ -1285,49 +1366,53 @@ var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*PadstackLayer)(nil),      // 8: agni.v1.geom.PadstackLayer
 	(*PadShape)(nil),           // 9: agni.v1.geom.PadShape
 	(*NetCopper)(nil),          // 10: agni.v1.geom.NetCopper
-	(*TrackSegment)(nil),       // 11: agni.v1.geom.TrackSegment
-	(*Via)(nil),                // 12: agni.v1.geom.Via
-	(*Zone)(nil),               // 13: agni.v1.geom.Zone
-	(*Provenance)(nil),         // 14: agni.v1.geom.Provenance
-	(*Point)(nil),              // 15: agni.v1.geom.Point
-	(*Shape)(nil),              // 16: agni.v1.geom.Shape
-	(*Polyline)(nil),           // 17: agni.v1.geom.Polyline
+	(*CopperShape)(nil),        // 11: agni.v1.geom.CopperShape
+	(*TrackSegment)(nil),       // 12: agni.v1.geom.TrackSegment
+	(*Via)(nil),                // 13: agni.v1.geom.Via
+	(*Zone)(nil),               // 14: agni.v1.geom.Zone
+	(*Provenance)(nil),         // 15: agni.v1.geom.Provenance
+	(*Point)(nil),              // 16: agni.v1.geom.Point
+	(*Shape)(nil),              // 17: agni.v1.geom.Shape
+	(*Polyline)(nil),           // 18: agni.v1.geom.Polyline
 }
 var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.BoardGeometry.layers:type_name -> agni.v1.geom.BoardLayer
 	4,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
 	5,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
 	10, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
-	13, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
+	14, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
 	1,  // 5: agni.v1.geom.BoardGeometry.texts:type_name -> agni.v1.geom.BoardText
 	2,  // 6: agni.v1.geom.BoardGeometry.graphics:type_name -> agni.v1.geom.BoardGraphic
 	7,  // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
-	14, // 8: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
-	15, // 9: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
-	16, // 10: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
-	17, // 11: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
-	15, // 12: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
+	15, // 8: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
+	16, // 9: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
+	17, // 10: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
+	18, // 11: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
+	16, // 12: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
 	6,  // 13: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
-	14, // 14: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
-	15, // 15: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
-	15, // 16: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
+	15, // 14: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
+	16, // 15: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
+	16, // 16: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
 	8,  // 17: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
 	9,  // 18: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
 	9,  // 19: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
 	9,  // 20: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
-	15, // 21: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
-	11, // 22: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	12, // 23: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	15, // 24: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	15, // 25: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	15, // 26: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	15, // 27: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	17, // 28: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	29, // [29:29] is the sub-list for method output_type
-	29, // [29:29] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	16, // 21: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
+	12, // 22: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	13, // 23: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	11, // 24: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
+	18, // 25: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
+	18, // 26: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
+	16, // 27: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	16, // 28: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	16, // 29: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	16, // 30: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	18, // 31: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	32, // [32:32] is the sub-list for method output_type
+	32, // [32:32] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }
@@ -1342,7 +1427,7 @@ func file_agni_v1_geom_geom_board_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_board_proto_rawDesc), len(file_agni_v1_geom_geom_board_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

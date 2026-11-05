@@ -276,3 +276,61 @@ func TestAllegroPadstacksMatchTheExtract(t *testing.T) {
 		t.Fatalf("compared %d rows of %d padstacks, too few to mean anything", compared, stacks)
 	}
 }
+
+// TestAllegroShapesMatchTheExtract holds the board's filled copper to the ETCH shapes Allegro's
+// extract lists (agni 1357): on each layer and net, the same number of shapes with the same number
+// of voids. The extract names a copper layer by its Allegro name, and its padstack rows list those
+// names in stackup order, which gives each one's board layer.
+func TestAllegroShapesMatchTheExtract(t *testing.T) {
+	_, g, x := readAllegroSample(t)
+	var order []string
+	for _, r := range x.padRows {
+		if r.padstack != x.padRows[0].padstack {
+			break
+		}
+		if r.layer != "internal_pad_def" {
+			order = append(order, r.layer)
+		}
+	}
+	if len(order) != len(g.GetLayers()) {
+		t.Fatalf("the extract's first padstack lists %d copper layers, the board %d", len(order), len(g.GetLayers()))
+	}
+	boardLayer := map[string]string{}
+	for i, name := range order {
+		boardLayer[name] = g.GetLayers()[i].GetName()
+	}
+	count := func(m map[string][]int, k string, holes int) { m[k] = append(m[k], holes) }
+	want, got := map[string][]int{}, map[string][]int{}
+	for _, s := range x.shapes {
+		count(want, boardLayer[s.layer]+" "+s.net, len(s.voids))
+	}
+	for _, nc := range g.GetNets() {
+		for _, s := range nc.GetShapes() {
+			count(got, s.GetLayer()+" "+nc.GetNet(), len(s.GetHoles()))
+		}
+	}
+	norm := func(m map[string][]int) []string {
+		var out []string
+		for k, v := range m {
+			sort.Ints(v)
+			out = append(out, fmt.Sprintf("%s %v", k, v))
+		}
+		sort.Strings(out)
+		return out
+	}
+	w, gt := norm(want), norm(got)
+	if diffs := diffRows("shapes", gt, w); len(diffs) > 0 {
+		t.Errorf("%d differences (layer net [voids per shape]):\n  %s", len(diffs), capLines(diffs))
+	}
+	shapes, voids := 0, 0
+	for _, v := range got {
+		shapes += len(v)
+		for _, n := range v {
+			voids += n
+		}
+	}
+	t.Logf("%d shapes with %d voids on %d layer-nets", shapes, voids, len(got))
+	if shapes < 300 || voids < 5000 {
+		t.Fatalf("read %d shapes and %d voids, too few to mean anything", shapes, voids)
+	}
+}

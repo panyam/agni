@@ -26,7 +26,8 @@ import (
 //   - Each pin's and via's lands on every copper layer, as padstacks (agni 1356). ODB++ names no
 //     padstack, so one is a set of lands, and a land the job leaves out, as Allegro leaves out a
 //     pad nothing on its layer joins, is not in it.
-//   - Copper surfaces on a net, as zones. Each island keeps its outline and drops its holes.
+//   - Copper surfaces on a net, as copper shapes. Each island keeps its outline and its holes
+//     (agni 1357). A negative feature, which cuts a surface drawn before it, is dropped.
 //   - Silkscreen and fabrication lines and text.
 //
 // A pad drawn by a user symbol or as a surface is kept as its extent with the shape "custom", not
@@ -620,11 +621,18 @@ func (b *boardBuilder) copper() error {
 					nc.Segments = append(nc.Segments, &geom.TrackSegment{A: arcPoint(a.S), Mid: arcPoint(a.M), B: arcPoint(a.E), Width: w, Layer: layer})
 				}
 			case featSurface:
+				// A surface is copper as etched, so each island is a copper shape with its holes
+				// (agni 1357).
 				for _, isl := range f.islands {
 					if len(isl) == 0 {
 						continue
 					}
-					b.g.Zones = append(b.g.Zones, &geom.Zone{Net: ref.net, Layer: layer, Outline: closedPolyline(isl[0].pts)})
+					sh := &geom.CopperShape{Layer: layer, Outline: closedPolyline(isl[0].pts)}
+					for _, h := range isl[1:] {
+						sh.Holes = append(sh.Holes, closedPolyline(h.pts))
+					}
+					nc := get(ref.net)
+					nc.Shapes = append(nc.Shapes, sh)
 				}
 			}
 		}

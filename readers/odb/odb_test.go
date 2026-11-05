@@ -168,8 +168,17 @@ func TestReadsAnInchJob(t *testing.T) {
 	if v.GetDrill() != 12*mil || v.GetSize() != 10*mil || v.GetLayerFrom() != "F.Cu" || v.GetLayerTo() != "B.Cu" {
 		t.Errorf("via = %v, want 12mil drill, 10mil land, F.Cu to B.Cu", v)
 	}
-	if len(g.GetZones()) != 1 || g.GetZones()[0].GetNet() != "GND" || g.GetZones()[0].GetLayer() != "In1.Cu" || len(g.GetZones()[0].GetOutline().GetPoints()) != 5 {
-		t.Errorf("zones = %v, want the GND plane's outline on In1.Cu", g.GetZones())
+	// The GND plane is a surface, which reads as a copper shape rather than a zone (agni 1357).
+	var shapes []*geom.CopperShape
+	var shapeNets []string
+	for _, nc := range g.GetNets() {
+		for _, s := range nc.GetShapes() {
+			shapes = append(shapes, s)
+			shapeNets = append(shapeNets, nc.GetNet())
+		}
+	}
+	if len(g.GetZones()) != 0 || len(shapes) != 1 || shapeNets[0] != "GND" || shapes[0].GetLayer() != "In1.Cu" || len(shapes[0].GetOutline().GetPoints()) != 5 {
+		t.Errorf("zones = %v and copper shapes = %v on %v, want the GND plane's outline on In1.Cu as a copper shape", g.GetZones(), shapes, shapeNets)
 	}
 	if len(g.GetTexts()) != 1 || g.GetTexts()[0].GetText() != "U1" || g.GetTexts()[0].GetLayer() != "F.SilkS" || g.GetTexts()[0].GetHeight() != 60*mil {
 		t.Errorf("texts = %v, want U1 on F.SilkS at 60mil", g.GetTexts())

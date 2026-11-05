@@ -154,10 +154,13 @@ func TestReadsAnODXBoard(t *testing.T) {
 		n2.GetSegments()[0].GetMid().GetY() != 19.5e6 {
 		t.Errorf("N2 copper = %v, want one arc from (10, 9.5) to (30, 9.5) through (20, 19.5)", n2)
 	}
-	// The surface takes N2 from the CAD_SET before it. It is a zone, and its hole is dropped, as a
-	// job's zones drop theirs.
-	if z := g.GetZones(); len(z) != 1 || z[0].GetNet() != "N2" || z[0].GetLayer() != "B.Cu" || len(z[0].GetOutline().GetPoints()) != 5 {
-		t.Errorf("zones = %v, want the one N2 surface on B.Cu as its outline", z)
+	// The surface takes N2 from the CAD_SET before it. It is copper, so it reads as a copper shape
+	// on N2 with its hole kept (agni 1357).
+	if n2 := nets["N2"]; len(g.GetZones()) != 0 || n2 == nil || len(n2.GetShapes()) != 1 {
+		t.Fatalf("zones = %v and N2 = %v, want the one N2 surface as a copper shape", g.GetZones(), n2)
+	}
+	if s := nets["N2"].GetShapes()[0]; s.GetLayer() != "B.Cu" || len(s.GetOutline().GetPoints()) != 5 || len(s.GetHoles()) != 1 {
+		t.Errorf("N2 shape = %v, want a 5-point outline on B.Cu with its one hole", s)
 	}
 }
 

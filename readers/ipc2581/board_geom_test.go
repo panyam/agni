@@ -18,23 +18,21 @@ func readBoardGeom(t *testing.T, name string) *geom.BoardGeometry {
 }
 
 // TestBoardGeometryZonesViaSpansUserPads (WS1-031 D/E/F) checks three things. A Set-direct Contour
-// becomes a copper Zone (fill). A drill layer's Span sets the via's layer span. A pad using
+// becomes a copper shape on its net (agni 1357). A drill layer's Span sets the via's layer span. A pad using
 // UserPrimitiveRef resolves to a real size, its user-dictionary bounding box, instead of 0x0.
 func TestBoardGeometryZonesViaSpansUserPads(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 
-	// D: the GNDPLANE Set's Contour -> a Zone with the authored outline.
-	var zone *geom.Zone
-	for _, z := range g.Zones {
-		if z.Net == "GNDPLANE" {
-			zone = z
-		}
+	// D: the GNDPLANE Set's Contour -> a copper shape with the contour's outline.
+	var zone *geom.CopperShape
+	if s := copperShapes(g)["GNDPLANE"]; len(s) == 1 {
+		zone = s[0]
 	}
 	if zone == nil || zone.Layer != "F.Cu" || zone.Outline == nil || len(zone.Outline.Points) != 5 {
-		t.Fatalf("GNDPLANE zone = %+v, want F.Cu fill with a 5-point outline", zone)
+		t.Fatalf("GNDPLANE shape = %+v, want an F.Cu fill with a 5-point outline", zone)
 	}
 	if p := zone.Outline.Points[0]; p.X != 0 || p.Y != 0 {
-		t.Errorf("zone outline[0] = (%d,%d), want (0,0)", p.X, p.Y)
+		t.Errorf("shape outline[0] = (%d,%d), want (0,0)", p.X, p.Y)
 	}
 
 	// E: the via (H1) records the TOP..BOTTOM span from the TOP layer's <Span>.
@@ -254,16 +252,29 @@ func TestBoardGeometryOutlineArcClockwiseCase(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryDocumentLayerNotZone guards the zone copper-gate. A Zone is a copper pour, so a
-// Contour on a DOCUMENT (fab) layer must not become one, otherwise off-board fabrication-drawing
-// bars leak in as copper and balloon the render bounds.
+// copperShapes lists every copper shape of a read, keyed by its net.
+func copperShapes(g *geom.BoardGeometry) map[string][]*geom.CopperShape {
+	out := map[string][]*geom.CopperShape{}
+	for _, nc := range g.GetNets() {
+		out[nc.GetNet()] = append(out[nc.GetNet()], nc.GetShapes()...)
+	}
+	return out
+}
+
+// TestBoardGeometryDocumentLayerNotZone guards the copper gate. A Contour on a copper layer is a
+// copper shape, so one on a DOCUMENT (fab) layer must not become one, otherwise off-board
+// fabrication-drawing bars leak in as copper and balloon the render bounds.
 func TestBoardGeometryDocumentLayerNotZone(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_doc_zone.xml")
-	if len(g.Zones) != 1 {
-		t.Fatalf("zones = %d, want 1 (GNDPLANE copper only; the fab DOCUMENT contour excluded)", len(g.Zones))
+	shapes, n := copperShapes(g), 0
+	for _, s := range shapes {
+		n += len(s)
 	}
-	if z := g.Zones[0]; z.Net != "GNDPLANE" || z.Layer != "F.Cu" {
-		t.Errorf("zone = %+v, want GNDPLANE on F.Cu", z)
+	if n != 1 || len(g.Zones) != 0 {
+		t.Fatalf("copper shapes = %d and zones = %d, want 1 shape (GNDPLANE copper only; the fab DOCUMENT contour excluded) and no zone", n, len(g.Zones))
+	}
+	if s := shapes["GNDPLANE"]; len(s) != 1 || s[0].Layer != "F.Cu" {
+		t.Errorf("GNDPLANE shapes = %+v, want one on F.Cu", s)
 	}
 }
 

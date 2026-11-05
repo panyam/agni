@@ -20,13 +20,14 @@ import (
 // Fidelity: lossy-bounded (C6). This producer emits the board outline (Profile), the layer
 // stackup table, and component placements with their pads. Pads resolve through the padstack
 // def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
-// through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular, and each records its
-// layer span. Each pin's and via's lands on every copper layer are gathered into padstacks by the
-// padstack each land names (agni 1356). It emits silkscreen/fab body graphics, composing a package's
-// Marking/Outline/AssemblyDrawing per placement. It emits copper plane/pour fills as zones with
-// their authored outline (WS1-031). A PadStackDef is not read, since the export that names padstacks
-// on its lands defines none. Fill cutouts, which hold the antipads, drop per the C6 zone bound. Emitted coordinates are integer nanometers (unit_nm=1), matching
-// the KiCad producer so downstream consumers see one frame.
+// through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular,
+// and each records its layer span. Each pin's and via's lands on every copper layer are gathered
+// into padstacks by the padstack each land names (agni 1356). A PadStackDef is not read, since the
+// export that names padstacks on its lands defines none. It emits silkscreen/fab body graphics,
+// composing a package's Marking/Outline/AssemblyDrawing per placement. It emits copper plane and
+// pour fills as copper shapes on their net, each cutout a hole (WS1-031, agni 1357). IPC-2581
+// states no zone a designer drew, so the read has none. Emitted coordinates are integer
+// nanometers (unit_nm=1), matching the KiCad producer so downstream consumers see one frame.
 //
 // IPC-2581 is Y-up like the geom contract, so coordinates map directly with no Y negation.
 // KiCad, by contrast, is Y-down. Sides normalize into the contract's KiCad-style vocabulary
@@ -98,7 +99,8 @@ type rectEl struct {
 
 // contourEl is an arbitrary polygon primitive; PR-1 reduces it to its bounding box.
 type contourEl struct {
-	Polygon polyPath `xml:"Polygon"`
+	Polygon polyPath   `xml:"Polygon"`
+	Cutouts []polyPath `xml:"Cutout"`
 }
 
 type profileEl struct {
@@ -219,7 +221,6 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 	g.Nets = f.copperNets(nmPerUnit, prims, stacks)
 	g.Padstacks = stacks.entries
 	g.Graphics = f.graphics(nmPerUnit)
-	g.Zones = f.zones(nmPerUnit)
 	return g
 }
 

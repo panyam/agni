@@ -12,14 +12,15 @@ import (
 
 // TestAllegroCopperMatchesItsFilms holds each copper layer of the BeagleBone AI, as agni reads it, to
 // the Gerber film Allegro 17.2-S049 plotted for that layer from the same .brd (agni issue 1376). Both
-// sides are drawn at 1 mil a pixel with pours left out, since agni keeps a zone's outline and not its
-// fill (#1357). The films also plot the board outline, so agni's outline is drawn too, at the films'
-// 5 mil default width.
+// sides are drawn at 1 mil a pixel. A film plots a pour as a region and cuts its voids with clear
+// flashes and regions, and agni draws the ETCH shapes it reads with their holes (agni 1357). The films
+// also plot the board outline, so agni's outline is drawn too, at the films' 5 mil default width.
 //
-// Tracks must agree on every layer, and agni must draw nearly all of each film's copper. Pads and
-// vias must agree on the outer layers. On an inner layer Allegro leaves out the pad of a via or pin
-// that nothing on that layer connects to, and agni draws every pad on every layer it spans (#1356), so
-// the inner-layer pads are logged rather than held.
+// Tracks must agree on every layer, and agni must draw nearly all of each film's copper, planes
+// included. The whole layer must agree on the outer layers. On an inner layer the films were
+// plotted with "Suppress unconnected internal pads: DYNAMIC" (photoplot.log), so Allegro leaves out
+// the land of a via or pin that nothing on that layer connects to. That is an artwork setting, and
+// agni draws every land the padstack defines, so an inner layer is held to a lower floor.
 func TestAllegroCopperMatchesItsFilms(t *testing.T) {
 	d, g, _ := readAllegroSample(t)
 	films, _ := filepath.Glob(filepath.Join(allegroBoards, "beaglebone-ai", "MFG", "*.art"))
@@ -80,6 +81,10 @@ func TestAllegroCopperMatchesItsFilms(t *testing.T) {
 		}
 		if outer && whole < 0.98 {
 			t.Errorf("%s (%s): the whole layer agrees %.3f, want 0.98 on an outer layer; %s",
+				layer, film.Etch, whole, writeCopperDiff(t, film.Etch, want, got))
+		}
+		if !outer && whole < 0.80 {
+			t.Errorf("%s (%s): the whole layer agrees %.3f, want 0.80 on an inner layer; %s",
 				layer, film.Etch, whole, writeCopperDiff(t, film.Etch, want, got))
 		}
 	}

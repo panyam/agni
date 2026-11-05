@@ -55,13 +55,14 @@ func main() {
 			return demokit.Errf("read the board in %s: %v", layout.Path(), err)
 		}
 		fmt.Println(common.StatsLines(d))
-		segs, vias := 0, 0
+		segs, vias, pours := 0, 0, 0
 		for _, nc := range b.GetNets() {
 			segs += len(nc.GetSegments())
 			vias += len(nc.GetVias())
+			pours += len(nc.GetShapes())
 		}
 		fmt.Printf("\nBoard: %d copper layers, %d placed parts, %d routed nets (%d track segments, %d vias), %d copper pours.\n",
-			copperLayers(b.GetLayers()), len(b.GetPlacements()), len(b.GetNets()), segs, vias, len(b.GetZones()))
+			copperLayers(b.GetLayers()), len(b.GetPlacements()), len(b.GetNets()), segs, vias, pours)
 		return nil
 	})
 

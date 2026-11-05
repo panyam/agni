@@ -2132,3 +2132,32 @@ wants them judged apart, it can bind each by host, which already scopes per comp
 
 **Reopen if** a board names one bus with two stems (`EMMC_CMD` beside `SD1_CLK`), which reads as two
 incomplete buses, or a checklist needs one bus of several and has no host to bind it by.
+
+## Copper the source stores as copper is kept, and a fill the tool recomputes is not
+
+**Question.** C6 bounds the board geometry to an authored subset and leaves zone fills out. Should a
+board's filled copper (planes, pours, their voids and thermal spokes) stay out too?
+
+**Answer. It depends on who wrote the fill, so the line is drawn by source, not by shape (agni
+1357).** KiCad recomputes a zone's fill from the outline and the zone's rules every time it fills,
+and stores the result as `filled_polygon`. That is derived data, it is most of a large board's file
+(Jetson's 273 MB board is mostly fill), and KiCad would write a different fill after the next edit.
+So a KiCad zone keeps its authored outline alone. Allegro, IPC-2581 and ODB++ store the fill as the
+copper itself: an Allegro ETCH shape with its voids, an IPC-2581 contour with its cutouts, an ODB++
+surface with its holes. A film plots that copper as stored, and a DRC measures it, so it is the
+board rather than a cache of it. Those are kept as `NetCopper.shapes`.
+
+**Why a shape is not a zone.** A zone states intent: a region the designer drew to be filled with a
+net, whose outline overlaps other nets' tracks on purpose. A copper shape is the metal. Keeping both
+in one list would make every consumer ask which one it holds, and a clearance rule that forgot to
+ask would read every KiCad zone outline as copper across the tracks it clears. So `Zone` holds
+intent and `CopperShape` sits beside tracks and vias under the net it belongs to.
+
+**What the evidence was.** The BeagleBone AI's 369 ETCH shapes and 8,233 voids match the extract
+Allegro wrote from the board. Drawn into the copper raster, they take every film's coverage to
+1.000, where the inner layers agreed only 0.10 to 0.53 without them. parasdr's 1,275 shapes and 855
+holes read the same from its `.brd` and its IPC-2581 export.
+
+**What this leaves open.** A negative plane, where the file holds the voids and the copper is the
+rest, has no sample yet, so `CopperShape` has no polarity field. KiCad fills stay out unless a
+consumer needs the fill without KiCad to compute it.

@@ -505,10 +505,12 @@ func (b *boardBuilder) copper() {
 					b.track(item, nc)
 				case tagVia:
 					b.via(item, nc)
+				case tagShape:
+					b.copperShape(item, nc)
 				}
 			})
 		})
-		if len(nc.Segments) > 0 || len(nc.Vias) > 0 {
+		if len(nc.Segments) > 0 || len(nc.Vias) > 0 || len(nc.Shapes) > 0 {
 			b.g.Nets = append(b.g.Nets, nc)
 		}
 	})
@@ -579,6 +581,34 @@ func (b *boardBuilder) via(off int, nc *geom.NetCopper) {
 		}
 	}
 	nc.Vias = append(nc.Vias, v)
+}
+
+// copperShape adds an ETCH shape, filled copper on one layer, with each of its voids as a hole
+// (agni 1357). A plane's voids are its clearances and the gaps between its thermal spokes, which
+// Allegro computed and stored, so the shape is the copper a film plots.
+func (b *boardBuilder) copperShape(off int, nc *geom.NetCopper) {
+	p := b.p
+	if p.b[off+2] != classEtch {
+		return
+	}
+	layer := b.copperLayer(p.b[off+3])
+	if layer == "" {
+		return
+	}
+	outline := b.path(p.u32(off, p.l.shapeSegs), p.u32(off, 4))
+	if len(outline) < 3 {
+		return
+	}
+	cs := &geom.CopperShape{Layer: layer, Outline: &geom.Polyline{Points: outline}}
+	p.chain(p.u32(off, p.l.shapeVoids), p.u32(off, 4), next8, func(v int) {
+		if p.b[v] != tagVoid {
+			return
+		}
+		if hole := b.path(p.u32(v, p.l.voidSegs), p.u32(v, 4)); len(hole) >= 3 {
+			cs.Holes = append(cs.Holes, &geom.Polyline{Points: hole})
+		}
+	})
+	nc.Shapes = append(nc.Shapes, cs)
 }
 
 // zones emits each zone boundary: a shape of the boundary class whose subclass is the copper layer.

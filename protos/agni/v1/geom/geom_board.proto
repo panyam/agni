@@ -18,8 +18,11 @@ import "agni/v1/geom/geom.proto";
 // geom_packed.proto. That transport is left out on purpose until its consumer, the WS7 board
 // renderer, exists.
 //
-// Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6. Zone fill polygons, teardrops,
-// and 3D model references are not kept. Zones keep their authored outline only. Arc tracks are
+// Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6. A fill the design tool computes
+// again from a zone (KiCad's filled_polygon) is not kept, and nor are teardrops and 3D model
+// references. Zones keep their authored outline only. Copper the source stores as copper (Allegro's
+// ETCH shapes, an IPC-2581 contour, an ODB++ surface) is kept as NetCopper.shapes, with its holes
+// (agni 1357, DECISIONS.md). Arc tracks are
 // kept as arcs (TrackSegment.mid); arcs in outlines and zones are approximated by chords. A
 // padstack keeps each copper layer's land, and Allegro's its thermal relief and antipad, by extent
 // and shape word; a custom shape keeps no outline.
@@ -172,13 +175,26 @@ message PadShape {
   Point size = 2;
 }
 
-// NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
-// so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
-// side.
+// NetCopper is the copper of one net, with its track segments, vias and filled shapes. They are
+// grouped so a consumer joins per-net geometry by name. WireGeometry uses the same key on the
+// schematic side. Pads are copper too and sit on their placements. Copper on no net (a logo, an
+// island) is the NetCopper whose net is "".
 message NetCopper {
   string net = 1;  // joins to ir.Net.name
   repeated TrackSegment segments = 2;
   repeated Via vias = 3;
+  repeated CopperShape shapes = 4;  // filled copper polygons (agni 1357)
+}
+
+// CopperShape is a filled copper polygon on one layer, as the board is etched (agni 1357). It is
+// the physical copper, which a zone is not. A plane is one shape whose holes are its clearances and
+// the gaps between its thermal spokes, and a pour on a signal layer is another. outline is the
+// shape's boundary and each hole a region inside it with no copper. Both are closed, and arcs are
+// approximated by chords.
+message CopperShape {
+  string layer = 1;
+  Polyline outline = 2;
+  repeated Polyline holes = 3;
 }
 
 // TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
@@ -206,9 +222,11 @@ message Via {
   string padstack = 6;
 }
 
-// Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
-// polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
-// it again, or a later tier will hold it, per the C6 bound above.
+// Zone is a region the designer drew to be filled with a net's copper, with its net, its layer, and
+// its AUTHORED outline (KiCad's zone, Allegro's shape boundary). It states intent, not copper. The
+// outline overlaps other nets' tracks, which the fill clears. A fill the source stores as copper is
+// a NetCopper shape (agni 1357), and a fill the tool computes again is not kept, per the C6 bound
+// above.
 message Zone {
   string net = 1;
   string layer = 2;

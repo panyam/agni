@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_board.proto.
  */
 export const file_agni_v1_geom_geom_board: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIrQDCg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSKQoJcGFkc3RhY2tzGAogAygLMhYuYWduaS52MS5nZW9tLlBhZHN0YWNrEiYKBHByb3YYECABKAsyGC5hZ25pLnYxLmdlb20uUHJvdmVuYW5jZSKvAQoJQm9hcmRUZXh0EgwKBHRleHQYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg4KBmhlaWdodBgEIAEoAxINCgVsYXllchgFIAEoCRIOCgZtaXJyb3IYBiABKAgSDwoHanVzdGlmeRgHIAEoCRIPCgdyZWZfZGVzGAggASgJEgwKBGtpbmQYCSABKAkiYQoMQm9hcmRHcmFwaGljEiIKBXNoYXBlGAEgASgLMhMuYWduaS52MS5nZW9tLlNoYXBlEg0KBWxheWVyGAIgASgJEg8KB3JlZl9kZXMYAyABKAkSDQoFd2lkdGgYBCABKAMiOAoKQm9hcmRMYXllchIOCgZudW1iZXIYASABKAUSDAoEbmFtZRgCIAEoCRIMCgRraW5kGAMgASgJIjUKDEJvYXJkT3V0bGluZRIlCgVwYXRocxgBIAMoCzIWLmFnbmkudjEuZ2VvbS5Qb2x5bGluZSLEAQoSQ29tcG9uZW50UGxhY2VtZW50Eg8KB3JlZl9kZXMYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg0KBWxheWVyGAQgASgJEh8KBHBhZHMYBSADKAsyES5hZ25pLnYxLmdlb20uUGFkEg4KBm1pcnJvchgGIAEoCBImCgRwcm92GBAgASgLMhguYWduaS52MS5nZW9tLlByb3ZlbmFuY2UivAEKA1BhZBIOCgZudW1iZXIYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEiEKBHNpemUYBCABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFc2hhcGUYBSABKAkSDgoGbGF5ZXJzGAYgAygJEg0KBWRyaWxsGAcgASgDEgsKA25ldBgIIAEoCRIQCghwYWRzdGFjaxgJIAEoCSJRCghQYWRzdGFjaxIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEisKBmxheWVycxgDIAMoCzIbLmFnbmkudjEuZ2VvbS5QYWRzdGFja0xheWVyIpUBCg1QYWRzdGFja0xheWVyEg0KBWxheWVyGAEgASgJEiMKA3BhZBgCIAEoCzIWLmFnbmkudjEuZ2VvbS5QYWRTaGFwZRInCgd0aGVybWFsGAMgASgLMhYuYWduaS52MS5nZW9tLlBhZFNoYXBlEicKB2FudGlwYWQYBCABKAsyFi5hZ25pLnYxLmdlb20uUGFkU2hhcGUiPAoIUGFkU2hhcGUSDQoFc2hhcGUYASABKAkSIQoEc2l6ZRgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCJnCglOZXRDb3BwZXISCwoDbmV0GAEgASgJEiwKCHNlZ21lbnRzGAIgAygLMhouYWduaS52MS5nZW9tLlRyYWNrU2VnbWVudBIfCgR2aWFzGAMgAygLMhEuYWduaS52MS5nZW9tLlZpYSKOAQoMVHJhY2tTZWdtZW50Eh4KAWEYASABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSHgoBYhgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBINCgV3aWR0aBgDIAEoAxINCgVsYXllchgEIAEoCRIgCgNtaWQYBSABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQiewoDVmlhEh8KAmF0GAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EgwKBHNpemUYAiABKAMSDQoFZHJpbGwYAyABKAMSEgoKbGF5ZXJfZnJvbRgEIAEoCRIQCghsYXllcl90bxgFIAEoCRIQCghwYWRzdGFjaxgGIAEoCSJLCgRab25lEgsKA25ldBgBIAEoCRINCgVsYXllchgCIAEoCRInCgdvdXRsaW5lGAMgASgLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lQixaKmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZ2VvbWIGcHJvdG8z", [file_agni_v1_geom_geom]);
+  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIrQDCg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSKQoJcGFkc3RhY2tzGAogAygLMhYuYWduaS52MS5nZW9tLlBhZHN0YWNrEiYKBHByb3YYECABKAsyGC5hZ25pLnYxLmdlb20uUHJvdmVuYW5jZSKvAQoJQm9hcmRUZXh0EgwKBHRleHQYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg4KBmhlaWdodBgEIAEoAxINCgVsYXllchgFIAEoCRIOCgZtaXJyb3IYBiABKAgSDwoHanVzdGlmeRgHIAEoCRIPCgdyZWZfZGVzGAggASgJEgwKBGtpbmQYCSABKAkiYQoMQm9hcmRHcmFwaGljEiIKBXNoYXBlGAEgASgLMhMuYWduaS52MS5nZW9tLlNoYXBlEg0KBWxheWVyGAIgASgJEg8KB3JlZl9kZXMYAyABKAkSDQoFd2lkdGgYBCABKAMiOAoKQm9hcmRMYXllchIOCgZudW1iZXIYASABKAUSDAoEbmFtZRgCIAEoCRIMCgRraW5kGAMgASgJIjUKDEJvYXJkT3V0bGluZRIlCgVwYXRocxgBIAMoCzIWLmFnbmkudjEuZ2VvbS5Qb2x5bGluZSLEAQoSQ29tcG9uZW50UGxhY2VtZW50Eg8KB3JlZl9kZXMYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEg0KBWxheWVyGAQgASgJEh8KBHBhZHMYBSADKAsyES5hZ25pLnYxLmdlb20uUGFkEg4KBm1pcnJvchgGIAEoCBImCgRwcm92GBAgASgLMhguYWduaS52MS5nZW9tLlByb3ZlbmFuY2UivAEKA1BhZBIOCgZudW1iZXIYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEiEKBHNpemUYBCABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFc2hhcGUYBSABKAkSDgoGbGF5ZXJzGAYgAygJEg0KBWRyaWxsGAcgASgDEgsKA25ldBgIIAEoCRIQCghwYWRzdGFjaxgJIAEoCSJRCghQYWRzdGFjaxIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEisKBmxheWVycxgDIAMoCzIbLmFnbmkudjEuZ2VvbS5QYWRzdGFja0xheWVyIpUBCg1QYWRzdGFja0xheWVyEg0KBWxheWVyGAEgASgJEiMKA3BhZBgCIAEoCzIWLmFnbmkudjEuZ2VvbS5QYWRTaGFwZRInCgd0aGVybWFsGAMgASgLMhYuYWduaS52MS5nZW9tLlBhZFNoYXBlEicKB2FudGlwYWQYBCABKAsyFi5hZ25pLnYxLmdlb20uUGFkU2hhcGUiPAoIUGFkU2hhcGUSDQoFc2hhcGUYASABKAkSIQoEc2l6ZRgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCKSAQoJTmV0Q29wcGVyEgsKA25ldBgBIAEoCRIsCghzZWdtZW50cxgCIAMoCzIaLmFnbmkudjEuZ2VvbS5UcmFja1NlZ21lbnQSHwoEdmlhcxgDIAMoCzIRLmFnbmkudjEuZ2VvbS5WaWESKQoGc2hhcGVzGAQgAygLMhkuYWduaS52MS5nZW9tLkNvcHBlclNoYXBlImwKC0NvcHBlclNoYXBlEg0KBWxheWVyGAEgASgJEicKB291dGxpbmUYAiABKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmUSJQoFaG9sZXMYAyADKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmUijgEKDFRyYWNrU2VnbWVudBIeCgFhGAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50Eh4KAWIYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFd2lkdGgYAyABKAMSDQoFbGF5ZXIYBCABKAkSIAoDbWlkGAUgASgLMhMuYWduaS52MS5nZW9tLlBvaW50InsKA1ZpYRIfCgJhdBgBIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIMCgRzaXplGAIgASgDEg0KBWRyaWxsGAMgASgDEhIKCmxheWVyX2Zyb20YBCABKAkSEAoIbGF5ZXJfdG8YBSABKAkSEAoIcGFkc3RhY2sYBiABKAkiSwoEWm9uZRILCgNuZXQYASABKAkSDQoFbGF5ZXIYAiABKAkSJwoHb3V0bGluZRgDIAEoCzIWLmFnbmkudjEuZ2VvbS5Qb2x5bGluZUIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw", [file_agni_v1_geom_geom]);
 
 /**
  * BoardGeometry is the root, with one message per board. It is the layout analogue of
@@ -542,9 +542,10 @@ export const PadShapeSchema: GenMessage<PadShape> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 9);
 
 /**
- * NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
- * so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
- * side.
+ * NetCopper is the copper of one net, with its track segments, vias and filled shapes. They are
+ * grouped so a consumer joins per-net geometry by name. WireGeometry uses the same key on the
+ * schematic side. Pads are copper too and sit on their placements. Copper on no net (a logo, an
+ * island) is the NetCopper whose net is "".
  *
  * @generated from message agni.v1.geom.NetCopper
  */
@@ -565,6 +566,13 @@ export type NetCopper = Message<"agni.v1.geom.NetCopper"> & {
    * @generated from field: repeated agni.v1.geom.Via vias = 3;
    */
   vias: Via[];
+
+  /**
+   * filled copper polygons (agni 1357)
+   *
+   * @generated from field: repeated agni.v1.geom.CopperShape shapes = 4;
+   */
+  shapes: CopperShape[];
 };
 
 /**
@@ -573,6 +581,39 @@ export type NetCopper = Message<"agni.v1.geom.NetCopper"> & {
  */
 export const NetCopperSchema: GenMessage<NetCopper> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 10);
+
+/**
+ * CopperShape is a filled copper polygon on one layer, as the board is etched (agni 1357). It is
+ * the physical copper, which a zone is not. A plane is one shape whose holes are its clearances and
+ * the gaps between its thermal spokes, and a pour on a signal layer is another. outline is the
+ * shape's boundary and each hole a region inside it with no copper. Both are closed, and arcs are
+ * approximated by chords.
+ *
+ * @generated from message agni.v1.geom.CopperShape
+ */
+export type CopperShape = Message<"agni.v1.geom.CopperShape"> & {
+  /**
+   * @generated from field: string layer = 1;
+   */
+  layer: string;
+
+  /**
+   * @generated from field: agni.v1.geom.Polyline outline = 2;
+   */
+  outline?: Polyline | undefined;
+
+  /**
+   * @generated from field: repeated agni.v1.geom.Polyline holes = 3;
+   */
+  holes: Polyline[];
+};
+
+/**
+ * Describes the message agni.v1.geom.CopperShape.
+ * Use `create(CopperShapeSchema)` to create a new message.
+ */
+export const CopperShapeSchema: GenMessage<CopperShape> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 11);
 
 /**
  * TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
@@ -619,7 +660,7 @@ export type TrackSegment = Message<"agni.v1.geom.TrackSegment"> & {
  * Use `create(TrackSegmentSchema)` to create a new message.
  */
 export const TrackSegmentSchema: GenMessage<TrackSegment> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 11);
+  messageDesc(file_agni_v1_geom_geom_board, 12);
 
 /**
  * Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
@@ -670,12 +711,14 @@ export type Via = Message<"agni.v1.geom.Via"> & {
  * Use `create(ViaSchema)` to create a new message.
  */
 export const ViaSchema: GenMessage<Via> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 12);
+  messageDesc(file_agni_v1_geom_geom_board, 13);
 
 /**
- * Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
- * polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
- * it again, or a later tier will hold it, per the C6 bound above.
+ * Zone is a region the designer drew to be filled with a net's copper, with its net, its layer, and
+ * its AUTHORED outline (KiCad's zone, Allegro's shape boundary). It states intent, not copper. The
+ * outline overlaps other nets' tracks, which the fill clears. A fill the source stores as copper is
+ * a NetCopper shape (agni 1357), and a fill the tool computes again is not kept, per the C6 bound
+ * above.
  *
  * @generated from message agni.v1.geom.Zone
  */
@@ -701,5 +744,5 @@ export type Zone = Message<"agni.v1.geom.Zone"> & {
  * Use `create(ZoneSchema)` to create a new message.
  */
 export const ZoneSchema: GenMessage<Zone> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 13);
+  messageDesc(file_agni_v1_geom_geom_board, 14);
 

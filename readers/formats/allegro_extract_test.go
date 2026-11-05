@@ -22,6 +22,15 @@ type allegroExtract struct {
 	widths map[int64]bool
 	// padRows are the padstack rows, one per padstack and layer, in the extract's order.
 	padRows []extractPadRow
+	// shapes are the ETCH shapes, by "<layer>|<record>": the net and the voids, counted by their
+	// numbers. An ETCH line or arc whose record tag has a third number is a shape's edge; 0 is
+	// the outline and any other number a void.
+	shapes map[string]*extractShape
+}
+
+type extractShape struct {
+	layer, net string
+	voids      map[string]bool
 }
 
 // extractPadRow is one padstack on one layer: its regular pad, thermal relief and antipad, each as
@@ -106,6 +115,21 @@ func readAllegroExtract(t *testing.T, path string) *allegroExtract {
 			}
 		case "CLASS":
 			// A line's width is GRAPHIC_DATA_5 and an arc's GRAPHIC_DATA_8.
+			if tag := strings.Fields(row["RECORD_TAG"]); row["CLASS"] == "ETCH" && len(tag) == 3 {
+				if x.shapes == nil {
+					x.shapes = map[string]*extractShape{}
+				}
+				k := row["SUBCLASS"] + "|" + tag[0]
+				s := x.shapes[k]
+				if s == nil {
+					s = &extractShape{layer: row["SUBCLASS"], net: row["NET_NAME"], voids: map[string]bool{}}
+					x.shapes[k] = s
+				}
+				if tag[2] != "0" {
+					s.voids[tag[2]] = true
+				}
+				continue
+			}
 			if row["CLASS"] == "ETCH" && row["NET_NAME"] != "" {
 				w := map[string]string{"LINE": row["GRAPHIC_DATA_5"], "ARC": row["GRAPHIC_DATA_8"]}[row["GRAPHIC_DATA_NAME"]]
 				if w != "" {
