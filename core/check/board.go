@@ -38,8 +38,18 @@ func (m *irModel) attachBoard() {
 			}
 		}
 		for _, v := range nc.Vias {
-			bn.Vias = append(bn.Vias, BoardVia{At: v.At, Size: v.Size, Drill: v.Drill})
+			bn.Vias = append(bn.Vias, BoardVia{At: v.At, Size: v.Size, Drill: v.Drill, LayerFrom: v.LayerFrom, LayerTo: v.LayerTo})
+		}
+		for _, sh := range nc.Shapes {
+			bs := BoardShape{Layer: sh.Layer, Outline: sh.GetOutline().GetPoints()}
+			for _, h := range sh.Holes {
+				bs.Holes = append(bs.Holes, h.GetPoints())
+			}
+			bn.Shapes = append(bn.Shapes, bs)
 		}
 		m.boardNets = append(m.boardNets, bn)
+	}
+	for _, z := range bg.Zones {
+		m.boardZones = append(m.boardZones, BoardZone{Net: z.Net, Layer: z.Layer, Outline: z.GetOutline().GetPoints()})
 	}
 }

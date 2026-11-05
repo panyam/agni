@@ -21,6 +21,8 @@ type (
 	BoardSeg       = model.BoardSeg
 	BoardRules     = model.BoardRules
 	BoardVia       = model.BoardVia
+	BoardShape     = model.BoardShape
+	BoardZone      = model.BoardZone
 	Reach          = model.Reach
 	ReachStep      = model.ReachStep
 	RouteHop       = model.RouteHop

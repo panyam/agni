@@ -209,9 +209,9 @@ func (b *boardBuilder) netName(i int) string {
 	return b.p.nets[i]
 }
 
-// copperItems groups each net's tracks, arcs and vias. Keepouts are not copper. The tracks and arcs a
-// polygon pour drew are left out with the pour's copper (agni issue 1357), and so is a graphical
-// component's copper. Arcs are chorded.
+// copperItems groups each net's tracks, arcs, vias and filled copper regions. Keepouts are not
+// copper. The tracks and arcs a polygon pour drew are left out, since a pour's copper is its
+// regions, and so is a graphical component's copper. Arcs are chorded.
 func (b *boardBuilder) copperItems() {
 	byNet := map[string]*geom.NetCopper{}
 	var order []string
@@ -252,6 +252,22 @@ func (b *boardBuilder) copperItems() {
 			})
 		}
 	}
+	// A copper region is filled copper as Altium stores it: a polygon pour's fill, or a solid
+	// region placed on its own (agni 1410).
+	for _, rg := range b.p.regions {
+		layer := b.copper[int(rg.layer)]
+		if rg.kind != 0 || rg.keepout || rg.cutout || layer == "" || len(rg.outline) < 3 || b.graphical(rg.comp) {
+			continue
+		}
+		sh := &geom.CopperShape{Layer: layer, Outline: b.ring(rg.outline)}
+		for _, h := range rg.holes {
+			if len(h) >= 3 {
+				sh.Holes = append(sh.Holes, b.ring(h))
+			}
+		}
+		nc := get(b.netName(rg.net))
+		nc.Shapes = append(nc.Shapes, sh)
+	}
 	for _, v := range b.p.vias {
 		from, to := b.copper[int(v.from)], b.copper[int(v.to)]
 		if from == "" || to == "" {
@@ -274,8 +290,18 @@ func (b *boardBuilder) copperItems() {
 	}
 }
 
-// zones emits each polygon pour's outline as drawn, with its net. The poured copper is not kept, as
-// for every other board format (agni issue 1357).
+// ring converts a region's vertices, absolute and in internal units, to a polyline in the
+// contract's frame.
+func (b *boardBuilder) ring(pts [][2]float64) *geom.Polyline {
+	pl := &geom.Polyline{Points: make([]*geom.Point, 0, len(pts))}
+	for _, q := range pts {
+		pl.Points = append(pl.Points, b.pt(int64(math.Round(q[0])), int64(math.Round(q[1]))))
+	}
+	return pl
+}
+
+// zones emits each polygon pour's outline as drawn, with its net. The outline states intent; the
+// copper the pour filled is a copper shape on its net (agni 1410).
 func (b *boardBuilder) zones() {
 	for _, poly := range b.p.polygons {
 		id, ok := b.byName[strings.ToUpper(poly["LAYER"])]

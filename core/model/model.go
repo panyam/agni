@@ -234,6 +234,9 @@ type Model interface {
 	// BoardNets returns each net's routed copper from the board-geometry sidecar (board tier, WS3-008).
 	// Empty when the model was built without a board; see check.WithBoard.
 	BoardNets() []BoardNet
+	// BoardZones returns the regions the designer drew to be filled, each with its net and layer
+	// (agni 1410). Empty without a board. A zone is intent; a net's copper is in BoardNets.
+	BoardZones() []BoardZone
 	// BoardRules returns the copper minimums the design declares (board_rules, agni issue 933). Today
 	// they come from a KiCad project's board.design_settings.rules. It returns the zero value when the
 	// design declares none, so a rule can fall back to a fabrication floor of its own.

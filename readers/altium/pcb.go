@@ -29,6 +29,7 @@ type pcb struct {
 	vias     []via
 	tracks   []track
 	arcs     []arc
+	regions  []region
 	texts    []text
 	polygons []props
 	stack    []int // copper layer ids, top to bottom
@@ -80,6 +81,19 @@ type arc struct {
 	cx, cy, r  int64
 	start, end float64 // degrees, counter-clockwise from start to end
 	width      int64
+}
+
+// region is a filled copper polygon (Regions6): a polygon pour's copper or a solid region placed
+// on its own (agni 1410). kind 0 is copper; the others are cutouts and keepouts. Points are
+// absolute, in internal units.
+type region struct {
+	layer     byte
+	net, comp int
+	keepout   bool
+	kind      int
+	cutout    bool
+	outline   [][2]float64
+	holes     [][][2]float64
 }
 
 type text struct {
@@ -158,6 +172,9 @@ func decode(c *cfb.File) (*pcb, error) {
 		return nil, err
 	}
 	if err := p.readCopper(read); err != nil {
+		return nil, err
+	}
+	if err := p.readRegions(read); err != nil {
 		return nil, err
 	}
 	if err := p.readTexts(read); err != nil {
@@ -278,6 +295,58 @@ func (p *pcb) readCopper(read reader) error {
 			cx: int64(g.i32(13)), cy: int64(g.i32(17)), r: int64(g.i32(21)),
 			start: g.f64(25), end: g.f64(33), width: int64(g.i32(41)),
 		})
+	}
+	return nil
+}
+
+// readRegions reads Regions6. Each record is one subrecord: the common primitive header (layer,
+// flags, net, polygon, component), the hole count at 14, a property list whose length is at 18,
+// then the outline's vertex count and that many x, y doubles, then each hole as a count and its
+// vertices. ShapeBasedRegions6 holds the same regions with arcs kept, and is not read.
+func (p *pcb) readRegions(read reader) error {
+	b, err := read("Regions6", false)
+	if err != nil || len(b) == 0 {
+		return err
+	}
+	recs, err := parseRecords(b, 0x0B, 1)
+	if err != nil {
+		return fmt.Errorf("Regions6: %w", err)
+	}
+	for i, r := range recs {
+		s := field(r.subs[0])
+		holes := int(s.u16(14))
+		plen := int(s.u32(18))
+		if 22+plen > len(s) {
+			return fmt.Errorf("Regions6 record %d: its properties run past its end", i)
+		}
+		pr := propsOf(s[22 : 22+plen])
+		off := 22 + plen
+		ring := func() ([][2]float64, error) {
+			n := int(s.u32(off))
+			off += 4
+			if n < 0 || off+16*n > len(s) {
+				return nil, fmt.Errorf("Regions6 record %d: %d vertices run past its end", i, n)
+			}
+			pts := make([][2]float64, n)
+			for k := range pts {
+				pts[k] = [2]float64{s.f64(off), s.f64(off + 8)}
+				off += 16
+			}
+			return pts, nil
+		}
+		rg := region{layer: s.u8(0), keepout: s.u8(2) == 2, net: p.primitiveNet(s), comp: index16(s.u16(7)), cutout: pr["ISBOARDCUTOUT"] == "TRUE"}
+		rg.kind, _ = pr.int("KIND")
+		if rg.outline, err = ring(); err != nil {
+			return err
+		}
+		for h := 0; h < holes; h++ {
+			hole, err := ring()
+			if err != nil {
+				return err
+			}
+			rg.holes = append(rg.holes, hole)
+		}
+		p.regions = append(p.regions, rg)
 	}
 	return nil
 }
