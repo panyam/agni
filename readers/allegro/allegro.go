@@ -2,10 +2,11 @@
 // the board geometry sidecar.
 //
 // Cadence publishes no specification for the format. The layouts read here are from KiCad's
-// reverse-engineered notes and importer, checked block by block against a real 17.2 board and an
-// ASCII extract Allegro wrote from it (the BeagleBone AI, agni-samples' allegro artifact). Only
-// Allegro 17.2 is read; a board from another release is refused with the release named (agni
-// issue 1355).
+// reverse-engineered notes and importer. 17.2 is checked block by block against a real board and an
+// ASCII extract Allegro wrote from it (the BeagleBone AI, agni-samples' allegro artifact). 16.6 is
+// checked against the Parallella parasdr's ODB++X and Clay R6's Capture netlist (agni issue 1388).
+// Allegro 16.6 and 17.2 are read, each through its own layout; a board from another release is
+// refused with the release named (agni issue 1355).
 //
 // Fidelity: lossy-bounded. The netlist is each placed, designated footprint, with each pin's net
 // taken from the net's chain of connected pads. A net with no pin on it is dropped, as is an
@@ -14,11 +15,12 @@
 // board geometry carries the copper layer stack renamed into the contract's F.Cu/In<n>.Cu/B.Cu
 // vocabulary, placements with footprint-local pads sized from the first copper layer of their
 // padstack, ETCH tracks with arcs approximated by chords, vias with their span, zone boundary
-// outlines with their nets, the board outline, and silkscreen and assembly graphics and text.
-// Per-layer pad shapes, antipads and thermal reliefs (1356), computed fills, plane voids and
-// standalone copper shapes (1357), constraint sets (1359), match groups (1360), keepouts and
-// teardrops are not kept. Coordinates are integer nanometres (unit_nm=1), in Allegro's own Y-up
-// frame.
+// outlines with their nets, the board outline, and silkscreen and assembly graphics and text. A
+// board with no outline of its own takes the outline rectangle of a placed mechanical symbol. A pad
+// Allegro draws as a shape symbol reads as custom, with no outline. Per-layer pad shapes, antipads
+// and thermal reliefs (1356), computed fills, plane voids and standalone copper shapes (1357),
+// constraint sets (1359), match groups (1360), keepouts and teardrops are not kept. Coordinates are
+// integer nanometres (unit_nm=1), in Allegro's own Y-up frame.
 package allegro
 
 import (

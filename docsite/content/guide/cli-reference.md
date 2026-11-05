@@ -698,8 +698,8 @@ its number, as the file's netlist names it. Only metric ODX files are read so fa
 is refused with its units named.
 
 A Cadence Allegro board (`.brd`) reads as a netlist and as a board, as an ODB++ job does, so
-`agni check board.brd` needs no export from Allegro. Only boards saved by Allegro 17.2 are read so far;
-a board from another release is refused with the release named, and an Eagle board, which shares the
+`agni check board.brd` needs no export from Allegro. Boards saved by Allegro 16.6 and 17.2 are read so
+far; a board from another release is refused with the release named, and an Eagle board, which shares the
 extension, is refused as Eagle. The reader keeps the copper, pads, vias, zone outlines, outline and
 silkscreen. It does not yet read the board's constraint sets, so `track-width` and `copper-clearance`
 judge an Allegro board against their fixed floors.

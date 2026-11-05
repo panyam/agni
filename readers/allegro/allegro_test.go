@@ -19,7 +19,7 @@ func header(magic uint32) []byte {
 }
 
 func TestAnotherReleaseIsRefusedByName(t *testing.T) {
-	for magic, want := range map[uint32]string{0x00131500: "16.6", 0x00141500: "17.5", 0x00150000: "18.0"} {
+	for magic, want := range map[uint32]string{0x00131000: "16.5", 0x00140900: "17.4", 0x00141500: "17.5", 0x00150000: "18.0"} {
 		_, err := Read(bytes.NewReader(header(magic)), "old.brd")
 		if err == nil || !strings.Contains(err.Error(), "Allegro "+want) {
 			t.Errorf("magic 0x%08X: err %v, want it to name Allegro %s", magic, err, want)
@@ -31,13 +31,65 @@ func TestAnotherReleaseIsRefusedByName(t *testing.T) {
 	}
 }
 
-func TestAn172HeaderWithNoBlocksReadsEmpty(t *testing.T) {
-	d, err := Read(bytes.NewReader(header(magicV172)), "empty.brd")
-	if err != nil {
-		t.Fatal(err)
+func TestAHeaderWithNoBlocksReadsEmpty(t *testing.T) {
+	for magic, release := range map[uint32]string{magicV172: "17.2", magicV166: "16.6"} {
+		d, err := Read(bytes.NewReader(header(magic)), "empty.brd")
+		if err != nil {
+			t.Fatalf("%s: %v", release, err)
+		}
+		if len(d.GetComponents()) != 0 || len(d.GetNets()) != 0 || d.GetName() != "empty" {
+			t.Errorf("%s: empty board read as %d components, %d nets, named %q", release, len(d.GetComponents()), len(d.GetNets()), d.GetName())
+		}
+		if got := d.GetAttributes()["allegro_format"]; got != release {
+			t.Errorf("allegro_format %q, want %s", got, release)
+		}
 	}
-	if len(d.GetComponents()) != 0 || len(d.GetNets()) != 0 || d.GetName() != "empty" {
-		t.Errorf("empty board read as %d components, %d nets, named %q", len(d.GetComponents()), len(d.GetNets()), d.GetName())
+}
+
+// A 16.6 block is sized from 16.6's table. A 0x06 is 36 bytes there and 40 in 17.2, so a 17.2 walk
+// of two 16.6 component definitions lands mid-block and refuses the tag it finds there.
+func TestA166BlockIsSizedByItsRelease(t *testing.T) {
+	compDef := func(key byte, size int) []byte {
+		b := make([]byte, size)
+		b[0], b[4] = tagCompDef, key
+		return b
+	}
+	body := append(compDef(1, 36), compDef(2, 36)...)
+	if _, err := parse(append(header(magicV166), body...)); err != nil {
+		t.Errorf("16.6: %v", err)
+	}
+	if _, err := parse(append(header(magicV172), body...)); err == nil {
+		t.Error("a 17.2 walk read two 36-byte component definitions")
+	}
+}
+
+// Every field a layout names sits inside the block it is read from, so a wrong offset in a table
+// cannot read the next block's bytes.
+func TestEveryLayoutFieldSitsInsideItsBlock(t *testing.T) {
+	for _, l := range layouts {
+		inside := map[string][2]int{
+			"compRef": {l.compRef, l.fixedSize[tagCompInst]}, "compDef": {l.compDef, l.fixedSize[tagCompInst]},
+			"fiRot": {l.fiRot, l.fixedSize[tagFootInst]}, "fiX": {l.fiX + 4, l.fixedSize[tagFootInst]},
+			"fiInstRef": {l.fiInstRef, l.fixedSize[tagFootInst]}, "fiGraphics": {l.fiGraphics, l.fixedSize[tagFootInst]},
+			"fiPads": {l.fiPads, l.fixedSize[tagFootInst]}, "fiText": {l.fiText, l.fixedSize[tagFootInst]},
+			"ppNextInFp": {l.ppNextInFp, l.fixedSize[tagPlacedPad]}, "ppParentFp": {l.ppParentFp, l.fixedSize[tagPlacedPad]},
+			"ppPad": {l.ppPad, l.fixedSize[tagPlacedPad]}, "padRot": {l.padRot, l.fixedSize[tagPad]},
+			"netAssign": {l.netAssign, l.fixedSize[tagNet]}, "trackSegs": {l.trackSegs, l.fixedSize[tagTrack]},
+			"segEnd": {l.segWidth + 16, l.fixedSize[tagLineH]}, "arcRadius": {l.arcCentre() + 20, l.fixedSize[tagArc]},
+			"graphSegs": {l.graphSegs, l.fixedSize[tagGraphic]}, "shapeSegs": {l.shapeSegs, l.fixedSize[tagShape]},
+			"shapeTable": {l.shapeTable, l.fixedSize[tagShape]}, "tablePtr1": {l.tablePtr1, l.fixedSize[tagTable]},
+			"textStr": {l.textStr, l.fixedSize[tagText]}, "textGroup": {l.textGroup, l.fixedSize[tagText]},
+			"textRot": {l.textRot, l.fixedSize[tagText]}, "rectCoords": {l.rectCoords + 12, l.fixedSize[tagRect]},
+			"viaPadstack": {l.viaPadstack, l.fixedSize[tagVia]},
+		}
+		for name, f := range inside {
+			if name == "compDef" && f[0] == 0 {
+				continue // 16.6 names no definition on an instance
+			}
+			if f[0] < 4 || f[0]+4 > f[1] {
+				t.Errorf("%s: %s at %d does not fit a %d-byte block", l.release, name, f[0], f[1])
+			}
+		}
 	}
 }
 

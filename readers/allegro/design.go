@@ -22,6 +22,7 @@ type placed struct {
 // symbol, has no designator and is not a component.
 func (p *board) placements() []placed {
 	var out []placed
+	defOf := p.compDefs()
 	p.list(listFootDefs, func(def int) {
 		fp := p.str(p.u32(def, 8))
 		defKey := p.u32(def, 4)
@@ -29,15 +30,15 @@ func (p *board) placements() []placed {
 			if p.b[inst] != tagFootInst {
 				return
 			}
-			comp, ok := p.at(p.u32(inst, 40), tagCompInst)
+			comp, ok := p.at(p.u32(inst, p.l.fiInstRef), tagCompInst)
 			if !ok {
 				return
 			}
-			ref := p.str(p.u32(comp, 28))
+			ref := p.str(p.u32(comp, p.l.compRef))
 			if ref == "" || refdes.IsPlaceholder(ref) {
 				return
 			}
-			cdef, ok := p.at(p.u32(comp, 12), tagCompDef)
+			cdef, ok := defOf[p.u32(comp, 4)]
 			if !ok {
 				cdef = -1
 			}
@@ -49,25 +50,55 @@ func (p *board) placements() []placed {
 
 func next8(byte) int { return 8 }
 
+// compDefs maps each component instance's (0x07) key to its definition (0x06). A 17.2 instance
+// names its definition. A 16.6 instance does not, so each definition's chain of instances is
+// followed instead.
+func (p *board) compDefs() map[uint32]int {
+	out := map[uint32]int{}
+	if p.l.compDef != 0 {
+		for _, off := range p.keys {
+			if p.b[off] != tagCompInst {
+				continue
+			}
+			if def, ok := p.at(p.u32(off, p.l.compDef), tagCompDef); ok {
+				out[p.u32(off, 4)] = def
+			}
+		}
+		return out
+	}
+	for _, def := range p.keys {
+		if p.b[def] != tagCompDef {
+			continue
+		}
+		p.chain(p.u32(def, 20), p.u32(def, 4), next8, func(inst int) {
+			if p.b[inst] == tagCompInst {
+				out[p.u32(inst, 4)] = def
+			}
+		})
+	}
+	return out
+}
+
 // fieldText is the text of the 0x03 field with the given code on the chain starting at head, or "".
 func (p *board) fieldText(head, owner uint32, code uint16) string {
 	text := ""
 	p.chain(head, owner, next8, func(off int) {
-		if text != "" || p.b[off] != tagField || le16(p.b, off+2) != code || p.b[off+16] != 0x68 {
+		if text != "" || p.b[off] != tagField || le16(p.b, off+2) != code || p.b[off+p.l.fieldSub] != 0x68 {
 			return
 		}
-		size := int(le16(p.b, off+18))
-		if off+24+size > len(p.b) {
+		size := int(le16(p.b, off+p.l.fieldLen))
+		body := off + p.l.fieldBody
+		if body+size > len(p.b) {
 			return
 		}
-		text = cstring(p.b[off+24 : off+24+size])
+		text = cstring(p.b[body : body+size])
 	})
 	return text
 }
 
 // padNumber is the pin number of a placed pad, from the footprint pad it copies.
 func (p *board) padNumber(placedPad int) string {
-	pad, ok := p.at(p.u32(placedPad, 36), tagPad)
+	pad, ok := p.at(p.u32(placedPad, p.l.ppPad), tagPad)
 	if !ok {
 		return ""
 	}
@@ -94,7 +125,7 @@ func (p *board) toDesign(src string) *ir.Design {
 		IrVersion:    "0",
 		SourceFormat: "allegro",
 		Name:         designName(src),
-		Attributes:   map[string]string{"allegro_format": "17.2"},
+		Attributes:   map[string]string{"allegro_format": p.l.release},
 		Prov:         prov(),
 	}
 	putAttr(d.Attributes, "allegro_version", p.version)
@@ -102,7 +133,7 @@ func (p *board) toDesign(src string) *ir.Design {
 	fps := map[string]bool{}
 	counts := map[string]int{}
 	var refs []string
-	byRef := map[uint32]string{} // 0x07 key -> ref-des, for the net walk
+	byRef := map[uint32]string{} // 0x2D key -> ref-des, for the net walk
 	for _, pl := range p.placements() {
 		if !fps[pl.fpName] {
 			fps[pl.fpName] = true
@@ -112,7 +143,7 @@ func (p *board) toDesign(src string) *ir.Design {
 			refs = append(refs, pl.ref)
 		}
 		counts[pl.ref]++
-		byRef[p.u32(pl.comp, 4)] = pl.ref
+		byRef[p.u32(pl.inst, 4)] = pl.ref
 
 		comp := &ir.Component{RefDes: pl.ref, FootprintRef: pl.fpName, Attributes: map[string]string{}, Prov: prov()}
 		props := map[string]string{}
@@ -145,7 +176,7 @@ func (p *board) toDesign(src string) *ir.Design {
 		n := &ir.Net{Name: name, Prov: prov()}
 		seen := map[string]bool{}
 		netKey := p.u32(net, 4)
-		p.chain(p.u32(net, 28), netKey, next8, func(asg int) {
+		p.chain(p.u32(net, p.l.netAssign), netKey, next8, func(asg int) {
 			if p.b[asg] != tagNetAssign {
 				return
 			}
@@ -153,7 +184,7 @@ func (p *board) toDesign(src string) *ir.Design {
 				if p.b[item] != tagPlacedPad {
 					return
 				}
-				ref := byRef[p.u32(item, 56)]
+				ref := byRef[p.u32(item, p.l.ppParentFp)]
 				pin := p.padNumber(item)
 				if ref == "" || pin == "" || seen[ref+"."+pin] {
 					return

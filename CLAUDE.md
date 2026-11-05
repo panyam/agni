@@ -535,14 +535,19 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `/USB_Hub/VBUS` and a schematic-against-layout diff reports it renamed. KiCad's exporter also
   leaves out a footprint marked `exclude_from_pos_files`, and nets copper by what touches, so a
   planted short moves a track onto the other net (demo-board).
-- **An Allegro `.brd` is read in binary, for 17.2 alone** (agni 1350, `readers/allegro`). The format
+- **An Allegro `.brd` is read in binary, for 16.6 and 17.2** (agni 1350, 1388, `readers/allegro`). The format
   has no published spec; the layouts come from KiCad's reverse-engineered notes and were checked on
   the BeagleBone AI, and `e2e_allegro_test.go` holds that board to the extract Allegro wrote from it
   (`allegro` samples artifact): nets as a partition, every pin's board position, vias, widths and
   values. A pad is footprint-local and Allegro mirrors X before rotating, so a bottom part's angle is
   negated for the contract's rotate-then-mirror. A placed pad's net goes through its 0x04 net
-  assignment, never straight to a 0x1B. Another release is refused by name (#1355), and an Eagle
-  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
+  assignment, never straight to a 0x1B. Each release reads through its own `layout`
+  (`readers/allegro/layout.go`), since 17.2 added words to most block types and every later field
+  moved. A new release is a new table, with every offset taken from KiCad's version-conditional
+  fields. 16.6 is held to parasdr's ODX and to Clay R6's `pstxnet.dat`, the netlist Capture handed
+  Allegro (`e2e_allegro166_test.go`). Clay's EDIF is NOT that board's second view, because it holds
+  only the top page and its designators name other parts. Another release is refused by name
+  (#1355), and an Eagle `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
   (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
   since Allegro drops a pad nothing on its layer connects to (#1356).
 - **An Altium `.PcbDoc` is a Microsoft compound file** (agni 1349, `readers/altium`, with its own
