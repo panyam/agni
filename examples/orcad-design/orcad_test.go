@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/examples/common"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // TestTheSampleDesignReadsWholeAndChecks runs the walkthrough's steps on Clay R6. The design comes
@@ -24,6 +25,13 @@ func TestTheSampleDesignReadsWholeAndChecks(t *testing.T) {
 	}
 	if u := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(u) != 0 {
 		t.Errorf("%d blocks were left out: %v", len(u), u)
+	}
+	g, err := (&formats.Loader{}).FaithfulGeometry(sampleDesign)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.GetSheets()) != 11 || len(g.GetUndrawn()) != 0 {
+		t.Errorf("%d sheets with %d undrawn placements, want Clay's 11 and none", len(g.GetSheets()), len(g.GetUndrawn()))
 	}
 	tally := common.RuleTally(check.RunBackground(check.NewModel(d), check.BuiltinRules()))
 	if !strings.Contains(tally, "single-pin-net") {

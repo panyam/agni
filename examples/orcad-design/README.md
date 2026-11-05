@@ -9,6 +9,8 @@ run the checks over it. It is the walkthrough form of `agni stats design.DSN` an
 - `common.ReadDesign` reading a top `.DSN` and opening each block's `.DSN` that it names, through
   `formats.Loader`.
 - Every part named by its occurrence designator, as Capture annotated it across the hierarchy.
+- Each page drawn as a sheet through `formats.Loader.FaithfulGeometry`, each block's under the page
+  that places it.
 - The note `report.HierarchyNote` prints when a block's file is missing, rather than a design that
   reads as smaller than it is.
 - The checks over the flattened netlist, printed as a tally per rule.
@@ -38,5 +40,5 @@ make doc        # render the walkthrough to markdown
 ## How it is built
 
 The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's `FromMarkdown`.
-`main.go` binds the three steps that run engine code (`pick`, `netlist`, `check`). See
+`main.go` binds the four steps that run engine code (`pick`, `netlist`, `pages`, `check`). See
 [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout every example follows.

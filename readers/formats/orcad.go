@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/orcad"
 )
@@ -16,7 +17,15 @@ import (
 // one key covers Capture's .DSN. A SPECCTRA design shares the extension and is plain text, so the
 // reader refuses it by name.
 func registerOrCAD() {
-	Register(&Format{Ext: ".dsn", Name: "orcad", Design: readOrCAD})
+	Register(&Format{Ext: ".dsn", Name: "orcad", Design: readOrCAD, Geometry: readOrCADGeometry})
+}
+
+func readOrCADGeometry(l *Loader, p string) (*geom.SchematicGeometry, error) {
+	b, err := l.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+	return orcad.ReadGeometry(bytes.NewReader(b), p, l.orcadOpener())
 }
 
 func readOrCAD(l *Loader, p string) (*ir.Design, error) {

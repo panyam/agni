@@ -6,19 +6,32 @@ import (
 	"strings"
 )
 
-// symPin is one pin of a cached part's symbol. slot is the pin's index among the symbol's pin
-// slots, counting skipped ones, since a package device's pin numbers are indexed by it.
+// symPin is one pin of a cached symbol. slot is the pin's index among the symbol's pin slots,
+// counting skipped ones, since a package device's pin numbers are indexed by it. leg is the free
+// end of the pin's line and hot its connection point, both in the symbol's own frame.
 type symPin struct {
 	slot     int
 	name     string
 	portType uint32
+	leg, hot point
 }
 
-// libPart is a cached LibraryPart (type 24): a symbol's pins, plus the part properties every
-// placement inherits.
+// libPart is a cached LibraryPart (type 24): a symbol's drawing and pins, plus the part properties
+// every placement inherits.
 type libPart struct {
 	pins  []symPin
+	draw  drawing
 	props map[string]string
+	// showNames and showNumbers are the part's last two bytes: bit 0 shows the pins' names and
+	// bit 2 hides their numbers.
+	showNames, showNumbers bool
+}
+
+// symbol is a cached symbol a page places that is not a part: a power symbol, a port, an off-page
+// connector or a title block.
+type symbol struct {
+	pins []symPin
+	draw drawing
 }
 
 // pkgDevice is one unit of a package. pins[slot] is the pin number of symbol slot slot, or "" for
@@ -40,15 +53,17 @@ type pkg struct {
 type cache struct {
 	parts    map[string]*libPart // by cache name, such as "RESISTOR.Normal"
 	packages map[string]*pkg     // by package name, such as "RESISTOR"
+	symbols  map[string]*symbol  // by cache name, such as "GND" or "PORTRIGHT-R"
 }
 
 const (
+	sectionSymbols      = 0
 	sectionLibraryParts = 1
 	sectionPackages     = 3
 )
 
 func parseCache(b []byte, lib *library) (*cache, error) {
-	out := &cache{parts: map[string]*libPart{}, packages: map[string]*pkg{}}
+	out := &cache{parts: map[string]*libPart{}, packages: map[string]*pkg{}, symbols: map[string]*symbol{}}
 	c := &cursor{b: b}
 	if c.u16() != 0 {
 		return nil, fmt.Errorf("the Cache stream has no leading marker")
@@ -67,7 +82,18 @@ func parseCache(b []byte, lib *library) (*cache, error) {
 				switch {
 				case sec == sectionLibraryParts && f.typ == typeLibraryPart:
 					if _, seen := out.parts[name]; !seen {
-						out.parts[name] = &libPart{pins: symbolPins(b, f), props: lib.props(f.props)}
+						pins, stop := symbolPins(b, f)
+						lp := &libPart{pins: pins, draw: readDrawing(b, f, stop), props: lib.props(f.props)}
+						if e := f.end(); e >= f.body+2 {
+							flags := uint16(b[e-2]) | uint16(b[e-1])<<8
+							lp.showNames, lp.showNumbers = flags&1 != 0, flags&4 == 0
+						}
+						out.parts[name] = lp
+					}
+				case sec == sectionSymbols:
+					if _, seen := out.symbols[name]; !seen {
+						pins, stop := symbolPins(b, f)
+						out.symbols[name] = &symbol{pins: pins, draw: readDrawing(b, f, stop)}
 					}
 				case sec == sectionPackages && f.typ == typePackage:
 					if _, seen := out.packages[name]; !seen {
@@ -86,12 +112,13 @@ func parseCache(b []byte, lib *library) (*cache, error) {
 	return out, nil
 }
 
-// symbolPins reads a LibraryPart's pin list. The pins follow the symbol's drawing, whose
-// primitives this reader does not decode. The list starts at one of the structure's prefix stops,
-// so each stop past the body is tried in order, and the first at which the whole list and the
-// property count after it read cleanly is taken. A part whose pins read at no stop has none, and
-// its pins then read as unnamed.
-func symbolPins(b []byte, f frame) []symPin {
+// symbolPins reads a symbol's pin list and returns the stop it starts at. The pins follow the
+// symbol's drawing and its box, and the list starts at one of the structure's prefix stops, so
+// each stop past the body is tried in order, and the first at which the whole list and the
+// property count after it read cleanly is taken. Finding it by its stop holds even where a
+// primitive the drawing reader does not know sits before it. A symbol whose pins read at no stop
+// has none, and stop is then 0.
+func symbolPins(b []byte, f frame) ([]symPin, int) {
 	for _, s := range sortedStops(f) {
 		if s <= f.body {
 			continue
@@ -108,21 +135,22 @@ func symbolPins(b []byte, f frame) []symPin {
 			if c.err == nil && pf.typ != typeSymPinScalar && pf.typ != typeSymPinBus {
 				c.fail("pin slot %d is a type-%d structure", slot, pf.typ)
 			}
-			name := c.lzt()
-			c.skip(16) // the leg's free end and its connection point, in symbol space
-			c.skip(4)  // shape bits and two uninitialised bytes
-			pt := c.u32()
+			sp := symPin{slot: slot, name: c.lzt()}
+			sp.leg = point{c.i32(), c.i32()}
+			sp.hot = point{c.i32(), c.i32()}
+			c.skip(4) // shape bits and two uninitialised bytes
+			sp.portType = c.u32()
 			if c.err == nil {
-				pins = append(pins, symPin{slot: slot, name: name, portType: pt})
+				pins = append(pins, sp)
 				c.p = pf.end()
 			}
 		}
 		c.u16() // the property count that follows the pins
 		if c.err == nil {
-			return pins
+			return pins, s
 		}
 	}
-	return nil
+	return nil, 0
 }
 
 func sortedStops(f frame) []int {

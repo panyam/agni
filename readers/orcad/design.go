@@ -54,11 +54,28 @@ type flattener struct {
 	pins    map[string][2]string // pin node -> ref, number
 	placed  []placement
 	missing []*ir.UnexpandedHierarchy
+
+	// visits is every page the walk reached, once per page however often its block is placed,
+	// with the sheet that places it. netOf names each net's root once nets has run.
+	visits []visit
+	drawn  map[string]bool
+	parent string
+	netOf  map[string]string
 }
 
-// flatten walks the root design and every block it places, depth first, and builds the design.
-func flatten(top *dsn, open Opener) (*ir.Design, error) {
-	f := &flattener{
+// visit is one page as the walk first reached it.
+type visit struct {
+	d      *dsn
+	pg     *page
+	pk     string // the prefix of its wire nodes
+	bpath  string
+	sheet  string
+	parent string
+	occ    *scope
+}
+
+func newFlattener(top *dsn, open Opener) *flattener {
+	return &flattener{
 		open:    open,
 		designs: map[string]*dsn{top.name: top},
 		globals: map[string]bool{},
@@ -66,12 +83,29 @@ func flatten(top *dsn, open Opener) (*ir.Design, error) {
 		names:   map[string][]netName{},
 		genName: map[string]netName{},
 		pins:    map[string][2]string{},
+		drawn:   map[string]bool{},
+		netOf:   map[string]string{},
 	}
+}
+
+// run walks the root design and every block it places, depth first.
+func (f *flattener) run(top *dsn) error {
 	f.collectGlobals(top, map[string]bool{})
-	if err := f.walk(top, top.root, "", top.occ, 0, map[string]bool{top.name: true}); err != nil {
+	return f.walk(top, top.root, "", top.occ, 0, map[string]bool{top.name: true})
+}
+
+// flatten walks the root design and every block it places, and builds the design.
+func flatten(top *dsn, open Opener) (*ir.Design, error) {
+	f := newFlattener(top, open)
+	if err := f.run(top); err != nil {
 		return nil, err
 	}
 	return f.design(top), nil
+}
+
+// sheetID names a page by its design, folder and page, so a block page placed twice is one sheet.
+func sheetID(d *dsn, folder string, pg *page) string {
+	return path.Base(d.name) + ":" + folder + ":" + pg.name
 }
 
 // collectGlobals records every power symbol's name across the design and the blocks it reaches,
@@ -133,6 +167,11 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 	for pi, pg := range pages {
 		pk := fmt.Sprintf("%s|%s|%d", bpath, folder, pi)
 		folderKey := "name|" + bpath + "|" + folder + "|"
+		sid := sheetID(d, folder, pg)
+		if !f.drawn[sid] {
+			f.drawn[sid] = true
+			f.visits = append(f.visits, visit{d: d, pg: pg, pk: pk, bpath: bpath, sheet: sid, parent: f.parent, occ: sc})
+		}
 		type at struct {
 			p    point
 			node string
@@ -140,6 +179,9 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 		var points []at
 		var symbols []pageSymbol
 		for _, w := range pg.wires {
+			if w.bus {
+				continue // a bus joins its members by name, which this reader does not read yet
+			}
 			node := fmt.Sprintf("w|%s|%d", pk, w.net)
 			f.sets.find(node)
 			if _, ok := f.genName[node]; !ok {
@@ -153,7 +195,7 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 		touching := func(p point) []string {
 			var out []string
 			for _, w := range pg.wires {
-				if onSegment(p, w.a, w.b) {
+				if !w.bus && onSegment(p, w.a, w.b) {
 					out = append(out, fmt.Sprintf("w|%s|%d", pk, w.net))
 				}
 			}
@@ -172,7 +214,7 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 			}
 			key := symbolKey(s, bpath, folderKey, ports)
 			for _, w := range pg.wires {
-				if s.covers(w.a) || s.covers(w.b) {
+				if !w.bus && (s.covers(w.a) || s.covers(w.b)) {
 					node := fmt.Sprintf("w|%s|%d", pk, w.net)
 					f.sets.join(node, key)
 					if s.kind == symGlobal && !ports[strings.ToUpper(s.name)] {
@@ -295,9 +337,12 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 				continue
 			}
 			open[child.name+"|"+childFolder] = true
+			saved := f.parent
+			f.parent = sid
 			if err := f.walk(child, childFolder, childPath, childScope, depth+1, open); err != nil {
 				return err
 			}
+			f.parent = saved
 			delete(open, child.name+"|"+childFolder)
 		}
 	}
@@ -578,6 +623,7 @@ func (f *flattener) nets(src string) []*ir.Net {
 		if !n.global && uses[name] > 1 && n.path != "" {
 			name = n.path + "/" + name
 		}
+		f.netOf[root] = name
 		sort.Strings(ps)
 		net := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: src}}
 		for _, p := range ps {
