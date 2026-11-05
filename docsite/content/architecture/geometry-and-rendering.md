@@ -276,6 +276,18 @@ KiCad also draws a label's text a little away from where it meets its wire, and 
 
 A global label is drawn inside a flag whose ends show the signal's direction (`Label.flag`). The renderer draws the outline from `anchor` with KiCad's shape, and sizes its length from its own text width rather than KiCad's stroke font, so the box fits the text a reader sees. `TestGlobalLabelFlagsStartWhereKiCadDrawsThem` holds the wire end of every flag to kicad-cli's corners.
 
+### A sheet pin's arrow sits inside its sheet
+
+KiCad draws a sheet pin as the hierarchical label it stands for, seen from the parent sheet. So its arrow is the label's arrow turned a half turn, inside the sheet's box, with input and output swapped, since a signal entering the sheet leaves the parent. The reader draws it as a sheet shape beside the pin's name, and keeps a dot only for a pin type that KiCad draws no arrow for. `TestSheetPinArrowsMatchKiCad` holds ten pins, on all four sides, to kicad-cli's outlines.
+
+### KiCad text markup draws, and the text stays as written
+
+KiCad writes `~{RESET}` for RESET with an overbar, `V_{OUT}` for a subscript and `I^{2}C` for a superscript, and `{slash}` and its siblings for a character a name cannot hold. The reader leaves the text as written, because a net label's text is also the net's name, and sets `SchematicGeometry.text_markup` to `kicad` instead. The renderer splits each single-line text into runs (`markupRuns`). The SVG backend writes them as `<tspan>`s, an overbar as `text-decoration="overline"` and a subscript or superscript at 70% off the baseline. The packer sends the runs in `PackedLabel.runs`, so the overlay draws them the same way without parsing the markup itself. A multi-line text prints as written in both backends. A geometry from another format leaves `text_markup` empty, so a brace in its text prints as a brace.
+
+### A placed pin can pick its alternate name
+
+A KiCad pin can carry alternate functions, and a placed part picks one with `(pin "G39" (alternate "CAN0_DIN"))`. kicad-cli draws the picked name where the library's would go. The library's name lives on the shared `SymbolDef`, so the reader puts the pick on the placement, in `SymbolPlacement.pin_names` keyed by pin number, and both backends draw it in place of the symbol's name.
+
 ### A do-not-populate part is crossed out
 
 `SymbolPlacement.dnp` marks a part that the schematic draws and the board leaves unfitted, read from KiCad's `(dnp yes)`. Both backends draw KiCad's red cross over the part's body, which is its artwork without the pin legs. The netlist keeps the same flag in the part's attributes, where `component.dnp` reads it.
