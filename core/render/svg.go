@@ -636,13 +636,14 @@ func placementRotation(t *geom.Transform) int32 {
 	return t.RotationDeg
 }
 
-// readableText keeps schematic text upright, as EDA viewers draw it. An angle whose normalized
-// magnitude exceeds 90 is turned a further 180 and its justify flipped on both axes, so the run
-// hangs off the same corner of its origin. Vertical text (+/-90) is left alone, which keeps
-// KiCad-90 parity.
+// readableText keeps schematic text readable, as EDA viewers draw it. Text reads left to right
+// or bottom to top, never upside down or top to bottom. Any other angle is turned a further 180
+// and its justify flipped on both axes, so the run hangs off the same corner of its origin. A
+// normalized -90 draws as SVG rotate(-90), bottom to top, which is the only rotation kicad-cli
+// writes for schematic text (agni issue 1322), so +90 flips to it.
 func readableText(rotDeg int32, justify string) (int32, string) {
 	a := normDeg(rotDeg)
-	if a <= 90 && a >= -90 {
+	if a < 90 && a >= -90 {
 		return rotDeg, justify
 	}
 	return rotDeg + 180, flipJustify(justify)

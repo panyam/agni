@@ -97,8 +97,8 @@ func roundInt64(v float64) int64 {
 // ComposePlacement maps a footprint-local offset into board (world) coordinates as
 // world = at + M(R(rotationDeg) * offset). R rotates CCW. M mirrors X iff the part is on the
 // back side, and it applies AFTER the rotation, so a back part is its front footprint rotated then
-// reflected. rotationDeg is already in the canonical Y-up frame (a Y-down source negates it on
-// import), and offset is in the reader's Y-flipped source-unit frame (pcbPoint). Every board
+// reflected. rotationDeg is already in the canonical Y-up frame (a clockwise source such as ODB++
+// negates it on import, while KiCad's angle carries over), and offset is in the reader's Y-flipped source-unit frame (pcbPoint). Every board
 // producer and the board renderer share it, so a footprint's pads and silkscreen text are placed
 // together. A nil at yields the origin and a nil offset yields at unchanged. It truncates to int64
 // rather than rounding, to match the board renderer's pad placement byte-for-byte.

@@ -270,7 +270,7 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 		if ref == "" {
 			continue
 		}
-		t := pinTransform(ps)
+		t := kicadTransform(ps)
 		local := libPins.forUnit(symbolKey(ps), unitOf(ps))
 		if ref[0] == '#' {
 			name := netName(propValue(ps, "Value"))
@@ -529,29 +529,6 @@ func gp(p *geom.Point) netgraph.Point {
 		return netgraph.Point{}
 	}
 	return netgraph.Point{X: p.X, Y: p.Y}
-}
-
-// pinTransform is the placement transform for computing pin CONNECT positions. It differs from
-// kicadTransform only in rotation. Lib pin coordinates are in KiCad's un-flipped frame, so an
-// unmirrored placement takes KiCad's raw angle, since geomRotation's 360-deg flip is right at 0/180
-// and swaps 90<->270.
-//
-// A MIRRORED placement keeps geomRotation's flipped angle. KiCad rotates and THEN mirrors while
-// geomath.ApplyTransform mirrors first, and the inverse angle reconciles the two; the derivation is in
-// docsite/content/architecture/net-solving.md#kicad-connection-point-semantics. Otherwise a symbol
-// mirrored at 90 or 270 swaps its two pins onto each other's nets (agni issue 577). Measured against
-// kicad-cli across all twelve placements of a two-pin symbol; the matrix is TestMirroredPinPlacement.
-func pinTransform(ps *node) *geom.Transform {
-	t := kicadTransform(ps)
-	if t.MirrorX || t.MirrorY {
-		return t
-	}
-	if a := ps.Child("at").Arg(3); a != nil {
-		if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
-			t.RotationDeg = ((int32(deg) % 360) + 360) % 360
-		}
-	}
-	return t
 }
 
 // unitOf reads a placement's (unit N); placements without one are unit 1.
