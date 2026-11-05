@@ -736,12 +736,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   an empty set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view
   tests read a board file and a test whose fixture is absent skips rather than fails. There is one
   stamp PER ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each
-  other's work. Since v0.1.4 there are four artifacts. The gate fetches `tutorial-board`,
-  `oracle-corpus` and `odb-altium` (foxBMS's Altium-written ODB++ jobs), and `make odb-oracle` adds
-  `odb-kicad`. A pin bump needs the release to exist first, or every CI job fails at the fetch, so a
-  samples PR merges and is tagged before the agni PR that pins it goes green. A new tarball leaves
-  the old ones byte-identical, and `make dist` in agni-samples proves that by reproducing their
-  checksums. `kicad-cli` writes a `.kicad_prl` beside any board it exports, so an export run over
+  other's work. The gate fetches `tutorial-board`, `oracle-corpus`, `odb-altium` (foxBMS's
+  Altium-written ODB++ jobs), `allegro` (the BeagleBone AI with its Allegro extract and copper films)
+  and `cadence-exports`, and `make odb-oracle` adds `odb-kicad`. A pin bump needs the release to
+  exist first, or every CI job fails at the fetch, so a samples PR merges and is tagged before the
+  agni PR that pins it goes green. A release reuses the previous release's file for every artifact it
+  does not change, renamed and byte for byte and checked against the old `SHA256SUMS`, because a
+  rebuild on another machine records new file times and moves every checksum. A pin bump restamps every
+  tutorial capture over `tools/samples/`, so commit that stamp-only diff with the pin, and two
+  branches that both move the pin conflict there and in `hack/samples.pin`. `kicad-cli` writes a `.kicad_prl` beside any board it exports, so an export run over
   `tools/samples` or a fixture folder leaves one there (both export scripts remove it). Since v0.1.2
   the oracle corpus carries a `design.yaml` per real design (entry, board companion, internal
   connectors) and the tutorial tarball does not. That tarball leaves the boards out, and a declared

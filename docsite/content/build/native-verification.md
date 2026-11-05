@@ -36,6 +36,7 @@ itself your consent. The tool still has to be registered for the format and inst
 | EDIF (`.edn`, `.edf`, `.edif`, `.eds`) | none open | | no | no |
 | IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
 | ODB++ (directory / `.tgz` / `.zip`) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
+| Cadence Allegro board (`.brd`) | Allegro (licensed, Windows); its films render in `gerbv` | `gerbv` via the `natup` image | films only | no |
 
 </div>
 
@@ -114,3 +115,11 @@ established without one.
    Visualizer, or the BoardUI parser run locally) renders the same file.
 5. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
    Linux or Windows.
+6. An Allegro board is held to two things Allegro wrote from the same `.brd`. An ASCII extract
+   (`cds2f_<board>.txt`) carries every placement, pin, via and track width, and
+   `e2e_allegro_test.go` compares them. The photoplot films carry each copper layer as Cadence's
+   plotter draws it, and `TestAllegroCopperMatchesItsFilms` draws both sides into a 1-mil bitmap
+   (`internal/copperraster`) and scores their overlap. The Go rasteriser was checked once against
+   `gerbv` from the `natup` image, and the two agreed to within a pixel on every film. Two `gerbv`
+   limits shape that check. Its export window is capped, so it ran at 500 dpi. It refuses a negative
+   `--origin`, so each film was shifted with its own `%OF` statement and drawn from `0;0`.
