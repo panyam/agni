@@ -16,7 +16,7 @@ The reader layer is heterogeneous by necessity, because the formats are. Entries
 | Binary natives | Cadence Allegro `.brd` (17.2); Altium (planned) | a binary deserializer over a reverse-engineered layout, held to an extract the vendor's tool wrote from the same board |
 | Text grammars | EDIF, KiCad s-expr, xschem, gEDA, Telesis; SPICE, IBIS, Touchstone (planned) | hand-written Go parsers |
 | XML | IPC-2581 | Go's `encoding/xml` |
-| Record/tabular | ODB++ | custom record reader over the job's directory tree |
+| Record/tabular | ODB++ | custom record reader over the job's directory tree, and an XML stream reader for ODB++X (ODX) that fills the same structures |
 
 They all target one IR. Diff, rules, analysis and everything else downstream read that IR and never touch a format directly. Adding a reader therefore makes every existing analysis work on the new format for free.
 
