@@ -156,6 +156,9 @@ export class SvgView {
     const hh = this.host.clientHeight || 1;
     const v = computeReveal(box, hw, hh);
     this.setView(v);
+    // A revealed view holds still as a navigated one does. Otherwise the next resize, such as a
+    // panel opening beside it, refits the sheet and throws the reveal away (agni issue 1326).
+    this.touched = true;
     return v;
   }
 

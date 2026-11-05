@@ -66,6 +66,11 @@ A via or a short track at fit zoom is a few pixels across. A mouse event carries
 coordinates, so a click can miss a via that a fractional probe hits. The reader zooms in to pick one,
 and `web/browser/board-pick.spec.ts` searches whole-pixel points for that reason.
 
+A pick on the board in a sheet view moves the canvas to the schematic sheet that draws the part,
+and a pick on the schematic moves a board view to the footprint (agni issue 1326). Each view decides
+for itself which sheet to show, from `LocateSubjects`.
+`architecture/web-client.md` has the sheet views.
+
 ### Selecting is not asking
 
 A click selects the entity under it, and the Properties panel describes it (agni issue 902). A click

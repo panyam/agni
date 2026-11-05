@@ -8,7 +8,7 @@ import { type SheetNode, sheetForest } from "./sheettree.js";
 // count and the shown sheet marked active. Clicking a tile navigates (the WS9-024 showSheet path).
 // A hierarchical design's sheets nest under their parents, as the file tree nests them, and a
 // parent folds (agni issue 1141). A flat design is one level, which draws as the plain list it was.
-function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void }) {
+function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void }) {
   const forest = createMemo(() => sheetForest(props.state().tiles));
   const [folded, setFolded] = createSignal(new Set<string>());
   const toggle = (id: string) =>
@@ -70,6 +70,18 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
               </Show>
             </Show>
           </button>
+          {/* Opens the sheet in a view of its own beside the canvas (agni issue 1326), only when asked. */}
+          <Show when={props.onOpenBeside}>
+            <button
+              type="button"
+              class="sheet-tile-beside"
+              title={`open ${t.name} in a new view`}
+              aria-label={`open ${t.name} in a new view`}
+              onClick={() => props.onOpenBeside?.(t.id)}
+            >
+              ⧉
+            </button>
+          </Show>
         </div>
         <Show when={parent && !folded().has(t.id)}>
           <ul class="sheet-tiles">
@@ -110,13 +122,13 @@ export function defectsTitle(t: SheetTile): string {
 export function sheetOverviewPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onSelect: (sheetId: string) => void },
+  handlers: { onSelect: (sheetId: string) => void; onOpenBeside?: (sheetId: string) => void },
 ): { island: SolidIsland; view: OverviewView } {
   const [state, setState] = signalView<OverviewState>({ tiles: [], activeId: "", ruleCount: 0, ranCount: 0 });
   const island = new SolidIsland(
     "sheet-overview",
     el,
-    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} />,
+    () => <SheetOverviewPanel state={state} onSelect={handlers.onSelect} onOpenBeside={handlers.onOpenBeside} />,
     eventBus,
   );
   return { island, view: { setState } };

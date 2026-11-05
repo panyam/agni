@@ -155,3 +155,27 @@ describe("what the count pills mean", () => {
     expect(legend).toContain("counts on each");
   });
 });
+
+// A sheet opens in a view of its own only when the reader asks (agni issue 1326).
+describe("opening a sheet beside the canvas", () => {
+  it("offers each tile's sheet in a new view when the page can open one", () => {
+    const onSelect = vi.fn();
+    const onOpenBeside = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const { island, view } = sheetOverviewPanelIsland(el, null, { onSelect, onOpenBeside });
+    island.activate();
+    view.setState(state({}));
+    const beside = [...el.querySelectorAll(".sheet-tile-beside")] as HTMLButtonElement[];
+    expect(beside.length).toBe(2);
+    beside[1].click();
+    expect(onOpenBeside).toHaveBeenCalledWith("s2");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("offers nothing when the page cannot open a view", () => {
+    const { el, view } = mountPanel();
+    view.setState(state({}));
+    expect(el.querySelectorAll(".sheet-tile-beside").length).toBe(0);
+  });
+});

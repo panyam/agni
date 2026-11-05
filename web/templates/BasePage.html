@@ -348,6 +348,18 @@
     .diff-side { flex: 1 1 50%; min-width: 0; position: relative; background: #fff; overflow: hidden; }
     .diff-side-label { position: absolute; left: 8px; top: 8px; z-index: 5; background: rgba(255, 255, 255, 0.85); border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; pointer-events: none; font-size: 11px; color: #555; }
     .diff-svg { position: absolute; inset: 0; overflow: hidden; }
+    /* agni issue 1326: a sheet view beside the canvas, its own bar, the sheets that also draw the
+       selection, and the drawing filling the rest */
+    .sheetview { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; }
+    .sheetview-bar { display: flex; gap: 6px; align-items: center; padding: 4px 6px; border-bottom: 1px solid #ddd; flex: 0 0 auto; }
+    .sheetview-bar select { font: inherit; font-size: 12px; }
+    .sheetview-bar .sheetview-sheet { max-width: 16em; }
+    .sheetview-also { flex: 0 0 auto; padding: 3px 6px; font-size: 12px; color: #555; }
+    .sheetview-also:empty { display: none; }
+    .sheetview-chip { font: inherit; font-size: 12px; margin-left: 4px; border: 1px solid #bbb; border-radius: 10px; background: #f6f6f6; padding: 0 8px; cursor: pointer; }
+    .sheetview-canvas { position: relative; flex: 1 1 auto; overflow: hidden; }
+    .sheet-tile-beside { border: none; background: none; cursor: pointer; color: #777; padding: 2px 6px; font: inherit; }
+    .sheet-tile-beside:hover { color: #1560bd; }
     .diff-ph { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: #999; background: #fafafa; z-index: 4; }
     .diff-ph.on { display: flex; }
     /* WS7-034 render controls float inside the canvas panel (they configure only the render) */

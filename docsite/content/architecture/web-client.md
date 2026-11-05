@@ -32,6 +32,32 @@ and once with a view never wired.
 on any of those omissions, so let the test tell you what you forgot. Read its header comment before
 changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
 
+## Sheet views are panels made at run time
+
+A sheet view shows one sheet of the open design beside the canvas (agni issue 1326). The reader opens
+one from a tile in the Sheets panel, and nothing opens one by itself. So a schematic and its board
+sit side by side, and a click on one finds the part on the other. A view is a different kind of
+panel from the ones above.
+
+- **It has no hole in the page and no entry in `VIEWER_PANELS`.** `SheetViews`
+  (`web/src/sheetviews.ts`) makes each one, and `addSheetView` in `dock.ts` docks it under an id
+  starting `sheetview-`. The dock's component factory hands that id its element. A saved layout that
+  names a view restores without it, since `prunePanels` drops every id that the registry lacks. A view
+  names a sheet of one design, and the next page may open another.
+- **It draws through `SvgView`**, the canvas's SVG renderer, from the same snapshot, layout and symbol
+  source (`ViewerPresenter.drawing`). So a pick in a view reads the keys that a pick on the canvas
+  reads.
+- **The selection is shared and the camera is not.** A pick in a view selects through
+  `PropertiesPresenter.select`, as a pick on the canvas does. `onSelect` then hands the selection to
+  every view, and the canvas follows a pick made in a view. Each one moves by `chooseSheet`
+  (`web/src/sheetfollow.ts`). It stays on a sheet that draws the selection, switches to the first that
+  does otherwise, and offers the others as chips. Then it centres on the highlight. The presenter's
+  `sheetToOpen` calls the same function, so a finding opens a sheet the same way.
+- **A view's link** is `follow`, `locked` or `off`. Locked views on the SAME sheet mirror pan and zoom.
+  Two sheets have different frames, so the schematic and the board never share a camera.
+- **A view floats** through dockview's floating groups. With the `always` renderer its content then
+  sits in a `dv-render-overlay-float` element, not inside the floating group's own container.
+
 ## Traps that ship green
 
 **A panel's derived rows must be MEMOIZED, or selecting a row rebuilds the whole panel.** Solid's
