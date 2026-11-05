@@ -66,6 +66,12 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 			base := symread.SymbolBase(symref)
 			attrs, fields, next := attrBlockFields(lines, i+1)
 			i = next
+			// A .sch writes an attached attribute where it sits on the sheet, at its angle on the
+			// sheet. The renderer adds the placement's turn to a field's own, so each field keeps
+			// only the part of its angle the placement does not supply (agni issue 1344).
+			for _, fl := range fields {
+				fl.RotationDeg = int32((((int(fl.RotationDeg) - angle) % 360) + 360) % 360)
+			}
 			if annotationSymbols[base] && !geomRenderAnnotation[base] {
 				continue // clutter annotation, not drawn in geometry (WS7-037)
 			}

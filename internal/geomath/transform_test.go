@@ -66,3 +66,24 @@ func TestPlaceShape_RectStaysAxisAligned(t *testing.T) {
 		t.Fatalf("corner1: got (%d,%d) want (-20,40)", out.Points[1].X, out.Points[1].Y)
 	}
 }
+
+// TestApplyTransformTurnsAnyAngle turns a point by an angle that is not a quarter turn. Such an
+// angle used to fall through the quarter-turn switch and draw the point unturned.
+func TestApplyTransformTurnsAnyAngle(t *testing.T) {
+	cases := []struct {
+		deg    int32
+		mirror bool
+		want   [2]int64
+	}{
+		{45, false, [2]int64{707, 707}},
+		{-45, false, [2]int64{707, -707}},
+		{30, false, [2]int64{866, 500}},
+		{135, true, [2]int64{707, -707}},
+	}
+	for _, c := range cases {
+		got := ApplyTransform(&geom.Transform{RotationDeg: c.deg, MirrorY: c.mirror}, &geom.Point{X: 1000, Y: 0})
+		if got.GetX() != c.want[0] || got.GetY() != c.want[1] {
+			t.Errorf("(1000,0) at %d degrees (mirror %v) = (%d,%d), want %v", c.deg, c.mirror, got.GetX(), got.GetY(), c.want)
+		}
+	}
+}

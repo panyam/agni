@@ -42,14 +42,20 @@ func ApplyTransform(t *geom.Transform, p *geom.Point) *geom.Point {
 			x = -x
 		}
 
-		// Rotate counter-clockwise. EDIF uses only 0/90/180/270.
-		switch ((t.RotationDeg % 360) + 360) % 360 {
+		// Rotate counter-clockwise. A quarter turn is exact. Any other angle turns by cos and sin,
+		// since a format may write one and dropping it to 0 drew the part unturned (agni issue 1344).
+		switch a := ((t.RotationDeg % 360) + 360) % 360; a {
+		case 0:
 		case 90:
 			x, y = -y, x
 		case 180:
 			x, y = -x, -y
 		case 270:
 			x, y = y, -x
+		default:
+			rad := float64(a) * math.Pi / 180
+			cos, sin := math.Cos(rad), math.Sin(rad)
+			x, y = cos*x-sin*y, sin*x+cos*y
 		}
 
 		if t.Origin != nil {
