@@ -281,13 +281,18 @@ func appendSubSheet(sh *geom.SheetGeometry, sub *node) {
 		}
 	}
 	// Hierarchical pins, (pin "NAME" <type> (at x y ang) (effects ...)) on the box border, draw
-	// as a connect dot plus a net-name label, matching KiCad's sheet-pin symbol.
+	// as KiCad's arrow inside the box plus a net-name label. A pin of a type KiCad has no arrow for
+	// keeps a connect dot.
 	for _, pin := range sub.Children("pin") {
 		loc := sheetPt(pin.Child("at"))
 		if loc == nil {
 			continue
 		}
-		sh.Shapes = append(sh.Shapes, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{loc}})
+		if arrow := sheetPinArrow(pin); arrow != nil {
+			sh.Shapes = append(sh.Shapes, arrow)
+		} else {
+			sh.Shapes = append(sh.Shapes, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{loc}})
+		}
 		if name := atomOf(pin.Arg(1)); name != "" {
 			l := &geom.Label{Text: name, Origin: loc, Height: fontSize(pin), Justify: kicadJustify(pin)}
 			deg, _ := strconv.ParseFloat(atomOf(pin.Child("at").Arg(3)), 64)
@@ -1041,37 +1046,61 @@ func hierLabelArrows(root *node) []*geom.Shape {
 	var out []*geom.Shape
 	for _, n := range root.Children("hierarchical_label") {
 		at := n.Child("at")
-		o := sheetPt(at)
-		tmpl, ok := hierArrows[atomOf(n.Child("shape").Arg(1))]
-		if o == nil || !ok {
-			continue
-		}
-		half := float64(fontSize(n)) / 2
-		if half == 0 {
-			half = 635_000
-		}
 		deg, _ := strconv.ParseFloat(atomOf(at.Arg(3)), 64)
-		// The template runs toward 180. Turn it to the label's own angle, counter-clockwise as
-		// seen, in the Y-up sheet. KiCad draws 270 as 90 mirrored along the pin, not turned a
-		// further half turn, as kicad-cli's arrows show.
-		down := normDeg(deg) == 270
-		if down {
-			deg = 90
+		if s := hierArrow(sheetPt(at), atomOf(n.Child("shape").Arg(1)), deg, fontSize(n)); s != nil {
+			out = append(out, s)
 		}
-		r := (deg - 180) * math.Pi / 180
-		c, sn := math.Cos(r), math.Sin(r)
-		pts := make([]*geom.Point, 0, len(tmpl))
-		for _, p := range tmpl {
-			x, y := p[0]*half, -p[1]*half
-			px, py := x*c-y*sn, x*sn+y*c
-			if down {
-				py = -py
-			}
-			pts = append(pts, &geom.Point{X: o.X + int64(math.Round(px)), Y: o.Y + int64(math.Round(py))})
-		}
-		out = append(out, &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts})
 	}
 	return out
+}
+
+// sheetPinArrow is the arrow KiCad draws at a sheet pin, inside the sheet's box. KiCad draws a
+// sheet pin as the hierarchical label it stands for, seen from the parent sheet. The arrow turns a
+// half turn, and input and output swap, since a signal entering the sheet leaves the parent
+// (SCH_SHEET_PIN::CreateGraphicShape). kicad-cli draws orient-sheetpins.kicad_sch that way.
+func sheetPinArrow(pin *node) *geom.Shape {
+	at := pin.Child("at")
+	deg, _ := strconv.ParseFloat(atomOf(at.Arg(3)), 64)
+	shape := atomOf(pin.Arg(2))
+	switch shape {
+	case "input":
+		shape = "output"
+	case "output":
+		shape = "input"
+	}
+	return hierArrow(sheetPt(at), shape, deg+180, fontSize(pin))
+}
+
+// hierArrow draws one hierarchical arrow of the named shape at o, for a label at deg, sized by
+// the text height. It returns nil for a shape KiCad draws no arrow for.
+func hierArrow(o *geom.Point, shape string, deg float64, height int64) *geom.Shape {
+	tmpl, ok := hierArrows[shape]
+	if o == nil || !ok {
+		return nil
+	}
+	half := float64(height) / 2
+	if half == 0 {
+		half = 635_000
+	}
+	// The template runs toward 180. Turn it to the label's own angle, counter-clockwise as
+	// seen, in the Y-up sheet. KiCad draws 270 as 90 mirrored along the pin, not turned a
+	// further half turn, as kicad-cli's arrows show.
+	down := normDeg(deg) == 270
+	if down {
+		deg = 90
+	}
+	r := (deg - 180) * math.Pi / 180
+	c, sn := math.Cos(r), math.Sin(r)
+	pts := make([]*geom.Point, 0, len(tmpl))
+	for _, p := range tmpl {
+		x, y := p[0]*half, -p[1]*half
+		px, py := x*c-y*sn, x*sn+y*c
+		if down {
+			py = -py
+		}
+		pts = append(pts, &geom.Point{X: o.X + int64(math.Round(px)), Y: o.Y + int64(math.Round(py))})
+	}
+	return &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts}
 }
 
 // globalLabelFlags maps KiCad's (shape ...) on a global label to the flag drawn around it.

@@ -54,7 +54,25 @@ func TestDoNotPopulateReachesThePlacement(t *testing.T) {
 // KiCad draws an arrow at a hierarchical label's connect point. orient-labels.kicad_sch has an
 // input label at each angle, and every corner of each arrow must be kicad-cli's.
 func TestHierarchicalLabelArrowsMatchKiCad(t *testing.T) {
-	g := readSheetGeometry(t, "orient-labels.kicad_sch")
+	arrowsMatchKiCad(t, "orient-labels.kicad_sch", "orient-labels.kicad-arrows.txt", 4, false)
+}
+
+// KiCad draws a sheet pin's arrow inside the sheet's box, as the hierarchical label it stands for
+// seen from the parent. orient-sheetpins.kicad_sch has pins of each shape on each side of a sheet,
+// and each arrow must be kicad-cli's outline (agni issue 1344). The outline is compared as a closed
+// polygon, from any corner and in either direction. Every arrow is symmetric about its pin's line,
+// and kicad-cli lists some sheet pins' corners in the reverse order from the matching label's, so
+// the order says nothing about what is drawn.
+func TestSheetPinArrowsMatchKiCad(t *testing.T) {
+	arrowsMatchKiCad(t, "orient-sheetpins.kicad_sch", "orient-sheetpins.kicad-arrows.txt", 10, true)
+}
+
+// arrowsMatchKiCad holds every arrow in an oracle file, kicad-cli's corners per row, to an arrow
+// the reader draws on the fixture's first sheet, corner by corner in kicad-cli's order. With
+// anyOrder, the corners may start anywhere and run either way round the outline.
+func arrowsMatchKiCad(t *testing.T, fixture, oracle string, rows int, anyOrder bool) {
+	t.Helper()
+	g := readSheetGeometry(t, fixture)
 	type xy struct{ x, y float64 }
 	var ours [][]xy
 	for _, s := range g.Sheets[0].Shapes {
@@ -67,14 +85,14 @@ func TestHierarchicalLabelArrowsMatchKiCad(t *testing.T) {
 		}
 		ours = append(ours, pts)
 	}
-	rows := 0
-	sc := bufio.NewScanner(bytes.NewReader(readFixture(t, "orient-labels.kicad-arrows.txt")))
+	read := 0
+	sc := bufio.NewScanner(bytes.NewReader(readFixture(t, oracle)))
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.HasPrefix(line, "#") || line == "" {
 			continue
 		}
-		rows++
+		read++
 		f := strings.Split(line, "\t")
 		var want []xy
 		for _, c := range f[1:] {
@@ -83,20 +101,30 @@ func TestHierarchicalLabelArrowsMatchKiCad(t *testing.T) {
 			y, _ := strconv.ParseFloat(b, 64)
 			want = append(want, xy{x, y})
 		}
+		same := func(o []xy, start, step int) bool {
+			for i, w := range want {
+				p := o[((start+step*i)%len(want)+len(want))%len(want)]
+				if math.Hypot(p.x-w.x, p.y-w.y) > 0.005 {
+					return false
+				}
+			}
+			return true
+		}
 		found := false
 		for _, o := range ours {
 			if len(o) < len(want) {
 				continue
 			}
-			ok := true
-			for i, w := range want {
-				if math.Hypot(o[i].x-w.x, o[i].y-w.y) > 0.005 {
-					ok = false
-					break
+			if !anyOrder {
+				found = same(o, 0, 1)
+			} else {
+				// A closed outline repeats its first corner last, so compare its distinct corners.
+				ring := o[:len(want)]
+				for start := 0; start < len(want) && !found; start++ {
+					found = same(ring, start, 1) || same(ring, start, -1)
 				}
 			}
-			if ok {
-				found = true
+			if found {
 				break
 			}
 		}
@@ -104,7 +132,7 @@ func TestHierarchicalLabelArrowsMatchKiCad(t *testing.T) {
 			t.Errorf("%s: no arrow of ours has kicad-cli's corners %v", f[0], want)
 		}
 	}
-	if rows != 4 {
-		t.Fatalf("read %d kicad-cli arrows, want 4", rows)
+	if read != rows {
+		t.Fatalf("read %d kicad-cli arrows, want %d", read, rows)
 	}
 }
