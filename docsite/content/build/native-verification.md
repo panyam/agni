@@ -37,6 +37,7 @@ itself your consent. The tool still has to be registered for the format and inst
 | IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
 | ODB++ (directory / `.tgz` / `.zip`) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
 | Cadence Allegro board (`.brd`) | Allegro (licensed, Windows); its films render in `gerbv` | `gerbv` via the `natup` image | films only | no |
+| Altium Designer board (`.PcbDoc`) | Altium (licensed, Windows) | none | no | no |
 
 </div>
 
@@ -123,3 +124,10 @@ established without one.
    `gerbv` from the `natup` image, and the two agreed to within a pixel on every film. Two `gerbv`
    limits shape that check. Its export window is capped, so it ran at 500 dpi. It refuses a negative
    `--origin`, so each film was shifted with its own `%OF` statement and drawn from `0;0`.
+7. An Altium board is held to the ODB++ job Altium exported from the same board. The foxBMS
+   packages ship both side by side, and `TestAltiumPcbDocMatchesItsODBExport` compares parts, the
+   pin-to-net partition, placements, every pad's board position, vias and track widths on all five.
+   The export changes three things on the way out, and the test allows for each. It drops mechanical
+   and graphical parts, it writes the drilled pad of a dropped part as a via, and it merges pads of
+   one part that share a name. agni's ODB++ reader also misses a via on no net, since it builds vias
+   from `eda/data`, which lists none.
