@@ -545,6 +545,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
   (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
   since Allegro drops a pad nothing on its layer connects to (#1356).
+- **An Altium `.PcbDoc` is a Microsoft compound file** (agni 1349, `readers/altium`, with its own
+  MS-CFB reader). `TestAltiumPcbDocMatchesItsODBExport` holds the five foxBMS boards (`altium`
+  samples artifact) to their ODB++ jobs (`odb-altium`). The board designator is the designator TEXT,
+  not `SOURCEDESIGNATOR`, which repeats across a multi-channel design's channels. Pads are stored at
+  board positions, so the reader solves their footprint-local ones. Copper a polygon pour or a
+  graphical component drew is left out, as Altium's export leaves it. Part numbers come from the
+  `PrimitiveParameters` stream, and some parts spell the key `PartNumber`, now an MPN alias.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out

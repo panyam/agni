@@ -39,5 +39,5 @@ make doc        # render the walkthrough to markdown
 
 The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's `FromMarkdown`.
 `main.go` binds the four steps that run engine code (`pick`, `netlist`, `board`, `check`), and
-`summary.go` holds the two printers the test also calls. See
+the two printers it shares with `altium-board` live in `../common`. See
 [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout every example follows.

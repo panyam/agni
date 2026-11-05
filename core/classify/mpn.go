@@ -11,8 +11,9 @@ import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 //
 // These are read-only. Nothing writes a canonical MPN attribute. The answer goes in the typed
 // ir.Component.mpn field, and the pass derives it FROM these raw keys. KiCad's "Part Number" field is
-// here since public boards (HackRF One, Cynthion) put their part numbers in it (agni 1285).
-var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "Part Number"}
+// here since public boards (HackRF One, Cynthion) put their part numbers in it (agni 1285), and
+// "PartNumber" since Altium boards (the foxBMS ones) spell some parts that way (agni 1349).
+var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "Part Number", "PartNumber"}
 
 // StampMPN fills ir.Component.mpn once at ingestion, for every format. It is a
 // DERIVED-NORMALIZATION pass under C9. No reader populates the field. A design built without the pass

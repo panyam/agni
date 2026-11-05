@@ -56,7 +56,7 @@ func main() {
 		if g == nil {
 			return demokit.Errf("%s carries no board geometry", board.Path())
 		}
-		fmt.Println(boardLines(g))
+		fmt.Println(common.BoardLines(g))
 		return nil
 	})
 
@@ -69,7 +69,7 @@ func main() {
 		if err != nil {
 			return demokit.Errf("read %s: %v", board.Path(), err)
 		}
-		fmt.Println(ruleTally(check.RunBackground(check.NewModel(d, check.WithBoard(g)), check.BuiltinRules())))
+		fmt.Println(common.RuleTally(check.RunBackground(check.NewModel(d, check.WithBoard(g)), check.BuiltinRules())))
 		return nil
 	})
 

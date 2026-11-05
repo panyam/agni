@@ -3,6 +3,7 @@ package allegro
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/panyam/agni/internal/latin1"
 	"math"
 	"strings"
 )
@@ -141,7 +142,7 @@ func (p *board) readStrings(n int) (int, error) {
 		if end >= len(p.b) {
 			return 0, fmt.Errorf("allegro: unterminated string %d", id)
 		}
-		p.strs[id] = latin1(p.b[off+4 : end])
+		p.strs[id] = latin1.Decode(p.b[off+4 : end])
 		off = align4(end + 1)
 	}
 	return off, nil
@@ -369,13 +370,5 @@ func cstring(b []byte) string {
 	if i := strings.IndexByte(string(b), 0); i >= 0 {
 		b = b[:i]
 	}
-	return latin1(b)
-}
-
-func latin1(b []byte) string {
-	r := make([]rune, len(b))
-	for i, c := range b {
-		r[i] = rune(c)
-	}
-	return string(r)
+	return latin1.Decode(b)
 }

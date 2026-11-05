@@ -636,7 +636,12 @@ func (b *boardBuilder) copper() error {
 
 // vias builds one Via per VIA subnet. Each sits at its drill hit and is drilled to the hit's size.
 // Its land is the widest copper pad under it, and it spans the drill layer's start and end.
+//
+// A via on no net may have no subnet at all: Altium's export drills it and marks the hit as a via,
+// and lists nothing for it in eda/data. So a drill hit marked via that no subnet claims becomes a
+// via on no net too (agni issue 1392).
 func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
+	claimed := map[string]map[int]bool{}
 	for _, n := range b.p.eda.nets {
 		name := n.name
 		if name == noNet {
@@ -665,6 +670,10 @@ func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 				w := b.symbol(ff, feat.sym).width()
 				switch {
 				case ml.typ == "DRILL" || f.typ == 'H':
+					if claimed[upper] == nil {
+						claimed[upper] = map[int]bool{}
+					}
+					claimed[upper][f.feat] = true
 					v.At, v.Drill, have = gp(feat.a), w, true
 					v.LayerFrom = b.names[strings.ToUpper(ml.startName)]
 					v.LayerTo = b.names[strings.ToUpper(ml.endName)]
@@ -684,6 +693,42 @@ func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 				v.LayerFrom, v.LayerTo = "F.Cu", "B.Cu"
 			}
 			nc := get(name)
+			nc.Vias = append(nc.Vias, v)
+		}
+	}
+	return b.unclaimedVias(get, claimed)
+}
+
+func (b *boardBuilder) unclaimedVias(get func(string) *geom.NetCopper, claimed map[string]map[int]bool) error {
+	for _, l := range b.p.matrix.layers {
+		if l.typ != "DRILL" {
+			continue
+		}
+		upper := strings.ToUpper(l.name)
+		ff, err := b.layerFeatures(upper)
+		if err != nil {
+			return err
+		}
+		for i := range ff.features {
+			f := &ff.features[i]
+			if !f.via || f.kind != featPad || claimed[upper][i] {
+				continue
+			}
+			v := &geom.Via{
+				At: gp(f.a), Drill: b.symbol(ff, f.sym).width(),
+				LayerFrom: b.names[strings.ToUpper(l.startName)], LayerTo: b.names[strings.ToUpper(l.endName)],
+			}
+			if v.LayerFrom == "" {
+				v.LayerFrom, v.LayerTo = "F.Cu", "B.Cu"
+			}
+			pad, pff, err := b.padAt(v.LayerFrom, f.a)
+			if err != nil {
+				return err
+			}
+			if pad != nil {
+				v.Size = b.symbol(pff, pad.sym).width()
+			}
+			nc := get("")
 			nc.Vias = append(nc.Vias, v)
 		}
 	}

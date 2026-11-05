@@ -118,6 +118,7 @@ func init() {
 	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readXML, Board: readXMLBoard})
 	registerODB()
 	registerAllegro()
+	registerAltium()
 }
 
 // readKicadProject merges the sibling .kicad_sch and .kicad_pcb that share the .kicad_pro's stem

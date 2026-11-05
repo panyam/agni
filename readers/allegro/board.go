@@ -2,6 +2,8 @@ package allegro
 
 import (
 	"fmt"
+	"github.com/panyam/agni/internal/boardlayer"
+	"github.com/panyam/agni/internal/geomath"
 	"math"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -53,23 +55,12 @@ func (p *board) copperLayers() []copperLayer {
 	for i := 0; i < n; i++ {
 		e := off + 4 + 12*i
 		out = append(out, copperLayer{
-			name:   copperName(i, n),
+			name:   boardlayer.CopperName(i, n),
 			source: p.str(le32(p.b, e)),
 			plane:  le32(p.b, e+4)&0x100 != 0,
 		})
 	}
 	return out
-}
-
-// copperName names copper index i of n: the first is F.Cu, the last B.Cu, and inner ones In1.Cu on.
-func copperName(i, n int) string {
-	switch {
-	case i == 0:
-		return "F.Cu"
-	case i == n-1:
-		return "B.Cu"
-	}
-	return fmt.Sprintf("In%d.Cu", i)
 }
 
 // artLayer names the silkscreen or fabrication layer a fixed subclass draws on, or "" for one the
@@ -282,7 +273,7 @@ func (b *boardBuilder) placements() {
 		g := &geom.ComponentPlacement{
 			RefDes:      pl.ref,
 			At:          b.pt(p.i32(pl.inst, 32), p.i32(pl.inst, 36)),
-			RotationDeg: normDeg(rot),
+			RotationDeg: geomath.NormDeg(rot),
 			Layer:       side,
 			Mirror:      bottom,
 			Prov:        &geom.Provenance{SourceFile: b.src, SourceId: pl.ref},
@@ -310,7 +301,7 @@ func (b *boardBuilder) pad(placedPad int, bottom bool) *geom.Pad {
 	pad := &geom.Pad{
 		Number:      p.str(p.u32(fp, 8)),
 		At:          b.pt(p.i32(fp, 16), p.i32(fp, 20)),
-		RotationDeg: normDeg(float64(p.u32(fp, 40)) / 1000),
+		RotationDeg: geomath.NormDeg(float64(p.u32(fp, 40)) / 1000),
 		Net:         p.padNet(placedPad),
 	}
 	ps, ok := p.at(p.u32(fp, 24), tagPadstack)
@@ -569,7 +560,7 @@ func (b *boardBuilder) text(off int, ref string) {
 	b.g.Texts = append(b.g.Texts, &geom.BoardText{
 		Text:        s,
 		At:          b.pt(p.i32(off, 40), p.i32(off, 44)),
-		RotationDeg: normDeg(float64(p.u32(off, 52)) / 1000),
+		RotationDeg: geomath.NormDeg(float64(p.u32(off, 52)) / 1000),
 		Height:      b.fontHeight(p.b[off+20]),
 		Layer:       layer,
 		Mirror:      p.b[off+23] == 1 || p.b[off+23] == 3,
@@ -598,13 +589,4 @@ func (b *boardBuilder) fontHeight(idx byte) int64 {
 		h = p.nm(float64(p.i32(item, 8)))
 	})
 	return h
-}
-
-// normDeg folds an angle into [0, 360).
-func normDeg(d float64) float64 {
-	d = math.Mod(d, 360)
-	if d < 0 {
-		d += 360
-	}
-	return d
 }
