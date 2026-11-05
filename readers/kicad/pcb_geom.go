@@ -73,9 +73,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 	}
 	g.Nets = netCopper(root, netName)
 	for _, z := range root.Children("zone") {
-		for _, zone := range zoneOutlines(z, netName) {
-			g.Zones = append(g.Zones, zone)
-		}
+		g.Zones = append(g.Zones, zoneOutlines(z, netName)...)
 	}
 	g.Texts = boardTexts(root)
 	g.Graphics = boardGraphics(root)
