@@ -252,3 +252,101 @@ func TestASPECCTRADesignIsRefusedAsOne(t *testing.T) {
 		t.Errorf("err %v, want a SPECCTRA design refused by name", err)
 	}
 }
+
+// TestOrCADDrawsEveryClayPageAndJoinsItsNetlist reads Clay R6's pages and holds them to its
+// netlist by name, the joins a viewer makes when it locates a part or a net. Each of the eleven
+// pages is a sheet, each block's under the top page. Every part draws once under the designator the
+// netlist gives it, no placement is left undrawn, and every wire that reaches a pin, power symbol
+// or port names a net the netlist has.
+func TestOrCADDrawsEveryClayPageAndJoinsItsNetlist(t *testing.T) {
+	l := &Loader{}
+	top := clayR6 + "CLAYR6.DSN"
+	d, err := l.ReadDesign(top)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := l.FaithfulGeometry(top)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.GetDesignRef() != d.GetName() || g.GetUnitNm() != 254000 {
+		t.Errorf("geometry for %q in %d nm units, want %q in Capture's 254000", g.GetDesignRef(), g.GetUnitNm(), d.GetName())
+	}
+	sheets := g.GetSheets()
+	if len(sheets) != 11 {
+		t.Fatalf("%d sheets, want Clay's top page and its ten blocks", len(sheets))
+	}
+	root := sheets[0].GetId()
+	for _, s := range sheets[1:] {
+		if s.GetParentId() != root {
+			t.Errorf("sheet %q has parent %q, want the top page %q", s.GetName(), s.GetParentId(), root)
+		}
+	}
+	if u := g.GetUndrawn(); len(u) != 0 {
+		t.Errorf("%d placements did not draw: %v", len(u), u)
+	}
+
+	parts := map[string]bool{}
+	for _, c := range d.GetComponents() {
+		parts[c.GetRefDes()] = true
+	}
+	nets := map[string]bool{}
+	for _, n := range d.GetNets() {
+		nets[n.GetName()] = true
+	}
+	drawn := map[string]int{}
+	named, anchored := 0, 0
+	for _, s := range sheets {
+		for _, p := range s.GetPlacements() {
+			if p.GetRefDes() == "" {
+				// A power symbol or port names the net it touches, and that net must be the netlist's.
+				if a := p.GetNetAnchor(); a != "" {
+					anchored++
+					if !nets[a] {
+						t.Errorf("sheet %q anchors a symbol to %q, which the netlist lacks", s.GetName(), a)
+					}
+				}
+				continue
+			}
+			drawn[p.GetRefDes()]++
+			if !parts[p.GetRefDes()] {
+				t.Errorf("sheet %q draws %s, which the netlist lacks", s.GetName(), p.GetRefDes())
+			}
+		}
+		for _, w := range s.GetWires() {
+			if w.GetNet() == "" {
+				continue
+			}
+			named++
+			if !nets[w.GetNet()] {
+				t.Errorf("sheet %q draws a wire on %q, which the netlist lacks", s.GetName(), w.GetNet())
+			}
+		}
+	}
+	if len(drawn) != len(parts) || len(drawn) != 149 {
+		t.Errorf("%d parts drawn of the netlist's %d, want all 149", len(drawn), len(parts))
+	}
+	for r, n := range drawn {
+		if n != 1 {
+			t.Errorf("%s draws %d times, want once", r, n)
+		}
+	}
+	// A resistor shows neither its pins' names nor their numbers, and the microcontroller shows both,
+	// as each part's cached flags say.
+	shows := map[string][2]bool{}
+	for _, sd := range g.GetSymbols() {
+		if len(sd.GetPins()) > 0 {
+			p := sd.GetPins()[0]
+			shows[strings.SplitN(sd.GetCellRef(), "|", 2)[0]] = [2]bool{p.GetLabelOrigin() != nil, p.GetNumberOrigin() != nil}
+		}
+	}
+	if got := shows["RESISTOR.Normal"]; got != [2]bool{false, false} {
+		t.Errorf("a resistor's pin shows name and number %v, want neither", got)
+	}
+	if got := shows["MK64FN1M0VLL12.Normal"]; got != [2]bool{true, true} {
+		t.Errorf("the microcontroller's pin shows name and number %v, want both", got)
+	}
+	if named < 150 || anchored < 200 {
+		t.Errorf("%d wires and %d symbols name a net, want most of Clay's", named, anchored)
+	}
+}

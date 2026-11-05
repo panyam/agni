@@ -570,7 +570,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   even when the pin is flagged no-connect. `TestOrCADReadsAsClaysNetlist` holds Clay R6 to
   `pstxnet.dat` with only the seven `NC` pins listed, and `TestOrCADJoinsClaysBoard` holds it to
   `CLAYR6.brd` by designator. Net NAMES are not yet Capture's, since `pstxnet.dat` cuts them at 31
-  characters and numbers unnamed nets from ids the reader has not decoded.
+  characters and numbers unnamed nets from ids the reader has not decoded. **The pages draw too**
+  (agni 1400, `readers/orcad/geometry.go`), and the file checks the transform itself: every placed pin
+  stores its page position, and `TestEveryPlacedPinLandsWhereThePageStoresIt` holds all 573 of Clay's
+  to `geomath.PlacePin`. A power symbol or port is placed from its stored box's corner, never its
+  anchor, which sits above a supply's box. Clay places nothing mirrored, so no file checks the mirror bit.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out

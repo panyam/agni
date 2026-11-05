@@ -29,6 +29,10 @@ Agni ->> Agni: open each block's .DSN
 Agni -->> You: *ir.Design, flattened
 ```
 
+## Draw the pages {#pages}
+
+> Each page is a sheet, and each block's page sits under the page that places it. A part draws its own symbol, turned the way Capture turned it, and a power symbol or port is drawn as a symbol that names its net. Run `agni render CLAYR6.DSN --sheet 1` to draw the first block as an SVG.
+
 ## Run the checks {#check}
 
 > The checks run over the flattened design as they run over any netlist. The schematic carries no board, so the copper rules have nothing to judge.

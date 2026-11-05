@@ -1,5 +1,5 @@
 // Command orcad-design reads an OrCAD Capture design straight from its .DSN files, every block it
-// places included, and runs the checks over it. The narration lives in the sidecar walkthrough.md.
+// places included, draws its pages, and runs the checks over it. The narration lives in the sidecar walkthrough.md.
 //
 // Nobody can author a synthetic Capture design without Capture, so this example reads a public one
 // from the pinned samples corpus (CONSTRAINTS C10): Clay R6, fetched by `make samples-oracle` into
@@ -16,6 +16,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/examples/common"
+	"github.com/panyam/agni/readers/formats"
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog
 	"github.com/panyam/demokit"
 )
@@ -50,6 +51,18 @@ func main() {
 			fmt.Println(note)
 		} else {
 			fmt.Println("Every block the design places was read.")
+		}
+		return nil
+	})
+
+	demo.Bind("pages").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		g, err := (&formats.Loader{}).FaithfulGeometry(design.Path())
+		if err != nil {
+			return demokit.Errf("read %s: %v", design.Path(), err)
+		}
+		fmt.Println(common.GeomStatsLines(g))
+		for _, s := range g.GetSheets() {
+			fmt.Printf("  %-22s %3d parts and symbols, %3d wires\n", s.GetName(), len(s.GetPlacements()), len(s.GetWires()))
 		}
 		return nil
 	})

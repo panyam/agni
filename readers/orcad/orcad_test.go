@@ -115,9 +115,8 @@ func TestPowerSymbolsJoinAcrossBlocksAndAPortBindsItsOwn(t *testing.T) {
 		11: {target: 11, nested: &scope{occ: map[uint32]*occurrence{1: {target: 1, ref: "R3"}}}},
 	}}
 	open := func(from, ref string) (string, []byte, error) { return ref, nil, nil }
-	f := &flattener{open: open, designs: map[string]*dsn{"top.dsn": td, "a.dsn": a, "b.dsn": b},
-		globals: map[string]bool{}, sets: sets{parent: map[string]string{}}, names: map[string][]netName{},
-		genName: map[string]netName{}, pins: map[string][2]string{}}
+	f := newFlattener(td, open)
+	f.designs["a.dsn"], f.designs["b.dsn"] = a, b
 	if err := f.walk(td, td.root, "", td.occ, 0, map[string]bool{}); err != nil {
 		t.Fatal(err)
 	}

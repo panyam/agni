@@ -96,6 +96,7 @@ func TestTurnToMeasuresInTheArcsDirection(t *testing.T) {
 var segmentRangeAllowed = map[string]string{
 	"stdlib/rules/builtin/rule_netclass_conformance.go": "ranges over check.BoardNet's BoardSegs, chorded by the model",
 	"stdlib/rules/builtin/rule_copper_clearance.go":     "ranges over check.BoardNet's BoardSegs, chorded by the model",
+	"stdlib/relations/facts.go":                         "ranges over check.BoardNet's BoardSegs for their width and layer, chorded by the model",
 }
 
 func TestEveryTrackSegmentConsumerSeesArcs(t *testing.T) {

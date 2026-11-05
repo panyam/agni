@@ -16,9 +16,12 @@
 // Assembly variants live in the project file and are not read. The board geometry carries the
 // copper stack in physical order, renamed into the contract's F.Cu/In<n>.Cu/B.Cu vocabulary, every
 // placement with footprint-local pads sized from the top copper, tracks, arc tracks as arcs, vias,
-// polygon pour outlines with their nets, the board outline, and silkscreen lines, arcs and text.
-// Poured copper, a graphical component's copper (a layer marker), fills, per-layer pad stacks,
-// mechanical layers, rules and classes are not kept, and a drilled pad no part owns is kept as a via.
+// polygon pour outlines with their nets as zones, the copper regions a pour filled and solid regions
+// as copper shapes with their holes (Regions6, agni 1410), the board outline, and silkscreen lines,
+// arcs and text. Region arcs are approximated by chords, as Regions6 stores them. A graphical
+// component's copper (a layer marker), the tracks a hatched pour drew, fills (Fills6), per-layer
+// pad stacks, mechanical layers, rules and classes are not kept, and a drilled pad no part owns is
+// kept as a via.
 // Coordinates are integer nanometres (unit_nm=1) from the board's origin, Y up.
 package altium
 

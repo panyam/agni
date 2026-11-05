@@ -75,6 +75,8 @@ const (
 	RelBoardTrackWidth = "board.track_width" // board.track_width(net, mm): the net's MINIMUM copper width. doc: facts/docs/board.track_width.md
 	RelBoardViaDrill   = "board.via_drill"   // board.via_drill(net, mm): the net's MINIMUM via drill. doc: facts/docs/board.via_drill.md
 	RelBoardLayer      = "board.layer"       // board.layer(net, layer): a layer the net's copper occupies. doc: facts/docs/board.layer.md
+	RelBoardCopper     = "board.copper"      // board.copper(net, layer, kind): the net has copper of a kind (track, via, pour) on a layer. doc: facts/docs/board.copper.md
+	RelBoardZone       = "board.zone"        // board.zone(net, layer): a zone the designer drew for the net on a layer. doc: facts/docs/board.zone.md
 
 	// Pin-level and per-net netlist relations (WS3-038), each a projection of an existing Model
 	// method. pin.net is absent for an unconnected pin, so `not pin.net(?r,?p,?_)` reads as
@@ -1179,7 +1181,50 @@ func boardFacts(m check.Model) []facts.Row {
 		for _, layer := range netLayers(bn.Segments) {
 			out = append(out, facts.Row{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cites: cites})
 		}
+		for _, c := range netCopper(bn) {
+			out = append(out, facts.Row{Relation: RelBoardCopper, Subject: bn.Net, Object: c[0], Value: c[1], Cites: cites})
+		}
 	}
+	seen := map[[2]string]bool{}
+	for _, z := range m.BoardZones() {
+		k := [2]string{z.Net, z.Layer}
+		if z.Layer == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, facts.Row{Relation: RelBoardZone, Subject: z.Net, Object: z.Layer, Cites: cite("board zone " + z.Net + " on " + z.Layer)})
+	}
+	return out
+}
+
+// netCopper lists the (layer, kind) pairs a net's copper occupies, once each, in a stable order:
+// track and pour by the layer they lie on, and a via on the two layers it joins (agni 1410).
+func netCopper(bn check.BoardNet) [][2]string {
+	seen := map[[2]string]bool{}
+	var out [][2]string
+	add := func(layer, kind string) {
+		k := [2]string{layer, kind}
+		if layer != "" && !seen[k] {
+			seen[k] = true
+			out = append(out, k)
+		}
+	}
+	for _, s := range bn.Segments {
+		add(s.Layer, "track")
+	}
+	for _, v := range bn.Vias {
+		add(v.LayerFrom, "via")
+		add(v.LayerTo, "via")
+	}
+	for _, s := range bn.Shapes {
+		add(s.Layer, "pour")
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i][0] != out[j][0] {
+			return out[i][0] < out[j][0]
+		}
+		return out[i][1] < out[j][1]
+	})
 	return out
 }
 

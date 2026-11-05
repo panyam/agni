@@ -97,9 +97,11 @@ var builtinSchema = map[string][]facts.Field{
 	RelNetDeclaredTrackWidth: {facts.FieldSubject, facts.FieldNum},                      // net.declared_track_width(net, mm), WS3-111
 	RelNetDeclaredViaDrill:   {facts.FieldSubject, facts.FieldNum},                      // net.declared_via_drill(net, mm), WS3-111
 	// Board tier, queryable with no evaluator change (tier-generality).
-	RelBoardTrackWidth: {facts.FieldSubject, facts.FieldNum},    // board.track_width(net, mm)
-	RelBoardViaDrill:   {facts.FieldSubject, facts.FieldNum},    // board.via_drill(net, mm)
-	RelBoardLayer:      {facts.FieldSubject, facts.FieldObject}, // board.layer(net, layer)
+	RelBoardTrackWidth: {facts.FieldSubject, facts.FieldNum},                      // board.track_width(net, mm)
+	RelBoardViaDrill:   {facts.FieldSubject, facts.FieldNum},                      // board.via_drill(net, mm)
+	RelBoardLayer:      {facts.FieldSubject, facts.FieldObject},                   // board.layer(net, layer)
+	RelBoardCopper:     {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // board.copper(net, layer, kind)
+	RelBoardZone:       {facts.FieldSubject, facts.FieldObject},                   // board.zone(net, layer)
 }
 
 // builtinCatalog is the human-facing metadata for the built-in relations: the picker's name, arg
@@ -114,6 +116,8 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "volts": {Unit: unitVolt}}, Summary: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage", Kind: facts.KindNetlist},
 	{Name: "net.signal_level", Args: []string{"net", "volts"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "volts": {Unit: unitVolt}}, Summary: "the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal; a regulator internal is on neither relation", Kind: facts.KindNetlist},
 	{Name: "board.layer", Args: []string{"net", "layer"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net appears on a board copper layer", Kind: facts.KindBoard},
+	{Name: "board.copper", Args: []string{"net", "layer", "kind"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "kind": {ValidOptions: []string{"track", "via", "pour"}}}, Summary: "a net has copper of a kind (track, via or pour) on a board layer, as etched", Kind: facts.KindBoard},
+	{Name: "board.zone", Args: []string{"net", "layer"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the designer drew a zone to be filled with a net on a board layer; intent, not copper", Kind: facts.KindBoard},
 	{Name: "board.track_width", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "mm": {Unit: unitMetre}}, Summary: "a copper track's width on a net (metres, shown in mm)", Kind: facts.KindBoard},
 	{Name: "board.via_drill", Args: []string{"net", "mm"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}, "mm": {Unit: unitMetre}}, Summary: "a via's drill diameter on a net (metres, shown in mm)", Kind: facts.KindBoard},
 	{Name: "component.pin", Args: []string{"ref_des", "pin"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}, "pin": {Entity: check.KindPin, OwnerArg: "ref_des"}}, Summary: "a part-type pin of a placed component", Kind: facts.KindNetlist},

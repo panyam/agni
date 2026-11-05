@@ -742,7 +742,8 @@ always flattened. Each part takes the designator Capture annotated across the hi
 carries the same one. A block whose file is missing is named in a note, and the design reads
 without it. A pin flagged not connected reads on no net. Only Capture's modern format is read, and a
 design in the legacy format is refused with its version named. SPECCTRA router files share the
-extension and are plain text, so agni refuses one as SPECCTRA. The schematic is not drawn yet (agni issue 1400).
+extension and are plain text, so agni refuses one as SPECCTRA. Each page draws as a sheet, each
+block's under the page that places it, so `agni render design.DSN --sheet 1` draws the first block.
 
 A schematic that references external symbols resolves them by one of three routes, in the order they
 are searched: its own `sym-lib-table` for a KiCad project, the `symbols` libraries its design and project

@@ -73,6 +73,12 @@ func (r *RecordingModel) BoardNets() []BoardNet {
 	return r.Model.BoardNets()
 }
 
+// BoardZones reads the board tier.
+func (r *RecordingModel) BoardZones() []BoardZone {
+	r.note(TierBoard)
+	return r.Model.BoardZones()
+}
+
 // Pins reads the connectivity tier, everything sourced from a component's pins. A placement that
 // lost its symbol has none of it.
 func (r *RecordingModel) Pins() []PinInst {

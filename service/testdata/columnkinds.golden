@@ -1,10 +1,15 @@
 absent	arg0=value	kind=""	kindVar=""	ref=-
+board.copper	arg0=net	kind="net"	kindVar=""	ref=-
+board.copper	arg1=layer	kind=""	kindVar=""	ref=-
+board.copper	arg2=kind	kind=""	kindVar=""	ref=-
 board.layer	arg0=net	kind="net"	kindVar=""	ref=-
 board.layer	arg1=layer	kind=""	kindVar=""	ref=-
 board.track_width	arg0=net	kind="net"	kindVar=""	ref=-
 board.track_width	arg1=mm	kind=""	kindVar=""	ref=-
 board.via_drill	arg0=net	kind="net"	kindVar=""	ref=-
 board.via_drill	arg1=mm	kind=""	kindVar=""	ref=-
+board.zone	arg0=net	kind="net"	kindVar=""	ref=-
+board.zone	arg1=layer	kind=""	kindVar=""	ref=-
 bus	arg0=label	kind=""	kindVar=""	ref=-
 bus	arg1=kind	kind=""	kindVar=""	ref=-
 coalesce	arg0=value	kind=""	kindVar=""	ref=-
