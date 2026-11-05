@@ -691,6 +691,13 @@ allows no spaces in a name, so a net the schematic calls `/USB Hub/VBUS` arrives
 and the diff reports it renamed. Members a producer compressed (`features.Z`, `.gz`) are read as
 well.
 
+A Cadence Allegro board (`.brd`) reads as a netlist and as a board, as an ODB++ job does, so
+`agni check board.brd` needs no export from Allegro. Only boards saved by Allegro 17.2 are read so far;
+a board from another release is refused with the release named, and an Eagle board, which shares the
+extension, is refused as Eagle. The reader keeps the copper, pads, vias, zone outlines, outline and
+silkscreen. It does not yet read the board's constraint sets, so `track-width` and `copper-clearance`
+judge an Allegro board against their fixed floors.
+
 A schematic that references external symbols resolves them by one of three routes, in the order they
 are searched: its own `sym-lib-table` for a KiCad project, the `symbols` libraries its design and project
 descriptors name, and any `--symbol-path` directory. A design
