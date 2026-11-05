@@ -54,8 +54,8 @@ github.com/panyam/gocurrent v0.1.2 h1:MtD98xJKVvGGdMrxIvUqhVA7AxA6rr9eU1ZUo5pNoy
 github.com/panyam/gocurrent v0.1.2/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.14 h1:PWM5jAzTSVHjWXbHD0CaifskSETFKHKaKIK5HrOg/uE=
 github.com/panyam/goutils v0.1.14/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
-github.com/panyam/jaala v0.1.88 h1:EUEZP7mEEVJZu2d4NQn9FVH+4lWLZW/4/cqpMEa+mfY=
-github.com/panyam/jaala v0.1.88/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
+github.com/panyam/jaala v0.1.92 h1:JsCbyoOZQTi380FTm1LRIgiHwa+VnmyxLiZL/8IOekA=
+github.com/panyam/jaala v0.1.92/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=

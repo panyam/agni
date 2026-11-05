@@ -193,6 +193,10 @@ str.contains	arg1=substring	kind=""	kindVar=""	ref=-
 str.distance	arg0=string	kind=""	kindVar=""	ref=-
 str.distance	arg1=other	kind=""	kindVar=""	ref=-
 str.distance	arg2=distance	kind=""	kindVar=""	ref=-
+str.find	arg0=string	kind=""	kindVar=""	ref=-
+str.find	arg1=regex	kind=""	kindVar=""	ref=-
+str.find	arg2=index	kind=""	kindVar=""	ref=-
+str.find	arg3=match	kind=""	kindVar=""	ref=-
 str.glob	arg0=string	kind=""	kindVar=""	ref=-
 str.glob	arg1=pattern	kind=""	kindVar=""	ref=-
 str.lower	arg0=string	kind=""	kindVar=""	ref=-
