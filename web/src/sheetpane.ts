@@ -116,26 +116,29 @@ export class SheetPane {
     this.linkSelect.addEventListener("change", () => {
       this.link = this.linkSelect.value as Link;
     });
-    const button = (cls: string, text: string, title: string, act: () => void): HTMLButtonElement => {
+    // Each turn control names its action in data-action, which the cross-probe walk and the view's
+    // own tests click by (web/browser/cross-probe-walk.spec.ts).
+    const button = (cls: string, action: string, text: string, title: string, act: () => void): HTMLButtonElement => {
       const b = el("button", `mode-btn ${cls}`) as HTMLButtonElement;
       b.type = "button";
+      b.dataset.action = action;
       b.textContent = text;
       b.title = title;
       b.addEventListener("click", act);
       return b;
     };
-    const rotate = button("sheetview-rotate", "⟳ 90°", "turn this view a quarter turn clockwise", () =>
+    const rotate = button("sheetview-rotate", "rotate", "⟳ 90°", "turn this view a quarter turn clockwise", () =>
       this.setTurn({ ...this.turn, orientation: rotateBy(this.turn.orientation) }),
     );
-    const flipH = button("sheetview-flip-h", "⇆", "flip this view left to right", () =>
+    const flipH = button("sheetview-flip-h", "flip-h", "⇆", "flip this view left to right", () =>
       this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") }),
     );
-    const flipV = button("sheetview-flip-v", "⇅", "flip this view top to bottom", () =>
+    const flipV = button("sheetview-flip-v", "flip-v", "⇅", "flip this view top to bottom", () =>
       this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "v") }),
     );
     // The bottom view turns the board over left to right and draws its back copper nearest, as the
     // board looks from underneath.
-    this.bottomButton = button("sheetview-bottom", "Bottom", "look at the board from underneath", () =>
+    this.bottomButton = button("sheetview-bottom", "bottom", "Bottom", "look at the board from underneath", () =>
       this.setTurn({ orientation: flip(this.turn.orientation, "h"), bottom: !this.turn.bottom }),
     );
     const float = el("button", "mode-btn sheetview-float") as HTMLButtonElement;
@@ -279,6 +282,10 @@ export class SheetPane {
     const svg = this.host.querySelector("svg");
     if (svg) orderStrata(svg, this.sheet === BOARD_SHEET && this.turn.bottom);
     this.bottomButton.classList.toggle("active", this.turn.bottom);
+    // The view states how it is turned, for a walk or a test to read without decoding a transform.
+    // data-side is the side of the board nearest the reader, "back" in the bottom view.
+    this.element.dataset.rotation = String(this.turn.orientation.rot);
+    this.element.dataset.side = this.turn.bottom ? "back" : "front";
     this.view.setOrientation(this.turn.orientation);
   }
 
