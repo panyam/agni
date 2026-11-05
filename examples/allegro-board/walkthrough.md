@@ -12,7 +12,7 @@ actors:
 
 Allegro boards usually reach other tools as an ODB++ or IPC-2581 export, and someone with an Allegro licence has to make it. Agni reads the `.brd` itself, so you can check a board you were only sent.
 
-Only boards saved by Allegro 17.2 are read so far. A board from another release is refused with the release named.
+Boards saved by Allegro 16.6 and 17.2 are read so far. A board from another release is refused with the release named.
 
 ## Pick a board {#pick}
 

@@ -5,6 +5,7 @@ import (
 	"github.com/panyam/agni/internal/boardlayer"
 	"github.com/panyam/agni/internal/geomath"
 	"math"
+	"sort"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
@@ -164,9 +165,9 @@ func (b *boardBuilder) outline() {
 		var head uint32
 		switch tag {
 		case tagShape:
-			head = p.u32(off, 40)
+			head = p.u32(off, p.l.shapeSegs)
 		case tagGraphic:
-			head = p.u32(off, 24)
+			head = p.u32(off, p.l.graphSegs)
 		default:
 			return
 		}
@@ -178,6 +179,34 @@ func (b *boardBuilder) outline() {
 	p.list(listRects, visit)
 	if !found {
 		p.list(listGraphics, visit)
+	}
+	if !found {
+		b.symbolOutline()
+	}
+}
+
+// symbolOutline is the board edge drawn as a rectangle inside a placed mechanical symbol, a
+// footprint with no designator. Clay R6 draws its edge that way, as the design outline of its
+// CLAY_R6_BOARD_2X2 symbol. A placed symbol's areas are board-absolute. The rectangles are taken in
+// file order, so the outline reads the same every time.
+func (b *boardBuilder) symbolOutline() {
+	p := b.p
+	var rects []int
+	for _, off := range p.keys {
+		if p.b[off] != tagRect || p.b[off+2] != classBoardGeom || (p.b[off+3] != subOutline && p.b[off+3] != subFmtOutline) {
+			continue
+		}
+		if owner, ok := p.at(p.u32(off, 12), tagFootInst); ok {
+			if _, designated := p.at(p.u32(owner, p.l.fiInstRef), tagCompInst); !designated {
+				rects = append(rects, off)
+			}
+		}
+	}
+	sort.Ints(rects)
+	for _, off := range rects {
+		c := p.l.rectCoords
+		x0, y0, x1, y1 := p.i32(off, c), p.i32(off, c+4), p.i32(off, c+8), p.i32(off, c+12)
+		b.g.Outline = appendOutline(b.g.Outline, []*geom.Point{b.pt(x0, y0), b.pt(x1, y0), b.pt(x1, y1), b.pt(x0, y1), b.pt(x0, y0)})
 	}
 }
 
@@ -207,10 +236,11 @@ func (b *boardBuilder) path(head, owner uint32) []*geom.Point {
 func (b *boardBuilder) segments(head, owner uint32, visit func(pts []*geom.Point, width int64)) {
 	p := b.p
 	p.chain(head, owner, next8, func(off int) {
-		width := p.nm(float64(p.u32(off, 24)))
+		w := p.l.segWidth
+		width := p.nm(float64(p.u32(off, w)))
 		switch p.b[off] {
 		case tagLineH, tagLineD, tagLineV:
-			visit([]*geom.Point{b.pt(p.i32(off, 28), p.i32(off, 32)), b.pt(p.i32(off, 36), p.i32(off, 40))}, width)
+			visit([]*geom.Point{b.pt(p.i32(off, w+4), p.i32(off, w+8)), b.pt(p.i32(off, w+12), p.i32(off, w+16))}, width)
 		case tagArc:
 			visit(b.arc(off), width)
 		}
@@ -221,9 +251,10 @@ func (b *boardBuilder) segments(head, owner uint32, visit func(pts []*geom.Point
 // end is a full circle. Bit 6 of the subtype byte marks a clockwise sweep.
 func (b *boardBuilder) arc(off int) []*geom.Point {
 	p := b.p
-	sx, sy := float64(p.i32(off, 28)), float64(p.i32(off, 32))
-	ex, ey := float64(p.i32(off, 36)), float64(p.i32(off, 40))
-	cx, cy, r := p.float(off, 44), p.float(off, 52), p.float(off, 60)
+	s, e, c := p.l.arcStart(), p.l.arcEnd(), p.l.arcCentre()
+	sx, sy := float64(p.i32(off, s)), float64(p.i32(off, s+4))
+	ex, ey := float64(p.i32(off, e)), float64(p.i32(off, e+4))
+	cx, cy, r := p.float(off, c), p.float(off, c+8), p.float(off, c+16)
 	start := math.Atan2(sy-cy, sx-cx)
 	end := math.Atan2(ey-cy, ex-cx)
 	cw := p.b[off+3]&0x40 != 0
@@ -263,7 +294,7 @@ func samePoint(a, b *geom.Point) bool { return a.GetX() == b.GetX() && a.GetY() 
 func (b *boardBuilder) placements() {
 	p := b.p
 	for _, pl := range p.placements() {
-		rot := float64(p.u32(pl.inst, 28)) / 1000
+		rot := float64(p.u32(pl.inst, p.l.fiRot)) / 1000
 		bottom := p.b[pl.inst+2] == 1
 		side := "F.Cu"
 		if bottom {
@@ -272,13 +303,13 @@ func (b *boardBuilder) placements() {
 		}
 		g := &geom.ComponentPlacement{
 			RefDes:      pl.ref,
-			At:          b.pt(p.i32(pl.inst, 32), p.i32(pl.inst, 36)),
+			At:          b.pt(p.i32(pl.inst, p.l.fiX), p.i32(pl.inst, p.l.fiX+4)),
 			RotationDeg: geomath.NormDeg(rot),
 			Layer:       side,
 			Mirror:      bottom,
 			Prov:        &geom.Provenance{SourceFile: b.src, SourceId: pl.ref},
 		}
-		p.chain(p.u32(pl.inst, 48), p.u32(pl.inst, 4), func(byte) int { return 24 }, func(pp int) {
+		p.chain(p.u32(pl.inst, p.l.fiPads), p.u32(pl.inst, 4), func(byte) int { return p.l.ppNextInFp }, func(pp int) {
 			if p.b[pp] != tagPlacedPad {
 				return
 			}
@@ -294,14 +325,14 @@ func (b *boardBuilder) placements() {
 // pad builds one placed pad from the footprint pad it copies and that pad's padstack.
 func (b *boardBuilder) pad(placedPad int, bottom bool) *geom.Pad {
 	p := b.p
-	fp, ok := p.at(p.u32(placedPad, 36), tagPad)
+	fp, ok := p.at(p.u32(placedPad, p.l.ppPad), tagPad)
 	if !ok {
 		return nil
 	}
 	pad := &geom.Pad{
 		Number:      p.str(p.u32(fp, 8)),
 		At:          b.pt(p.i32(fp, 16), p.i32(fp, 20)),
-		RotationDeg: geomath.NormDeg(float64(p.u32(fp, 40)) / 1000),
+		RotationDeg: geomath.NormDeg(float64(p.u32(fp, p.l.padRot)) / 1000),
 		Net:         p.padNet(placedPad),
 	}
 	ps, ok := p.at(p.u32(fp, 24), tagPadstack)
@@ -334,19 +365,24 @@ type stack struct {
 	start, count int
 }
 
-// padstack reads a 0x1C. Its components follow a 192-byte header: 21 fixed technical-layer slots,
-// then four per copper layer (antipad, thermal relief, pad, and one unknown). The pad of the first
-// spanned layer is slot 23.
+// padSlot is the pad's slot within a copper layer's components, after the antipad and the thermal
+// relief.
+const padSlot = 2
+
+// padstack reads a 0x1C. Its components follow a header: fixed technical-layer slots (21 in 17.2,
+// 11 in 16.6), then the slots of each copper layer (four in 17.2, three in 16.6). The pad of the
+// first spanned layer is read.
 func (b *boardBuilder) padstack(off int) stack {
 	p := b.p
-	st := stack{start: int(p.b[off+3]), count: int(le16(p.b, off+44))}
+	l := p.l
+	st := stack{start: int(p.b[off+3]), count: int(le16(p.b, off+l.psCount))}
 	if st.count > 0 {
-		c := off + 192 + 36*23
+		c := off + l.psHeader + l.psComp*(l.psFixed+padSlot)
 		st.shape = padShape(p.b[c])
-		st.size = &geom.Point{X: p.nm(float64(p.i32(c, 8))), Y: p.nm(float64(p.i32(c, 12)))}
+		st.size = &geom.Point{X: p.nm(float64(p.i32(c, l.psW))), Y: p.nm(float64(p.i32(c, l.psW+4)))}
 	}
-	drill := p.u32(off, 64)
-	if sx, sy := p.u32(off, 76), p.u32(off, 80); sy > 0 && sy < sx {
+	drill := p.u32(off, l.psDrill)
+	if sx, sy := p.u32(off, l.psSlotX), p.u32(off, l.psSlotY); sy > 0 && sy < sx {
 		drill = sy // a slot is drawn by its narrower dimension, the drill bit's
 	}
 	st.drill = p.nm(float64(drill))
@@ -381,7 +417,7 @@ func (b *boardBuilder) copper() {
 	p.list(listNets, func(net int) {
 		name := p.str(p.u32(net, 12))
 		nc := &geom.NetCopper{Net: name}
-		p.chain(p.u32(net, 28), p.u32(net, 4), next8, func(asg int) {
+		p.chain(p.u32(net, p.l.netAssign), p.u32(net, 4), next8, func(asg int) {
 			if p.b[asg] != tagNetAssign {
 				return
 			}
@@ -411,7 +447,7 @@ func (b *boardBuilder) track(off int, nc *geom.NetCopper) {
 	if layer == "" {
 		return
 	}
-	b.segments(p.u32(off, 56), p.u32(off, 4), func(pts []*geom.Point, width int64) {
+	b.segments(p.u32(off, p.l.trackSegs), p.u32(off, 4), func(pts []*geom.Point, width int64) {
 		for i := 1; i < len(pts); i++ {
 			nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i-1], B: pts[i], Width: width, Layer: layer})
 		}
@@ -422,8 +458,8 @@ func (b *boardBuilder) track(off int, nc *geom.NetCopper) {
 // layer, or every layer, is a through via.
 func (b *boardBuilder) via(off int, nc *geom.NetCopper) {
 	p := b.p
-	v := &geom.Via{At: b.pt(p.i32(off, 32), p.i32(off, 36)), LayerFrom: "F.Cu", LayerTo: "B.Cu"}
-	if ps, ok := p.at(p.u32(off, 44), tagPadstack); ok {
+	v := &geom.Via{At: b.pt(p.i32(off, p.l.viaX), p.i32(off, p.l.viaX+4)), LayerFrom: "F.Cu", LayerTo: "B.Cu"}
+	if ps, ok := p.at(p.u32(off, p.l.viaPadstack), tagPadstack); ok {
 		st := b.padstack(ps)
 		v.Drill = st.drill
 		if st.size != nil {
@@ -450,7 +486,7 @@ func (b *boardBuilder) zones() {
 		if layer == "" {
 			return
 		}
-		outline := b.path(p.u32(off, 40), p.u32(off, 4))
+		outline := b.path(p.u32(off, p.l.shapeSegs), p.u32(off, 4))
 		if len(outline) < 3 {
 			return
 		}
@@ -460,11 +496,11 @@ func (b *boardBuilder) zones() {
 
 func (b *boardBuilder) zoneNet(shape int) string {
 	p := b.p
-	tbl, ok := p.at(p.u32(shape, 52), tagTable)
+	tbl, ok := p.at(p.u32(shape, p.l.shapeTable), tagTable)
 	if !ok {
 		return ""
 	}
-	arr, ok := p.at(p.u32(tbl, 28), tagPtrArray)
+	arr, ok := p.at(p.u32(tbl, p.l.tablePtr1), tagPtrArray)
 	if !ok {
 		return ""
 	}
@@ -480,12 +516,12 @@ func (b *boardBuilder) zoneNet(shape int) string {
 func (b *boardBuilder) footprintArt(pl placed) {
 	p := b.p
 	instKey := p.u32(pl.inst, 4)
-	p.chain(p.u32(pl.inst, 44), instKey, next8, func(off int) {
+	p.chain(p.u32(pl.inst, p.l.fiGraphics), instKey, next8, func(off int) {
 		if p.b[off] == tagGraphic {
 			b.graphic(off, pl.ref)
 		}
 	})
-	p.chain(p.u32(pl.inst, 52), instKey, next8, func(off int) {
+	p.chain(p.u32(pl.inst, p.l.fiText), instKey, next8, func(off int) {
 		if p.b[off] == tagText {
 			b.text(off, pl.ref)
 		}
@@ -501,7 +537,7 @@ func (b *boardBuilder) boardArt() {
 		}
 	})
 	p.list(listText, func(off int) {
-		if p.b[off] == tagText && p.u32(off, 32) == 0 {
+		if p.b[off] == tagText && p.u32(off, p.l.textGroup) == 0 {
 			b.text(off, "")
 		}
 	})
@@ -513,7 +549,7 @@ func (b *boardBuilder) graphic(off int, ref string) {
 	if layer == "" {
 		return
 	}
-	b.segments(p.u32(off, 24), p.u32(off, 4), func(pts []*geom.Point, width int64) {
+	b.segments(p.u32(off, p.l.graphSegs), p.u32(off, 4), func(pts []*geom.Point, width int64) {
 		b.g.Graphics = append(b.g.Graphics, &geom.BoardGraphic{
 			Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts},
 			Layer: layer, RefDes: ref, Width: width,
@@ -528,7 +564,7 @@ func (b *boardBuilder) text(off int, ref string) {
 	if layer == "" {
 		return
 	}
-	sg, ok := p.at(p.u32(off, 28), tagStrGraphic)
+	sg, ok := p.at(p.u32(off, p.l.textStr), tagStrGraphic)
 	if !ok {
 		return
 	}
@@ -559,8 +595,8 @@ func (b *boardBuilder) text(off int, ref string) {
 	}
 	b.g.Texts = append(b.g.Texts, &geom.BoardText{
 		Text:        s,
-		At:          b.pt(p.i32(off, 40), p.i32(off, 44)),
-		RotationDeg: geomath.NormDeg(float64(p.u32(off, 52)) / 1000),
+		At:          b.pt(p.i32(off, p.l.textX), p.i32(off, p.l.textX+4)),
+		RotationDeg: geomath.NormDeg(float64(p.u32(off, p.l.textRot)) / 1000),
 		Height:      b.fontHeight(p.b[off+20]),
 		Layer:       layer,
 		Mirror:      p.b[off+23] == 1 || p.b[off+23] == 3,
@@ -582,10 +618,10 @@ func (b *boardBuilder) fontHeight(idx byte) int64 {
 		if h != 0 || p.b[off] != tagDefTable || le16(p.b, off+2) != 0x08 {
 			return
 		}
-		if int(idx) > int(p.u32(off, 16)) {
+		if int(idx) > int(p.u32(off, p.l.defCount)) {
 			return
 		}
-		item := off + 32 + 64*(int(idx)-1)
+		item := off + p.l.defItems + p.l.defItemSize[0x08]*(int(idx)-1)
 		h = p.nm(float64(p.i32(item, 8)))
 	})
 	return h

@@ -23,8 +23,8 @@ pinned `allegro` samples artifact carries. Fetch it once from the repo root:
 make samples-oracle
 ```
 
-Give the path to your own `.brd` at the first step to read that instead. Only boards saved by
-Allegro 17.2 are read so far.
+Give the path to your own `.brd` at the first step to read that instead. Boards saved by
+Allegro 16.6 and 17.2 are read so far.
 
 ## Run it
 

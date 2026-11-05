@@ -8,24 +8,26 @@ import (
 	"strings"
 )
 
-// Allegro writes the format version into the file's first word, with the low byte free. Only 17.2
-// is read. The other versions differ in block layouts as well as in the header (agni issue 1355).
+// Allegro writes the format version into the file's first word, with the low byte free. 17.2 and
+// 16.6 are read, each through its own layout. The other versions differ in block layouts too (agni
+// issue 1355).
 const (
 	magicMask   = 0xFFFFFF00
 	magicV172   = 0x00140400
+	magicV166   = 0x00131500
 	stringTable = 0x1200
 )
 
 // knownVersions names the magic words of other Allegro releases, so a refusal says which release
-// wrote the file rather than only that it is not 17.2.
+// wrote the file rather than only that agni does not read it.
 var knownVersions = map[uint32]string{
 	0x00130000: "16.0", 0x00130200: "16.1", 0x00130400: "16.2", 0x00130500: "16.2",
-	0x00130C00: "16.4", 0x00131000: "16.5", 0x00131500: "16.6",
+	0x00130C00: "16.4", 0x00131000: "16.5",
 	0x00140500: "17.2 (variant)", 0x00140600: "17.2 (variant)", 0x00140700: "17.2 (variant)",
 	0x00140900: "17.4", 0x00141500: "17.5", 0x00150000: "18.0",
 }
 
-// Header offsets, for version 17.x. A linked-list descriptor is two words, the tail sentinel first
+// Header offsets, the same in 16.6 and 17.2. A linked-list descriptor is two words, the tail sentinel first
 // and the head key second. Lists 0 to 17 sit at 0x03C and lists 18 to 21 at 0x0D4.
 const (
 	hdrVersionString = 0x0F8
@@ -64,6 +66,7 @@ const (
 	tagNet        = 0x1B
 	tagPadstack   = 0x1C
 	tagShape      = 0x28
+	tagRect       = 0x24
 	tagLayerList  = 0x2A
 	tagFootDef    = 0x2B
 	tagTable      = 0x2C
@@ -85,6 +88,7 @@ type board struct {
 	units   byte
 	divisor uint32
 	version string
+	l       *layout
 }
 
 // parse checks the version, reads the string table and walks every block to the end of the object
@@ -98,13 +102,15 @@ func parse(b []byte) (*board, error) {
 		return nil, fmt.Errorf("allegro: not an Allegro board (no \"all\" at 0xF8)")
 	}
 	magic := le32(b, 0) & magicMask
-	if magic != magicV172 {
+	l, ok := layouts[magic]
+	if !ok {
 		if rel, ok := knownVersions[magic]; ok {
-			return nil, fmt.Errorf("allegro: written by Allegro %s, and only 17.2 boards are read (agni issue 1355)", rel)
+			return nil, fmt.Errorf("allegro: written by Allegro %s, and only 16.6 and 17.2 boards are read (agni issue 1355)", rel)
 		}
-		return nil, fmt.Errorf("allegro: unknown format version 0x%08X, and only 17.2 boards are read", magic)
+		return nil, fmt.Errorf("allegro: unknown format version 0x%08X, and only 16.6 and 17.2 boards are read", magic)
 	}
 	p := &board{
+		l:       l,
 		b:       b,
 		strs:    map[uint32]string{},
 		keys:    map[uint32]int{},
@@ -168,31 +174,16 @@ func (p *board) walk(off int) error {
 	return nil
 }
 
-// fixedSize is the size of each block type whose size does not vary, for 17.2.
-var fixedSize = map[byte]int{
-	0x01: 84, 0x04: 20, 0x05: 68, 0x06: 40, 0x07: 48, 0x08: 32, 0x09: 48, 0x0A: 72, 0x0C: 64,
-	0x0D: 44, 0x0E: 68, 0x0F: 60, 0x10: 36, 0x11: 24, 0x12: 28, 0x14: 36, 0x15: 44, 0x16: 44,
-	0x17: 44, 0x1A: 88, 0x1B: 60, 0x20: 40, 0x22: 44, 0x23: 84, 0x24: 56, 0x26: 24, 0x28: 76,
-	0x29: 56, 0x2B: 76, 0x2C: 44, 0x2D: 72, 0x2E: 40, 0x2F: 32, 0x30: 56, 0x32: 84, 0x33: 80,
-	0x34: 36, 0x35: 124, 0x37: 428, 0x38: 52, 0x39: 60, 0x3A: 16, 0x3E: 44,
-}
-
 // variableSize names the block types whose size is read from the block itself.
 var variableSize = map[byte]bool{
 	0x03: true, 0x1C: true, 0x1D: true, 0x1E: true, 0x1F: true, 0x21: true, 0x27: true,
 	0x2A: true, 0x31: true, 0x36: true, 0x3B: true, 0x3C: true,
 }
 
-// defItemSize is the item size of each 0x36 definition table code, for 17.2.
-var defItemSize = map[uint16]int{
-	0x02: 108, 0x03: 64, 0x05: 28, 0x06: 8, 0x08: 64, 0x0B: 1016, 0x0C: 232, 0x0D: 200,
-	0x0F: 20, 0x10: 108, 0x12: 1052,
-}
-
 // blockSize is the size of the block whose tag is at off. Every size is a multiple of four.
 func (p *board) blockSize(off int) (int, error) {
 	tag := p.b[off]
-	if n, ok := fixedSize[tag]; ok {
+	if n, ok := p.l.fixedSize[tag]; ok {
 		return n, nil
 	}
 	if !variableSize[tag] {
@@ -203,16 +194,17 @@ func (p *board) blockSize(off int) (int, error) {
 	}
 	switch tag {
 	case 0x03:
-		return fieldSize(p.b, off)
-	case 0x1C: // padstack: 21 fixed components and 4 per copper layer, plus N trailing records
-		comps := 21 + 4*int(le16(p.b, off+44))
-		return 192 + 36*comps + 40*int(p.b[off+2]), nil
+		return p.fieldSize(off)
+	case 0x1C: // padstack: fixed components and some per copper layer, plus N trailing records
+		l := p.l
+		comps := l.psFixed + l.psPerLayer*int(le16(p.b, off+l.psCount))
+		return l.psHeader + l.psComp*comps - l.psLastShort + l.psTrailer*int(p.b[off+2]), nil
 	case 0x1D: // constraint set: B per-layer records of 56 bytes, then A name records of 256
-		return 28 + 56*int(le16(p.b, off+22)) + 256*int(le16(p.b, off+20)), nil
+		return p.l.conSetHeader + 56*int(le16(p.b, off+22)) + 256*int(le16(p.b, off+20)), nil
 	case 0x1E:
-		return 28 + align4(int(le32(p.b, off+20))), nil
+		return p.l.siModelBase + align4(int(le32(p.b, off+20))), nil
 	case 0x1F:
-		return 36 + 280*int(le16(p.b, off+26)), nil
+		return p.l.dimBase + 280*int(le16(p.b, off+26)), nil
 	case 0x21:
 		n := int(le32(p.b, off+4))
 		if n < 12 {
@@ -231,42 +223,43 @@ func (p *board) blockSize(off int) (int, error) {
 		return 24 + align4(int(le16(p.b, off+22))), nil
 	case 0x36:
 		code := le16(p.b, off+2)
-		item, ok := defItemSize[code]
+		item, ok := p.l.defItemSize[code]
 		if !ok {
 			return 0, fmt.Errorf("allegro: definition table 0x36 at 0x%X has unknown code 0x%X", off, code)
 		}
-		return 32 + item*int(le32(p.b, off+16)), nil
+		return p.l.defItems + item*int(le32(p.b, off+p.l.defCount)), nil
 	case 0x3B:
-		return 180 + align4(int(le32(p.b, off+4))), nil
+		return p.l.propBase + align4(int(le32(p.b, off+4))), nil
 	case 0x3C:
 		return 12 + 4*int(le32(p.b, off+8)), nil
 	}
 	return 0, fmt.Errorf("allegro: unknown block type 0x%02X at 0x%X", tag, off)
 }
 
-// fieldSize sizes a 0x03 field block from its subtype.
-func fieldSize(b []byte, off int) (int, error) {
-	sub := b[off+16]
-	size := int(le16(b, off+18))
+// fieldSize sizes a 0x03 field block from its subtype. The payload starts at fieldBody.
+func (p *board) fieldSize(off int) (int, error) {
+	b, base := p.b, p.l.fieldBody
+	sub := b[off+p.l.fieldSub]
+	size := int(le16(b, off+p.l.fieldLen))
 	switch sub {
 	case 0x65:
-		return 24, nil
+		return base, nil
 	case 0x64, 0x66, 0x67, 0x6A:
-		return 28, nil
+		return base + 4, nil
 	case 0x69:
-		return 32, nil
+		return base + 8, nil
 	case 0x68, 0x6B, 0x6D, 0x6E, 0x6F, 0x71, 0x73, 0x78:
-		return 24 + align4(size), nil
+		return base + align4(size), nil
 	case 0x6C:
-		return 28 + 4*int(le32(b, off+24)), nil
+		return base + 4 + 4*int(le32(b, off+base)), nil
 	case 0x70, 0x74:
-		x0, x1 := int(le16(b, off+24)), int(le16(b, off+26))
-		return 28 + x1 + 4*x0, nil
+		x0, x1 := int(le16(b, off+base)), int(le16(b, off+base+2))
+		return base + 4 + x1 + 4*x0, nil
 	case 0xF6:
-		return 104, nil
+		return base + 80, nil
 	}
 	if size == 4 || size == 8 {
-		return 24 + size, nil
+		return base + size, nil
 	}
 	return 0, fmt.Errorf("allegro: field at 0x%X has subtype 0x%X and size %d", off, sub, size)
 }
