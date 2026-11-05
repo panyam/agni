@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { labelAnchor, labelBaseline, overlayTransform, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight } from "./textoverlay.js";
+import { labelAnchor, labelBaseline, overlayTransform, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight, appendRuns } from "./textoverlay.js";
 import type { Image } from "./packed.js";
 
 // The overlay's alignment mapping must mirror core/render/svg.go's justifyText, so the overlay puts
@@ -135,5 +135,25 @@ describe("bakeDivisor", () => {
   it("leaves already-safe font sizes at a divisor of 1", () => {
     expect(bakeDivisor(1000)).toBe(1);
     expect(bakeDivisor(0)).toBe(1); // a sheet with no labels
+  });
+});
+
+// appendRuns draws a label's markup runs (geom.PackedLabel.runs) as core/render/svg.go's
+// markupSpans does, so the overlay and the SVG backend draw ~{RESET} and V_{OUT} alike (agni 1344).
+describe("appendRuns", () => {
+  it("writes a plain run as text and a marked run as a styled tspan", () => {
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    appendRuns(t, [
+      { text: "SWD.", kind: 0 },
+      { text: "RST", kind: 1 },
+      { text: "n", kind: 2 },
+      { text: "2", kind: 3 },
+    ]);
+    expect(t.innerHTML).toBe(
+      'SWD.<tspan text-decoration="overline">RST</tspan>' +
+        '<tspan baseline-shift="sub" font-size="70%">n</tspan>' +
+        '<tspan baseline-shift="super" font-size="70%">2</tspan>',
+    );
+    expect(t.textContent).toBe("SWD.RSTn2");
   });
 });

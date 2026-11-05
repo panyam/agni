@@ -82,6 +82,16 @@ export interface Label {
   justify: string; // canonical "<h> <v>"
   color: string; // "#rrggbb"
   maxWidth: number; // world width to condense into (0 = unbounded); see textoverlay
+  // runs is the text split by its markup, as the engine split it (geom.PackedLabel.runs). Empty
+  // means the text draws as one plain run.
+  runs: TextRun[];
+}
+
+// TextRun is one piece of a label in one style. kind is geom.TextRun.Kind: 0 plain, 1 overbar,
+// 2 subscript, 3 superscript.
+export interface TextRun {
+  text: string;
+  kind: number;
 }
 
 // Image is a sheet raster image positioned in world coordinates (x,y = min corner, w/h = span),
@@ -175,6 +185,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
       justify: l.justify,
       color: l.color,
       maxWidth: l.maxWidth,
+      runs: l.runs.map((r) => ({ text: r.text, kind: r.kind })),
     })),
     images: msg.images.map((im) => ({
       x: im.x,

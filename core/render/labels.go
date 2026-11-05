@@ -4,6 +4,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
@@ -19,7 +20,8 @@ type placedLabel struct {
 	rotationDeg int32
 	justify     string
 	color       string
-	maxWidth    int64 // world-space width to condense into (0 = unbounded); see boxTextWidth
+	maxWidth    int64     // world-space width to condense into (0 = unbounded); see boxTextWidth
+	runs        []textRun // the text split by markup, nil when it draws as one plain run
 }
 
 // collectLabels gathers all schematic text for a sheet in world (Y-up) coordinates:
@@ -34,17 +36,24 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 	// default keeps such text a consistent, readable size under the page-fitting camera.
 	def := defaultTextHeight(g, sheet)
 	var out []placedLabel
-	add := func(x, y int64, text string, h int64, rot int32, justify, color string, maxWidth int64) {
+	mk := g.GetTextMarkup()
+	add := func(x, y int64, text, markup string, h int64, rot int32, justify, color string, maxWidth int64) {
 		if text == "" {
 			return
 		}
+		// Markup draws on a single line only, as the SVG backend draws it (drawText).
+		var runs []textRun
+		if !strings.Contains(text, "\n") {
+			runs = markupRuns(markup, text)
+		}
+		text = runsText(runs, text)
 		if h <= 0 {
 			h = def
 		}
 		// Keep text upright like the SVG backend (see readableText). The WebGL overlay applies
 		// rotationDeg/justify verbatim, so it must receive already-readable values.
 		rot, justify = readableText(rot, justify)
-		out = append(out, placedLabel{x: x, y: y, text: text, height: h, rotationDeg: rot, justify: justify, color: color, maxWidth: maxWidth})
+		out = append(out, placedLabel{x: x, y: y, text: text, runs: runs, height: h, rotationDeg: rot, justify: justify, color: color, maxWidth: maxWidth})
 	}
 
 	// Placement text fields (ref-des, value, custom), already in sheet coordinates. KiCad rotates
@@ -55,7 +64,7 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			if !f.Visible || f.Origin == nil {
 				continue
 			}
-			add(f.Origin.X, f.Origin.Y, f.Value, f.Height, rot+f.RotationDeg, f.Justify, style.Field, 0)
+			add(f.Origin.X, f.Origin.Y, f.Value, mk, f.Height, rot+f.RotationDeg, f.Justify, style.Field, 0)
 		}
 	}
 	// Sheet labels (net labels, page text). Multi-line free-text columns shrink by the
@@ -73,7 +82,7 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			}
 			h = int64(float64(eff) * f)
 		}
-		add(l.Origin.X, l.Origin.Y, l.Text, h, l.RotationDeg, l.Justify, style.Label, 0)
+		add(l.Origin.X, l.Origin.Y, l.Text, mk, h, l.RotationDeg, l.Justify, style.Label, 0)
 	}
 	// Symbol annotations and pin numbers/names are symbol-local; transform to sheet space.
 	for _, pl := range sheet.Placements {
@@ -87,7 +96,7 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 				continue
 			}
 			wp := geomath.ApplyTransform(pl.Transform, a.Origin)
-			add(wp.X, wp.Y, a.Text, a.Height, rot, a.Justify, style.Annotation, captionWidth(sym))
+			add(wp.X, wp.Y, a.Text, mk, a.Height, rot, a.Justify, style.Annotation, captionWidth(sym))
 		}
 		for _, pin := range sym.Pins {
 			if pin.LabelOrigin == nil {
@@ -106,8 +115,8 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			if pin.NumberOrigin != nil {
 				nx, ny, nrot, nj = pinTextAt(pl.Transform, pin, pin.NumberOrigin, pin.NumberJustify)
 			}
-			add(nx, ny, pin.PortRef, h, nrot, nj, style.Ruler, 0)
-			add(lx, ly, pin.Name, h, lrot, lj, style.PinName, 0)
+			add(nx, ny, pin.PortRef, "", h, nrot, nj, style.Ruler, 0)
+			add(lx, ly, pinName(pl, pin), mk, h, lrot, lj, style.PinName, 0)
 		}
 	}
 	// Worksheet furniture text: zone-ruler numbers/letters and the title-block fields.
@@ -135,16 +144,16 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 	for i := int64(0); i < fl.cols; i++ {
 		cx := fl.l + (fl.r-fl.l)*(2*i+1)/(2*fl.cols)
 		label := strconv.FormatInt(zoneNumber(fl.cols, i), 10)
-		out = append(out, placedLabel{cx, fl.t - fl.m/2, label, rulerH, 0, "center center", style.Ruler, 0})
-		out = append(out, placedLabel{cx, fl.b + fl.m/2, label, rulerH, 0, "center center", style.Ruler, 0})
+		out = append(out, placedLabel{cx, fl.t - fl.m/2, label, rulerH, 0, "center center", style.Ruler, 0, nil})
+		out = append(out, placedLabel{cx, fl.b + fl.m/2, label, rulerH, 0, "center center", style.Ruler, 0, nil})
 	}
 	// Row letters A.. centered in each row, just inside the left and right edges. Row A is the
 	// top row; geom is Y-up, so the top row has the highest y.
 	for i := int64(0); i < fl.rows; i++ {
 		cy := fl.b + (fl.t-fl.b)*(2*i+1)/(2*fl.rows)
 		label := string(rune('A' + (fl.rows - 1 - i))) // #nosec G115 -- a frame's row index, a handful of letters
-		out = append(out, placedLabel{fl.l + fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0})
-		out = append(out, placedLabel{fl.r - fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0})
+		out = append(out, placedLabel{fl.l + fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0, nil})
+		out = append(out, placedLabel{fl.r - fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0, nil})
 	}
 	// Title-block field text from the shared grid, each cell at its cell's center-left. Row 0 is
 	// the top; geom is Y-up, so weight accumulates downward from the box top edge.
@@ -163,7 +172,7 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 				if cell.text == "" {
 					continue
 				}
-				out = append(out, placedLabel{bx + int64(cell.x0*float64(bw)) + fl.m/3, cy, cell.text, th, 0, "left center", style.Annotation, 0})
+				out = append(out, placedLabel{bx + int64(cell.x0*float64(bw)) + fl.m/3, cy, cell.text, th, 0, "left center", style.Annotation, 0, nil})
 			}
 		}
 	}

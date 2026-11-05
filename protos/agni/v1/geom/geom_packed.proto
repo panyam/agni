@@ -124,6 +124,19 @@ message PackedHighlight {
 // architecture/geometry-and-rendering.md). The server computes the world position and the
 // color with the SVG backend's transform math, so the overlay and the SVG oracle agree. The
 // browser only maps world->screen with the view camera. O(labels), and structured like keys.
+// TextRun is one piece of a label that draws in one style. The engine splits a label by its
+// markup, so the SVG backend and the overlay draw it alike without parsing it again.
+message TextRun {
+  string text = 1;
+  Kind kind = 2;
+  enum Kind {
+    KIND_PLAIN = 0;
+    KIND_OVERBAR = 1;
+    KIND_SUBSCRIPT = 2;
+    KIND_SUPERSCRIPT = 3;
+  }
+}
+
 message PackedLabel {
   int32 x = 1;             // sheet-relative world origin (rebased, like the vertex blob)
   int32 y = 2;
@@ -135,6 +148,9 @@ message PackedLabel {
   int32 max_width = 8;     // world-space width to condense the run into (0 = unbounded). A symbol
                            // caption gets its box width here; the overlay squeezes glyphs to fit
                            // (textLength) rather than spilling past the box, matching the SVG backend.
+  // runs is the text split by markup (SchematicGeometry.text_markup), in order. Their texts join
+  // to `text`. Empty means `text` draws as one plain run.
+  repeated TextRun runs = 9;
   // There is no font field yet. Every renderer draws one font (monospace, matching the SVG
   // backend), and the geom IR has no per-text font. Add `string font` here once a reader
   // populates per-element font on the IR. It is an additive change, so waiting loses nothing.

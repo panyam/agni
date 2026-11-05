@@ -84,6 +84,32 @@ func (c *Canvas) Text(content string, attrs ...Attr) {
 	c.b.WriteString("</text>")
 }
 
+// Span is one <tspan> of a TextSpans element, its content XML-escaped.
+type Span struct {
+	Content string
+	Attrs   []Attr
+}
+
+// TextSpans writes a <text> element whose content is a run of <tspan>s, one per span, so parts of
+// one line can draw in different styles. A span with no attributes is written as plain text.
+func (c *Canvas) TextSpans(spans []Span, attrs ...Attr) {
+	c.b.WriteString("\n<text")
+	writeAttrs(&c.b, attrs...)
+	c.b.WriteByte('>')
+	for _, sp := range spans {
+		if len(sp.Attrs) == 0 {
+			_ = xml.EscapeText(&c.b, []byte(sp.Content))
+			continue
+		}
+		c.b.WriteString("<tspan")
+		writeAttrs(&c.b, sp.Attrs...)
+		c.b.WriteByte('>')
+		_ = xml.EscapeText(&c.b, []byte(sp.Content))
+		c.b.WriteString("</tspan>")
+	}
+	c.b.WriteString("</text>")
+}
+
 // String closes the document and returns the SVG source.
 func (c *Canvas) String() string { return c.b.String() + "\n</svg>\n" }
 
