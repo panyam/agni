@@ -21,9 +21,9 @@ import (
 //
 // Fidelity: lossy-bounded (render/DRC subset, CONSTRAINTS C6). Silkscreen/legend text and
 // silk/fab body graphics (the footprint ref-des and value, free gr_text, and the fp_*/gr_*
-// outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not; outline,
-// silk and arc-track arcs are approximated as polylines, so a chorded track's path is slightly
-// shorter than the arc, which a future length rule has to allow for. Coordinates are emitted in
+// outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not. An arc
+// track is kept as an arc, with the file's own mid point (agni 1358). Outline and silk arcs are
+// approximated as polylines. Coordinates are emitted in
 // nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations are kept
 // verbatim (see the proto contract). The caller owns file I/O (C1).
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
@@ -632,20 +632,21 @@ func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 			Layer: atomOf(s.Child("layer").Arg(1)),
 		})
 	}
-	// An arc track is a curved run of copper, written as start, mid and end. The contract holds
-	// straight runs only (C6), so the arc becomes a polyline, as an outline arc does. Until agni
-	// issue 1260 arcs were skipped, and the copper rules never saw a curved trace.
+	// An arc track is a curved run of copper, written as start, mid and end, which is how the
+	// contract spells an arc too (agni issue 1358). Until agni issue 1260 arcs were skipped, and the
+	// copper rules never saw a curved trace.
 	for _, a := range root.Children("arc") {
 		nc := get(a)
 		if nc == nil {
 			continue
 		}
-		width := mmToNm(atomOf(a.Child("width").Arg(1)))
-		layer := atomOf(a.Child("layer").Arg(1))
-		pts := arcPolyline(pcbPoint(a.Child("start")), pcbPoint(a.Child("mid")), pcbPoint(a.Child("end"))).GetPoints()
-		for i := 1; i < len(pts); i++ {
-			nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i-1], B: pts[i], Width: width, Layer: layer})
-		}
+		nc.Segments = append(nc.Segments, &geom.TrackSegment{
+			A:     pcbPoint(a.Child("start")),
+			Mid:   pcbPoint(a.Child("mid")),
+			B:     pcbPoint(a.Child("end")),
+			Width: mmToNm(atomOf(a.Child("width").Arg(1))),
+			Layer: atomOf(a.Child("layer").Arg(1)),
+		})
 	}
 	for _, v := range root.Children("via") {
 		nc := get(v)

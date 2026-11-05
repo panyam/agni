@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io/fs"
+	"math"
 	"os"
 	"path"
 	"strings"
@@ -139,9 +140,26 @@ func TestReadsAnInchJob(t *testing.T) {
 	if vin == nil {
 		t.Fatalf("no VIN copper in %v", g.GetNets())
 	}
-	// One straight run and one arc of arcSegments pieces on the front, one run on the back.
-	if got, want := len(vin.GetSegments()), 1+arcSegments+1; got != want {
-		t.Errorf("VIN segments = %d, want %d", got, want)
+	// One straight run and one arc on the front, one run on the back.
+	if got := len(vin.GetSegments()); got != 3 {
+		t.Errorf("VIN segments = %d, want 3", got)
+	}
+	arcs := 0
+	for _, s := range vin.GetSegments() {
+		if s.GetMid() == nil {
+			continue
+		}
+		arcs++
+		// A 0.8 0.55 0.9 0.65 0.8 0.65, counter-clockwise: a quarter circle of 0.1 inch about
+		// (0.8, 0.65), with its mid at -45 degrees.
+		const inch = 25.4e6 // nanometres
+		mx, my := (0.8+0.1*math.Sqrt2/2)*inch, (0.65-0.1*math.Sqrt2/2)*inch
+		if math.Abs(float64(s.GetMid().GetX())-mx) > 1 || math.Abs(float64(s.GetMid().GetY())-my) > 1 {
+			t.Errorf("VIN arc = %v, want its mid at (%.0f, %.0f) nm", s, mx, my)
+		}
+	}
+	if arcs != 1 {
+		t.Errorf("VIN arcs = %d, want 1", arcs)
 	}
 	if len(vin.GetVias()) != 1 {
 		t.Fatalf("VIN vias = %d, want 1", len(vin.GetVias()))

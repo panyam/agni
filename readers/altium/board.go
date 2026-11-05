@@ -1,11 +1,12 @@
 package altium
 
 import (
-	"github.com/panyam/agni/internal/boardlayer"
-	"github.com/panyam/agni/internal/geomath"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/panyam/agni/internal/boardlayer"
+	"github.com/panyam/agni/internal/geomath"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
@@ -237,12 +238,17 @@ func (b *boardBuilder) copperItems() {
 			continue
 		}
 		nc := get(b.netName(a.net))
-		pts := arcPoints(float64(a.cx), float64(a.cy), float64(a.r), a.start, a.end)
-		for i := 1; i < len(pts); i++ {
+		cx, cy, r := float64(a.cx), float64(a.cy), float64(a.r)
+		sa, ea := a.start*math.Pi/180, a.end*math.Pi/180
+		sx, sy := cx+r*math.Cos(sa), cy+r*math.Sin(sa)
+		ex, ey := cx+r*math.Cos(ea), cy+r*math.Sin(ea)
+		if math.Mod(a.end-a.start, 360) == 0 {
+			ex, ey = sx, sy // a full circle: CenterArc splits it into two halves
+		}
+		at := func(p [2]float64) *geom.Point { return b.pt(int64(math.Round(p[0])), int64(math.Round(p[1]))) }
+		for _, piece := range geomath.CenterArc(sx, sy, ex, ey, cx, cy, false) {
 			nc.Segments = append(nc.Segments, &geom.TrackSegment{
-				A:     b.pt(int64(math.Round(pts[i-1][0])), int64(math.Round(pts[i-1][1]))),
-				B:     b.pt(int64(math.Round(pts[i][0])), int64(math.Round(pts[i][1]))),
-				Width: nm(a.width), Layer: layer,
+				A: at(piece.S), Mid: at(piece.M), B: at(piece.E), Width: nm(a.width), Layer: layer,
 			})
 		}
 	}

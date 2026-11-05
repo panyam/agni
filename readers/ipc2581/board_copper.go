@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
-// arcSegments is the fixed polyline count an arc step is approximated with, matching the
-// KiCad outline-arc precedent. C6 bounds copper and outline arcs to polylines rather than a
-// native arc primitive.
+// arcSegments is the fixed polyline count an outline or zone arc step is approximated with,
+// matching the KiCad outline-arc precedent. A track's arc step is kept as an arc (trackSegments).
 const arcSegments = 16
 
 // Copper XML subset. A LayerFeature groups per-layer feature Sets. Each Set names its net and
@@ -120,8 +120,8 @@ func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	}
 }
 
-// copperNets groups routed copper by net into NetCopper, with tracks flattened to straight
-// TrackSegments (arcs approximated) and vias from drilled holes. Sorted by net name for
+// copperNets groups routed copper by net into NetCopper, with each track step a TrackSegment (an
+// arc step keeps its curve) and vias from drilled holes. Sorted by net name for
 // deterministic output, mirroring the KiCad producer.
 func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) []*geom.NetCopper {
 	widths := f.lineWidths(nmPerUnit)
@@ -147,11 +147,7 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) 
 			}
 			nc := get(s.Net)
 			for _, tr := range s.Tracks {
-				w := widths[tr.lineRef]
-				pts := flattenPath(tr, nmPerUnit)
-				for i := 0; i+1 < len(pts); i++ {
-					nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i], B: pts[i+1], Width: w, Layer: layer})
-				}
+				nc.Segments = append(nc.Segments, trackSegments(tr, nmPerUnit, widths[tr.lineRef], layer)...)
 			}
 			for _, h := range s.Holes {
 				if !isVia(h.PlatingStatus) {
@@ -282,6 +278,27 @@ func flattenPath(p polyPath, nmPerUnit float64) []*geom.Point {
 		px, py = s.x, s.y
 	}
 	return pts
+}
+
+// trackSegments reads a track's polyline as one TrackSegment per step. A PolyStepCurve becomes an
+// arc, with its mid point computed from the center and direction (agni issue 1358).
+func trackSegments(p polyPath, nmPerUnit float64, width int64, layer string) []*geom.TrackSegment {
+	at := func(x, y float64) *geom.Point { return &geom.Point{X: rnd(x * nmPerUnit), Y: rnd(y * nmPerUnit)} }
+	var out []*geom.TrackSegment
+	px, py := p.x, p.y
+	for _, s := range p.steps {
+		if !s.isArc {
+			out = append(out, &geom.TrackSegment{A: at(px, py), B: at(s.x, s.y), Width: width, Layer: layer})
+		} else {
+			for _, a := range geomath.CenterArc(px, py, s.x, s.y, s.cx, s.cy, s.cw) {
+				out = append(out, &geom.TrackSegment{
+					A: at(a.S[0], a.S[1]), Mid: at(a.M[0], a.M[1]), B: at(a.E[0], a.E[1]), Width: width, Layer: layer,
+				})
+			}
+		}
+		px, py = s.x, s.y
+	}
+	return out
 }
 
 // arcPoints approximates one arc step as arcSegments chords. The step runs from the current

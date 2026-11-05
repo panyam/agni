@@ -30,9 +30,7 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) strin
 				if s.GetA() == nil || s.GetB() == nil {
 					continue
 				}
-				c.El("line", svg.F("x1", fr.tx(s.GetA().X)), svg.F("y1", fr.ty(s.GetA().Y)),
-					svg.F("x2", fr.tx(s.GetB().X)), svg.F("y2", fr.ty(s.GetB().Y)),
-					svg.A("stroke", color), svg.F("stroke-opacity", alpha),
+				drawTrack(c, s, fr, svg.A("stroke", color), svg.F("stroke-opacity", alpha),
 					svg.F("stroke-width", copperStrokePx(s.GetWidth(), fr.scale)+highlightStrokePx),
 					svg.A("stroke-linecap", "round"))
 			}

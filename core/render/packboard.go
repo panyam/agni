@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	geomath "github.com/panyam/agni/internal/geomath"
 )
 
 // primTriangles is the filled-area primitive kind (WS7-035), a vertex range drawn as a
@@ -58,8 +59,13 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			if s.GetA() == nil || s.GetB() == nil {
 				continue
 			}
-			add(primTriangles, copperGroup(s.GetLayer()), "", nc.GetNet(), "",
-				quadPts(s.GetA().X, s.GetA().Y, s.GetB().X, s.GetB().Y, s.GetWidth()))
+			// An arc goes as the quads of its chords, one record, so a pick or highlight on the net
+			// takes the whole curve.
+			var tris [][2]int64
+			for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
+				tris = append(tris, quadPts(pts[i-1].X, pts[i-1].Y, pts[i].X, pts[i].Y, s.GetWidth())...)
+			}
+			add(primTriangles, copperGroup(s.GetLayer()), "", nc.GetNet(), "", tris)
 		}
 		for _, v := range nc.GetVias() {
 			if v.GetAt() == nil {

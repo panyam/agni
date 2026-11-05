@@ -130,16 +130,18 @@ class NetCopper(_message.Message):
     def __init__(self, net: _Optional[str] = ..., segments: _Optional[_Iterable[_Union[TrackSegment, _Mapping]]] = ..., vias: _Optional[_Iterable[_Union[Via, _Mapping]]] = ...) -> None: ...
 
 class TrackSegment(_message.Message):
-    __slots__ = ("a", "b", "width", "layer")
+    __slots__ = ("a", "b", "width", "layer", "mid")
     A_FIELD_NUMBER: _ClassVar[int]
     B_FIELD_NUMBER: _ClassVar[int]
     WIDTH_FIELD_NUMBER: _ClassVar[int]
     LAYER_FIELD_NUMBER: _ClassVar[int]
+    MID_FIELD_NUMBER: _ClassVar[int]
     a: _geom_pb2.Point
     b: _geom_pb2.Point
     width: int
     layer: str
-    def __init__(self, a: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., b: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., width: _Optional[int] = ..., layer: _Optional[str] = ...) -> None: ...
+    mid: _geom_pb2.Point
+    def __init__(self, a: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., b: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., width: _Optional[int] = ..., layer: _Optional[str] = ..., mid: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ...) -> None: ...
 
 class Via(_message.Message):
     __slots__ = ("at", "size", "drill", "layer_from", "layer_to")

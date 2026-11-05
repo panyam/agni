@@ -18,9 +18,9 @@ import "agni/v1/geom/geom.proto";
 // geom_packed.proto. That transport is left out on purpose until its consumer, the WS7 board
 // renderer, exists.
 //
-// Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6. Arc track segments, zone fill
-// polygons, teardrops, and 3D model references are not kept. Zones keep their authored outline
-// only.
+// Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6. Zone fill polygons, teardrops,
+// and 3D model references are not kept. Zones keep their authored outline only. Arc tracks are
+// kept as arcs (TrackSegment.mid); arcs in outlines and zones are approximated by chords.
 
 // BoardGeometry is the root, with one message per board. It is the layout analogue of
 // SchematicGeometry. Coordinates are Points in raw source units, unit_nm nanometers per unit.
@@ -140,12 +140,17 @@ message NetCopper {
   repeated Via vias = 3;
 }
 
-// TrackSegment is one straight copper run on one layer.
+// TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
+// arc sets mid to a point on the curve between a and b, so the run is the circular arc through
+// a, mid and b, as geom.Shape spells an arc (agni issue 1358). A consumer that cannot draw a curve
+// reads the path through geomath.TrackPath, because a and b alone are the chord across the arc.
+// A full circle has no single mid point, so a reader splits one into two arcs.
 message TrackSegment {
   Point a = 1;
   Point b = 2;
   int64 width = 3;   // trace width in source units
   string layer = 4;
+  Point mid = 5;     // a point on the arc between a and b; unset for a straight run
 }
 
 // Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a

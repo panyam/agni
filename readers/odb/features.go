@@ -60,8 +60,8 @@ type featuresFile struct {
 	drillTag int // the index the @ table gives the .drill attribute, or -1
 }
 
-// arcSegments is how many straight pieces an arc becomes. The geom contract has no arc primitive for
-// copper (C6). The IPC-2581 and KiCad outline readers use the same count.
+// arcSegments is how many straight pieces an arc in an outline, a surface or a graphic becomes. A
+// track's arc is kept whole (agni 1358). The IPC-2581 and KiCad outline readers use the same count.
 const arcSegments = 16
 
 // parseFeatures reads a features file. A record this reader does not draw, such as a barcode, still

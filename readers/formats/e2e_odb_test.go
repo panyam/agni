@@ -143,7 +143,12 @@ func copperItems(g *geom.BoardGeometry) []placed {
 			if b[0] < a[0] || (b[0] == a[0] && b[1] < a[1]) {
 				a, b = b, a
 			}
-			out = append(out, placed{key: fmt.Sprintf("seg %s %s w=%d", net, s.GetLayer(), (s.GetWidth()+500)/1000), pts: [][2]int64{a, b}})
+			kind, pts := "seg", [][2]int64{a, b}
+			if m := s.GetMid(); m != nil {
+				// An arc matches by its two ends and the point it bulges through (agni 1358).
+				kind, pts = "arc", append(pts, [2]int64{m.GetX(), m.GetY()})
+			}
+			out = append(out, placed{key: fmt.Sprintf("%s %s %s w=%d", kind, net, s.GetLayer(), (s.GetWidth()+500)/1000), pts: pts})
 		}
 		for _, v := range nc.GetVias() {
 			out = append(out, placed{

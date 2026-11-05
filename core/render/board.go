@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/panyam/agni/core/svg"
@@ -79,9 +80,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 					c.Group(keys...)
 					grouped = true
 				}
-				c.El("line", svg.F("x1", tx(s.GetA().X)), svg.F("y1", ty(s.GetA().Y)),
-					svg.F("x2", tx(s.GetB().X)), svg.F("y2", ty(s.GetB().Y)),
-					svg.A("stroke", color), svg.F("stroke-width", copperStrokePx(s.GetWidth(), scale)),
+				drawTrack(c, s, fr, svg.A("stroke", color), svg.F("stroke-width", copperStrokePx(s.GetWidth(), scale)),
 					svg.A("stroke-linecap", "round"))
 			}
 			if grouped {
@@ -335,8 +334,9 @@ func frameBoard(b *geom.BoardGeometry) sheetFrame {
 	}
 	for _, nc := range b.GetNets() {
 		for _, s := range nc.GetSegments() {
-			bounds.Add(s.GetA())
-			bounds.Add(s.GetB())
+			for _, pt := range geomath.TrackPath(s) {
+				bounds.Add(pt)
+			}
 		}
 		for _, v := range nc.GetVias() {
 			bounds.Add(v.GetAt())
@@ -385,6 +385,41 @@ func frameBoard(b *geom.BoardGeometry) sheetFrame {
 // padWorld composes a pad's footprint-local offset with its placement in the canonical Y-up
 // frame (WS1-030). geomath.ComposePlacement holds the transform, the mirror order and the frame
 // contract, and every board producer calls it.
+// drawTrack draws one track segment, a line for a straight run and an SVG arc path for an arc. The
+// path draws the arc as two halves that meet at its mid point, each with its own large-arc flag.
+// ty flips Y, so an arc that turns counter-clockwise in the Y-up frame turns the negative way in
+// SVG's Y-down frame, which is sweep flag 0.
+func drawTrack(c *svg.Canvas, s *geom.TrackSegment, fr sheetFrame, attrs ...svg.Attr) {
+	if s.GetMid() != nil {
+		if a, ok := geomath.ArcThrough(s.GetA(), s.GetMid(), s.GetB()); ok {
+			c.El("path", append([]svg.Attr{svg.A("d", arcPathD(s, a, fr)), svg.A("fill", "none")}, attrs...)...)
+			return
+		}
+	}
+	for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
+		c.El("line", append([]svg.Attr{svg.F("x1", fr.tx(pts[i-1].X)), svg.F("y1", fr.ty(pts[i-1].Y)),
+			svg.F("x2", fr.tx(pts[i].X)), svg.F("y2", fr.ty(pts[i].Y))}, attrs...)...)
+	}
+}
+
+func arcPathD(s *geom.TrackSegment, a geomath.Arc, fr sheetFrame) string {
+	f := func(v float64) string { return strconv.FormatFloat(v, 'f', 2, 64) }
+	pt := func(p *geom.Point) string { return f(fr.tx(p.X)) + " " + f(fr.ty(p.Y)) }
+	r := f(a.R * fr.scale)
+	half := func(turn float64, to *geom.Point) string {
+		large, sweep := "0", "0"
+		if math.Abs(turn) > math.Pi {
+			large = "1"
+		}
+		if turn < 0 {
+			sweep = "1"
+		}
+		return " A " + r + " " + r + " 0 " + large + " " + sweep + " " + pt(to)
+	}
+	h1 := a.TurnTo(float64(s.GetMid().X), float64(s.GetMid().Y))
+	return "M " + pt(s.GetA()) + half(h1, s.GetMid()) + half(a.Sweep-h1, s.GetB())
+}
+
 func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 	p := geomath.ComposePlacement(pl.GetAt(), pl.GetRotationDeg(), pl.GetMirror(), pad.GetAt())
 	return p.X, p.Y
