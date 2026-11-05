@@ -106,6 +106,34 @@ describe("picking the board", () => {
     });
   }, 90_000);
 
+  // On a dense board a designator lies over its neighbour's pads, and a keyed label there picked
+  // the neighbour (agni issue 1347). The test lays J1's designator over R1's pad 1, large enough to
+  // cover every probe, and the pad must still pick its own pin.
+  it("picks a pad through a designator drawn over it", async () => {
+    await withPage(browser, async (page) => {
+      await openBoard(page);
+      const at = await page.evaluate(() => {
+        const pad = document.querySelector('#svg-view [data-kind="pin"][data-ref="R1"][data-pin="1"]') as SVGGraphicsElement;
+        const label = [...document.querySelectorAll("#svg-view .labels text")].find((t) => t.textContent === "J1") as SVGTextElement;
+        if (!pad || !label) throw new Error("the board draws no R1.1 pad or no J1 designator");
+        const b = pad.getBBox();
+        label.removeAttribute("transform");
+        label.setAttribute("x", String(b.x + b.width / 2));
+        label.setAttribute("y", String(b.y + b.height / 2));
+        label.setAttribute("font-size", "120");
+        const r = pad.getBoundingClientRect();
+        const x = Math.round(r.left + r.width / 2);
+        const y = Math.round(r.top + r.height / 2);
+        // The label's painted box, since a label that passes clicks through is invisible to
+        // elementFromPoint, which is the fix.
+        const l = label.getBoundingClientRect();
+        if (!(l.left < x - 5 && l.right > x + 5 && l.top < y - 5 && l.bottom > y + 5)) throw new Error("the moved designator does not cover the pad");
+        return { x, y };
+      });
+      await clickAndRead(page, at, "R1.1");
+    });
+  }, 90_000);
+
   it("stops picking a back part once the back is hidden", async () => {
     await withPage(browser, async (page) => {
       await openBoard(page);
