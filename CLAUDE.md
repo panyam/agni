@@ -536,7 +536,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   values. A pad is footprint-local and Allegro mirrors X before rotating, so a bottom part's angle is
   negated for the contract's rotate-then-mirror. A placed pad's net goes through its 0x04 net
   assignment, never straight to a 0x1B. Another release is refused by name (#1355), and an Eagle
-  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code.
+  `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
+  (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
+  since Allegro drops a pad nothing on its layer connects to (#1356).
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945). That sharing holds an
   80 MB board in under 4 times its size, so never assign a parsed node's `Atom`; put a new node in
   its parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out

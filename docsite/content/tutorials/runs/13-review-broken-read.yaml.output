@@ -1,4 +1,4 @@
-#agni-run 3ef04f57537dd9aa
+#agni-run 472e67acf70cafcd
 **8 pass, 3 fail, 3 n/a, 1 not-automated (of 15)**
 | I3 | exposed signals have ESD protection | pass |  |
 | I4 | every I2C bus has pull-ups | pass |  |
