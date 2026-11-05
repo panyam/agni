@@ -127,7 +127,9 @@ export class CanvasComponent extends BaseComponent {
         for (const entity of g.entities) {
           const b = entityBounds(sheet.vertices, sheet.primitives, entity);
           if (!b) continue;
-          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY);
+          // A point (a picked pin) frames by the floor alone, so the floor is the path marker's
+          // width, a fraction of the sheet, which reads at any coordinate scale.
+          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY, pathHalfWidth);
           tris.push(...(g.shape === HighlightShape.BOUNDING_RECT ? rectTriangles(frame) : circleTriangles(frame)));
         }
       }

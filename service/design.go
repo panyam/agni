@@ -309,10 +309,13 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 	// WHENEVER the two differ, the netlist tier is read for the counts. Sheets then come from the
 	// schematic export, and counts (3980 components on one board) from the netlist beside it.
 	//
-	// A faithful file that IS its own netlist tier reports no counts, because netlisting a drawing
-	// counts per-sheet segments that nothing joins. The same board reads 5219 components and 4572
-	// nets off its schematic export against 3980 and 1617 off its netlist.
-	if layout != faithfulLayout || nu.String() != gu.String() {
+	// A faithful file that IS its own netlist tier reports counts unless its format nets what the
+	// drawing draws (formats.DrawnNetlist). An EDIF schematic export does, counting per-sheet
+	// segments that nothing joins, so the same board reads 5219 components and 4572 nets off its
+	// .eds against 3980 and 1617 off its netlist. A KiCad schematic is its design's netlist, and
+	// until agni issue 1342 it reported no counts either, so `agni trial` read every KiCad design
+	// as empty.
+	if layout != faithfulLayout || nu.String() != gu.String() || !formats.DrawnNetlist(nu.Path) {
 		if d, err := LoaderOr(snap, s.loader).Design(ctx, nu, opts...); err == nil {
 			if resp.Name == "" {
 				resp.Name = d.GetName()

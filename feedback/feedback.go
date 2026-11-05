@@ -218,12 +218,27 @@ func ClassifyError(err error) ErrorKind {
 	return ErrorInternal
 }
 
+// readFailed reports whether the report's read step ran and failed.
+func (r Report) readFailed() bool {
+	for _, st := range r.Steps {
+		if st.Step == StepRead {
+			return st.Status == StatusFailed
+		}
+	}
+	return false
+}
+
 // Markdown renders the report for a person to read before they send it.
 func (r Report) Markdown() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "**agni %s** on %s\n\n", r.Version, r.Platform)
 	s := r.Shape
-	fmt.Fprintf(&b, "Design: %s, %d components, %d nets, %d sheets, board %s", s.Format, s.Components, s.Nets, s.Sheets, yesNo(s.HasBoard))
+	// A design that failed to read has no shape, and zero counts would read as an empty design.
+	if r.readFailed() {
+		b.WriteString("Design: not read, so there is nothing to count")
+	} else {
+		fmt.Fprintf(&b, "Design: %s, %d components, %d nets, %d sheets, board %s", s.Format, s.Components, s.Nets, s.Sheets, yesNo(s.HasBoard))
+	}
 	if s.UnexpandedBlocks > 0 {
 		fmt.Fprintf(&b, ", %d hierarchical blocks not read (--flatten-hierarchy reads them)", s.UnexpandedBlocks)
 	}

@@ -23,8 +23,11 @@ exercise run on the mission issue.
   flips and shows the board from underneath (#1378). `make exercise-cross-probe HEADED=0
   WALK_DESIGN=jetson` is the exercise, and it works at `a66eeef4`, every step passing on Jetson.
   It still has to pass on an EDIF + ODB++ design and beside a real board. Ready next are #1366 (board text sizes and
-  colours, against kicad-cli), #1367 (add a board to an open design) and #1382 (an EDIF + ODB++ design
-  for the walk). #1374 (a selected pin lights nothing) is in progress elsewhere.
+  colours, against kicad-cli) and #1367 (add a board to an open design). #1382 (an EDIF design for the
+  walk) needs a decision first. The only public EDIF design with its board is Clay R6, whose board is
+  an Allegro `.brd` rather than ODB++, so either the done-when becomes "an EDIF design on its Cadence
+  board", which then waits on #1350, or the mission waits for an ODB++ export. #1374 (a selected pin
+  lights nothing) is in PR #1385.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 3 of 4
   closed. agni reads Allegro 17.2 boards (#1365) and holds their copper to Allegro's own films
   (#1380). `make exercise-allegro` is the Allegro half, last run at `76bdb29c` (works). #1349, the
@@ -36,7 +39,7 @@ exercise run on the mission issue.
   exercise's output is right by eye. If the audit finds a heuristic outside the lexicon, that
   heuristic becomes a ticket here.
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 7 of 8 tickets closed (#1342 is in progress elsewhere), exercise last run at `aba62b48` (works on the fixtures), 20 PRs
+  datasheet), 7 of 8 tickets closed (#1342 is in PR #1385, which makes `agni trial` count KiCad designs), exercise last run at `aba62b48` (works on the fixtures), 20 PRs
   merged since, so re-run `make exercise-pin-functions` before a team starts. It waits
   on a team's clean-room run on their own board. The team runs the three commands in
   `guide/trying-agni.md`'s "Signing off a pin map in a clean room" and sends back the `agni trial`

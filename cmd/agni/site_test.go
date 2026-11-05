@@ -1,9 +1,15 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -240,5 +246,60 @@ func TestSiteRefusesWithoutABuiltEngine(t *testing.T) {
 	err := writeSite(t.TempDir(), web, "/", "", []string{"g=" + filepath.Join("..", "..", "examples", "tutorial-project")}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "make ui wasm") {
 		t.Errorf("err %v, want a refusal naming make ui wasm", err)
+	}
+}
+
+// An ODB++ archive is a whole design in one file, so a folder of them seeds every one, as `agni
+// serve` lists them. The site kept one design per folder and dropped the rest of agni-samples'
+// odb/kicad until agni issue 1342.
+func TestSiteSeedsEveryODBJobInAFolder(t *testing.T) {
+	dir := t.TempDir()
+	for _, job := range []string{"board", "mixer"} {
+		writeJobArchive(t, filepath.Join("..", "..", "readers", "odb", "testdata", job), filepath.Join(dir, job+".odb.tgz"))
+	}
+	designs, err := seedDesigns(dir, "odb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, d := range designs {
+		got = append(got, d.uri)
+	}
+	sort.Strings(got)
+	want := []string{"mount://odb/board.odb.tgz", "mount://odb/mixer.odb.tgz"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("seeded %v, want both jobs %v", got, want)
+	}
+}
+
+// writeJobArchive packs an ODB++ job folder into a .tgz, one folder down, as producers wrap it.
+func writeJobArchive(t *testing.T, job, dst string) {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	err := filepath.WalkDir(job, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(job, p)
+		name := path.Join(filepath.Base(job), filepath.ToSlash(rel))
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(b)), Typeflag: tar.TypeReg}); err != nil {
+			return err
+		}
+		_, err = tw.Write(b)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw.Close()
+	gz.Close()
+	if err := os.WriteFile(dst, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
