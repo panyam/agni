@@ -87,7 +87,8 @@ func TestSheetSVG_MultiLineLabel(t *testing.T) {
 
 // TestReadableText pins the readable-text rule. Text at a normalized angle magnitude over 90
 // would read upside down, so it is turned a further 180 and its justify flipped on both axes.
-// Upright and vertical (+/-90) text is left untouched, which preserves KiCad-90 parity.
+// Text at +90 would read top to bottom, which kicad-cli never draws, so it flips to -90 the same
+// way. Upright and bottom-to-top (-90) text is left untouched.
 func TestReadableText(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -98,7 +99,7 @@ func TestReadableText(t *testing.T) {
 	}{
 		{"upright", 0, "left bottom", 0, "left bottom"},
 		{"cw90 kept", 270, "left", 270, "left"}, // normalizes to -90, vertical, kept
-		{"ccw90 kept", 90, "right top", 90, "right top"},
+		{"ccw90 flips to read bottom to top", 90, "right top", 270, "left bottom"},
 		{"r180 flips", 180, "left bottom", 360, "right top"},
 		{"neg180 flips", -180, "right top", 0, "left bottom"},
 		{"r135 flips", 135, "left", 315, "right"},

@@ -685,8 +685,18 @@ func kicadPinLeg(pn *node) *geom.Shape {
 // (Reference, Value, custom). Each carries its own position/justify/height. visible is false
 // for a hidden field or a #-prefixed Reference (a virtual power/flag ref KiCad does not show);
 // empty-value fields are dropped. The renderer draws the visible ones at their field position.
+//
+// KiCad stores a field's angle relative to its symbol, and the renderer adds the placement's
+// rotation to it. That placement rotation is KiCad's own angle for an unmirrored symbol
+// (kicadTransform), while text angles convert through geomRotation. So each field's angle is
+// stored as the angle KiCad displays minus the rotation the renderer will add.
 func fieldsOf(ps *node) []*geom.Field {
 	var out []*geom.Field
+	var symDeg float64
+	if a := ps.Child("at").Arg(3); a != nil {
+		symDeg, _ = strconv.ParseFloat(atomOf(a), 64)
+	}
+	placed := kicadTransform(ps).GetRotationDeg()
 	for _, p := range ps.Children("property") {
 		key, val := atomOf(p.Arg(1)), atomOf(p.Arg(2))
 		if val == "" {
@@ -701,11 +711,11 @@ func fieldsOf(ps *node) []*geom.Field {
 			visible = false
 		}
 		f := &geom.Field{Name: key, Value: val, Origin: origin, Height: fontSize(p), Justify: kicadJustify(p), Visible: visible}
+		var deg float64
 		if a := p.Child("at").Arg(3); a != nil {
-			if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
-				f.RotationDeg = geomRotation(deg)
-			}
+			deg, _ = strconv.ParseFloat(atomOf(a), 64)
 		}
+		f.RotationDeg = normDeg(float64(geomRotation(deg+symDeg) - placed))
 		out = append(out, f)
 	}
 	return out
@@ -767,24 +777,35 @@ func placementOf(ps *node, src string) *geom.SymbolPlacement {
 }
 
 // kicadTransform maps a KiCad (at x y angle) plus optional (mirror x|y) onto the neutral
-// Transform. Coordinates are converted (mm->nm, Y flipped) by sheetPt, and the angle by
-// geomRotation.
+// Transform. Drawing and connectivity both use it, so a drawn pin sits where it connects (agni
+// issue 1322). sheetPt converts the origin (mm to nm, Y flipped). Lib pin coordinates are already
+// Y-up, so an unmirrored placement keeps KiCad's own angle.
+//
+// A mirrored placement takes the inverse angle. KiCad rotates and then mirrors, while
+// geomath.ApplyTransform mirrors first, and the inverse angle reconciles the two. The derivation is
+// in docsite/content/architecture/net-solving.md#kicad-connection-point-semantics. Without it a
+// symbol mirrored at 90 or 270 swaps its two pins onto each other's nets (agni issue 577).
+// TestMirroredPinPlacement holds all twelve placements of a two-pin symbol to kicad-cli.
 func kicadTransform(ps *node) *geom.Transform {
 	t := &geom.Transform{}
-	if at := ps.Child("at"); at != nil {
-		t.Origin = sheetPt(at)
-		if a := at.Arg(3); a != nil {
-			if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
-				t.RotationDeg = geomRotation(deg)
-			}
-		}
-	}
 	if m := ps.Child("mirror"); m != nil {
 		switch atomOf(m.Arg(1)) {
 		case "x":
 			t.MirrorX = true
 		case "y":
 			t.MirrorY = true
+		}
+	}
+	if at := ps.Child("at"); at != nil {
+		t.Origin = sheetPt(at)
+		if a := at.Arg(3); a != nil {
+			if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
+				if t.MirrorX || t.MirrorY {
+					t.RotationDeg = geomRotation(deg)
+				} else {
+					t.RotationDeg = normDeg(deg)
+				}
+			}
 		}
 	}
 	return t
@@ -971,13 +992,22 @@ func sheetPt(n *node) *geom.Point {
 	return &geom.Point{X: mmToNm(atomOf(n.Arg(1))), Y: -mmToNm(atomOf(n.Arg(2)))}
 }
 
-// geomRotation converts a KiCad rotation angle (degrees) to the geom contract's rotation.
-// Converting KiCad's Y-down frame to the geom Y-up frame is a reflection, which inverts
-// rotation direction, so the geom angle is -kicad (mod 360). Origin translation and mirror
-// axes are unaffected by this (mirror conjugated by the Y-flip is itself), so only rotation
-// flips. Without this, rotated symbols end up mirrored about their origin and overlap.
+// geomRotation turns a KiCad text or mirrored-placement angle into the geom contract's
+// rotation. The Y flip from KiCad's Y-down sheet frame to geom's Y-up frame is a reflection,
+// which reverses the direction of a rotation, so the geom angle is -kicad (mod 360). An
+// unmirrored placement keeps KiCad's angle instead (normDeg), because its lib pins are already
+// Y-up (see kicadTransform).
 func geomRotation(deg float64) int32 {
 	r := math.Mod(360-deg, 360)
+	if r < 0 {
+		r += 360
+	}
+	return int32(r)
+}
+
+// normDeg reduces an angle in degrees to [0, 360).
+func normDeg(deg float64) int32 {
+	r := math.Mod(deg, 360)
 	if r < 0 {
 		r += 360
 	}

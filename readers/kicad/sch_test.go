@@ -185,7 +185,7 @@ func TestReadSchematicNets(t *testing.T) {
 	}
 
 	// geom.kicad_sch has a symbol rotated 270 deg. The placement transform must use KiCad's raw
-	// angle (see pinTransform). With the render-frame angle the rotated pins end up swapped, which
+	// angle (see kicadTransform). With the negated angle the rotated pins end up swapped, which
 	// mis-groups connectivity. As a regression guard, this fixture yielded 4 nets (incl. a spurious
 	// label-only net) before the fix; kicad-cli confirms 3.
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "geom.kicad_sch")), "geom.kicad_sch")
