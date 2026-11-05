@@ -53,6 +53,9 @@ func TestPartNumberKeys(t *testing.T) {
 	if got := stamp(DefaultLexicon(), map[string]string{"Part Number": "LM1117"}); got != "LM1117" {
 		t.Errorf("KiCad's Part Number field reads %q", got)
 	}
+	if got := stamp(DefaultLexicon(), map[string]string{"PartNumber": "67503-1020"}); got != "67503-1020" {
+		t.Errorf("Altium's PartNumber parameter reads %q", got)
+	}
 	if got := stamp(DefaultLexicon(), map[string]string{"part number": "LM1117"}); got != "LM1117" {
 		t.Errorf("a key differing in case reads %q", got)
 	}
