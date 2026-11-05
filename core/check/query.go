@@ -23,31 +23,32 @@ type irModel struct {
 	pinDir map[string]ir.PinDirection // "refdes\x00pin" -> direction
 	// pinListed marks the pins of parts from undeclared cells that are already in pins. They are
 	// read off connections (agni issue 975), so a pin named by two nets is listed once.
-	pinListed map[string]bool
-	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
-	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
-	unfitted  map[string]bool             // ref-des the design marks do-not-populate
-	pins      []PinInst                   // every part-type pin of every component, dedup by designator
-	pinConn   map[string]bool             // "refdes\x00pin" present in some net's connections
-	pinNet    map[string]string           // "refdes\x00pin" -> first net name it appears on
-	pinNetDup []PinNetConflict            // pins claimed by more than one net (malformed input)
-	ncChannel bool                        // source carries any no-connect evidence (typed pin, flagged net, or NC_ name)
-	netClass  bool                        // at least one net carries a tool-assigned net class (WS3-105)
-	board     *geom.BoardGeometry         // staged by WithBoard, built into boardNets by attachBoard
-	boardNets []BoardNet                  // board tier, populated only when WithBoard attached one
-	hasBoard  bool                        // a non-nil board geometry was attached (tier present, may be empty)
-	connected map[string]bool             // ref_des present on >= 1 net
-	netByName map[string]*ir.Net          // exact net name -> net (rail/attribute lookups)
-	netNames  map[string]bool             // upper-cased net names (for the pair primitive)
-	nameCount map[string]int              // exact-name net counts (duplicate-net-name)
-	classSet  map[string][]ComponentClass // ref_des -> device_classes set (specific + family tags)
-	specs     param.ParamProvider         // params tier, set only by WithParamProvider
-	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
-	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
-	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
-	internal  map[string]bool             // ref_des the design's intent declares an internal connector
-	pullUpHop map[string]int              // net name -> the pull-up reach its intent declares (pull_up_reach_hops)
-	memo      sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
+	pinListed  map[string]bool
+	pinName    map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
+	pinless    map[string]bool             // ref-des whose resolved part types declare no pins at all
+	unfitted   map[string]bool             // ref-des the design marks do-not-populate
+	pins       []PinInst                   // every part-type pin of every component, dedup by designator
+	pinConn    map[string]bool             // "refdes\x00pin" present in some net's connections
+	pinNet     map[string]string           // "refdes\x00pin" -> first net name it appears on
+	pinNetDup  []PinNetConflict            // pins claimed by more than one net (malformed input)
+	ncChannel  bool                        // source carries any no-connect evidence (typed pin, flagged net, or NC_ name)
+	netClass   bool                        // at least one net carries a tool-assigned net class (WS3-105)
+	board      *geom.BoardGeometry         // staged by WithBoard, built into boardNets by attachBoard
+	boardNets  []BoardNet                  // board tier, populated only when WithBoard attached one
+	boardZones []BoardZone                 // board tier: the zones drawn, agni 1410
+	hasBoard   bool                        // a non-nil board geometry was attached (tier present, may be empty)
+	connected  map[string]bool             // ref_des present on >= 1 net
+	netByName  map[string]*ir.Net          // exact net name -> net (rail/attribute lookups)
+	netNames   map[string]bool             // upper-cased net names (for the pair primitive)
+	nameCount  map[string]int              // exact-name net counts (duplicate-net-name)
+	classSet   map[string][]ComponentClass // ref_des -> device_classes set (specific + family tags)
+	specs      param.ParamProvider         // params tier, set only by WithParamProvider
+	mpn        map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
+	passNets   map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
+	lex        *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
+	internal   map[string]bool             // ref_des the design's intent declares an internal connector
+	pullUpHop  map[string]int              // net name -> the pull-up reach its intent declares (pull_up_reach_hops)
+	memo       sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
 }
 
 // ModelOption configures a Model at construction. Options are applied before anything is derived.
@@ -511,6 +512,8 @@ func (m *irModel) BoardRules() BoardRules {
 }
 
 func (m *irModel) BoardNets() []BoardNet { return m.boardNets }
+
+func (m *irModel) BoardZones() []BoardZone { return m.boardZones }
 
 func (m *irModel) HasNetName(name string) bool { return m.netNames[strings.ToUpper(name)] }
 

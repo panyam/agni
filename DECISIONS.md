@@ -2142,9 +2142,9 @@ board's filled copper (planes, pours, their voids and thermal spokes) stay out t
 1357).** KiCad recomputes a zone's fill from the outline and the zone's rules every time it fills,
 and stores the result as `filled_polygon`. That is derived data, it is most of a large board's file
 (Jetson's 273 MB board is mostly fill), and KiCad would write a different fill after the next edit.
-So a KiCad zone keeps its authored outline alone. Allegro, IPC-2581 and ODB++ store the fill as the
-copper itself: an Allegro ETCH shape with its voids, an IPC-2581 contour with its cutouts, an ODB++
-surface with its holes. A film plots that copper as stored, and a DRC measures it, so it is the
+So a KiCad zone keeps its authored outline alone. Allegro, Altium, IPC-2581 and ODB++ store the fill
+as the copper itself: an Allegro ETCH shape with its voids, an Altium region (`Regions6`) with its
+holes (agni 1410), an IPC-2581 contour with its cutouts, an ODB++ surface with its holes. A film plots that copper as stored, and a DRC measures it, so it is the
 board rather than a cache of it. Those are kept as `NetCopper.shapes`.
 
 **Why a shape is not a zone.** A zone states intent: a region the designer drew to be filled with a

@@ -261,3 +261,58 @@ func compareAltiumBoards(t *testing.T, pg, og *geom.BoardGeometry) {
 		}
 	}
 }
+
+// shapeArea is a copper shape's area less its holes', in mm², by the shoelace formula.
+func shapeArea(s *geom.CopperShape) float64 {
+	ring := func(pl *geom.Polyline) float64 {
+		pts := pl.GetPoints()
+		a := 0.0
+		for i := range pts {
+			j := (i + 1) % len(pts)
+			a += float64(pts[i].GetX())*float64(pts[j].GetY()) - float64(pts[j].GetX())*float64(pts[i].GetY())
+		}
+		return math.Abs(a) / 2 / 1e12
+	}
+	a := ring(s.GetOutline())
+	for _, h := range s.GetHoles() {
+		a -= ring(h)
+	}
+	return a
+}
+
+// TestAltiumPoursMatchTheirODBExport holds each foxBMS .PcbDoc's filled copper to the ODB++ job
+// Altium exported from the same board (agni 1410). The pours and solid regions must be the same
+// shapes on the same layers and nets, with the same number of holes, and each layer and net's copper
+// must cover the same area to within 0.5%.
+func TestAltiumPoursMatchTheirODBExport(t *testing.T) {
+	total := 0
+	for _, pr := range altiumPairs(t) {
+		t.Run(pr.name, func(t *testing.T) {
+			_, pg := readBoth(t, pr.pcb)
+			_, og := readBoth(t, pr.odb)
+			ours, theirs := shapeRows(pg), shapeRows(og)
+			if diffs := diffRows("shapes", ours, theirs); len(diffs) > 0 {
+				t.Errorf("%d differences (copper layer, net, holes):\n  %s", len(diffs), capLines(diffs))
+			}
+			area := func(g *geom.BoardGeometry) map[string]float64 {
+				m := map[string]float64{}
+				for _, nc := range g.GetNets() {
+					for _, s := range nc.GetShapes() {
+						m[s.GetLayer()+" "+nc.GetNet()] += shapeArea(s)
+					}
+				}
+				return m
+			}
+			oa, ta := area(pg), area(og)
+			for k, a := range ta {
+				if math.Abs(oa[k]-a) > 0.005*a {
+					t.Errorf("%s: the .PcbDoc's copper covers %.3f mm², the export's %.3f mm²", k, oa[k], a)
+				}
+			}
+			total += len(theirs)
+		})
+	}
+	if total < 300 {
+		t.Fatalf("compared %d shapes across the boards, too few to mean anything", total)
+	}
+}

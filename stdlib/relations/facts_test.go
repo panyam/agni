@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
@@ -1374,3 +1375,38 @@ func TestEntityFactsSkipsUnnamed(t *testing.T) {
 // mmOf converts a published length from metres (agni issue 1035) back to millimetres. It rounds to
 // the nanometre a board records, so a test states the number the board's own tools print.
 func mmOf(m float64) float64 { return math.Round(m*1e9) / 1e6 }
+
+// TestBoardCopperAndZones checks the two copper views (agni 1410). board.copper names the kinds of
+// copper a net has on each layer, a via on the two layers it joins, and board.zone the zones drawn,
+// which are intent and so never copper.
+func TestBoardCopperAndZones(t *testing.T) {
+	pt := func(x, y int64) *geom.Point { return &geom.Point{X: x, Y: y} }
+	sq := &geom.Polyline{Points: []*geom.Point{pt(0, 0), pt(10, 0), pt(10, 10), pt(0, 10)}}
+	bg := &geom.BoardGeometry{
+		Nets: []*geom.NetCopper{
+			{Net: "GND", Shapes: []*geom.CopperShape{{Layer: "In1.Cu", Outline: sq}},
+				Vias: []*geom.Via{{At: pt(5, 5), Size: 4, Drill: 2, LayerFrom: "F.Cu", LayerTo: "B.Cu"}}},
+			{Net: "SIG", Segments: []*geom.TrackSegment{{A: pt(0, 0), B: pt(5, 0), Width: 1, Layer: "F.Cu"}, {A: pt(5, 0), B: pt(9, 0), Width: 1, Layer: "F.Cu"}}},
+		},
+		Zones: []*geom.Zone{{Net: "GND", Layer: "In1.Cu", Outline: sq}, {Net: "GND", Layer: "In1.Cu", Outline: sq}, {Net: "VCC", Layer: "In2.Cu", Outline: sq}},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(&ir.Design{}, check.WithBoard(bg))))
+	var copper, zones []string
+	for _, f := range byRel[RelBoardCopper] {
+		copper = append(copper, f.Subject+" "+f.Object+" "+f.Value)
+		if len(f.Cites) == 0 {
+			t.Errorf("board.copper(%s) has no provenance cite", f.Subject)
+		}
+	}
+	for _, f := range byRel[RelBoardZone] {
+		zones = append(zones, f.Subject+" "+f.Object)
+	}
+	sort.Strings(copper)
+	sort.Strings(zones)
+	if got, want := strings.Join(copper, "; "), "GND B.Cu via; GND F.Cu via; GND In1.Cu pour; SIG F.Cu track"; got != want {
+		t.Errorf("board.copper = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(zones, "; "), "GND In1.Cu; VCC In2.Cu"; got != want {
+		t.Errorf("board.zone = %q, want %q (one row per net and layer)", got, want)
+	}
+}

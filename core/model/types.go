@@ -139,6 +139,24 @@ type BoardNet struct {
 	Net      string
 	Segments []BoardSeg
 	Vias     []BoardVia
+	// Shapes are the net's filled copper, its planes and pours as etched (agni 1357, 1410).
+	Shapes []BoardShape
+}
+
+// BoardShape is one filled copper polygon on a layer: its outline, and each hole a region inside it
+// with no copper. Points are in the sidecar's units, rings closed and arcs chorded.
+type BoardShape struct {
+	Layer   string
+	Outline []*geom.Point
+	Holes   [][]*geom.Point
+}
+
+// BoardZone is a region a designer drew to be filled with a net's copper, on a layer. It states
+// intent, not copper; the copper a fill made is a BoardShape on the net (agni 1410).
+type BoardZone struct {
+	Net     string
+	Layer   string
+	Outline []*geom.Point
 }
 
 // BoardSeg is one routed track segment. Coordinates and width are in the sidecar's
@@ -155,6 +173,8 @@ type BoardVia struct {
 	At    *geom.Point
 	Size  int64
 	Drill int64
+	// LayerFrom and LayerTo are the copper layers the via joins, the outer pair for a through via.
+	LayerFrom, LayerTo string
 }
 
 // Annular is the copper ring width around the drill: (Size - Drill) / 2.

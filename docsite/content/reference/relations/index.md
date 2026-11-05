@@ -56,9 +56,11 @@ The relations a datalog query joins over. Each documented relation links to its 
 
 | Relation | Summary |
 |---|---|
+| [`board.copper(net, layer, kind)`](board.copper/) | a net has copper of a kind (track, via or pour) on a board layer, as etched |
 | [`board.layer(net, layer)`](board.layer/) | a net appears on a board copper layer |
 | [`board.track_width(net, mm)`](board.track_width/) | a copper track's width on a net (metres, shown in mm) |
 | [`board.via_drill(net, mm)`](board.via_drill/) | a via's drill diameter on a net (metres, shown in mm) |
+| [`board.zone(net, layer)`](board.zone/) | the designer drew a zone to be filled with a net on a board layer; intent, not copper |
 
 ## datasheet
 
