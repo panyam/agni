@@ -74,6 +74,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     undrawnNote: vi.fn(),
     staleLinkNote: vi.fn(),
     hierarchyNote: vi.fn(),
+    drawingNote: vi.fn(),
     rules: { setState: vi.fn() },
     report: vi.fn(),
     query: stubQueryView(),

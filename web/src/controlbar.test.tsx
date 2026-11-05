@@ -6,10 +6,6 @@ import type { ControlsState } from "./controls.js";
 const base: ControlsState = {
   mode: "svg",
   nativeAvailable: false,
-  layouts: ["faithful"],
-  layout: "faithful",
-  providedSymbols: false,
-  faithfulSymbols: false,
   hasHighlights: false,
 };
 
@@ -19,8 +15,6 @@ function mount(over: Partial<ControlsState> = {}, staticHost = false) {
   document.body.appendChild(el);
   const bar = controlBarIsland(el, null, {
     onMode: vi.fn(),
-    onLayout: vi.fn(),
-    onSymbols: vi.fn(),
     onClearHighlights,
   }, { staticHost });
   bar.island.activate();

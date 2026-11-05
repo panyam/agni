@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import type { RenderMode } from "./viewer.js";
@@ -10,21 +10,17 @@ const MODES: { mode: RenderMode; label: string }[] = [
   { mode: "native", label: "Native" },
 ];
 
-// Controls renders the render-mode buttons, layout selector and the other toggles from
-// ControlsState. Everything derives from the signal, so the presenter drives it by pushing state,
-// and every click or selection emits an intent up.
+// Controls renders the render-mode buttons and the other toggles from ControlsState. It offers no
+// layout or symbol-source choice. A design draws as its schematic does, or on agni's default layout
+// with a note saying why (GetDesignResponse.drawing_note). `?layout=` and `?symbols=` still choose
+// one from the address, for experiments. Everything derives from the signal, so the presenter drives
+// it by pushing state, and every click or selection emits an intent up.
 function Controls(props: {
   state: () => ControlsState;
   onMode: (m: RenderMode) => void;
-  onLayout: (l: string) => void;
-  onSymbols: (faithful: boolean) => void;
   onClearHighlights: () => void;
   staticHost: boolean;
 }) {
-  // The faithful-symbols toggle is only meaningful for an auto-layout of a design that ships
-  // symbols; the faithful layout already draws them, and native has its own pages.
-  const showSymbols = () =>
-    props.state().providedSymbols && props.state().layout !== "faithful" && props.state().mode !== "native";
   const nativeDisabled = (m: RenderMode) => m === "native" && !props.state().nativeAvailable;
   return (
     <div class="controls">
@@ -51,27 +47,6 @@ function Controls(props: {
           )}
         </For>
       </div>
-      <Show when={props.state().layouts.length > 1}>
-        <select
-          class="layout-select"
-          title="geometry layout"
-          disabled={props.state().mode === "native"}
-          value={props.state().layout}
-          onChange={(e) => props.onLayout(e.currentTarget.value)}
-        >
-          <For each={props.state().layouts}>{(l) => <option value={l}>{l}</option>}</For>
-        </select>
-      </Show>
-      <Show when={showSymbols()}>
-        <label class="symbols-toggle" title="draw the design's own symbols instead of synthetic glyphs">
-          <input
-            type="checkbox"
-            checked={props.state().faithfulSymbols}
-            onChange={(e) => props.onSymbols(e.currentTarget.checked)}
-          />
-          Provided symbols
-        </label>
-      </Show>
       {/* Always rendered, and disabled when there is nothing to clear, because a control that
           appears on a state change has to be discovered twice (agni issue 348). */}
       <button
@@ -93,8 +68,6 @@ export function controlBarIsland(
   eventBus: EventBus | null,
   handlers: {
     onMode: (m: RenderMode) => void;
-    onLayout: (l: string) => void;
-    onSymbols: (faithful: boolean) => void;
     onClearHighlights: () => void;
   },
   opts: { staticHost?: boolean } = {},
@@ -102,10 +75,6 @@ export function controlBarIsland(
   const [state, setState] = signalView<ControlsState>({
     mode: "svg",
     nativeAvailable: false,
-    layouts: [],
-    layout: "",
-    providedSymbols: false,
-    faithfulSymbols: false,
     hasHighlights: false,
   });
   const island = new SolidIsland(
@@ -115,8 +84,6 @@ export function controlBarIsland(
       <Controls
         state={state}
         onMode={handlers.onMode}
-        onLayout={handlers.onLayout}
-        onSymbols={handlers.onSymbols}
         onClearHighlights={handlers.onClearHighlights}
         staticHost={opts.staticHost ?? false}
       />

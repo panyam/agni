@@ -81,6 +81,7 @@ function harness() {
       undrawnNote: vi.fn(),
       staleLinkNote: vi.fn(),
       hierarchyNote: vi.fn(),
+      drawingNote: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
       location: onLocation,

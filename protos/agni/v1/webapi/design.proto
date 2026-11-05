@@ -176,6 +176,11 @@ message GetDesignResponse {
   // stderr note and both HTML reports use the same wording. The server sends it whole, so the
   // viewer's strip renders it and does not compose a second copy.
   string hierarchy_note = 13;
+  // drawing_note is a sentence saying why the sheets are a computed layout, and which file would
+  // draw them as the designer did. It is "" when the geometry tier carries its own drawing. The
+  // server writes it from the format registry (formats.Format.DrawnBy), so the viewer shows it as
+  // sent and keeps no list of formats.
+  string drawing_note = 14;
 }
 
 message GetSheetRequest {

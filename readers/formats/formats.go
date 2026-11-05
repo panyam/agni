@@ -61,6 +61,10 @@ type Format struct {
 	// and 1617 off its .edn. A design read from such a file reports no counts. A KiCad, xschem or
 	// gEDA schematic is its design's netlist and leaves this false (agni issue 1342).
 	DrawnNetlist bool
+	// DrawnBy names the extensions of the schematic files that draw a design this format holds no
+	// drawing of, such as ".eds" for an EDIF netlist. The viewer's note on a computed layout names
+	// them (DrawnByExts). Empty when no format agni reads draws it, as for a board format.
+	DrawnBy []string
 }
 
 // byExt is the registry. The built-in entries are defined in registry.go; an out-of-module
@@ -117,6 +121,27 @@ func HasNetlist(name string) bool {
 func HasFaithful(name string) bool {
 	f := ByExt(name)
 	return f != nil && f.Geometry != nil
+}
+
+// DrawnByExts returns the extensions that draw the file's design, from its format's DrawnBy, or nil.
+func DrawnByExts(name string) []string {
+	if f := ByExt(name); f != nil {
+		return f.DrawnBy
+	}
+	return nil
+}
+
+// DrawingExts lists every registered extension with a faithful-geometry reader, sorted. These are
+// the files a design.yaml can name as a companion to give a netlist its drawn sheets.
+func DrawingExts() []string {
+	var out []string
+	for ext, f := range byExt {
+		if f.Geometry != nil {
+			out = append(out, ext)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // HasBoard reports whether the file's extension holds board geometry, the copper, layers and

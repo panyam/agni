@@ -110,7 +110,9 @@ names the flag and the two other ways to say the same thing.
 `web/` after `make ui`, or the container image. A release binary finds its own viewer.
 
 The viewer pans and zooms, and its panels run the same checks the CLI runs, over the same catalog, so
-the findings you saw in rung 2 appear against the drawing rather than as a list. The `Board` sheet
+the findings you saw in rung 2 appear against the drawing rather than as a list. The viewer draws a
+design with no drawing, such as `gateway.edn` alone, on the `grid` layout, and a note above the
+canvas names the file that would draw it. The `Board` sheet
 in its list is the copper. Later rungs add tiers
 to that catalog, and the viewer picks them up the same way the CLI does.
 
