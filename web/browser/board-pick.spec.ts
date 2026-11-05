@@ -209,6 +209,13 @@ describe("hiding a board layer", () => {
       await open();
       expect(await page.locator(".board-layer-row", { hasText: "In1.Cu" }).locator("input").isChecked()).toBe(false);
       expect(await page.$eval(track, (el) => el.getClientRects().length)).toBe(0);
+
+      // A double-click shows one layer alone. The panel draws its rows again after the first click's
+      // toggle, so this is a real double-click, not two calls on one element.
+      await page.locator(".board-layer-row", { hasText: "B.Cu" }).dblclick();
+      await page.waitForFunction(() => document.querySelector('#svg-view [data-layer="F.Cu"]')!.getClientRects().length === 0, null, { timeout: 30_000 });
+      const shown = await page.$$eval(".board-layer-row", (rs) => rs.filter((r) => (r.querySelector("input") as HTMLInputElement).checked).map((r) => r.textContent!.trim()));
+      expect(shown).toEqual(["B.Cu"]);
     });
   }, 90_000);
 });

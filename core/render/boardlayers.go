@@ -31,7 +31,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 			return fallback
 		}
 		s.colors = append(s.colors, color)
-		return uint8(len(s.colors) - 1)
+		return uint8(len(s.colors) - 1) // #nosec G115 -- the check above holds len(s.colors) to maxBoardGroups, 256
 	}
 
 	stack := copperStack(b)
@@ -90,12 +90,17 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 	}
 	if len(s.zone) > 0 {
 		var groups []uint32
+		color := ""
 		for _, ly := range stack {
 			if g, ok := s.zone[ly]; ok {
 				groups = append(groups, uint32(g))
+				if color == "" {
+					// The swatch takes the colour of the first layer that has a zone.
+					color = copperColor(style, ly)
+				}
 			}
 		}
-		s.rows = append(s.rows, &geom.BoardLayerRow{Name: "Zones", Kind: "zones", Color: style.CopperFront,
+		s.rows = append(s.rows, &geom.BoardLayerRow{Name: "Zones", Kind: "zones", Color: color,
 			SvgSelector: ".zones-front, .zones-back, .zones-inner", Groups: groups})
 	}
 	for _, ly := range artLayers(b) {

@@ -215,8 +215,15 @@ describe("the Board tile's layers", () => {
     view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: [] }));
     el.querySelectorAll<HTMLInputElement>(".board-layer-row input")[1].click();
     expect(layers.onToggle).toHaveBeenCalledWith("In1.Cu");
-    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    // Two presses on one row show it alone, even when the row is drawn again between them.
+    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    view.setState(state({ tiles, activeId: "board", boardLayers: rows, hiddenLayers: ["F.Cu"] }));
+    expect(layers.onSolo).not.toHaveBeenCalled();
+    el.querySelectorAll(".board-layer-row")[0].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     expect(layers.onSolo).toHaveBeenCalledWith("F.Cu");
+    // A press on another row starts again.
+    el.querySelectorAll(".board-layer-row")[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(layers.onSolo).toHaveBeenCalledTimes(1);
     const back = [...el.querySelectorAll<HTMLButtonElement>(".board-layer-preset")].find((b) => b.textContent === "Back");
     back!.click();
     expect(layers.onPreset).toHaveBeenCalledWith("back");

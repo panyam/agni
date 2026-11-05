@@ -35,7 +35,12 @@ const PRESETS: { preset: LayerPreset; label: string; title: string }[] = [
   { preset: "back", label: "Back", title: "show the back side: its layers, the edge, the through copper and the zones" },
 ];
 
-function BoardLayers(props: { state: () => OverviewState; layers: LayerControl; depth: number }) {
+// soloPressMs is how close two presses on one row must be to show it alone. The panel draws its
+// tiles again on every state push, a toggle included, so the second press lands on a new element and
+// the browser fires no dblclick. The panel counts presses by the row's name instead.
+const soloPressMs = 400;
+
+function BoardLayers(props: { state: () => OverviewState; layers: LayerControl; depth: number; onPress: (name: string) => void }) {
   const hidden = createMemo(() => new Set(props.state().hiddenLayers ?? []));
   return (
     <div class="board-layers" style={{ "padding-left": `${(props.depth + 1) * 12}px` }}>
@@ -52,7 +57,7 @@ function BoardLayers(props: { state: () => OverviewState; layers: LayerControl; 
         <For each={props.state().boardLayers ?? []}>
           {(r) => (
             <li>
-              <label class="board-layer-row" title={`${r.name}: double-click to show it alone`} onDblClick={() => props.layers.onSolo(r.name)}>
+              <label class="board-layer-row" title={`${r.name}: double-click to show it alone`} onMouseDown={() => props.onPress(r.name)}>
                 <input type="checkbox" checked={!hidden().has(r.name)} onChange={() => props.layers.onToggle(r.name)} />
                 <span class="board-layer-swatch" style={{ background: r.color }} />
                 <span class="board-layer-name">{r.name}</span>
@@ -81,6 +86,16 @@ function SheetOverviewPanel(props: {
       return next;
     });
   const counted = () => props.state().ruleCount > 0 && props.state().ranCount > 0;
+  let lastPress = { name: "", at: 0 };
+  const pressed = (name: string) => {
+    const now = Date.now();
+    if (lastPress.name === name && now - lastPress.at < soloPressMs) {
+      lastPress = { name: "", at: 0 };
+      props.layers?.onSolo(name);
+      return;
+    }
+    lastPress = { name, at: now };
+  };
   // nested is whether any sheet has children, so a flat list keeps no room for a fold arrow.
   const nested = createMemo(() => forest().some((n) => n.children.length > 0));
 
@@ -147,7 +162,7 @@ function SheetOverviewPanel(props: {
           </Show>
         </div>
         <Show when={t.id === "board" && props.layers && props.state().activeId === "board" && (props.state().boardLayers ?? []).length > 0}>
-          <BoardLayers state={props.state} layers={props.layers!} depth={p.depth} />
+          <BoardLayers state={props.state} layers={props.layers!} depth={p.depth} onPress={pressed} />
         </Show>
         <Show when={parent && !folded().has(t.id)}>
           <ul class="sheet-tiles">
