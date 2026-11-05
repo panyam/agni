@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
+import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageBoard, pageFlattens, pageOf, parseUrl, setBase, withBoard, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -113,6 +113,17 @@ describe("router", () => {
     expect(pageFlattens("?flatten=1&timing=1")).toBe(true);
     expect(pageFlattens("?timing=1")).toBe(false);
     expect(withFlatten("/designs/m/b.edn/view?sheet=root")).toBe("/designs/m/b.edn/view?sheet=root&flatten=1");
+  });
+
+  it("carries an attached board through every address the viewer writes (agni issue 1367)", () => {
+    const url = locationToUrl(loc({ mount: "m", path: "odb/gateway.edn", sheet: "graph", board: "m/odb/gateway-layout" }));
+    expect(url).toBe("/designs/m/odb/gateway.edn/view?sheet=graph&board=m%2Fodb%2Fgateway-layout");
+    expect(parseUrl("/designs/m/odb/gateway.edn/view", "?board=m%2Fodb%2Fgateway-layout").board).toBe("m/odb/gateway-layout");
+    expect(parseUrl("/designs/m/odb/gateway.edn/view", "").board).toBe("");
+    expect(pageBoard("?board=m%2Fodb%2Fgateway-layout&timing=1")).toBe("mount://m/odb/gateway-layout");
+    expect(pageBoard("?timing=1")).toBe("");
+    expect(withBoard("/designs/m/x.edn/view?sheet=graph", "m/b.kicad_pcb")).toBe("/designs/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb");
+    expect(withBoard("/designs/m/x.edn/view?sheet=graph&board=m%2Fb.kicad_pcb", "")).toBe("/designs/m/x.edn/view?sheet=graph");
   });
 
   it("marks a folder with a trailing slash and carries no view knobs", () => {

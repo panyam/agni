@@ -123,6 +123,13 @@ message DirEntry {
   // browser used to decide by extension. That put a second copy of the rule in TypeScript, and
   // nothing could notice when it disagreed with the server.
   FileKind kind = 5;
+  // board_uri is what to attach as a design's board (Snapshot.board_uri) when this entry is one, and
+  // empty otherwise. It is set only when ListDirRequest.mark_boards asks. A file a board reader opens
+  // is its own uri. A directory holding an ODB++ job answers its matrix/matrix entry, the file a
+  // reader enters the job by, since a loader reads exactly the artifact it is handed. The server
+  // decides both, as it decides kind, so no client keeps a list of board formats or knows a job's
+  // layout.
+  string board_uri = 6;
 }
 
 message ListDirRequest {
@@ -141,6 +148,10 @@ message ListDirRequest {
   // because it reached its bound or the adapter failed. That directory is kept. A folder shown
   // wrongly costs a click, and a folder hidden wrongly costs a file.
   repeated FileKind opens = 3;
+  // mark_boards sets DirEntry.board_uri on each entry the viewer can attach as a design's board, for a
+  // picker that asks for one (agni issue 1367). Marking a directory costs one listing of it, so it is
+  // off unless asked.
+  bool mark_boards = 4;
 
   reserved 2; // prune_empty_dirs, replaced by opens
 }

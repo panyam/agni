@@ -22,6 +22,11 @@ export interface ViewerLocation {
   // 1102). It is a property of the page rather than of one question. Every snapshot the page
   // ingests is read with it (pageFlattens), so every address the viewer writes includes it.
   flatten: boolean;
+  // board is a board the page attaches to its design, "<mount>/<path>", when the design declares
+  // none or a different one (Snapshot.board_uri, agni issue 1367). Like flatten it belongs to the
+  // page. Every snapshot the page ingests reads it (pageBoard), so every address keeps it. Absent
+  // and "" both mean the design's own board.
+  board?: string;
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
   // It is SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET
@@ -141,7 +146,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, board: "", verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -179,6 +184,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.layout) params.set("layout", loc.layout);
   if (loc.symbols) params.set("sym", "1");
   if (loc.flatten) params.set(FLATTEN_PARAM, "1");
+  if (loc.board) params.set(BOARD_PARAM, loc.board);
   if (loc.verdict) params.set("verdict", loc.verdict);
   // Only alongside its verdict, or the address bar keeps asserting a provenance that nothing on
   // screen depends on.
@@ -216,6 +222,25 @@ export const FLATTEN_PARAM = "flatten";
 // page and the viewer share the address's query, so both ingest the same way.
 export function pageFlattens(search: string): boolean {
   return new URLSearchParams(search).get(FLATTEN_PARAM) === "1";
+}
+
+// BOARD_PARAM is the query parameter naming a board the page attaches, "<mount>/<path>".
+export const BOARD_PARAM = "board";
+
+// pageBoard is the board the page at search attaches to its design, as a mount:// URI, or "" for the
+// design's own (agni issue 1367).
+export function pageBoard(search: string): string {
+  const b = new URLSearchParams(search).get(BOARD_PARAM) ?? "";
+  return b ? `mount://${b}` : "";
+}
+
+// withBoard is url attaching board ("<mount>/<path>") to the page's design, every other parameter
+// kept. An empty board takes the parameter off, so the design's own board is read again.
+export function withBoard(url: string, board: string): string {
+  const u = new URL(url, "http://x");
+  if (board) u.searchParams.set(BOARD_PARAM, board);
+  else u.searchParams.delete(BOARD_PARAM);
+  return u.pathname + u.search;
 }
 
 // withFlatten is url with the page asking for its design read whole, every other parameter kept.
@@ -297,6 +322,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.layout = params.get("layout") ?? "";
   loc.symbols = params.get("sym") === "1";
   loc.flatten = params.get(FLATTEN_PARAM) === "1";
+  loc.board = params.get(BOARD_PARAM) ?? "";
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
   loc.rule = params.get("rule") ?? "";

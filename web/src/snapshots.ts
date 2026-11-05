@@ -33,6 +33,7 @@ interface Definition {
   uri: string;
   overlay?: OverlayConfig;
   flattenHierarchy?: boolean;
+  boardUri?: string;
 }
 
 // RegistryOptions apply to every snapshot that a page ingests.
@@ -41,6 +42,9 @@ export interface RegistryOptions {
   // 1102). The page sets it from its address (pageFlattens), so a design read under one choice is
   // never asked about under the other.
   flatten?: boolean;
+  // board attaches a board to every design the page ingests (Snapshot.board_uri, agni issue 1367),
+  // a mount:// URI. The page sets it from its address (pageBoard).
+  board?: string;
 }
 
 // SnapshotSource names a design's snapshot under a config. A presenter asks the registry for
@@ -69,7 +73,9 @@ export class SnapshotRegistry implements SnapshotSource {
 
   // def returns the definition that the page ingests uri under.
   private def(uri: string, overlay?: OverlayConfig): Definition {
-    return this.options.flatten ? { uri, overlay, flattenHierarchy: true } : { uri, overlay };
+    const def: Definition = this.options.flatten ? { uri, overlay, flattenHierarchy: true } : { uri, overlay };
+    if (this.options.board) def.boardUri = this.options.board;
+    return def;
   }
 
   // of returns the name of the snapshot of uri under overlay, ingesting it on first use. A failed

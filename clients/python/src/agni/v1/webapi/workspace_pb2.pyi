@@ -42,26 +42,30 @@ class ListMountsResponse(_message.Message):
     def __init__(self, mounts: _Optional[_Iterable[_Union[Mount, _Mapping]]] = ..., pruned_mounts: _Optional[int] = ...) -> None: ...
 
 class DirEntry(_message.Message):
-    __slots__ = ("name", "is_dir", "format", "uri", "kind")
+    __slots__ = ("name", "is_dir", "format", "uri", "kind", "board_uri")
     NAME_FIELD_NUMBER: _ClassVar[int]
     IS_DIR_FIELD_NUMBER: _ClassVar[int]
     FORMAT_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
+    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     name: str
     is_dir: bool
     format: str
     uri: str
     kind: FileKind
-    def __init__(self, name: _Optional[str] = ..., is_dir: _Optional[bool] = ..., format: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[FileKind, str]] = ...) -> None: ...
+    board_uri: str
+    def __init__(self, name: _Optional[str] = ..., is_dir: _Optional[bool] = ..., format: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[FileKind, str]] = ..., board_uri: _Optional[str] = ...) -> None: ...
 
 class ListDirRequest(_message.Message):
-    __slots__ = ("uri", "opens")
+    __slots__ = ("uri", "opens", "mark_boards")
     URI_FIELD_NUMBER: _ClassVar[int]
     OPENS_FIELD_NUMBER: _ClassVar[int]
+    MARK_BOARDS_FIELD_NUMBER: _ClassVar[int]
     uri: str
     opens: _containers.RepeatedScalarFieldContainer[FileKind]
-    def __init__(self, uri: _Optional[str] = ..., opens: _Optional[_Iterable[_Union[FileKind, str]]] = ...) -> None: ...
+    mark_boards: bool
+    def __init__(self, uri: _Optional[str] = ..., opens: _Optional[_Iterable[_Union[FileKind, str]]] = ..., mark_boards: _Optional[bool] = ...) -> None: ...
 
 class ListDirResponse(_message.Message):
     __slots__ = ("entries",)
