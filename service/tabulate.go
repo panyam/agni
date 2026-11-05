@@ -185,6 +185,60 @@ func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
 	return t
 }
 
+// WalkColumns is the walk table's header. through, enter_pin and exit_pin say how the walk entered
+// the net. parts lists the other parts on it, and parts_elided how many more the list left out.
+var WalkColumns = []webapi.TableColumn{
+	{Name: "hop", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "net", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "from_net", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "through", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "enter_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "exit_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "ended"},
+	{Name: "parts", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "parts_elided", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+}
+
+// WalkBoundaryColumns is the walk_boundary table's header.
+var WalkBoundaryColumns = []webapi.TableColumn{
+	{Name: "hop", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "ref_des", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "class"},
+	{Name: "net", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "reason"},
+}
+
+// WalkTables returns a walk's nets in the order it reached them, and the parts it left at the
+// boundary.
+func WalkTables(w *webapi.Walk) []*webapi.Table {
+	nets := &webapi.Table{Name: "walk", Columns: columns(WalkColumns)}
+	for _, n := range w.GetNets() {
+		var parts []string
+		for _, st := range n.GetNet().GetStubs() {
+			parts = append(parts, st.GetRefDes()+"."+st.GetPin())
+		}
+		e := n.GetEntered()
+		r := []string{
+			strconv.Itoa(int(n.GetHop())), n.GetNet().GetName(), e.GetFromNet(), e.GetRefDes(), e.GetEnterPin(), e.GetExitPin(),
+			n.GetEnded(), strings.Join(parts, rpt.MultiValueSep), strconv.Itoa(int(n.GetNet().GetStubsElided())),
+		}
+		kinds := make([]string, len(WalkColumns))
+		kinds[1], kinds[3] = check.KindNet, check.KindComponent
+		if r[2] != "" {
+			kinds[2] = check.KindNet
+		}
+		nets.Rows = append(nets.Rows, &webapi.TableRow{Cells: r, CellKinds: kinds})
+	}
+	edge := &webapi.Table{Name: "walk_boundary", Columns: columns(WalkBoundaryColumns)}
+	for _, b := range w.GetBoundary() {
+		edge.Rows = append(edge.Rows, &webapi.TableRow{
+			Cells:     []string{strconv.Itoa(int(b.GetHop())), b.GetRefDes(), b.GetClass(), b.GetNet(), b.GetReason()},
+			CellKinds: []string{"", check.KindComponent, "", check.KindNet, ""},
+		})
+	}
+	return []*webapi.Table{nets, edge}
+}
+
 // ReviewColumns is the review table's header. findings names each firing behind an item as
 // rule=kind:ref, and unmet each part whose datasheet the item needed, so a failed or undecided row
 // says what to look at.
@@ -478,6 +532,8 @@ func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*w
 		tables = append(tables, DiffTable(a.Diff))
 	case *webapi.TabulateRequest_Review:
 		tables = append(tables, ReviewTables(a.Review)...)
+	case *webapi.TabulateRequest_Walk:
+		tables = append(tables, WalkTables(a.Walk.GetWalk())...)
 	case *webapi.TabulateRequest_Query:
 		tables = append(tables, QueryTable("query", a.Query))
 	case *webapi.TabulateRequest_QuerySet:

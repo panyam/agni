@@ -62,6 +62,20 @@ service DesignService {
   // it as "not connected" would send its reader to look at the board, when the mistake is in what
   // they typed.
   rpc TraceDesign(TraceDesignRequest) returns (TraceDesignResponse);
+
+  // WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
+  // part it crossed into each, and the parts it left at the boundary with the reason (agni issue
+  // 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
+  // through, and so is a rail except on the series walk, which passes through one as trace does.
+  // The answer says which branches ended there. The walk kind decides which parts are crossed. `agni walk` prints the same answer.
+  //
+  // Like TraceDesign it is verb-shaped (C23), and a start that names nothing the design has is an
+  // answer with `reason` set rather than an empty walk.
+  rpc WalkDesign(WalkDesignRequest) returns (WalkDesignResponse);
+
+  // ListWalkKinds lists the walk kinds WalkDesign takes, in the order a viewer offers them. It reads
+  // no design, so it names no snapshot.
+  rpc ListWalkKinds(ListWalkKindsRequest) returns (ListWalkKindsResponse);
 }
 
 // SheetFormat selects which renderer draws a sheet. It is a separate axis from
@@ -342,6 +356,85 @@ message TraceNet {
   // route crosses three sheets. A Finding's `sheets` and a query AnswerEntity's `sheet_ids` have
   // the same shape. So the panel renders the same SheetBadges, and a click navigates the same way.
   repeated string sheet_ids = 5;
+}
+
+message WalkDesignRequest {
+  // snapshot names the design to walk, "snapshots/{snapshot}".
+  string snapshot = 1;
+  // from is the start. A part when pin is empty, which starts from every pin of it, or one pin.
+  TraceEndpoint from = 2;
+  // kind names the walk, one of ListWalkKinds' names. Empty takes "series".
+  string kind = 3;
+  // hops is how many hops to walk, hop 1 being the start's own nets. 0 takes the default of 2.
+  int32 hops = 4;
+  // through names parts to cross whatever the kind's rule says, such as one IC a reader wants to
+  // walk past.
+  repeated string through = 5;
+}
+
+message WalkDesignResponse {
+  Walk walk = 1;
+}
+
+// Walk is one walk outwards from a part or pin, and its whole answer.
+message Walk {
+  // from is the start as resolved. Its pin and net are empty when the walk started from a part.
+  TraceEnd from = 1;
+  string kind = 2;
+  // radius is the number of hops walked.
+  int32 radius = 3;
+  // reason says why nothing was walked, when the start names nothing the design has. Empty
+  // otherwise.
+  string reason = 4;
+  // nets are the nets reached, hop by hop, in the order the walk reached them.
+  repeated WalkNet nets = 5;
+  // boundary lists the parts on a reached net that the walk did not cross, each once.
+  repeated WalkBoundary boundary = 6;
+  // elided counts the nets a hop left out under its kind's cap.
+  repeated WalkElided elided = 7;
+}
+
+// WalkNet is one net a walk reached.
+message WalkNet {
+  int32 hop = 1;
+  // net is the net with the other parts on it, and the sheets it is drawn on.
+  TraceNet net = 2;
+  // entered is the part the walk crossed into this net, with its pin on each side. On a hop-1 net it
+  // is the start part's own pin, and from_net and enter_pin are empty.
+  TraceCross entered = 3;
+  // ended says why the walk went no further from this net: "ground", "rail", "global", or a
+  // fan-out. Empty when the net was walked through or lies at the radius.
+  string ended = 4;
+}
+
+// WalkBoundary is a part the walk did not cross, and why. Naming it in `through` crosses it.
+message WalkBoundary {
+  string ref_des = 1;
+  string class = 2;
+  // hop and net are where the walk met it first.
+  int32 hop = 3;
+  string net = 4;
+  string reason = 5;
+}
+
+// WalkElided counts the nets one hop left out.
+message WalkElided {
+  int32 hop = 1;
+  int32 nets = 2;
+}
+
+message ListWalkKindsRequest {}
+
+message ListWalkKindsResponse {
+  repeated WalkKind kinds = 1;
+}
+
+// WalkKind is one walk a viewer can offer for a part.
+message WalkKind {
+  string name = 1;
+  string title = 2;
+  // summary says which parts the walk crosses, in a sentence a reader can choose by.
+  string summary = 3;
 }
 
 // TraceStub is a part on one of the route's nets, which the route does not pass through. Test points

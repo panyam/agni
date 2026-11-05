@@ -412,6 +412,29 @@ connected.
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 | `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
+### `walk <file>`
+
+Walk outwards from a part or one pin, hop by hop, and print the nets reached, the part each was
+entered through, and the parts the walk did not cross, with the reason. Hop 1 is the start's own
+nets. `--kind` picks which parts a hop crosses. `series` crosses what `trace` crosses, `small-parts`
+crosses any part with up to four connected pins and stops at ICs, connectors and rails, and `all`
+crosses every part with a cap per hop. See
+[Walking outwards from a part](../../architecture/net-solving/#walking-outwards-from-a-part). A start
+that names nothing in the design fails and exits non-zero.
+
+| flag | what it does |
+|---|---|
+| `--from <ref>` or `<ref.pin>` | the part (`R1`) or pin (`U7.3`) to start from |
+| `--kind <kind>` | `series` (default), `small-parts` or `all` |
+| `--hops <n>` | how many hops to walk, hop 1 being the start's own nets (default 2) |
+| `--through <refs>` | parts to cross whatever `--kind` says, such as `--through U7` |
+| `--format <fmt>` | `text` (default), `json`, which emits the `WalkDesign` rpc's `Walk` message in protojson, or `csv`, which writes one of the `walk` and `walk_boundary` tables that `Tabulate` projects |
+| `--table <name>` | with `--format csv`, `walk` (default) or `walk_boundary` |
+| `--order-by <cols>` | with `--format csv`, sort by these columns, `-` before one to reverse it |
+| `--remote <url>` | send the request to a running `agni serve`, as on `trace` |
+| `-o, --out <file>` | write the `--format` output to this file |
+| `--timing` | print where the run's time went to stderr, as on `trace` |
+
 ### `pinmap <file>`
 
 Draft a pin map for one device from the netlist (agni issue 1238). It lists every pin of `--device`

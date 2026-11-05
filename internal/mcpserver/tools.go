@@ -25,6 +25,7 @@ func (s *srv) registerTools(srv *mcpkit.Server) {
 	addTool(s, srv, "designs", designsDesc, s.designsTool)
 	addTool(s, srv, "check", checkDesc, s.check)
 	addTool(s, srv, "trace", traceDesc, s.trace)
+	addTool(s, srv, "walk", walkDesc, s.walk)
 	addTool(s, srv, "diff", diffDesc, s.diff)
 	addTool(s, srv, "design", designDesc, s.design)
 	addTool(s, srv, "checklists", checklistsDesc, s.checklists)
@@ -240,6 +241,46 @@ func (s *srv) trace(ctx context.Context, in traceInput) (core.ToolResult, error)
 	res, err := answer(b.String(), map[string]any{"design": u.String(), "from": in.From, "to": in.To, "link": link, "page": linkAction(link), "no_link": why, "answer": protoJSON(resp)})
 	// A pin the design lacks is the question's mistake, so the agent hears it as one.
 	res.IsError = t.Outcome == check.TraceUnresolved
+	return res, err
+}
+
+const walkDesc = `Walk outwards from one part (R1) or pin (U7.3), hop by hop, and get the nets reached, the part crossed into each, and the parts the walk did not cross with the reason. Hop 1 is the start's own nets. A ground ends its branch. kind picks which parts a hop crosses: "series" (resistors, inductors, ferrites, fuses, passing through rails as trace does), "small-parts" (any part with up to four pins, stopping at ICs, connectors and rails) or "all". through names parts to cross anyway.`
+
+type walkInput struct {
+	Design  string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/designs/gateway)."`
+	From    string   `json:"from" jsonschema:"required" jsonschema_description:"The part (R1) or pin (U7.3) to start from."`
+	Kind    string   `json:"kind,omitempty" jsonschema_description:"series, small-parts or all; series when empty."`
+	Hops    int32    `json:"hops,omitempty" jsonschema_description:"How many hops to walk, hop 1 being the start's own nets; 2 when 0."`
+	Through []string `json:"through,omitempty" jsonschema_description:"Parts to cross whatever the kind says, such as [U7]."`
+}
+
+// walkNoLink says why a walk's reply carries no viewer link.
+const walkNoLink = "the viewer does not open a walk from a link yet"
+
+func (s *srv) walk(ctx context.Context, in walkInput) (core.ToolResult, error) {
+	start := &webapi.TraceEndpoint{RefDes: strings.TrimSpace(in.From)}
+	if ref, pin, ok := strings.Cut(start.RefDes, "."); ok {
+		start = &webapi.TraceEndpoint{RefDes: ref, Pin: pin}
+	}
+	if start.RefDes == "" {
+		return failed(fmt.Errorf("from %q: name a part (R1) or a pin (U7.3)", in.From)), nil
+	}
+	var resp *webapi.WalkDesignResponse
+	u, err := s.on(ctx, in.Design, func(sn *webapi.Snapshot) (err error) {
+		resp, err = s.api.Design.WalkDesign(ctx, &webapi.WalkDesignRequest{Snapshot: sn.GetName(), From: start, Kind: in.Kind, Hops: in.Hops, Through: in.Through})
+		return err
+	})
+	if err != nil {
+		return failed(err), nil
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "design: %s\n", u)
+	rpt.WriteWalkText(&b, service.WalkFromProto(resp.GetWalk()))
+	b.WriteString("\n")
+	writeLink(&b, "", walkNoLink)
+	res, err := answer(b.String(), map[string]any{"design": u.String(), "from": in.From, "no_link": walkNoLink, "answer": protoJSON(resp)})
+	// A start the design lacks is the question's mistake, so the agent hears it as one.
+	res.IsError = resp.GetWalk().GetReason() != ""
 	return res, err
 }
 

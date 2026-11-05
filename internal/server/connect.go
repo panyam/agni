@@ -206,6 +206,22 @@ func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.Tr
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) WalkDesign(ctx context.Context, req *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
+	resp, err := a.svc.WalkDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) ListWalkKinds(ctx context.Context, req *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error) {
+	resp, err := a.svc.ListWalkKinds(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Check adapts service.CheckService to the generated Connect handler interface.
 type Check struct {
 	webapiconnect.UnimplementedCheckServiceHandler

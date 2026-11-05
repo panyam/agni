@@ -301,13 +301,41 @@ func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSou
 	for _, n := range t.GetNets() {
 		n.SheetIds = netSheets(n.GetName())
 	}
+	annotateEnds(ix, netSheets, t.GetFrom(), t.GetTo())
+}
+
+// AnnotateWalkSheets fills a walk's per-net sheet ids and its start's, as AnnotateTraceSheets does
+// for a trace. A walk started from a part locates by the part.
+func AnnotateWalkSheets(w *webapi.Walk, g *geom.SchematicGeometry, m LocateSource) {
+	if w == nil || (g == nil && (m == nil || len(m.Nets()) == 0)) {
+		return
+	}
+	ix := indexSheets(g, m)
+	netSheets := func(name string) []string {
+		if name == "" {
+			return nil
+		}
+		return ix.sheetsFor(&checkspb.Subject{Kind: check.KindNet, Ref: name})
+	}
+	for _, n := range w.GetNets() {
+		n.GetNet().SheetIds = netSheets(n.GetNet().GetName())
+	}
+	if f := w.GetFrom(); f != nil && f.GetEndpoint().GetPin() == "" && f.GetEndpoint().GetRefDes() != "" {
+		f.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: check.KindComponent, Ref: f.GetEndpoint().GetRefDes()})
+		return
+	}
+	annotateEnds(ix, netSheets, w.GetFrom())
+}
+
+// annotateEnds fills each endpoint's sheet ids.
+func annotateEnds(ix sheetIndex, netSheets func(string) []string, ends ...*webapi.TraceEnd) {
 	// An endpoint resolves by its PLACEMENT, not by its net. A trace endpoint is a pin on a part, and
 	// a reader wants to open the sheet where that part is drawn. The endpoint's net may be drawn on
 	// sheets the part does not appear on (agni issue 657). A pin finding uses the same lookup.
 	//
 	// Some endpoints have a part that is not placed, such as an unresolved symbol. Falling back to the
 	// net keeps such an endpoint from going blank when its net is drawn somewhere.
-	for _, e := range []*webapi.TraceEnd{t.GetFrom(), t.GetTo()} {
+	for _, e := range ends {
 		if e == nil {
 			continue
 		}

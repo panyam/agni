@@ -49,6 +49,12 @@ const (
 	// DesignServiceTraceDesignProcedure is the fully-qualified name of the DesignService's TraceDesign
 	// RPC.
 	DesignServiceTraceDesignProcedure = "/agni.v1.webapi.DesignService/TraceDesign"
+	// DesignServiceWalkDesignProcedure is the fully-qualified name of the DesignService's WalkDesign
+	// RPC.
+	DesignServiceWalkDesignProcedure = "/agni.v1.webapi.DesignService/WalkDesign"
+	// DesignServiceListWalkKindsProcedure is the fully-qualified name of the DesignService's
+	// ListWalkKinds RPC.
+	DesignServiceListWalkKindsProcedure = "/agni.v1.webapi.DesignService/ListWalkKinds"
 )
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
@@ -92,6 +98,18 @@ type DesignServiceClient interface {
 	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
+	// WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
+	// part it crossed into each, and the parts it left at the boundary with the reason (agni issue
+	// 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
+	// through, and so is a rail except on the series walk, which passes through one as trace does.
+	// The answer says which branches ended there. The walk kind decides which parts are crossed. `agni walk` prints the same answer.
+	//
+	// Like TraceDesign it is verb-shaped (C23), and a start that names nothing the design has is an
+	// answer with `reason` set rather than an empty walk.
+	WalkDesign(context.Context, *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error)
+	// ListWalkKinds lists the walk kinds WalkDesign takes, in the order a viewer offers them. It reads
+	// no design, so it names no snapshot.
+	ListWalkKinds(context.Context, *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error)
 }
 
 // NewDesignServiceClient constructs a client for the agni.v1.webapi.DesignService service. By
@@ -141,6 +159,18 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
 			connect.WithClientOptions(opts...),
 		),
+		walkDesign: connect.NewClient[webapi.WalkDesignRequest, webapi.WalkDesignResponse](
+			httpClient,
+			baseURL+DesignServiceWalkDesignProcedure,
+			connect.WithSchema(designServiceMethods.ByName("WalkDesign")),
+			connect.WithClientOptions(opts...),
+		),
+		listWalkKinds: connect.NewClient[webapi.ListWalkKindsRequest, webapi.ListWalkKindsResponse](
+			httpClient,
+			baseURL+DesignServiceListWalkKindsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ListWalkKinds")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -152,6 +182,8 @@ type designServiceClient struct {
 	getLayoutReport *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
 	locateSubjects  *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
 	traceDesign     *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
+	walkDesign      *connect.Client[webapi.WalkDesignRequest, webapi.WalkDesignResponse]
+	listWalkKinds   *connect.Client[webapi.ListWalkKindsRequest, webapi.ListWalkKindsResponse]
 }
 
 // GetDesign calls agni.v1.webapi.DesignService.GetDesign.
@@ -182,6 +214,16 @@ func (c *designServiceClient) LocateSubjects(ctx context.Context, req *connect.R
 // TraceDesign calls agni.v1.webapi.DesignService.TraceDesign.
 func (c *designServiceClient) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	return c.traceDesign.CallUnary(ctx, req)
+}
+
+// WalkDesign calls agni.v1.webapi.DesignService.WalkDesign.
+func (c *designServiceClient) WalkDesign(ctx context.Context, req *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
+	return c.walkDesign.CallUnary(ctx, req)
+}
+
+// ListWalkKinds calls agni.v1.webapi.DesignService.ListWalkKinds.
+func (c *designServiceClient) ListWalkKinds(ctx context.Context, req *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error) {
+	return c.listWalkKinds.CallUnary(ctx, req)
 }
 
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
@@ -225,6 +267,18 @@ type DesignServiceHandler interface {
 	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
+	// WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
+	// part it crossed into each, and the parts it left at the boundary with the reason (agni issue
+	// 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
+	// through, and so is a rail except on the series walk, which passes through one as trace does.
+	// The answer says which branches ended there. The walk kind decides which parts are crossed. `agni walk` prints the same answer.
+	//
+	// Like TraceDesign it is verb-shaped (C23), and a start that names nothing the design has is an
+	// answer with `reason` set rather than an empty walk.
+	WalkDesign(context.Context, *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error)
+	// ListWalkKinds lists the walk kinds WalkDesign takes, in the order a viewer offers them. It reads
+	// no design, so it names no snapshot.
+	ListWalkKinds(context.Context, *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error)
 }
 
 // NewDesignServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -270,6 +324,18 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceWalkDesignHandler := connect.NewUnaryHandler(
+		DesignServiceWalkDesignProcedure,
+		svc.WalkDesign,
+		connect.WithSchema(designServiceMethods.ByName("WalkDesign")),
+		connect.WithHandlerOptions(opts...),
+	)
+	designServiceListWalkKindsHandler := connect.NewUnaryHandler(
+		DesignServiceListWalkKindsProcedure,
+		svc.ListWalkKinds,
+		connect.WithSchema(designServiceMethods.ByName("ListWalkKinds")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.DesignService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DesignServiceGetDesignProcedure:
@@ -284,6 +350,10 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceLocateSubjectsHandler.ServeHTTP(w, r)
 		case DesignServiceTraceDesignProcedure:
 			designServiceTraceDesignHandler.ServeHTTP(w, r)
+		case DesignServiceWalkDesignProcedure:
+			designServiceWalkDesignHandler.ServeHTTP(w, r)
+		case DesignServiceListWalkKindsProcedure:
+			designServiceListWalkKindsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -315,4 +385,12 @@ func (UnimplementedDesignServiceHandler) LocateSubjects(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.TraceDesign is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) WalkDesign(context.Context, *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.WalkDesign is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ListWalkKinds(context.Context, *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ListWalkKinds is not implemented"))
 }

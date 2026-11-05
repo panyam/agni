@@ -389,6 +389,25 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			appliesLink(t, "trace", a.Page, a.Link)
 		})
 
+		t.Run("walk", func(t *testing.T) {
+			res, a := callMCP(t, s.mcp, "walk", map[string]any{"design": mcpGateway, "from": "Y1", "kind": "small-parts", "hops": 3})
+			resp, err := s.api.design.WalkDesign(ctx, connect.NewRequest(&webapi.WalkDesignRequest{Snapshot: snap,
+				From: &webapi.TraceEndpoint{RefDes: "Y1"}, Kind: "small-parts", Hops: 3}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := &webapi.WalkDesignResponse{}
+			if err := protojson.Unmarshal(a.Answer, got); err != nil {
+				t.Fatal(err)
+			}
+			if len(resp.Msg.GetWalk().GetNets()) < 3 || !proto.Equal(got, resp.Msg) {
+				t.Errorf("walk over MCP %v\nover Connect %v", got, resp.Msg)
+			}
+			if txt := res.Content[0].Text; !strings.HasPrefix(txt, "design: ") || !strings.Contains(txt, "no viewer link: ") {
+				t.Errorf("the walk reply opens or ends unlike every other tool's:\n%s", txt)
+			}
+		})
+
 		t.Run("diff", func(t *testing.T) {
 			const a1, b1 = mcpGateway + "/gateway.edn", mcpGateway + "/gateway-rev-b.edn"
 			res, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
@@ -441,7 +460,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 
 // mcpTools are the tools an agent sees. They are jaala's query language tools, each taking a
 // design, and agni's own.
-var mcpTools = []string{"check", "checklists", "design", "designs", "diff", "explain", "look", "query", "query_set", "review", "schema", "trace", "values"}
+var mcpTools = []string{"check", "checklists", "design", "designs", "diff", "explain", "look", "query", "query_set", "review", "schema", "trace", "values", "walk"}
 
 func toolNames(t *testing.T, c *client.Client) []string {
 	t.Helper()

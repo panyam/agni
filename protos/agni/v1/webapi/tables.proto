@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/design.proto";
 import "agni/v1/webapi/diff.proto";
 import "agni/v1/webapi/query.proto";
 import "agni/v1/webapi/review.proto";
@@ -129,6 +130,9 @@ message TabulateRequest {
     // review gives the "review" table, one row per checklist item in the checklist's order, and the
     // one-row "review_summary".
     Review review = 7;
+    // walk gives the "walk" table, one row per net reached in hop order, and "walk_boundary", one row
+    // per part the walk did not cross (agni issue 1339).
+    WalkDesignResponse walk = 8;
   }
   // order_by sorts each table by these columns, in priority order. A plain name sorts ascending, and
   // a name with a leading "-" sorts descending, as in ["rule", "-outcome", "subjects"]. The sort is
