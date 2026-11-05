@@ -12,9 +12,9 @@
 # run `make samples`. A checksum that does not match is a hard failure, never a warning, because a
 # fixture that silently fails to arrive turns every test that reads it into a test that proves
 # nothing.
-VERSION v0.1.6
+VERSION v0.1.9
 1eabf42527e39ca6b0293b6715c3def2925583085516594123552dfce0ea2cb9  tutorial-board
-4f94872b25b871ad17b88244886a733c1020e8c6948072a3f8a6ec64b5461619  oracle-corpus
+26988564f41547677ab6814f160002772ebe5d68469ec69f61a202441a0ecebb  oracle-corpus
 5243b6379540aca07cf3640e68d0e517d718ed88f09ce1cc23e081bb1343ecef  odb-altium
 e9966e73ecaaee01d63b8021dd4734a8b00910c6b7395adeb9d04805459cc812  odb-kicad
-e3b8300aeac35ebffc842f93651ec202a053995b52687568ad0b86460b687e4e  allegro
+fb5bbbed56095a3f914e4e17d57fe063a0118c05b399bc1b0ae7b1b108d38688  allegro
