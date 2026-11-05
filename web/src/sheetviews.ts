@@ -20,7 +20,7 @@ export interface SheetViewHooks {
   onPickEmpty: (pane: SheetPane) => void;
 }
 
-type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs">;
+type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns">;
 
 export class SheetViews {
   private readonly panes = new Map<string, SheetPane>();
@@ -42,8 +42,11 @@ export class SheetViews {
         ...this.engine,
         onPick: (p, sel) => this.hooks.onPick(p, sel),
         onPickEmpty: (p) => this.hooks.onPickEmpty(p),
-        onViewChange: (p, v) => {
-          for (const peer of lockedPeers(this.list(), p)) this.panes.get(peer.id)?.view.setView(v);
+        // A locked peer takes the drawing point at this view's centre and its zoom, so two views of
+        // the board line up though one is the bottom view or a different size (agni issue 1327).
+        onViewChange: (p) => {
+          const c = p.view.getCentre();
+          for (const peer of lockedPeers(this.list(), p)) this.panes.get(peer.id)?.view.setCentre(c.at, c.scale);
         },
         onFloat: (p) => this.dock.float(p.id),
         onClose: (p) => this.dock.close(p.id),

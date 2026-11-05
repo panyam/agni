@@ -5,6 +5,7 @@
 #   artifacts: tutorial-board (schematics, one board) | oracle-corpus (both views, every board)
 #              | odb-altium (Altium-written ODB++ jobs) | odb-kicad (kicad-cli's ODB++ export of each board)
 #              | allegro (Allegro boards with an extract Allegro wrote from each)
+#              | cadence-exports (Allegro's ODB++ jobs, an Allegro IPC-2581 and its ODB++X twin, an OrCAD EDIF)
 #
 # EVERY failure path here exits non-zero. That is the whole design. A test that reads a board which
 # quietly failed to download does not fail, it passes over an empty set, and

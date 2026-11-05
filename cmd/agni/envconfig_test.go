@@ -258,3 +258,29 @@ func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
 		t.Errorf("a value nobody typed must be announced, got %q", note.String())
 	}
 }
+
+// TestEnvConfigResolvesRelativePathsBesideTheFile runs from a subfolder of the folder holding the
+// file. A relative path names a folder beside the file, wherever the command ran (agni issue 1373).
+func TestEnvConfigResolvesRelativePathsBesideTheFile(t *testing.T) {
+	root := t.TempDir()
+	writeEnvCfg(t, root, "mounts:\n  boards: boards\n  abs: /srv/abs\nsymbol_paths:\n  - syms/lib\n  - mount://shared/syms\nweb_dir: web\n")
+	sub := filepath.Join(root, "boards", "hackrf")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := loadEnvConfig(sub, noEnv)
+	if err != nil {
+		t.Fatalf("loadEnvConfig: %v", err)
+	}
+	got := cfg.mountSpecs()
+	want := []string{"abs=/srv/abs", "boards=" + filepath.Join(root, "boards")}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("mounts = %v, want %v", got, want)
+	}
+	if wantSyms := []string{filepath.Join(root, "syms", "lib"), "mount://shared/syms"}; strings.Join(cfg.SymbolPaths, ",") != strings.Join(wantSyms, ",") {
+		t.Errorf("symbol_paths = %v, want %v", cfg.SymbolPaths, wantSyms)
+	}
+	if want := filepath.Join(root, "web"); cfg.WebDir != want {
+		t.Errorf("web_dir = %q, want %q", cfg.WebDir, want)
+	}
+}

@@ -44,6 +44,7 @@ import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel, addSheetView } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
+import { parseTurn, turnKey } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
@@ -529,6 +530,25 @@ class AppRoot extends BaseComponent {
           return resp.content.case === "svg" ? resp.content.value : "";
         },
         drawnOn: drawnOnFor,
+        // A sheet's turn is kept per design and sheet in this browser (agni issue 1327), so a board
+        // view opened again comes back the way the bench has it. Storage can be absent or full, and
+        // then the view opens upright.
+        turns: {
+          load: (sheetId) => {
+            try {
+              return parseTurn(window.localStorage.getItem(turnKey(presenter.doc.mount, presenter.doc.path, sheetId)));
+            } catch {
+              return null;
+            }
+          },
+          save: (sheetId, turn) => {
+            try {
+              window.localStorage.setItem(turnKey(presenter.doc.mount, presenter.doc.path, sheetId), JSON.stringify(turn));
+            } catch {
+              // a view that cannot keep its turn still turns
+            }
+          },
+        },
         specs: (sel) =>
           sel.kind === "area" ? [] : presenter.focusSpecs(sel.kind, sel.kind === "net" ? (sel.net ?? "") : sel.kind === "bus" ? (sel.busId ?? "") : (sel.ref ?? ""), sel.pin),
       },

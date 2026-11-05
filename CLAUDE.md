@@ -178,6 +178,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   and `OVERLAY_DIR` on `dockserve`, `NATIVE_DOCKER_MOUNTS` on `natup`, and `DATASHEET_DIR` on the
   datasheet targets. If a workflow only exists as a wrapper in someone's local Makefile, this repo
   is missing a target.
+- **A relative path in `agni.yaml` resolves beside the file**, not against the working directory,
+  so `agni stats mount://boards/...` reads the same from a subfolder of the checkout (agni 1373).
 - **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
   `--mount` shuts the file out. `make serve MOUNTS=` hands the mount table back to the file.
 - **`agni.yaml` wants a `web_dir` or `--server self` cannot run outside a checkout.** The lookup falls
@@ -507,6 +509,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   fails to read answers `LOCATE_REASON_SCHEMATIC_UNREADABLE` rather than `NO_GEOMETRY`, and the CLI
   warns once. A companion once fell one `)` short, and every part read as drawn nowhere, with only
   `render` saying why.
+- **ODB++X (ODX) is ODB++ in one XML file rooted at `<ODX>`, and it fills the job reader's own
+  `parsedJob`** (agni 1372, `readers/odb/odx.go`), so its netlist and board come out of the job
+  code. `.xml` is sniffed by root element. ODX names a pin by its NUMBER, since NAME can be a
+  placeholder such as `un_1`. Allegro writes `encoding = "ISO-8859-1"` with spaces, which Go's
+  decoder ignores, so `odxDecoded` reads the declaration itself. `TestODXReadsAsItsIPC2581Twin`
+  holds parasdr's two Allegro exports (cadence-exports) to each other.
 - **An ODB++ job is a DIRECTORY, entered by its `matrix/matrix` file** (agni 1250, `readers/odb`).
   The registry keys that path as `.odb++` (`lowerExt`), `.tgz` and `.zip` read the whole job from
   one archive, and the CLI and the proposer turn a job folder into its matrix entry. A host
@@ -960,8 +968,8 @@ it. `.github/dependabot.yml` lists every module directory (examples by glob) and
 updates, because a bump that touched the root alone left every nested module stale and failed this
 check (PR 782). A new module outside `examples/` needs a line there.
 
-**`make testall` is the full gate, and CI runs exactly it**, as its two halves `testall-core` and
-`browser-test` in parallel jobs (agni 1147). Read `docsite/content/build/the-gate.md` before
+**`make testall` is the full gate, and CI runs exactly it**, as four parallel jobs, `testall-test`,
+`testall-scan`, `testall-docs` and `browser-test` (agni 1147). `testall-core` is the first three. Read `docsite/content/build/the-gate.md` before
 trusting a run. It lists three ways to misread the gate. A wrapper can report its own status rather
 than make's and turn red green, there is a commit-first ordering rule, and there is a per-clone
 `pnpm install`. It also lists one way a fine tree reads RED. A stray `agni serve` on :8080 fails

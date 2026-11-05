@@ -163,14 +163,29 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			svg.F("x", x), svg.F("y", y), svg.A("fill", style.Field), svg.F("font-size", fontPx),
 			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),
 		}
-		if rot := -t.GetRotationDeg(); rot != 0 {
-			attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, x, y)))
+		if tf := boardTextTransform(-t.GetRotationDeg(), t.GetMirror(), x, y); tf != "" {
+			attrs = append(attrs, svg.A("transform", tf))
 		}
 		c.Text(boardTextLine(t), attrs...)
 	}
 	c.GroupEnd()
 
 	return c.String()
+}
+
+// boardTextTransform turns a board text about its anchor, and mirrors it left to right first when
+// the text is mirrored, as back-side text is. KiCad draws back text mirrored, the way it sits on the
+// copper seen from the front, so a view turned over to the bottom reads it the right way round
+// (agni issue 1327, #142). Upright, unmirrored text needs no transform.
+func boardTextTransform(rot float64, mirror bool, x, y float64) string {
+	var parts []string
+	if rot != 0 {
+		parts = append(parts, fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, x, y))
+	}
+	if mirror {
+		parts = append(parts, fmt.Sprintf("translate(%.1f %.1f) scale(-1 1) translate(%.1f %.1f)", x, y, -x, -y))
+	}
+	return strings.Join(parts, " ")
 }
 
 // boardLabels returns the text a board view draws. A board with text of its own gets that text.

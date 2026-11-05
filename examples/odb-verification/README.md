@@ -9,7 +9,8 @@ form of `agni check <job>` and `agni diff <schematic> <job>`.
 
 - An ODB++ job read as a folder (a `.tgz` or `.zip` of one works the same), through the same format
   registry every other file goes through, so checks and diff do not know the layout arrived as
-  ODB++.
+  ODB++. An ODB++X file (ODB++ written as one XML file, such as Allegro's "ODB++ XML" export) works
+  as the layout too, and `../../readers/odb/testdata/odx/two-sided.xml` is a small one.
 - The board tier built from the job's copper, which the copper-clearance and track-width rules
   read.
 - A schematic-against-layout diff. The default layout, the gateway's rev B, adds two I2C pull-ups

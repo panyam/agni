@@ -681,7 +681,8 @@ this tool can actually read. The rest sit closer to the engine and are covered i
 The reader is picked by file extension (case-insensitive): EDIF netlists (`.edn`/`.edf`/`.edif`) and
 geometry (`.eds`), KiCad (`.kicad_sch`/`.kicad_pcb`/`.kicad_pro`), IPC-2581 (`.xml`/`.cvg`), Telesis
 netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy KiCad, sniffed by
-header).
+header). An `.xml` file is read by its root element. `<IPC-2581>` is IPC-2581, `<ODX>` is ODB++X, and
+any other root is refused with its name.
 
 An ODB++ job is a directory rather than a file, so it is named by its folder, or by a `.tgz` or
 `.zip` of it, and agni enters it through the folder's `matrix/matrix` file (`agni check board-odb/`,
@@ -690,6 +691,11 @@ An ODB++ job is a directory rather than a file, so it is named by its folder, or
 allows no spaces in a name, so a net the schematic calls `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
 and the diff reports it renamed. Members a producer compressed (`features.Z`, `.gz`) are read as
 well.
+
+ODB++X (ODX) is the same data written as one XML file, which Allegro's "ODB++ XML" export writes
+(`agni check board.xml`). It reads as a job does, into the same netlist and board. A pin is named by
+its number, as the file's netlist names it. Only metric ODX files are read so far, and an imperial one
+is refused with its units named.
 
 A Cadence Allegro board (`.brd`) reads as a netlist and as a board, as an ODB++ job does, so
 `agni check board.brd` needs no export from Allegro. Only boards saved by Allegro 17.2 are read so far;
