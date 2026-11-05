@@ -9,21 +9,31 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-31, at `014819c5`.
+Last pruned 2026-11-05, at `344c03c3`.
 
 ## At a glance
 
-Two missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
+Four missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
 mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
 exercise run on the mission issue.
 
-- **#1264** (see, explain and change how agni reads your board's names), 9 of 9 tickets closed,
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 7 of 12
+  tickets closed. A Sheets tile opens a sheet in a view beside the canvas (#1375), a pick in one view
+  finds the part in the others through `DesignService.LocateSubjects` (#1364), and a board view turns,
+  flips and shows the board from underneath (#1378). `make exercise-cross-probe HEADED=0
+  WALK_DESIGN=jetson` is the exercise. It passes every step at `fa79698e` with #1384, which names the
+  board view's turn controls as the walk reads them. Ready next are #1366 (board text sizes and
+  colours, against kicad-cli), #1367 (add a board to an open design) and #1382 (an EDIF + ODB++ design
+  for the walk). #1374 (a selected pin lights nothing) is in progress elsewhere.
+- **#1353** (open an Altium or Allegro board with no export step), 1 of 4 closed. #1349, the Altium
+  `.PcbDoc` reader, is next.
+- **#1264** (see, explain and change how agni reads your board's names), 11 of 11 tickets closed,
   exercise last run at `014819c5` (works on the MNT Reform motherboard). Nothing is ready. It closes
   once an audit confirms that the lexicon holds every built-in rule's name heuristics, and once the
   exercise's output is right by eye. If the audit finds a heuristic outside the lexicon, that
   heuristic becomes a ticket here.
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 7 of 7 tickets closed, exercise last run at `aba62b48` (works on the fixtures), 20 PRs
+  datasheet), 7 of 8 tickets closed (#1342 is in progress elsewhere), exercise last run at `aba62b48` (works on the fixtures), 20 PRs
   merged since, so re-run `make exercise-pin-functions` before a team starts. It waits
   on a team's clean-room run on their own board. The team runs the three commands in
   `guide/trying-agni.md`'s "Signing off a pin map in a clean room" and sends back the `agni trial`
@@ -39,11 +49,9 @@ exercise run on the mission issue.
 - **Candidate**: more tours of the viewer. Each would tour another workflow the way
   `web/src/reviewtour.ts` tours a review. Work on each starts with the viewer events, since the
   tour advances on them.
-- This run, off-mission: ODB++ is read (#1262). Reading boards both ways found problems in KiCad
-  placement, arcs and slots, in Altium's dialect, in labels, and in a report link reloading a slow
-  viewer, and #1271 fixed them. Samples `v0.1.4` carries foxBMS's Altium jobs and kicad-cli exports
-  of every board. The work waits on a team's real ODB++ export, since no corpus here gives that
-  check.
+- This run: the cross-probe PRs above, the board's pick keys (#1343, #1354), and CI split into four
+  parallel jobs (#1381), which `build/the-gate.md` describes. Sheet views and popout windows were
+  scoped. Popouts are #1369, `waiting`, with what blocks them on the issue.
 
 ## Open, ranked
 

@@ -23,6 +23,7 @@ expensive to rediscover.
 | Geometry, rendering, the web viewer | `architecture/geometry-and-rendering.md`, `architecture/web-app.md` |
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Moving an open viewer from a parent page, a saved report or an agent (`--viewer-rooms`) | `architecture/viewer-control.md`, `build/embedding-the-viewer.md` |
+| A sheet view beside the canvas, cross-probing a part between schematic and board, turning a board view | `architecture/web-client.md` ("Sheet views are panels made at run time"), `architecture/web-picking.md` ("Picking the board") |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
 | A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the seven forms), `core/ident`'s package comment |
@@ -667,6 +668,21 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the angle, and the contract's composer mirrors once. No rule reads a pad's position, so the bug
   shipped. Only the board view and `TestODBReadsAsItsKiCadSource` (pad positions against kicad-cli's
   own export) see it.
+- **Where a part, pin or net is drawn is `DesignService.LocateSubjects`** (agni 1325). It and a check
+  run's findings read one index, so a subject locates where its finding badges. A pin answers the
+  sheets that draw its own unit. The board sheet joins only when the request sets `board`, by
+  ref-des and net NAME (an EDIF schematic and an ODB++ job share no net id), through a small index
+  that the design cache keeps per board. The caching loader's `Board` returns a COPY, 385 MB on
+  Jetson, so a new per-click caller goes through `boardIndexFor`, never `Board`. A run whose model
+  read the board badges its findings with `"board"` after the schematic sheets.
+- **kicad-cli is the oracle for a render, and two fixture traps make it draw less than KiCad would.**
+  A hand-written fixture's schematic often has an empty `(lib_symbols)` cache and keeps its symbols
+  in a `.kicad_sym`, and `design.yaml` names that library for agni. Eeschema plots from that cache alone, so
+  kicad-cli draws the labels and wires with no symbol bodies. Copy the library's symbols into a
+  SCRATCH copy as `<lib>:<name>`. Gateway's Edge.Cuts outline is a filled `gr_rect`, which plots over
+  the copper, so export the copper and silk layers without Edge.Cuts. Export from a scratch copy in
+  any case, since kicad-cli writes a `.kicad_prl` beside the board. A text is mirrored exactly when
+  its effects say `(justify mirror)`, which kicad-cli confirmed on a back footprint that names none.
 - **KiCad names a local label by its sheet path**, so a root-sheet net is `/SCL`, and every finding,
   query answer and link names it that way. `render --highlight net=SCL` matches nothing and still
   reports a highlight (#1225), so spell a hand-typed subject as `check` prints it.
