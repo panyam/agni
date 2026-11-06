@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { HighlightShape } from "./highlights.js";
-import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_ENDED_COLOR, WALK_GOAL_COLOR, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
+import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_ENDED_COLOR, WALK_GOAL_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
 import { emptyLocation, locationToUrl, parseUrl } from "./router.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };
@@ -64,6 +64,37 @@ describe("walk state", () => {
     const none = answer();
     none.goal = create(WalkGoalAnswerSchema, { kind: "pin", at: "SDA", outcome: TraceOutcome.NO_ROUTE, reason: "no series path" });
     expect(walkSpecs(walkFromResponse(goalReq, none)).filter((x) => x.color === WALK_GOAL_COLOR)).toEqual([]);
+  });
+
+  it("zooms a routed goal to the start and the parts its route crosses, and keeps the walk's sheet when it draws the route's end", () => {
+    const goalReq: WalkRequest = { ...req, goal: { kind: "pull-up", at: "SDA", to: "" } };
+    const routed = answer();
+    routed.goal = create(WalkGoalAnswerSchema, {
+      kind: "pull-up",
+      at: "SDA",
+      outcome: TraceOutcome.ROUTED,
+      routes: [{ nets: [{ name: "SDA", sheetIds: ["s2"] }, { name: "+3V3", sheetIds: ["s1", "s3"] }], crossings: [{ refDes: "R9", fromNet: "SDA", toNet: "+3V3" }], endsAt: "+3V3" }],
+    });
+    const s = walkFromResponse(goalReq, routed);
+    const lit = goalRevealSpecs(s);
+    expect(lit.flatMap((x) => x.components ?? [])).toEqual(["R9", "R1"]);
+    expect(lit.flatMap((x) => x.nets ?? [])).toEqual([]);
+    expect(goalSheet(s, "s2")).toBe("s1");
+    expect(goalSheet(s, "s3")).toBe("s3");
+    const none = answer();
+    none.goal = create(WalkGoalAnswerSchema, { kind: "pull-up", at: "SDA", outcome: TraceOutcome.NO_ROUTE, reason: "no pull-up" });
+    expect(goalRevealSpecs(walkFromResponse(goalReq, none))).toEqual([]);
+    expect(goalSheet(walkFromResponse(goalReq, none), "s2")).toBe("");
+  });
+
+  it("opens a route whose last net is drawn nowhere on its nearest drawn net's sheet", () => {
+    const routed = answer();
+    routed.goal = create(WalkGoalAnswerSchema, {
+      kind: "rail",
+      outcome: TraceOutcome.ROUTED,
+      routes: [{ nets: [{ name: "SDA", sheetIds: ["s4"] }, { name: "VBUS" }], crossings: [{ refDes: "R2" }], endsAt: "VBUS" }],
+    });
+    expect(goalSheet(walkFromResponse({ ...req, goal: { kind: "rail", at: "", to: "" } }, routed), "s2")).toBe("s4");
   });
 
   it("splits a start at its first dot", () => {

@@ -110,7 +110,12 @@ a pin typed beside it. Each one walks again with the goal on the same `WalkDesig
 routes come back with the walk they extend. The tab shows each route as one line, as
 `RenderRoute` spells it, then each net with the part crossed into it. A no-route and a goal that
 names nothing show as two different notes, as a trace's do. The canvas lights the routes over the
-walk in magenta (`goalSpecs`, `WALK_GOAL_COLOR`), with a pin goal's pin on top. The address bar
+walk in magenta (`goalSpecs`, `WALK_GOAL_COLOR`), with a pin goal's pin on top. A routed goal
+then moves the view onto its route (agni issue 1423). The view opens the sheet that draws the
+route's last net, keeping the walk's sheet when that one draws it (`goalSheet`). It lights the
+start, the parts the route crosses and a pin goal's pin, and zooms to them (`goalRevealSpecs`)
+before the walk is lit around them. A route's nets are left out of the zoom, because a pull-up's
+route ends on a rail that runs across the whole sheet. The address bar
 keeps the goal as `walk_goal=`, `walk_at=` and `walk_to=`. The two-pin trace below the walk stays
 for two ends that no walk has reached.
 

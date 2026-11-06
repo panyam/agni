@@ -150,6 +150,26 @@ async function askGoal(page: Page, goal: string, at: string, to = ""): Promise<{
   }));
 }
 
+// routeOnScreen waits until every part a route crosses is drawn inside the canvas, as the viewer
+// zooms to a routed goal (agni issue 1423). It names the parts still off screen when it gives up.
+async function routeOnScreen(page: Page, routes: Route[]): Promise<string[]> {
+  const refs = [...new Set(routes.flatMap((r) => (r.crossings ?? []).map((c) => c.refDes)))];
+  if (refs.length === 0) throw new Error("the route crosses no part to look for");
+  const off = (rs: string[]) => {
+    const host = document.querySelector("#svg-view")!.getBoundingClientRect();
+    return rs.filter((ref) => {
+      const el = document.querySelector(`#svg-view [data-kind="component"][data-ref="${ref}"]`);
+      if (!el) return true;
+      const r = el.getBoundingClientRect();
+      return r.right < host.left || r.left > host.right || r.bottom < host.top || r.top > host.bottom;
+    });
+  };
+  await page.waitForFunction(`(${off.toString()})(${JSON.stringify(refs)}).length === 0`, null, { timeout: 10_000 }).catch(async () => {
+    throw new Error(`off screen after the goal answered: ${(await page.evaluate(`(${off.toString()})(${JSON.stringify(refs)})`) as string[]).join(", ")}`);
+  });
+  return refs;
+}
+
 // shape is what two answers to one walk must share: each net with its hop and the part it was
 // entered through, then the parts left at the boundary.
 function shape(w: Walk): string {
@@ -332,7 +352,9 @@ describe("the walk mission", () => {
         const got = await askGoal(page, "pull-up", walk.pullUp.at);
         expect(got.outcome).toBe(outcomeName(pullUp.outcome));
         expect(got.routes).toEqual((pullUp.routes ?? []).map(routeLine));
-        return got.routes.length > 0 ? `the Trace tab shows ${got.routes.join("; ")}` : `the Trace tab says ${got.outcome}`;
+        if (got.routes.length === 0) return `the Trace tab says ${got.outcome}`;
+        const shown = await routeOnScreen(page, pullUp.routes ?? []);
+        return `the Trace tab shows ${got.routes.join("; ")}, with ${shown.join(", ")} on screen`;
       });
 
       let pinGoal: Goal = {};
@@ -354,7 +376,8 @@ describe("the walk mission", () => {
         const got = await askGoal(page, "pin", walk.pin.at, walk.pin.to);
         expect(got.outcome).toBe("routed");
         expect(got.routes).toEqual((pinGoal.routes ?? []).map(routeLine));
-        return `the Trace tab shows ${got.routes.join("; ")}`;
+        const shown = await routeOnScreen(page, pinGoal.routes ?? []);
+        return `the Trace tab shows ${got.routes.join("; ")}, with ${shown.join(", ")} on screen`;
       });
 
       // Step 5. The CLI gives the same walk as the API the viewer calls.
