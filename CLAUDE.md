@@ -386,6 +386,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   kept apart: a route, no route within the radius, and an endpoint that names nothing in the design.
   The last one exits non-zero, because a pin spelled wrong and two pins genuinely unconnected are
   opposite problems.
+- **`agni walk <design> --from R1` walks outwards hop by hop** (agni 1339, `check.WalkFrom`,
+  `DesignService.WalkDesign`), and the viewer offers it from Properties into the Trace tab (agni
+  1341). Hop 1 is the start's own nets. A walk KIND picks which parts a hop crosses, and
+  `ListWalkKinds` lists them. `series` crosses what trace crosses and passes through rail-named
+  nets, so the two agree. `small-parts` crosses up to four connected pins and stops at ICs,
+  connectors and rails, and `all` caps a hop at 64 nets. **An IC is crossed by its pin pairs**, the
+  lexicon's `pin.through_pair` (`A{n}`/`B{n}`, `{n}A`/`{n}Y`, `SDA1`/`SDA2`, agni 1338), so a
+  translator walks one channel rather than every pin. An unpaired pin of a paired part crosses
+  nothing, and only the crossed channel counts as crossed. A part that crosses into a net reached
+  already is recorded in `also_entered`, so a drawing of the walk can light it.
 - **A rule NAME that the catalog lacks is refused** (agni 1121, `check.Catalog.CheckNames`), by
   `--rule`, `CheckDesign` and `GetCheckReport` alike, with the nearest names offered and a
   superseded rule named as superseded. Before, it ran nothing and answered an empty run that read as
@@ -965,7 +975,10 @@ VERBATIM, so canonicalizing belongs on the comparison and never at the projector
 **The security scanners run through `go run` at versions that the Makefile pins** (`STATICCHECK`,
 `GOSEC`, `GITLEAKS`, `GOVULNCHECK`), over the two shipped modules, the root and `datasheet`. `lint`
 (staticcheck), `seccheck` (gosec, medium and up) and `secrets` (gitleaks over the whole history) are
-in the gate. `vulncheck` is not in the gate, since the advisory database moves without the code. It
+in the gate. So is `binaries-check` (`hack/check_no_binaries.sh`, after mcpkit's), which refuses a
+tracked compiled executable by its magic bytes and any tracked file over 5 MB. A bare `go build` in
+an example's folder writes a binary named after the folder, and #1405 merged one of 17 MB before the
+check existed, so it stays in history. `vulncheck` is not in the gate, since the advisory database moves without the code. It
 runs weekly and per tag in `vulncheck.yml`, and `make audit` runs all four. A gosec finding is fixed
 or annotated on its own line as `// #nosec G<n> -- <why>`, never excluded in the Makefile, so the
 reason reaches an outside scanner too. **gosec runs under the Go `go.mod` names (`GOTOOLCHAIN`)**,
@@ -1011,7 +1024,10 @@ page dimmed with no hole, since their controls sat below their panel's fold and 
 takes no wheel. Each step now scrolls its control into view (`reveals` in `reviewtour.ts`) and the
 walk fails a released step with no hole. Look at a capture of each step (`page.screenshot` after the
 release) before trusting a tour change, as #1179 did. A `:has()` locator over a large answer is
-re-resolved on every action and cost Jetson's query-cell step 9 s, so find a row by index. A viewer
+re-resolved on every action and cost Jetson's query-cell step 9 s, so find a row by index. **A schematic resistor's body is a hollow outline**, and
+only the outline takes a click, while the picker probes a ring and prefers a pin. So `clearPoint`
+finds no point inside it, and a spec clicking one searches its outline for a point whose ring lands
+on the part alone (`outlinePoint` in `walk-mission.spec.ts`). A viewer
 change that breaks the walk fails it on that PR, so update the spec there rather than loosening it
 (agni 1118). **A headed run is a different page from a headless one, and four things only it
 showed** (agni 1124). First, a headed page takes the window's own size (`viewportFor` in
@@ -1365,8 +1381,9 @@ ticket closed by a PR that never touched the walk, which is how #1326 closed whi
 read its steps "not available". The gate runs offline and skips that half.
 #1337 `mission_walk` (click one part and walk outwards) is open, and `make exercise-walk` is its
 exercise (agni 1338). Each step has an engine row that asks `WalkDesign` and a viewer row that
-waits on #1341 or #1340 by the names `web/browser/walk-mission.spec.ts` lists, and the gate walks
-the cut from R119. #1194
+drives the Trace tab's walk (agni 1341) by the names `web/browser/walk-mission.spec.ts` lists. Only
+the goal steps wait, on #1340. The gate walks the cut from R119, and `WALK_DESIGN=jetson` walks from
+R361, since every pull-up on U80's 1.8 V side is do-not-populate. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni

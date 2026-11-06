@@ -9,51 +9,40 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-05, at `243f13a6`.
+Last pruned 2026-11-05, at `76979309`.
 
 ## At a glance
 
-Four missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
+Three missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
 mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
 exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 10 of 12
-  tickets closed. `make exercise-cross-probe HEADED=0 WALK_DESIGN=jetson` works at `781731a7`, every
-  step passing on Jetson, with the two board clicks at 12 to 17 s (#1329's ground). #1367 (add a
-  board to an open design) is ready next. #1382 walks the mission on Clay R6, an OrCAD EDIF design on
-  its Allegro board, and waits on #1388 (Allegro 16.6 boards). The mission still has to pass beside a
-  real board.
-- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 4 of 5
-  closed. agni reads Allegro 17.2 boards (#1365), holds their copper to Allegro's films (#1380), reads
-  Altium `.PcbDoc` (#1349) and Allegro's ODB++X export (#1379). #1388, Allegro 16.6, is next, and it
-  also unblocks #1382. `make exercise-allegro` is the Allegro half. #1383 holds the IPC-2581 board
-  read's missing widths, pad nets and drills, which make parasdr's two exports `check` differently.
-- **#1264** (see, explain and change how agni reads your board's names), 11 of 11 tickets closed,
-  exercise last run at `014819c5` (works on the MNT Reform motherboard). Nothing is ready. It closes
-  once an audit confirms that the lexicon holds every built-in rule's name heuristics, and once the
-  exercise's output is right by eye. If the audit finds a heuristic outside the lexicon, that
-  heuristic becomes a ticket here.
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 14 of 18
+  tickets closed. `make exercise-cross-probe HEADED=0 WALK_DESIGN=jetson` passes every step at
+  `878b088e`. #1382 walks the mission on Clay R6, whose pages now draw from its `.DSN` (#1412), and
+  #1397 holds the board toolbar's overflow and the 11 to 16 s board clicks. #1406, #1401 and #1407
+  are its follow-ups. The mission still has to pass beside a real board.
+- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 9 of 10
+  closed, released in v0.5.0. Its closing run at `1b7426a4` passed on every sample board, and
+  agni-samples' `make serve` mounts `allegro/` and `altium/` (agni-samples #20). It closes once
+  someone opens a real board of their own in each format. #1355 holds the Allegro releases not read
+  yet: 17.4, 17.5, and pc069's magic `0x00150200`, which reads as "not an Allegro board".
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 8 of 8 tickets closed, exercise last run at `aba62b48` (works on the fixtures), with
-  many PRs merged since, so re-run `make exercise-pin-functions` before a team starts. It waits on a
-  team's clean-room run on their own board. The team runs the three commands in
-  `guide/trying-agni.md`'s "Signing off a pin map in a clean room" and sends back the `agni trial`
-  report. Their findings become its next tickets. #1198 left one choice open. Should
-  `service.ShippedRules` name the fixed `intent/io-map-*` rules? The trial now counts them under
-  project rules.
-- **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
-  0 of 1 and not active. #1173 holds the multi-user half and is `waiting` until someone runs agni
-  serve for more than one person. The mission has no exercise yet; its first PR writes one.
+  datasheet), 8 of 8 tickets closed, exercise last run at `aba62b48`, with many PRs merged since, so
+  re-run `make exercise-pin-functions` before a team starts. It waits on a team's clean-room run on
+  their own board (`guide/trying-agni.md`, "Signing off a pin map in a clean room").
+- **#1337 `mission_walk`** (click one part and walk outwards), not active, 3 of 4 closed.
+  `make exercise-walk HEADED=0 WALK_DESIGN=jetson` passes every row at `76979309` but the goal steps,
+  which wait on #1340, the next ticket. Its last log notes the zoom to a small start is tight.
+- **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
+  runs agni serve for more than one person.
 - **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
-  `guide/older-comparison-tools.md` its first page. Its reproducer still names its rail `RAIL_3V3`,
-  and the default vocabulary does not read that name.
-- **Candidate**: more tours of the viewer. Each would tour another workflow the way
-  `web/src/reviewtour.ts` tours a review. Work on each starts with the viewer events, since the
-  tour advances on them.
-- This run: ODB++X read as ODB++ and `agni.yaml`'s relative paths anchored beside the file (#1379,
-  samples pin v0.1.7), and #1344's orientation and KiCad-text suspects checked against Lepton,
-  kicad-cli and the EDIF spec (#1390). #1389 holds the rest of #1344: schematic text about 28%
-  small, the worksheet frame, and an EDIF field angle waiting on a real EDIF export.
+  `guide/older-comparison-tools.md` its first page.
+- **Candidate**: more tours of the viewer, each touring another workflow the way
+  `web/src/reviewtour.ts` tours a review.
+- This run: released v0.5.0. Shipped `agni walk` and its viewer (#1339, #1341), pin pairs and
+  `make exercise-walk` (#1338), and the hidden layout picker (#1404). The gate's `binaries-check`
+  now refuses a tracked executable. #1264 closed after its audit.
 
 ## Open, ranked
 
