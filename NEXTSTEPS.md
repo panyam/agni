@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-05, at `76979309`.
+Last pruned 2026-11-05, at `b0340480`.
 
 ## At a glance
 
@@ -17,11 +17,12 @@ Three missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill
 mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
 exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 14 of 18
-  tickets closed. `make exercise-cross-probe HEADED=0 WALK_DESIGN=jetson` passes every step at
-  `878b088e`. #1382 walks the mission on Clay R6, whose pages now draw from its `.DSN` (#1412), and
-  #1397 holds the board toolbar's overflow and the 11 to 16 s board clicks. #1406, #1401 and #1407
-  are its follow-ups. The mission still has to pass beside a real board.
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 15 of 18
+  tickets closed. `make exercise-cross-probe HEADED=0` passes every step at `b0340480` with
+  `WALK_DESIGN=jetson` and with `WALK_DESIGN=clay`, Clay R6's Capture `.DSN` on its Allegro board
+  (#1418), and the gate walks the cut and Clay. #1397 (the toolbar overflow and Jetson's 9 to 13 s
+  board clicks) is next, then #1406 (OrCAD net names that match the board's) and #1401. #1419 is
+  waiting. The mission still has to pass beside a real board.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 9 of 10
   closed, released in v0.5.0. Its closing run at `1b7426a4` passed on every sample board, and
   agni-samples' `make serve` mounts `allegro/` and `altium/` (agni-samples #20). It closes once
@@ -40,9 +41,10 @@ exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: released v0.5.0. Shipped `agni walk` and its viewer (#1339, #1341), pin pairs and
-  `make exercise-walk` (#1338), and the hidden layout picker (#1404). The gate's `binaries-check`
-  now refuses a tracked executable. #1264 closed after its audit.
+- This run: released v0.6.0 (the OrCAD Capture reader, #1405 and #1412, board layers, padstacks and
+  pours) and agni-samples v0.1.12 and v0.1.13, whose Clay R6 now reads from `CLAYR6.DSN` with its
+  board. #1388, #1399, #1400 and #1382 closed. KiCad 26003 asks KiCad's OrCAD importer to follow a
+  block kept in another `.DSN`.
 
 ## Open, ranked
 

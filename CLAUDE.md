@@ -789,7 +789,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   Altium-written ODB++ jobs), `allegro` (the BeagleBone AI with its Allegro extract and copper films)
   and `cadence-exports`, and `make odb-oracle` adds `odb-kicad`. A pin bump needs the release to
   exist first, or every CI job fails at the fetch, so a samples PR merges and is tagged before the
-  agni PR that pins it goes green. A release reuses the previous release's file for every artifact it
+  agni PR that pins it goes green. **agni-samples' CI reads every design with its pinned agni
+  RELEASE** (`AGNI_VERSION` in its `verify.yml`, the README's oldest supported version). So a samples
+  change that needs a reader newer than that release fails there, as Clay R6's `.DSN` entry did under
+  v0.5.0. The order is then agni release, raise that floor in the samples PR, merge, tag samples, pin
+  (v0.6.0 and samples v0.1.13 went that way, agni 1382). A release reuses the previous release's file for every artifact it
   does not change, renamed and byte for byte and checked against the old `SHA256SUMS`, because a
   rebuild on another machine records new file times and moves every checksum. A pin bump restamps every
   tutorial capture over `tools/samples/`, so commit that stamp-only diff with the pin, and two
