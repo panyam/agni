@@ -55,10 +55,20 @@ class GetLocationRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetLocationResponse(_message.Message):
-    __slots__ = ("location",)
+    __slots__ = ("location", "views")
     LOCATION_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
     location: ViewerLocation
-    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
+    views: _containers.RepeatedCompositeFieldContainer[SheetView]
+    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
+
+class SheetView(_message.Message):
+    __slots__ = ("id", "sheet")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SHEET_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    sheet: str
+    def __init__(self, id: _Optional[str] = ..., sheet: _Optional[str] = ...) -> None: ...
 
 class ApplyLocationRequest(_message.Message):
     __slots__ = ("location", "url")
@@ -131,13 +141,49 @@ class LocateEntityResponse(_message.Message):
     def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
 
 class ShowSheetRequest(_message.Message):
+    __slots__ = ("sheet", "view")
+    SHEET_FIELD_NUMBER: _ClassVar[int]
+    VIEW_FIELD_NUMBER: _ClassVar[int]
+    sheet: str
+    view: str
+    def __init__(self, sheet: _Optional[str] = ..., view: _Optional[str] = ...) -> None: ...
+
+class ShowSheetResponse(_message.Message):
+    __slots__ = ("location", "views")
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
+    location: ViewerLocation
+    views: _containers.RepeatedCompositeFieldContainer[SheetView]
+    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
+
+class OpenSheetViewRequest(_message.Message):
     __slots__ = ("sheet",)
     SHEET_FIELD_NUMBER: _ClassVar[int]
     sheet: str
     def __init__(self, sheet: _Optional[str] = ...) -> None: ...
 
-class ShowSheetResponse(_message.Message):
-    __slots__ = ("location",)
+class OpenSheetViewResponse(_message.Message):
+    __slots__ = ("view", "location", "views")
+    VIEW_FIELD_NUMBER: _ClassVar[int]
     LOCATION_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
+    view: SheetView
     location: ViewerLocation
-    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
+    views: _containers.RepeatedCompositeFieldContainer[SheetView]
+    def __init__(self, view: _Optional[_Union[SheetView, _Mapping]] = ..., location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
+
+class CloseSheetViewRequest(_message.Message):
+    __slots__ = ("view",)
+    VIEW_FIELD_NUMBER: _ClassVar[int]
+    view: str
+    def __init__(self, view: _Optional[str] = ...) -> None: ...
+
+class CloseSheetViewResponse(_message.Message):
+    __slots__ = ("closed", "location", "views")
+    CLOSED_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
+    closed: bool
+    location: ViewerLocation
+    views: _containers.RepeatedCompositeFieldContainer[SheetView]
+    def __init__(self, closed: _Optional[bool] = ..., location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...

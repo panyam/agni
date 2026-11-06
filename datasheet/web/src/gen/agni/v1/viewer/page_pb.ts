@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/viewer/page.proto.
  */
 export const file_agni_v1_viewer_page: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3ZpZXdlci9wYWdlLnByb3RvEg5hZ25pLnYxLnZpZXdlciLtAgoOVmlld2VyTG9jYXRpb24SDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVzaGVldBgDIAEoCRIMCgRtb2RlGAQgASgJEg4KBmxheW91dBgFIAEoCRIUCgdzeW1ib2xzGAYgASgISACIAQESFAoHZmxhdHRlbhgHIAEoCEgBiAEBEg8KB3ZlcmRpY3QYCCABKAkSDAoEaGFzaBgJIAEoCRIMCgRydWxlGAogASgJEhAKCHN1YmplY3RzGAsgAygJEg0KBXRyYWNlGAwgASgJEhIKCnRyYWNlX2hvcHMYDSABKAUSDQoFcXVlcnkYDiABKAkSDQoFdGl0bGUYDyABKAkSDQoFYmluZHMYECADKAkSCwoDc2V0GBEgASgJEgkKAXEYEiABKAkSDwoHYWdhaW5zdBgTIAEoCRIVCg1yZW5hbWVfYXBwcm94GBQgASgIQgoKCF9zeW1ib2xzQgoKCF9mbGF0dGVuIhQKEkdldExvY2F0aW9uUmVxdWVzdCJHChNHZXRMb2NhdGlvblJlc3BvbnNlEjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24iVQoUQXBwbHlMb2NhdGlvblJlcXVlc3QSMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhILCgN1cmwYAiABKAkiYwoVQXBwbHlMb2NhdGlvblJlc3BvbnNlEjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SGAoQdmVyZGljdF9yZXNvbHZlZBgCIAEoCCJCChRMb2NhdGVWZXJkaWN0UmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRydWxlGAIgASgJEhAKCHN1YmplY3RzGAMgAygJIlsKFUxvY2F0ZVZlcmRpY3RSZXNwb25zZRIQCghyZXNvbHZlZBgBIAEoCBIwCghsb2NhdGlvbhgCIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uIkYKFFNlbGVjdEZpbmRpbmdSZXF1ZXN0Eg8KB3N1YmplY3QYASABKAkSDgoGbmV0X2lkGAIgASgJEg0KBXNoZWV0GAMgASgJIlsKFVNlbGVjdEZpbmRpbmdSZXNwb25zZRIQCghzZWxlY3RlZBgBIAEoCBIwCghsb2NhdGlvbhgCIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uIlAKE0xvY2F0ZUVudGl0eVJlcXVlc3QSDAoEa2luZBgBIAEoCRIPCgdzdWJqZWN0GAIgASgJEgsKA3BpbhgDIAEoCRINCgVzaGVldBgEIAEoCSJIChRMb2NhdGVFbnRpdHlSZXNwb25zZRIwCghsb2NhdGlvbhgBIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uIiEKEFNob3dTaGVldFJlcXVlc3QSDQoFc2hlZXQYASABKAkiRQoRU2hvd1NoZWV0UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbjK3BAoRVmlld2VyUGFnZVNlcnZpY2USWwoLR2V0TG9jYXRpb24SIi5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlcXVlc3QaIy5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlc3BvbnNlIgOQAgESXAoNQXBwbHlMb2NhdGlvbhIkLmFnbmkudjEudmlld2VyLkFwcGx5TG9jYXRpb25SZXF1ZXN0GiUuYWduaS52MS52aWV3ZXIuQXBwbHlMb2NhdGlvblJlc3BvbnNlElwKDUxvY2F0ZVZlcmRpY3QSJC5hZ25pLnYxLnZpZXdlci5Mb2NhdGVWZXJkaWN0UmVxdWVzdBolLmFnbmkudjEudmlld2VyLkxvY2F0ZVZlcmRpY3RSZXNwb25zZRJcCg1TZWxlY3RGaW5kaW5nEiQuYWduaS52MS52aWV3ZXIuU2VsZWN0RmluZGluZ1JlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5TZWxlY3RGaW5kaW5nUmVzcG9uc2USWQoMTG9jYXRlRW50aXR5EiMuYWduaS52MS52aWV3ZXIuTG9jYXRlRW50aXR5UmVxdWVzdBokLmFnbmkudjEudmlld2VyLkxvY2F0ZUVudGl0eVJlc3BvbnNlElAKCVNob3dTaGVldBIgLmFnbmkudjEudmlld2VyLlNob3dTaGVldFJlcXVlc3QaIS5hZ25pLnYxLnZpZXdlci5TaG93U2hlZXRSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3ZpZXdlcmIGcHJvdG8z");
+  fileDesc("ChlhZ25pL3YxL3ZpZXdlci9wYWdlLnByb3RvEg5hZ25pLnYxLnZpZXdlciLtAgoOVmlld2VyTG9jYXRpb24SDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVzaGVldBgDIAEoCRIMCgRtb2RlGAQgASgJEg4KBmxheW91dBgFIAEoCRIUCgdzeW1ib2xzGAYgASgISACIAQESFAoHZmxhdHRlbhgHIAEoCEgBiAEBEg8KB3ZlcmRpY3QYCCABKAkSDAoEaGFzaBgJIAEoCRIMCgRydWxlGAogASgJEhAKCHN1YmplY3RzGAsgAygJEg0KBXRyYWNlGAwgASgJEhIKCnRyYWNlX2hvcHMYDSABKAUSDQoFcXVlcnkYDiABKAkSDQoFdGl0bGUYDyABKAkSDQoFYmluZHMYECADKAkSCwoDc2V0GBEgASgJEgkKAXEYEiABKAkSDwoHYWdhaW5zdBgTIAEoCRIVCg1yZW5hbWVfYXBwcm94GBQgASgIQgoKCF9zeW1ib2xzQgoKCF9mbGF0dGVuIhQKEkdldExvY2F0aW9uUmVxdWVzdCJxChNHZXRMb2NhdGlvblJlc3BvbnNlEjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SKAoFdmlld3MYAiADKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXciJgoJU2hlZXRWaWV3EgoKAmlkGAEgASgJEg0KBXNoZWV0GAIgASgJIlUKFEFwcGx5TG9jYXRpb25SZXF1ZXN0EjAKCGxvY2F0aW9uGAEgASgLMh4uYWduaS52MS52aWV3ZXIuVmlld2VyTG9jYXRpb24SCwoDdXJsGAIgASgJImMKFUFwcGx5TG9jYXRpb25SZXNwb25zZRIwCghsb2NhdGlvbhgBIAEoCzIeLmFnbmkudjEudmlld2VyLlZpZXdlckxvY2F0aW9uEhgKEHZlcmRpY3RfcmVzb2x2ZWQYAiABKAgiQgoUTG9jYXRlVmVyZGljdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEcnVsZRgCIAEoCRIQCghzdWJqZWN0cxgDIAMoCSJbChVMb2NhdGVWZXJkaWN0UmVzcG9uc2USEAoIcmVzb2x2ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJGChRTZWxlY3RGaW5kaW5nUmVxdWVzdBIPCgdzdWJqZWN0GAEgASgJEg4KBm5ldF9pZBgCIAEoCRINCgVzaGVldBgDIAEoCSJbChVTZWxlY3RGaW5kaW5nUmVzcG9uc2USEAoIc2VsZWN0ZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiJQChNMb2NhdGVFbnRpdHlSZXF1ZXN0EgwKBGtpbmQYASABKAkSDwoHc3ViamVjdBgCIAEoCRILCgNwaW4YAyABKAkSDQoFc2hlZXQYBCABKAkiSAoUTG9jYXRlRW50aXR5UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbiIvChBTaG93U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEgwKBHZpZXcYAiABKAkibwoRU2hvd1NoZWV0UmVzcG9uc2USMAoIbG9jYXRpb24YASABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgCIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyIlChRPcGVuU2hlZXRWaWV3UmVxdWVzdBINCgVzaGVldBgBIAEoCSKcAQoVT3BlblNoZWV0Vmlld1Jlc3BvbnNlEicKBHZpZXcYASABKAsyGS5hZ25pLnYxLnZpZXdlci5TaGVldFZpZXcSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldyIlChVDbG9zZVNoZWV0Vmlld1JlcXVlc3QSDAoEdmlldxgBIAEoCSKEAQoWQ2xvc2VTaGVldFZpZXdSZXNwb25zZRIOCgZjbG9zZWQYASABKAgSMAoIbG9jYXRpb24YAiABKAsyHi5hZ25pLnYxLnZpZXdlci5WaWV3ZXJMb2NhdGlvbhIoCgV2aWV3cxgDIAMoCzIZLmFnbmkudjEudmlld2VyLlNoZWV0VmlldzL2BQoRVmlld2VyUGFnZVNlcnZpY2USWwoLR2V0TG9jYXRpb24SIi5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlcXVlc3QaIy5hZ25pLnYxLnZpZXdlci5HZXRMb2NhdGlvblJlc3BvbnNlIgOQAgESXAoNQXBwbHlMb2NhdGlvbhIkLmFnbmkudjEudmlld2VyLkFwcGx5TG9jYXRpb25SZXF1ZXN0GiUuYWduaS52MS52aWV3ZXIuQXBwbHlMb2NhdGlvblJlc3BvbnNlElwKDUxvY2F0ZVZlcmRpY3QSJC5hZ25pLnYxLnZpZXdlci5Mb2NhdGVWZXJkaWN0UmVxdWVzdBolLmFnbmkudjEudmlld2VyLkxvY2F0ZVZlcmRpY3RSZXNwb25zZRJcCg1TZWxlY3RGaW5kaW5nEiQuYWduaS52MS52aWV3ZXIuU2VsZWN0RmluZGluZ1JlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5TZWxlY3RGaW5kaW5nUmVzcG9uc2USWQoMTG9jYXRlRW50aXR5EiMuYWduaS52MS52aWV3ZXIuTG9jYXRlRW50aXR5UmVxdWVzdBokLmFnbmkudjEudmlld2VyLkxvY2F0ZUVudGl0eVJlc3BvbnNlElAKCVNob3dTaGVldBIgLmFnbmkudjEudmlld2VyLlNob3dTaGVldFJlcXVlc3QaIS5hZ25pLnYxLnZpZXdlci5TaG93U2hlZXRSZXNwb25zZRJcCg1PcGVuU2hlZXRWaWV3EiQuYWduaS52MS52aWV3ZXIuT3BlblNoZWV0Vmlld1JlcXVlc3QaJS5hZ25pLnYxLnZpZXdlci5PcGVuU2hlZXRWaWV3UmVzcG9uc2USXwoOQ2xvc2VTaGVldFZpZXcSJS5hZ25pLnYxLnZpZXdlci5DbG9zZVNoZWV0Vmlld1JlcXVlc3QaJi5hZ25pLnYxLnZpZXdlci5DbG9zZVNoZWV0Vmlld1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvdmlld2VyYgZwcm90bzM");
 
 /**
  * ViewerLocation is the page's URL-addressable state, the wire twin of router.ts's ViewerLocation,
@@ -164,6 +164,14 @@ export type GetLocationResponse = Message<"agni.v1.viewer.GetLocationResponse"> 
    * @generated from field: agni.v1.viewer.ViewerLocation location = 1;
    */
   location?: ViewerLocation | undefined;
+
+  /**
+   * views lists the sheet views open beside the canvas, in the order they opened. A link cannot
+   * address a view, so the views are kept out of ViewerLocation.
+   *
+   * @generated from field: repeated agni.v1.viewer.SheetView views = 2;
+   */
+  views: SheetView[];
 };
 
 /**
@@ -172,6 +180,36 @@ export type GetLocationResponse = Message<"agni.v1.viewer.GetLocationResponse"> 
  */
 export const GetLocationResponseSchema: GenMessage<GetLocationResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_viewer_page, 2);
+
+/**
+ * SheetView is one view open beside the canvas (agni issue 1370). It has its own sheet and camera,
+ * and it follows a selection made anywhere on the page.
+ *
+ * @generated from message agni.v1.viewer.SheetView
+ */
+export type SheetView = Message<"agni.v1.viewer.SheetView"> & {
+  /**
+   * id names the view for as long as the page is open, such as "sheetview-2". A page numbers its
+   * views from 1 and never reuses a number, so a closed view's id names nothing.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * sheet is the sheet id that the view shows.
+   *
+   * @generated from field: string sheet = 2;
+   */
+  sheet: string;
+};
+
+/**
+ * Describes the message agni.v1.viewer.SheetView.
+ * Use `create(SheetViewSchema)` to create a new message.
+ */
+export const SheetViewSchema: GenMessage<SheetView> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 3);
 
 /**
  * @generated from message agni.v1.viewer.ApplyLocationRequest
@@ -202,7 +240,7 @@ export type ApplyLocationRequest = Message<"agni.v1.viewer.ApplyLocationRequest"
  * Use `create(ApplyLocationRequestSchema)` to create a new message.
  */
 export const ApplyLocationRequestSchema: GenMessage<ApplyLocationRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 3);
+  messageDesc(file_agni_v1_viewer_page, 4);
 
 /**
  * @generated from message agni.v1.viewer.ApplyLocationResponse
@@ -227,7 +265,7 @@ export type ApplyLocationResponse = Message<"agni.v1.viewer.ApplyLocationRespons
  * Use `create(ApplyLocationResponseSchema)` to create a new message.
  */
 export const ApplyLocationResponseSchema: GenMessage<ApplyLocationResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 4);
+  messageDesc(file_agni_v1_viewer_page, 5);
 
 /**
  * @generated from message agni.v1.viewer.LocateVerdictRequest
@@ -260,7 +298,7 @@ export type LocateVerdictRequest = Message<"agni.v1.viewer.LocateVerdictRequest"
  * Use `create(LocateVerdictRequestSchema)` to create a new message.
  */
 export const LocateVerdictRequestSchema: GenMessage<LocateVerdictRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 5);
+  messageDesc(file_agni_v1_viewer_page, 6);
 
 /**
  * @generated from message agni.v1.viewer.LocateVerdictResponse
@@ -284,7 +322,7 @@ export type LocateVerdictResponse = Message<"agni.v1.viewer.LocateVerdictRespons
  * Use `create(LocateVerdictResponseSchema)` to create a new message.
  */
 export const LocateVerdictResponseSchema: GenMessage<LocateVerdictResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 6);
+  messageDesc(file_agni_v1_viewer_page, 7);
 
 /**
  * @generated from message agni.v1.viewer.SelectFindingRequest
@@ -317,7 +355,7 @@ export type SelectFindingRequest = Message<"agni.v1.viewer.SelectFindingRequest"
  * Use `create(SelectFindingRequestSchema)` to create a new message.
  */
 export const SelectFindingRequestSchema: GenMessage<SelectFindingRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 7);
+  messageDesc(file_agni_v1_viewer_page, 8);
 
 /**
  * @generated from message agni.v1.viewer.SelectFindingResponse
@@ -342,7 +380,7 @@ export type SelectFindingResponse = Message<"agni.v1.viewer.SelectFindingRespons
  * Use `create(SelectFindingResponseSchema)` to create a new message.
  */
 export const SelectFindingResponseSchema: GenMessage<SelectFindingResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 8);
+  messageDesc(file_agni_v1_viewer_page, 9);
 
 /**
  * @generated from message agni.v1.viewer.LocateEntityRequest
@@ -376,7 +414,7 @@ export type LocateEntityRequest = Message<"agni.v1.viewer.LocateEntityRequest"> 
  * Use `create(LocateEntityRequestSchema)` to create a new message.
  */
 export const LocateEntityRequestSchema: GenMessage<LocateEntityRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 9);
+  messageDesc(file_agni_v1_viewer_page, 10);
 
 /**
  * @generated from message agni.v1.viewer.LocateEntityResponse
@@ -393,7 +431,7 @@ export type LocateEntityResponse = Message<"agni.v1.viewer.LocateEntityResponse"
  * Use `create(LocateEntityResponseSchema)` to create a new message.
  */
 export const LocateEntityResponseSchema: GenMessage<LocateEntityResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 10);
+  messageDesc(file_agni_v1_viewer_page, 11);
 
 /**
  * @generated from message agni.v1.viewer.ShowSheetRequest
@@ -403,6 +441,14 @@ export type ShowSheetRequest = Message<"agni.v1.viewer.ShowSheetRequest"> & {
    * @generated from field: string sheet = 1;
    */
   sheet: string;
+
+  /**
+   * view is the id of an open sheet view to show the sheet in. Empty shows it on the canvas. An id
+   * naming no open view is refused.
+   *
+   * @generated from field: string view = 2;
+   */
+  view: string;
 };
 
 /**
@@ -410,7 +456,7 @@ export type ShowSheetRequest = Message<"agni.v1.viewer.ShowSheetRequest"> & {
  * Use `create(ShowSheetRequestSchema)` to create a new message.
  */
 export const ShowSheetRequestSchema: GenMessage<ShowSheetRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 11);
+  messageDesc(file_agni_v1_viewer_page, 12);
 
 /**
  * @generated from message agni.v1.viewer.ShowSheetResponse
@@ -420,6 +466,11 @@ export type ShowSheetResponse = Message<"agni.v1.viewer.ShowSheetResponse"> & {
    * @generated from field: agni.v1.viewer.ViewerLocation location = 1;
    */
   location?: ViewerLocation | undefined;
+
+  /**
+   * @generated from field: repeated agni.v1.viewer.SheetView views = 2;
+   */
+  views: SheetView[];
 };
 
 /**
@@ -427,7 +478,101 @@ export type ShowSheetResponse = Message<"agni.v1.viewer.ShowSheetResponse"> & {
  * Use `create(ShowSheetResponseSchema)` to create a new message.
  */
 export const ShowSheetResponseSchema: GenMessage<ShowSheetResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_viewer_page, 12);
+  messageDesc(file_agni_v1_viewer_page, 13);
+
+/**
+ * @generated from message agni.v1.viewer.OpenSheetViewRequest
+ */
+export type OpenSheetViewRequest = Message<"agni.v1.viewer.OpenSheetViewRequest"> & {
+  /**
+   * sheet is the sheet id the new view shows. A sheet the open design lacks is refused.
+   *
+   * @generated from field: string sheet = 1;
+   */
+  sheet: string;
+};
+
+/**
+ * Describes the message agni.v1.viewer.OpenSheetViewRequest.
+ * Use `create(OpenSheetViewRequestSchema)` to create a new message.
+ */
+export const OpenSheetViewRequestSchema: GenMessage<OpenSheetViewRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 14);
+
+/**
+ * @generated from message agni.v1.viewer.OpenSheetViewResponse
+ */
+export type OpenSheetViewResponse = Message<"agni.v1.viewer.OpenSheetViewResponse"> & {
+  /**
+   * view is the view just opened. The call returns once the view has drawn its sheet.
+   *
+   * @generated from field: agni.v1.viewer.SheetView view = 1;
+   */
+  view?: SheetView | undefined;
+
+  /**
+   * @generated from field: agni.v1.viewer.ViewerLocation location = 2;
+   */
+  location?: ViewerLocation | undefined;
+
+  /**
+   * @generated from field: repeated agni.v1.viewer.SheetView views = 3;
+   */
+  views: SheetView[];
+};
+
+/**
+ * Describes the message agni.v1.viewer.OpenSheetViewResponse.
+ * Use `create(OpenSheetViewResponseSchema)` to create a new message.
+ */
+export const OpenSheetViewResponseSchema: GenMessage<OpenSheetViewResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 15);
+
+/**
+ * @generated from message agni.v1.viewer.CloseSheetViewRequest
+ */
+export type CloseSheetViewRequest = Message<"agni.v1.viewer.CloseSheetViewRequest"> & {
+  /**
+   * @generated from field: string view = 1;
+   */
+  view: string;
+};
+
+/**
+ * Describes the message agni.v1.viewer.CloseSheetViewRequest.
+ * Use `create(CloseSheetViewRequestSchema)` to create a new message.
+ */
+export const CloseSheetViewRequestSchema: GenMessage<CloseSheetViewRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 16);
+
+/**
+ * @generated from message agni.v1.viewer.CloseSheetViewResponse
+ */
+export type CloseSheetViewResponse = Message<"agni.v1.viewer.CloseSheetViewResponse"> & {
+  /**
+   * closed is false when no open view has that id, and then the page is left as it was.
+   *
+   * @generated from field: bool closed = 1;
+   */
+  closed: boolean;
+
+  /**
+   * @generated from field: agni.v1.viewer.ViewerLocation location = 2;
+   */
+  location?: ViewerLocation | undefined;
+
+  /**
+   * @generated from field: repeated agni.v1.viewer.SheetView views = 3;
+   */
+  views: SheetView[];
+};
+
+/**
+ * Describes the message agni.v1.viewer.CloseSheetViewResponse.
+ * Use `create(CloseSheetViewResponseSchema)` to create a new message.
+ */
+export const CloseSheetViewResponseSchema: GenMessage<CloseSheetViewResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_viewer_page, 17);
 
 /**
  * This file defines ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150,
@@ -505,7 +650,7 @@ export const ViewerPageService: GenService<{
     output: typeof LocateEntityResponseSchema;
   },
   /**
-   * ShowSheet opens one sheet of the open design.
+   * ShowSheet opens one sheet of the open design, on the canvas or in an open sheet view.
    *
    * @generated from rpc agni.v1.viewer.ViewerPageService.ShowSheet
    */
@@ -513,6 +658,27 @@ export const ViewerPageService: GenService<{
     methodKind: "unary";
     input: typeof ShowSheetRequestSchema;
     output: typeof ShowSheetResponseSchema;
+  },
+  /**
+   * OpenSheetView opens a sheet view beside the canvas on one sheet of the open design, as the
+   * Sheets panel's "open beside" does (agni issues 1326, 1370).
+   *
+   * @generated from rpc agni.v1.viewer.ViewerPageService.OpenSheetView
+   */
+  openSheetView: {
+    methodKind: "unary";
+    input: typeof OpenSheetViewRequestSchema;
+    output: typeof OpenSheetViewResponseSchema;
+  },
+  /**
+   * CloseSheetView closes one sheet view.
+   *
+   * @generated from rpc agni.v1.viewer.ViewerPageService.CloseSheetView
+   */
+  closeSheetView: {
+    methodKind: "unary";
+    input: typeof CloseSheetViewRequestSchema;
+    output: typeof CloseSheetViewResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_viewer_page, 0);

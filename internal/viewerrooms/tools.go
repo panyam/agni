@@ -18,13 +18,17 @@ const toolPrefix = "viewer_"
 // have no comments, so the text is written here. TestEveryPageMethodIsATool fails on a method
 // without one.
 var descriptions = map[string]string{
-	"GetLocation": "Where an open viewer tab is now: its design, sheet, view and focused verdict, query or trace. Changes nothing.",
+	"GetLocation": "Where an open viewer tab is now: its design, sheet, view and focused verdict, query or trace, and the sheet views open beside the canvas. Changes nothing.",
 	"ApplyLocation": "Move an open viewer tab to a location, as following a link would. Pass url (a viewer link, such as the one an answer from check, trace or query carries) or location (only the fields to change). " +
 		"Returns where the tab landed and whether a verdict it named was found.",
 	"LocateVerdict": "Focus one verdict in an open viewer tab and draw its proof. id is the verdict id from check; rule and subjects let a tab that has not run that rule ask it.",
 	"SelectFinding": "Focus one finding of the tab's last check run, as clicking its row does. subject is a net name or reference designator.",
 	"LocateEntity":  "Highlight a net, component or pin in an open viewer tab, as clicking a query result does. kind is net, component or pin; pin is set only for a pin.",
-	"ShowSheet":     "Open one sheet of the design in an open viewer tab. sheet is a sheet id, as GetLocation reports.",
+	"ShowSheet": "Open one sheet of the design in an open viewer tab. sheet is a sheet id, as GetLocation reports. " +
+		"view names an open sheet view to show it in, as GetLocation lists them; empty shows it on the canvas.",
+	"OpenSheetView": "Open a sheet view beside the canvas of an open viewer tab, showing one sheet, such as the board beside the schematic. " +
+		"Returns the new view's id. A view follows what the reader selects, and a selection event names the view it was made in.",
+	"CloseSheetView": "Close one sheet view of an open viewer tab. view is its id, as OpenSheetView returned it or GetLocation lists it. Returns closed false for an id that names no open view.",
 }
 
 // toolNote ends every page tool's description, saying how a call picks its tab.

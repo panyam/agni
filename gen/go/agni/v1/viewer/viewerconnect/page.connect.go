@@ -51,6 +51,12 @@ const (
 	// ViewerPageServiceShowSheetProcedure is the fully-qualified name of the ViewerPageService's
 	// ShowSheet RPC.
 	ViewerPageServiceShowSheetProcedure = "/agni.v1.viewer.ViewerPageService/ShowSheet"
+	// ViewerPageServiceOpenSheetViewProcedure is the fully-qualified name of the ViewerPageService's
+	// OpenSheetView RPC.
+	ViewerPageServiceOpenSheetViewProcedure = "/agni.v1.viewer.ViewerPageService/OpenSheetView"
+	// ViewerPageServiceCloseSheetViewProcedure is the fully-qualified name of the ViewerPageService's
+	// CloseSheetView RPC.
+	ViewerPageServiceCloseSheetViewProcedure = "/agni.v1.viewer.ViewerPageService/CloseSheetView"
 )
 
 // ViewerPageServiceClient is a client for the agni.v1.viewer.ViewerPageService service.
@@ -68,8 +74,13 @@ type ViewerPageServiceClient interface {
 	SelectFinding(context.Context, *connect.Request[viewer.SelectFindingRequest]) (*connect.Response[viewer.SelectFindingResponse], error)
 	// LocateEntity highlights a net, part or pin, as clicking a query result cell does.
 	LocateEntity(context.Context, *connect.Request[viewer.LocateEntityRequest]) (*connect.Response[viewer.LocateEntityResponse], error)
-	// ShowSheet opens one sheet of the open design.
+	// ShowSheet opens one sheet of the open design, on the canvas or in an open sheet view.
 	ShowSheet(context.Context, *connect.Request[viewer.ShowSheetRequest]) (*connect.Response[viewer.ShowSheetResponse], error)
+	// OpenSheetView opens a sheet view beside the canvas on one sheet of the open design, as the
+	// Sheets panel's "open beside" does (agni issues 1326, 1370).
+	OpenSheetView(context.Context, *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error)
+	// CloseSheetView closes one sheet view.
+	CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error)
 }
 
 // NewViewerPageServiceClient constructs a client for the agni.v1.viewer.ViewerPageService service.
@@ -120,17 +131,31 @@ func NewViewerPageServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(viewerPageServiceMethods.ByName("ShowSheet")),
 			connect.WithClientOptions(opts...),
 		),
+		openSheetView: connect.NewClient[viewer.OpenSheetViewRequest, viewer.OpenSheetViewResponse](
+			httpClient,
+			baseURL+ViewerPageServiceOpenSheetViewProcedure,
+			connect.WithSchema(viewerPageServiceMethods.ByName("OpenSheetView")),
+			connect.WithClientOptions(opts...),
+		),
+		closeSheetView: connect.NewClient[viewer.CloseSheetViewRequest, viewer.CloseSheetViewResponse](
+			httpClient,
+			baseURL+ViewerPageServiceCloseSheetViewProcedure,
+			connect.WithSchema(viewerPageServiceMethods.ByName("CloseSheetView")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // viewerPageServiceClient implements ViewerPageServiceClient.
 type viewerPageServiceClient struct {
-	getLocation   *connect.Client[viewer.GetLocationRequest, viewer.GetLocationResponse]
-	applyLocation *connect.Client[viewer.ApplyLocationRequest, viewer.ApplyLocationResponse]
-	locateVerdict *connect.Client[viewer.LocateVerdictRequest, viewer.LocateVerdictResponse]
-	selectFinding *connect.Client[viewer.SelectFindingRequest, viewer.SelectFindingResponse]
-	locateEntity  *connect.Client[viewer.LocateEntityRequest, viewer.LocateEntityResponse]
-	showSheet     *connect.Client[viewer.ShowSheetRequest, viewer.ShowSheetResponse]
+	getLocation    *connect.Client[viewer.GetLocationRequest, viewer.GetLocationResponse]
+	applyLocation  *connect.Client[viewer.ApplyLocationRequest, viewer.ApplyLocationResponse]
+	locateVerdict  *connect.Client[viewer.LocateVerdictRequest, viewer.LocateVerdictResponse]
+	selectFinding  *connect.Client[viewer.SelectFindingRequest, viewer.SelectFindingResponse]
+	locateEntity   *connect.Client[viewer.LocateEntityRequest, viewer.LocateEntityResponse]
+	showSheet      *connect.Client[viewer.ShowSheetRequest, viewer.ShowSheetResponse]
+	openSheetView  *connect.Client[viewer.OpenSheetViewRequest, viewer.OpenSheetViewResponse]
+	closeSheetView *connect.Client[viewer.CloseSheetViewRequest, viewer.CloseSheetViewResponse]
 }
 
 // GetLocation calls agni.v1.viewer.ViewerPageService.GetLocation.
@@ -163,6 +188,16 @@ func (c *viewerPageServiceClient) ShowSheet(ctx context.Context, req *connect.Re
 	return c.showSheet.CallUnary(ctx, req)
 }
 
+// OpenSheetView calls agni.v1.viewer.ViewerPageService.OpenSheetView.
+func (c *viewerPageServiceClient) OpenSheetView(ctx context.Context, req *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error) {
+	return c.openSheetView.CallUnary(ctx, req)
+}
+
+// CloseSheetView calls agni.v1.viewer.ViewerPageService.CloseSheetView.
+func (c *viewerPageServiceClient) CloseSheetView(ctx context.Context, req *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error) {
+	return c.closeSheetView.CallUnary(ctx, req)
+}
+
 // ViewerPageServiceHandler is an implementation of the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceHandler interface {
 	// GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
@@ -178,8 +213,13 @@ type ViewerPageServiceHandler interface {
 	SelectFinding(context.Context, *connect.Request[viewer.SelectFindingRequest]) (*connect.Response[viewer.SelectFindingResponse], error)
 	// LocateEntity highlights a net, part or pin, as clicking a query result cell does.
 	LocateEntity(context.Context, *connect.Request[viewer.LocateEntityRequest]) (*connect.Response[viewer.LocateEntityResponse], error)
-	// ShowSheet opens one sheet of the open design.
+	// ShowSheet opens one sheet of the open design, on the canvas or in an open sheet view.
 	ShowSheet(context.Context, *connect.Request[viewer.ShowSheetRequest]) (*connect.Response[viewer.ShowSheetResponse], error)
+	// OpenSheetView opens a sheet view beside the canvas on one sheet of the open design, as the
+	// Sheets panel's "open beside" does (agni issues 1326, 1370).
+	OpenSheetView(context.Context, *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error)
+	// CloseSheetView closes one sheet view.
+	CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error)
 }
 
 // NewViewerPageServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -226,6 +266,18 @@ func NewViewerPageServiceHandler(svc ViewerPageServiceHandler, opts ...connect.H
 		connect.WithSchema(viewerPageServiceMethods.ByName("ShowSheet")),
 		connect.WithHandlerOptions(opts...),
 	)
+	viewerPageServiceOpenSheetViewHandler := connect.NewUnaryHandler(
+		ViewerPageServiceOpenSheetViewProcedure,
+		svc.OpenSheetView,
+		connect.WithSchema(viewerPageServiceMethods.ByName("OpenSheetView")),
+		connect.WithHandlerOptions(opts...),
+	)
+	viewerPageServiceCloseSheetViewHandler := connect.NewUnaryHandler(
+		ViewerPageServiceCloseSheetViewProcedure,
+		svc.CloseSheetView,
+		connect.WithSchema(viewerPageServiceMethods.ByName("CloseSheetView")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.viewer.ViewerPageService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ViewerPageServiceGetLocationProcedure:
@@ -240,6 +292,10 @@ func NewViewerPageServiceHandler(svc ViewerPageServiceHandler, opts ...connect.H
 			viewerPageServiceLocateEntityHandler.ServeHTTP(w, r)
 		case ViewerPageServiceShowSheetProcedure:
 			viewerPageServiceShowSheetHandler.ServeHTTP(w, r)
+		case ViewerPageServiceOpenSheetViewProcedure:
+			viewerPageServiceOpenSheetViewHandler.ServeHTTP(w, r)
+		case ViewerPageServiceCloseSheetViewProcedure:
+			viewerPageServiceCloseSheetViewHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -271,4 +327,12 @@ func (UnimplementedViewerPageServiceHandler) LocateEntity(context.Context, *conn
 
 func (UnimplementedViewerPageServiceHandler) ShowSheet(context.Context, *connect.Request[viewer.ShowSheetRequest]) (*connect.Response[viewer.ShowSheetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.ShowSheet is not implemented"))
+}
+
+func (UnimplementedViewerPageServiceHandler) OpenSheetView(context.Context, *connect.Request[viewer.OpenSheetViewRequest]) (*connect.Response[viewer.OpenSheetViewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.OpenSheetView is not implemented"))
+}
+
+func (UnimplementedViewerPageServiceHandler) CloseSheetView(context.Context, *connect.Request[viewer.CloseSheetViewRequest]) (*connect.Response[viewer.CloseSheetViewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.viewer.ViewerPageService.CloseSheetView is not implemented"))
 }

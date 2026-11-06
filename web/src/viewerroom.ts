@@ -41,6 +41,14 @@ export interface ViewerRoomDeps {
 // starts with it off.
 export const AGENTS_KEY = "agni.viewerRooms.agentsAllowed";
 
+// CANVAS_VIEW is the view a selection names when no sheet view made it, a pick on the canvas or a
+// row or link anywhere else on the page. A sheet view names itself by its id, "sheetview-<n>", the
+// same id the page contract's OpenSheetView returns (agni issue 1370).
+export const CANVAS_VIEW = "canvas";
+
+// RoomSelection is a selection as agents hear it, with the view it was made in.
+export type RoomSelection = Focus & { view: string };
+
 // ViewerRoomTab is this tab's membership in its design's room, following the page from design to
 // design.
 export class ViewerRoomTab {
@@ -54,7 +62,7 @@ export class ViewerRoomTab {
   private readonly refusedNote: HTMLElement | undefined;
   private refused = new Map<string, string>();
   // focus is what the reader last selected. An ask sends it along.
-  private focus: Focus | undefined;
+  private focus: RoomSelection | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
   private readonly storage: Pick<Storage, "getItem" | "setItem"> | undefined;
   private readonly win: Pick<Window, "addEventListener" | "location">;
@@ -97,12 +105,14 @@ export class ViewerRoomTab {
     return true;
   }
 
-  // select records what the reader selected and, while agents may drive the tab, tells them.
-  select(focus: Focus): void {
-    this.focus = focus;
+  // select records what the reader selected and the view it was made in and, while agents may drive
+  // the tab, tells them.
+  select(focus: Focus, view: string = CANVAS_VIEW): void {
+    const sel: RoomSelection = { ...focus, view };
+    this.focus = sel;
     if (!this.room || !this.agentsAllowed()) return;
     try {
-      this.room.selectionChanged(focus);
+      this.room.selectionChanged(sel);
     } catch (e) {
       // An area over the event size limit is not worth an error on the page.
       console.warn(`agni: the selection was not sent to agents: ${e instanceof Error ? e.message : String(e)}`);

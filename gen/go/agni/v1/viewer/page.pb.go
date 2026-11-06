@@ -267,8 +267,11 @@ func (*GetLocationRequest) Descriptor() ([]byte, []int) {
 }
 
 type GetLocationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Location      *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Location *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	// views lists the sheet views open beside the canvas, in the order they opened. A link cannot
+	// address a view, so the views are kept out of ViewerLocation.
+	Views         []*SheetView `protobuf:"bytes,2,rep,name=views,proto3" json:"views,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -310,6 +313,70 @@ func (x *GetLocationResponse) GetLocation() *ViewerLocation {
 	return nil
 }
 
+func (x *GetLocationResponse) GetViews() []*SheetView {
+	if x != nil {
+		return x.Views
+	}
+	return nil
+}
+
+// SheetView is one view open beside the canvas (agni issue 1370). It has its own sheet and camera,
+// and it follows a selection made anywhere on the page.
+type SheetView struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id names the view for as long as the page is open, such as "sheetview-2". A page numbers its
+	// views from 1 and never reuses a number, so a closed view's id names nothing.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// sheet is the sheet id that the view shows.
+	Sheet         string `protobuf:"bytes,2,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SheetView) Reset() {
+	*x = SheetView{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SheetView) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SheetView) ProtoMessage() {}
+
+func (x *SheetView) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SheetView.ProtoReflect.Descriptor instead.
+func (*SheetView) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SheetView) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SheetView) GetSheet() string {
+	if x != nil {
+		return x.Sheet
+	}
+	return ""
+}
+
 type ApplyLocationRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Location *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
@@ -328,7 +395,7 @@ type ApplyLocationRequest struct {
 
 func (x *ApplyLocationRequest) Reset() {
 	*x = ApplyLocationRequest{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[3]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +407,7 @@ func (x *ApplyLocationRequest) String() string {
 func (*ApplyLocationRequest) ProtoMessage() {}
 
 func (x *ApplyLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[3]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +420,7 @@ func (x *ApplyLocationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyLocationRequest.ProtoReflect.Descriptor instead.
 func (*ApplyLocationRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ApplyLocationRequest) GetLocation() *ViewerLocation {
@@ -382,7 +449,7 @@ type ApplyLocationResponse struct {
 
 func (x *ApplyLocationResponse) Reset() {
 	*x = ApplyLocationResponse{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[4]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -394,7 +461,7 @@ func (x *ApplyLocationResponse) String() string {
 func (*ApplyLocationResponse) ProtoMessage() {}
 
 func (x *ApplyLocationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[4]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +474,7 @@ func (x *ApplyLocationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyLocationResponse.ProtoReflect.Descriptor instead.
 func (*ApplyLocationResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ApplyLocationResponse) GetLocation() *ViewerLocation {
@@ -439,7 +506,7 @@ type LocateVerdictRequest struct {
 
 func (x *LocateVerdictRequest) Reset() {
 	*x = LocateVerdictRequest{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[5]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +518,7 @@ func (x *LocateVerdictRequest) String() string {
 func (*LocateVerdictRequest) ProtoMessage() {}
 
 func (x *LocateVerdictRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[5]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -464,7 +531,7 @@ func (x *LocateVerdictRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateVerdictRequest.ProtoReflect.Descriptor instead.
 func (*LocateVerdictRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *LocateVerdictRequest) GetId() string {
@@ -499,7 +566,7 @@ type LocateVerdictResponse struct {
 
 func (x *LocateVerdictResponse) Reset() {
 	*x = LocateVerdictResponse{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[6]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +578,7 @@ func (x *LocateVerdictResponse) String() string {
 func (*LocateVerdictResponse) ProtoMessage() {}
 
 func (x *LocateVerdictResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[6]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +591,7 @@ func (x *LocateVerdictResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateVerdictResponse.ProtoReflect.Descriptor instead.
 func (*LocateVerdictResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LocateVerdictResponse) GetResolved() bool {
@@ -556,7 +623,7 @@ type SelectFindingRequest struct {
 
 func (x *SelectFindingRequest) Reset() {
 	*x = SelectFindingRequest{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[7]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -568,7 +635,7 @@ func (x *SelectFindingRequest) String() string {
 func (*SelectFindingRequest) ProtoMessage() {}
 
 func (x *SelectFindingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[7]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -581,7 +648,7 @@ func (x *SelectFindingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SelectFindingRequest.ProtoReflect.Descriptor instead.
 func (*SelectFindingRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SelectFindingRequest) GetSubject() string {
@@ -617,7 +684,7 @@ type SelectFindingResponse struct {
 
 func (x *SelectFindingResponse) Reset() {
 	*x = SelectFindingResponse{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[8]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -629,7 +696,7 @@ func (x *SelectFindingResponse) String() string {
 func (*SelectFindingResponse) ProtoMessage() {}
 
 func (x *SelectFindingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[8]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -642,7 +709,7 @@ func (x *SelectFindingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SelectFindingResponse.ProtoReflect.Descriptor instead.
 func (*SelectFindingResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SelectFindingResponse) GetSelected() bool {
@@ -672,7 +739,7 @@ type LocateEntityRequest struct {
 
 func (x *LocateEntityRequest) Reset() {
 	*x = LocateEntityRequest{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[9]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +751,7 @@ func (x *LocateEntityRequest) String() string {
 func (*LocateEntityRequest) ProtoMessage() {}
 
 func (x *LocateEntityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[9]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +764,7 @@ func (x *LocateEntityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateEntityRequest.ProtoReflect.Descriptor instead.
 func (*LocateEntityRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LocateEntityRequest) GetKind() string {
@@ -737,7 +804,7 @@ type LocateEntityResponse struct {
 
 func (x *LocateEntityResponse) Reset() {
 	*x = LocateEntityResponse{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[10]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +816,7 @@ func (x *LocateEntityResponse) String() string {
 func (*LocateEntityResponse) ProtoMessage() {}
 
 func (x *LocateEntityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[10]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +829,7 @@ func (x *LocateEntityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateEntityResponse.ProtoReflect.Descriptor instead.
 func (*LocateEntityResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LocateEntityResponse) GetLocation() *ViewerLocation {
@@ -773,15 +840,18 @@ func (x *LocateEntityResponse) GetLocation() *ViewerLocation {
 }
 
 type ShowSheetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sheet         string                 `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Sheet string                 `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	// view is the id of an open sheet view to show the sheet in. Empty shows it on the canvas. An id
+	// naming no open view is refused.
+	View          string `protobuf:"bytes,2,opt,name=view,proto3" json:"view,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ShowSheetRequest) Reset() {
 	*x = ShowSheetRequest{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[11]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -793,7 +863,7 @@ func (x *ShowSheetRequest) String() string {
 func (*ShowSheetRequest) ProtoMessage() {}
 
 func (x *ShowSheetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[11]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -806,7 +876,7 @@ func (x *ShowSheetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShowSheetRequest.ProtoReflect.Descriptor instead.
 func (*ShowSheetRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ShowSheetRequest) GetSheet() string {
@@ -816,16 +886,24 @@ func (x *ShowSheetRequest) GetSheet() string {
 	return ""
 }
 
+func (x *ShowSheetRequest) GetView() string {
+	if x != nil {
+		return x.View
+	}
+	return ""
+}
+
 type ShowSheetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Location      *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	Views         []*SheetView           `protobuf:"bytes,2,rep,name=views,proto3" json:"views,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ShowSheetResponse) Reset() {
 	*x = ShowSheetResponse{}
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[12]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -837,7 +915,7 @@ func (x *ShowSheetResponse) String() string {
 func (*ShowSheetResponse) ProtoMessage() {}
 
 func (x *ShowSheetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_viewer_page_proto_msgTypes[12]
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -850,12 +928,230 @@ func (x *ShowSheetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShowSheetResponse.ProtoReflect.Descriptor instead.
 func (*ShowSheetResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ShowSheetResponse) GetLocation() *ViewerLocation {
 	if x != nil {
 		return x.Location
+	}
+	return nil
+}
+
+func (x *ShowSheetResponse) GetViews() []*SheetView {
+	if x != nil {
+		return x.Views
+	}
+	return nil
+}
+
+type OpenSheetViewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// sheet is the sheet id the new view shows. A sheet the open design lacks is refused.
+	Sheet         string `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenSheetViewRequest) Reset() {
+	*x = OpenSheetViewRequest{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenSheetViewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenSheetViewRequest) ProtoMessage() {}
+
+func (x *OpenSheetViewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenSheetViewRequest.ProtoReflect.Descriptor instead.
+func (*OpenSheetViewRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *OpenSheetViewRequest) GetSheet() string {
+	if x != nil {
+		return x.Sheet
+	}
+	return ""
+}
+
+type OpenSheetViewResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// view is the view just opened. The call returns once the view has drawn its sheet.
+	View          *SheetView      `protobuf:"bytes,1,opt,name=view,proto3" json:"view,omitempty"`
+	Location      *ViewerLocation `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	Views         []*SheetView    `protobuf:"bytes,3,rep,name=views,proto3" json:"views,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenSheetViewResponse) Reset() {
+	*x = OpenSheetViewResponse{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenSheetViewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenSheetViewResponse) ProtoMessage() {}
+
+func (x *OpenSheetViewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenSheetViewResponse.ProtoReflect.Descriptor instead.
+func (*OpenSheetViewResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *OpenSheetViewResponse) GetView() *SheetView {
+	if x != nil {
+		return x.View
+	}
+	return nil
+}
+
+func (x *OpenSheetViewResponse) GetLocation() *ViewerLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+func (x *OpenSheetViewResponse) GetViews() []*SheetView {
+	if x != nil {
+		return x.Views
+	}
+	return nil
+}
+
+type CloseSheetViewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	View          string                 `protobuf:"bytes,1,opt,name=view,proto3" json:"view,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseSheetViewRequest) Reset() {
+	*x = CloseSheetViewRequest{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseSheetViewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseSheetViewRequest) ProtoMessage() {}
+
+func (x *CloseSheetViewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseSheetViewRequest.ProtoReflect.Descriptor instead.
+func (*CloseSheetViewRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CloseSheetViewRequest) GetView() string {
+	if x != nil {
+		return x.View
+	}
+	return ""
+}
+
+type CloseSheetViewResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// closed is false when no open view has that id, and then the page is left as it was.
+	Closed        bool            `protobuf:"varint,1,opt,name=closed,proto3" json:"closed,omitempty"`
+	Location      *ViewerLocation `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	Views         []*SheetView    `protobuf:"bytes,3,rep,name=views,proto3" json:"views,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseSheetViewResponse) Reset() {
+	*x = CloseSheetViewResponse{}
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseSheetViewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseSheetViewResponse) ProtoMessage() {}
+
+func (x *CloseSheetViewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_viewer_page_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseSheetViewResponse.ProtoReflect.Descriptor instead.
+func (*CloseSheetViewResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_viewer_page_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CloseSheetViewResponse) GetClosed() bool {
+	if x != nil {
+		return x.Closed
+	}
+	return false
+}
+
+func (x *CloseSheetViewResponse) GetLocation() *ViewerLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+func (x *CloseSheetViewResponse) GetViews() []*SheetView {
+	if x != nil {
+		return x.Views
 	}
 	return nil
 }
@@ -892,9 +1188,13 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\b_symbolsB\n" +
 	"\n" +
 	"\b_flatten\"\x14\n" +
-	"\x12GetLocationRequest\"Q\n" +
+	"\x12GetLocationRequest\"\x82\x01\n" +
 	"\x13GetLocationResponse\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"d\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
+	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"1\n" +
+	"\tSheetView\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05sheet\x18\x02 \x01(\tR\x05sheet\"d\n" +
 	"\x14ApplyLocationRequest\x12:\n" +
 	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\"~\n" +
@@ -921,18 +1221,34 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x14\n" +
 	"\x05sheet\x18\x04 \x01(\tR\x05sheet\"R\n" +
 	"\x14LocateEntityResponse\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"(\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"<\n" +
 	"\x10ShowSheetRequest\x12\x14\n" +
-	"\x05sheet\x18\x01 \x01(\tR\x05sheet\"O\n" +
+	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x12\n" +
+	"\x04view\x18\x02 \x01(\tR\x04view\"\x80\x01\n" +
 	"\x11ShowSheetResponse\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation2\xb7\x04\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
+	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\",\n" +
+	"\x14OpenSheetViewRequest\x12\x14\n" +
+	"\x05sheet\x18\x01 \x01(\tR\x05sheet\"\xb3\x01\n" +
+	"\x15OpenSheetViewResponse\x12-\n" +
+	"\x04view\x18\x01 \x01(\v2\x19.agni.v1.viewer.SheetViewR\x04view\x12:\n" +
+	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
+	"\x05views\x18\x03 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"+\n" +
+	"\x15CloseSheetViewRequest\x12\x12\n" +
+	"\x04view\x18\x01 \x01(\tR\x04view\"\x9d\x01\n" +
+	"\x16CloseSheetViewResponse\x12\x16\n" +
+	"\x06closed\x18\x01 \x01(\bR\x06closed\x12:\n" +
+	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
+	"\x05views\x18\x03 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views2\xf6\x05\n" +
 	"\x11ViewerPageService\x12[\n" +
 	"\vGetLocation\x12\".agni.v1.viewer.GetLocationRequest\x1a#.agni.v1.viewer.GetLocationResponse\"\x03\x90\x02\x01\x12\\\n" +
 	"\rApplyLocation\x12$.agni.v1.viewer.ApplyLocationRequest\x1a%.agni.v1.viewer.ApplyLocationResponse\x12\\\n" +
 	"\rLocateVerdict\x12$.agni.v1.viewer.LocateVerdictRequest\x1a%.agni.v1.viewer.LocateVerdictResponse\x12\\\n" +
 	"\rSelectFinding\x12$.agni.v1.viewer.SelectFindingRequest\x1a%.agni.v1.viewer.SelectFindingResponse\x12Y\n" +
 	"\fLocateEntity\x12#.agni.v1.viewer.LocateEntityRequest\x1a$.agni.v1.viewer.LocateEntityResponse\x12P\n" +
-	"\tShowSheet\x12 .agni.v1.viewer.ShowSheetRequest\x1a!.agni.v1.viewer.ShowSheetResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/viewerb\x06proto3"
+	"\tShowSheet\x12 .agni.v1.viewer.ShowSheetRequest\x1a!.agni.v1.viewer.ShowSheetResponse\x12\\\n" +
+	"\rOpenSheetView\x12$.agni.v1.viewer.OpenSheetViewRequest\x1a%.agni.v1.viewer.OpenSheetViewResponse\x12_\n" +
+	"\x0eCloseSheetView\x12%.agni.v1.viewer.CloseSheetViewRequest\x1a&.agni.v1.viewer.CloseSheetViewResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/viewerb\x06proto3"
 
 var (
 	file_agni_v1_viewer_page_proto_rawDescOnce sync.Once
@@ -946,47 +1262,63 @@ func file_agni_v1_viewer_page_proto_rawDescGZIP() []byte {
 	return file_agni_v1_viewer_page_proto_rawDescData
 }
 
-var file_agni_v1_viewer_page_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_agni_v1_viewer_page_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_agni_v1_viewer_page_proto_goTypes = []any{
-	(*ViewerLocation)(nil),        // 0: agni.v1.viewer.ViewerLocation
-	(*GetLocationRequest)(nil),    // 1: agni.v1.viewer.GetLocationRequest
-	(*GetLocationResponse)(nil),   // 2: agni.v1.viewer.GetLocationResponse
-	(*ApplyLocationRequest)(nil),  // 3: agni.v1.viewer.ApplyLocationRequest
-	(*ApplyLocationResponse)(nil), // 4: agni.v1.viewer.ApplyLocationResponse
-	(*LocateVerdictRequest)(nil),  // 5: agni.v1.viewer.LocateVerdictRequest
-	(*LocateVerdictResponse)(nil), // 6: agni.v1.viewer.LocateVerdictResponse
-	(*SelectFindingRequest)(nil),  // 7: agni.v1.viewer.SelectFindingRequest
-	(*SelectFindingResponse)(nil), // 8: agni.v1.viewer.SelectFindingResponse
-	(*LocateEntityRequest)(nil),   // 9: agni.v1.viewer.LocateEntityRequest
-	(*LocateEntityResponse)(nil),  // 10: agni.v1.viewer.LocateEntityResponse
-	(*ShowSheetRequest)(nil),      // 11: agni.v1.viewer.ShowSheetRequest
-	(*ShowSheetResponse)(nil),     // 12: agni.v1.viewer.ShowSheetResponse
+	(*ViewerLocation)(nil),         // 0: agni.v1.viewer.ViewerLocation
+	(*GetLocationRequest)(nil),     // 1: agni.v1.viewer.GetLocationRequest
+	(*GetLocationResponse)(nil),    // 2: agni.v1.viewer.GetLocationResponse
+	(*SheetView)(nil),              // 3: agni.v1.viewer.SheetView
+	(*ApplyLocationRequest)(nil),   // 4: agni.v1.viewer.ApplyLocationRequest
+	(*ApplyLocationResponse)(nil),  // 5: agni.v1.viewer.ApplyLocationResponse
+	(*LocateVerdictRequest)(nil),   // 6: agni.v1.viewer.LocateVerdictRequest
+	(*LocateVerdictResponse)(nil),  // 7: agni.v1.viewer.LocateVerdictResponse
+	(*SelectFindingRequest)(nil),   // 8: agni.v1.viewer.SelectFindingRequest
+	(*SelectFindingResponse)(nil),  // 9: agni.v1.viewer.SelectFindingResponse
+	(*LocateEntityRequest)(nil),    // 10: agni.v1.viewer.LocateEntityRequest
+	(*LocateEntityResponse)(nil),   // 11: agni.v1.viewer.LocateEntityResponse
+	(*ShowSheetRequest)(nil),       // 12: agni.v1.viewer.ShowSheetRequest
+	(*ShowSheetResponse)(nil),      // 13: agni.v1.viewer.ShowSheetResponse
+	(*OpenSheetViewRequest)(nil),   // 14: agni.v1.viewer.OpenSheetViewRequest
+	(*OpenSheetViewResponse)(nil),  // 15: agni.v1.viewer.OpenSheetViewResponse
+	(*CloseSheetViewRequest)(nil),  // 16: agni.v1.viewer.CloseSheetViewRequest
+	(*CloseSheetViewResponse)(nil), // 17: agni.v1.viewer.CloseSheetViewResponse
 }
 var file_agni_v1_viewer_page_proto_depIdxs = []int32{
 	0,  // 0: agni.v1.viewer.GetLocationResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 1: agni.v1.viewer.ApplyLocationRequest.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 2: agni.v1.viewer.ApplyLocationResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 3: agni.v1.viewer.LocateVerdictResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 4: agni.v1.viewer.SelectFindingResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 5: agni.v1.viewer.LocateEntityResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	0,  // 6: agni.v1.viewer.ShowSheetResponse.location:type_name -> agni.v1.viewer.ViewerLocation
-	1,  // 7: agni.v1.viewer.ViewerPageService.GetLocation:input_type -> agni.v1.viewer.GetLocationRequest
-	3,  // 8: agni.v1.viewer.ViewerPageService.ApplyLocation:input_type -> agni.v1.viewer.ApplyLocationRequest
-	5,  // 9: agni.v1.viewer.ViewerPageService.LocateVerdict:input_type -> agni.v1.viewer.LocateVerdictRequest
-	7,  // 10: agni.v1.viewer.ViewerPageService.SelectFinding:input_type -> agni.v1.viewer.SelectFindingRequest
-	9,  // 11: agni.v1.viewer.ViewerPageService.LocateEntity:input_type -> agni.v1.viewer.LocateEntityRequest
-	11, // 12: agni.v1.viewer.ViewerPageService.ShowSheet:input_type -> agni.v1.viewer.ShowSheetRequest
-	2,  // 13: agni.v1.viewer.ViewerPageService.GetLocation:output_type -> agni.v1.viewer.GetLocationResponse
-	4,  // 14: agni.v1.viewer.ViewerPageService.ApplyLocation:output_type -> agni.v1.viewer.ApplyLocationResponse
-	6,  // 15: agni.v1.viewer.ViewerPageService.LocateVerdict:output_type -> agni.v1.viewer.LocateVerdictResponse
-	8,  // 16: agni.v1.viewer.ViewerPageService.SelectFinding:output_type -> agni.v1.viewer.SelectFindingResponse
-	10, // 17: agni.v1.viewer.ViewerPageService.LocateEntity:output_type -> agni.v1.viewer.LocateEntityResponse
-	12, // 18: agni.v1.viewer.ViewerPageService.ShowSheet:output_type -> agni.v1.viewer.ShowSheetResponse
-	13, // [13:19] is the sub-list for method output_type
-	7,  // [7:13] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	3,  // 1: agni.v1.viewer.GetLocationResponse.views:type_name -> agni.v1.viewer.SheetView
+	0,  // 2: agni.v1.viewer.ApplyLocationRequest.location:type_name -> agni.v1.viewer.ViewerLocation
+	0,  // 3: agni.v1.viewer.ApplyLocationResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	0,  // 4: agni.v1.viewer.LocateVerdictResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	0,  // 5: agni.v1.viewer.SelectFindingResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	0,  // 6: agni.v1.viewer.LocateEntityResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	0,  // 7: agni.v1.viewer.ShowSheetResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	3,  // 8: agni.v1.viewer.ShowSheetResponse.views:type_name -> agni.v1.viewer.SheetView
+	3,  // 9: agni.v1.viewer.OpenSheetViewResponse.view:type_name -> agni.v1.viewer.SheetView
+	0,  // 10: agni.v1.viewer.OpenSheetViewResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	3,  // 11: agni.v1.viewer.OpenSheetViewResponse.views:type_name -> agni.v1.viewer.SheetView
+	0,  // 12: agni.v1.viewer.CloseSheetViewResponse.location:type_name -> agni.v1.viewer.ViewerLocation
+	3,  // 13: agni.v1.viewer.CloseSheetViewResponse.views:type_name -> agni.v1.viewer.SheetView
+	1,  // 14: agni.v1.viewer.ViewerPageService.GetLocation:input_type -> agni.v1.viewer.GetLocationRequest
+	4,  // 15: agni.v1.viewer.ViewerPageService.ApplyLocation:input_type -> agni.v1.viewer.ApplyLocationRequest
+	6,  // 16: agni.v1.viewer.ViewerPageService.LocateVerdict:input_type -> agni.v1.viewer.LocateVerdictRequest
+	8,  // 17: agni.v1.viewer.ViewerPageService.SelectFinding:input_type -> agni.v1.viewer.SelectFindingRequest
+	10, // 18: agni.v1.viewer.ViewerPageService.LocateEntity:input_type -> agni.v1.viewer.LocateEntityRequest
+	12, // 19: agni.v1.viewer.ViewerPageService.ShowSheet:input_type -> agni.v1.viewer.ShowSheetRequest
+	14, // 20: agni.v1.viewer.ViewerPageService.OpenSheetView:input_type -> agni.v1.viewer.OpenSheetViewRequest
+	16, // 21: agni.v1.viewer.ViewerPageService.CloseSheetView:input_type -> agni.v1.viewer.CloseSheetViewRequest
+	2,  // 22: agni.v1.viewer.ViewerPageService.GetLocation:output_type -> agni.v1.viewer.GetLocationResponse
+	5,  // 23: agni.v1.viewer.ViewerPageService.ApplyLocation:output_type -> agni.v1.viewer.ApplyLocationResponse
+	7,  // 24: agni.v1.viewer.ViewerPageService.LocateVerdict:output_type -> agni.v1.viewer.LocateVerdictResponse
+	9,  // 25: agni.v1.viewer.ViewerPageService.SelectFinding:output_type -> agni.v1.viewer.SelectFindingResponse
+	11, // 26: agni.v1.viewer.ViewerPageService.LocateEntity:output_type -> agni.v1.viewer.LocateEntityResponse
+	13, // 27: agni.v1.viewer.ViewerPageService.ShowSheet:output_type -> agni.v1.viewer.ShowSheetResponse
+	15, // 28: agni.v1.viewer.ViewerPageService.OpenSheetView:output_type -> agni.v1.viewer.OpenSheetViewResponse
+	17, // 29: agni.v1.viewer.ViewerPageService.CloseSheetView:output_type -> agni.v1.viewer.CloseSheetViewResponse
+	22, // [22:30] is the sub-list for method output_type
+	14, // [14:22] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_viewer_page_proto_init() }
@@ -1001,7 +1333,7 @@ func file_agni_v1_viewer_page_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_viewer_page_proto_rawDesc), len(file_agni_v1_viewer_page_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

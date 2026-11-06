@@ -102,7 +102,7 @@ from any other peer in the room goes unanswered (agni issue 1173). Every token t
 for the local subject, so no page can join as the bridge. A page that holds a genuine token for the
 room still cannot call a tab directly and skip the bridge's check of the switch.
 
-The bridge declares the six tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
+The bridge declares the eight tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
 for every caller and the bridge serves the stateless 2026-07-28 MCP wire as well as the session one.
 It also refuses a tab's tool whose schema differs from the declaration by a byte. The declaration is
 built in Go from the service's descriptor (`internal/viewerrooms/tools.go`) and the tab builds its
@@ -114,12 +114,29 @@ builds can still disagree about a tool, and the bridge then refuses it. The tab 
 `notifications/rooms/tool_refused` and names the tool beside its switch (`onToolRefused`, since
 mcpkit v0.8.13).
 
+## Sheet views beside the canvas
+
+A reader opens a sheet view from the Sheets panel, such as the board beside the schematic (agni
+issue 1326). The page contract opens one too, so a parent page or an agent can put the
+board beside the canvas without a reader's click (agni issue 1370). `OpenSheetView` opens a view on
+a sheet and answers its id, `ShowSheet` with a `view` moves that view to another sheet, and
+`CloseSheetView` closes it. The canvas keeps its own sheet throughout. `GetLocation` lists the open
+views beside the location.
+
+A view is not part of `ViewerLocation`, because a link cannot open one. A link names one sheet, and
+a view lives only as long as the page holding it. The id is `sheetview-<n>`, numbered from 1 per
+page and never reused, so a caller holding the id of a closed view is refused rather than reaching
+some other view. `SheetViews` in `sheetviews.ts` holds the views, and `pageApi` reaches them
+through the `SheetViewsHost` port, so a page with no dock lists none and refuses to open one.
+
 ## A tab asking an agent
 
 The same room carries the other direction (agni issue 1173). With its switch on, a tab tells the
 room what the reader selected (`page.selection_changed`, from the Properties panel's focus). The Ask
 box beside the switch sends the reader's question as `room.ask`. Its data carries the text, the
-tab's `GetLocation` answer and the selection. These are page events, which the bridge buffers per
+tab's `GetLocation` answer and the selection. A selection carries a `view` (agni issue 1370). It is
+the id of the sheet view the reader picked in, or `canvas` for every other selection. So an agent
+can tell a pick on the board view from a pick on the schematic. These are page events, which the bridge buffers per
 room (`rooms.WithEventFallbacks`) and hands only to agents the tab agreed to. An agent waits for the
 next one with `next_request`, on either wire, or subscribes to `rooms://events/{room}` on the session
 wire.

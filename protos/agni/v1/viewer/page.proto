@@ -37,8 +37,13 @@ service ViewerPageService {
   rpc SelectFinding(SelectFindingRequest) returns (SelectFindingResponse);
   // LocateEntity highlights a net, part or pin, as clicking a query result cell does.
   rpc LocateEntity(LocateEntityRequest) returns (LocateEntityResponse);
-  // ShowSheet opens one sheet of the open design.
+  // ShowSheet opens one sheet of the open design, on the canvas or in an open sheet view.
   rpc ShowSheet(ShowSheetRequest) returns (ShowSheetResponse);
+  // OpenSheetView opens a sheet view beside the canvas on one sheet of the open design, as the
+  // Sheets panel's "open beside" does (agni issues 1326, 1370).
+  rpc OpenSheetView(OpenSheetViewRequest) returns (OpenSheetViewResponse);
+  // CloseSheetView closes one sheet view.
+  rpc CloseSheetView(CloseSheetViewRequest) returns (CloseSheetViewResponse);
 }
 
 // ViewerLocation is the page's URL-addressable state, the wire twin of router.ts's ViewerLocation,
@@ -81,6 +86,19 @@ message GetLocationRequest {}
 
 message GetLocationResponse {
   ViewerLocation location = 1;
+  // views lists the sheet views open beside the canvas, in the order they opened. A link cannot
+  // address a view, so the views are kept out of ViewerLocation.
+  repeated SheetView views = 2;
+}
+
+// SheetView is one view open beside the canvas (agni issue 1370). It has its own sheet and camera,
+// and it follows a selection made anywhere on the page.
+message SheetView {
+  // id names the view for as long as the page is open, such as "sheetview-2". A page numbers its
+  // views from 1 and never reuses a number, so a closed view's id names nothing.
+  string id = 1;
+  // sheet is the sheet id that the view shows.
+  string sheet = 2;
 }
 
 message ApplyLocationRequest {
@@ -150,8 +168,35 @@ message LocateEntityResponse {
 
 message ShowSheetRequest {
   string sheet = 1;
+  // view is the id of an open sheet view to show the sheet in. Empty shows it on the canvas. An id
+  // naming no open view is refused.
+  string view = 2;
 }
 
 message ShowSheetResponse {
   ViewerLocation location = 1;
+  repeated SheetView views = 2;
+}
+
+message OpenSheetViewRequest {
+  // sheet is the sheet id the new view shows. A sheet the open design lacks is refused.
+  string sheet = 1;
+}
+
+message OpenSheetViewResponse {
+  // view is the view just opened. The call returns once the view has drawn its sheet.
+  SheetView view = 1;
+  ViewerLocation location = 2;
+  repeated SheetView views = 3;
+}
+
+message CloseSheetViewRequest {
+  string view = 1;
+}
+
+message CloseSheetViewResponse {
+  // closed is false when no open view has that id, and then the page is left as it was.
+  bool closed = 1;
+  ViewerLocation location = 2;
+  repeated SheetView views = 3;
 }

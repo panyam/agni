@@ -67,7 +67,7 @@ import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
 import { pageApi, type ViewerPageAPI } from "./pageapi.js";
 import { pageDispatcher } from "./pageservice.js";
-import { ViewerRoomTab } from "./viewerroom.js";
+import { CANVAS_VIEW, ViewerRoomTab } from "./viewerroom.js";
 import { ViewerRoomService } from "./gen/agni/v1/webapi/viewerroom_pb.js";
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
@@ -110,6 +110,9 @@ class AppRoot extends BaseComponent {
   presenter: ViewerPresenter | null = null;
   // tourHost is what a guided tour needs of the page beyond its DOM, for `?tour=` at boot.
   tourHost: ReviewTourHost | null = null;
+  // sheetViews are the views open beside the canvas, which the page contract opens and closes (agni
+  // issue 1370). performLocalInit creates them.
+  sheetViews: SheetViews | null = null;
 
   override performLocalInit(): LCMComponent[] {
     const children: LCMComponent[] = [];
@@ -529,11 +532,13 @@ class AppRoot extends BaseComponent {
       onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
       // Under --viewer-rooms the tab lets agents in, and it tells them what the reader selected.
       onSelect: (focus) => {
-        roomTab?.select(focus);
-        // Every sheet view hears the selection (agni issue 1326). The view it was picked in lights it
-        // where it is, and the others follow it as their link says.
         const from = pickedIn;
         pickedIn = "";
+        // An agent hears which view the reader picked in (agni issue 1370), so it can tell a pick on
+        // the board view from one on the schematic.
+        roomTab?.select(focus, from || CANVAS_VIEW);
+        // Every sheet view hears the selection (agni issue 1326). The view it was picked in lights it
+        // where it is, and the others follow it as their link says.
         void sheetViews.follow(focus.level === "entity" ? focus.sel : null, from);
       },
     });
@@ -561,7 +566,7 @@ class AppRoot extends BaseComponent {
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
       svgView.revealOverlay();
     };
-    const sheetViews = new SheetViews(
+    const sheetViews = (this.sheetViews = new SheetViews(
       {
         add: (id, title, element, closed) => dockApi && addSheetView(dockApi, id, title, element, closed),
         setTitle: (id, title) => dockApi?.getPanel(id)?.api.setTitle(title),
@@ -621,7 +626,7 @@ class AppRoot extends BaseComponent {
           propertiesPresenter.select({ level: "sheet", sheetId: pane.sheet });
         },
       },
-    );
+    ));
     // An area is selected by Shift-dragging over the drawing or Shift-clicking entities in and out of
     // it (agni issue 904). It is a Selection like any other from here on, so Properties describes it,
     // the drawing lights its members and its Ask rows bind the whole set.
@@ -988,7 +993,7 @@ void admitted()
     // viewer through it over postMessage. The page starts listening once the URL's design is open,
     // so a host's first request never races the restore. At that point the page also announces
     // itself to its parent.
-    const page: ViewerPageAPI = pageApi(presenter);
+    const page: ViewerPageAPI = pageApi(presenter, booted.root.sheetViews ?? undefined);
     const dispatch = pageDispatcher(page);
     const shell = document.querySelector<HTMLElement>(".app")?.dataset;
     listenForHosts(window, dispatch, embedOrigins(shell?.embedOrigins));

@@ -92,7 +92,8 @@ describe("ViewerRoomTab", () => {
     // call it directly (agni issue 1173).
     expect(r.opts.trustBridges).toEqual(["agni-bridge"]);
     expect([...r.tools.keys()].sort()).toEqual([
-      "viewer_apply_location", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict", "viewer_select_finding", "viewer_show_sheet",
+      "viewer_apply_location", "viewer_close_sheet_view", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict",
+      "viewer_open_sheet_view", "viewer_select_finding", "viewer_show_sheet",
     ]);
     expect(r.tools.get("viewer_show_sheet")?.inputSchema).toEqual(toolSchema(ViewerPageService.method.showSheet));
     expect(r.tools.get("viewer_get_location")?.annotations?.readOnlyHint).toBe(true);
@@ -181,12 +182,12 @@ describe("ViewerRoomTab", () => {
     box.dispatchEvent(new Event("change"));
     expect(form.hidden).toBe(false);
     const focus = { level: "entity", sel: { kind: "net", net: "SDA" }, sheetId: "s1" } as const;
-    h.tab.select(focus);
+    h.tab.select(focus, "sheetview-2");
     h.rooms[0].emits.length = 0;
     expect(await h.tab.ask("why is SDA flagged?")).toBe(true);
     expect(h.dispatch).toHaveBeenCalledWith("GetLocation", {});
     expect(h.rooms[0].emits).toEqual([
-      { name: "room.ask", data: { text: "why is SDA flagged?", location: { method: "GetLocation", body: {} }, selection: focus } },
+      { name: "room.ask", data: { text: "why is SDA flagged?", location: { method: "GetLocation", body: {} }, selection: { ...focus, view: "sheetview-2" } } },
     ]);
   });
 
@@ -231,6 +232,17 @@ describe("ViewerRoomTab", () => {
     box.checked = true;
     box.dispatchEvent(new Event("change"));
     h.tab.select({ level: "sheet", sheetId: "s2" });
-    expect(h.rooms[0].emits).toEqual([{ name: "page.selection_changed", data: { selection: { level: "sheet", sheetId: "s2" } } }]);
+    expect(h.rooms[0].emits).toEqual([{ name: "page.selection_changed", data: { selection: { level: "sheet", sheetId: "s2", view: "canvas" } } }]);
+  });
+
+  // An agent hears which view a pick came from (agni issue 1370), so a pick on the board view beside
+  // the schematic reads as one.
+  it("names the sheet view a selection was made in", async () => {
+    const h = harness({ stored: "1" });
+    await h.tab.follow({ mount: "m", path: "a" });
+    h.tab.select({ level: "entity", sel: { kind: "component", ref: "U7" }, sheetId: "board" }, "sheetview-3");
+    expect(h.rooms[0].emits).toEqual([
+      { name: "page.selection_changed", data: { selection: { level: "entity", sel: { kind: "component", ref: "U7" }, sheetId: "board", view: "sheetview-3" } } },
+    ]);
   });
 });
