@@ -42,7 +42,7 @@ describe("the Trace tab's walk", () => {
     const rows = [...el.querySelectorAll("[data-walk-net]")].map((r) => `${r.getAttribute("data-hop")}:${r.getAttribute("data-walk-net")}`);
     expect(rows).toEqual(["1:SDA", "2:GND"]);
     expect(el.querySelector('[data-walk-net="GND"]')!.textContent).toContain("through C1 pin 1 to pin 2");
-    expect(el.querySelector('[data-walk-net="GND"]')!.textContent).toContain("ends here: ground");
+    expect(el.querySelector('[data-walk-net="GND"]')!.textContent).toContain(", ends here: ground");
     expect(el.querySelector('[data-walk-boundary="U3"]')!.textContent).toContain("8 connected pins");
   });
 

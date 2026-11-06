@@ -96,7 +96,7 @@ function WalkSection(props: { walk: () => WalkState; handlers: WalkHandlers }) {
                           <Show when={n.alsoThrough.length > 0}>, also through {n.alsoThrough.join(", ")}</Show>
                         </span>
                         <Show when={n.ended}>
-                          <span class="walk-ended"> ends here: {n.ended}</span>
+                          <span class="walk-ended">, ends here: {n.ended}</span>
                         </Show>
                         <Show when={n.parts.length > 0 || n.partsElided > 0}>
                           <div class="walk-parts">
