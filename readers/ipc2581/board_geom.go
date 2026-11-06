@@ -209,12 +209,22 @@ type primShape struct {
 
 func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 	nmPerUnit := unitToNm(f.units())
+	// A net the export invented for an unconnected pin is read as no net, as the design read reads
+	// it (unusedNet).
+	for i := range f.Features {
+		for j := range f.Features[i].Sets {
+			if unusedNet(f.Features[i].Sets[j].Net) {
+				f.Features[i].Sets[j].Net = ""
+			}
+		}
+	}
 	g := &geom.BoardGeometry{UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}}
+	names := f.layerNames()
 
 	for i, l := range f.Layers {
 		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word.
 		// BoardLayer has no stackup material/thickness until a consumer needs it (C9).
-		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: l.Name, Kind: l.Function})
+		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: names.of(l.Name), Kind: l.Function})
 	}
 
 	if o := f.outline(nmPerUnit); o != nil {
@@ -361,6 +371,7 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 // output.
 func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl, stacks *padstackIndex) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
+	nets, holes := f.pinNets(), f.pinHoles(nmPerUnit)
 	for _, c := range f.Comps {
 		if skipRefDes(c.RefDes) {
 			continue
@@ -379,9 +390,12 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 		}
 		for _, pin := range pkgPins[c.PackageRef] {
 			p := prims[pin.primID()]
+			at := ptNm(pin.Location, nmPerUnit)
 			pl.Pads = append(pl.Pads, &geom.Pad{
+				Net:    nets[[2]string{c.RefDes, pin.Number}],
+				Drill:  holes[umKey(geomath.ComposePlacement(pl.At, pl.RotationDeg, pl.Mirror, at))],
 				Number: pin.Number,
-				At:     ptNm(pin.Location, nmPerUnit),
+				At:     at,
 				Size:   &geom.Point{X: p.sizeX, Y: p.sizeY},
 				Shape:  p.shape,
 				Layers: []string{side},

@@ -72,12 +72,12 @@ var mechPins = map[string]string{
 }
 
 // TestODXReadsAsItsIPC2581Twin holds parasdr's ODX read to its IPC-2581 read. Every pin is on the
-// same net, and every pad sits at the same point on the same side.
+// same net, and every pad sits at the same point on the same side. Each ODX pad is on its pin's net,
+// and its copper is on nets the netlist has. TestParasdrsCopperAgreesAcrossItsReads holds the copper
+// of both reads to the board itself.
 //
 // IPC-2581 writes an unconnected pin as a net of its own (`Unused_05CE8640`), and ODX puts it on
-// `$NONE$`, which the reader reads as no net. So the IPC-2581 side drops its one-pin nets before the
-// two are compared. The IPC-2581 board read gives no pad its net or drill and no track its width, so
-// the copper is checked against the ODX netlist instead.
+// `$NONE$`. Both readers read either as no net (agni 1383).
 func TestODXReadsAsItsIPC2581Twin(t *testing.T) {
 	ipcPath, odxPath := parasdr+"parasdr_ipc2581.xml", parasdr+"parasdr_odb++.xml"
 	if _, err := os.Stat(odxPath); err != nil {
@@ -93,17 +93,7 @@ func TestODXReadsAsItsIPC2581Twin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pinCount := map[string]int{}
-	for _, n := range id.GetNets() {
-		pinCount[n.GetName()] = len(n.GetConnections())
-	}
-	var ipcPins []string
-	for _, row := range pinNets(id) {
-		if pinCount[row[strings.LastIndex(row, "=")+1:]] > 1 {
-			ipcPins = append(ipcPins, row)
-		}
-	}
-	odxPins := pinNets(od)
+	ipcPins, odxPins := pinNets(id), pinNets(od)
 	// A count guard, so a read that lost the netlist cannot pass by comparing nothing with nothing.
 	if len(ipcPins) != 432 || len(odxPins) != 432 {
 		t.Fatalf("pins on nets: IPC-2581 %d, ODX %d, want 432 each", len(ipcPins), len(odxPins))
@@ -159,6 +149,10 @@ func TestODXReadsAsItsIPC2581Twin(t *testing.T) {
 	}
 	vias, segs := 0, 0
 	for _, nc := range og.GetNets() {
+		// Unnamed copper is a pour on no net, which carries no track and no via.
+		if nc.GetNet() == "" && len(nc.GetSegments()) == 0 && len(nc.GetVias()) == 0 {
+			continue
+		}
 		if !nets[nc.GetNet()] {
 			wrong = append(wrong, "copper on "+nc.GetNet()+", which the netlist lacks")
 		}

@@ -3,6 +3,7 @@ package ipc2581
 import (
 	"encoding/xml"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,10 +26,22 @@ type layerFeatureEl struct {
 type setEl struct {
 	Net      string      `xml:"net,attr"`
 	Tracks   []polyPath  `xml:"Features>Polyline"`
+	Lines    []lineEl    `xml:"Features>Line"`
 	FeatPads []cPadEl    `xml:"Features>Pad"`
 	Pads     []cPadEl    `xml:"Pad"`
 	Holes    []holeEl    `xml:"Hole"`
 	Fills    []contourEl `xml:"Features>Contour"` // copper plane/pour: a filled region, authored outline (C6)
+}
+
+// lineEl is a single straight track segment. Allegro writes one for a route with no bend, in place
+// of a two-point Polyline (agni 1383).
+type lineEl struct {
+	StartX  string     `xml:"startX,attr"`
+	StartY  string     `xml:"startY,attr"`
+	EndX    string     `xml:"endX,attr"`
+	EndY    string     `xml:"endY,attr"`
+	Desc    lineDescEl `xml:"LineDesc"`
+	DescRef primRefEl  `xml:"LineDescRef"`
 }
 
 type cPadEl struct {
@@ -84,11 +97,15 @@ type polyStep struct {
 }
 
 // polyPath is a track/outline polyline decoded in document order. It holds a start point,
-// ordered steps, and the id of the LineDesc that sets its width.
+// ordered steps, and the id of the LineDesc that sets its width, or the width a LineDesc inside it
+// gives.
 type polyPath struct {
 	x, y    float64
 	steps   []polyStep
 	lineRef string
+	// lineWidth is an inline LineDesc's width in source units. Allegro writes one inside each
+	// Polyline rather than naming a dictionary entry (agni 1383).
+	lineWidth string
 	// xform is the polygon's own Xform, which a pad primitive uses to place its shape off the pad's
 	// centre and turn it with the pin (agni 1407).
 	xOff, yOff, rot float64
@@ -118,6 +135,8 @@ func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				})
 			case "LineDescRef":
 				p.lineRef = attr(t, "id")
+			case "LineDesc":
+				p.lineWidth = attr(t, "lineWidth")
 			case "Xform":
 				p.xOff, p.yOff, p.rot = attrF(t, "xOffset"), attrF(t, "yOffset"), attrF(t, "rotation")
 			}
@@ -149,8 +168,10 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape, 
 	}
 
 	copper := f.copperLayers()
+	names := f.layerNames()
+	lands := f.landNets(nmPerUnit)
 	for _, lf := range f.Features {
-		layer := normalizeSide(lf.LayerRef)
+		layer := names.of(lf.LayerRef)
 		for _, s := range lf.Sets {
 			// A Set-direct Contour on a copper layer is a pour or plane, copper as etched, with its
 			// cutouts as holes (agni 1357). On a fab, mask or silk layer it is drawing geometry.
@@ -162,28 +183,52 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape, 
 					}
 				}
 			}
-			if s.Net == "" {
-				continue
-			}
-			nc := get(s.Net)
-			for _, tr := range s.Tracks {
-				nc.Segments = append(nc.Segments, trackSegments(tr, nmPerUnit, widths[tr.lineRef], layer)...)
-			}
 			for _, h := range s.Holes {
 				if !isVia(h.PlatingStatus) {
 					continue
 				}
 				at := ptNm(ptEl{X: h.X, Y: h.Y}, nmPerUnit)
+				// Allegro writes each drill hit in a Set of its own with no net, so a via takes the
+				// net of the land drawn at its position (agni 1383).
+				net := s.Net
+				if net == "" {
+					net = lands[[2]int64{at.X, at.Y}]
+				}
+				if net == "" {
+					continue
+				}
 				drill := lenNm(h.Diameter, nmPerUnit)
-				size := padSize[padKey(s.Net, at)]
+				size := padSize[padKey(net, at)]
 				if size == 0 {
 					size = drill // no co-located pad: annular reads as zero ring, still a placed via
 				}
-				via := &geom.Via{At: at, Size: size, Drill: drill, Padstack: stacks.via[padKey(s.Net, at)]}
+				via := &geom.Via{At: at, Size: size, Drill: drill, Padstack: stacks.via[padKey(net, at)]}
 				if sp, ok := spans[lf.LayerRef]; ok {
-					via.LayerFrom, via.LayerTo = normalizeSide(sp[0]), normalizeSide(sp[1])
+					via.LayerFrom, via.LayerTo = names.of(sp[0]), names.of(sp[1])
 				}
+				nc := get(net)
 				nc.Vias = append(nc.Vias, via)
+			}
+			if s.Net == "" {
+				continue
+			}
+			nc := get(s.Net)
+			for _, ln := range s.Lines {
+				w, ok := widths[ln.DescRef.ID]
+				if !ok {
+					w = lenNm(ln.Desc.Width, nmPerUnit)
+				}
+				nc.Segments = append(nc.Segments, &geom.TrackSegment{
+					A: ptNm(ptEl{X: ln.StartX, Y: ln.StartY}, nmPerUnit), B: ptNm(ptEl{X: ln.EndX, Y: ln.EndY}, nmPerUnit),
+					Width: w, Layer: layer,
+				})
+			}
+			for _, tr := range s.Tracks {
+				w, ok := widths[tr.lineRef]
+				if !ok && tr.lineWidth != "" {
+					w = lenNm(tr.lineWidth, nmPerUnit)
+				}
+				nc.Segments = append(nc.Segments, trackSegments(tr, nmPerUnit, w, layer)...)
 			}
 		}
 	}
@@ -210,17 +255,148 @@ func (f *ipcGeomFile) copperLayers() map[string]bool {
 	return m
 }
 
-// layerSpans indexes each drill layer's Span (fromLayer,toLayer) so a via records the copper
-// layers it bridges. A through via spans the outer pair, blind/buried vias a narrower one.
-func (f *ipcGeomFile) layerSpans() map[string][2]string {
-	m := map[string][2]string{}
+// layerNamer maps a file's layer name onto the contract's vocabulary.
+type layerNamer map[string]string
+
+// of is ref's contract name. A copper layer is named by its place in the stackup, and any other
+// reference goes through normalizeSide.
+func (n layerNamer) of(ref string) string {
+	if name, ok := n[ref]; ok {
+		return name
+	}
+	return normalizeSide(ref)
+}
+
+// layerNames names the copper layers in stackup order, as the ODB++ reader does: the first is F.Cu,
+// the last B.Cu, and the inner ones In1.Cu upward. Allegro's export keeps its own names (`L2-GND`),
+// which no board rule or renderer reads as copper (agni 1383).
+func (f *ipcGeomFile) layerNames() layerNamer {
+	copper := f.copperLayers()
+	var order []string
 	for _, l := range f.Layers {
-		if l.Span != nil {
-			m[l.Name] = [2]string{l.Span.From, l.Span.To}
+		if copper[l.Name] {
+			order = append(order, l.Name)
+		}
+	}
+	n := layerNamer{}
+	for i, name := range order {
+		switch {
+		case i == 0:
+			n[name] = "F.Cu"
+		case i == len(order)-1:
+			n[name] = "B.Cu"
+		default:
+			n[name] = "In" + strconv.Itoa(i) + ".Cu"
+		}
+	}
+	return n
+}
+
+// landNets indexes the net of every via land on a copper layer by its position, so a drill hit in a
+// Set with no net finds its via's net.
+func (f *ipcGeomFile) landNets(nmPerUnit float64) map[[2]int64]string {
+	copper := f.copperLayers()
+	m := map[[2]int64]string{}
+	for _, lf := range f.Features {
+		if !copper[lf.LayerRef] {
+			continue
+		}
+		for _, s := range lf.Sets {
+			if s.Net == "" {
+				continue
+			}
+			for _, pads := range [][]cPadEl{s.Pads, s.FeatPads} {
+				for _, pd := range pads {
+					at := ptNm(pd.Location, nmPerUnit)
+					m[[2]int64{at.X, at.Y}] = s.Net
+				}
+			}
 		}
 	}
 	return m
 }
+
+// pinNets indexes the net of each (ref-des, pin) a copper land names. A package pin in IPC-2581
+// carries no net, so a pin's net is its land's Set's net (agni 1383).
+func (f *ipcGeomFile) pinNets() map[[2]string]string {
+	copper := f.copperLayers()
+	m := map[[2]string]string{}
+	for _, lf := range f.Features {
+		if !copper[lf.LayerRef] {
+			continue
+		}
+		for _, s := range lf.Sets {
+			for _, pads := range [][]cPadEl{s.Pads, s.FeatPads} {
+				for _, pd := range pads {
+					k := [2]string{pd.PinRef.ComponentRef, pd.PinRef.Pin}
+					if k[0] != "" && m[k] == "" {
+						m[k] = s.Net
+					}
+				}
+			}
+		}
+	}
+	return m
+}
+
+// pinHoles indexes each plated or unplated hole's diameter by its position to the micrometre, so a
+// pad finds its drill at the point it composes to. A mechanical pin has no copper land, so its
+// position is the only key it shares with its hole.
+func (f *ipcGeomFile) pinHoles(nmPerUnit float64) map[[2]int64]int64 {
+	m := map[[2]int64]int64{}
+	for _, lf := range f.Features {
+		for _, s := range lf.Sets {
+			for _, h := range s.Holes {
+				if isVia(h.PlatingStatus) {
+					continue
+				}
+				m[umKey(ptNm(ptEl{X: h.X, Y: h.Y}, nmPerUnit))] = lenNm(h.Diameter, nmPerUnit)
+			}
+		}
+	}
+	return m
+}
+
+func umKey(p *geom.Point) [2]int64 {
+	return [2]int64{rnd(float64(p.X) / 1000), rnd(float64(p.Y) / 1000)}
+}
+
+// layerSpans indexes each drill layer's Span (fromLayer,toLayer) so a via records the copper
+// layers it bridges. A through via spans the outer pair, blind/buried vias a narrower one.
+//
+// Allegro's export writes no Span, and names the drill layer by the copper layers it joins instead,
+// counted from 1 in stackup order (`IPC2581DRILL_1-6`). A drill layer named that way spans those
+// layers (agni 1383).
+func (f *ipcGeomFile) layerSpans() map[string][2]string {
+	copper := f.copperLayers()
+	var order []string
+	for _, l := range f.Layers {
+		if copper[l.Name] {
+			order = append(order, l.Name)
+		}
+	}
+	m := map[string][2]string{}
+	for _, l := range f.Layers {
+		if l.Span != nil {
+			m[l.Name] = [2]string{l.Span.From, l.Span.To}
+			continue
+		}
+		if !strings.EqualFold(l.Function, "DRILL") {
+			continue
+		}
+		if g := drillSpanName.FindStringSubmatch(l.Name); g != nil {
+			from, _ := strconv.Atoi(g[1])
+			to, _ := strconv.Atoi(g[2])
+			if from >= 1 && to >= 1 && from <= len(order) && to <= len(order) {
+				m[l.Name] = [2]string{order[from-1], order[to-1]}
+			}
+		}
+	}
+	return m
+}
+
+// drillSpanName matches the copper span Allegro writes at the end of a drill layer's name.
+var drillSpanName = regexp.MustCompile(`_(\d+)-(\d+)$`)
 
 // copperShape is a contour's polygon as a copper shape on layer, with each cutout a hole, or nil
 // for a degenerate polygon.
@@ -409,13 +585,14 @@ func (f *ipcGeomFile) padstacks(nmPerUnit float64, prims map[string]primShape) *
 		return primShape{}, false
 	}
 	copper := f.copperLayers()
+	names := f.layerNames()
 	lands := map[string]map[string]*geom.PadShape{} // entry id -> layer -> land
 	byID := map[string]*geom.Padstack{}
 	for _, lf := range f.Features {
 		if !copper[lf.LayerRef] {
 			continue
 		}
-		layer := normalizeSide(lf.LayerRef)
+		layer := names.of(lf.LayerRef)
 		for _, s := range lf.Sets {
 			for _, pads := range [][]cPadEl{s.Pads, s.FeatPads} {
 				for _, pd := range pads {
@@ -454,8 +631,8 @@ func (f *ipcGeomFile) padstacks(nmPerUnit float64, prims map[string]primShape) *
 	// Each entry lists its layers in the stackup's order.
 	for _, ps := range ix.entries {
 		for _, l := range f.Layers {
-			if land, ok := lands[ps.Id][normalizeSide(l.Name)]; ok {
-				ps.Layers = append(ps.Layers, &geom.PadstackLayer{Layer: normalizeSide(l.Name), Pad: land})
+			if land, ok := lands[ps.Id][names.of(l.Name)]; ok {
+				ps.Layers = append(ps.Layers, &geom.PadstackLayer{Layer: names.of(l.Name), Pad: land})
 			}
 		}
 	}

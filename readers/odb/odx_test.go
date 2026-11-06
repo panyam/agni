@@ -194,3 +194,44 @@ func TestXMLRoot(t *testing.T) {
 		}
 	}
 }
+
+// TestODXReadsAViasTracksAndUnnamedPours edits the fixture into the two shapes Allegro writes (agni
+// 1383). A CAD_SET that leaves USAGE out keeps a via's usage, so the track after a via's pad must
+// still read as track. A surface on no net must still read as copper, on no net.
+func TestODXReadsAViasTracksAndUnnamedPours(t *testing.T) {
+	src, err := os.ReadFile(odxFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(src)
+	for old, repl := range map[string]string{
+		// The top layer's track follows its via with no USAGE reset.
+		`<CAD_SET GEOM = "" USAGE = "NONE" SYM = "r0.2"/>`: `<CAD_SET GEOM = "" SYM = "r0.2"/>`,
+		// The bottom layer's pour moves onto no net.
+		"<CAD_SET NET = \"N2\"/>\n              <CAD_S>": "<CAD_SET NET = \"\"/>\n              <CAD_S>",
+	} {
+		if !strings.Contains(text, old) {
+			t.Fatalf("the fixture no longer holds %q", old)
+		}
+		text = strings.Replace(text, old, repl, 1)
+	}
+	path := t.TempDir() + "/allegro-shapes.xml"
+	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, g := readODX(t, path)
+	tracks := map[string]int{}
+	shapes := map[string]int{}
+	for _, nc := range g.GetNets() {
+		for _, s := range nc.GetSegments() {
+			tracks[nc.GetNet()+" "+s.GetLayer()]++
+		}
+		shapes[nc.GetNet()] += len(nc.GetShapes())
+	}
+	if tracks["N1 F.Cu"] != 1 {
+		t.Errorf("N1 has %d track segments on F.Cu, want the one after its via; tracks %v", tracks["N1 F.Cu"], tracks)
+	}
+	if shapes[""] != 1 || shapes["N2"] != 0 {
+		t.Errorf("shapes by net = %v, want the pour on no net", shapes)
+	}
+}

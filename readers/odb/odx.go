@@ -675,8 +675,10 @@ func (ps *odxParser) job() (*parsedJob, error) {
 				}
 			}
 			// A via's lands say USAGE="VIA". Its drill hit says only its net, so any drill hit that
-			// is not a pin's is taken for the via at its position.
-			if f.usage == "VIA" || typ == 'H' {
+			// is not a pin's is taken for the via at its position. A CAD_SET keeps its usage until
+			// the next one changes it, and Allegro writes a via's traces after its pads without
+			// resetting it, so the usage marks pads alone (agni 1383).
+			if (f.usage == "VIA" && l.ff.features[fi].kind == featPad) || typ == 'H' {
 				ni := netOf(f.net)
 				k := viaKey{ni, micron(l.ff.features[fi].a)}
 				si, found := vias[k]
@@ -689,7 +691,10 @@ func (ps *odxParser) job() (*parsedJob, error) {
 				p.eda.nets[ni].subnets[si].fids = append(p.eda.nets[ni].subnets[si].fids, id)
 				continue
 			}
-			if f.net == "" {
+			// A pour on no net is kept on $NONE$, as eda/data keeps it, so a board's unnamed copper is
+			// still drawn. A line on no net is artwork on a copper layer, which the board's own read
+			// leaves out too.
+			if f.net == "" && l.ff.features[fi].kind != featSurface {
 				continue
 			}
 			ni := netOf(f.net)
