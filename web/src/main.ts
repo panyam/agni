@@ -16,6 +16,7 @@ import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { tracePanelIsland } from "./tracepanel.js";
+import { DEFAULT_WALK_HOPS } from "./walk.js";
 import { tracePicks } from "./tracepick.js";
 import { tablesPanelIsland } from "./tablespanel.js";
 import { TablesPresenter, type TablesSourceKey } from "./tables.js";
@@ -489,6 +490,12 @@ class AppRoot extends BaseComponent {
         if (dockApi) dockApi.getPanel("trace")?.api.setActive();
         trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
       },
+      // A walk starts on the selected part or pin, at its first hop (agni issue 1341).
+      onWalk: (kind, sel) => {
+        if (dockApi) dockApi.getPanel("trace")?.api.setActive();
+        const start = sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : (sel.ref ?? "");
+        void presenter.runWalk({ start, kind, hops: DEFAULT_WALK_HOPS, through: [] });
+      },
     });
     // The engine says where a selected part or net is drawn (LocateSubjects, agni issue 1325). It
     // adds the board only while the board is on screen, since this worker has read the board then, and
@@ -668,8 +675,20 @@ class AppRoot extends BaseComponent {
     });
     // In the trace panel (agni issue 600) the reader names two pins, and the presenter walks between them
     // and lights the route through the same highlight stack a query cell and a verdict use.
+    // The walk kinds a part offers come from the engine once per page, so the panel keeps no list of
+    // its own (agni issue 1341). A host that cannot answer offers no walk.
+    void designClient()
+      .listWalkKinds({})
+      .then((r) => properties.view.setWalkKinds?.(r.kinds.map((k) => ({ name: k.name, title: k.title, summary: k.summary }))))
+      .catch(() => {});
     const trace = tracePanelIsland(traceEl, this._eventBus, {
       onTrace: (from, to) => void presenter.runTrace(from, to),
+      // The walk outwards from one part shows above the two-pin trace (agni issue 1341).
+      walk: {
+        onWalk: (r) => void presenter.runWalk(r),
+        onLocate: (kind, name, sheet) => void presenter.locateInWalk(kind, name, sheet || undefined),
+        onClear: () => void presenter.clearWalk(),
+      },
     });
     // In the datasheet-params panel (WS9-035), clicking a component locates it on the canvas through
     // the same component-highlight path a finding uses.
@@ -799,6 +818,8 @@ class AppRoot extends BaseComponent {
         query: query.view,
         coverage: coverage.view,
         trace: trace.view,
+        walk: trace.view,
+        reveal: () => svgView.revealOverlay(),
         review: review.view,
         conventionBar: conventionBar.view,
         vocabulary: {

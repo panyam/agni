@@ -2,14 +2,13 @@
 // large schematic, sees what it connects to, widens the walk hop by hop, and asks a goal question
 // from where the walk has reached.
 //
-// The engine answers the walk (WalkDesign, agni issue 1339) and the viewer draws none of it yet. So
-// each step runs twice. Its engine row asks WalkDesign over the same Connect API the viewer calls,
-// and passes today. Its viewer row drives the page through the names below, and waits on the ticket
-// that builds them. As in the cross-probe walk, a waiting row that fails reads "not available", and
+// Each step runs twice. Its engine row asks WalkDesign (agni issue 1339) over the same Connect API the
+// viewer calls. Its viewer row drives the page through the names below, which #1341 built, and the
+// goal steps wait on #1340. As in the cross-probe walk, a waiting row that fails reads "not available", and
 // a waiting row that passes FAILS the walk (exercise-report.ts, waitedOn), so the PR that makes a
 // row pass also removes its wait here.
 //
-// The viewer rows drive the walk as #1341 is to build it, through these names:
+// The viewer rows drive the walk through these names:
 // - a part's Properties offers each walk kind as [data-action="walk"][data-walk-kind="<kind>"]
 // - the Trace tab lists the walk's nets as [data-walk-net="<net>"][data-hop="<n>"]
 // - [data-action="walk-wider"] widens the walk by one hop
@@ -140,7 +139,7 @@ async function outlinePoint(page: Page, sel: string, ref: string): Promise<{ x: 
   );
 }
 
-// viewerWalk reads the walk the page lists, as #1341 is to draw it.
+// viewerWalk reads the walk the Trace tab lists.
 async function viewerWalk(page: Page): Promise<string[]> {
   const rows = page.locator("[data-walk-net]");
   await rows.first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {
@@ -214,7 +213,7 @@ describe("the walk mission", () => {
         if (stray.length > 0) throw new Error(`hop 1 holds ${stray.map((x) => x.net.name).join(", ")}, which ${walk.start} did not enter`);
         return `${walk.start}'s nets: ${names(one).join(", ")}`;
       });
-      await step("1. hop 1 (viewer)", { waitsOn: ["#1341"], needs: ["open", "1. hop 1 (engine)"] }, async () => {
+      await step("1. hop 1 (viewer)", { needs: ["open", "1. hop 1 (engine)"] }, async () => {
         // A reader zooms to the part and clicks it. A resistor's body is a hollow outline, and only
         // the outline takes a click, so the point is found on it (outlinePoint).
         const part = `#svg-view [data-kind="component"][data-ref="${walk.start}"]`;
@@ -253,19 +252,23 @@ describe("the walk mission", () => {
         }
         return steps.join(", ");
       });
-      await step("2. widen (viewer)", { waitsOn: ["#1341"], needs: ["1. hop 1 (viewer)", "2. widen (engine)"] }, async () => {
-        for (let i = 0; i < 2; i++) await (await control(page, '[data-action="walk-wider"]')).click({ timeout: 10_000 });
+      await step("2. widen (viewer)", { needs: ["1. hop 1 (viewer)", "2. widen (engine)"] }, async () => {
+        // Each widen walks again, so the next waits until the tab states the radius it asked for.
+        for (const hops of [2, 3]) {
+          await (await control(page, '[data-action="walk-wider"]')).click({ timeout: 10_000 });
+          await page.waitForFunction((h) => (document.querySelector(".walk-title")?.textContent ?? "").includes(`${h} hops`) && !document.querySelector(".walk-loading"), hops, { timeout: 30_000 });
+        }
         const got = await viewerWalk(page);
         expect(got.sort()).toEqual((three.nets ?? []).map((x) => `${x.hop}:${x.net.name}`).sort());
         return `the Trace tab lists ${got.length} nets over 3 hops`;
       });
 
       // Steps 3 and 4. A goal question from where the walk has reached.
-      await step("3. to the pull-up", { waitsOn: ["#1340", "#1341"], needs: ["2. widen (viewer)"] }, async () => {
+      await step("3. to the pull-up", { waitsOn: ["#1340"], needs: ["2. widen (viewer)"] }, async () => {
         await (await control(page, '[data-action="walk-goal"][data-goal="pull-up"]')).click({ timeout: 10_000 });
         return "the walk shows the route to the pull-up and its rail";
       });
-      await step("4. to a pin", { waitsOn: ["#1340", "#1341"], needs: ["2. widen (viewer)"] }, async () => {
+      await step("4. to a pin", { waitsOn: ["#1340"], needs: ["2. widen (viewer)"] }, async () => {
         await (await control(page, '[data-action="walk-goal"][data-goal="pin"]')).click({ timeout: 10_000 });
         return "the walk shows the route to the pin, or says none lies within the radius";
       });
@@ -281,7 +284,7 @@ describe("the walk mission", () => {
         expect(shape(cli)).toBe(shape(three));
         return `agni walk and WalkDesign agree on ${names(cli).length} nets and ${(cli.boundary ?? []).length} boundary parts`;
       });
-      await step("5. agni walk agrees (viewer)", { waitsOn: ["#1341"], needs: ["2. widen (viewer)", "5. agni walk agrees (engine)"] }, async () => {
+      await step("5. agni walk agrees (viewer)", { needs: ["2. widen (viewer)", "5. agni walk agrees (engine)"] }, async () => {
         const got = await viewerWalk(page);
         expect(got.sort()).toEqual((three.nets ?? []).map((x) => `${x.hop}:${x.net.name}`).sort());
         return "the viewer lists the nets agni walk prints";

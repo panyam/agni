@@ -1,13 +1,17 @@
-import { For, Show, createMemo } from "solid-js";
+import { For, Show, createMemo, createSignal, type Accessor } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type Crumb, type Datasheet, type Focus, type PropertiesState, type Ref, reportLines } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";
 import type { Selection } from "./selection.js";
+import type { WalkKindItem } from "./walk.js";
 
 // PropertiesView is the command-down port: the presenter pushes one state per focus.
 export interface PropertiesView {
   setState: (s: PropertiesState) => void;
+  // setWalkKinds lists the walk kinds a part offers (ListWalkKinds, agni issue 1341). Until it is
+  // called, the panel offers no walk.
+  setWalkKinds?: (kinds: WalkKindItem[]) => void;
 }
 
 export interface PropertiesHandlers {
@@ -19,6 +23,8 @@ export interface PropertiesHandlers {
   onVerdict?: (id: string) => void;
   // onTrace names the selected part or pin as one end of a trace (agni issue 1133).
   onTrace?: (end: "from" | "to", sel: Selection) => void;
+  // onWalk walks outwards from the selected part or pin by one walk kind (agni issue 1341).
+  onWalk?: (kind: string, sel: Selection) => void;
 }
 
 function emptyState(): PropertiesState {
@@ -99,7 +105,7 @@ function RefList(props: {
   );
 }
 
-function PropertiesPanel(props: { state: () => PropertiesState; handlers: PropertiesHandlers }) {
+function PropertiesPanel(props: { state: () => PropertiesState; handlers: PropertiesHandlers; walkKinds?: Accessor<WalkKindItem[]> }) {
   const s = props.state;
   // The sheet an entity was picked on carries into the entity it leads to, so a walk inside the
   // panel keeps its breadcrumb.
@@ -203,6 +209,20 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
           </div>
         )}
       </Show>
+      <Show when={props.handlers.onWalk && (props.walkKinds?.() ?? []).length > 0 && traceable()}>
+        {(sel) => (
+          <div class="pr-walk">
+            <span class="pr-section">walk</span>
+            <For each={props.walkKinds!()}>
+              {(k) => (
+                <button type="button" class="pr-ask-go pr-walk-go" data-action="walk" data-walk-kind={k.name} title={k.summary} onClick={() => props.handlers.onWalk!(k.name, sel())}>
+                  {k.title}
+                </button>
+              )}
+            </For>
+          </div>
+        )}
+      </Show>
       <Show when={props.handlers.onTrace && traceable()}>
         {(sel) => (
           <div class="pr-trace">
@@ -227,6 +247,7 @@ export function propertiesPanelIsland(
   handlers: PropertiesHandlers,
 ): { island: SolidIsland; view: PropertiesView } {
   const [state, setState] = signalView<PropertiesState>(emptyState());
-  const island = new SolidIsland("properties", el, () => <PropertiesPanel state={state} handlers={handlers} />, eventBus);
-  return { island, view: { setState } };
+  const [walkKinds, setWalkKinds] = createSignal<WalkKindItem[]>([]);
+  const island = new SolidIsland("properties", el, () => <PropertiesPanel state={state} handlers={handlers} walkKinds={walkKinds} />, eventBus);
+  return { island, view: { setState, setWalkKinds } };
 }
