@@ -9,7 +9,7 @@ import {
   emptyTrace,
 } from "./trace.js";
 import { type TracePick, type TracePicks, emptyPicks, pickCandidates } from "./tracepick.js";
-import { type WalkRequest, type WalkState, type WalkView, emptyWalk, hopColor } from "./walk.js";
+import { type WalkGoalItem, type WalkRequest, type WalkState, type WalkView, WALK_GOAL_COLOR, emptyWalk, hopColor, routeLine } from "./walk.js";
 
 // WalkHandlers are the walk section's intents up. onWalk walks again with a changed request (wider,
 // narrower, a part crossed), onLocate moves the canvas to one row, and onClear drops the walk.
@@ -17,6 +17,124 @@ export interface WalkHandlers {
   onWalk: (r: WalkRequest) => void;
   onLocate: (kind: "net" | "component", name: string, sheet: string) => void;
   onClear: () => void;
+}
+
+// GOAL_TITLES names each goal question as its button does.
+const GOAL_TITLES: Record<string, string> = { "pull-up": "To the pull-up", rail: "To the rail", pin: "To the pin" };
+
+// WalkGoalBar asks a goal question from a net the walk reached (agni issue 1340). The reader picks
+// the net, or leaves the start's own, then asks for the pull-up, the rail, or a pin they type.
+function WalkGoalBar(props: { walk: () => WalkState; onGoal: (kind: string, at: string, to: string) => void }) {
+  const w = () => props.walk();
+  const [at, setAt] = createSignal(w().request.goal?.at ?? "");
+  const [to, setTo] = createSignal(w().request.goal?.to ?? "");
+  let toInput: HTMLInputElement | undefined;
+  const reached = () => w().hops.flatMap((h) => h.nets.filter((n) => !n.ended).map((n) => ({ name: n.name, hop: h.hop })));
+  const ask = (kind: string) => props.onGoal(kind, at(), kind === "pin" ? (toInput?.value ?? to()).trim() : "");
+  return (
+    <div class="walk-goals">
+      <label class="walk-goal-at">
+        Ask from{" "}
+        <select data-walk-at value={at()} onChange={(e) => setAt(e.currentTarget.value)}>
+          <option value="">the start's own net</option>
+          <For each={reached()}>
+            {(n) => (
+              <option value={n.name}>
+                hop {n.hop}: {n.name}
+              </option>
+            )}
+          </For>
+        </select>
+      </label>
+      <button type="button" class="mode-btn" data-action="walk-goal" data-goal="pull-up" disabled={w().loading} onClick={() => ask("pull-up")}>
+        {GOAL_TITLES["pull-up"]}
+      </button>
+      <button type="button" class="mode-btn" data-action="walk-goal" data-goal="rail" disabled={w().loading} onClick={() => ask("rail")}>
+        {GOAL_TITLES.rail}
+      </button>
+      <span class="walk-goal-pin">
+        <input
+          ref={toInput}
+          type="text"
+          data-walk-goal-to
+          placeholder="pin, e.g. J4.2"
+          spellcheck={false}
+          value={to()}
+          onInput={(e) => setTo(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === "Enter" && ask("pin")}
+        />
+        <button type="button" class="mode-btn" data-action="walk-goal" data-goal="pin" disabled={w().loading} onClick={() => ask("pin")}>
+          {GOAL_TITLES.pin}
+        </button>
+      </span>
+    </div>
+  );
+}
+
+// WalkGoalAnswer shows a goal's answer below the walk. A route reads as one line, then each net with
+// the part crossed into it. No route and a goal naming nothing read as two different things, as a
+// trace's do.
+function WalkGoalAnswer(props: { goal: WalkGoalItem; onLocate: WalkHandlers["onLocate"] }) {
+  const g = () => props.goal;
+  const what = () => (g().kind === "pin" ? `To ${g().to || "the pin"}` : (GOAL_TITLES[g().kind] ?? g().kind));
+  return (
+    <div class="walk-goal" data-goal-kind={g().kind} data-goal-outcome={g().outcome}>
+      <div class="walk-goal-head">
+        <span class="walk-swatch" style={{ background: WALK_GOAL_COLOR }} />
+        {what()}, from {g().at}
+      </div>
+      <Show when={g().outcome === "no-route"}>
+        <div class="trace-noroute">
+          <div class="trace-headline">No route</div>
+          <div class="trace-reason">{g().reason}</div>
+        </div>
+      </Show>
+      <Show when={g().outcome === "unresolved"}>
+        <div class="trace-unresolved">
+          <div class="trace-headline">Cannot ask</div>
+          <div class="trace-reason">{g().reason}</div>
+        </div>
+      </Show>
+      <For each={g().routes}>
+        {(r, i) => (
+          <div class="walk-route" data-walk-route={i() + 1} data-ends-at={r.endsAt}>
+            <div class="walk-route-line">{routeLine(r)}</div>
+            <Show when={r.note}>
+              <div class="walk-note">{r.note}</div>
+            </Show>
+            <ul class="walk-nets">
+              <For each={r.nets}>
+                {(net, j) => (
+                  <li class="walk-net" data-walk-route-net={net}>
+                    <button type="button" class="walk-net-name" onClick={() => props.onLocate("net", net, r.sheetIds[j()]?.[0] ?? "")}>
+                      {net}
+                    </button>
+                    <Show when={j() > 0 && r.crossings[j() - 1]}>
+                      {(c) => (
+                        <span class="walk-entered">
+                          {" "}through{" "}
+                          <button type="button" class="walk-part" onClick={() => props.onLocate("component", c().refDes, r.sheetIds[j()]?.[0] ?? "")}>
+                            {c().refDes}
+                          </button>{" "}
+                          pin {c().enterPin} to pin {c().exitPin}
+                          {c().paired ? " (paired)" : ""}
+                        </span>
+                      )}
+                    </Show>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </div>
+        )}
+      </For>
+      <Show when={g().outcome === "routed"}>
+        <div class="trace-summary">
+          {g().routes.length} route{g().routes.length === 1 ? "" : "s"}, searched to {g().radius} {g().kind === "pull-up" ? "hops" : "crossings"} from {g().at}
+        </div>
+      </Show>
+    </div>
+  );
 }
 
 // WalkSection lists a walk hop by hop (agni issue 1341). Each hop is a group the reader can fold, in
@@ -146,6 +264,8 @@ function WalkSection(props: { walk: () => WalkState; handlers: WalkHandlers }) {
           {nets()} net{nets() === 1 ? "" : "s"} over {w().hops.length} hop{w().hops.length === 1 ? "" : "s"}, {w().boundary.length} part
           {w().boundary.length === 1 ? "" : "s"} not crossed
         </div>
+        <WalkGoalBar walk={w} onGoal={(kind, at, to) => again({ goal: { kind, at, to } })} />
+        <Show when={w().goal}>{(g) => <WalkGoalAnswer goal={g()} onLocate={props.handlers.onLocate} />}</Show>
       </Show>
     </div>
   );

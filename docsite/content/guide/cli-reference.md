@@ -422,14 +422,25 @@ crosses every part with a cap per hop. See
 [Walking outwards from a part](../../architecture/net-solving/#walking-outwards-from-a-part). A start
 that names nothing in the design fails and exits non-zero.
 
+`--goal` asks a goal question from a net the walk reached, and prints its routes after the walk.
+`pin` routes to the pin `--to` names, `pull-up` finds every pull-up resistor that takes the net to a
+rail, and `rail` routes to the nearest rail. Each route runs from the start along the walk to `--at`,
+then on to the goal. A goal with no route within its radius is an answer and exits 0. A goal that
+names nothing, such as a net the walk never reached, exits non-zero. See
+[Goal questions from a walk](../../architecture/net-solving/#goal-questions-from-a-walk).
+
 | flag | what it does |
 |---|---|
 | `--from <ref>` or `<ref.pin>` | the part (`R1`) or pin (`U7.3`) to start from |
 | `--kind <kind>` | `series` (default), `small-parts` or `all` |
 | `--hops <n>` | how many hops to walk, hop 1 being the start's own nets (default 2) |
 | `--through <refs>` | parts to cross whatever `--kind` says, such as `--through U7` |
-| `--format <fmt>` | `text` (default), `json`, which emits the `WalkDesign` rpc's `Walk` message in protojson, or `csv`, which writes one of the `walk` and `walk_boundary` tables that `Tabulate` projects |
-| `--table <name>` | with `--format csv`, `walk` (default) or `walk_boundary` |
+| `--goal <goal>` | ask a goal question from the walk, `pin`, `pull-up` or `rail` |
+| `--at <net>` | with `--goal`, the reached net to ask from. The default is a pin start's own net, or a part start's first own net that is not a rail |
+| `--to <ref.pin>` | with `--goal pin`, the pin to route to, such as `--to J4.2` |
+| `--goal-hops <n>` | with `--goal pin` or `rail`, the crossings to search from `--at` (default 6) |
+| `--format <fmt>` | `text` (default), `json`, which emits the `WalkDesign` rpc's `Walk` message in protojson, or `csv`, which writes one of the `walk`, `walk_boundary` and `walk_goal` tables that `Tabulate` projects |
+| `--table <name>` | with `--format csv`, `walk` (default), `walk_boundary`, or `walk_goal`, one row per net of each goal route, and one row with the outcome and reason when there is no route |
 | `--order-by <cols>` | with `--format csv`, sort by these columns, `-` before one to reverse it |
 | `--remote <url>` | send the request to a running `agni serve`, as on `trace` |
 | `-o, --out <file>` | write the `--format` output to this file |

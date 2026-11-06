@@ -1821,7 +1821,12 @@ export class ViewerPresenter {
     view.setWalk(loadingWalk(req));
     let state;
     try {
-      const resp = await this.client.walkDesign({ snapshot: await this.drawn(), from: { refDes: ref, pin }, kind: req.kind, hops: req.hops, through: req.through });
+      // A goal question rides on the same request, so its routes extend the walk they start from (agni
+      // issue 1340).
+      const g = req.goal;
+      const [toRef, toPin] = splitStart(g?.to ?? "");
+      const goal = g?.kind ? { kind: g.kind, at: g.at, to: { refDes: toRef, pin: toPin } } : undefined;
+      const resp = await this.client.walkDesign({ snapshot: await this.drawn(), from: { refDes: ref, pin }, kind: req.kind, hops: req.hops, through: req.through, goal });
       if (!resp.walk) {
         view.setWalk(errorWalk(req, "The server answered with no walk"));
         return;

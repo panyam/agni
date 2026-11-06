@@ -134,6 +134,17 @@ describe("walk presenter", () => {
     expect(specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["C1", "R1"]));
   });
 
+  it("sends a goal question on the walk's own request", async () => {
+    const onLocation = vi.fn();
+    const h = harness({ onLocation });
+    await h.presenter.openFile("m", "proj/board.edn");
+    const goal = { kind: "pin", at: "SDA", to: "J4.2" };
+    await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [], goal });
+    expect(h.walkDesign).toHaveBeenLastCalledWith(expect.objectContaining({ goal: { kind: "pin", at: "SDA", to: { refDes: "J4", pin: "2" } } }));
+    const loc = onLocation.mock.calls[onLocation.mock.calls.length - 1][0] as ViewerLocation;
+    expect(loc.walk?.goal).toEqual(goal);
+  });
+
   it("states a start that names nothing and leaves the canvas alone", async () => {
     const h = harness();
     h.walkDesign.mockResolvedValueOnce({ walk: create(WalkSchema, { reason: "no component R77 in this design" }) });

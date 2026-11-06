@@ -152,6 +152,8 @@ type Walk struct {
 	Nets     []WalkNet      `json:"nets,omitempty"`
 	Boundary []WalkBoundary `json:"boundary,omitempty"`
 	Elided   []WalkElided   `json:"elided,omitempty"`
+	// Goal is the answer to a goal question asked from the walk (WalkGoalFrom), nil when none was.
+	Goal *WalkGoalAnswer `json:"goal,omitempty"`
 }
 
 // WalkFrom walks outwards from a part, or from one pin when from names a pin, hop by hop.

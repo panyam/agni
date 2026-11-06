@@ -60,4 +60,55 @@ func WriteWalkText(w io.Writer, wk check.Walk) {
 	fmt.Fprintf(w, "\nwalked: %d %s over %d %s, %d %s not crossed\n",
 		len(wk.Nets), pluralWord(len(wk.Nets), "net", "nets"), hop, pluralWord(hop, "hop", "hops"),
 		len(wk.Boundary), pluralWord(len(wk.Boundary), "part", "parts"))
+	if wk.Goal != nil {
+		writeWalkGoal(w, *wk.Goal)
+	}
+}
+
+// writeWalkGoal renders a goal's answer after the walk. Each route opens with its one-line form
+// (check.RenderRoute), then lists its nets and crossings as a trace does.
+func writeWalkGoal(w io.Writer, g check.WalkGoalAnswer) {
+	what := "to the " + g.Kind
+	if g.Kind == check.WalkGoalPin {
+		what = "to " + endpointLabel(g.To)
+	}
+	fmt.Fprintf(w, "\ngoal %s, from %s\n", what, g.At)
+	switch g.Outcome {
+	case check.TraceNoRoute:
+		fmt.Fprintf(w, "  no route: %s\n", g.Reason)
+		return
+	case check.TraceUnresolved:
+		fmt.Fprintf(w, "  cannot ask: %s\n", g.Reason)
+		return
+	}
+	for i, r := range g.Routes {
+		hops := make([]check.RouteHop, len(r.Crossings))
+		for j, c := range r.Crossings {
+			hops[j] = check.RouteHop{Through: c.RefDes, To: c.ToNet}
+		}
+		first := ""
+		if len(r.Nets) > 0 {
+			first = r.Nets[0].Name
+		}
+		fmt.Fprintf(w, "  route %d: %s\n", i+1, check.RenderRoute(first, hops))
+		if r.Note != "" {
+			fmt.Fprintf(w, "    %s\n", r.Note)
+		}
+		for j, n := range r.Nets {
+			writeTraceNet(w, n)
+			if j < len(r.Crossings) {
+				c := r.Crossings[j]
+				fmt.Fprintf(w, "  cross %s%s pin %s --> pin %s%s\n", c.RefDes, classNote(c.Class), c.EnterPin, c.ExitPin, pairNote(c))
+			}
+		}
+		if g.Kind == check.WalkGoalPin {
+			fmt.Fprintf(w, "  %s\n", endpointLabel(g.To))
+		}
+	}
+	unit := "crossings"
+	if g.Kind == check.WalkGoalPullUp {
+		unit = "hops"
+	}
+	fmt.Fprintf(w, "\nrouted: %d %s, searched to a radius of %d %s from %s\n",
+		len(g.Routes), pluralWord(len(g.Routes), "route", "routes"), g.Radius, unit, g.At)
 }

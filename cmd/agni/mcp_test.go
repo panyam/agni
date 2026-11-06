@@ -408,6 +408,22 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			}
 		})
 
+		t.Run("walk goal", func(t *testing.T) {
+			_, a := callMCP(t, s.mcp, "walk", map[string]any{"design": mcpGateway, "from": "Y1", "kind": "small-parts", "hops": 2, "goal": "rail"})
+			resp, err := s.api.design.WalkDesign(ctx, connect.NewRequest(&webapi.WalkDesignRequest{Snapshot: snap,
+				From: &webapi.TraceEndpoint{RefDes: "Y1"}, Kind: "small-parts", Hops: 2, Goal: &webapi.WalkGoal{Kind: "rail"}}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := &webapi.WalkDesignResponse{}
+			if err := protojson.Unmarshal(a.Answer, got); err != nil {
+				t.Fatal(err)
+			}
+			if resp.Msg.GetWalk().GetGoal().GetOutcome() == webapi.TraceOutcome_TRACE_OUTCOME_UNSPECIFIED || !proto.Equal(got, resp.Msg) {
+				t.Errorf("walk goal over MCP %v\nover Connect %v", got, resp.Msg)
+			}
+		})
+
 		t.Run("diff", func(t *testing.T) {
 			const a1, b1 = mcpGateway + "/gateway.edn", mcpGateway + "/gateway-rev-b.edn"
 			res, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})

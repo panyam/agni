@@ -35,6 +35,16 @@ func WalkProto(w check.Walk) *webapi.Walk {
 	for _, e := range w.Elided {
 		p.Elided = append(p.Elided, &webapi.WalkElided{Hop: num.Int32(e.Hop), Nets: num.Int32(e.Nets)})
 	}
+	if g := w.Goal; g != nil {
+		p.Goal = &webapi.WalkGoalAnswer{
+			Kind: g.Kind, At: g.At, To: traceEndProto(g.To), Outcome: traceOutcomeProto(g.Outcome),
+			Reason: g.Reason, Radius: num.Int32(g.Radius),
+		}
+		for _, r := range g.Routes {
+			t := TraceProto(check.Trace{Crossings: r.Crossings, Nets: r.Nets})
+			p.Goal.Routes = append(p.Goal.Routes, &webapi.WalkRoute{Crossings: t.GetCrossings(), Nets: t.GetNets(), EndsAt: r.EndsAt, Note: r.Note})
+		}
+	}
 	return p
 }
 
@@ -62,12 +72,24 @@ func WalkFromProto(p *webapi.Walk) check.Walk {
 	for _, e := range p.GetElided() {
 		w.Elided = append(w.Elided, check.WalkElided{Hop: int(e.GetHop()), Nets: int(e.GetNets())})
 	}
+	if g := p.GetGoal(); g != nil {
+		w.Goal = &check.WalkGoalAnswer{
+			Kind: g.GetKind(), At: g.GetAt(), To: traceEndFromProto(g.GetTo()), Outcome: traceOutcomeFromProto(g.GetOutcome()),
+			Reason: g.GetReason(), Radius: int(g.GetRadius()),
+		}
+		for _, r := range g.GetRoutes() {
+			t := TraceFromProto(&webapi.Trace{Crossings: r.GetCrossings(), Nets: r.GetNets()})
+			w.Goal.Routes = append(w.Goal.Routes, check.WalkRoute{Crossings: t.Crossings, Nets: t.Nets, EndsAt: r.GetEndsAt(), Note: r.GetNote()})
+		}
+	}
 	return w
 }
 
 // WalkDesign walks outwards from one part or pin over the snapshot's netlist (agni issue 1339). It
 // calls the same check.WalkFrom the CLI calls. An unknown kind is ErrInvalidArgument, and a start
 // that names nothing is an answer with its reason set, as TraceDesign answers an unresolved endpoint.
+// A request with a goal also asks it from the walk (check.WalkGoalFrom, agni issue 1340). An unknown
+// goal kind is ErrInvalidArgument, and a goal that names nothing is an answer with its outcome set.
 func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
@@ -86,6 +108,18 @@ func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRe
 	}
 	if err != nil {
 		return nil, err
+	}
+	if g := req.GetGoal(); g != nil {
+		w.Goal, err = check.WalkGoalFrom(m, w, check.WalkGoal{
+			Kind: g.GetKind(), At: g.GetAt(), Hops: int(g.GetHops()),
+			To: check.Endpoint{RefDes: g.GetTo().GetRefDes(), Pin: g.GetTo().GetPin()},
+		})
+		if errors.Is(err, check.ErrUnknownWalkGoal) {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidArgument, err)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	p := WalkProto(w)
 	AnnotateWalkSheets(p, BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, opts...), m)

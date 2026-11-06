@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { tracePanelIsland } from "./tracepanel.jsx";
 import { propertiesPanelIsland } from "./propertiespanel.jsx";
-import { WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { TraceOutcome, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { emptyWalk, walkFromResponse, type WalkRequest } from "./walk.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };
@@ -72,6 +72,52 @@ describe("the Trace tab's walk", () => {
     click(el.querySelector('[data-hop-group="1"] .walk-hop-toggle'));
     expect(el.querySelector('[data-walk-net="SDA"]')).toBeNull();
     expect(el.querySelector('[data-walk-net="GND"]')).not.toBeNull();
+  });
+});
+
+describe("the walk's goal questions", () => {
+  it("asks a goal from the net the reader picks, walking again with the goal", () => {
+    const { el, view, handlers } = mountTrace();
+    view.setWalk(walk);
+    const options = [...el.querySelectorAll("[data-walk-at] option")].map((o) => (o as HTMLOptionElement).value);
+    expect(options).toEqual(["", "SDA"]);
+    click(el.querySelector('[data-action="walk-goal"][data-goal="pull-up"]'));
+    expect(handlers.onWalk).toHaveBeenLastCalledWith({ ...req, goal: { kind: "pull-up", at: "", to: "" } });
+    const at = el.querySelector("[data-walk-at]") as HTMLSelectElement;
+    at.value = "SDA";
+    at.dispatchEvent(new Event("change"));
+    (el.querySelector("[data-walk-goal-to]") as HTMLInputElement).value = "J4.2";
+    click(el.querySelector('[data-action="walk-goal"][data-goal="pin"]'));
+    expect(handlers.onWalk).toHaveBeenLastCalledWith({ ...req, goal: { kind: "pin", at: "SDA", to: "J4.2" } });
+  });
+
+  it("shows a route, a no-route and a goal that names nothing as three things", () => {
+    const { el, view, handlers } = mountTrace();
+    const answer = (goal: object) =>
+      walkFromResponse({ ...req, goal: { kind: "pull-up", at: "", to: "" } }, create(WalkSchema, { nets: [{ hop: 1, net: { name: "SDA" }, entered: { refDes: "R1", exitPin: "1" } }], goal }));
+    view.setWalk(
+      answer({
+        kind: "pull-up",
+        at: "SDA",
+        outcome: TraceOutcome.ROUTED,
+        radius: 3,
+        routes: [{ nets: [{ name: "SDA" }, { name: "+3V3", sheetIds: ["s1"] }], crossings: [{ refDes: "R7", enterPin: "2", exitPin: "1", fromNet: "SDA", toNet: "+3V3" }], endsAt: "+3V3" }],
+      }),
+    );
+    const g = el.querySelector(".walk-goal")!;
+    expect(g.getAttribute("data-goal-outcome")).toBe("routed");
+    expect(g.querySelector(".walk-route-line")!.textContent).toBe("SDA -> [R7] -> +3V3");
+    expect(g.querySelector('[data-walk-route-net="+3V3"]')!.textContent).toContain("through R7 pin 2 to pin 1");
+    click(g.querySelector('[data-walk-route-net="+3V3"] .walk-part'));
+    expect(handlers.onLocate).toHaveBeenLastCalledWith("component", "R7", "s1");
+
+    view.setWalk(answer({ kind: "pull-up", at: "SDA", outcome: TraceOutcome.NO_ROUTE, reason: "no rail is reachable from SDA" }));
+    expect(el.querySelector(".walk-goal .trace-noroute")!.textContent).toContain("no rail is reachable from SDA");
+    expect(el.querySelector(".walk-goal .trace-unresolved")).toBeNull();
+
+    view.setWalk(answer({ kind: "pin", at: "SDA", outcome: TraceOutcome.UNRESOLVED, reason: "no component U9 in this design" }));
+    expect(el.querySelector(".walk-goal .trace-unresolved")!.textContent).toContain("Cannot ask");
+    expect(el.querySelector(".walk-goal .trace-noroute")).toBeNull();
   });
 });
 

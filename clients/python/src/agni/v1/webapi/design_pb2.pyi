@@ -247,17 +247,61 @@ class TraceNet(_message.Message):
     def __init__(self, name: _Optional[str] = ..., stubs: _Optional[_Iterable[_Union[TraceStub, _Mapping]]] = ..., stubs_elided: _Optional[int] = ..., bus_like: _Optional[bool] = ..., sheet_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class WalkDesignRequest(_message.Message):
-    __slots__ = ("snapshot", "kind", "hops", "through")
+    __slots__ = ("snapshot", "kind", "hops", "through", "goal")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     FROM_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     HOPS_FIELD_NUMBER: _ClassVar[int]
     THROUGH_FIELD_NUMBER: _ClassVar[int]
+    GOAL_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     kind: str
     hops: int
     through: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, snapshot: _Optional[str] = ..., kind: _Optional[str] = ..., hops: _Optional[int] = ..., through: _Optional[_Iterable[str]] = ..., **kwargs) -> None: ...
+    goal: WalkGoal
+    def __init__(self, snapshot: _Optional[str] = ..., kind: _Optional[str] = ..., hops: _Optional[int] = ..., through: _Optional[_Iterable[str]] = ..., goal: _Optional[_Union[WalkGoal, _Mapping]] = ..., **kwargs) -> None: ...
+
+class WalkGoal(_message.Message):
+    __slots__ = ("kind", "at", "to", "hops")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    AT_FIELD_NUMBER: _ClassVar[int]
+    TO_FIELD_NUMBER: _ClassVar[int]
+    HOPS_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    at: str
+    to: TraceEndpoint
+    hops: int
+    def __init__(self, kind: _Optional[str] = ..., at: _Optional[str] = ..., to: _Optional[_Union[TraceEndpoint, _Mapping]] = ..., hops: _Optional[int] = ...) -> None: ...
+
+class WalkGoalAnswer(_message.Message):
+    __slots__ = ("kind", "at", "to", "outcome", "reason", "radius", "routes")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    AT_FIELD_NUMBER: _ClassVar[int]
+    TO_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    RADIUS_FIELD_NUMBER: _ClassVar[int]
+    ROUTES_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    at: str
+    to: TraceEnd
+    outcome: TraceOutcome
+    reason: str
+    radius: int
+    routes: _containers.RepeatedCompositeFieldContainer[WalkRoute]
+    def __init__(self, kind: _Optional[str] = ..., at: _Optional[str] = ..., to: _Optional[_Union[TraceEnd, _Mapping]] = ..., outcome: _Optional[_Union[TraceOutcome, str]] = ..., reason: _Optional[str] = ..., radius: _Optional[int] = ..., routes: _Optional[_Iterable[_Union[WalkRoute, _Mapping]]] = ...) -> None: ...
+
+class WalkRoute(_message.Message):
+    __slots__ = ("crossings", "nets", "ends_at", "note")
+    CROSSINGS_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    ENDS_AT_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    crossings: _containers.RepeatedCompositeFieldContainer[TraceCross]
+    nets: _containers.RepeatedCompositeFieldContainer[TraceNet]
+    ends_at: str
+    note: str
+    def __init__(self, crossings: _Optional[_Iterable[_Union[TraceCross, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[TraceNet, _Mapping]]] = ..., ends_at: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
 
 class WalkDesignResponse(_message.Message):
     __slots__ = ("walk",)
@@ -266,7 +310,7 @@ class WalkDesignResponse(_message.Message):
     def __init__(self, walk: _Optional[_Union[Walk, _Mapping]] = ...) -> None: ...
 
 class Walk(_message.Message):
-    __slots__ = ("kind", "radius", "reason", "nets", "boundary", "elided")
+    __slots__ = ("kind", "radius", "reason", "nets", "boundary", "elided", "goal")
     FROM_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     RADIUS_FIELD_NUMBER: _ClassVar[int]
@@ -274,13 +318,15 @@ class Walk(_message.Message):
     NETS_FIELD_NUMBER: _ClassVar[int]
     BOUNDARY_FIELD_NUMBER: _ClassVar[int]
     ELIDED_FIELD_NUMBER: _ClassVar[int]
+    GOAL_FIELD_NUMBER: _ClassVar[int]
     kind: str
     radius: int
     reason: str
     nets: _containers.RepeatedCompositeFieldContainer[WalkNet]
     boundary: _containers.RepeatedCompositeFieldContainer[WalkBoundary]
     elided: _containers.RepeatedCompositeFieldContainer[WalkElided]
-    def __init__(self, kind: _Optional[str] = ..., radius: _Optional[int] = ..., reason: _Optional[str] = ..., nets: _Optional[_Iterable[_Union[WalkNet, _Mapping]]] = ..., boundary: _Optional[_Iterable[_Union[WalkBoundary, _Mapping]]] = ..., elided: _Optional[_Iterable[_Union[WalkElided, _Mapping]]] = ..., **kwargs) -> None: ...
+    goal: WalkGoalAnswer
+    def __init__(self, kind: _Optional[str] = ..., radius: _Optional[int] = ..., reason: _Optional[str] = ..., nets: _Optional[_Iterable[_Union[WalkNet, _Mapping]]] = ..., boundary: _Optional[_Iterable[_Union[WalkBoundary, _Mapping]]] = ..., elided: _Optional[_Iterable[_Union[WalkElided, _Mapping]]] = ..., goal: _Optional[_Union[WalkGoalAnswer, _Mapping]] = ..., **kwargs) -> None: ...
 
 class WalkNet(_message.Message):
     __slots__ = ("hop", "net", "entered", "ended", "also_entered")

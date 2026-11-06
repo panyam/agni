@@ -245,3 +245,28 @@ carries no signal across, so the walk crosses nothing from it. Only the crossed 
 crossed, so the walk can come back across the part's other channels. The `all` walk ignores pairs.
 On Jetson, the walk from R361, a pull-up on the connector I2C bus's 3.3 V side, crosses the
 translator U80 from B4 to A4 alone, onto `I2C5_SDA_1V8`.
+
+### Goal questions from a walk
+
+Once the walk has reached a net, a reader often knows what they are after. They want the pull-up on
+this line, the rail it comes from, or the route to one pin. A request's `goal` asks that from a net
+the walk reached (`at`), and the walk's answer carries it in `goal` (agni issue 1340). Three
+questions exist, and each uses an engine that already answers it.
+
+| Goal | Engine | Radius |
+|---|---|---|
+| `pin` | trace's series walk (`ReachToTerminus`) to the pin `to` names, resolved as trace resolves it | trace's, 6 crossings by default |
+| `pull-up` | `AllPullUpPathsToRail`, one route per pull-up resistor, as the I2C pull-up rule finds them, and a datasheet's internal pull-up when there is none | the net's pull-up reach, 3 hops by default |
+| `rail` | trace's series walk to the nearest rail-named net, crossing zero-ohm links as it crosses any resistor | trace's |
+
+Each route runs from the start, along the walk's own path to `at`, then on to the goal. So it
+extends the walk rather than starting a new one. Past `at`, a pin goal's route is the one `agni
+trace` finds from the pin the walk entered `at` through, and `TestPinGoalFromAPinStartAnswersAsTraceDoes`
+holds the two together. The answer keeps trace's three outcomes. A route is `routed`. Nothing within
+the radius is `no-route`, with the radius in the reason. A goal that names nothing is `unresolved`,
+such as a net the walk never reached or a pin the design lacks. `agni walk` exits non-zero on the
+last one alone. With no `at`, a pin start asks from its own net and a part start from its first own
+net that is not a rail, a ground or a global net.
+
+On Jetson the pull-up goal from R361's walk finds R361 itself on the connector side. Asked from
+`I2C5_SDA_1V8` it answers no route, because every pull-up on U80's 1.8 V side is do-not-populate.

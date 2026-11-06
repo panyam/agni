@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { HighlightShape } from "./highlights.js";
-import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_ENDED_COLOR, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
+import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_ENDED_COLOR, WALK_GOAL_COLOR, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
 import { emptyLocation, locationToUrl, parseUrl } from "./router.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };
@@ -45,6 +45,27 @@ describe("walk state", () => {
     expect(walkSpecs(walkFromResponse(req, create(WalkSchema, { reason: "no component R1" })))).toEqual([]);
   });
 
+  it("lights a goal's routes over the walk, and nothing for a goal with no route", () => {
+    const goalReq: WalkRequest = { ...req, goal: { kind: "pin", at: "SDA", to: "J4.2" } };
+    const routed = answer();
+    routed.goal = create(WalkGoalAnswerSchema, {
+      kind: "pin",
+      at: "SDA",
+      to: { endpoint: { refDes: "J4", pin: "2" }, pinName: "SDA", net: "SDA_J" },
+      outcome: TraceOutcome.ROUTED,
+      routes: [{ nets: [{ name: "SDA" }, { name: "SDA_J" }], crossings: [{ refDes: "R7", fromNet: "SDA", toNet: "SDA_J" }], endsAt: "SDA_J" }],
+    });
+    const s = walkFromResponse(goalReq, routed);
+    expect(s.goal?.to).toBe("J4.2 (SDA)");
+    const lit = walkSpecs(s).filter((x) => x.color === WALK_GOAL_COLOR);
+    expect(lit.flatMap((x) => x.nets ?? [])).toEqual(["SDA", "SDA_J"]);
+    expect(lit.flatMap((x) => x.components ?? [])).toEqual(["R7"]);
+    expect(lit.flatMap((x) => x.pins ?? [])).toEqual([{ refDes: "J4", pin: "2" }]);
+    const none = answer();
+    none.goal = create(WalkGoalAnswerSchema, { kind: "pin", at: "SDA", outcome: TraceOutcome.NO_ROUTE, reason: "no series path" });
+    expect(walkSpecs(walkFromResponse(goalReq, none)).filter((x) => x.color === WALK_GOAL_COLOR)).toEqual([]);
+  });
+
   it("splits a start at its first dot", () => {
     expect(splitStart("R1")).toEqual(["R1", ""]);
     expect(splitStart("U7.3")).toEqual(["U7", "3"]);
@@ -58,5 +79,8 @@ describe("walk state", () => {
     const url = new URL(locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", walk: r }), "http://x");
     expect(url.searchParams.get("walk")).toBe("U7.3");
     expect(parseUrl(url.pathname, url.search).walk).toEqual(r);
+    const g: WalkRequest = { ...r, goal: { kind: "pin", at: "SDA", to: "J4.2" } };
+    const gp = walkParams(g);
+    expect(parseWalkParams((k) => gp[k] ?? null)).toEqual(g);
   });
 });

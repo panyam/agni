@@ -244,7 +244,7 @@ func (s *srv) trace(ctx context.Context, in traceInput) (core.ToolResult, error)
 	return res, err
 }
 
-const walkDesc = `Walk outwards from one part (R1) or pin (U7.3), hop by hop, and get the nets reached, the part crossed into each, and the parts the walk did not cross with the reason. Hop 1 is the start's own nets. A ground ends its branch. kind picks which parts a hop crosses: "series" (resistors, inductors, ferrites, fuses, passing through rails as trace does), "small-parts" (any part with up to four pins, stopping at ICs, connectors and rails) or "all". through names parts to cross anyway.`
+const walkDesc = `Walk outwards from one part (R1) or pin (U7.3), hop by hop, and get the nets reached, the part crossed into each, and the parts the walk did not cross with the reason. Hop 1 is the start's own nets. A ground ends its branch. kind picks which parts a hop crosses: "series" (resistors, inductors, ferrites, fuses, passing through rails as trace does), "small-parts" (any part with up to four pins, stopping at ICs, connectors and rails) or "all". through names parts to cross anyway. goal asks a goal question from a net the walk reached (at, default the start's own net): "pin" routes to the pin in to as trace does, "pull-up" finds every pull-up resistor taking the net to a rail, "rail" routes to the nearest rail. Each route runs from the start along the walk to at, then on to the goal, and the answer keeps trace's three outcomes: routed, no route within the radius, or a goal naming nothing.`
 
 type walkInput struct {
 	Design  string   `json:"design" jsonschema:"required" jsonschema_description:"The design, as mount/path (tut/designs/gateway)."`
@@ -252,6 +252,9 @@ type walkInput struct {
 	Kind    string   `json:"kind,omitempty" jsonschema_description:"series, small-parts or all; series when empty."`
 	Hops    int32    `json:"hops,omitempty" jsonschema_description:"How many hops to walk, hop 1 being the start's own nets; 2 when 0."`
 	Through []string `json:"through,omitempty" jsonschema_description:"Parts to cross whatever the kind says, such as [U7]."`
+	Goal    string   `json:"goal,omitempty" jsonschema_description:"A goal question from the walk: pin, pull-up or rail. None when empty."`
+	At      string   `json:"at,omitempty" jsonschema_description:"With goal, the reached net to ask from; the start's own net when empty."`
+	To      string   `json:"to,omitempty" jsonschema_description:"With goal pin, the pin to route to (J4.2)."`
 }
 
 // walkNoLink says why a walk's reply carries no viewer link.
@@ -265,9 +268,20 @@ func (s *srv) walk(ctx context.Context, in walkInput) (core.ToolResult, error) {
 	if start.RefDes == "" {
 		return failed(fmt.Errorf("from %q: name a part (R1) or a pin (U7.3)", in.From)), nil
 	}
+	var goal *webapi.WalkGoal
+	if in.Goal != "" {
+		goal = &webapi.WalkGoal{Kind: in.Goal, At: in.At}
+		if in.Goal == check.WalkGoalPin {
+			to, err := endpoint(in.To, "to")
+			if err != nil {
+				return failed(err), nil
+			}
+			goal.To = to
+		}
+	}
 	var resp *webapi.WalkDesignResponse
 	u, err := s.on(ctx, in.Design, func(sn *webapi.Snapshot) (err error) {
-		resp, err = s.api.Design.WalkDesign(ctx, &webapi.WalkDesignRequest{Snapshot: sn.GetName(), From: start, Kind: in.Kind, Hops: in.Hops, Through: in.Through})
+		resp, err = s.api.Design.WalkDesign(ctx, &webapi.WalkDesignRequest{Snapshot: sn.GetName(), From: start, Kind: in.Kind, Hops: in.Hops, Through: in.Through, Goal: goal})
 		return err
 	})
 	if err != nil {
@@ -279,8 +293,8 @@ func (s *srv) walk(ctx context.Context, in walkInput) (core.ToolResult, error) {
 	b.WriteString("\n")
 	writeLink(&b, "", walkNoLink)
 	res, err := answer(b.String(), map[string]any{"design": u.String(), "from": in.From, "no_link": walkNoLink, "answer": protoJSON(resp)})
-	// A start the design lacks is the question's mistake, so the agent hears it as one.
-	res.IsError = resp.GetWalk().GetReason() != ""
+	// A start or goal the design lacks is the question's mistake, so the agent hears it as one.
+	res.IsError = resp.GetWalk().GetReason() != "" || resp.GetWalk().GetGoal().GetOutcome() == webapi.TraceOutcome_TRACE_OUTCOME_UNRESOLVED
 	return res, err
 }
 

@@ -305,7 +305,7 @@ func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSou
 }
 
 // AnnotateWalkSheets fills a walk's per-net sheet ids and its start's, as AnnotateTraceSheets does
-// for a trace. A walk started from a part locates by the part.
+// for a trace, and its goal's route nets and pin. A walk started from a part locates by the part.
 func AnnotateWalkSheets(w *webapi.Walk, g *geom.SchematicGeometry, m LocateSource) {
 	if w == nil || (g == nil && (m == nil || len(m.Nets()) == 0)) {
 		return
@@ -319,6 +319,14 @@ func AnnotateWalkSheets(w *webapi.Walk, g *geom.SchematicGeometry, m LocateSourc
 	}
 	for _, n := range w.GetNets() {
 		n.GetNet().SheetIds = netSheets(n.GetNet().GetName())
+	}
+	if goal := w.GetGoal(); goal != nil {
+		for _, r := range goal.GetRoutes() {
+			for _, n := range r.GetNets() {
+				n.SheetIds = netSheets(n.GetName())
+			}
+		}
+		annotateEnds(ix, netSheets, goal.GetTo())
 	}
 	if f := w.GetFrom(); f != nil && f.GetEndpoint().GetPin() == "" && f.GetEndpoint().GetRefDes() != "" {
 		f.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: check.KindComponent, Ref: f.GetEndpoint().GetRefDes()})
