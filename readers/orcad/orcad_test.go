@@ -62,6 +62,27 @@ func TestAPinJoinsTheWireItsPositionSitsOn(t *testing.T) {
 	}
 }
 
+func TestAnUnnamedNetIsNumberedFromItsLowestWire(t *testing.T) {
+	pg := &page{
+		netName: map[uint32][]string{},
+		wires: []wire{
+			{id: 409, net: 7, a: point{0, 0}, b: point{50, 0}},
+			{id: 299, net: 7, a: point{50, 0}, b: point{100, 0}},
+		},
+		parts: []placedPart{
+			resistor(1, "R1", point{0, 0}, point{0, 50}),
+			resistor(2, "R2", point{100, 0}, point{100, 50}),
+		},
+	}
+	d, err := flatten(testDesign("t.dsn", pg), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := netsOf(t, d)["N00299"]; got != "R1.1 R2.1" {
+		t.Errorf("nets %v, want R1.1 and R2.1 on N00299, after the lower wire id", netsOf(t, d))
+	}
+}
+
 func TestTheOccurrenceTreeNamesAPartOverItsPlacement(t *testing.T) {
 	pg := &page{netName: map[uint32][]string{}, wires: []wire{{net: 1, a: point{0, 0}, b: point{10, 0}}},
 		parts: []placedPart{resistor(42, "R?", point{0, 0}, point{10, 0})}}

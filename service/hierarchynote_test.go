@@ -42,6 +42,7 @@ func readFixture(t *testing.T, name string) fakeLoader {
 // page. Each is built from the run its caller holds, as the CLI and the viewer build them.
 type surfaces struct {
 	designNote   string
+	readsMore    bool
 	checkRunLen  int
 	checkDocLen  int
 	checkPage    string
@@ -62,6 +63,7 @@ func renderSurfaces(t *testing.T, name string) surfaces {
 		t.Fatal(err)
 	}
 	out.designNote = d.GetHierarchyNote()
+	out.readsMore = d.GetFlattenReadsMore()
 
 	csvc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
 	csnap := snapOf(t, csvc.Snapshots(), uri)
@@ -112,6 +114,9 @@ func TestEverySurfaceSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	if hier.designNote != hierSentence {
 		t.Errorf("GetDesign hierarchy_note = %q, want %q", hier.designNote, hierSentence)
 	}
+	if !hier.readsMore {
+		t.Error("GetDesign flatten_reads_more is false for a top-level read, which reading every block extends")
+	}
 	if hier.checkRunLen != 1 || hier.checkDocLen != 1 || hier.reviewDocLen != 1 {
 		t.Errorf("unexpanded_hierarchy entries: check run %d, check document %d, review document %d; want 1 each",
 			hier.checkRunLen, hier.checkDocLen, hier.reviewDocLen)
@@ -131,7 +136,7 @@ func TestEverySurfaceSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	}
 
 	flat := renderSurfaces(t, "basic.edn")
-	if flat.designNote != "" || flat.checkRunLen != 0 || flat.checkDocLen != 0 || flat.reviewDocLen != 0 {
+	if flat.designNote != "" || flat.readsMore || flat.checkRunLen != 0 || flat.checkDocLen != 0 || flat.reviewDocLen != 0 {
 		t.Errorf("a flat design reports a read limit: %+v", flat)
 	}
 	for name, page := range map[string]string{"check": flat.checkPage, "checklist": flat.reviewPage} {

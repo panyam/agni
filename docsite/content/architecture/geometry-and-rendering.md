@@ -190,7 +190,10 @@ A supply's anchor sits above its box, so the symbol is placed from the box's cor
 pin on its page. A title block stores its position from the page's bottom-right corner.
 
 Capture stores no junction dots, so the reader draws one wherever three wire ends meet or a wire ends
-on another's span. A part shows its pins' names and numbers as the last two bytes of its cached
+on another's span. It draws a cross on every pin the page flags not connected, as Capture does, and
+Clay R6 flags eight. A block's pin names sit inside the block along their edge, and a name on the top
+or bottom edge is written at 270, reading upward as drawn. The renderer turns a label at 90 the
+other way up, which once ran those names out of the block. A part shows its pins' names and numbers as the last two bytes of its cached
 record say. Bit 0 shows the names and bit 2 hides the numbers, so a resistor shows neither.
 
 ## Render-fidelity fields

@@ -10,10 +10,18 @@
 // viewer renders it as sent rather than composing its own copy, so the three surfaces cannot drift
 // apart.
 
+// HierarchyNote is the strip's content as the server sent it. flattenReadsMore says whether reading
+// every block would take in a block the note lists (GetDesignResponse.flatten_reads_more). The
+// server decides it, since only the engine knows why each block was left out (agni issue 1406).
+export interface HierarchyNote {
+  text: string;
+  flattenReadsMore: boolean;
+}
+
 // hierarchyNote returns the served sentence for the strip, or null when the read left nothing out.
 // An empty or absent field is null, so a server that predates the field shows no strip.
-export function hierarchyNote(served: string | undefined): string | null {
-  return served ? served : null;
+export function hierarchyNote(served: string | undefined, flattenReadsMore?: boolean): HierarchyNote | null {
+  return served ? { text: served, flattenReadsMore: flattenReadsMore === true } : null;
 }
 
 // hierarchyStrip wraps the notice element, as undrawnStrip does. It renders the note and hides the
@@ -22,8 +30,9 @@ export function hierarchyNote(served: string | undefined): string | null {
 // readAll, when given, runs when the reader presses the strip's "Read every block" button. The
 // button is the browser's form of the CLI's --flatten-hierarchy hint, and it appears where the reader
 // learns the read was partial (agni issue 1102). A page already reading designs whole passes none.
-// Any note it still shows lists blocks that place themselves, and reading again would not reach them.
-export function hierarchyStrip(el: HTMLElement | null, readAll?: () => void): (note: string | null) => void {
+// The button shows only when the note says reading every block would take more in, so a note about
+// a block whose file is missing, or that places itself, offers nothing to press (agni issue 1406).
+export function hierarchyStrip(el: HTMLElement | null, readAll?: () => void): (note: HierarchyNote | null) => void {
   return (note) => {
     if (!el) return;
     if (!note) {
@@ -32,9 +41,9 @@ export function hierarchyStrip(el: HTMLElement | null, readAll?: () => void): (n
       return;
     }
     const text = document.createElement("span");
-    text.textContent = note;
+    text.textContent = note.text;
     el.replaceChildren(text);
-    if (readAll) {
+    if (readAll && note.flattenReadsMore) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "hierarchy-read-all";

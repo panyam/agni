@@ -17,7 +17,7 @@ import (
 // one key covers Capture's .DSN. A SPECCTRA design shares the extension and is plain text, so the
 // reader refuses it by name.
 func registerOrCAD() {
-	Register(&Format{Ext: ".dsn", Name: "orcad", Design: readOrCAD, Geometry: readOrCADGeometry})
+	Register(&Format{Ext: ".dsn", Name: "orcad", Design: readOrCAD, Geometry: readOrCADGeometry, Blocks: orcad.BlockFiles})
 }
 
 func readOrCADGeometry(l *Loader, p string) (*geom.SchematicGeometry, error) {

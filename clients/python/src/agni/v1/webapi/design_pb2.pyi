@@ -68,7 +68,7 @@ class GetDesignRequest(_message.Message):
     def __init__(self, snapshot: _Optional[str] = ..., layout: _Optional[str] = ..., read_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., nets: _Optional[_Iterable[str]] = ..., ref_des: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetDesignResponse(_message.Message):
-    __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy", "design", "hierarchy_note", "drawing_note")
+    __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy", "design", "hierarchy_note", "drawing_note", "flatten_reads_more")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FORMAT_FIELD_NUMBER: _ClassVar[int]
     COMPONENT_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -83,6 +83,7 @@ class GetDesignResponse(_message.Message):
     DESIGN_FIELD_NUMBER: _ClassVar[int]
     HIERARCHY_NOTE_FIELD_NUMBER: _ClassVar[int]
     DRAWING_NOTE_FIELD_NUMBER: _ClassVar[int]
+    FLATTEN_READS_MORE_FIELD_NUMBER: _ClassVar[int]
     name: str
     source_format: str
     component_count: int
@@ -97,7 +98,8 @@ class GetDesignResponse(_message.Message):
     design: _ir_pb2.Design
     hierarchy_note: str
     drawing_note: str
-    def __init__(self, name: _Optional[str] = ..., source_format: _Optional[str] = ..., component_count: _Optional[int] = ..., net_count: _Optional[int] = ..., undrawn: _Optional[_Iterable[_Union[_geom_pb2.UndrawnPlacement, _Mapping]]] = ..., layout: _Optional[str] = ..., sheets: _Optional[_Iterable[_Union[SheetRef, _Mapping]]] = ..., native_available: _Optional[bool] = ..., available_layouts: _Optional[_Iterable[str]] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ..., design: _Optional[_Union[_ir_pb2.Design, _Mapping]] = ..., hierarchy_note: _Optional[str] = ..., drawing_note: _Optional[str] = ...) -> None: ...
+    flatten_reads_more: bool
+    def __init__(self, name: _Optional[str] = ..., source_format: _Optional[str] = ..., component_count: _Optional[int] = ..., net_count: _Optional[int] = ..., undrawn: _Optional[_Iterable[_Union[_geom_pb2.UndrawnPlacement, _Mapping]]] = ..., layout: _Optional[str] = ..., sheets: _Optional[_Iterable[_Union[SheetRef, _Mapping]]] = ..., native_available: _Optional[bool] = ..., available_layouts: _Optional[_Iterable[str]] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ..., design: _Optional[_Union[_ir_pb2.Design, _Mapping]] = ..., hierarchy_note: _Optional[str] = ..., drawing_note: _Optional[str] = ..., flatten_reads_more: _Optional[bool] = ...) -> None: ...
 
 class GetSheetRequest(_message.Message):
     __slots__ = ("snapshot", "sheet", "layout", "format", "symbols")

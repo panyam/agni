@@ -79,6 +79,19 @@ func hierarchyMissing(blocks []*ir.UnexpandedHierarchy) string {
 	return strings.Join(files, ", ")
 }
 
+// FlattenReadsMore reports whether a read of every block would take in a block that blocks lists.
+// A block left out because the read walked the top level alone would be read. One whose file is
+// missing, or that places itself, would still be left out.
+func FlattenReadsMore(blocks []*ir.UnexpandedHierarchy) bool {
+	for _, b := range blocks {
+		switch b.GetReason() {
+		case ir.UnexpandedReason_UNEXPANDED_REASON_UNSPECIFIED, ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED:
+			return true
+		}
+	}
+	return false
+}
+
 // HierarchyCycles reports whether every listed block was left out because it places itself. A
 // flattened read leaves out only such blocks.
 func HierarchyCycles(blocks []*ir.UnexpandedHierarchy) bool {

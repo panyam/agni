@@ -36,6 +36,7 @@ function harness() {
     // Optional like undrawn: absent means the read left nothing out, and a server that predates the
     // field sends nothing (agni issue 717).
     hierarchyNote?: string;
+    flattenReadsMore?: boolean;
     drawingNote?: string;
   };
   const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
@@ -1462,12 +1463,12 @@ describe("the hierarchical-read notice", () => {
     h.getDesign.mockResolvedValue({
       name: "TEST", layout: "grid", sourceFormat: "edif", componentCount: 1, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid"],
-      hierarchyNote: sentence,
+      hierarchyNote: sentence, flattenReadsMore: true,
     });
     await h.presenter.openFile("edif", "hier.edn");
     const calls = h.onHierarchyNote.mock.calls;
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls[calls.length - 1][0]).toBe(sentence);
+    expect(calls[calls.length - 1][0]).toEqual({ text: sentence, flattenReadsMore: true });
   });
 
   it("pushes null for a design read whole, so the notice stays off", async () => {
