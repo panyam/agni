@@ -137,32 +137,21 @@ export class SvgView {
   // WS9-006 click-to-locate the focused item's overlay IS its location. Returns the applied view
   // so a host can mirror it onto a synced sibling, or null when there is nothing to reveal (no
   // overlay, or nothing drawn on this sheet).
-  revealOverlay(): SvgViewState | null {
+  //
+  // A pin's highlight is a dot at the pin's tip. Passing the pin frames the unit of its part that
+  // draws it instead, since a part drawn at the end of a long leg sits outside a window sized to a
+  // dot (agni issue 1419).
+  revealOverlay(pin?: { ref: string; pin: string }): SvgViewState | null {
     let box: RevealBox | null = null;
     // Each drawn element is measured on its own. An <svg>'s own getBBox leaves out a child with no
     // size, and a pin's highlight is a point, a box with no size (agni issue 1326). computeReveal
     // frames a point with its minimum extent.
     for (const el of this.overlay.querySelectorAll(":scope > svg > *")) {
-      let b: { x: number; y: number; width: number; height: number };
-      try {
-        b = (el as SVGGraphicsElement).getBBox();
-      } catch {
-        continue; // detached/unrendered SVG (jsdom, display:none) has nothing to measure
-      }
-      if (!box) {
-        box = { x: b.x, y: b.y, w: b.width, h: b.height };
-      } else {
-        const x = Math.min(box.x, b.x);
-        const y = Math.min(box.y, b.y);
-        box = {
-          x,
-          y,
-          w: Math.max(box.x + box.w, b.x + b.width) - x,
-          h: Math.max(box.y + box.h, b.y + b.height) - y,
-        };
-      }
+      const b = measure(el);
+      if (b) box = box ? union(box, b) : b;
     }
     if (!box) return null;
+    if (pin) box = this.unitOfPin(box, pin.ref, pin.pin);
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
     const { w, h } = this.docSize();
@@ -173,6 +162,26 @@ export class SvgView {
     // panel opening beside it, refits the sheet and throws the reveal away (agni issue 1326).
     this.touched = true;
     return v;
+  }
+
+  // unitOfPin widens a pin's highlight box to the drawing of the pin and its part's unit, read off
+  // the base drawing's entity keys. A pin the drawing does not key leaves the box as it was.
+  private unitOfPin(lit: RevealBox, ref: string, pin: string): RevealBox {
+    const svg = this.base.querySelector("svg");
+    if (!svg) return lit;
+    const pins: RevealBox[] = [];
+    const parts: RevealBox[] = [];
+    for (const el of svg.querySelectorAll('[data-kind="pin"], [data-kind="component"]')) {
+      if (el.getAttribute("data-ref") !== ref) continue;
+      const b = measure(el);
+      if (!b) continue;
+      if (el.getAttribute("data-kind") === "component") parts.push(b);
+      else if (el.getAttribute("data-pin") === pin) pins.push(b);
+    }
+    // A pin drawn on more than one unit, such as a shared supply pin, is taken only where it
+    // touches the lit dot.
+    const own = pins.filter((b) => touches(b, lit));
+    return unitAround(own.reduce(union, lit), parts);
   }
 
   // getView / setView snapshot and restore the pan/zoom transform, so a caller can remember a
@@ -401,6 +410,46 @@ export function computeReveal(b: RevealBox, hostW: number, hostH: number): SvgVi
     tx: hostW / 2 - (b.x + b.w / 2) * scale,
     ty: hostH / 2 - (b.y + b.h / 2) * scale,
   };
+}
+
+// unitAround grows a box through every part box that touches it, until none is left that does.
+// Seeded with a pin's drawing, it takes in the unit that draws the pin and leaves out a unit of the
+// same part drawn elsewhere on the sheet, which a union of every box keyed to the part would not.
+export function unitAround(seed: RevealBox, parts: RevealBox[]): RevealBox {
+  let box = seed;
+  let left = parts;
+  for (;;) {
+    const near = left.filter((b) => touches(b, box));
+    if (near.length === 0) return box;
+    box = near.reduce(union, box);
+    left = left.filter((b) => !near.includes(b));
+  }
+}
+
+// TOUCH_SLACK is how far apart two boxes may be and still touch, in document units, so a pin's leg
+// that ends on its body's outline counts as meeting it despite rounding.
+const TOUCH_SLACK = 1;
+
+function touches(a: RevealBox, b: RevealBox): boolean {
+  return (
+    a.x <= b.x + b.w + TOUCH_SLACK && b.x <= a.x + a.w + TOUCH_SLACK && a.y <= b.y + b.h + TOUCH_SLACK && b.y <= a.y + a.h + TOUCH_SLACK
+  );
+}
+
+function union(a: RevealBox, b: RevealBox): RevealBox {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
+// measure is an element's box in document units, or null for one with nothing to measure.
+function measure(el: Element): RevealBox | null {
+  try {
+    const b = (el as SVGGraphicsElement).getBBox();
+    return { x: b.x, y: b.y, w: b.width, h: b.height };
+  } catch {
+    return null; // detached/unrendered SVG (jsdom, display:none) has nothing to measure
+  }
 }
 
 // drawnOnSheet lists what the sheet on screen draws, read off the rendered document's entity keys,

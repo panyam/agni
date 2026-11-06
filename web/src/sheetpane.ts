@@ -7,7 +7,7 @@
 // pick on the canvas does. It asks the engine through the three ports in SheetPaneDeps, and holds
 // no client of its own, so a test drives it with fakes.
 import { SvgView, type SvgViewState } from "./svgview.js";
-import type { Selection } from "./selection.js";
+import { pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, rotateBy, type Orientation } from "./orient.js";
@@ -236,7 +236,7 @@ export class SheetPane {
     }
     if (this.sel !== sel) return;
     this.view.setOverlay(markup);
-    if (reveal) this.view.revealOverlay();
+    if (reveal && sel) this.view.revealOverlay(pinOf(sel));
   }
 
   // offer names the other sheets that draw the selection, each a button that opens it.

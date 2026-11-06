@@ -205,6 +205,12 @@ export function selectionFromCell(kind: string, subject: string, ref = ""): Sele
 // with both its name and its id while a result cell carries only the name, and those are the same
 // net. Ids are compared only when BOTH carry one, since two nets can share a display name across
 // sheets.
+// pinOf names the pin a selection picked, for a reveal that frames the pin's part (agni issue
+// 1419), or undefined for any other selection.
+export function pinOf(sel: Selection): { ref: string; pin: string } | undefined {
+  return sel.kind === "pin" && sel.ref && sel.pin ? { ref: sel.ref, pin: sel.pin } : undefined;
+}
+
 export function sameSelection(a: Selection | null, b: Selection | null): boolean {
   if (!a || !b || a.kind !== b.kind) return false;
   switch (a.kind) {

@@ -44,11 +44,10 @@ const base = (): string => inject("baseUrl");
 //
 // On Jetson, C133 is a back-side capacitor on "USB Debug, PD", TP76 a front-side test point on
 // "Power", and C133's pin 1 is on the net. On Clay R6, an OrCAD design on its Allegro board (agni
-// issue 1382), R28 is on the top page, LS1 the front-side buzzer on the BUZZER block's page, and
-// WIFI_TX runs across the top page with the same name on the board. Clay's test points are drawn at
-// the end of a long leg, and a click on one's pad lights its pin, so the canvas frames the pin and
-// leaves the part off centre. A small IC's middle is copper, so a click there picks its net. LS1's
-// footprint is clicked on its body, which picks the part.
+// issue 1382), R28 is on the top page, TP3 a test point on the IMU block's page, and WIFI_TX runs
+// across the top page with the same name on the board. Clay's test points are drawn at the end of a
+// long leg, and a click on one's pad lights its pin, so the canvas frames the pin with the part it
+// belongs to (agni issue 1419).
 const jetsonPicks = {
   part: { ref: "C133", sheet: "USB Debug, PD" },
   footprint: { ref: "TP76", sheet: "Power" },
@@ -72,7 +71,7 @@ const walks = {
     path: "clay-r6",
     about: "Clay R6, its OrCAD Capture design on its Allegro board",
     part: { ref: "R28", sheet: "PAGE1" },
-    footprint: { ref: "LS1", sheet: "BUZZER" },
+    footprint: { ref: "TP3", sheet: "IMU" },
     net: "WIFI_TX",
   },
 };
