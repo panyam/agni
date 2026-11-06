@@ -583,8 +583,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   GND_EARTH that way. A part's `PACK_SHORT` joins its pins, and a pin's own stored net id joins it
   even when the pin is flagged no-connect. `TestOrCADReadsAsClaysNetlist` holds Clay R6 to
   `pstxnet.dat` with only the seven `NC` pins listed, and `TestOrCADJoinsClaysBoard` holds it to
-  `CLAYR6.brd` by designator. Net NAMES are not yet Capture's, since `pstxnet.dat` cuts them at 31
-  characters and numbers unnamed nets from ids the reader has not decoded. **The pages draw too**
+  `CLAYR6.brd` by designator. `TestOrCADNamesNetsAsClaysNetlist` holds every net NAME to
+  `pstxnet.dat` (agni 1406). Capture names an unnamed net `N%05d` after the lowest WIRE id on it,
+  not its net id, and the shallowest name wins, so the root's generated name beats a block's label.
+  `pstxnet.dat` and the board cut a name at 31 characters, and the read keeps it whole. One wire-less
+  pin-to-pin net is still numbered another way. A dropped folder groups a `.DSN` with its block
+  files through `formats.Format.Blocks`. **The pages draw too**
   (agni 1400, `readers/orcad/geometry.go`), and the file checks the transform itself: every placed pin
   stores its page position, and `TestEveryPlacedPinLandsWhereThePageStoresIt` holds all 573 of Clay's
   to `geomath.PlacePin`. A power symbol or port is placed from its stored box's corner, never its

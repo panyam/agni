@@ -119,6 +119,48 @@ func TestOrCADReadsAsClaysNetlist(t *testing.T) {
 	}
 }
 
+// TestOrCADNamesNetsAsClaysNetlist holds the name of every net in Clay R6's read to the name
+// pstxnet.dat gives the same pins. Capture cuts a name at 31 characters for Allegro, and the board
+// carries the cut name too, so a netlist name that is the read's name cut there agrees. The read
+// keeps the design's own name. One net that no wire carries is listed, since Capture numbers it
+// some way still to find.
+func TestOrCADNamesNetsAsClaysNetlist(t *testing.T) {
+	top := clayR6 + "CLAYR6.DSN"
+	if _, err := os.Stat(top); err != nil {
+		t.Fatalf("Clay R6's design is missing; run `make samples-oracle`: %v", err)
+	}
+	d, err := (&Loader{}).ReadDesign(top)
+	if err != nil {
+		t.Fatal(err)
+	}
+	netOf := map[string]string{}
+	for name, pins := range designNets(d) {
+		for _, p := range pins {
+			netOf[p] = name
+		}
+	}
+	unexplained := map[string]string{"N0016014": "N12547"} // R27.2 and U7.31, pin to pin
+	compared, cut := 0, 0
+	for want, pins := range pstxnetNets(readPstxnet(t, clayR6+"pstxnet.dat")) {
+		if want == "NC" {
+			continue // the not-connected pins, which TestOrCADReadsAsClaysNetlist covers
+		}
+		compared++
+		got := netOf[pins[0]]
+		switch {
+		case got == want:
+		case len(got) > 31 && got[:31] == want:
+			cut++
+		case unexplained[want] == got:
+		default:
+			t.Errorf("the netlist names %s's net %s, and the read names it %q", pins[0], want, got)
+		}
+	}
+	if compared != 167 || cut != 24 {
+		t.Errorf("compared %d nets with %d cut at 31 characters, want 167 with 24", compared, cut)
+	}
+}
+
 // rowDiff is the rows only one side has, the netlist's first.
 func rowDiff(netlist, read []string) []string {
 	in := func(rows []string) map[string]bool {

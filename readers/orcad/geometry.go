@@ -374,6 +374,9 @@ func (f *flattener) sheet(g *geom.SchematicGeometry, v visit, defs map[string]bo
 	for _, p := range junctions(pg) {
 		s.Shapes = append(s.Shapes, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{gp(p)}})
 	}
+	for _, p := range noConnects(pg) {
+		s.Shapes = append(s.Shapes, noConnectMark(p)...)
+	}
 
 	for _, a := range pg.aliases {
 		s.Labels = append(s.Labels, &geom.Label{Text: a.text, Origin: gp(a.at), Height: d.lib.fontHeight(a.font),
@@ -481,7 +484,9 @@ func symbolLabel(sym pageSymbol, cs *symbol, height int64) *geom.Label {
 	return l
 }
 
-// blockPinLabel names a block pin inside the block, along the edge it sits on.
+// blockPinLabel names a block pin inside the block, along the edge it sits on. A name on the top or
+// bottom edge reads upward as drawn, which is 270 here as in the KiCad reader. The renderer turns a
+// label at 90 the other way up and swaps its justify, which ran these names out of the block.
 func blockPinLabel(name string, at, lo, hi point, height int64) *geom.Label {
 	const gap = 2
 	l := &geom.Label{Text: name, Height: height}
@@ -491,11 +496,35 @@ func blockPinLabel(name string, at, lo, hi point, height int64) *geom.Label {
 	case at.x >= hi.x:
 		l.Origin, l.Justify = gp(point{at.x - gap, at.y}), "right middle"
 	case at.y <= lo.y:
-		l.Origin, l.Justify, l.RotationDeg = gp(point{at.x, at.y + gap}), "right middle", 90
+		l.Origin, l.Justify, l.RotationDeg = gp(point{at.x, at.y + gap}), "right middle", 270
 	default:
-		l.Origin, l.Justify, l.RotationDeg = gp(point{at.x, at.y - gap}), "left middle", 90
+		l.Origin, l.Justify, l.RotationDeg = gp(point{at.x, at.y - gap}), "left middle", 270
 	}
 	return l
+}
+
+// noConnects are the connection points of the pins Capture flags not connected, where it draws a
+// cross. Clay's WiFi block flags MTMS and MTDI this way (agni issue 1413).
+func noConnects(pg *page) []point {
+	var out []point
+	for _, part := range pg.parts {
+		for _, pin := range part.pins {
+			if pin.index < 0 {
+				out = append(out, pin.at)
+			}
+		}
+	}
+	return out
+}
+
+// noConnectMark is the cross on a not-connected pin, two strokes through its point, as the KiCad
+// reader draws a no-connect.
+func noConnectMark(p point) []*geom.Shape {
+	const arm = 3 // 30 mil, about KiCad's 0.635 mm
+	return []*geom.Shape{
+		{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{gp(point{p.x - arm, p.y - arm}), gp(point{p.x + arm, p.y + arm})}},
+		{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{gp(point{p.x - arm, p.y + arm}), gp(point{p.x + arm, p.y - arm})}},
+	}
 }
 
 // junctions are the points where three or more wire ends meet, or where a wire ends on another

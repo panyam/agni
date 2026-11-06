@@ -195,6 +195,12 @@ message GetDesignResponse {
   // server writes it from the format registry (formats.Format.DrawnBy), so the viewer shows it as
   // sent and keeps no list of formats.
   string drawing_note = 14;
+  // flatten_reads_more is true when reading every block (--flatten-hierarchy, the viewer's
+  // ?flatten=1) would take in a block that unexpanded_hierarchy lists. It is false for a block whose
+  // file is missing or that places itself, since reading again cannot reach either (agni issue
+  // 1406). report.FlattenReadsMore decides it, so the viewer offers its "Read every block" button
+  // only where the button can help.
+  bool flatten_reads_more = 15;
 }
 
 message GetSheetRequest {

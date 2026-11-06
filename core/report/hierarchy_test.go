@@ -97,3 +97,28 @@ func TestMissingFileNoteNamesTheFile(t *testing.T) {
 		t.Errorf("two missing:\n got %q\nwant %q", got, want)
 	}
 }
+
+// TestFlattenReadsMoreOnlyForABlockTheTopLevelReadSkipped covers agni issue 1406. Reading every block
+// takes in a block the read skipped, and cannot reach one whose file is missing or that places
+// itself, so the viewer's button is offered for the first alone.
+func TestFlattenReadsMoreOnlyForABlockTheTopLevelReadSkipped(t *testing.T) {
+	block := func(r ir.UnexpandedReason) *ir.UnexpandedHierarchy {
+		return &ir.UnexpandedHierarchy{Name: "B", Reason: r}
+	}
+	missing, cycle := ir.UnexpandedReason_UNEXPANDED_REASON_FILE_MISSING, ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE
+	for _, c := range []struct {
+		blocks []*ir.UnexpandedHierarchy
+		want   bool
+	}{
+		{nil, false},
+		{[]*ir.UnexpandedHierarchy{block(ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED)}, true},
+		{[]*ir.UnexpandedHierarchy{block(ir.UnexpandedReason_UNEXPANDED_REASON_UNSPECIFIED)}, true},
+		{[]*ir.UnexpandedHierarchy{block(missing)}, false},
+		{[]*ir.UnexpandedHierarchy{block(cycle), block(missing)}, false},
+		{[]*ir.UnexpandedHierarchy{block(missing), block(ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED)}, true},
+	} {
+		if got := FlattenReadsMore(c.blocks); got != c.want {
+			t.Errorf("FlattenReadsMore(%v) = %v, want %v", c.blocks, got, c.want)
+		}
+	}
+}

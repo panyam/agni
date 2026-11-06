@@ -258,3 +258,39 @@ func TestProposeNamesADesignsSymbolLibraries(t *testing.T) {
 		t.Errorf("design.yaml:\n%s\nwant the symbols folder named once, and no footprint folder", y)
 	}
 }
+
+// A Capture design keeps each block in a .DSN of its own, named by a path relative to the file
+// that places it (agni issue 1406). A dropped Clay R6 folder is one design entered at CLAYR6.DSN
+// holding all eleven files, rather than eleven designs.
+func TestProposeAClayFolderAsOneCaptureDesign(t *testing.T) {
+	dir := filepath.Join("..", "tools", "samples", "cadence", "clay-r6")
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatalf("the samples corpus is missing (make samples-oracle): %v", err)
+	}
+	host := fshost.New(fshost.Mount{Name: "s", FS: withoutDescriptors{os.DirFS(dir)}})
+	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
+	r, err := svc.ProposeDesigns(context.Background(), &webapi.ProposeDesignsRequest{Uri: "mount://s"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entries []string
+	var top *webapi.ProposedDesign
+	for _, d := range r.GetDesigns() {
+		if e := d.GetDesign().GetEntryUri(); strings.HasSuffix(strings.ToLower(e), ".dsn") {
+			entries = append(entries, e)
+			top = d
+		}
+	}
+	if len(entries) != 1 || entries[0] != "mount://s/CLAYR6.DSN" {
+		t.Fatalf("designs entered at a .DSN: %v, want CLAYR6.DSN alone", entries)
+	}
+	var dsns []string
+	for _, f := range top.GetFiles() {
+		if strings.HasSuffix(strings.ToLower(f), ".dsn") {
+			dsns = append(dsns, f)
+		}
+	}
+	if len(dsns) != 11 {
+		t.Errorf("the design holds %d .DSN files, want the top and its ten blocks: %v", len(dsns), dsns)
+	}
+}

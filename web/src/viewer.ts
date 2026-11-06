@@ -27,7 +27,7 @@ import { sheetIdForNet } from "./netsheetguess.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
-import { hierarchyNote } from "./hierarchy.js";
+import { hierarchyNote, type HierarchyNote } from "./hierarchy.js";
 import { drawingNote } from "./drawingnote.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
@@ -146,7 +146,7 @@ export interface ViewSink {
   // hierarchyNote receives the server's sentence saying the read left hierarchical blocks out, or
   // null for a design read whole (agni issues 707, 717). The drawing and the counts look complete
   // either way, so this is the only thing on screen that says they cover the top level alone.
-  hierarchyNote: (note: string | null) => void;
+  hierarchyNote: (note: HierarchyNote | null) => void;
   // drawingNote receives the server's sentence saying agni laid the shown sheet out itself and which
   // file would draw it, or null on a drawn sheet or the board. The viewer offers no layout picker,
   // so this is how a reader learns the drawing is not the designer's.
@@ -817,7 +817,7 @@ export class ViewerPresenter {
       // Pushed with the summary because it is a property of THIS read, and a reader needs it before
       // trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
-      this.views.hierarchyNote(hierarchyNote(d.hierarchyNote));
+      this.views.hierarchyNote(hierarchyNote(d.hierarchyNote, d.flattenReadsMore));
       this.servedDrawingNote = d.drawingNote ?? "";
       // "" means the server could not hash the file, and it MUST NOT be read as agreement with a
       // link that named a revision; staleLinkNote keeps it a third state.

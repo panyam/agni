@@ -355,6 +355,7 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 			// The viewer's strip shows this sentence as sent, so the page and the CLI say it in one
 			// wording (agni issue 717).
 			resp.HierarchyNote = report.HierarchyNote(nu.Path, resp.UnexpandedHierarchy)
+			resp.FlattenReadsMore = report.FlattenReadsMore(resp.UnexpandedHierarchy)
 		}
 	}
 	return resp, nil

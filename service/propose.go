@@ -47,7 +47,8 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 }
 
 // ProposeFromFiles applies the grouping rules to a list of mount-relative file paths. read returns a
-// file's bytes, and is used only to find a KiCad sheet's child sheets.
+// file's bytes, and is used only to find a KiCad sheet's child sheets and a Capture design's block
+// files.
 //
 // The rules, in the order they claim files:
 //
@@ -69,6 +70,9 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 //     server it is not safe (agni 528).
 //   - A `.eds` with no netlist of its stem is a design of its own, with a note, since a drawing's
 //     counts are not a netlist's.
+//   - A file whose format places blocks from other files (an OrCAD `.DSN`, `formats.Format.Blocks`)
+//     that no other such file places is a root. It claims every block file it reaches, matched
+//     without case as the reader opens them, so a dropped Clay folder is one design, not eleven.
 //   - Any other file a reader opens is a design of its own. KiCad libraries belong to the KiCad
 //     design beside or above them.
 //   - Everything left is unread, with the reason.
@@ -87,6 +91,7 @@ func ProposeFromFiles(mount string, files []string, read func(string) ([]byte, e
 	p.edif()
 	p.kicad()
 	p.odbJobs()
+	p.blockDesigns()
 	p.loose()
 	p.libraries()
 	p.leftovers()
@@ -424,6 +429,74 @@ func (p *proposer) odbJobs() {
 			name = designID(path.Base(job))
 		}
 		p.addIn(dirOf(job), name, f, nil, nil, files, "")
+	}
+}
+
+// blockClosure is root and every file it reaches through its format's block references, among the
+// free files present. A reference matches a present file without regard to case, as the reader's
+// opener matches it, since Capture records the path as the machine that saved it spelled it.
+func (p *proposer) blockClosure(root string, byLower map[string]string) []string {
+	seen := map[string]bool{root: true}
+	out := []string{root}
+	for i := 0; i < len(out); i++ {
+		f := formats.ByExt(out[i])
+		if f == nil || f.Blocks == nil {
+			continue
+		}
+		b, err := p.read(out[i])
+		if err != nil {
+			continue
+		}
+		refs, err := f.Blocks(b)
+		if err != nil {
+			continue
+		}
+		for _, ref := range refs {
+			rel := strings.ReplaceAll(ref, "\\", "/")
+			if strings.HasPrefix(rel, "/") || (len(rel) > 1 && rel[1] == ':') {
+				continue // an absolute path, which the reader does not follow either
+			}
+			child, ok := byLower[strings.ToLower(path.Clean(joinPath(dirOf(out[i]), rel)))]
+			if ok && p.free(child) && !seen[child] {
+				seen[child] = true
+				out = append(out, child)
+			}
+		}
+	}
+	return out
+}
+
+// blockDesigns makes one design of each root among the files whose format places blocks from other
+// files, claiming the block files it reaches. A root is such a file that no other places.
+func (p *proposer) blockDesigns() {
+	byLower := map[string]string{}
+	var candidates []string
+	for _, f := range p.files {
+		byLower[strings.ToLower(f)] = f
+		if fm := formats.ByExt(f); fm != nil && fm.Blocks != nil && p.free(f) {
+			candidates = append(candidates, f)
+		}
+	}
+	closures := map[string][]string{}
+	placed := map[string]bool{}
+	for _, f := range candidates {
+		closures[f] = p.blockClosure(f, byLower)
+		for _, c := range closures[f][1:] {
+			placed[c] = true
+		}
+	}
+	for _, f := range candidates {
+		if placed[f] || !p.free(f) {
+			continue
+		}
+		var files []string
+		for _, c := range closures[f] {
+			if p.free(c) {
+				p.claim(c)
+				files = append(files, c)
+			}
+		}
+		p.add(f, nil, nil, files, "")
 	}
 }
 

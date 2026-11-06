@@ -8,6 +8,7 @@ type point struct{ x, y int32 }
 
 // wire is a wire on a page. net keys the page's net table. A bus wire is drawn and joins no net.
 type wire struct {
+	id   uint32 // the wire's own id; Capture numbers an unnamed net after the lowest on it
 	net  uint32
 	a, b point
 	bus  bool
@@ -163,8 +164,8 @@ func parsePage(b []byte, lib *library) (*page, error) {
 	}
 	for n := int(c.u16()); n > 0 && c.err == nil; n-- {
 		wf := c.frame()
-		c.u32() // the wire's own id
-		w := wire{net: c.u32(), bus: wf.typ == typeWireBus}
+		w := wire{id: c.u32()}
+		w.net, w.bus = c.u32(), wf.typ == typeWireBus
 		c.u32() // colour
 		w.a = point{c.i32(), c.i32()}
 		w.b = point{c.i32(), c.i32()}

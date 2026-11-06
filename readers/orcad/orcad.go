@@ -62,6 +62,35 @@ func Read(r io.Reader, sourceFile string, open Opener) (*ir.Design, error) {
 	return flatten(top, open)
 }
 
+// BlockFiles returns the design files b places as blocks, once each, by folder and page. Each is as
+// the design records it, relative to b's folder and possibly in Windows form. A block drawn from a
+// folder of b itself names no file and is left out. It reads the whole design, so a file that is
+// not a Capture design is an error.
+func BlockFiles(b []byte) ([]string, error) {
+	d, err := load(b, "design")
+	if err != nil {
+		return nil, err
+	}
+	folders := make([]string, 0, len(d.folders))
+	for f := range d.folders {
+		folders = append(folders, f)
+	}
+	sort.Strings(folders)
+	seen := map[string]bool{}
+	var out []string
+	for _, f := range folders {
+		for _, pg := range d.folders[f] {
+			for _, bl := range pg.blocks {
+				if bl.file != "" && !seen[bl.file] {
+					seen[bl.file] = true
+					out = append(out, bl.file)
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
 // IsDesign reports whether b is a compound file, which a Capture design is and a SPECCTRA
 // design (.dsn, plain text) is not.
 func IsDesign(b []byte) bool { return cfb.IsCompoundFile(b) }

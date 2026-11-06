@@ -65,6 +65,12 @@ type Format struct {
 	// drawing of, such as ".eds" for an EDIF netlist. The viewer's note on a computed layout names
 	// them (DrawnByExts). Empty when no format agni reads draws it, as for a board format.
 	DrawnBy []string
+	// Blocks returns the files a design file places as blocks, each as the file records it,
+	// relative to the file's own folder and possibly in Windows form (".\MPU9250\MPU9250.DSN").
+	// ProposeDesigns groups a dropped folder by it, so a block's file joins the design that places
+	// it rather than proposing a design of its own (agni issue 1406). nil when the format keeps a
+	// design in one file. An error says the bytes are not this format's design.
+	Blocks func(b []byte) ([]string, error)
 }
 
 // byExt is the registry. The built-in entries are defined in registry.go; an out-of-module

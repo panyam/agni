@@ -31,6 +31,16 @@ type netName struct {
 	depth  int
 	global bool
 	path   string // the block path a local name belongs to
+	isGen  bool   // Capture generated the name, since the net carries none of its own
+	gen    uint32 // a generated name's number
+}
+
+// generated is the name Capture gives a net that carries none, N and the number padded to five
+// digits. Capture numbers it from the lowest wire id on the net, so Clay's charger block names the
+// net on wires 299, 467 and 490 N00299. A net no wire carries is numbered from the page net id
+// its pins name; Capture names those some other way not yet found (agni issue 1406).
+func generated(id uint32, depth int, bpath string) netName {
+	return netName{name: fmt.Sprintf("N%05d", id), depth: depth, path: bpath, isGen: true, gen: id}
 }
 
 // placement is one placed part, resolved to its designator and its cached definitions.
@@ -195,8 +205,8 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 			}
 			node := fmt.Sprintf("w|%s|%d", pk, w.net)
 			f.sets.find(node)
-			if _, ok := f.genName[node]; !ok {
-				f.genName[node] = netName{name: fmt.Sprintf("N%05d", w.net), depth: depth, path: bpath}
+			if g, ok := f.genName[node]; !ok || w.id < g.gen {
+				f.genName[node] = generated(w.id, depth, bpath)
 			}
 			for _, nm := range pg.netName[w.net] {
 				f.sets.join(node, folderKey+strings.ToUpper(nm))
@@ -258,7 +268,7 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 					wnode := fmt.Sprintf("w|%s|%d", pk, pin.net)
 					f.sets.join(node, wnode)
 					if _, ok := f.genName[wnode]; !ok {
-						f.genName[wnode] = netName{name: fmt.Sprintf("N%05d", pin.net), depth: depth, path: bpath}
+						f.genName[wnode] = generated(pin.net, depth, bpath)
 					}
 					for _, nm := range pg.netName[pin.net] {
 						f.sets.join(node, folderKey+strings.ToUpper(nm))
@@ -602,18 +612,17 @@ func (f *flattener) nets(src string) []*ir.Net {
 			gen[root] = g
 		}
 	}
-	// The shallowest name wins, a power name over any local one, and the first by spelling breaks
-	// a tie, so a read names each net the same way every time.
+	// A power name wins, then the shallowest name, so a net a block labels CHG_IN takes the name the
+	// root gives it, generated or not, as Capture's netlist does (Clay's N08855). At one depth a
+	// label beats a generated name, and the lowest number or the first by spelling breaks a tie, so a
+	// read names each net the same way every time.
 	chosen := map[string]netName{}
 	for root := range members {
-		best, ok := netName{}, false
+		best, ok := gen[root]
 		for _, n := range names[root] {
 			if !ok || better(n, best) {
 				best, ok = n, true
 			}
-		}
-		if !ok {
-			best = gen[root]
 		}
 		if best.name == "" {
 			continue // a pin that touches nothing is unconnected, not a net of its own
@@ -653,6 +662,12 @@ func better(a, b netName) bool {
 	}
 	if a.depth != b.depth {
 		return a.depth < b.depth
+	}
+	if a.isGen != b.isGen {
+		return !a.isGen
+	}
+	if a.gen != b.gen {
+		return a.gen < b.gen
 	}
 	return a.name < b.name
 }

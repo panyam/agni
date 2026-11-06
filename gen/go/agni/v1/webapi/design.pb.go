@@ -406,9 +406,15 @@ type GetDesignResponse struct {
 	// draw them as the designer did. It is "" when the geometry tier carries its own drawing. The
 	// server writes it from the format registry (formats.Format.DrawnBy), so the viewer shows it as
 	// sent and keeps no list of formats.
-	DrawingNote   string `protobuf:"bytes,14,opt,name=drawing_note,json=drawingNote,proto3" json:"drawing_note,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DrawingNote string `protobuf:"bytes,14,opt,name=drawing_note,json=drawingNote,proto3" json:"drawing_note,omitempty"`
+	// flatten_reads_more is true when reading every block (--flatten-hierarchy, the viewer's
+	// ?flatten=1) would take in a block that unexpanded_hierarchy lists. It is false for a block whose
+	// file is missing or that places itself, since reading again cannot reach either (agni issue
+	// 1406). report.FlattenReadsMore decides it, so the viewer offers its "Read every block" button
+	// only where the button can help.
+	FlattenReadsMore bool `protobuf:"varint,15,opt,name=flatten_reads_more,json=flattenReadsMore,proto3" json:"flatten_reads_more,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetDesignResponse) Reset() {
@@ -537,6 +543,13 @@ func (x *GetDesignResponse) GetDrawingNote() string {
 		return x.DrawingNote
 	}
 	return ""
+}
+
+func (x *GetDesignResponse) GetFlattenReadsMore() bool {
+	if x != nil {
+		return x.FlattenReadsMore
+	}
+	return false
 }
 
 type GetSheetRequest struct {
@@ -2754,7 +2767,7 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x127\n" +
 	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
 	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
-	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\xdb\x04\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\x89\x05\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -2770,7 +2783,8 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x12*\n" +
 	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\x12%\n" +
 	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\x12!\n" +
-	"\fdrawing_note\x18\x0e \x01(\tR\vdrawingNote\"\xe3\x01\n" +
+	"\fdrawing_note\x18\x0e \x01(\tR\vdrawingNote\x12,\n" +
+	"\x12flatten_reads_more\x18\x0f \x01(\bR\x10flattenReadsMore\"\xe3\x01\n" +
 	"\x0fGetSheetRequest\x12\x1a\n" +
 	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
