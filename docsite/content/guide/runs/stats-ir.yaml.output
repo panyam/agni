@@ -74,5 +74,6 @@
     "prov": null
   },
   "hierarchyNote": "",
-  "drawingNote": ""
+  "drawingNote": "",
+  "flattenReadsMore": false
 }
