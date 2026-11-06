@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-05, at `b0340480`.
+Last pruned 2026-11-05, at `b062ed67`.
 
 ## At a glance
 
@@ -23,10 +23,11 @@ exercise run on the mission issue.
   (#1418), and the gate walks the cut and Clay. #1397 (the toolbar overflow and Jetson's 9 to 13 s
   board clicks) is next, then #1406 (OrCAD net names that match the board's) and #1401. #1419 is
   waiting. The mission still has to pass beside a real board.
-- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 9 of 10
-  closed, released in v0.5.0. Its closing run at `1b7426a4` passed on every sample board, and
-  agni-samples' `make serve` mounts `allegro/` and `altium/` (agni-samples #20). It closes once
-  someone opens a real board of their own in each format. #1355 holds the Allegro releases not read
+- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), 10 of 10
+  closed. `make exercise-allegro` and `make exercise-altium` pass at `b062ed67`, and agni-samples'
+  `make serve` mounts `allegro/` and `altium/` (agni-samples #20). No make target covers the
+  exercise's viewer step, and #1421 changed what it draws, since a turned part's lands on these
+  formats now turn with it. It closes once someone opens a real board of their own in each format. #1355 holds the Allegro releases not read
   yet: 17.4, 17.5, and pc069's magic `0x00150200`, which reads as "not an Allegro board".
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
   datasheet), 8 of 8 tickets closed, exercise last run at `aba62b48`, with many PRs merged since, so
@@ -41,10 +42,9 @@ exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: released v0.6.0 (the OrCAD Capture reader, #1405 and #1412, board layers, padstacks and
-  pours) and agni-samples v0.1.12 and v0.1.13, whose Clay R6 now reads from `CLAYR6.DSN` with its
-  board. #1388, #1399, #1400 and #1382 closed. KiCad 26003 asks KiCad's OrCAD importer to follow a
-  block kept in another `.DSN`.
+- This run: #1421 merged and closed #1407, the last ticket on #1353. A pad's angle now means the
+  footprint's frame in every reader and renderer (CLAUDE.md, "A pad's angle is in its footprint's
+  frame").
 
 ## Open, ranked
 

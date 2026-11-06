@@ -353,7 +353,12 @@ changes, the circuit, the hardware primer, prerequisite knowledge, then the revi
   them in a follow-up commit so they never reach `main`. Do it before the PR merges, so the image
   commit is in `main`'s history. If you add it after the merge, it lives only on the PR's branch
   (GitHub deletes a merged branch, so pushing recreates it). That branch then has to be kept, or the
-  image eventually stops resolving.
+  image eventually stops resolving. An orphan branch named `pr-assets/<PR>` that holds only the
+  images also works, at any time, and it too has to be kept (#1404 and #1421 did this).
+  ImageMagick cannot render agni's SVG (it fails on the font list), so lay the frames side by side
+  in an HTML page, serve it locally, and screenshot it in a browser. `BoardSVG` has no option to
+  show one layer, but each layer draws in its own `<g data-layer="...">`, so a `<style>` hiding the
+  others shows one.
 - **A rendering before/after carries a third frame, from the format's own tool, whenever one
   exists.** That means `kicad-cli sch export svg` or `pcb export svg` for KiCad, xschem and Lepton
   for their schematics through `make natrender`, and gerbv for Gerbers. Render the same fixture
