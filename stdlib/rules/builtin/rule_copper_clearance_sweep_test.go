@@ -17,17 +17,41 @@ import (
 )
 
 // allPairsClearance is copper-clearance as it was before the sweep (agni issue 963): every segment
-// against every other, in board order. It is the reference the sweep must agree with exactly.
+// against every other, in board order. It is the reference the sweep must agree with exactly. A
+// pour's edges are segments too, after the tracks, and copper inside another net's pour is found by
+// testing every pour (agni 1410).
 func allPairsClearance(m check.Model) []check.Verdict {
 	floor, floorDesc := floorFor(m, "clearance")
 	type flatSeg struct {
-		net string
-		s   check.BoardSeg
+		net  string
+		s    check.BoardSeg
+		edge bool
 	}
 	var segs []flatSeg
 	for _, bn := range m.BoardNets() {
 		for _, s := range bn.Segments {
 			segs = append(segs, flatSeg{net: bn.Net, s: s})
+		}
+	}
+	type pourRef struct {
+		net string
+		sh  check.BoardShape
+	}
+	var pours []pourRef
+	for _, bn := range m.BoardNets() {
+		for _, sh := range bn.Shapes {
+			if len(sh.Outline) < 3 {
+				continue
+			}
+			pours = append(pours, pourRef{bn.Net, sh})
+			for _, ring := range append([][]*geom.Point{sh.Outline}, sh.Holes...) {
+				for i := range ring {
+					a, b := ring[i], ring[(i+1)%len(ring)]
+					if a.X != b.X || a.Y != b.Y {
+						segs = append(segs, flatSeg{net: bn.Net, s: check.BoardSeg{Layer: sh.Layer, A: a, B: b}, edge: true})
+					}
+				}
+			}
 		}
 	}
 	type pairKey struct{ a, b string }
@@ -55,7 +79,11 @@ func allPairsClearance(m check.Model) []check.Verdict {
 				order = append(order, k)
 			}
 			gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
-			if gap >= floor-clearanceEpsilonNm {
+			tolerance := int64(clearanceEpsilonNm)
+			if a.edge || b.edge {
+				tolerance = pourEdgeToleranceNm
+			}
+			if gap >= floor-tolerance {
 				w.near++
 				continue
 			}
@@ -64,6 +92,47 @@ func allPairsClearance(m check.Model) []check.Verdict {
 				w.gap, w.at = gap, a.s.A
 			}
 		}
+	}
+	inPour := func(p pourRef, x, y int64) bool {
+		n := 0
+		for _, ring := range append([][]*geom.Point{p.sh.Outline}, p.sh.Holes...) {
+			for i := range ring {
+				if a, b := ring[i], ring[(i+1)%len(ring)]; (a.X != b.X || a.Y != b.Y) && rayCrosses(a, b, x, y) {
+					n++
+				}
+			}
+		}
+		return n%2 == 1
+	}
+	contained := func(net, layer string, x, y, gap int64, at *geom.Point) {
+		for _, p := range pours {
+			if p.net == net || p.sh.Layer != layer || !inPour(p, x, y) {
+				continue
+			}
+			k := pairKey{net, p.net}
+			if k.a > k.b {
+				k.a, k.b = k.b, k.a
+			}
+			w := pairs[k]
+			if w == nil {
+				w = &worst{gap: floor}
+				pairs[k] = w
+				order = append(order, k)
+			}
+			w.count++
+			if w.at == nil || gap < w.gap {
+				w.gap, w.at = gap, at
+			}
+		}
+	}
+	for _, f := range segs {
+		if !f.edge {
+			mx, my := (f.s.A.X+f.s.B.X)/2, (f.s.A.Y+f.s.B.Y)/2
+			contained(f.net, f.s.Layer, mx, my, -f.s.Width/2, &geom.Point{X: mx, Y: my})
+		}
+	}
+	for _, p := range pours {
+		contained(p.net, p.sh.Layer, p.sh.Outline[0].X, p.sh.Outline[0].Y, 0, p.sh.Outline[0])
 	}
 	sort.Slice(order, func(i, j int) bool {
 		if order[i].a != order[j].a {
@@ -124,12 +193,38 @@ func denseBoard(seed int64, n int) *geom.BoardGeometry {
 	return g
 }
 
+// pouredBoard is denseBoard with pours: a rectangle per net on some layers, with a few rectangular
+// holes, some of them around another net's tracks and some overlapping other pours (agni 1410).
+func pouredBoard(seed int64, n int) *geom.BoardGeometry {
+	g := denseBoard(seed, n)
+	r := rand.New(rand.NewSource(seed + 1000))
+	layers := []string{"F.Cu", "In1.Cu", "B.Cu"}
+	rect := func(x0, y0, x1, y1 int64) *geom.Polyline {
+		return &geom.Polyline{Points: []*geom.Point{{X: x0, Y: y0}, {X: x1, Y: y0}, {X: x1, Y: y1}, {X: x0, Y: y1}}}
+	}
+	for _, nc := range g.Nets {
+		if r.Intn(3) != 0 {
+			continue
+		}
+		x, y := int64(r.Intn(30))*150_000, int64(r.Intn(30))*150_000
+		w, h := int64(r.Intn(10)+3)*150_000, int64(r.Intn(10)+3)*150_000
+		sh := &geom.CopperShape{Layer: layers[r.Intn(len(layers))], Outline: rect(x, y, x+w, y+h)}
+		for k := 0; k < r.Intn(4); k++ {
+			hx, hy := x+int64(r.Intn(int(w/150_000)))*150_000+30_000, y+int64(r.Intn(int(h/150_000)))*150_000+30_000
+			sh.Holes = append(sh.Holes, rect(hx, hy, hx+90_000, hy+90_000))
+		}
+		nc.Shapes = append(nc.Shapes, sh)
+	}
+	return g
+}
+
 // TestTheSweepMeasuresWhatEveryPairMeasured holds the sweep to the all-pairs walk, verdict for
 // verdict and word for word, on random crowded boards and on the Jetson baseboard.
 func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 	boards := map[string]*geom.BoardGeometry{}
 	for seed := int64(1); seed <= 25; seed++ {
 		boards[fmt.Sprintf("dense-%d", seed)] = denseBoard(seed, 400)
+		boards[fmt.Sprintf("poured-%d", seed)] = pouredBoard(seed, 400)
 	}
 	const jetson = "../../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
 	f, err := os.Open(jetson)
@@ -163,6 +258,28 @@ func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 	if fails < 100 || passes < 100 {
 		t.Fatalf("the boards compared gave %d failing and %d passing pairs, too few to prove the sweep", fails, passes)
 	}
+	// And the pours count. Nearly every pair of nets on these crowded boards fails on its tracks
+	// alone, so the control counts the places under the floor, which the pours' edges and insides add
+	// to, rather than the failing pairs.
+	more := 0
+	for seed := int64(1); seed <= 25; seed++ {
+		count := func(g *geom.BoardGeometry) int {
+			n := 0
+			for _, v := range copperClearanceVerdicts(context.Background(), check.NewModel(&ir.Design{}, check.WithBoard(g))) {
+				for _, term := range v.Witness.Terms {
+					if term.Label == "places under the floor" {
+						k, _ := strconv.Atoi(term.Value)
+						n += k
+					}
+				}
+			}
+			return n
+		}
+		more += count(pouredBoard(seed, 400)) - count(denseBoard(seed, 400))
+	}
+	if more < 500 {
+		t.Fatalf("the pours added %d places under the floor across the boards, too few to prove the pour edges are measured", more)
+	}
 }
 
 // agni issue 1070: asked about some nets, the rule measures only their segments' neighbours, and its
@@ -171,8 +288,12 @@ func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 // be measured from both ends.
 func TestAScopedSweepGivesTheFullSweepsVerdictsAboutItsNets(t *testing.T) {
 	asked, both := 0, 0
-	for seed := int64(1); seed <= 25; seed++ {
-		m := check.NewModel(&ir.Design{}, check.WithBoard(denseBoard(seed, 400)))
+	for seed := int64(1); seed <= 50; seed++ {
+		board := denseBoard(seed, 400)
+		if seed > 25 {
+			board = pouredBoard(seed, 400) // agni 1410: a pour's net in scope measures its edges and its insides
+		}
+		m := check.NewModel(&ir.Design{}, check.WithBoard(board))
 		full := copperClearanceVerdicts(context.Background(), m)
 		for _, nets := range [][]string{{"N1"}, {"N2", "N3"}, {"N4", "N5", "N6"}, {"N0", "N11"}} {
 			es := make([]check.Entity, len(nets))
