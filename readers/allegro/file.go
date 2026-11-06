@@ -67,6 +67,7 @@ const (
 	tagLineV      = 0x17
 	tagNet        = 0x1B
 	tagPadstack   = 0x1C
+	tagMatchGroup = 0x26
 	tagShape      = 0x28
 	tagRect       = 0x24
 	tagLayerList  = 0x2A

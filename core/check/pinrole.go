@@ -85,14 +85,15 @@ func IsPassiveClass(c ComponentClass) bool {
 }
 
 // formatTypesPowerOut reports whether a source format's reader classifies power-OUTPUT pins. EDIF
-// carries only INPUT/OUTPUT/INOUT (no power_out) and IPC-2581 is a board format with no pin electrical
-// types; every other reader (KiCad, gEDA, xschem) types power outputs. power-input-not-driven gates
+// carries only INPUT/OUTPUT/INOUT (no power_out). IPC-2581 and an Allegro .brd are board formats
+// with no pin electrical types (agni issue 1361). Every other reader (KiCad, gEDA, xschem) types
+// power outputs. power-input-not-driven gates
 // on it. That rule infers "unpowered" from the absence of a typed driver. On a format that types no
 // power outputs, a rail's driver reads as a plain input, so the absence is meaningless.
 // Prefix-matched because SourceFormat includes a version ("edif-2.0.0"). WS3-072 PR2 stamps the
 // power_IN side; the symmetric power_out stamp (PR3) lifts this gate.
 func formatTypesPowerOut(sourceFormat string) bool {
-	return !strings.HasPrefix(sourceFormat, "edif") && !strings.HasPrefix(sourceFormat, "ipc")
+	return !strings.HasPrefix(sourceFormat, "edif") && !strings.HasPrefix(sourceFormat, "ipc") && sourceFormat != "allegro"
 }
 
 // classifyPinRole derives a pin's role from its declared name, gated by device class for

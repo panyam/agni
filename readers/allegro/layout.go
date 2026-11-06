@@ -51,7 +51,10 @@ type layout struct {
 
 	padRot int // a footprint pad's (0x0D) rotation
 
-	netAssign int // a net's (0x1B) first assignment
+	netAssign int // a net's (0x1B) first assignment; its fields follow at +8 and its match group at +12
+
+	mgGroup     int // a match group's (0x26) table (0x2C), or another 0x26 that names it
+	tableFields int // a table's (0x2C) first field (0x03)
 
 	trackSegs  int // a track's (0x05) first segment
 	segWidth   int // a line's or arc's width; start, end, centre and radius follow from it
@@ -101,7 +104,8 @@ var layout172 = &layout{
 	pinNumName: 20,
 	padRot:     40,
 	netAssign:  28,
-	trackSegs:  56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
+	mgGroup:    16, tableFields: 32,
+	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
 	rectCoords: 24,
 	viaX:       32, viaPadstack: 44,
@@ -134,7 +138,8 @@ var layout166 = &layout{
 	pinNumName: 16,
 	padRot:     36,
 	netAssign:  24,
-	trackSegs:  48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
+	mgGroup:    12, tableFields: 24,
+	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
 	rectCoords: 20,
 	viaX:       24, viaPadstack: 36,

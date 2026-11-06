@@ -14,17 +14,19 @@
 // value and its device type. Each component definition (0x06) is a part type named by its device
 // type, and its pins carry the names Allegro stores, read through each placed pad's pin number
 // (0x08) and pin name (0x11) (agni issue 1361). No pin is typed, and a power or ground pin flag is
-// not read yet. The
-// board geometry carries the copper layer stack renamed into the contract's F.Cu/In<n>.Cu/B.Cu
+// not read yet. The board geometry carries the copper layer stack renamed into the contract's
+// F.Cu/In<n>.Cu/B.Cu
 // vocabulary, placements with footprint-local pads sized from the first copper layer of their
 // padstack, each padstack's pad, thermal relief and antipad on every copper layer (agni 1356), ETCH
 // tracks with their arcs kept as arcs, vias with their span, ETCH shapes as copper shapes with
 // their voids as holes (agni 1357), zone boundary outlines with their nets, the board outline, and
-// silkscreen and assembly graphics and text. A board with no outline of its own takes the outline
-// rectangle of a placed mechanical symbol. Each padstack shape keeps its offset from the pad, and a
+// silkscreen and assembly graphics and text. Each named physical constraint set (0x1D) is a net
+// class with its minimum track width, the narrowest on any layer and each layer's own where they
+// differ, and each net is in the set it or its match group names (agni issue 1359). A board with no
+// outline of its own takes the outline rectangle of a placed mechanical symbol. Each padstack shape keeps its offset from the pad, and a
 // pad Allegro draws as a shape symbol reads as custom with the shape's outline (agni 1407). An ETCH
-// shape on no net, the flash a thermal relief names, constraint sets (1359), match groups (1360),
-// keepouts and teardrops are not kept.
+// shape on no net, the flash a thermal relief names, a constraint set's clearance and pair gap,
+// match groups as pairs (1360), keepouts and teardrops are not kept.
 // Arcs in shape outlines and voids are approximated by chords. Coordinates are integer nanometres
 // (unit_nm=1), in Allegro's own Y-up frame.
 package allegro

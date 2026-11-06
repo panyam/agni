@@ -218,6 +218,13 @@ func (p *board) toDesign(src string) *ir.Design {
 		d.Libraries = []*ir.PartLibrary{lib}
 	}
 
+	sets := p.constraintSets()
+	setName := map[uint32]string{}
+	for _, s := range sets {
+		setName[s.key] = s.name
+	}
+	d.Constraints = append(d.Constraints, netClassDefs(sets, p.copperLayers())...)
+
 	// A net is built from the placed pads on it, as the ODB++ and KiCad board readers build one. An
 	// unnamed net holds an unconnected pin, so it is left out and the pin reads as unconnected.
 	p.list(listNets, func(net int) {
@@ -226,6 +233,9 @@ func (p *board) toDesign(src string) *ir.Design {
 			return
 		}
 		n := &ir.Net{Name: name, Prov: prov()}
+		if key, ok := p.netConstraintSet(net); ok && setName[key] != "" {
+			n.NetClasses = []string{setName[key]}
+		}
 		seen := map[string]bool{}
 		netKey := p.u32(net, 4)
 		p.chain(p.u32(net, p.l.netAssign), netKey, next8, func(asg int) {

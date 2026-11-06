@@ -25,6 +25,12 @@ func TestAvailableCapability(t *testing.T) {
 	if ok, reason := Available(ncRule, edif); ok || reason == "" {
 		t.Errorf("nc rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
+	// agni issue 1361: an Allegro board names its pins and types none of them.
+	allegro := NewModel(&ir.Design{SourceFormat: "allegro",
+		Nets: []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}}})
+	if ok, reason := Available(powerRule, allegro); ok || reason == "" {
+		t.Errorf("power rule on Allegro: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
 
 	// KiCad source types power outputs; a no-connect-flagged net gives the no-connect channel.
 	kicad := NewModel(&ir.Design{SourceFormat: "kicad-sch",
