@@ -84,3 +84,76 @@ func TestWalkCLIRefusesAStartTheDesignLacks(t *testing.T) {
 		t.Errorf("an unknown kind: err = %v", err)
 	}
 }
+
+// A pin goal asked from a pin start's own net routes as trace does between the same two pins, and
+// the other two goals answer from the fixture's I2C pull-up.
+func TestWalkCLIGoalRoutesAsTraceDoes(t *testing.T) {
+	out, err := runWalk(t, traceFixtureSch, "--from", "J1.1", "--goal", "pin", "--to", "U1.1", "--format", "json")
+	if err != nil {
+		t.Fatalf("walk: %v\n%s", err, out)
+	}
+	w := &webapi.Walk{}
+	if err := protojson.Unmarshal([]byte(out), w); err != nil {
+		t.Fatal(err)
+	}
+	trOut, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--format", "json")
+	if err != nil {
+		t.Fatalf("trace: %v\n%s", err, trOut)
+	}
+	tr := &webapi.Trace{}
+	if err := protojson.Unmarshal([]byte(trOut), tr); err != nil {
+		t.Fatal(err)
+	}
+	g := w.GetGoal()
+	if g.GetOutcome() != webapi.TraceOutcome_TRACE_OUTCOME_ROUTED || len(g.GetRoutes()) != 1 {
+		t.Fatalf("goal %v, want one route", g)
+	}
+	r := g.GetRoutes()[0]
+	for _, n := range r.GetNets() {
+		if len(n.GetSheetIds()) == 0 {
+			t.Errorf("route net %s carries no sheet ids", n.GetName())
+		}
+	}
+	if len(g.GetTo().GetSheetIds()) == 0 {
+		t.Errorf("the goal pin carries no sheet ids: %v", g.GetTo())
+	}
+	if len(r.GetCrossings()) != len(tr.GetCrossings()) || len(r.GetNets()) != len(tr.GetNets()) {
+		t.Fatalf("goal crossed %d parts over %d nets, trace %d over %d", len(r.GetCrossings()), len(r.GetNets()), len(tr.GetCrossings()), len(tr.GetNets()))
+	}
+	for i, c := range r.GetCrossings() {
+		if c.GetRefDes() != tr.GetCrossings()[i].GetRefDes() || r.GetNets()[i].GetName() != tr.GetNets()[i].GetName() {
+			t.Errorf("step %d: goal %s on %s, trace %s on %s", i, c.GetRefDes(), r.GetNets()[i].GetName(), tr.GetCrossings()[i].GetRefDes(), tr.GetNets()[i].GetName())
+		}
+	}
+
+	for goal, want := range map[string]string{
+		"pull-up": "goal to the pull-up, from /SDA\n  route 1: /SDA -> [R1] -> +3V3\n",
+		"rail":    "goal to the rail, from /SDA\n  route 1: /SDA -> [R1] -> +3V3\n",
+	} {
+		out, err := runWalk(t, traceFixtureSch, "--from", "U2.3", "--goal", goal)
+		if err != nil || !strings.Contains(out, want) {
+			t.Errorf("--goal %s: err %v, want %q in\n%s", goal, err, want, out)
+		}
+	}
+}
+
+// A goal naming nothing is a failed question and exits non-zero. A goal with no route is an answer.
+func TestWalkCLIGoalKeepsItsOutcomesApart(t *testing.T) {
+	out, err := runWalk(t, traceFixtureSch, "--from", "J1", "--goal", "pin", "--to", "U1.1", "--at", "/NOPE")
+	if err == nil || !strings.Contains(err.Error(), "did not reach a net /NOPE") {
+		t.Errorf("an unreached net: err = %v\n%s", err, out)
+	}
+	out, err = runWalk(t, traceFixtureSch, "--from", "U2.3", "--goal", "pin", "--to", "TP2.1")
+	if err != nil || !strings.Contains(out, "  no route: no series path from /SDA to GND") {
+		t.Errorf("no route: err = %v\n%s", err, out)
+	}
+	if _, err := runWalk(t, traceFixtureSch, "--from", "J1", "--goal", "pin"); err == nil || !strings.Contains(err.Error(), "--to") {
+		t.Errorf("a pin goal without --to: err = %v", err)
+	}
+	if _, err := runWalk(t, traceFixtureSch, "--from", "J1", "--at", "/VBUS"); err == nil || !strings.Contains(err.Error(), "--goal") {
+		t.Errorf("--at without --goal: err = %v", err)
+	}
+	if _, err := runWalk(t, traceFixtureSch, "--from", "J1", "--goal", "ground"); err == nil || !strings.Contains(err.Error(), "unknown walk goal") {
+		t.Errorf("an unknown goal: err = %v", err)
+	}
+}

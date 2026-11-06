@@ -211,8 +211,25 @@ var WalkBoundaryColumns = []webapi.TableColumn{
 	{Name: "reason"},
 }
 
-// WalkTables returns a walk's nets in the order it reached them, and the parts it left at the
-// boundary.
+// WalkGoalColumns is the walk_goal table's header, one row per net of each route a goal found.
+// route numbers the routes from 1 and step the nets along one from 0. through, enter_pin and exit_pin
+// say how the route entered the net. A goal with no route writes one row with its outcome and reason
+// and the rest empty, so a "no route" answer is never an empty file.
+var WalkGoalColumns = []webapi.TableColumn{
+	{Name: "outcome"},
+	{Name: "reason"},
+	{Name: "route", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "step", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "net", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "through", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "enter_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "exit_pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "parts", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "note"},
+}
+
+// WalkTables returns a walk's nets in the order it reached them, the parts it left at the boundary,
+// and its goal's routes. The walk_goal table has no rows when the walk asked no goal.
 func WalkTables(w *webapi.Walk) []*webapi.Table {
 	nets := &webapi.Table{Name: "walk", Columns: columns(WalkColumns)}
 	for _, n := range w.GetNets() {
@@ -243,7 +260,37 @@ func WalkTables(w *webapi.Walk) []*webapi.Table {
 			CellKinds: []string{"", check.KindComponent, "", check.KindNet, ""},
 		})
 	}
-	return []*webapi.Table{nets, edge}
+	return []*webapi.Table{nets, edge, walkGoalTable(w.GetGoal())}
+}
+
+func walkGoalTable(g *webapi.WalkGoalAnswer) *webapi.Table {
+	t := &webapi.Table{Name: "walk_goal", Columns: columns(WalkGoalColumns)}
+	if g == nil {
+		return t
+	}
+	outcome := string(traceOutcomeFromProto(g.GetOutcome()))
+	if len(g.GetRoutes()) == 0 {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: []string{outcome, g.GetReason(), "", "", "", "", "", "", "", ""}, CellKinds: make([]string, len(WalkGoalColumns))})
+		return t
+	}
+	for i, r := range g.GetRoutes() {
+		for j, n := range r.GetNets() {
+			var parts []string
+			for _, st := range n.GetStubs() {
+				parts = append(parts, st.GetRefDes()+"."+st.GetPin())
+			}
+			cells := []string{outcome, g.GetReason(), strconv.Itoa(i + 1), strconv.Itoa(j), n.GetName(), "", "", "", strings.Join(parts, rpt.MultiValueSep), r.GetNote()}
+			kinds := make([]string, len(WalkGoalColumns))
+			kinds[4] = check.KindNet
+			if j > 0 && j-1 < len(r.GetCrossings()) {
+				c := r.GetCrossings()[j-1]
+				cells[5], cells[6], cells[7] = c.GetRefDes(), c.GetEnterPin(), c.GetExitPin()
+				kinds[5] = check.KindComponent
+			}
+			t.Rows = append(t.Rows, &webapi.TableRow{Cells: cells, CellKinds: kinds})
+		}
+	}
+	return t
 }
 
 // ReviewColumns is the review table's header. findings names each firing behind an item as

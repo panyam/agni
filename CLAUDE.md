@@ -395,7 +395,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   lexicon's `pin.through_pair` (`A{n}`/`B{n}`, `{n}A`/`{n}Y`, `SDA1`/`SDA2`, agni 1338), so a
   translator walks one channel rather than every pin. An unpaired pin of a paired part crosses
   nothing, and only the crossed channel counts as crossed. A part that crosses into a net reached
-  already is recorded in `also_entered`, so a drawing of the walk can light it.
+  already is recorded in `also_entered`, so a drawing of the walk can light it. **A walk takes a
+  goal question** (`--goal pin|pull-up|rail`, `WalkGoal` on the request, agni 1340) from a net it
+  reached (`--at`). Each route runs from the start along the walk to that net, then on through
+  trace's series walk or the pull-up rule's own search, so a goal never has an engine of its own.
+  The answer keeps trace's three outcomes, and only an unresolved goal exits non-zero.
 - **A rule NAME that the catalog lacks is refused** (agni 1121, `check.Catalog.CheckNames`), by
   `--rule`, `CheckDesign` and `GetCheckReport` alike, with the nearest names offered and a
   superseded rule named as superseded. Before, it ran nothing and answered an empty run that read as
@@ -1391,9 +1395,10 @@ ticket closed by a PR that never touched the walk, which is how #1326 closed whi
 read its steps "not available". The gate runs offline and skips that half.
 #1337 `mission_walk` (click one part and walk outwards) is open, and `make exercise-walk` is its
 exercise (agni 1338). Each step has an engine row that asks `WalkDesign` and a viewer row that
-drives the Trace tab's walk (agni 1341) by the names `web/browser/walk-mission.spec.ts` lists. Only
-the goal steps wait, on #1340. The gate walks the cut from R119, and `WALK_DESIGN=jetson` walks from
-R361, since every pull-up on U80's 1.8 V side is do-not-populate. #1194
+drives the Trace tab's walk (agni 1341) by the names `web/browser/walk-mission.spec.ts` lists. No
+step waits since #1340 added the goal questions. The gate walks the cut from R119, and
+`WALK_DESIGN=jetson` walks from R361, since every pull-up on U80's 1.8 V side is do-not-populate.
+The cut holds no pull-up, so its pull-up step expects no route. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
 active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
 a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni

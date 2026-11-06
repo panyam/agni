@@ -373,6 +373,55 @@ message WalkDesignRequest {
   // through names parts to cross whatever the kind's rule says, such as one IC a reader wants to
   // walk past.
   repeated string through = 5;
+  // goal asks a goal question from a net the walk reached (agni issue 1340). The answer is in
+  // Walk.goal. Unset asks none.
+  WalkGoal goal = 6;
+}
+
+// WalkGoal is a goal question asked from a walk: to a pin, to the pull-up, or to the rail.
+message WalkGoal {
+  // kind is "pin", "pull-up" or "rail". Any other is InvalidArgument.
+  string kind = 1;
+  // at names the net the question starts from, which must be a net the walk reached. Empty takes
+  // the start pin's net, or a part start's first own net that is not a rail, a ground or global.
+  string at = 2;
+  // to is the pin a "pin" goal routes to. Its pin may be a designator or a functional name, as in
+  // TraceDesign.
+  TraceEndpoint to = 3;
+  // hops bounds a "pin" or "rail" route from `at`, 0 taking trace's default. A "pull-up" goal
+  // searches as far as the net's pull-up reach, as the pull-up rule does.
+  int32 hops = 4;
+}
+
+// WalkGoalAnswer answers a goal question. It keeps trace's three outcomes apart: TRACE_OUTCOME_ROUTED
+// with routes, TRACE_OUTCOME_NO_ROUTE when nothing lies within the radius, and
+// TRACE_OUTCOME_UNRESOLVED when `at` is a net the walk never reached or `to` names nothing.
+message WalkGoalAnswer {
+  string kind = 1;
+  // at is the net the question was asked from, as resolved.
+  string at = 2;
+  // to is the pin a "pin" goal resolved to, with its net.
+  TraceEnd to = 3;
+  TraceOutcome outcome = 4;
+  // reason says why, for no-route and unresolved. Empty for a route.
+  string reason = 5;
+  // radius is the bound searched from `at`, crossings for a pin or rail, hops for a pull-up.
+  int32 radius = 6;
+  // routes are the routes found. A pull-up goal has one per pull-up resistor, in the pull-up
+  // rule's order; a pin or rail goal has one.
+  repeated WalkRoute routes = 7;
+}
+
+// WalkRoute is one route a goal found. It runs from the walk's start along the walk's own path to
+// `at`, then on to the goal, so it extends the walk.
+message WalkRoute {
+  repeated TraceCross crossings = 1;
+  repeated TraceNet nets = 2;
+  // ends_at is the net the route reaches: the pin's net, or the rail.
+  string ends_at = 3;
+  // note says how a route with no crossing reached its goal, such as a pull-up a part's datasheet
+  // puts inside the part.
+  string note = 4;
 }
 
 message WalkDesignResponse {
@@ -395,6 +444,8 @@ message Walk {
   repeated WalkBoundary boundary = 6;
   // elided counts the nets a hop left out under its kind's cap.
   repeated WalkElided elided = 7;
+  // goal answers the request's goal question, and is unset when it asked none.
+  WalkGoalAnswer goal = 8;
 }
 
 // WalkNet is one net a walk reached.

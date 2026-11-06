@@ -3,16 +3,18 @@
 // from where the walk has reached.
 //
 // Each step runs twice. Its engine row asks WalkDesign (agni issue 1339) over the same Connect API the
-// viewer calls. Its viewer row drives the page through the names below, which #1341 built, and the
-// goal steps wait on #1340. As in the cross-probe walk, a waiting row that fails reads "not available", and
-// a waiting row that passes FAILS the walk (exercise-report.ts, waitedOn), so the PR that makes a
-// row pass also removes its wait here.
+// viewer calls. Its viewer row drives the page through the names below, which #1341 and #1340 built.
+// As in the cross-probe walk, a waiting row that fails reads "not available", and a waiting row that
+// passes FAILS the walk (exercise-report.ts, waitedOn), so the PR that makes a row pass also removes
+// its wait here.
 //
 // The viewer rows drive the walk through these names:
 // - a part's Properties offers each walk kind as [data-action="walk"][data-walk-kind="<kind>"]
 // - the Trace tab lists the walk's nets as [data-walk-net="<net>"][data-hop="<n>"]
 // - [data-action="walk-wider"] widens the walk by one hop
-// - #1340's goal questions are [data-action="walk-goal"][data-goal="pull-up" | "pin"]
+// - #1340's goal questions are [data-action="walk-goal"][data-goal="pull-up" | "rail" | "pin"], asked from
+//   the net [data-walk-at] picks, a pin goal naming its pin in [data-walk-goal-to]. The answer is
+//   .walk-goal[data-goal-outcome], each route's one line in .walk-route-line.
 // A ticket that names them differently changes them here in the same PR.
 //
 // `make exercise-walk` tells the walk which of the tickets it waits on are closed (CLOSED_TICKETS,
@@ -20,7 +22,8 @@
 // cut of Jetson (examples/cross-probe-project) from R119, an LED's resistor whose walk widens over
 // three hops. `make exercise-walk WALK_DESIGN=jetson` walks the whole board from R361, the fitted
 // pull-up on the 3.3 V side of the connector I2C bus, whose second hop crosses the level translator
-// U80 by its B4/A4 pin pair alone. The run writes
+// U80 by its B4/A4 pin pair alone. Its pull-up goal finds R361 itself on the connector side, and its
+// pin goal routes back across U80 to the module's own pin. The run writes
 // the step table and a screenshot per step to EXERCISE_OUT.
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -45,6 +48,10 @@ const walks = {
     sheet: "USB Debug, PD",
     // A part the second hop crosses, which names the hop the reader sees grow.
     paired: "",
+    // The goal questions. The cut holds no pull-up, so "to the pull-up" answers no route. A pin goal's
+    // route past `at` must match agni trace from traceFrom, the pin the walk entered `at` through.
+    pullUp: { at: "", want: "no-route", via: "" },
+    pin: { at: "Net-(D20-A)", to: "D21.2", traceFrom: "R119.1" },
   },
   jetson: {
     mount: "jetson",
@@ -54,6 +61,8 @@ const walks = {
     start: "R361",
     sheet: "SoM_IO",
     paired: "U80",
+    pullUp: { at: "", want: "routed", via: "R361" },
+    pin: { at: "/SoM_IO/I2C5_SDA_1V8", to: "J1.C53", traceFrom: "U80.5" },
   },
 };
 const which = (process.env.WALK_DESIGN || "cut") as keyof typeof walks;
@@ -67,11 +76,34 @@ interface WalkNet {
   net: { name: string };
   entered: { refDes: string; enterPin?: string; exitPin?: string; paired?: boolean };
 }
+interface Route {
+  nets?: { name: string }[];
+  crossings?: { refDes: string }[];
+  endsAt?: string;
+}
+interface Goal {
+  outcome?: string;
+  reason?: string;
+  at?: string;
+  routes?: Route[];
+}
 interface Walk {
   nets?: WalkNet[];
   boundary?: { refDes: string }[];
   reason?: string;
+  goal?: Goal;
 }
+
+// routeLine spells a route as the engine's RenderRoute and the Trace tab do, "SDA -> [R1] -> +3V3".
+function routeLine(r: Route): string {
+  const nets = (r.nets ?? []).map((n) => n.name);
+  const parts = [nets[0] ?? ""];
+  (r.crossings ?? []).forEach((c, i) => parts.push(`[${c.refDes}]`, nets[i + 1] ?? ""));
+  return parts.join(" -> ");
+}
+
+// outcomeName reads a goal's outcome as the Trace tab names it.
+const outcomeName = (o?: string): string => ({ TRACE_OUTCOME_ROUTED: "routed", TRACE_OUTCOME_NO_ROUTE: "no-route", TRACE_OUTCOME_UNRESOLVED: "unresolved" })[o ?? ""] ?? String(o);
 
 // rpc asks the server a Connect question in JSON, as the viewer's client does.
 async function rpc<T>(method: string, body: unknown): Promise<T> {
@@ -94,6 +126,28 @@ async function walkOf(hops: number): Promise<Walk> {
   const r = await rpc<{ walk: Walk }>("DesignService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops });
   if (r.walk.reason) throw new Error(`the walk did not start: ${r.walk.reason}`);
   return r.walk;
+}
+
+// goalOf asks a goal question from the three-hop walk.
+async function goalOf(goal: { kind: string; at: string; to?: string }): Promise<Goal> {
+  await walkOf(1);
+  const [ref, pin] = (goal.to ?? "").split(".");
+  const body = { kind: goal.kind, at: goal.at, ...(goal.to ? { to: { refDes: ref, pin } } : {}) };
+  const r = await rpc<{ walk: Walk }>("DesignService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops: 3, goal: body });
+  if (!r.walk.goal) throw new Error("the walk answered no goal");
+  return r.walk.goal;
+}
+
+// askGoal asks a goal question in the Trace tab and reads the answer: its outcome and each route's line.
+async function askGoal(page: Page, goal: string, at: string, to = ""): Promise<{ outcome: string; routes: string[] }> {
+  if (at) await page.locator("[data-walk-at]").selectOption(at, { timeout: 10_000 });
+  if (to) await page.locator("[data-walk-goal-to]").fill(to, { timeout: 10_000 });
+  await (await control(page, `[data-action="walk-goal"][data-goal="${goal}"]`)).click({ timeout: 10_000 });
+  await page.waitForFunction((g) => !document.querySelector(".walk-loading") && document.querySelector(`.walk-goal[data-goal-kind="${g}"][data-goal-outcome]`), goal, { timeout: 30_000 });
+  return page.evaluate(() => ({
+    outcome: document.querySelector(".walk-goal")?.getAttribute("data-goal-outcome") ?? "",
+    routes: [...document.querySelectorAll(".walk-goal .walk-route-line")].map((e) => e.textContent ?? ""),
+  }));
 }
 
 // shape is what two answers to one walk must share: each net with its hop and the part it was
@@ -264,13 +318,43 @@ describe("the walk mission", () => {
       });
 
       // Steps 3 and 4. A goal question from where the walk has reached.
-      await step("3. to the pull-up", { waitsOn: ["#1340"], needs: ["2. widen (viewer)"] }, async () => {
-        await (await control(page, '[data-action="walk-goal"][data-goal="pull-up"]')).click({ timeout: 10_000 });
-        return "the walk shows the route to the pull-up and its rail";
+      let pullUp: Goal = {};
+      await step("3. to the pull-up (engine)", { needs: ["2. widen (engine)"] }, async () => {
+        pullUp = await goalOf({ kind: "pull-up", at: walk.pullUp.at });
+        const got = outcomeName(pullUp.outcome);
+        if (got !== walk.pullUp.want) throw new Error(`from ${pullUp.at}: ${got} (${pullUp.reason ?? ""}), want ${walk.pullUp.want}`);
+        if (got !== "routed") return `from ${pullUp.at}: ${pullUp.reason}`;
+        const routes = pullUp.routes ?? [];
+        if (!routes.some((r) => (r.crossings ?? []).some((c) => c.refDes === walk.pullUp.via))) throw new Error(`no route crosses ${walk.pullUp.via}: ${routes.map(routeLine).join("; ")}`);
+        return `from ${pullUp.at}: ${routes.map(routeLine).join("; ")}`;
       });
-      await step("4. to a pin", { waitsOn: ["#1340"], needs: ["2. widen (viewer)"] }, async () => {
-        await (await control(page, '[data-action="walk-goal"][data-goal="pin"]')).click({ timeout: 10_000 });
-        return "the walk shows the route to the pin, or says none lies within the radius";
+      await step("3. to the pull-up (viewer)", { needs: ["2. widen (viewer)", "3. to the pull-up (engine)"] }, async () => {
+        const got = await askGoal(page, "pull-up", walk.pullUp.at);
+        expect(got.outcome).toBe(outcomeName(pullUp.outcome));
+        expect(got.routes).toEqual((pullUp.routes ?? []).map(routeLine));
+        return got.routes.length > 0 ? `the Trace tab shows ${got.routes.join("; ")}` : `the Trace tab says ${got.outcome}`;
+      });
+
+      let pinGoal: Goal = {};
+      await step("4. to a pin (engine)", { needs: ["2. widen (engine)"] }, async () => {
+        pinGoal = await goalOf({ kind: "pin", at: walk.pin.at, to: walk.pin.to });
+        if (outcomeName(pinGoal.outcome) !== "routed") throw new Error(`${outcomeName(pinGoal.outcome)}: ${pinGoal.reason ?? ""}`);
+        const route = (pinGoal.routes ?? [])[0];
+        // Past `at`, the route is the one agni trace finds from the pin the walk entered `at` through.
+        const [fromRef, fromPin] = walk.pin.traceFrom.split(".");
+        const [toRef, toPin] = walk.pin.to.split(".");
+        const tr = await rpc<{ trace: Route & { outcome?: string } }>("DesignService/TraceDesign", { snapshot, from: { refDes: fromRef, pin: fromPin }, to: { refDes: toRef, pin: toPin } });
+        const nets = (route.nets ?? []).map((x) => x.name);
+        const i = nets.indexOf(walk.pin.at);
+        const leg = { nets: (route.nets ?? []).slice(i), crossings: (route.crossings ?? []).slice(i) };
+        expect(routeLine(leg)).toBe(routeLine(tr.trace));
+        return `${routeLine(route)}, ending at ${walk.pin.to}; past ${walk.pin.at} it is agni trace's ${routeLine(tr.trace)}`;
+      });
+      await step("4. to a pin (viewer)", { needs: ["2. widen (viewer)", "4. to a pin (engine)"] }, async () => {
+        const got = await askGoal(page, "pin", walk.pin.at, walk.pin.to);
+        expect(got.outcome).toBe("routed");
+        expect(got.routes).toEqual((pinGoal.routes ?? []).map(routeLine));
+        return `the Trace tab shows ${got.routes.join("; ")}`;
       });
 
       // Step 5. The CLI gives the same walk as the API the viewer calls.
@@ -282,7 +366,18 @@ describe("the walk mission", () => {
         });
         const cli = JSON.parse(json) as Walk;
         expect(shape(cli)).toBe(shape(three));
-        return `agni walk and WalkDesign agree on ${names(cli).length} nets and ${(cli.boundary ?? []).length} boundary parts`;
+        let goals = "";
+        if (passed.has("4. to a pin (engine)")) {
+          const asked = execFileSync(inject("agniBin"), ["walk", walk.file, "--from", walk.start, "--kind", kind, "--hops", "3", "--goal", "pin", "--at", walk.pin.at, "--to", walk.pin.to, "--format", "json"], {
+            cwd: repoRoot,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"],
+          });
+          const g = (JSON.parse(asked) as Walk).goal ?? {};
+          expect((g.routes ?? []).map(routeLine)).toEqual((pinGoal.routes ?? []).map(routeLine));
+          goals = ", and on the pin goal's route";
+        }
+        return `agni walk and WalkDesign agree on ${names(cli).length} nets and ${(cli.boundary ?? []).length} boundary parts${goals}`;
       });
       await step("5. agni walk agrees (viewer)", { needs: ["2. widen (viewer)", "5. agni walk agrees (engine)"] }, async () => {
         const got = await viewerWalk(page);

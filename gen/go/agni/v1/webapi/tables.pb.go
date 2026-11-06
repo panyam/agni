@@ -665,8 +665,9 @@ type TabulateRequest_Review struct {
 }
 
 type TabulateRequest_Walk struct {
-	// walk gives the "walk" table, one row per net reached in hop order, and "walk_boundary", one row
-	// per part the walk did not cross (agni issue 1339).
+	// walk gives the "walk" table, one row per net reached in hop order, "walk_boundary", one row
+	// per part the walk did not cross (agni issue 1339), and "walk_goal", one row per net of each goal
+	// route, empty when the walk asked no goal (agni issue 1340).
 	Walk *WalkDesignResponse `protobuf:"bytes,8,opt,name=walk,proto3,oneof"`
 }
 

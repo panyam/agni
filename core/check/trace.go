@@ -146,33 +146,54 @@ func TracePins(m Model, from, to Endpoint, hops int) Trace {
 		return t
 	}
 
-	r := m.ReachToTerminus(fromNet, hops)
-	if _, ok := r.Parent[toNet.Name]; !ok {
+	nets, crossings, ok := seriesRoute(m, fromNet, toNet, hops)
+	if !ok {
 		t.Outcome = TraceNoRoute
 		t.Reason = fmt.Sprintf("no series path from %s to %s within %d crossings",
 			fromNet.Name, toNet.Name, hops)
 		return t
 	}
+	t.Crossings = crossings
+	t.Nets = routeNets(m, nets, crossings, []Endpoint{t.From.Endpoint, t.To.Endpoint})
+	t.Outcome = TraceRouted
+	return t
+}
 
+// seriesRoute finds the series route from one net to another within hops crossings, as trace walks
+// it (ReachToTerminus). It returns the nets in crossing order and the crossings between them, and
+// false when no route lies within the radius. A walk's goal questions route the same way.
+func seriesRoute(m Model, from, to *ir.Net, hops int) ([]*ir.Net, []TraceCross, bool) {
+	r := m.ReachToTerminus(from, hops)
+	if _, ok := r.Parent[to.Name]; !ok {
+		return nil, nil, false
+	}
 	// The nets in crossing order and the steps between them come from the same walk. Step i joins
 	// nets[i] to nets[i+1], so nothing has to be re-derived by searching for the net a step reached.
-	nets, steps := r.PathTo(toNet), r.StepsTo(toNet)
-	onRoute := map[string][]string{}
+	nets, steps := r.PathTo(to), r.StepsTo(to)
+	crossings := make([]TraceCross, len(steps))
 	for i, s := range steps {
-		t.Crossings = append(t.Crossings, TraceCross{
+		crossings[i] = TraceCross{
 			RefDes: s.Through, Class: string(m.ComponentClass(s.Through)),
 			EnterPin: s.FromPin, ExitPin: s.ToPin,
 			FromNet: nets[i].Name, ToNet: nets[i+1].Name,
-		})
-		onRoute[nets[i].Name] = append(onRoute[nets[i].Name], s.Through)
-		onRoute[nets[i+1].Name] = append(onRoute[nets[i+1].Name], s.Through)
+		}
 	}
-	ends := []Endpoint{t.From.Endpoint, t.To.Endpoint}
+	return nets, crossings, true
+}
+
+// routeNets describes each net of a route, leaving off its list of other parts the crossings that
+// enter or leave it.
+func routeNets(m Model, nets []*ir.Net, crossings []TraceCross, ends []Endpoint) []TraceNet {
+	onRoute := map[string][]string{}
+	for _, c := range crossings {
+		onRoute[c.FromNet] = append(onRoute[c.FromNet], c.RefDes)
+		onRoute[c.ToNet] = append(onRoute[c.ToNet], c.RefDes)
+	}
+	out := make([]TraceNet, 0, len(nets))
 	for _, n := range nets {
-		t.Nets = append(t.Nets, traceNet(m, n, onRoute[n.Name], ends))
+		out = append(out, traceNet(m, n, onRoute[n.Name], ends))
 	}
-	t.Outcome = TraceRouted
-	return t
+	return out
 }
 
 // resolveEndpoint turns a named pin into the net it sits on, or returns the reason it could not.

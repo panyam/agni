@@ -102,7 +102,17 @@ by hop, and each hop folds. Each net and part locates on its sheet, and `locateI
 walk lit under the focus. Wider and Narrower walk again a hop further or nearer. A part left
 uncrossed has a Cross button, which walks again with it in `through`. The address bar keeps the
 walk as `walk=`, `walk_kind=`, `walk_hops=` and `walk_through=`, and a link walks it again on
-arrival. The two-pin trace below stays the "to a pin" question until #1340's goal buttons arrive.
+arrival.
+
+Below the hops the tab asks goal questions (agni issue 1340). The reader picks a reached net in
+"Ask from", or leaves the start's own, then presses To the pull-up, To the rail, or To the pin with
+a pin typed beside it. Each one walks again with the goal on the same `WalkDesign` request, so the
+routes come back with the walk they extend. The tab shows each route as one line, as
+`RenderRoute` spells it, then each net with the part crossed into it. A no-route and a goal that
+names nothing show as two different notes, as a trace's do. The canvas lights the routes over the
+walk in magenta (`goalSpecs`, `WALK_GOAL_COLOR`), with a pin goal's pin on top. The address bar
+keeps the goal as `walk_goal=`, `walk_at=` and `walk_to=`. The two-pin trace below the walk stays
+for two ends that no walk has reached.
 
 ## A design with no drawing opens on agni's layout
 

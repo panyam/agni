@@ -74,6 +74,8 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 		{"walk text", walkCmd, "/WalkDesign", []string{design, "--from", "Y1", "--kind", "small-parts", "--hops", "3"}},
 		{"walk json", walkCmd, "/WalkDesign", []string{design, "--from", "U3.4", "--format", "json"}},
 		{"walk csv", walkCmd, "/WalkDesign", []string{design, "--from", "R3", "--format", "csv", "--table", "walk"}},
+		{"walk goal", walkCmd, "/WalkDesign", []string{design, "--from", "Y1", "--kind", "small-parts", "--goal", "pin", "--to", "Y1.1"}},
+		{"walk goal csv", walkCmd, "/WalkDesign", []string{design, "--from", "Y1", "--kind", "small-parts", "--goal", "rail", "--format", "csv", "--table", "walk_goal"}},
 		{"review markdown", reviewCmd, "/CreateReview", []string{design}},
 		{"review json", reviewCmd, "/CreateReview", []string{design, "--format", "json"}},
 		{"lexicon text", lexiconCmd, "/GetLexicon", []string{design}},
