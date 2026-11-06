@@ -1397,16 +1397,20 @@ passes FAILS the walk, so the PR that makes a step pass also removes its wait in
 closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a
 ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
 read its steps "not available". The gate runs offline and skips that half.
-#1337 `mission_walk` (click one part and walk outwards) is open, and `make exercise-walk` is its
-exercise (agni 1338). Each step has an engine row that asks `WalkDesign` and a viewer row that
-drives the Trace tab's walk (agni 1341) by the names `web/browser/walk-mission.spec.ts` lists. No
-step waits since #1340 added the goal questions. The gate walks the cut from R119, and
+#1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) is
+active in the webgl clone, and its first ticket, #1330, writes `make exercise-webgl`. #1353
+`mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
+formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise.
+#1337 `mission_walk` (click one part and walk outwards) closed on 2026-11-06, and `make
+exercise-walk` is still its exercise (agni 1338). Each step has an engine row that asks
+`WalkDesign` and a viewer row that drives the Trace tab's walk (agni 1341) by the names
+`web/browser/walk-mission.spec.ts` lists. The gate walks the cut from R119, and
 `WALK_DESIGN=jetson` walks from R361, since every pull-up on U80's 1.8 V side is do-not-populate.
-The cut holds no pull-up, so its pull-up step expects no route. #1194
-`mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is
-active, with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on
-a team's real-board run in a clean room (`guide/trying-agni.md`). That run sends back only `agni
-trial`'s report. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
+The cut holds no pull-up, so its pull-up step expects no route. #1194 `mission_pin_functions`
+(sign off a board's pin map against the netlist and the datasheet) closed on 2026-11-06 too, and
+`make exercise-pin-functions` is its exercise. A team's real-board run in a clean room
+(`guide/trying-agni.md`) sends back only `agni trial`'s report, and reopens it if that run finds
+something. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
 (2026-10-20), #909 `mission_ask` (2026-10-22), #1157 `mission_viewer_page_api` and #845
 `mission_browser_review` (both 2026-10-25) have closed. Their exercises still exist as the example
 that #843 built, `make exercise-public-demo`, `make exercise-mcp-ask`, `make exercise-viewer-page`
