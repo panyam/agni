@@ -244,8 +244,10 @@ classes lacks `netclass` as surely as an EDIF netlist does. `ref_des_collisions`
 An Allegro board supplies both from its physical constraint sets (agni issue 1359). Each named set
 is a class with its minimum track width, and a net is in the set its own field names, or else the
 set its match group names, which is where Allegro puts a differential pair's set. A net that names
-no set takes `DEFAULT`. The sets also hold a clearance and a pair gap, which are not read yet,
-because no file the gate reads says which word is which.
+no set takes `DEFAULT`. The narrowest width any set allows becomes the board's own minimum, so
+`track-width` holds the board to it rather than the 5 mil floor (agni issue 1432). The sets also
+hold a clearance and a pair gap, which are not read yet, because no file the gate reads says which
+word is which.
 
 `netclass_defs` is separate from `netclass` on purpose. A KiCad project's `net_settings` carries
 membership and definitions in independent blocks, so a project can assign nets to a class it never

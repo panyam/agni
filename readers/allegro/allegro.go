@@ -22,7 +22,8 @@
 // their voids as holes (agni 1357), zone boundary outlines with their nets, the board outline, and
 // silkscreen and assembly graphics and text. Each named physical constraint set (0x1D) is a net
 // class with its minimum track width, the narrowest on any layer and each layer's own where they
-// differ, and each net is in the set it or its match group names (agni issue 1359). A board with no
+// differ, and each net is in the set it or its match group names (agni issue 1359). The narrowest
+// width any set allows is the board's own minimum track width (agni 1432). A board with no
 // outline of its own takes the outline rectangle of a placed mechanical symbol. Each padstack shape keeps its offset from the pad, and a
 // pad Allegro draws as a shape symbol reads as custom with the shape's outline (agni 1407). An ETCH
 // shape on no net, the flash a thermal relief names, a constraint set's clearance and pair gap,
