@@ -35,7 +35,7 @@ import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlight
 import { chooseSheet } from "./sheetfollow.js";
 import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
-import { type WalkRequest, type WalkView, emptyWalk, errorWalk, loadingWalk, splitStart, walkFromResponse, walkSheet, walkSpecs, walkStartSpecs } from "./walk.js";
+import { type WalkRequest, type WalkView, emptyWalk, errorWalk, goalRevealSpecs, goalSheet, loadingWalk, splitStart, walkFromResponse, walkSheet, walkSpecs, walkStartSpecs } from "./walk.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
@@ -1843,9 +1843,12 @@ export class ViewerPresenter {
     this.views.showPanel?.("trace");
     if (state.reason) return;
     if (this.mode === "native") await this.setMode("svg");
-    const target = walkSheet(state);
+    // A routed goal moves the view to its route, so the part it reached is on screen (agni issue 1423).
+    const onSheet = walkSheet(state);
+    const target = goalSheet(state, onSheet) || onSheet;
     if (target && target !== this.currentSheet) await this.showSheet(target);
-    await this.setHighlights(walkStartSpecs(req));
+    const route = goalRevealSpecs(state);
+    await this.setHighlights(route.length > 0 ? route : walkStartSpecs(req));
     this.views.reveal?.();
     await this.setHighlights(walkSpecs(state));
   }

@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { SheetFormat, TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { stubQueryView } from "./testviews.js";
 import type { WalkState } from "./walk.js";
 import { HighlightShape } from "./highlights.js";
@@ -30,7 +30,7 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
   const client = {
     getDesign: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
-      sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }], nativeAvailable: false, availableLayouts: ["faithful"],
+      sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }, { id: "s3", name: "S3" }], nativeAvailable: false, availableLayouts: ["faithful"],
     })),
     getSheet: vi.fn(async (req: { format?: SheetFormat }) =>
       req.format === SheetFormat.SVG ? { content: { case: "svg", value: "<svg/>" } } : { content: { case: "packed", value: { sheetId: "s1" } } },
@@ -143,6 +143,29 @@ describe("walk presenter", () => {
     expect(h.walkDesign).toHaveBeenLastCalledWith(expect.objectContaining({ goal: { kind: "pin", at: "SDA", to: { refDes: "J4", pin: "2" } } }));
     const loc = onLocation.mock.calls[onLocation.mock.calls.length - 1][0] as ViewerLocation;
     expect(loc.walk?.goal).toEqual(goal);
+  });
+
+  // agni issue 1423: a routed goal opens the sheet its route ends on and zooms to the start and the
+  // parts the route crosses, before the walk is lit around them.
+  it("moves the view to a routed goal's route", async () => {
+    const h = harness();
+    const routed = walkAnswer();
+    routed.goal = create(WalkGoalAnswerSchema, {
+      kind: "pull-up",
+      at: "SDA",
+      outcome: TraceOutcome.ROUTED,
+      routes: [{ nets: [{ name: "SDA", sheetIds: ["s2"] }, { name: "+3V3", sheetIds: ["s3"] }], crossings: [{ refDes: "R9", fromNet: "SDA", toNet: "+3V3" }], endsAt: "+3V3" }],
+    });
+    h.walkDesign.mockResolvedValue({ walk: routed });
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.getSheet.mockClear();
+    h.order.length = 0;
+    await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [], goal: { kind: "pull-up", at: "SDA", to: "" } });
+    expect(h.getSheet).toHaveBeenCalledWith(expect.objectContaining({ sheet: "s3" }));
+    expect(h.order).toEqual(["walk", "reveal", "walk"]);
+    const calls = h.canvas.setHighlights.mock.calls;
+    const zoomed = calls[calls.length - 2][0] as { components?: string[] }[];
+    expect(zoomed.flatMap((x) => x.components ?? [])).toEqual(["R9", "R1"]);
   });
 
   it("states a start that names nothing and leaves the canvas alone", async () => {

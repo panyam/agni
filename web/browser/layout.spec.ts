@@ -946,6 +946,28 @@ describe("the trace pickers", () => {
   }, 90_000);
 });
 
+// agni issue 1423: a goal answered with a route moves the view onto it. On the showcase the walk
+// starts at U2's SDA pin. Zoomed to the start alone, its pull-up R1 sits against the frame's right
+// edge with its rail cut off, so the check asks for R1 an eighth of the frame clear of every edge.
+describe("a walk's goal question", () => {
+  it("zooms the canvas to the part its route reaches", async () => {
+    await withPage(browser, async (page) => {
+      await page.setViewportSize({ width: 1100, height: 800 });
+      await page.goto(`${base()}/designs/conformance/showcase.fires.kicad_sch/view?walk=U2.3&walk_goal=pull-up`, { waitUntil: "networkidle" });
+      await page.waitForSelector('.walk-goal[data-goal-outcome="routed"]', { timeout: 30_000 });
+      await page.waitForFunction(() => {
+        const host = document.querySelector("#svg-view")!.getBoundingClientRect();
+        const el = document.querySelector('#svg-view [data-kind="component"][data-ref="R1"]');
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        const mx = host.width / 8;
+        const my = host.height / 8;
+        return r.left >= host.left + mx && r.right <= host.right - mx && r.top >= host.top + my && r.bottom <= host.bottom - my;
+      }, null, { timeout: 10_000 });
+    });
+  }, 90_000);
+});
+
 // agni issue 1133: a rule group's docs link sits on the header's line, beside the count, where jsdom
 // can say it exists and cannot say where it sits. The first version wrapped under the name, and the
 // next was pushed to the row's far end by the toggle growing into the line.

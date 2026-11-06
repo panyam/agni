@@ -254,6 +254,38 @@ export function goalSpecs(s: WalkState): HighlightSpec[] {
   return specs;
 }
 
+// goalRevealSpecs lights what the view zooms to when a goal found a route (agni issue 1423): the
+// start, the parts each route crosses and a pin goal's pin. A route's nets are left out, because a
+// pull-up's route ends on a rail that runs across the whole sheet. It is empty when no route was
+// found, and the view then zooms to the start alone.
+export function goalRevealSpecs(s: WalkState): HighlightSpec[] {
+  const g = s.goal;
+  if (!g || g.outcome !== "routed" || g.routes.length === 0) return [];
+  const parts = new Set<string>();
+  for (const r of g.routes) r.crossings.forEach((c) => parts.add(c.refDes));
+  const specs: HighlightSpec[] = [];
+  if (parts.size > 0) specs.push({ components: [...parts], color: WALK_GOAL_COLOR, shape: HighlightShape.BOUNDING_RECT });
+  const [ref, pin] = splitStart(s.request.goal?.to ?? "");
+  if (g.kind === "pin" && ref && pin) specs.push({ pins: [{ refDes: ref, pin }], color: WALK_GOAL_COLOR });
+  return [...specs, ...walkStartSpecs(s.request)];
+}
+
+// goalSheet is the sheet a routed goal should open on, given the sheet the walk opens on. That sheet
+// is kept when it draws the first route's last net. Otherwise the last net's first sheet is used, or
+// the nearest earlier net's when the last is drawn nowhere. It is "" when no goal was routed.
+export function goalSheet(s: WalkState, walkOn: string): string {
+  const g = s.goal;
+  if (!g || g.outcome !== "routed") return "";
+  for (const r of g.routes) {
+    for (let i = r.sheetIds.length - 1; i >= 0; i--) {
+      const ids = r.sheetIds[i] ?? [];
+      if (ids.length === 0) continue;
+      return ids.includes(walkOn) ? walkOn : ids[0];
+    }
+  }
+  return "";
+}
+
 // walkSheet is the sheet a walk should open on: the first hop-1 net's, "" when it is drawn nowhere.
 export function walkSheet(s: WalkState): string {
   for (const h of s.hops) {
