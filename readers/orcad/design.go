@@ -57,10 +57,10 @@ type flattener struct {
 
 	// visits is every page the walk reached, once per page however often its block is placed,
 	// with the sheet that places it. netOf names each net's root once nets has run.
-	visits []visit
-	drawn  map[string]bool
-	parent string
-	netOf  map[string]string
+	visits  []visit
+	sheetOf map[string]string // page key -> the sheet id it draws under
+	parent  string
+	netOf   map[string]string
 }
 
 // visit is one page as the walk first reached it.
@@ -83,7 +83,7 @@ func newFlattener(top *dsn, open Opener) *flattener {
 		names:   map[string][]netName{},
 		genName: map[string]netName{},
 		pins:    map[string][2]string{},
-		drawn:   map[string]bool{},
+		sheetOf: map[string]string{},
 		netOf:   map[string]string{},
 	}
 }
@@ -103,9 +103,19 @@ func flatten(top *dsn, open Opener) (*ir.Design, error) {
 	return f.design(top), nil
 }
 
-// sheetID names a page by its design, folder and page, so a block page placed twice is one sheet.
-func sheetID(d *dsn, folder string, pg *page) string {
+// pageKey names a page by its design, folder and page, so a block page placed twice is drawn once.
+func pageKey(d *dsn, folder string, pg *page) string {
 	return path.Base(d.name) + ":" + folder + ":" + pg.name
+}
+
+// sheetPath is the sheet id a page draws under, its block path as KiCad's are: /IMU for the one
+// page of the block IMU, /IMU/PAGE2 for a page of a block with several, and /PAGE1 for a page of
+// the top folder.
+func sheetPath(bpath string, pages int, pg *page) string {
+	if bpath == "" || pages > 1 {
+		return bpath + "/" + pg.name
+	}
+	return bpath
 }
 
 // collectGlobals records every power symbol's name across the design and the blocks it reaches,
@@ -167,11 +177,12 @@ func (f *flattener) walk(d *dsn, folder, bpath string, sc *scope, depth int, ope
 	for pi, pg := range pages {
 		pk := fmt.Sprintf("%s|%s|%d", bpath, folder, pi)
 		folderKey := "name|" + bpath + "|" + folder + "|"
-		sid := sheetID(d, folder, pg)
-		if !f.drawn[sid] {
-			f.drawn[sid] = true
-			f.visits = append(f.visits, visit{d: d, pg: pg, pk: pk, bpath: bpath, sheet: sid, parent: f.parent, occ: sc})
+		key := pageKey(d, folder, pg)
+		if f.sheetOf[key] == "" {
+			f.sheetOf[key] = sheetPath(bpath, len(pages), pg)
+			f.visits = append(f.visits, visit{d: d, pg: pg, pk: pk, bpath: bpath, sheet: f.sheetOf[key], parent: f.parent, occ: sc})
 		}
+		sid := f.sheetOf[key]
 		type at struct {
 			p    point
 			node string

@@ -82,6 +82,29 @@ describe("pickAt", () => {
     expect(pickAt(doc, 100, 100)).toEqual({ kind: "net", net: "GND", netId: "" });
   });
 
+  // An Allegro board's ground plane is a pour over the whole board, drawn above the footprint bodies,
+  // so the part under a click there has to win over the plane (agni issue 1382).
+  it("picks a part's body under a pour, and the pour where no part lies", () => {
+    const pour = el({ class: "pour", "data-kind": "net", "data-net": "GND" });
+    const body = el({ "data-kind": "component", "data-ref": "LS1" });
+    const doc = {
+      elementFromPoint: () => pour,
+      elementsFromPoint: (x: number) => (x < 50 ? [pour, body] : [pour]),
+    } as unknown as Document;
+    expect(pickAt(doc, 20, 20)).toEqual({ kind: "component", ref: "LS1" });
+    expect(pickAt(doc, 200, 200)).toEqual({ kind: "net", net: "GND", netId: "" });
+  });
+
+  it("keeps a track over a part's body as the track", () => {
+    const track = el({ "data-kind": "net", "data-net": "SCL0" });
+    const body = el({ "data-kind": "component", "data-ref": "LS1" });
+    const doc = {
+      elementFromPoint: () => track,
+      elementsFromPoint: () => [track, body],
+    } as unknown as Document;
+    expect(pickAt(doc, 20, 20)).toEqual({ kind: "net", net: "SCL0", netId: "" });
+  });
+
   it("is null when the ring finds nothing either", () => {
     const doc = { elementFromPoint: () => null } as unknown as Document;
     expect(pickAt(doc, 10, 10)).toBeNull();

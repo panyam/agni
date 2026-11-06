@@ -24,9 +24,10 @@
 // closed must pass. The gate runs offline and leaves this out, so there only the waits as written
 // apply.
 //
-// The gate walks a nineteen-part cut of Jetson (examples/cross-probe-project). `make
-// exercise-cross-probe` walks the whole board (examples/jetson-project), headed unless HEADED=0, and
-// writes the step table and a screenshot per step to EXERCISE_OUT.
+// The gate walks a nineteen-part cut of Jetson (examples/cross-probe-project) and Clay R6, an OrCAD
+// design on its Allegro board (tools/samples/cadence/clay-r6). `make exercise-cross-probe` walks the
+// one WALK_DESIGN names, the whole Jetson board (examples/jetson-project) with WALK_DESIGN=jetson,
+// headed unless HEADED=0, and writes the step table and a screenshot per step to EXERCISE_OUT.
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -37,28 +38,51 @@ import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, extent, lit, openBeside, picked, zoomTo } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
+// Each walk names a part to click on the schematic, a footprint to click on the board, and a net to
+// click on the board's copper. The part and the net are drawn on one sheet, and the footprint's part
+// on another, so the canvas has to change sheets.
+//
+// On Jetson, C133 is a back-side capacitor on "USB Debug, PD", TP76 a front-side test point on
+// "Power", and C133's pin 1 is on the net. On Clay R6, an OrCAD design on its Allegro board (agni
+// issue 1382), R28 is on the top page, LS1 the front-side buzzer on the BUZZER block's page, and
+// WIFI_TX runs across the top page with the same name on the board. Clay's test points are drawn at
+// the end of a long leg, and a click on one's pad lights its pin, so the canvas frames the pin and
+// leaves the part off centre. A small IC's middle is copper, so a click there picks its net. LS1's
+// footprint is clicked on its body, which picks the part.
+const jetsonPicks = {
+  part: { ref: "C133", sheet: "USB Debug, PD" },
+  footprint: { ref: "TP76", sheet: "Power" },
+  net: "/USB Debug, PD/FTDI_3V3",
+};
 const walks = {
   cut: {
     mount: "probe",
     path: "designs/jetson-cut",
     about: "nineteen parts of Antmicro's Jetson AGX Thor baseboard, cut with their copper",
+    ...jetsonPicks,
   },
   jetson: {
     mount: "jetson",
     path: "designs/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
+    ...jetsonPicks,
+  },
+  clay: {
+    mount: "cadence",
+    path: "clay-r6",
+    about: "Clay R6, its OrCAD Capture design on its Allegro board",
+    part: { ref: "R28", sheet: "PAGE1" },
+    footprint: { ref: "LS1", sheet: "BUZZER" },
+    net: "WIFI_TX",
   },
 };
-const which = (process.env.WALK_DESIGN || "cut") as keyof typeof walks;
-const walk = walks[which];
-if (!walk) throw new Error(`WALK_DESIGN=${which} names no walk; use one of ${Object.keys(walks).join(", ")}`);
-const label = `${walk.path.split("/").pop()} (${walk.mount})`;
+type Walk = (typeof walks)[keyof typeof walks];
+// The gate walks the Jetson cut and Clay R6. WALK_DESIGN walks the one it names.
+const chosen = process.env.WALK_DESIGN ? [process.env.WALK_DESIGN] : ["cut", "clay"];
+for (const w of chosen) {
+  if (!(w in walks)) throw new Error(`WALK_DESIGN=${w} names no walk; use one of ${Object.keys(walks).join(", ")}`);
+}
 
-// The walk's parts are in both designs. C133 is a back-side capacitor on "USB Debug, PD", TP76 a
-// front-side test point on "Power", and C133's pin 1 is on the net below.
-const part = { ref: "C133", sheet: "USB Debug, PD" };
-const footprint = { ref: "TP76", sheet: "Power" };
-const net = "/USB Debug, PD/FTDI_3V3";
 
 let browser: Browser;
 beforeAll(async () => {
@@ -196,141 +220,146 @@ async function tile(page: Page, name: string): Promise<void> {
 
 const closed = new Set((process.env.CLOSED_TICKETS ?? "").split(",").filter((t) => t !== "").map((t) => `#${t.replace(/^#/, "")}`));
 
-describe("the cross-probe walk", () => {
-  it("finds a schematic part on the board and back", async () => {
-    const rows: Row[] = [];
-    const passed = new Set<string>();
-    const out = process.env.EXERCISE_OUT;
-    if (out) mkdirSync(out, { recursive: true });
-    const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }) });
-    const pageErrors: string[] = [];
-    page.on("pageerror", (e) => pageErrors.push(String(e)));
+for (const name of chosen) {
+  const walk: Walk = walks[name as keyof typeof walks];
+  const label = `${walk.path.split("/").pop()} (${walk.mount})`;
+  const { part, footprint, net } = walk;
+  describe(`the cross-probe walk on ${name}`, () => {
+    it("finds a schematic part on the board and back", async () => {
+      const rows: Row[] = [];
+      const passed = new Set<string>();
+      const out = process.env.EXERCISE_OUT;
+      if (out) mkdirSync(out, { recursive: true });
+      const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }) });
+      const pageErrors: string[] = [];
+      page.on("pageerror", (e) => pageErrors.push(String(e)));
 
-    let n = 0;
-    const step = async (
-      name: string,
-      opts: { waitsOn?: string[]; needs?: string[] },
-      body: () => Promise<string>,
-    ): Promise<void> => {
-      n++;
-      const waitsOn = opts.waitsOn ?? [];
-      const missing = (opts.needs ?? []).filter((s) => !passed.has(s));
-      if (missing.length > 0) {
-        rows.push({ step: name, design: label, status: "not available", detail: `not reached, after ${missing.join(", ")}` });
-        return;
-      }
-      const t0 = Date.now();
-      let ok = false;
-      let detail: string;
+      let n = 0;
+      const step = async (
+        name: string,
+        opts: { waitsOn?: string[]; needs?: string[] },
+        body: () => Promise<string>,
+      ): Promise<void> => {
+        n++;
+        const waitsOn = opts.waitsOn ?? [];
+        const missing = (opts.needs ?? []).filter((s) => !passed.has(s));
+        if (missing.length > 0) {
+          rows.push({ step: name, design: label, status: "not available", detail: `not reached, after ${missing.join(", ")}` });
+          return;
+        }
+        const t0 = Date.now();
+        let ok = false;
+        let detail: string;
+        try {
+          detail = await body();
+          ok = true;
+          passed.add(name);
+        } catch (e) {
+          detail = (e instanceof Error ? e.message : String(e)).split("\n")[0];
+        }
+        if (out) await page.screenshot({ path: join(out, `cross-probe-${n}-${name.replace(/\W+/g, "-")}.png`) }).catch(() => {});
+        const open = waitsOn.filter((t) => !closed.has(t));
+        const shut = waitsOn.filter((t) => closed.has(t));
+        if (shut.length > 0) detail += ` (${shut.join(", ")} closed)`;
+        rows.push({ step: name, design: label, ms: Date.now() - t0, ...waitedOn(ok, open, detail) });
+      };
+
       try {
-        detail = await body();
-        ok = true;
-        passed.add(name);
-      } catch (e) {
-        detail = (e instanceof Error ? e.message : String(e)).split("\n")[0];
+        // Two controls, which pass today. The design opens and lists both the part's sheet and its
+        // board, and the board draws the part's footprint with its data-ref key.
+        await step("open", {}, async () => {
+          await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
+          await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
+          for (const title of [`/${part.sheet}`, `/${footprint.sheet}`, "board"]) {
+            await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ timeout: 30_000 });
+          }
+          return `${await page.locator("#sheet-overview .sheet-tile").count()} sheets listed, ${part.sheet}, ${footprint.sheet} and the board among them`;
+        });
+
+        await step("two views", { needs: ["open"] }, async () => {
+          await openBeside(page, "Board");
+          await onScreen(page, SHEET, "schematic");
+          await onScreen(page, BOARD, "board");
+          const fp = page.locator(footprintOf(part.ref));
+          await fp.first().waitFor({ state: "attached", timeout: 60_000 });
+          return `the schematic on the canvas and the board in a view beside it, ${part.ref}'s footprint drawn`;
+        });
+
+        await step(`click ${part.ref}`, { needs: ["two views"] }, async () => {
+          await tile(page, part.sheet);
+          // A reader zooms to a small part before clicking it, and at fit zoom a capacitor has no
+          // point clear of its pins.
+          await zoomTo(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`);
+          const at = await clearPoint(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`, part.ref);
+          await page.mouse.click(at.x, at.y);
+          await picked(page, part.ref);
+          await lit(page, BOARD);
+          return `picked on ${part.sheet}, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
+        });
+
+        await step("turn the board over", { needs: [`click ${part.ref}`] }, async () => {
+          const board = page.locator(PANE).first();
+          for (const a of ["rotate", "bottom"]) {
+            if ((await board.locator(`[data-action="${a}"]`).count()) === 0) throw new Error(`the board view has no data-action="${a}" control`);
+          }
+          await board.locator('[data-action="rotate"]').click({ timeout: 10_000 });
+          await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
+          expect(await board.getAttribute("data-rotation")).toBe("90");
+          expect(await board.getAttribute("data-side")).toBe("back");
+          return `turned 90 and viewed from the back, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
+        });
+
+        await step(`click ${footprint.ref} on the board`, { needs: ["two views"] }, async () => {
+          // TP76 is on the front, and the bottom view draws the back copper over it, as the board looks
+          // from underneath. So a reader turns the board back over to reach it.
+          const board = page.locator(PANE).first();
+          if ((await board.getAttribute("data-side")) === "back") await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
+          // The board view is still zoomed in on the last part, so a reader zooms out to find this one
+          // and back in to click it.
+          await findIn(page, BOARD, footprintOf(footprint.ref));
+          await zoomTo(page, footprintOf(footprint.ref));
+          // A test point is one pad, which covers its whole footprint, so the click picks the pad. A
+          // pad's pin is the part's, and the canvas finds the part from either.
+          const at = await centreOf(page, footprintOf(footprint.ref));
+          await page.mouse.click(at.x, at.y);
+          await page.waitForFunction(
+            ({ sel, ref }) => { const t = document.querySelector(sel)?.textContent ?? ""; return t === ref || t.startsWith(`${ref}.`); },
+            { sel: TITLE, ref: footprint.ref },
+            { timeout: 30_000 },
+          );
+          await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, footprint.sheet, { timeout: 30_000 });
+          await lit(page, SHEET);
+          return `the canvas opened ${footprint.sheet}, ${await centres(page, `${SHEET} [data-kind="component"][data-ref="${footprint.ref}"]`, SHEET, footprint.ref)}`;
+        });
+
+        await step("click a net's copper", { needs: ["two views"] }, async () => {
+          await findIn(page, BOARD, `${BOARD} [data-kind="net"][data-net="${net}"]`);
+          // A track is a few pixels wide at a whole-board zoom, so a reader zooms in on one first.
+          const at = await clickableNet(page, BOARD, net);
+          await page.mouse.click(at.x, at.y);
+          await picked(page, net);
+          await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, part.sheet, { timeout: 30_000 })
+            .catch(async () => {
+              throw new Error(`the canvas stayed on ${(await page.locator(".sheet-tile.active .sheet-tile-name").innerText()).trim()}, which does not draw ${net}`);
+            });
+          await lit(page, SHEET);
+          const wires = await page.locator(`${SHEET} [data-kind="net"][data-net="${net}"]`).count();
+          if (wires === 0) throw new Error(`${part.sheet} draws no wire of ${net}`);
+          return `the canvas opened ${part.sheet} and lit ${net}`;
+        });
+
+        await step("no page errors", {}, async () => {
+          if (pageErrors.length) throw new Error(pageErrors.join("; "));
+          return "none";
+        });
+      } finally {
+        const report = `## Cross-probe walk, ${walk.about}\n\n${table(rows)}\n`;
+        process.stdout.write(`\n${report}\n`);
+        if (out) writeFileSync(join(out, "cross-probe.md"), report);
+        await page.close();
       }
-      if (out) await page.screenshot({ path: join(out, `cross-probe-${n}-${name.replace(/\W+/g, "-")}.png`) }).catch(() => {});
-      const open = waitsOn.filter((t) => !closed.has(t));
-      const shut = waitsOn.filter((t) => closed.has(t));
-      if (shut.length > 0) detail += ` (${shut.join(", ")} closed)`;
-      rows.push({ step: name, design: label, ms: Date.now() - t0, ...waitedOn(ok, open, detail) });
-    };
-
-    try {
-      // Two controls, which pass today. The design opens and lists both the part's sheet and its
-      // board, and the board draws the part's footprint with its data-ref key.
-      await step("open", {}, async () => {
-        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
-        await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
-        for (const title of [`/${part.sheet}`, `/${footprint.sheet}`, "board"]) {
-          await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ timeout: 30_000 });
-        }
-        return `${await page.locator("#sheet-overview .sheet-tile").count()} sheets listed, ${part.sheet}, ${footprint.sheet} and the board among them`;
-      });
-
-      await step("two views", { needs: ["open"] }, async () => {
-        await openBeside(page, "Board");
-        await onScreen(page, SHEET, "schematic");
-        await onScreen(page, BOARD, "board");
-        const fp = page.locator(footprintOf(part.ref));
-        await fp.first().waitFor({ state: "attached", timeout: 60_000 });
-        return `the schematic on the canvas and the board in a view beside it, ${part.ref}'s footprint drawn`;
-      });
-
-      await step(`click ${part.ref}`, { needs: ["two views"] }, async () => {
-        await tile(page, part.sheet);
-        // A reader zooms to a small part before clicking it, and at fit zoom a capacitor has no
-        // point clear of its pins.
-        await zoomTo(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`);
-        const at = await clearPoint(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`, part.ref);
-        await page.mouse.click(at.x, at.y);
-        await picked(page, part.ref);
-        await lit(page, BOARD);
-        return `picked on ${part.sheet}, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
-      });
-
-      await step("turn the board over", { needs: [`click ${part.ref}`] }, async () => {
-        const board = page.locator(PANE).first();
-        for (const a of ["rotate", "bottom"]) {
-          if ((await board.locator(`[data-action="${a}"]`).count()) === 0) throw new Error(`the board view has no data-action="${a}" control`);
-        }
-        await board.locator('[data-action="rotate"]').click({ timeout: 10_000 });
-        await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
-        expect(await board.getAttribute("data-rotation")).toBe("90");
-        expect(await board.getAttribute("data-side")).toBe("back");
-        return `turned 90 and viewed from the back, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
-      });
-
-      await step(`click ${footprint.ref} on the board`, { needs: ["two views"] }, async () => {
-        // TP76 is on the front, and the bottom view draws the back copper over it, as the board looks
-        // from underneath. So a reader turns the board back over to reach it.
-        const board = page.locator(PANE).first();
-        if ((await board.getAttribute("data-side")) === "back") await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
-        // The board view is still zoomed in on the last part, so a reader zooms out to find this one
-        // and back in to click it.
-        await findIn(page, BOARD, footprintOf(footprint.ref));
-        await zoomTo(page, footprintOf(footprint.ref));
-        // A test point is one pad, which covers its whole footprint, so the click picks the pad. A
-        // pad's pin is the part's, and the canvas finds the part from either.
-        const at = await centreOf(page, footprintOf(footprint.ref));
-        await page.mouse.click(at.x, at.y);
-        await page.waitForFunction(
-          ({ sel, ref }) => { const t = document.querySelector(sel)?.textContent ?? ""; return t === ref || t.startsWith(`${ref}.`); },
-          { sel: TITLE, ref: footprint.ref },
-          { timeout: 30_000 },
-        );
-        await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, footprint.sheet, { timeout: 30_000 });
-        await lit(page, SHEET);
-        return `the canvas opened ${footprint.sheet}, ${await centres(page, `${SHEET} [data-kind="component"][data-ref="${footprint.ref}"]`, SHEET, footprint.ref)}`;
-      });
-
-      await step("click a net's copper", { needs: ["two views"] }, async () => {
-        await findIn(page, BOARD, `${BOARD} [data-kind="net"][data-net="${net}"]`);
-        // A track is a few pixels wide at a whole-board zoom, so a reader zooms in on one first.
-        const at = await clickableNet(page, BOARD, net);
-        await page.mouse.click(at.x, at.y);
-        await picked(page, net);
-        await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, part.sheet, { timeout: 30_000 })
-          .catch(async () => {
-            throw new Error(`the canvas stayed on ${(await page.locator(".sheet-tile.active .sheet-tile-name").innerText()).trim()}, which does not draw ${net}`);
-          });
-        await lit(page, SHEET);
-        const wires = await page.locator(`${SHEET} [data-kind="net"][data-net="${net}"]`).count();
-        if (wires === 0) throw new Error(`${part.sheet} draws no wire of ${net}`);
-        return `the canvas opened ${part.sheet} and lit ${net}`;
-      });
-
-      await step("no page errors", {}, async () => {
-        if (pageErrors.length) throw new Error(pageErrors.join("; "));
-        return "none";
-      });
-    } finally {
-      const report = `## Cross-probe walk, ${walk.about}\n\n${table(rows)}\n`;
-      process.stdout.write(`\n${report}\n`);
-      if (out) writeFileSync(join(out, "cross-probe.md"), report);
-      await page.close();
-    }
-    const broken = rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`);
-    expect(exitCode(rows), broken.join("\n")).toBe(0);
-  }, 300_000);
-});
+      const broken = rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`);
+      expect(exitCode(rows), broken.join("\n")).toBe(0);
+    }, 300_000);
+  });
+}

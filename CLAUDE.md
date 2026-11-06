@@ -1373,7 +1373,8 @@ Work is aimed at MISSIONS, issues labelled `mission` that state something a pers
 and the command that exercises it. Several may be active at once, one per worktree. #1321
 `mission_cross_probe` (find a schematic part on the board beside you, and back) is active, and `make
 exercise-cross-probe` is its exercise. Its walk runs in the gate on a cut of Jetson
-(`examples/cross-probe-project`) and names, per step, the tickets it waits on. A waiting step that
+(`examples/cross-probe-project`) and on Clay R6, an OrCAD design on its Allegro board
+(`WALK_DESIGN=clay`, agni 1382), and names, per step, the tickets it waits on. A waiting step that
 passes FAILS the walk, so the PR that makes a step pass also removes its wait in
 `web/browser/cross-probe-walk.spec.ts`. The make target also asks GitHub which of those tickets are
 closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a

@@ -49,6 +49,11 @@ The board view picks with the same `Selection` and the same priority (agni issue
 - A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
   copper. A click between two pads then picks the part, and a pad or a track drawn over the body
   still wins where it is drawn.
+- **A pour yields to the part under it.** A pour is filled copper drawn with its layer (#1357), so an
+  Allegro board's ground plane lies over every footprint body on its side, and an inner plane over
+  every body on the board. `pickAt` looks under a pour for a footprint body and picks the part when
+  one is there, so a click between a part's pads on Clay R6 picks the part rather than GND (agni
+  issue 1382). A pour where no part lies still picks its net.
 - **The silkscreen and the designators pass clicks through** (`pointer-events="none"`), and carry no
   key. On a dense board a designator lies over its neighbour's pads. On Jetson, C123's designator
   covers C133's pads, and while board text was keyed a click on C133's pad picked C123 (agni issue
