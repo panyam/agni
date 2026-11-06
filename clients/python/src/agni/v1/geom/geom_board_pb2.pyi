@@ -146,12 +146,16 @@ class PadstackLayer(_message.Message):
     def __init__(self, layer: _Optional[str] = ..., pad: _Optional[_Union[PadShape, _Mapping]] = ..., thermal: _Optional[_Union[PadShape, _Mapping]] = ..., antipad: _Optional[_Union[PadShape, _Mapping]] = ...) -> None: ...
 
 class PadShape(_message.Message):
-    __slots__ = ("shape", "size")
+    __slots__ = ("shape", "size", "offset", "outline")
     SHAPE_FIELD_NUMBER: _ClassVar[int]
     SIZE_FIELD_NUMBER: _ClassVar[int]
+    OFFSET_FIELD_NUMBER: _ClassVar[int]
+    OUTLINE_FIELD_NUMBER: _ClassVar[int]
     shape: str
     size: _geom_pb2.Point
-    def __init__(self, shape: _Optional[str] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ...) -> None: ...
+    offset: _geom_pb2.Point
+    outline: _containers.RepeatedCompositeFieldContainer[_geom_pb2.Point]
+    def __init__(self, shape: _Optional[str] = ..., size: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., offset: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., outline: _Optional[_Iterable[_Union[_geom_pb2.Point, _Mapping]]] = ...) -> None: ...
 
 class NetCopper(_message.Message):
     __slots__ = ("net", "segments", "vias", "shapes")

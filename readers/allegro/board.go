@@ -434,7 +434,17 @@ func (b *boardBuilder) stackEntry(off int, bottom bool) string {
 		if shape == "" {
 			return nil
 		}
-		return &geom.PadShape{Shape: shape, Size: &geom.Point{X: p.nm(float64(p.i32(c, l.psW))), Y: p.nm(float64(p.i32(c, l.psW+4)))}}
+		ps := &geom.PadShape{Shape: shape, Size: &geom.Point{X: p.nm(float64(p.i32(c, l.psW))), Y: p.nm(float64(p.i32(c, l.psW+4)))}}
+		if dx, dy := p.i32(c, l.psW+8), p.i32(c, l.psW+12); dx != 0 || dy != 0 {
+			ps.Offset = b.pt(dx, dy)
+		}
+		// A custom pad draws a shape, whose outline sits around the shape's own centre (agni 1407).
+		if shape == "custom" {
+			if sh, ok := p.at(p.u32(c, l.psShape), tagShape); ok {
+				ps.Outline = b.path(p.u32(sh, l.shapeSegs), p.u32(sh, 4))
+			}
+		}
+		return ps
 	}
 	for i := 0; i < count; i++ {
 		idx := start + i

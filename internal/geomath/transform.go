@@ -133,3 +133,39 @@ func NormDeg(d float64) float64 {
 	}
 	return d
 }
+
+// PlaceLand puts a point of a pad's own frame on the board, the frame a padstack land's offset and
+// outline are written in (agni 1407). The point turns with the pad's angle into the footprint's
+// frame, and then the footprint is placed as the contract defines it:
+// world = at + M(R(rotation) * local), with M mirroring X on a mirrored placement.
+func PlaceLand(pl *geom.ComponentPlacement, pad *geom.Pad, px, py float64) (float64, float64) {
+	s, c := math.Sincos(pad.GetRotationDeg() * math.Pi / 180)
+	lx := float64(pad.GetAt().GetX()) + px*c - py*s
+	ly := float64(pad.GetAt().GetY()) + px*s + py*c
+	s, c = math.Sincos(pl.GetRotationDeg() * math.Pi / 180)
+	x, y := lx*c-ly*s, lx*s+ly*c
+	if pl.GetMirror() {
+		x = -x
+	}
+	return float64(pl.GetAt().GetX()) + x, float64(pl.GetAt().GetY()) + y
+}
+
+// PadAngle is the angle a pad's shape is drawn at on the board, CCW in the Y-up frame. A pad's own
+// angle is in its footprint's frame (agni 1407), so it adds to the placement's, and a mirrored
+// placement reflects the sum: M R(a) = R(-a) M, and the shapes a pad names are symmetric in X.
+func PadAngle(pl *geom.ComponentPlacement, pad *geom.Pad) float64 {
+	a := pl.GetRotationDeg() + pad.GetRotationDeg()
+	if pl.GetMirror() {
+		a = -a
+	}
+	return NormDeg(a)
+}
+
+// PadLocalAngle is PadAngle's inverse: the footprint-frame angle of a pad drawn at boardDeg on the
+// board. A reader whose source stores a pad's board angle (KiCad, ODB++) writes this.
+func PadLocalAngle(pl *geom.ComponentPlacement, boardDeg float64) float64 {
+	if pl.GetMirror() {
+		boardDeg = -boardDeg
+	}
+	return NormDeg(boardDeg - pl.GetRotationDeg())
+}

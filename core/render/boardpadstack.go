@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/svg"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // A pad or via that names a padstack draws its land on each copper layer the padstack has one,
@@ -83,15 +84,37 @@ func (ix planeIndex) cuts(layer, net string) bool {
 // drawStackLayer draws a padstack's land on one layer at the pad's position, and its antipad as an
 // outline where cut says the layer clears around it. The antipad takes no clicks.
 func drawStackLayer(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, l *geom.PadstackLayer, fr sheetFrame, color string, cut bool, keys ...svg.Attr) {
+	draw := func(sh *geom.PadShape, attrs ...svg.Attr) {
+		cx, cy, ring := landAt(pl, pad, sh)
+		if ring != nil {
+			c.El("polygon", append([]svg.Attr{svg.A("points", points(ring, fr.tx, fr.ty))}, attrs...)...)
+			return
+		}
+		drawShapeAt(c, cx, cy, sh.GetShape(), sh.GetSize(), geomath.PadAngle(pl, pad), fr, attrs...)
+	}
 	if a := l.GetAntipad(); cut && a != nil {
-		ring := &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: a.GetShape(), Size: a.GetSize()}
-		drawPadWith(c, pl, ring, fr, svg.A("fill", "none"), svg.A("stroke", color), svg.F("stroke-width", 2*strokePx),
+		draw(a, svg.A("fill", "none"), svg.A("stroke", color), svg.F("stroke-width", 2*strokePx),
 			svg.A("stroke-dasharray", "3 2"), svg.A("pointer-events", "none"))
 	}
 	if p := l.GetPad(); p != nil {
-		land := &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: p.GetShape(), Size: p.GetSize()}
-		drawPadWith(c, pl, land, fr, append([]svg.Attr{svg.A("fill", color)}, keys...)...)
+		draw(p, append([]svg.Attr{svg.A("fill", color)}, keys...)...)
 	}
+}
+
+// landAt places one shape of a padstack on the board (agni 1407). It returns the shape's centre,
+// moved by its offset, and for a custom shape its outline as board points. Both go through
+// geomath.PlaceLand, so the land turns and mirrors with its pad.
+func landAt(pl *geom.ComponentPlacement, pad *geom.Pad, sh *geom.PadShape) (cx, cy int64, ring []*geom.Point) {
+	ox, oy := float64(sh.GetOffset().GetX()), float64(sh.GetOffset().GetY())
+	x, y := geomath.PlaceLand(pl, pad, ox, oy)
+	if out := sh.GetOutline(); len(out) > 2 {
+		ring = make([]*geom.Point, 0, len(out))
+		for _, p := range out {
+			px, py := geomath.PlaceLand(pl, pad, ox+float64(p.GetX()), oy+float64(p.GetY()))
+			ring = append(ring, &geom.Point{X: int64(math.Round(px)), Y: int64(math.Round(py))})
+		}
+	}
+	return int64(math.Round(x)), int64(math.Round(y)), ring
 }
 
 // drawBarrel draws a plated hole's barrel, a ring at the drill's edge around a page-coloured hole.

@@ -89,6 +89,9 @@ type polyPath struct {
 	x, y    float64
 	steps   []polyStep
 	lineRef string
+	// xform is the polygon's own Xform, which a pad primitive uses to place its shape off the pad's
+	// centre and turn it with the pin (agni 1407).
+	xOff, yOff, rot float64
 }
 
 // UnmarshalXML reads a Polyline's children in order, so straight (PolyStepSegment) and arc
@@ -115,6 +118,8 @@ func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				})
 			case "LineDescRef":
 				p.lineRef = attr(t, "id")
+			case "Xform":
+				p.xOff, p.yOff, p.rot = attrF(t, "xOffset"), attrF(t, "yOffset"), attrF(t, "rotation")
 			}
 		case xml.EndElement:
 			if t.Name.Local == start.Name.Local {
@@ -385,8 +390,23 @@ type padstackIndex struct {
 func (f *ipcGeomFile) padstacks(nmPerUnit float64, prims map[string]primShape) *padstackIndex {
 	ix := &padstackIndex{pin: map[[2]string]string{}, via: map[string]string{}}
 	bottom := map[string]bool{}
+	pkgOf := map[string]string{}
 	for _, c := range f.Comps {
 		bottom[c.RefDes] = normalizeSide(c.LayerRef) == "B.Cu"
+		pkgOf[c.RefDes] = c.PackageRef
+	}
+	// A layer's land names its primitive with the offset already applied to its location, while the
+	// package's pin names the primitive that carries the offset in its Xform (agni 1407). A pin's
+	// land takes its offset and outline from the package pin's primitive.
+	pins := f.packagePins()
+	pinPrim := func(ref, pin string) (primShape, bool) {
+		for _, pp := range pins[pkgOf[ref]] {
+			if pp.Number == pin {
+				ps, ok := prims[pp.primID()]
+				return ps, ok
+			}
+		}
+		return primShape{}, false
 	}
 	copper := f.copperLayers()
 	lands := map[string]map[string]*geom.PadShape{} // entry id -> layer -> land
@@ -418,7 +438,14 @@ func (f *ipcGeomFile) padstacks(nmPerUnit float64, prims map[string]primShape) *
 					}
 					p, ok := prims[pd.primID()]
 					if _, have := lands[id][layer]; ok && !have {
-						lands[id][layer] = &geom.PadShape{Shape: p.shape, Size: &geom.Point{X: p.sizeX, Y: p.sizeY}}
+						land := &geom.PadShape{Shape: p.shape, Size: &geom.Point{X: p.sizeX, Y: p.sizeY}, Offset: p.offset, Outline: p.outline}
+						if pp, ok := pinPrim(pd.PinRef.ComponentRef, pd.PinRef.Pin); ok && pd.PinRef.ComponentRef != "" {
+							land.Offset = pp.offset
+							if len(pp.outline) > 0 {
+								land.Outline = pp.outline
+							}
+						}
+						lands[id][layer] = land
 					}
 				}
 			}

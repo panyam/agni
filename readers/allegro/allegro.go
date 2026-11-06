@@ -18,9 +18,10 @@
 // tracks with their arcs kept as arcs, vias with their span, ETCH shapes as copper shapes with
 // their voids as holes (agni 1357), zone boundary outlines with their nets, the board outline, and
 // silkscreen and assembly graphics and text. A board with no outline of its own takes the outline
-// rectangle of a placed mechanical symbol. A pad Allegro draws as a shape symbol reads as custom,
-// with no outline. An ETCH shape on no net, a pad's offset within its padstack, the flash a thermal
-// relief names, constraint sets (1359), match groups (1360), keepouts and teardrops are not kept.
+// rectangle of a placed mechanical symbol. Each padstack shape keeps its offset from the pad, and a
+// pad Allegro draws as a shape symbol reads as custom with the shape's outline (agni 1407). An ETCH
+// shape on no net, the flash a thermal relief names, constraint sets (1359), match groups (1360),
+// keepouts and teardrops are not kept.
 // Arcs in shape outlines and voids are approximated by chords. Coordinates are integer nanometres
 // (unit_nm=1), in Allegro's own Y-up frame.
 package allegro

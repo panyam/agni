@@ -816,12 +816,17 @@ func (x *PadstackLayer) GetAntipad() *PadShape {
 	return nil
 }
 
-// PadShape is one shape of a padstack, centred on the pad and turned with it. shape is the source
-// word, as Pad.shape spells it, and size its extent in source units.
+// PadShape is one shape of a padstack, turned with the pad. shape is the source word, as Pad.shape
+// spells it, and size its extent in source units. offset is the shape's centre relative to the
+// pad's position, before the pad's rotation; unset means centred (agni 1407). outline is a custom
+// shape's polygon, in the same frame as offset and around the shape's own centre, closed and with
+// arcs chorded; empty means the shape word and size describe it.
 type PadShape struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Shape         string                 `protobuf:"bytes,1,opt,name=shape,proto3" json:"shape,omitempty"`
 	Size          *Point                 `protobuf:"bytes,2,opt,name=size,proto3" json:"size,omitempty"`
+	Offset        *Point                 `protobuf:"bytes,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	Outline       []*Point               `protobuf:"bytes,4,rep,name=outline,proto3" json:"outline,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -866,6 +871,20 @@ func (x *PadShape) GetShape() string {
 func (x *PadShape) GetSize() *Point {
 	if x != nil {
 		return x.Size
+	}
+	return nil
+}
+
+func (x *PadShape) GetOffset() *Point {
+	if x != nil {
+		return x.Offset
+	}
+	return nil
+}
+
+func (x *PadShape) GetOutline() []*Point {
+	if x != nil {
+		return x.Outline
 	}
 	return nil
 }
@@ -1309,10 +1328,12 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x05layer\x18\x01 \x01(\tR\x05layer\x12(\n" +
 	"\x03pad\x18\x02 \x01(\v2\x16.agni.v1.geom.PadShapeR\x03pad\x120\n" +
 	"\athermal\x18\x03 \x01(\v2\x16.agni.v1.geom.PadShapeR\athermal\x120\n" +
-	"\aantipad\x18\x04 \x01(\v2\x16.agni.v1.geom.PadShapeR\aantipad\"I\n" +
+	"\aantipad\x18\x04 \x01(\v2\x16.agni.v1.geom.PadShapeR\aantipad\"\xa5\x01\n" +
 	"\bPadShape\x12\x14\n" +
 	"\x05shape\x18\x01 \x01(\tR\x05shape\x12'\n" +
-	"\x04size\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x04size\"\xaf\x01\n" +
+	"\x04size\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x04size\x12+\n" +
+	"\x06offset\x18\x03 \x01(\v2\x13.agni.v1.geom.PointR\x06offset\x12-\n" +
+	"\aoutline\x18\x04 \x03(\v2\x13.agni.v1.geom.PointR\aoutline\"\xaf\x01\n" +
 	"\tNetCopper\x12\x10\n" +
 	"\x03net\x18\x01 \x01(\tR\x03net\x126\n" +
 	"\bsegments\x18\x02 \x03(\v2\x1a.agni.v1.geom.TrackSegmentR\bsegments\x12%\n" +
@@ -1398,21 +1419,23 @@ var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	9,  // 19: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
 	9,  // 20: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
 	16, // 21: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
-	12, // 22: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	13, // 23: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	11, // 24: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
-	18, // 25: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
-	18, // 26: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
-	16, // 27: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	16, // 28: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	16, // 29: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	16, // 30: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	18, // 31: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	32, // [32:32] is the sub-list for method output_type
-	32, // [32:32] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	16, // 22: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
+	16, // 23: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
+	12, // 24: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	13, // 25: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	11, // 26: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
+	18, // 27: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
+	18, // 28: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
+	16, // 29: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	16, // 30: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	16, // 31: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	16, // 32: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	18, // 33: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	34, // [34:34] is the sub-list for method output_type
+	34, // [34:34] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }

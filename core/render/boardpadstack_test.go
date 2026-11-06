@@ -1,6 +1,7 @@
 package render
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -102,5 +103,97 @@ func TestAPadstackPacksEachLandIntoItsLayersGroup(t *testing.T) {
 	// The plane packs both lands and SIG's antipad outline.
 	if in2 := boardRow(t, rows, "In2.Cu").GetGroups()[0]; groups[in2] != 3 {
 		t.Errorf("In2.Cu's group packs %d primitives, want two lands and one antipad", groups[in2])
+	}
+}
+
+// offsetLand is one pad whose F.Cu land sits 0.5 mm off the pad along its own x and turns with it,
+// and whose In1.Cu land is a custom triangle around a 0.4 mm offset (agni 1407).
+func offsetLand(pl *geom.ComponentPlacement) (*geom.Pad, *geom.PadstackLayer, *geom.PadstackLayer) {
+	pad := &geom.Pad{Number: "1", At: &geom.Point{}, Shape: "rect", Size: &geom.Point{X: 2_000_000, Y: 1_000_000}, Layers: []string{"*.Cu"}, Net: "SIG", Padstack: "OFF"}
+	front := &geom.PadstackLayer{Layer: "F.Cu", Pad: &geom.PadShape{Shape: "rect", Size: &geom.Point{X: 2_000_000, Y: 1_000_000}, Offset: &geom.Point{X: 500_000}}}
+	inner := &geom.PadstackLayer{Layer: "In1.Cu", Pad: &geom.PadShape{Shape: "custom", Size: &geom.Point{X: 600_000, Y: 600_000}, Offset: &geom.Point{X: 400_000},
+		Outline: []*geom.Point{{X: -300_000, Y: -300_000}, {X: 300_000, Y: -300_000}, {X: 0, Y: 300_000}}}}
+	pl.Pads = []*geom.Pad{pad}
+	return pad, front, inner
+}
+
+// packed collects what packStackLayer adds.
+func packed(pl *geom.ComponentPlacement, pad *geom.Pad, l *geom.PadstackLayer) [][2]int64 {
+	var pts [][2]int64
+	packStackLayer(func(_, _ uint8, _, _, _ string, p [][2]int64) { pts = append(pts, p...) }, 0, pl, pad, l, false, "J1", "SIG", "1")
+	return pts
+}
+
+func centroid(pts [][2]int64) (float64, float64) {
+	var x, y float64
+	for _, p := range pts {
+		x, y = x+float64(p[0]), y+float64(p[1])
+	}
+	return x / float64(len(pts)), y / float64(len(pts))
+}
+
+func TestAPackedLandSitsAtItsOffsetAndTurnsWithItsPart(t *testing.T) {
+	sin, cos := math.Sincos(math.Pi / 6)
+	for _, c := range []struct {
+		name   string
+		pl     *geom.ComponentPlacement
+		cx, cy float64 // the F.Cu land's centre on the board
+		long   float64 // the angle its 2 mm side lies at, CCW
+		// The custom triangle's centroid, 100 µm below its own centre along the pad's y.
+		innerCx, innerCy float64
+	}{
+		// A part turned 30° CCW turns the land's offset and its long side with it. 30° rather
+		// than 90°, since a rectangle turned 90° either way covers the same ground.
+		{"turned", &geom.ComponentPlacement{RefDes: "J1", At: &geom.Point{X: 10_000_000}, RotationDeg: 30},
+			10_000_000 + 500_000*cos, 500_000 * sin, 30, 10_000_000 + 400_000*cos + 100_000*sin, 400_000*sin - 100_000*cos},
+		// A part on the bottom mirrors the offset onto -x.
+		{"mirrored", &geom.ComponentPlacement{RefDes: "J1", At: &geom.Point{}, Mirror: true}, -500_000, 0, 0, -400_000, -100_000},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			pad, front, inner := offsetLand(c.pl)
+			quad := packed(c.pl, pad, front)
+			if len(quad) != 6 {
+				t.Fatalf("F.Cu packs %d vertices, want a quad's 6", len(quad))
+			}
+			if x, y := centroid(quad); math.Abs(x-c.cx) > 2 || math.Abs(y-c.cy) > 2 {
+				t.Errorf("F.Cu land centred at (%.0f, %.0f) nm, want (%.0f, %.0f)", x, y, c.cx, c.cy)
+			}
+			// The quad's first edge runs along the land's 2 mm side.
+			dx, dy := float64(quad[1][0]-quad[0][0]), float64(quad[1][1]-quad[0][1])
+			if a := math.Mod(math.Atan2(dy, dx)*180/math.Pi+360, 180); math.Abs(a-c.long) > 0.01 || math.Abs(math.Hypot(dx, dy)-2_000_000) > 2 {
+				t.Errorf("F.Cu land's long side lies at %.2f°, %.0f nm long, want %.0f°, 2 mm", a, math.Hypot(dx, dy), c.long)
+			}
+			tri := packed(c.pl, pad, inner)
+			if len(tri) != 3 {
+				t.Fatalf("the custom land packs %d vertices, want its triangle's 3", len(tri))
+			}
+			if x, y := centroid(tri); math.Abs(x-c.innerCx) > 2 || math.Abs(y-c.innerCy) > 2 {
+				t.Errorf("the custom land's centroid is (%.0f, %.0f) nm, want (%.0f, %.0f)", x, y, c.innerCx, c.innerCy)
+			}
+		})
+	}
+}
+
+func TestASVGLandDrawsItsOutlineAndOffset(t *testing.T) {
+	b := stackBoard()
+	pl := &geom.ComponentPlacement{RefDes: "J1", At: &geom.Point{}, RotationDeg: 90, Layer: "F.Cu"}
+	pad, front, inner := offsetLand(pl)
+	pad.Drill = 400_000
+	b.Placements = []*geom.ComponentPlacement{pl}
+	b.Padstacks = []*geom.Padstack{{Id: "OFF", Layers: []*geom.PadstackLayer{front, inner}}}
+	doc := BoardSVG(b, WithPickTargets())
+	if n := strings.Count(layerGroup(t, doc, "In1.Cu"), "<polygon "); n != 1 {
+		t.Errorf("In1.Cu draws %d polygons, want the custom land's one", n)
+	}
+	// The part turns 90°, so the land's offset points up the page from the hole.
+	rect := regexp.MustCompile(`<rect x="([-0-9.]+)" y="([-0-9.]+)" width="([0-9.]+)" height="([0-9.]+)"[^>]*rotate\(-90`).FindStringSubmatch(layerGroup(t, doc, "F.Cu"))
+	hole := regexp.MustCompile(`<circle cx="([-0-9.]+)" cy="([-0-9.]+)"`).FindStringSubmatch(doc[strings.Index(doc, `data-layer="F.Cu">`):])
+	if rect == nil || hole == nil {
+		t.Fatalf("F.Cu has no land turned by -90 (%v) or no hole (%v)", rect != nil, hole != nil)
+	}
+	f := func(s string) float64 { v, _ := strconv.ParseFloat(s, 64); return v }
+	cx, cy := f(rect[1])+f(rect[3])/2, f(rect[2])+f(rect[4])/2
+	if dx, dy := cx-f(hole[1]), cy-f(hole[2]); math.Abs(dx) > 0.2 || dy > -1 {
+		t.Errorf("the land's centre is (%.1f, %.1f) px from the hole, want straight up the page", dx, dy)
 	}
 }

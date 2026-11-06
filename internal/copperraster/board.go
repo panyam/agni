@@ -18,7 +18,8 @@ import (
 // where the padstack has none (agni 1356). Otherwise a pad on the layer is drawn from its own shape.
 //
 // A pad is drawn from its shape word at its board position, composed as the contract defines it:
-// world = at + M(R(rotation) * local), with M mirroring X on a mirrored placement. A shape the
+// world = at + M(R(rotation) * local), with M mirroring X on a mirrored placement. A padstack land
+// sits at its offset, and a custom land with an outline fills it (agni 1407). Any other shape the
 // contract has no outline for (custom, octagon, chamfered) is drawn as its rectangle extent.
 func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks, lands *Bitmap) {
 	scale := float64(g.GetUnitNm())
@@ -75,7 +76,7 @@ func DrawBoardLayer(g *geom.BoardGeometry, layer string, order []string, tracks,
 		for _, pad := range pl.GetPads() {
 			if ps := stacks[pad.GetPadstack()]; ps != nil {
 				if land := LandOn(ps, layer); land != nil {
-					drawPad(lands, pl, &geom.Pad{At: pad.GetAt(), RotationDeg: pad.GetRotationDeg(), Shape: land.GetShape(), Size: land.GetSize()}, scale)
+					drawLand(lands, pl, pad, land, scale)
 				}
 				continue
 			}
@@ -109,6 +110,27 @@ func drawPad(b *Bitmap, pl *geom.ComponentPlacement, pad *geom.Pad, scale float6
 	cx := (float64(pl.GetAt().GetX()) + x) * scale
 	cy := (float64(pl.GetAt().GetY()) + y) * scale
 	drawShape(b, cx, cy, pad.GetShape(), float64(pad.GetSize().GetX())*scale, float64(pad.GetSize().GetY())*scale, angle)
+}
+
+// drawLand draws a padstack's land for one pad. The land's offset and outline are in the pad's own
+// frame, so each point goes through the pad's rotation and then the placement's (agni 1407).
+func drawLand(b *Bitmap, pl *geom.ComponentPlacement, pad *geom.Pad, land *geom.PadShape, scale float64) {
+	ox, oy := float64(land.GetOffset().GetX()), float64(land.GetOffset().GetY())
+	if out := land.GetOutline(); len(out) > 2 {
+		ring := make([][2]float64, 0, len(out))
+		for _, p := range out {
+			x, y := geomath.PlaceLand(pl, pad, ox+float64(p.GetX()), oy+float64(p.GetY()))
+			ring = append(ring, [2]float64{x * scale, y * scale})
+		}
+		b.Rings([][][2]float64{ring}, true)
+		return
+	}
+	cx, cy := geomath.PlaceLand(pl, pad, ox, oy)
+	angle := pl.GetRotationDeg() + pad.GetRotationDeg()
+	if pl.GetMirror() {
+		angle = -angle
+	}
+	drawShape(b, cx*scale, cy*scale, land.GetShape(), float64(land.GetSize().GetX())*scale, float64(land.GetSize().GetY())*scale, angle)
 }
 
 func drawShape(b *Bitmap, cx, cy float64, shape string, w, h, angle float64) {
