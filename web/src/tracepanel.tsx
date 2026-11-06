@@ -9,6 +9,147 @@ import {
   emptyTrace,
 } from "./trace.js";
 import { type TracePick, type TracePicks, emptyPicks, pickCandidates } from "./tracepick.js";
+import { type WalkRequest, type WalkState, type WalkView, emptyWalk, hopColor } from "./walk.js";
+
+// WalkHandlers are the walk section's intents up. onWalk walks again with a changed request (wider,
+// narrower, a part crossed), onLocate moves the canvas to one row, and onClear drops the walk.
+export interface WalkHandlers {
+  onWalk: (r: WalkRequest) => void;
+  onLocate: (kind: "net" | "component", name: string, sheet: string) => void;
+  onClear: () => void;
+}
+
+// WalkSection lists a walk hop by hop (agni issue 1341). Each hop is a group the reader can fold, in
+// the shade the canvas lights it in. Each net says the part it was entered through, and a net where
+// the walk stopped says why. The parts the walk did not cross come last, each with its reason and a
+// button that crosses it.
+function WalkSection(props: { walk: () => WalkState; handlers: WalkHandlers }) {
+  const w = () => props.walk();
+  const [folded, setFolded] = createSignal<Set<number>>(new Set());
+  const toggle = (hop: number) =>
+    setFolded((f) => {
+      const next = new Set(f);
+      if (next.has(hop)) next.delete(hop);
+      else next.add(hop);
+      return next;
+    });
+  const again = (change: Partial<WalkRequest>) => props.handlers.onWalk({ ...w().request, ...change });
+  const nets = () => w().hops.reduce((n, h) => n + h.nets.length, 0);
+  return (
+    <div class="walk" data-walk-start={w().request.start}>
+      <div class="walk-head">
+        <span class="walk-title">
+          Walk from <strong>{w().request.start}</strong>, {w().request.kind || "series"}, {w().request.hops} hop
+          {w().request.hops === 1 ? "" : "s"}
+        </span>
+        <button type="button" class="mode-btn walk-narrower" data-action="walk-narrower" disabled={w().loading || w().request.hops <= 1} onClick={() => again({ hops: w().request.hops - 1 })}>
+          Narrower
+        </button>
+        <button type="button" class="mode-btn walk-wider" data-action="walk-wider" disabled={w().loading} onClick={() => again({ hops: w().request.hops + 1 })}>
+          Wider
+        </button>
+        <button type="button" class="mode-btn walk-clear" data-action="walk-clear" onClick={() => props.handlers.onClear()}>
+          Clear
+        </button>
+      </div>
+      <Show when={w().loading}>
+        <div class="walk-note walk-loading">Walking…</div>
+      </Show>
+      <Show when={w().error}>
+        <div class="trace-error">{w().error}</div>
+      </Show>
+      <Show when={w().reason}>
+        <div class="trace-unresolved">
+          <div class="trace-headline">Cannot walk</div>
+          <div class="trace-reason">{w().reason}</div>
+        </div>
+      </Show>
+      <Show when={!w().loading && !w().error && !w().reason}>
+        <For each={w().hops}>
+          {(h) => (
+            <div class="walk-hop" data-hop-group={h.hop}>
+              <button type="button" class="walk-hop-toggle" aria-expanded={!folded().has(h.hop)} onClick={() => toggle(h.hop)}>
+                <span class="walk-swatch" style={{ background: hopColor(h.hop) }} />
+                hop {h.hop}, {h.nets.length} net{h.nets.length === 1 ? "" : "s"}
+              </button>
+              <Show when={!folded().has(h.hop)}>
+                <ul class="walk-nets">
+                  <For each={h.nets}>
+                    {(n) => (
+                      <li class={`walk-net${n.ended ? " ended" : ""}`} data-walk-net={n.name} data-hop={n.hop}>
+                        <button type="button" class="walk-net-name" onClick={() => props.handlers.onLocate("net", n.name, n.sheetIds[0] ?? "")}>
+                          {n.name}
+                        </button>
+                        <span class="walk-entered">
+                          {n.fromNet ? (
+                            <>
+                              {" "}through{" "}
+                              <button type="button" class="walk-part" onClick={() => props.handlers.onLocate("component", n.through, n.sheetIds[0] ?? "")}>
+                                {n.through}
+                              </button>{" "}
+                              pin {n.enterPin} to pin {n.exitPin}
+                              {n.paired ? " (paired)" : ""}
+                            </>
+                          ) : (
+                            <> from pin {n.exitPin}</>
+                          )}
+                          <Show when={n.alsoThrough.length > 0}>, also through {n.alsoThrough.join(", ")}</Show>
+                        </span>
+                        <Show when={n.ended}>
+                          <span class="walk-ended"> ends here: {n.ended}</span>
+                        </Show>
+                        <Show when={n.parts.length > 0 || n.partsElided > 0}>
+                          <div class="walk-parts">
+                            <For each={n.parts}>
+                              {(p) => (
+                                <button type="button" class={`walk-part${p.cls === "test_point" ? " probe" : ""}`} onClick={() => props.handlers.onLocate("component", p.refDes, n.sheetIds[0] ?? "")}>
+                                  {p.refDes}.{p.pin}
+                                </button>
+                              )}
+                            </For>
+                            <Show when={n.partsElided > 0}>
+                              <span class="walk-more"> and {n.partsElided} more</span>
+                            </Show>
+                          </div>
+                        </Show>
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </Show>
+            </div>
+          )}
+        </For>
+        <For each={w().elided}>{(e) => <div class="walk-note">and {e.nets} more nets at hop {e.hop}, past the cap</div>}</For>
+        <Show when={w().boundary.length > 0}>
+          <div class="walk-boundary-head">not crossed</div>
+          <ul class="walk-boundary">
+            <For each={w().boundary}>
+              {(b) => (
+                <li data-walk-boundary={b.refDes}>
+                  <button type="button" class="walk-part" onClick={() => props.handlers.onLocate("component", b.refDes, "")}>
+                    {b.refDes}
+                  </button>
+                  <Show when={b.cls}>
+                    <span class="trace-stub-class"> ({b.cls.replace(/_/g, " ")})</span>
+                  </Show>{" "}
+                  on {b.net}: {b.reason}{" "}
+                  <button type="button" class="mode-btn walk-cross" data-action="walk-cross" onClick={() => again({ through: [...w().request.through, b.refDes] })}>
+                    Cross
+                  </button>
+                </li>
+              )}
+            </For>
+          </ul>
+        </Show>
+        <div class="trace-summary">
+          {nets()} net{nets() === 1 ? "" : "s"} over {w().hops.length} hop{w().hops.length === 1 ? "" : "s"}, {w().boundary.length} part
+          {w().boundary.length === 1 ? "" : "s"} not crossed
+        </div>
+      </Show>
+    </div>
+  );
+}
 
 type End = "from" | "to";
 
@@ -35,6 +176,8 @@ function endLabel(e: TraceEndItem): string {
 // connectivity, or a reader would go look at the board instead of at what they typed.
 function TracePanel(props: {
   state: () => TraceState;
+  walk: () => WalkState;
+  walkHandlers: WalkHandlers;
   picks: () => TracePicks;
   ends: TraceEnds;
   onTrace: (from: string, to: string) => void;
@@ -123,6 +266,9 @@ function TracePanel(props: {
   const s = () => props.state();
   return (
     <div class="trace">
+      <Show when={props.walk().ran}>
+        <WalkSection walk={props.walk} handlers={props.walkHandlers} />
+      </Show>
       <div class="trace-ask">
         {field("from", "Start pin", "U1.3")}
         {field("to", "End pin", "J1.1")}
@@ -257,9 +403,11 @@ function TracePanel(props: {
 export function tracePanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onTrace: (from: string, to: string) => void },
-): { island: SolidIsland; view: TraceView & TracePickView } {
+  handlers: { onTrace: (from: string, to: string) => void; walk?: WalkHandlers },
+): { island: SolidIsland; view: TraceView & TracePickView & WalkView } {
   const [state, setState] = signalView<TraceState>(emptyTrace());
+  const [walk, setWalk] = createSignal<WalkState>(emptyWalk());
+  const walkHandlers: WalkHandlers = handlers.walk ?? { onWalk: () => {}, onLocate: () => {}, onClear: () => {} };
   const [picks, setPicks] = createSignal<TracePicks>(emptyPicks());
   const [from, setFrom] = createSignal("");
   const [to, setTo] = createSignal("");
@@ -267,14 +415,14 @@ export function tracePanelIsland(
   const island = new SolidIsland(
     "trace",
     el,
-    () => <TracePanel state={state} picks={picks} ends={ends} onTrace={handlers.onTrace} />,
+    () => <TracePanel state={state} walk={walk} walkHandlers={walkHandlers} picks={picks} ends={ends} onTrace={handlers.onTrace} />,
     eventBus,
   );
   const setEnd = (end: End, text: string) => {
     ends.set[end](text);
     ends.inputs[end]?.focus();
   };
-  return { island, view: { setState, setPicks, setEnd } };
+  return { island, view: { setState, setPicks, setEnd, setWalk } };
 }
 
 // TracePickView is the pickers' half of the panel's view: the design's parts and pins, and a way to

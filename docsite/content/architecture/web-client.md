@@ -90,6 +90,20 @@ drop store under `.agni-overlay/`, as the Load page writes a proposal, and opens
 without `?board=`. A served design's folder belongs to whoever runs the server. So there the page
 shows the text, and the reader commits it.
 
+## Walking outwards in the viewer
+
+A reader selects a part or a pin, and Properties offers a walk per kind that `ListWalkKinds` lists
+(agni issue 1341). Choosing one calls `WalkDesign` at one hop and shows the walk in the Trace tab,
+above the two-pin trace. The presenter lights the start alone, and the host zooms to it with
+`SvgView.revealOverlay`. Then the presenter lights the whole walk, each hop in its own shade
+(`walk.ts`, `HOP_COLORS`). A net where the walk stopped is drawn faint, since a rail runs across the
+sheet. The parts crossed are red, and the parts left uncrossed are outlined. The tab groups the nets
+by hop, and each hop folds. Each net and part locates on its sheet, and `locateInWalk` keeps the
+walk lit under the focus. Wider and Narrower walk again a hop further or nearer. A part left
+uncrossed has a Cross button, which walks again with it in `through`. The address bar keeps the
+walk as `walk=`, `walk_kind=`, `walk_hops=` and `walk_through=`, and a link walks it again on
+arrival. The two-pin trace below stays the "to a pin" question until #1340's goal buttons arrive.
+
 ## A design with no drawing opens on agni's layout
 
 Say someone opens a bare `.edn`, or a `.kicad_pcb` with no schematic beside it. Neither holds a

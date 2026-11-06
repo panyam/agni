@@ -1,4 +1,5 @@
 import type { Bindings } from "./query.js";
+import { parseWalkParams, walkParams, type WalkRequest } from "./walk.js";
 import type { RenderMode } from "./viewer.js";
 
 // ViewerLocation is the URL-addressable state of the viewer: which file is open (mount+path),
@@ -69,6 +70,9 @@ export interface ViewerLocation {
   // It means nothing without `trace`. A link that dropped it would re-ask a NARROWER question
   // wider, so a run that said "no route within 2 crossings" could link to a route.
   traceHops: number;
+  // walk is a walk outwards from one part the viewer should run on arrival (agni issue 1341). It is
+  // absent, or has an empty start, when none. Like `trace` it carries the question.
+  walk?: WalkRequest;
   // query is a datalog question the viewer should ask on arrival, in a query tab, "" when none (agni
   // issue 634). Like `trace` it carries the QUESTION, so it needs no `hash`. title names the tab and
   // binds are its bound values as `--bind` spells them (`n=GND`, `t="3"`), so the link asks the
@@ -146,7 +150,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, board: "", verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, board: "", verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, walk: { start: "", kind: "", hops: 0, through: [] }, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -196,6 +200,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.trace) params.set("trace", loc.trace);
   // Only alongside its trace, and only when it is not the server default.
   if (loc.trace && loc.traceHops > 0) params.set("hops", String(loc.traceHops));
+  if (loc.walk) for (const [k, v] of Object.entries(walkParams(loc.walk))) params.set(k, v);
   if (loc.query) {
     params.set("query", loc.query);
     if (loc.title) params.set("title", loc.title);
@@ -332,6 +337,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   // back to the server default instead of asking a question nobody wrote.
   const hops = Number(params.get("hops"));
   loc.traceHops = Number.isInteger(hops) && hops > 0 ? hops : 0;
+  loc.walk = parseWalkParams((k) => params.get(k));
   loc.query = params.get("query") ?? "";
   loc.title = loc.query ? (params.get("title") ?? "") : "";
   loc.binds = loc.query ? params.getAll("bind") : [];

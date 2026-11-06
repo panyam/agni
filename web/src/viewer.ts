@@ -35,6 +35,7 @@ import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlight
 import { chooseSheet } from "./sheetfollow.js";
 import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
+import { type WalkRequest, type WalkView, emptyWalk, errorWalk, loadingWalk, splitStart, walkFromResponse, walkSheet, walkSpecs, walkStartSpecs } from "./walk.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
@@ -180,6 +181,12 @@ export interface ViewSink {
   // trace receives each pin-to-pin answer (agni issue 600). Optional like coverage; runTrace no-ops
   // when the host left the panel out.
   trace?: TraceView;
+  // walk receives each walk outwards from a part (agni issue 1341), shown in the Trace tab. Optional
+  // like trace; runWalk no-ops when the host left it out.
+  walk?: WalkView;
+  // reveal zooms the canvas to the highlight on screen, as the host does after a locate. runWalk calls
+  // it with the start alone lit, so the view zooms to the start before the walk is drawn around it.
+  reveal?: () => void;
   // The datasheet-params panel (WS9-035), optional like coverage; refreshParts no-ops when absent.
   parts?: PartsView;
   // review receives the project's checklist verdict for the open design (WS9-052). Optional like
@@ -279,6 +286,9 @@ export class ViewerPresenter {
   // it asked at (0 for the server default). They are URL state in the same category as the focused
   // verdict, naming which question the open viewer is looking at.
   private tracedPins = "";
+  // walked is the walk the Trace tab is showing, kept so the address bar holds it (agni issue 1341).
+  private walked: WalkRequest = { start: "", kind: "", hops: 0, through: [] };
+  private walkState = emptyWalk();
   private tracedHops = 0;
   // highlights are the active highlight layers (the selection API): each spec names
   // components/nets/pins and its color/alpha. The WebGL canvas resolves them locally against
@@ -899,6 +909,8 @@ export class ViewerPresenter {
       this.views.showPanel?.("trace");
       await this.runTrace(from, to, loc.traceHops);
     }
+    // A walk link holds the question as a trace link does, so the viewer walks it again.
+    if (loc.walk?.start) await this.runWalk(loc.walk);
     // A query link holds the question too (agni issue 634). The panel opens a tab holding it, asks it
     // whole as `agni query` did, and comes forward, since the answer appears there rather than on
     // the drawing (agni issue 1236).
@@ -1034,6 +1046,7 @@ export class ViewerPresenter {
       // disagrees with the panel.
       trace: this.tracedPins,
       traceHops: this.tracedHops,
+      walk: this.walked,
       // A query link is read on arrival and not written back, since the panel's tabs are the reader's
       // own from then on.
       query: "",
@@ -1787,6 +1800,69 @@ export class ViewerPresenter {
     if (target && target !== this.currentSheet) await this.showSheet(target);
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
     await this.setHighlights(focusStack(this.field(), subjects, focus));
+  }
+
+  // runWalk walks outwards from a part or pin (agni issue 1341) and shows the walk in the Trace tab.
+  // The canvas moves to the sheet the walk starts on and lights the start alone, the host zooms to
+  // it, and then each hop lights around it in its own shade. A start that names nothing is an answer
+  // the tab states, and the canvas is left alone.
+  async runWalk(req: WalkRequest): Promise<void> {
+    const view = this.views.walk;
+    if (!view) return;
+    const [ref, pin] = splitStart(req.start);
+    if (!ref) {
+      view.setWalk(errorWalk(req, "Name a part, such as R1, or a pin, such as U7.3"));
+      return;
+    }
+    if (!this.doc.mount || !this.doc.path) {
+      view.setWalk(errorWalk(req, "Open a design first"));
+      return;
+    }
+    view.setWalk(loadingWalk(req));
+    let state;
+    try {
+      const resp = await this.client.walkDesign({ snapshot: await this.drawn(), from: { refDes: ref, pin }, kind: req.kind, hops: req.hops, through: req.through });
+      if (!resp.walk) {
+        view.setWalk(errorWalk(req, "The server answered with no walk"));
+        return;
+      }
+      state = walkFromResponse(req, resp.walk);
+    } catch (e) {
+      view.setWalk(errorWalk(req, e instanceof Error ? e.message : String(e)));
+      return;
+    }
+    view.setWalk(state);
+    this.walkState = state;
+    this.walked = req;
+    this.syncLocation();
+    this.views.showPanel?.("trace");
+    if (state.reason) return;
+    if (this.mode === "native") await this.setMode("svg");
+    const target = walkSheet(state);
+    if (target && target !== this.currentSheet) await this.showSheet(target);
+    await this.setHighlights(walkStartSpecs(req));
+    this.views.reveal?.();
+    await this.setHighlights(walkSpecs(state));
+  }
+
+  // locateInWalk moves to a net or part of the walk on screen and lays the focus highlight over the
+  // walk's shades, so locating one row of the walk keeps the rest of it lit. The host zooms to it.
+  async locateInWalk(kind: string, subject: string, sheet?: string): Promise<void> {
+    if (!subject) return;
+    if (sheet && sheet !== this.currentSheet) await this.showSheet(sheet);
+    if (this.mode === "native") await this.setMode("svg");
+    const focus = withFocusShape(entitySpecs(kind, subject), this.highlightStyle);
+    await this.setHighlights([...walkSpecs(this.walkState), ...focus]);
+    this.views.reveal?.();
+  }
+
+  // clearWalk drops the walk from the Trace tab and the address bar, and its highlight.
+  async clearWalk(): Promise<void> {
+    this.walked = { start: "", kind: "", hops: 0, through: [] };
+    this.walkState = emptyWalk();
+    this.views.walk?.setWalk(emptyWalk());
+    this.syncLocation();
+    await this.setHighlights([]);
   }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes
