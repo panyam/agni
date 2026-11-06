@@ -61,7 +61,7 @@ import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
 import { hierarchyStrip } from "./hierarchy.js";
 import { drawingStrip } from "./drawingnote.js";
-import { selectionFromCell, type Selection } from "./selection.js";
+import { pinOf, selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
@@ -564,7 +564,7 @@ class AppRoot extends BaseComponent {
       if (open) await presenter.showSheet(open);
       if (sel.kind === "area") await presenter.locateArea(sel);
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      svgView.revealOverlay();
+      svgView.revealOverlay(pinOf(sel));
     };
     const sheetViews = (this.sheetViews = new SheetViews(
       {

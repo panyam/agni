@@ -60,19 +60,25 @@ describe("a sheet view beside the canvas", () => {
       );
       expect(await centredIn(page, `${PANE} .picks-front [data-ref="${onSheet.ref}"]`, `${PANE} .sheetview-canvas`)).toBe(true);
 
-      // A pad picked on the board centres its pin on the schematic. A pin's highlight is a point, and
-      // a point used to reveal nothing.
+      // A pad picked on the board centres its pin's part on the schematic, with the pin on screen. A
+      // pin's highlight is a point, and a point used to reveal nothing (agni issue 1326). Framing the
+      // point alone left a part drawn at the end of a long leg off centre (agni issue 1419).
       const pad = `${PANE} [data-kind="pin"][data-ref="${onSheet.ref}"]`;
       const pin = await page.$eval(pad, (e) => e.getAttribute("data-pin")!);
       await page.mouse.click(...(Object.values(await centreOf(page, `${pad}[data-pin="${pin}"]`)) as [number, number]));
       await picked(page, `${onSheet.ref}.${pin}`);
       const pinOnSheet = `#svg-view [data-kind="pin"][data-ref="${onSheet.ref}"][data-pin="${pin}"]`;
-      await page.waitForFunction((sel) => {
-        const e = document.querySelector(sel)!.getBoundingClientRect();
+      await page.waitForFunction(({ sel, ref }) => {
+        const p = document.querySelector(sel)!.getBoundingClientRect();
         const h = document.querySelector("#svg-view")!.getBoundingClientRect();
-        const cx = e.left + e.width / 2, cy = e.top + e.height / 2;
-        return Math.abs(cx - (h.left + h.width / 2)) < h.width / 10 && Math.abs(cy - (h.top + h.height / 2)) < h.height / 10;
-      }, pinOnSheet, { timeout: 30_000 });
+        const px = p.left + p.width / 2, py = p.top + p.height / 2;
+        if (px < h.left || px > h.right || py < h.top || py > h.bottom) return false;
+        // The body nearest the pin is the unit that draws it.
+        const bodies = [...document.querySelectorAll(`#svg-view [data-kind="component"][data-ref="${ref}"]`)].map((e) => e.getBoundingClientRect());
+        const centre = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        const body = bodies.map(centre).sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))[0];
+        return !!body && body.x > h.left + h.width / 3 && body.x < h.right - h.width / 3 && body.y > h.top + h.height / 3 && body.y < h.bottom - h.height / 3;
+      }, { sel: pinOnSheet, ref: onSheet.ref }, { timeout: 30_000 });
     });
   }, 120_000);
 

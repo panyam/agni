@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
-import { SvgView, computeReveal, drawnOnSheet } from "./svgview.js";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
+import { SvgView, computeReveal, drawnOnSheet, unitAround } from "./svgview.js";
 
 describe("computeReveal (WS9-006)", () => {
   it("centers the target box in the host", () => {
@@ -24,6 +24,91 @@ describe("computeReveal (WS9-006)", () => {
     expect(wire.scale).toBeCloseTo(800 / (500 * 2.5));
     // Still centered on the true (unfloored) box.
     expect(10 * dot.scale + dot.tx).toBeCloseTo(400);
+  });
+});
+
+// A test point drawn at the end of a long leg: its pin runs from the tip at x=0 to the body at x=200,
+// and the body is a 20-unit circle there. A second unit of the same part is drawn far away.
+const LEG = { x: 0, y: 95, w: 200, h: 10 };
+const BODY = { x: 200, y: 90, w: 20, h: 20 };
+const FAR_UNIT = { x: 2000, y: 2000, w: 50, h: 50 };
+
+describe("unitAround (agni issue 1419)", () => {
+  it("grows from a pin's leg into the body the leg ends on", () => {
+    expect(unitAround(LEG, [BODY])).toEqual({ x: 0, y: 90, w: 220, h: 20 });
+  });
+
+  it("leaves out a unit of the same part that nothing touches", () => {
+    expect(unitAround(LEG, [FAR_UNIT, BODY])).toEqual({ x: 0, y: 90, w: 220, h: 20 });
+  });
+
+  it("follows a chain of touching boxes, so a label beside the body comes along", () => {
+    const label = { x: 221, y: 90, w: 30, h: 8 };
+    expect(unitAround(LEG, [label, BODY])).toEqual({ x: 0, y: 90, w: 251, h: 20 });
+  });
+
+  it("keeps the seed when the part draws nothing near it", () => {
+    expect(unitAround(LEG, [])).toEqual(LEG);
+  });
+});
+
+// jsdom lays nothing out, so getBBox reads a data-box attribute that each test element carries.
+describe("revealOverlay for a pin (agni issue 1419)", () => {
+  const proto = (window as unknown as { SVGElement: { prototype: Record<string, unknown> } }).SVGElement.prototype;
+  const had = Object.prototype.hasOwnProperty.call(proto, "getBBox");
+  const before = proto.getBBox;
+  beforeEach(() => {
+    proto.getBBox = function (this: Element) {
+      const b = this.getAttribute("data-box");
+      if (!b) throw new Error("not rendered");
+      const [x, y, width, height] = b.split(",").map(Number);
+      return { x, y, width, height };
+    };
+  });
+  afterEach(() => {
+    if (had) proto.getBBox = before;
+    else delete proto.getBBox;
+  });
+
+  const box = (b: { x: number; y: number; w: number; h: number }) => `${b.x},${b.y},${b.w},${b.h}`;
+  function harness(): SvgView {
+    const host = document.createElement("div");
+    Object.defineProperty(host, "clientWidth", { value: 800 });
+    Object.defineProperty(host, "clientHeight", { value: 600 });
+    document.body.appendChild(host);
+    const view = new SvgView(host);
+    view.setSvg(
+      `<svg width="3000" height="3000">` +
+        `<line data-kind="pin" data-ref="TP3" data-pin="1" data-box="${box(LEG)}"/>` +
+        `<circle data-kind="component" data-ref="TP3" data-box="${box(BODY)}"/>` +
+        `<rect data-kind="component" data-ref="TP3" data-box="${box(FAR_UNIT)}"/>` +
+        `<circle data-kind="component" data-ref="TP4" data-box="200,110,20,20"/>` +
+        `</svg>`,
+    );
+    // The overlay lights the pin as a dot at its tip.
+    view.setOverlay(`<svg width="3000" height="3000"><circle data-box="-2,98,4,4"/></svg>`);
+    return view;
+  }
+  const centre = (v: { tx: number; ty: number; scale: number }) => ({ x: (400 - v.tx) / v.scale, y: (300 - v.ty) / v.scale });
+
+  it("frames the pin's leg and the body it ends on, centred on the unit", () => {
+    const v = harness().revealOverlay({ ref: "TP3", pin: "1" })!;
+    // The unit spans x 0..220 and y 90..110 (the dot pokes out to x=-2), so its middle is x=109.
+    expect(centre(v).x).toBeCloseTo(109);
+    expect(centre(v).y).toBeCloseTo(100);
+    // 222 units wide in an 800 px host at a 2.5 window.
+    expect(v.scale).toBeCloseTo(800 / (222 * 2.5));
+  });
+
+  it("frames the dot alone when the caller names no pin", () => {
+    const v = harness().revealOverlay()!;
+    expect(centre(v).x).toBeCloseTo(0);
+    expect(centre(v).y).toBeCloseTo(100);
+  });
+
+  it("frames the dot alone for a pin the drawing does not key", () => {
+    const v = harness().revealOverlay({ ref: "U9", pin: "1" })!;
+    expect(centre(v).x).toBeCloseTo(0);
   });
 });
 
