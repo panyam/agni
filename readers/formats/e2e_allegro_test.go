@@ -101,6 +101,46 @@ func TestAllegroNetlistMatchesItsExtract(t *testing.T) {
 	}
 }
 
+// TestAllegroPinNamesMatchTheExtract holds every pin's functional name to the extract's PIN_NAME,
+// read through the part type its component's section names (agni issue 1361).
+func TestAllegroPinNamesMatchTheExtract(t *testing.T) {
+	d, _, x := readAllegroSample(t)
+	parts := map[string]map[string]string{}
+	for _, lib := range d.GetLibraries() {
+		for _, pt := range lib.GetParts() {
+			names := map[string]string{}
+			for _, p := range pt.GetPins() {
+				names[p.GetDesignator()] = p.GetName()
+			}
+			parts[lib.GetName()+"/"+pt.GetName()] = names
+		}
+	}
+	byRef := map[string]map[string]string{}
+	for _, c := range d.GetComponents() {
+		s := c.GetSections()[0]
+		byRef[c.GetRefDes()] = parts[s.GetLibraryRef()+"/"+s.GetPartRef()]
+	}
+	compared := 0
+	for _, p := range x.pins {
+		names, ok := byRef[p.ref]
+		if !ok {
+			continue
+		}
+		got, ok := names[p.number]
+		if !ok {
+			t.Errorf("%s.%s: no pin on its part type, extract names it %q", p.ref, p.number, p.name)
+			continue
+		}
+		if got != p.name {
+			t.Errorf("%s.%s: name %q, extract %q", p.ref, p.number, got, p.name)
+		}
+		compared++
+	}
+	if compared != 3135 {
+		t.Fatalf("compared %d pin names, want the extract's 3,135", compared)
+	}
+}
+
 // TestAllegroBoardMatchesItsExtract holds the board geometry to the extract: each placement's origin,
 // angle and side, every pin's position on the board once the contract's transform is applied, and
 // every via's position and net.

@@ -30,6 +30,14 @@ func formatTypesPowerIn(sourceFormat string) bool {
 	return strings.HasPrefix(sourceFormat, "kicad") || sourceFormat == "geda" || sourceFormat == "telesis"
 }
 
+// formatTypesNoPins reports whether a source format stores no electrical type for any pin. A board
+// file such as an Allegro .brd names its pins and types none of them. Promoting its loads to
+// POWER_IN by name leaves every regulator output untyped, so every rail would read as undriven
+// (agni issue 1361). Such a format is left alone until its own power and ground pin flags are read.
+func formatTypesNoPins(sourceFormat string) bool {
+	return sourceFormat == "allegro"
+}
+
 // StampPowerInPins FILLS the POWER_IN electrical type on under-typed supply pins (WS3-072 PR2), once
 // at ingestion. KiCad and gEDA already mark a VCC/VIN pin POWER_IN, so it is a no-op there, and an
 // INPUT pin in those formats is left INPUT (formatTypesPowerIn). EDIF's port grammar has only

@@ -2,6 +2,7 @@ package formats
 
 import (
 	"bufio"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"os"
 	"sort"
 	"strings"
@@ -190,6 +191,67 @@ func TestAllegro166ReadsAsClaysNetlist(t *testing.T) {
 	if values["R9"] != "1.0K" || values["U5"] != "MK64FN1M0VLL12" {
 		t.Errorf("values R9=%q U5=%q, want 1.0K and MK64FN1M0VLL12", values["R9"], values["U5"])
 	}
+}
+
+// TestAllegro166PinNamesMatchClaysNetlist holds a 16.6 board's pin names to the names Capture wrote
+// in pstxnet.dat (agni issue 1361). Both spell a name a part repeats with its pin (`GND#3`), and
+// pstxnet.dat cuts a name at 31 characters. Pins the board does not place are skipped.
+func TestAllegro166PinNamesMatchClaysNetlist(t *testing.T) {
+	d, err := (&Loader{}).ReadDesign(clayR6 + "CLAYR6.brd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]string{}
+	parts := map[string]*ir.PartType{}
+	for _, lib := range d.GetLibraries() {
+		for _, pt := range lib.GetParts() {
+			parts[lib.GetName()+"/"+pt.GetName()] = pt
+		}
+	}
+	for _, c := range d.GetComponents() {
+		s := c.GetSections()[0]
+		for _, p := range parts[s.GetLibraryRef()+"/"+s.GetPartRef()].GetPins() {
+			names[c.GetRefDes()+"."+p.GetDesignator()] = p.GetName()
+		}
+	}
+	compared := 0
+	for pin, want := range readPstxnetPinNames(t, clayR6+"pstxnet.dat") {
+		got, ok := names[pin]
+		if !ok {
+			continue
+		}
+		if len(want) == 31 && strings.HasPrefix(got, want) {
+			got = want
+		}
+		if got != want {
+			t.Errorf("%s: name %q, pstxnet.dat %q", pin, got, want)
+		}
+		compared++
+	}
+	if compared != 567 {
+		t.Fatalf("compared %d pin names, want 567", compared)
+	}
+}
+
+// readPstxnetPinNames reads the pin name pstxnet.dat gives each `REF.PIN`. A NODE_NAME line is
+// followed by the pin's symbol path and then its quoted name.
+func readPstxnetPinNames(t *testing.T, path string) map[string]string {
+	t.Helper()
+	b, err := os.ReadFile(path) // #nosec G304 -- a fixed path in the samples corpus
+	if err != nil {
+		t.Fatalf("%v; run `make samples-oracle`", err)
+	}
+	out := map[string]string{}
+	lines := strings.Split(strings.ReplaceAll(string(b), "\r", ""), "\n")
+	for i, line := range lines {
+		f := strings.Fields(line)
+		if len(f) != 3 || f[0] != "NODE_NAME" || i+2 >= len(lines) {
+			continue
+		}
+		name := strings.TrimSuffix(strings.TrimSpace(lines[i+2]), ":;")
+		out[f[1]+"."+f[2]] = strings.Trim(name, "'")
+	}
+	return out
 }
 
 // TestAllegro166DrawsClaysOutline reads Clay R6's board edge. Clay draws it as the design outline of

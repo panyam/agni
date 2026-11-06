@@ -35,6 +35,14 @@ func TestStampPowerInPins(t *testing.T) {
 		{"IO1", IN, IN},         // plain signal
 		{"VDD", OUT, OUT},       // confident OUTPUT is never overwritten
 		{"VDD", POWER, POWER},   // already typed (KiCad-style): no-op
+		// agni issue 1361: signals that start with a supply word.
+		{"VIN1A_D10", UNSPEC, UNSPEC}, // a video input port's data pin
+		{"VIN2A_CLK", IN, IN},         // the same port's clock
+		{"VBUS_DET", IN, IN},          // a supply's detect pin
+		{"VCC_SENSE", IN, IN},         // a supply's sense pin
+		{"VIN1", UNSPEC, POWER},       // a numbered supply input is still one
+		{"VDD_1V8", IN, POWER},        // a rail-named supply input is still one
+		{"VBUS0", UNSPEC, POWER},      // as is a numbered VBUS pin
 	}
 	for _, c := range cases {
 		d := &ir.Design{Libraries: []*ir.PartLibrary{{Parts: []*ir.PartType{{
@@ -103,6 +111,8 @@ func TestStampPowerInPinsKeepsAConfidentInput(t *testing.T) {
 		{"edif-2.0.0", IN, POWER},
 		{"ipc-2581", INOUT, POWER},
 		{"xschem", IN, POWER},
+		// agni issue 1361: a board file types no pin, so a name alone promotes nothing.
+		{"allegro", UNSPEC, UNSPEC},
 	}
 	for _, c := range cases {
 		d := &ir.Design{SourceFormat: c.format, Libraries: []*ir.PartLibrary{{Parts: []*ir.PartType{{

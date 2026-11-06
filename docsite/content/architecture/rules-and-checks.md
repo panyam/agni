@@ -227,7 +227,7 @@ so the requirement is declared rather than inferred.
 
 | Capability | Present when | Missing on | Rule that needs it | Queryable twin |
 |---|---|---|---|---|
-| `design.types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only) and IPC-2581 (no pin electrical types) | `power-input-not-driven` | `design.types_power_out`, also a spec fact |
+| `design.types_power_out` | the format types power-OUTPUT pins, so a rail's driver is visible | EDIF (INPUT, OUTPUT and INOUT only), IPC-2581 and an Allegro board (no pin electrical types) | `power-input-not-driven` | `design.types_power_out`, also a spec fact |
 | `nc_channel` | the design can mark a pin intentionally open, by a NO_CONNECT pin type, a no-connect flag (the net's `no_connect` attribute) or a net name in the `no_connect` vocabulary | EDIF netlists | `unconnected-pin`, `power-pin-mistyped` | `design.has_nc_channel`, spec fact `design.nc_channel` |
 | `netclass` | nets carry tool-assigned net-class membership (WS3-105) | EDIF, IPC-2581, a `.kicad_sch` or `.kicad_pcb` with no same-stem `.kicad_pro`, and a KiCad project that declares no classes | any rule scoped by net class | `design.has_netclass`, also a spec fact |
 | `netclass_defs` | the design declares what a class routes at, its clearance, track width and via sizes (WS3-111) | everything `netclass` is missing on, plus a project that assigns classes and defines none | `netclass-track-width`, `netclass-via-drill` | `design.has_netclass_defs` |
@@ -240,6 +240,12 @@ property of the format's grammar and is decided from the source format alone. `n
 classes lacks `netclass` as surely as an EDIF netlist does. `ref_des_collisions` and
 `junction_taps` are properties of the reader's implementation, so they are declared per read in
 `InputDiagnostics.supplied`, because only the reader knows whether it looked.
+
+An Allegro board supplies both from its physical constraint sets (agni issue 1359). Each named set
+is a class with its minimum track width, and a net is in the set its own field names, or else the
+set its match group names, which is where Allegro puts a differential pair's set. A net that names
+no set takes `DEFAULT`. The sets also hold a clearance and a pair gap, which are not read yet,
+because no file the gate reads says which word is which.
 
 `netclass_defs` is separate from `netclass` on purpose. A KiCad project's `net_settings` carries
 membership and definitions in independent blocks, so a project can assign nets to a class it never
