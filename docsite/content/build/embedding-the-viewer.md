@@ -57,7 +57,8 @@ guessing when the viewer has booted. Requests are answered one at a time, in the
 Every response carries the page's location after the call, so a caller learns where the viewer
 ended up without asking again.
 
-- `GetLocation` reads where the page is and changes nothing.
+- `GetLocation` reads where the page is and changes nothing. Its answer also lists the sheet views
+  open beside the canvas, each with its id and the sheet it shows.
 - `ApplyLocation` moves the page to a location as following a link to it would. A location naming
   another design opens it. A location naming the open design applies to the page as it stands, and
   so does a location naming no design. An empty field leaves its part alone, so a caller sends only
@@ -69,12 +70,22 @@ ended up without asking again.
 - `SelectFinding` focuses a finding of the last run, as clicking its row does, except that selecting
   the focused finding again keeps it rather than clearing it.
 - `LocateEntity` highlights a net, part or pin, as clicking a query result does.
-- `ShowSheet` opens a sheet by its id.
+- `ShowSheet` opens a sheet by its id. It opens the sheet on the canvas, or in the sheet view that
+  its `view` names.
+- `OpenSheetView` opens a sheet view beside the canvas on one sheet, as the Sheets panel's open
+  beside button does. It answers the new view's id, such as `sheetview-2`. A page numbers its views
+  from 1 and never reuses a number, so the id of a closed view names nothing.
+- `CloseSheetView` closes one view by its id.
 
 A call can name something the page does not have, such as an unknown verdict or a finding the run
 lacks. That call answers `resolved: false` or `selected: false` and leaves the page alone, because a
-stale link should not clear what the reader was looking at. A sheet the design lacks is
-`invalid_argument`.
+stale link should not clear what the reader was looking at. `CloseSheetView` answers `closed: false`
+for a view that is not open. A sheet the design lacks is `invalid_argument`, and so is a `ShowSheet`
+naming a view that is not open.
+
+Say a report link wants the board open beside the schematic. The parent applies the link, then
+sends `OpenSheetView` with `sheet: "board"`. The canvas keeps the schematic, and the view beside
+it follows whatever the reader selects.
 
 ## A parent page
 

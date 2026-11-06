@@ -30,7 +30,7 @@ const MODES: readonly RenderMode[] = ["svg", "webgl", "native"];
 export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
   const here = () => locationToWire(api.location());
   const impl: PageImpl = {
-    getLocation: async () => ({ location: here() }),
+    getLocation: async () => ({ location: here(), views: api.sheetViews() }),
     applyLocation: async (req) => {
       if (req.url && req.location) throw new ConnectError("ApplyLocation takes a location or a url, not both", Code.InvalidArgument);
       const { location, verdictResolved } = await api.applyLocation(req.url ? locationFromLink(req.url) : locationFromWire(req.location));
@@ -43,9 +43,14 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
       return { location: here() };
     },
     showSheet: async (req) => {
-      await api.showSheet(req.sheet);
-      return { location: here() };
+      await api.showSheet(req.sheet, req.view || undefined);
+      return { location: here(), views: api.sheetViews() };
     },
+    openSheetView: async (req) => {
+      const view = await api.openSheetView(req.sheet);
+      return { view, location: here(), views: api.sheetViews() };
+    },
+    closeSheetView: async (req) => ({ closed: api.closeSheetView(req.view), location: here(), views: api.sheetViews() }),
   };
   return async (method, body) => {
     const m = findMethod(method);

@@ -124,12 +124,14 @@ func TestEveryPageMethodIsATool(t *testing.T) {
 
 func TestToolNamesAndReadOnly(t *testing.T) {
 	want := map[string]bool{
-		"viewer_get_location":   true,
-		"viewer_apply_location": false,
-		"viewer_locate_verdict": false,
-		"viewer_select_finding": false,
-		"viewer_locate_entity":  false,
-		"viewer_show_sheet":     false,
+		"viewer_get_location":     true,
+		"viewer_apply_location":   false,
+		"viewer_locate_verdict":   false,
+		"viewer_select_finding":   false,
+		"viewer_locate_entity":    false,
+		"viewer_show_sheet":       false,
+		"viewer_open_sheet_view":  false,
+		"viewer_close_sheet_view": false,
 	}
 	got := map[string]bool{}
 	for _, d := range ToolDecls() {

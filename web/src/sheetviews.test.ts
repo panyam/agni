@@ -69,6 +69,20 @@ describe("the sheet views beside the canvas", () => {
     expect(c.view.getView()).toEqual(cBefore);
   });
 
+  it("closes a view by its id, and refuses an id that names no open view", async () => {
+    const { views, docked } = setup();
+    const a = await views.open("s1");
+    const b = await views.open("board");
+    expect(views.get(b.id)).toBe(b);
+    expect(views.close(a.id)).toBe(true);
+    expect(views.list().map((p) => p.id)).toEqual([b.id]);
+    expect([...docked.keys()]).toEqual([b.id]);
+    expect(views.get(a.id)).toBeUndefined();
+    expect(views.close(a.id)).toBe(false);
+    expect(views.close("sheetview-9")).toBe(false);
+    expect(views.list().map((p) => p.id)).toEqual([b.id]);
+  });
+
   it("forgets a view the dock closes", async () => {
     const { views, dock } = setup();
     const a = await views.open("s1");

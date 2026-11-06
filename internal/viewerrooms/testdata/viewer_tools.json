@@ -192,6 +192,45 @@
           },
           "sheet": {
             "type": "string"
+          },
+          "view": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_open_sheet_view",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_close_sheet_view",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "view": {
+            "type": "string"
           }
         },
         "required": [

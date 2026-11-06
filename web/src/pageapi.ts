@@ -53,13 +53,47 @@ export interface ViewerPageAPI {
   // designator for a pin. An entity the design does not draw highlights nothing.
   locateEntity(kind: string, subject: string, opts?: { pin?: string; sheet?: string }): Promise<void>;
 
-  // showSheet opens one sheet of the open design by its id. It rejects for an id the design lacks.
-  showSheet(id: string): Promise<void>;
+  // showSheet opens one sheet of the open design by its id, on the canvas, or in the open sheet view
+  // that `view` names. It rejects for an id the design lacks, and for a view that is not open.
+  showSheet(id: string, view?: string): Promise<void>;
+
+  // sheetViews lists the sheet views open beside the canvas (agni issue 1370), in the order they
+  // opened. A page with no dock has none.
+  sheetViews(): SheetViewInfo[];
+
+  // openSheetView opens a sheet view on one sheet of the open design, as the Sheets panel's "open
+  // beside" does, and resolves to it once it has drawn the sheet. It rejects for a sheet the design
+  // lacks, and on a page that has no sheet views.
+  openSheetView(sheet: string): Promise<SheetViewInfo>;
+
+  // closeSheetView closes one sheet view. It returns false when no open view has that id, and then
+  // the page is left as it was.
+  closeSheetView(id: string): boolean;
 }
 
-// pageApi narrows a presenter to the page contract. It holds no state of its own, so any number of
-// transports can share one.
-export function pageApi(p: ViewerPresenter): ViewerPageAPI {
+// SheetViewInfo is a sheet view as a host sees it. id is "sheetview-<n>", numbered from 1 per page
+// and never reused, and sheet is the sheet id the view shows.
+export interface SheetViewInfo {
+  id: string;
+  sheet: string;
+}
+
+// SheetViewsHost is what the page contract asks of the sheet views beside the canvas. SheetViews
+// (sheetviews.ts) satisfies it.
+export interface SheetViewsHost {
+  open(sheetId: string): Promise<SheetViewInfo>;
+  close(id: string): boolean;
+  get(id: string): { sheet: string; open(sheetId: string): Promise<void> } | undefined;
+  list(): SheetViewInfo[];
+}
+
+// pageApi narrows a presenter and the page's sheet views to the page contract. It holds no state of
+// its own, so any number of transports can share one. Without `views` the page has no sheet views,
+// and opening one is refused.
+export function pageApi(p: ViewerPresenter, views?: SheetViewsHost): ViewerPageAPI {
+  const hasSheet = (id: string) => {
+    if (!p.hasSheet(id)) throw new Error(`the open design has no sheet "${id}"`);
+  };
   return {
     location: () => p.location(),
     async applyLocation(loc) {
@@ -81,9 +115,23 @@ export function pageApi(p: ViewerPresenter): ViewerPageAPI {
       if (opts?.sheet && !p.hasSheet(opts.sheet)) throw new Error(`the open design has no sheet "${opts.sheet}"`);
       await p.locateEntity(kind, subject, opts?.sheet, undefined, opts?.pin ?? "");
     },
-    async showSheet(id) {
-      if (!p.hasSheet(id)) throw new Error(`the open design has no sheet "${id}"`);
-      await p.showSheet(id);
+    async showSheet(id, view) {
+      hasSheet(id);
+      if (!view) {
+        await p.showSheet(id);
+        return;
+      }
+      const pane = views?.get(view);
+      if (!pane) throw new Error(`no sheet view "${view}" is open`);
+      await pane.open(id);
     },
+    sheetViews: () => (views ? views.list().map(({ id, sheet }) => ({ id, sheet })) : []),
+    async openSheetView(sheet) {
+      if (!views) throw new Error("this page has no sheet views");
+      hasSheet(sheet);
+      const v = await views.open(sheet);
+      return { id: v.id, sheet: v.sheet };
+    },
+    closeSheetView: (id) => (views ? views.close(id) : false),
   };
 }

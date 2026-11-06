@@ -68,6 +68,19 @@ export class SheetViews {
     );
   }
 
+  // close closes one view. It returns false when no open view has that id.
+  close(id: string): boolean {
+    if (!this.panes.has(id)) return false;
+    this.dock.close(id);
+    this.panes.delete(id);
+    return true;
+  }
+
+  // get returns the open view with that id.
+  get(id: string): SheetPane | undefined {
+    return this.panes.get(id);
+  }
+
   // reset closes every view, for a page that opens another design.
   reset(): void {
     for (const id of [...this.panes.keys()]) this.dock.close(id);

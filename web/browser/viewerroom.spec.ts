@@ -41,6 +41,8 @@ afterAll(async () => {
 });
 
 type CallResult = { isError?: boolean; content?: { text?: string }[]; structuredContent?: { location?: { mount: string; path: string; sheet: string } } };
+type SheetViewWire = { id: string; sheet: string };
+type ViewCall = CallResult & { structuredContent?: { view?: SheetViewWire; views?: SheetViewWire[]; closed?: boolean } };
 
 // Agent is an MCP client on one wire, spoken by hand so the spec needs no SDK. The "session" wire
 // initializes and sends its session id. The "stateless" wire is the 2026-07-28 one, and it sends the
@@ -198,6 +200,39 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
     expect(ev?.data.text).toBe("why is this sheet so busy?");
     expect(ev?.data.location.location).toMatchObject({ mount: "kicad", path: "hier_numeric_root.kicad_sch" });
     expect(await form.locator("input[type=text]").inputValue(), "the box clears once the question is sent").toBe("");
+  }, 120_000);
+
+  // An agent opens a sheet view beside the canvas, moves it to another sheet and closes it (agni
+  // issue 1370). Only A2 lets agents in, so the view opens there.
+  it("opens, moves and closes a sheet view beside the canvas", async () => {
+    const agent = new Agent(`${server.base}/mcp`, wire);
+    await agent.connect();
+    const here = await agent.call("viewer_get_location", { design: DESIGN_A });
+    expect(here.isError, text(here)).toBeFalsy();
+    const canvasSheet = here.structuredContent?.location?.sheet ?? "";
+    const otherSheet = await tabs.A1.evaluate(() => (globalThis as unknown as { __agniViewerPage: { location(): { sheet: string } } }).__agniViewerPage.location().sheet);
+    expect(otherSheet, "A1 and A2 show different sheets, so a move is visible").not.toBe(canvasSheet);
+
+    const opened = (await agent.call("viewer_open_sheet_view", { design: DESIGN_A, sheet: canvasSheet })) as ViewCall;
+    expect(opened.isError, text(opened)).toBeFalsy();
+    const id = opened.structuredContent?.view?.id ?? "";
+    expect(id).toMatch(/^sheetview-\d+$/);
+    expect(opened.structuredContent?.view?.sheet).toBe(canvasSheet);
+    await tabs.A2.locator(`[data-sheetview="${id}"]`).waitFor({ timeout: 30_000 });
+    expect(await tabs.A1.locator("[data-sheetview]").count(), "A1 kept agents out, so it opened no view").toBe(0);
+
+    const moved = (await agent.call("viewer_show_sheet", { design: DESIGN_A, sheet: otherSheet, view: id })) as ViewCall;
+    expect(moved.isError, text(moved)).toBeFalsy();
+    expect(moved.structuredContent?.location?.sheet, "the canvas stays on its sheet").toBe(canvasSheet);
+    expect(moved.structuredContent?.views).toEqual([{ id, sheet: otherSheet }]);
+
+    const closed = (await agent.call("viewer_close_sheet_view", { design: DESIGN_A, view: id })) as ViewCall;
+    expect(closed.isError, text(closed)).toBeFalsy();
+    expect(closed.structuredContent?.closed).toBe(true);
+    await tabs.A2.locator(`[data-sheetview="${id}"]`).waitFor({ state: "detached", timeout: 30_000 });
+    const gone = (await agent.call("viewer_show_sheet", { design: DESIGN_A, sheet: otherSheet, view: id })) as ViewCall;
+    expect(gone.isError, "a closed view's id names nothing").toBe(true);
+    expect(text(gone)).toContain("InvalidArgument");
   }, 120_000);
 });
 
