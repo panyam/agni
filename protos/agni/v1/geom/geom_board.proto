@@ -168,11 +168,16 @@ message PadstackLayer {
   PadShape antipad = 4;
 }
 
-// PadShape is one shape of a padstack, centred on the pad and turned with it. shape is the source
-// word, as Pad.shape spells it, and size its extent in source units.
+// PadShape is one shape of a padstack, turned with the pad. shape is the source word, as Pad.shape
+// spells it, and size its extent in source units. offset is the shape's centre relative to the
+// pad's position, before the pad's rotation; unset means centred (agni 1407). outline is a custom
+// shape's polygon, in the same frame as offset and around the shape's own centre, closed and with
+// arcs chorded; empty means the shape word and size describe it.
 message PadShape {
   string shape = 1;
   Point size = 2;
+  Point offset = 3;
+  repeated Point outline = 4;
 }
 
 // NetCopper is the copper of one net, with its track segments, vias and filled shapes. They are

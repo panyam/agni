@@ -2,6 +2,7 @@ package formats
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -115,7 +116,7 @@ func padItems(g *geom.BoardGeometry) []placed {
 			if num == "" || exportedPadName.MatchString(num) {
 				num = "?"
 			}
-			size := fmt.Sprintf("%dx%d", p.GetSize().GetX(), p.GetSize().GetY())
+			size := fmt.Sprintf("%dx%d", p.GetSize().GetX(), p.GetSize().GetY()) + " at " + boardAngle(pl, p)
 			if p.GetShape() == "custom" {
 				size = "-"
 			}
@@ -127,6 +128,25 @@ func padItems(g *geom.BoardGeometry) []placed {
 		}
 	}
 	return out
+}
+
+// boardAngle is the angle a pad is drawn at on the board, as geomath.PadAngle composes it, folded
+// over the shape's symmetry so two files that write one rectangle as w x h at a and h x w at a+90
+// agree (agni 1407). A circle has no angle.
+func boardAngle(pl *geom.ComponentPlacement, p *geom.Pad) string {
+	w, h := p.GetSize().GetX(), p.GetSize().GetY()
+	if p.GetShape() == "circle" {
+		return "-"
+	}
+	a := geomath.PadAngle(pl, p)
+	if w < h {
+		a += 90
+	}
+	fold := 180.0
+	if w == h {
+		fold = 90
+	}
+	return fmt.Sprintf("%.0f", math.Mod(math.Round(math.Mod(a, fold)+fold), fold))
 }
 
 // copperItems is every track segment and via on a net, a segment's ends in a fixed order so a run

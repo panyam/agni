@@ -17,6 +17,7 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/geomath"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -103,11 +104,12 @@ func TestReadsAnInchJob(t *testing.T) {
 	if p1.GetNumber() != "1" || p1.GetAt().GetX() != -50*mil || p1.GetAt().GetY() != 0 || p1.GetNet() != "VIN" {
 		t.Errorf("U1.1 = %v, want pin 1 at (-50mil, 0) on VIN", p1)
 	}
-	if p1.GetShape() != "rect" || p1.GetSize().GetX() != 60*mil || p1.GetSize().GetY() != 40*mil || p1.GetRotationDeg() != -90 {
-		t.Errorf("U1.1 shape %s %v rot %v, want a 60x40mil rect at -90 (legacy orient 1)", p1.GetShape(), p1.GetSize(), p1.GetRotationDeg())
+	// A feature's angle is the pad's on the board, and the pad keeps it in U1's frame (agni 1407).
+	if p1.GetShape() != "rect" || p1.GetSize().GetX() != 60*mil || p1.GetSize().GetY() != 40*mil || geomath.PadAngle(u1, p1) != 270 {
+		t.Errorf("U1.1 shape %s %v at %v on the board, want a 60x40mil rect at -90 (legacy orient 1)", p1.GetShape(), p1.GetSize(), geomath.PadAngle(u1, p1))
 	}
-	if p2 := u1.GetPads()[1]; p2.GetRotationDeg() != -90 {
-		t.Errorf("U1.2 rot = %v, want -90 (orient 8 at 90 clockwise)", p2.GetRotationDeg())
+	if p2 := u1.GetPads()[1]; geomath.PadAngle(u1, p2) != 270 {
+		t.Errorf("U1.2 at %v on the board, want -90 (orient 8 at 90 clockwise)", geomath.PadAngle(u1, p2))
 	}
 	r1 := placement(t, g, "R1")
 	if !r1.GetMirror() || r1.GetLayer() != "B.Cu" || r1.GetPads()[0].GetAt().GetX() != -30*mil || r1.GetPads()[0].GetLayers()[0] != "B.Cu" {

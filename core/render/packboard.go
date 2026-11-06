@@ -88,7 +88,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			if st := stacks.of(v.GetPadstack()); st != nil {
 				at := &geom.Pad{At: v.GetAt()}
 				for _, l := range st.ps.GetLayers() {
-					packStackLayer(add, strata.copperGroup(l.GetLayer()), v.GetAt().X, v.GetAt().Y, at, l, planes.cuts(l.GetLayer(), nc.GetNet()), "", nc.GetNet(), "")
+					packStackLayer(add, strata.copperGroup(l.GetLayer()), &geom.ComponentPlacement{}, at, l, planes.cuts(l.GetLayer(), nc.GetNet()), "", nc.GetNet(), "")
 				}
 				if v.GetDrill() > 0 {
 					add(primTriangles, groupBoardHole, "", "", "", diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetDrill())/2))
@@ -108,7 +108,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			wx, wy := padWorld(pl, pad)
 			if st := stacks.of(pad.GetPadstack()); st != nil {
 				for _, l := range st.ps.GetLayers() {
-					packStackLayer(add, strata.copperGroup(l.GetLayer()), wx, wy, pad, l, planes.cuts(l.GetLayer(), pad.GetNet()), pl.GetRefDes(), pad.GetNet(), pad.GetNumber())
+					packStackLayer(add, strata.copperGroup(l.GetLayer()), pl, pad, l, planes.cuts(l.GetLayer(), pad.GetNet()), pl.GetRefDes(), pad.GetNet(), pad.GetNumber())
 				}
 				if pad.GetDrill() > 0 {
 					add(primTriangles, groupBoardHole, "", "", "", diskPts(wx, wy, float64(pad.GetDrill())/2))
@@ -127,7 +127,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 					diskPts(wx, wy, float64(pad.GetSize().GetX())/2))
 			} else {
 				add(primTriangles, group, pl.GetRefDes(), pad.GetNet(), pad.GetNumber(),
-					padQuadPts(wx, wy, pad))
+					padQuadPts(wx, wy, pad.GetSize(), geomath.PadAngle(pl, pad)))
 			}
 			if pad.GetDrill() > 0 {
 				add(primTriangles, groupBoardHole, "", "", "", diskPts(wx, wy, float64(pad.GetDrill())/2))
@@ -240,39 +240,51 @@ func shapeTris(sh *geom.CopperShape) [][2]int64 {
 }
 
 // packStackLayer packs a padstack's land on one layer as filled triangles, keyed as the pad or via
-// is, and its antipad as an unkeyed outline where cut says the layer clears around it.
-func packStackLayer(add func(kind, group uint8, ref, net, pin string, pts [][2]int64), group uint8, wx, wy int64, pad *geom.Pad, l *geom.PadstackLayer, cut bool, ref, net, pin string) {
+// is, and its antipad as an outline where cut says the layer clears around it. A land sits at its
+// offset and a custom one fills its outline (agni 1407), placed as landAt places it.
+func packStackLayer(add func(kind, group uint8, ref, net, pin string, pts [][2]int64), group uint8, pl *geom.ComponentPlacement, pad *geom.Pad, l *geom.PadstackLayer, cut bool, ref, net, pin string) {
+	deg := geomath.PadAngle(pl, pad)
 	if a := l.GetAntipad(); cut && a != nil {
-		ring := &geom.Pad{RotationDeg: pad.GetRotationDeg(), Shape: a.GetShape(), Size: a.GetSize()}
-		add(primLineLoop, group, "", "", "", outlinePts(wx, wy, ring))
+		cx, cy, ring := landAt(pl, pad, a)
+		if ring == nil {
+			ring = outlinePts(cx, cy, a.GetShape(), a.GetSize(), deg)
+		}
+		add(primLineLoop, group, "", "", "", xy(ring))
 	}
 	if p := l.GetPad(); p != nil {
-		land := &geom.Pad{RotationDeg: pad.GetRotationDeg(), Shape: p.GetShape(), Size: p.GetSize()}
-		if p.GetShape() == "circle" {
-			add(primTriangles, group, ref, net, pin, diskPts(wx, wy, float64(p.GetSize().GetX())/2))
-		} else {
-			add(primTriangles, group, ref, net, pin, padQuadPts(wx, wy, land))
+		cx, cy, ring := landAt(pl, pad, p)
+		switch {
+		case ring != nil:
+			add(primTriangles, group, ref, net, pin, shapeTris(&geom.CopperShape{Outline: &geom.Polyline{Points: ring}}))
+		case p.GetShape() == "circle":
+			add(primTriangles, group, ref, net, pin, diskPts(cx, cy, float64(p.GetSize().GetX())/2))
+		default:
+			add(primTriangles, group, ref, net, pin, padQuadPts(cx, cy, p.GetSize(), deg))
 		}
 	}
 }
 
-// outlinePts is a pad shape's outline as a closed loop, a circle for a circle and the rotated
-// rectangle of its extent otherwise.
-func outlinePts(cx, cy int64, pad *geom.Pad) [][2]int64 {
-	if pad.GetShape() == "circle" {
-		r := float64(pad.GetSize().GetX()) / 2
-		pts := make([][2]int64, 0, viaSegments)
+// outlinePts is a pad shape's outline as a closed loop, a circle for a circle and the rectangle of
+// its extent, turned deg degrees CCW, otherwise.
+func outlinePts(cx, cy int64, shape string, size *geom.Point, deg float64) []*geom.Point {
+	if shape == "circle" {
+		r := float64(size.GetX()) / 2
+		pts := make([]*geom.Point, 0, viaSegments)
 		for i := 0; i < viaSegments; i++ {
 			a := 2 * math.Pi * float64(i) / viaSegments
-			pts = append(pts, [2]int64{cx + int64(r*math.Cos(a)), cy + int64(r*math.Sin(a))})
+			pts = append(pts, &geom.Point{X: cx + int64(r*math.Cos(a)), Y: cy + int64(r*math.Sin(a))})
 		}
 		return pts
 	}
-	q := padQuadPts(cx, cy, pad)
+	q := padQuadPts(cx, cy, size, deg)
 	if len(q) < 6 {
 		return nil
 	}
-	return [][2]int64{q[0], q[1], q[2], q[4]}
+	var out []*geom.Point
+	for _, i := range []int{0, 1, 2, 4} {
+		out = append(out, &geom.Point{X: q[i][0], Y: q[i][1]})
+	}
+	return out
 }
 
 // quadPts returns a track segment as a filled quad (two triangles) at true width, floored to
@@ -309,18 +321,16 @@ func diskPts(cx, cy int64, r float64) [][2]int64 {
 	return pts
 }
 
-// padQuadPts is a rect, roundrect or oval pad as two triangles, rotated by the pad's own
-// angle negated for the Y-flip. The angle is source-cumulative, so it is not composed with the
-// placement's again (the same rule as drawPad).
-func padQuadPts(cx, cy int64, pad *geom.Pad) [][2]int64 {
-	w, h := float64(pad.GetSize().GetX())/2, float64(pad.GetSize().GetY())/2
+// padQuadPts is a rect, roundrect or oval pad's extent as two triangles, turned deg degrees CCW on
+// the board (geomath.PadAngle).
+func padQuadPts(cx, cy int64, size *geom.Point, deg float64) [][2]int64 {
+	w, h := float64(size.GetX())/2, float64(size.GetY())/2
 	if w <= 0 || h <= 0 {
 		return nil
 	}
-	rad := -pad.GetRotationDeg() * math.Pi / 180
-	cos, sin := math.Cos(rad), math.Sin(rad)
+	sin, cos := math.Sincos(deg * math.Pi / 180)
 	rot := func(x, y float64) [2]int64 {
-		return [2]int64{cx + int64(cos*x-sin*y), cy + int64(sin*x+cos*y)}
+		return [2]int64{cx + int64(math.Round(cos*x-sin*y)), cy + int64(math.Round(sin*x+cos*y))}
 	}
 	c1, c2, c3, c4 := rot(-w, -h), rot(w, -h), rot(w, h), rot(-w, h)
 	return [][2]int64{c1, c2, c3, c3, c4, c1}

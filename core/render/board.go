@@ -472,9 +472,8 @@ func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 }
 
 // drawPad draws one pad at its world position, rect/roundrect/oval as a (rounded) rectangle and
-// circle as a circle. It rotates by the pad's own angle verbatim. KiCad stores that angle
-// cumulative with the footprint's, so drawPad does NOT compose it with the placement again. It
-// only negates it for the Y-flip. A drilled pad gets a page-colored hole.
+// circle as a circle. It turns by geomath.PadAngle, the pad's footprint-frame angle composed with
+// its placement (agni 1407), negated for the Y-flip. A drilled pad gets a page-colored hole.
 func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style, keys ...svg.Attr) {
 	drawPadWith(c, pl, pad, fr, append([]svg.Attr{svg.A("fill", color)}, keys...)...)
 	if pad.GetDrill() > 0 {
@@ -489,14 +488,22 @@ func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheet
 // for an antipad.
 func drawPadWith(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, attrs ...svg.Attr) {
 	wx, wy := padWorld(pl, pad)
+	drawShapeAt(c, wx, wy, pad.GetShape(), pad.GetSize(), geomath.PadAngle(pl, pad), fr, attrs...)
+}
+
+// drawShapeAt draws a pad shape centred on a board point, turned deg degrees CCW on the board.
+func drawShapeAt(c *svg.Canvas, wx, wy int64, shape string, size *geom.Point, deg float64, fr sheetFrame, attrs ...svg.Attr) {
 	cx, cy := fr.tx(wx), fr.ty(wy)
-	w := math.Max(float64(pad.GetSize().GetX())*fr.scale, strokePx)
-	h := math.Max(float64(pad.GetSize().GetY())*fr.scale, strokePx)
-	rot := -pad.GetRotationDeg()
+	w := math.Max(float64(size.GetX())*fr.scale, strokePx)
+	h := math.Max(float64(size.GetY())*fr.scale, strokePx)
+	rot := -deg
+	if deg > 180 {
+		rot = 360 - deg
+	}
 	if rot != 0 {
 		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.1f %.1f)", rot, cx, cy)))
 	}
-	switch pad.GetShape() {
+	switch shape {
 	case "circle":
 		c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", w/2)}, attrs...)...)
 	case "oval":

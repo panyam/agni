@@ -19,7 +19,9 @@ import (
 //   - The board outline, from the step's profile.
 //   - The layer stack.
 //   - Component placements with their pads. Each pad's shape and size come from the copper feature
-//     eda/data ties to its toeprint, and its drill from the drill layer.
+//     eda/data ties to its toeprint, and its drill from the drill layer. A feature's angle is the
+//     pad's on the board, so the reader subtracts the part's to keep it in the footprint's frame
+//     (geomath.PadLocalAngle, agni 1407).
 //   - Routed copper, as lines and arcs, grouped by the net eda/data assigns each feature. An arc
 //     keeps its curve as a mid point (agni 1358); a full circle becomes two half arcs.
 //   - Vias, each a drill hit and its copper lands.
@@ -318,6 +320,9 @@ func (b *boardBuilder) placements() error {
 				if err != nil {
 					return err
 				}
+				// A feature's angle is the pad's on the board, and the contract keeps it in the
+				// footprint's frame (agni 1407).
+				pad.RotationDeg = geomath.PadLocalAngle(pl, pad.RotationDeg)
 				pad.Padstack = b.stackEntry(lands)
 				switch {
 				case through:

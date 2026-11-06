@@ -23,8 +23,11 @@ type layout struct {
 	psHeader, psComp, psFixed, psPerLayer int
 	psCount, psDrill, psSlotX, psSlotY    int
 	psW                                   int
-	psLastShort                           int
-	psTrailer                             int // bytes per trailing record, times the count at +2
+	// A slot's offset, x then y, follows its width and height at psW+8. psShape is the slot's
+	// pointer to the shape (0x28) a custom pad draws, at a place that differs by release (agni 1407).
+	psShape     int
+	psLastShort int
+	psTrailer   int // bytes per trailing record, times the count at +2
 
 	conSetHeader int // a 0x1D's bytes outside its records
 	siModelBase  int // a 0x1E's bytes outside its string
@@ -87,7 +90,7 @@ var layout172 = &layout{
 	},
 	fieldSub: 16, fieldLen: 18, fieldBody: 24,
 	psHeader: 192, psComp: 36, psFixed: 21, psPerLayer: 4,
-	psCount: 44, psDrill: 64, psSlotX: 76, psSlotY: 80, psW: 8, psTrailer: 40,
+	psCount: 44, psDrill: 64, psSlotX: 76, psSlotY: 80, psW: 8, psShape: 32, psTrailer: 40,
 	conSetHeader: 28, siModelBase: 28, dimBase: 36, propBase: 180,
 	compRef: 28, compDef: 12,
 	fiRot: 28, fiX: 32, fiInstRef: 40, fiGraphics: 44, fiPads: 48, fiText: 52,
@@ -119,7 +122,7 @@ var layout166 = &layout{
 	},
 	fieldSub: 12, fieldLen: 14, fieldBody: 16,
 	psHeader: 88, psComp: 28, psFixed: 11, psPerLayer: 3,
-	psCount: 50, psDrill: 16, psSlotX: 72, psSlotY: 76, psW: 4, psLastShort: 4, psTrailer: 32,
+	psCount: 50, psDrill: 16, psSlotX: 72, psSlotY: 76, psW: 4, psShape: 20, psLastShort: 4, psTrailer: 32,
 	conSetHeader: 24, siModelBase: 24, dimBase: 32, propBase: 176,
 	compRef: 20, compDef: 0,
 	fiRot: 24, fiX: 28, fiInstRef: 12, fiGraphics: 36, fiPads: 40, fiText: 44,

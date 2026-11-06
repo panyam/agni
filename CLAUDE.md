@@ -718,7 +718,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   is. KiCad stores a flipped footprint's items already mirrored, so the reader negates their x and
   the angle, and the contract's composer mirrors once. No rule reads a pad's position, so the bug
   shipped. Only the board view and `TestODBReadsAsItsKiCadSource` (pad positions against kicad-cli's
-  own export) see it.
+  own export) see it. **A pad's angle is in its footprint's frame**, as the proto says (agni 1407).
+  KiCad and ODB++ write the board angle, so their readers subtract the part's
+  (`geomath.PadLocalAngle`). Every consumer draws through `geomath.PadAngle` and places a padstack
+  land's offset and outline through `geomath.PlaceLand`. Until 1407 the renderers drew the stored
+  angle unchanged, so every turned part on an Allegro, Altium or IPC-2581 board drew its lands the
+  wrong way round. A rectangle at 90° looks the same turned either way, so test an angle at 30°.
 - **Where a part, pin or net is drawn is `DesignService.LocateSubjects`** (agni 1325). It and a check
   run's findings read one index, so a subject locates where its finding badges. A pin answers the
   sheets that draw its own unit. The board sheet joins only when the request sets `board`, by

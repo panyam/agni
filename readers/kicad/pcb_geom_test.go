@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 func readBoardFixture(t *testing.T) *geom.BoardGeometry {
@@ -50,8 +51,9 @@ func TestBoardGeometryPlacements(t *testing.T) {
 	if p1.Size.X != 1_200_000 || p1.Size.Y != 1_400_000 || p1.Drill != 0 {
 		t.Errorf("R1 pad 1 size/drill = %+v drill=%d", p1.Size, p1.Drill)
 	}
-	if r1.Pads[1].RotationDeg != 90 || r1.Pads[1].Net != "GND" {
-		t.Errorf("R1 pad 2 = %+v", r1.Pads[1])
+	// KiCad writes pad 2's board angle, 90, and the pad keeps it in R1's frame (agni 1407).
+	if geomath.PadAngle(r1, r1.Pads[1]) != 90 || r1.Pads[1].RotationDeg != 0 || r1.Pads[1].Net != "GND" {
+		t.Errorf("R1 pad 2 = %+v, at %v on the board", r1.Pads[1], geomath.PadAngle(r1, r1.Pads[1]))
 	}
 
 	j1 := byRef["J1"]

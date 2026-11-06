@@ -1,13 +1,17 @@
 package formats
 
 import (
+	"encoding/xml"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/copperraster"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // stackLands lists each padstack entry's lands by copper-layer position, so two reads that name
@@ -192,4 +196,158 @@ func TestPinLandsAgreeAcrossParasdrsReads(t *testing.T) {
 			t.Errorf("%s: compared %d pins, want at least 400", c.file, compared)
 		}
 	}
+}
+
+// outlineArea is a polygon's area by the shoelace formula, in nm².
+func outlineArea(pts []*geom.Point) float64 {
+	a := 0.0
+	for i := range pts {
+		j := (i + 1) % len(pts)
+		a += float64(pts[i].GetX())*float64(pts[j].GetY()) - float64(pts[j].GetX())*float64(pts[i].GetY())
+	}
+	return math.Abs(a) / 2
+}
+
+// TestPadstackOffsetsAndOutlinesAgreeAcrossParasdrsReads holds a custom pad's shape and a land's
+// offset on parasdr's board to its IPC-2581 export (agni 1407). Allegro stores a custom pad as a
+// shape around its own centre with the offset beside it, and the export writes the same contour
+// with the offset in its Xform, so each padstack the two share must give the same offset to the
+// micron and the same outline area to 1%.
+func TestPadstackOffsetsAndOutlinesAgreeAcrossParasdrsReads(t *testing.T) {
+	l := &Loader{}
+	read := func(file string) map[string]*geom.PadShape {
+		g, err := l.BoardGeometry(parasdr + file)
+		if err != nil {
+			t.Fatalf("%s: %v", file, err)
+		}
+		out := map[string]*geom.PadShape{}
+		for _, ps := range g.GetPadstacks() {
+			for _, ly := range ps.GetLayers() {
+				// The outer layer the pad sits on carries the land, and the two reads name it alike.
+				if p := ly.GetPad(); p != nil && (ly.GetLayer() == "F.Cu" || ly.GetLayer() == "B.Cu") {
+					out[ps.GetId()+" "+ly.GetLayer()] = p
+				}
+			}
+		}
+		return out
+	}
+	board, export := read("parasdr_layout.brd"), read("parasdr_ipc2581.xml")
+	offsets, outlines := 0, 0
+	for k, want := range board {
+		got, ok := export[k]
+		if !ok {
+			continue
+		}
+		wo, go_ := want.GetOffset(), got.GetOffset()
+		if math.Abs(float64(wo.GetX()-go_.GetX())) > 1000 || math.Abs(float64(wo.GetY()-go_.GetY())) > 1000 {
+			t.Errorf("%s: the board's offset (%d, %d) nm, the export's (%d, %d)", k, wo.GetX(), wo.GetY(), go_.GetX(), go_.GetY())
+		}
+		if wo != nil {
+			offsets++
+		}
+		if len(want.GetOutline()) == 0 {
+			continue
+		}
+		if len(got.GetOutline()) == 0 {
+			t.Errorf("%s: the board draws a custom outline and the export none", k)
+			continue
+		}
+		if a, b := outlineArea(want.GetOutline()), outlineArea(got.GetOutline()); math.Abs(a-b) > 0.01*b {
+			t.Errorf("%s: the board's outline covers %.4f mm², the export's %.4f", k, a/1e12, b/1e12)
+		}
+		outlines++
+	}
+	t.Logf("%d offsets and %d custom outlines compared", offsets, outlines)
+	if offsets < 3 || outlines < 8 {
+		t.Fatalf("compared %d offsets and %d outlines, too few to mean anything", offsets, outlines)
+	}
+}
+
+// TestAnOffsetLandSitsWhereTheExportPutsIt places each offset land of parasdr's board through
+// geomath.PlaceLand and holds it to the land the IPC-2581 export writes for the same pin (agni
+// 1407). The export's LayerFeature pads stand at the land's own centre, with the offset already
+// applied, so they say where the land is on the board independently of how agni composes a pad.
+// Both sides of the board are held, since a bottom part mirrors its pads.
+func TestAnOffsetLandSitsWhereTheExportPutsIt(t *testing.T) {
+	g, err := (&Loader{}).BoardGeometry(parasdr + "parasdr_layout.brd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := exportLands(t, parasdr+"parasdr_ipc2581.xml")
+	stacks := map[string]*geom.Padstack{}
+	for _, ps := range g.GetPadstacks() {
+		stacks[ps.GetId()] = ps
+	}
+	sides := map[bool]int{}
+	for _, pl := range g.GetPlacements() {
+		for _, pad := range pl.GetPads() {
+			land := copperraster.LandOn(stacks[pad.GetPadstack()], pl.GetLayer())
+			if land.GetOffset() == nil {
+				continue
+			}
+			key := pl.GetLayer() + " " + pl.GetRefDes() + "." + pad.GetNumber()
+			at, ok := want[key]
+			if !ok {
+				t.Errorf("%s: the export writes no land for this pin", key)
+				continue
+			}
+			x, y := geomath.PlaceLand(pl, pad, float64(land.GetOffset().GetX()), float64(land.GetOffset().GetY()))
+			if d := math.Hypot(x-at[0], y-at[1]); d > 2000 {
+				t.Errorf("%s: the land sits at (%.4f, %.4f) mm, the export's at (%.4f, %.4f), %.1f µm apart",
+					key, x/1e6, y/1e6, at[0]/1e6, at[1]/1e6, d/1e3)
+			}
+			sides[pl.GetMirror()]++
+		}
+	}
+	t.Logf("offset lands placed: %d on top parts, %d on bottom parts", sides[false], sides[true])
+	if sides[false] < 10 {
+		t.Fatalf("placed %d offset lands on top parts, too few to mean anything", sides[false])
+	}
+}
+
+// exportLands reads the board-level pads an IPC-2581 file writes per copper layer, keyed
+// "F.Cu R1.2", at their board position in nanometres.
+func exportLands(t *testing.T, path string) map[string][2]float64 {
+	t.Helper()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	type pad struct {
+		Pin struct {
+			Pin  string `xml:"pin,attr"`
+			Comp string `xml:"componentRef,attr"`
+		} `xml:"PinRef"`
+		Loc struct {
+			X float64 `xml:"x,attr"`
+			Y float64 `xml:"y,attr"`
+		} `xml:"Location"`
+	}
+	var doc struct {
+		Layers []struct {
+			Ref  string `xml:"layerRef,attr"`
+			Pads []pad  `xml:"Set>Pad"`
+		} `xml:"Ecad>CadData>Step>LayerFeature"`
+	}
+	if err := xml.NewDecoder(f).Decode(&doc); err != nil {
+		t.Fatal(err)
+	}
+	side := map[string]string{"TOP": "F.Cu", "BOTTOM": "B.Cu"}
+	out := map[string][2]float64{}
+	for _, l := range doc.Layers {
+		s, ok := side[l.Ref]
+		if !ok {
+			continue
+		}
+		for _, p := range l.Pads {
+			if p.Pin.Comp != "" {
+				out[s+" "+p.Pin.Comp+"."+p.Pin.Pin] = [2]float64{p.Loc.X * 1e6, p.Loc.Y * 1e6}
+			}
+		}
+	}
+	if len(out) == 0 {
+		t.Fatalf("%s: read no board-level pads", path)
+	}
+	return out
 }

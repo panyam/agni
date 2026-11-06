@@ -22,7 +22,9 @@ import (
 // def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
 // through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular,
 // and each records its layer span. Each pin's and via's lands on every copper layer are gathered
-// into padstacks by the padstack each land names (agni 1356). A PadStackDef is not read, since the
+// into padstacks by the padstack each land names (agni 1356). A land keeps its offset from the pin,
+// which the package pin's primitive carries in its Xform, and a contour primitive keeps its outline
+// (agni 1407). A PadStackDef is not read, since the
 // export that names padstacks on its lands defines none. It emits silkscreen/fab body graphics,
 // composing a package's Marking/Outline/AssemblyDrawing per placement. It emits copper plane and
 // pour fills as copper shapes on their net, each cutout a hole (WS1-031, agni 1357). IPC-2581
@@ -198,6 +200,11 @@ type primShape struct {
 	shape string
 	sizeX int64
 	sizeY int64
+	// offset and outline describe a contour primitive in its pad's own frame (agni 1407): the
+	// contour's points around its centre, and its Xform offset turned back by the Xform's rotation,
+	// since an export writes one primitive per pin orientation with the pin's turn folded in.
+	offset  *geom.Point
+	outline []*geom.Point
 }
 
 func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
@@ -293,7 +300,12 @@ func (f *ipcGeomFile) primitives(nmPerUnit float64) map[string]primShape {
 				m[e.ID] = primShape{shape: "oval", sizeX: lenNm(e.Oval.Width, nmPerUnit), sizeY: lenNm(e.Oval.Height, nmPerUnit)}
 			case e.Cont != nil:
 				w, h := polyBBox(e.Cont.Polygon, nmPerUnit)
-				m[e.ID] = primShape{shape: "polygon", sizeX: w, sizeY: h}
+				ps := primShape{shape: "polygon", sizeX: w, sizeY: h, outline: flattenPath(e.Cont.Polygon, nmPerUnit)}
+				if pg := e.Cont.Polygon; pg.xOff != 0 || pg.yOff != 0 {
+					s, c := math.Sincos(-pg.rot * math.Pi / 180)
+					ps.offset = &geom.Point{X: rnd((pg.xOff*c - pg.yOff*s) * nmPerUnit), Y: rnd((pg.xOff*s + pg.yOff*c) * nmPerUnit)}
+				}
+				m[e.ID] = ps
 			}
 		}
 	}

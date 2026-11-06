@@ -671,12 +671,6 @@ func (ps *odxParser) job() (*parsedJob, error) {
 					}
 					sn := &p.eda.nets[at2[0]].subnets[at2[1]]
 					sn.fids = append(sn.fids, id)
-					// ODX draws a pin's pad with its symbol already turned to the board, where a
-					// job turns the pad by the feature's angle. The pad's angle in its part's frame
-					// is then the part's turn undone.
-					if feat := &l.ff.features[fi]; feat.kind == featPad && feat.rot == 0 {
-						feat.rot = -p.sides[at.side][at.comp].rot
-					}
 					continue
 				}
 			}

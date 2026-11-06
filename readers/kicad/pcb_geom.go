@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -22,10 +23,12 @@ import (
 // Fidelity: lossy-bounded (render/DRC subset, CONSTRAINTS C6). Silkscreen/legend text and
 // silk/fab body graphics (the footprint ref-des and value, free gr_text, and the fp_*/gr_*
 // outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not. An arc
-// track is kept as an arc, with the file's own mid point (agni 1358). Outline and silk arcs are
-// approximated as polylines. Coordinates are emitted in
-// nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations are kept
-// verbatim (see the proto contract). The caller owns file I/O (C1).
+// track is kept as an arc, with the file's own mid point (agni 1358). A KiCad 9 pad with a
+// (padstack) block gets a padstack entry with its shape on each copper layer (agni 1407). Outline
+// and silk arcs are approximated as polylines. Coordinates are emitted in nanometers (unit_nm=1),
+// Y-flipped to the geom contract's Y-up frame. A footprint's angle is kept verbatim. KiCad writes a
+// pad's angle on the board, and the contract keeps it in the footprint's frame, so the reader
+// subtracts the footprint's (geomath.PadLocalAngle). The caller owns file I/O (C1).
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
 	root, err := parseBoard(r)
 	if err != nil {
@@ -66,8 +69,9 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 	}
 
 	g.Outline = boardOutline(root)
+	stacks := newPadstacks(g)
 	for _, fp := range root.Children("footprint") {
-		if p := boardPlacement(fp, src); p != nil {
+		if p := boardPlacement(fp, src, stacks); p != nil {
 			g.Placements = append(g.Placements, p)
 		}
 	}
@@ -557,7 +561,7 @@ func circumcenter(ax, ay, bx, by, cx, cy float64) (x, y float64, ok bool) {
 // boardPlacement extracts one footprint's placement and pads; a footprint with no Reference
 // (a graphic) yields nil, mirroring the netlist reader's skip so the two artifacts agree
 // on which components exist.
-func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
+func boardPlacement(fp *node, src string, stacks *padstacks) *geom.ComponentPlacement {
 	ref := propValue(fp, "Reference")
 	if ref == "" || refdes.IsPlaceholder(ref) {
 		return nil
@@ -579,7 +583,7 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 		g := &geom.Pad{
 			Number:      atomOf(pad.Arg(1)),
 			At:          footprintLocal(pcbPoint(pat), back),
-			RotationDeg: rotOf(pat),
+			RotationDeg: geomath.PadLocalAngle(p, rotOf(pat)), // KiCad writes a pad's board angle
 			Shape:       atomOf(pad.Arg(3)),
 		}
 		if sz := pad.Child("size"); sz != nil {
@@ -595,6 +599,9 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 		}
 		if nr := pad.Child("net"); nr != nil {
 			g.Net = atomOf(nr.Arg(len(nr.Kids) - 1)) // name is the last argument in both forms
+		}
+		if ps := pad.Child("padstack"); ps != nil && stacks != nil {
+			g.Padstack = stacks.entry(g, ps)
 		}
 		p.Pads = append(p.Pads, g)
 	}
@@ -730,4 +737,77 @@ func zoneOutlines(z *node, netName map[string]string) []*geom.Zone {
 		out = append(out, &geom.Zone{Net: net, Layer: ly, Outline: &geom.Polyline{Points: outline}})
 	}
 	return out
+}
+
+// padstacks gathers the per-layer padstacks KiCad 9 pads declare (agni 1407). A pad's (padstack)
+// block gives its shape on other copper layers than the front: in front_inner_back mode one
+// "Inner" shape for every inner layer and one for B.Cu, in custom mode a shape per named layer. The
+// pad's own shape and size are its front layer's, and a layer the block leaves out keeps them.
+// KiCad names no padstack, so an entry is a set of lands, numbered in the order the board first
+// uses it, and pads with the same lands share one.
+type padstacks struct {
+	g      *geom.BoardGeometry
+	copper []string // the board's copper layers, front to back
+	ids    map[string]string
+}
+
+func newPadstacks(g *geom.BoardGeometry) *padstacks {
+	ps := &padstacks{g: g, ids: map[string]string{}}
+	var inner []string
+	for _, l := range g.Layers {
+		switch {
+		case l.Name == "F.Cu" || l.Name == "B.Cu":
+		case strings.HasSuffix(l.Name, ".Cu"):
+			inner = append(inner, l.Name)
+		}
+	}
+	ps.copper = append(append([]string{"F.Cu"}, inner...), "B.Cu")
+	return ps
+}
+
+// entry finds or writes the padstack entry for one pad and returns its id. The pad's own shape is
+// every layer's until the block names another.
+func (ps *padstacks) entry(pad *geom.Pad, block *node) string {
+	own := &geom.PadShape{Shape: pad.Shape, Size: pad.Size}
+	lands := map[string]*geom.PadShape{}
+	for _, l := range ps.copper {
+		lands[l] = own
+	}
+	mode := ""
+	if m := block.Child("mode"); m != nil {
+		mode = atomOf(m.Arg(1))
+	}
+	for _, ly := range block.Children("layer") {
+		land := &geom.PadShape{Shape: own.Shape, Size: own.Size}
+		if sh := ly.Child("shape"); sh != nil {
+			land.Shape = atomOf(sh.Arg(1))
+		}
+		if sz := ly.Child("size"); sz != nil {
+			land.Size = &geom.Point{X: mmToNm(atomOf(sz.Arg(1))), Y: mmToNm(atomOf(sz.Arg(2)))}
+		}
+		name := atomOf(ly.Arg(1))
+		if name == "Inner" && mode == "front_inner_back" {
+			for _, l := range ps.copper[1 : len(ps.copper)-1] {
+				lands[l] = land
+			}
+			continue
+		}
+		if _, ok := lands[name]; ok {
+			lands[name] = land
+		}
+	}
+	entry := &geom.Padstack{}
+	var sig strings.Builder
+	for _, l := range ps.copper {
+		land := lands[l]
+		entry.Layers = append(entry.Layers, &geom.PadstackLayer{Layer: l, Pad: land})
+		fmt.Fprintf(&sig, "%s %s %d %d;", l, land.Shape, land.Size.GetX(), land.Size.GetY())
+	}
+	if id, ok := ps.ids[sig.String()]; ok {
+		return id
+	}
+	entry.Id = fmt.Sprintf("padstack-%d", len(ps.ids)+1)
+	ps.ids[sig.String()] = entry.Id
+	ps.g.Padstacks = append(ps.g.Padstacks, entry)
+	return entry.Id
 }
