@@ -12,6 +12,10 @@ import (
 // project reader writes it, so the netclass rules read either format's classes.
 const constraintKindNetClass = "netclass"
 
+// constraintKindBoardRules is the ir.Constraint kind that carries a board's own copper minimums, as
+// the KiCad project reader writes it, so the copper rules hold the board to them.
+const constraintKindBoardRules = "board_rules"
+
 // netFieldConstraintSet is the code of a net's field that names its physical constraint set.
 const netFieldConstraintSet = 0x1a0
 
@@ -161,6 +165,26 @@ func netClassDefs(sets []conSet, layers []copperLayer) []*ir.Constraint {
 		out = append(out, &ir.Constraint{Name: s.name, Kind: constraintKindNetClass, Params: params})
 	}
 	return out
+}
+
+// boardRules returns the board's minimum track width as a board_rules constraint, or nil when no
+// named set gives a width. Allegro checks each net against its own set, so the narrowest width any
+// set allows is the narrowest track the board's own rules accept anywhere. That is what KiCad's
+// min_track_width means. Clearance, drill and annular ring are not read, so their rules keep their
+// fixed floors (agni issue 1432).
+func boardRules(sets []conSet) *ir.Constraint {
+	var least int64
+	for _, s := range sets {
+		for _, w := range s.widths {
+			if w > 0 && (least == 0 || w < least) {
+				least = w
+			}
+		}
+	}
+	if least == 0 {
+		return nil
+	}
+	return &ir.Constraint{Name: "board", Kind: constraintKindBoardRules, Params: map[string]string{"min_track_width": mm(least)}}
 }
 
 func mm(nm int64) string { return strconv.FormatFloat(float64(nm)/1e6, 'g', -1, 64) }

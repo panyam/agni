@@ -31,8 +31,10 @@ and fails under current.
 The 0.127mm default is deliberately the loosest published floor, so the rule fires on defects
 rather than on deliberate tight routing under a capable fab's own rules. A board that declares its
 own minimum is held to that instead, because the declaration is the designer saying which process
-the board is routed for. Today the declaration comes from a KiCad project's
-`board.design_settings.rules`, read whichever of the project's files names the design. Every
+the board is routed for. A KiCad project declares it in `board.design_settings.rules`, read
+whichever of the project's files names the design. An Allegro board declares it through its
+physical constraint sets, and the board's minimum is the narrowest width any set allows (agni issue
+1432), since Allegro holds each net to its own set. Every
 finding names which of the two floors it was measured against (agni issue 933). So an HDI board
 routed at 0.1mm and declaring 0.0969mm is checked against 0.0969mm. `netclass-track-width`
 separately checks the width that each of the project's net classes declares. `check.Available`

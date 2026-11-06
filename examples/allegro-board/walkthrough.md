@@ -20,7 +20,7 @@ Boards saved by Allegro 16.6 and 17.2 are read so far. A board from another rele
 
 ## Read the netlist {#netlist}
 
-> The reader builds the netlist from each net's chain of placed pads. Each part carries its footprint, its value and its device type. Pin names are not read yet.
+> The reader builds the netlist from each net's chain of placed pads. Each part carries its footprint, its value and its device type, and each pin carries the name Allegro stores for it.
 
 ```mermaid
 sequenceDiagram
@@ -34,4 +34,4 @@ Agni -->> You: *ir.Design
 
 ## Run the checks {#check}
 
-> With the board in the model, the copper rules run as well. On the BeagleBone AI most findings are track-width. The board routes 4 mil traces, and the rule judges them against its fixed 5 mil floor, because the board's own constraint sets are not read yet.
+> With the board in the model, the copper rules run as well. The board's constraint sets become net classes, and the narrowest set becomes the board's own track floor. The BeagleBone AI routes some traces at 3.2 mil, which its EMMC set allows, so track-width judges every net against that and fails none.

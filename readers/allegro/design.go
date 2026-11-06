@@ -224,6 +224,9 @@ func (p *board) toDesign(src string) *ir.Design {
 		setName[s.key] = s.name
 	}
 	d.Constraints = append(d.Constraints, netClassDefs(sets, p.copperLayers())...)
+	if r := boardRules(sets); r != nil {
+		d.Constraints = append(d.Constraints, r)
+	}
 
 	// A net is built from the placed pads on it, as the ODB++ and KiCad board readers build one. An
 	// unnamed net holds an unconnected pin, so it is left out and the pin reads as unconnected.

@@ -32,8 +32,27 @@ func TestTheSampleBoardReadsAndChecks(t *testing.T) {
 			t.Errorf("board summary lacks %q:\n%s", want, lines)
 		}
 	}
-	tally := common.RuleTally(check.RunBackground(check.NewModel(d, check.WithBoard(g)), check.BuiltinRules()))
-	if !strings.Contains(tally, "track-width") {
-		t.Errorf("the checks never reached the copper, so track-width did not run:\n%s", tally)
+	m := check.NewModel(d, check.WithBoard(g))
+	tally := common.RuleTally(check.RunBackground(m, check.BuiltinRules()))
+	if !strings.Contains(tally, "copper-clearance") {
+		t.Errorf("the checks never reached the copper, so copper-clearance did not run:\n%s", tally)
+	}
+	// The board's narrowest constraint set is its track floor (agni issue 1432), so track-width judges
+	// every routed net and fails none of them.
+	judged, failed := 0, 0
+	for _, v := range check.RunVerdictsBackground(m, check.BuiltinRules()) {
+		if v.Rule != "track-width" {
+			continue
+		}
+		switch v.Outcome {
+		case check.Pass:
+			judged++
+		case check.Fail:
+			judged++
+			failed++
+		}
+	}
+	if judged < 500 || failed != 0 {
+		t.Errorf("track-width judged %d nets and failed %d, want the board's routed nets judged and none failed", judged, failed)
 	}
 }

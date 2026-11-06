@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -147,4 +148,60 @@ func holdTracksToClasses(t *testing.T, d *ir.Design, g *geom.BoardGeometry, clas
 		}
 	}
 	return held, necked
+}
+
+// TestAllegroBoardFloorIsItsNarrowestSet reads each Allegro board's minimum track width from its
+// narrowest constraint set (agni issue 1432), so track-width holds the board to its own rules rather
+// than the fixed 5 mil floor. On the BeagleBone AI that is EMMC's 3.2 mil, and on parasdr both sets'
+// 0.1 mm. No track either board routes is narrower.
+func TestAllegroBoardFloorIsItsNarrowestSet(t *testing.T) {
+	bbD, bbG, _ := readAllegroSample(t)
+	l := &Loader{}
+	pD, err := l.ReadDesign(parasdr + "parasdr_layout.brd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pG, err := l.BoardGeometry(parasdr + "parasdr_layout.brd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name string
+		d    *ir.Design
+		g    *geom.BoardGeometry
+		want string
+		nm   int64
+	}{
+		{"BeagleBone AI", bbD, bbG, "0.081305", 81_305},
+		{"parasdr", pD, pG, "0.1", 100_000},
+	} {
+		var rules []*ir.Constraint
+		for _, k := range c.d.GetConstraints() {
+			if k.GetKind() == check.BoardRulesConstraintKind {
+				rules = append(rules, k)
+			}
+		}
+		if len(rules) != 1 {
+			t.Errorf("%s: %d board_rules constraints, want 1", c.name, len(rules))
+			continue
+		}
+		if got := rules[0].GetParams()["min_track_width"]; got != c.want {
+			t.Errorf("%s: min_track_width %q, want %s mm, the narrowest set", c.name, got, c.want)
+		}
+		if got := check.NewModel(c.d).BoardRules().TrackWidthNm; got != c.nm {
+			t.Errorf("%s: the model reads a %d nm track floor, want %d", c.name, got, c.nm)
+		}
+		segs := 0
+		for _, n := range c.g.GetNets() {
+			for _, s := range n.GetSegments() {
+				segs++
+				if s.GetWidth() < c.nm {
+					t.Errorf("%s: net %s routes a %d nm track under the board's %d nm floor", c.name, n.GetNet(), s.GetWidth(), c.nm)
+				}
+			}
+		}
+		if segs < 1000 {
+			t.Errorf("%s: held %d segments to the floor, want the board's routed ones", c.name, segs)
+		}
+	}
 }
