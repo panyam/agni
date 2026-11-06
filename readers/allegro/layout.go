@@ -43,8 +43,11 @@ type layout struct {
 	// placed pads and its text.
 	fiRot, fiX, fiInstRef, fiGraphics, fiPads, fiText int
 
-	// A placed pad (0x32): the next pad in its footprint, its footprint, and its footprint pad.
-	ppNextInFp, ppParentFp, ppPad int
+	// A placed pad (0x32): the next pad in its footprint, its footprint, its footprint pad, and its
+	// pin number (0x08).
+	ppNextInFp, ppParentFp, ppPad, ppPinNumber int
+
+	pinNumName int // a pin number's (0x08) pin name (0x11); the name's string is at +8 in both releases
 
 	padRot int // a footprint pad's (0x0D) rotation
 
@@ -94,10 +97,11 @@ var layout172 = &layout{
 	conSetHeader: 28, siModelBase: 28, dimBase: 36, propBase: 180,
 	compRef: 28, compDef: 12,
 	fiRot: 28, fiX: 32, fiInstRef: 40, fiGraphics: 44, fiPads: 48, fiText: 52,
-	ppNextInFp: 24, ppParentFp: 28, ppPad: 36,
-	padRot:    40,
-	netAssign: 28,
-	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
+	ppNextInFp: 24, ppParentFp: 28, ppPad: 36, ppPinNumber: 48,
+	pinNumName: 20,
+	padRot:     40,
+	netAssign:  28,
+	trackSegs:  56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
 	rectCoords: 24,
 	viaX:       32, viaPadstack: 44,
@@ -126,10 +130,11 @@ var layout166 = &layout{
 	conSetHeader: 24, siModelBase: 24, dimBase: 32, propBase: 176,
 	compRef: 20, compDef: 0,
 	fiRot: 24, fiX: 28, fiInstRef: 12, fiGraphics: 36, fiPads: 40, fiText: 44,
-	ppNextInFp: 20, ppParentFp: 24, ppPad: 32,
-	padRot:    36,
-	netAssign: 24,
-	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
+	ppNextInFp: 20, ppParentFp: 24, ppPad: 32, ppPinNumber: 44,
+	pinNumName: 16,
+	padRot:     36,
+	netAssign:  24,
+	trackSegs:  48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
 	rectCoords: 20,
 	viaX:       24, viaPadstack: 36,

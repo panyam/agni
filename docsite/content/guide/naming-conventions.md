@@ -155,7 +155,7 @@ lexicon:
     voltage:   { patterns: ["^(\\d+)P(\\d+)$"] }  # reads VDD_3P3 as 3.3V
     infer_rail_from_supply_pins: false       # on unless a convention turns it off
   pin:
-    supply: { patterns: ["^PWR_"] }
+    supply: { patterns: ["^PWR_"] }         # VCC/VDD/VIN... by default; VIN1A_D10, VBUS_DET excluded
     gate:   { patterns: ["^DRV$"] }
     source: { patterns: ["^SRC_"] }
     drain:  { patterns: ["^DRN_"] }

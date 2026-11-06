@@ -11,7 +11,10 @@
 // Fidelity: lossy-bounded. The netlist is each placed, designated footprint, with each pin's net
 // taken from the net's chain of connected pads. A net with no pin on it is dropped, as is an
 // unnamed net, whose one pad reads as unconnected. Each component carries its footprint name, its
-// value and its device type; pin names and pin use codes are not read yet (agni issue 1361). The
+// value and its device type. Each component definition (0x06) is a part type named by its device
+// type, and its pins carry the names Allegro stores, read through each placed pad's pin number
+// (0x08) and pin name (0x11) (agni issue 1361). No pin is typed, and a power or ground pin flag is
+// not read yet. The
 // board geometry carries the copper layer stack renamed into the contract's F.Cu/In<n>.Cu/B.Cu
 // vocabulary, placements with footprint-local pads sized from the first copper layer of their
 // padstack, each padstack's pad, thermal relief and antipad on every copper layer (agni 1356), ETCH

@@ -96,6 +96,9 @@ func (l *Lexicon) StampNetRoles(d *ir.Design) {
 // See the package-level StampPowerInPins.
 func (l *Lexicon) StampPowerInPins(d *ir.Design) {
 	v := l.role()
+	if formatTypesNoPins(d.GetSourceFormat()) {
+		return
+	}
 	typesPowerIn := formatTypesPowerIn(d.GetSourceFormat())
 	for _, lib := range d.GetLibraries() {
 		for _, pt := range lib.GetParts() {

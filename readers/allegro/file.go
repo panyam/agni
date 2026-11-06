@@ -58,7 +58,9 @@ const (
 	tagTrack      = 0x05
 	tagCompDef    = 0x06
 	tagCompInst   = 0x07
+	tagPinNumber  = 0x08
 	tagPad        = 0x0D
+	tagPinName    = 0x11
 	tagGraphic    = 0x14
 	tagLineH      = 0x15
 	tagLineD      = 0x16

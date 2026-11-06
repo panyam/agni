@@ -105,6 +105,20 @@ func (p *board) padNumber(placedPad int) string {
 	return p.str(p.u32(pad, 8))
 }
 
+// pinName is the functional name of a placed pad's pin, through the pad's pin number (0x08) and that
+// number's pin name (0x11), or "" when the part names none (agni issue 1361).
+func (p *board) pinName(placedPad int) string {
+	num, ok := p.at(p.u32(placedPad, p.l.ppPinNumber), tagPinNumber)
+	if !ok {
+		return ""
+	}
+	name, ok := p.at(p.u32(num, p.l.pinNumName), tagPinName)
+	if !ok {
+		return ""
+	}
+	return p.str(p.u32(name, 8))
+}
+
 // padNet is the name of the net a placed pad, via, track or copper shape is on, through its net
 // assignment, or "" for none.
 func (p *board) padNet(item int) string {
@@ -130,6 +144,13 @@ func (p *board) toDesign(src string) *ir.Design {
 	}
 	putAttr(d.Attributes, "allegro_version", p.version)
 
+	// A part type is a component definition (0x06), named by its device type. Its pins are the
+	// placed pads of every placement of it, each with the pin name its pin number carries, so a pin
+	// on no net is still a pin of the part.
+	partOf := map[int]*ir.PartType{}
+	partByName := map[string]*ir.PartType{}
+	partPins := map[*ir.PartType]map[string]bool{}
+	lib := &ir.PartLibrary{Name: "allegro", Prov: prov()}
 	fps := map[string]bool{}
 	counts := map[string]int{}
 	var refs []string
@@ -162,8 +183,39 @@ func (p *board) toDesign(src string) *ir.Design {
 			putAttr(comp.Attributes, "device_type", device)
 			putAttr(props, "device_type", device)
 		}
-		comp.Sections = []*ir.ComponentSection{{Index: 0, PartRef: pl.fpName, Attributes: props, Prov: prov()}}
+		partRef := pl.fpName
+		if pt := partOf[pl.def]; pl.def >= 0 && pt == nil {
+			if name := p.str(p.u32(pl.def, 12)); name != "" {
+				if pt = partByName[name]; pt == nil {
+					pt = &ir.PartType{Name: name, Prov: prov()}
+					partByName[name] = pt
+					partPins[pt] = map[string]bool{}
+					lib.Parts = append(lib.Parts, pt)
+				}
+				partOf[pl.def] = pt
+			}
+		}
+		if pt := partOf[pl.def]; pt != nil {
+			partRef = pt.Name
+			p.chain(p.u32(pl.inst, p.l.fiPads), p.u32(pl.inst, 4), func(byte) int { return p.l.ppNextInFp }, func(pp int) {
+				num := p.padNumber(pp)
+				if p.b[pp] != tagPlacedPad || num == "" || partPins[pt][num] {
+					return
+				}
+				partPins[pt][num] = true
+				pt.Pins = append(pt.Pins, &ir.Pin{Name: p.pinName(pp), Designator: num, Prov: prov()})
+			})
+		}
+		sec := &ir.ComponentSection{Index: 0, PartRef: partRef, Attributes: props, Prov: prov()}
+		if partRef != pl.fpName {
+			sec.LibraryRef = lib.Name
+		}
+		comp.Sections = []*ir.ComponentSection{sec}
 		d.Components = append(d.Components, comp)
+	}
+
+	if len(lib.Parts) > 0 {
+		d.Libraries = []*ir.PartLibrary{lib}
 	}
 
 	// A net is built from the placed pads on it, as the ODB++ and KiCad board readers build one. An

@@ -190,8 +190,14 @@ func defaultLexicon() *configpb.NamingLexicon {
 		},
 		Pin: &configpb.PinNameVocab{
 			// supplyPin matches a power-supply INPUT pin name by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC
-			// covers VCCIO). It is stricter than rail (see the RoleVocab doc).
-			Supply: vp(`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`),
+			// covers VCCIO). It is stricter than rail (see the RoleVocab doc). Two families start with a
+			// supply word and are signals (agni issue 1361). A numbered input port's pins are one, such
+			// as a video port's VIN1A_D10 and VIN2A_CLK. A supply's detect or sense pin is the other, such
+			// as VBUS_DET and VCC_SENSE.
+			Supply: &configpb.VocabPatterns{
+				Patterns: []string{`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`},
+				Exclude:  []string{`^VIN[0-9]+[A-Z]_`, `_(DET|SENSE)$`},
+			},
 			// Transistor terminals, whole-name anchored, because even inside the class gate an
 			// unanchored "S" would match SDA, SCLK and SENSE.
 			Gate:   vp(`^G$`, `^GATE$`),
