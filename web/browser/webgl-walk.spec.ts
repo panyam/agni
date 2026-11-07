@@ -420,6 +420,10 @@ const ms = (n: number): string => `${n.toFixed(1)} ms`;
 // how many findings the run listed, how many of them badge the board, and how many subjects the board
 // lit. Every finding the board badges has to light there, since the badge says the board draws its
 // subject (LocateSubjects, agni issue 1325).
+// lightFindings lights every finding through Highlight → show all findings, and checks that the board
+// lights each subject a Board badge names. Two findings on one net badge twice and light once, so
+// the check compares subjects rather than counts. Each badge sits beside its finding's locate
+// button, which names the subject's kind and spells it as the lit list does.
 async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number; badged: number; lit: number }> {
   await page.click(".highlight-btn");
   const all = page.locator(".highlight-show-all");
@@ -434,11 +438,23 @@ async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number
   const findings = await page.locator(".check-locate").count();
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(1000);
-  const badged = await page.locator('.sheet-badge[title="show sheet Board"]').count();
-  if (badged === 0) throw new Unwalkable(`none of the run's ${findings} findings is drawn on the board`);
-  const lit = (await readLit(page, mode)).length;
-  if (lit < badged) throw new Error(`${mode} lit ${lit} subjects on the board, and ${badged} of the run's ${findings} findings badge it`);
-  return { findings, badged, lit };
+  const badged = await page.evaluate(() => {
+    const subjects = new Set<string>();
+    for (const badge of document.querySelectorAll('.sheet-badge[title="show sheet Board"]')) {
+      const locate = badge.closest(".check-subject")?.querySelector(".check-locate");
+      const kind = locate?.getAttribute("title")?.split(" ")[1] ?? "";
+      const label = locate?.textContent?.trim() ?? "";
+      if (label) subjects.add(`${kind || "component"}:${label}`);
+    }
+    return [...subjects].sort();
+  });
+  if (badged.length === 0) throw new Unwalkable(`none of the run's ${findings} findings is drawn on the board`);
+  const lit = new Set(await readLit(page, mode));
+  const dark = badged.filter((s) => !lit.has(s));
+  if (dark.length > 0) {
+    throw new Error(`${mode} lit ${badged.length - dark.length} of the ${badged.length} subjects the run's findings badge on the board, not ${dark.slice(0, 5).join(", ")}`);
+  }
+  return { findings, badged: badged.length, lit: lit.size };
 }
 
 for (const name of chosen) {
@@ -533,16 +549,15 @@ for (const name of chosen) {
         }
 
         // The board again with highlights on, since #1331 expected the lag there, as the highlight
-        // recolour sets one uniform per highlighted primitive. A reader lights a run's findings with Highlight →
-        // show all findings, and none of them light on a board until #1440. So the walk also lights
-        // the ground net, the largest highlight a board draws, through the page API's locateEntity,
-        // and times that.
+        // recolour sets one uniform per highlighted primitive. A reader lights a run's findings with
+        // Highlight → show all findings. The walk also lights the ground net, the largest highlight a
+        // board draws, through the page API's locateEntity, and times that.
         for (const mode of MODES) {
-          await step(`light the findings on the board (${mode})`, { waitsOn: ["#1440"], needs: [`draw Board (${mode})`] }, async () => {
+          await step(`light the findings on the board (${mode})`, { needs: [`draw Board (${mode})`] }, async () => {
             await open(page, walk, mode, "Board");
             const { findings, badged, lit } = await lightFindings(page, mode);
             const frames = await panZoom(page, mode);
-            return `${badged} of ${findings} findings badge the board and ${lit} subjects lit there, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+            return `the run's ${findings} findings badge ${badged} subjects on the board, and all of them lit, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
           });
         }
         const litTimes: Partial<Record<Mode, FrameSummary>> = {};

@@ -12,9 +12,12 @@ import (
 // document. It is the board face of the WS9-016 highlight contract. A listed NET matches its
 // routed copper (segments re-stroked wider, vias ringed) and every pad on it, a listed
 // COMPONENT matches all its pads plus a marker ring at the placement origin, and a listed pin
-// matches that (ref_des, pad number). Specs paint in order, later wins.
-func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) string {
+// matches that (ref_des, pad number). A net listed by id matches through the render's
+// WithNetIDs, since the board names its nets and holds no schematic ids. Specs paint in order,
+// later wins.
+func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts ...Option) string {
 	fr := frameBoard(b)
+	netID := boardNetIDs(b, resolveStyle(opts))
 	c := svg.Open(fr.pxW, fr.pxH) // transparent, no background rect
 
 	for _, spec := range specs {
@@ -23,7 +26,7 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) strin
 		alpha := highlightAlpha(spec.GetAlpha())
 
 		for _, nc := range b.GetNets() {
-			if !m.nets[nc.GetNet()] {
+			if !m.matchWire(nc.GetNet(), netID(nc.GetNet())) {
 				continue
 			}
 			for _, s := range nc.GetSegments() {
@@ -55,7 +58,7 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec) strin
 		for _, pl := range b.GetPlacements() {
 			wholeComp := m.comps[pl.GetRefDes()]
 			for _, pad := range pl.GetPads() {
-				onNet := pad.GetNet() != "" && m.nets[pad.GetNet()]
+				onNet := pad.GetNet() != "" && m.matchWire(pad.GetNet(), netID(pad.GetNet()))
 				onPin := m.pins[[2]string{pl.GetRefDes(), pad.GetNumber()}]
 				if !wholeComp && !onNet && !onPin {
 					continue
