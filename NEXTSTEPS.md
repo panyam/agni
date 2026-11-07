@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-06, at `801bd690`.
+Last pruned 2026-11-07, at `e6914c1d`.
 
 ## At a glance
 
@@ -18,19 +18,18 @@ retriage skill's script) prints one mission's queue, and the order lives in GitH
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
 - **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 18 of
-  20 tickets closed. `make exercise-cross-probe HEADED=0` passes every step at `801bd690` on the
-  gate's Jetson cut and with `WALK_DESIGN=clay`, and the Clay walk clicks TP3's pad again (#1419).
-  #1397 (the toolbar overflow and Jetson's 10 to 12 s board clicks) is next, then #1401. The mission
-  still has to pass beside a real board.
+  20 tickets closed. Its exercise last passed at `19aeed5e`, and five PRs have merged since, so run
+  `make exercise-cross-probe HEADED=0` (and with `WALK_DESIGN=clay`) before picking #1397 (the
+  toolbar overflow and Jetson's 11 to 16 s board clicks), then #1401. The mission still has to pass
+  beside a real board.
 - **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), worked in the
-  webgl clone, 0 of 10 closed. #1330 writes `make exercise-webgl`, so take it first even though the
-  queue ranks #1332 above it.
+  webgl clone, 1 of 11 closed. #1439 wrote `make exercise-webgl` (#1330), and nobody has logged a
+  run of it on #1329 yet, so run it first. #1332 (click to pick on the WebGL canvas) is next ready.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
-  the formats clone, 12 of 15 closed. `make exercise-allegro` and `make exercise-altium` pass at
-  `b062ed67`. #1383 (IPC-2581 track widths, pad nets and drills), #1360 (declared differential
-  pairs) and #1432 (Allegro tracks against the DEFAULT constraint set) are open. It also waits on
-  someone opening a real board of their own in each format. #1355 holds the Allegro releases not
-  read yet.
+  the formats clone, 15 of 15 closed. `make exercise-allegro` and `make exercise-altium` pass at
+  `67fbcf2f` and now cover all three steps, the viewer's pad click included. Its "Done when" line
+  still wants someone to open a real board of their own in each format. Whether to close the mission before
+  that run is the user's call. #1355, #1362, #1393, #1430 and #1437 are its `waiting` follow-ups.
 - **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06 with every
   ticket done and their exercises passing. Each still wants a person's run on a real board, and
   either reopens if that run finds something.
@@ -40,9 +39,10 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1421 merged and closed #1407, the last ticket on #1353. A pad's angle now means the
-  footprint's frame in every reader and renderer (CLAUDE.md, "A pad's angle is in its footprint's
-  frame").
+- This run: #1438 merged and closed #1383 and #1360. parasdr's exports now read the copper its
+  `.brd` reads, an Allegro board's declared pairs and match groups reach `net.group` and
+  `diff-pair-naming`, and the mission's exercise clicks a pad on each native board (CLAUDE.md, the ODX
+  and Allegro bullets).
 
 ## Open, ranked
 

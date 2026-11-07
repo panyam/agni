@@ -536,7 +536,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   code. `.xml` is sniffed by root element. ODX names a pin by its NUMBER, since NAME can be a
   placeholder such as `un_1`. Allegro writes `encoding = "ISO-8859-1"` with spaces, which Go's
   decoder ignores, so `odxDecoded` reads the declaration itself. `TestODXReadsAsItsIPC2581Twin`
-  holds parasdr's two Allegro exports (cadence-exports) to each other.
+  holds parasdr's two Allegro exports (cadence-exports) to each other, and
+  `TestParasdrsCopperAgreesAcrossItsReads` holds both exports' tracks, vias and pads to the `.brd`
+  (agni 1383). **A `CAD_SET` attribute stays in force until the next one changes it**, and Allegro
+  writes a via's tracks after its `USAGE="VIA"` pad without a reset, so `USAGE` marks pads alone; a
+  surface on no net is kept on `$NONE$`. Allegro's IPC-2581 export writes a track's width in an
+  inline `LineDesc` and a straight run as a `<Line>`. It puts each drill hit in a `Set` with no net,
+  so a via takes its land's net, and it names a drill layer for its copper span (`IPC2581DRILL_1-6`)
+  in place of a `<Span>`. It names an unconnected pin's net `Unused_<8 hex>`, which both IPC-2581
+  reads take as no net.
 - **An ODB++ job is a DIRECTORY, entered by its `matrix/matrix` file** (agni 1250, `readers/odb`).
   The registry keys that path as `.odb++` (`lowerExt`), `.tgz` and `.zip` read the whole job from
   one archive, and the CLI and the proposer turn a job folder into its matrix entry. A host
@@ -564,7 +572,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   only the top page and its designators name other parts. Another release is refused by name
   (#1355), and an Eagle `.brd` is refused as Eagle. Read KiCad's GPL importer for format facts only, never its code. `TestAllegroCopperMatchesItsFilms` holds each copper layer to the film Allegro plotted
   (`internal/copperraster`, agni 1376), and only the inner layers' pads are logged rather than held,
-  since Allegro drops a pad nothing on its layer connects to (#1356).
+  since Allegro drops a pad nothing on its layer connects to (#1356). **A board's declared
+  differential pairs and match groups become `ir.Design.net_groups`** (agni 1360, `netGroups` in
+  `readers/allegro/netclass.go`). A 17.2 net chains one 0x26 per table it sits in (the next at +8),
+  each naming a 0x2C table; the table's third byte says 0x03 for a pair and 0x06 for a match group,
+  so a DDR strobe pair reads in its pair and in its byte lane. Both kinds were read off the BeagleBone
+  AI, not a spec. `diff-pair-naming` passes a declared pair before it reads a name
+  (`Model.DeclaredPair`), and `net.group(group, kind, net)` queries them.
 - **An Altium `.PcbDoc` is a Microsoft compound file** (agni 1349, `readers/altium`, over the
   MS-CFB reader in `internal/cfb`). `TestAltiumPcbDocMatchesItsODBExport` holds the five foxBMS boards (`altium`
   samples artifact) to their ODB++ jobs (`odb-altium`). The board designator is the designator TEXT,
@@ -1405,7 +1419,9 @@ something only headed on an idle machine, since headless Chrome draws WebGL in S
 gate's cut run never judges them. The canvas writes `data-highlight` and `data-lit` for its highlight
 step, and a sheet's first draw records the `agni:sheet-drawn` mark (`web/src/drawmark.ts`). #1353
 `mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
-formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise.
+formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise. Each runs
+its example, then opens the native board in the viewer and clicks a pad
+(`web/browser/native-board.spec.ts`, agni 1383).
 #1337 `mission_walk` (click one part and walk outwards) closed on 2026-11-06, and `make
 exercise-walk` is still its exercise (agni 1338). Each step has an engine row that asks
 `WalkDesign` and a viewer row that drives the Trace tab's walk (agni 1341) by the names
@@ -1488,7 +1504,10 @@ Five more that cost a session time:
 - **A baseline run of `main`'s web code relinks `node_modules`.** Stashing a branch's `web/` and
   lockfile to time `main` on the same clock works, but its `make ui` runs `pnpm install` against
   `main`'s lockfile, so after `git stash pop` the old package versions are linked and `tsc` reports
-  exports missing. Run `pnpm install` at the root before reading anything else.
+  exports missing. Run `pnpm install` at the root before reading anything else. If `make ui` then
+  fails with `_lruCache is not a constructor` in the Solid plugin, a package under `node_modules/.pnpm`
+  is a copied directory rather than pnpm's symlink, and plain `pnpm install` sees nothing to change.
+  `pnpm install --force` relinks it.
 - **Time two tools on the same clock.** Say you start a timer inside Python, after the interpreter
   and the client library load. That time is not comparable with another tool's launch-to-exit time.
   Compare launch to exit on an idle machine (check `/proc/loadavg`; a shared box running other
