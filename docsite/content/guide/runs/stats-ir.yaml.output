@@ -69,6 +69,7 @@
     "stackup": null,
     "constraints": [],
     "bom": [],
+    "netGroups": [],
     "attributes": {},
     "fidelity": [],
     "prov": null
