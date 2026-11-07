@@ -55,6 +55,7 @@ type layout struct {
 
 	mgGroup     int // a match group's (0x26) table (0x2C), or another 0x26 that names it
 	tableFields int // a table's (0x2C) first field (0x03)
+	tableName   int // a table's (0x2C) name, a string key (agni 1360)
 
 	trackSegs  int // a track's (0x05) first segment
 	segWidth   int // a line's or arc's width; start, end, centre and radius follow from it
@@ -104,7 +105,7 @@ var layout172 = &layout{
 	pinNumName: 20,
 	padRot:     40,
 	netAssign:  28,
-	mgGroup:    16, tableFields: 32,
+	mgGroup:    16, tableFields: 32, tableName: 24,
 	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
 	rectCoords: 24,
@@ -138,7 +139,7 @@ var layout166 = &layout{
 	pinNumName: 16,
 	padRot:     36,
 	netAssign:  24,
-	mgGroup:    12, tableFields: 24,
+	mgGroup:    12, tableFields: 24, tableName: 12,
 	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
 	rectCoords: 20,

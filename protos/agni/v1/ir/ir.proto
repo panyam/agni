@@ -110,6 +110,9 @@ message Design {
   Stackup stackup = 10;
   repeated Constraint constraints = 11;
   repeated BomLine bom = 12;
+  // net_groups are the sets of nets the design tool declares belong together, read from the source
+  // and never derived (agni issue 1360). Empty for a reader that has none to read.
+  repeated NetGroup net_groups = 18;
 
   map<string, string> attributes = 14;     // un-promoted named properties (escape hatch)
   repeated FidelityFragment fidelity = 15;  // format-fidelity layer
@@ -682,6 +685,26 @@ enum Role {
   ROLE_SWITCHING = 4;
   ROLE_CONTROL = 5;
   ROLE_GATE_DRIVE = 6;
+}
+
+// NetGroup is a set of nets that a design tool declares belong together, so a rule can pair nets
+// the way the designer paired them rather than by guessing from names (agni issue 1360). Allegro
+// declares both kinds in the board. A net can sit in at most one group of each kind.
+message NetGroup {
+  string name = 1;
+  NetGroupKind kind = 2;
+  // nets are the member net names, sorted. A differential pair has two.
+  repeated string nets = 3;
+  Provenance prov = 16;
+}
+
+// NetGroupKind says what a NetGroup declares.
+enum NetGroupKind {
+  NET_GROUP_KIND_UNSPECIFIED = 0;
+  // A differential pair: two nets routed as one coupled signal.
+  NET_GROUP_KIND_DIFF_PAIR = 1;
+  // A match group: nets whose routed lengths are held to one another, such as a DDR byte lane.
+  NET_GROUP_KIND_MATCH_GROUP = 2;
 }
 
 // Net is a set of electrically connected pins.

@@ -161,6 +161,14 @@ type Model interface {
 	// DiffNegative is the complementary net name for a differential pair's positive member, under this
 	// model's lexicon, and ok=false when the name is not a positive member.
 	DiffNegative(name string) (string, bool)
+	// DeclaredPair is the other net of the differential pair the design declares a net in, and the
+	// pair's name. ok=false when the design declares the net in no pair, whatever its name says
+	// (agni issue 1360). A declared pair is the designer's statement, so a rule that pairs nets reads
+	// it before DiffNegative's guess.
+	DeclaredPair(net string) (other, pair string, ok bool)
+	// NetGroups are the differential pairs and match groups the design declares, as the reader read
+	// them. Empty for a format that declares none.
+	NetGroups() []*ir.NetGroup
 	// NoConnectMarked reports whether a net carries a designer's no-connect, the reader's flag or a name
 	// in this model's no_connect vocabulary. A tool's stub name is neither.
 	NoConnectMarked(n *ir.Net) bool

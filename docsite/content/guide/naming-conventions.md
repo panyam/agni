@@ -228,7 +228,9 @@ because a pin name carries no rail prefix for a pattern like `_FB$` to end on.
 rather than its leaf, so a pin named `A/K` is not read. A `diff_pair` entry names a suffix pair
 rather than a pattern, because a rule has to work out the complement of a name. Its suffixes match
 at the end of the whole net name without regard to case, the longest positive suffix wins, and the
-complement keeps the name's casing, so `usb_p` expects `usb_n`.
+complement keeps the name's casing, so `usb_p` expects `usb_n`. A board that declares its pairs needs no suffix. An Allegro board's
+declared pairs ([`net.group`](../../reference/relations/net.group/)) pass `diff-pair-naming` on the
+declaration, before any name is read (agni issue 1360).
 
 A `through_pair` entry names two pins that carry one signal across a part, such as a level
 translator's `A2` and `B2`. `agni walk` crosses such a part from one pin of a pair to its partner

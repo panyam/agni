@@ -337,3 +337,61 @@ func TestDiffPairNamingNoConvention(t *testing.T) {
 		}
 	}
 }
+
+// TestDiffPairNamingReadsDeclaredPairs gives the rule a board that declares its pairs (agni issue
+// 1360). A declared pair passes whatever its names say, and as one verdict. A declaration also opens
+// the convention gate, so a positive-suffix net the board declares in no pair is judged by its name.
+func TestDiffPairNamingReadsDeclaredPairs(t *testing.T) {
+	d := declaredPairFixture()
+	var rule *check.Rule
+	for _, r := range check.BuiltinRules() {
+		if r.Name == "diff-pair-naming" {
+			rule = r
+		}
+	}
+	if rule == nil {
+		t.Fatal("diff-pair-naming is not registered")
+	}
+	got := map[string]string{}
+	for _, v := range check.RunVerdictsBackground(check.NewModel(d), []*check.Rule{rule}) {
+		got[v.Subjects[0].Ref] = string(v.Outcome)
+		if v.Outcome == check.Pass && !strings.Contains(v.Witness.Statement, "declares") {
+			t.Errorf("%s passes with %q, want the declaration as its witness", v.Subjects[0].Ref, v.Witness.Statement)
+		}
+	}
+	want := map[string]string{"CLK0": string(check.Pass), "USB_DP": string(check.Pass), "HDMI_D0_P": string(check.Fail)}
+	if len(got) != len(want) {
+		t.Errorf("verdicts = %v, want one per declared pair and one for HDMI_D0_P: %v", got, want)
+	}
+	for sub, w := range want {
+		if got[sub] != w {
+			t.Errorf("%s = %q, want %q (all: %v)", sub, got[sub], w, got)
+		}
+	}
+	f := indexFindings(d)
+	if _, ok := f["diff-pair-naming|HDMI_D0_P"]; !ok {
+		t.Error("HDMI_D0_P should be flagged diff-pair-naming, since the board declares pairs")
+	}
+	if _, ok := f["diff-pair-naming|USB_DP"]; ok {
+		t.Error("USB_DP must not be flagged, since the board pairs it with USB_DMX")
+	}
+}
+
+// declaredPairFixture is a design that declares two pairs and a match group, one pair with no
+// suffix and one whose names are no complement, beside a positive net in no pair.
+func declaredPairFixture() *ir.Design {
+	return &ir.Design{
+		Nets: []*ir.Net{
+			tnet("CLK0", "U1.1", "J1.1"),      // declared with CLK0N, no suffix either side
+			tnet("CLK0N", "U1.2", "J1.2"),     // declared with CLK0
+			tnet("USB_DP", "U1.3", "J1.3"),    // declared with USB_DMX, whose name is no complement
+			tnet("USB_DMX", "U1.4", "J1.4"),   // declared with USB_DP
+			tnet("HDMI_D0_P", "U1.5", "J1.5"), // in no pair and no complement -> flag
+		},
+		NetGroups: []*ir.NetGroup{
+			{Name: "DIFFPAIR2", Kind: ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR, Nets: []string{"CLK0", "CLK0N"}},
+			{Name: "USB_D", Kind: ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR, Nets: []string{"USB_DMX", "USB_DP"}},
+			{Name: "LANE", Kind: ir.NetGroupKind_NET_GROUP_KIND_MATCH_GROUP, Nets: []string{"CLK0", "HDMI_D0_P"}},
+		},
+	}
+}

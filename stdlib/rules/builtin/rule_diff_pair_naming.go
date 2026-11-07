@@ -12,11 +12,11 @@ import (
 var diffPairNaming = &check.Rule{
 	Name:       "diff-pair-naming",
 	Severity:   "warning",
-	Summary:    "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net.",
+	Summary:    "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net, and the board declares no pair for it.",
 	Impact:     "A broken pair means the layout tool never treats the two nets as coupled, so they route like ordinary signals and the high-speed link fails signal integrity. Caught at capture it is a one-line fix; caught after layout it means re-routing.",
 	Remedy:     "Add the missing complementary net, or rename the net if it was never half of a pair. Left as it is, the layout tool routes the two as ordinary signals and the link is not a differential pair at all.",
 	Primitives: []string{"select", "pattern", "pair"},
-	Reads:      []string{"net.names"},
+	Reads:      []string{"net.names", "net.group"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryNaming,
 		check.KeyTier:         "R",
@@ -28,9 +28,14 @@ var diffPairNaming = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// diffPairNamingVerdicts decides every net whose NAME claims to be the positive half of a pair, and
-// that set is the considered set. A net with no such suffix yields no verdict, because a pass would
-// claim the rule checked something it never asked about.
+// diffPairNamingVerdicts decides every pair the design declares and every net whose NAME claims to
+// be the positive half of a pair, and that set is the considered set. A net with neither yields no
+// verdict, because a pass would claim the rule checked something it never asked about.
+//
+// A DECLARED PAIR PASSES ON THE DECLARATION. The designer paired the two nets in the board, so the
+// pair passes whatever its names say, and the witness names both nets and the pair (agni issue 1360).
+// It is one verdict per pair, on the member whose name reads as the positive half, else the first by
+// name.
 //
 // THE POPULATION GATE BECOMES NotConsidered. `DiffConventionPresent` asks whether the design uses the
 // convention anywhere, since a netlist where nothing is differential can still end nets in `_P` by
@@ -44,6 +49,20 @@ func diffPairNamingVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
+		if other, pair, declared := m.DeclaredPair(n.Name); declared {
+			if pairSubject(m, n.Name, other) != n.Name {
+				continue // the pair's verdict sits on its other member
+			}
+			out = append(out, check.Verdict{
+				Subjects: []check.Entity{{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}},
+				Outcome:  check.Pass,
+				Witness: &check.Witness{
+					Statement: fmt.Sprintf("the board declares %q and %q as the differential pair %q", n.Name, other, pair),
+					Terms:     []check.WitnessTerm{{Label: "complement", Value: other}, {Label: "pair", Value: pair}},
+				},
+			})
+			continue
+		}
 		neg, ok := m.DiffNegative(n.Name)
 		if !ok {
 			continue // not a differential-positive name, so not this rule's subject
@@ -72,6 +91,23 @@ func diffPairNamingVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 	return out
 }
 
+// pairSubject is the member of a declared pair its verdict sits on: the one whose name reads as the
+// positive half when exactly one does, else the first by name.
+func pairSubject(m check.Model, a, b string) string {
+	_, aPos := m.DiffNegative(a)
+	_, bPos := m.DiffNegative(b)
+	switch {
+	case aPos && !bPos:
+		return a
+	case bPos && !aPos:
+		return b
+	case a < b:
+		return a
+	default:
+		return b
+	}
+}
+
 // diffPairNamingSpec is the rule's declarative twin (see `specs` in register.go). The complement
 // name is a Let binding shared by the Where clause and the message. The diff_convention_present gate
 // mirrors the Eval's design-level guard, so evaluating it per net is redundant but harmless.
@@ -81,6 +117,7 @@ var diffPairNamingSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.IsTrue{T: check.Call{Fn: "diff_convention_present"}},
 		check.Cmp{L: check.Var{Name: "neg"}, Op: "!=", R: check.Lit{V: ""}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "declared_pair", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "has_net", Args: []check.Term{check.Var{Name: "neg"}}}}},
 	}},
 	Message: "differential net has no complementary {neg:q}",

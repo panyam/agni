@@ -32,6 +32,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
 | [`net.feedback(net)`](net.feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |
+| [`net.group(group, kind, net)`](net.group/) | a differential pair (diff_pair) or match group (match_group) the design declares, one row per member net (Allegro boards) |
 | [`net.max_voltage(net, volts)`](net.max_voltage/) | a net's declared rail voltage |
 | [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
 | [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage |

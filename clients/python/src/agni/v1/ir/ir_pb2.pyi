@@ -52,6 +52,12 @@ class Role(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ROLE_CONTROL: _ClassVar[Role]
     ROLE_GATE_DRIVE: _ClassVar[Role]
 
+class NetGroupKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    NET_GROUP_KIND_UNSPECIFIED: _ClassVar[NetGroupKind]
+    NET_GROUP_KIND_DIFF_PAIR: _ClassVar[NetGroupKind]
+    NET_GROUP_KIND_MATCH_GROUP: _ClassVar[NetGroupKind]
+
 class LayerFunction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     LAYER_FUNCTION_UNSPECIFIED: _ClassVar[LayerFunction]
@@ -91,6 +97,9 @@ ROLE_FEEDBACK: Role
 ROLE_SWITCHING: Role
 ROLE_CONTROL: Role
 ROLE_GATE_DRIVE: Role
+NET_GROUP_KIND_UNSPECIFIED: NetGroupKind
+NET_GROUP_KIND_DIFF_PAIR: NetGroupKind
+NET_GROUP_KIND_MATCH_GROUP: NetGroupKind
 LAYER_FUNCTION_UNSPECIFIED: LayerFunction
 LAYER_FUNCTION_SIGNAL: LayerFunction
 LAYER_FUNCTION_PLANE: LayerFunction
@@ -136,7 +145,7 @@ class FidelityFragment(_message.Message):
     def __init__(self, prov: _Optional[_Union[Provenance, _Mapping]] = ..., format: _Optional[str] = ..., raw: _Optional[bytes] = ..., note: _Optional[str] = ...) -> None: ...
 
 class Design(_message.Message):
-    __slots__ = ("name", "ir_version", "source_format", "libraries", "components", "nets", "sheets", "input_diagnostics", "footprints", "layers", "stackup", "constraints", "bom", "attributes", "fidelity", "prov")
+    __slots__ = ("name", "ir_version", "source_format", "libraries", "components", "nets", "sheets", "input_diagnostics", "footprints", "layers", "stackup", "constraints", "bom", "net_groups", "attributes", "fidelity", "prov")
     class AttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -157,6 +166,7 @@ class Design(_message.Message):
     STACKUP_FIELD_NUMBER: _ClassVar[int]
     CONSTRAINTS_FIELD_NUMBER: _ClassVar[int]
     BOM_FIELD_NUMBER: _ClassVar[int]
+    NET_GROUPS_FIELD_NUMBER: _ClassVar[int]
     ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
     FIDELITY_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
@@ -173,10 +183,11 @@ class Design(_message.Message):
     stackup: Stackup
     constraints: _containers.RepeatedCompositeFieldContainer[Constraint]
     bom: _containers.RepeatedCompositeFieldContainer[BomLine]
+    net_groups: _containers.RepeatedCompositeFieldContainer[NetGroup]
     attributes: _containers.ScalarMap[str, str]
     fidelity: _containers.RepeatedCompositeFieldContainer[FidelityFragment]
     prov: Provenance
-    def __init__(self, name: _Optional[str] = ..., ir_version: _Optional[str] = ..., source_format: _Optional[str] = ..., libraries: _Optional[_Iterable[_Union[PartLibrary, _Mapping]]] = ..., components: _Optional[_Iterable[_Union[Component, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[Net, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[Sheet, _Mapping]]] = ..., input_diagnostics: _Optional[_Union[InputDiagnostics, _Mapping]] = ..., footprints: _Optional[_Iterable[_Union[Footprint, _Mapping]]] = ..., layers: _Optional[_Iterable[_Union[Layer, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., constraints: _Optional[_Iterable[_Union[Constraint, _Mapping]]] = ..., bom: _Optional[_Iterable[_Union[BomLine, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., fidelity: _Optional[_Iterable[_Union[FidelityFragment, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., ir_version: _Optional[str] = ..., source_format: _Optional[str] = ..., libraries: _Optional[_Iterable[_Union[PartLibrary, _Mapping]]] = ..., components: _Optional[_Iterable[_Union[Component, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[Net, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[Sheet, _Mapping]]] = ..., input_diagnostics: _Optional[_Union[InputDiagnostics, _Mapping]] = ..., footprints: _Optional[_Iterable[_Union[Footprint, _Mapping]]] = ..., layers: _Optional[_Iterable[_Union[Layer, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., constraints: _Optional[_Iterable[_Union[Constraint, _Mapping]]] = ..., bom: _Optional[_Iterable[_Union[BomLine, _Mapping]]] = ..., net_groups: _Optional[_Iterable[_Union[NetGroup, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., fidelity: _Optional[_Iterable[_Union[FidelityFragment, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class InputDiagnostics(_message.Message):
     __slots__ = ("dangling_endpoints", "ref_des_collisions", "no_junction_endpoints", "unmodeled_buses", "unresolved_symbols", "resolved_symbols", "joined_taps", "unannotated_components", "unexpanded_hierarchy", "range_labels", "supplied")
@@ -443,6 +454,18 @@ class NetRole(_message.Message):
     source: RoleSource
     reason: str
     def __init__(self, role_kind: _Optional[_Union[Role, str]] = ..., source: _Optional[_Union[RoleSource, str]] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class NetGroup(_message.Message):
+    __slots__ = ("name", "kind", "nets", "prov")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    PROV_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    kind: NetGroupKind
+    nets: _containers.RepeatedScalarFieldContainer[str]
+    prov: Provenance
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[NetGroupKind, str]] = ..., nets: _Optional[_Iterable[str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Net(_message.Message):
     __slots__ = ("name", "net_classes", "connections", "id", "roles", "attributes", "prov")

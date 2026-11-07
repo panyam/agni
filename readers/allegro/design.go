@@ -263,6 +263,8 @@ func (p *board) toDesign(src string) *ir.Design {
 		}
 	})
 
+	d.NetGroups = p.netGroups(src)
+
 	// A repeated designator is two placements claiming one name. The list is declared even when
 	// empty, so `duplicate-ref-des` knows this reader looked (agni issue 309).
 	diag := &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}

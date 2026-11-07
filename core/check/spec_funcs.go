@@ -156,6 +156,16 @@ func registerBuiltinSpecFuncs() {
 			return neg
 		},
 	})
+	RegisterSpecFunc("declared_pair", &SpecFunc{
+		// True when the design declares the net in a differential pair (Model.DeclaredPair), so a
+		// rule pairs it the way the designer did rather than by its name (agni issue 1360).
+		Reads:      []string{"net.group"},
+		Primitives: []string{"pair"},
+		Fn: func(m Model, _ map[string]any, args []any) any {
+			_, _, ok := m.DeclaredPair(args[0].(string))
+			return ok
+		},
+	})
 	RegisterSpecFunc("has_net", &SpecFunc{
 		// The pairing primitive, true when a net with this name exists (case-insensitive).
 		Reads:      []string{"net.names"},

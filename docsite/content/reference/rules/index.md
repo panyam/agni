@@ -53,7 +53,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 
 | Rule | Source | Severity | What it checks |
 |---|---|---|---|
-| [diff-pair-naming](diff-pair-naming/) | built-in | warning | A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net. |
+| [diff-pair-naming](diff-pair-naming/) | built-in | warning | A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net, and the board declares no pair for it. |
 
 ## board
 

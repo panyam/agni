@@ -32,6 +32,12 @@ func TestTheSampleBoardReadsAndChecks(t *testing.T) {
 			t.Errorf("board summary lacks %q:\n%s", want, lines)
 		}
 	}
+	// The board declares its pairs and match groups (agni issue 1360).
+	for _, want := range []string{"31 differential pairs:", "USB1_D       USB1_DM USB1_DP", "7 match groups:", "DDR1_DQ1"} {
+		if !strings.Contains(groupLines(d), want) {
+			t.Errorf("the group listing lacks %q:\n%s", want, groupLines(d))
+		}
+	}
 	m := check.NewModel(d, check.WithBoard(g))
 	tally := common.RuleTally(check.RunBackground(m, check.BuiltinRules()))
 	if !strings.Contains(tally, "copper-clearance") {

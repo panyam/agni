@@ -88,6 +88,7 @@ var builtinSchema = map[string][]facts.Field{
 	RelNetBias:               {facts.FieldSubject, facts.FieldValue},                    // net.bias(net, level), WS3-088
 	RelNetACCoupled:          {facts.FieldSubject},                                      // net.ac_coupled(net), WS3-088
 	RelNetNetClass:           {facts.FieldSubject, facts.FieldValue},                    // net.netclass(net, class), WS3-105
+	RelNetGroup:              {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // net.group(group, kind, net), agni 1360
 	RelHasNetClass:           {facts.FieldSubject},                                      // design.has_netclass(present), WS3-105
 	RelNetClassClearance:     {facts.FieldSubject, facts.FieldNum},                      // netclass.clearance(class, mm), WS3-111
 	RelNetClassTrackWidth:    {facts.FieldSubject, facts.FieldNum},                      // netclass.track_width(class, mm), WS3-111
@@ -150,6 +151,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "net.bias", Args: []string{"net", "level"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider", Kind: facts.KindNetlist},
 	{Name: "net.ac_coupled", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count)", Kind: facts.KindNetlist},
 	{Name: "net.netclass", Args: []string{"net", "class"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)", Kind: facts.KindNetlist},
+	{Name: "net.group", Args: []string{"group", "kind", "net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a differential pair (diff_pair) or match group (match_group) the design declares, one row per member net (Allegro boards)", Kind: facts.KindNetlist},
 	{Name: "design.has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: facts.KindNetlist},
 	{Name: "netclass.clearance", Args: []string{"class", "mm"}, ArgKinds: map[string]facts.ArgKind{"mm": {Unit: unitMetre}}, Summary: "the clearance a net class declares its nets should route at (metres, shown in mm)", Kind: facts.KindNetlist},
 	{Name: "netclass.track_width", Args: []string{"class", "mm"}, ArgKinds: map[string]facts.ArgKind{"mm": {Unit: unitMetre}}, Summary: "the track width a net class declares its nets should route at (metres, shown in mm)", Kind: facts.KindNetlist},

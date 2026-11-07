@@ -32,6 +32,10 @@ Agni -->> You: *ir.Design
 
 > The same file also gives the board geometry. The copper layers are renamed F.Cu, In1.Cu and so on down to B.Cu, as every board format is, so the renderer and the copper rules read it as they read a KiCad board. A part on the bottom is mirrored.
 
+## Read the pairs the board declares {#pairs}
+
+> A layout engineer pairs nets in Allegro's constraint manager, and puts a bus's nets in a match group to tune them to one length. The board keeps both, so agni reads them (agni issue 1360). The BeagleBone AI pairs `USB1_DP` with `USB1_DM`, where a name rule would look for `USB1_DN`, and it pairs `DDR1_CLK0` with `DDR1_CLK0N` with no suffix at all. `diff-pair-naming` passes a declared pair on the declaration, and `net.group` asks about the groups in a query.
+
 ## Run the checks {#check}
 
 > With the board in the model, the copper rules run as well. The board's constraint sets become net classes, and the narrowest set becomes the board's own track floor. The BeagleBone AI routes some traces at 3.2 mil, which its EMMC set allows, so track-width judges every net against that and fails none.
