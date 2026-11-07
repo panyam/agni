@@ -132,7 +132,9 @@ export class CanvasComponent extends BaseComponent {
       const tris: number[] = [];
       if (g.shape === HighlightShape.PATH) {
         const w = pathHalfWidth * g.strokeScale; // user width scale (WS9-044)
-        for (const entity of g.entities) tris.push(...pathQuads(sheet.vertices, sheet.primitives, entity, w));
+        // Appended one by one, because a spread passes every number as an argument, and a board's
+        // ground net makes too many quads for the call stack (agni issue 1330, on Jetson's GND).
+        for (const entity of g.entities) for (const v of pathQuads(sheet.vertices, sheet.primitives, entity, w)) tris.push(v);
       } else {
         for (const entity of g.entities) {
           const b = entityBounds(sheet.vertices, sheet.primitives, entity);

@@ -449,12 +449,15 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 # writes it to $(EXERCISE_OUT)/webgl.md. Run it headed (the default) on an idle machine, since headless
 # Chrome draws WebGL in software, and the table states the load average it ran under. SLOWMO is fixed
 # at 0, because a pause before each input would be measured as a slow frame. WALK_DESIGN=cut walks the
-# gate's cut of Jetson.
+# gate's cut of Jetson. VIDEO=<dir> records the walk as webgl-walk-<design>.webm there, for a demo, and
+# then judges no timing.
+#   make exercise-webgl
+#   make exercise-webgl VIDEO=/tmp/agni-demo
 exercise-webgl: HEADED ?= 1
 exercise-webgl: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
 	mkdir -p $(EXERCISE_OUT)
-	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/webgl-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=0 EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/webgl-walk.spec.ts; \
+	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/webgl-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=0 VIDEO=$(VIDEO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/webgl-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/webgl.md 2>/dev/null; exit $$status
 
 # The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
