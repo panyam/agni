@@ -53,6 +53,7 @@ const walks = {
     path: "designs/jetson-cut",
     about: "the cross-probe cut of Jetson, nineteen parts and their copper",
     sheet: "Power",
+    ground: "GND",
     verdict: { id: "single-pin-net:(net:/USB Debug%2C PD/UART3_DEBUG.RX)", rule: "single-pin-net", subject: "net:/USB Debug, PD/UART3_DEBUG.RX" },
     trace: "R119.1,R119.2",
   },
@@ -61,6 +62,7 @@ const walks = {
     path: "designs/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     sheet: "Expansion connector",
+    ground: "GND",
     verdict: { id: "bulk-cap:(net:/Power/USBPD1_HV)", rule: "bulk-cap", subject: "net:/Power/USBPD1_HV" },
     trace: "R119.1,R119.2",
   },
@@ -91,6 +93,10 @@ const MIN_ANCHORS = 10;
 class Unwalkable extends Error {}
 // NotJudged leaves a step "not available" whatever it waits on, for a run that cannot judge it.
 class NotJudged extends Error {}
+
+// VIDEO names a directory to record the walk into, one .webm per design, for a demo. A recording
+// run judges no timing, since the encoder competes with the page for the CPU.
+const video = process.env.VIDEO ?? "";
 
 const closed = new Set((process.env.CLOSED_TICKETS ?? "").split(",").filter((t) => t !== "").map((t) => `#${t.replace(/^#/, "")}`));
 
@@ -342,17 +348,28 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
 // such list, so the walk matches the keyed elements of the drawn sheet against the subjects the
 // canvas was asked to light (data-highlight), as resolveHighlights matches a packed sheet's keys.
 async function litSubjects(page: Page, mode: Mode): Promise<string[]> {
+  await waitLit(page, mode);
+  return readLit(page, mode);
+}
+
+// waitLit waits for a mode to draw some highlight.
+async function waitLit(page: Page, mode: Mode): Promise<void> {
   if (mode === "webgl") {
     await page
       .waitForFunction((c) => ((document.querySelector(c) as HTMLElement | null)?.dataset.lit ?? "[]") !== "[]", CANVAS, { timeout: 60_000 })
       .catch(() => {
         throw new Error("WebGL lit nothing within 60 s");
       });
-    return page.evaluate((c) => JSON.parse((document.querySelector(c) as HTMLElement).dataset.lit!) as string[], CANVAS);
+    return;
   }
   await page.waitForFunction((s) => document.querySelectorAll(`${s} .highlight-overlay svg *`).length > 0, SVG, { timeout: 60_000 }).catch(() => {
     throw new Unwalkable("SVG drew no highlight within 60 s");
   });
+}
+
+// readLit reads what the shown sheet lit, as litSubjects describes, without waiting.
+async function readLit(page: Page, mode: Mode): Promise<string[]> {
+  if (mode === "webgl") return page.evaluate((c) => JSON.parse((document.querySelector(c) as HTMLElement).dataset.lit ?? "[]") as string[], CANVAS);
   return page.evaluate(({ svg, canvas }) => {
     type Spec = { components?: string[]; nets?: string[]; netIds?: string[]; busIds?: string[]; pins?: { refDes: string; pin: string }[] };
     const specs = JSON.parse((document.querySelector(canvas) as HTMLElement).dataset.highlight ?? "[]") as Spec[];
@@ -398,6 +415,32 @@ async function compareLit(page: Page, walk: Walk, extra: string): Promise<string
 
 const ms = (n: number): string => `${n.toFixed(1)} ms`;
 
+// lightFindings turns on the Highlight menu's "show all findings", as a reader would, and runs every
+// check on the open board, which then lights every finding drawn on it (agni issue 356). It returns
+// how many findings the run listed, how many of them badge the board, and how many subjects the board
+// lit. Every finding the board badges has to light there, since the badge says the board draws its
+// subject (LocateSubjects, agni issue 1325).
+async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number; badged: number; lit: number }> {
+  await page.click(".highlight-btn");
+  const all = page.locator(".highlight-show-all");
+  if (!(await all.isChecked())) await all.check();
+  await page.click(".highlight-btn");
+  await page.click(".checks-run");
+  await page
+    .waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, { timeout: 600_000 })
+    .catch(() => {
+      throw new Unwalkable("Run checks did not finish within 10 minutes");
+    });
+  const findings = await page.locator(".check-locate").count();
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1000);
+  const badged = await page.locator('.sheet-badge[title="show sheet Board"]').count();
+  if (badged === 0) throw new Unwalkable(`none of the run's ${findings} findings is drawn on the board`);
+  const lit = (await readLit(page, mode)).length;
+  if (lit < badged) throw new Error(`${mode} lit ${lit} subjects on the board, and ${badged} of the run's ${findings} findings badge it`);
+  return { findings, badged, lit };
+}
+
 for (const name of chosen) {
   const walk: Walk = walks[name as keyof typeof walks];
   const label = `${walk.path.split("/").pop()} (${walk.mount})`;
@@ -407,7 +450,12 @@ for (const name of chosen) {
       const passed = new Set<string>();
       const out = process.env.EXERCISE_OUT;
       if (out) mkdirSync(out, { recursive: true });
-      const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }) });
+      const viewport = viewportFor({ width: 1400, height: 1000 });
+      const context = await browser.newContext({
+        viewport,
+        ...(video ? { recordVideo: { dir: video, size: viewport ?? { width: 1400, height: 1000 } } } : {}),
+      });
+      const page = await context.newPage();
       const pageErrors: string[] = [];
       page.on("pageerror", (e) => pageErrors.push(String(e)));
       const timings: Record<string, Record<Mode, { draw: number; frames: FrameSummary }>> = {};
@@ -482,14 +530,54 @@ for (const name of chosen) {
           }
         }
 
+        // The board again with highlights on, since #1331 expected the lag there, as the highlight
+        // recolour sets one uniform per highlighted primitive. A reader lights a run's findings with Highlight →
+        // show all findings, and none of them light on a board until #1440. So the walk also lights
+        // the ground net, the largest highlight a board draws, through the page API's locateEntity,
+        // and times that.
+        for (const mode of MODES) {
+          await step(`light the findings on the board (${mode})`, { waitsOn: ["#1440"], needs: [`draw Board (${mode})`] }, async () => {
+            await open(page, walk, mode, "Board");
+            const { findings, badged, lit } = await lightFindings(page, mode);
+            const frames = await panZoom(page, mode);
+            return `${badged} of ${findings} findings badge the board and ${lit} subjects lit there, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+          });
+        }
+        const litTimes: Partial<Record<Mode, FrameSummary>> = {};
+        for (const mode of MODES) {
+          await step(`pan the board with ${walk.ground} lit (${mode})`, { needs: [`draw Board (${mode})`] }, async () => {
+            await open(page, walk, mode, "Board", "&devpage=1");
+            await page.evaluate(
+              (net) => (window as unknown as { __agniViewerPage: { locateEntity(k: string, s: string, o: { sheet: string }): Promise<void> } }).__agniViewerPage.locateEntity("net", net, { sheet: "board" }),
+              walk.ground,
+            );
+            const lit = await litSubjects(page, mode);
+            if (!lit.includes(`net:${walk.ground}`)) throw new Unwalkable(`${mode} lit [${lit.join(", ")}], not ${walk.ground}`);
+            const frames = await panZoom(page, mode);
+            litTimes[mode] = frames;
+            return `frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+          });
+        }
+
         // This passed at its first headed run on Jetson (agni issue 1330), so it waits on nothing, and a
         // headed run where WebGL loses is a regression.
         await step("WebGL beats SVG on the board", { needs: ["draw Board (svg)", "draw Board (webgl)"] }, async () => {
           if (!headed) throw new NotJudged("judged only headed, since headless Chrome draws WebGL in software");
+          if (video) throw new NotJudged("not judged while the walk records a video, which competes for the CPU");
           const { svg, webgl } = timings.Board;
           const verdict = `p95 ${ms(webgl.frames.p95)} against ${ms(svg.frames.p95)}, first draw ${ms(webgl.draw)} against ${ms(svg.draw)}`;
           // WebGL has to take at most 80% of SVG's p95 frame time to count as beating it.
           if (webgl.frames.p95 > 0.8 * svg.frames.p95) throw new Error(`WebGL ${verdict}`);
+          return `WebGL ${verdict}`;
+        });
+
+        // This also passed at its first headed run on Jetson, with GND lit, so it waits on nothing.
+        await step("WebGL beats SVG on the lit board", { needs: [`pan the board with ${walk.ground} lit (svg)`, `pan the board with ${walk.ground} lit (webgl)`] }, async () => {
+          if (!headed) throw new NotJudged("judged only headed, since headless Chrome draws WebGL in software");
+          if (video) throw new NotJudged("not judged while the walk records a video, which competes for the CPU");
+          const { svg, webgl } = litTimes as Record<Mode, FrameSummary>;
+          const verdict = `p95 ${ms(webgl.p95)} against ${ms(svg.p95)}, max ${ms(webgl.max)} against ${ms(svg.max)}`;
+          if (webgl.p95 > 0.8 * svg.p95) throw new Error(`WebGL ${verdict}`);
           return `WebGL ${verdict}`;
         });
 
@@ -553,12 +641,20 @@ for (const name of chosen) {
         });
       } finally {
         const machine =
-          `${headed ? "Headed" : "Headless"} Chromium, renderer ${gpu || "unknown"}, load average ${loadavg().map((l) => l.toFixed(2)).join(" ")}. ` +
+          `${headed ? "Headed" : "Headless"} Chromium${video ? ", recording a video" : ""}, renderer ${gpu || "unknown"}, load average ${loadavg().map((l) => l.toFixed(2)).join(" ")}. ` +
           "Times are on the page's performance.now. A first draw runs from a Sheets tile click to the frame after the sheet first shows, and frame times are requestAnimationFrame deltas over 80 wheel steps and a 600 px drag, one input per frame.";
         const report = `## WebGL walk, ${walk.about}\n\n${machine}\n\n${table(rows)}\n`;
         process.stdout.write(`\n${report}\n`);
         if (out) writeFileSync(join(out, "webgl.md"), report);
+        const recording = page.video();
         await page.close();
+        await context.close();
+        if (recording) {
+          const file = join(video, `webgl-walk-${name}.webm`);
+          await recording.saveAs(file);
+          await recording.delete();
+          process.stdout.write(`video: ${file}\n`);
+        }
       }
       const broken = rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`);
       expect(exitCode(rows), broken.join("\n")).toBe(0);
