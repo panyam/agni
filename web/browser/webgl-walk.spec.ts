@@ -450,10 +450,12 @@ for (const name of chosen) {
       const passed = new Set<string>();
       const out = process.env.EXERCISE_OUT;
       if (out) mkdirSync(out, { recursive: true });
-      const viewport = viewportFor({ width: 1400, height: 1000 });
+      // A recording fixes the page at 1080p and records at that size. A headed page otherwise takes the
+      // window's size, and the video showed it in one corner of a grey frame.
+      const recorded = { width: 1920, height: 1080 };
       const context = await browser.newContext({
-        viewport,
-        ...(video ? { recordVideo: { dir: video, size: viewport ?? { width: 1400, height: 1000 } } } : {}),
+        viewport: video ? recorded : viewportFor({ width: 1400, height: 1000 }),
+        ...(video ? { recordVideo: { dir: video, size: recorded } } : {}),
       });
       const page = await context.newPage();
       const pageErrors: string[] = [];
