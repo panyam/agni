@@ -73,6 +73,7 @@ import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { verdictItem } from "./document.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
+import { SHEET_DRAWN } from "./drawmark.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
 // The presenter's location callback still fires then, and must not push a history entry for it.
@@ -187,6 +188,7 @@ class AppRoot extends BaseComponent {
         canvas.hideText(); // the SVG host renders its own text
         svgView.show();
         svgView.setSvg(markup);
+        requestAnimationFrame(() => requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "svg" } })));
         // The readout remains visible in SVG mode, with the element count (see SvgView.stats).
         if (readoutEl) {
           readoutEl.textContent = `SVG — ${svgView.stats().elements} elements`;

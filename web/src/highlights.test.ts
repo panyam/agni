@@ -30,6 +30,19 @@ describe("resolveHighlights", () => {
     expect([...groups[1].primitives]).toEqual([6]);
   });
 
+  it("names each matched entity once as a subject, a net matched by id by its name", () => {
+    const withIds: PrimitiveKey[] = [
+      ...keys,
+      { primitive: 7, refDes: "", net: "NET3", netId: "n3", pin: "", busId: "" },
+      { primitive: 8, refDes: "", net: "", netId: "", pin: "", busId: "bus-1" },
+    ];
+    const [g] = resolveHighlights(withIds, [
+      { components: ["R1"], nets: ["NET2", "NOSUCH"], netIds: ["n3"], busIds: ["bus-1"], pins: [{ refDes: "U1", pin: "1" }] },
+    ]);
+    expect(g.subjects).toEqual(["net:NET2", "component:R1", "pin:U1.1", "net:NET3", "bus:bus-1"]);
+    expect(resolveHighlights(keys, [{ nets: ["NOSUCH"] }])[0].subjects).toEqual([]);
+  });
+
   it("yields no primitives for a subject absent from the sheet keys", () => {
     expect(resolveHighlights(keys, [{ nets: ["NET1"] }])[0].primitives.size).toBeGreaterThan(0);
     expect(resolveHighlights(keys, [{ nets: ["NOSUCH"] }])[0].primitives.size).toBe(0);

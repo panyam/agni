@@ -1398,7 +1398,12 @@ closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must p
 ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
 read its steps "not available". The gate runs offline and skips that half.
 #1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) is
-active in the webgl clone, and its first ticket, #1330, writes `make exercise-webgl`. #1353
+active in the webgl clone, and `make exercise-webgl` is its exercise (agni 1330). It runs
+`web/browser/webgl-walk.spec.ts` in SVG and then in WebGL. It lines the two views up by fitting their
+label anchors (`browser/frametimes.ts`), so a click lands on one place in both. Its timings mean
+something only headed on an idle machine, since headless Chrome draws WebGL in SwiftShader, so the
+gate's cut run never judges them. The canvas writes `data-highlight` and `data-lit` for its highlight
+step, and a sheet's first draw records the `agni:sheet-drawn` mark (`web/src/drawmark.ts`). #1353
 `mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
 formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise.
 #1337 `mission_walk` (click one part and walk outwards) closed on 2026-11-06, and `make
