@@ -670,6 +670,64 @@ func TestHighlightSheetBoard(t *testing.T) {
 	}
 }
 
+// TestBoardJoinsANetByItsSchematicID holds the board sheet to a finding's highlight, which names
+// its net by schematic id alone (agni issue 1440). The board names its nets, so every board path
+// keys a net with the id of the design's one net of that name, and a name two nets share keys none.
+func TestBoardJoinsANetByItsSchematicID(t *testing.T) {
+	board := testBoard()
+	board.Nets = append(board.Nets, &geom.NetCopper{Net: "DUP", Segments: []*geom.TrackSegment{
+		{A: &geom.Point{X: 600, Y: 10}, B: &geom.Point{X: 900, Y: 400}, Width: 20, Layer: "F.Cu"},
+	}})
+	ld := boardLoader{
+		fakeLoader: fakeLoader{
+			geom:   &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}},
+			design: &ir.Design{Nets: []*ir.Net{{Name: "SIG", Id: "sig-1"}, {Name: "DUP", Id: "dup-1"}, {Name: "DUP", Id: "dup-2"}}},
+		},
+		board: board,
+	}
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	ctx := context.Background()
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")
+	highlight := func(format webapi.SheetFormat, id string) *webapi.HighlightSheetResponse {
+		t.Helper()
+		resp, err := svc.HighlightSheet(ctx, &webapi.HighlightSheetRequest{Snapshot: snap, Sheet: "board", Format: format,
+			Specs: []*geom.HighlightSpec{{NetIds: []string{id}}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+
+	if n := strings.Count(highlight(webapi.SheetFormat_SHEET_FORMAT_SVG, "sig-1").GetSvg(), "<line"); n != 1 {
+		t.Errorf("SVG overlay for SIG's id drew %d lines, want its 1 segment", n)
+	}
+	if n := strings.Count(highlight(webapi.SheetFormat_SHEET_FORMAT_SVG, "dup-1").GetSvg(), "<line"); n != 0 {
+		t.Errorf("SVG overlay for one of two DUP nets drew %d lines, want 0, since the board can't tell them apart", n)
+	}
+	if g := highlight(webapi.SheetFormat_SHEET_FORMAT_PACKED, "sig-1").GetPacked().GetGroups(); len(g) != 1 || len(g[0].GetPrimitives()) == 0 {
+		t.Errorf("packed overlay for SIG's id = %v, want SIG's primitives", g)
+	}
+
+	resp, err := svc.GetSheet(ctx, &webapi.GetSheetRequest{Snapshot: snap, Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]string{}
+	for _, k := range resp.GetPacked().GetKeys() {
+		ids[k.GetNet()] = k.GetNetId()
+	}
+	if ids["SIG"] != "sig-1" || ids["DUP"] != "" {
+		t.Errorf("packed board keys SIG with %q and DUP with %q, want sig-1 and none", ids["SIG"], ids["DUP"])
+	}
+	resp, err = svc.GetSheet(ctx, &webapi.GetSheetRequest{Snapshot: snap, Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(resp.GetSvg(), `data-net-id="sig-1"`) {
+		t.Error("the board SVG keys SIG's copper with no data-net-id")
+	}
+}
+
 // TestBoardSheetAbsent checks that a loader without board geometry lists no board sheet, and that
 // asking for one is ErrNotFound. Such a loader returns (nil, nil), since absence is normal.
 func TestBoardSheetAbsent(t *testing.T) {

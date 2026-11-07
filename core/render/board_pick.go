@@ -11,14 +11,31 @@ import (
 // in the same vocabulary as the schematic's (wireKeys, symbolKeys, pinKeys). They are written
 // only under WithPickTargets, so `agni render` and a report keep an unkeyed board. See
 // docsite/content/architecture/web-picking.md#picking-the-board.
-type boardPickKeys struct{ on bool }
+// netID gives a net's schematic id (boardNetIDs), so a board pick names the net as a schematic
+// pick does. A nil netID writes names alone.
+type boardPickKeys struct {
+	on    bool
+	netID func(string) string
+}
 
-// net keys a track, a via or a zone by its net name. Copper with no net names nothing.
+// net keys a track, a via or a zone by its net name, and by its schematic net id where the render
+// knows one. Copper with no net names nothing.
 func (k boardPickKeys) net(name string) []svg.Attr {
 	if !k.on || name == "" {
 		return nil
 	}
-	return []svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", name)}
+	return append([]svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", name)}, k.id(name)...)
+}
+
+// id is the data-net-id attribute for a net, or nothing when the render has no id for it.
+func (k boardPickKeys) id(net string) []svg.Attr {
+	if k.netID == nil {
+		return nil
+	}
+	if id := k.netID(net); id != "" {
+		return []svg.Attr{svg.AEsc("data-net-id", id)}
+	}
+	return nil
 }
 
 // component keys a footprint's body rect, and a pad with no number. Free board artwork has no
@@ -53,7 +70,7 @@ func (k boardPickKeys) pad(pl *geom.ComponentPlacement, pad *geom.Pad) []svg.Att
 	}
 	keys := []svg.Attr{svg.AEsc("data-kind", "pin"), svg.AEsc("data-ref", pl.GetRefDes()), svg.AEsc("data-pin", pad.GetNumber())}
 	if n := pad.GetNet(); n != "" {
-		keys = append(keys, svg.AEsc("data-net", n))
+		keys = append(append(keys, svg.AEsc("data-net", n)), k.id(n)...)
 	}
 	return keys
 }
