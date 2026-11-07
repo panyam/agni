@@ -1,0 +1,567 @@
+// The WebGL walk, mission #1329's exercise (agni issue 1330). An engineer opens Jetson's board and
+// its densest schematic sheet, pans and zooms, clicks things, drags a box, and follows a finding and
+// a trace. The walk does each in SVG and then in WebGL and compares the two.
+//
+// 1. Timings. Each mode opens each sheet from its Sheets tile and times the click to the
+//    SHEET_DRAWN mark (src/drawmark.ts). Then it runs a fixed pan and zoom script, one input event
+//    per animation frame, and summarizes the requestAnimationFrame deltas. The clock is the page's
+//    performance.now. A last row asks whether WebGL beat SVG on the board. It is judged only headed,
+//    because headless Chrome draws WebGL in software (SwiftShader), and there it reads "not
+//    available" rather than a verdict either way.
+// 2. Clicks. A footprint, a pad and a track on the board, a pin and a bus on the schematic. The walk
+//    finds and clicks each in SVG, then clicks the same place in WebGL. "The same place" comes from
+//    the labels both renderers draw. Each fits the sheet to the view on its own, so the walk fits a
+//    scale and offset between their label anchors (frametimes.ts) and carries the SVG point
+//    through it. A zoom replays as the same wheel steps at the mapped point, which keeps that fit
+//    valid, since both views zoom by panzoom's one wheelZoomFactor.
+// 3. A Shift-drag box, mapped the same way.
+// 4. A verdict link and a trace link, opened in each mode. The canvas writes the subjects it was asked
+//    to light to data-highlight in every mode and those it lit to data-lit in WebGL (canvas.ts). The
+//    walk reads the SVG side off the keyed elements of the drawn sheet, matched as
+//    resolveHighlights matches packed keys, and compares the two sets.
+//
+// A Selection is compared as the Properties panel shows it, its kind, its title and its whole text,
+// since a reader sees exactly that. A difference no panel shows is out of reach, and #1436 is
+// waiting for a reason to compare Selection values field by field.
+//
+// Steps that wait on a ticket read "not available" until it lands (exercise-report.ts, waitedOn),
+// and a waiting step that passes fails the walk, so the PR that makes it pass removes its wait.
+// `make exercise-webgl` passes CLOSED_TICKETS as the other walks do.
+//
+// The gate walks the cross-probe cut of Jetson (examples/cross-probe-project). `make exercise-webgl`
+// walks the whole board (WALK_DESIGN=jetson, examples/jetson-project), headed unless HEADED=0, and
+// writes the table to EXERCISE_OUT/webgl.md.
+
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import type { Browser, Page } from "playwright-core";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { loadavg } from "node:os";
+import { join } from "node:path";
+import { headed, launch, viewportFor } from "./browser.js";
+import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
+import { fitFrame, mapPoint, summarize, type Frame, type FrameSummary, type Point } from "./frametimes.js";
+import { TITLE, clearPoint } from "./picks.js";
+
+const base = (): string => inject("baseUrl");
+
+// Each walk names its densest schematic sheet, which the "densest sheet" step checks, plus a verdict
+// whose link lights something on a sheet and a trace through one resistor. The verdict fails on the
+// cut and passes on Jetson, and either way its link lights its subjects.
+const walks = {
+  cut: {
+    mount: "probe",
+    path: "designs/jetson-cut",
+    about: "the cross-probe cut of Jetson, nineteen parts and their copper",
+    sheet: "Power",
+    verdict: { id: "single-pin-net:(net:/USB Debug%2C PD/UART3_DEBUG.RX)", rule: "single-pin-net", subject: "net:/USB Debug, PD/UART3_DEBUG.RX" },
+    trace: "R119.1,R119.2",
+  },
+  jetson: {
+    mount: "jetson",
+    path: "designs/jetson",
+    about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
+    sheet: "Expansion connector",
+    verdict: { id: "bulk-cap:(net:/Power/USBPD1_HV)", rule: "bulk-cap", subject: "net:/Power/USBPD1_HV" },
+    trace: "R119.1,R119.2",
+  },
+};
+type Walk = (typeof walks)[keyof typeof walks];
+const chosen = process.env.WALK_DESIGN ? [process.env.WALK_DESIGN] : ["cut"];
+for (const w of chosen) {
+  if (!(w in walks)) throw new Error(`WALK_DESIGN=${w} names no walk; use one of ${Object.keys(walks).join(", ")}`);
+}
+
+type Mode = "svg" | "webgl";
+const MODES: Mode[] = ["svg", "webgl"];
+const SVG = "#svg-view";
+const CANVAS = "#view";
+const PROPS = '[data-component="properties"]';
+const DRAWN = "agni:sheet-drawn";
+// The walk trusts a fit over at least MIN_ANCHORS labels whose median distance from their twins is
+// at most MAX_RESIDUAL_PX, and otherwise says so rather than clicking somewhere else. On a board the
+// anchors agree to a tenth of a pixel. On a schematic each renderer places a justified label a few
+// pixels apart (4.5 px median on the cut's Power sheet), and a fit over dozens of them still places
+// the frame far closer than that.
+const MAX_RESIDUAL_PX = 8;
+const MIN_ANCHORS = 10;
+
+// Unwalkable is a failure of the walk's own SVG half, such as no part to click or two views that do
+// not line up. It fails the step even when the step waits on a ticket, since that ticket would not
+// fix it.
+class Unwalkable extends Error {}
+// NotJudged leaves a step "not available" whatever it waits on, for a run that cannot judge it.
+class NotJudged extends Error {}
+
+const closed = new Set((process.env.CLOSED_TICKETS ?? "").split(",").filter((t) => t !== "").map((t) => `#${t.replace(/^#/, "")}`));
+
+let browser: Browser;
+beforeAll(async () => {
+  browser = await launch();
+}, 180_000);
+afterAll(async () => {
+  await browser?.close();
+});
+
+// sheetParam is a sheet's id in a view URL. The board's is "board", and a schematic sheet's its path.
+const sheetParam = (name: string): string => (name === "Board" ? "board" : `/${name}`);
+
+// open loads a design in one mode on one sheet and waits for it to be drawn.
+async function open(page: Page, walk: Walk, mode: Mode, sheet: string, extra = ""): Promise<void> {
+  const q = `mode=${mode}&sheet=${encodeURIComponent(sheetParam(sheet))}${extra}`;
+  await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?${q}`, { waitUntil: "networkidle", timeout: 180_000 });
+  await drawnSince(page, mode, 0);
+}
+
+// drawnSince waits for a SHEET_DRAWN mark from `mode` after `since` on the page's clock, and returns
+// its time.
+async function drawnSince(page: Page, mode: Mode, since: number): Promise<number> {
+  const h = await page.waitForFunction(
+    ({ name, mode, since }) =>
+      performance
+        .getEntriesByName(name)
+        .map((e) => e as PerformanceMark)
+        .find((e) => (e.detail as { mode?: string })?.mode === mode && e.startTime > since)?.startTime ?? false,
+    { name: DRAWN, mode, since },
+    { timeout: 180_000, polling: 50 },
+  );
+  return (await h.jsonValue()) as number;
+}
+
+// tile clicks a Sheets tile by its exact name.
+async function tile(page: Page, name: string): Promise<void> {
+  const tiles = page.locator(".sheet-tile");
+  for (let i = 0; i < (await tiles.count()); i++) {
+    if ((await tiles.nth(i).locator(".sheet-tile-name").innerText()).trim() === name) {
+      await tiles.nth(i).click();
+      return;
+    }
+  }
+  throw new Error(`no Sheets tile is named ${name}`);
+}
+
+// host is the rect the drawing fills in client pixels, which is the same in both modes since the SVG
+// host lies over the canvas.
+async function host(page: Page, mode: Mode): Promise<{ x: number; y: number; width: number; height: number }> {
+  const b = await page.locator(mode === "svg" ? SVG : CANVAS).boundingBox();
+  if (!b || b.width < 50 || b.height < 50) throw new Error(`the ${mode} view has no room to draw in`);
+  return b;
+}
+
+// nextFrame waits for the page's next animation frame, so the walk sends one input event per frame
+// as a hand on a mouse would.
+const nextFrame = (page: Page): Promise<unknown> => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+
+// panZoom runs the fixed script over the middle of the view and returns its frame times. The
+// script is 40 wheel steps in, 40 out, and a drag 600 px across and back in 60 moves.
+async function panZoom(page: Page, mode: Mode): Promise<FrameSummary> {
+  const h = await host(page, mode);
+  const cx = h.x + h.width / 2, cy = h.y + h.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.evaluate(() => {
+    const w = window as unknown as { __frames: number[]; __sampling: boolean };
+    w.__frames = [];
+    w.__sampling = true;
+    let last = performance.now();
+    const tick = (t: number) => {
+      w.__frames.push(t - last);
+      last = t;
+      if (w.__sampling) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame((t) => {
+      last = t;
+      requestAnimationFrame(tick);
+    });
+  });
+  for (const dy of [-120, 120]) {
+    for (let i = 0; i < 40; i++) {
+      await page.mouse.wheel(0, dy);
+      await nextFrame(page);
+    }
+  }
+  await page.mouse.move(cx - 300, cy);
+  await page.mouse.down();
+  for (const i of [...Array(30).keys()].map((k) => k + 1).concat([...Array(30).keys()].reverse())) {
+    await page.mouse.move(cx - 300 + i * 20, cy);
+    await nextFrame(page);
+  }
+  await page.mouse.up();
+  await nextFrame(page);
+  const frames = await page.evaluate(() => {
+    const w = window as unknown as { __frames: number[]; __sampling: boolean };
+    w.__sampling = false;
+    return w.__frames;
+  });
+  return summarize(frames);
+}
+
+// anchors reads every label drawn once in a mode, as the client point of its text anchor.
+async function anchors(page: Page, mode: Mode): Promise<Map<string, Point>> {
+  const entries = await page.evaluate((sel) => {
+    const seen = new Map<string, [number, number] | null>();
+    const view = document.querySelector(sel.view)!.getBoundingClientRect();
+    // The SVG host holds the drawn sheet's <svg> and the highlight overlay's, and only the first is
+    // the sheet.
+    const root = sel.svg
+      ? [...document.querySelectorAll(`${sel.view} svg`)].find((s) => !s.closest(".highlight-overlay"))
+      : document.querySelector("#text-overlay");
+    for (const t of root?.querySelectorAll<SVGTextElement>("text") ?? []) {
+      const s = (t.textContent ?? "").trim();
+      const ctm = t.getScreenCTM();
+      if (!s || !ctm || t.getBoundingClientRect().width === 0) continue;
+      const x = t.x.baseVal.numberOfItems ? t.x.baseVal.getItem(0).value : 0;
+      const y = t.y.baseVal.numberOfItems ? t.y.baseVal.getItem(0).value : 0;
+      const px = ctm.a * x + ctm.c * y + ctm.e, py = ctm.b * x + ctm.d * y + ctm.f;
+      if (px < view.left || px > view.right || py < view.top || py > view.bottom) continue;
+      seen.set(s, seen.has(s) ? null : [px, py]);
+    }
+    return [...seen].filter((e): e is [string, [number, number]] => e[1] !== null);
+  }, mode === "svg" ? { view: SVG, svg: true } : { view: CANVAS, svg: false });
+  return new Map(entries);
+}
+
+// frameBetween fits the frame that carries an SVG client point to the WebGL one showing the same
+// place.
+function frameBetween(svg: Map<string, Point>, gl: Map<string, Point>): Frame {
+  const pairs = [...svg].filter(([k]) => gl.has(k)).map(([k, p]): [Point, Point] => [p, gl.get(k)!]);
+  const f = fitFrame(pairs);
+  if (!f || pairs.length < MIN_ANCHORS) throw new Unwalkable(`the two modes share ${pairs.length} labels, too few to line their views up`);
+  if (f.residual > MAX_RESIDUAL_PX) throw new Unwalkable(`the two modes' views disagree by ${f.residual.toFixed(1)} px after the fit`);
+  return f;
+}
+
+interface Shown {
+  kind: string;
+  title: string;
+  text: string;
+}
+
+// shown reads the Selection as Properties shows it, waiting up to `ms` for a title to appear.
+async function shown(page: Page, ms: number): Promise<Shown> {
+  await page.waitForFunction((sel) => (document.querySelector(sel)?.textContent ?? "") !== "", TITLE, { timeout: ms }).catch(() => {});
+  return page.evaluate((p) => {
+    const panel = document.querySelector(p);
+    // With nothing selected, the panel describes the design or the sheet instead.
+    const kind = panel?.querySelector(".pr-kind")?.textContent ?? "";
+    const title = kind === "design" || kind === "sheet" ? "" : (panel?.querySelector(".pr-title")?.textContent ?? "");
+    return { kind: title ? (panel?.querySelector(".pr-kind")?.textContent ?? "") : "", title, text: title ? ((panel as HTMLElement | null)?.innerText ?? "") : "" };
+  }, PROPS);
+}
+
+const said = (s: Shown): string => (s.title ? `${s.kind} ${s.title}` : "nothing");
+const same = (a: Shown, b: Shown): boolean => a.kind === b.kind && a.title === b.title && a.text === b.text;
+
+// A Target is something on a sheet to click, the elements matching `sel` and the Properties kind a
+// click on one shows. A line is clicked at a point on its stroke. A `clear` target is a part,
+// clicked at a point clear of its own pads (picks.ts, clearPoint). Anything else is clicked at its
+// middle. A target `absent` from a design reads "not available" on it rather than failing.
+interface Target {
+  name: string;
+  sheet: string;
+  sel: string;
+  kind: string;
+  line?: boolean;
+  clear?: boolean;
+  absent?: boolean;
+  waitsOn: string[];
+}
+
+// candidates lists a target's points in the fitted SVG view, nearest the middle first, each with the
+// ref-des of the part it belongs to, if any.
+async function candidates(page: Page, t: Target): Promise<{ at: Point; ref: string }[]> {
+  return page.evaluate(({ sel, line, view }) => {
+    const v = document.querySelector(view)!.getBoundingClientRect();
+    const mid = [v.left + v.width / 2, v.top + v.height / 2];
+    const pts: { at: [number, number]; ref: string }[] = [];
+    for (const el of document.querySelectorAll(sel)) {
+      let p: [number, number] | null = null;
+      if (line) {
+        const geo = (el instanceof SVGGeometryElement ? el : el.querySelector("path, line, polyline")) as SVGGeometryElement | null;
+        const ctm = geo?.getScreenCTM();
+        if (geo && ctm) {
+          const at = geo.getPointAtLength(geo.getTotalLength() / 2);
+          p = [ctm.a * at.x + ctm.c * at.y + ctm.e, ctm.b * at.x + ctm.d * at.y + ctm.f];
+        }
+      } else {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 || r.height > 0) p = [r.left + r.width / 2, r.top + r.height / 2];
+      }
+      if (p && p[0] > v.left + 20 && p[0] < v.right - 20 && p[1] > v.top + 20 && p[1] < v.bottom - 20) pts.push({ at: p, ref: el.getAttribute("data-ref") ?? "" });
+    }
+    const far = (p: { at: [number, number] }) => Math.hypot(p.at[0] - mid[0], p.at[1] - mid[1]);
+    return pts.sort((a, b) => far(a) - far(b)).slice(0, 6);
+  }, { sel: t.sel, line: t.line ?? false, view: SVG });
+}
+
+// zoomIn zooms the view on a point with `steps` wheel steps, a frame apart.
+async function zoomIn(page: Page, [x, y]: Point, steps: number): Promise<void> {
+  await page.mouse.move(x, y);
+  for (let i = 0; i < steps; i++) {
+    await page.mouse.wheel(0, -400);
+    await nextFrame(page);
+  }
+  await page.waitForTimeout(150);
+}
+
+// ZOOM is how many wheel steps the walk zooms a click target in by, per sheet, so a small part on a
+// whole board has room around it. A fitted cut needs none.
+const ZOOM = { cut: { Board: 2, sheet: 0 }, jetson: { Board: 6, sheet: 3 } };
+
+// clickBoth clicks a target in SVG, then the same place in WebGL, and returns what each showed.
+// Both views zoom in on the target by the same wheel steps first, about the same place.
+async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promise<{ svg: Shown; gl: Shown }> {
+  const zoom = ZOOM[name as keyof typeof ZOOM][t.sheet === "Board" ? "Board" : "sheet"];
+  await open(page, walk, "svg", t.sheet);
+  const svgFit = await anchors(page, "svg");
+  const found = await candidates(page, t);
+  if (found.length === 0) {
+    const why = `${t.sheet} draws no ${t.name} the walk can click`;
+    throw t.absent ? new Error(why) : new Unwalkable(why);
+  }
+  const tried: string[] = [];
+  for (const { at, ref } of found) {
+    await open(page, walk, "svg", t.sheet);
+    await zoomIn(page, at, zoom);
+    const click: Point = t.clear ? await clearPoint(page, `${t.sel}[data-ref="${ref}"]`, ref).then((p) => [p.x, p.y] as Point).catch(() => at) : at;
+    await page.mouse.click(click[0], click[1]);
+    const svg = await shown(page, 10_000);
+    if (svg.kind !== t.kind) {
+      tried.push(said(svg));
+      continue;
+    }
+    await open(page, walk, "webgl", t.sheet);
+    const frame = frameBetween(svgFit, await anchors(page, "webgl"));
+    await zoomIn(page, mapPoint(frame, at), zoom);
+    const there = mapPoint(frame, click);
+    await page.mouse.click(there[0], there[1]);
+    return { svg, gl: await shown(page, 5_000) };
+  }
+  throw new Unwalkable(`no ${t.name} clicked as a ${t.kind} in SVG (got ${tried.join(", ")})`);
+}
+
+// litSubjects reads what the shown sheet lit. WebGL writes it to the canvas's data-lit. SVG has no
+// such list, so the walk matches the keyed elements of the drawn sheet against the subjects the
+// canvas was asked to light (data-highlight), as resolveHighlights matches a packed sheet's keys.
+async function litSubjects(page: Page, mode: Mode): Promise<string[]> {
+  if (mode === "webgl") {
+    await page
+      .waitForFunction((c) => ((document.querySelector(c) as HTMLElement | null)?.dataset.lit ?? "[]") !== "[]", CANVAS, { timeout: 60_000 })
+      .catch(() => {
+        throw new Error("WebGL lit nothing within 60 s");
+      });
+    return page.evaluate((c) => JSON.parse((document.querySelector(c) as HTMLElement).dataset.lit!) as string[], CANVAS);
+  }
+  await page.waitForFunction((s) => document.querySelectorAll(`${s} .highlight-overlay svg *`).length > 0, SVG, { timeout: 60_000 }).catch(() => {
+    throw new Unwalkable("SVG drew no highlight within 60 s");
+  });
+  return page.evaluate(({ svg, canvas }) => {
+    type Spec = { components?: string[]; nets?: string[]; netIds?: string[]; busIds?: string[]; pins?: { refDes: string; pin: string }[] };
+    const specs = JSON.parse((document.querySelector(canvas) as HTMLElement).dataset.highlight ?? "[]") as Spec[];
+    const lit = new Set<string>();
+    const drawn = [...document.querySelectorAll(`${svg} svg`)].find((s) => !s.closest(".highlight-overlay"));
+    if (!drawn) return [];
+    for (const spec of specs) {
+      const comps = new Set(spec.components ?? []), nets = new Set(spec.nets ?? []), ids = new Set(spec.netIds ?? []);
+      const buses = new Set(spec.busIds ?? []), pins = new Set((spec.pins ?? []).map((p) => `${p.refDes}.${p.pin}`));
+      for (const el of drawn.querySelectorAll("[data-kind]")) {
+        const ref = el.getAttribute("data-ref") ?? "", net = el.getAttribute("data-net") ?? "", id = el.getAttribute("data-net-id") ?? "";
+        const bus = el.getAttribute("data-bus") ?? "", pin = el.getAttribute("data-pin") ?? "";
+        if (ref && comps.has(ref)) lit.add(`component:${ref}`);
+        else if (id && ids.has(id)) lit.add(`net:${net || id}`);
+        else if (net && nets.has(net)) lit.add(`net:${net}`);
+        else if (bus && buses.has(bus)) lit.add(`bus:${bus}`);
+        else if (ref && pin && pins.has(`${ref}.${pin}`)) lit.add(`pin:${ref}.${pin}`);
+      }
+    }
+    return [...lit].sort();
+  }, { svg: SVG, canvas: CANVAS });
+}
+
+// compareLit opens a link in each mode and compares the sheet it lands on and what it lit there.
+async function compareLit(page: Page, walk: Walk, extra: string): Promise<string> {
+  const got: { sheet: string; lit: string[] }[] = [];
+  for (const mode of MODES) {
+    await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=${mode}${extra}`, { waitUntil: "networkidle", timeout: 180_000 });
+    await drawnSince(page, mode, 0);
+    const lit = await litSubjects(page, mode);
+    const sheet = (await page.locator(".sheet-tile.active .sheet-tile-name").innerText().catch(() => "")).trim();
+    got.push({ sheet, lit });
+  }
+  const [s, g] = got;
+  if (s.lit.length === 0) throw new Error(`SVG lit nothing on ${s.sheet}`);
+  if (s.sheet !== g.sheet) throw new Error(`SVG opened ${s.sheet} and WebGL ${g.sheet}`);
+  const onlySvg = s.lit.filter((x) => !g.lit.includes(x)), onlyGl = g.lit.filter((x) => !s.lit.includes(x));
+  if (onlySvg.length || onlyGl.length) {
+    throw new Error(`on ${s.sheet}, only SVG lit [${onlySvg.join(", ")}] and only WebGL lit [${onlyGl.join(", ")}]`);
+  }
+  return `both lit the same ${s.lit.length} subject(s) on ${s.sheet}`;
+}
+
+const ms = (n: number): string => `${n.toFixed(1)} ms`;
+
+for (const name of chosen) {
+  const walk: Walk = walks[name as keyof typeof walks];
+  const label = `${walk.path.split("/").pop()} (${walk.mount})`;
+  describe(`the WebGL walk on ${name}`, () => {
+    it("compares SVG and WebGL on one board", async () => {
+      const rows: Row[] = [];
+      const passed = new Set<string>();
+      const out = process.env.EXERCISE_OUT;
+      if (out) mkdirSync(out, { recursive: true });
+      const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }) });
+      const pageErrors: string[] = [];
+      page.on("pageerror", (e) => pageErrors.push(String(e)));
+      const timings: Record<string, Record<Mode, { draw: number; frames: FrameSummary }>> = {};
+      let gpu = "";
+
+      const step = async (step: string, opts: { waitsOn?: string[]; needs?: string[] }, body: () => Promise<string>): Promise<void> => {
+        const waitsOn = opts.waitsOn ?? [];
+        const missing = (opts.needs ?? []).filter((s) => !passed.has(s));
+        if (missing.length > 0) {
+          rows.push({ step, design: label, status: "not available", detail: `not reached, after ${missing.join(", ")}` });
+          return;
+        }
+        const t0 = Date.now();
+        let ok = false;
+        let detail: string;
+        try {
+          detail = await body();
+          ok = true;
+          passed.add(step);
+        } catch (e) {
+          detail = (e instanceof Error ? e.message : String(e)).split("\n")[0];
+          if (e instanceof Unwalkable) {
+            rows.push({ step, design: label, ms: Date.now() - t0, status: "fail", detail: `the walk could not set the step up: ${detail}` });
+            return;
+          }
+          if (e instanceof NotJudged) {
+            rows.push({ step, design: label, ms: Date.now() - t0, status: "not available", detail });
+            return;
+          }
+        }
+        const open = waitsOn.filter((t) => !closed.has(t));
+        const shut = waitsOn.filter((t) => closed.has(t));
+        if (shut.length > 0) detail += ` (${shut.join(", ")} closed)`;
+        rows.push({ step, design: label, ms: Date.now() - t0, ...waitedOn(ok, open, detail) });
+      };
+
+      try {
+        await step("densest sheet", {}, async () => {
+          // Opened on the board, so every schematic tile clicked below draws a sheet not yet shown.
+          await open(page, walk, "svg", "Board");
+          const names = await page.$$eval("#sheet-overview .sheet-tile .sheet-tile-name", (ns) => ns.map((n) => (n.textContent ?? "").trim()));
+          const counts: [string, number][] = [];
+          for (const n of names.filter((n) => n !== "Board")) {
+            const since = await page.evaluate(() => performance.now());
+            await tile(page, n);
+            await drawnSince(page, "svg", since);
+            counts.push([n, await page.evaluate((s) => [...document.querySelectorAll(`${s} svg`)].find((e) => !e.closest(".highlight-overlay"))?.querySelectorAll("*").length ?? 0, SVG)]);
+          }
+          counts.sort((a, b) => b[1] - a[1]);
+          if (counts[0][0] !== walk.sheet) throw new Unwalkable(`${counts[0][0]} draws ${counts[0][1]} SVG elements, more than ${walk.sheet}, so the walk names the wrong sheet`);
+          return `${walk.sheet}, ${counts[0][1]} SVG elements, against ${counts[1]?.[1] ?? 0} on ${counts[1]?.[0] ?? "no other sheet"}`;
+        });
+
+        for (const sheet of ["Board", walk.sheet]) {
+          for (const mode of MODES) {
+            await step(`draw ${sheet} (${mode})`, {}, async () => {
+              // Open on another sheet, so the timed draw is a tile click to a sheet not yet shown.
+              await open(page, walk, mode, sheet === "Board" ? walk.sheet : "Board");
+              if (!gpu) gpu = await page.evaluate(() => {
+                const gl = document.createElement("canvas").getContext("webgl2");
+                const ext = gl?.getExtension("WEBGL_debug_renderer_info");
+                return gl && ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : "no WebGL2";
+              });
+              const since = await page.evaluate(() => performance.now());
+              await tile(page, sheet);
+              const drawn = await drawnSince(page, mode, since);
+              await page.waitForLoadState("networkidle");
+              const frames = await panZoom(page, mode);
+              (timings[sheet] ??= {} as Record<Mode, { draw: number; frames: FrameSummary }>)[mode] = { draw: drawn - since, frames };
+              return `first draw ${ms(drawn - since)}, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+            });
+          }
+        }
+
+        // This passed at its first headed run on Jetson (agni issue 1330), so it waits on nothing, and a
+        // headed run where WebGL loses is a regression.
+        await step("WebGL beats SVG on the board", { needs: ["draw Board (svg)", "draw Board (webgl)"] }, async () => {
+          if (!headed) throw new NotJudged("judged only headed, since headless Chrome draws WebGL in software");
+          const { svg, webgl } = timings.Board;
+          const verdict = `p95 ${ms(webgl.frames.p95)} against ${ms(svg.frames.p95)}, first draw ${ms(webgl.draw)} against ${ms(svg.draw)}`;
+          // WebGL has to take at most 80% of SVG's p95 frame time to count as beating it.
+          if (webgl.frames.p95 > 0.8 * svg.frames.p95) throw new Error(`WebGL ${verdict}`);
+          return `WebGL ${verdict}`;
+        });
+
+        const targets: Target[] = [
+          { name: "footprint", sheet: "Board", sel: `${SVG} .picks-front [data-kind="component"]`, kind: "component", clear: true, waitsOn: ["#1332"] },
+          { name: "pad", sheet: "Board", sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: ["#1332"] },
+          { name: "track", sheet: "Board", sel: `${SVG} [data-kind="net"]`, kind: "net", line: true, waitsOn: ["#1332"] },
+          { name: "schematic pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: ["#1332"] },
+          // A bus is picked by its id, and the KiCad reader gives a bus none, so no KiCad bus is
+          // pickable in either mode until #1435.
+          { name: "bus", sheet: walk.sheet, sel: `${SVG} [data-kind="bus"]:not([data-bus=""])`, kind: "bus", line: true, absent: true, waitsOn: ["#1332", "#1435"] },
+        ];
+        for (const t of targets) {
+          await step(`click a ${t.name}`, { waitsOn: t.waitsOn }, async () => {
+            const { svg, gl } = await clickBoth(page, walk, name, t);
+            if (!same(svg, gl)) throw new Error(`SVG picked ${said(svg)}, WebGL ${said(gl)}`);
+            return `both picked ${said(svg)}`;
+          });
+        }
+
+        await step("box select", { waitsOn: ["#1333"] }, async () => {
+          await open(page, walk, "svg", walk.sheet);
+          // The box takes in the part nearest the middle of the sheet with 30 px to spare, so it holds
+          // at least one part.
+          const near = (await candidates(page, { name: "part", sheet: walk.sheet, sel: `${SVG} [data-kind="component"]`, kind: "component", waitsOn: [] }))[0];
+          if (!near) throw new Unwalkable(`${walk.sheet} draws no part to box`);
+          const box = await page.locator(`${SVG} [data-kind="component"][data-ref="${near.ref}"]`).first().boundingBox();
+          if (!box) throw new Unwalkable(`${near.ref} has no box on ${walk.sheet}`);
+          const corners: [Point, Point] = [[box.x - 30, box.y - 30], [box.x + box.width + 30, box.y + box.height + 30]];
+          const svgFit = await anchors(page, "svg");
+          await open(page, walk, "webgl", walk.sheet);
+          const frame = frameBetween(svgFit, await anchors(page, "webgl"));
+          const got: Shown[] = [];
+          for (const mode of MODES) {
+            await open(page, walk, mode, walk.sheet);
+            const [a, b] = mode === "svg" ? corners : corners.map((c) => mapPoint(frame, c));
+            await page.keyboard.down("Shift");
+            await page.mouse.move(a[0], a[1]);
+            await page.mouse.down();
+            for (let i = 1; i <= 10; i++) await page.mouse.move(a[0] + ((b[0] - a[0]) * i) / 10, a[1] + ((b[1] - a[1]) * i) / 10);
+            await page.mouse.up();
+            await page.keyboard.up("Shift");
+            got.push(await shown(page, mode === "svg" ? 10_000 : 5_000));
+          }
+          const [svg, gl] = got;
+          if (svg.kind !== "area") throw new Unwalkable(`a Shift-drag in SVG selected ${said(svg)}, not an area`);
+          if (!same(svg, gl)) throw new Error(`SVG selected ${said(svg)}, WebGL ${said(gl)}`);
+          return `both selected ${said(svg)}`;
+        });
+
+        await step("a finding's highlight", {}, async () => {
+          const v = walk.verdict;
+          return compareLit(page, walk, `&verdict=${encodeURIComponent(v.id)}&rule=${encodeURIComponent(v.rule)}&subject=${encodeURIComponent(v.subject)}`);
+        });
+
+        await step("a trace's highlight", {}, async () => compareLit(page, walk, `&trace=${encodeURIComponent(walk.trace)}`));
+
+        await step("no page errors", {}, async () => {
+          if (pageErrors.length) throw new Error(pageErrors.join("; "));
+          return "none";
+        });
+      } finally {
+        const machine =
+          `${headed ? "Headed" : "Headless"} Chromium, renderer ${gpu || "unknown"}, load average ${loadavg().map((l) => l.toFixed(2)).join(" ")}. ` +
+          "Times are on the page's performance.now. A first draw runs from a Sheets tile click to the frame after the sheet first shows, and frame times are requestAnimationFrame deltas over 80 wheel steps and a 600 px drag, one input per frame.";
+        const report = `## WebGL walk, ${walk.about}\n\n${machine}\n\n${table(rows)}\n`;
+        process.stdout.write(`\n${report}\n`);
+        if (out) writeFileSync(join(out, "webgl.md"), report);
+        await page.close();
+      }
+      const broken = rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`);
+      expect(exitCode(rows), broken.join("\n")).toBe(0);
+    }, 1_800_000);
+  });
+}

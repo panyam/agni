@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -441,6 +441,21 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/walk-mission.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/walk-mission.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/walk.md 2>/dev/null; exit $$status
+
+# Mission #1329's exercise (agni issue 1330). It opens Jetson's board and its densest schematic sheet
+# in SVG and then in WebGL, times each sheet's first draw and the frames of a fixed pan and zoom, and
+# compares a click on a footprint, a pad, a track, a pin and a bus, a Shift-drag box, a finding's
+# highlight and a trace's. Steps WebGL cannot do yet name their tickets. It prints the table and
+# writes it to $(EXERCISE_OUT)/webgl.md. Run it headed (the default) on an idle machine, since headless
+# Chrome draws WebGL in software, and the table states the load average it ran under. SLOWMO is fixed
+# at 0, because a pause before each input would be measured as a slow frame. WALK_DESIGN=cut walks the
+# gate's cut of Jetson.
+exercise-webgl: HEADED ?= 1
+exercise-webgl: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT)
+	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/webgl-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=0 EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/webgl-walk.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/webgl.md 2>/dev/null; exit $$status
 
 # The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
 # one design through an MCP client, as the calls a model would make, over `agni serve --mcp` on a free

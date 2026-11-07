@@ -16,6 +16,7 @@ import {
   resolveHighlights,
   type HighlightSpec,
 } from "./highlights.js";
+import { SHEET_DRAWN } from "./drawmark.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // CanvasComponent owns the WebGL2 schematic canvas as a tsappkit lifecycle component. It
@@ -33,6 +34,9 @@ export class CanvasComponent extends BaseComponent {
   // survive a re-render.
   private sheet?: DecodedSheet;
   private highlights: HighlightSpec[] = [];
+  // marked is false from a sheet's draw until the frame that first renders it. The frame after that
+  // one records the SHEET_DRAWN mark, as the SVG host does (drawmark.ts).
+  private marked = true;
 
   activate(): void {
     const canvas = this.rootElement as HTMLCanvasElement;
@@ -84,6 +88,7 @@ export class CanvasComponent extends BaseComponent {
     this.applyHighlights(); // highlights chosen before this sheet was (re)drawn are reapplied
     this.resize();
     this.camera.fit(canvas.width, canvas.height);
+    this.marked = false;
     this.setReadout(`sheet ${sheet.sheetId} — ${sheet.primitives.length} primitives, ${sheet.vertices.length / 2} vertices`);
     this.start();
   }
@@ -93,6 +98,7 @@ export class CanvasComponent extends BaseComponent {
   // drawn, since the specs are remembered and reapplied on the next draw.
   setHighlights(specs: HighlightSpec[]): void {
     this.highlights = specs;
+    (this.rootElement as HTMLElement).dataset.highlight = JSON.stringify(specs.map(askedSubjects));
     this.applyHighlights();
   }
 
@@ -104,6 +110,7 @@ export class CanvasComponent extends BaseComponent {
   private applyHighlights(): void {
     if (!this.renderer || !this.sheet) return;
     const sheet = this.sheet;
+    const lit = new Set<string>();
     const fallback = hexToRgba(DEFAULT_HIGHLIGHT_COLOR, [1, 0, 1, 1]);
     const draws: { color: ReturnType<typeof hexToRgba>; primitives: Set<number> }[] = [];
     const overlays: { color: ReturnType<typeof hexToRgba>; vertices: Int32Array }[] = [];
@@ -112,6 +119,7 @@ export class CanvasComponent extends BaseComponent {
     const sb = boundsOfVertices(sheet.vertices);
     const pathHalfWidth = PATH_WIDTH_FRACTION * Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
     for (const g of resolveHighlights(sheet.keys, this.highlights)) {
+      for (const s of g.subjects) lit.add(s);
       const color = hexToRgba(g.color, fallback, g.alpha);
       // PATH (WS9-043) draws a wider translucent marker. GL lines are always 1px, so its width
       // comes from filled quads tessellated along each wire segment (as the board copper tracks
@@ -139,6 +147,7 @@ export class CanvasComponent extends BaseComponent {
     }
     this.renderer.setHighlights(draws);
     this.renderer.setOverlays(overlays);
+    (this.rootElement as HTMLElement).dataset.lit = JSON.stringify([...lit].sort());
   }
 
   // makeOverlay attaches the text layer to the #text-overlay host beside the canvas. Returns
@@ -224,6 +233,10 @@ export class CanvasComponent extends BaseComponent {
         this.renderer.render(this.camera.matrix(), this.camera.viewRect());
         // The overlay reads the same camera in the same tick, so text moves with the geometry.
         this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr());
+        if (!this.marked) {
+          this.marked = true;
+          requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "webgl" } }));
+        }
       }
       requestAnimationFrame(frame);
     };
@@ -234,4 +247,11 @@ export class CanvasComponent extends BaseComponent {
     const readout = document.getElementById("readout");
     if (readout) readout.textContent = text;
   }
+}
+
+// askedSubjects is the part of a spec that names what to light, without its style. The canvas
+// writes it to data-highlight in every mode, so a browser spec can see what an SVG sheet was asked
+// to light and compare it with what the canvas lit (data-lit, agni issue 1330).
+function askedSubjects(spec: HighlightSpec): Pick<HighlightSpec, "components" | "nets" | "netIds" | "busIds" | "pins"> {
+  return { components: spec.components, nets: spec.nets, netIds: spec.netIds, busIds: spec.busIds, pins: spec.pins };
 }
