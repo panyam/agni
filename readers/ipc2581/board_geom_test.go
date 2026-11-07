@@ -169,11 +169,12 @@ func TestBoardGeometryPlacements(t *testing.T) {
 }
 
 // TestBoardGeometryLayersOutline checks that the stackup table keeps IPC-2581's layerFunction
-// verbatim in kind, and the Profile becomes an outline polyline (Y-up, no negation).
+// verbatim in kind, names its copper layers in the contract's vocabulary (agni 1383), and the
+// Profile becomes an outline polyline (Y-up, no negation).
 func TestBoardGeometryLayersOutline(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
-	if len(g.Layers) != 2 || g.Layers[0].Name != "TOP" || g.Layers[0].Kind != "CONDUCTOR" || g.Layers[1].Name != "BOTTOM" {
-		t.Errorf("layers = %v, want TOP/BOTTOM kind=CONDUCTOR", g.Layers)
+	if len(g.Layers) != 2 || g.Layers[0].Name != "F.Cu" || g.Layers[0].Kind != "CONDUCTOR" || g.Layers[1].Name != "B.Cu" {
+		t.Errorf("layers = %v, want TOP/BOTTOM as F.Cu/B.Cu kind=CONDUCTOR", g.Layers)
 	}
 	if g.Outline == nil || len(g.Outline.Paths) != 1 {
 		t.Fatalf("outline = %v, want 1 path", g.Outline)

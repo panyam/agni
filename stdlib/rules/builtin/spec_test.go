@@ -141,6 +141,7 @@ func TestSpecParity(t *testing.T) {
 	}{
 		{"ruleFixture", ruleFixture()},
 		{"parityFixture", specParityFixture()},
+		{"declaredPairFixture", declaredPairFixture()},
 	} {
 		m := check.NewModel(tc.d)
 		for name, spec := range specs {

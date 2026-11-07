@@ -188,3 +188,89 @@ func boardRules(sets []conSet) *ir.Constraint {
 }
 
 func mm(nm int64) string { return strconv.FormatFloat(float64(nm)/1e6, 'g', -1, 64) }
+
+// The kinds a match-group table (0x2C) declares, read from its third byte. On the BeagleBone AI the
+// two-net tables named for a pair (USB1_D, DDR1_DQS0) say 0x03 and the DDR byte lanes say 0x06. A
+// net's own constraint table says 0x05 or 0x0C, and declares no group.
+const (
+	tableKindDiffPair   = 0x03
+	tableKindMatchGroup = 0x06
+)
+
+// netGroups reads the differential pairs and match groups the board declares (agni issue 1360). The
+// nets that reach the same pair or group table are its members, and the table's name is a string key
+// in its header. A net can sit in a pair and in a match group at once, as a DDR strobe pair sits in
+// its byte lane.
+func (p *board) netGroups(src string) []*ir.NetGroup {
+	byTable := map[int]*ir.NetGroup{}
+	var order []int
+	p.list(listNets, func(net int) {
+		name := p.str(p.u32(net, 12))
+		if name == "" {
+			return
+		}
+		for _, tbl := range p.groupTables(net) {
+			g := byTable[tbl]
+			if g == nil {
+				var kind ir.NetGroupKind
+				switch p.b[tbl+2] {
+				case tableKindDiffPair:
+					kind = ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR
+				case tableKindMatchGroup:
+					kind = ir.NetGroupKind_NET_GROUP_KIND_MATCH_GROUP
+				default:
+					continue
+				}
+				g = &ir.NetGroup{Name: p.str(p.u32(tbl, p.l.tableName)), Kind: kind, Prov: &ir.Provenance{SourceFile: src}}
+				byTable[tbl] = g
+				order = append(order, tbl)
+			}
+			g.Nets = append(g.Nets, name)
+		}
+	})
+	var out []*ir.NetGroup
+	for _, tbl := range order {
+		g := byTable[tbl]
+		// A pair names two nets. A table that reaches some other count is not read as one.
+		if g.Kind == ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR && len(g.Nets) != 2 {
+			continue
+		}
+		sort.Strings(g.Nets)
+		out = append(out, g)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// groupTables lists every table (0x2C) a net's match-group pointer reaches. A 16.6 net points at a
+// 0x26 that names its tables directly. A 17.2 net points at a chain of 0x26s, one per table it sits
+// in, each naming its table at the match-group offset and the net's next 0x26 at +8.
+func (p *board) groupTables(net int) []int {
+	var out []int
+	seen := map[int]bool{}
+	netKey := p.u32(net, 4)
+	ptr := p.u32(net, p.l.netAssign+12)
+	for range 8 {
+		off, ok := p.at(ptr, tagMatchGroup, tagTable)
+		if !ok || seen[off] {
+			break
+		}
+		seen[off] = true
+		if p.b[off] == tagTable {
+			out = append(out, off)
+			break
+		}
+		for _, w := range []int{8, 12, 16} {
+			if t, ok := p.at(p.u32(off, w), tagTable); ok && !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		}
+		next, ok := p.at(p.u32(off, 8), tagMatchGroup)
+		if !ok || p.u32(next, 12) != netKey {
+			break
+		}
+		ptr = p.u32(off, 8)
+	}
+	return out
+}

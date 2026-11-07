@@ -152,6 +152,7 @@ const (
 	// nothing. design.has_netclass separates "no net in this class" from "this design has no
 	// classes". Only KiCad supplies classes.
 	RelNetNetClass = "net.netclass"        // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
+	RelNetGroup    = "net.group"           // net.group(group, kind, net): a pair or match group the design declares. doc: facts/docs/net.group.md
 	RelHasNetClass = "design.has_netclass" // design.has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/design.has_netclass.md
 
 	// Net-class DEFINITIONS (WS3-111), keyed by CLASS, in metres like the board tier. These are
@@ -238,6 +239,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, netBiasFacts(m)...)
 	out = append(out, netACCoupledFacts(m)...)
 	out = append(out, netNetClassFacts(m)...)
+	out = append(out, netGroupFacts(m)...)
 	out = append(out, hasNetClassFacts(m)...)
 	out = append(out, netClassDefFacts(m)...)
 	out = append(out, hasNetClassDefsFacts(m)...)
@@ -1148,6 +1150,28 @@ func netNetClassFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		for _, c := range n.NetClasses {
 			out = append(out, facts.Row{Relation: RelNetNetClass, Subject: n.Name, Value: c, Cites: cite(irCite(n.Prov))})
+		}
+	}
+	return out
+}
+
+// netGroupFacts emits net.group(group, kind, net), one row per member net of each differential pair
+// and match group the design declares (Model.NetGroups, agni issue 1360). kind is diff_pair or
+// match_group. Empty for a format that declares no groups, which is every one but Allegro today.
+func netGroupFacts(m check.Model) []facts.Row {
+	var out []facts.Row
+	for _, g := range m.NetGroups() {
+		var kind string
+		switch g.GetKind() {
+		case ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR:
+			kind = "diff_pair"
+		case ir.NetGroupKind_NET_GROUP_KIND_MATCH_GROUP:
+			kind = "match_group"
+		default:
+			continue
+		}
+		for _, n := range g.GetNets() {
+			out = append(out, facts.Row{Relation: RelNetGroup, Subject: g.GetName(), Object: kind, Value: n, Cites: cite(irCite(g.GetProv()))})
 		}
 	}
 	return out

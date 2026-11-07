@@ -68,6 +68,9 @@ net.declared_via_drill	arg1=mm	kind=""	kindVar=""	ref=-
 net.external	arg0=net	kind="net"	kindVar=""	ref=-
 net.feedback	arg0=net	kind="net"	kindVar=""	ref=-
 net.ground	arg0=net	kind="net"	kindVar=""	ref=-
+net.group	arg0=group	kind=""	kindVar=""	ref=-
+net.group	arg1=kind	kind=""	kindVar=""	ref=-
+net.group	arg2=net	kind="net"	kindVar=""	ref=-
 net.has_test_point	arg0=n	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg0=net	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg1=volts	kind=""	kindVar=""	ref=-

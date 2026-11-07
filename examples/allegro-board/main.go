@@ -13,9 +13,11 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/examples/common"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog
 	"github.com/panyam/demokit"
 )
@@ -60,6 +62,15 @@ func main() {
 		return nil
 	})
 
+	demo.Bind("pairs").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := common.ReadDesign(board.Path())
+		if err != nil {
+			return demokit.Errf("read %s: %v", board.Path(), err)
+		}
+		fmt.Println(groupLines(d))
+		return nil
+	})
+
 	demo.Bind("check").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		d, err := common.ReadDesign(board.Path())
 		if err != nil {
@@ -75,4 +86,19 @@ func main() {
 
 	common.SetupRenderer(demo)
 	demo.Execute()
+}
+
+// groupLines lists the differential pairs and match groups a design declares, one per line.
+func groupLines(d *ir.Design) string {
+	var pairs, groups []string
+	for _, g := range d.GetNetGroups() {
+		line := fmt.Sprintf("  %-12s %s", g.GetName(), strings.Join(g.GetNets(), " "))
+		if g.GetKind() == ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR {
+			pairs = append(pairs, line)
+		} else {
+			groups = append(groups, line)
+		}
+	}
+	return fmt.Sprintf("%d differential pairs:\n%s\n%d match groups:\n%s",
+		len(pairs), strings.Join(pairs, "\n"), len(groups), strings.Join(groups, "\n"))
 }

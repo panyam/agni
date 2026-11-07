@@ -60,11 +60,16 @@ func documentRef(spec *parampb.PartSpec, docRef string) string {
 	return `datasheet "unknown source"`
 }
 
-// DiffConventionPresent reports whether the design uses differential-pair naming at all, meaning at
-// least one net has its expected complement (a complete X_P/X_N pair). Orphan reporting is gated on
-// it, so a design with no differential pairs reports nothing even when names happen to end in _P,
-// _DP or +.
+// DiffConventionPresent reports whether the design uses differential pairs at all. That means it
+// declares a pair (agni issue 1360), or at least one net has its expected complement (a complete
+// X_P/X_N pair). Orphan reporting is gated on it, so a design with no differential pairs reports
+// nothing even when names happen to end in _P, _DP or +.
 func DiffConventionPresent(m Model) bool {
+	for _, g := range m.NetGroups() {
+		if g.GetKind() == ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR {
+			return true
+		}
+	}
 	for _, n := range m.Nets() {
 		if neg, ok := m.DiffNegative(n.Name); ok && m.HasNetName(neg) {
 			return true

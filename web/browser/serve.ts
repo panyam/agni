@@ -76,6 +76,10 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "boards=tools/samples/boards",
       // Clay R6, the cross-probe walk's OrCAD design on its Allegro board (agni issue 1382).
       "--mount", "cadence=tools/samples/cadence",
+      // Mission #1353's native boards: the BeagleBone AI's Allegro .brd and foxBMS's Altium .PcbDoc
+      // (agni issue 1383).
+      "--mount", "allegro=tools/samples/allegro",
+      "--mount", "altium=tools/samples/altium",
       // A store, so the Review panel can run a checklist and save it (agni issue 1030). Fresh per run,
       // so no spec sees another run's reviews.
       "--review-store", mkdtempSync(join(tmpdir(), "agni-browser-reviews-")),

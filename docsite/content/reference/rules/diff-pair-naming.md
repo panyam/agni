@@ -1,6 +1,6 @@
 ---
 title: "diff-pair-naming"
-description: "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net."
+description: "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net, and the board declares no pair for it."
 ---
 
 ### Remedy
@@ -26,6 +26,17 @@ signals and the link fails signal integrity.
 
 ![A positive net with no matching negative half is flagged; a complete P/N pair is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/diff-pair-naming.svg)
 
+### A declared pair passes on the declaration
+
+Some boards declare their pairs. An Allegro board records each pair in its constraint manager, so
+`USB1_DP` and `USB1_DM` pair because the designer paired them, and `DDR1_CLK0` pairs with
+`DDR1_CLK0N` though no suffix says so. The rule reads those pairs first (`net.group`, agni issue
+1360). A declared pair passes, and the witness names both nets and the pair. A pair is one verdict,
+on the member whose name reads as the positive half.
+
+A net the board declares in no pair is still judged by its name, as below. A design that declares
+any pair uses differential pairs, so the gate in the next section is open on it.
+
 ### Positive-anchored on purpose
 
 Detection anchors on the positive member. A lone "_N" suffix
@@ -36,8 +47,9 @@ the positive anchor accepts that cost.
 
 ### Only when the design uses the convention
 
-The rule fires only on a design that shows it uses differential-pair naming at all, i.e. at
-least one *complete* pair (some `X_P` with a matching `X_N`) exists somewhere. A suffix like
+The rule fires only on a design that shows it uses differential pairs at all. That means it
+declares a pair, or at least one *complete* pair by name (some `X_P` with a matching `X_N`) exists
+somewhere. A suffix like
 `_P` is weak evidence on its own. Combinational netlists (the LGSynth benchmark family, for
 example) carry hundreds of `_P`-suffixed signal names that are not differential, and without
 this gate every one of them is a finding. Requiring pair-population evidence takes those
@@ -55,11 +67,12 @@ only a bug if the convention is in use.
 
 ### Query structure
 
-Gate on pair-population evidence, then select the positive-suffix nets whose expected
-complement is absent.
+Gate on pair-population evidence, then select the positive-suffix nets the design declares in no
+pair and whose expected complement is absent.
 
     diff_convention_present(design)
-      and select N in nets where is_pos_diff(N) and not has_net(expected_negative(N))
+      and select N in nets where is_pos_diff(N) and not declared_pair(N)
+        and not has_net(expected_negative(N))
 
-Reads: net.names. Primitives: pattern (the suffix), pair (the P-to-N lookup and the
+Reads: net.names, net.group. Primitives: pattern (the suffix), pair (the P-to-N lookup and the
 convention-present check). Tier R.

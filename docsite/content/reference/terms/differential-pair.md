@@ -22,6 +22,8 @@ flowchart TB
 The two halves are conventionally named as a pair, `X_P` and `X_N`, or for CAN `_CANH` and `_CANL`.
 A pair with only one half wired is not a pair at all, and the layout tool will route the survivor as
 an ordinary signal. [`diff-pair-naming`](../../rules/diff-pair-naming/) exists to catch that.
+Some board tools also declare the pair outright. An Allegro board records it in its constraints, and
+agni reads that declaration ([`net.group`](../../relations/net.group/)) before it reads the names.
 
 A pair almost always needs [termination](../termination/) at each end, for a reason that has nothing
 to do with noise.

@@ -34,6 +34,7 @@ type irModel struct {
 	pinNetDup  []PinNetConflict            // pins claimed by more than one net (malformed input)
 	ncChannel  bool                        // source carries any no-connect evidence (typed pin, flagged net, or NC_ name)
 	netClass   bool                        // at least one net carries a tool-assigned net class (WS3-105)
+	pairOf     map[string][2]string        // net name -> (other net, pair name) of the pair the design declares it in
 	board      *geom.BoardGeometry         // staged by WithBoard, built into boardNets by attachBoard
 	boardNets  []BoardNet                  // board tier, populated only when WithBoard attached one
 	boardZones []BoardZone                 // board tier: the zones drawn, agni 1410
@@ -179,6 +180,17 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	for _, rc := range d.GetInputDiagnostics().GetRefDesCollisions() {
 		collided[rc.RefDes] = true
 	}
+	for _, g := range d.GetNetGroups() {
+		if g.GetKind() != ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR || len(g.GetNets()) != 2 {
+			continue
+		}
+		if m.pairOf == nil {
+			m.pairOf = map[string][2]string{}
+		}
+		a, b := g.GetNets()[0], g.GetNets()[1]
+		m.pairOf[a] = [2]string{b, g.GetName()}
+		m.pairOf[b] = [2]string{a, g.GetName()}
+	}
 	for _, n := range d.Nets {
 		m.netByName[n.Name] = n
 		m.netNames[strings.ToUpper(n.Name)] = true
@@ -242,6 +254,14 @@ func (m *irModel) lexicon() *classify.Lexicon {
 func (m *irModel) DiffNegative(name string) (string, bool) {
 	return m.lexicon().RoleVocab().DiffNegative(name)
 }
+
+// DeclaredPair reads the pairs the design declares (ir.Design.net_groups), never a name.
+func (m *irModel) DeclaredPair(net string) (other, pair string, ok bool) {
+	p, ok := m.pairOf[net]
+	return p[0], p[1], ok
+}
+
+func (m *irModel) NetGroups() []*ir.NetGroup { return m.d.GetNetGroups() }
 
 // NoConnectMarked reads the reader's flag first, since a format that states a no-connect needs no
 // vocabulary to say so.

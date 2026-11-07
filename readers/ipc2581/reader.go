@@ -12,6 +12,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -202,6 +203,9 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	d.InputDiagnostics = refDesCollisions(f.Comps, src)
 
 	for _, n := range f.Nets {
+		if unusedNet(n.Name) {
+			continue
+		}
 		net := &ir.Net{Name: n.Name, Attributes: map[string]string{}, Prov: prov()}
 		// The enum is a lossy normalization, so keep the source term beside the mapped one, as
 		// layer_function_raw does below. declared_role is the NEUTRAL key classify.StampNetRoles
@@ -267,6 +271,15 @@ func (f *ipcFile) units() string {
 	}
 	return ""
 }
+
+// allegroUnused is the name Allegro's export gives the net of a pin that is on no net, such as
+// `Unused_05CE8C28`. The board itself names no net there.
+var allegroUnused = regexp.MustCompile(`^Unused_[0-9A-Fa-f]{8}$`)
+
+// unusedNet reports whether name is a net the exporting tool invented for an unconnected pin. Such
+// a net is read as no net, so each of those pins reads unconnected, as the board's own read has it
+// (agni 1383).
+func unusedNet(name string) bool { return allegroUnused.MatchString(name) }
 
 // declaredRole translates IPC-2581's LogicalNet/@netClass enum into the engine's net-role
 // vocabulary, or "" when the term states no role. Only GROUND and POWER state one. SIGNAL is the

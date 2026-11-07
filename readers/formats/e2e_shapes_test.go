@@ -43,10 +43,10 @@ func shapeRows(g *geom.BoardGeometry) []string {
 }
 
 // TestCopperShapesAgreeAcrossParasdrsReads holds parasdr's filled copper across the three reads
-// Allegro wrote (agni 1357). The board's ETCH shapes and the IPC-2581 contours must give the same
-// shapes on the same layers and nets, with the same number of holes. The ODB++X read keeps only
-// copper eda/data puts on a named net, so most of the board's shapes, which sit on unnamed nets,
-// are missing from it (agni 1383). Each shape it does keep must be one of the board's.
+// Allegro wrote (agni 1357). The board's ETCH shapes, the IPC-2581 contours and the ODB++X surfaces
+// must give the same shapes on the same layers and nets, with the same number of holes. The ODB++X
+// read keeps a surface on no net as unnamed copper, so it carries the board's unnamed shapes too
+// (agni 1383).
 func TestCopperShapesAgreeAcrossParasdrsReads(t *testing.T) {
 	l := &Loader{}
 	read := func(file string) []string {
@@ -67,23 +67,12 @@ func TestCopperShapesAgreeAcrossParasdrsReads(t *testing.T) {
 	if len(board) < 5 || holes < 500 {
 		t.Fatalf("the board reads %d shapes with %d holes, too few to mean anything", len(board), holes)
 	}
-	if diffs := diffRows("IPC-2581", board, read("parasdr_ipc2581.xml")); len(diffs) > 0 {
-		t.Errorf("IPC-2581: %d differences:\n  %s", len(diffs), capLines(diffs))
-	}
-	left := map[string]int{}
-	for _, r := range board {
-		left[r]++
-	}
-	odx := read("parasdr_odb++.xml")
-	for _, r := range odx {
-		if left[r] == 0 {
-			t.Errorf("the ODB++X read has %s, which the board has no more of", r)
-			continue
+	for _, export := range []struct{ name, file string }{
+		{"IPC-2581", "parasdr_ipc2581.xml"},
+		{"ODB++X", "parasdr_odb++.xml"},
+	} {
+		if diffs := diffRows(export.name, board, read(export.file)); len(diffs) > 0 {
+			t.Errorf("%s: %d differences:\n  %s", export.name, len(diffs), capLines(diffs))
 		}
-		left[r]--
-	}
-	t.Logf("the ODB++X read keeps %d of the board's %d shapes", len(odx), len(board))
-	if len(odx) < 100 {
-		t.Errorf("the ODB++X read keeps %d shapes, too few to mean anything", len(odx))
 	}
 }

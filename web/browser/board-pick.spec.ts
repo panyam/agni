@@ -8,6 +8,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { pickPoint as clearPoint } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -24,43 +25,6 @@ async function openBoard(page: Page): Promise<void> {
   await page.locator(".sheet-tile", { hasText: /board/i }).first().click();
   // The auto-layout sheet keys pins too, so wait for what only the board draws.
   await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
-}
-
-// clearPoint finds a whole-pixel point inside the first element matching sel where the centre
-// lands on that element's own keys, and every probe of the picker (selection.ts PROBES) lands on the
-// wanted kind or on nothing keyed. A body rect sits under its own pads, so its centre can be a pad,
-// and this finds the gap between them.
-async function clearPoint(page: Page, sel: string, kind: string): Promise<{ x: number; y: number }> {
-  return page.evaluate(
-    ({ sel, kind }) => {
-      const target = document.querySelector(sel);
-      if (!target) throw new Error(`no element matches ${sel}`);
-      // A key may sit on an ancestor (a net's track group), as selection.ts reads it.
-      const keyed = (e: Element | null) => e?.closest("#svg-view [data-kind]") ?? null;
-      const el = keyed(target);
-      if (el?.getAttribute("data-kind") !== kind) throw new Error(`${sel} is not keyed ${kind}`);
-      const r = target.getBoundingClientRect();
-      const probes = [-5, 0, 5].flatMap((dx) => [-5, 0, 5].map((dy) => [dx, dy]));
-      for (let fy = 0.1; fy < 0.95; fy += 0.05) {
-        for (let fx = 0.1; fx < 0.95; fx += 0.05) {
-          // A mouse event's clientX and clientY are whole pixels, and a via at fit zoom is a few
-          // pixels wide, so a fractional point can hit it while the click beside it misses.
-          const x = Math.round(r.left + r.width * fx);
-          const y = Math.round(r.top + r.height * fy);
-          const kinds = probes.map(([dx, dy]) => keyed(document.elementFromPoint(x + dx, y + dy))?.getAttribute("data-kind") ?? "");
-          // The centre must land on the target's own keys, such as a via's drill drawn over its
-          // ring. A zone under a via is also a net, and would pass on kind alone.
-          const centre = keyed(document.elementFromPoint(x, y));
-          const same = (a: string) => centre?.getAttribute(a) === el.getAttribute(a);
-          if (centre && same("data-kind") && same("data-ref") && same("data-pin") && same("data-net") && kinds.every((k) => k === kind || k === "")) {
-            return { x, y };
-          }
-        }
-      }
-      throw new Error(`no point inside ${sel} picks only ${kind}`);
-    },
-    { sel, kind },
-  );
 }
 
 async function clickAndRead(page: Page, at: { x: number; y: number }, want: string): Promise<void> {

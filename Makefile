@@ -327,15 +327,19 @@ exercise-odb:
 
 # Mission #1353's exercise for Allegro (agni issue 1350): the allegro-board example over the BeagleBone
 # AI from the samples corpus, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it would
-# replace the board with a personal design.
-exercise-allegro: samples-oracle
+# replace the board with a personal design. The browser half opens the .brd in the viewer and clicks a
+# pad (web/browser/native-board.spec.ts, agni issue 1383).
+exercise-allegro: samples-oracle ui
 	cd examples/allegro-board && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
+	cd web && HEADED=$(HEADED) pnpm exec vitest run -c vitest.browser.config.ts browser/native-board.spec.ts -t Allegro
 
 # Mission #1353's exercise for Altium (agni issue 1349): the altium-board example over the foxBMS
 # master board from the samples corpus, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it
-# would replace the board with a personal design.
-exercise-altium: samples-oracle
+# would replace the board with a personal design. The browser half opens the .PcbDoc in the viewer and
+# clicks a pad (web/browser/native-board.spec.ts, agni issue 1383).
+exercise-altium: samples-oracle ui
 	cd examples/altium-board && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
+	cd web && HEADED=$(HEADED) pnpm exec vitest run -c vitest.browser.config.ts browser/native-board.spec.ts -t Altium
 
 # Regenerates the ODB++ fixtures from the synthetic KiCad boards with kicad-cli (KiCad 9 or later).
 odb-fixtures:
