@@ -1,4 +1,4 @@
-#agni-run d7e4f249b3b94e73
+#agni-run 1390fa05e04bd893
 design:              Antmicro Baseboard for Jetson AGX Thor
 source format:       kicad-sch
 libraries:           38
