@@ -43,6 +43,11 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 	for _, pkg := range p.eda.pkgs {
 		d.Footprints = append(d.Footprints, &ir.Footprint{Name: pkg.name, Prov: prov()})
 	}
+	// Each package is also the part type of the components placed from it, with the package's pins
+	// as the part's pins. So a part whose package has no electrical pin, such as a fiducial or a
+	// label, reads as a part with no pins, not as a part whose pins are unknown (agni issue 1437).
+	lib := &ir.PartLibrary{Name: partLibrary, Prov: prov()}
+	typed := map[int]bool{}
 
 	byNet := map[int]*ir.Net{}
 	seen := map[*ir.Net]map[string]bool{}
@@ -75,7 +80,15 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 			putAttr(comp.Attributes, key, pr[1])
 			putAttr(props, key, pr[1])
 		}
-		comp.Sections = []*ir.ComponentSection{{Index: 0, PartRef: pkgName, Attributes: props, Prov: prov()}}
+		sec := &ir.ComponentSection{Index: 0, PartRef: pkgName, Attributes: props, Prov: prov()}
+		if pkgName != "" {
+			sec.LibraryRef = partLibrary
+			if !typed[c.pkg] {
+				typed[c.pkg] = true
+				lib.Parts = append(lib.Parts, packagePart(p.eda.pkgs[c.pkg], prov))
+			}
+		}
+		comp.Sections = []*ir.ComponentSection{sec}
 		d.Components = append(d.Components, comp)
 
 		for _, t := range c.pins {
@@ -100,6 +113,9 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 	sort.Ints(order)
 	for _, i := range order {
 		d.Nets = append(d.Nets, byNet[i])
+	}
+	if len(lib.Parts) > 0 {
+		d.Libraries = []*ir.PartLibrary{lib}
 	}
 
 	// A repeated designator is two placements claiming one name. The list is declared even when
@@ -129,6 +145,24 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 		d.Layers = append(d.Layers, layer)
 	}
 	return d
+}
+
+// partLibrary names the library that holds a job's package part types.
+const partLibrary = "odb++"
+
+// packagePart is the part type of a package, with one pin per electrical pin, named as a toeprint
+// names it. A pin the producer marks mechanical is left out.
+func packagePart(pkg edaPkg, prov func() *ir.Provenance) *ir.PartType {
+	pt := &ir.PartType{Name: pkg.name, Prov: prov()}
+	seen := map[string]bool{}
+	for _, pin := range pkg.pins {
+		if pin.mech || pin.name == "" || seen[pin.name] {
+			continue
+		}
+		seen[pin.name] = true
+		pt.Pins = append(pt.Pins, &ir.Pin{Designator: pin.name, Prov: prov()})
+	}
+	return pt
 }
 
 // skipRefDes reports whether a designator is absent, or is a placeholder the source has not

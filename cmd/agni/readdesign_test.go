@@ -103,7 +103,7 @@ func TestResolveSourceCompanionRedirects(t *testing.T) {
 	if localOf(src.BoardURI) != filepath.Join(dir, "gateway.kicad_pcb") {
 		t.Errorf("board = %q, want the design's declared board companion", localOf(src.BoardURI))
 	}
-	if !strings.Contains(src.Note, "board geometry from gateway.kicad_pcb") {
+	if !strings.Contains(src.Note, "gateway.kicad_pcb as its board where the command reads one") {
 		t.Errorf("note = %q, want it to name the board it pulled in unasked", src.Note)
 	}
 }
@@ -119,7 +119,7 @@ func TestResolveSourceNoteOnlyNamesUnaskedArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(src.Note, "board geometry from") {
+	if strings.Contains(src.Note, "as its board") {
 		t.Errorf("note = %q: the board was the file named, so it was not pulled in unasked", src.Note)
 	}
 	if !strings.Contains(src.Note, "sheets from gateway.kicad_sch") {

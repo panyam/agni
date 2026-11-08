@@ -183,8 +183,10 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
 		extra = append(extra, "sheets from "+path.Base(g))
 	}
+	// The note is written before anything is read, and a command such as stats reads no board, so
+	// it names the declared board without claiming a read (agni issue 1355).
 	if b := tiers.BoardURI; b != tiers.NetlistURI && b != ref {
-		extra = append(extra, "board geometry from "+path.Base(b))
+		extra = append(extra, path.Base(b)+" as its board where the command reads one")
 	}
 	// Naming the entry read exactly the file asked for, so only companion tiers get a line, and a
 	// run that picked up no companion prints nothing.

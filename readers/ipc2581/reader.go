@@ -84,9 +84,17 @@ type stackupLayerEl struct {
 }
 
 type pkgEl struct {
-	Name   string `xml:"name,attr"`
-	Type   string `xml:"type,attr,omitempty"`
-	Height string `xml:"height,attr,omitempty"`
+	Name   string     `xml:"name,attr"`
+	Type   string     `xml:"type,attr,omitempty"`
+	Height string     `xml:"height,attr,omitempty"`
+	Pins   []pkgPinEl `xml:"Pin,omitempty"`
+}
+
+// pkgPinEl is one <Pin> of a package. electricalType is ELECTRICAL, MECHANICAL or UNDEFINED, and a
+// MECHANICAL pin, such as a fiducial's pad, is no pin of the part.
+type pkgPinEl struct {
+	Number         string `xml:"number,attr"`
+	ElectricalType string `xml:"electricalType,attr,omitempty"`
 }
 
 type compEl struct {
@@ -155,12 +163,21 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	putAttr(d.Attributes, "ipc2581_revision", f.Revision)
 	nmPerUnit := unitToNm(f.units())
 
+	// Each package is also the part type of the components placed from it, with the package's
+	// electrical pins as the part's pins. So a part whose package has none, such as a fiducial or a
+	// label, reads as a part with no pins, not as a part whose pins are unknown (agni issue 1437).
+	pkgPart := map[string]*ir.PartType{}
 	for _, p := range f.Packages {
 		fp := &ir.Footprint{Name: p.Name, Attributes: map[string]string{}, Prov: prov()}
 		putAttr(fp.Attributes, "type", p.Type)
 		putAttr(fp.Attributes, "height", p.Height)
 		d.Footprints = append(d.Footprints, fp)
+		if p.Name != "" && pkgPart[p.Name] == nil {
+			pkgPart[p.Name] = packagePart(p, prov)
+		}
 	}
+	lib := &ir.PartLibrary{Name: partLibrary, Prov: prov()}
+	typed := map[string]bool{}
 
 	for _, c := range f.Comps {
 		// Skip a component with no designator or a placeholder one ("REF**", "C?1845"), as the
@@ -188,13 +205,24 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		}
 		// One placed component is one physical section (see kicad/pcb.go), and the "part" is the
 		// package, so section-aware consumers behave the same across formats.
-		comp.Sections = []*ir.ComponentSection{{
+		sec := &ir.ComponentSection{
 			Index:      0,
 			PartRef:    c.PackageRef,
 			Attributes: map[string]string{},
 			Prov:       prov(),
-		}}
+		}
+		if pt := pkgPart[c.PackageRef]; pt != nil {
+			sec.LibraryRef = partLibrary
+			if !typed[c.PackageRef] {
+				typed[c.PackageRef] = true
+				lib.Parts = append(lib.Parts, pt)
+			}
+		}
+		comp.Sections = []*ir.ComponentSection{sec}
 		d.Components = append(d.Components, comp)
+	}
+	if len(lib.Parts) > 0 {
+		d.Libraries = []*ir.PartLibrary{lib}
 	}
 	// IPC-2581 has no gate or slot construct, so a repeated refDes is two placements claiming one
 	// name. Declared even when empty so `duplicate-ref-des` knows this reader looked (agni issue
@@ -380,4 +408,22 @@ func refDesCollisions(comps []compEl, src string) *ir.InputDiagnostics {
 		diag.RefDesCollisions = append(diag.RefDesCollisions, &ir.RefDesCollision{RefDes: ref, Instances: instances})
 	}
 	return diag
+}
+
+// partLibrary names the library that holds a file's package part types.
+const partLibrary = "ipc-2581"
+
+// packagePart is the part type of a package, with one pin per pin number, leaving out a MECHANICAL
+// pin.
+func packagePart(p pkgEl, prov func() *ir.Provenance) *ir.PartType {
+	pt := &ir.PartType{Name: p.Name, Prov: prov()}
+	seen := map[string]bool{}
+	for _, pin := range p.Pins {
+		if pin.Number == "" || seen[pin.Number] || strings.EqualFold(pin.ElectricalType, "MECHANICAL") {
+			continue
+		}
+		seen[pin.Number] = true
+		pt.Pins = append(pt.Pins, &ir.Pin{Designator: pin.Number, Prov: prov()})
+	}
+	return pt
 }
