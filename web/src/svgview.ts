@@ -238,7 +238,12 @@ export class SvgView {
 
   private applyOrientation(): void {
     const { w, h } = this.docSize();
-    this.orient.style.transform = orientCss(this.orientation, w, h);
+    const css = orientCss(this.orientation, w, h);
+    this.orient.style.transform = css;
+    // A turned drawing zoomed past about 3x made Chrome spend 700 ms laying out layers on every frame
+    // on Jetson's board, so a click there took seconds (agni issue 1397). Its own compositor layer
+    // takes that to 17 ms. An upright drawing never paid it, so it keeps none.
+    this.orient.style.willChange = css ? "transform" : "";
   }
 
   private docSize(): { w: number; h: number } {

@@ -47,24 +47,28 @@
     <!-- WS9-025: the birds-eye sheet overview (per-sheet violation counts) mounts here -->
     <div data-dock-panel="overview" class="dock-body"><div id="sheet-overview" data-component="sheet-overview"></div></div>
     <div data-dock-panel="canvas" class="canvas-wrap">
-      <!-- The render controls (mode/layout/symbols/board-layers) float inside the canvas
-           panel: they configure only the rendered sheet, so they live next to it (the top
-           bar keeps the truly global chrome: Compare, Panels). -->
-      <div id="controls" class="canvas-toolbar" data-component="controls"></div>
       <canvas id="view"></canvas>
       <div id="text-overlay" class="text-overlay"></div>
       <!-- WS9-045: the conformance-fixture expectation verdict (hidden on real designs). -->
       <div id="expect-caption" class="expect-caption" role="status" aria-live="polite"></div>
-      <!-- The notes about this open stack in one column below the controls, so two of them never
-           paint over each other (agni issue 717). -->
-      <div class="canvas-notes">
-        <div id="stale-link-note" class="stale-link-note" role="status" aria-live="polite"></div>
-        <div id="hierarchy-note" class="hierarchy-note" role="status" aria-live="polite"></div>
-        <div id="drawing-note" class="drawing-note" role="status" aria-live="polite"></div>
-        <div id="undrawn-note" class="undrawn-note" role="status" aria-live="polite"></div>
-      </div>
       <div id="svg-view" class="svg-view"></div>
-      <div id="readout">no sheet loaded</div>
+      <!-- The top of the canvas is one flow (agni issue 1397). The readout and the render controls
+           share a row that wraps when the canvas is narrow, and the notes about this open stack in one
+           column below it (agni issue 717), so none of them paints over another at any width. The
+           controls configure only the rendered sheet, so they live beside it, and the page's top bar
+           keeps the global chrome (Compare, Panels). -->
+      <div class="canvas-top">
+        <div class="canvas-bar">
+          <div id="readout">no sheet loaded</div>
+          <div id="controls" class="canvas-toolbar" data-component="controls"></div>
+        </div>
+        <div class="canvas-notes">
+          <div id="stale-link-note" class="stale-link-note" role="status" aria-live="polite"></div>
+          <div id="hierarchy-note" class="hierarchy-note" role="status" aria-live="polite"></div>
+          <div id="drawing-note" class="drawing-note" role="status" aria-live="polite"></div>
+          <div id="undrawn-note" class="undrawn-note" role="status" aria-live="polite"></div>
+        </div>
+      </div>
     </div>
     <!-- agni issue 902: the Properties panel describes the selection, and replaced Details -->
     <div data-dock-panel="properties" class="dock-body"><div id="properties-panel" data-component="properties"></div></div>

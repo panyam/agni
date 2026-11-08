@@ -204,6 +204,41 @@ async function clickableNet(page: Page, host: string, name: string): Promise<{ x
   throw new Error(`no point on ${name}'s copper picks only that net, even zoomed in`);
 }
 
+// inReach lists every visible control in a panel that a reader cannot reach (agni issue 1397). A
+// control has to lie inside its own panel, sit clear of every other control there, and be the
+// topmost element at its centre. The middle test alone misses a bar that overflows its panel,
+// because the overflowing controls paint over the next panel and are still on top. The readout takes
+// no pointer events, so it is held to the first two tests only.
+async function inReach(page: Page, panel: string, items: string): Promise<string[]> {
+  return page.evaluate(
+    ({ panel, items }) => {
+      const p = document.querySelector(panel)?.getBoundingClientRect();
+      if (!p) return [`no ${panel}`];
+      const name = (e: Element) =>
+        e.id ? `#${e.id}` : ((e as HTMLElement).dataset.action ?? (e.tagName === "SELECT" ? `select.${e.className}` : e.textContent?.trim().slice(0, 20) || e.tagName));
+      const shown = [...document.querySelectorAll(items)].filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      const bad: string[] = [];
+      for (const e of shown) {
+        const r = e.getBoundingClientRect();
+        if (r.left < p.left - 1 || r.right > p.right + 1 || r.top < p.top - 1 || r.bottom > p.bottom + 1) bad.push(`${name(e)} runs outside its panel`);
+        for (const o of shown) {
+          if (o === e || o.contains(e) || e.contains(o)) continue;
+          const q = o.getBoundingClientRect();
+          if (r.left < q.right && q.left < r.right && r.top < q.bottom && q.top < r.bottom && shown.indexOf(o) > shown.indexOf(e)) bad.push(`${name(e)} and ${name(o)} overlap`);
+        }
+        if (getComputedStyle(e).pointerEvents === "none") continue;
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (!top || !(top === e || e.contains(top))) bad.push(`${name(e)} is covered`);
+      }
+      return shown.length === 0 ? [`nothing matches ${items}`] : bad;
+    },
+    { panel, items },
+  );
+}
+
 // tile clicks a Sheets tile by its exact name, which puts that sheet on the canvas.
 async function tile(page: Page, name: string): Promise<void> {
   const tiles = page.locator(".sheet-tile");
@@ -282,6 +317,18 @@ for (const name of chosen) {
           const fp = page.locator(footprintOf(part.ref));
           await fp.first().waitFor({ state: "attached", timeout: 60_000 });
           return `the schematic on the canvas and the board in a view beside it, ${part.ref}'s footprint drawn`;
+        });
+
+        // A reader with the two views side by side reaches every control on both (agni issue 1397).
+        // The board's bar once ran past its panel and over the Checks panel, and the canvas's mode
+        // bar covered its readout.
+        await step("every control in reach", { needs: ["two views"] }, async () => {
+          const bad = [
+            ...(await inReach(page, '[data-dock-panel="canvas"]', '#readout, .canvas-toolbar button, .canvas-toolbar select')),
+            ...(await inReach(page, PANE, `${PANE} .sheetview-bar > *`)),
+          ];
+          if (bad.length > 0) throw new Error(bad.join("; "));
+          return "the canvas's readout and controls and the board view's bar, each inside its panel and uncovered";
         });
 
         await step(`click ${part.ref}`, { needs: ["two views"] }, async () => {
