@@ -251,8 +251,23 @@ interface Shown {
 }
 
 // shown reads the Selection as Properties shows it, waiting up to `ms` for a title to appear.
+// Some of the panel's rows, such as the checks a part has, arrive after its title. So shown waits
+// for the text to hold still across SETTLE_MS too, or two clicks on one part read as two answers.
 async function shown(page: Page, ms: number): Promise<Shown> {
   await page.waitForFunction((sel) => (document.querySelector(sel)?.textContent ?? "") !== "", TITLE, { timeout: ms }).catch(() => {});
+  const until = Date.now() + ms;
+  let last = await read(page);
+  for (;;) {
+    await page.waitForTimeout(SETTLE_MS);
+    const now = await read(page);
+    if (same(now, last) || Date.now() > until) return now;
+    last = now;
+  }
+}
+
+const SETTLE_MS = 300;
+
+async function read(page: Page): Promise<Shown> {
   return page.evaluate((p) => {
     const panel = document.querySelector(p);
     // With nothing selected, the panel describes the design or the sheet instead.
@@ -263,6 +278,14 @@ async function shown(page: Page, ms: number): Promise<Shown> {
 }
 
 const said = (s: Shown): string => (s.title ? `${s.kind} ${s.title}` : "nothing");
+
+// apart names what two answers disagree on, the pick or else the first Properties line that differs.
+function apart(a: Shown, b: Shown): string {
+  if (a.kind !== b.kind || a.title !== b.title) return `SVG picked ${said(a)}, WebGL ${said(b)}`;
+  const la = a.text.split("\n"), lb = b.text.split("\n");
+  const i = la.findIndex((l, j) => l !== lb[j]);
+  return `both picked ${said(a)}, and Properties differs at line ${i + 1}, ${JSON.stringify(la[i] ?? "")} in SVG and ${JSON.stringify(lb[i] ?? "")} in WebGL`;
+}
 const same = (a: Shown, b: Shown): boolean => a.kind === b.kind && a.title === b.title && a.text === b.text;
 
 // A Target is something on a sheet to click, the elements matching `sel` and the Properties kind a
@@ -630,7 +653,7 @@ for (const name of chosen) {
         for (const t of targets) {
           await step(`click a ${t.name}`, { waitsOn: t.waitsOn }, async () => {
             const { svg, gl } = await clickBoth(page, walk, name, t);
-            if (!same(svg, gl)) throw new Error(`SVG picked ${said(svg)}, WebGL ${said(gl)}`);
+            if (!same(svg, gl)) throw new Error(apart(svg, gl));
             return `both picked ${said(svg)}`;
           });
         }
