@@ -41,11 +41,13 @@ type edaPkg struct {
 }
 
 // edaPin is one pin of a package. It holds the pin's name, its type (T through-hole, S surface, B
-// blind), and its centre in the package's own frame.
+// blind), and its centre in the package's own frame. mech is set when the producer marks the pin's
+// electrical type M, a mechanical pin such as a fiducial's pad, which is no pin of the part.
 type edaPin struct {
 	name string
 	typ  string
 	at   pt
+	mech bool
 }
 
 // noNet is the name ODB++ gives the net of unconnected features.
@@ -130,7 +132,9 @@ func parseEDA(b []byte) (*eda, error) {
 			if err != nil {
 				return fmt.Errorf("line %d: %w", n, err)
 			}
-			pkg.pins = append(pkg.pins, edaPin{name: w[1], typ: strings.ToUpper(w[2]), at: at})
+			// PIN <name> <type> <xc> <yc> <fhs> <etype> <mtype>, where etype is E, M or U.
+			mech := len(w) > 6 && strings.EqualFold(w[6], "M")
+			pkg.pins = append(pkg.pins, edaPin{name: w[1], typ: strings.ToUpper(w[2]), at: at, mech: mech})
 		}
 		return nil
 	})

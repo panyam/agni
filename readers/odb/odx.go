@@ -339,7 +339,8 @@ func (ps *odxParser) start(e xml.StartElement) error {
 		if name == "" {
 			name = attrS(e, "NAME")
 		}
-		ps.pkg.pins = append(ps.pkg.pins, edaPin{name: name, typ: typ})
+		mech := strings.EqualFold(attrS(e, "ETYPE"), "M")
+		ps.pkg.pins = append(ps.pkg.pins, edaPin{name: name, typ: typ, mech: mech})
 		ps.pin = &ps.pkg.pins[len(ps.pkg.pins)-1]
 	case "CAD_COMPONENT":
 		if ps.step == nil {
