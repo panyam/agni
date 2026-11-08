@@ -110,11 +110,18 @@ export class Camera {
     this.centerY += worldBefore.y - worldAfter.y;
   }
 
-  private pixelToWorld(px: number, py: number): { x: number; y: number } {
+  // pixelToWorld maps a canvas pixel (device pixels, origin top-left) to the world point under it,
+  // the inverse of matrix(). A click on the canvas picks through it (canvaspick.ts).
+  pixelToWorld(px: number, py: number): { x: number; y: number } {
     const x = this.centerX + (px - this.viewportW / 2) * this.worldPerPixel;
     // Screen Y is down and world Y is up, so a small py is a higher world Y.
     const y = this.centerY - (py - this.viewportH / 2) * this.worldPerPixel;
     return { x, y };
+  }
+
+  // worldPerDevicePixel is how many world units one canvas pixel spans, the same on both axes.
+  worldPerDevicePixel(): number {
+    return this.worldPerPixel;
   }
 
   // The view rect in world coordinates (for viewport culling).

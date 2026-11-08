@@ -45,6 +45,16 @@ export const GROUP_BOARD_SILK = 11;
 export const GROUP_BUS = 12;
 // The cross over a do-not-populate part (agni 1344), mirroring core/render/pack.go groupDNP.
 export const GROUP_DNP = 13;
+// A board footprint's pick area, by the side the part sits on, mirroring core/render/packboard.go
+// groupBoardPickBack and groupBoardPickFront. Nothing draws them and no highlight lights them. A
+// click reads them, so a click between a part's pads picks the part (agni issue 1332).
+export const GROUP_BOARD_PICK_BACK = 254;
+export const GROUP_BOARD_PICK_FRONT = 255;
+
+// pickOnly reports whether a primitive group is a pick area, read by a click and never drawn.
+export function pickOnly(group: number): boolean {
+  return group === GROUP_BOARD_PICK_BACK || group === GROUP_BOARD_PICK_FRONT;
+}
 
 // Width of one packed primitive record in bytes.
 export const PRIMITIVE_RECORD_SIZE = 12;

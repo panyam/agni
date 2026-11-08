@@ -139,20 +139,27 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		if sym == nil {
 			continue
 		}
+		// A glyph that names a net (a ground or rail symbol) keys as that net, as symbolKeys does
+		// for SVG, so a click on it picks the net (agni issue 764). Its pins key nothing, since a
+		// pin needs a ref-des.
+		ref, anchor := pl.RefDes, pl.GetNetAnchor()
+		if anchor != "" {
+			ref = ""
+		}
 		for _, s := range sym.Shapes {
 			kind, pts := shapeVerts(geomath.PlaceShape(pl.Transform, s))
-			add(kind, groupSymbol, pl.RefDes, "", "", pts)
+			add(kind, groupSymbol, ref, anchor, "", pts)
 		}
 		for _, pin := range sym.Pins {
 			wp := geomath.PlacePin(pl.Transform, pin)
 			if wp != nil {
-				add(primPoints, groupPin, pl.RefDes, "", pin.PortRef, [][2]int64{{wp.X, wp.Y}})
+				add(primPoints, groupPin, ref, "", pin.PortRef, [][2]int64{{wp.X, wp.Y}})
 			}
 		}
 		if a, b, ok := dnpCross(sym, pl); ok {
 			hasDNP = true
 			for _, d := range [][2]*geom.Point{a, b} {
-				add(primTriangles, groupDNP, pl.RefDes, "", "", quadPts(d[0].X, d[0].Y, d[1].X, d[1].Y, busWidthNm))
+				add(primTriangles, groupDNP, ref, anchor, "", quadPts(d[0].X, d[0].Y, d[1].X, d[1].Y, busWidthNm))
 			}
 		}
 	}

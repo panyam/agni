@@ -293,3 +293,39 @@ func decodeRecords(b []byte) []primRecord {
 	}
 	return out
 }
+
+// A ground or rail glyph packs keyed as the net it names, as SVG keys it, so WebGL can pick it
+// (agni issue 764). Its shapes name the net and no part, and its pins key nothing.
+func TestPackSheetKeysNetAnchorsAsNets(t *testing.T) {
+	g, sheet := keyFixture()
+	sheet.Placements = append(sheet.Placements, &geom.SymbolPlacement{
+		RefDes: "#PWR01", NetAnchor: "DGND", CellRef: "R", LibraryRef: "L", ViewRef: "sym",
+		Transform: &geom.Transform{Origin: &geom.Point{X: 300, Y: 300}},
+	})
+	p := PackSheet(g, sheet)
+	anchored := 0
+	for _, k := range p.GetKeys() {
+		if k.GetRefDes() == "#PWR01" {
+			t.Errorf("the anchor keyed as a part: %v", k)
+		}
+		if k.GetNet() == "DGND" {
+			anchored++
+			if k.GetRefDes() != "" || k.GetPin() != "" {
+				t.Errorf("the anchor's net key names a part or a pin: %v", k)
+			}
+		}
+	}
+	if anchored == 0 {
+		t.Fatalf("no primitive keys the anchor's net DGND, keys %v", p.GetKeys())
+	}
+	// The ordinary part beside it still keys by its ref-des.
+	r7 := 0
+	for _, k := range p.GetKeys() {
+		if k.GetRefDes() == "R7" {
+			r7++
+		}
+	}
+	if r7 == 0 {
+		t.Error("R7 lost its keys")
+	}
+}

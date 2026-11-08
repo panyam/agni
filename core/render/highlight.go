@@ -122,13 +122,24 @@ func HighlightPacked(sheet *geom.PackedSheet, specs []*geom.HighlightSpec) *geom
 		m := matcherFor(spec)
 		g := &geom.PackedHighlight_Group{Color: spec.GetColor(), Alpha: spec.GetAlpha(), Shape: spec.GetShape()}
 		for _, k := range sheet.GetKeys() {
-			if m.matchKey(k) {
+			if m.matchKey(k) && !pickOnly(sheet, k.GetPrimitive()) {
 				g.Primitives = append(g.Primitives, k.GetPrimitive())
 			}
 		}
 		out.Groups = append(out.Groups, g)
 	}
 	return out
+}
+
+// pickOnly reports whether a packed primitive is a footprint's pick area (groupBoardPickFront or
+// groupBoardPickBack), which a click reads and no highlight lights, since nothing draws it.
+func pickOnly(sheet *geom.PackedSheet, primitive uint32) bool {
+	i := int(primitive)*primRecordBytes + 1
+	if i >= len(sheet.GetPrimitives()) {
+		return false
+	}
+	g := sheet.GetPrimitives()[i]
+	return g == groupBoardPickFront || g == groupBoardPickBack
 }
 
 // highlightStrokePx is the overlay stroke width, wider than the base render's strokePx so

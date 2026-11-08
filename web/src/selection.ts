@@ -87,13 +87,17 @@ export function bestOf(candidates: (Selection | null)[]): Selection | null {
   return null;
 }
 
+// CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a
+// click rather than a pan. The SVG and WebGL views share it, so a click is a click in both.
+export const CLICK_SLOP_PX = 3;
+
 // PROBES are the offsets sampled around a click in CSS pixels, the exact point first and then a
 // ring that gives small targets some tolerance. The ring does not rescue a bare wire, since every
 // probe faces the same sub-pixel stroke; the served render's invisible wide wire companion does
 // (core/render/svg.go, WithPickTargets). The ring is small, 5px at cursor scale, so a click
 // BETWEEN two close wires still misses rather than guessing.
-const PROBE_R = 5;
-const PROBES: [number, number][] = [
+export const PROBE_R = 5;
+export const PROBES: [number, number][] = [
   [0, 0],
   [PROBE_R, 0],
   [-PROBE_R, 0],

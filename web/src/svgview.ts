@@ -4,13 +4,9 @@
 // shares. It is a plain view adapter with no framework or presenter coupling, and the presenter
 // only calls setSvg / show / hide.
 import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
-import { pickAt, type Selection } from "./selection.js";
+import { CLICK_SLOP_PX, pickAt, type Selection } from "./selection.js";
 import { rectOf, type ClientRect } from "./area.js";
 import { UPRIGHT, orientBox, orientCss, orientPoint, orientedSize, unorientPoint, type Orientation, type Point } from "./orient.js";
-
-// CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a
-// click rather than a pan.
-const CLICK_SLOP_PX = 3;
 
 // SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
 // structurally panzoom.PanZoom, so the shared helpers operate on it directly.

@@ -35,10 +35,12 @@ export async function centreOf(page: Page, sel: string): Promise<{ x: number; y:
 
 // clearPoint finds a whole-pixel point inside `sel` where every probe of the picker lands on `ref` or
 // on nothing keyed, the search board-pick.spec.ts uses. `kind` "net" looks for the net named `ref`
-// instead of the part.
-export async function clearPoint(page: Page, sel: string, ref: string, kind: "component" | "net" = "component"): Promise<{ x: number; y: number }> {
+// instead of the part. `margin` asks for the same within that many pixels of each probe, for a walk
+// that clicks the same place in a second renderer, whose edges can sit half a pixel from this one's
+// (webgl-walk.spec.ts).
+export async function clearPoint(page: Page, sel: string, ref: string, kind: "component" | "net" = "component", margin = 0): Promise<{ x: number; y: number }> {
   return page.evaluate(
-    ({ sel, ref, kind }) => {
+    ({ sel, ref, kind, margin }) => {
       const key = kind === "net" ? "data-net" : "data-ref";
       const keyed = (e: Element | null) => e?.closest("[data-kind]") ?? null;
       const el = document.querySelector(sel);
@@ -48,7 +50,8 @@ export async function clearPoint(page: Page, sel: string, ref: string, kind: "co
         for (let fx = 0.1; fx < 0.95; fx += 0.05) {
           const x = Math.round(r.left + r.width * fx);
           const y = Math.round(r.top + r.height * fy);
-          const hits = [-5, 0, 5].flatMap((dx) => [-5, 0, 5].map((dy) => keyed(document.elementFromPoint(x + dx, y + dy))));
+          const offs = [...new Set([-5, 0, 5].flatMap((o) => [o - margin, o, o + margin]))];
+          const hits = offs.flatMap((dx) => offs.map((dy) => keyed(document.elementFromPoint(x + dx, y + dy))));
           const centre = keyed(document.elementFromPoint(x, y));
           if (centre?.getAttribute(key) === ref && centre.getAttribute("data-kind") === kind &&
             hits.every((h) => !h || (h.getAttribute(key) === ref && h.getAttribute("data-kind") === kind))) {
@@ -58,7 +61,7 @@ export async function clearPoint(page: Page, sel: string, ref: string, kind: "co
       }
       throw new Error(`no point inside ${sel} picks only ${ref}`);
     },
-    { sel, ref, kind },
+    { sel, ref, kind, margin },
   );
 }
 
