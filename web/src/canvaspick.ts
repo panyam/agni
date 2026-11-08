@@ -27,6 +27,7 @@ import {
 } from "./packed.js";
 import { boundsOfVertices, type Bounds } from "./camera.js";
 import { PROBES, PROBE_R, bestOf, type Selection } from "./selection.js";
+import type { Members } from "./area.js";
 
 // These mirror core/render/svg.go (sheetMaxPx, pinPickRPx, wirePickWidthPx, strokePx). Change them
 // only alongside the Go constants.
@@ -58,6 +59,8 @@ export class PickIndex {
   private readonly targets: Target[] = [];
   private readonly cells = new Map<number, number[]>();
   private readonly big: number[] = [];
+  // parts lists each part's targets, since an area holds a part only when all of them lie inside.
+  private readonly parts = new Map<string, number[]>();
   private readonly cell: number;
   private readonly minX: number;
   private readonly minY: number;
@@ -108,9 +111,48 @@ export class PickIndex {
     return bestOf(found);
   }
 
+  // membersIn returns the area a Shift-drag over world rectangle r selects, by area.ts's membersIn
+  // rules. A part counts when every shape keyed to it lies inside, and a pin of a part not wholly
+  // inside counts on its own. A net counts when any one of its primitives lies inside, since each
+  // board track and schematic wire packs as a primitive of its own. A shape counts by its bounds
+  // with no stroke, as getBoundingClientRect measures an SVG element. A schematic pin also reaches
+  // as far as SVG's pick circle, the element SVG keys it on. A shape in a hidden group lies
+  // nowhere, as a display: none element measures as an empty rect.
+  membersIn(r: Bounds, hidden: ReadonlySet<number> = new Set()): Members {
+    const within = (i: number): boolean => {
+      const t = this.targets[i];
+      if (hidden.has(this.sheet.primitives[t.primitive].group)) return false;
+      const reach = t.sel.kind === "pin" ? t.slack : 0;
+      const b = t.bounds;
+      return b.minX - reach >= r.minX && b.maxX + reach <= r.maxX && b.minY - reach >= r.minY && b.maxY + reach <= r.maxY;
+    };
+    const refs = new Set<string>();
+    const pins: { ref: string; pin: string }[] = [];
+    const wires = new Set<string>();
+    const judged = new Set<string>();
+    for (const i of this.overlapping(r)) {
+      const sel = this.targets[i].sel;
+      if (sel.kind === "component" && sel.ref && !judged.has(sel.ref)) {
+        judged.add(sel.ref);
+        if ((this.parts.get(sel.ref) ?? []).every(within)) refs.add(sel.ref);
+      } else if (sel.kind === "pin" && sel.ref && sel.pin && within(i)) {
+        pins.push({ ref: sel.ref, pin: sel.pin });
+      } else if (sel.kind === "net" && sel.net && within(i)) {
+        wires.add(sel.net);
+      }
+    }
+    const loose = new Set(pins.filter((p) => !refs.has(p.ref)).map((p) => `${p.ref}.${p.pin}`));
+    return { refs: [...refs].sort(), pins: [...loose].sort(), wires: [...wires].sort() };
+  }
+
   private add(t: Target): void {
     const i = this.targets.length;
     this.targets.push(t);
+    if (t.sel.kind === "component" && t.sel.ref) {
+      const list = this.parts.get(t.sel.ref);
+      if (list) list.push(i);
+      else this.parts.set(t.sel.ref, [i]);
+    }
     const b = t.bounds;
     const x0 = this.cellX(b.minX - t.slack), x1 = this.cellX(b.maxX + t.slack);
     const y0 = this.cellY(b.minY - t.slack), y1 = this.cellY(b.maxY + t.slack);
@@ -133,6 +175,20 @@ export class PickIndex {
     const out = new Set<number>(this.big);
     const x0 = this.cellX(x - r), x1 = this.cellX(x + r);
     const y0 = this.cellY(y - r), y1 = this.cellY(y + r);
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cy = y0; cy <= y1; cy++) {
+        for (const i of this.cells.get(cx * 65536 + cy) ?? []) out.add(i);
+      }
+    }
+    return out;
+  }
+
+  // overlapping lists the targets in the cells that rectangle r covers, each once, and every big
+  // target.
+  private overlapping(r: Bounds): Set<number> {
+    const out = new Set<number>(this.big);
+    const x0 = this.cellX(r.minX), x1 = this.cellX(r.maxX);
+    const y0 = this.cellY(r.minY), y1 = this.cellY(r.maxY);
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {
         for (const i of this.cells.get(cx * 65536 + cy) ?? []) out.add(i);
@@ -200,6 +256,23 @@ export class PickIndex {
         return Infinity;
     }
   }
+}
+
+// drawnOnPacked lists the parts and nets a packed sheet draws, as svgview.ts's drawnOnSheet reads
+// them off an SVG sheet. A key counts when a click on it would name a part or a net, so a board's
+// silkscreen and fab outlines add nothing, as their unkeyed SVG elements add nothing.
+export function drawnOnPacked(sheet: DecodedSheet): { refs: string[]; nets: string[] } {
+  const board = sheet.sheetId === "board";
+  const refs = new Set<string>();
+  const nets = new Set<string>();
+  for (const k of sheet.keys) {
+    const p = sheet.primitives[k.primitive];
+    if (!p) continue;
+    const sel = selectionOf(k, board, p.kind, p.group);
+    if (sel?.kind === "component" && sel.ref) refs.add(sel.ref);
+    if (sel?.kind === "net" && sel.net) nets.add(sel.net);
+  }
+  return { refs: [...refs], nets: [...nets] };
 }
 
 // selectionOf reads a key as the Selection a click on it names, or null for a primitive a click

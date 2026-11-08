@@ -194,9 +194,29 @@ tells the first case from the third.
 and a Shift-click adds an entity or takes it out** (agni issue 904). A plain drag still pans and a
 plain click still picks one entity. The viewer reads the set off the rendered document's entity keys
 (`membersIn` in `web/src/area.ts`) and measures each element's client rectangle, so forming the set
-asks the server nothing. A part drawn as several shapes is inside only when every shape is. If a
+asks the server nothing. A symbol with no ref-des, such as a logo, names no part and is never a
+member. A part drawn as several shapes is inside only when every shape is. If a
 part is only partly inside, its pins inside the rectangle are members on their own. A wire is
 identified by its net, since the renderer keys a wire with nothing finer.
+
+**The WebGL canvas forms the same set from its pick index** (`PickIndex.membersIn` in
+`web/src/canvaspick.ts`, agni issue 1333). The canvas has no elements to measure. So it carries the
+drag's corners through the camera's inverse and tests each keyed primitive's bounds against the
+world rectangle. A primitive's bounds leave out its stroke, as an SVG element's client rectangle
+does. A schematic pin reaches as far as SVG's pick circle, since SVG keys a pin on that circle. A
+primitive in a hidden group lies nowhere, as a `display: none` element measures empty. A test of a
+filled symbol's inside never comes up, because a part counts only when its shapes lie wholly inside.
+The WebGL walk (`webgl-walk.spec.ts`) drags one box and Shift-clicks two pins in each renderer, then
+compares what Properties shows. It chooses a box with no keyed element's edge within 3 px of its
+sides, and pins with no neighbour that close, because the walk maps a point between the renderers
+with a pixel or so of error.
+
+**Properties lists what the sheet on screen draws from whichever renderer drew it.** The SVG view
+reads the document's keys (`drawnOnSheet`), and the canvas reads the packed sheet's keys
+(`drawnOnPacked`). A key counts when a click on it would name a part or a net, so a board's
+silkscreen adds nothing in either renderer. The hidden SVG host keeps the last sheet it drew, and
+reading it under WebGL would name that old sheet. So the page tracks which renderer drew the sheet on
+screen and asks that one.
 
 **An area is a `Selection` of kind `area`**, carrying its parts (`refs`), its loose pins (`pins`), the
 nets with a wire inside it (`wires`) and every net it touches (`nets`). So it goes wherever a

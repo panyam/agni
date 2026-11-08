@@ -12,7 +12,7 @@ function drawing(items: { kind: string; ref?: string; pin?: string; net?: string
   for (const it of items) {
     const el = document.createElement("span");
     el.setAttribute("data-kind", it.kind);
-    if (it.ref) el.setAttribute("data-ref", it.ref);
+    if (it.ref !== undefined) el.setAttribute("data-ref", it.ref);
     if (it.pin) el.setAttribute("data-pin", it.pin);
     if (it.net) el.setAttribute("data-net", it.net);
     el.setAttribute("data-box", it.box.join(","));
@@ -24,6 +24,18 @@ function drawing(items: { kind: string; ref?: string; pin?: string; net?: string
   };
   return { root, boxOf };
 }
+
+describe("a symbol with no ref-des (agni issue 1333)", () => {
+  it("is no part of an area, as the WebGL canvas counts it", () => {
+    // A logo or a graphic placed as a symbol is keyed as a component with an empty data-ref.
+    const { root, boxOf } = drawing([
+      { kind: "component", ref: "", box: [10, 10, 20, 20] },
+      { kind: "pin", ref: "", pin: "1", box: [10, 10, 12, 12] },
+      { kind: "component", ref: "C1", box: [30, 10, 40, 20] },
+    ]);
+    expect(membersIn(root, { left: 0, top: 0, right: 50, bottom: 50 }, boxOf)).toEqual({ refs: ["C1"], pins: [], wires: [] });
+  });
+});
 
 describe("what an area holds", () => {
   const { root, boxOf } = drawing([

@@ -17,7 +17,9 @@ import {
   type HighlightSpec,
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
-import { PickIndex } from "./canvaspick.js";
+import { PickIndex, drawnOnPacked } from "./canvaspick.js";
+import { rectOf, type Members } from "./area.js";
+import { AreaBand } from "./areaband.js";
 import { CLICK_SLOP_PX, type Selection } from "./selection.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
@@ -48,6 +50,11 @@ export class CanvasComponent extends BaseComponent {
   onPick: ((sel: Selection) => void) | null = null;
   // onPickEmpty fires when a click hits nothing keyed, such as the paper or the frame.
   onPickEmpty: (() => void) | null = null;
+  // onArea fires when the reader Shift-drags a box over the canvas, with what the box holds, and
+  // onToggle when they Shift-click an entity, as SvgView's do (agni issue 1333). The canvas forms
+  // the area itself, since only its pick index knows what lies where.
+  onArea: ((m: Members) => void) | null = null;
+  onToggle: ((sel: Selection) => void) | null = null;
 
   activate(): void {
     const canvas = this.rootElement as HTMLCanvasElement;
@@ -223,8 +230,13 @@ export class CanvasComponent extends BaseComponent {
     let downX = 0;
     let downY = 0;
     let moved = false;
+    // selecting is a press with Shift held, which draws a box rather than panning.
+    let selecting = false;
+    const band = new AreaBand(canvas.parentElement ?? canvas);
     canvas.addEventListener("mousedown", (e) => {
       dragging = true;
+      selecting = e.shiftKey && (this.onArea !== null || this.onToggle !== null);
+      if (selecting) e.preventDefault();
       lastX = e.clientX;
       lastY = e.clientY;
       downX = e.clientX;
@@ -234,6 +246,18 @@ export class CanvasComponent extends BaseComponent {
     window.addEventListener("mouseup", (e) => {
       const wasDragging = dragging;
       dragging = false;
+      if (wasDragging && selecting) {
+        selecting = false;
+        band.clear();
+        if (moved) {
+          const m = this.membersIn(rectOf(downX, downY, e.clientX, e.clientY));
+          if (m) this.onArea?.(m);
+        } else {
+          const sel = this.pickAt(e.clientX, e.clientY);
+          if (sel) this.onToggle?.(sel);
+        }
+        return;
+      }
       if (!wasDragging || moved || !this.onPick) return;
       const sel = this.pickAt(e.clientX, e.clientY);
       if (sel) this.onPick(sel);
@@ -242,6 +266,10 @@ export class CanvasComponent extends BaseComponent {
     window.addEventListener("mousemove", (e) => {
       if (!dragging || !this.camera) return;
       if (Math.abs(e.clientX - downX) > CLICK_SLOP_PX || Math.abs(e.clientY - downY) > CLICK_SLOP_PX) moved = true;
+      if (selecting) {
+        if (moved) band.draw(rectOf(downX, downY, e.clientX, e.clientY));
+        return;
+      }
       this.camera.panPixels((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
       lastX = e.clientX;
       lastY = e.clientY;
@@ -280,6 +308,25 @@ export class CanvasComponent extends BaseComponent {
     const at = this.camera.pixelToWorld((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
     this.picks ??= new PickIndex(this.sheet);
     return this.picks.pick(at.x, at.y, this.dpr() * this.camera.worldPerDevicePixel(), new Set(this.hidden));
+  }
+
+  // membersIn returns what a client rectangle holds on the drawn sheet, or null before one is drawn.
+  // The rectangle's corners go through the camera's inverse, and since screen Y runs down and world
+  // Y up, the corners swap on the way.
+  membersIn(r: { left: number; top: number; right: number; bottom: number }): Members | null {
+    if (!this.sheet || !this.camera) return null;
+    const rect = (this.rootElement as HTMLCanvasElement).getBoundingClientRect();
+    const a = this.camera.pixelToWorld((r.left - rect.left) * this.dpr(), (r.top - rect.top) * this.dpr());
+    const b = this.camera.pixelToWorld((r.right - rect.left) * this.dpr(), (r.bottom - rect.top) * this.dpr());
+    this.picks ??= new PickIndex(this.sheet);
+    const world = { minX: Math.min(a.x, b.x), minY: Math.min(a.y, b.y), maxX: Math.max(a.x, b.x), maxY: Math.max(a.y, b.y) };
+    return this.picks.membersIn(world, new Set(this.hidden));
+  }
+
+  // drawn lists the parts and nets the sheet on the canvas draws, or null before one is drawn, for
+  // Properties' account of the sheet (agni issue 1333).
+  drawn(): { refs: string[]; nets: string[] } | null {
+    return this.sheet ? drawnOnPacked(this.sheet) : null;
   }
 
   private setReadout(text: string): void {

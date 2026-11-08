@@ -47,6 +47,9 @@ export function membersIn(root: ParentNode, r: ClientRect, boxOf: (el: Element) 
   const parts = new Map<string, boolean>();
   for (const el of root.querySelectorAll('[data-kind="component"][data-ref]')) {
     const ref = el.getAttribute("data-ref") ?? "";
+    // A symbol with no ref-des, such as a logo, is keyed as a component with an empty ref. It names
+    // no part, so it is no member, as drawnOnSheet and the WebGL canvas also count it.
+    if (!ref) continue;
     parts.set(ref, (parts.get(ref) ?? true) && inside(boxOf(el), r));
   }
   const refs = [...parts].filter(([, all]) => all).map(([ref]) => ref);
@@ -54,7 +57,7 @@ export function membersIn(root: ParentNode, r: ClientRect, boxOf: (el: Element) 
   const pins = new Set<string>();
   for (const el of root.querySelectorAll('[data-kind="pin"][data-ref][data-pin]')) {
     const ref = el.getAttribute("data-ref") ?? "";
-    if (whole.has(ref) || !inside(boxOf(el), r)) continue;
+    if (!ref || whole.has(ref) || !inside(boxOf(el), r)) continue;
     pins.add(`${ref}.${el.getAttribute("data-pin")}`);
   }
   const wires = new Set<string>();

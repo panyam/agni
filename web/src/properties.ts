@@ -348,7 +348,7 @@ function sheetView(input: PropertiesInput, sheetId: string): Omit<PropertiesStat
       { name: "nets", refs: nets.map((n) => ({ label: n, target: { kind: "net", net: n } })), empty: "none drawn" },
       { name: "findings", refs: findingRefs(onSheet), empty: "none" },
     ],
-    note: input.drawn ? undefined : "What this sheet draws is read off its SVG drawing, and none is on screen.",
+    note: input.drawn ? undefined : "What this sheet draws is read off its drawing, and none is on screen.",
   };
 }
 

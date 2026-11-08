@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PickIndex, PIN_PICK_R, SHEET_MAX_PX, WIRE_PICK_WIDTH } from "./canvaspick.js";
+import { PickIndex, drawnOnPacked, PIN_PICK_R, SHEET_MAX_PX, WIRE_PICK_WIDTH } from "./canvaspick.js";
 import {
   GROUP_BOARD_COPPER_BACK,
   GROUP_BOARD_COPPER_FRONT,
@@ -213,5 +213,81 @@ describe("PickIndex zones", () => {
 
   it("picks nothing in the notch of a zone that is not convex", () => {
     expect(zone.pick(500, 500, 0)).toBeNull();
+  });
+});
+
+// box is a world rectangle, as the canvas passes a Shift-drag to membersIn.
+function box(minX: number, minY: number, maxX: number, maxY: number) {
+  return { minX, minY, maxX, maxY };
+}
+
+describe("PickIndex.membersIn on a schematic (agni issue 1333)", () => {
+  const idx = new PickIndex(schematic);
+
+  it("holds a part whose every shape lies inside, and folds its pins into it", () => {
+    expect(idx.membersIn(box(250, 250, 550, 450))).toEqual({ refs: ["R7"], pins: [], wires: [] });
+  });
+
+  it("leaves out a part with one shape inside and another outside", () => {
+    const two = new PickIndex(sheetOf("/", [
+      { kind: KIND_LINE_LOOP, group: GROUP_SYMBOL, pts: [[300, 300], [400, 300], [400, 400], [300, 400]], key: { refDes: "U3" } },
+      { kind: KIND_LINE_STRIP, group: GROUP_SYMBOL, pts: [[400, 350], [700, 350]], key: { refDes: "U3" } },
+    ]));
+    expect(two.membersIn(box(250, 250, 450, 450)).refs).toEqual([]);
+    expect(two.membersIn(box(250, 250, 750, 450)).refs).toEqual(["U3"]);
+  });
+
+  it("lists a pin of a part that is not wholly inside, reaching as far as SVG's pick circle", () => {
+    expect(idx.membersIn(box(300 - PIN_PICK_R, 340, 350, 360))).toEqual({ refs: [], pins: ["R7.1"], wires: [] });
+    expect(idx.membersIn(box(300 - PIN_PICK_R + 1, 340, 350, 360)).pins).toEqual([]);
+  });
+
+  it("holds a net when a wire lies inside, measured without its stroke", () => {
+    expect(idx.membersIn(box(100, 500, 900, 500)).wires).toEqual(["SDA"]);
+    expect(idx.membersIn(box(101, 490, 950, 510)).wires).toEqual([]);
+  });
+
+  it("holds a glyph that names a net as that net, and never a bus", () => {
+    expect(idx.membersIn(box(1190, 1190, 1270, 1210))).toEqual({ refs: [], pins: [], wires: ["GND"] });
+    expect(idx.membersIn(box(90, 790, 910, 820))).toEqual({ refs: [], pins: [], wires: [] });
+  });
+
+  it("finds a hidden shape nowhere, so a part with one hidden is never whole", () => {
+    expect(idx.membersIn(box(250, 250, 550, 450), new Set([GROUP_SYMBOL]))).toEqual({ refs: [], pins: ["R7.1"], wires: [] });
+  });
+});
+
+describe("PickIndex.membersIn on a board (agni issue 1333)", () => {
+  const idx = new PickIndex(board);
+
+  it("judges a part by its pick area, not its silkscreen", () => {
+    expect(idx.membersIn(box(380, 380, 620, 460))).toEqual({ refs: ["U1"], pins: [], wires: [] });
+  });
+
+  it("lists the pads of a part whose side is hidden", () => {
+    expect(idx.membersIn(box(380, 380, 620, 460), new Set([GROUP_BOARD_PICK_FRONT]))).toEqual({ refs: [], pins: ["U1.1", "U1.2"], wires: [] });
+  });
+
+  it("holds a net by a track inside the box, and not by the pour around it", () => {
+    expect(idx.membersIn(box(690, 990, 1210, 1020))).toEqual({ refs: [], pins: [], wires: ["SDA"] });
+  });
+
+  it("holds a part whose numberless pad lies inside with its pick area", () => {
+    expect(idx.membersIn(box(990, 190, 1150, 250))).toEqual({ refs: ["U2"], pins: [], wires: [] });
+    expect(idx.membersIn(box(990, 190, 1120, 250))).toEqual({ refs: [], pins: ["U2.1"], wires: [] });
+  });
+});
+
+describe("drawnOnPacked (agni issue 1333)", () => {
+  it("lists a schematic's parts and nets, a net glyph among them", () => {
+    const d = drawnOnPacked(schematic);
+    expect(d.refs.sort()).toEqual(["R7"]);
+    expect(d.nets.sort()).toEqual(["GND", "SDA"]);
+  });
+
+  it("lists a board's parts and the nets its copper names, and no pad's net", () => {
+    const d = drawnOnPacked(board);
+    expect(d.refs.sort()).toEqual(["U1", "U2"]);
+    expect(d.nets.sort()).toEqual(["GND", "SDA"]);
   });
 });
