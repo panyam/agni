@@ -194,7 +194,8 @@ tells the first case from the third.
 and a Shift-click adds an entity or takes it out** (agni issue 904). A plain drag still pans and a
 plain click still picks one entity. The viewer reads the set off the rendered document's entity keys
 (`membersIn` in `web/src/area.ts`) and measures each element's client rectangle, so forming the set
-asks the server nothing. A part drawn as several shapes is inside only when every shape is. If a
+asks the server nothing. A symbol with no ref-des, such as a logo, names no part and is never a
+member. A part drawn as several shapes is inside only when every shape is. If a
 part is only partly inside, its pins inside the rectangle are members on their own. A wire is
 identified by its net, since the renderer keys a wire with nothing finer.
 

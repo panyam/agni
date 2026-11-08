@@ -281,6 +281,12 @@ const said = (s: Shown): string => (s.title ? `${s.kind} ${s.title}` : "nothing"
 
 // apart names what two answers disagree on, the pick or else the first Properties line that differs.
 function apart(a: Shown, b: Shown): string {
+  if (a.kind === "area" && b.kind === "area" && a.title !== b.title) {
+    // Two areas of different sizes differ by members, so name the lines one lists and the other lacks.
+    const la = new Set(a.text.split("\n")), lb = new Set(b.text.split("\n"));
+    const only = (x: Set<string>, y: Set<string>) => [...x].filter((l) => !y.has(l)).slice(0, 8).map((l) => JSON.stringify(l)).join(", ");
+    return `SVG picked ${said(a)}, WebGL ${said(b)}. Only SVG lists ${only(la, lb) || "nothing"}, only WebGL lists ${only(lb, la) || "nothing"}`;
+  }
   if (a.kind !== b.kind || a.title !== b.title) return `SVG picked ${said(a)}, WebGL ${said(b)}`;
   const la = a.text.split("\n"), lb = b.text.split("\n");
   const i = la.findIndex((l, j) => l !== lb[j]);
@@ -305,8 +311,8 @@ interface Target {
 
 // candidates lists a target's points in the fitted SVG view, nearest the middle first, each with the
 // ref-des of the part it belongs to, if any.
-async function candidates(page: Page, t: Target): Promise<{ at: Point; ref: string }[]> {
-  return page.evaluate(({ sel, line, view }) => {
+async function candidates(page: Page, t: Target, limit = 6): Promise<{ at: Point; ref: string }[]> {
+  return page.evaluate(({ sel, line, view, limit }) => {
     const v = document.querySelector(view)!.getBoundingClientRect();
     const mid = [v.left + v.width / 2, v.top + v.height / 2];
     const pts: { at: [number, number]; ref: string }[] = [];
@@ -326,8 +332,8 @@ async function candidates(page: Page, t: Target): Promise<{ at: Point; ref: stri
       if (p && p[0] > v.left + 20 && p[0] < v.right - 20 && p[1] > v.top + 20 && p[1] < v.bottom - 20) pts.push({ at: p, ref: el.getAttribute("data-ref") ?? "" });
     }
     const far = (p: { at: [number, number] }) => Math.hypot(p.at[0] - mid[0], p.at[1] - mid[1]);
-    return pts.sort((a, b) => far(a) - far(b)).slice(0, 6);
-  }, { sel: t.sel, line: t.line ?? false, view: SVG });
+    return pts.sort((a, b) => far(a) - far(b)).slice(0, limit);
+  }, { sel: t.sel, line: t.line ?? false, view: SVG, limit });
 }
 
 // zoomIn zooms the view on a point with `steps` wheel steps, a frame apart.
@@ -440,8 +446,9 @@ async function sheetShown(page: Page, mode: Mode): Promise<string> {
   const edges: Point[] = [[0.01, 0.5], [0.99, 0.5], [0.5, 0.99], [0.01, 0.9], [0.99, 0.9], [0.01, 0.2], [0.99, 0.2]];
   for (const [fx, fy] of edges) {
     await page.mouse.click(v.x + v.width * fx, v.y + v.height * fy);
-    await page.waitForTimeout(SETTLE_MS);
-    if (await isSheet()) break;
+    // The canvas builds its pick index on the first click, which takes a few seconds on a large board.
+    const named = await page.waitForFunction((p) => document.querySelector(p)?.querySelector(".pr-kind")?.textContent === "sheet", PROPS, { timeout: 5_000 }).then(() => true, () => false);
+    if (named) break;
   }
   if (!(await isSheet())) throw new Unwalkable(`no click by the ${mode} view's edges names the sheet`);
   const text = () => page.evaluate((p) => (document.querySelector(p) as HTMLElement | null)?.innerText ?? "", PROPS);
@@ -752,27 +759,32 @@ for (const name of chosen) {
           return `both selected ${said(svg)}`;
         });
 
-        // Two Shift-clicks on pins of two parts make an area of the two pins.
+        // Two Shift-clicks on pins of two parts make an area of the two pins. Both views zoom in on the
+        // sheet's middle by the same wheel steps first, as the click steps do, since a fitted dense
+        // sheet leaves no pin clear of its neighbours.
         await step("Shift-click two pins", {}, async () => {
+          const zoom = ZOOM[name as keyof typeof ZOOM].sheet;
           await open(page, walk, "svg", walk.sheet);
-          const pins = await lonePins(page, await candidates(page, { name: "pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] }));
+          const svgFit = await anchors(page, "svg");
+          const v = await host(page, "svg");
+          const mid: Point = [v.x + v.width / 2, v.y + v.height / 2];
+          await zoomIn(page, mid, zoom);
+          const pins = await lonePins(page, await candidates(page, { name: "pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] }, 200));
           const two = pins.filter((p, i) => pins.findIndex((q) => q.ref === p.ref) === i).slice(0, 2);
           if (two.length < 2) throw new Unwalkable(`${walk.sheet} draws no two parts' pins near its middle with no other pin within ${EDGE_PX} px`);
-          const svgFit = await anchors(page, "svg");
+          const svgZoomed = await anchors(page, "svg");
+          const shiftClick = async (points: Point[]): Promise<Shown> => {
+            await page.keyboard.down("Shift");
+            for (const [x, y] of points) await page.mouse.click(x, y);
+            await page.keyboard.up("Shift");
+            return shown(page, 10_000);
+          };
+          const svg = await shiftClick(two.map((p) => p.at));
           await open(page, walk, "webgl", walk.sheet);
           const frame = frameBetween(svgFit, await anchors(page, "webgl"));
-          const got: Shown[] = [];
-          for (const mode of MODES) {
-            await open(page, walk, mode, walk.sheet);
-            await page.keyboard.down("Shift");
-            for (const { at } of two) {
-              const [x, y] = mode === "svg" ? at : mapPoint(frame, at);
-              await page.mouse.click(x, y);
-            }
-            await page.keyboard.up("Shift");
-            got.push(await shown(page, mode === "svg" ? 10_000 : 5_000));
-          }
-          const [svg, gl] = got;
+          await zoomIn(page, mapPoint(frame, mid), zoom);
+          const zoomed = refit(svgZoomed, await anchors(page, "webgl")) ?? frame;
+          const gl = await shiftClick(two.map((p) => mapPoint(zoomed, p.at)));
           if (svg.kind !== "area") throw new Unwalkable(`two Shift-clicks in SVG selected ${said(svg)}, not an area`);
           if (!same(svg, gl)) throw new Error(apart(svg, gl));
           return `both selected ${said(svg)}`;
