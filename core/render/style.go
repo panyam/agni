@@ -52,6 +52,9 @@ type Style struct {
 	// them. On a board it keys every pad, track, via, zone and footprint graphic, and adds one
 	// invisible rect per footprint (BoardSVG). See docsite/content/architecture/web-picking.md.
 	PickTargets bool
+	// netIDs names a board net's schematic net id (WithNetIDs). It is a pointer so Style stays
+	// comparable, and nil leaves a board's nets keyed by name alone.
+	netIDs *NetIDFunc
 }
 
 // GroupColor returns the geometry color for a schematic primitive group (groupSymbol through
@@ -160,6 +163,11 @@ func WithPinDots() Option { return func(dst *Style) { dst.PinDots = true } }
 // WithPickTargets emits the invisible per-pin pick targets (see Style.PickTargets). The served
 // viewer asks for them; a render destined for a file or a report does not.
 func WithPickTargets() Option { return func(dst *Style) { dst.PickTargets = true } }
+
+// WithNetIDs has a board render ask f for each net's schematic net id, and key the net's copper and
+// pads with it (see NetIDFunc). Options apply in order and WithStyle replaces the whole Style, so
+// pass this after any WithStyle.
+func WithNetIDs(f NetIDFunc) Option { return func(dst *Style) { dst.netIDs = &f } }
 
 // resolveStyle applies the options over a copy of DefaultStyle.
 func resolveStyle(opts []Option) Style {

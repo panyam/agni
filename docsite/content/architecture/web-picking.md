@@ -46,6 +46,14 @@ The board view picks with the same `Selection` and the same priority (agni issue
   mechanical hole, keys as its footprint, since a pin needs both halves.
 - A track, a via and a zone each pick their net. A via's drill hole draws over its ring, so the
   hole carries the key too.
+- **A board net carries the schematic net's id** (agni issue 1440). A board file names its nets,
+  and the design's netlist gives each net an id. The service hands the board renders a
+  `render.NetIDFunc`, and it answers each board net with the id of the design's one net of that
+  name. So a pick on a track names `{net, netId}`, as a pick on the wire does, and a finding's
+  highlight, which names its net by id alone, lights the copper. `PackBoard` writes the id on the
+  net's keys and `BoardSVG` writes `data-net-id`. A name that two of the design's nets share gets
+  no id, since the board draws one net under it and can't say which. That net is still keyed and
+  lit by its name.
 - A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
   copper. A click between two pads then picks the part, and a pad or a track drawn over the body
   still wins where it is drawn.

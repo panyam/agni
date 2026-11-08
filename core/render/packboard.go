@@ -149,6 +149,14 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	}
 
 	vertices, records, keys, ox, oy := c.build()
+	// A board net keys its schematic id beside its name where the caller gave one (WithNetIDs), so
+	// a highlight naming the net by id lights it here as on a schematic (agni issue 1440).
+	netID := boardNetIDs(b, style)
+	for _, k := range keys {
+		if k.GetNet() != "" {
+			k.NetId = netID(k.GetNet())
+		}
+	}
 
 	// Silkscreen and legend labels arrive in board coordinates from the reader, so they only
 	// rebase to the vertex origin here. The overlay draws the glyphs.

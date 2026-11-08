@@ -31,7 +31,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	style := resolveStyle(opts)
 	fr := frameBoard(b)
 	tx, ty, scale := fr.tx, fr.ty, fr.scale
-	pk := boardPickKeys{on: style.PickTargets}
+	pk := boardPickKeys{on: style.PickTargets, netID: boardNetIDs(b, style)}
 	stacks := padstacksOf(b)
 	planes := planesOf(b)
 

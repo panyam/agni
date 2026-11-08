@@ -446,12 +446,12 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 			return &webapi.GetSheetResponse{
 				// The served viewer picks on the board as on a sheet, so the board carries the same
 				// keys (render.Style.PickTargets).
-				Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets())},
+				Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets(), s.boardNetIDs(ctx, snap))},
 				BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
 			}, nil
 		}
 		return &webapi.GetSheetResponse{
-			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, render.WithStyle(s.styleOrDefault()))},
+			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, render.WithStyle(s.styleOrDefault()), s.boardNetIDs(ctx, snap))},
 			BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
 		}, nil
 	}
@@ -530,11 +530,11 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		}
 		if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {
 			return &webapi.HighlightSheetResponse{
-				Content: &webapi.HighlightSheetResponse_Svg{Svg: render.HighlightBoardSVG(b, req.GetSpecs())},
+				Content: &webapi.HighlightSheetResponse_Svg{Svg: render.HighlightBoardSVG(b, req.GetSpecs(), s.boardNetIDs(ctx, snap))},
 			}, nil
 		}
 		return &webapi.HighlightSheetResponse{
-			Content: &webapi.HighlightSheetResponse_Packed{Packed: render.HighlightPacked(render.PackBoard(b), req.GetSpecs())},
+			Content: &webapi.HighlightSheetResponse_Packed{Packed: render.HighlightPacked(render.PackBoard(b, s.boardNetIDs(ctx, snap)), req.GetSpecs())},
 		}, nil
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
