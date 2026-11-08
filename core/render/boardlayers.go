@@ -20,9 +20,10 @@ type boardStrata struct {
 	rows   []*geom.BoardLayerRow
 }
 
-// maxBoardGroups is the group count a primitive record can name, since its group is a u8. A board
-// with more layers than that packs the rest into the shared fallback groups below.
-const maxBoardGroups = 256
+// maxBoardGroups is the group count a board's layers can take. A primitive record's group is a u8,
+// and the two pick groups keep the last two, 254 and 255. A board with more layers than that packs
+// the rest into the shared fallback groups below.
+const maxBoardGroups = 254
 
 func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 	s := &boardStrata{copper: map[string]uint8{}, zone: map[string]uint8{}, pour: map[string]uint8{}, art: map[string]uint8{}}
@@ -32,7 +33,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 			return fallback
 		}
 		s.colors = append(s.colors, color)
-		return uint8(len(s.colors) - 1) // #nosec G115 -- the check above holds len(s.colors) to maxBoardGroups, 256
+		return uint8(len(s.colors) - 1) // #nosec G115 -- the check above holds len(s.colors) to maxBoardGroups, 254
 	}
 
 	stack := copperStack(b)
@@ -87,8 +88,10 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 		switch layerSide(ly) {
 		case "front":
 			sel += ", .picks-front"
+			groups = append(groups, uint32(groupBoardPickFront))
 		case "back":
 			sel += ", .picks-back"
+			groups = append(groups, uint32(groupBoardPickBack))
 		}
 		s.rows = append(s.rows, &geom.BoardLayerRow{Name: ly, Kind: "copper", Side: layerSide(ly),
 			Color: copperColor(style, ly), SvgSelector: sel, Groups: groups})

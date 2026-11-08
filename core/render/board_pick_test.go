@@ -1,6 +1,7 @@
 package render
 
 import (
+	"encoding/binary"
 	"math"
 	"regexp"
 	"strconv"
@@ -194,4 +195,119 @@ func svgGroup(t *testing.T, doc, cls string) (open, body string) {
 	}
 	t.Fatalf("%s group never closes", cls)
 	return "", ""
+}
+
+// PackBoard packs each footprint's pick area as BoardSVG draws it, in the pick group of its side,
+// so a WebGL click between a part's pads picks the part (agni issue 1332).
+func TestPackBoardPacksEachFootprintsPickArea(t *testing.T) {
+	b := pickBoard()
+	p := PackBoard(b)
+	recs := decodeRecords(p.GetPrimitives())
+	verts := p.GetVertices()
+	vertex := func(i uint32) (int64, int64) {
+		x := int32(binary.LittleEndian.Uint32(verts[i*8:]))
+		y := int32(binary.LittleEndian.Uint32(verts[i*8+4:]))
+		return int64(x) + p.GetOriginX(), int64(y) + p.GetOriginY()
+	}
+	want := map[string]uint8{`R"1`: groupBoardPickFront, "C9": groupBoardPickBack}
+	found := map[string]bool{}
+	for _, k := range p.GetKeys() {
+		r := recs[k.GetPrimitive()]
+		if r.group != groupBoardPickFront && r.group != groupBoardPickBack {
+			continue
+		}
+		ref := k.GetRefDes()
+		if want[ref] != r.group {
+			t.Errorf("%s's pick area is in group %d, want %d", ref, r.group, want[ref])
+		}
+		if k.GetNet() != "" || k.GetPin() != "" {
+			t.Errorf("%s's pick area names a net or a pin: %v", ref, k)
+		}
+		var pl *geom.ComponentPlacement
+		for _, q := range b.GetPlacements() {
+			if q.GetRefDes() == ref {
+				pl = q
+			}
+		}
+		minX, minY, maxX, maxY := footprintBody(pl)
+		x0, y0 := vertex(r.firstVertex)
+		x1, y1 := vertex(r.firstVertex + 2)
+		if r.count != 4 || x0 != minX || y0 != minY || x1 != maxX || y1 != maxY {
+			t.Errorf("%s's pick area is (%d,%d)-(%d,%d) over %d vertices, want BoardSVG's (%d,%d)-(%d,%d)", ref, x0, y0, x1, y1, r.count, minX, minY, maxX, maxY)
+		}
+		found[ref] = true
+	}
+	if len(found) != len(want) {
+		t.Fatalf("pick areas for %v, want %v", found, want)
+	}
+	// A component highlight lights the part's copper and artwork, and never its undrawn pick area.
+	hl := HighlightPacked(p, []*geom.HighlightSpec{{Components: []string{"C9"}}})
+	if len(hl.GetGroups()) != 1 || len(hl.GetGroups()[0].GetPrimitives()) == 0 {
+		t.Fatalf("C9 lit nothing: %v", hl)
+	}
+	for _, i := range hl.GetGroups()[0].GetPrimitives() {
+		if g := recs[i].group; g == groupBoardPickFront || g == groupBoardPickBack {
+			t.Errorf("a highlight lit C9's pick area, primitive %d", i)
+		}
+	}
+	// Each side's copper row hides its side's pick areas.
+	rows := BoardLayers(b)
+	hides := func(layer string, g uint8) bool {
+		for _, r := range rows {
+			if r.GetName() == layer {
+				for _, rg := range r.GetGroups() {
+					if rg == uint32(g) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+	if !hides("F.Cu", groupBoardPickFront) || !hides("B.Cu", groupBoardPickBack) {
+		t.Errorf("the outer copper rows do not hide their sides' pick areas: %v", rows)
+	}
+}
+
+// PackBoard packs in BoardSVG's paint order, back layer first, a layer's pours under its tracks and
+// the edge over the copper. Net A's front track is listed before net B's back copper, and still
+// packs after it, so WebGL draws it on top and the canvas picker takes it (agni issue 1332).
+func TestPackBoardPacksInPaintOrder(t *testing.T) {
+	pt := func(x, y int64) *geom.Point { return &geom.Point{X: x, Y: y} }
+	b := &geom.BoardGeometry{
+		Layers:  []*geom.BoardLayer{{Name: "F.Cu", Kind: "signal", Number: 0}, {Name: "B.Cu", Kind: "signal", Number: 31}},
+		Outline: &geom.BoardOutline{Paths: []*geom.Polyline{{Points: []*geom.Point{pt(0, 0), pt(100, 0), pt(100, 100)}}}},
+		Nets: []*geom.NetCopper{
+			{Net: "A", Segments: []*geom.TrackSegment{{A: pt(10, 50), B: pt(90, 50), Width: 4, Layer: "F.Cu"}}},
+			{Net: "B",
+				Segments: []*geom.TrackSegment{{A: pt(50, 10), B: pt(50, 90), Width: 4, Layer: "B.Cu"}},
+				Shapes: []*geom.CopperShape{{Layer: "B.Cu", Outline: &geom.Polyline{Points: []*geom.Point{pt(0, 0), pt(100, 0), pt(100, 100), pt(0, 100)}}}}},
+		},
+	}
+	p := PackBoard(b)
+	recs := decodeRecords(p.GetPrimitives())
+	first := map[string]int{}
+	for _, k := range p.GetKeys() {
+		r := recs[k.GetPrimitive()]
+		key := k.GetNet() + "/" + map[uint8]string{groupBoardCopperFront: "front", groupBoardCopperBack: "back"}[r.group]
+		if r.group != groupBoardCopperFront && r.group != groupBoardCopperBack {
+			key = k.GetNet() + "/pour"
+		}
+		if _, ok := first[key]; !ok {
+			first[key] = int(k.GetPrimitive())
+		}
+	}
+	edge := -1
+	for i, r := range recs {
+		if r.group == groupBoardEdge {
+			edge = i
+		}
+	}
+	pour, backTrack, frontTrack := first["B/pour"], first["B/back"], first["A/front"]
+	if len(first) != 3 || edge < 0 {
+		t.Fatalf("packed %v and the edge at %d, want B's pour, B's back track, A's front track and an edge", first, edge)
+	}
+	if !(pour < backTrack && backTrack < frontTrack && frontTrack < edge) {
+		t.Errorf("paint order is pour %d, back track %d, front track %d, edge %d, want each after the last", pour, backTrack, frontTrack, edge)
+	}
 }

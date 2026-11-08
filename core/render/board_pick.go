@@ -88,15 +88,7 @@ func drawFootprintPicks(c *svg.Canvas, b *geom.BoardGeometry, fr sheetFrame) {
 			if placementSide(pl) != side || pl.GetRefDes() == "" || len(pl.GetPads()) == 0 {
 				continue
 			}
-			minX, minY := int64(math.MaxInt64), int64(math.MaxInt64)
-			maxX, maxY := int64(math.MinInt64), int64(math.MinInt64)
-			for _, pad := range pl.GetPads() {
-				wx, wy := padWorld(pl, pad)
-				// The larger extent on both axes covers a pad at any rotation.
-				half := max(pad.GetSize().GetX(), pad.GetSize().GetY()) / 2
-				minX, maxX = min(minX, wx-half), max(maxX, wx+half)
-				minY, maxY = min(minY, wy-half), max(maxY, wy+half)
-			}
+			minX, minY, maxX, maxY := footprintBody(pl)
 			if !opened {
 				c.Group(svg.A("class", "picks-"+side))
 				opened = true
@@ -110,6 +102,22 @@ func drawFootprintPicks(c *svg.Canvas, b *geom.BoardGeometry, fr sheetFrame) {
 			c.GroupEnd()
 		}
 	}
+}
+
+// footprintBody is a placement's pick area in board coordinates, a square around each pad, half
+// the pad's longer side out from its centre. The larger extent on both axes covers a pad at any
+// rotation. BoardSVG draws it as an invisible rect and PackBoard packs it into groupBoardPick, so
+// the two views pick a part from one area. It assumes the placement has pads.
+func footprintBody(pl *geom.ComponentPlacement) (minX, minY, maxX, maxY int64) {
+	minX, minY = int64(math.MaxInt64), int64(math.MaxInt64)
+	maxX, maxY = int64(math.MinInt64), int64(math.MinInt64)
+	for _, pad := range pl.GetPads() {
+		wx, wy := padWorld(pl, pad)
+		half := max(pad.GetSize().GetX(), pad.GetSize().GetY()) / 2
+		minX, maxX = min(minX, wx-half), max(maxX, wx+half)
+		minY, maxY = min(minY, wy-half), max(maxY, wy+half)
+	}
+	return minX, minY, maxX, maxY
 }
 
 // placementSide is the side of the board a part sits on, "back" for a mirrored placement or one

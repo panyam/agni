@@ -246,8 +246,8 @@ equal a net name.
 The SVG backend keys an anchored placement's graphics as its net (`data-kind="net"` and
 `data-net`). A wire carries the same key, so clicking a ground symbol selects its net. It emits no pin
 pick target for an anchor, because that target would carry an empty ref-des and resolve to nothing.
-The tier-2 packer does not read the field yet. It keys symbol primitives by `ref_des` alone, so an
-anchored placement packs with no `PrimitiveKey` and cannot be picked in WebGL mode.
+The tier-2 packer keys an anchored placement's primitives the same way, by `net` with no `ref_des`,
+and its pins with nothing, so a WebGL click on a ground symbol selects its net too (agni issue 764).
 
 ## Text stays readable and inside its box
 

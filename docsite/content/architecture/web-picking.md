@@ -56,7 +56,8 @@ The board view picks with the same `Selection` and the same priority (agni issue
   lit by its name.
 - A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
   copper. A click between two pads then picks the part, and a pad or a track drawn over the body
-  still wins where it is drawn.
+  still wins where it is drawn. `footprintBody` computes the rect once, and `PackBoard` packs the
+  same rect for the WebGL canvas (below).
 - **A pour yields to the part under it.** A pour is filled copper drawn with its layer (#1357), so an
   Allegro board's ground plane lies over every footprint body on its side, and an inner plane over
   every body on the board. `pickAt` looks under a pour for a footprint body and picks the part when
@@ -85,6 +86,52 @@ A pick on the board in a sheet view moves the canvas to the schematic sheet that
 and a pick on the schematic moves a board view to the footprint (agni issue 1326). Each view decides
 for itself which sheet to show, from `LocateSubjects`.
 `architecture/web-client.md` has the sheet views.
+
+### Picking the WebGL canvas
+
+Say a reader switches to WebGL and clicks a pad. The canvas has no elements for the browser to hit
+test, so `web/src/canvaspick.ts` does the work the browser does for SVG (agni issue 1332). It reads
+the packed sheet's `PrimitiveKey`s and answers with the same `Selection`, ranked by the same
+`bestOf`. `canvas.ts` hands the answer to the same `onPick` that the SVG view calls.
+
+- **The canvas indexes on the first click.** `PickIndex` lays a grid over the sheet's keyed
+  primitives, and a pour or a frame line too big for the grid goes on a list it checks every time.
+  A board that is only looked at never builds one.
+- **A click samples SVG's nine probes**, the point and a ring 5 CSS pixels out, through the camera's
+  inverse (`Camera.pixelToWorld`). A disc of the same radius would find a small pad between two
+  probes that SVG misses, so the walk's footprint click picked a pin in WebGL and the part in SVG.
+- **Each target reaches as far as its SVG element does.** A schematic pin has the invisible 6 px
+  target, a wire the 7 px companion stroke, and a symbol outline its 0.8 px stroke. These are
+  document pixels, which grow with the zoom. The constants mirror `core/render/svg.go`. Board
+  copper reaches only as far as its own shape.
+- **A part on a board picks from its pick area.** `PackBoard` packs `footprintBody`'s rect for each
+  part into `groupBoardPickFront` or `groupBoardPickBack`, groups 255 and 254. No renderer draws
+  them, and no highlight lights them. The F.Cu and B.Cu rows name them, so a part hides with its
+  side's copper, as `.picks-front` does in SVG. An earlier version guessed the area from the pads.
+  A rounded pad packs as many triangles, so the guess missed SVG's area by a pixel on Jetson's
+  SOT-23s.
+- **A zone picks anywhere inside it.** `PackBoard` packs a zone as its outline, and SVG draws it as
+  a faint filled polygon, so a click inside it hits. The picker fills every keyed loop on a board,
+  a zone and a pick area alike. On Jetson the walk's track click landed inside a +1V8 zone, and
+  WebGL picked a neighbouring net's track until the zone counted as filled.
+- **The silkscreen and fab outlines pass a click through**, as SVG's do. On a board a key with a
+  ref-des and no pin names a part only on a pick area or a pad with no number.
+- **Of two targets of one kind under a probe, the topmost wins**, as `elementFromPoint` answers.
+  `PackBoard` packs in `BoardSVG`'s paint order, zones first, then each copper layer from the back
+  with its pours under its tracks and pads, then the through copper, the edge and the artwork. So a
+  later primitive is drawn over an earlier one. A front track wins over a back track that crosses
+  it, and over the pour under it. Before, the board packed net by net. On Jetson a click on a +1V8
+  track then picked another net's track on a layer behind it, and WebGL drew that track on top.
+- **A hidden layer picks nothing.** The canvas passes its hidden groups, and the picker skips them.
+- **A glyph that names a net picks the net** (agni issue 764). `PackSheet` keys a ground or rail
+  symbol by its `net_anchor`, as SVG keys it. A net highlight that names the net by name now tints
+  the glyph in WebGL too. SVG lights only the wires, but both views list the net as lit.
+
+`web/browser/webgl-walk.spec.ts` clicks a footprint, a pad, a track and a schematic pin in both
+views and holds them to one answer. It lines the views up by their labels, then zooms both and lines
+them up again, since a wheel event carries whole pixels and the zoom grows that rounding to a pixel
+or two. It also asks for a footprint point a pixel clear of the pads. A pad's edge can sit half a
+pixel apart in the two renderers, and the cut's Q2 cleared SVG's probe by 0.4 px.
 
 ### Selecting is not asking
 

@@ -235,6 +235,15 @@ function frameBetween(svg: Map<string, Point>, gl: Map<string, Point>): Frame {
   return f;
 }
 
+// refit lines up two zoomed views, or answers null when they share too few labels to.
+function refit(svg: Map<string, Point>, gl: Map<string, Point>): Frame | null {
+  try {
+    return frameBetween(svg, gl);
+  } catch {
+    return null;
+  }
+}
+
 interface Shown {
   kind: string;
   title: string;
@@ -242,8 +251,23 @@ interface Shown {
 }
 
 // shown reads the Selection as Properties shows it, waiting up to `ms` for a title to appear.
+// Some of the panel's rows, such as the checks a part has, arrive after its title. So shown waits
+// for the text to hold still across SETTLE_MS too, or two clicks on one part read as two answers.
 async function shown(page: Page, ms: number): Promise<Shown> {
   await page.waitForFunction((sel) => (document.querySelector(sel)?.textContent ?? "") !== "", TITLE, { timeout: ms }).catch(() => {});
+  const until = Date.now() + ms;
+  let last = await read(page);
+  for (;;) {
+    await page.waitForTimeout(SETTLE_MS);
+    const now = await read(page);
+    if (same(now, last) || Date.now() > until) return now;
+    last = now;
+  }
+}
+
+const SETTLE_MS = 300;
+
+async function read(page: Page): Promise<Shown> {
   return page.evaluate((p) => {
     const panel = document.querySelector(p);
     // With nothing selected, the panel describes the design or the sheet instead.
@@ -254,6 +278,14 @@ async function shown(page: Page, ms: number): Promise<Shown> {
 }
 
 const said = (s: Shown): string => (s.title ? `${s.kind} ${s.title}` : "nothing");
+
+// apart names what two answers disagree on, the pick or else the first Properties line that differs.
+function apart(a: Shown, b: Shown): string {
+  if (a.kind !== b.kind || a.title !== b.title) return `SVG picked ${said(a)}, WebGL ${said(b)}`;
+  const la = a.text.split("\n"), lb = b.text.split("\n");
+  const i = la.findIndex((l, j) => l !== lb[j]);
+  return `both picked ${said(a)}, and Properties differs at line ${i + 1}, ${JSON.stringify(la[i] ?? "")} in SVG and ${JSON.stringify(lb[i] ?? "")} in WebGL`;
+}
 const same = (a: Shown, b: Shown): boolean => a.kind === b.kind && a.title === b.title && a.text === b.text;
 
 // A Target is something on a sheet to click, the elements matching `sel` and the Properties kind a
@@ -309,8 +341,14 @@ async function zoomIn(page: Page, [x, y]: Point, steps: number): Promise<void> {
 }
 
 // ZOOM is how many wheel steps the walk zooms a click target in by, per sheet, so a small part on a
-// whole board has room around it. A fitted cut needs none.
-const ZOOM = { cut: { Board: 2, sheet: 0 }, jetson: { Board: 6, sheet: 3 } };
+// whole board has room around it. A fitted cut's sheet needs none. The cut's board takes 4, so a
+// SOT-23 has a point a pixel clear of its pads (CLEAR_MARGIN_PX).
+const ZOOM = { cut: { Board: 4, sheet: 0 }, jetson: { Board: 6, sheet: 3 } };
+
+// CLEAR_MARGIN_PX keeps a footprint click that far clear of the part's pads and neighbours, since a
+// pad's edge can sit half a pixel apart in the two renderers. On the cut SVG's probe missed Q2's pad
+// by 0.4 px and WebGL's landed on it.
+const CLEAR_MARGIN_PX = 1;
 
 // clickBoth clicks a target in SVG, then the same place in WebGL, and returns what each showed.
 // Both views zoom in on the target by the same wheel steps first, about the same place.
@@ -327,7 +365,8 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
   for (const { at, ref } of found) {
     await open(page, walk, "svg", t.sheet);
     await zoomIn(page, at, zoom);
-    const click: Point = t.clear ? await clearPoint(page, `${t.sel}[data-ref="${ref}"]`, ref).then((p) => [p.x, p.y] as Point).catch(() => at) : at;
+    const svgZoomed = await anchors(page, "svg");
+    const click: Point = t.clear ? await clearPoint(page, `${t.sel}[data-ref="${ref}"]`, ref, "component", CLEAR_MARGIN_PX).then((p) => [p.x, p.y] as Point).catch(() => at) : at;
     await page.mouse.click(click[0], click[1]);
     const svg = await shown(page, 10_000);
     if (svg.kind !== t.kind) {
@@ -337,7 +376,11 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
     await open(page, walk, "webgl", t.sheet);
     const frame = frameBetween(svgFit, await anchors(page, "webgl"));
     await zoomIn(page, mapPoint(frame, at), zoom);
-    const there = mapPoint(frame, click);
+    // The views line up to a hundredth of a pixel at fit. A wheel event carries whole pixels, so each
+    // zooms about a point up to half a pixel from the other's, and the zoom grows that to a pixel or
+    // two at the target. So the walk lines the zoomed views up again, from the labels they show,
+    // where it can.
+    const there = mapPoint(refit(svgZoomed, await anchors(page, "webgl")) ?? frame, click);
     await page.mouse.click(there[0], there[1]);
     return { svg, gl: await shown(page, 5_000) };
   }
@@ -599,18 +642,18 @@ for (const name of chosen) {
         });
 
         const targets: Target[] = [
-          { name: "footprint", sheet: "Board", sel: `${SVG} .picks-front [data-kind="component"]`, kind: "component", clear: true, waitsOn: ["#1332"] },
-          { name: "pad", sheet: "Board", sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: ["#1332"] },
-          { name: "track", sheet: "Board", sel: `${SVG} [data-kind="net"]`, kind: "net", line: true, waitsOn: ["#1332"] },
-          { name: "schematic pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: ["#1332"] },
+          { name: "footprint", sheet: "Board", sel: `${SVG} .picks-front [data-kind="component"]`, kind: "component", clear: true, waitsOn: [] },
+          { name: "pad", sheet: "Board", sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] },
+          { name: "track", sheet: "Board", sel: `${SVG} [data-kind="net"]`, kind: "net", line: true, waitsOn: [] },
+          { name: "schematic pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] },
           // A bus is picked by its id, and the KiCad reader gives a bus none, so no KiCad bus is
           // pickable in either mode until #1435.
-          { name: "bus", sheet: walk.sheet, sel: `${SVG} [data-kind="bus"]:not([data-bus=""])`, kind: "bus", line: true, absent: true, waitsOn: ["#1332", "#1435"] },
+          { name: "bus", sheet: walk.sheet, sel: `${SVG} [data-kind="bus"]:not([data-bus=""])`, kind: "bus", line: true, absent: true, waitsOn: ["#1435"] },
         ];
         for (const t of targets) {
           await step(`click a ${t.name}`, { waitsOn: t.waitsOn }, async () => {
             const { svg, gl } = await clickBoth(page, walk, name, t);
-            if (!same(svg, gl)) throw new Error(`SVG picked ${said(svg)}, WebGL ${said(gl)}`);
+            if (!same(svg, gl)) throw new Error(apart(svg, gl));
             return `both picked ${said(svg)}`;
           });
         }

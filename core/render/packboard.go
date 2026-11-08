@@ -25,6 +25,14 @@ const (
 	groupBoardHole        uint8 = 10 // drill fills, page-colored, drawn last so they punch out
 	groupBoardSilk        uint8 = 11 // a silkscreen or courtyard layer past the group limit
 	groupBoardFab         uint8 = 12 // a fab layer past the group limit (agni issue 1366)
+	// groupBoardPickFront and groupBoardPickBack hold each footprint's pick area (footprintBody),
+	// keyed by its ref-des and split by the side the part sits on. No renderer draws them and no
+	// highlight lights them. A WebGL click reads them, as an SVG click reads BoardSVG's invisible
+	// picks-front and picks-back rects, so a click between a part's pads picks the part (agni issue
+	// 1332). The outer copper rows name them, so a part hides with its side's copper. They are the
+	// last two u8s, and planBoardStrata hands out groups below them (maxBoardGroups).
+	groupBoardPickBack  uint8 = 254
+	groupBoardPickFront uint8 = 255
 
 	// boardGroupCount is the first group planBoardStrata hands out. Each inner copper layer, each
 	// copper layer's zones and each graphics layer gets a group from there up (agni 1351), and
@@ -50,89 +58,120 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	var c primCollector
 	add := c.Add
 
-	for _, p := range b.GetOutline().GetPaths() {
-		add(primLineStrip, groupBoardEdge, "", "", "", xy(p.Points))
-	}
-	for _, z := range b.GetZones() {
-		if z.GetOutline() == nil {
-			continue
-		}
-		add(primLineLoop, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
-	}
-	for _, nc := range b.GetNets() {
-		// Filled copper as triangles, with its holes left out (agni 1357). The packer
-		// triangulates once, so every renderer draws the same fill.
-		for _, sh := range nc.GetShapes() {
-			if tris := shapeTris(sh); len(tris) > 0 {
-				add(primTriangles, strata.pourGroup(sh.GetLayer()), "", nc.GetNet(), "", tris)
-			}
-		}
-		for _, s := range nc.GetSegments() {
-			if s.GetA() == nil || s.GetB() == nil {
+	// The board packs in BoardSVG's paint order, so WebGL stacks the layers as SVG does, and a later
+	// primitive is drawn over an earlier one. The canvas picker reads that order to choose between two
+	// nets under one click (agni issue 1332). The order is zones, pick areas, each copper layer from
+	// the back (pours, tracks, pads, via lands), through copper, the edge, then the artwork.
+	front, back, inner := splitByLayer(func(z *geom.Zone) string { return z.GetLayer() }, b.GetZones())
+	for _, zones := range [][]*geom.Zone{back, inner, front} {
+		for _, z := range zones {
+			if z.GetOutline() == nil {
 				continue
 			}
-			// An arc goes as the quads of its chords, one record, so a pick or highlight on the net
-			// takes the whole curve.
-			var tris [][2]int64
-			for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
-				tris = append(tris, quadPts(pts[i-1].X, pts[i-1].Y, pts[i].X, pts[i].Y, s.GetWidth())...)
-			}
-			add(primTriangles, strata.copperGroup(s.GetLayer()), "", nc.GetNet(), "", tris)
+			add(primLineLoop, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
 		}
+	}
+
+	// Each footprint's pick area, as BoardSVG's drawFootprintPicks draws it, above the zones and
+	// under the copper. A placement with no pads or no ref-des gets none, and its silkscreen names
+	// it alone.
+	for _, pl := range b.GetPlacements() {
+		if pl.GetRefDes() == "" || len(pl.GetPads()) == 0 {
+			continue
+		}
+		group := groupBoardPickFront
+		if placementSide(pl) == "back" {
+			group = groupBoardPickBack
+		}
+		minX, minY, maxX, maxY := footprintBody(pl)
+		add(primLineLoop, group, pl.GetRefDes(), "", "", [][2]int64{{minX, minY}, {maxX, minY}, {maxX, maxY}, {minX, maxY}})
+	}
+
+	for _, ly := range copperLayersBackToFront(b) {
+		// Filled copper as triangles, with its holes left out (agni 1357). The packer
+		// triangulates once, so every renderer draws the same fill.
+		for _, nc := range b.GetNets() {
+			for _, sh := range nc.GetShapes() {
+				if sh.GetLayer() != ly {
+					continue
+				}
+				if tris := shapeTris(sh); len(tris) > 0 {
+					add(primTriangles, strata.pourGroup(ly), "", nc.GetNet(), "", tris)
+				}
+			}
+		}
+		for _, nc := range b.GetNets() {
+			for _, s := range nc.GetSegments() {
+				if s.GetLayer() != ly || s.GetA() == nil || s.GetB() == nil {
+					continue
+				}
+				// An arc goes as the quads of its chords, one record, so a pick or highlight on the net
+				// takes the whole curve.
+				var tris [][2]int64
+				for i, pts := 1, geomath.TrackPath(s); i < len(pts); i++ {
+					tris = append(tris, quadPts(pts[i-1].X, pts[i-1].Y, pts[i].X, pts[i].Y, s.GetWidth())...)
+				}
+				add(primTriangles, strata.copperGroup(ly), "", nc.GetNet(), "", tris)
+			}
+		}
+		// A pad with a padstack packs its land into each layer's group (agni 1356). A pad without
+		// one lives on its side's outer layer, and a through-hole pad packs once, below.
+		for _, pl := range b.GetPlacements() {
+			for _, pad := range pl.GetPads() {
+				if st := stacks.of(pad.GetPadstack()); st != nil {
+					if l := st.on(ly); l != nil {
+						packStackLayer(add, strata.copperGroup(ly), pl, pad, l, planes.cuts(ly, pad.GetNet()), pl.GetRefDes(), pad.GetNet(), pad.GetNumber())
+					}
+					continue
+				}
+				switch side := padSide(pad); {
+				case side == "front" && side == layerSide(ly):
+					packPad(add, groupBoardCopperFront, pl, pad)
+				case side == "back" && side == layerSide(ly):
+					packPad(add, groupBoardCopperBack, pl, pad)
+				}
+			}
+		}
+		for _, nc := range b.GetNets() {
+			for _, v := range nc.GetVias() {
+				if st := stacks.of(v.GetPadstack()); st != nil && v.GetAt() != nil {
+					if l := st.on(ly); l != nil {
+						packStackLayer(add, strata.copperGroup(ly), &geom.ComponentPlacement{}, &geom.Pad{At: v.GetAt()}, l, planes.cuts(ly, nc.GetNet()), "", nc.GetNet(), "")
+					}
+				}
+			}
+		}
+	}
+
+	// Through copper, visible from both sides: via barrels, through-hole pads and every drill hole.
+	for _, nc := range b.GetNets() {
 		for _, v := range nc.GetVias() {
 			if v.GetAt() == nil {
 				continue
 			}
-			// A via with a padstack packs its land into each layer's group (agni 1356), and only its
-			// hole stays with the through copper.
-			if st := stacks.of(v.GetPadstack()); st != nil {
-				at := &geom.Pad{At: v.GetAt()}
-				for _, l := range st.ps.GetLayers() {
-					packStackLayer(add, strata.copperGroup(l.GetLayer()), &geom.ComponentPlacement{}, at, l, planes.cuts(l.GetLayer(), nc.GetNet()), "", nc.GetNet(), "")
-				}
-				if v.GetDrill() > 0 {
-					add(primTriangles, groupBoardHole, "", "", "", diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetDrill())/2))
-				}
-				continue
+			// A via with a padstack has its lands on their layers, so only its hole is here.
+			if stacks.of(v.GetPadstack()) == nil {
+				add(primTriangles, groupBoardThrough, "", nc.GetNet(), "", diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetSize())/2))
 			}
-			add(primTriangles, groupBoardThrough, "", nc.GetNet(), "",
-				diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetSize())/2))
 			if v.GetDrill() > 0 {
-				add(primTriangles, groupBoardHole, "", "", "",
-					diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetDrill())/2))
+				add(primTriangles, groupBoardHole, "", "", "", diskPts(v.GetAt().X, v.GetAt().Y, float64(v.GetDrill())/2))
 			}
 		}
 	}
 	for _, pl := range b.GetPlacements() {
 		for _, pad := range pl.GetPads() {
-			wx, wy := padWorld(pl, pad)
-			if st := stacks.of(pad.GetPadstack()); st != nil {
-				for _, l := range st.ps.GetLayers() {
-					packStackLayer(add, strata.copperGroup(l.GetLayer()), pl, pad, l, planes.cuts(l.GetLayer(), pad.GetNet()), pl.GetRefDes(), pad.GetNet(), pad.GetNumber())
-				}
-				if pad.GetDrill() > 0 {
-					add(primTriangles, groupBoardHole, "", "", "", diskPts(wx, wy, float64(pad.GetDrill())/2))
-				}
-				continue
-			}
-			group := groupBoardThrough
-			switch padSide(pad) {
-			case "front":
-				group = groupBoardCopperFront
-			case "back":
-				group = groupBoardCopperBack
-			}
-			if pad.GetShape() == "circle" {
-				add(primTriangles, group, pl.GetRefDes(), pad.GetNet(), pad.GetNumber(),
-					diskPts(wx, wy, float64(pad.GetSize().GetX())/2))
-			} else {
-				add(primTriangles, group, pl.GetRefDes(), pad.GetNet(), pad.GetNumber(),
-					padQuadPts(wx, wy, pad.GetSize(), geomath.PadAngle(pl, pad)))
+			if stacks.of(pad.GetPadstack()) == nil && padSide(pad) == "through" {
+				packPad(add, groupBoardThrough, pl, pad)
 			}
 			if pad.GetDrill() > 0 {
+				wx, wy := padWorld(pl, pad)
 				add(primTriangles, groupBoardHole, "", "", "", diskPts(wx, wy, float64(pad.GetDrill())/2))
 			}
 		}
+	}
+
+	for _, p := range b.GetOutline().GetPaths() {
+		add(primLineStrip, groupBoardEdge, "", "", "", xy(p.Points))
 	}
 
 	// Silkscreen and fab body graphics go through the schematic packer's shapeVerts, keyed by
@@ -187,6 +226,16 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		Keys:            keys,
 		Labels:          labels,
 	}
+}
+
+// packPad packs a pad that has no padstack, a disk or a turned rectangle, keyed as its part's pin.
+func packPad(add func(kind, group uint8, refDes, net, pin string, pts [][2]int64), group uint8, pl *geom.ComponentPlacement, pad *geom.Pad) {
+	wx, wy := padWorld(pl, pad)
+	if pad.GetShape() == "circle" {
+		add(primTriangles, group, pl.GetRefDes(), pad.GetNet(), pad.GetNumber(), diskPts(wx, wy, float64(pad.GetSize().GetX())/2))
+		return
+	}
+	add(primTriangles, group, pl.GetRefDes(), pad.GetNet(), pad.GetNumber(), padQuadPts(wx, wy, pad.GetSize(), geomath.PadAngle(pl, pad)))
 }
 
 // boardGroupColors extends the schematic group palette with the board strata, indexed by

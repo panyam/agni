@@ -674,6 +674,10 @@ class AppRoot extends BaseComponent {
       propertiesPresenter.selectSheet();
       if (dockApi) dockApi.getPanel("properties")?.api.setActive();
     };
+    // The WebGL canvas picks into the same handlers, so a click selects one thing in either mode
+    // (agni issue 1332).
+    canvas.onPick = svgView.onPick;
+    canvas.onPickEmpty = svgView.onPickEmpty;
 
     // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
     // path the query panel uses.

@@ -1,5 +1,5 @@
 import { BaseComponent } from "@panyam/tsappkit";
-import { toRenderable, type DecodedSheet } from "./packed.js";
+import { pickOnly, toRenderable, type DecodedSheet } from "./packed.js";
 import { Camera, boundsOfVertices, type CameraView } from "./camera.js";
 import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
@@ -17,6 +17,8 @@ import {
   type HighlightSpec,
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
+import { PickIndex } from "./canvaspick.js";
+import { CLICK_SLOP_PX, type Selection } from "./selection.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // CanvasComponent owns the WebGL2 schematic canvas as a tsappkit lifecycle component. It
@@ -37,6 +39,15 @@ export class CanvasComponent extends BaseComponent {
   // marked is false from a sheet's draw until the frame that first renders it. The frame after that
   // one records the SHEET_DRAWN mark, as the SVG host does (drawmark.ts).
   private marked = true;
+  // picks indexes the drawn sheet for clicks (canvaspick.ts). It is built on the first click
+  // rather than with the sheet, so a board that is only looked at never pays for it.
+  private picks?: PickIndex;
+
+  // onPick fires when the reader CLICKS an entity on the canvas, as SvgView.onPick does. A press
+  // and release that moved more than CLICK_SLOP_PX is a pan and picks nothing (agni issue 1332).
+  onPick: ((sel: Selection) => void) | null = null;
+  // onPickEmpty fires when a click hits nothing keyed, such as the paper or the frame.
+  onPickEmpty: (() => void) | null = null;
 
   activate(): void {
     const canvas = this.rootElement as HTMLCanvasElement;
@@ -79,6 +90,7 @@ export class CanvasComponent extends BaseComponent {
     const gl = this.gl!;
     const canvas = this.rootElement as HTMLCanvasElement;
     this.sheet = sheet;
+    this.picks = undefined;
     this.renderer = new Renderer(gl, sheet);
     this.renderer.setHiddenGroups(this.hidden);
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
@@ -118,7 +130,9 @@ export class CanvasComponent extends BaseComponent {
     // it is visible at any coordinate scale (geometry is in nanometers for KiCad).
     const sb = boundsOfVertices(sheet.vertices);
     const pathHalfWidth = PATH_WIDTH_FRACTION * Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
-    for (const g of resolveHighlights(sheet.keys, this.highlights)) {
+    // A pick area is never drawn, so no highlight lights it (packed.ts, pickOnly).
+    const drawn = sheet.keys.filter((k) => !pickOnly(sheet.primitives[k.primitive]?.group ?? 0));
+    for (const g of resolveHighlights(drawn, this.highlights)) {
       for (const s of g.subjects) lit.add(s);
       const color = hexToRgba(g.color, fallback, g.alpha);
       // PATH (WS9-043) draws a wider translucent marker. GL lines are always 1px, so its width
@@ -205,16 +219,29 @@ export class CanvasComponent extends BaseComponent {
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    // downX/downY and moved separate a click from a pan, as SvgView's bindInput does.
+    let downX = 0;
+    let downY = 0;
+    let moved = false;
     canvas.addEventListener("mousedown", (e) => {
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      moved = false;
     });
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
+      const wasDragging = dragging;
       dragging = false;
+      if (!wasDragging || moved || !this.onPick) return;
+      const sel = this.pickAt(e.clientX, e.clientY);
+      if (sel) this.onPick(sel);
+      else this.onPickEmpty?.();
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging || !this.camera) return;
+      if (Math.abs(e.clientX - downX) > CLICK_SLOP_PX || Math.abs(e.clientY - downY) > CLICK_SLOP_PX) moved = true;
       this.camera.panPixels((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
       lastX = e.clientX;
       lastY = e.clientY;
@@ -243,6 +270,16 @@ export class CanvasComponent extends BaseComponent {
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+  }
+
+  // pickAt resolves a client point to the entity drawn under it, through the camera's inverse and
+  // the sheet's pick index. A hidden layer picks nothing.
+  private pickAt(clientX: number, clientY: number): Selection | null {
+    if (!this.sheet || !this.camera) return null;
+    const rect = (this.rootElement as HTMLCanvasElement).getBoundingClientRect();
+    const at = this.camera.pixelToWorld((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
+    this.picks ??= new PickIndex(this.sheet);
+    return this.picks.pick(at.x, at.y, this.dpr() * this.camera.worldPerDevicePixel(), new Set(this.hidden));
   }
 
   private setReadout(text: string): void {

@@ -6,7 +6,7 @@
 // precomputed world-space bounds fall entirely outside the current view rect.
 
 import {
-  KIND_TRIANGLES, DecodedSheet, Primitive, KIND_LINE_STRIP, KIND_LINE_LOOP, KIND_POINTS } from "./packed.js";
+  KIND_TRIANGLES, DecodedSheet, Primitive, KIND_LINE_STRIP, KIND_LINE_LOOP, KIND_POINTS, pickOnly } from "./packed.js";
 import { Bounds } from "./camera.js";
 
 type Rgba = [number, number, number, number];
@@ -261,7 +261,7 @@ export class Renderer {
     let lastGroup = -1;
     for (let i = 0; i < this.primitives.length; i++) {
       const p = this.primitives[i];
-      if (p.count === 0) continue;
+      if (p.count === 0 || pickOnly(p.group)) continue;
       const hl = this.highlightColors.get(i);
       // A highlighted primitive always draws, neither hidden nor culled, so selecting an
       // off-screen finding still tints its element.
