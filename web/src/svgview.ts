@@ -6,6 +6,7 @@
 import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { CLICK_SLOP_PX, pickAt, type Selection } from "./selection.js";
 import { rectOf, type ClientRect } from "./area.js";
+import { AreaBand } from "./areaband.js";
 import { UPRIGHT, orientBox, orientCss, orientPoint, orientedSize, unorientPoint, type Orientation, type Point } from "./orient.js";
 
 // SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
@@ -49,9 +50,10 @@ export class SvgView {
   onToggle: ((sel: Selection) => void) | null = null;
   // band is the rectangle drawn while a Shift-drag is under way, in the host's own space so it does not
   // pan or zoom with the drawing.
-  private band: HTMLDivElement | null = null;
+  private readonly band: AreaBand;
 
   constructor(private readonly host: HTMLElement) {
+    this.band = new AreaBand(host);
     this.layer = document.createElement("div");
     this.layer.style.transformOrigin = "0 0";
     this.layer.style.position = "absolute";
@@ -301,7 +303,7 @@ export class SvgView {
       dragging = false;
       if (wasDragging && selecting) {
         selecting = false;
-        this.clearBand();
+        this.band.clear();
         if (moved) this.onArea?.(rectOf(downX, downY, e.clientX, e.clientY));
         else {
           const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
@@ -318,7 +320,7 @@ export class SvgView {
       if (!dragging) return;
       if (Math.abs(e.clientX - downX) > CLICK_SLOP_PX || Math.abs(e.clientY - downY) > CLICK_SLOP_PX) moved = true;
       if (selecting) {
-        if (moved) this.drawBand(rectOf(downX, downY, e.clientX, e.clientY));
+        if (moved) this.band.draw(rectOf(downX, downY, e.clientX, e.clientY));
         return;
       }
       this.commitUserView(panBy(this.getView(), e.clientX - lastX, e.clientY - lastY));
@@ -336,26 +338,6 @@ export class SvgView {
       },
       { passive: false },
     );
-  }
-
-  // drawBand shows the rectangle that a Shift-drag spans, positioned in the host's space.
-  private drawBand(r: ClientRect): void {
-    if (!this.band) {
-      this.band = document.createElement("div");
-      this.band.className = "area-band";
-      this.host.appendChild(this.band);
-    }
-    const h = this.host.getBoundingClientRect();
-    const s = this.band.style;
-    s.left = `${r.left - h.left}px`;
-    s.top = `${r.top - h.top}px`;
-    s.width = `${r.right - r.left}px`;
-    s.height = `${r.bottom - r.top}px`;
-  }
-
-  private clearBand(): void {
-    this.band?.remove();
-    this.band = null;
   }
 
   // commitUserView applies a view from a USER gesture, so it notifies onViewChange. setView does

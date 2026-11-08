@@ -177,13 +177,19 @@ class AppRoot extends BaseComponent {
     const canvas = new CanvasComponent("canvas", canvasEl, this._eventBus);
     // RenderView reveals whichever renderer drew the sheet. The SVG host overlays the canvas, so
     // showWebgl just hides it and showSvg fills and shows it.
+    // drawnBy is the renderer that drew the sheet on screen, so Properties reads that renderer's
+    // account of what the sheet draws (agni issue 1333). The hidden SVG host keeps the last sheet it
+    // drew, so reading it under WebGL would name that sheet.
+    let drawnBy: "svg" | "webgl" = "svg";
     const renderView: RenderView = {
       showWebgl: () => {
+        drawnBy = "webgl";
         svgView.hide();
         canvas.showText(); // the text layer belongs to the WebGL view
         if (readoutEl) readoutEl.style.display = ""; // canvas owns the readout in WebGL mode
       },
       showSvg: (markup) => {
+        drawnBy = "svg";
         // Show before setSvg so fit() measures a laid-out (non-zero) host.
         canvas.hideText(); // the SVG host renders its own text
         svgView.show();
@@ -507,7 +513,7 @@ class AppRoot extends BaseComponent {
     // asking on a schematic would read a large board for one panel row (agni issue 943).
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
       getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
-      drawn: () => drawnOnSheet(svgEl),
+      drawn: () => (drawnBy === "webgl" ? canvas.drawn() : drawnOnSheet(svgEl)),
       drawnOn: async (uri, sel) => {
         const subject = subjectOf(sel);
         if (!subject) return [];
@@ -653,8 +659,12 @@ class AppRoot extends BaseComponent {
     this.tourHost = {
       show: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
       selectArea: () => {
-        const v = svgEl.getBoundingClientRect();
-        svgView.onArea?.({ left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 });
+        const v = (drawnBy === "webgl" ? canvasEl : svgEl).getBoundingClientRect();
+        const r = { left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 };
+        if (drawnBy === "webgl") {
+          const m = canvas.membersIn(r);
+          if (m) selectArea(m);
+        } else svgView.onArea?.(r);
       },
     };
     svgView.onToggle = (picked) => {
@@ -678,6 +688,8 @@ class AppRoot extends BaseComponent {
     // (agni issue 1332).
     canvas.onPick = svgView.onPick;
     canvas.onPickEmpty = svgView.onPickEmpty;
+    canvas.onArea = selectArea;
+    canvas.onToggle = svgView.onToggle;
 
     // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
     // path the query panel uses.

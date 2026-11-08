@@ -387,6 +387,74 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
   throw new Unwalkable(`no ${t.name} clicked as a ${t.kind} in SVG (got ${tried.join(", ")})`);
 }
 
+// EDGE_PX is how far every keyed element's edge must lie from a box's sides. The walk carries the
+// box into WebGL through a fitted frame, which is good to a pixel or so, and an element whose edge
+// lies on a side could fall inside in one view and outside in the other.
+const EDGE_PX = 3;
+
+// clearBox returns a box around `ref` on the SVG view, with between 20 and 80 px to spare, that no
+// keyed element's edge lies within EDGE_PX of.
+async function clearBox(page: Page, ref: string): Promise<[Point, Point]> {
+  const found = await page.evaluate(({ view, ref, edge }) => {
+    const part = [...document.querySelectorAll(`${view} [data-kind="component"][data-ref="${ref}"]`)].map((el) => el.getBoundingClientRect());
+    if (part.length === 0) return null;
+    const left = Math.min(...part.map((r) => r.left)), top = Math.min(...part.map((r) => r.top));
+    const right = Math.max(...part.map((r) => r.right)), bottom = Math.max(...part.map((r) => r.bottom));
+    const keyed = [...document.querySelectorAll(`${view} [data-kind]`)].flatMap((el) => (el.tagName.toLowerCase() === "g" ? [...el.children] : [el])).map((el) => el.getBoundingClientRect());
+    for (let m = 20; m <= 80; m += 2) {
+      const b = { left: left - m, top: top - m, right: right + m, bottom: bottom + m };
+      const near = (v: number, side: number) => Math.abs(v - side) <= edge;
+      const touches = keyed.some((r) => r.right >= b.left - edge && r.left <= b.right + edge && r.bottom >= b.top - edge && r.top <= b.bottom + edge &&
+        (near(r.left, b.left) || near(r.right, b.left) || near(r.left, b.right) || near(r.right, b.right) ||
+         near(r.top, b.top) || near(r.bottom, b.top) || near(r.top, b.bottom) || near(r.bottom, b.bottom)));
+      if (!touches) return [[b.left, b.top], [b.right, b.bottom]];
+    }
+    return null;
+  }, { view: SVG, ref, edge: EDGE_PX });
+  if (!found) throw new Unwalkable(`no box around ${ref} keeps every element ${EDGE_PX} px from its sides`);
+  return found as [Point, Point];
+}
+
+// lonePins keeps the pin points whose pin target lies EDGE_PX or more from any other pin's. A click
+// carried into WebGL through the fitted frame lands a pixel or so from where it landed in SVG, and
+// that must not move it onto a neighbour.
+async function lonePins(page: Page, pins: { at: Point; ref: string }[]): Promise<{ at: Point; ref: string }[]> {
+  const keep = await page.evaluate(({ view, pins, edge }) => {
+    const rects = [...document.querySelectorAll(`${view} [data-kind="pin"]`)].map((el) => el.getBoundingClientRect());
+    return pins.map(({ at }) => {
+      const mine = rects.filter((r) => at[0] >= r.left && at[0] <= r.right && at[1] >= r.top && at[1] <= r.bottom);
+      const reach = Math.max(0, ...mine.map((r) => r.width / 2));
+      return rects.every((r) => mine.includes(r) || Math.hypot(Math.max(r.left - at[0], 0, at[0] - r.right), Math.max(r.top - at[1], 0, at[1] - r.bottom)) > reach + edge);
+    });
+  }, { view: SVG, pins, edge: EDGE_PX });
+  return pins.filter((_, i) => keep[i]);
+}
+
+// sheetShown reads Properties as it describes the sheet on screen, its parts and nets among it. A
+// click on bare paper names the sheet, so the walk tries points along the view's edges until one
+// does. The panel lists the sheet's contents as the drawing reads them, so it waits for the text to
+// hold still.
+async function sheetShown(page: Page, mode: Mode): Promise<string> {
+  const v = await host(page, mode);
+  const isSheet = () => page.evaluate((p) => document.querySelector(p)?.querySelector(".pr-kind")?.textContent === "sheet", PROPS);
+  const edges: Point[] = [[0.01, 0.5], [0.99, 0.5], [0.5, 0.99], [0.01, 0.9], [0.99, 0.9], [0.01, 0.2], [0.99, 0.2]];
+  for (const [fx, fy] of edges) {
+    await page.mouse.click(v.x + v.width * fx, v.y + v.height * fy);
+    await page.waitForTimeout(SETTLE_MS);
+    if (await isSheet()) break;
+  }
+  if (!(await isSheet())) throw new Unwalkable(`no click by the ${mode} view's edges names the sheet`);
+  const text = () => page.evaluate((p) => (document.querySelector(p) as HTMLElement | null)?.innerText ?? "", PROPS);
+  let last = await text();
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(SETTLE_MS);
+    const now = await text();
+    if (now === last) return now;
+    last = now;
+  }
+  return last;
+}
+
 // litSubjects reads what the shown sheet lit. WebGL writes it to the canvas's data-lit. SVG has no
 // such list, so the walk matches the keyed elements of the drawn sheet against the subjects the
 // canvas was asked to light (data-highlight), as resolveHighlights matches a packed sheet's keys.
@@ -658,15 +726,11 @@ for (const name of chosen) {
           });
         }
 
-        await step("box select", { waitsOn: ["#1333"] }, async () => {
+        await step("box select", {}, async () => {
           await open(page, walk, "svg", walk.sheet);
-          // The box takes in the part nearest the middle of the sheet with 30 px to spare, so it holds
-          // at least one part.
           const near = (await candidates(page, { name: "part", sheet: walk.sheet, sel: `${SVG} [data-kind="component"]`, kind: "component", waitsOn: [] }))[0];
           if (!near) throw new Unwalkable(`${walk.sheet} draws no part to box`);
-          const box = await page.locator(`${SVG} [data-kind="component"][data-ref="${near.ref}"]`).first().boundingBox();
-          if (!box) throw new Unwalkable(`${near.ref} has no box on ${walk.sheet}`);
-          const corners: [Point, Point] = [[box.x - 30, box.y - 30], [box.x + box.width + 30, box.y + box.height + 30]];
+          const corners = await clearBox(page, near.ref);
           const svgFit = await anchors(page, "svg");
           await open(page, walk, "webgl", walk.sheet);
           const frame = frameBetween(svgFit, await anchors(page, "webgl"));
@@ -684,9 +748,54 @@ for (const name of chosen) {
           }
           const [svg, gl] = got;
           if (svg.kind !== "area") throw new Unwalkable(`a Shift-drag in SVG selected ${said(svg)}, not an area`);
-          if (!same(svg, gl)) throw new Error(`SVG selected ${said(svg)}, WebGL ${said(gl)}`);
+          if (!same(svg, gl)) throw new Error(apart(svg, gl));
           return `both selected ${said(svg)}`;
         });
+
+        // Two Shift-clicks on pins of two parts make an area of the two pins.
+        await step("Shift-click two pins", {}, async () => {
+          await open(page, walk, "svg", walk.sheet);
+          const pins = await lonePins(page, await candidates(page, { name: "pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] }));
+          const two = pins.filter((p, i) => pins.findIndex((q) => q.ref === p.ref) === i).slice(0, 2);
+          if (two.length < 2) throw new Unwalkable(`${walk.sheet} draws no two parts' pins near its middle with no other pin within ${EDGE_PX} px`);
+          const svgFit = await anchors(page, "svg");
+          await open(page, walk, "webgl", walk.sheet);
+          const frame = frameBetween(svgFit, await anchors(page, "webgl"));
+          const got: Shown[] = [];
+          for (const mode of MODES) {
+            await open(page, walk, mode, walk.sheet);
+            await page.keyboard.down("Shift");
+            for (const { at } of two) {
+              const [x, y] = mode === "svg" ? at : mapPoint(frame, at);
+              await page.mouse.click(x, y);
+            }
+            await page.keyboard.up("Shift");
+            got.push(await shown(page, mode === "svg" ? 10_000 : 5_000));
+          }
+          const [svg, gl] = got;
+          if (svg.kind !== "area") throw new Unwalkable(`two Shift-clicks in SVG selected ${said(svg)}, not an area`);
+          if (!same(svg, gl)) throw new Error(apart(svg, gl));
+          return `both selected ${said(svg)}`;
+        });
+
+        // Properties lists what the sheet on screen draws, read off whichever renderer drew it (agni
+        // issue 1333).
+        for (const sheet of [walk.sheet, "Board"]) {
+          await step(`what ${sheet} draws`, {}, async () => {
+            const got: string[] = [];
+            for (const mode of MODES) {
+              await open(page, walk, mode, sheet);
+              got.push(await sheetShown(page, mode));
+            }
+            const [svg, gl] = got;
+            if (svg !== gl) {
+              const la = svg.split("\n"), lb = gl.split("\n");
+              const i = la.findIndex((l, j) => l !== lb[j]);
+              throw new Error(`Properties differs at line ${i + 1}, ${JSON.stringify(la[i] ?? "")} in SVG and ${JSON.stringify(lb[i] ?? "")} in WebGL`);
+            }
+            return `both list ${svg.split("\n").length} lines`;
+          });
+        }
 
         await step("a finding's highlight", {}, async () => {
           const v = walk.verdict;
