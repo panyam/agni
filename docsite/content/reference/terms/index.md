@@ -63,3 +63,4 @@ question it helps answer.
 ## Layout (EE7)
 
 - [Via](./via/), the plated hole that lets a net change layers
+- [Fiducial](./fiducial/), the copper dot an assembly machine's camera finds to line the board up

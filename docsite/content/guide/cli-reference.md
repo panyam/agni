@@ -741,7 +741,7 @@ judge an Allegro board against their fixed floors.
 An Altium Designer board (`.PcbDoc`) reads the same way, so `agni check board.PcbDoc` needs no export
 from Altium. Only the binary form is read, which is what Altium saves by default. The netlist uses the
 designators drawn on the board, which differ from the schematic's on a multi-channel design, and
-leaves out mounting holes and fiducials, as Altium's own ODB++ export does. Each part keeps its
+leaves out mounting holes and {{ explainable "fiducial" "fiducials" }}, as Altium's own ODB++ export does. Each part keeps its
 schematic parameters, its part number and description among them, which an ODB++ export drops, so a
 check of the `.PcbDoc` can recognise parts a check of the export cannot. Assembly variants live in
 the project file and are not read.

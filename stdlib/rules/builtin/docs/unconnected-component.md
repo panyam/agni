@@ -20,8 +20,11 @@ wasted cost and board area. Both are worth surfacing.
 
 ### Parts with no pins
 
-A mounting hole, a logo or a module's assembly symbol declares no pins, so "none of its pins is on a
-net" is true of it and says nothing. Such a part is not considered (agni issue 937). Sometimes a
+A mounting hole, a fiducial (the copper dot an assembly machine aligns the board by), a logo or a
+module's assembly symbol declares no pins, so "none of its pins is on a net" is true of it and says
+nothing. Such a part is not considered (agni issue 937). A board read builds each part's pin list from
+its package, and leaves out a pad the file marks mechanical, so a fiducial's one pad is no pin (agni
+issue 1437). Sometimes a
 part's read carries no pin list at all, as a hand-built or pin-less netlist gives. That part still
 fails when nothing connects to it, because its pins are unknown rather than absent.
 
