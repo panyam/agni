@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -173,6 +173,10 @@ binaries-check:
 	hack/check_no_binaries_test.sh
 	hack/check_no_binaries.sh
 
+# The remote-board fetcher against a file:// upstream, so it needs no network.
+fetch-remote-check:
+	hack/fetch_remote_test.sh
+
 # Every scanner, vulncheck included. lint, seccheck and secrets also run in the gate (testall).
 audit: lint seccheck secrets vulncheck
 
@@ -204,8 +208,16 @@ samples:
 # compares a design's schematic and board views against each other. The gate takes THIS one rather
 # than `samples` alone, because a test whose corpus is absent skips, and a skipped test is a test that
 # proves nothing (agni issue 591). 19MB against tutorial-board's 3MB, fetched once per pin bump.
+#
+# remote-boards adds the boards the corpus may not redistribute, fetched from their publishers' repos
+# through a cache in ~/.cache/agni/samples, so each file is downloaded once per machine (agni 1446).
 samples-oracle:
-	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium
+	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
+
+# Lists the cached remote boards unused for 30 days and deletes them only when you answer y. Without a
+# terminal it deletes nothing.
+samples-clean:
+	./hack/clean_remote.sh
 
 # The KiCad reader cross-check against real boards: read a design's schematic our way, read the same
 # design's .kicad_pcb for the netlist KiCad itself resolved, and require the two to agree on which
@@ -629,7 +641,7 @@ testall-core: testall-test testall-scan testall-docs
 testall-test: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check
 
 # testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
-testall-scan: vet lint seccheck secrets binaries-check
+testall-scan: vet lint seccheck secrets binaries-check fetch-remote-check
 
 # testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
 # match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its
