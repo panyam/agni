@@ -7,6 +7,11 @@
 #              | allegro (Allegro boards with an extract Allegro wrote from each)
 #              | altium (the foxBMS boards as Altium saved them)
 #              | cadence-exports (Allegro's ODB++ jobs, an Allegro IPC-2581 and its ODB++X twin, an OrCAD EDIF)
+#              | remote-boards (remote/remote.pin alone; the boards it names come from their publishers)
+#
+# remote-boards carries no boards, because this corpus may not redistribute them. After it lands,
+# hack/fetch_remote.sh fetches each board its pin names from the publisher's own repo, through a
+# cache keyed on sha256 in ~/.cache/agni/samples, into tools/samples/remote/ (agni issue 1446).
 #
 # EVERY failure path here exits non-zero. That is the whole design. A test that reads a board which
 # quietly failed to download does not fail, it passes over an empty set, and
@@ -38,7 +43,17 @@ for name in "$@"; do
   fi
   needed+=("$name")
 done
+# The remote boards are fetched on every run that names remote-boards, even when its tarball is
+# current, so a board deleted from tools/samples/remote/ comes back from the cache.
+fetch_remote() {
+  for name in "$@"; do
+    [ "$name" = remote-boards ] || continue
+    "$root/hack/fetch_remote.sh" "$dest/remote/remote.pin" "$dest/remote"
+  done
+}
+
 if [ ${#needed[@]} -eq 0 ]; then
+  fetch_remote "$@"
   exit 0
 fi
 
@@ -85,7 +100,7 @@ done
 
 # A tarball that extracts to nothing is the silent-skip failure wearing a green hat. An ODB++ job
 # carries no schematic, so a job folder's matrix file or a packed job counts as the design fetched.
-if [ -z "$(find "$staged" \( -name '*.kicad_sch' -o -path '*/matrix/matrix' -o -name '*.tgz' -o -name '*.zip' \) -print -quit)" ]; then
+if [ -z "$(find "$staged" \( -name '*.kicad_sch' -o -path '*/matrix/matrix' -o -name '*.tgz' -o -name '*.zip' -o -path '*/remote/remote.pin' \) -print -quit)" ]; then
   echo "fetch_samples: extracted no schematics or ODB++ jobs from ${files[*]}" >&2
   exit 1
 fi
@@ -97,3 +112,5 @@ cp -R "$staged"/. "$dest"/
 for name in "${needed[@]}"; do
   echo "$pin_hash" > "$dest/.stamp-$name"
 done
+
+fetch_remote "$@"

@@ -1,6 +1,7 @@
 package formats
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -85,5 +86,44 @@ func TestAllegroBoardsDeclareTheirPairs(t *testing.T) {
 	}
 	if gs := parasdr.GetNetGroups(); len(gs) != 1 || gs[0].GetName() != "RX_MG" || gs[0].GetKind() != ir.NetGroupKind_NET_GROUP_KIND_MATCH_GROUP || len(gs[0].GetNets()) != 14 {
 		t.Errorf("parasdr's groups = %v, want its one 16.6 match group RX_MG of 14 nets", gs)
+	}
+}
+
+// TestA166StrobePairSitsInItsLane reads the BeagleBoard-X15, an Allegro 16.6 board whose DDR strobe
+// pairs sit in their byte lanes, as the BeagleBone AI's do on 17.2. A 16.6 net chains its tables
+// differently from a 17.2 one, and the reader once stopped at the first table, so lanes 1 and 3 read
+// with no strobe pair and lanes 0 and 2 without their strobes (agni issue 1437). The board comes from
+// its publisher's repo through the remote-boards pin (agni issue 1446).
+func TestA166StrobePairSitsInItsLane(t *testing.T) {
+	l := &Loader{}
+	x15, err := l.ReadDesign("../../tools/samples/remote/beagleboard-x15/BB_X15_revB1_public.brd")
+	if err != nil {
+		t.Fatalf("%v (run `make samples-oracle`)", err)
+	}
+	pairs := map[string][]string{}
+	lanes := map[string][]string{}
+	for _, g := range x15.GetNetGroups() {
+		switch g.GetKind() {
+		case ir.NetGroupKind_NET_GROUP_KIND_DIFF_PAIR:
+			pairs[g.GetName()] = g.GetNets()
+		case ir.NetGroupKind_NET_GROUP_KIND_MATCH_GROUP:
+			lanes[g.GetName()] = g.GetNets()
+		}
+	}
+	if len(pairs) != 51 || len(lanes) != 8 {
+		t.Fatalf("the X15 declares %d pairs and %d match groups, want 51 and 8", len(pairs), len(lanes))
+	}
+	for _, bus := range []string{"DDR1", "DDR2"} {
+		for lane := range 4 {
+			strobe := fmt.Sprintf("%s_DQS%d", bus, lane)
+			want := []string{strobe, fmt.Sprintf("%s_DQSN%d", bus, lane)}
+			if got := pairs[strobe]; !slices.Equal(got, want) {
+				t.Errorf("pair %s = %v, want %v", strobe, got, want)
+			}
+			nets := lanes[fmt.Sprintf("%s_DQ%d", bus, lane)]
+			if len(nets) != 11 || !slices.Contains(nets, want[0]) || !slices.Contains(nets, want[1]) {
+				t.Errorf("byte lane %s_DQ%d = %v, want its 11 nets with the strobe pair", bus, lane, nets)
+			}
+		}
 	}
 }

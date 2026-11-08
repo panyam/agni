@@ -242,9 +242,10 @@ func (p *board) netGroups(src string) []*ir.NetGroup {
 	return out
 }
 
-// groupTables lists every table (0x2C) a net's match-group pointer reaches. A 16.6 net points at a
-// 0x26 that names its tables directly. A 17.2 net points at a chain of 0x26s, one per table it sits
-// in, each naming its table at the match-group offset and the net's next 0x26 at +8.
+// groupTables lists every table (0x2C) a net's match-group pointer reaches. A net points at a chain
+// of 0x26s, one per table it sits in, each naming its table and the net's next 0x26 at +8. A 17.2
+// 0x26 names the net at +12. A 16.6 chain instead ends at a 0x26 whose +8 names the net, so a 16.6
+// strobe pair in its byte lane reads in both (agni issue 1437, on the BeagleBoard-X15).
 func (p *board) groupTables(net int) []int {
 	var out []int
 	seen := map[int]bool{}
@@ -267,10 +268,26 @@ func (p *board) groupTables(net int) []int {
 			}
 		}
 		next, ok := p.at(p.u32(off, 8), tagMatchGroup)
-		if !ok || p.u32(next, 12) != netKey {
+		if !ok || (p.u32(next, 12) != netKey && !p.chainEndsAt(next, netKey)) {
 			break
 		}
 		ptr = p.u32(off, 8)
 	}
 	return out
+}
+
+// chainEndsAt reports whether following +8 from a 0x26 through further 0x26s reaches one whose +8
+// names the net, which is how a 16.6 chain ends.
+func (p *board) chainEndsAt(off int, netKey uint32) bool {
+	for range 8 {
+		if p.u32(off, 8) == netKey {
+			return true
+		}
+		next, ok := p.at(p.u32(off, 8), tagMatchGroup)
+		if !ok {
+			return false
+		}
+		off = next
+	}
+	return false
 }

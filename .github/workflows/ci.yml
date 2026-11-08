@@ -41,6 +41,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The remote boards come from their publishers' repos, so they are cached on the samples pin
+      # rather than downloaded every run (agni issue 1446).
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+
       - name: make testall-test
         run: make testall-test
 
@@ -61,6 +68,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
 
       - name: make testall-docs
         run: make testall-docs

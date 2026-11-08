@@ -828,7 +828,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `tools/samples` or a fixture folder leaves one there (both export scripts remove it). Since v0.1.2
   the oracle corpus carries a `design.yaml` per real design (entry, board companion, internal
   connectors) and the tutorial tarball does not. That tarball leaves the boards out, and a declared
-  companion missing from a tarball fails every read.
+  companion missing from a tarball fails every read. **A board whose repo states no licence is
+  fetched from its publisher, never shipped** (agni 1446). The `remote-boards` artifact carries
+  `remote/remote.pin` alone, each line a URL at a fixed commit and a sha256, and `hack/fetch_remote.sh`
+  (the twin of agni-samples' own) downloads each file into `~/.cache/agni/samples/<sha256>` and
+  copies it into `tools/samples/remote/<board>/`. A cached file is never downloaded again. `make
+  samples-clean` lists files unused for 30 days and deletes them only when you answer y.
 - **The public demo's seeds have a verdict for every finding** in
   `hack/seed-triage/<design>.triage.yaml` (agni 857), and `TestSeedTriage` fails on any finding that
   appears, disappears or sits untriaged. A change that moves a seed's findings regenerates the
