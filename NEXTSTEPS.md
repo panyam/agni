@@ -28,7 +28,7 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
 - **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06, and **#1329
   `mission_webgl`** on 2026-11-09, with every ticket done and their exercises passing. #1329 left
   SVG the default renderer (DECISIONS.md) and #1331 parked. Each still wants a person's run on a
-  real board, and  either reopens if that run finds something.
+  real board, and either reopens if that run finds something.
 - **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
   runs agni serve for more than one person.
 - **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and

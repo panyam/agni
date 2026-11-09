@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-09
+
+A board with no drawn schematic opens as the board alone, and every locate answer names the board
+(PR 1468). One WebGL checkbox picks the renderer, and Native shows only where it is offered (PR
+1470). jaala moves to v0.1.99 and mcpkit to v0.8.20 (PR 1467). It is a patch, with no Go API change.
+The full write-up is [RELEASES/v0.6.3.md](RELEASES/v0.6.3.md).
+
 ## [0.6.2] - 2026-11-09
 
 A board view beside the schematic draws in WebGL (PR 1461), and so does the visual diff, with
