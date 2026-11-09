@@ -275,7 +275,7 @@ type designRead struct {
 	base   *query.Base
 	reg    *facts.Registry // the vocabulary base answers over, the project's library included
 	ov     Overlay
-	gu     artifact.URI
+	snap   Snap
 
 	geomLoaded bool
 	ix         sheetIndex
@@ -295,7 +295,7 @@ func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (
 	// from the design's
 	// declaration, so a query of a schematic companion counts the netlist's 1617 nets rather than the
 	// drawing's 4572 per-sheet segments (agni issue 656).
-	u, ov, nu, bu, gu, source := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Geometry, snap.Design.String()
+	u, ov, nu, bu, source := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Design.String()
 	// The project's own library joins the vocabulary here, so every query surface that reads through
 	// this function sees it (agni issue 773). A library that does not compose fails the read rather
 	// than answering without it.
@@ -309,7 +309,7 @@ func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (
 	if err != nil {
 		return nil, err
 	}
-	return &designRead{loader: LoaderOr(snap, s.loader), u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
+	return &designRead{loader: LoaderOr(snap, s.loader), u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, snap: snap}, nil
 }
 
 // boardTierFor returns ReadBoard when any of qs reads a board.* relation. A query's own rules and
@@ -331,9 +331,13 @@ func boardTierFor(reg *facts.Registry, qs ...query.Query) BoardTier {
 func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, map[string]bool, map[string]bool) {
 	if !d.geomLoaded {
 		d.geomLoaded = true
-		g, unreadable := locateGeometry(ctx, loader, d.gu, d.ov.ReadOptions()...)
+		g, unreadable := snapGeometry(ctx, loader, d.snap, d.ov.ReadOptions()...)
 		d.ix = indexSheets(g, d.model)
 		d.ix.unreadable = unreadable
+		// A board-only design's cells locate on its board, its only drawing (agni issue 1466).
+		if d.snap.BoardOnly() {
+			d.ix.board = locateBoard(ctx, loader, d.snap, nil)
+		}
 		if g != nil {
 			d.drawnComps, d.drawnNets = drawnEntities(g)
 		}

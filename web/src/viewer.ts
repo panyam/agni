@@ -2293,8 +2293,11 @@ export class ViewerPresenter {
   }
 }
 
-function summaryLine(path: string, name: string, layout: string, format: string, comps: number, nets: number): string {
-  const parts = [name || path, layout];
+// summaryLine is the design's one-line read summary. A board-only design lays nothing out, so it has
+// no layout to name (agni issue 1466).
+export function summaryLine(path: string, name: string, layout: string, format: string, comps: number, nets: number): string {
+  const parts = [name || path];
+  if (layout) parts.push(layout);
   if (format) parts.push(format);
   if (comps) parts.push(`${comps} comps`);
   if (nets) parts.push(`${nets} nets`);

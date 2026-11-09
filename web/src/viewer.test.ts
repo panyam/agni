@@ -3,7 +3,7 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { TextPositionSchema } from "./gen/agni/v1/webapi/query_pb.js";
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { ViewerPresenter, type RenderView } from "./viewer.js";
+import { ViewerPresenter, summaryLine, type RenderView } from "./viewer.js";
 import { stubQueryView } from "./testviews.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
@@ -2021,5 +2021,13 @@ describe("a rule's reference page reaches the Checks panel", () => {
     });
     await h.presenter.openFile("m", "board.eds");
     expect(lastFindings(h).ruleDocs).toEqual({ "single-pin-net": url });
+  });
+});
+
+// A board-only design lays nothing out, so its summary names no layout (agni issue 1466).
+describe("summaryLine", () => {
+  it("names the layout when there is one, and nothing in its place when there is none", () => {
+    expect(summaryLine("x.kicad_sch", "gateway", "faithful", "kicad", 12, 9)).toBe("gateway · faithful · kicad · 12 comps · 9 nets");
+    expect(summaryLine("x.brd", "parasdr_layout", "", "allegro", 405, 89)).toBe("parasdr_layout · allegro · 405 comps · 89 nets");
   });
 });

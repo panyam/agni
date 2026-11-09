@@ -115,6 +115,16 @@ func (s Snap) ProjectsOr(r *ProjectResolver) *ProjectResolver {
 // own artifact for a format that holds its own copper.
 func (s Snap) BoardRead() artifact.URI { return boardReadURI(s.Netlist, s.Board) }
 
+// BoardOnly reports whether the design is drawn by its board alone. It is when no file draws its
+// schematic and its board tier holds a board, such as an ODB++ job, an Altium or Allegro board, or an
+// IPC-2581 file opened on its own. Such a design lists the Board sheet and no auto-layout, and every
+// answer that says where a subject is drawn names the board (agni issue 1466). A grid of a board's
+// netlist shows nothing the board does not. A netlist with no board keeps its auto-layout, since that
+// is the only drawing it has.
+func (s Snap) BoardOnly() bool {
+	return !formats.HasFaithful(s.Geometry.Path) && formats.HasBoard(s.BoardRead().Path)
+}
+
 type snapshotEntry struct {
 	snap Snap
 	// def is the definition and its output fields, handed out as a copy.

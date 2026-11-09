@@ -20,12 +20,13 @@ afterAll(async () => {
   await browser?.close();
 });
 
+// A board opened on its own opens on the board, its only sheet (agni issue 1466).
 async function openBoard(page: Page): Promise<void> {
   await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view`, { waitUntil: "networkidle" });
-  await page.locator(".sheet-tile", { hasText: /board/i }).first().click();
-  // The auto-layout sheet keys pins too, so wait for what only the board draws.
   await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
 }
+
+const tileNames = (page: Page) => page.$$eval(".sheet-tile-name", (ns) => ns.map((n) => n.textContent?.trim() ?? ""));
 
 async function clickAndRead(page: Page, at: { x: number; y: number }, want: string): Promise<void> {
   await page.mouse.click(at.x, at.y);
@@ -40,6 +41,16 @@ async function clickAndRead(page: Page, at: { x: number; y: number }, want: stri
 }
 
 describe("picking the board", () => {
+  // A board with no drawn schematic lists the board alone, with no auto-layout of its netlist, and
+  // draws it with no click (agni issue 1466).
+  it("opens a board on its own as the board alone", async () => {
+    await withPage(browser, async (page) => {
+      await openBoard(page);
+      await page.waitForSelector(".sheet-tile", { timeout: 30_000 });
+      expect(await tileNames(page)).toEqual(["Board"]);
+    });
+  }, 60_000);
+
   it("picks a pad as its pin, a body as its part, and copper as its net", async () => {
     await withPage(browser, async (page) => {
       await openBoard(page);

@@ -24,9 +24,7 @@ const boards = [
 
 async function openBoard(page: Page, design: string): Promise<void> {
   await page.goto(`${base()}/designs/${design}/view`, { waitUntil: "networkidle" });
-  // A board-only design lists its board as a sheet. Open it unless the viewer opened it already.
-  const tile = page.locator(".sheet-tile", { hasText: /board/i }).first();
-  if (await tile.count()) await tile.click();
+  // A board-only design opens on its board, its only sheet (agni issue 1466).
   await page.waitForSelector("#svg-view .copper-front [data-kind=\"pin\"][data-net]", { timeout: 60_000 });
 }
 

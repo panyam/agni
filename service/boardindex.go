@@ -94,6 +94,34 @@ func boardIndexFor(ctx context.Context, loader interface {
 // pinKey joins a ref-des and a pin designator. NUL cannot occur in either.
 func pinKey(ref, pin string) string { return ref + "\x00" + pin }
 
+// locateBoard is the board index an answer locates on. A board-only design always gets one, since
+// its board is the only drawing it lists (agni issue 1466). Any other design gets runBoardIndex's,
+// so a run that never read the board does not read it to badge a finding.
+func locateBoard(ctx context.Context, loader interface {
+	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+}, snap Snap, m check.Model) *boardIndex {
+	if !snap.BoardOnly() {
+		return runBoardIndex(ctx, loader, snap.BoardRead(), m)
+	}
+	ix, err := boardIndexFor(ctx, loader, snap.BoardRead())
+	if err != nil {
+		return nil
+	}
+	return ix
+}
+
+// traceBoard is the board a trace or a walk locates on. Only a board-only design has one, since
+// those answers otherwise name the schematic's sheets alone, and reading a large board for them
+// would cost seconds a reader asking about a schematic never sees.
+func traceBoard(ctx context.Context, loader interface {
+	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
+}, snap Snap) *boardIndex {
+	if !snap.BoardOnly() {
+		return nil
+	}
+	return locateBoard(ctx, loader, snap, nil)
+}
+
 // runBoardIndex is the board index for a run whose model read the board, so its findings badge the
 // board sheet (#142's WS7-034). A model without a board gets none, and so does a board that fails
 // to index, since the run already answered and a missing badge is all that is lost.

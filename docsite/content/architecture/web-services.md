@@ -108,6 +108,12 @@ A few contract details bite if missed.
   GetSheet it overlays.
 - **The board is a sheet.** A `.kicad_pcb` renders as a synthetic "board" sheet, so
   navigation, deep links, and both highlight paths needed no board-specific client plumbing.
+- **A board with no drawn schematic lists the board alone** (agni issue 1466). Open an ODB++ job, an
+  Altium or Allegro board, an IPC-2581 file or a lone `.kicad_pcb`, and GetDesign lists the Board
+  sheet with no auto-layout, no layout to pick and no drawing note. `Snap.BoardOnly` decides it. A
+  finding, a query cell, a trace, a walk and LocateSubjects all name the board for such a design,
+  since it lists no other sheet. A netlist with no board keeps its auto-layout, its only drawing.
+  The visual diff and the CLI's `render` still lay a board-only design's netlist out.
 - **Diff is all-or-nothing.** If either side fails to load, the call fails. There is no partial
   diff.
 - **Query evaluates on the server over netlist facts.** RunQuery loads the design, builds the

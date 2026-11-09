@@ -1149,7 +1149,10 @@ the sheet off the response rather than choosing, so C32 holds at one more call s
 
 **Opening a design must not parse its board** (agni 943). `GetDesign` lists the Board sheet from the
 board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
-board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
+board-tier rule runs. **A design with a board and no drawn schematic lists the board alone**
+(`Snap.BoardOnly`, agni 1466), so it opens on the board, and every locate answer names it. A new
+surface that says where a subject is drawn reads `snapGeometry` and `locateBoard`, or it names
+auto-layout sheets the viewer no longer lists. Reading it on open made the Jetson seed's first sheet and rule catalog wait
 about 30 s in the browser, since everything on the worker queues behind the request that opens. The
 Load page reads it before the viewer opens (agni 1072). It calls `GetDesign`, then an `Ingest` with
 `read_board` on a `prepare` worker. That worker ends when it answers, and leaves the parsed board in

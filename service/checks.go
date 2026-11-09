@@ -178,7 +178,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	ov, nu, bu, gu := snap.Overlay, snap.Netlist, snap.Board, snap.Geometry
+	ov, nu, bu := snap.Overlay, snap.Netlist, snap.Board
 	b, err := buildModelEntry(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs, ReadBoard)
 	if err != nil {
 		return nil, err
@@ -237,9 +237,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if ranIOMap(runnable) {
 		resp.IoMap = ov.DesignIntent.GetIoMap()
 	}
-	g, unreadable := locateGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
+	g, unreadable := snapGeometry(ctx, LoaderOr(snap, s.loader), snap, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")
-	annotateRunSheets(resp, g, m, unreadable, runBoardIndex(ctx, LoaderOr(snap, s.loader), snap.BoardRead(), m))
+	annotateRunSheets(resp, g, m, unreadable, locateBoard(ctx, LoaderOr(snap, s.loader), snap, m))
 	endLocate()
 	return resp, nil
 }

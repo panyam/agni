@@ -34,10 +34,12 @@ func (s *DesignService) LocateSubjects(ctx context.Context, req *webapi.LocateSu
 		return nil, ClassifyLoadErr(err)
 	}
 	m := check.NewModel(d)
-	g, unreadable := locateGeometry(ctx, loader, snap.Geometry, opts...)
+	g, unreadable := snapGeometry(ctx, loader, snap, opts...)
 	ix := indexSheets(g, m)
 	ix.unreadable = unreadable
-	if req.GetBoard() {
+	// A board-only design locates on its board whatever the request asks, since it lists no other
+	// sheet (agni issue 1466).
+	if req.GetBoard() || snap.BoardOnly() {
 		if ix.board, err = boardIndexFor(ctx, loader, snap.BoardRead()); err != nil {
 			return nil, err
 		}
