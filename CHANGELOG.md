@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-09
+
+A board view beside the schematic draws in WebGL (PR 1461), and so does the visual diff, with
+removed parts shown as ghosts (PR 1465). Zones fill in WebGL as a translucent wash, and SVG and
+WebGL size the title block alike (PR 1463). A click on a KiCad bus selects it in either renderer
+(PR 1462). It is a patch, with added proto fields and no Go API change. The full write-up is
+[RELEASES/v0.6.2.md](RELEASES/v0.6.2.md).
+
 ## [0.6.1] - 2026-11-09
 
 A walk outwards from a part asks where a line goes next, to a pin, its pull-up or the rail (PR
