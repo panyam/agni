@@ -66,8 +66,8 @@ github.com/panyam/gocurrent v0.1.2 h1:MtD98xJKVvGGdMrxIvUqhVA7AxA6rr9eU1ZUo5pNoy
 github.com/panyam/gocurrent v0.1.2/go.mod h1:jIIhcNfNnnIe2JXH8aY2+ba+/5G1fzwCWoZXdcMNw6o=
 github.com/panyam/goutils v0.1.14 h1:PWM5jAzTSVHjWXbHD0CaifskSETFKHKaKIK5HrOg/uE=
 github.com/panyam/goutils v0.1.14/go.mod h1:lxEmbCJ04RY+KqFgo/+67bEdU2edpLYafMiJECTm3gQ=
-github.com/panyam/jaala v0.1.99 h1:rPHS7fwFOOjT8EW1z2KYkFc4fC3N+gi87Wq9iRJ7Bd0=
-github.com/panyam/jaala v0.1.99/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
+github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=
+github.com/panyam/jaala v0.1.101/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
 github.com/panyam/mcpkit v0.8.20 h1:NYY44Q0HnGpqfapcgv20mpRwsuNKg5YVD7APgL6zptI=
 github.com/panyam/mcpkit v0.8.20/go.mod h1:GYpx01kgsz3tf83/b5q15pVbtQ3j9yWMhepRINfYa5w=
 github.com/panyam/servicekit v0.2.2 h1:ra5MCDoDvAmCaeB7Qe8SToAo8pB0W4i+ciUjAmd6GJ0=

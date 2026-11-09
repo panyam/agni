@@ -1,7 +1,7 @@
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/panyam/jaala v0.1.99 h1:rPHS7fwFOOjT8EW1z2KYkFc4fC3N+gi87Wq9iRJ7Bd0=
-github.com/panyam/jaala v0.1.99/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
+github.com/panyam/jaala v0.1.101 h1:cQTr2wxR0H9ki3i9xAiav4vOiZmIMd5QsGh0KmrzVEA=
+github.com/panyam/jaala v0.1.101/go.mod h1:A/dm6zBFvdjXavPfpGp0xP8BZAFHKMjQ5e3ASkzdaqE=
 golang.org/x/text v0.43.0 h1:1QivrlhwAsnMOcqgOdl9my7s9OyZl8O5/UGUTJVXoWc=
 golang.org/x/text v0.43.0/go.mod h1:hbSIYA/amXcRXTFSZqh8tWHEoqRvvbKPJ2uz/KU+a+s=
 google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
