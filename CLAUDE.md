@@ -784,6 +784,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   position, ascending index. All of it is in `architecture/net-solving.md`, and **none of it is
   visible in a net COUNT**, because a pin swap moves one connection out of a net and another in, so
   one demo board read 47 nets against KiCad's 47 while 19 were wrong.
+- **A drawn KiCad bus takes its name the way the solver names a branch** (agni 1435,
+  `readers/kicad/sch_bus_geom.go`). A piece of bus takes the nearest bus label along the bus, vector
+  or group, on any kind of label, and an entry takes the name at its bus end. That name is the bus's
+  join key (`WireGeometry.net`) in both renderers. Before, only a vector label on that very segment
+  named it, so none of Jetson's group buses could be clicked. A group bus's members go in
+  `InputDiagnostics.group_buses`, never `unmodeled_buses`, since `bus-not-modeled` must not judge
+  one (agni 939). Each member is named by the net that carries it (`Net.Aliases`).
 - **A locator records the path WITHIN the design's mount, never the host path.** Readers stamp
   `ir.Provenance.SourceFile` with whatever path they are handed, so the rename happens once, after
   the read. There `Loader.SourceName` maps a path to the name that provenance should carry, and
@@ -1426,7 +1433,15 @@ step, and a sheet's first draw records the `agni:sheet-drawn` mark (`web/src/dra
 busy overlay sets `data-busy` at once and takes a wheel or click while it shows, so the walk waits
 for it to clear (`idle`) before acting. A zoom whose refit finds too few anchors moves the old frame
 by the zoom (`zoomFrame`) rather than keeping it, or later clicks drift. Once the first sheet draws,
-the overlay turns into a pill that takes no input (agni 1454). #1353
+the overlay turns into a pill that takes no input (agni 1454). **The canvas and every sheet view
+draw through one `SheetSurface`** (`web/src/sheetsurface.ts`, agni 1368), and a view picks SVG or
+WebGL in its bar, opening in the canvas's renderer. A WebGL view turns through its camera
+(`orientTurn`), and from below draws by `strataDrawOrder`, which a click reads too. Locked views lock
+only within one renderer, since SVG and WebGL measure a centre in different units. The page API's
+`OpenSheetView` takes a `renderer`. Each `agni:sheet-drawn` mark names its drawing in
+`detail.view` (`canvas` or a view's id), so a spec timing the canvas skips a view's draws. The
+walk's last steps pan a board view beside the schematic, and a headless Jetson walk takes most of
+an hour (`WALK_TIMEOUT_MS`). #1353
 `mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
 formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise. Each runs
 its example, then opens the native board in the viewer and clicks a pad
@@ -1495,7 +1510,7 @@ all exit 0.**
   enough, because the generated file has to be COMMITTED or the gate is still red on a tree that is
   correct. The same is true of `tutorial-runs`.
 
-Six more that cost a session time:
+Seven more that cost a session time:
 
 - **A new test file can replace an existing one of the same name.** `service/boardtier_test.go` was
   written over in agni 987 and the gate was still green, because the test that the file held was
@@ -1521,6 +1536,11 @@ Six more that cost a session time:
   first, which does. So a test can pass under `pnpm exec vitest run` and fail CI on `Array.at`
   (the lib target lacks it) or a mistyped mock callback. Run `pnpm run typecheck` in `web/` before
   pushing a TypeScript test (agni 1456).
+- **Another session's load fails the web tests in ways that look like yours.** At a load average
+  of 40 or more, `composition.test.ts`'s 10 s boot hook and `load.test.ts` time out, and the WebGL
+  walk reads Properties while WebGL still says `checking…`. Check `uptime` before reading a red
+  `web-test`, rerun with `pnpm exec vitest run --maxWorkers=3`, and run the walk again once the
+  load drops. All three passed that way during agni 1368 and 1435.
 - **Time two tools on the same clock.** Say you start a timer inside Python, after the interpreter
   and the client library load. That time is not comparable with another tool's launch-to-exit time.
   Compare launch to exit on an idle machine (check `/proc/loadavg`; a shared box running other
