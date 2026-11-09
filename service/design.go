@@ -484,6 +484,10 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 		style = render.DefaultStyle // a service constructed without a theme still renders
 	}
 	resp := &webapi.GetSheetResponse{}
+	if req.GetFormat() != webapi.SheetFormat_SHEET_FORMAT_NATIVE {
+		// NATIVE finds the sheet's page by its place in g, so only the drawn formats take the copy.
+		sheet = s.withWireNetIDs(ctx, snap, g, sheet)
+	}
 	switch req.GetFormat() {
 	case webapi.SheetFormat_SHEET_FORMAT_SVG:
 		// Only the served viewer PICKS, so only it asks for per-pin pick targets.
@@ -554,8 +558,14 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, err)
 	}
 
-	// A NAME-ONLY canvas needs id-only net specs resolved to net names (nameJoinSpecs).
-	specs := s.nameJoinSpecs(ctx, LoaderOr(snap, s.loader), snap.Design, g, req.GetSpecs(), opts...)
+	// A name-only canvas has its wires keyed by id here as GetSheet keys them, so a highlight joins
+	// the packed keys the page holds. A net whose name another net shares keeps its name join.
+	specs := req.GetSpecs()
+	if nameOnlyCanvas(g) {
+		names := s.readNetNames(ctx, snap)
+		sheet = stampWireNetIDs(sheet, names)
+		specs = sharedNameSpecs(names, specs)
+	}
 
 	resp := &webapi.HighlightSheetResponse{}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {
@@ -569,53 +579,8 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	return resp, nil
 }
 
-// nameJoinSpecs adapts highlight specs for a NAME-ONLY geometry canvas (a faithful .eds / WS1-047
-// companion schematic). Such a canvas names its wires by net but has no per-instance net_id. The
-// net_id hashes ref-des, and the schematic under-annotates them. So a spec targeting a net by id
-// alone matches nothing there. nameJoinSpecs resolves each spec's net_id to its net NAME from the
-// netlist at uri and adds the name. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false),
-// and when no spec has a bare net_id. So the primary canvas keeps its per-instance precision, and
-// the goldens do not change.
-func (s *DesignService) nameJoinSpecs(ctx context.Context, loader Loader, uri artifact.URI, g *geom.SchematicGeometry, specs []*geom.HighlightSpec, opts ...ReadOption) []*geom.HighlightSpec {
-	if !nameOnlyCanvas(g) || !anyNetIDSpec(specs) {
-		return specs
-	}
-	// The caller's resolved options, not a second resolution. This read must see the same config as
-	// the geometry it joins against, or an id could resolve to a name the drawing does not carry.
-	d, err := loader.Design(ctx, uri, opts...)
-	if err != nil {
-		return specs // netlist unreadable, so leave specs as-is
-	}
-	idToName := map[string]string{}
-	for _, n := range d.GetNets() {
-		if id := n.GetId(); id != "" {
-			idToName[id] = n.GetName()
-		}
-	}
-	out := make([]*geom.HighlightSpec, len(specs))
-	for i, sp := range specs {
-		if len(sp.GetNetIds()) == 0 {
-			out[i] = sp
-			continue
-		}
-		seen := map[string]bool{}
-		for _, nm := range sp.GetNets() {
-			seen[nm] = true
-		}
-		cp := proto.Clone(sp).(*geom.HighlightSpec) // don't mutate the request's specs
-		for _, id := range sp.GetNetIds() {
-			if nm := idToName[id]; nm != "" && !seen[nm] {
-				cp.Nets = append(cp.Nets, nm)
-				seen[nm] = true
-			}
-		}
-		out[i] = cp
-	}
-	return out
-}
-
 // nameOnlyCanvas reports whether a geometry names its wires by net but carries no per-instance
-// net_id, the faithful .eds / companion case where a net highlight must join by name, not id.
+// net_id, as a faithful .eds companion does. Such a sheet takes its ids from withWireNetIDs.
 func nameOnlyCanvas(g *geom.SchematicGeometry) bool {
 	named := false
 	for _, sh := range g.GetSheets() {
@@ -629,16 +594,6 @@ func nameOnlyCanvas(g *geom.SchematicGeometry) bool {
 		}
 	}
 	return named
-}
-
-// anyNetIDSpec reports whether any spec targets a net by id (so a name resolution is worth doing).
-func anyNetIDSpec(specs []*geom.HighlightSpec) bool {
-	for _, sp := range specs {
-		if len(sp.GetNetIds()) > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 // ParseArtifactURI parses a request's artifact URI, classifying a malformed one for the transport.
