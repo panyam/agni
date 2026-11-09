@@ -467,7 +467,7 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 #   make exercise-webgl VIDEO=/tmp/agni-demo
 exercise-webgl: HEADED ?= 1
 exercise-webgl: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
-	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board rev-b)
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/webgl-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=0 VIDEO=$(VIDEO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/webgl-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/webgl.md 2>/dev/null; exit $$status

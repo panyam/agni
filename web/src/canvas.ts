@@ -1,5 +1,5 @@
 import { BaseComponent } from "@panyam/tsappkit";
-import { pickOnly, toRenderable, type DecodedSheet } from "./packed.js";
+import { KIND_LINE_LOOP, KIND_POINTS, KIND_TRIANGLES, pickOnly, toRenderable, type DecodedSheet } from "./packed.js";
 import { Camera, boundsOfVertices, revealView, type Bounds, type CameraView } from "./camera.js";
 import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
@@ -129,18 +129,30 @@ export class CanvasComponent extends BaseComponent {
     this.touched = true;
   }
 
-  // getCentre is the world point at the middle of the view and the zoom, in pixels per world unit.
-  // setCentre puts a world point at the middle at a zoom. Two locked WebGL views on one sheet
-  // exchange these, as two SVG views exchange SvgView's.
+  // getCentre is the design point at the middle of the view and the zoom, in pixels per world unit.
+  // setCentre puts a design point at the middle at a zoom. The point is in the design's own
+  // coordinates rather than the sheet's rebased ones, so two drawings of different sheets line up:
+  // two locked views of one sheet, and the two revisions of a visual diff (agni issue 1335).
   getCentre(): { at: Point; scale: number } | null {
-    if (!this.camera) return null;
+    if (!this.camera || !this.sheet) return null;
     const v = this.camera.getView();
-    return { at: { x: v.centerX, y: v.centerY }, scale: 1 / v.worldPerPixel };
+    return { at: { x: v.centerX + this.sheet.originX, y: v.centerY + this.sheet.originY }, scale: 1 / v.worldPerPixel };
   }
 
   setCentre(at: Point, scale: number): void {
-    this.setView({ centerX: at.x, centerY: at.y, worldPerPixel: 1 / scale });
+    if (!this.sheet) return;
+    this.setView({ centerX: at.x - this.sheet.originX, centerY: at.y - this.sheet.originY, worldPerPixel: 1 / scale });
   }
+
+  // setGhost draws another sheet's matches for specs over this one, as the visual diff's union draws
+  // the old revision's removed parts over the new one (agni issue 1335). The ghost sheet is placed by
+  // its origin, so a part sits where the old revision drew it. Its lines draw as thin quads and its
+  // fills as they are, in each spec's colour, and nothing of it picks. null clears it.
+  setGhost(sheet: PackedSheet | null, specs: HighlightSpec[]): void {
+    this.ghost = sheet ? { sheet: toRenderable(sheet), specs } : null;
+    this.applyHighlights();
+  }
+  private ghost: { sheet: DecodedSheet; specs: HighlightSpec[] } | null = null;
 
   // getOrientation and setOrientation turn the view (agni issues 1327, 1368). A view the reader has
   // moved keeps the point at its centre, since the camera turns about it, and a fresh one refits.
@@ -301,6 +313,12 @@ export class CanvasComponent extends BaseComponent {
         }
       }
       overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });
+    }
+    if (this.ghost) {
+      for (const o of ghostOverlays(this.ghost.sheet, this.ghost.specs, sheet, pathHalfWidth / 4, fallback)) {
+        for (const s of o.subjects) lit.add(s);
+        overlays.push({ color: o.color, vertices: o.vertices });
+      }
     }
     this.lit = litBoxes;
     this.renderer.setHighlights(draws);
@@ -496,4 +514,49 @@ function fromBox(b: RevealBox): Bounds {
 // to light and compare it with what the canvas lit (data-lit, agni issue 1330).
 function askedSubjects(spec: HighlightSpec): Pick<HighlightSpec, "components" | "nets" | "netIds" | "busIds" | "pins"> {
   return { components: spec.components, nets: spec.nets, netIds: spec.netIds, busIds: spec.busIds, pins: spec.pins };
+}
+
+// ghostOverlays tessellates a ghost sheet's matches for specs into overlay triangles in the drawn
+// sheet's frame, the two sheets lined up by their origins. A line becomes quads halfWidth to either
+// side, a fill keeps its triangles, and a point becomes a small disc.
+export function ghostOverlays(
+  ghost: DecodedSheet,
+  specs: HighlightSpec[],
+  onto: Pick<DecodedSheet, "originX" | "originY">,
+  halfWidth: number,
+  fallback: ReturnType<typeof hexToRgba>,
+): { color: ReturnType<typeof hexToRgba>; vertices: Int32Array; subjects: string[] }[] {
+  const dx = ghost.originX - onto.originX;
+  const dy = ghost.originY - onto.originY;
+  const drawn = ghost.keys.filter((k) => !pickOnly(ghost.primitives[k.primitive]?.group ?? 0));
+  const out: { color: ReturnType<typeof hexToRgba>; vertices: Int32Array; subjects: string[] }[] = [];
+  for (const g of resolveHighlights(drawn, specs)) {
+    const tris: number[] = [];
+    for (const i of g.primitives) {
+      const p = ghost.primitives[i];
+      if (!p) continue;
+      if (p.kind === KIND_TRIANGLES) {
+        for (let v = p.firstVertex; v < p.firstVertex + p.count; v++) tris.push(ghost.vertices[v * 2], ghost.vertices[v * 2 + 1]);
+      } else if (p.kind === KIND_POINTS || p.count === 1) {
+        const x = ghost.vertices[p.firstVertex * 2], y = ghost.vertices[p.firstVertex * 2 + 1];
+        for (const t of circleTriangles(entityFrame(x, y, x, y, halfWidth * 2))) tris.push(t);
+      } else {
+        const ring = p.kind === KIND_LINE_LOOP;
+        for (const t of pathQuads(ghost.vertices, ghost.primitives, [i], halfWidth)) tris.push(t);
+        if (ring && p.count > 2) {
+          // A loop closes back on its first point, which pathQuads leaves open.
+          const a = p.firstVertex + p.count - 1, b = p.firstVertex;
+          const closing = { kind: p.kind, group: p.group, firstVertex: 0, count: 2 };
+          const pts = Int32Array.from([ghost.vertices[a * 2], ghost.vertices[a * 2 + 1], ghost.vertices[b * 2], ghost.vertices[b * 2 + 1]]);
+          for (const t of pathQuads(pts, [closing], [0], halfWidth)) tris.push(t);
+        }
+      }
+    }
+    for (let k = 0; k < tris.length; k += 2) {
+      tris[k] += dx;
+      tris[k + 1] += dy;
+    }
+    out.push({ color: hexToRgba(g.color, fallback, g.alpha), vertices: Int32Array.from(tris, Math.round), subjects: g.subjects });
+  }
+  return out;
 }
