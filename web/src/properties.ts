@@ -82,6 +82,8 @@ export const INVENTORY_PATHS = [
   "design.input_diagnostics.unmodeled_buses.label",
   "design.input_diagnostics.unmodeled_buses.kind",
   "design.input_diagnostics.unmodeled_buses.members",
+  "design.input_diagnostics.group_buses.label",
+  "design.input_diagnostics.group_buses.members",
   "design.input_diagnostics.unexpanded_hierarchy.name",
   "design.input_diagnostics.unexpanded_hierarchy.instance_count",
 ];
@@ -126,6 +128,15 @@ export function inventoryFromDesign(d: Design, served: ServedFacts = { pinNames:
     if (!b.label) continue;
     const at = buses.get(b.label) ?? { constructs: [], members: [] };
     if (!at.constructs.includes(b.kind)) at.constructs.push(b.kind);
+    for (const m of b.members) if (!at.members.includes(m)) at.members.push(m);
+    buses.set(b.label, at);
+  }
+  // A KiCad group bus, drawn under its label with the nets it carries (agni issue 1435). The same
+  // label on two sheets is one bus to a reader, so their members join.
+  for (const b of d.inputDiagnostics?.groupBuses ?? []) {
+    if (!b.label) continue;
+    const at = buses.get(b.label) ?? { constructs: [], members: [] };
+    if (!at.constructs.includes("group bus")) at.constructs.push("group bus");
     for (const m of b.members) if (!at.members.includes(m)) at.members.push(m);
     buses.set(b.label, at);
   }

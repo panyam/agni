@@ -226,6 +226,11 @@ message InputDiagnostics {
   // filters. A reader declares it through `supplied` ("range_labels"). A reader that never looked
   // returns the same nothing as a sheet with no range label.
   repeated RangeLabel range_labels = 11;
+  // The group buses the drawing names (KiCad's `PREFIX{ALIAS}` and `PREFIX{A B C}`), each with the
+  // nets it carries, PREFIX.MEMBER (agni issue 1435). A reader showing a clicked bus lists them. They
+  // are apart from unmodeled_buses because a group bus is no gap in the read. KiCad lets a group leave
+  // members unbroken-out, so bus-not-modeled must not judge one (agni issue 939).
+  repeated GroupBus group_buses = 12;
   // The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
   // "dangling_endpoints", ...), whether or not it found any.
   //
@@ -331,6 +336,15 @@ message UnresolvedSymbol {
 // construct's native id/location. Emitting it does not change connectivity. It marks the read as
 // incomplete for this construct, the same silence-is-not-coverage posture as the dangling-endpoint
 // diagnostics.
+// GroupBus is one group bus drawn on one sheet. label is the bus's name as the drawing spells it,
+// which is also the drawn bus's join key (WireGeometry.net). members are the nets it carries, named
+// as the netlist names them on that sheet, and empty when the group names nothing the read knows.
+message GroupBus {
+  string label = 1;
+  repeated string members = 2;
+  Provenance prov = 3;
+}
+
 message BusNotModeled {
   string label = 1;
   string kind = 2;

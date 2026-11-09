@@ -92,7 +92,7 @@ func extractSchGeom(root *node, src string) *geom.SchematicGeometry {
 		Prov:       &geom.Provenance{SourceFile: src},
 	}
 	single := solveWireNets(root, sheetScope{src: src})
-	sh := sheetOf(root, src, func(uuid string) netgraph.NetRef { return single[uuid] })
+	sh := sheetOf(root, src, busAliases(root), func(uuid string) netgraph.NetRef { return single[uuid] })
 	sh.Id = "root"
 	sh.Name = g.DesignRef
 	g.Sheets = []*geom.SheetGeometry{sh}
@@ -138,7 +138,7 @@ func solveWireNets(root *node, sc sheetScope) map[string]netgraph.NetRef {
 // than a map because the hierarchy caller namespaces the lookup by sheet instance (a reused
 // sub-sheet's wires share uuids across instances), while the single-sheet caller looks up the
 // bare uuid.
-func sheetOf(root *node, src string, wireNetOf func(uuid string) netgraph.NetRef) *geom.SheetGeometry {
+func sheetOf(root *node, src string, aliases map[string][]string, wireNetOf func(uuid string) netgraph.NetRef) *geom.SheetGeometry {
 	sh := &geom.SheetGeometry{Size: paperSize(root), Prov: &geom.Provenance{SourceFile: src}}
 	for _, ps := range root.Children("symbol") {
 		sh.Placements = append(sh.Placements, placementOf(ps, src))
@@ -149,20 +149,10 @@ func sheetOf(root *node, src string, wireNetOf func(uuid string) netgraph.NetRef
 			sh.Wires = append(sh.Wires, &geom.WireGeometry{Net: nr.Name, NetId: nr.ID, Polylines: []*geom.Polyline{{Points: pts}}, Prov: &geom.Provenance{SourceFile: src}})
 		}
 	}
-	// Bus trunks and entries (WS7-042) are drawn as wires tagged with a Kind so the renderers
-	// style them apart. The trunk holds its range-label name in Net (busWire, busLabelFor); an
-	// entry stub has no label of its own and is drawn unnamed. A bus_alias is a declaration and
-	// is not drawn.
-	for _, b := range root.Children("bus") {
-		if pts := xyPoints(b.Child("pts"), sheetPt); len(pts) > 0 {
-			sh.Wires = append(sh.Wires, busWire(geom.WireGeometry_KIND_BUS, pts, uuidOf(b), busLabelFor(root, pts), src))
-		}
-	}
-	for _, e := range root.Children("bus_entry") {
-		if pts := busEntryPoints(e); len(pts) > 0 {
-			sh.Wires = append(sh.Wires, busWire(geom.WireGeometry_KIND_BUS_ENTRY, pts, uuidOf(e), "", src))
-		}
-	}
+	// Bus trunks and entries (WS7-042) are drawn as wires tagged with a Kind so the renderers style
+	// them apart, each named for the bus it carries (drawnBuses, agni issue 1435). A bus_alias is a
+	// declaration and is not drawn.
+	sh.Wires = append(sh.Wires, drawnBuses(root, aliases, src)...)
 	sh.Labels = append(sh.Labels, labelsOf(root)...)
 	sh.Shapes = append(sheetShapes(root), hierLabelArrows(root)...)
 	for _, im := range root.Children("image") {
@@ -191,51 +181,6 @@ func busWire(kind geom.WireGeometry_Kind, pts []*geom.Point, uuid, name, src str
 		Polylines: []*geom.Polyline{{Points: pts}},
 		Prov:      &geom.Provenance{SourceFile: src, SourceId: uuid},
 	}
-}
-
-// busLabelFor returns the name of the range-bus label (e.g. "DATA[0..7]") placed on this bus
-// polyline, or "" if none (WS1-034, WS7-042b). It uses the same name normalization and predicate
-// as the netlist detector (collectBuses), so the finding subject and the geometry name match
-// exactly. KiCad reads a `[hi:lo]` label as a plain scalar, so such a label names no bus here
-// either (agni issue 605, docsite/content/architecture/net-solving.md).
-func busLabelFor(root *node, pts []*geom.Point) string {
-	for _, tag := range []string{"label", "global_label"} {
-		for _, l := range root.Children(tag) {
-			name := unescapeName(atomOf(l.Arg(1)))
-			if !isKiCadBusLabel(name) {
-				continue
-			}
-			if p := sheetPt(l.Child("at")); p != nil && pointOnPolyline(p, pts) {
-				return name
-			}
-		}
-	}
-	return ""
-}
-
-// pointOnPolyline reports whether p lies on any segment of the polyline, within a sub-grid
-// tolerance (KiCad places a bus label's connection point on the bus wire).
-func pointOnPolyline(p *geom.Point, pts []*geom.Point) bool {
-	const tol = 1000 // 0.001mm, well under KiCad's 0.0001mm grid
-	for i := 0; i+1 < len(pts); i++ {
-		a, b := pts[i], pts[i+1]
-		if p.X < min(a.X, b.X)-tol || p.X > max(a.X, b.X)+tol || p.Y < min(a.Y, b.Y)-tol || p.Y > max(a.Y, b.Y)+tol {
-			continue
-		}
-		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
-		segLen := math.Hypot(dx, dy)
-		if segLen == 0 {
-			if math.Hypot(float64(p.X-a.X), float64(p.Y-a.Y)) <= tol {
-				return true
-			}
-			continue
-		}
-		// Perpendicular distance from p to the (infinite) line through a,b.
-		if math.Abs(dx*float64(p.Y-a.Y)-dy*float64(p.X-a.X))/segLen <= tol {
-			return true
-		}
-	}
-	return false
 }
 
 // busEntryPoints synthesizes a bus_entry's drawn segment. KiCad writes it as an (at x y) origin
@@ -374,6 +319,7 @@ func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open
 		// names that the netlist read produces. A per-sheet solve would mis-number N$ stubs and
 		// mis-qualify some names.
 		wireNets: hierWireNets(rootName, rootContent, open, openSym),
+		aliases:  projectBusAliases(rootContent, open),
 		open:     open,
 	}
 	if err := w.walk(rootContent, rootName, "/", "", "", map[string]bool{}); err != nil {
@@ -389,7 +335,10 @@ type hierGeomWalker struct {
 	symByKey map[string]bool
 	syms     *symLibCache
 	wireNets map[string]netgraph.NetRef // wire uuid -> solved net (name + id), per-instance keyed "<id>\x00<uuid>"
-	open     func(relPath string) ([]byte, error)
+	// aliases is the project-wide bus_alias table, so a sheet names a group bus whose alias another
+	// sheet declares, as the net solve does (projectBusAliases).
+	aliases map[string][]string
+	open    func(relPath string) ([]byte, error)
 }
 
 // addSymbols merges symbol defs into the design, skipping any (cell_ref, view_ref) already seen.
@@ -427,7 +376,7 @@ func (w *hierGeomWalker) walk(content []byte, src, id, name, parentID string, an
 	// Combined solve, keyed per instance ("<sheetId>\x00<uuid>") so a reused sub-sheet's
 	// shared wire uuids don't collapse across instances (WS1-022). The key mirrors
 	// hierWireNets's sheetScope.wirePfx = id.
-	sh := sheetOf(root, src, func(uuid string) netgraph.NetRef { return w.wireNets[id+"\x00"+uuid] })
+	sh := sheetOf(root, src, w.aliases, func(uuid string) netgraph.NetRef { return w.wireNets[id+"\x00"+uuid] })
 	sh.Id, sh.Name, sh.ParentId = id, name, parentID
 	w.g.Sheets = append(w.g.Sheets, sh)
 
