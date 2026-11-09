@@ -25,9 +25,9 @@ function Controls(props: {
   return (
     <div class="controls">
       <div class="render-mode">
-        {/* WebGL is offered only to a page already in it (`?mode=webgl`), since it lags on a large
-            design (agni issue 1132). */}
-        <For each={MODES.filter((m) => m.mode !== "webgl" || props.state().mode === "webgl")}>
+        {/* WebGL is offered beside SVG again (agni issue 1336), after a year behind `?mode=webgl`
+            (agni issue 1132). SVG stays the default; DECISIONS.md says until when. */}
+        <For each={MODES}>
           {(m) => (
             <button
               type="button"

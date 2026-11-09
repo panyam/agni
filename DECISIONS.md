@@ -2161,3 +2161,26 @@ holes read the same from its `.brd` and its IPC-2581 export.
 **What this leaves open.** A negative plane, where the file holds the voids and the copper is the
 rest, has no sample yet, so `CopperShape` has no polarity field. KiCad fills stay out unless a
 consumer needs the fill without KiCad to compute it.
+
+## SVG stays the default renderer until WebGL draws everything SVG draws
+
+**Question.** The WebGL canvas pans Jetson's board about three times as smoothly as SVG, and its
+clicks, areas and highlights now agree with SVG's. Should a page open in WebGL?
+
+**Answer. Not yet (agni 1336).** A page still opens in SVG, and the WebGL button sits beside SVG in
+every mode, where it used to appear only on a page opened with `?mode=webgl` (agni 1132). WebGL
+becomes the default once it draws everything SVG draws. Four tickets mark that: #1334 (board layer
+rows, filled zones and a title-block size), #1368 (sheet views), #1443 (an EDIF companion
+schematic's highlights) and #1435 (a KiCad bus has no id to click, in either renderer).
+
+**What the evidence was.** The WebGL walk on all of Jetson, headed on an M5 Pro, measured the board's
+pan at p95 14 ms in WebGL against 35 to 48 ms in SVG, lit or not, and its first draw at 420 ms
+against 392 ms. The Expansion connector sheet drew in 114 ms against 276 ms and panned at the same
+8 ms. Without a GPU the order flips. Headless Chrome draws WebGL in SwiftShader, where the same
+board's first draw took 4.9 s and the sheet's 30 s, while SVG took 0.4 s and 0.3 s. A reader whose
+browser falls back to software rendering would see that as a broken viewer, so the default stays
+with the renderer that is fast everywhere.
+
+**What this leaves open.** A per-sheet default (WebGL for a board, SVG for a schematic) would give
+most readers the faster board now. It waits on the same tickets, since the board is where #1334's
+gaps show.

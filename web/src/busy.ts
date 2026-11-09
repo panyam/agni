@@ -10,6 +10,9 @@ export const RENDER_BUSY_DELAY_MS = 120;
 // If a label is given, it is written to the ".render-busy-label" child at once, even before the
 // overlay shows. Repeated true calls keep the one pending timer and a single false clears it. That
 // relies on the presenter's setBusy collapsing nested renders first. A null element is a no-op.
+// The element's data-busy reads "on" from the busy(true) call until busy(false), with no delay. A
+// browser spec waits on it before acting, since the overlay takes every click and wheel while it
+// shows, and its delay leaves no other way to tell busy from done (agni issue 1336).
 export function delayedBusy(
   el: HTMLElement | null,
   delayMs = RENDER_BUSY_DELAY_MS,
@@ -19,6 +22,7 @@ export function delayedBusy(
   return (busy: boolean, label?: string) => {
     if (label !== undefined && labelEl) labelEl.textContent = label;
     if (busy) {
+      if (el) el.dataset.busy = "on";
       if (timer === undefined) timer = setTimeout(() => el?.classList.add("on"), delayMs);
     } else {
       if (timer !== undefined) {
@@ -26,6 +30,7 @@ export function delayedBusy(
         timer = undefined;
       }
       el?.classList.remove("on");
+      if (el) delete el.dataset.busy;
     }
   };
 }
