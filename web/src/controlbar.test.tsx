@@ -9,17 +9,22 @@ const base: ControlsState = {
   hasHighlights: false,
 };
 
-function mount(over: Partial<ControlsState> = {}, staticHost = false) {
+function mount(over: Partial<ControlsState> = {}) {
   const onClearHighlights = vi.fn();
+  const onMode = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const bar = controlBarIsland(el, null, {
-    onMode: vi.fn(),
-    onClearHighlights,
-  }, { staticHost });
+  const bar = controlBarIsland(el, null, { onMode, onClearHighlights });
   bar.island.activate();
   bar.view.setState({ ...base, ...over });
-  return { el, onClearHighlights, clear: () => el.querySelector(".clear-highlights") as HTMLButtonElement | null };
+  return {
+    el,
+    onMode,
+    onClearHighlights,
+    clear: () => el.querySelector(".clear-highlights") as HTMLButtonElement | null,
+    webgl: () => el.querySelector(".render-webgl") as HTMLInputElement | null,
+    native: () => el.querySelector(".render-native") as HTMLInputElement | null,
+  };
 }
 
 // The control that had nowhere to live (agni issue 348). setHighlights([]) was reachable from one
@@ -50,30 +55,36 @@ describe("the clear-highlight control", () => {
   });
 });
 
-describe("the native mode button", () => {
-  const native = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>(".mode-btn")].find((b) => b.textContent === "Native")!;
-
-  it("names the flag that enables it on a server", () => {
-    expect(native(mount({ nativeAvailable: false }).el).title).toContain("--enable-native");
+// The renderer is one WebGL checkbox, off for SVG (agni issue 1469). It replaced a WebGL, SVG and
+// Native switch, whose Native button was greyed out on almost every server.
+describe("the WebGL checkbox", () => {
+  it("is off in SVG and on in WebGL", () => {
+    expect(mount({ mode: "svg" }).webgl()!.checked).toBe(false);
+    expect(mount({ mode: "webgl" }).webgl()!.checked).toBe(true);
   });
 
-  it("names no flag on a static page", () => {
-    const b = native(mount({ nativeAvailable: false }, true).el);
-    expect(b.disabled).toBe(true);
-    expect(b.title).toBe("native rendering is not available in this demo");
+  it("asks for WebGL when checked and for SVG when cleared", () => {
+    const svg = mount({ mode: "svg" });
+    svg.webgl()!.click();
+    expect(svg.onMode).toHaveBeenLastCalledWith("webgl");
+    const gl = mount({ mode: "webgl" });
+    gl.webgl()!.click();
+    expect(gl.onMode).toHaveBeenLastCalledWith("svg");
+  });
+
+  it("is the only renderer control where Native is not offered", () => {
+    const m = mount({ nativeAvailable: false });
+    expect(m.native()).toBeNull();
+    expect(m.el.querySelectorAll(".render-mode input").length).toBe(1);
   });
 });
 
-// WebGL was offered only to a page already in it (agni issue 1132) until the WebGL walk passed in both
-// modes, and it is now offered in every mode (agni issue 1336).
-describe("the WebGL mode button", () => {
-  const labels = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>(".render-mode .mode-btn")].map((b) => b.textContent);
-
-  it("is offered in SVG mode (agni issue 1336)", () => {
-    expect(labels(mount({ mode: "svg" }).el)).toEqual(["WebGL", "SVG", "Native"]);
-  });
-
-  it("stays for a page opened in it", () => {
-    expect(labels(mount({ mode: "webgl" }).el)).toEqual(["WebGL", "SVG", "Native"]);
+describe("the Native checkbox", () => {
+  it("shows where the server can draw the design natively, and asks for it when checked", () => {
+    const m = mount({ nativeAvailable: true, mode: "svg" });
+    expect(m.native()!.checked).toBe(false);
+    m.native()!.click();
+    expect(m.onMode).toHaveBeenLastCalledWith("native");
+    expect(mount({ nativeAvailable: true, mode: "native" }).native()!.checked).toBe(true);
   });
 });

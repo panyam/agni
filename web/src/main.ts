@@ -392,7 +392,7 @@ class AppRoot extends BaseComponent {
     const controls = controlBarIsland(controlsEl, this._eventBus, {
       onMode: (mode) => void presenter.setMode(mode),
       onClearHighlights: () => void presenter.clearHighlights(),
-    }, { staticHost: onStaticHost });
+    });
     // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
     // datasheet workbench's keys and never sees this canvas (agni issue 348). An open picker owns
     // Escape, and so does a text field the reader is typing in.

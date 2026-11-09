@@ -1,51 +1,43 @@
-import { For } from "solid-js";
+import { Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import type { RenderMode } from "./viewer.js";
 import type { ControlsState, ControlsView } from "./controls.js";
 
-const MODES: { mode: RenderMode; label: string }[] = [
-  { mode: "webgl", label: "WebGL" },
-  { mode: "svg", label: "SVG" },
-  { mode: "native", label: "Native" },
-];
-
-// Controls renders the render-mode buttons and the other toggles from ControlsState. It offers no
+// Controls renders the renderer checkboxes and the other toggles from ControlsState. It offers no
 // layout or symbol-source choice. A design draws as its schematic does, or on agni's default layout
-// with a note saying why (GetDesignResponse.drawing_note). `?layout=` and `?symbols=` still choose
-// one from the address, for experiments. Everything derives from the signal, so the presenter drives
-// it by pushing state, and every click or selection emits an intent up.
-function Controls(props: {
-  state: () => ControlsState;
-  onMode: (m: RenderMode) => void;
-  onClearHighlights: () => void;
-  staticHost: boolean;
-}) {
-  const nativeDisabled = (m: RenderMode) => m === "native" && !props.state().nativeAvailable;
+// with a note saying why (GetDesignResponse.drawing_note). `?layout=`, `?symbols=` and `?mode=` still
+// choose one from the address, for experiments. Everything derives from the signal, so the presenter
+// drives it by pushing state, and every click or selection emits an intent up.
+//
+// The renderer is one WebGL checkbox, off for SVG (agni issue 1469). SVG is the default, and
+// DECISIONS.md says until when. Native gets a checkbox of its own only where the server can draw
+// this design natively, since most servers never enable it.
+function Controls(props: { state: () => ControlsState; onMode: (m: RenderMode) => void; onClearHighlights: () => void }) {
+  const mode = () => props.state().mode;
   return (
     <div class="controls">
       <div class="render-mode">
-        {/* WebGL is offered beside SVG again (agni issue 1336), after a year behind `?mode=webgl`
-            (agni issue 1132). SVG stays the default; DECISIONS.md says until when. */}
-        <For each={MODES}>
-          {(m) => (
-            <button
-              type="button"
-              class={`mode-btn${props.state().mode === m.mode ? " active" : ""}`}
-              disabled={nativeDisabled(m.mode)}
-              title={
-                nativeDisabled(m.mode)
-                  ? props.staticHost
-                    ? "native rendering is not available in this demo"
-                    : "no native renderer for this format (or not enabled with --enable-native)"
-                  : ""
-              }
-              onClick={() => props.onMode(m.mode)}
-            >
-              {m.label}
-            </button>
-          )}
-        </For>
+        <label class="render-toggle" title="draw with WebGL, or with SVG when off">
+          <input
+            type="checkbox"
+            class="render-webgl"
+            checked={mode() === "webgl"}
+            onChange={(e) => props.onMode(e.currentTarget.checked ? "webgl" : "svg")}
+          />
+          WebGL
+        </label>
+        <Show when={props.state().nativeAvailable}>
+          <label class="render-toggle" title="draw with the format's own tool">
+            <input
+              type="checkbox"
+              class="render-native"
+              checked={mode() === "native"}
+              onChange={(e) => props.onMode(e.currentTarget.checked ? "native" : "svg")}
+            />
+            Native
+          </label>
+        </Show>
       </div>
       {/* Always rendered, and disabled when there is nothing to clear, because a control that
           appears on a state change has to be discovered twice (agni issue 348). */}
@@ -70,7 +62,6 @@ export function controlBarIsland(
     onMode: (m: RenderMode) => void;
     onClearHighlights: () => void;
   },
-  opts: { staticHost?: boolean } = {},
 ): { island: SolidIsland; view: ControlsView } {
   const [state, setState] = signalView<ControlsState>({
     mode: "svg",
@@ -85,7 +76,6 @@ export function controlBarIsland(
         state={state}
         onMode={handlers.onMode}
         onClearHighlights={handlers.onClearHighlights}
-        staticHost={opts.staticHost ?? false}
       />
     ),
     eventBus,

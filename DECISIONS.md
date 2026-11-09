@@ -2168,7 +2168,8 @@ consumer needs the fill without KiCad to compute it.
 clicks, areas and highlights now agree with SVG's. Should a page open in WebGL?
 
 **Answer. Not yet (agni 1336).** A page still opens in SVG, and the WebGL button sits beside SVG in
-every mode, where it used to appear only on a page opened with `?mode=webgl` (agni 1132). WebGL
+every mode, where it used to appear only on a page opened with `?mode=webgl` (agni 1132). The
+button is now one WebGL checkbox, off for SVG, in the canvas bar and each sheet view (agni 1469). WebGL
 becomes the default once it draws everything SVG draws. Four tickets mark that: #1334 (board layer
 rows, filled zones and a title-block size), #1368 (sheet views), #1443 (an EDIF companion
 schematic's highlights) and #1435 (a KiCad bus has no id to click, in either renderer).
