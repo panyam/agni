@@ -438,7 +438,7 @@ exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 #   make exercise-cross-probe HEADED=0
 #   make exercise-cross-probe WALK_DESIGN=cut
 exercise-cross-probe: HEADED ?= 1
-exercise-cross-probe: ui $(if $(filter jetson clay,$(WALK_DESIGN)),samples-oracle)
+exercise-cross-probe: ui wasm $(if $(filter jetson clay,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/cross-probe-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
