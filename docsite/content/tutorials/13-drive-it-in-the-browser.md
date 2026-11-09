@@ -125,8 +125,9 @@ run at once, and the viewer remembers the choice. Grouped by rule, each rule's h
 page in the [rule reference](../../reference/rules/), which says what the rule checks and why.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
-not, exactly as [rung 3](../03-see-it/) described. It draws in SVG. WebGL is offered only to a page
-opened with `?mode=webgl`, since it lags on a large board.
+not, exactly as [rung 3](../03-see-it/) described. It draws in SVG. The **WebGL** button draws the
+same sheet on the GPU, which pans a large board more smoothly, and a few features still draw only
+in SVG.
 
 **Rules** lists the composed catalog. Use it to confirm a tier actually loaded, rather than inferring
 that from findings that did or did not appear. Select the design first. With no design chosen, the

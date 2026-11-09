@@ -53,6 +53,19 @@ export function fitFrame(pairs: readonly [Point, Point][]): Frame | null {
   return { ...f, residual: ds[ds.length >> 1], anchors: kept.length };
 }
 
+// zoomFrame carries a Frame through the same zoom in both views. SVG zoomed by factor z about client
+// point ps, and WebGL by z about pg. A point s on the zoomed SVG view showed s0 = ps + (s - ps)/z
+// before, and that place sat at f(s0) on WebGL, so it now sits at pg + z*(f(s0) - pg). The walk
+// uses it when the zoomed views share too few labels to fit again (agni issue 1336). The frame it
+// had before the zoom then holds only near the pivot, and a click a few hundred pixels out on Jetson
+// landed on the next track over.
+export function zoomFrame(f: Frame, ps: Point, pg: Point, z: number): Frame {
+  const axis = (k: number, c: number, s: number, g: number) => ({ k, c: g * (1 - z) + z * (k * s + c) - k * s });
+  const x = axis(f.kx, f.cx, ps[0], pg[0]);
+  const y = axis(f.ky, f.cy, ps[1], pg[1]);
+  return { kx: x.k, cx: x.c, ky: y.k, cy: y.c, residual: f.residual * z, anchors: f.anchors };
+}
+
 // mapPoint carries a client point through a Frame.
 export function mapPoint(f: Pick<Frame, "kx" | "cx" | "ky" | "cy">, [x, y]: Point): Point {
   return [f.kx * x + f.cx, f.ky * y + f.cy];

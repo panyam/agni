@@ -26,6 +26,16 @@ describe("delayedBusy", () => {
     expect(el.classList.contains("on")).toBe(false);
   });
 
+  it("marks the element busy at once, before the overlay shows (agni issue 1336)", () => {
+    const el = document.createElement("div");
+    const setBusy = delayedBusy(el);
+    setBusy(true);
+    expect(el.dataset.busy).toBe("on");
+    expect(el.classList.contains("on")).toBe(false);
+    setBusy(false);
+    expect(el.dataset.busy).toBeUndefined();
+  });
+
   it("repeated busy(true) does not restack the timer", () => {
     const el = document.createElement("div");
     const setBusy = delayedBusy(el);

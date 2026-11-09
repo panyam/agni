@@ -39,7 +39,8 @@ import { loadavg } from "node:os";
 import { join } from "node:path";
 import { headed, launch, viewportFor } from "./browser.js";
 import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
-import { fitFrame, mapPoint, summarize, type Frame, type FrameSummary, type Point } from "./frametimes.js";
+import { fitFrame, mapPoint, summarize, zoomFrame, type Frame, type FrameSummary, type Point } from "./frametimes.js";
+import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { TITLE, clearPoint } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
@@ -116,6 +117,15 @@ async function open(page: Page, walk: Walk, mode: Mode, sheet: string, extra = "
   const q = `mode=${mode}&sheet=${encodeURIComponent(sheetParam(sheet))}${extra}`;
   await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?${q}`, { waitUntil: "networkidle", timeout: 180_000 });
   await drawnSince(page, mode, 0);
+  await idle(page);
+}
+
+// idle waits for the page to stop loading. The sheet draws before the design's rules, report and
+// parts load, and until they do the busy overlay lies over the drawing and takes every click and
+// wheel. On a GPU that is over before a hand reaches the mouse. Under SwiftShader on Jetson it lasted
+// seconds, and the walk's first wheel steps went to the overlay (agni issue 1336).
+async function idle(page: Page): Promise<void> {
+  await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 180_000, polling: 50 });
 }
 
 // drawnSince waits for a SHEET_DRAWN mark from `mode` after `since` on the page's clock, and returns
@@ -336,20 +346,34 @@ async function candidates(page: Page, t: Target, limit = 6): Promise<{ at: Point
   }, { sel: t.sel, line: t.line ?? false, view: SVG, limit });
 }
 
-// zoomIn zooms the view on a point with `steps` wheel steps, a frame apart.
-async function zoomIn(page: Page, [x, y]: Point, steps: number): Promise<void> {
-  await page.mouse.move(x, y);
+// zoomIn zooms the view on a point with `steps` wheel steps, a frame apart, and returns the point it
+// zoomed about. A wheel event's client position is a whole pixel, so the walk rounds the point
+// itself and knows the pivot exactly (zoomFrame).
+async function zoomIn(page: Page, [x, y]: Point, steps: number): Promise<Point> {
+  const pivot: Point = [Math.round(x), Math.round(y)];
+  await page.mouse.move(pivot[0], pivot[1]);
   for (let i = 0; i < steps; i++) {
-    await page.mouse.wheel(0, -400);
+    await page.mouse.wheel(0, WHEEL_DELTA);
     await nextFrame(page);
   }
   await page.waitForTimeout(150);
+  return pivot;
 }
+
+// WHEEL_DELTA is one zoom step, and zoomBy is how far `steps` of them zoom either view.
+const WHEEL_DELTA = -400;
+const zoomBy = (steps: number): number => wheelZoomFactor(WHEEL_DELTA) ** steps;
 
 // ZOOM is how many wheel steps the walk zooms a click target in by, per sheet, so a small part on a
 // whole board has room around it. A fitted cut's sheet needs none. The cut's board takes 4, so a
 // SOT-23 has a point a pixel clear of its pads (CLEAR_MARGIN_PX).
 const ZOOM = { cut: { Board: 4, sheet: 0 }, jetson: { Board: 6, sheet: 3 } };
+
+// ZOOM_SLACK is how far the scale between the two views may move across the same wheel steps. Each
+// renderer fits a sheet on its own, so the scales differ by a few percent at fit. Both zoom by
+// panzoom's wheelZoomFactor, so a ratio that moves means one view missed a step, and a click carried
+// across would land on a neighbour.
+const ZOOM_SLACK = 0.02;
 
 // CLEAR_MARGIN_PX keeps a footprint click that far clear of the part's pads and neighbours, since a
 // pad's edge can sit half a pixel apart in the two renderers. On the cut SVG's probe missed Q2's pad
@@ -370,7 +394,7 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
   const tried: string[] = [];
   for (const { at, ref } of found) {
     await open(page, walk, "svg", t.sheet);
-    await zoomIn(page, at, zoom);
+    const svgPivot = await zoomIn(page, at, zoom);
     const svgZoomed = await anchors(page, "svg");
     const click: Point = t.clear ? await clearPoint(page, `${t.sel}[data-ref="${ref}"]`, ref, "component", CLEAR_MARGIN_PX).then((p) => [p.x, p.y] as Point).catch(() => at) : at;
     await page.mouse.click(click[0], click[1]);
@@ -381,12 +405,14 @@ async function clickBoth(page: Page, walk: Walk, name: string, t: Target): Promi
     }
     await open(page, walk, "webgl", t.sheet);
     const frame = frameBetween(svgFit, await anchors(page, "webgl"));
-    await zoomIn(page, mapPoint(frame, at), zoom);
+    const glPivot = await zoomIn(page, mapPoint(frame, svgPivot), zoom);
     // The views line up to a hundredth of a pixel at fit. A wheel event carries whole pixels, so each
-    // zooms about a point up to half a pixel from the other's, and the zoom grows that to a pixel or
-    // two at the target. So the walk lines the zoomed views up again, from the labels they show,
-    // where it can.
-    const there = mapPoint(refit(svgZoomed, await anchors(page, "webgl")) ?? frame, click);
+    // zooms about a point up to half a pixel from the other's, and the zoom grows that to several
+    // pixels away from the pivot. So the walk lines the zoomed views up again from the labels they
+    // show, and where they share too few, carries the fit through the zoom (zoomFrame).
+    const refitted = refit(svgZoomed, await anchors(page, "webgl"));
+    if (refitted && Math.abs(refitted.kx / frame.kx - 1) > ZOOM_SLACK) throw new Unwalkable(`WebGL zoomed ${(refitted.kx / frame.kx).toFixed(2)} times as far as SVG on ${t.sheet}, so a click would land elsewhere`);
+    const there = mapPoint(refitted ?? zoomFrame(frame, svgPivot, glPivot, zoomBy(zoom)), click);
     await page.mouse.click(there[0], there[1]);
     return { svg, gl: await shown(page, 5_000) };
   }
@@ -658,6 +684,7 @@ for (const name of chosen) {
               const since = await page.evaluate(() => performance.now());
               await tile(page, sheet);
               const drawn = await drawnSince(page, mode, since);
+              await idle(page);
               await page.waitForLoadState("networkidle");
               const frames = await panZoom(page, mode);
               (timings[sheet] ??= {} as Record<Mode, { draw: number; frames: FrameSummary }>)[mode] = { draw: drawn - since, frames };
@@ -682,6 +709,8 @@ for (const name of chosen) {
         for (const mode of MODES) {
           await step(`pan the board with ${walk.ground} lit (${mode})`, { needs: [`draw Board (${mode})`] }, async () => {
             await open(page, walk, mode, "Board", "&devpage=1");
+            // The page API is installed once the URL's design has opened, after the first draw.
+            await page.waitForFunction(() => "__agniViewerPage" in window, null, { timeout: 60_000 });
             await page.evaluate(
               (net) => (window as unknown as { __agniViewerPage: { locateEntity(k: string, s: string, o: { sheet: string }): Promise<void> } }).__agniViewerPage.locateEntity("net", net, { sheet: "board" }),
               walk.ground,
@@ -768,7 +797,7 @@ for (const name of chosen) {
           const svgFit = await anchors(page, "svg");
           const v = await host(page, "svg");
           const mid: Point = [v.x + v.width / 2, v.y + v.height / 2];
-          await zoomIn(page, mid, zoom);
+          const svgPivot = await zoomIn(page, mid, zoom);
           const pins = await lonePins(page, await candidates(page, { name: "pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] }, 200));
           const two = pins.filter((p, i) => pins.findIndex((q) => q.ref === p.ref) === i).slice(0, 2);
           if (two.length < 2) throw new Unwalkable(`${walk.sheet} draws no two parts' pins near its middle with no other pin within ${EDGE_PX} px`);
@@ -782,8 +811,10 @@ for (const name of chosen) {
           const svg = await shiftClick(two.map((p) => p.at));
           await open(page, walk, "webgl", walk.sheet);
           const frame = frameBetween(svgFit, await anchors(page, "webgl"));
-          await zoomIn(page, mapPoint(frame, mid), zoom);
-          const zoomed = refit(svgZoomed, await anchors(page, "webgl")) ?? frame;
+          const glPivot = await zoomIn(page, mapPoint(frame, svgPivot), zoom);
+          const fitted = refit(svgZoomed, await anchors(page, "webgl"));
+          if (fitted && Math.abs(fitted.kx / frame.kx - 1) > ZOOM_SLACK) throw new Unwalkable(`WebGL zoomed ${(fitted.kx / frame.kx).toFixed(2)} times as far as SVG on ${walk.sheet}`);
+          const zoomed = fitted ?? zoomFrame(frame, svgPivot, glPivot, zoomBy(zoom));
           const gl = await shiftClick(two.map((p) => mapPoint(zoomed, p.at)));
           if (svg.kind !== "area") throw new Unwalkable(`two Shift-clicks in SVG selected ${said(svg)}, not an area`);
           if (!same(svg, gl)) throw new Error(apart(svg, gl));
@@ -808,6 +839,34 @@ for (const name of chosen) {
             return `both list ${svg.split("\n").length} lines`;
           });
         }
+
+        // The hidden SVG host keeps the last sheet it drew. A reader can now switch to SVG and back
+        // in one page, so Properties must read whichever renderer drew the sheet on screen, not the
+        // SVG host's old sheet (agni issue 1333, reachable since 1336).
+        await step("what a sheet draws after SVG and back", {}, async () => {
+          await open(page, walk, "svg", walk.sheet);
+          const svg = await sheetShown(page, "svg");
+          await open(page, walk, "webgl", "Board");
+          let since = await page.evaluate(() => performance.now());
+          await page.locator(".mode-btn", { hasText: "SVG" }).click();
+          await drawnSince(page, "svg", since);
+          await idle(page);
+          since = await page.evaluate(() => performance.now());
+          await page.locator(".mode-btn", { hasText: "WebGL" }).click();
+          await drawnSince(page, "webgl", since);
+          await idle(page);
+          since = await page.evaluate(() => performance.now());
+          await tile(page, walk.sheet);
+          await drawnSince(page, "webgl", since);
+          await idle(page);
+          const gl = await sheetShown(page, "webgl");
+          if (svg !== gl) {
+            const la = svg.split("\n"), lb = gl.split("\n");
+            const i = la.findIndex((l, j) => l !== lb[j]);
+            throw new Error(`Properties differs at line ${i + 1}, ${JSON.stringify(la[i] ?? "")} in SVG and ${JSON.stringify(lb[i] ?? "")} in WebGL after the switch`);
+          }
+          return `both list ${svg.split("\n").length} lines`;
+        });
 
         await step("a finding's highlight", {}, async () => {
           const v = walk.verdict;
