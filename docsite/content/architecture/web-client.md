@@ -44,9 +44,14 @@ panel from the ones above.
   starting `sheetview-`. The dock's component factory hands that id its element. A saved layout that
   names a view restores without it, since `prunePanels` drops every id that the registry lacks. A view
   names a sheet of one design, and the next page may open another.
-- **It draws through `SvgView`**, the canvas's SVG renderer, from the same snapshot, layout and symbol
-  source (`ViewerPresenter.drawing`). So a pick in a view reads the keys that a pick on the canvas
-  reads.
+- **It draws through a `SheetSurface`** (`web/src/sheetsurface.ts`), as the canvas does (agni issue
+  1368). A surface holds an `SvgView` and, once the reader picks WebGL, a `CanvasComponent` with a
+  canvas of its own. It draws from the canvas's snapshot, layout and symbol source
+  (`ViewerPresenter.drawing`), so a pick in a view reads the keys that a pick on the canvas reads.
+  The bar's renderer picker chooses SVG or WebGL per view, and a view opens in the canvas's
+  renderer. A WebGL view lights a selection against the packed keys it holds, and frames it through
+  its camera (`CanvasComponent.reveal`). Leaving WebGL frees the view's GPU copy of the sheet, since
+  each WebGL view holds one.
 - **The selection is shared and the camera is not.** A pick in a view selects through
   `PropertiesPresenter.select`, as a pick on the canvas does. `onSelect` then hands the selection to
   every view, and the canvas follows a pick made in a view. Each one moves by `chooseSheet`
@@ -54,7 +59,8 @@ panel from the ones above.
   does otherwise, and offers the others as chips. Then it centres on the highlight. The presenter's
   `sheetToOpen` calls the same function, so a finding opens a sheet the same way.
 - **A view's link** is `follow`, `locked` or `off`. Locked views on the SAME sheet mirror pan and zoom.
-  Two sheets have different frames, so the schematic and the board never share a camera.
+  Two sheets have different frames, so the schematic and the board never share a camera. A WebGL view
+  and an SVG view measure their centres in different units, so they do not lock either.
 - **A view floats** through dockview's floating groups. With the `always` renderer its content then
   sits in a `dv-render-overlay-float` element, not inside the floating group's own container.
 - **A view turns** to match the board on the bench (agni issue 1327). It rotates by quarter turns and
@@ -65,7 +71,11 @@ panel from the ones above.
   and redraws its strata with the back copper nearest (`orderStrata` in `web/src/boardstrata.ts`). A
   sheet's turn is kept per design and sheet in `localStorage`, so a board view opened again comes back
   turned. Locked views exchange the drawing point at their centre and the zoom (`getCentre`), so a top
-  view and a bottom view of one board stay over the same spot.
+  view and a bottom view of one board stay over the same spot. **A WebGL view turns the same way**.
+  The camera composes the orientation's turn (`orientTurn`) with pan and zoom, picking inverts
+  through it, and the text layer takes the same turn. From below, `strataDrawOrder` draws the zones,
+  pick areas and copper nearest last, and a click reads that order. Back-side board text arrives
+  marked `PackedLabel.mirror`, so the text layer flips it as `BoardSVG` does.
 - **A view hides board layers on its own** (agni issue 1401). Its Layers button opens the list that
   the Sheets panel shows for the canvas (`BoardLayerList` in `web/src/boardlayerlist.tsx`), over a
   hidden set of the view's own. The view writes its rules scoped to its own drawing

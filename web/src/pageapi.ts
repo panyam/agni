@@ -63,8 +63,9 @@ export interface ViewerPageAPI {
 
   // openSheetView opens a sheet view on one sheet of the open design, as the Sheets panel's "open
   // beside" does, and resolves to it once it has drawn the sheet. It rejects for a sheet the design
-  // lacks, and on a page that has no sheet views.
-  openSheetView(sheet: string): Promise<SheetViewInfo>;
+  // lacks, and on a page that has no sheet views. renderer is "svg" or "webgl", and empty opens the
+  // view in the canvas's renderer (agni issue 1368). Any other renderer is refused.
+  openSheetView(sheet: string, renderer?: string): Promise<SheetViewInfo>;
 
   // closeSheetView closes one sheet view. It returns false when no open view has that id, and then
   // the page is left as it was.
@@ -72,19 +73,20 @@ export interface ViewerPageAPI {
 }
 
 // SheetViewInfo is a sheet view as a host sees it. id is "sheetview-<n>", numbered from 1 per page
-// and never reused, and sheet is the sheet id the view shows.
+// and never reused, sheet is the sheet id the view shows, and renderer the renderer that drew it.
 export interface SheetViewInfo {
   id: string;
   sheet: string;
+  renderer: string;
 }
 
 // SheetViewsHost is what the page contract asks of the sheet views beside the canvas. SheetViews
 // (sheetviews.ts) satisfies it.
 export interface SheetViewsHost {
-  open(sheetId: string): Promise<SheetViewInfo>;
+  open(sheetId: string, renderer?: "svg" | "webgl"): Promise<{ id: string; sheet: string; drawnBy: string }>;
   close(id: string): boolean;
   get(id: string): { sheet: string; open(sheetId: string): Promise<void> } | undefined;
-  list(): SheetViewInfo[];
+  list(): { id: string; sheet: string; drawnBy: string }[];
 }
 
 // pageApi narrows a presenter and the page's sheet views to the page contract. It holds no state of
@@ -125,12 +127,13 @@ export function pageApi(p: ViewerPresenter, views?: SheetViewsHost): ViewerPageA
       if (!pane) throw new Error(`no sheet view "${view}" is open`);
       await pane.open(id);
     },
-    sheetViews: () => (views ? views.list().map(({ id, sheet }) => ({ id, sheet })) : []),
-    async openSheetView(sheet) {
+    sheetViews: () => (views ? views.list().map(({ id, sheet, drawnBy }) => ({ id, sheet, renderer: drawnBy })) : []),
+    async openSheetView(sheet, renderer = "") {
       if (!views) throw new Error("this page has no sheet views");
+      if (renderer !== "" && renderer !== "svg" && renderer !== "webgl") throw new Error(`no renderer "${renderer}"; a view draws in "svg" or "webgl"`);
       hasSheet(sheet);
-      const v = await views.open(sheet);
-      return { id: v.id, sheet: v.sheet };
+      const v = await views.open(sheet, renderer === "" ? undefined : renderer);
+      return { id: v.id, sheet: v.sheet, renderer: v.drawnBy };
     },
     closeSheetView: (id) => (views ? views.close(id) : false),
   };

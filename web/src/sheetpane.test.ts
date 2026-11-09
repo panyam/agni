@@ -236,3 +236,117 @@ describe("the names a turned view answers to", () => {
     expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["90", "back"]);
   });
 });
+
+// fakeGl stands in for a WebGL drawing, which jsdom cannot make, and records what the view asks of it.
+interface FakeGl {
+  sheet: string;
+  specs: HighlightSpec[];
+  strata: { rows: number; fromBelow: boolean };
+  orientation: { rot: number; flipH: boolean; flipV: boolean };
+  [method: string]: unknown;
+}
+
+function fakeGl() {
+  const calls: string[] = [];
+  const gl: FakeGl = {
+    markView: "",
+    onPick: null,
+    onPickEmpty: null,
+    onArea: null,
+    onToggle: null,
+    onViewChange: null,
+    sheet: "",
+    specs: [] as HighlightSpec[],
+    strata: { rows: 0, fromBelow: false },
+    orientation: { rot: 0, flipH: false, flipV: false },
+    showSheet: (s: { sheetId: string }) => {
+      gl.sheet = s.sheetId;
+      calls.push(`draw ${s.sheetId}`);
+    },
+    setHighlights: (specs: HighlightSpec[]) => (gl.specs = specs),
+    setHiddenGroups: () => {},
+    setOrientation: (o: typeof gl.orientation) => (gl.orientation = o),
+    setStrata: (rows: unknown[], fromBelow: boolean) => (gl.strata = { rows: rows.length, fromBelow }),
+    showText: () => {},
+    hideText: () => {},
+    reveal: (pin?: { ref: string; pin: string }) => calls.push(`reveal ${pin ? `${pin.ref}.${pin.pin}` : ""}`),
+    getView: () => null,
+    setView: () => {},
+    getCentre: () => ({ at: { x: 1, y: 2 }, scale: 3 }),
+    setCentre: () => {},
+    drawn: () => null,
+    membersIn: () => null,
+    dispose: () => calls.push("dispose"),
+  };
+  return { gl, calls };
+}
+
+// A view draws in WebGL when its reader picks it (agni issue 1368), from the packed sheet, and lights
+// a selection against the keys it holds rather than fetching an overlay.
+describe("a sheet view in WebGL", () => {
+  function glPane(gl: FakeGl | null, drawnOn: string[] = ["board"]) {
+    const asked: string[] = [];
+    let overlays = 0;
+    const deps: SheetPaneDeps = {
+      sheets: () => SHEETS,
+      render: async (id, mode) => {
+        asked.push(`${id} ${mode}`);
+        const packed = mode === "webgl" ? ({ sheetId: id } as never) : undefined;
+        return { svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, packed, boardLayers: id === "board" ? ROWS : [] };
+      },
+      overlay: async () => {
+        overlays++;
+        return `<svg width="100" height="100"><circle r="1"/></svg>`;
+      },
+      drawnOn: async () => drawnOn,
+      specs: () => [{ components: ["U1"] } as unknown as HighlightSpec],
+      onPick: vi.fn(),
+      onPickEmpty: vi.fn(),
+      onViewChange: vi.fn(),
+      onFloat: vi.fn(),
+      onClose: vi.fn(),
+      onOpened: vi.fn(),
+      renderer: () => "webgl",
+      gl: () => gl as never,
+    };
+    const p = new SheetPane(`sheetview-${++panes}`, deps);
+    document.body.appendChild(p.element);
+    return { p, asked, overlays: () => overlays };
+  }
+
+  it("draws the packed sheet, lights a selection itself and frames the pin", async () => {
+    const { gl, calls } = fakeGl();
+    const { p, asked, overlays } = glPane(gl);
+    await p.open("board");
+    expect(asked).toEqual(["board webgl"]);
+    expect(gl.sheet).toBe("board");
+    expect(p.element.dataset.renderer).toBe("webgl");
+    expect(p.element.querySelector<HTMLSelectElement>(".sheetview-renderer")?.value).toBe("webgl");
+    await p.follow({ kind: "pin", ref: "U1", pin: "3" });
+    expect(gl.specs).toEqual([{ components: ["U1"] }]);
+    expect(overlays()).toBe(0);
+    expect(calls).toContain("reveal U1.3");
+  });
+
+  it("draws in SVG where the browser has no WebGL2, and says so", async () => {
+    const { p, asked } = glPane(null);
+    await p.open("s1");
+    expect(asked).toEqual(["s1 webgl", "s1 svg"]);
+    expect(p.element.dataset.renderer).toBe("svg");
+    expect(p.element.querySelector<HTMLSelectElement>(".sheetview-renderer")?.value).toBe("svg");
+    expect(shown(p)).toBe("s1");
+  });
+
+  it("turns a board over in WebGL, back copper nearest, and frees the drawing when it leaves WebGL", async () => {
+    const { gl, calls } = fakeGl();
+    const { p, asked } = glPane(gl);
+    await p.open("board");
+    p.element.querySelector<HTMLButtonElement>('[data-action="bottom"]')!.click();
+    expect(gl.strata).toEqual({ rows: ROWS.length, fromBelow: true });
+    expect(gl.orientation.flipH).toBe(true);
+    await p.setRenderer("svg");
+    expect(calls).toContain("dispose");
+    expect(asked).toEqual(["board webgl", "board svg"]);
+    expect(p.element.dataset.renderer).toBe("svg");
+  });
+});

@@ -87,7 +87,10 @@ export class PickIndex {
   // it or under any probe around it. perPx is the world size of one CSS pixel, which places the
   // probes. hidden holds the primitive groups the view hides, and a hidden group picks nothing, as a
   // hidden SVG layer picks nothing.
-  pick(x: number, y: number, perPx: number, hidden: ReadonlySet<number> = new Set()): Selection | null {
+  //
+  // depth gives a primitive's place in the draw order, for a view that draws out of pack order, such
+  // as a board seen from below (strataDrawOrder). Without it the pack order is the draw order.
+  pick(x: number, y: number, perPx: number, hidden: ReadonlySet<number> = new Set(), depth?: Int32Array): Selection | null {
     const near = [...this.near(x, y, PROBE_R * Math.SQRT2 * perPx)];
     const found: Selection[] = [];
     for (const [dx, dy] of PROBES) {
@@ -99,7 +102,7 @@ export class PickIndex {
         if (hidden.has(this.sheet.primitives[t.primitive].group)) continue;
         const b = t.bounds;
         if (px < b.minX - t.slack || px > b.maxX + t.slack || py < b.minY - t.slack || py > b.maxY + t.slack) continue;
-        if ((t.filled && this.inside(t.primitive, px, py)) || this.distance(t.primitive, px, py) <= t.slack) here.push({ sel: t.sel, z: t.primitive });
+        if ((t.filled && this.inside(t.primitive, px, py)) || this.distance(t.primitive, px, py) <= t.slack) here.push({ sel: t.sel, z: depth ? depth[t.primitive] : t.primitive });
       }
       // Under one probe the topmost comes first, as elementFromPoint answers. A sheet packs in
       // paint order, so a later primitive is drawn over an earlier one, and a front track beats a

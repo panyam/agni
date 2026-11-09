@@ -209,7 +209,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			Text: boardTextLine(t), Height: num.Int32(boardTextEm(t)),
 			RotationDeg: int32(math.Round(t.GetRotationDeg())),
 			Justify:     justifyWord(t), Color: boardTextColor(style, t.GetLayer()),
-			Group: uint32(strata.art[t.GetLayer()]),
+			Group:  uint32(strata.art[t.GetLayer()]),
+			Mirror: t.GetMirror(),
 		})
 	}
 

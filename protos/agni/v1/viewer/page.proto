@@ -99,6 +99,9 @@ message SheetView {
   string id = 1;
   // sheet is the sheet id that the view shows.
   string sheet = 2;
+  // renderer is "svg" or "webgl", the renderer that drew the view's sheet (agni issue 1368). A view
+  // asked for WebGL on a browser with no WebGL2 draws in SVG and says "svg".
+  string renderer = 3;
 }
 
 message ApplyLocationRequest {
@@ -181,6 +184,9 @@ message ShowSheetResponse {
 message OpenSheetViewRequest {
   // sheet is the sheet id the new view shows. A sheet the open design lacks is refused.
   string sheet = 1;
+  // renderer is "svg" or "webgl", the renderer the view draws in. Empty opens it in the canvas's
+  // renderer, and any other value is refused (agni issue 1368).
+  string renderer = 2;
 }
 
 message OpenSheetViewResponse {

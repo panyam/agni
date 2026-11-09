@@ -243,6 +243,15 @@ export class Renderer {
   // is still visible.
   private hiddenGroups = new Set<number>();
 
+  // order is the draw order, a permutation of the primitive indices, or null for pack order. A board
+  // seen from below draws its strata nearest last (boardstrata.ts, strataDrawOrder).
+  private order: Int32Array | null = null;
+
+  // setOrder replaces the draw order. null draws in pack order.
+  setOrder(order: Int32Array | null): void {
+    this.order = order;
+  }
+
   // setHiddenGroups replaces the hidden set.
   setHiddenGroups(groups: Iterable<number>): void {
     this.hiddenGroups = new Set(groups);
@@ -259,7 +268,9 @@ export class Renderer {
     gl.uniformMatrix3fv(this.uView, false, viewMatrix);
 
     let lastGroup = -1;
-    for (let i = 0; i < this.primitives.length; i++) {
+    const order = this.order;
+    for (let n = 0; n < this.primitives.length; n++) {
+      const i = order ? order[n] : n;
       const p = this.primitives[i];
       if (p.count === 0 || pickOnly(p.group)) continue;
       const hl = this.highlightColors.get(i);

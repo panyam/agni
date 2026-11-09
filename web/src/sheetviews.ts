@@ -2,6 +2,7 @@
 // hands each a selection made anywhere on the page, and mirrors the camera between locked views on
 // one sheet. The dock is reached through SheetViewDock, so a test runs the manager with no dock.
 import { SheetPane, type SheetPaneDeps } from "./sheetpane.js";
+import type { SurfaceMode } from "./sheetsurface.js";
 import { lockedPeers } from "./sheetfollow.js";
 import type { Selection } from "./selection.js";
 
@@ -20,7 +21,7 @@ export interface SheetViewHooks {
   onPickEmpty: (pane: SheetPane) => void;
 }
 
-type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns">;
+type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl">;
 
 export class SheetViews {
   private readonly panes = new Map<string, SheetPane>();
@@ -33,20 +34,23 @@ export class SheetViews {
     private readonly doc: Document = document,
   ) {}
 
-  // open adds a view showing sheetId and returns it once the sheet is drawn.
-  async open(sheetId: string): Promise<SheetPane> {
+  // open adds a view showing sheetId and returns it once the sheet is drawn. renderer picks SVG or
+  // WebGL, and without it the view opens in the canvas's renderer (agni issue 1368).
+  async open(sheetId: string, renderer?: SurfaceMode): Promise<SheetPane> {
     const id = `sheetview-${this.next++}`;
     const pane = new SheetPane(
       id,
       {
         ...this.engine,
+        renderer: renderer ? () => renderer : this.engine.renderer,
         onPick: (p, sel) => this.hooks.onPick(p, sel),
         onPickEmpty: (p) => this.hooks.onPickEmpty(p),
         // A locked peer takes the drawing point at this view's centre and its zoom, so two views of
         // the board line up though one is the bottom view or a different size (agni issue 1327).
         onViewChange: (p) => {
-          const c = p.view.getCentre();
-          for (const peer of lockedPeers(this.list(), p)) this.panes.get(peer.id)?.view.setCentre(c.at, c.scale);
+          const c = p.getCentre();
+          if (!c) return;
+          for (const peer of lockedPeers(this.list(), p)) this.panes.get(peer.id)?.setCentre(c.at, c.scale);
         },
         onFloat: (p) => this.dock.float(p.id),
         onClose: (p) => this.dock.close(p.id),

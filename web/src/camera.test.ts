@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { orientPoint, type Orientation, type Rotation } from "./orient.js";
 import { Camera } from "./camera.js";
 
 const bounds = { minX: 0, minY: 0, maxX: 1000, maxY: 800 };
@@ -63,6 +64,75 @@ describe("Camera pixelToWorld", () => {
       const clipY = m[1] * w.x + m[4] * w.y + m[7];
       expect((clipX + 1) * 320).toBeCloseTo(px, 3);
       expect((1 - clipY) * 240).toBeCloseTo(py, 3);
+    }
+  });
+});
+
+// A turned WebGL view turns as an SVG view does (agni issue 1368). orientPoint is the SVG view's map,
+// in the drawing's own frame with y down, and the camera's has to agree with it.
+describe("Camera orientation", () => {
+  const ALL: Orientation[] = [];
+  for (const rot of [0, 90, 180, 270] as Rotation[]) for (const flipH of [false, true]) for (const flipV of [false, true]) ALL.push({ rot, flipH, flipV });
+  const W = 800;
+  const H = 600;
+  const camera = (o: Orientation): Camera => {
+    const c = new Camera({ minX: 0, minY: 0, maxX: 1000, maxY: 500 });
+    c.setViewport(W, H);
+    c.setView({ centerX: 400, centerY: 200, worldPerPixel: 2 });
+    c.setOrientation(o);
+    return c;
+  };
+  // pixelOf runs a world point through matrix() into canvas pixels.
+  const pixelOf = (c: Camera, x: number, y: number): { x: number; y: number } => {
+    const m = c.matrix();
+    const cx = m[0] * x + m[3] * y + m[6];
+    const cy = m[1] * x + m[4] * y + m[7];
+    return { x: ((cx + 1) / 2) * W, y: ((1 - cy) / 2) * H };
+  };
+
+  it("maps a world point to a pixel and back in every orientation", () => {
+    for (const o of ALL) {
+      const c = camera(o);
+      const p = pixelOf(c, 530, 120);
+      const w = c.pixelToWorld(p.x, p.y);
+      expect([o, Math.round(w.x), Math.round(w.y)]).toEqual([o, 530, 120]);
+    }
+  });
+
+  it("moves a point about the centre as orientPoint moves it in a y-down frame", () => {
+    for (const o of ALL) {
+      const c = camera(o);
+      // 50 world units right of the centre and 30 above it is (25, -15) pixels, y down, upright.
+      const p = pixelOf(c, 450, 230);
+      const want = orientPoint(o, 0, 0, { x: 25, y: -15 });
+      expect([o, Math.round(p.x - W / 2), Math.round(p.y - H / 2)]).toEqual([o, Math.round(want.x), Math.round(want.y)]);
+    }
+  });
+
+  it("puts a point right of the centre below it after a quarter turn clockwise", () => {
+    const p = pixelOf(camera({ rot: 90, flipH: false, flipV: false }), 500, 200);
+    expect(Math.round(p.x)).toBe(W / 2);
+    expect(Math.round(p.y)).toBe(H / 2 + 50);
+  });
+
+  it("keeps the grabbed point under the cursor when a turned view pans", () => {
+    for (const o of ALL) {
+      const c = camera(o);
+      const before = c.pixelToWorld(100, 80);
+      c.panPixels(37, -12);
+      const after = c.pixelToWorld(137, 68);
+      expect([o, Math.round(after.x), Math.round(after.y)]).toEqual([o, Math.round(before.x), Math.round(before.y)]);
+    }
+  });
+
+  it("culls against a view rect that holds every corner of a turned view", () => {
+    for (const o of ALL) {
+      const c = camera(o);
+      const r = c.viewRect();
+      for (const [px, py] of [[0, 0], [W, 0], [0, H], [W, H]]) {
+        const w = c.pixelToWorld(px, py);
+        expect(w.x >= r.minX - 1e-6 && w.x <= r.maxX + 1e-6 && w.y >= r.minY - 1e-6 && w.y <= r.maxY + 1e-6).toBe(true);
+      }
     }
   });
 });

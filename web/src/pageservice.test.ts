@@ -43,7 +43,7 @@ function fakeApi(over: Partial<ViewerPageAPI> = {}): ViewerPageAPI {
     locateEntity: vi.fn(async () => {}),
     showSheet: vi.fn(async () => {}),
     sheetViews: () => [],
-    openSheetView: vi.fn(async (sheet: string) => ({ id: "sheetview-1", sheet })),
+    openSheetView: vi.fn(async (sheet: string) => ({ id: "sheetview-1", sheet, renderer: "svg" })),
     closeSheetView: vi.fn(() => false),
     ...over,
   };
@@ -164,13 +164,14 @@ describe("sheet views through the page contract", () => {
         canvas.sheet = id;
       }),
     } as unknown as ViewerPresenter;
-    const open = new Map<string, { id: string; sheet: string; open(id: string): Promise<void> }>();
+    const open = new Map<string, { id: string; sheet: string; drawnBy: string; open(id: string): Promise<void> }>();
     let next = 1;
     const views: SheetViewsHost = {
-      async open(sheet) {
+      async open(sheet, renderer) {
         const v = {
           id: `sheetview-${next++}`,
           sheet,
+          drawnBy: renderer ?? "svg",
           async open(id: string) {
             v.sheet = id;
           },
@@ -188,11 +189,11 @@ describe("sheet views through the page contract", () => {
   it("opens a view on a sheet, lists it in GetLocation, and closes it", async () => {
     const { dispatch, canvas } = page();
     const opened = (await dispatch("OpenSheetView", { sheet: "board" })) as { view: { id: string; sheet: string }; views: unknown[]; location: { sheet: string } };
-    expect(opened.view).toEqual({ id: "sheetview-1", sheet: "board" });
-    expect(opened.views).toEqual([{ id: "sheetview-1", sheet: "board" }]);
+    expect(opened.view).toEqual({ id: "sheetview-1", sheet: "board", renderer: "svg" });
+    expect(opened.views).toEqual([{ id: "sheetview-1", sheet: "board", renderer: "svg" }]);
     expect(opened.location.sheet, "the canvas stays where it was").toBe("s-root");
     expect(canvas.sheet).toBe("s-root");
-    expect(await dispatch("GetLocation", {})).toMatchObject({ views: [{ id: "sheetview-1", sheet: "board" }] });
+    expect(await dispatch("GetLocation", {})).toMatchObject({ views: [{ id: "sheetview-1", sheet: "board", renderer: "svg" }] });
 
     expect(await dispatch("CloseSheetView", { view: "sheetview-1" })).toMatchObject({ closed: true });
     const after = (await dispatch("GetLocation", {})) as { views?: unknown[] };
@@ -201,11 +202,21 @@ describe("sheet views through the page contract", () => {
     expect(again.closed ?? false, "a closed view's id names nothing").toBe(false);
   });
 
+  it("opens a view in the renderer a request names, and refuses one that is neither", async () => {
+    const { dispatch } = page();
+    const opened = (await dispatch("OpenSheetView", { sheet: "board", renderer: "webgl" })) as { view: unknown };
+    expect(opened.view).toEqual({ id: "sheetview-1", sheet: "board", renderer: "webgl" });
+    await expect(dispatch("OpenSheetView", { sheet: "board", renderer: "native" })).rejects.toMatchObject({
+      code: Code.InvalidArgument,
+      rawMessage: 'no renderer "native"; a view draws in "svg" or "webgl"',
+    });
+  });
+
   it("shows a sheet in the view a ShowSheet names, and on the canvas when it names none", async () => {
     const { dispatch, presenter, canvas } = page();
     await dispatch("OpenSheetView", { sheet: "s-root" });
     const moved = (await dispatch("ShowSheet", { sheet: "board", view: "sheetview-1" })) as { views: unknown[]; location: { sheet: string } };
-    expect(moved.views).toEqual([{ id: "sheetview-1", sheet: "board" }]);
+    expect(moved.views).toEqual([{ id: "sheetview-1", sheet: "board", renderer: "svg" }]);
     expect(moved.location.sheet).toBe("s-root");
     expect(presenter.showSheet).not.toHaveBeenCalled();
     await dispatch("ShowSheet", { sheet: "board" });
@@ -218,7 +229,7 @@ describe("sheet views through the page contract", () => {
     await expect(dispatch("OpenSheetView", { sheet: "s9" })).rejects.toMatchObject({ code: Code.InvalidArgument, rawMessage: 'the open design has no sheet "s9"' });
     await dispatch("OpenSheetView", { sheet: "board" });
     await expect(dispatch("ShowSheet", { sheet: "s9", view: "sheetview-1" })).rejects.toMatchObject({ code: Code.InvalidArgument });
-    expect(await dispatch("GetLocation", {})).toMatchObject({ views: [{ id: "sheetview-1", sheet: "board" }] });
+    expect(await dispatch("GetLocation", {})).toMatchObject({ views: [{ id: "sheetview-1", sheet: "board", renderer: "svg" }] });
   });
 
   it("refuses to open a view on a page with no sheet views, and lists none", async () => {

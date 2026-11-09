@@ -52,6 +52,22 @@ func TestBoardSVGMirrorsBackText(t *testing.T) {
 	}
 }
 
+// The packed board marks back-side text mirrored, so the WebGL overlay flips it as BoardSVG does
+// (agni issue 1368).
+func TestPackBoardMirrorsBackText(t *testing.T) {
+	b := &geom.BoardGeometry{Texts: []*geom.BoardText{
+		{Text: "TOP", At: &geom.Point{X: 0, Y: 0}, Layer: "F.SilkS"},
+		{Text: "BOTTOM", At: &geom.Point{X: 10_000_000, Y: 0}, Layer: "B.SilkS", Mirror: true},
+	}}
+	got := map[string]bool{}
+	for _, l := range PackBoard(b).GetLabels() {
+		got[l.GetText()] = l.GetMirror()
+	}
+	if len(got) != 2 || got["TOP"] || !got["BOTTOM"] {
+		t.Errorf("packed labels mirror %v, want BOTTOM alone", got)
+	}
+}
+
 // A board text draws its glyphs at its height, as KiCad draws them, in its layer's colour (agni issue
 // 1366). Both renderers size and colour it the same way.
 func TestBoardTextSizeAndColour(t *testing.T) {

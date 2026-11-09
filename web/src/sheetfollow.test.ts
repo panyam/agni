@@ -34,4 +34,14 @@ describe("which views a locked camera mirrors", () => {
   it("mirrors nothing across sheets, since two sheets have different frames", () => {
     expect(lockedPeers(views, views[3])).toEqual([]);
   });
+
+  // An SVG view and a WebGL view measure their centres in different units (agni issue 1368).
+  it("mirrors nothing onto a locked view drawn by the other renderer", () => {
+    const mixed: LinkedView[] = [
+      { id: "a", sheet: "board", link: "locked", drawnBy: "webgl" },
+      { id: "b", sheet: "board", link: "locked", drawnBy: "svg" },
+      { id: "c", sheet: "board", link: "locked", drawnBy: "webgl" },
+    ];
+    expect(lockedPeers(mixed, mixed[0]).map((p) => p.id)).toEqual(["c"]);
+  });
 });

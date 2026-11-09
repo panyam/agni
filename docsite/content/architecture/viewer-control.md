@@ -121,7 +121,9 @@ issue 1326). The page contract opens one too, so a parent page or an agent can p
 board beside the canvas without a reader's click (agni issue 1370). `OpenSheetView` opens a view on
 a sheet and answers its id, `ShowSheet` with a `view` moves that view to another sheet, and
 `CloseSheetView` closes it. The canvas keeps its own sheet throughout. `GetLocation` lists the open
-views beside the location.
+views beside the location. `OpenSheetView` takes a `renderer`, `svg` or `webgl`, and with none the
+view opens in the canvas's renderer (agni issue 1368). Each listed view says which renderer drew it.
+A browser with no WebGL2 draws a WebGL view in SVG, and the view then says `svg`.
 
 A view is not part of `ViewerLocation`, because a link cannot open one. A link names one sheet, and
 a view lives only as long as the page holding it. The id is `sheetview-<n>`, numbered from 1 per

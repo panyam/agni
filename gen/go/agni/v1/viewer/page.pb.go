@@ -328,7 +328,10 @@ type SheetView struct {
 	// views from 1 and never reuses a number, so a closed view's id names nothing.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// sheet is the sheet id that the view shows.
-	Sheet         string `protobuf:"bytes,2,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	Sheet string `protobuf:"bytes,2,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	// renderer is "svg" or "webgl", the renderer that drew the view's sheet (agni issue 1368). A view
+	// asked for WebGL on a browser with no WebGL2 draws in SVG and says "svg".
+	Renderer      string `protobuf:"bytes,3,opt,name=renderer,proto3" json:"renderer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -373,6 +376,13 @@ func (x *SheetView) GetId() string {
 func (x *SheetView) GetSheet() string {
 	if x != nil {
 		return x.Sheet
+	}
+	return ""
+}
+
+func (x *SheetView) GetRenderer() string {
+	if x != nil {
+		return x.Renderer
 	}
 	return ""
 }
@@ -948,7 +958,10 @@ func (x *ShowSheetResponse) GetViews() []*SheetView {
 type OpenSheetViewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// sheet is the sheet id the new view shows. A sheet the open design lacks is refused.
-	Sheet         string `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	Sheet string `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	// renderer is "svg" or "webgl", the renderer the view draws in. Empty opens it in the canvas's
+	// renderer, and any other value is refused (agni issue 1368).
+	Renderer      string `protobuf:"bytes,2,opt,name=renderer,proto3" json:"renderer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -986,6 +999,13 @@ func (*OpenSheetViewRequest) Descriptor() ([]byte, []int) {
 func (x *OpenSheetViewRequest) GetSheet() string {
 	if x != nil {
 		return x.Sheet
+	}
+	return ""
+}
+
+func (x *OpenSheetViewRequest) GetRenderer() string {
+	if x != nil {
+		return x.Renderer
 	}
 	return ""
 }
@@ -1191,10 +1211,11 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\x12GetLocationRequest\"\x82\x01\n" +
 	"\x13GetLocationResponse\x12:\n" +
 	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
-	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"1\n" +
+	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"M\n" +
 	"\tSheetView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05sheet\x18\x02 \x01(\tR\x05sheet\"d\n" +
+	"\x05sheet\x18\x02 \x01(\tR\x05sheet\x12\x1a\n" +
+	"\brenderer\x18\x03 \x01(\tR\brenderer\"d\n" +
 	"\x14ApplyLocationRequest\x12:\n" +
 	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\"~\n" +
@@ -1227,9 +1248,10 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\x04view\x18\x02 \x01(\tR\x04view\"\x80\x01\n" +
 	"\x11ShowSheetResponse\x12:\n" +
 	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +
-	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\",\n" +
+	"\x05views\x18\x02 \x03(\v2\x19.agni.v1.viewer.SheetViewR\x05views\"H\n" +
 	"\x14OpenSheetViewRequest\x12\x14\n" +
-	"\x05sheet\x18\x01 \x01(\tR\x05sheet\"\xb3\x01\n" +
+	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x1a\n" +
+	"\brenderer\x18\x02 \x01(\tR\brenderer\"\xb3\x01\n" +
 	"\x15OpenSheetViewResponse\x12-\n" +
 	"\x04view\x18\x01 \x01(\v2\x19.agni.v1.viewer.SheetViewR\x04view\x12:\n" +
 	"\blocation\x18\x02 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12/\n" +

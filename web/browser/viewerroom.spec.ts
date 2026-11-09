@@ -224,7 +224,7 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
     const moved = (await agent.call("viewer_show_sheet", { design: DESIGN_A, sheet: otherSheet, view: id })) as ViewCall;
     expect(moved.isError, text(moved)).toBeFalsy();
     expect(moved.structuredContent?.location?.sheet, "the canvas stays on its sheet").toBe(canvasSheet);
-    expect(moved.structuredContent?.views).toEqual([{ id, sheet: otherSheet }]);
+    expect(moved.structuredContent?.views).toEqual([{ id, sheet: otherSheet, renderer: "svg" }]);
 
     const closed = (await agent.call("viewer_close_sheet_view", { design: DESIGN_A, view: id })) as ViewCall;
     expect(closed.isError, text(closed)).toBeFalsy();

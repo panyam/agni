@@ -1,6 +1,6 @@
 import { BaseComponent } from "@panyam/tsappkit";
 import { pickOnly, toRenderable, type DecodedSheet } from "./packed.js";
-import { Camera, boundsOfVertices, type CameraView } from "./camera.js";
+import { Camera, boundsOfVertices, revealView, type Bounds, type CameraView } from "./camera.js";
 import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
@@ -22,11 +22,14 @@ import { rectOf, type Members } from "./area.js";
 import { AreaBand } from "./areaband.js";
 import { CLICK_SLOP_PX, type Selection } from "./selection.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { UPRIGHT, orientTurn, type Orientation, type Point } from "./orient.js";
+import { strataDrawOrder, type StrataRow } from "./boardstrata.js";
+import { unitAround, type RevealBox } from "./svgview.js";
 
-// CanvasComponent owns the WebGL2 schematic canvas as a tsappkit lifecycle component. It
-// mounts on the #view canvas and renders whatever sheet the presenter hands it through
-// showSheet (WS9-003). Switching sheets swaps the renderer and camera, while the input
-// handlers and the animation loop are set up once.
+// CanvasComponent owns one WebGL2 drawing as a tsappkit lifecycle component. The canvas mounts it on
+// #view, and each sheet view in WebGL mounts one on a canvas of its own (agni issue 1368). It renders
+// whatever sheet it is handed through showSheet (WS9-003). Switching sheets swaps the renderer and
+// camera, while the input handlers and the animation loop are set up once.
 export class CanvasComponent extends BaseComponent {
   private gl?: WebGL2RenderingContext;
   private renderer?: Renderer;
@@ -44,6 +47,31 @@ export class CanvasComponent extends BaseComponent {
   // picks indexes the drawn sheet for clicks (canvaspick.ts). It is built on the first click
   // rather than with the sheet, so a board that is only looked at never pays for it.
   private picks?: PickIndex;
+  // orientation turns the view, and fromBelow draws a board's strata nearest last (agni issue 1368).
+  // strata are the board's layer rows, which say how deep each group lies. order is the draw order
+  // they give, and depth its inverse, a primitive's place in that order, which a pick reads.
+  private orientation: Orientation = UPRIGHT;
+  private fromBelow = false;
+  private strata: StrataRow[] = [];
+  private order: Int32Array | null = null;
+  private depth: Int32Array | undefined;
+  // touched says the reader moved this sheet's view, so turning it keeps the point at its centre
+  // rather than refitting, as SvgView does.
+  private touched = false;
+  // lit holds the world box of each entity the highlight lit, which reveal frames.
+  private lit: Bounds[] = [];
+  private frameId = 0;
+  private disposed = false;
+  private resizeObserver?: ResizeObserver;
+
+  // textHost is where the text layer goes, and readout where the canvas reports what it drew. The
+  // page's canvas leaves both unset and gets #text-overlay and #readout. A sheet view sets its own
+  // text host and no readout before activate.
+  textHost?: HTMLElement;
+  readout?: HTMLElement | null;
+  // markView names the drawing in the SHEET_DRAWN mark's detail, so a browser spec timing the
+  // canvas can tell its draws from a sheet view's.
+  markView = "canvas";
 
   // onPick fires when the reader CLICKS an entity on the canvas, as SvgView.onPick does. A press
   // and release that moved more than CLICK_SLOP_PX is a pan and picks nothing (agni issue 1332).
@@ -55,6 +83,8 @@ export class CanvasComponent extends BaseComponent {
   // the area itself, since only its pick index knows what lies where.
   onArea: ((m: Members) => void) | null = null;
   onToggle: ((sel: Selection) => void) | null = null;
+  // onViewChange fires when the reader pans or zooms, so a locked view can follow.
+  onViewChange: (() => void) | null = null;
 
   activate(): void {
     const canvas = this.rootElement as HTMLCanvasElement;
@@ -65,6 +95,11 @@ export class CanvasComponent extends BaseComponent {
     }
     this.gl = gl;
     this.setReadout("no sheet loaded — pick a file");
+  }
+
+  // ready says the browser gave this canvas a WebGL2 context, so it can draw.
+  ready(): boolean {
+    return this.gl !== undefined;
   }
 
   // showSheet renders a packed sheet delivered by the design API (GetSheet). Safe to call
@@ -91,6 +126,97 @@ export class CanvasComponent extends BaseComponent {
 
   setView(v: CameraView): void {
     this.camera?.setView(v);
+    this.touched = true;
+  }
+
+  // getCentre is the world point at the middle of the view and the zoom, in pixels per world unit.
+  // setCentre puts a world point at the middle at a zoom. Two locked WebGL views on one sheet
+  // exchange these, as two SVG views exchange SvgView's.
+  getCentre(): { at: Point; scale: number } | null {
+    if (!this.camera) return null;
+    const v = this.camera.getView();
+    return { at: { x: v.centerX, y: v.centerY }, scale: 1 / v.worldPerPixel };
+  }
+
+  setCentre(at: Point, scale: number): void {
+    this.setView({ centerX: at.x, centerY: at.y, worldPerPixel: 1 / scale });
+  }
+
+  // getOrientation and setOrientation turn the view (agni issues 1327, 1368). A view the reader has
+  // moved keeps the point at its centre, since the camera turns about it, and a fresh one refits.
+  getOrientation(): Orientation {
+    return this.orientation;
+  }
+
+  setOrientation(o: Orientation): void {
+    this.orientation = o;
+    if (!this.camera) return;
+    this.camera.setOrientation(o);
+    if (!this.touched) this.fit();
+  }
+
+  // setStrata gives a board's layer rows and the side the reader looks from. From below, the strata
+  // draw nearest last and a click picks the nearest first, as orderStrata orders an SVG board. A
+  // schematic passes no rows and draws in pack order.
+  setStrata(rows: StrataRow[], fromBelow: boolean): void {
+    this.strata = rows;
+    this.fromBelow = fromBelow;
+    this.applyOrder();
+  }
+
+  private applyOrder(): void {
+    const sheet = this.sheet;
+    this.order = sheet ? strataDrawOrder(sheet.primitives.map((p) => p.group), this.strata, this.fromBelow) : null;
+    this.depth = undefined;
+    if (this.order) {
+      this.depth = new Int32Array(this.order.length);
+      this.order.forEach((primitive, n) => (this.depth![primitive] = n));
+    }
+    this.renderer?.setOrder(this.order);
+  }
+
+  // reveal frames what the highlight lit, as SvgView's revealOverlay frames its overlay. A pin frames
+  // the unit of its part that draws it, since a dot alone is too small to read (agni issue 1419). It
+  // returns false when nothing is lit on this sheet.
+  reveal(pin?: { ref: string; pin: string }): boolean {
+    if (!this.camera || !this.sheet || this.lit.length === 0) return false;
+    let box = this.lit.reduce(unionBounds);
+    if (pin) box = this.unitOf(box, pin.ref);
+    const canvas = this.rootElement as HTMLCanvasElement;
+    const quarter = this.orientation.rot === 90 || this.orientation.rot === 270;
+    this.camera.setView(revealView(box, boundsOfVertices(this.sheet.vertices), canvas.width, canvas.height, quarter));
+    this.touched = true;
+    this.onViewChange?.();
+    return true;
+  }
+
+  // unitOf grows a box through every drawing of the part that touches it (svgview.ts, unitAround).
+  private unitOf(seed: Bounds, ref: string): Bounds {
+    const sheet = this.sheet!;
+    const parts: RevealBox[] = [];
+    for (const k of sheet.keys) {
+      if (k.refDes !== ref || k.pin) continue;
+      const b = entityBounds(sheet.vertices, sheet.primitives, [k.primitive]);
+      if (b) parts.push(toBox(b));
+    }
+    return fromBox(unitAround(toBox(seed), parts));
+  }
+
+  // dispose stops drawing and frees the GPU's copy of the sheet, for a sheet view the reader closed
+  // or switched to SVG.
+  dispose(): void {
+    this.disposed = true;
+    cancelAnimationFrame(this.frameId);
+    this.resizeObserver?.disconnect();
+    this.overlay?.hide();
+    this.gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    this.gl = undefined;
+    this.renderer = undefined;
+  }
+
+  private fit(): void {
+    const canvas = this.rootElement as HTMLCanvasElement;
+    this.camera?.fit(canvas.width, canvas.height);
   }
 
   private draw(sheet: DecodedSheet): void {
@@ -101,6 +227,9 @@ export class CanvasComponent extends BaseComponent {
     this.renderer = new Renderer(gl, sheet);
     this.renderer.setHiddenGroups(this.hidden);
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
+    this.camera.setOrientation(this.orientation);
+    this.touched = false;
+    this.applyOrder();
     this.overlay ??= this.makeOverlay();
     this.overlay?.setHiddenGroups(this.hidden);
     this.overlay?.setContent(sheet.images, sheet.labels, sheet.fontFamily);
@@ -133,6 +262,7 @@ export class CanvasComponent extends BaseComponent {
     const fallback = hexToRgba(DEFAULT_HIGHLIGHT_COLOR, [1, 0, 1, 1]);
     const draws: { color: ReturnType<typeof hexToRgba>; primitives: Set<number> }[] = [];
     const overlays: { color: ReturnType<typeof hexToRgba>; vertices: Int32Array }[] = [];
+    const litBoxes: Bounds[] = [];
     // PATH marker half-width in world units, a fraction of the sheet's smaller span (WS9-043) so
     // it is visible at any coordinate scale (geometry is in nanometers for KiCad).
     const sb = boundsOfVertices(sheet.vertices);
@@ -141,6 +271,10 @@ export class CanvasComponent extends BaseComponent {
     const drawn = sheet.keys.filter((k) => !pickOnly(sheet.primitives[k.primitive]?.group ?? 0));
     for (const g of resolveHighlights(drawn, this.highlights)) {
       for (const s of g.subjects) lit.add(s);
+      for (const entity of g.entities) {
+        const b = entityBounds(sheet.vertices, sheet.primitives, entity);
+        if (b) litBoxes.push(b);
+      }
       const color = hexToRgba(g.color, fallback, g.alpha);
       // PATH (WS9-043) draws a wider translucent marker. GL lines are always 1px, so its width
       // comes from filled quads tessellated along each wire segment (as the board copper tracks
@@ -168,6 +302,7 @@ export class CanvasComponent extends BaseComponent {
       }
       overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });
     }
+    this.lit = litBoxes;
     this.renderer.setHighlights(draws);
     this.renderer.setOverlays(overlays);
     (this.rootElement as HTMLElement).dataset.lit = JSON.stringify([...lit].sort());
@@ -176,7 +311,7 @@ export class CanvasComponent extends BaseComponent {
   // makeOverlay attaches the text layer to the #text-overlay host beside the canvas. Returns
   // undefined if the host is absent, so text is simply not drawn.
   private makeOverlay(): TextOverlay | undefined {
-    const host = document.getElementById("text-overlay");
+    const host = this.textHost ?? document.getElementById("text-overlay");
     return host ? new TextOverlay(host) : undefined;
   }
 
@@ -220,7 +355,8 @@ export class CanvasComponent extends BaseComponent {
     // window resize), so observe the canvas element itself. Guarded because jsdom has no
     // ResizeObserver.
     if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(() => this.resize()).observe(canvas);
+      this.resizeObserver = new ResizeObserver(() => this.resize());
+      this.resizeObserver.observe(canvas);
     }
 
     let dragging = false;
@@ -271,6 +407,8 @@ export class CanvasComponent extends BaseComponent {
         return;
       }
       this.camera.panPixels((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
+      this.touched = true;
+      this.onViewChange?.();
       lastX = e.clientX;
       lastY = e.clientY;
     });
@@ -281,23 +419,28 @@ export class CanvasComponent extends BaseComponent {
         if (!this.camera) return;
         const rect = canvas.getBoundingClientRect();
         this.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), wheelZoomFactor(e.deltaY));
+        this.touched = true;
+        this.onViewChange?.();
       },
       { passive: false },
     );
 
     const frame = (): void => {
+      if (this.disposed) return;
       if (this.renderer && this.camera) {
         this.renderer.render(this.camera.matrix(), this.camera.viewRect());
-        // The overlay reads the same camera in the same tick, so text moves with the geometry.
-        this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr());
+        // The overlay reads the same camera in the same tick, so text moves and turns with the
+        // geometry.
+        this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr(), orientTurn(this.orientation));
         if (!this.marked) {
           this.marked = true;
-          requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "webgl" } }));
+          const view = this.markView;
+          requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "webgl", view } }));
         }
       }
-      requestAnimationFrame(frame);
+      this.frameId = requestAnimationFrame(frame);
     };
-    requestAnimationFrame(frame);
+    this.frameId = requestAnimationFrame(frame);
   }
 
   // pickAt resolves a client point to the entity drawn under it, through the camera's inverse and
@@ -307,7 +450,7 @@ export class CanvasComponent extends BaseComponent {
     const rect = (this.rootElement as HTMLCanvasElement).getBoundingClientRect();
     const at = this.camera.pixelToWorld((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
     this.picks ??= new PickIndex(this.sheet);
-    return this.picks.pick(at.x, at.y, this.dpr() * this.camera.worldPerDevicePixel(), new Set(this.hidden));
+    return this.picks.pick(at.x, at.y, this.dpr() * this.camera.worldPerDevicePixel(), new Set(this.hidden), this.depth);
   }
 
   // membersIn returns what a client rectangle holds on the drawn sheet, or null before one is drawn.
@@ -330,9 +473,22 @@ export class CanvasComponent extends BaseComponent {
   }
 
   private setReadout(text: string): void {
-    const readout = document.getElementById("readout");
+    const readout = this.readout === undefined ? document.getElementById("readout") : this.readout;
     if (readout) readout.textContent = text;
   }
+}
+
+function unionBounds(a: Bounds, b: Bounds): Bounds {
+  return { minX: Math.min(a.minX, b.minX), minY: Math.min(a.minY, b.minY), maxX: Math.max(a.maxX, b.maxX), maxY: Math.max(a.maxY, b.maxY) };
+}
+
+// toBox and fromBox move between world bounds and unitAround's boxes.
+function toBox(b: Bounds): RevealBox {
+  return { x: b.minX, y: b.minY, w: b.maxX - b.minX, h: b.maxY - b.minY };
+}
+
+function fromBox(b: RevealBox): Bounds {
+  return { minX: b.x, minY: b.y, maxX: b.x + b.w, maxY: b.y + b.h };
 }
 
 // askedSubjects is the part of a spec that names what to light, without its style. The canvas
