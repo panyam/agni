@@ -10,6 +10,17 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-09
+
+A walk outwards from a part asks where a line goes next, to a pin, its pull-up or the rail (PR
+1422, 1427), and the viewer walks hop by hop (PR 1420). The WebGL canvas picks, box-selects and
+lights findings as SVG does (PR 1444, 1448, 1451, 1457), and its button is back (PR 1455). A board
+view beside the canvas keeps its own layer list (PR 1453) and answers a click in about a second on
+Jetson (PR 1452). Allegro boards read pin names, constraint sets and declared pairs (PR 1431, 1433,
+1438), and Capture net names match its netlist (PR 1429). Eight Dependabot alerts are cleared (PR
+1460). A patch by choice, it adds rpcs and fields, and four Go API changes can break an implementer
+of agni's interfaces. The full write-up is [RELEASES/v0.6.1.md](RELEASES/v0.6.1.md).
+
 ## [0.6.0] - 2026-11-05
 
 agni reads OrCAD Capture designs, a `.DSN` and every block it keeps in a file of its own, flattened
