@@ -5,8 +5,8 @@
 #   pads odb++ only       a non-plated hole the KiCad file lists on mask alone, which ODB++ drills
 #   error: kicad read     a board the KiCad reader cannot read yet (the Feather, agni issue 681)
 # Regenerate with AGNI_ODB_ORACLE_UPDATE=1 make odb-oracle, and read the diff.
-cynthion	pads: odb++ only: J5.? net= circle 700000x700000 drill=700000 side=F.Cu (122750,-107199)um
-cynthion	pads: odb++ only: J5.? net= circle 700000x700000 drill=700000 side=F.Cu (131850,-107199)um
+cynthion	pads: odb++ only: J5.? net= circle 700000x700000 at - drill=700000 side=F.Cu (122750,-107199)um
+cynthion	pads: odb++ only: J5.? net= circle 700000x700000 at - drill=700000 side=F.Cu (131850,-107199)um
 glasgow-revC3	parts: kicad only: NONO_HANA=MECHOKKU
 hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
 hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
@@ -40,8 +40,8 @@ hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_6=VAL**
 hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_7=VAL**
 hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_8=VAL**
 hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_9=VAL**
-jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1100000x1100000 drill=1100000 side=B.Cu (118959,-94500)um
-jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1600000x1600000 drill=1600000 side=B.Cu (118959,-114497)um
+jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1100000x1100000 at - drill=1100000 side=B.Cu (118959,-94500)um
+jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1600000x1600000 at - drill=1600000 side=B.Cu (118959,-114497)um
 jetson-agx-thor-baseboard	parts: kicad only: A1=Mech_M2_2280_H2.5mm
 jetson-agx-thor-baseboard	parts: kicad only: A2=Mech_M2_2242_H2.5mm
 jetson-agx-thor-baseboard	parts: kicad only: A3=Jetson-Thor-AGX-T5000
