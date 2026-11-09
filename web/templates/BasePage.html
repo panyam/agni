@@ -72,6 +72,9 @@
     .render-busy { position: fixed; inset: 0; z-index: 5000; display: none; align-items: center; justify-content: center; gap: 12px; background: rgba(15, 23, 42, 0.5); color: #fff; font-size: 18px; letter-spacing: 0.02em; cursor: progress; }
     .render-busy.on { display: flex; }
     .render-busy::before { content: ""; width: 26px; height: 26px; border: 3px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; border-radius: 50%; animation: render-spin 0.8s linear infinite; }
+    /* Work that goes on after the sheet is drawn shows as a pill that takes no input (agni issue 1454). */
+    .render-busy.soft { display: flex; inset: auto; left: 50%; bottom: 16px; transform: translateX(-50%); gap: 8px; padding: 6px 14px; border-radius: 16px; background: rgba(15, 23, 42, 0.8); font-size: 13px; pointer-events: none; cursor: default; }
+    .render-busy.soft::before { width: 12px; height: 12px; border-width: 2px; }
     @keyframes render-spin { to { transform: rotate(360deg); } }
     .svg-view { position: absolute; inset: 0; overflow: hidden; background: #fff; display: none; }
     /* The rectangle a Shift-drag draws to select an area (agni issue 904). */

@@ -368,6 +368,47 @@ describe("ViewerPresenter", () => {
     expect(lastControls(h).nativeAvailable).toBe(true);
   });
 
+  it("stops blocking the page once the sheet is drawn, while the rules still load (agni issue 1454)", async () => {
+    const h = harness();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const rules = h.listRules.getMockImplementation()!;
+    h.listRules.mockImplementationOnce(async (req) => {
+      await held;
+      return rules(req);
+    });
+    const opened = h.presenter.openFile("m", "board.eds");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalled());
+    const calls = (): unknown[] => (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    const last = () => calls()[calls().length - 1];
+    expect(calls()[0]).toBe(true);
+    expect(last()).toBe("soft");
+    release();
+    await opened;
+    expect(last()).toBe(false);
+  });
+
+  it("stops an open that a newer one superseded before its later phases", async () => {
+    const h = harness();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const rules = h.listRules.getMockImplementation()!;
+    h.listRules.mockImplementationOnce(async (req) => {
+      await held;
+      return rules(req);
+    });
+    const first = h.presenter.openFile("m", "a.eds");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalledTimes(1));
+    await h.presenter.openFile("m", "b.eds");
+    const reports = h.onReport.mock.calls.length;
+    release();
+    await first;
+    // The first open's report phase never ran, so the panel still shows the second design's.
+    expect(h.onReport.mock.calls.length).toBe(reports);
+    const busy = (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls;
+    expect(busy[busy.length - 1][0]).toBe(false);
+  });
+
   it("switching designs drops the sticky layout and adopts the new design's default", async () => {
     const h = harness();
     await h.presenter.openFile("m", "a.eds"); // faithful

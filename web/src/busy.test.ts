@@ -36,6 +36,41 @@ describe("delayedBusy", () => {
     expect(el.dataset.busy).toBeUndefined();
   });
 
+  it("softens a blocking overlay into a pill that takes no input (agni issue 1454)", () => {
+    const el = document.createElement("div");
+    const setBusy = delayedBusy(el);
+    setBusy(true);
+    vi.advanceTimersByTime(RENDER_BUSY_DELAY_MS);
+    expect(el.classList.contains("on")).toBe(true);
+    setBusy("soft", "loading rules…");
+    expect(el.classList.contains("on")).toBe(false);
+    expect(el.classList.contains("soft")).toBe(true);
+    expect(el.dataset.busy).toBe("on");
+    setBusy(false);
+    expect(el.classList.contains("soft")).toBe(false);
+    expect(el.dataset.busy).toBeUndefined();
+  });
+
+  it("never shows the blocking overlay for a soft span, however long it lasts", () => {
+    const el = document.createElement("div");
+    const setBusy = delayedBusy(el);
+    setBusy(true);
+    setBusy("soft");
+    vi.advanceTimersByTime(RENDER_BUSY_DELAY_MS * 10);
+    expect(el.classList.contains("on")).toBe(false);
+    expect(el.classList.contains("soft")).toBe(true);
+  });
+
+  it("blocks again, after the delay, when a render starts during a soft span", () => {
+    const el = document.createElement("div");
+    const setBusy = delayedBusy(el);
+    setBusy("soft");
+    setBusy(true);
+    expect(el.classList.contains("soft")).toBe(false);
+    vi.advanceTimersByTime(RENDER_BUSY_DELAY_MS);
+    expect(el.classList.contains("on")).toBe(true);
+  });
+
   it("repeated busy(true) does not restack the timer", () => {
     const el = document.createElement("div");
     const setBusy = delayedBusy(el);

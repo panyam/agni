@@ -279,6 +279,26 @@ reads `document.ts` and fails if it imports an interaction module or names inter
 positive control checks that the same patterns match `viewer.ts`. A new field belongs in the store only
 if it holds with no reader present. A field that changes with a click belongs in the presenter.
 
+## Opening a design blocks the page until the sheet draws
+
+`openFile` reads the design, resolves its project and draws its first sheet. Then it loads the rule
+catalog, the layout report, the part parameters, the pickers and the stored reviews. The sheet is on
+screen for that second half, and on Jetson without a GPU the second half took seconds. So the loader
+blocks the page behind its full-screen overlay only until the sheet draws. After that it shows the
+phase in a small pill that takes no input (`delayedBusy`'s `"soft"` state in `web/src/busy.ts`, agni
+issue 1454), and the reader can pan, zoom and click while the rest arrives. A panel that needs the
+rest says so itself, such as Checks' Run button, which stays disabled until the catalog arrives. A
+sheet render the reader starts in that window still blocks, since it replaces the drawing.
+
+**A reader can now start a second open mid-load**, by changing the layout for one. Each `openFile`
+takes a number, and an open that a newer one superseded stops between its phases rather than
+pushing an older catalog or report over the newer one. A phase already under way still finishes,
+since the check sits between phases.
+
+The loader's element carries `data-busy` from the first busy call to the last, in either form. A
+browser spec waits on it before acting, since the overlay's show delay leaves no other way to tell
+a loading page from a loaded one.
+
 ## The live page contract
 
 A viewer page is reached three ways: a link (`ViewerLocation` in the URL, applied once by `restore`),

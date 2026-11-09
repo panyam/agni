@@ -1,5 +1,6 @@
 import { snapshots } from "./api.js";
 import type { SnapshotSource } from "./snapshots.js";
+import type { Busy } from "./busy.js";
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
@@ -99,8 +100,9 @@ export interface RenderView {
   setSvgOverlay(markup: string): void;
   // setBusy shows or hides a loading indicator around a render, which is slow on large schematics
   // and slower for the native shell-out. label names the current phase (loading, rendering, running
-  // checks) and is left unchanged when omitted.
-  setBusy(busy: boolean, label?: string): void;
+  // checks) and is left unchanged when omitted. "soft" says work goes on with the sheet already on
+  // screen, so the indicator must leave the page usable (busy.ts, agni issue 1454).
+  setBusy(busy: Busy, label?: string): void;
   // getView / setView snapshot and restore the active renderer's pan/zoom for the given mode (WebGL
   // -> canvas, SVG/Native -> the SVG host). The value is opaque to the presenter, which stores and
   // replays whatever the renderer returns. getView returns null when there is nothing to snapshot
@@ -298,6 +300,10 @@ export class ViewerPresenter {
   private highlightStyle: FocusStyle | undefined;
 
   private busyDepth = 0;
+  // softDepth counts spans that go on after their sheet is drawn, which show without blocking.
+  private softDepth = 0;
+  // openSeq numbers each openFile, so an open that a newer one superseded stops between its phases.
+  private openSeq = 0;
 
   // viewMemory remembers each renderer's pan/zoom keyed by mode|mount|path|sheet, so switching
   // renderer/sheet/file restores where you left it. shownKey/shownMode track what is currently
@@ -784,6 +790,8 @@ export class ViewerPresenter {
   // layout must win; a same-file re-open (setLayout) keeps the chosen layout because mount/path are
   // unchanged.
   async openFile(mount: string, path: string, wantSheet = "", keepLayout = false): Promise<void> {
+    const seq = ++this.openSeq;
+    const superseded = () => seq !== this.openSeq;
     const newFile = mount !== this.doc.mount || path !== this.doc.path;
     if (!keepLayout && newFile) this.currentLayout = "";
     // A different design retires the link's claim, since the hash described the bytes behind the
@@ -801,8 +809,10 @@ export class ViewerPresenter {
     this.doc.path = path;
     if (changed) void this.loadQuerySets(mount, path);
     this.setBusy(true, "loading design…");
+    let soft = false;
     try {
       const d = await this.client.getDesign({ snapshot: await this.snaps.of(artifactUri(mount, path)), layout: this.currentLayout });
+      if (superseded()) return;
       this.doc.sheets = d.sheets;
       // Adopt the effective layout the server chose (the request may have been empty or
       // unavailable for this file), and report the options to the UI.
@@ -830,25 +840,36 @@ export class ViewerPresenter {
       // Resolve the project before the report and parts work, since a reader wants to know whose
       // config is in effect while the rest loads, and the pickers below filter by it.
       await this.resolveProject();
+      if (superseded()) return;
       const target = (wantSheet && d.sheets.find((s) => s.id === wantSheet)) || d.sheets[0];
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
+      if (superseded()) return;
+      // The sheet is on screen. What follows is the design's rules, report, parts and reviews, which
+      // the reader need not wait for, so the loader stops blocking the page (agni issue 1454).
+      this.soften();
+      soft = true;
       this.doc.dropRun(); // a run is of one design, with its own tiers and so its own skipped rules
       this.checksCancelled = false;
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
+      if (superseded()) return;
       this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
       await this.setHighlights([]); // clear any highlight carried over from the previously open design
+      if (superseded()) return;
       this.clearExpectations(); // the sidecar reconcile is part of the on-demand run, not the load
       this.setBusyPhase("building report…");
       await this.refreshReport(); // the auto-layout conversion report is not a check, so it stays eager
+      if (superseded()) return;
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
+      if (superseded()) return;
       // One resolution feeds both pickers, each with the kind it can actually parse.
       const choices =
         this.views.conventionBar || this.views.review
           ? await this.pickerChoices()
           : { conventions: [], checklists: [] };
+      if (superseded()) return;
       this.conventionChoices = choices.conventions;
       this.checklistChoices = choices.checklists;
       this.pushConvention();
@@ -857,9 +878,13 @@ export class ViewerPresenter {
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
     } finally {
-      this.setBusy(false);
-      // An open that failed before loadRules would otherwise leave Run disabled for good.
-      if (this.doc.catalogLoading) {
+      if (soft) {
+        this.softDepth--;
+        this.pushBusy();
+      } else this.setBusy(false);
+      // An open that failed before loadRules would otherwise leave Run disabled for good. A superseded
+      // open leaves the flag to the open that replaced it.
+      if (!superseded() && this.doc.catalogLoading) {
         this.doc.catalogLoading = false;
         this.pushFindings();
       }
@@ -2199,14 +2224,27 @@ export class ViewerPresenter {
   // it only clears once the outermost finishes. An optional label names the phase being started.
   private setBusy(busy: boolean, label?: string): void {
     this.busyDepth += busy ? 1 : -1;
-    this.render.setBusy(this.busyDepth > 0, label);
+    this.pushBusy(label);
+  }
+
+  // soften turns one blocking span into a soft one, once its sheet is on screen and what remains is
+  // work the reader need not wait for.
+  private soften(): void {
+    this.busyDepth--;
+    this.softDepth++;
+    this.pushBusy();
+  }
+
+  // pushBusy shows the strongest span open. A render blocks even while a design's load goes on soft.
+  private pushBusy(label?: string): void {
+    this.render.setBusy(this.busyDepth > 0 ? true : this.softDepth > 0 ? "soft" : false, label);
   }
 
   // setBusyPhase updates the loader's label mid-load without touching the nesting count, so a
   // long openFile can report each stage (loading -> rendering -> running checks) while the overlay
   // remains up. A no-op visually when nothing is busy.
   private setBusyPhase(label: string): void {
-    this.render.setBusy(this.busyDepth > 0, label);
+    this.pushBusy(label);
   }
 
   // setMode switches renderer and re-renders the current sheet in the new mode. Native renders
