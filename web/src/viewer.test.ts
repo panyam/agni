@@ -379,12 +379,13 @@ describe("ViewerPresenter", () => {
     });
     const opened = h.presenter.openFile("m", "board.eds");
     await vi.waitFor(() => expect(h.listRules).toHaveBeenCalled());
-    const calls = () => (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls.map((c: [unknown]) => c[0]);
+    const calls = (): unknown[] => (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    const last = () => calls()[calls().length - 1];
     expect(calls()[0]).toBe(true);
-    expect(calls().at(-1)).toBe("soft");
+    expect(last()).toBe("soft");
     release();
     await opened;
-    expect(calls().at(-1)).toBe(false);
+    expect(last()).toBe(false);
   });
 
   it("stops an open that a newer one superseded before its later phases", async () => {
@@ -404,7 +405,8 @@ describe("ViewerPresenter", () => {
     await first;
     // The first open's report phase never ran, so the panel still shows the second design's.
     expect(h.onReport.mock.calls.length).toBe(reports);
-    expect((h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0]).toBe(false);
+    const busy = (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls;
+    expect(busy[busy.length - 1][0]).toBe(false);
   });
 
   it("switching designs drops the sticky layout and adopts the new design's default", async () => {
