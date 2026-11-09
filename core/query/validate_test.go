@@ -38,7 +38,7 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 		{
 			name:  "projecting a variable no positive relation binds",
 			query: `component.net(?r, ?n) => ?r, ?nothing`,
-			wants: "not bound by a positive relation",
+			wants: "not bound by the goal",
 		},
 		{
 			name:  "rule head redefining a fact relation",

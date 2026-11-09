@@ -233,8 +233,8 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/mcpkit-rooms':
-        specifier: 0.8.16
-        version: 0.8.16
+        specifier: 0.8.20
+        version: 0.8.20
       '@panyam/tsappkit':
         specifier: ^0.7.7
         version: 0.7.7
@@ -767,14 +767,14 @@ packages:
   '@oxc-project/types@0.156.0':
     resolution: {integrity: sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw==}
 
-  '@panyam/massrelay@0.3.3':
-    resolution: {integrity: sha512-N+FUXNHIJKbDHx+vAul/BPbH6C3kxxOJyLly58NDcopG+atTd8TtwU9I83fHT3cjRcZ3mrBzHWvbYuiW+ZFOFQ==}
+  '@panyam/massrelay@0.3.6':
+    resolution: {integrity: sha512-Z5jDFVAUMR8gJv5CCXImz4pm65UV3BIMT4ppPnlYQH+8e0hpSTp0Yogsj0QqB31USjOaq2QtcSuDZoQCYHDjAA==}
     peerDependencies:
       '@bufbuild/protobuf': ^2.0.0
       '@panyam/servicekit-client': ^0.0.7 || ^0.1.9 || ^0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.16':
-    resolution: {integrity: sha512-BOFIB0K/cnWey6NkhX7snhq3BpQHdbJap7QfQYizhfTgzSbJxsoMPivFO6lDPMxfP+NdDatis4Nkp8EUKCtEQg==}
+  '@panyam/mcpkit-rooms@0.8.20':
+    resolution: {integrity: sha512-piSR4XB7KPWujU8cV8iuoyXI3sESMRMp6T74zCiIgMBA8aX3/hWpAFxcDVnLNwDrwZRlU2SpMCJpN/L5LHBf8A==}
 
   '@panyam/servicekit-client@0.2.0':
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
@@ -1883,15 +1883,15 @@ snapshots:
 
   '@oxc-project/types@0.156.0': {}
 
-  '@panyam/massrelay@0.3.3(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)':
+  '@panyam/massrelay@0.3.6(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
       '@panyam/servicekit-client': 0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.16':
+  '@panyam/mcpkit-rooms@0.8.20':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
-      '@panyam/massrelay': 0.3.3(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
+      '@panyam/massrelay': 0.3.6(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
       '@panyam/servicekit-client': 0.2.0
 
   '@panyam/servicekit-client@0.2.0': {}
