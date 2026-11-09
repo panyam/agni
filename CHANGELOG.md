@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-09
+
+jaala moves to v0.1.101 (PR 1471). A query naming a value that no rule writes now answers nothing
+rather than failing. `make odb-oracle` passes again. It is a patch, with no Go API change. The full
+write-up is [RELEASES/v0.6.4.md](RELEASES/v0.6.4.md).
+
 ## [0.6.3] - 2026-11-09
 
 A board with no drawn schematic opens as the board alone, and every locate answer names the board
