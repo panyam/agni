@@ -88,16 +88,20 @@
     <div data-dock-panel="review" class="dock-body"><div id="review-panel" data-component="review"></div></div>
     <!-- WS9-035: the datasheet-params panel (per-component parameter tree) mounts here -->
     <div data-dock-panel="parts" class="dock-body"><div id="parts-panel" data-component="parts"></div></div>
-    <!-- WS9-005: the visual diff — the chrome bar island plus two synced SVG canvases (plain DOM) -->
+    <!-- WS9-005: the visual diff — the chrome bar island plus two synced canvases (plain DOM), each an SVG host over a WebGL canvas (agni issue 1335) -->
     <div data-dock-panel="diff" class="diff-wrap">
       <div id="diff-bar" data-component="diff-bar"></div>
       <div id="diff-sides" class="diff-sides">
         <div class="diff-side">
+          <canvas id="diff-gl-a" class="diff-gl"></canvas>
+          <div id="diff-text-a" class="text-overlay"></div>
           <div id="diff-svg-a" class="diff-svg"></div>
           <div id="diff-ph-a" class="diff-ph"></div>
           <div id="diff-label-a" class="diff-side-label">A — old</div>
         </div>
         <div class="diff-side">
+          <canvas id="diff-gl-b" class="diff-gl"></canvas>
+          <div id="diff-text-b" class="text-overlay"></div>
           <div id="diff-svg-b" class="diff-svg"></div>
           <div id="diff-ph-b" class="diff-ph"></div>
           <div class="diff-side-label">B — new</div>

@@ -5,6 +5,14 @@ import { DIFF_COLORS } from "./diff.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { create } from "@bufbuild/protobuf";
 import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
+import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+
+// packedSheet is a packed sheet naming the side and sheet it came from, 1000 by 800 world units.
+function packedSheet(id: string): PackedSheet {
+  const v = new Int32Array([0, 0, 1000, 0, 1000, 800, 0, 800]);
+  return create(PackedSheetSchema, { sheetId: id, vertices: new Uint8Array(v.buffer) });
+}
 
 // snapPath is the design path a fake snapshot name carries.
 function snapPath(snapshot: string): string {
@@ -13,7 +21,7 @@ function snapPath(snapshot: string): string {
 
 // Fakes mirror the viewer.test.ts harness, with plain stubs behind the typed clients, a
 // recording view per side, and the onState pushes captured for assertion.
-function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: OverlayConfig } = {}) {
+function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: OverlayConfig; renderer?: "svg" | "webgl" } = {}) {
   const diffDesigns =
     over.diffDesigns ??
     vi.fn(async (_req: object) => ({
@@ -39,9 +47,11 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
       { id: "s2", name: snapPath(req.snapshot) === "a.edn" ? "OldOnly" : "NewOnly" },
     ],
   }));
-  const getSheet = vi.fn(async (req: { snapshot: string; sheet: string }) => ({
-    content: { case: "svg" as const, value: `<svg data-doc="${snapPath(req.snapshot)}/${req.sheet}"/>` },
-  }));
+  const getSheet = vi.fn(async (req: { snapshot: string; sheet: string; format?: SheetFormat }) =>
+    req.format === SheetFormat.PACKED
+      ? { content: { case: "packed" as const, value: packedSheet(`${snapPath(req.snapshot)}/${req.sheet}`) } }
+      : { content: { case: "svg" as const, value: `<svg data-doc="${snapPath(req.snapshot)}/${req.sheet}"/>` } },
+  );
   const highlightSheet = vi.fn(async (req: { snapshot: string }) => ({
     content: { case: "svg" as const, value: `<svg data-overlay="${snapPath(req.snapshot)}"/>` },
   }));
@@ -52,13 +62,23 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
     overlays: ReturnType<typeof vi.fn>;
     ph: ReturnType<typeof vi.fn>;
     reveal: ReturnType<typeof vi.fn>;
+    packed: ReturnType<typeof vi.fn>;
+    lit: ReturnType<typeof vi.fn>;
+    ghost: ReturnType<typeof vi.fn>;
   } => {
     const svg = vi.fn();
     const overlay = vi.fn();
     const overlays = vi.fn();
     const ph = vi.fn();
     const reveal = vi.fn();
-    return { showSvg: svg, setOverlay: overlay, setOverlays: overlays, showPlaceholder: ph, reveal, svg, overlay, overlays, ph };
+    const packed = vi.fn();
+    const lit = vi.fn();
+    const ghost = vi.fn();
+    return {
+      showSvg: svg, setOverlay: overlay, setOverlays: overlays, showPlaceholder: ph, reveal,
+      showPacked: packed, setHighlights: lit, setGhost: ghost,
+      svg, overlay, overlays, ph, packed, lit, ghost,
+    };
   };
   const a = side();
   const b = side();
@@ -73,6 +93,7 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
     (s) => states.push(s),
     fakeSnapshots(),
     () => over.overlay,
+    () => over.renderer ?? "svg",
   );
   const A = { mount: "m", path: "a.edn" };
   const B = { mount: "m", path: "b.edn" };
@@ -449,5 +470,44 @@ describe("DiffPresenter render errors", () => {
     expect(h.a.svg).toHaveBeenCalled();
     expect(h.a.overlay).toHaveBeenCalledWith("");
     expect(h.b.overlay).toHaveBeenCalledWith("");
+  });
+});
+
+// A comparison opened while the canvas draws in WebGL draws in WebGL (agni issue 1335). Each side
+// draws its packed sheet and lights its changes over the keys it holds, so no highlight is fetched,
+// and the union draws a's removed parts as a ghost over b.
+describe("DiffPresenter in WebGL", () => {
+  const sheetOf = (m: ReturnType<typeof vi.fn>) => (m.mock.lastCall?.[0] as PackedSheet | undefined)?.sheetId;
+  type Specs = { components?: string[]; nets?: string[] }[];
+
+  it("draws each side's packed sheet and lights its changes without a highlight fetch", async () => {
+    const h = harness({ renderer: "webgl" });
+    await h.presenter.open(h.A, h.B);
+    expect(h.getSheet.mock.calls.every((c) => (c[0] as { format: SheetFormat }).format === SheetFormat.PACKED)).toBe(true);
+    expect(sheetOf(h.a.packed)).toBe("a.edn/s1");
+    expect(sheetOf(h.b.packed)).toBe("b.edn/s1");
+    expect(h.a.svg).not.toHaveBeenCalled();
+    expect(h.highlightSheet).not.toHaveBeenCalled();
+    const aSpecs = h.a.lit.mock.lastCall![0] as Specs;
+    const bSpecs = h.b.lit.mock.lastCall![0] as Specs;
+    expect(aSpecs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R2", "R3"]));
+    expect(bSpecs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R3", "R4"]));
+    expect(last(h.states).overlayOk).toBe(true);
+  });
+
+  it("draws the union as b's sheet, b's changes, and a's removed parts as a ghost", async () => {
+    const h = harness({ renderer: "webgl" });
+    await h.presenter.open(h.A, h.B);
+    await h.presenter.setMode("overlay");
+    expect(sheetOf(h.a.packed)).toBe("b.edn/s1");
+    expect((h.a.lit.mock.lastCall![0] as Specs).flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R3", "R4"]));
+    const [ghostSheet, ghostSpecs] = h.a.ghost.mock.lastCall! as [PackedSheet, Specs];
+    expect(ghostSheet.sheetId).toBe("a.edn/s1");
+    expect(ghostSpecs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
+    expect(h.highlightSheet).not.toHaveBeenCalled();
+
+    await h.presenter.setMode("side");
+    expect(h.a.ghost).toHaveBeenLastCalledWith(null, []);
+    expect(sheetOf(h.a.packed)).toBe("a.edn/s1");
   });
 });

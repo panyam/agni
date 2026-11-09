@@ -136,6 +136,12 @@ export class SheetSurface {
     this.svg.setOverlay(markup);
   }
 
+  // setGhost draws another sheet's matches for specs over the WebGL drawing, as the visual diff's
+  // union draws the old revision's removed parts over the new one (agni issue 1335). null clears it.
+  setGhost(sheet: PackedSheet | null, specs: HighlightSpec[]): void {
+    this.parts.gl(false)?.setGhost(sheet, specs);
+  }
+
   // reveal frames the highlight on the drawing on screen. A pin frames the unit that draws it.
   reveal(pin?: { ref: string; pin: string }): void {
     if (this.drawnBy === "webgl") this.parts.gl(false)?.reveal(pin);

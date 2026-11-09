@@ -13,6 +13,10 @@ import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { DiffService, type DiffDesignsResponse } from "./gen/agni/v1/webapi/diff_pb.js";
+import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { HighlightSpec } from "./highlights.js";
+import { toRenderable } from "./packed.js";
+import { boundsOfVertices } from "./camera.js";
 import {
   changedItems,
   checkAlignment,
@@ -40,7 +44,9 @@ export interface DiffFileRef {
   path: string;
 }
 
-// DiffSideView is the command-down interface for one side's canvas. setOverlay stacks a
+// DiffSideView is the command-down interface for one side's canvas. In WebGL (agni issue 1335) a
+// side draws a packed sheet with showPacked and lights it with setHighlights, which it resolves over
+// the keys it holds, and the union canvas draws the old revision's removed parts with setGhost. setOverlay stacks a
 // highlight overlay framed like the sheet ("" clears), and showPlaceholder replaces the sheet
 // when the pair has none on this side or it failed to render. showSvg and showPlaceholder each
 // hide the other. reveal pans and zooms to the current overlay's content (the focused item,
@@ -53,6 +59,9 @@ export interface DiffSideView {
   setOverlays(markups: string[]): void;
   showPlaceholder(text: string): void;
   reveal(): void;
+  showPacked(sheet: PackedSheet): void;
+  setHighlights(specs: HighlightSpec[]): void;
+  setGhost(sheet: PackedSheet | null, specs: HighlightSpec[]): void;
 }
 
 // DiffRenderView is the diff view, holding the two sides, one busy indicator, and the
@@ -135,6 +144,11 @@ export class DiffPresenter {
   private errB = "";
   private frameA: Frame | null = null;
   private frameB: Frame | null = null;
+  // gl says this comparison draws in WebGL, chosen when it opens from the canvas's renderer (agni
+  // issue 1335). It then retains each side's packed sheet beside its marker in docA or docB.
+  private gl = false;
+  private packedA: PackedSheet | null = null;
+  private packedB: PackedSheet | null = null;
   private placementsA: DiffDesignsResponse["sharedPlacementsA"] = {};
   private placementsB: DiffDesignsResponse["sharedPlacementsB"] = {};
   private overlayOk = false;
@@ -152,6 +166,8 @@ export class DiffPresenter {
     // overlay is the convention the page's vocabulary bar shows. The diff itself is asked under it, so
     // Compare reads a design as the rest of the page does (agni issue 1275).
     private readonly overlay: () => OverlayConfig | undefined = () => undefined,
+    // renderer is the renderer a comparison draws in, the canvas's own, read when it opens.
+    private readonly renderer: () => "svg" | "webgl" = () => "svg",
   ) {}
 
   private snap(r: DiffFileRef): Promise<string> {
@@ -184,6 +200,7 @@ export class DiffPresenter {
   // renders (else the first pair). Either file failing to diff or load fails the whole open,
   // as the RPC has no partial diff, and the panel shows the error over two placeholders.
   async open(a: DiffFileRef, b: DiffFileRef): Promise<void> {
+    this.gl = this.renderer() === "webgl";
     this.aRef = a;
     this.bRef = b;
     this.view.setBusy(true);
@@ -322,6 +339,7 @@ export class DiffPresenter {
     this.focusItem = null;
     this.mode = "side";
     this.docA = this.docB = null;
+    this.packedA = this.packedB = null;
     this.frameA = this.frameB = null;
     this.placementsA = {};
     this.placementsB = {};
@@ -367,6 +385,7 @@ export class DiffPresenter {
     const ref = side === "a" ? this.aRef : this.bRef;
     const layout = side === "a" ? this.aLayout : this.bLayout;
     let doc: string | null = null;
+    let packed: PackedSheet | null = null;
     let err = `no sheet "${p.name}" in ${side.toUpperCase()}`;
     if (sheetId) {
       try {
@@ -374,22 +393,30 @@ export class DiffPresenter {
           snapshot: await this.snap(ref),
           sheet: sheetId,
           layout,
-          format: SheetFormat.SVG,
+          format: this.gl ? SheetFormat.PACKED : SheetFormat.SVG,
           symbols: SymbolSource.GLYPH,
         });
-        doc = resp.content.case === "svg" ? resp.content.value : "";
+        if (resp.content.case === "packed") {
+          packed = resp.content.value;
+          doc = "";
+        } else {
+          doc = resp.content.case === "svg" ? resp.content.value : "";
+        }
       } catch (e) {
         err = `error: ${String(e)}`;
       }
     }
+    const frame = packed ? packedFrame(packed) : doc ? svgFrame(doc) : null;
     if (side === "a") {
       this.docA = doc;
+      this.packedA = packed;
       this.errA = err;
-      this.frameA = doc ? svgFrame(doc) : null;
+      this.frameA = frame;
     } else {
       this.docB = doc;
+      this.packedB = packed;
       this.errB = err;
-      this.frameB = doc ? svgFrame(doc) : null;
+      this.frameB = frame;
     }
   }
 
@@ -397,7 +424,11 @@ export class DiffPresenter {
   private showDoc(side: DiffSide): void {
     const v = side === "a" ? this.view.a : this.view.b;
     const doc = side === "a" ? this.docA : this.docB;
-    if (doc !== null) v.showSvg(doc);
+    const packed = side === "a" ? this.packedA : this.packedB;
+    if (packed) {
+      v.showPacked(packed);
+      v.setGhost(null, []);
+    } else if (doc !== null) v.showSvg(doc);
     else v.showPlaceholder(side === "a" ? this.errA : this.errB);
   }
 
@@ -411,7 +442,8 @@ export class DiffPresenter {
       this.view.a.showPlaceholder(this.errB);
       return;
     }
-    this.view.a.showSvg(this.docB);
+    if (this.packedB) this.view.a.showPacked(this.packedB);
+    else this.view.a.showSvg(this.docB);
     await this.sendUnionOverlays(p);
   }
 
@@ -425,6 +457,12 @@ export class DiffPresenter {
         ? focusSpecs(this.focusItem, "a")
         : []
       : ghostSpecs(this.componentStatus, this.netStatus);
+    // WebGL lights b's specs over the keys it holds and draws a's ghosts from a's packed sheet.
+    if (this.packedB) {
+      this.view.a.setHighlights(bSpecs);
+      this.view.a.setGhost(this.packedA, gSpecs);
+      return;
+    }
     const [bo, go] = await Promise.all([
       bSpecs.length > 0 && p.bId ? this.fetchOverlay(this.bRef, this.bLayout, p.bId, bSpecs) : Promise.resolve(""),
       gSpecs.length > 0 && p.aId ? this.fetchOverlay(this.aRef, this.aLayout, p.aId, gSpecs) : Promise.resolve(""),
@@ -460,6 +498,10 @@ export class DiffPresenter {
   private async sendOverlay(side: DiffSide, ref: DiffFileRef, layout: string, sheetId: string): Promise<void> {
     const v = side === "a" ? this.view.a : this.view.b;
     const specs = this.specsFor(side);
+    if (side === "a" ? this.packedA : this.packedB) {
+      v.setHighlights(specs);
+      return;
+    }
     if (specs.length === 0) {
       v.setOverlay("");
       return;
@@ -484,4 +526,13 @@ export class DiffPresenter {
       return "";
     }
   }
+}
+
+// packedFrame is a packed sheet's size, the alignment evidence a WebGL side holds in place of an SVG
+// document's frame. checkAlignment compares the two sides' frames by ratio, so world units serve as
+// SVG's pixels do.
+function packedFrame(sheet: PackedSheet): Frame | null {
+  const b = boundsOfVertices(toRenderable(sheet).vertices);
+  const w = b.maxX - b.minX, h = b.maxY - b.minY;
+  return w > 0 && h > 0 ? { w, h } : null;
 }

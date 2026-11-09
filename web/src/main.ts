@@ -30,7 +30,6 @@ import { type ReviewTourHost, startReviewTour } from "./reviewtour.js";
 import { viewerEmitter } from "./viewerevents.js";
 import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
-import { SvgView } from "./svgview.js";
 import { SheetSurface } from "./sheetsurface.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
@@ -48,7 +47,7 @@ import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel, addSheetView } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
-import { parseTurn, turnKey } from "./sheetpane.js";
+import { glDrawing, parseTurn, turnKey } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
@@ -217,37 +216,84 @@ class AppRoot extends BaseComponent {
       showSheet: (sheet: PackedSheet) => void surface.showPacked(sheet),
       setHighlights: (specs: HighlightSpec[]) => surface.setHighlights(specs),
     };
-    // The visual diff (WS9-005) is two SvgViews that mirror each other's pan and zoom. setView fires
-    // no onViewChange, so the mirroring cannot loop. Each side pairs its view with a placeholder for
-    // "no sheet on this side" and render errors. reveal (WS9-006) centers on the side's overlay and
-    // copies the camera to the sibling, so both panes show the focused item.
-    const diffSvgViewA = new SvgView(diffSvgA);
-    const diffSvgViewB = new SvgView(diffSvgB);
-    diffSvgViewA.show();
-    diffSvgViewB.show();
-    diffSvgViewA.onViewChange = (v) => diffSvgViewB.setView(v);
-    diffSvgViewB.onViewChange = (v) => diffSvgViewA.setView(v);
-    const diffSide = (view: SvgView, other: SvgView, ph: HTMLElement): DiffSideView => ({
+    // The visual diff (WS9-005) is two sides that mirror each other's pan and zoom. Each draws through
+    // a SheetSurface, in SVG or, when the canvas draws in WebGL, in WebGL (agni issue 1335). A side's
+    // WebGL drawing is built on first use and freed when the comparison closes. setView and setCentre
+    // fire no onViewChange, so the mirroring cannot loop. SVG sides mirror by their aligned frames,
+    // and WebGL sides by the point at the middle in the design's own coordinates, which lines the two
+    // revisions up though each sheet is packed about its own origin. Each side pairs its drawing with
+    // a placeholder for "no sheet on this side" and render errors. reveal (WS9-006) centers on the
+    // side's highlight and the mirror moves the sibling, so both panes show the focused item.
+    const diffSurface = (side: "a" | "b", svgEl: HTMLElement): SheetSurface => {
+      let gl: CanvasComponent | null = null;
+      const canvasEl = document.getElementById(`diff-gl-${side}`) as HTMLCanvasElement | null;
+      const textEl = document.getElementById(`diff-text-${side}`);
+      const style = document.createElement("style");
+      document.head.appendChild(style);
+      return new SheetSurface({
+        svgHost: svgEl,
+        gl: (create) => {
+          if (!gl && create && canvasEl && textEl) gl = glDrawing(`diff-${side}`, canvasEl, textEl);
+          return gl;
+        },
+        dropGl: () => {
+          gl?.dispose();
+          gl = null;
+        },
+        layerScope: `#diff-svg-${side}`,
+        layerStyle: style,
+        markView: `diff-${side}`,
+        readout: null,
+      });
+    };
+    const diffA = diffSurface("a", diffSvgA);
+    const diffB = diffSurface("b", diffSvgB);
+    const mirror = (from: SheetSurface, to: SheetSurface) => {
+      if (from.drawnBy === "svg") {
+        to.svg.setView(from.svg.getView());
+        return;
+      }
+      const c = from.getCentre();
+      if (c) to.setCentre(c.at, c.scale);
+    };
+    diffA.onViewChange = () => mirror(diffA, diffB);
+    diffB.onViewChange = () => mirror(diffB, diffA);
+    const diffSide = (surface: SheetSurface, other: SheetSurface, ph: HTMLElement): DiffSideView => ({
       showSvg: (markup) => {
         ph.classList.remove("on");
-        view.setSvg(markup);
+        surface.setMode("svg");
+        surface.showSvg(markup);
       },
-      setOverlay: (markup) => view.setOverlay(markup),
-      setOverlays: (markups) => view.setOverlays(markups),
+      setOverlay: (markup) => surface.svg.setOverlay(markup),
+      setOverlays: (markups) => surface.svg.setOverlays(markups),
       showPlaceholder: (text) => {
         ph.textContent = text;
         ph.classList.add("on");
       },
       reveal: () => {
-        const v = view.revealOverlay();
-        if (v) other.setView(v);
+        if (surface.drawnBy === "webgl") {
+          surface.reveal(); // the drawing's view change mirrors the sibling
+          return;
+        }
+        const v = surface.svg.revealOverlay();
+        if (v) other.svg.setView(v);
       },
+      showPacked: (sheet) => {
+        ph.classList.remove("on");
+        surface.setMode("webgl");
+        if (!surface.showPacked(sheet)) {
+          ph.textContent = "this browser has no WebGL2, so the comparison cannot draw here";
+          ph.classList.add("on");
+        }
+      },
+      setHighlights: (specs) => surface.setHighlights(specs),
+      setGhost: (sheet, specs) => surface.setGhost(sheet, specs),
     });
     const diffSidesEl = document.getElementById("diff-sides");
     const diffLabelA = document.getElementById("diff-label-a");
     const diffView: DiffRenderView = {
-      a: diffSide(diffSvgViewA, diffSvgViewB, diffPhA),
-      b: diffSide(diffSvgViewB, diffSvgViewA, diffPhB),
+      a: diffSide(diffA, diffB, diffPhA),
+      b: diffSide(diffB, diffA, diffPhB),
       setBusy: (busy) => setBusyOverlay(busy, busy ? "comparing…" : undefined),
       // Overlay mode (WS9-007) hides the b pane, so the a pane flexes to full width and hosts the
       // union. Arrangement is view chrome, so it lives here and not in the presenter.
@@ -261,6 +307,9 @@ class AppRoot extends BaseComponent {
       onMode: (m) => void diffPresenter.setMode(m),
       onClose: () => {
         diffPresenter.close();
+        // Each side's WebGL drawing holds a GPU copy of its sheet, so a closed comparison frees it.
+        diffA.setMode("svg");
+        diffB.setMode("svg");
         if (dockApi) closeDiffPanel(dockApi);
       },
     });
@@ -273,7 +322,7 @@ class AppRoot extends BaseComponent {
       diffPanel.view.setState(s);
       diffChanges.view.setState(s);
       tablesPresenter.setCompareOpen(s.active && s.error === "");
-    }, snapshots(), () => presenter.overlayConfig());
+    }, snapshots(), () => presenter.overlayConfig(), () => (presenter.renderMode() === "webgl" ? "webgl" : "svg"));
 
     // The Tables panel shows an answer as Tabulate's tables and saves them as csv through Encode
     // (agni issues 898 and 956). The page already holds each answer. The presenters holding them

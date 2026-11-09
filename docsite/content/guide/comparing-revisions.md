@@ -105,7 +105,8 @@ are declared file by file rather than inferred.
 entities are tinted by kind. On faithful-geometry formats (KiCad) the two revisions can be overlaid,
 because the author coordinates are preserved between them. {{ explainableCap "netlist" }}-only
 formats render via auto-layout, where node positions shift when the node set changes, so
-those revisions are compared side by side rather than overlaid.
+those revisions are compared side by side rather than overlaid. The comparison draws in the
+renderer the canvas draws in, SVG or WebGL, so a large board compares at the speed it pans.
 [The web app](../../architecture/web-app/) page covers the visual diff in detail.
 
 While a comparison is open, the **Tables** panel offers it as a table, a row per change in the

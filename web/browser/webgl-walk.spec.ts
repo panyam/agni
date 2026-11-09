@@ -56,6 +56,7 @@ const walks = {
     sheet: "Power",
     // busSheet is a sheet that draws a bus, for the bus click. The cut's Power sheet draws none.
     busSheet: "USB Debug, PD",
+    revB: "",
     ground: "GND",
     verdict: { id: "single-pin-net:(net:/USB Debug%2C PD/UART3_DEBUG.RX)", rule: "single-pin-net", subject: "net:/USB Debug, PD/UART3_DEBUG.RX" },
     trace: "R119.1,R119.2",
@@ -66,6 +67,9 @@ const walks = {
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     sheet: "Expansion connector",
     busSheet: "Expansion connector",
+    // revB is the second revision the walk compares against, which `make -C examples/jetson-project
+    // rev-b` builds (agni issue 1335). The cut has none.
+    revB: "designs/jetson-rev-b",
     ground: "GND",
     verdict: { id: "bulk-cap:(net:/Power/USBPD1_HV)", rule: "bulk-cap", subject: "net:/Power/USBPD1_HV" },
     trace: "R119.1,R119.2",
@@ -917,6 +921,38 @@ for (const name of chosen) {
           if (webgl.p95 > 0.8 * svg.p95) throw new Error(`WebGL ${verdict}`);
           return `WebGL ${verdict}`;
         });
+
+        // The visual diff draws in the canvas's renderer (agni issue 1335). The walk compares the design
+        // against its second revision in each renderer, waits for both sides to draw, and pans the old
+        // side, which the new side mirrors.
+        for (const mode of MODES) {
+          await step(`compare two revisions (${mode})`, {}, async () => {
+            if (!walk.revB) throw new NotJudged(`${name} has no second revision to compare against`);
+            const t0 = Date.now();
+            await open(page, walk, mode, walk.sheet, `&against=${encodeURIComponent(`${walk.mount}/${walk.revB}`)}`);
+            const drawn = (side: "a" | "b") =>
+              mode === "webgl"
+                ? page.waitForFunction((s) => !!document.getElementById(`diff-gl-${s}`)?.dataset.lit, side, { timeout: 180_000 })
+                : page.waitForSelector(`#diff-svg-${side} svg`, { timeout: 180_000 });
+            await Promise.all([drawn("a"), drawn("b")]).catch(() => {
+              throw new Unwalkable(`the comparison against ${walk.revB} drew no sheet within 3 minutes`);
+            });
+            const opened = Date.now() - t0;
+            // The comparison opens on its first sheet pair, which need not draw a change, so the walk
+            // focuses the first changed item, as a reader would, and the diff opens the pair that draws it.
+            // The Changes panel can sit behind another tab, so the walk clicks the item as the panel's
+            // own handler takes it.
+            await page.waitForFunction(() => !!document.querySelector("#diff-changes button.finding.chg"), null, { timeout: 60_000 });
+            await page.evaluate(() => (document.querySelector("#diff-changes button.finding.chg") as HTMLButtonElement).click());
+            const litCounts = () =>
+              page.evaluate(() => (["a", "b"] as const).map((s) => (JSON.parse(document.getElementById(`diff-gl-${s}`)?.dataset.lit ?? "[]") as string[]).length));
+            const lit = mode === "webgl" ? await expect.poll(litCounts, { timeout: 60_000 }).toSatisfy((n: number[]) => n[0] + n[1] > 0).then(litCounts) : null;
+            if (mode === "svg") await page.waitForSelector("#diff-sides .highlight-overlay svg *", { timeout: 60_000 });
+            const frames = await panZoom(page, mode, "#diff-sides .diff-side:first-child");
+            const shown = lit ? `, the focused change lit ${lit[0]} subject(s) old and ${lit[1]} new` : "";
+            return `opened in ${ms(opened)}${shown}, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+          });
+        }
 
         await step("no page errors", {}, async () => {
           if (pageErrors.length) throw new Error(pageErrors.join("; "));
