@@ -169,7 +169,11 @@ board badges its findings with the board sheet too (#142's WS7-034). Before 1325
 the find-by-name query and read the sheets off the answer's entity, and a query never reads the
 board. Properties lists a bus by its members instead, and reads them off the IR's record of the
 bus (`InputDiagnostics.unmodeled_buses`). The `bus` relation records only the construct the format
-reader saw, and nothing about its members.
+reader saw, and nothing about its members. A KiCad group bus is recorded apart, in
+`InputDiagnostics.group_buses`, since bus-not-modeled must not judge one (agni issue 939). Each
+member there is the net that carries it, so `/USB Debug, PD/UART3_DEBUG.TX` lists as
+`/SoM_IO/UART3_DEBUG.TX`, the name KiCad gives that net. A member no net carries keeps its own
+name, and Properties says no net has it (agni issue 1435).
 
 **A selected net, part or pin is checked on its own** (agni issue 897). Properties asks
 `CheckDesign` for the rules ticked in the Rules panel, with `subjects` naming the selection. It lists

@@ -17,6 +17,7 @@ import {
   GROUP_PIN,
   GROUP_SYMBOL,
   GROUP_WIRE,
+  GROUP_BUS,
   KIND_LINE_LOOP,
   KIND_LINE_STRIP,
   KIND_POINTS,
@@ -35,6 +36,9 @@ export const SHEET_MAX_PX = 1600;
 export const PIN_PICK_R = 6;
 export const WIRE_PICK_WIDTH = 7;
 export const SYMBOL_STROKE = 0.8;
+// BUS_HALF_WIDTH is half the world width PackSheet gives a bus quad (core/render/pack.go,
+// busWidthNm).
+export const BUS_HALF_WIDTH = 150_000;
 
 // GRID is how many cells the index lays along the sheet's longer side. A primitive spanning more
 // than BIG_CELLS cells, such as a pour or a frame line, goes on a list tested on every click
@@ -296,6 +300,9 @@ function slackOf(group: number, kind: number, docPx: number): number {
   if (group === GROUP_PIN || kind === KIND_POINTS) return PIN_PICK_R * docPx;
   if (group === GROUP_WIRE) return (WIRE_PICK_WIDTH / 2) * docPx;
   if (group === GROUP_SYMBOL) return (SYMBOL_STROKE / 2) * docPx;
+  // SVG gives a bus the wire's invisible pick stroke about its centre line, and a bus packs as a quad
+  // already half a bus wide, so its slack is what the stroke reaches past the quad (agni issue 1435).
+  if (group === GROUP_BUS) return Math.max(0, (WIRE_PICK_WIDTH / 2) * docPx - BUS_HALF_WIDTH);
   return 0;
 }
 

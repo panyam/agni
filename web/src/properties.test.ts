@@ -48,7 +48,14 @@ const design = create(DesignSchema, {
     { name: "3V3", roles: [{ roleKind: Role.RAIL }], connections: [{ componentRef: "U1", pinRef: "10" }, { componentRef: "TP1", pinRef: "1" }] },
   ],
   // A bus the reader recorded with two members, one of which the netlist names.
-  inputDiagnostics: { unmodeledBuses: [{ label: "D[1:0]", kind: "bus_alias", members: ["VIN", "D0"] }] },
+  // A group bus drawn on two sheets, each listing the nets it carries there (agni issue 1435).
+  inputDiagnostics: {
+    unmodeledBuses: [{ label: "D[1:0]", kind: "bus_alias", members: ["VIN", "D0"] }],
+    groupBuses: [
+      { label: "PWR{RAILS}", members: ["GND", "/a/PWR.EN"] },
+      { label: "PWR{RAILS}", members: ["3V3", "GND"] },
+    ],
+  },
 });
 
 // SERVED holds the engine's answers to SERVED_QUERIES on that design. It has pin.name off each part
@@ -211,6 +218,17 @@ describe("propertiesFor", () => {
     expect(group(s, "members")?.refs).toEqual([
       { label: "D0", detail: "no net by this name" },
       { label: "VIN", target: { kind: "net", net: "VIN" } },
+    ]);
+    expect(s.note).toBeUndefined();
+  });
+
+  it("lists a group bus's members from every sheet that draws it", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "bus", busId: "PWR{RAILS}" } } }));
+    expect(row(s, "drawn as")).toBe("group bus");
+    expect(group(s, "members")?.refs).toEqual([
+      { label: "/a/PWR.EN", detail: "no net by this name" },
+      { label: "3V3", target: { kind: "net", net: "3V3" } },
+      { label: "GND", target: { kind: "net", net: "GND" } },
     ]);
     expect(s.note).toBeUndefined();
   });

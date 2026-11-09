@@ -54,6 +54,8 @@ const walks = {
     path: "designs/jetson-cut",
     about: "the cross-probe cut of Jetson, nineteen parts and their copper",
     sheet: "Power",
+    // busSheet is a sheet that draws a bus, for the bus click. The cut's Power sheet draws none.
+    busSheet: "USB Debug, PD",
     ground: "GND",
     verdict: { id: "single-pin-net:(net:/USB Debug%2C PD/UART3_DEBUG.RX)", rule: "single-pin-net", subject: "net:/USB Debug, PD/UART3_DEBUG.RX" },
     trace: "R119.1,R119.2",
@@ -63,12 +65,17 @@ const walks = {
     path: "designs/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     sheet: "Expansion connector",
+    busSheet: "Expansion connector",
     ground: "GND",
     verdict: { id: "bulk-cap:(net:/Power/USBPD1_HV)", rule: "bulk-cap", subject: "net:/Power/USBPD1_HV" },
     trace: "R119.1,R119.2",
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
+// WALK_TIMEOUT_MS bounds a walk. Headless SwiftShader on a loaded machine spends minutes on each of
+// Jetson's WebGL board steps, and its walk ran past half an hour once the board view beside the
+// schematic joined it (agni issue 1435).
+const WALK_TIMEOUT_MS: Record<keyof typeof walks, number> = { cut: 1_800_000, jetson: 3_600_000 };
 const chosen = process.env.WALK_DESIGN ? [process.env.WALK_DESIGN] : ["cut"];
 for (const w of chosen) {
   if (!(w in walks)) throw new Error(`WALK_DESIGN=${w} names no walk; use one of ${Object.keys(walks).join(", ")}`);
@@ -754,9 +761,9 @@ for (const name of chosen) {
           { name: "pad", sheet: "Board", sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] },
           { name: "track", sheet: "Board", sel: `${SVG} [data-kind="net"]`, kind: "net", line: true, waitsOn: [] },
           { name: "schematic pin", sheet: walk.sheet, sel: `${SVG} [data-kind="pin"]`, kind: "pin", waitsOn: [] },
-          // A bus is picked by its id, and the KiCad reader gives a bus none, so no KiCad bus is
-          // pickable in either mode until #1435.
-          { name: "bus", sheet: walk.sheet, sel: `${SVG} [data-kind="bus"]:not([data-bus=""])`, kind: "bus", line: true, absent: true, waitsOn: ["#1435"] },
+          // A bus is picked by its name, which the KiCad reader gives each drawn bus from the label
+          // that names it (agni issue 1435).
+          { name: "bus", sheet: walk.busSheet, sel: `${SVG} [data-kind="bus"]:not([data-bus=""])`, kind: "bus", line: true, waitsOn: [] },
         ];
         for (const t of targets) {
           await step(`click a ${t.name}`, { waitsOn: t.waitsOn }, async () => {
@@ -934,6 +941,6 @@ for (const name of chosen) {
       }
       const broken = rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`);
       expect(exitCode(rows), broken.join("\n")).toBe(0);
-    }, 1_800_000);
+    }, WALK_TIMEOUT_MS[name as keyof typeof walks] ?? 1_800_000);
   });
 }

@@ -109,6 +109,17 @@ describe("PickIndex on a schematic", () => {
     expect(idx.pick(500, 805, 0)).toEqual({ kind: "bus", busId: "DATA" });
   });
 
+  // At KiCad's scale a bus packs as a 0.3 mm quad, and SVG reaches 3.5 px from its centre line, as it
+  // reaches for a wire (agni issue 1435). A sheet 1600e5 nm across makes one SVG px 1e5 nm.
+  it("reaches a bus as far from its centre line as SVG's pick stroke does", () => {
+    const nm = new PickIndex(sheetOf("s", [
+      { kind: KIND_LINE_LOOP, group: 4, pts: [[0, 0], [1600e5, 0], [1600e5, 1600e5], [0, 1600e5]] },
+      { kind: KIND_TRIANGLES, group: GROUP_BUS, pts: quad(100e5, 800e5 - 1.5e5, 900e5, 800e5 + 1.5e5), key: { busId: "DATA" } },
+    ]));
+    expect(nm.pick(500e5, 800e5 + 3e5, 0)).toEqual({ kind: "bus", busId: "DATA" });
+    expect(nm.pick(500e5, 800e5 + 4e5, 0)).toBeNull();
+  });
+
   it("picks nothing on bare paper or past the sheet", () => {
     expect(idx.pick(700, 1100, 5)).toBeNull();
     expect(idx.pick(-500, -500, 5)).toBeNull();

@@ -93,6 +93,7 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 		NoJunctionEndpoints:   noJunction,
 		JoinedTaps:            joinedTaps,
 		UnmodeledBuses:        collectBuses(root, src, nil),
+		GroupBuses:            collectGroupBuses(root, src, busAliases(root), nil),
 		RangeLabels:           rangeLabels(root, src),
 		UnresolvedSymbols:     unresolvedSyms,
 		ResolvedSymbols:       libs.resolvedSymbols(),

@@ -78,6 +78,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	}
 	d.Nets = netgraph.IRNets(kept, rootName)
 	stampNetSheets(d.Nets, pointNets, d.Sheets)
+	carriedBy(w.groupBuses, kept)
 	d.InputDiagnostics = &ir.InputDiagnostics{
 		DanglingEndpoints: hierDangles(dangles, w.srcs),
 		RefDesCollisions:  collisions,
@@ -86,6 +87,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		NoJunctionEndpoints:   w.in.noJunction,
 		JoinedTaps:            w.in.joinedTaps,
 		UnmodeledBuses:        w.buses,
+		GroupBuses:            w.groupBuses,
 		RangeLabels:           w.ranges,
 		UnresolvedSymbols:     unresolvedSyms,
 		ResolvedSymbols:       w.libs.resolvedSymbols(),
@@ -326,31 +328,7 @@ func isBusLabel(name string, aliases map[string][]string) bool {
 // distance, since the drawing then does not say which branch the pin is on and guessing would invent
 // a connection.
 func nearestBusLabel(start netgraph.Point, adj map[netgraph.Point][]netgraph.Point, labelAt map[netgraph.Point]string) (string, bool) {
-	seen := map[netgraph.Point]bool{start: true}
-	frontier := []netgraph.Point{start}
-	for len(frontier) > 0 {
-		var found []string
-		var next []netgraph.Point
-		for _, p := range frontier {
-			if name, ok := labelAt[p]; ok && !slices.Contains(found, name) {
-				found = append(found, name)
-			}
-			for _, q := range adj[p] {
-				if !seen[q] {
-					seen[q] = true
-					next = append(next, q)
-				}
-			}
-		}
-		if len(found) == 1 {
-			return found[0], true
-		}
-		if len(found) > 1 {
-			return "", false // a tie names no single branch
-		}
-		frontier = next
-	}
-	return "", false
+	return nearestOf([]netgraph.Point{start}, adj, labelAt)
 }
 
 // reusedSheetFiles names the sub-sheet files that this sheet instantiates more than once. Every
@@ -498,17 +476,18 @@ func projectBusAliases(rootContent []byte, open func(string) ([]byte, error)) ma
 type hierNetWalker struct {
 	// aliases is the PROJECT-wide bus_alias table, collected before the walk because a sheet may use
 	// an alias that another sheet declares.
-	aliases  map[string][]string
-	d        *ir.Design
-	libs     *libAccum
-	comps    *compAccum
-	syms     *symLibCache
-	in       netInputs
-	srcs     []string            // per-instance source file, indexed by the instance's offset band
-	buses    []*ir.BusNotModeled // bus constructs detected across sheets (WS1-034)
-	ranges   []*ir.RangeLabel    // range-spelled labels, one per name and source file (agni issue 605)
-	complete bool
-	open     func(relPath string) ([]byte, error)
+	aliases    map[string][]string
+	d          *ir.Design
+	libs       *libAccum
+	comps      *compAccum
+	syms       *symLibCache
+	in         netInputs
+	srcs       []string            // per-instance source file, indexed by the instance's offset band
+	buses      []*ir.BusNotModeled // bus constructs detected across sheets (WS1-034)
+	groupBuses []*ir.GroupBus      // group buses labelled across sheets, with their members (agni issue 1435)
+	ranges     []*ir.RangeLabel    // range-spelled labels, one per name and source file (agni issue 605)
+	complete   bool
+	open       func(relPath string) ([]byte, error)
 }
 
 // walk reads one sheet instance (content) at hierarchical id, appends its libraries,
@@ -552,6 +531,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 	w.comps.collect(root, src, instPath)
 	collectSheetNets(root, sc, &w.in)
 	w.buses = append(w.buses, collectBuses(root, src, sc.local)...)
+	w.groupBuses = append(w.groupBuses, collectGroupBuses(root, src, w.aliases, sc.local)...)
 	for _, r := range rangeLabels(root, src) {
 		if !slices.ContainsFunc(w.ranges, func(o *ir.RangeLabel) bool {
 			return o.GetLabel() == r.GetLabel() && o.GetProv().GetSourceFile() == src

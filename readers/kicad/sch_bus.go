@@ -69,7 +69,7 @@ func collectBuses(root *node, src string, qualify func(string) string) []*ir.Bus
 
 // isKiCadBusLabel reports whether a label is a bus to KiCad, which reads only its vector spelling
 // `PREFIX[first..last]`. netgraph.IsBusName also accepts `[hi:lo]` because xschem and gEDA write it.
-// collectBuses and busLabelFor both read KiCad labels, and both ask this function instead.
+// collectBuses reads KiCad labels, and asks this function instead.
 func isKiCadBusLabel(name string) bool { return kicadBusVectorRe.MatchString(name) }
 
 // rangeLabels records every label on one sheet spelled with an index range in either dialect, and
@@ -128,4 +128,64 @@ func busAliases(root *node) map[string][]string {
 		out[name] = aliasMembers(a)
 	}
 	return out
+}
+
+// collectGroupBuses records each group bus labelled on one sheet, KiCad's `PREFIX{ALIAS}` or
+// `PREFIX{A B C}`, with the nets it carries (agni issue 1435). A member is the net `PREFIX.MEMBER`,
+// or `MEMBER` under an empty prefix, as KiCad names the taps. qualify maps it into the sheet's net
+// names, as collectBuses qualifies its members. A drawn bus takes the same label as its name
+// (drawnBuses), so a reader clicking the bus finds its members here. The list is apart from
+// collectBuses's, since a group bus is no gap in the read (agni issue 939). Deduped by label within
+// the sheet.
+func collectGroupBuses(root *node, src string, aliases map[string][]string, qualify func(string) string) []*ir.GroupBus {
+	if qualify == nil {
+		qualify = func(s string) string { return s }
+	}
+	var out []*ir.GroupBus
+	seen := map[string]bool{}
+	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
+		for _, l := range root.Children(tag) {
+			name := unescapeName(atomOf(l.Arg(1)))
+			prefix, members, ok := groupBus(name, aliases)
+			if !ok || seen[name] {
+				continue
+			}
+			seen[name] = true
+			g := &ir.GroupBus{Label: name, Prov: &ir.Provenance{SourceFile: src}}
+			for _, m := range members {
+				if prefix != "" {
+					m = prefix + "." + m
+				}
+				g.Members = append(g.Members, qualify(m))
+			}
+			out = append(out, g)
+		}
+	}
+	return out
+}
+
+// carriedBy renames each group-bus member to the net that carries it. A member broken out on one
+// sheet is often named by a label on another, since KiCad names a net for its strongest driver, so
+// `/USB Debug, PD/UART3_DEBUG.TX` is carried by the net `/SoM_IO/UART3_DEBUG.TX`. A net keeps every
+// name it was reached by (Net.Aliases), and a member found among exactly one net's names takes that
+// net's name. A member no net carries keeps its own, since KiCad lets a group leave a member
+// unbroken-out, and a reader then sees it named and unconnected.
+func carriedBy(groups []*ir.GroupBus, nets []netgraph.Net) {
+	byAlias := map[string]string{}
+	shared := map[string]bool{}
+	for _, n := range nets {
+		for _, a := range n.Aliases {
+			if prev, ok := byAlias[a.Name]; ok && prev != n.Name {
+				shared[a.Name] = true
+			}
+			byAlias[a.Name] = n.Name
+		}
+	}
+	for _, g := range groups {
+		for i, m := range g.Members {
+			if name, ok := byAlias[m]; ok && !shared[m] {
+				g.Members[i] = name
+			}
+		}
+	}
 }
