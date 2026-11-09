@@ -1422,7 +1422,11 @@ active in the webgl clone, and `make exercise-webgl` is its exercise (agni 1330)
 label anchors (`browser/frametimes.ts`), so a click lands on one place in both. Its timings mean
 something only headed on an idle machine, since headless Chrome draws WebGL in SwiftShader, so the
 gate's cut run never judges them. The canvas writes `data-highlight` and `data-lit` for its highlight
-step, and a sheet's first draw records the `agni:sheet-drawn` mark (`web/src/drawmark.ts`). #1353
+step, and a sheet's first draw records the `agni:sheet-drawn` mark (`web/src/drawmark.ts`). The
+busy overlay sets `data-busy` at once and takes a wheel or click while it shows, so the walk waits
+for it to clear (`idle`) before acting. A zoom whose refit finds too few anchors moves the old frame
+by the zoom (`zoomFrame`) rather than keeping it, or later clicks drift. Once the first sheet draws,
+the overlay turns into a pill that takes no input (agni 1454). #1353
 `mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
 formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise. Each runs
 its example, then opens the native board in the viewer and clicks a pad
@@ -1491,7 +1495,7 @@ all exit 0.**
   enough, because the generated file has to be COMMITTED or the gate is still red on a tree that is
   correct. The same is true of `tutorial-runs`.
 
-Five more that cost a session time:
+Six more that cost a session time:
 
 - **A new test file can replace an existing one of the same name.** `service/boardtier_test.go` was
   written over in agni 987 and the gate was still green, because the test that the file held was
@@ -1513,6 +1517,10 @@ Five more that cost a session time:
   fails with `_lruCache is not a constructor` in the Solid plugin, a package under `node_modules/.pnpm`
   is a copied directory rather than pnpm's symlink, and plain `pnpm install` sees nothing to change.
   `pnpm install --force` relinks it.
+- **vitest runs a test file without typechecking it**, and `make web-test` runs `pnpm run typecheck`
+  first, which does. So a test can pass under `pnpm exec vitest run` and fail CI on `Array.at`
+  (the lib target lacks it) or a mistyped mock callback. Run `pnpm run typecheck` in `web/` before
+  pushing a TypeScript test (agni 1456).
 - **Time two tools on the same clock.** Say you start a timer inside Python, after the interpreter
   and the client library load. That time is not comparable with another tool's launch-to-exit time.
   Compare launch to exit on an idle machine (check `/proc/loadavg`; a shared box running other

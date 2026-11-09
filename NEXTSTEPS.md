@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-07, at `e6914c1d`.
+Last pruned 2026-11-08, at `ddfe0a49`.
 
 ## At a glance
 
@@ -17,14 +17,14 @@ Three missions are active, each worked in its own clone. `MISSION=mission_<slug>
 retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 18 of
-  20 tickets closed. Its exercise last passed at `19aeed5e`, and five PRs have merged since, so run
-  `make exercise-cross-probe HEADED=0` (and with `WALK_DESIGN=clay`) before picking #1397 (the
-  toolbar overflow and Jetson's 11 to 16 s board clicks), then #1401. The mission still has to pass
-  beside a real board.
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 20 of
+  20 tickets closed. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
+  The mission still has to pass beside a real board before it closes.
 - **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), worked in the
-  webgl clone, 1 of 11 closed. #1439 wrote `make exercise-webgl` (#1330), and nobody has logged a
-  run of it on #1329 yet, so run it first. #1332 (click to pick on the WebGL canvas) is next ready.
+  webgl clone, 7 of 13 closed. `make exercise-webgl HEADED=0` last passed at `854631fb` (#1455) and
+  is logged on #1329. #1456 (#1454, the soft busy pill) merged since, so run it again and log it,
+  then pick #1368 (the canvas as a sheet view). SVG stays the default renderer until WebGL draws
+  everything SVG draws (DECISIONS.md). #1443 is ready but serves no mission.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
   the formats clone, 15 of 15 closed. `make exercise-allegro` and `make exercise-altium` pass at
   `67fbcf2f` and now cover all three steps, the viewer's pad click included. Its "Done when" line
@@ -39,10 +39,8 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1438 merged and closed #1383 and #1360. parasdr's exports now read the copper its
-  `.brd` reads, an Allegro board's declared pairs and match groups reach `net.group` and
-  `diff-pair-naming`, and the mission's exercise clicks a pad on each native board (CLAUDE.md, the ODX
-  and Allegro bullets).
+- This run: #1451, #1455 and #1456 merged for #1329 and closed #1333, #1336 and #1454. CLAUDE.md
+  gained the walk's busy-overlay wait and the vitest-skips-typecheck trap.
 
 ## Open, ranked
 
