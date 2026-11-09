@@ -66,6 +66,12 @@ panel from the ones above.
   sheet's turn is kept per design and sheet in `localStorage`, so a board view opened again comes back
   turned. Locked views exchange the drawing point at their centre and the zoom (`getCentre`), so a top
   view and a bottom view of one board stay over the same spot.
+- **A view hides board layers on its own** (agni issue 1401). Its Layers button opens the list that
+  the Sheets panel shows for the canvas (`BoardLayerList` in `web/src/boardlayerlist.tsx`), over a
+  hidden set of the view's own. The view writes its rules scoped to its own drawing
+  (`[data-sheetview="<id>"] .sheetview-canvas`), so a reader can show In2.Cu alone beside the canvas
+  and keep the whole board on the canvas. The set lasts as long as the view, since a view's id does
+  not outlive the page.
 
 ## A board the design does not declare
 
