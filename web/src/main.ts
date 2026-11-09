@@ -592,7 +592,7 @@ class AppRoot extends BaseComponent {
         render: async (sheetId) => {
           const d = presenter.drawing();
           const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG });
-          return resp.content.case === "svg" ? resp.content.value : "";
+          return { svg: resp.content.case === "svg" ? resp.content.value : "", boardLayers: resp.boardLayers };
         },
         overlay: async (sheetId, specs) => {
           const d = presenter.drawing();

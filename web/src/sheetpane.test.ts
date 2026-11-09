@@ -3,6 +3,12 @@ import { describe, it, expect, vi } from "vitest";
 import { SheetPane, parseTurn, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
+import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+
+// ROWS are a board's layer rows as the engine lists them, two inner layers between the outer pair.
+const ROWS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"].map(
+  (name) => ({ name, kind: "copper", color: "#888", svgSelector: `[data-layer="${name}"]`, groups: [] }) as unknown as BoardLayerRow,
+);
 
 const SHEETS = [
   { id: "s1", name: "Root" },
@@ -11,13 +17,15 @@ const SHEETS = [
   { id: "board", name: "Board" },
 ];
 
+let panes = 0;
+
 function pane(drawnOn: string[]) {
   const calls = { render: [] as string[], overlay: [] as string[], drawnOn: [] as boolean[] };
   const deps: SheetPaneDeps = {
     sheets: () => SHEETS,
     render: async (id) => {
       calls.render.push(id);
-      return `<svg width="100" height="100" data-sheet="${id}"></svg>`;
+      return { svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: id === "board" ? ROWS : [] };
     },
     overlay: async (id) => {
       calls.overlay.push(id);
@@ -35,7 +43,7 @@ function pane(drawnOn: string[]) {
     onClose: vi.fn(),
     onOpened: vi.fn(),
   };
-  const p = new SheetPane("sheetview-1", deps);
+  const p = new SheetPane(`sheetview-${++panes}`, deps);
   document.body.appendChild(p.element);
   return { p, calls, deps };
 }
@@ -122,16 +130,40 @@ describe("a sheet view", () => {
     expect(shown(p)).toBe("s1");
   });
 
-  it("shows the board layer control on the board alone, and hides a side by class", async () => {
+  it("offers its own board layer list on the board alone", async () => {
     const { p } = pane([]);
-    const layers = p.element.querySelector(".sheetview-layers") as HTMLSelectElement;
+    const button = p.element.querySelector('[data-action="layers"]') as HTMLButtonElement;
+    const pop = p.element.querySelector(".sheetview-layer-pop") as HTMLElement;
     await p.open("s1");
-    expect(layers.style.display).toBe("none");
+    expect(button.style.display).toBe("none");
+    expect(p.element.querySelector(".sheetview-layers select, select.sheetview-layers")).toBeNull();
     await p.open("board");
-    expect(layers.style.display).toBe("");
-    layers.value = "front";
-    layers.dispatchEvent(new Event("change"));
-    expect(p.element.querySelector(".sheetview-canvas")!.classList.contains("board-front")).toBe(true);
+    expect(button.style.display).toBe("");
+    expect(pop.hidden).toBe(true);
+    button.click();
+    expect(pop.hidden).toBe(false);
+    expect([...pop.querySelectorAll(".board-layer-name")].map((n) => n.textContent)).toEqual(["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]);
+    await p.open("s1");
+    expect(pop.hidden).toBe(true);
+  });
+
+  // agni issue 1401: a view beside the canvas hides a layer in its own drawing alone.
+  it("hides a layer in its own drawing and no other", async () => {
+    const { p } = pane([]);
+    const { p: other } = pane([]);
+    await p.open("board");
+    await other.open("board");
+    (p.element.querySelector('[data-action="layers"]') as HTMLButtonElement).click();
+    const row = [...p.element.querySelectorAll(".board-layer-row")].find((r) => r.textContent === "In1.Cu") as HTMLElement;
+    row.click();
+    expect(p.hiddenLayersOf()).toEqual(new Set(["In1.Cu"]));
+    expect(p.element.querySelector("style")!.textContent).toBe(`[data-sheetview="${p.id}"] .sheetview-canvas :is([data-layer="In1.Cu"]) { display: none; }`);
+    expect((row.querySelector("input") as HTMLInputElement).checked).toBe(false);
+    expect(other.hiddenLayersOf().size).toBe(0);
+    expect(other.element.querySelector("style")!.textContent).toBe("");
+    // A schematic sheet in the same view takes no board rule.
+    await p.open("s1");
+    expect(p.element.querySelector("style")!.textContent).toBe("");
   });
 });
 
@@ -166,7 +198,7 @@ describe("turning a sheet view", () => {
 
   it("turns the board over left to right and draws it from below in a bottom view", async () => {
     const { p, deps } = turned();
-    deps.render = async () => `<svg width="100" height="100"><g class="copper-back"></g><g class="copper-front"></g><g class="labels"></g></svg>`;
+    deps.render = async () => ({ svg: `<svg width="100" height="100"><g class="copper-back"></g><g class="copper-front"></g><g class="labels"></g></svg>`, boardLayers: [] });
     await p.open("board");
     (p.element.querySelector(".sheetview-bottom") as HTMLButtonElement).click();
     expect(p.turnOf()).toEqual({ orientation: { rot: 0, flipH: true, flipV: false }, bottom: true });

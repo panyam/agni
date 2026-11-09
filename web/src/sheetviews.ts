@@ -55,7 +55,10 @@ export class SheetViews {
       this.doc,
     );
     this.panes.set(id, pane);
-    this.dock.add(id, pane.title(), pane.element, () => this.panes.delete(id));
+    this.dock.add(id, pane.title(), pane.element, () => {
+      pane.dispose();
+      this.panes.delete(id);
+    });
     await pane.open(sheetId);
     return pane;
   }
@@ -72,6 +75,7 @@ export class SheetViews {
   close(id: string): boolean {
     if (!this.panes.has(id)) return false;
     this.dock.close(id);
+    this.panes.get(id)?.dispose();
     this.panes.delete(id);
     return true;
   }
@@ -84,6 +88,7 @@ export class SheetViews {
   // reset closes every view, for a page that opens another design.
   reset(): void {
     for (const id of [...this.panes.keys()]) this.dock.close(id);
+    for (const p of this.panes.values()) p.dispose();
     this.panes.clear();
   }
 

@@ -164,3 +164,37 @@ func TestBoardLayersFollowTheTableNotTheNumbers(t *testing.T) {
 		t.Errorf("rows %q, want %q", got, want)
 	}
 }
+
+// Each inner layer draws in a colour of its own, and its row's swatch, its packed group and its
+// SVG copper all carry that colour, in every theme (agni issue 1401, C12).
+func TestEachInnerLayerHasItsOwnColourEverywhere(t *testing.T) {
+	b := innerBoard(t)
+	for theme, style := range Themes {
+		rows := BoardLayers(b, WithStyle(style))
+		packed := PackBoard(b, WithStyle(style))
+		doc := BoardSVG(b, WithStyle(style))
+		in1, in2 := boardRow(t, rows, "In1.Cu").GetColor(), boardRow(t, rows, "In2.Cu").GetColor()
+		if in1 == in2 {
+			t.Errorf("%s: In1.Cu and In2.Cu share the colour %s", theme, in1)
+		}
+		for _, name := range []string{"F.Cu", "In1.Cu", "In2.Cu", "B.Cu"} {
+			r := boardRow(t, rows, name)
+			if g := packed.GetGroupColors()[r.GetGroups()[0]]; g != r.GetColor() {
+				t.Errorf("%s: %s's packed group draws %s, its swatch %s", theme, name, g, r.GetColor())
+			}
+			// A layer's first marked element is its copper group or, on In2.Cu here, its zone.
+			mark := `data-layer="` + name + `"`
+			at := strings.Index(doc, mark)
+			if at < 0 {
+				t.Fatalf("%s: the SVG board marks nothing on %s", theme, name)
+			}
+			group := doc[at+len(mark):]
+			if next := strings.Index(group, `data-layer="`); next >= 0 {
+				group = group[:next]
+			}
+			if !strings.Contains(group, `"`+r.GetColor()+`"`) {
+				t.Errorf("%s: the SVG board draws %s's copper without its swatch colour %s", theme, name, r.GetColor())
+			}
+		}
+	}
+}

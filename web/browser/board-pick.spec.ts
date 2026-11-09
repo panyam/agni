@@ -8,7 +8,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
-import { pickPoint as clearPoint } from "./picks.js";
+import { PANE, openBeside, pickPoint as clearPoint } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -187,6 +187,36 @@ describe("hiding a board layer", () => {
       await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length > 0, track, { timeout: 30_000 });
       const alone = await page.$$eval(".board-layer-row", (rs) => rs.filter((r) => (r.querySelector("input") as HTMLInputElement).checked).map((r) => r.textContent!.trim()));
       expect(alone).toEqual(["In1.Cu"]);
+    });
+  }, 90_000);
+
+  // agni issue 1401. A view beside the canvas has its own layer list, so a reader can hide In1.Cu
+  // there and keep it on the canvas. Each inner layer draws in a colour of its own.
+  it("hides a layer in a view beside the canvas and leaves the canvas drawing it", async () => {
+    await withPage(browser, async (page) => {
+      const inner = (scope: string) => `${scope} .copper-inner[data-layer="In1.Cu"] g[data-kind="net"] > line`;
+      const drawn = (sel: string) => page.$eval(sel, (el) => el.getClientRects().length > 0);
+      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view`, { waitUntil: "networkidle" });
+      await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
+      await page.waitForSelector(inner("#svg-view"), { state: "attached", timeout: 30_000 });
+      await openBeside(page, "Board");
+      await page.waitForSelector(inner(`${PANE} .sheetview-canvas`), { state: "attached", timeout: 30_000 });
+      // The positive control. Both drawings show the track before anything is hidden.
+      expect(await drawn(inner(`${PANE} .sheetview-canvas`))).toBe(true);
+      expect(await drawn(inner("#svg-view"))).toBe(true);
+
+      await page.locator(`${PANE} [data-action="layers"]`).click();
+      const rows = page.locator(`${PANE} .sheetview-layer-pop .board-layer-row`);
+      await rows.first().waitFor({ state: "visible", timeout: 10_000 });
+      const swatch = (name: string) =>
+        rows.filter({ hasText: name }).locator(".board-layer-swatch").evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(await swatch("In1.Cu"), "In1.Cu and In2.Cu share a swatch colour").not.toBe(await swatch("In2.Cu"));
+
+      await rows.filter({ hasText: "In1.Cu" }).locator("input").click();
+      await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length === 0, inner(`${PANE} .sheetview-canvas`), { timeout: 10_000 });
+      expect(await drawn(inner("#svg-view")), "hiding In1.Cu beside the canvas hid it on the canvas too").toBe(true);
+      expect(await drawn(`${PANE} .sheetview-canvas [data-layer="In2.Cu"]`)).toBe(true);
+      expect(await page.locator('.sheet-overview .board-layer-row, #sheet-overview .board-layer-row', { hasText: "In1.Cu" }).locator("input").isChecked()).toBe(true);
     });
   }, 90_000);
 });

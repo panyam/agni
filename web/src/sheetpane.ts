@@ -12,6 +12,9 @@ import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, rotateBy, type Orientation } from "./orient.js";
 import { orderStrata } from "./boardstrata.js";
+import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { layerHiding, presetHidden, soloHidden, toggled } from "./boardlayers.js";
+import { boardLayerListIsland } from "./boardlayerlist.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). bottom draws the board from
@@ -49,12 +52,19 @@ export interface TurnStore {
 
 export const BOARD_SHEET = "board";
 
+// SheetDrawing is one sheet as a pane draws it. boardLayers is empty for a schematic sheet.
+export interface SheetDrawing {
+  svg: string;
+  boardLayers: BoardLayerRow[];
+}
+
 // SheetPaneDeps are what a pane asks of the page.
 export interface SheetPaneDeps {
   // sheets lists the open design's sheets, for the picker and for naming the other sheets.
   sheets: () => { id: string; name: string }[];
-  // render returns a sheet's SVG document with pick targets, as the canvas draws it.
-  render: (sheetId: string) => Promise<string>;
+  // render returns a sheet's SVG document with pick targets, as the canvas draws it, and the
+  // board's layer rows when the sheet is the board.
+  render: (sheetId: string) => Promise<SheetDrawing>;
   // overlay returns the highlight overlay for specs on a sheet, framed like render's document.
   overlay: (sheetId: string, specs: HighlightSpec[]) => Promise<string>;
   // drawnOn lists the sheets that draw a selection, the board included when board is set.
@@ -79,7 +89,14 @@ export class SheetPane {
   link: Link = "follow";
   private readonly host: HTMLElement;
   private readonly picker: HTMLSelectElement;
-  private readonly layers: HTMLSelectElement;
+  // The board's layer rows and the ones this view hides, apart from the canvas's (agni issue 1401).
+  // layerStyle holds the rules that hide them, scoped to this view's drawing.
+  private readonly layersButton: HTMLButtonElement;
+  private readonly layerPop: HTMLElement;
+  private readonly layerStyle: HTMLStyleElement;
+  private readonly layerList: ReturnType<typeof boardLayerListIsland>;
+  private layerRows: BoardLayerRow[] = [];
+  private hiddenLayers = new Set<string>();
   private readonly bottomButton: HTMLButtonElement;
   private turn: ViewTurn = { orientation: UPRIGHT, bottom: false };
   private readonly linkSelect: HTMLSelectElement;
@@ -106,10 +123,6 @@ export class SheetPane {
     this.picker = el("select", "sheetview-sheet") as HTMLSelectElement;
     this.picker.title = "sheet shown in this view";
     this.picker.addEventListener("change", () => void this.open(this.picker.value));
-    this.layers = el("select", "sheetview-layers") as HTMLSelectElement;
-    this.layers.title = "board layer visibility";
-    for (const s of ["all", "front", "back"]) this.layers.append(new Option(`${s} layers`, s));
-    this.layers.addEventListener("change", () => this.applyLayers());
     this.linkSelect = el("select", "sheetview-link") as HTMLSelectElement;
     this.linkSelect.title = "follow: open and centre on what is selected elsewhere. locked: also mirror pan and zoom with other locked views on the same sheet. off: never move.";
     for (const l of LINKS) this.linkSelect.append(new Option(l, l));
@@ -146,14 +159,35 @@ export class SheetPane {
     float.textContent = "Float";
     float.title = "float this view over the page";
     float.addEventListener("click", () => this.deps.onFloat(this));
+    // The Layers button opens this view's own layer rows, the list the Sheets panel shows for the
+    // canvas, so a reader can show In2.Cu alone here and keep the whole board on the canvas.
+    this.layersButton = button("sheetview-layers", "layers", "Layers", "show or hide this view's board layers", () =>
+      this.showLayerPop(this.layerPop.hidden),
+    );
+    this.layersButton.setAttribute("aria-haspopup", "true");
+    this.layersButton.setAttribute("aria-expanded", "false");
+    this.layerPop = el("div", "sheetview-layer-pop");
+    this.layerPop.hidden = true;
+    this.layerList = boardLayerListIsland(this.layerPop, {
+      onToggle: (name) => this.setHiddenLayers(toggled(this.hiddenLayers, name)),
+      onSolo: (name) => this.setHiddenLayers(soloHidden(this.layerRows, name)),
+      onPreset: (preset) => this.setHiddenLayers(presetHidden(this.layerRows, preset)),
+    });
+    this.layerList.island.activate();
+    // A press anywhere outside the list and its button closes the list.
+    doc.addEventListener("pointerdown", (e) => {
+      const t = e.target as Node | null;
+      if (!this.layerPop.hidden && t && !this.layerPop.contains(t) && !this.layersButton.contains(t)) this.showLayerPop(false);
+    });
+    this.layerStyle = doc.createElement("style");
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, this.layers, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close);
+    bar.append(this.picker, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
     this.host = el("div", "sheetview-canvas");
-    this.element.append(bar, this.also, this.host);
+    this.element.append(this.layerStyle, bar, this.also, this.host);
     this.view = new SvgView(this.host);
     this.view.onPick = (sel) => this.deps.onPick(this, sel);
     this.view.onPickEmpty = () => this.deps.onPickEmpty(this);
@@ -170,20 +204,22 @@ export class SheetPane {
     this.sheet = sheetId;
     this.fillPicker();
     const n = ++this.drawing;
-    let svg = "";
+    let drawing: SheetDrawing = { svg: "", boardLayers: [] };
     try {
-      svg = await this.deps.render(sheetId);
+      drawing = await this.deps.render(sheetId);
     } catch (e) {
-      svg = "";
       this.also.textContent = `could not draw this sheet: ${String(e)}`;
     }
     if (n !== this.drawing) return;
+    const svg = drawing.svg;
+    this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
     this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT, bottom: false };
     this.view.setSvg(svg);
     this.deps.onOpened(this);
     this.applyLayers();
     this.applyTurn();
-    this.layers.style.display = sheetId === BOARD_SHEET ? "" : "none";
+    this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
+    if (this.layerRows.length === 0) this.showLayerPop(false);
     this.bottomButton.style.display = sheetId === BOARD_SHEET ? "" : "none";
     await this.paint(false);
   }
@@ -289,10 +325,33 @@ export class SheetPane {
     this.view.setOrientation(this.turn.orientation);
   }
 
+  // hiddenLayersOf names the board layers this view hides.
+  hiddenLayersOf(): ReadonlySet<string> {
+    return this.hiddenLayers;
+  }
+
+  // dispose unmounts the layer list, for a view the dock has closed.
+  dispose(): void {
+    this.layerList.island.deactivate();
+  }
+
+  private setHiddenLayers(hidden: Set<string>): void {
+    this.hiddenLayers = hidden;
+    this.applyLayers();
+  }
+
+  private showLayerPop(open: boolean): void {
+    this.layerPop.hidden = !open;
+    this.layersButton.classList.toggle("active", open);
+    this.layersButton.setAttribute("aria-expanded", String(open));
+  }
+
+  // applyLayers hides this view's hidden layers with rules scoped to its own drawing, so the canvas
+  // and every other view keep theirs.
   private applyLayers(): void {
-    this.host.classList.remove("board-front", "board-back");
-    const side = this.layers.value;
-    if (this.sheet === BOARD_SHEET && (side === "front" || side === "back")) this.host.classList.add(`board-${side}`);
+    const scope = `[data-sheetview="${this.id}"] .sheetview-canvas`;
+    this.layerStyle.textContent = layerHiding(this.layerRows, this.hiddenLayers, scope).css;
+    this.layerList.setState({ rows: this.layerRows, hidden: this.hiddenLayers });
   }
 
   private nameOf(id: string): string {

@@ -37,6 +37,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 	}
 
 	stack := copperStack(b)
+	copperColor := copperColors(style, b)
 	zoned := map[string]bool{}
 	for _, z := range b.GetZones() {
 		if z.GetOutline() != nil {
@@ -50,7 +51,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 		}
 	}
 	for _, ly := range stack {
-		color := copperColor(style, ly)
+		color := copperColor(ly)
 		switch layerSide(ly) {
 		case "front":
 			s.copper[ly] = groupBoardCopperFront
@@ -94,7 +95,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 			groups = append(groups, uint32(groupBoardPickBack))
 		}
 		s.rows = append(s.rows, &geom.BoardLayerRow{Name: ly, Kind: "copper", Side: layerSide(ly),
-			Color: copperColor(style, ly), SvgSelector: sel, Groups: groups})
+			Color: copperColor(ly), SvgSelector: sel, Groups: groups})
 	}
 	if len(b.GetOutline().GetPaths()) > 0 {
 		s.rows = append(s.rows, &geom.BoardLayerRow{Name: "Edge", Kind: "edge", Color: style.BoardOutline,
@@ -122,7 +123,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 				groups = append(groups, uint32(g))
 				if color == "" {
 					// The swatch takes the colour of the first layer that has a zone.
-					color = copperColor(style, ly)
+					color = copperColor(ly)
 				}
 			}
 		}
