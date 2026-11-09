@@ -209,6 +209,8 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   additionally RAN the `> review.html` redirect inside an example command and left the empty file in
   the tree. The edit reported success, so the damage was only visible by reading the result back.
   Quote the delimiter whenever the body is prose, and read the output back before pushing it.
+- **zsh reads `$var:r` as a history modifier.** `git push origin $c:refs/heads/x` strips the
+  colon and what follows from `$c` and pushes a nonsense refspec. Write `"${c}:refs/heads/x"`.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
   ONCE over the whole blob, and a sweep that did this compared one file and reported success. Glob
   directly in the `for`, or use an array. **The nastiest form is a before/after comparison loop**:

@@ -1426,8 +1426,9 @@ passes FAILS the walk, so the PR that makes a step pass also removes its wait in
 closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a
 ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
 read its steps "not available". The gate runs offline and skips that half.
-#1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) is
-active in the webgl clone, and `make exercise-webgl` is its exercise (agni 1330). It runs
+#1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) closed
+on 2026-11-09, and `make exercise-webgl` is still its exercise (agni 1330). SVG stays the default
+renderer (DECISIONS.md), and #1331 (batching draws) is parked. It runs
 `web/browser/webgl-walk.spec.ts` in SVG and then in WebGL. It lines the two views up by fitting their
 label anchors (`browser/frametimes.ts`), so a click lands on one place in both. Its timings mean
 something only headed on an idle machine, since headless Chrome draws WebGL in SwiftShader, so the
@@ -1437,8 +1438,9 @@ busy overlay sets `data-busy` at once and takes a wheel or click while it shows,
 for it to clear (`idle`) before acting. A zoom whose refit finds too few anchors moves the old frame
 by the zoom (`zoomFrame`) rather than keeping it, or later clicks drift. Once the first sheet draws,
 the overlay turns into a pill that takes no input (agni 1454). **The canvas and every sheet view
-draw through one `SheetSurface`** (`web/src/sheetsurface.ts`, agni 1368), and a view picks SVG or
-WebGL in its bar, opening in the canvas's renderer. A WebGL view turns through its camera
+draw through one `SheetSurface`** (`web/src/sheetsurface.ts`, agni 1368), and a view picks its
+renderer with a WebGL checkbox in its bar, as the canvas does (agni 1469), opening in the canvas's
+renderer. Native has a checkbox only where the server offers it. A WebGL view turns through its camera
 (`orientTurn`), and from below draws by `strataDrawOrder`, which a click reads too. Locked views lock
 only within one renderer, since SVG and WebGL measure a centre in different units. The page API's
 `OpenSheetView` takes a `renderer`. Each `agni:sheet-drawn` mark names its drawing in

@@ -9,39 +9,35 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-09, at `361eda24`.
+Last pruned 2026-11-09, at `5eecfbdb`.
 
 ## At a glance
 
-Three missions are active, each worked in its own clone. `MISSION=mission_<slug> queue.sh` (the
+Two missions are active, each worked in its own clone. `MISSION=mission_<slug> queue.sh` (the
 retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
 - **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 20 of
   20 tickets closed. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
   The mission still has to pass beside a real board before it closes.
-- **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), worked in the
-  webgl clone, 12 of 13 closed. #1331 is the one left, and it is `waiting`. A headed
-  `make exercise-webgl` at `f7f53eb` passed every step, WebGL's p95 frame 20.9 ms against SVG's
-  55.6 ms on Jetson's board (logged on #1329). PR #1465 (#1335) since drew the visual diff in WebGL
-  and added a compare step to the walk. What is left is whether to make WebGL the default renderer
-  and close the mission (DECISIONS.md keeps SVG the default until WebGL draws everything SVG draws).
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
-  the formats clone, 15 of 15 closed. `make exercise-allegro` and `make exercise-altium` pass at
-  `67fbcf2f` and now cover all three steps, the viewer's pad click included. Its "Done when" line
-  still wants someone to open a real board of their own in each format. Whether to close the mission before
+  the formats clone, 17 of 17 closed. `make exercise-allegro` and `make exercise-altium` passed at
+  `e4394b70`, and a native board now opens on the board alone (#1466). Its "Done when" line still
+  wants someone to open a real board of their own in each format. Whether to close the mission before
   that run is the user's call. #1355, #1362, #1393, #1430 and #1437 are its `waiting` follow-ups.
-- **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06 with every
-  ticket done and their exercises passing. Each still wants a person's run on a real board, and
-  either reopens if that run finds something.
+- **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06, and **#1329
+  `mission_webgl`** on 2026-11-09, with every ticket done and their exercises passing. #1329 left
+  SVG the default renderer (DECISIONS.md) and #1331 parked. Each still wants a person's run on a
+  real board, and  either reopens if that run finds something.
 - **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
   runs agni serve for more than one person.
 - **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1462 (#1435), #1463 (#1334, #765, #1464) and #1465 (#1335) merged for #1329, and
-  v0.6.2 is cut. CLAUDE.md gained the opaque-canvas blending trap and the WebGL visual diff.
+- This run: #1465 (#1335), #1468 (#1466) and #1470 (#1469) merged, #1329 closed, and v0.6.3 is
+  cut. agni-samples v0.1.16 reads with agni v0.6.2 in CI, and three Allegro folders gained
+  descriptors naming their Capture schematics.
 
 ## Open, ranked
 
