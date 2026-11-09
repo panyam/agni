@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-09, at `d48fe701`.
+Last pruned 2026-11-09, at `361eda24`.
 
 ## At a glance
 
@@ -21,13 +21,11 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   20 tickets closed. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
   The mission still has to pass beside a real board before it closes.
 - **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), worked in the
-  webgl clone, 8 of 13 closed. PR #1462 (#1435, KiCad bus names) is open on
-  `feat/kicad-bus-names-1435`, waiting on review and one rerun of the WebGL walk on the cut once the
-  machine's load drops. Its Jetson screenshot pair of Properties for a clicked bus is still to add.
-  `make exercise-webgl HEADED=0` last ran at `8fe99d2` and broke on the 30 minute timeout, which
-  #1462 raises (logged on #1329). Next after it is #1334 (WebGL zone fills and layer hiding) with
-  #765 folded in, then #1335 if its link to the `waiting` #1331 is dropped. SVG stays the default
-  renderer until WebGL draws everything SVG draws (DECISIONS.md).
+  webgl clone, 12 of 13 closed. #1331 is the one left, and it is `waiting`. A headed
+  `make exercise-webgl` at `f7f53eb` passed every step, WebGL's p95 frame 20.9 ms against SVG's
+  55.6 ms on Jetson's board (logged on #1329). PR #1465 (#1335) since drew the visual diff in WebGL
+  and added a compare step to the walk. What is left is whether to make WebGL the default renderer
+  and close the mission (DECISIONS.md keeps SVG the default until WebGL draws everything SVG draws).
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
   the formats clone, 15 of 15 closed. `make exercise-allegro` and `make exercise-altium` pass at
   `67fbcf2f` and now cover all three steps, the viewer's pad click included. Its "Done when" line
@@ -42,8 +40,8 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1457 (#1443) and #1461 (#1368) merged for #1329. CLAUDE.md gained the drawn KiCad bus
-  names, the shared `SheetSurface` and the load trap in the web tests.
+- This run: #1462 (#1435), #1463 (#1334, #765, #1464) and #1465 (#1335) merged for #1329, and
+  v0.6.2 is cut. CLAUDE.md gained the opaque-canvas blending trap and the WebGL visual diff.
 
 ## Open, ranked
 

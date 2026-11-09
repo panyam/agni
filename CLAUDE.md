@@ -1439,9 +1439,16 @@ WebGL in its bar, opening in the canvas's renderer. A WebGL view turns through i
 (`orientTurn`), and from below draws by `strataDrawOrder`, which a click reads too. Locked views lock
 only within one renderer, since SVG and WebGL measure a centre in different units. The page API's
 `OpenSheetView` takes a `renderer`. Each `agni:sheet-drawn` mark names its drawing in
-`detail.view` (`canvas` or a view's id), so a spec timing the canvas skips a view's draws. The
-walk's last steps pan a board view beside the schematic, and a headless Jetson walk takes most of
-an hour (`WALK_TIMEOUT_MS`). #1353
+`detail.view` (`canvas` or a view's id), so a spec timing the canvas skips a view's draws. A zone
+fill blends (`enableBlending` in `web/src/webgl.ts`, agni 1334), and the canvas must stay OPAQUE.
+The browser composites a WebGL canvas as premultiplied alpha, so a translucent pixel drew white
+over the page. **The visual diff draws in the canvas's renderer too** (agni 1335). Each side is a
+`SheetSurface`, and the union draws the old sheet's removed parts as ghosts (`ghostOverlays` in
+`web/src/canvas.ts`). Each packed sheet sits about its own origin, so the two sides mirror pan and
+zoom in design coordinates (`getCentre`/`setCentre`). The walk's compare step needs Jetson's rev B,
+which `make exercise-webgl` builds, and it clicks the first change, since the first sheet pair
+need not draw one. The walk's last steps pan a board view beside the schematic, and a headless
+Jetson walk takes most of an hour (`WALK_TIMEOUT_MS`). #1353
 `mission_board_formats` (open an Altium or Allegro board with no export step) is active in the
 formats clone, and `make exercise-allegro` and `make exercise-altium` are its exercise. Each runs
 its example, then opens the native board in the viewer and clicks a pad
