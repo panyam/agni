@@ -251,7 +251,7 @@ describe("highlight layers", () => {
 
       // SVG mode, because there the overlay is a served document in the DOM and its paint is
       // inspectable. WebGL resolves specs into buffers with nothing to read back short of pixels.
-      await page.click(`.render-mode .mode-btn:has-text("SVG")`);
+      await page.uncheck(".render-webgl");
       // Scoped to #svg-view, because the diff panel builds two more SvgViews. Their overlays are
       // empty and hidden, so an unscoped selector waits forever on the wrong one.
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
@@ -308,7 +308,7 @@ describe("the run-wide field", () => {
   it("is off after a run, and a clicked finding is drawn", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
-      await page.click(`.render-mode .mode-btn:has-text("SVG")`);
+      await page.uncheck(".render-webgl");
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
       await page.click(".checks-run");
       await page.waitForSelector(".check-locate", { timeout: 30_000 });
@@ -901,7 +901,7 @@ describe("the top bar's menu buttons", () => {
       await page.setViewportSize({ width: 700, height: 900 });
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
       const heights = await page.evaluate(() =>
-        [".panels-btn", ".highlight-btn", ".render-mode .mode-btn"].map((sel) => {
+        [".panels-btn", ".highlight-btn", ".clear-highlights"].map((sel) => {
           const b = document.querySelector<HTMLElement>(sel);
           return { sel, h: b ? b.getBoundingClientRect().height : -1 };
         }),

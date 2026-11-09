@@ -321,7 +321,7 @@ describe("a sheet view in WebGL", () => {
     expect(asked).toEqual(["board webgl"]);
     expect(gl.sheet).toBe("board");
     expect(p.element.dataset.renderer).toBe("webgl");
-    expect(p.element.querySelector<HTMLSelectElement>(".sheetview-renderer")?.value).toBe("webgl");
+    expect(p.element.querySelector<HTMLInputElement>(".sheetview-webgl")?.checked).toBe(true);
     await p.follow({ kind: "pin", ref: "U1", pin: "3" });
     expect(gl.specs).toEqual([{ components: ["U1"] }]);
     expect(overlays()).toBe(0);
@@ -333,7 +333,7 @@ describe("a sheet view in WebGL", () => {
     await p.open("s1");
     expect(asked).toEqual(["s1 webgl", "s1 svg"]);
     expect(p.element.dataset.renderer).toBe("svg");
-    expect(p.element.querySelector<HTMLSelectElement>(".sheetview-renderer")?.value).toBe("svg");
+    expect(p.element.querySelector<HTMLInputElement>(".sheetview-webgl")?.checked).toBe(false);
     expect(shown(p)).toBe("s1");
   });
 

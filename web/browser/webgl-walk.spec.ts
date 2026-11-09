@@ -863,11 +863,11 @@ for (const name of chosen) {
           const svg = await sheetShown(page, "svg");
           await open(page, walk, "webgl", "Board");
           let since = await page.evaluate(() => performance.now());
-          await page.locator(".mode-btn", { hasText: "SVG" }).click();
+          await page.locator(".render-webgl").uncheck();
           await drawnSince(page, "svg", since);
           await idle(page);
           since = await page.evaluate(() => performance.now());
-          await page.locator(".mode-btn", { hasText: "WebGL" }).click();
+          await page.locator(".render-webgl").check();
           await drawnSince(page, "webgl", since);
           await idle(page);
           since = await page.evaluate(() => performance.now());

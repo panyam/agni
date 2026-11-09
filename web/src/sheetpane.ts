@@ -113,7 +113,7 @@ export class SheetPane {
   private readonly glCanvas: HTMLCanvasElement;
   private readonly textHost: HTMLElement;
   private gl: CanvasComponent | null = null;
-  private readonly rendererSelect: HTMLSelectElement;
+  private readonly webglBox: HTMLInputElement;
   private readonly picker: HTMLSelectElement;
   // The board's layer rows and the ones this view hides, apart from the canvas's (agni issue 1401).
   // layerStyle holds the rules that hide them, scoped to this view's drawing.
@@ -206,16 +206,19 @@ export class SheetPane {
       if (!this.layerPop.hidden && t && !this.layerPop.contains(t) && !this.layersButton.contains(t)) this.showLayerPop(false);
     });
     this.layerStyle = doc.createElement("style");
-    // The renderer this view draws in, SVG or WebGL, chosen per view (agni issue 1368).
-    this.rendererSelect = el("select", "sheetview-renderer") as HTMLSelectElement;
-    this.rendererSelect.title = "the renderer this view draws in";
-    this.rendererSelect.append(new Option("SVG", "svg"), new Option("WebGL", "webgl"));
-    this.rendererSelect.addEventListener("change", () => void this.setRenderer(this.rendererSelect.value as SurfaceMode));
+    // The renderer this view draws in, chosen per view (agni issue 1368). It is one WebGL checkbox, off
+    // for SVG, as the canvas's is (agni issue 1469).
+    const renderer = el("label", "render-toggle sheetview-renderer");
+    renderer.title = "draw this view with WebGL, or with SVG when off";
+    this.webglBox = el("input", "sheetview-webgl") as HTMLInputElement;
+    this.webglBox.type = "checkbox";
+    this.webglBox.addEventListener("change", () => void this.setRenderer(this.webglBox.checked ? "webgl" : "svg"));
+    renderer.append(this.webglBox, doc.createTextNode("WebGL"));
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, this.rendererSelect, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
+    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
     // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
     // panel does (#view, #text-overlay, #svg-view).
@@ -244,7 +247,7 @@ export class SheetPane {
     this.surface.onPickEmpty = () => this.deps.onPickEmpty(this);
     this.surface.onViewChange = () => this.deps.onViewChange(this, this.surface.svg.getView());
     this.surface.setMode(this.deps.renderer?.() ?? "svg");
-    this.rendererSelect.value = this.surface.mode;
+    this.webglBox.checked = this.surface.mode === "webgl";
   }
 
   // renderer is the renderer this view draws in, and drawnBy the one that drew the sheet on screen,
@@ -265,7 +268,7 @@ export class SheetPane {
   // setRenderer switches this view to SVG or WebGL and draws its sheet again in it.
   async setRenderer(mode: SurfaceMode): Promise<void> {
     this.surface.setMode(mode);
-    this.rendererSelect.value = mode;
+    this.webglBox.checked = mode === "webgl";
     if (this.sheet) await this.open(this.sheet);
   }
 
@@ -306,7 +309,7 @@ export class SheetPane {
     if (!drawnInGl) {
       if (mode === "webgl") {
         this.surface.setMode("svg");
-        this.rendererSelect.value = "svg";
+        this.webglBox.checked = false;
         drawing = await this.deps.render(sheetId, "svg");
         if (n !== this.drawing) return;
       }

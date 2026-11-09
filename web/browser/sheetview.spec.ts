@@ -141,7 +141,7 @@ describe("a sheet view in WebGL", () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut/designs/gateway");
       await openBeside(page, "Board");
-      await page.selectOption(`${PANE} .sheetview-renderer`, "webgl");
+      await page.check(`${PANE} .sheetview-webgl`);
       await page.waitForSelector(`${PANE}[data-renderer="webgl"]`, { timeout: 30_000 });
 
       const part = await firstClear(page, "#svg-view");
