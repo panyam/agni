@@ -78,7 +78,7 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 
 	// Title-block left and top edges in world coordinates. A column whose text reaches into the
 	// title-block x-range and drops below its top edge must shrink.
-	tbx, tby, _, tbh := titleBlockBox(fl, titleBlockGrid(g, sheet))
+	tbx, tby, _, tbh := titleBlockBox(fl)
 	tbTop := tby + tbh
 
 	// One uniform factor for all multi-line free text, the minimum any column needs.

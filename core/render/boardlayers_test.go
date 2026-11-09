@@ -198,3 +198,62 @@ func TestEachInnerLayerHasItsOwnColourEverywhere(t *testing.T) {
 		}
 	}
 }
+
+// A packed zone fills as a wash, as BoardSVG fills it (agni issue 1334). It packs as triangles in a
+// group of its own, in its layer's copper colour at zoneWashOpacity, so WebGL blends it over
+// whatever lies under it. Before, it packed as an outline and drew no fill.
+func TestPackBoardWashesAZone(t *testing.T) {
+	b := pickBoard()
+	ps := PackBoard(b)
+	recs := decodeRecords(ps.GetPrimitives())
+	zones := 0
+	for _, k := range ps.GetKeys() {
+		r := recs[k.GetPrimitive()]
+		if k.GetNet() != "GND" || r.group == groupBoardCopperBack || r.group == groupBoardPickBack || r.group == groupBoardThrough {
+			continue
+		}
+		zones++
+		if r.kind != primTriangles {
+			t.Errorf("the GND zone packs as kind %d, want filled triangles", r.kind)
+		}
+		g := int(r.group)
+		if g >= len(ps.GetGroupAlphas()) || ps.GetGroupAlphas()[g] != zoneWashOpacity {
+			t.Errorf("the zone's group %d draws at alphas %v, want %v", g, ps.GetGroupAlphas(), zoneWashOpacity)
+		}
+		if want := copperColors(DefaultStyle, b)("B.Cu"); ps.GetGroupColors()[g] != want {
+			t.Errorf("the zone's group is coloured %q, want B.Cu's copper %q", ps.GetGroupColors()[g], want)
+		}
+	}
+	if zones != 1 {
+		t.Fatalf("found %d GND zone records, want 1", zones)
+	}
+}
+
+// Every group a packed board draws hides with a layer row (agni issue 1334), so the viewer's Layers
+// list can hide inner copper, zones, pours, silkscreen and fab in WebGL as in SVG. A group no row
+// names would stay on screen whatever the reader hid.
+func TestEveryPackedBoardGroupHidesWithARow(t *testing.T) {
+	b := pickBoard()
+	pt := func(x, y int64) *geom.Point { return &geom.Point{X: x, Y: y} }
+	b.Zones = append(b.Zones, &geom.Zone{Net: "VCC", Layer: "In1.Cu", Outline: &geom.Polyline{Points: []*geom.Point{pt(1_000_000, 1_000_000), pt(9_000_000, 1_000_000), pt(9_000_000, 9_000_000)}}})
+	b.Nets = append(b.Nets, &geom.NetCopper{Net: "VCC", Segments: []*geom.TrackSegment{{A: pt(2_000_000, 2_000_000), B: pt(8_000_000, 2_000_000), Width: 250_000, Layer: "In1.Cu"}}})
+	b.Graphics = append(b.Graphics, &geom.BoardGraphic{Layer: "F.Fab", Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{pt(9_000_000, 9_000_000), pt(11_000_000, 9_000_000)}}})
+	named := map[uint8]bool{}
+	for _, r := range BoardLayers(b) {
+		for _, g := range r.GetGroups() {
+			named[uint8(g)] = true // #nosec G115 -- a group is a u8 on the wire
+		}
+	}
+	drawn := map[uint8]bool{}
+	for _, r := range decodeRecords(PackBoard(b).GetPrimitives()) {
+		drawn[r.group] = true
+	}
+	if len(drawn) < 8 {
+		t.Fatalf("the board packs %d groups, want the strata the fixture draws", len(drawn))
+	}
+	for g := range drawn {
+		if !named[g] {
+			t.Errorf("group %d draws and no layer row hides it", g)
+		}
+	}
+}

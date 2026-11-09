@@ -490,9 +490,7 @@ func drawWorksheet(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetGe
 func drawTitleBlock(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, l, r, t, b float64, style Style) {
 	rows := titleBlockGrid(g, sheet)
 	total := gridWeight(rows)
-	rowH := math.Max(10, math.Min((b-t)/30, 22))
-	tw := math.Min((r-l)*0.36, 360)
-	th := math.Min(total*rowH, (b-t)*0.6)
+	tw, th := titleBlockPx(r-l, b-t, total)
 	bx, byTop := r-tw, b-th // top-left of the title block; the block bottom sits on the frame
 	c.El("rect", svg.A("fill", style.TitleBlockFill), svg.A("stroke", style.Frame), svg.F("stroke-width", 0.8),
 		svg.F("x", bx), svg.F("y", byTop), svg.F("width", tw), svg.F("height", th))
@@ -506,7 +504,7 @@ func drawTitleBlock(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetG
 			c.El("polyline", svg.A("fill", "none"), svg.A("stroke", style.Frame), svg.F("stroke-width", 0.5),
 				svg.A("points", fmt.Sprintf("%.1f,%.1f %.1f,%.1f", bx, yBot, bx+tw, yBot)))
 		}
-		font := math.Max(6, math.Min((yBot-yTop)*0.5, 13))
+		font := titleBlockFontPx(yBot - yTop)
 		for _, cell := range row.cells {
 			cx0 := bx + tw*cell.x0
 			if cell.x0 > 0.0001 { // interior column divider
@@ -518,7 +516,7 @@ func drawTitleBlock(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetG
 			}
 			f := font
 			fill := style.Annotation
-			attrs := []svg.Attr{svg.F("x", cx0+4), svg.F("y", (yTop+yBot)/2), svg.F("font-size", f), svg.A("dominant-baseline", "central"), svg.A("fill", fill)}
+			attrs := []svg.Attr{svg.F("x", cx0+titleBlockIndentPx), svg.F("y", (yTop+yBot)/2), svg.F("font-size", f), svg.A("dominant-baseline", "central"), svg.A("fill", fill)}
 			if cell.bold {
 				attrs = append(attrs, svg.A("font-weight", "bold"))
 			}

@@ -63,8 +63,9 @@ data-heavy panel may take rendered HTML, as one renderer over the same typed sta
 The request path runs from the browser through two server layers into the engine.
 
 In the browser, leaf UI components push intents to a TypeScript presenter. The leaf components
-are the panels, the file tree and the controls. The presenter drives a WebGL canvas for the packed
-render form and an SVG host for the SVG document and its overlay. It talks to the server over
+are the panels, the file tree and the controls. The presenter drives the canvas's sheet surface,
+which draws the packed form in WebGL and the SVG document and its overlay in an SVG host. A sheet view
+beside the canvas draws through a surface of its own (`web/src/sheetsurface.ts`). It talks to the server over
 Connect using proto JSON.
 
 On the server, Connect handlers receive the call and delegate to transport-neutral services. The
@@ -87,7 +88,7 @@ There are five server-rendered shells, each with its own bundle, so a page downl
 |---|---|---|---|
 | `/` | `LandingPage` | `landing.js` | Where am I going: the destinations, this browser's recents, and the designs the server's projects declare. Also the catch-all, so an unmatched URL offers choices instead of 404ing |
 | `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
-| `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: WebGL canvas, checks, query, diff |
+| `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: the canvas in SVG or WebGL, sheet views, checks, query, diff |
 | `/designs/<mount>/<path>/load`, `/designs/local/load/` | `LoadPage` | `load.js` | Reads a design into the engine's store before the viewer opens it, step by step, then opens the viewer at the same address (agni issue 1072). With no design, the browser mount's page takes dropped files and lists the kept drops |
 
 `agnids` serves the extraction workbench, rather than `agni serve` (agni issue 744). The workbench

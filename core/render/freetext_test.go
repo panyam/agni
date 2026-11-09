@@ -109,7 +109,7 @@ func TestFreeTextFitClearsTitleBlock(t *testing.T) {
 	}
 
 	fl, _ := worksheetLayout(g, g.Sheets[0])
-	_, tby, _, tbh := titleBlockBox(fl, titleBlockGrid(g, g.Sheets[0]))
+	_, tby, _, tbh := titleBlockBox(fl)
 	tbTop := tby + tbh
 
 	step := int64(float64(h) * lineHeight)

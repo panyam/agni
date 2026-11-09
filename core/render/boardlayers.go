@@ -17,6 +17,7 @@ type boardStrata struct {
 	pour   map[string]uint8 // copper layer -> its copper shapes' group (agni 1357)
 	art    map[string]uint8 // graphics layer -> its graphics' and text's group
 	colors []string         // indexed by group
+	alphas []float32        // indexed by group, 0 for opaque; nil while every group is opaque
 	rows   []*geom.BoardLayerRow
 }
 
@@ -34,6 +35,20 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 		}
 		s.colors = append(s.colors, color)
 		return uint8(len(s.colors) - 1) // #nosec G115 -- the check above holds len(s.colors) to maxBoardGroups, 254
+	}
+
+	// allocWash allocates a group that draws as a translucent wash, and holds a fallback opaque, so
+	// a zone that ran out of groups draws as its outline rather than blotting its copper.
+	allocWash := func(fallback uint8, color string, alpha float32) uint8 {
+		g := alloc(fallback, color)
+		if g == fallback {
+			return g
+		}
+		for len(s.alphas) < len(s.colors) {
+			s.alphas = append(s.alphas, 0)
+		}
+		s.alphas[g] = alpha
+		return g
 	}
 
 	stack := copperStack(b)
@@ -61,7 +76,7 @@ func planBoardStrata(b *geom.BoardGeometry, style Style) *boardStrata {
 			s.copper[ly] = alloc(groupBoardCopperInner, color)
 		}
 		if zoned[ly] {
-			s.zone[ly] = alloc(s.copper[ly], color)
+			s.zone[ly] = allocWash(s.copper[ly], color, zoneWashOpacity)
 		}
 		if poured[ly] {
 			s.pour[ly] = alloc(s.copper[ly], color)
@@ -152,6 +167,13 @@ func (s *boardStrata) pourGroup(layer string) uint8 {
 		return g
 	}
 	return s.copperGroup(layer)
+}
+
+// zoneWashed reports whether a layer's zones have a wash group of their own, which fills them. A
+// zone that shares its copper's group draws as an outline.
+func (s *boardStrata) zoneWashed(layer string) bool {
+	g, ok := s.zone[layer]
+	return ok && int(g) < len(s.alphas) && s.alphas[g] > 0
 }
 
 func (s *boardStrata) zoneGroup(layer string) uint8 {

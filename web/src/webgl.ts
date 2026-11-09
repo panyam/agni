@@ -184,7 +184,8 @@ export class Renderer {
 
     this.primitives = sheet.primitives;
     this.bounds = sheet.primitives.map((p) => recordBounds(sheet.vertices, p));
-    this.colors = sheet.groupColors.map((c) => hexToRgba(c, DEFAULT_COLOR));
+    // A group with an alpha draws translucent, as a board's zones wash over it (agni issue 1334).
+    this.colors = sheet.groupColors.map((c, g) => hexToRgba(c, DEFAULT_COLOR, sheet.groupAlphas?.[g] || 1));
     this.background = hexToRgba(sheet.backgroundColor, WHITE);
   }
 
