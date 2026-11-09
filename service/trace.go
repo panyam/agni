@@ -118,7 +118,7 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	if err != nil {
 		return nil, err
 	}
-	opts, nu, gu := snap.Overlay.ReadOptions(), snap.Netlist, snap.Geometry
+	opts, nu := snap.Overlay.ReadOptions(), snap.Netlist
 	d, err := LoaderOr(snap, s.loader).Design(ctx, nu, opts...)
 	if err != nil {
 		return nil, err
@@ -130,6 +130,7 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	p := TraceProto(t)
 	// Record where each net of the answer is drawn, so the panel can badge it. Both renderers can then
 	// open the sheet the route is actually on, rather than the design's first (agni issue 657).
-	AnnotateTraceSheets(p, BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, opts...), m)
+	g, _ := snapGeometry(ctx, LoaderOr(snap, s.loader), snap, opts...)
+	annotateTraceSheets(p, g, m, traceBoard(ctx, LoaderOr(snap, s.loader), snap))
 	return &webapi.TraceDesignResponse{Trace: p}, nil
 }

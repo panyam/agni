@@ -174,12 +174,12 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// Each finding names the sheets its subject is drawn on, as CheckDesign's do, so the Review panel
 	// opens the right sheet on a click and says why when there is none (agni issue 1132).
 	if gl, ok := loader.(GeometryLoader); ok {
-		g, unreadable := locateGeometry(ctx, gl, snap.Geometry, ov.ReadOptions()...)
+		g, unreadable := snapGeometry(ctx, gl, snap, ov.ReadOptions()...)
 		var board *boardIndex
 		if bl, ok := loader.(interface {
 			Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
 		}); ok {
-			board = runBoardIndex(ctx, bl, snap.BoardRead(), m)
+			board = locateBoard(ctx, bl, snap, m)
 		}
 		annotateSheets(reviewFindings(areas), g, m, unreadable, board)
 	}

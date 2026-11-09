@@ -95,7 +95,7 @@ func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRe
 	if err != nil {
 		return nil, err
 	}
-	opts, nu, gu := snap.Overlay.ReadOptions(), snap.Netlist, snap.Geometry
+	opts, nu := snap.Overlay.ReadOptions(), snap.Netlist
 	d, err := LoaderOr(snap, s.loader).Design(ctx, nu, opts...)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,8 @@ func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRe
 		}
 	}
 	p := WalkProto(w)
-	AnnotateWalkSheets(p, BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, opts...), m)
+	g, _ := snapGeometry(ctx, LoaderOr(snap, s.loader), snap, opts...)
+	annotateWalkSheets(p, g, m, traceBoard(ctx, LoaderOr(snap, s.loader), snap))
 	return &webapi.WalkDesignResponse{Walk: p}, nil
 }
 

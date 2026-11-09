@@ -288,10 +288,16 @@ func (ix sheetIndex) reasonFor(s *checkspb.Subject, m LocateSource) checkspb.Loc
 // reader wants that picture once they learn the pins do not join. Empty sheet ids mean the
 // net is drawn nowhere, rather than that nobody looked.
 func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSource) {
-	if t == nil || (g == nil && (m == nil || len(m.Nets()) == 0)) {
+	annotateTraceSheets(t, g, m, nil)
+}
+
+// annotateTraceSheets is AnnotateTraceSheets that also locates on board, when set.
+func annotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSource, board *boardIndex) {
+	if t == nil || (g == nil && board == nil && (m == nil || len(m.Nets()) == 0)) {
 		return
 	}
 	ix := indexSheets(g, m)
+	ix.board = board
 	netSheets := func(name string) []string {
 		if name == "" {
 			return nil
@@ -307,10 +313,16 @@ func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSou
 // AnnotateWalkSheets fills a walk's per-net sheet ids and its start's, as AnnotateTraceSheets does
 // for a trace, and its goal's route nets and pin. A walk started from a part locates by the part.
 func AnnotateWalkSheets(w *webapi.Walk, g *geom.SchematicGeometry, m LocateSource) {
-	if w == nil || (g == nil && (m == nil || len(m.Nets()) == 0)) {
+	annotateWalkSheets(w, g, m, nil)
+}
+
+// annotateWalkSheets is AnnotateWalkSheets that also locates on board, when set.
+func annotateWalkSheets(w *webapi.Walk, g *geom.SchematicGeometry, m LocateSource, board *boardIndex) {
+	if w == nil || (g == nil && board == nil && (m == nil || len(m.Nets()) == 0)) {
 		return
 	}
 	ix := indexSheets(g, m)
+	ix.board = board
 	netSheets := func(name string) []string {
 		if name == "" {
 			return nil

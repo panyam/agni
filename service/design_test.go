@@ -561,13 +561,21 @@ func testBoard() *geom.BoardGeometry {
 	}
 }
 
+// schematicWithBoard ingests a design whose schematic draws its sheets and whose board is a companion.
+// A board opened on its own lists the board alone (agni issue 1466), so a test of the sheets a
+// schematic lists before its board opens one of these.
+func schematicWithBoard(t *testing.T, svc *DesignService) string {
+	t.Helper()
+	return ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/x.kicad_sch", BoardUri: "mount://m/x.kicad_pcb"})
+}
+
 func TestGetDesignListsBoardSheet(t *testing.T) {
 	ld := boardLoader{
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph", Name: "netlist graph"}}}},
 		board:      testBoard(),
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: schematicWithBoard(t, svc)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -607,7 +615,7 @@ func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
 		reads: &reads,
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: schematicWithBoard(t, svc)})
 	if err != nil {
 		t.Fatal(err)
 	}

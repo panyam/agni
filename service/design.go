@@ -294,19 +294,22 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 	u, gu, nu, bu := snap.Design, snap.Geometry, snap.Netlist, snap.BoardRead()
 	layout := layoutForFile(gu.Path, req.GetLayout())
 	opts := snap.Overlay.ReadOptions()
-	g, err := LoaderOr(snap, s.loader).Geometry(ctx, gu, layout, false, opts...)
-	if err != nil {
-		return nil, ClassifyLoadErr(err)
-	}
-	resp := &webapi.GetDesignResponse{
-		Layout:           layout,
-		NativeAvailable:  s.native != nil && s.native.Available(u),
-		AvailableLayouts: availableLayouts(gu.Path),
+	resp := &webapi.GetDesignResponse{NativeAvailable: s.native != nil && s.native.Available(u)}
+	// A board-only design lists its board alone, so it lays nothing out (agni issue 1466). It has no
+	// layout to offer, and no drawing note, since the board is the drawing.
+	var g *geom.SchematicGeometry
+	if !snap.BoardOnly() {
+		var err error
+		if g, err = LoaderOr(snap, s.loader).Geometry(ctx, gu, layout, false, opts...); err != nil {
+			return nil, ClassifyLoadErr(err)
+		}
+		resp.Layout = layout
+		resp.AvailableLayouts = availableLayouts(gu.Path)
 		// Taken straight off the geometry, which computed it with the renderer's own resolution. A
 		// render that lost its symbols still draws every ref des and wire, so without this the
 		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
-		Undrawn:     g.GetUndrawn(),
-		DrawingNote: drawingNote(gu.Path),
+		resp.Undrawn = g.GetUndrawn()
+		resp.DrawingNote = drawingNote(gu.Path)
 	}
 	// A hash failure is not a read failure. ContentHash goes empty and the rest of the response is
 	// still sent. DesignRef.content_hash documents this case for a producer that did not hash. So

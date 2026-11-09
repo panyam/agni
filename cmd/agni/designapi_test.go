@@ -307,13 +307,17 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 		}
 	})
 
-	t.Run("kicad_pcb falls back to grid", func(t *testing.T) {
+	// A board opened on its own lists the board alone, and lays no netlist out (agni issue 1466).
+	t.Run("kicad_pcb lists its board alone", func(t *testing.T) {
 		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/pcb.kicad_pcb")})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if d.GetLayout() != "grid" {
-			t.Errorf("kicad_pcb layout = %q, want grid (no faithful board render)", d.GetLayout())
+		if d.GetLayout() != "" {
+			t.Errorf("kicad_pcb layout = %q, want none", d.GetLayout())
+		}
+		if s := d.GetSheets(); len(s) != 1 || s[0].GetId() != "board" {
+			t.Errorf("kicad_pcb sheets = %v, want the board alone", s)
 		}
 	})
 

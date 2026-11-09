@@ -54,6 +54,16 @@ func locateGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI
 	return g, false
 }
 
+// snapGeometry is locateGeometry over a snapshot's geometry tier. A board-only design draws no
+// schematic sheet (agni issue 1466), so it has none to locate on, and its answers locate on the
+// board alone through locateBoard.
+func snapGeometry(ctx context.Context, loader GeometryLoader, snap Snap, opts ...ReadOption) (*geom.SchematicGeometry, bool) {
+	if snap.BoardOnly() {
+		return nil, false
+	}
+	return locateGeometry(ctx, loader, snap.Geometry, opts...)
+}
+
 // BuildModel constructs the FULL check Model for a design (netlist, board tier, params tier), so every
 // rule-running service surface builds the same Model and none drops a tier (WS9-048). A plain
 // check.NewModel gates every board-DRC and datasheet rule to not-applicable. The board tier reads the
