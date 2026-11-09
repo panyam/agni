@@ -3,17 +3,19 @@
 // A reader opens one from the Sheets panel, so a board sits beside its schematic and a click on one
 // finds the part on the other.
 //
-// The pane draws through SvgView, the canvas's SVG renderer, so a pick here reads the same keys a
-// pick on the canvas does. It asks the engine through the three ports in SheetPaneDeps, and holds
-// no client of its own, so a test drives it with fakes.
-import { SvgView, type SvgViewState } from "./svgview.js";
+// The pane draws through a SheetSurface, as the canvas does, in SVG or in WebGL as its reader chooses
+// (agni issue 1368). So a pick here reads the same keys a pick on the canvas does. It asks the engine
+// through the ports in SheetPaneDeps, and holds no client of its own, so a test drives it with fakes.
+import type { SvgView, SvgViewState } from "./svgview.js";
+import { SheetSurface, type SurfaceMode } from "./sheetsurface.js";
+import { CanvasComponent } from "./canvas.js";
+import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, rotateBy, type Orientation } from "./orient.js";
-import { orderStrata } from "./boardstrata.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
-import { layerHiding, presetHidden, soloHidden, toggled } from "./boardlayers.js";
+import { presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
@@ -52,19 +54,35 @@ export interface TurnStore {
 
 export const BOARD_SHEET = "board";
 
-// SheetDrawing is one sheet as a pane draws it. boardLayers is empty for a schematic sheet.
+// SheetDrawing is one sheet as a pane draws it, the SVG document or, in WebGL, the packed sheet.
+// boardLayers is empty for a schematic sheet.
 export interface SheetDrawing {
   svg: string;
+  packed?: PackedSheet;
   boardLayers: BoardLayerRow[];
 }
+
+// GlFactory builds a pane's WebGL drawing on its canvas and text host, or returns null where WebGL2
+// is missing. The page uses glDrawing, and a test passes a fake.
+export type GlFactory = (id: string, canvas: HTMLCanvasElement, textHost: HTMLElement) => CanvasComponent | null;
+
+// glDrawing is the page's GlFactory. A pane's drawing reports to no readout, and names the pane in
+// its SHEET_DRAWN marks.
+export const glDrawing: GlFactory = (id, canvas, textHost) => {
+  const gl = new CanvasComponent(`${id}-gl`, canvas);
+  gl.textHost = textHost;
+  gl.readout = null;
+  gl.activate();
+  return gl.ready() ? gl : null;
+};
 
 // SheetPaneDeps are what a pane asks of the page.
 export interface SheetPaneDeps {
   // sheets lists the open design's sheets, for the picker and for naming the other sheets.
   sheets: () => { id: string; name: string }[];
-  // render returns a sheet's SVG document with pick targets, as the canvas draws it, and the
-  // board's layer rows when the sheet is the board.
-  render: (sheetId: string) => Promise<SheetDrawing>;
+  // render returns a sheet as the canvas draws it in mode, an SVG document with pick targets or a
+  // packed sheet, and the board's layer rows when the sheet is the board.
+  render: (sheetId: string, mode: SurfaceMode) => Promise<SheetDrawing>;
   // overlay returns the highlight overlay for specs on a sheet, framed like render's document.
   overlay: (sheetId: string, specs: HighlightSpec[]) => Promise<string>;
   // drawnOn lists the sheets that draw a selection, the board included when board is set.
@@ -80,14 +98,22 @@ export interface SheetPaneDeps {
   onOpened: (pane: SheetPane) => void;
   // turns keeps each sheet's turn for the open design.
   turns?: TurnStore;
+  // renderer is the renderer a new view starts in, the canvas's own (agni issue 1368).
+  renderer?: () => SurfaceMode;
+  // gl builds the WebGL drawing when the reader turns WebGL on. glDrawing when unset.
+  gl?: GlFactory;
 }
 
 export class SheetPane {
   readonly element: HTMLElement;
-  readonly view: SvgView;
+  readonly surface: SheetSurface;
   sheet = "";
   link: Link = "follow";
   private readonly host: HTMLElement;
+  private readonly glCanvas: HTMLCanvasElement;
+  private readonly textHost: HTMLElement;
+  private gl: CanvasComponent | null = null;
+  private readonly rendererSelect: HTMLSelectElement;
   private readonly picker: HTMLSelectElement;
   // The board's layer rows and the ones this view hides, apart from the canvas's (agni issue 1401).
   // layerStyle holds the rules that hide them, scoped to this view's drawing.
@@ -180,18 +206,77 @@ export class SheetPane {
       if (!this.layerPop.hidden && t && !this.layerPop.contains(t) && !this.layersButton.contains(t)) this.showLayerPop(false);
     });
     this.layerStyle = doc.createElement("style");
+    // The renderer this view draws in, SVG or WebGL, chosen per view (agni issue 1368).
+    this.rendererSelect = el("select", "sheetview-renderer") as HTMLSelectElement;
+    this.rendererSelect.title = "the renderer this view draws in";
+    this.rendererSelect.append(new Option("SVG", "svg"), new Option("WebGL", "webgl"));
+    this.rendererSelect.addEventListener("change", () => void this.setRenderer(this.rendererSelect.value as SurfaceMode));
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
+    bar.append(this.picker, this.rendererSelect, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
+    // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
+    // panel does (#view, #text-overlay, #svg-view).
+    const stage = el("div", "sheetview-stage");
+    this.glCanvas = el("canvas", "sheetview-gl") as HTMLCanvasElement;
+    this.textHost = el("div", "text-overlay sheetview-text");
     this.host = el("div", "sheetview-canvas");
-    this.element.append(this.layerStyle, bar, this.also, this.host);
-    this.view = new SvgView(this.host);
-    this.view.onPick = (sel) => this.deps.onPick(this, sel);
-    this.view.onPickEmpty = () => this.deps.onPickEmpty(this);
-    this.view.onViewChange = (v) => this.deps.onViewChange(this, v);
+    stage.append(this.glCanvas, this.textHost, this.host);
+    this.element.append(this.layerStyle, bar, this.also, stage);
+    this.surface = new SheetSurface({
+      svgHost: this.host,
+      gl: (create) => {
+        if (!this.gl && create) this.gl = (this.deps.gl ?? glDrawing)(this.id, this.glCanvas, this.textHost);
+        return this.gl;
+      },
+      dropGl: () => {
+        this.gl?.dispose();
+        this.gl = null;
+      },
+      layerScope: `[data-sheetview="${id}"] .sheetview-canvas`,
+      layerStyle: this.layerStyle,
+      markView: id,
+      readout: null,
+    });
+    this.surface.onPick = (sel) => this.deps.onPick(this, sel);
+    this.surface.onPickEmpty = () => this.deps.onPickEmpty(this);
+    this.surface.onViewChange = () => this.deps.onViewChange(this, this.surface.svg.getView());
+    this.surface.setMode(this.deps.renderer?.() ?? "svg");
+    this.rendererSelect.value = this.surface.mode;
+  }
+
+  // renderer is the renderer this view draws in, and drawnBy the one that drew the sheet on screen,
+  // which is SVG where WebGL2 is missing.
+  renderer(): SurfaceMode {
+    return this.surface.mode;
+  }
+
+  get drawnBy(): SurfaceMode {
+    return this.surface.drawnBy;
+  }
+
+  // view is this view's SVG drawing.
+  get view(): SvgView {
+    return this.surface.svg;
+  }
+
+  // setRenderer switches this view to SVG or WebGL and draws its sheet again in it.
+  async setRenderer(mode: SurfaceMode): Promise<void> {
+    this.surface.setMode(mode);
+    this.rendererSelect.value = mode;
+    if (this.sheet) await this.open(this.sheet);
+  }
+
+  // getCentre and setCentre are the point at the middle of this view and its zoom, which locked views
+  // on one sheet exchange.
+  getCentre(): { at: { x: number; y: number }; scale: number } | null {
+    return this.surface.getCentre();
+  }
+
+  setCentre(at: { x: number; y: number }, scale: number): void {
+    this.surface.setCentre(at, scale);
   }
 
   // title is the dock tab's label, the sheet's name.
@@ -205,16 +290,29 @@ export class SheetPane {
     this.fillPicker();
     const n = ++this.drawing;
     let drawing: SheetDrawing = { svg: "", boardLayers: [] };
+    const mode = this.surface.mode;
     try {
-      drawing = await this.deps.render(sheetId);
+      drawing = await this.deps.render(sheetId, mode);
     } catch (e) {
       this.also.textContent = `could not draw this sheet: ${String(e)}`;
     }
     if (n !== this.drawing) return;
-    const svg = drawing.svg;
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
     this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT, bottom: false };
-    this.view.setSvg(svg);
+    // The turn goes to the surface first, so a WebGL sheet draws turned from its first frame.
+    this.surface.setTurn(this.turn.orientation, sheetId === BOARD_SHEET && this.turn.bottom, this.layerRows);
+    // Where WebGL2 is missing, a WebGL view draws its sheet as SVG instead.
+    const drawnInGl = mode === "webgl" && drawing.packed !== undefined && this.surface.showPacked(drawing.packed);
+    if (!drawnInGl) {
+      if (mode === "webgl") {
+        this.surface.setMode("svg");
+        this.rendererSelect.value = "svg";
+        drawing = await this.deps.render(sheetId, "svg");
+        if (n !== this.drawing) return;
+      }
+      this.surface.showSvg(drawing.svg);
+    }
+    this.element.dataset.renderer = this.surface.drawnBy;
     this.deps.onOpened(this);
     this.applyLayers();
     this.applyTurn();
@@ -260,19 +358,23 @@ export class SheetPane {
   private async paint(reveal: boolean): Promise<void> {
     const sel = this.sel;
     const specs = sel ? this.deps.specs(sel) : [];
+    this.surface.setHighlights(specs);
     if (!this.sheet || specs.length === 0) {
-      this.view.setOverlay("");
+      this.surface.setSvgOverlay("");
       return;
     }
-    let markup = "";
-    try {
-      markup = await this.deps.overlay(this.sheet, specs);
-    } catch {
-      markup = "";
+    // WebGL lights the specs against the keys it holds, and only an SVG drawing needs the overlay.
+    if (this.surface.drawnBy === "svg") {
+      let markup = "";
+      try {
+        markup = await this.deps.overlay(this.sheet, specs);
+      } catch {
+        markup = "";
+      }
+      if (this.sel !== sel) return;
+      this.surface.setSvgOverlay(markup);
     }
-    if (this.sel !== sel) return;
-    this.view.setOverlay(markup);
-    if (reveal && sel) this.view.revealOverlay(pinOf(sel));
+    if (reveal && sel) this.surface.reveal(pinOf(sel));
   }
 
   // offer names the other sheets that draw the selection, each a button that opens it.
@@ -289,7 +391,7 @@ export class SheetPane {
       b.addEventListener("click", async () => {
         await this.open(id);
         this.offer(this.drawnOnLast.filter((o) => o !== id));
-        this.view.revealOverlay();
+        this.surface.reveal();
       });
       this.also.append(b);
     }
@@ -315,14 +417,12 @@ export class SheetPane {
   }
 
   private applyTurn(): void {
-    const svg = this.host.querySelector("svg");
-    if (svg) orderStrata(svg, this.sheet === BOARD_SHEET && this.turn.bottom);
+    this.surface.setTurn(this.turn.orientation, this.sheet === BOARD_SHEET && this.turn.bottom, this.layerRows);
     this.bottomButton.classList.toggle("active", this.turn.bottom);
     // The view states how it is turned, for a walk or a test to read without decoding a transform.
     // data-side is the side of the board nearest the reader, "back" in the bottom view.
     this.element.dataset.rotation = String(this.turn.orientation.rot);
     this.element.dataset.side = this.turn.bottom ? "back" : "front";
-    this.view.setOrientation(this.turn.orientation);
   }
 
   // hiddenLayersOf names the board layers this view hides.
@@ -330,9 +430,11 @@ export class SheetPane {
     return this.hiddenLayers;
   }
 
-  // dispose unmounts the layer list, for a view the dock has closed.
+  // dispose unmounts the layer list and frees the WebGL drawing, for a view the dock has closed.
   dispose(): void {
     this.layerList.island.deactivate();
+    this.gl?.dispose();
+    this.gl = null;
   }
 
   private setHiddenLayers(hidden: Set<string>): void {
@@ -349,8 +451,7 @@ export class SheetPane {
   // applyLayers hides this view's hidden layers with rules scoped to its own drawing, so the canvas
   // and every other view keep theirs.
   private applyLayers(): void {
-    const scope = `[data-sheetview="${this.id}"] .sheetview-canvas`;
-    this.layerStyle.textContent = layerHiding(this.layerRows, this.hiddenLayers, scope).css;
+    this.surface.setBoardLayers(this.layerRows, this.hiddenLayers);
     this.layerList.setState({ rows: this.layerRows, hidden: this.hiddenLayers });
   }
 

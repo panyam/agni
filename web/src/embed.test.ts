@@ -58,7 +58,7 @@ function fakeApi(): ViewerPageAPI {
     selectFinding: vi.fn(async () => true),
     locateEntity: vi.fn(async () => {}),
     sheetViews: () => [],
-    openSheetView: vi.fn(async (sheet: string) => ({ id: "sheetview-1", sheet })),
+    openSheetView: vi.fn(async (sheet: string) => ({ id: "sheetview-1", sheet, renderer: "svg" })),
     closeSheetView: vi.fn(() => false),
     showSheet: vi.fn(async (id: string) => {
       if (id !== "s-a") throw new Error(`the open design has no sheet "${id}"`);

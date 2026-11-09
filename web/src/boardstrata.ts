@@ -34,3 +34,46 @@ export function orderStrata(svg: Element, fromBelow: boolean): void {
   for (const { el } of ranked) svg.insertBefore(el, after);
   svg.setAttribute("data-strata", fromBelow ? "below" : "above");
 }
+
+// StrataRow is the part of a BoardLayerRow that strataDrawOrder reads.
+export interface StrataRow {
+  kind: string;
+  groups: readonly number[];
+}
+
+// The packed groups of each footprint's pick area (core/render/packboard.go). They are the last two
+// u8s and sit on their side's copper rows.
+const PICK_BACK = 254;
+const PICK_FRONT = 255;
+
+// strataDrawOrder is the order a WebGL board view draws its primitives in, as orderStrata orders an
+// SVG board's strata (agni issue 1368). PackBoard packs from the back of the board to the front, so
+// the view from above draws in pack order and the answer is null. The view from below draws the
+// zones, the pick areas and the copper each from the front to the back, nearest last, and keeps
+// every other primitive in its place. Within one layer the pack order stands, so a pour still draws
+// under its tracks. A copper row's place in rows sets its depth, since rows list the copper from the
+// front to the back.
+export function strataDrawOrder(groups: ArrayLike<number>, rows: readonly StrataRow[], fromBelow: boolean): Int32Array | null {
+  if (!fromBelow) return null;
+  const zone = new Set<number>();
+  for (const r of rows) if (r.kind === "zones") for (const g of r.groups) zone.add(g);
+  const depth = new Map<number, number>();
+  rows
+    .filter((r) => r.kind === "copper")
+    .forEach((r, i) => {
+      for (const g of r.groups) if (!depth.has(g)) depth.set(g, i);
+    });
+  const family = (g: number): number => (zone.has(g) ? 0 : g === PICK_BACK || g === PICK_FRONT ? 1 : 2);
+  const slots: number[] = [];
+  const strata: number[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    if (!depth.has(groups[i])) continue;
+    slots.push(i);
+    strata.push(i);
+  }
+  strata.sort((a, b) => family(groups[a]) - family(groups[b]) || depth.get(groups[a])! - depth.get(groups[b])! || a - b);
+  const order = new Int32Array(groups.length);
+  for (let i = 0; i < groups.length; i++) order[i] = i;
+  slots.forEach((slot, k) => (order[slot] = strata[k]));
+  return order;
+}

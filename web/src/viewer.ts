@@ -15,7 +15,7 @@ import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
 import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import { type NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
-import type { CanvasComponent } from "./canvas.js";
+import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
@@ -113,6 +113,13 @@ export interface RenderView {
   // pure view concern, since each row names the SVG elements and the packed groups that draw it,
   // so the host hides them with no re-render. A schematic document matches none of them.
   setBoardLayers(rows: BoardLayerRow[], hidden: ReadonlySet<string>): void;
+}
+
+// SheetCanvas is what the presenter hands a packed sheet and its highlight to. The page backs it with
+// the canvas's SheetSurface (sheetsurface.ts), so the canvas draws as every sheet view draws.
+export interface SheetCanvas {
+  showSheet(sheet: PackedSheet): void;
+  setHighlights(specs: HighlightSpec[]): void;
 }
 
 // ViewSink bundles every view surface the presenter pushes state to (WS9-019), one typed object
@@ -324,7 +331,7 @@ export class ViewerPresenter {
     // checks is the CheckService client (rules, findings, expectations, the severity report), a
     // separate service (WS9-026).
     private readonly checks: CheckClient,
-    private readonly canvas: CanvasComponent,
+    private readonly canvas: SheetCanvas,
     private readonly render: RenderView,
     private readonly views: ViewSink,
     // query is the QueryService client for the datalog search panel (WS9-036). Optional so
@@ -360,6 +367,11 @@ export class ViewerPresenter {
   }
 
   // currentSheetId is the sheet on the canvas.
+  // renderMode is the canvas's renderer. A sheet view opens in it (agni issue 1368).
+  renderMode(): RenderMode {
+    return this.mode;
+  }
+
   currentSheetId(): string {
     return this.currentSheet;
   }

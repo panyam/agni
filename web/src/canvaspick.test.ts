@@ -198,6 +198,12 @@ describe("PickIndex paint order", () => {
   it("takes the one underneath where the top one is hidden", () => {
     expect(crossing.pick(500, 500, 0, new Set([GROUP_BOARD_COPPER_FRONT]))).toEqual({ kind: "net", net: "BACK", netId: "" });
   });
+
+  // A board seen from below draws its back copper nearest (agni issue 1368), so a click takes the
+  // net drawn last in that order rather than in the pack order. The page frame packs first, at 0.
+  it("takes the topmost in a draw order other than the pack order", () => {
+    expect(crossing.pick(500, 500, 0, new Set(), Int32Array.from([0, 2, 1]))).toEqual({ kind: "net", net: "BACK", netId: "" });
+  });
 });
 
 describe("PickIndex zones", () => {

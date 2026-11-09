@@ -1,5 +1,6 @@
 import { DEFAULT_FONT_STACK, type Label, type Image } from "./packed.js";
 import type { CameraView } from "./camera.js";
+import type { Turn } from "./orient.js";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -130,6 +131,22 @@ export function overlayTransform(
   return { scale, tx: cssW / 2 - view.centerX * scale, ty: cssH / 2 + view.centerY * scale };
 }
 
+const UPRIGHT_TURN: Turn = { a: 1, b: 0, c: 0, d: 1 };
+
+// turnedOverlayCss is the overlay layer's CSS transform. Upright it is overlayTransform's translate
+// and scale. A turned view turns the layer about the view's centre by the camera's turn, so the text
+// stays on the geometry the camera turned (agni issue 1368). bakeScale undoes the per-sheet shrink
+// baked into the coordinates (see setContent).
+export function turnedOverlayCss(view: CameraView, cssW: number, cssH: number, dpr: number, bakeScale: number, turn: Turn): string {
+  const { scale, tx, ty } = overlayTransform(view, cssW, cssH, dpr);
+  const s = scale * bakeScale;
+  if (turn.a === 1 && turn.b === 0 && turn.c === 0 && turn.d === 1) return `translate(${tx}px, ${ty}px) scale(${s})`;
+  // Baked coordinates are (x, -y) over bakeScale, so the view's centre sits at (cx, -cy) over it.
+  const bx = -view.centerX / bakeScale;
+  const by = view.centerY / bakeScale;
+  return `translate(${cssW / 2}px, ${cssH / 2}px) matrix(${turn.a}, ${turn.b}, ${turn.c}, ${turn.d}, 0, 0) scale(${s}) translate(${bx}px, ${by}px)`;
+}
+
 // TextOverlay draws schematic text over the WebGL canvas as an SVG layer, since a GPU line
 // pipeline renders no glyphs. Text nodes are positioned once per sheet in a Y-flipped world
 // space (y -> -y), so glyphs are upright. Pan/zoom is a single CSS transform on the <svg>
@@ -206,7 +223,12 @@ export class TextOverlay {
         }
         // Rotation is per-label and static, in world CCW degrees. The baked Y-down space makes SVG's
         // clockwise-positive rotate() match, as in the SVG backend.
-        if (l.rotationDeg) t.setAttribute("transform", `rotate(${l.rotationDeg} ${x} ${line.y})`);
+        const turned = l.rotationDeg ? `rotate(${l.rotationDeg} ${x} ${line.y})` : "";
+        // A mirrored label flips about its anchor first, then turns, as BoardSVG's boardTextTransform
+        // draws back-side text (agni issue 1368).
+        const mirrored = l.mirror ? `translate(${2 * x} 0) scale(-1 1)` : "";
+        const transform = [turned, mirrored].filter(Boolean).join(" ");
+        if (transform) t.setAttribute("transform", transform);
         if (l.runs.length > 0 && !l.text.includes("\n")) appendRuns(t, l.runs);
         else t.textContent = line.text;
         if (l.group) t.setAttribute("data-group", String(l.group));
@@ -230,11 +252,10 @@ export class TextOverlay {
     }
   }
 
-  // update applies overlayTransform from the same camera the WebGL renderer uses.
-  update(view: CameraView, cssW: number, cssH: number, dpr: number): void {
-    const { scale, tx, ty } = overlayTransform(view, cssW, cssH, dpr);
-    // Multiply by bakeScale to undo the per-sheet shrink baked into the coordinates (see setContent).
-    this.svg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale * this.bakeScale})`;
+  // update applies overlayTransform from the same camera the WebGL renderer uses, turned by the
+  // camera's turn.
+  update(view: CameraView, cssW: number, cssH: number, dpr: number, turn: Turn = UPRIGHT_TURN): void {
+    this.svg.style.transform = turnedOverlayCss(view, cssW, cssH, dpr, this.bakeScale, turn);
   }
 
   show(): void {

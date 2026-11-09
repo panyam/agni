@@ -155,6 +155,9 @@ message PackedLabel {
   // layer (agni 1351). 0 means the label belongs to no group and always draws, as every schematic
   // label does.
   uint32 group = 10;
+  // mirror draws the text mirrored left to right about its anchor, after rotating it, as a board
+  // draws its back-side text (BoardText.mirror, agni issue 1368). A schematic label never sets it.
+  bool mirror = 11;
   // There is no font field yet. Every renderer draws one font (monospace, matching the SVG
   // backend), and the geom IR has no per-text font. Add `string font` here once a reader
   // populates per-element font on the IR. It is an additive change, so waiting loses nothing.

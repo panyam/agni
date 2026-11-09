@@ -211,6 +211,9 @@
           "design": {
             "type": "string"
           },
+          "renderer": {
+            "type": "string"
+          },
           "sheet": {
             "type": "string"
           }

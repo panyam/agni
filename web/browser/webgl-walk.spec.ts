@@ -129,15 +129,18 @@ async function idle(page: Page): Promise<void> {
 }
 
 // drawnSince waits for a SHEET_DRAWN mark from `mode` after `since` on the page's clock, and returns
-// its time.
-async function drawnSince(page: Page, mode: Mode, since: number): Promise<number> {
+// its time. view names the drawing, the canvas or a sheet view's id, since each marks its own draws.
+async function drawnSince(page: Page, mode: Mode, since: number, view = "canvas"): Promise<number> {
   const h = await page.waitForFunction(
-    ({ name, mode, since }) =>
+    ({ name, mode, since, view }) =>
       performance
         .getEntriesByName(name)
         .map((e) => e as PerformanceMark)
-        .find((e) => (e.detail as { mode?: string })?.mode === mode && e.startTime > since)?.startTime ?? false,
-    { name: DRAWN, mode, since },
+        .find((e) => {
+          const d = e.detail as { mode?: string; view?: string };
+          return d?.mode === mode && (d.view ?? "canvas") === view && e.startTime > since;
+        })?.startTime ?? false,
+    { name: DRAWN, mode, since, view },
     { timeout: 180_000, polling: 50 },
   );
   return (await h.jsonValue()) as number;
@@ -157,8 +160,9 @@ async function tile(page: Page, name: string): Promise<void> {
 
 // host is the rect the drawing fills in client pixels, which is the same in both modes since the SVG
 // host lies over the canvas.
-async function host(page: Page, mode: Mode): Promise<{ x: number; y: number; width: number; height: number }> {
-  const b = await page.locator(mode === "svg" ? SVG : CANVAS).boundingBox();
+// within names a sheet view's stage instead, for a step that pans a view beside the canvas.
+async function host(page: Page, mode: Mode, within = ""): Promise<{ x: number; y: number; width: number; height: number }> {
+  const b = await page.locator(within || (mode === "svg" ? SVG : CANVAS)).boundingBox();
   if (!b || b.width < 50 || b.height < 50) throw new Error(`the ${mode} view has no room to draw in`);
   return b;
 }
@@ -169,8 +173,8 @@ const nextFrame = (page: Page): Promise<unknown> => page.evaluate(() => new Prom
 
 // panZoom runs the fixed script over the middle of the view and returns its frame times. The
 // script is 40 wheel steps in, 40 out, and a drag 600 px across and back in 60 moves.
-async function panZoom(page: Page, mode: Mode): Promise<FrameSummary> {
-  const h = await host(page, mode);
+async function panZoom(page: Page, mode: Mode, within = ""): Promise<FrameSummary> {
+  const h = await host(page, mode, within);
   const cx = h.x + h.width / 2, cy = h.y + h.height / 2;
   await page.mouse.move(cx, cy);
   await page.evaluate(() => {
@@ -874,6 +878,38 @@ for (const name of chosen) {
         });
 
         await step("a trace's highlight", {}, async () => compareLit(page, walk, `&trace=${encodeURIComponent(walk.trace)}`));
+
+        // A board beside its schematic draws in a sheet view, in the renderer the view was opened in
+        // (agni issue 1368). These steps run last, since a view docked beside the canvas narrows it
+        // in the layout the page saves, and the clicks above find their targets at the canvas's size. The walk opens the canvas on the densest schematic sheet and a view of the
+        // board beside it through the page API, then times the view's first draw and pans it.
+        const besideTimes: Partial<Record<Mode, FrameSummary>> = {};
+        for (const mode of MODES) {
+          await step(`pan a board view beside ${walk.sheet} (${mode})`, {}, async () => {
+            await open(page, walk, "svg", walk.sheet, "&devpage=1");
+            await page.waitForFunction(() => "__agniViewerPage" in window, null, { timeout: 60_000 });
+            const since = await page.evaluate(() => performance.now());
+            const view = await page.evaluate(
+              (m) => (window as unknown as { __agniViewerPage: { openSheetView(s: string, r: string): Promise<{ id: string; renderer: string }> } }).__agniViewerPage.openSheetView("board", m),
+              mode,
+            );
+            if (view.renderer !== mode) throw new Unwalkable(`the view drew in ${view.renderer}, not ${mode}`);
+            const drawn = await drawnSince(page, mode, since, view.id);
+            await page.waitForLoadState("networkidle");
+            const frames = await panZoom(page, mode, `[data-sheetview="${view.id}"] .sheetview-stage`);
+            besideTimes[mode] = frames;
+            await page.evaluate((id) => (window as unknown as { __agniViewerPage: { closeSheetView(v: string): boolean } }).__agniViewerPage.closeSheetView(id), view.id);
+            return `first draw ${ms(drawn - since)}, frames p50 ${ms(frames.p50)}, p95 ${ms(frames.p95)}, max ${ms(frames.max)} over ${frames.frames}`;
+          });
+        }
+        await step("a WebGL board view beats an SVG one", { needs: [`pan a board view beside ${walk.sheet} (svg)`, `pan a board view beside ${walk.sheet} (webgl)`] }, async () => {
+          if (!headed) throw new NotJudged("judged only headed, since headless Chrome draws WebGL in software");
+          if (video) throw new NotJudged("not judged while the walk records a video, which competes for the CPU");
+          const svg = besideTimes.svg!, webgl = besideTimes.webgl!;
+          const verdict = `p95 ${ms(webgl.p95)} against ${ms(svg.p95)}`;
+          if (webgl.p95 > 0.8 * svg.p95) throw new Error(`WebGL ${verdict}`);
+          return `WebGL ${verdict}`;
+        });
 
         await step("no page errors", {}, async () => {
           if (pageErrors.length) throw new Error(pageErrors.join("; "));

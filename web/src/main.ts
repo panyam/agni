@@ -30,7 +30,10 @@ import { type ReviewTourHost, startReviewTour } from "./reviewtour.js";
 import { viewerEmitter } from "./viewerevents.js";
 import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
-import { SvgView, drawnOnSheet } from "./svgview.js";
+import { SvgView } from "./svgview.js";
+import { SheetSurface } from "./sheetsurface.js";
+import type { HighlightSpec } from "./highlights.js";
+import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { type Members, areaSelection, emptyMembers, membersIn, membersOf, size, toggle } from "./area.js";
 import { compareButton } from "./compare.js";
 import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
@@ -73,7 +76,6 @@ import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { verdictItem } from "./document.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
-import { SHEET_DRAWN } from "./drawmark.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
 // The presenter's location callback still fires then, and must not push a history entry for it.
@@ -170,58 +172,50 @@ class AppRoot extends BaseComponent {
     );
     const setDrawingNote = drawingStrip(document.getElementById("drawing-note"));
     const readoutEl = document.getElementById("readout");
-    const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
     // wiring is deferred to the end of this method because it needs the query panel, which is built
     // below; see the assignment after the panels.
     const canvas = new CanvasComponent("canvas", canvasEl, this._eventBus);
+    let boardLayerStyle = document.getElementById("board-layer-style") as HTMLStyleElement | null;
+    if (!boardLayerStyle) {
+      boardLayerStyle = document.createElement("style");
+      boardLayerStyle.id = "board-layer-style";
+      document.head.appendChild(boardLayerStyle);
+    }
+    // The canvas draws through a SheetSurface, as every sheet view does (agni issue 1368). Its WebGL
+    // drawing is the lifecycle's CanvasComponent on #view, and its SVG drawing the #svg-view host over it.
+    const surface = new SheetSurface({
+      svgHost: svgEl,
+      gl: () => canvas,
+      layerScope: "#svg-view",
+      layerStyle: boardLayerStyle,
+      markView: CANVAS_VIEW,
+      readout: readoutEl,
+    });
     // RenderView reveals whichever renderer drew the sheet. The SVG host overlays the canvas, so
-    // showWebgl just hides it and showSvg fills and shows it.
-    // drawnBy is the renderer that drew the sheet on screen, so Properties reads that renderer's
-    // account of what the sheet draws (agni issue 1333). The hidden SVG host keeps the last sheet it
-    // drew, so reading it under WebGL would name that sheet.
-    let drawnBy: "svg" | "webgl" = "svg";
+    // showWebgl leaves it hidden and showSvg fills and shows it.
     const renderView: RenderView = {
       showWebgl: () => {
-        drawnBy = "webgl";
-        svgView.hide();
-        canvas.showText(); // the text layer belongs to the WebGL view
+        surface.mode = "webgl";
         if (readoutEl) readoutEl.style.display = ""; // canvas owns the readout in WebGL mode
       },
       showSvg: (markup) => {
-        drawnBy = "svg";
-        // Show before setSvg so fit() measures a laid-out (non-zero) host.
-        canvas.hideText(); // the SVG host renders its own text
-        svgView.show();
-        svgView.setSvg(markup);
-        requestAnimationFrame(() => requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "svg" } })));
-        // The readout remains visible in SVG mode, with the element count (see SvgView.stats).
-        if (readoutEl) {
-          readoutEl.textContent = `SVG — ${svgView.stats().elements} elements`;
-          readoutEl.style.display = "";
-        }
+        surface.mode = "svg";
+        surface.showSvg(markup);
       },
-      setSvgOverlay: (markup) => svgView.setOverlay(markup),
+      setSvgOverlay: (markup) => surface.setSvgOverlay(markup),
       setBusy: setBusyOverlay,
       // WebGL views live on the canvas; SVG and Native both use the SVG host.
-      getView: (mode) => (mode === "webgl" ? canvas.getView() : svgView.getView()),
-      setView: (mode, view) => {
-        if (mode === "webgl") canvas.setView(view as ReturnType<typeof canvas.getView> & object);
-        else svgView.setView(view as ReturnType<typeof svgView.getView>);
-      },
+      getView: (mode) => surface.getView(mode === "webgl" ? "webgl" : "svg"),
+      setView: (mode, view) => surface.setView(mode === "webgl" ? "webgl" : "svg", view),
       // Board layer visibility (agni 1351) writes one style rule per hidden row over the SVG host,
       // and hides the rows' packed groups on the WebGL canvas.
-      setBoardLayers: (rows, hidden) => {
-        const h = layerHiding(rows, hidden, "#svg-view");
-        let style = document.getElementById("board-layer-style");
-        if (!style) {
-          style = document.createElement("style");
-          style.id = "board-layer-style";
-          document.head.appendChild(style);
-        }
-        style.textContent = h.css;
-        canvas.setHiddenGroups(h.groups);
-      },
+      setBoardLayers: (rows, hidden) => surface.setBoardLayers(rows, hidden),
+    };
+    // The presenter hands its packed sheets and highlight to the surface.
+    const canvasPort = {
+      showSheet: (sheet: PackedSheet) => void surface.showPacked(sheet),
+      setHighlights: (specs: HighlightSpec[]) => surface.setHighlights(specs),
     };
     // The visual diff (WS9-005) is two SvgViews that mirror each other's pan and zoom. setView fires
     // no onViewChange, so the mirroring cannot loop. Each side pairs its view with a placeholder for
@@ -513,7 +507,7 @@ class AppRoot extends BaseComponent {
     // asking on a schematic would read a large board for one panel row (agni issue 943).
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
       getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
-      drawn: () => (drawnBy === "webgl" ? canvas.drawn() : drawnOnSheet(svgEl)),
+      drawn: () => surface.drawn(),
       drawnOn: async (uri, sel) => {
         const subject = subjectOf(sel);
         if (!subject) return [];
@@ -572,7 +566,7 @@ class AppRoot extends BaseComponent {
       if (open) await presenter.showSheet(open);
       if (sel.kind === "area") await presenter.locateArea(sel);
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      svgView.revealOverlay(pinOf(sel));
+      surface.reveal(pinOf(sel));
     };
     const sheetViews = (this.sheetViews = new SheetViews(
       {
@@ -589,11 +583,19 @@ class AppRoot extends BaseComponent {
       },
       {
         sheets: () => presenter.sheetRefs().map((s) => ({ id: s.id, name: s.name })),
-        render: async (sheetId) => {
+        render: async (sheetId, mode) => {
           const d = presenter.drawing();
-          const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG });
-          return { svg: resp.content.case === "svg" ? resp.content.value : "", boardLayers: resp.boardLayers };
+          const format = mode === "webgl" ? SheetFormat.PACKED : SheetFormat.SVG;
+          const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format });
+          return {
+            svg: resp.content.case === "svg" ? resp.content.value : "",
+            packed: resp.content.case === "packed" ? resp.content.value : undefined,
+            boardLayers: resp.boardLayers,
+          };
         },
+        // A view opens in the canvas's renderer. The native tool's pages carry no picks, so a view
+        // opened beside a native canvas draws in SVG.
+        renderer: () => (presenter.renderMode() === "webgl" ? "webgl" : "svg"),
         overlay: async (sheetId, specs) => {
           const d = presenter.drawing();
           const resp = await designClient().highlightSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG, specs });
@@ -650,46 +652,37 @@ class AppRoot extends BaseComponent {
       if (dockApi) dockApi.getPanel("properties")?.api.setActive();
       emit("area.selected", { components: members.refs.length });
     };
-    svgView.onArea = (r) => {
-      const svg = svgEl.querySelector("svg");
-      if (svg) selectArea(membersIn(svg, r));
-    };
     // A tour's Show me on the area step selects the middle of the view, since a Shift-drag is not
     // something a click can make.
     this.tourHost = {
       show: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
       selectArea: () => {
-        const v = (drawnBy === "webgl" ? canvasEl : svgEl).getBoundingClientRect();
+        const v = surface.element(canvasEl).getBoundingClientRect();
         const r = { left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 };
-        if (drawnBy === "webgl") {
-          const m = canvas.membersIn(r);
-          if (m) selectArea(m);
-        } else svgView.onArea?.(r);
+        const m = surface.membersIn(r);
+        if (m) selectArea(m);
       },
     };
-    svgView.onToggle = (picked) => {
+    // The surface picks in either renderer into the same handlers, so a click selects one thing in
+    // either mode (agni issue 1332).
+    surface.onArea = selectArea;
+    surface.onToggle = (picked: Selection) => {
       const f = propertiesPresenter.currentFocus();
       // Shift-clicking starts from the area on show, or from the one entity selected, so Shift-clicking
       // a second part makes an area of the two.
       const base = f.level !== "entity" ? emptyMembers() : f.sel.kind === "area" ? membersOf(f.sel) : toggle(emptyMembers(), f.sel);
       selectArea(toggle(base, picked));
     };
-    svgView.onPick = (sel) => {
+    surface.onPick = (sel: Selection) => {
       locateSelection(sel);
       propertiesPresenter.selectEntity(sel);
       if (dockApi) dockApi.getPanel("properties")?.api.setActive();
     };
     // A click on empty paper names the sheet being looked at.
-    svgView.onPickEmpty = () => {
+    surface.onPickEmpty = () => {
       propertiesPresenter.selectSheet();
       if (dockApi) dockApi.getPanel("properties")?.api.setActive();
     };
-    // The WebGL canvas picks into the same handlers, so a click selects one thing in either mode
-    // (agni issue 1332).
-    canvas.onPick = svgView.onPick;
-    canvas.onPickEmpty = svgView.onPickEmpty;
-    canvas.onArea = selectArea;
-    canvas.onToggle = svgView.onToggle;
 
     // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
     // path the query panel uses.
@@ -799,7 +792,7 @@ class AppRoot extends BaseComponent {
     const presenter = new ViewerPresenter(
       designClient(),
       checksClient(),
-      canvas,
+      canvasPort,
       renderView,
       {
         sheetNavs: [sheetTabs.view, { setState: (st) => propertiesPresenter.setSheets(st) }],
@@ -842,7 +835,7 @@ class AppRoot extends BaseComponent {
         coverage: coverage.view,
         trace: trace.view,
         walk: trace.view,
-        reveal: () => svgView.revealOverlay(),
+        reveal: () => surface.reveal(),
         review: review.view,
         conventionBar: conventionBar.view,
         vocabulary: {

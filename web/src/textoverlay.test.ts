@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { labelAnchor, labelBaseline, overlayTransform, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight, appendRuns } from "./textoverlay.js";
+import { labelAnchor, labelBaseline, overlayTransform, turnedOverlayCss, TextOverlay, imageAttrs, bakeDivisor, naturalTextWidth, splitLabelLines, lineHeight, appendRuns } from "./textoverlay.js";
+import { Camera } from "./camera.js";
+import { orientTurn, type Rotation } from "./orient.js";
 import type { Image } from "./packed.js";
 
 // The overlay's alignment mapping must mirror core/render/svg.go's justifyText, so the overlay puts
@@ -155,5 +157,60 @@ describe("appendRuns", () => {
         '<tspan baseline-shift="super" font-size="70%">2</tspan>',
     );
     expect(t.textContent).toBe("SWD.RSTn2");
+  });
+});
+
+// applyCss runs a point through a CSS transform list of translate, matrix and scale, the last one
+// first, as the browser applies it.
+function applyCss(css: string, x: number, y: number): { x: number; y: number } {
+  const ops = [...css.matchAll(/(translate|matrix|scale)\(([^)]*)\)/g)].map((m) => ({ op: m[1], n: m[2].split(",").map((v) => parseFloat(v)) }));
+  let p = { x, y };
+  for (const { op, n } of ops.reverse()) {
+    if (op === "translate") p = { x: p.x + n[0], y: p.y + n[1] };
+    else if (op === "scale") p = { x: p.x * n[0], y: p.y * (n[1] ?? n[0]) };
+    else p = { x: n[0] * p.x + n[2] * p.y + n[4], y: n[1] * p.x + n[3] * p.y + n[5] };
+  }
+  return p;
+}
+
+// A turned WebGL view turns its text with its geometry (agni issue 1368), so a label lands on the
+// pixel where the camera draws its anchor.
+describe("turnedOverlayCss", () => {
+  const view = { centerX: 400, centerY: 200, worldPerPixel: 2 };
+  const W = 800;
+  const H = 600;
+  it("is overlayTransform's translate and scale for an upright view", () => {
+    const { scale, tx, ty } = overlayTransform(view, W, H, 1);
+    expect(turnedOverlayCss(view, W, H, 1, 4, { a: 1, b: 0, c: 0, d: 1 })).toBe(`translate(${tx}px, ${ty}px) scale(${scale * 4})`);
+  });
+
+  it("puts a baked label where the turned camera draws its anchor", () => {
+    for (const rot of [0, 90, 180, 270] as Rotation[]) {
+      for (const flipH of [false, true]) {
+        const o = { rot, flipH, flipV: false };
+        const camera = new Camera({ minX: 0, minY: 0, maxX: 1000, maxY: 500 });
+        camera.setViewport(W, H);
+        camera.setView(view);
+        camera.setOrientation(o);
+        const m = camera.matrix();
+        const [wx, wy] = [530, 120];
+        const want = { x: ((m[0] * wx + m[3] * wy + m[6] + 1) / 2) * W, y: ((1 - (m[1] * wx + m[4] * wy + m[7])) / 2) * H };
+        const bake = 4;
+        const got = applyCss(turnedOverlayCss(view, W, H, 1, bake, orientTurn(o)).replace(/px/g, ""), wx / bake, -wy / bake);
+        expect([o, Math.round(got.x), Math.round(got.y)]).toEqual([o, Math.round(want.x), Math.round(want.y)]);
+      }
+    }
+  });
+});
+
+describe("mirrored labels", () => {
+  it("flips a mirrored label about its anchor after turning it, as BoardSVG draws back-side text", () => {
+    const host = document.createElement("div");
+    const overlay = new TextOverlay(host);
+    const label = { x: 10, y: 20, text: "", height: 5, rotationDeg: 0, justify: "", color: "#000", maxWidth: 0, runs: [] };
+    overlay.setContent([], [{ ...label, text: "TOP" }, { ...label, text: "BOTTOM", rotationDeg: 90, mirror: true }], "");
+    const transform = (text: string) => [...host.querySelectorAll("text")].find((t) => t.textContent === text)?.getAttribute("transform") ?? null;
+    expect(transform("TOP")).toBeNull();
+    expect(transform("BOTTOM")).toMatch(/^rotate\(90 [-\d.]+ [-\d.]+\) translate\([-\d.]+ 0\) scale\(-1 1\)$/);
   });
 });

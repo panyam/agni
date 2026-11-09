@@ -98,6 +98,9 @@ export interface Label {
   // group is the primitive group the label hides with (geom.PackedLabel.group), 0 or absent for a
   // label that always draws.
   group?: number;
+  // mirror flips the text left to right about its anchor after rotating it, as a board draws its
+  // back-side text (geom.PackedLabel.mirror).
+  mirror?: boolean;
 }
 
 // TextRun is one piece of a label in one style. kind is geom.TextRun.Kind: 0 plain, 1 overbar,
@@ -200,6 +203,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
       maxWidth: l.maxWidth,
       runs: l.runs.map((r) => ({ text: r.text, kind: r.kind })),
       group: l.group,
+      mirror: l.mirror,
     })),
     images: msg.images.map((im) => ({
       x: im.x,

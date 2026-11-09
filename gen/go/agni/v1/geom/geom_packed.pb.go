@@ -546,7 +546,10 @@ type PackedLabel struct {
 	// group is the primitive group the label hides with, so a board's silkscreen text hides with its
 	// layer (agni 1351). 0 means the label belongs to no group and always draws, as every schematic
 	// label does.
-	Group         uint32 `protobuf:"varint,10,opt,name=group,proto3" json:"group,omitempty"`
+	Group uint32 `protobuf:"varint,10,opt,name=group,proto3" json:"group,omitempty"`
+	// mirror draws the text mirrored left to right about its anchor, after rotating it, as a board
+	// draws its back-side text (BoardText.mirror, agni issue 1368). A schematic label never sets it.
+	Mirror        bool `protobuf:"varint,11,opt,name=mirror,proto3" json:"mirror,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -649,6 +652,13 @@ func (x *PackedLabel) GetGroup() uint32 {
 		return x.Group
 	}
 	return 0
+}
+
+func (x *PackedLabel) GetMirror() bool {
+	if x != nil {
+		return x.Mirror
+	}
+	return false
 }
 
 // PackedImage is one raster image positioned in sheet-relative world coordinates (rebased by
@@ -1119,7 +1129,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"KIND_PLAIN\x10\x00\x12\x10\n" +
 	"\fKIND_OVERBAR\x10\x01\x12\x12\n" +
 	"\x0eKIND_SUBSCRIPT\x10\x02\x12\x14\n" +
-	"\x10KIND_SUPERSCRIPT\x10\x03\"\x86\x02\n" +
+	"\x10KIND_SUPERSCRIPT\x10\x03\"\x9e\x02\n" +
 	"\vPackedLabel\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\x12\n" +
@@ -1131,7 +1141,8 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\tmax_width\x18\b \x01(\x05R\bmaxWidth\x12)\n" +
 	"\x04runs\x18\t \x03(\v2\x15.agni.v1.geom.TextRunR\x04runs\x12\x14\n" +
 	"\x05group\x18\n" +
-	" \x01(\rR\x05group\"\xa8\x01\n" +
+	" \x01(\rR\x05group\x12\x16\n" +
+	"\x06mirror\x18\v \x01(\bR\x06mirror\"\xa8\x01\n" +
 	"\vPackedImage\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x05R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\x12\f\n" +

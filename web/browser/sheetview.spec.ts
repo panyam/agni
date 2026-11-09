@@ -3,9 +3,9 @@
 // the same part in the other, in either direction, and that a view keeps following once it floats.
 
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import type { Browser } from "playwright-core";
+import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
-import { PANE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";
+import { PANE, TITLE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";
 
 let browser: Browser;
 beforeAll(async () => {
@@ -119,6 +119,47 @@ describe("a sheet view beside the canvas", () => {
       await picked(page, second.ref);
       await page.waitForTimeout(1500);
       expect(await page.$eval(`${PANE} .sheetview-canvas > div`, (d) => (d as HTMLElement).style.transform)).toBe(before);
+    });
+  }, 120_000);
+});
+
+// A view draws the board in WebGL when its reader picks WebGL (agni issue 1368). Only a browser has
+// WebGL2, and only a browser shows that the drawing lights and centres a part picked on the canvas,
+// that a click on it picks that part, and that turning the board over keeps the part under the click.
+describe("a sheet view in WebGL", () => {
+  const GL = `${PANE} .sheetview-gl`;
+  // litInView is what the view's WebGL drawing lit (canvas.ts, data-lit).
+  const litInView = (page: Page) => page.$eval(GL, (c) => JSON.parse((c as HTMLElement).dataset.lit ?? "[]") as string[]);
+  // clickCentre clicks the middle of the view's drawing.
+  const clickCentre = async (page: Page) => {
+    const b = (await page.locator(GL).boundingBox())!;
+    await page.mouse.click(Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2));
+  };
+  const pickedPart = (page: Page) => page.$eval(TITLE, (t) => t.textContent ?? "");
+
+  it("lights and centres a part picked on the canvas, and a click there picks it, from above and below", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut/designs/gateway");
+      await openBeside(page, "Board");
+      await page.selectOption(`${PANE} .sheetview-renderer`, "webgl");
+      await page.waitForSelector(`${PANE}[data-renderer="webgl"]`, { timeout: 30_000 });
+
+      const part = await firstClear(page, "#svg-view");
+      await page.mouse.click(part.x, part.y);
+      await picked(page, part.ref);
+      await expect.poll(() => litInView(page), { timeout: 30_000 }).toContain(`component:${part.ref}`);
+
+      // The view centred the part, so a click in its middle lands on the part or one of its pads.
+      await page.waitForTimeout(300);
+      await clickCentre(page);
+      await expect.poll(() => pickedPart(page), { timeout: 30_000 }).toMatch(new RegExp(`^${part.ref}(\\.|$)`));
+
+      // From below the board turns about the view's middle, so the part is still under it.
+      await page.locator(`${PANE} [data-action="bottom"]`).click();
+      await page.waitForSelector(`${PANE}[data-side="back"]`, { timeout: 10_000 });
+      await page.waitForTimeout(300);
+      await clickCentre(page);
+      await expect.poll(() => pickedPart(page), { timeout: 30_000 }).toMatch(new RegExp(`^${part.ref}(\\.|$)`));
     });
   }, 120_000);
 });

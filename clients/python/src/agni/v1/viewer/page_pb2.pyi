@@ -63,12 +63,14 @@ class GetLocationResponse(_message.Message):
     def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
 
 class SheetView(_message.Message):
-    __slots__ = ("id", "sheet")
+    __slots__ = ("id", "sheet", "renderer")
     ID_FIELD_NUMBER: _ClassVar[int]
     SHEET_FIELD_NUMBER: _ClassVar[int]
+    RENDERER_FIELD_NUMBER: _ClassVar[int]
     id: str
     sheet: str
-    def __init__(self, id: _Optional[str] = ..., sheet: _Optional[str] = ...) -> None: ...
+    renderer: str
+    def __init__(self, id: _Optional[str] = ..., sheet: _Optional[str] = ..., renderer: _Optional[str] = ...) -> None: ...
 
 class ApplyLocationRequest(_message.Message):
     __slots__ = ("location", "url")
@@ -157,10 +159,12 @@ class ShowSheetResponse(_message.Message):
     def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., views: _Optional[_Iterable[_Union[SheetView, _Mapping]]] = ...) -> None: ...
 
 class OpenSheetViewRequest(_message.Message):
-    __slots__ = ("sheet",)
+    __slots__ = ("sheet", "renderer")
     SHEET_FIELD_NUMBER: _ClassVar[int]
+    RENDERER_FIELD_NUMBER: _ClassVar[int]
     sheet: str
-    def __init__(self, sheet: _Optional[str] = ...) -> None: ...
+    renderer: str
+    def __init__(self, sheet: _Optional[str] = ..., renderer: _Optional[str] = ...) -> None: ...
 
 class OpenSheetViewResponse(_message.Message):
     __slots__ = ("view", "location", "views")

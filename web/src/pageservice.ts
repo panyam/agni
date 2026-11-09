@@ -47,7 +47,7 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
       return { location: here(), views: api.sheetViews() };
     },
     openSheetView: async (req) => {
-      const view = await api.openSheetView(req.sheet);
+      const view = await api.openSheetView(req.sheet, req.renderer);
       return { view, location: here(), views: api.sheetViews() };
     },
     closeSheetView: async (req) => ({ closed: api.closeSheetView(req.view), location: here(), views: api.sheetViews() }),

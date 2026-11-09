@@ -33,10 +33,14 @@ export interface LinkedView {
   id: string;
   sheet: string;
   link: Link;
+  // drawnBy is the renderer the view drew its sheet in. An SVG view and a WebGL view measure their
+  // centres in different units, so only views drawn by one renderer lock (agni issue 1368).
+  drawnBy?: string;
 }
 
-// lockedPeers lists the views whose camera mirrors `from`'s, the other locked views on its sheet.
+// lockedPeers lists the views whose camera mirrors `from`'s, the other locked views on its sheet drawn
+// by the same renderer.
 export function lockedPeers(views: readonly LinkedView[], from: LinkedView): LinkedView[] {
   if (from.link !== "locked" || !from.sheet) return [];
-  return views.filter((v) => v.id !== from.id && v.link === "locked" && v.sheet === from.sheet);
+  return views.filter((v) => v.id !== from.id && v.link === "locked" && v.sheet === from.sheet && v.drawnBy === from.drawnBy);
 }

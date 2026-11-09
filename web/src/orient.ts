@@ -95,6 +95,26 @@ export function flip(o: Orientation, axis: "h" | "v"): Orientation {
   return own === "h" ? { ...o, flipH: !o.flipH } : { ...o, flipV: !o.flipV };
 }
 
+// Turn is the 2x2 linear part of an orientation, in a frame whose y runs down the screen. It maps
+// an offset in the drawing's own frame to the offset on screen, flips first and then the turn, as
+// orientPoint does. A point maps as (a*x + c*y, b*x + d*y), CSS matrix()'s order. Its entries are 0
+// and ±1, so its inverse is its transpose.
+export interface Turn {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+}
+
+// orientTurn is an orientation's Turn. The WebGL camera and its text overlay turn by it, so a
+// WebGL view turns as orientCss turns an SVG one (agni issue 1368).
+export function orientTurn(o: Orientation): Turn {
+  const along = (x: number, y: number): [number, number] => turn(o.rot, o.flipH ? -x : x, o.flipV ? -y : y);
+  const [a, b] = along(1, 0);
+  const [c, d] = along(0, 1);
+  return { a, b, c, d };
+}
+
 function turn(rot: Rotation, x: number, y: number): [number, number] {
   switch (rot) {
     case 90:
