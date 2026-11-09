@@ -140,6 +140,9 @@ export interface DecodedSheet {
   // Geometry colors indexed by primitive group (server-resolved from render.Style), and the
   // page background, so the WebGL renderer colors from the same palette as the SVG backend.
   groupColors: string[];
+  // groupAlphas is each group's opacity, indexed like groupColors, 0 or absent for opaque. A
+  // board's zones draw as a translucent wash (geom.PackedSheet.group_alphas, agni issue 1334).
+  groupAlphas?: number[];
   backgroundColor: string;
 }
 
@@ -216,6 +219,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
     })),
     fontFamily: msg.fontFamily || DEFAULT_FONT_STACK,
     groupColors: msg.groupColors,
+    groupAlphas: msg.groupAlphas,
     backgroundColor: msg.backgroundColor,
   };
 }

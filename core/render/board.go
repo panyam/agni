@@ -39,7 +39,8 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
 	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
 
-	// Zones first, as a faint wash of their layer's copper color under everything. The sidecar
+	// Zones first, as a faint wash of their layer's copper color under everything, at
+	// zoneWashOpacity, which the packed board's zone groups draw at too (agni issue 1334). The sidecar
 	// carries authored outlines only, no fill.
 	front, back, inner := splitByLayer(func(z *geom.Zone) string { return z.GetLayer() }, b.GetZones())
 	for _, grp := range []struct {
@@ -56,7 +57,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			}
 			// data-layer lets the zone hide with its copper layer as well as with the Zones row.
 			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)), svg.A("data-layer", z.GetLayer()),
-				svg.A("fill", copperColor(z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none")},
+				svg.A("fill", copperColor(z.GetLayer())), svg.F("fill-opacity", zoneWashOpacity), svg.A("stroke", "none")},
 				pk.net(z.GetNet())...)...)
 		}
 		c.GroupEnd()
@@ -542,6 +543,10 @@ func padSide(pad *geom.Pad) string {
 }
 
 // layerSide maps a copper layer name to its visibility bucket.
+// zoneWashOpacity is how strongly a zone washes its layer's copper color over the board, in both
+// renderers.
+const zoneWashOpacity = 0.18
+
 func layerSide(layer string) string {
 	switch {
 	case layer == "F.Cu":

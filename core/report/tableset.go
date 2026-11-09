@@ -63,6 +63,11 @@ func TableSetText(w io.Writer, s TableSet) error {
 			return bw.err
 		}
 		if sec.Error != "" {
+			// The query goes above its error, as the markdown and html documents show it, so a reader
+			// can see what failed (agni issue 765).
+			if q := sec.Table.Query; q != "" {
+				bw.printf("%s\n", q)
+			}
 			bw.printf("error: %s\n", sec.Error)
 			continue
 		}

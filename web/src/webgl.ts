@@ -66,6 +66,15 @@ export function hexToRgba(hex: string, fallback: Rgba, alpha = 1): Rgba {
   ];
 }
 
+// enableBlending lets a translucent draw, a zone's wash or a highlight tint, blend over what lies
+// under it, and keeps the canvas opaque. The browser composites a canvas as premultiplied alpha, so a
+// canvas left below alpha 1 adds the page behind it, and an 18% wash came out white (agni issue
+// 1334). The colour blends by the source's alpha, and the canvas's own alpha only ever adds up to 1.
+export function enableBlending(gl: Pick<WebGL2RenderingContext, "enable" | "blendFuncSeparate" | "BLEND" | "SRC_ALPHA" | "ONE_MINUS_SRC_ALPHA" | "ONE">): void {
+  gl.enable(gl.BLEND);
+  gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+}
+
 function drawMode(gl: WebGL2RenderingContext, kind: number): number {
   switch (kind) {
     case KIND_LINE_STRIP:
@@ -178,13 +187,12 @@ export class Renderer {
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-    // Highlight tints can be translucent; opaque geometry (alpha 1) is unaffected by blending.
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    enableBlending(gl);
 
     this.primitives = sheet.primitives;
     this.bounds = sheet.primitives.map((p) => recordBounds(sheet.vertices, p));
-    this.colors = sheet.groupColors.map((c) => hexToRgba(c, DEFAULT_COLOR));
+    // A group with an alpha draws translucent, as a board's zones wash over it (agni issue 1334).
+    this.colors = sheet.groupColors.map((c, g) => hexToRgba(c, DEFAULT_COLOR, sheet.groupAlphas?.[g] || 1));
     this.background = hexToRgba(sheet.backgroundColor, WHITE);
   }
 

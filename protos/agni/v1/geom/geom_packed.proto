@@ -209,6 +209,11 @@ message PackedSheet {
   // Sheet-level raster images (logos, notes), rebased to origin_x/origin_y; drawn by the
   // overlay above the geometry. O(images), and structured like labels.
   repeated PackedImage images = 12;
+  // The opacity each group draws at, indexed like group_colors. 0, and a group past the list's
+  // end, draw opaque. A board's zones draw as a wash, 18% of their layer's copper over whatever is
+  // under them, as the SVG backend fills them (agni issue 1334), so two overlapping zones darken
+  // as they do in SVG.
+  repeated float group_alphas = 13;
 }
 
 // BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes

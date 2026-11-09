@@ -23,7 +23,26 @@ type frameLayout struct {
 	cols, rows int64 // zone-ruler divisions
 	tbx, tby   int64 // title-block box bottom-left corner
 	tbw, tbh   int64 // title-block box size
+	// scale is the drawing pixels per world unit that SheetSVG draws this sheet at (frameSheet), so
+	// the title block takes SVG's pixel sizes in world units (titleBlockPx, agni issue 765).
+	scale float64
 }
+
+// titleBlockPx sizes the title block, in drawing pixels, for an inner frame frameW by frameH px
+// holding rows of total weight. Both renderers size it here (agni issue 765). Before, SVG used
+// 36% of the frame and WebGL 32% with an 18% floor, so the two drew different blocks.
+func titleBlockPx(frameW, frameH, total float64) (w, h float64) {
+	rowH := math.Max(10, math.Min(frameH/30, 22))
+	return math.Min(frameW*0.36, 360), math.Min(total*rowH, frameH*0.6)
+}
+
+// titleBlockFontPx is a title-block row's font size in drawing pixels, for a row rowH px tall.
+func titleBlockFontPx(rowH float64) float64 {
+	return math.Max(6, math.Min(rowH*0.5, 13))
+}
+
+// titleBlockIndentPx is how far a cell's text sits from its cell's left edge, in drawing pixels.
+const titleBlockIndentPx = 4.0
 
 // worksheetLayout computes the furniture layout from sheet.Size, returning false when the sheet
 // has no page. The zone-ruler column count comes from zoneCols (WS7-038).
@@ -40,8 +59,10 @@ func worksheetLayout(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) (fram
 	}
 	m := span / 50 // 2% inset margin, in world units
 	fl := frameLayout{l: left + m, r: right - m, b: bottom + m, t: top - m, m: m, cols: zoneCols(g, sheet), rows: 4}
-	fl.tbw = (fl.r - fl.l) * 32 / 100
-	fl.tbh = (fl.t - fl.b) * 18 / 100
+	fl.scale = frameSheet(sheet, indexSymbols(g)).scale
+	w, h := titleBlockPx(float64(fl.r-fl.l)*fl.scale, float64(fl.t-fl.b)*fl.scale, gridWeight(titleBlockGrid(g, sheet)))
+	fl.tbw = int64(math.Round(w / fl.scale))
+	fl.tbh = int64(math.Round(h / fl.scale))
 	fl.tbx = fl.r - fl.tbw
 	fl.tby = fl.b
 	return fl, true
@@ -87,7 +108,7 @@ func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []fram
 
 	// Title block: bottom-right box plus the shared grid's row and column dividers.
 	rows := titleBlockGrid(g, sheet)
-	bx, by, bw, bh := titleBlockBox(fl, rows)
+	bx, by, bw, bh := titleBlockBox(fl)
 	rect(bx, by, bx+bw, by+bh)
 	total := gridWeight(rows)
 	// Row 0 is the top; geom is Y-up, so accumulate weight downward from the top edge.
@@ -179,16 +200,9 @@ func gridWeight(rows []tbRow) float64 {
 }
 
 // titleBlockBox returns the world-space (Y-up) box that the grid fills. x,y is the bottom-left
-// corner and w,h the size. The width is the frame's fixed title-block width. The height grows
-// with the row count so a block with comments does not cram, and it never shrinks below the base
-// box.
-func titleBlockBox(fl frameLayout, rows []tbRow) (x, y, w, h int64) {
-	rowUnit := (fl.t - fl.b) / 30 // ~one row per 1/30 of the frame height
-	h = int64(gridWeight(rows) * float64(rowUnit))
-	if h < fl.tbh {
-		h = fl.tbh
-	}
-	return fl.tbx, fl.tby, fl.tbw, h
+// corner and w,h the size, as titleBlockPx sizes it for SheetSVG.
+func titleBlockBox(fl frameLayout) (x, y, w, h int64) {
+	return fl.tbx, fl.tby, fl.tbw, fl.tbh
 }
 
 // sheetOrdinal is the "n/m" the Id cell shows: this sheet's 1-based position among the

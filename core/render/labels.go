@@ -157,22 +157,24 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 	}
 	// Title-block field text from the shared grid, each cell at its cell's center-left. Row 0 is
 	// the top; geom is Y-up, so weight accumulates downward from the box top edge.
+	// The font and indent are SheetSVG's pixel sizes in world units, so both renderers draw one block
+	// (agni issue 765).
 	rows := titleBlockGrid(g, sheet)
-	bx, by, bw, bh := titleBlockBox(fl, rows)
-	if total := gridWeight(rows); total > 0 {
-		rowH := int64(float64(bh) / total)
-		th := min(textH, max(rowH*3/5, 1)) // fit within a row
+	bx, by, bw, bh := titleBlockBox(fl)
+	if total := gridWeight(rows); total > 0 && fl.scale > 0 {
+		indent := int64(math.Round(titleBlockIndentPx / fl.scale))
 		acc := 0.0
 		for _, row := range rows {
 			yTop := by + bh - int64(math.Round(acc/total*float64(bh)))
 			acc += row.weight
 			yBot := by + bh - int64(math.Round(acc/total*float64(bh)))
 			cy := (yTop + yBot) / 2
+			th := int64(math.Round(titleBlockFontPx(float64(yTop-yBot)*fl.scale) / fl.scale))
 			for _, cell := range row.cells {
 				if cell.text == "" {
 					continue
 				}
-				out = append(out, placedLabel{bx + int64(cell.x0*float64(bw)) + fl.m/3, cy, cell.text, th, 0, "left center", style.Annotation, 0, nil})
+				out = append(out, placedLabel{bx + int64(cell.x0*float64(bw)) + indent, cy, cell.text, th, 0, "left center", style.Annotation, 0, nil})
 			}
 		}
 	}

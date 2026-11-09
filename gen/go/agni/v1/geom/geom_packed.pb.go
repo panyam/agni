@@ -796,7 +796,12 @@ type PackedSheet struct {
 	BackgroundColor string `protobuf:"bytes,11,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
 	// Sheet-level raster images (logos, notes), rebased to origin_x/origin_y; drawn by the
 	// overlay above the geometry. O(images), and structured like labels.
-	Images        []*PackedImage `protobuf:"bytes,12,rep,name=images,proto3" json:"images,omitempty"`
+	Images []*PackedImage `protobuf:"bytes,12,rep,name=images,proto3" json:"images,omitempty"`
+	// The opacity each group draws at, indexed like group_colors. 0, and a group past the list's
+	// end, draw opaque. A board's zones draw as a wash, 18% of their layer's copper over whatever is
+	// under them, as the SVG backend fills them (agni issue 1334), so two overlapping zones darken
+	// as they do in SVG.
+	GroupAlphas   []float32 `protobuf:"fixed32,13,rep,packed,name=group_alphas,json=groupAlphas,proto3" json:"group_alphas,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -911,6 +916,13 @@ func (x *PackedSheet) GetBackgroundColor() string {
 func (x *PackedSheet) GetImages() []*PackedImage {
 	if x != nil {
 		return x.Images
+	}
+	return nil
+}
+
+func (x *PackedSheet) GetGroupAlphas() []float32 {
+	if x != nil {
+		return x.GroupAlphas
 	}
 	return nil
 }
@@ -1151,7 +1163,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x04mime\x18\x05 \x01(\tR\x04mime\x12\x12\n" +
 	"\x04data\x18\x06 \x01(\fR\x04data\x12!\n" +
 	"\frotation_deg\x18\a \x01(\x05R\vrotationDeg\x12\x16\n" +
-	"\x06mirror\x18\b \x01(\bR\x06mirror\"\xc6\x03\n" +
+	"\x06mirror\x18\b \x01(\bR\x06mirror\"\xe9\x03\n" +
 	"\vPackedSheet\x12\x19\n" +
 	"\bsheet_id\x18\x01 \x01(\tR\asheetId\x12%\n" +
 	"\x0elayout_version\x18\x02 \x01(\x05R\rlayoutVersion\x12\x19\n" +
@@ -1168,7 +1180,8 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\fgroup_colors\x18\n" +
 	" \x03(\tR\vgroupColors\x12)\n" +
 	"\x10background_color\x18\v \x01(\tR\x0fbackgroundColor\x121\n" +
-	"\x06images\x18\f \x03(\v2\x19.agni.v1.geom.PackedImageR\x06images\"\x9c\x01\n" +
+	"\x06images\x18\f \x03(\v2\x19.agni.v1.geom.PackedImageR\x06images\x12!\n" +
+	"\fgroup_alphas\x18\r \x03(\x02R\vgroupAlphas\"\x9c\x01\n" +
 	"\rBoardLayerRow\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +

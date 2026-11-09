@@ -158,12 +158,22 @@ var Themes = map[string]Style{"default": DefaultStyle, "dark": DarkStyle}
 // Option configures one render call. With no options a render uses DefaultStyle.
 type Option func(*Style)
 
-// WithStyle overrides the palette and font for one render call.
-func WithStyle(s Style) Option { return func(dst *Style) { *dst = s } }
+// WithStyle overrides the palette and font for one render call. It keeps the switches an earlier
+// option turned on (PinDots, PickTargets, the net-id lookup), so options combine in any order
+// (agni issue 765). Before, it replaced the whole Style and erased them.
+func WithStyle(s Style) Option {
+	return func(dst *Style) {
+		kept := *dst
+		*dst = s
+		dst.PinDots = dst.PinDots || kept.PinDots
+		dst.PickTargets = dst.PickTargets || kept.PickTargets
+		if dst.netIDs == nil {
+			dst.netIDs = kept.netIDs
+		}
+	}
+}
 
 // WithPinDots turns the per-pin verification dots on for one render call (see Style.PinDots).
-// Options apply in order and WithStyle replaces the whole Style, so pass this after any
-// WithStyle or the preset turns the dots back off.
 func WithPinDots() Option { return func(dst *Style) { dst.PinDots = true } }
 
 // WithPickTargets emits the invisible per-pin pick targets (see Style.PickTargets). The served
@@ -171,8 +181,7 @@ func WithPinDots() Option { return func(dst *Style) { dst.PinDots = true } }
 func WithPickTargets() Option { return func(dst *Style) { dst.PickTargets = true } }
 
 // WithNetIDs has a board render ask f for each net's schematic net id, and key the net's copper and
-// pads with it (see NetIDFunc). Options apply in order and WithStyle replaces the whole Style, so
-// pass this after any WithStyle.
+// pads with it (see NetIDFunc).
 func WithNetIDs(f NetIDFunc) Option { return func(dst *Style) { dst.netIDs = &f } }
 
 // resolveStyle applies the options over a copy of DefaultStyle.

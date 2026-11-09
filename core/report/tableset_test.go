@@ -80,3 +80,21 @@ func TestTableSetUntitledHasAHeading(t *testing.T) {
 		t.Errorf("untitled set starts %q, want a Query set heading", out[:20])
 	}
 }
+
+// An errored section states the question that failed in every format (agni issue 765). The text
+// renderer printed the error alone, while markdown and html showed the query above it.
+func TestTableSetErroredSectionShowsItsQuery(t *testing.T) {
+	s := TableSet{Title: "Audit", Sections: []TableSection{
+		{Name: "Broken", Error: `unknown relation "compnent"`, Table: Table{Query: `compnent(?r) => ?r`}},
+	}}
+	for name, f := range map[string]func(*bytes.Buffer, TableSet) error{
+		"text":     func(b *bytes.Buffer, s TableSet) error { return TableSetText(b, s) },
+		"markdown": func(b *bytes.Buffer, s TableSet) error { return TableSetMarkdown(b, s) },
+		"html":     func(b *bytes.Buffer, s TableSet) error { return TableSetHTML(b, s) },
+	} {
+		out := render(t, f, s)
+		if !strings.Contains(out, "compnent(?r)") {
+			t.Errorf("%s: the errored section does not show its query:\n%s", name, out)
+		}
+	}
+}

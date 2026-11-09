@@ -68,6 +68,14 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			if z.GetOutline() == nil {
 				continue
 			}
+			// A zone fills as a wash in its own group, as BoardSVG fills it. One that shares its
+			// copper's group, past the group limit, keeps its outline.
+			if strata.zoneWashed(z.GetLayer()) {
+				if tris := polygonTris(z.GetOutline().GetPoints(), nil); len(tris) > 0 {
+					add(primTriangles, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", tris)
+					continue
+				}
+			}
 			add(primLineLoop, strata.zoneGroup(z.GetLayer()), "", z.GetNet(), "", xy(z.GetOutline().Points))
 		}
 	}
@@ -219,6 +227,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		LayoutVersion:   packLayoutVersion,
 		FontFamily:      style.Font,
 		GroupColors:     strata.colors,
+		GroupAlphas:     strata.alphas,
 		BackgroundColor: style.Page,
 		OriginX:         ox,
 		OriginY:         oy,
@@ -263,7 +272,16 @@ func boardGroupColors(style Style) []string {
 // relative to the shape's first point while earcut runs, so float64 keeps them exact on a board
 // metres across.
 func shapeTris(sh *geom.CopperShape) [][2]int64 {
-	pts := sh.GetOutline().GetPoints()
+	var holes [][]*geom.Point
+	for _, h := range sh.GetHoles() {
+		holes = append(holes, h.GetPoints())
+	}
+	return polygonTris(sh.GetOutline().GetPoints(), holes)
+}
+
+// polygonTris triangulates an outline less its holes, for a renderer that fills it. A ring shorter
+// than three points fills nothing.
+func polygonTris(pts []*geom.Point, holeRings [][]*geom.Point) [][2]int64 {
 	if len(pts) < 3 {
 		return nil
 	}
@@ -282,12 +300,12 @@ func shapeTris(sh *geom.CopperShape) [][2]int64 {
 	}
 	addRing(pts)
 	var holes []int
-	for _, h := range sh.GetHoles() {
-		if len(h.GetPoints()) < 3 {
+	for _, h := range holeRings {
+		if len(h) < 3 {
 			continue
 		}
 		holes = append(holes, len(all))
-		addRing(h.GetPoints())
+		addRing(h)
 	}
 	idx := geomath.Earcut(flat, holes)
 	out := make([][2]int64, 0, len(idx))

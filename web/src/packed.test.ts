@@ -1,6 +1,6 @@
 // Interop check against the Go packer (render.PackSheet). Decodes the committed
-// sample.pb fixture (produced by `agni render edif/testdata/sample.eds --format pack
-// --sheet 0`) and asserts the decoded shape matches the ground-truth content, including the
+// sample.pb fixture (produced by `agni render readers/edif/testdata/sample.eds --format pack
+// --sheet 0 -o web/sample.pb`, which cmd/agni's TestSamplePBIsWhatThePackerWrites holds it to) and asserts the decoded shape matches the ground-truth content, including the
 // sheet-level free graphics (GROUP_FREE) the Go packer now emits from sheet.Shapes. Also
 // decodes a hand-built PackedSheet to lock the byte-record parsing independent of the fixture.
 
@@ -39,13 +39,13 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
 
   it("exposes int32 vertices as flat pairs", () => {
     expect(sheet.vertices).toBeInstanceOf(Int32Array);
-    expect(sheet.vertices.length).toBe(116); // 58 vertices, x/y interleaved
+    expect(sheet.vertices.length).toBe(140); // 70 vertices, x/y interleaved
     // First few vertices are the worksheet frame border's corners, verified against the blob.
     expect(Array.from(sheet.vertices.slice(0, 6))).toEqual([15, 14, 983, 14, 983, 782]);
   });
 
   it("parses the fixed-width primitive records", () => {
-    expect(sheet.primitives.length).toBe(25);
+    expect(sheet.primitives.length).toBe(31);
     // The synthesized worksheet furniture is packed first (behind the schematic): the frame
     // border, then zone-ruler ticks and the title-block box/dividers, all under GROUP_FRAME.
     expect(sheet.primitives[0]).toEqual({
@@ -55,7 +55,9 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
       count: 4,
     });
     const frame = sheet.primitives.filter((p) => p.group === GROUP_FRAME).length;
-    expect(frame).toBe(19); // 1 frame + 16 ruler ticks + 1 title box + 1 divider
+    // 1 frame + 16 ruler ticks + 1 title box + 7 dividers. The title-block grid's five rows take
+    // four row dividers, and its split Size|Date|Rev and Id rows three column dividers.
+    expect(frame).toBe(25);
     // The schematic content still packs after the furniture: wire, free graphic, symbol, pin.
     expect(sheet.primitives.some((p) => p.group === GROUP_WIRE)).toBe(true);
     expect(sheet.primitives.some((p) => p.group === GROUP_FREE && p.kind === KIND_LINE_LOOP)).toBe(true);
@@ -63,13 +65,13 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
     expect(sheet.primitives[sheet.primitives.length - 1]).toEqual({
       kind: KIND_POINTS,
       group: GROUP_PIN,
-      firstVertex: 57,
+      firstVertex: 69,
       count: 1,
     });
   });
 
   it("carries the primitive keys (furniture and free graphics carry none)", () => {
-    // 25 primitives but 5 keys: wire + 3 symbol + pin. Worksheet furniture and free graphics
+    // 31 primitives but 5 keys: wire + 3 symbol + pin. Worksheet furniture and free graphics
     // have no ref_des/net, so they get no key.
     expect(sheet.keys.length).toBe(5);
     const keyed = new Set(sheet.keys.map((k) => k.primitive));
@@ -78,15 +80,18 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
   });
 
   it("decodes the text labels for the overlay", () => {
-    // Zone ruler (1..6 x2, A..D x2) + title-block rows + HELLO + R1 = 24 labels.
-    expect(sheet.labels.length).toBe(24);
+    // Zone ruler (1..6 x2, A..D x2) = 20, the title block's six filled cells (Sheet, Title, Size,
+    // Date, Rev, Id; the Company cell is empty), HELLO, and R1 with its value 10k = 29 labels.
+    expect(sheet.labels.length).toBe(29);
+    expect(sheet.labels.map((l) => l.text)).toEqual(expect.arrayContaining(["10k", "Rev: ", "Id: 1/1"]));
     const title = sheet.labels.find((l) => l.text === "Title: Sheet 1");
     expect(title).toBeDefined();
     expect(title?.color).toBe("#333333"); // title-block text color, matching the SVG backend
     // R1 is a ref-des field, rotated with its symbol, in the field color.
     const r1 = sheet.labels.find((l) => l.text === "R1");
     expect(r1?.color).toBe("#1560bd");
-    expect(r1?.rotationDeg).toBe(90);
+    // 270, which the overlay draws as rotate(270), the SVG backend's rotate(-90) for the same text.
+    expect(r1?.rotationDeg).toBe(270);
   });
 
   it("decodes the geometry palette and background from the server Style", () => {
