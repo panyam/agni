@@ -22,7 +22,7 @@ function setup(drawnOn: string[] = ["s1"]) {
     dock,
     {
       sheets: () => [{ id: "s1", name: "Root" }, { id: "board", name: "Board" }],
-      render: async (id) => `<svg width="100" height="100" data-sheet="${id}"></svg>`,
+      render: async (id) => ({ svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: [] }),
       overlay: async () => "<svg width='100' height='100'><circle r='1'/></svg>",
       drawnOn: async (sel) => {
         asked.push(sel.ref ?? "");

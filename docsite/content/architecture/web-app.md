@@ -239,4 +239,5 @@ page has the full argument.
   SVG elements that draw it (`svg_selector`) and the packed groups (`groups`). So the viewer hides a
   row with one CSS rule or a draw-loop skip, and knows nothing about how a board is drawn. The
   Sheets panel lists the rows under the Board entry, and the viewer keeps a design's hidden rows in
-  browser storage.
+  browser storage. A sheet view beside the canvas lists the same rows over a hidden set of its own,
+  with its rules scoped to its own drawing (agni issue 1401).

@@ -34,6 +34,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	pk := boardPickKeys{on: style.PickTargets, netID: boardNetIDs(b, style)}
 	stacks := padstacksOf(b)
 	planes := planesOf(b)
+	copperColor := copperColors(style, b)
 
 	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
 	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
@@ -55,7 +56,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			}
 			// data-layer lets the zone hide with its copper layer as well as with the Zones row.
 			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)), svg.A("data-layer", z.GetLayer()),
-				svg.A("fill", copperColor(style, z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none")},
+				svg.A("fill", copperColor(z.GetLayer())), svg.F("fill-opacity", 0.18), svg.A("stroke", "none")},
 				pk.net(z.GetNet())...)...)
 		}
 		c.GroupEnd()
@@ -70,7 +71,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	// Copper per layer, back-most first (higher KiCad layer number = further back).
 	for _, ly := range copperLayersBackToFront(b) {
 		c.Group(svg.A("class", "copper-"+layerSide(ly)), svg.A("data-layer", ly))
-		color := copperColor(style, ly)
+		color := copperColor(ly)
 		// Filled copper first, so the tracks and lands on it draw over it (agni 1357).
 		for _, nc := range b.GetNets() {
 			for _, sh := range nc.GetShapes() {
@@ -561,13 +562,35 @@ func copperStrokePx(widthNm int64, scale float64) float64 {
 }
 
 // copperColor picks the layer's copper color from the style.
-func copperColor(s Style, layer string) string {
-	switch layerSide(layer) {
-	case "front":
-		return s.CopperFront
-	case "back":
-		return s.CopperBack
-	default:
+// copperColors returns each copper layer's colour on one board. An inner layer takes the next of
+// Style.CopperInners in stack order (agni issue 1401). The SVG board, the packed groups and the
+// layer rows all ask it, so the two renderers and every swatch agree (C12).
+func copperColors(s Style, b *geom.BoardGeometry) func(layer string) string {
+	var palette []string
+	for _, c := range s.CopperInners {
+		if c == "" {
+			break
+		}
+		palette = append(palette, c)
+	}
+	inner := map[string]string{}
+	if len(palette) > 0 {
+		for _, ly := range copperStack(b) {
+			if layerSide(ly) == "inner" {
+				inner[ly] = palette[len(inner)%len(palette)]
+			}
+		}
+	}
+	return func(layer string) string {
+		switch layerSide(layer) {
+		case "front":
+			return s.CopperFront
+		case "back":
+			return s.CopperBack
+		}
+		if c, ok := inner[layer]; ok {
+			return c
+		}
 		return s.CopperInner
 	}
 }
