@@ -189,10 +189,11 @@ describe("per-instance net id (WS9)", () => {
     expect(specs).toHaveLength(1);
     expect(new Set(specs[0].netIds)).toEqual(new Set(["aaa", "bbb"]));
     expect(specs[0].nets).toEqual(["GND"]);
+    expect(specs[0].netIdNames).toEqual(["PWR_A"]);
   });
 
   it("findingSpec targets one instance by id", () => {
-    expect(findingSpec(f({ kind: "net", subject: "PWR_A", netId: "aaa" }))).toEqual([{ netIds: ["aaa"] }]);
+    expect(findingSpec(f({ kind: "net", subject: "PWR_A", netId: "aaa" }))).toEqual([{ netIds: ["aaa"], netIdNames: ["PWR_A"] }]);
   });
 
   it("collapse folds same-key findings that differ only in netId, keeping each instance addressable", () => {
@@ -208,7 +209,7 @@ describe("per-instance net id (WS9)", () => {
     // Base is the sibling (bbb) only, now stamped as context; the focus layer for aaa sits on top
     // carrying no color, so it resolves to the default (agni issue 348).
     expect(stack).toEqual([
-      { netIds: ["bbb"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { netIds: ["bbb"], netIdNames: ["PWR_A"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
       { netIds: ["aaa"] },
     ]);
   });

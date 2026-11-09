@@ -395,14 +395,17 @@ export interface HighlightSubject {
 export function subjectsToSpecs(findings: HighlightSubject[]): HighlightSpec[] {
   const nets = new Set<string>();
   const netIds = new Set<string>();
+  const netIdNames = new Set<string>();
   const busIds = new Set<string>();
   const components = new Set<string>();
   const pins: { refDes: string; pin: string }[] = [];
   const seenPin = new Set<string>();
   for (const f of findings) {
     if (f.kind === "net") {
-      if (f.netId) netIds.add(f.netId);
-      else if (f.subject) nets.add(f.subject);
+      if (f.netId) {
+        netIds.add(f.netId);
+        if (f.subject) netIdNames.add(f.subject);
+      } else if (f.subject) nets.add(f.subject);
     } else if (f.kind === "bus") {
       // A bus joins ONLY by its source id (WS7-042b). One with no id (an undrawable bus_alias or EDIF
       // array) contributes nothing, and its "not drawn" note is WS7-042c.
@@ -425,6 +428,7 @@ export function subjectsToSpecs(findings: HighlightSubject[]): HighlightSpec[] {
   const spec: HighlightSpec = {};
   if (nets.size > 0) spec.nets = [...nets];
   if (netIds.size > 0) spec.netIds = [...netIds];
+  if (netIdNames.size > 0) spec.netIdNames = [...netIdNames];
   if (busIds.size > 0) spec.busIds = [...busIds];
   if (components.size > 0) spec.components = [...components];
   if (pins.length > 0) spec.pins = pins;

@@ -54,6 +54,14 @@ The board view picks with the same `Selection` and the same priority (agni issue
   net's keys and `BoardSVG` writes `data-net-id`. A name that two of the design's nets share gets
   no id, since the board draws one net under it and can't say which. That net is still keyed and
   lit by its name.
+- **An EDIF schematic's wires get the same ids** (agni issue 1443). A `.eds` export names each
+  wire's net and carries no id. `GetSheet` and `HighlightSheet` key each wire of such a sheet with
+  the id of the design's one net of that name (`withWireNetIDs` in `service/netnames.go`). A KiCad
+  sheet's wires carry ids already and pass unchanged. A shared name gets no id here either. The
+  WebGL canvas matches a highlight against the packed keys in the page, so a finding's spec also
+  carries the name of each net it lists by id (`HighlightSpec.netIdNames`). `resolveHighlights`
+  joins a wire with no id through that name, and `HighlightSheet` adds the name to the spec for
+  the SVG overlay. Both nets of a shared name then light, as they did before.
 - A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
   copper. A click between two pads then picks the part, and a pad or a track drawn over the body
   still wins where it is drawn. `footprintBody` computes the rect once, and `PackBoard` packs the

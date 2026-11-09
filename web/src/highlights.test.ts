@@ -280,6 +280,36 @@ describe("per-instance net id matching (WS9)", () => {
   });
 });
 
+// A drawing keys a wire by name alone when two of the design's nets share the name (agni issue
+// 1443). A finding naming one of them by id then lights that name's wires, as HighlightSheet does.
+describe("a net id's name joins a wire keyed by name alone (agni issue 1443)", () => {
+  const nameOnly: PrimitiveKey[] = [
+    { primitive: 0, refDes: "", net: "PWR_A", netId: "", pin: "", busId: "" },
+    { primitive: 1, refDes: "", net: "PWR_A", netId: "", pin: "", busId: "" },
+    { primitive: 2, refDes: "", net: "GND", netId: "", pin: "", busId: "" },
+  ];
+  const dupKeys: PrimitiveKey[] = [
+    { primitive: 0, refDes: "", net: "PWR_A", netId: "aaa", pin: "", busId: "" },
+    { primitive: 1, refDes: "", net: "PWR_A", netId: "bbb", pin: "", busId: "" },
+  ];
+
+  it("lights every wire of the name when the wires carry no id", () => {
+    const [g] = resolveHighlights(nameOnly, [{ netIds: ["aaa"], netIdNames: ["PWR_A"] }]);
+    expect([...g.primitives].sort()).toEqual([0, 1]);
+    expect(g.subjects).toEqual(["net:PWR_A"]);
+  });
+
+  it("never joins by name a wire that carries an id, so the focus stays on its instance", () => {
+    const [g] = resolveHighlights(dupKeys, [{ netIds: ["aaa"], netIdNames: ["PWR_A"] }]);
+    expect([...g.primitives]).toEqual([0]);
+  });
+
+  it("lights nothing by id alone on a wire keyed by name, which is why a spec carries the names", () => {
+    const [g] = resolveHighlights(nameOnly, [{ netIds: ["aaa"] }]);
+    expect([...g.primitives]).toEqual([]);
+  });
+});
+
 describe("framing a point (agni issue 1374)", () => {
   it("pads a zero-size entity by the caller's floor when it beats the 8-unit one", () => {
     const f = entityFrame(5, 5, 5, 5, 20);
