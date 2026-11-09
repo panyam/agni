@@ -4,18 +4,16 @@ go 1.26.9
 
 require (
 	connectrpc.com/connect v1.20.0
-	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/panyam/goapplib v0.7.7
 	github.com/panyam/jaala/frontends/mcp v0.1.92
 	github.com/panyam/jaala/frontends/nl v0.1.92
-	github.com/panyam/massrelay v0.3.3
+	github.com/panyam/massrelay v0.3.7
 	github.com/panyam/mcpkit v0.8.16
 	github.com/panyam/mcpkit/experimental/ext/events v0.8.16
 	github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.16
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.16
 	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.16
 	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.16
-	github.com/panyam/oneauth v0.3.0
 	github.com/panyam/servicekit v0.2.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -34,12 +32,14 @@ require (
 	github.com/fernet/fernet-go v0.0.0-20240119011108-303da6aec611 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/panyam/jaala/frontends/cypher v0.1.92 // indirect
+	github.com/panyam/oneauth v0.3.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect

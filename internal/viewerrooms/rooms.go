@@ -25,13 +25,11 @@ package viewerrooms
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/panyam/massrelay/services"
 	relaymw "github.com/panyam/massrelay/web/middleware"
 	relayserver "github.com/panyam/massrelay/web/server"
@@ -40,7 +38,6 @@ import (
 	"github.com/panyam/mcpkit/experimental/ext/rooms/massrelay"
 	"github.com/panyam/mcpkit/experimental/integrations/roomsevents"
 	mcpkit "github.com/panyam/mcpkit/server"
-	"github.com/panyam/oneauth/keys"
 	mw "github.com/panyam/servicekit/middleware"
 )
 
@@ -79,8 +76,7 @@ type Rooms struct {
 	relay  *relayserver.RelayApp
 	bridge *rooms.Bridge
 	events *roomsevents.Events
-	key    []byte
-	ttl    time.Duration
+	signer *relaymw.RelaySigner
 }
 
 // New builds the relay, with a signing key of its own for this process, and the bridge joined to it
@@ -89,22 +85,18 @@ func New(o Options) (*Rooms, error) {
 	if o.RoomOf == nil {
 		return nil, errors.New("viewerrooms: Options.RoomOf is required")
 	}
-	r := &Rooms{key: make([]byte, 32), ttl: o.TokenTTL, events: roomsevents.New()}
-	if r.ttl <= 0 {
-		r.ttl = DefaultTokenTTL
+	ttl := o.TokenTTL
+	if ttl <= 0 {
+		ttl = DefaultTokenTTL
 	}
-	if _, err := rand.Read(r.key); err != nil {
+	// massrelay's signer writes the claims its authenticator reads, with a key of its own for this
+	// process (agni issue 1459).
+	signer, err := relaymw.NewRelaySigner(relaymw.RelaySignerConfig{ClientID: clientID, Issuer: issuer, TTL: ttl})
+	if err != nil {
 		return nil, err
 	}
-	ks := keys.NewInMemoryKeyStore()
-	if _, err := ks.PutKey(context.Background(), &keys.PutKeyRequest{Record: &keys.KeyRecord{
-		ClientID: clientID, Key: r.key, Algorithm: "HS256",
-	}}); err != nil {
-		return nil, err
-	}
-	auth := relaymw.NewRelayAuthenticator(relaymw.RelayAuthConfig{
-		KeyStore: ks, Required: true, Issuer: issuer, TokenQueryParam: "token",
-	})
+	r := &Rooms{signer: signer, events: roomsevents.New()}
+	auth := signer.Authenticator(relaymw.RelayAuthConfig{Required: true, TokenQueryParam: "token"})
 	// NewRelayApp reads RELAY_* from the environment for a standalone relay. The parts that decide
 	// who gets in are replaced here, so none of those variables can open this one up.
 	r.relay = relayserver.NewRelayApp()
@@ -156,12 +148,7 @@ func (r *Rooms) Register(srv *mcpkit.Server) {
 // Mint returns a relay token for the local subject. The token admits its holder to room alone, and
 // service.ViewerRoomService hands it to a page.
 func (r *Rooms) Mint(room string) (string, time.Time, error) {
-	now := time.Now()
-	exp := now.Add(r.ttl)
-	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": LocalSubject, "client_id": clientID, "type": "access", "iss": issuer,
-		"rooms": []string{room}, "iat": now.Unix(), "exp": exp.Unix(),
-	}).SignedString(r.key)
+	tok, exp, err := r.signer.Mint(LocalSubject, []string{room})
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("viewerrooms: minting a relay token: %w", err)
 	}
