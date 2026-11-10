@@ -5,7 +5,8 @@
 //
 // The board is readers/kicad/testdata/board.kicad_pcb. Its "Demo Board" legend is back silkscreen
 // marked (justify mirror), and R1 sits on the front. kicad-cli draws the legend mirrored from the
-// front and R1 the right way round, and the reverse with --mirror.
+// front and R1 the right way round, and the reverse with --mirror. The legend is written on two
+// lines, and the spec reads its first, "Demo".
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -56,11 +57,11 @@ describe("turning a board view", () => {
   it("draws back text mirrored from the front, and the right way round from below", async () => {
     await withPage(browser, async (page) => {
       await openBoardView(page);
-      expect(await mirrored(page, "Demo Board")).toBe(true);
+      expect(await mirrored(page, "Demo")).toBe(true);
       expect(await mirrored(page, "R1")).toBe(false);
 
       await page.locator(`${PANE} .sheetview-bottom`).click();
-      expect(await mirrored(page, "Demo Board")).toBe(false);
+      expect(await mirrored(page, "Demo")).toBe(false);
       expect(await mirrored(page, "R1")).toBe(true);
       const order = await page.$$eval(`${PANE} .sheetview-canvas svg > g`, (gs) => gs.map((g) => g.getAttribute("class") ?? ""));
       expect(order.indexOf("copper-back")).toBeGreaterThan(order.indexOf("copper-front"));

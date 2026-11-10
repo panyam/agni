@@ -92,7 +92,13 @@ describe("picking the board", () => {
         const label = [...document.querySelectorAll("#svg-view .labels text")].find((t) => t.textContent === "J1") as SVGTextElement;
         if (!pad || !label) throw new Error("the board draws no R1.1 pad or no J1 designator");
         const b = pad.getBBox();
+        // A KiCad label carries its run's length and starts at its ink, so the enlarged copy
+        // drops both and centres on the pad.
         label.removeAttribute("transform");
+        label.removeAttribute("textLength");
+        label.removeAttribute("lengthAdjust");
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("dominant-baseline", "central");
         label.setAttribute("x", String(b.x + b.width / 2));
         label.setAttribute("y", String(b.y + b.height / 2));
         label.setAttribute("font-size", "120");
