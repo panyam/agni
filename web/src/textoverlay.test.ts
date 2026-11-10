@@ -214,3 +214,18 @@ describe("mirrored labels", () => {
     expect(transform("BOTTOM")).toMatch(/^rotate\(90 [-\d.]+ [-\d.]+\) translate\([-\d.]+ 0\) scale\(-1 1\)$/);
   });
 });
+
+describe("board run width", () => {
+  it("draws a label at exactly its width, and leaves a label without one to its font", () => {
+    const host = document.createElement("div");
+    const overlay = new TextOverlay(host);
+    const label = { x: 10, y: 20, text: "", height: 5, rotationDeg: 0, justify: "left", color: "#000", maxWidth: 0, runs: [] };
+    overlay.setContent([], [{ ...label, text: "SIZED", width: 40 }, { ...label, text: "FREE" }], "");
+    const text = (t: string) => [...host.querySelectorAll("text")].find((el) => el.textContent === t);
+    const sized = text("SIZED");
+    const k = Number(sized?.getAttribute("font-size")) / 5;
+    expect(Number(sized?.getAttribute("textLength"))).toBeCloseTo(40 * k);
+    expect(sized?.getAttribute("lengthAdjust")).toBe("spacingAndGlyphs");
+    expect(text("FREE")?.getAttribute("textLength")).toBeNull();
+  });
+});

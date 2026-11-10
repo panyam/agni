@@ -195,17 +195,22 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 
 	// Silkscreen and legend text (ref-des, value, free title-block text) in board coordinates.
 	// Rotation negates for the Y-down screen like a pad, and anchor and font-size follow the
-	// authored justify and height.
+	// authored justify and height. A text whose run length is known (boardTextRun) is stretched to
+	// it.
 	c.Group(append([]svg.Attr{svg.A("class", "labels")}, pk.passThrough()...)...)
 	for _, t := range boardLabels(b) {
 		if t.GetAt() == nil {
 			continue
 		}
-		x, y := tx(t.GetAt().X), ty(t.GetAt().Y)
+		at, justify, width := boardTextRun(t)
+		x, y := tx(at.X), ty(at.Y)
 		fontPx := math.Max(float64(boardTextEm(t))*scale, boardTextMinPx)
 		attrs := []svg.Attr{
 			svg.F("x", x), svg.F("y", y), svg.A("fill", boardTextColor(style, t.GetLayer())), svg.F("font-size", fontPx),
-			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),
+			svg.A("text-anchor", svgAnchor(justify)), svg.A("dominant-baseline", "central"),
+		}
+		if width > 0 {
+			attrs = append(attrs, svg.F("textLength", float64(width)*scale), svg.A("lengthAdjust", "spacingAndGlyphs"))
 		}
 		if tf := boardTextTransform(-t.GetRotationDeg(), t.GetMirror(), x, y); tf != "" {
 			attrs = append(attrs, svg.A("transform", tf))
@@ -360,16 +365,16 @@ func boardTextHeight(t *geom.BoardText) int64 {
 
 // justifyWord maps a board text's horizontal justify to the anchor word the packed overlay
 // keys on ("center" when the source left it unset).
-func justifyWord(t *geom.BoardText) string {
-	if j := t.GetJustify(); j != "" {
-		return j
+func justifyWord(justify string) string {
+	if justify != "" {
+		return justify
 	}
 	return "center"
 }
 
 // svgAnchor maps a board text's horizontal justify to an SVG text-anchor ("middle" default).
-func svgAnchor(t *geom.BoardText) string {
-	switch t.GetJustify() {
+func svgAnchor(justify string) string {
+	switch justify {
 	case "left":
 		return "start"
 	case "right":

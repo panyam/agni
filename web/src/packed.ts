@@ -92,6 +92,9 @@ export interface Label {
   justify: string; // canonical "<h> <v>"
   color: string; // "#rrggbb"
   maxWidth: number; // world width to condense into (0 = unbounded); see textoverlay
+  // width is the world length the run draws at exactly (geom.PackedLabel.width), so a board text
+  // covers what its source font covers. 0 or absent means the font's own width.
+  width?: number;
   // runs is the text split by its markup, as the engine split it (geom.PackedLabel.runs). Empty
   // means the text draws as one plain run.
   runs: TextRun[];
@@ -204,6 +207,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
       justify: l.justify,
       color: l.color,
       maxWidth: l.maxWidth,
+      width: l.width,
       runs: l.runs.map((r) => ({ text: r.text, kind: r.kind })),
       group: l.group,
       mirror: l.mirror,

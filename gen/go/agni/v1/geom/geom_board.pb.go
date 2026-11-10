@@ -157,16 +157,21 @@ func (x *BoardGeometry) GetProv() *Provenance {
 // without deriving the placement again, just as gr_text is authored absolute. Hidden source
 // text is dropped, as a placement with no ref is skipped.
 type BoardText struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`                                    // the string as authored; may contain newlines
-	At            *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`                                        // board-frame anchor, Y-up (footprint text is pre-composed)
-	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // CCW degrees as drawn, in the Y-up frame
-	Height        int64                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                               // glyph height in source units (unit_nm), from the font size
-	Layer         string                 `protobuf:"bytes,5,opt,name=layer,proto3" json:"layer,omitempty"`                                  // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", ...)
-	Mirror        bool                   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"`                               // back-side / mirrored text (KiCad's justify mirror)
-	Justify       string                 `protobuf:"bytes,7,opt,name=justify,proto3" json:"justify,omitempty"`                              // horizontal justify verbatim: "left" / "right" / "" (center)
-	RefDes        string                 `protobuf:"bytes,8,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`                  // owning placement's ref for footprint text; "" for free text
-	Kind          string                 `protobuf:"bytes,9,opt,name=kind,proto3" json:"kind,omitempty"`                                    // source role: "reference" | "value" | "user" | "gr"
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Text        string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`                                    // the string as authored; may contain newlines
+	At          *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`                                        // board-frame anchor, Y-up (footprint text is pre-composed)
+	RotationDeg float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // CCW degrees as drawn, in the Y-up frame
+	Height      int64                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                               // glyph height in source units (unit_nm), from the font size
+	Layer       string                 `protobuf:"bytes,5,opt,name=layer,proto3" json:"layer,omitempty"`                                  // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", ...)
+	Mirror      bool                   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"`                               // back-side / mirrored text (KiCad's justify mirror)
+	Justify     string                 `protobuf:"bytes,7,opt,name=justify,proto3" json:"justify,omitempty"`                              // horizontal justify verbatim: "left" / "right" / "" (center)
+	RefDes      string                 `protobuf:"bytes,8,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`                  // owning placement's ref for footprint text; "" for free text
+	Kind        string                 `protobuf:"bytes,9,opt,name=kind,proto3" json:"kind,omitempty"`                                    // source role: "reference" | "value" | "user" | "gr"
+	// font names the face the source tool draws the text in, when a renderer can match it. "" is the
+	// renderer's own font. "kicad_stroke" is KiCad's built-in stroke font, whose advances the board
+	// renderers know, so a run starts and ends where KiCad draws it.
+	Font          string `protobuf:"bytes,10,opt,name=font,proto3" json:"font,omitempty"`
+	Thickness     int64  `protobuf:"varint,11,opt,name=thickness,proto3" json:"thickness,omitempty"` // stroke width in source units (unit_nm); 0 when the source gives none
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -262,6 +267,20 @@ func (x *BoardText) GetKind() string {
 		return x.Kind
 	}
 	return ""
+}
+
+func (x *BoardText) GetFont() string {
+	if x != nil {
+		return x.Font
+	}
+	return ""
+}
+
+func (x *BoardText) GetThickness() int64 {
+	if x != nil {
+		return x.Thickness
+	}
+	return 0
 }
 
 // BoardGraphic is one piece of non-copper board artwork. It may be a footprint's silkscreen or
@@ -1279,7 +1298,7 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\bgraphics\x18\t \x03(\v2\x1a.agni.v1.geom.BoardGraphicR\bgraphics\x124\n" +
 	"\tpadstacks\x18\n" +
 	" \x03(\v2\x16.agni.v1.geom.PadstackR\tpadstacks\x12,\n" +
-	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xf4\x01\n" +
+	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xa6\x02\n" +
 	"\tBoardText\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -1289,7 +1308,10 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x06mirror\x18\x06 \x01(\bR\x06mirror\x12\x18\n" +
 	"\ajustify\x18\a \x01(\tR\ajustify\x12\x17\n" +
 	"\aref_des\x18\b \x01(\tR\x06refDes\x12\x12\n" +
-	"\x04kind\x18\t \x01(\tR\x04kind\"~\n" +
+	"\x04kind\x18\t \x01(\tR\x04kind\x12\x12\n" +
+	"\x04font\x18\n" +
+	" \x01(\tR\x04font\x12\x1c\n" +
+	"\tthickness\x18\v \x01(\x03R\tthickness\"~\n" +
 	"\fBoardGraphic\x12)\n" +
 	"\x05shape\x18\x01 \x01(\v2\x13.agni.v1.geom.ShapeR\x05shape\x12\x14\n" +
 	"\x05layer\x18\x02 \x01(\tR\x05layer\x12\x17\n" +

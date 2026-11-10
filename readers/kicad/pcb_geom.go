@@ -96,10 +96,9 @@ var graphicHeads = []string{"line", "arc", "circle", "poly", "rect"}
 func boardGraphics(root *node) []*geom.BoardGraphic {
 	var out []*geom.BoardGraphic
 	for _, fp := range root.Children("footprint") {
-		ref := propValue(fp, "Reference")
-		if ref == "" || refdes.IsPlaceholder(ref) {
-			continue
-		}
+		// A footprint with no designator, such as a logo whose reference is REF**, is no part, but
+		// KiCad still draws its artwork. Its graphics go out owned by no part.
+		ref := partRef(fp)
 		origin := pcbPoint(fp.Child("at"))
 		back := atomOf(fp.Child("layer").Arg(1)) == "B.Cu"
 		rot := placementAngle(fp.Child("at"), back)
@@ -244,21 +243,28 @@ func graphicWidth(n *node) int64 {
 	return 0
 }
 
-// boardTexts collects the board's placed text: each footprint's silkscreen ref-des and
-// value (composed from footprint-local to board coordinates so they pin to the pads), and
-// free graphic text (gr_text, including the title block, authored absolute). Hidden source
-// text is dropped, mirroring the no-ref placement skip. Footprint user text (fp_text) is
-// out of scope for this tier (C6 bound; see the proto contract), and silk/fab graphics are
-// boardGraphics' job.
+// boardTexts collects the board's placed text: each footprint's ref-des and value, its user
+// text, and free graphic text (gr_text, including the title block, authored absolute). Footprint
+// text is composed from footprint-local to board coordinates so it pins to the pads. Hidden source
+// text is dropped. A footprint that is no part, such as a logo, gives no designator or value, and
+// its user text belongs to no part. Silk and fab graphics are boardGraphics' job.
 func boardTexts(root *node) []*geom.BoardText {
 	var out []*geom.BoardText
 	for _, fp := range root.Children("footprint") {
-		ref := propValue(fp, "Reference")
-		if ref == "" || refdes.IsPlaceholder(ref) {
-			continue
-		}
+		ref := partRef(fp)
 		fpAt := fp.Child("at")
 		back := atomOf(fp.Child("layer").Arg(1)) == "B.Cu"
+		for _, u := range fp.Children("fp_text") {
+			if atomOf(u.Arg(1)) != "user" || !footprintLayerDrawn(atomOf(u.Child("layer").Arg(1))) {
+				continue
+			}
+			if t := footprintText(u, userText(fp, atomOf(u.Arg(2))), "user", ref, fpAt, back); t != nil {
+				out = append(out, t)
+			}
+		}
+		if ref == "" {
+			continue
+		}
 		for _, p := range fp.Children("property") {
 			var kind string
 			switch atomOf(p.Arg(1)) {
@@ -282,6 +288,24 @@ func boardTexts(root *node) []*geom.BoardText {
 	return out
 }
 
+// partRef is a footprint's designator, or "" for a footprint that is no part: one with no
+// Reference, or a placeholder such as REF** that a logo or a panel tab keeps.
+func partRef(fp *node) string {
+	ref := propValue(fp, "Reference")
+	if refdes.IsPlaceholder(ref) {
+		return ""
+	}
+	return ref
+}
+
+// userText fills the two text variables a footprint's user text most often names, ${REFERENCE}
+// and ${VALUE}, from the footprint's own fields, as KiCad draws them. A fab-layer ${REFERENCE}
+// is how most libraries put the designator inside a part's outline. Other variables stay as
+// written.
+func userText(fp *node, text string) string {
+	return strings.NewReplacer("${REFERENCE}", propValue(fp, "Reference"), "${VALUE}", propValue(fp, "Value")).Replace(text)
+}
+
 // footprintText composes one footprint-owned text (a Reference or Value property) into a
 // board-frame BoardText. Its position is the footprint-local offset rotated by the footprint
 // orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer that
@@ -295,6 +319,7 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 		return nil
 	}
 	height, justify, mirror := effectsOf(n)
+	font, pen := strokeOf(n)
 	if height == 0 {
 		height = fieldDefaultHeight
 	}
@@ -310,6 +335,8 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 		Layer:       fieldLayer(atomOf(n.Child("layer").Arg(1)), kind),
 		Mirror:      mirror,
 		Justify:     justify,
+		Font:        font,
+		Thickness:   pen,
 		RefDes:      ref,
 		Kind:        kind,
 	}
@@ -326,6 +353,7 @@ func freeText(n *node) *geom.BoardText {
 	}
 	at := n.Child("at")
 	height, justify, mirror := effectsOf(n)
+	font, pen := strokeOf(n)
 	return &geom.BoardText{
 		Text:        text,
 		At:          pcbPoint(at),
@@ -334,6 +362,8 @@ func freeText(n *node) *geom.BoardText {
 		Layer:       atomOf(n.Child("layer").Arg(1)),
 		Mirror:      mirror,
 		Justify:     justify,
+		Font:        font,
+		Thickness:   pen,
 		Kind:        "gr",
 	}
 }
@@ -362,6 +392,19 @@ func effectsOf(n *node) (height int64, justify string, mirror bool) {
 		}
 	}
 	return height, justify, mirror
+}
+
+// strokeOf names the font a text draws in and its pen width. KiCad draws in its own stroke font
+// unless the effects name a TrueType face, and only the stroke font has a pen.
+func strokeOf(n *node) (font string, pen int64) {
+	f := n.Child("effects").Child("font")
+	if f.Child("face") != nil {
+		return "", 0
+	}
+	if th := f.Child("thickness"); th != nil {
+		pen = mmToNm(atomOf(th.Arg(1)))
+	}
+	return "kicad_stroke", pen
 }
 
 // fieldDefaultHeight is the glyph height KiCad draws a footprint field at when its effects give no
@@ -401,11 +444,7 @@ func keepUpright(deg float64) float64 {
 // isHidden reports whether a text node is marked hidden, by KiCad's (hide yes) child (v7+)
 // or the bare (hide) form, so dropped text never renders.
 func isHidden(n *node) bool {
-	h := n.Child("hide")
-	if h == nil {
-		return false
-	}
-	return h.Arg(1) == nil || atomOf(h.Arg(1)) == "yes"
+	return hideFlag(n) || hideFlag(n.Child("effects"))
 }
 
 // isUnlocked reports whether a footprint text opts out of keepUpright, by the (unlocked yes) child
