@@ -155,6 +155,10 @@ export class Renderer {
   // layer wins an overlap). Empty means no highlight. Set by the canvas from the resolved
   // highlight specs.
   private highlightColors: Map<number, Rgba> = new Map();
+  // version counts the changes made to what this renderer draws since it was built: highlights,
+  // overlays, draw order and hidden groups. A view draws a frame only when it or the camera moved
+  // (drawgate.ts, agni issue 1479), so every setter bumps it.
+  version = 0;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -200,6 +204,7 @@ export class Renderer {
   // a later group winning where they overlap. An empty array clears every highlight. Called
   // by the canvas whenever the highlight specs (or the sheet) change.
   setHighlights(groups: HighlightDraw[]): void {
+    this.version++;
     this.highlightColors = new Map();
     for (const g of groups) {
       for (const i of g.primitives) this.highlightColors.set(i, g.color);
@@ -217,6 +222,7 @@ export class Renderer {
   // triangle lists upload once per call, since the overlay changes with the highlight specs
   // and not with the camera. An empty array clears the overlay.
   setOverlays(overlays: OverlayDraw[]): void {
+    this.version++;
     this.overlayGroups = [];
     const total = overlays.reduce((n, o) => n + o.vertices.length, 0);
     if (total === 0) return;
@@ -257,11 +263,13 @@ export class Renderer {
 
   // setOrder replaces the draw order. null draws in pack order.
   setOrder(order: Int32Array | null): void {
+    this.version++;
     this.order = order;
   }
 
   // setHiddenGroups replaces the hidden set.
   setHiddenGroups(groups: Iterable<number>): void {
+    this.version++;
     this.hiddenGroups = new Set(groups);
   }
 

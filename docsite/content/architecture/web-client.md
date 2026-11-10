@@ -84,6 +84,19 @@ panel from the ones above.
   (`[data-sheetview="<id>"] .sheetview-canvas`), so a reader can show In2.Cu alone beside the canvas
   and keep the whole board on the canvas. The set lasts as long as the view, since a view's id does
   not outlive the page.
+- **A view costs nothing per frame while nobody touches it** (agni issue 1479). Every WebGL drawing,
+  the canvas, each view and each side of the visual diff, asks a `DrawGate` (`web/src/drawgate.ts`)
+  before it draws a frame. It draws only when the camera's matrix, its size, the pixel ratio or
+  its sheet's drawing changed. The renderer counts each change to its highlights, overlays, draw
+  order and hidden layers in `Renderer.version`. The gate compares the matrix rather than hooking
+  each place the camera moves, so a camera moved from outside, by a locked peer or the other side
+  of a diff, still draws. A view behind another dock tab has no area and draws once it is shown.
+  Each canvas counts its frames in `data-draws`, and `web/browser/drawonchange.spec.ts` holds a
+  board beside the schematic to no draws while the schematic pans. **An SVG view is partly
+  isolated.** `.sheetview-canvas` takes a compositor layer and `contain: strict`. Chrome still
+  layerizes the whole document's paint chunks on every frame, so a large SVG board beside the
+  canvas costs the canvas's pan some time even untouched. On Jetson a pan took 2.2 s with the
+  board open against 1.9 s closed, and 2.5 s before the layer.
 - **A view shows its own loader while it draws.** A large board takes a second or more to draw, so
   the view covers its stage with a `.sheetview-busy` loader, and the canvas and the other views stay
   usable. It uses the page loader's `delayedBusy` (`web/src/busy.ts`), so a quick draw does not

@@ -40,6 +40,16 @@ describe("the visual diff in WebGL", () => {
       // The SVG hosts stand aside while WebGL draws.
       expect(await page.$eval("#diff-svg-a", (e) => (e as HTMLElement).style.display)).toBe("none");
 
+      // Each side draws only when it changes (agni issue 1479), and a pan on one side moves the
+      // other's camera, so the other side draws too.
+      const draws = (side: "a" | "b") => page.$eval(`#diff-gl-${side}`, (c) => Number((c as HTMLElement).dataset.draws ?? "0"));
+      await page.waitForTimeout(500);
+      const still = await draws("b");
+      const box = (await page.locator("#diff-gl-a").boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      for (let i = 0; i < 6; i++) await page.mouse.wheel(0, -120);
+      await expect.poll(() => draws("b"), { timeout: 10_000 }).toBeGreaterThan(still);
+
       await page.locator(".diff-modes .mode-btn").nth(1).click();
       await expect.poll(() => litOn(page, "a"), { timeout: 30_000 }).toEqual(expect.arrayContaining(b));
     });
