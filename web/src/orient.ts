@@ -95,6 +95,20 @@ export function flip(o: Orientation, axis: "h" | "v"): Orientation {
   return own === "h" ? { ...o, flipH: !o.flipH } : { ...o, flipV: !o.flipV };
 }
 
+// flipped says whether the drawing is flipped along a screen axis, the flip that flip(o, axis)
+// toggles. A flip button shows it as pressed.
+export function flipped(o: Orientation, axis: "h" | "v"): boolean {
+  const quarter = o.rot === 90 || o.rot === 270;
+  return (axis === "h") !== quarter ? o.flipH : o.flipV;
+}
+
+// fromBelow says whether a board drawn this way is seen from underneath. A board turned over is the
+// top's mirror image, and two flips are the top turned half round, so an odd number of flips is the
+// bottom view.
+export function fromBelow(o: Orientation): boolean {
+  return o.flipH !== o.flipV;
+}
+
 // Turn is the 2x2 linear part of an orientation, in a frame whose y runs down the screen. It maps
 // an offset in the drawing's own frame to the offset on screen, flips first and then the turn, as
 // orientPoint does. A point maps as (a*x + c*y, b*x + d*y), CSS matrix()'s order. Its entries are 0

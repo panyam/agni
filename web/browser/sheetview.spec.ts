@@ -155,7 +155,7 @@ describe("a sheet view in WebGL", () => {
       await expect.poll(() => pickedPart(page), { timeout: 30_000 }).toMatch(new RegExp(`^${part.ref}(\\.|$)`));
 
       // From below the board turns about the view's middle, so the part is still under it.
-      await page.locator(`${PANE} [data-action="bottom"]`).click();
+      await page.locator(`${PANE} [data-action="flip-h"]`).click();
       await page.waitForSelector(`${PANE}[data-side="back"]`, { timeout: 10_000 });
       await page.waitForTimeout(300);
       await clickCentre(page);

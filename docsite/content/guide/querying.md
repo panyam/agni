@@ -217,6 +217,10 @@ runs the query and hands you back the query and the binding. Each hit is clickab
 thing it turns out to be. So a search takes you to the drawing, and it leaves the query in the box
 for you to edit into a better question.
 
+Command-F (Ctrl-F on Linux and Windows) opens **Find by name** from anywhere on the page. It brings
+the query panel forward and puts the cursor in the box, with any text already there selected. In
+another text field, such as the query box, the key does what the browser does.
+
 ### Reading a result cell in the viewer
 
 A cell is a link when it names a component, a net or a {{ explainable "bus" }}, and clicking it

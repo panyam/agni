@@ -209,6 +209,11 @@ export interface QueryView {
   // openSet opens one tab per query of a set, in the set's order, and asks the host to answer them
   // over one read through onRunSet.
   openSet: (set: QuerySet) => void;
+  // findByName selects the Find by name tab and focuses its box with any text in it selected, so the
+  // next keystrokes replace it (agni issue 1472). It returns false and changes nothing while the
+  // panel offers no search, before the find-by-name template arrives. The host brings the panel
+  // forward first, since a hidden box takes no focus.
+  findByName: () => boolean;
 }
 
 // QuerySetItem is one set that a project keeps, with its name (the file's stem), the file, and the

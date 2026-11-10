@@ -183,6 +183,8 @@ function QueryPanel(props: {
   // registerAsk hands the island the panel's askAbout, so a question asked from elsewhere (the
   // Properties panel's Ask rows) opens its tab exactly as the panel's own ask button does.
   registerAsk?: (ask: (sel: Selection, question?: EntityQueryItem) => void) => void;
+  // registerFind hands the island the panel's findByName, for the page's Command-F.
+  registerFind?: (find: () => boolean) => void;
 }) {
   // The tab in front, whose question the editor shows and whose answer the table renders.
   const front = () => activeTab(props.strip());
@@ -464,6 +466,17 @@ function QueryPanel(props: {
     props.emit?.("query.asked", { title });
   };
   props.registerAsk?.(askAbout);
+  // findByName switches to the search mode, which renders its box at once, then focuses the box and
+  // selects what it holds.
+  let termRef: HTMLInputElement | undefined;
+  const findByName = (): boolean => {
+    if (!props.search()) return false;
+    setMode("search");
+    termRef?.focus();
+    termRef?.select();
+    return true;
+  };
+  props.registerFind?.(findByName);
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
   // selects it, so one answer becomes the subject of the next question. A kind with no selection
   // shape (scalars never reach here) locates and deselects rather than leaving the bar naming the
@@ -708,6 +721,7 @@ function QueryPanel(props: {
             <input
               type="text"
               class="query-term"
+              ref={termRef}
               spellcheck={false}
               placeholder="part of a name: CAN, U1, 3V3"
               aria-label="Find by name"
@@ -1209,6 +1223,7 @@ export function queryPanelIsland(
   const onInspect = handlers.onInspect ?? (() => {});
   let askHook: (sel: Selection, question?: EntityQueryItem) => void = () => {};
   let openSetHook: (set: QuerySet) => void = () => {};
+  let findHook: () => boolean = () => false;
   const [querySets, setQuerySets] = signalView<QuerySetItem[]>([]);
   // A fresh answer for the tab in front clears any stale locate note from its previous run.
   const setTabState = (s: QueryResult, tab?: string) => {
@@ -1256,6 +1271,7 @@ export function queryPanelIsland(
         onRunSet={handlers.onRunSet ?? (() => {})}
         onSetFile={handlers.onSetFile}
         registerOpenSet={(open) => (openSetHook = open)}
+        registerFind={(find) => (findHook = find)}
         emit={viewerEmitter(eventBus)}
       />
     ),
@@ -1283,6 +1299,7 @@ export function queryPanelIsland(
       },
       setQuerySets,
       openSet: (set: QuerySet) => openSetHook(set),
+      findByName: () => findHook(),
     },
   };
 }
