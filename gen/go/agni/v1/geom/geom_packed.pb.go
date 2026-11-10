@@ -802,7 +802,9 @@ type PackedSheet struct {
 	OriginY       int64                  `protobuf:"varint,4,opt,name=origin_y,json=originY,proto3" json:"origin_y,omitempty"`
 	// int32 LE pairs, sheet-relative: [x0,y0,x1,y1,...].
 	Vertices []byte `protobuf:"bytes,5,opt,name=vertices,proto3" json:"vertices,omitempty"`
-	// Fixed-width LE records: (kind:u8, group:u8, _pad:u16, first_vertex:u32, count:u32).
+	// Fixed-width LE records: (kind:u8, group:u8, stroke_um:u16, first_vertex:u32, count:u32).
+	// stroke_um is the width a line's source draws it at, in micrometres, and 0 is a hairline. Only
+	// a board's graphics set it (agni issue 1486), and a reader that ignores it draws hairlines.
 	Primitives []byte          `protobuf:"bytes,6,opt,name=primitives,proto3" json:"primitives,omitempty"`
 	Keys       []*PrimitiveKey `protobuf:"bytes,7,rep,name=keys,proto3" json:"keys,omitempty"`     // O(primitives), stays structured
 	Labels     []*PackedLabel  `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty"` // O(labels), stays structured; drawn by the text overlay

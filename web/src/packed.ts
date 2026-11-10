@@ -2,7 +2,7 @@
 // upload directly. The proto envelope carries geometry as two opaque byte blobs:
 //   - vertices: int32 LE pairs, sheet-relative: [x0,y0,x1,y1,...]
 //   - primitives: fixed-width 12-byte LE records
-//       kind:u8, group:u8, _pad:u16, first_vertex:u32, count:u32
+//       kind:u8, group:u8, stroke_um:u16, first_vertex:u32, count:u32
 // We keep the int32 vertices as an Int32Array VIEW over the decoded bytes so the same
 // backing store goes straight to gl.bufferData without a copy.
 
@@ -64,6 +64,9 @@ export interface Primitive {
   group: number;
   firstVertex: number;
   count: number;
+  // width is the world width a line's source draws it at (the record's stroke_um), so WebGL can draw
+  // a board's outlines as wide as SVG strokes them (agni issue 1486). Absent means a hairline.
+  width?: number;
 }
 
 export interface PrimitiveKey {
@@ -182,10 +185,12 @@ function parsePrimitives(bytes: Uint8Array): Primitive[] {
     out[i] = {
       kind: view.getUint8(off + 0),
       group: view.getUint8(off + 1),
-      // bytes 2..3 are _pad (u16), skipped.
       firstVertex: view.getUint32(off + 4, true),
       count: view.getUint32(off + 8, true),
     };
+    // Bytes 2..3 are the stroke width in micrometres, and a world unit is a nanometre.
+    const um = view.getUint16(off + 2, true);
+    if (um > 0) out[i].width = um * 1000;
   }
   return out;
 }

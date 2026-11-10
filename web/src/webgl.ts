@@ -136,6 +136,60 @@ function recordBounds(vertices: Int32Array, p: Primitive): Bounds {
   return { minX, minY, maxX, maxY };
 }
 
+// strokeQuads tessellates a line primitive into a triangle list `width` world units wide, as SVG
+// strokes it. Each segment runs on by half the width at both ends, so two segments meeting at a
+// corner close it as a square join does, and a loop gets its closing segment.
+export function strokeQuads(vertices: Int32Array, p: Primitive, width: number): number[] {
+  const tris: number[] = [];
+  const h = width / 2;
+  const segments = p.kind === KIND_LINE_LOOP && p.count > 2 ? p.count : p.count - 1;
+  for (let j = 0; j < segments; j++) {
+    const a = p.firstVertex + j;
+    const b = p.firstVertex + ((j + 1) % p.count);
+    const ax = vertices[a * 2], ay = vertices[a * 2 + 1];
+    const bx = vertices[b * 2], by = vertices[b * 2 + 1];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len === 0) continue;
+    const ux = ((bx - ax) / len) * h, uy = ((by - ay) / len) * h;
+    const sx = ax - ux, sy = ay - uy, ex = bx + ux, ey = by + uy;
+    tris.push(sx - uy, sy + ux, sx + uy, sy - ux, ex - uy, ey + ux);
+    tris.push(sx + uy, sy - ux, ex + uy, ey - ux, ex - uy, ey + ux);
+  }
+  return tris.map(Math.round);
+}
+
+// Stroke is where a wide line's triangles sit in the vertex buffer, after the sheet's own vertices.
+interface Stroke {
+  first: number;
+  count: number;
+  width: number;
+}
+
+// strokesOf appends a triangle list for every line primitive with a width, and returns the vertex
+// buffer to upload with each primitive's stroke, if it has one.
+function strokesOf(sheet: DecodedSheet): { vertices: Int32Array; strokes: (Stroke | undefined)[] } {
+  const strokes: (Stroke | undefined)[] = [];
+  const extra: number[][] = [];
+  let at = sheet.vertices.length / 2;
+  sheet.primitives.forEach((p, i) => {
+    if (!p.width || p.count < 2 || (p.kind !== KIND_LINE_STRIP && p.kind !== KIND_LINE_LOOP)) return;
+    const tris = strokeQuads(sheet.vertices, p, p.width);
+    if (tris.length === 0) return;
+    strokes[i] = { first: at, count: tris.length / 2, width: p.width };
+    at += tris.length / 2;
+    extra.push(tris);
+  });
+  if (extra.length === 0) return { vertices: sheet.vertices, strokes };
+  const vertices = new Int32Array(at * 2);
+  vertices.set(sheet.vertices);
+  let off = sheet.vertices.length;
+  for (const t of extra) {
+    vertices.set(t, off);
+    off += t.length;
+  }
+  return { vertices, strokes };
+}
+
 function outside(b: Bounds, view: Bounds): boolean {
   return b.maxX < view.minX || b.minX > view.maxX || b.maxY < view.minY || b.minY > view.maxY;
 }
@@ -148,6 +202,9 @@ export class Renderer {
   private uColor: WebGLUniformLocation;
   private primitives: Primitive[];
   private bounds: Bounds[];
+  // strokes holds the triangles of each line its source draws at a width (agni issue 1486). A line
+  // draws as them once the width spans a canvas pixel, and as a 1px GL line below that.
+  private strokes: (Stroke | undefined)[];
   // Geometry colors by group and the clear color, resolved from the sheet's server-chosen
   // palette so WebGL matches the SVG backend.
   private colors: Rgba[];
@@ -185,7 +242,9 @@ export class Renderer {
     this.buf = buf;
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, sheet.vertices, gl.STATIC_DRAW);
+    const { vertices, strokes } = strokesOf(sheet);
+    this.strokes = strokes;
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     const aPos = gl.getAttribLocation(this.program, "a_pos");
     gl.enableVertexAttribArray(aPos);
     // Integer attribute, ivec2 of int32, tightly packed (stride 0 = 8 bytes).
@@ -292,8 +351,9 @@ export class Renderer {
   }
 
   // Draw one frame and return how many draw calls it made. viewMatrix is the mat3 (column-major)
-  // from Camera; viewRect is the world-space rectangle it maps to, used for culling.
-  render(viewMatrix: Float32Array, viewRect: Bounds): number {
+  // from Camera; viewRect is the world-space rectangle it maps to, used for culling. perPx is the
+  // world size of one canvas pixel, and a line with a width at least that draws at its width.
+  render(viewMatrix: Float32Array, viewRect: Bounds, perPx = Infinity): number {
     let calls = 0;
     const gl = this.gl;
     gl.clearColor(this.background[0], this.background[1], this.background[2], this.background[3]);
@@ -321,7 +381,9 @@ export class Renderer {
         gl.uniform4f(this.uColor, c[0], c[1], c[2], c[3]);
         lastGroup = p.group;
       }
-      gl.drawArrays(drawMode(gl, p.kind), p.firstVertex, p.count);
+      const st = this.strokes[i];
+      if (st && st.width >= perPx) gl.drawArrays(gl.TRIANGLES, st.first, st.count);
+      else gl.drawArrays(drawMode(gl, p.kind), p.firstVertex, p.count);
       calls++;
     }
     gl.bindVertexArray(null);

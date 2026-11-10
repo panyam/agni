@@ -75,7 +75,7 @@ func schematicGroupColors(style Style, hasBus, hasDNP bool) []string {
 }
 
 // primRecordBytes is the fixed width of one primitives-table record:
-// kind:u8, group:u8, _pad:u16, first_vertex:u32, count:u32.
+// kind:u8, group:u8, stroke_um:u16, first_vertex:u32, count:u32.
 const primRecordBytes = 12
 
 // circleSegments is how finely a circle is tessellated into a line loop for packing, since
@@ -257,8 +257,9 @@ func shapeVerts(s *geom.Shape) (uint8, [][2]int64) {
 	}
 }
 
-func appendRecord(dst []byte, kind, group uint8, firstVertex, count uint32) []byte {
-	dst = append(dst, kind, group, 0, 0) // kind, group, 2-byte pad
+func appendRecord(dst []byte, kind, group uint8, strokeUm uint16, firstVertex, count uint32) []byte {
+	dst = append(dst, kind, group)
+	dst = binary.LittleEndian.AppendUint16(dst, strokeUm)
 	dst = binary.LittleEndian.AppendUint32(dst, firstVertex)
 	dst = binary.LittleEndian.AppendUint32(dst, count)
 	return dst

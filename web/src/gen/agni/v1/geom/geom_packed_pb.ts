@@ -553,7 +553,9 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
   vertices: Uint8Array;
 
   /**
-   * Fixed-width LE records: (kind:u8, group:u8, _pad:u16, first_vertex:u32, count:u32).
+   * Fixed-width LE records: (kind:u8, group:u8, stroke_um:u16, first_vertex:u32, count:u32).
+   * stroke_um is the width a line's source draws it at, in micrometres, and 0 is a hairline. Only
+   * a board's graphics set it (agni issue 1486), and a reader that ignores it draws hairlines.
    *
    * @generated from field: bytes primitives = 6;
    */

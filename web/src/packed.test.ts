@@ -164,4 +164,20 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
     ]);
     expect(sheet.groupColors[GROUP_BUS]).toBe("#1a4de0");
   });
+
+  it("reads a line's stroke width in micrometres as world nanometres (agni issue 1486)", () => {
+    const pbuf = new ArrayBuffer(24);
+    const pv = new DataView(pbuf);
+    pv.setUint8(0, KIND_LINE_LOOP);
+    pv.setUint16(2, 50, true);
+    pv.setUint32(8, 4, true);
+    pv.setUint8(12, KIND_LINE_STRIP);
+    pv.setUint32(16, 4, true);
+    pv.setUint32(20, 2, true);
+    const sheet = decodePackedSheet(toBinary(PackedSheetSchema, create(PackedSheetSchema, { sheetId: "board", primitives: new Uint8Array(pbuf) })));
+    expect(sheet.primitives).toEqual([
+      { kind: KIND_LINE_LOOP, group: 0, firstVertex: 0, count: 4, width: 50_000 },
+      { kind: KIND_LINE_STRIP, group: 0, firstVertex: 4, count: 2 },
+    ]);
+  });
 });

@@ -480,7 +480,7 @@ export class CanvasComponent extends BaseComponent {
         this.gate.shouldDraw({ matrix, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: this.renderer, version: this.renderer.version })
       ) {
         const t0 = performance.now();
-        const calls = this.renderer.render(matrix, this.camera.viewRect());
+        const calls = this.renderer.render(matrix, this.camera.viewRect(), this.camera.worldPerDevicePixel());
         const t1 = performance.now();
         canvas.dataset.draws = String(++this.draws);
         // The overlay reads the same camera in the same tick, so text moves and turns with the
