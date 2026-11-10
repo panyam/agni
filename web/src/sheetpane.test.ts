@@ -190,35 +190,64 @@ describe("turning a sheet view", () => {
   });
 
   it("opens a sheet the way it was last turned", async () => {
-    const { p } = turned({ board: JSON.stringify({ orientation: { rot: 270, flipH: true, flipV: false }, bottom: true }) });
+    const { p } = turned({ board: JSON.stringify({ orientation: { rot: 270, flipH: true, flipV: false } }) });
     await p.open("board");
-    expect(p.turnOf()).toEqual({ orientation: { rot: 270, flipH: true, flipV: false }, bottom: true });
+    expect(p.turnOf()).toEqual({ orientation: { rot: 270, flipH: true, flipV: false } });
     expect(orientOf(p)).toContain("rotate(270deg)");
   });
 
-  it("turns the board over left to right and draws it from below in a bottom view", async () => {
+  it("draws the board from below after one flip, and from above again after a second", async () => {
     const { p, deps } = turned();
     deps.render = async () => ({ svg: `<svg width="100" height="100"><g class="copper-back"></g><g class="copper-front"></g><g class="labels"></g></svg>`, boardLayers: [] });
     await p.open("board");
-    (p.element.querySelector(".sheetview-bottom") as HTMLButtonElement).click();
-    expect(p.turnOf()).toEqual({ orientation: { rot: 0, flipH: true, flipV: false }, bottom: true });
     const groups = () => [...p.element.querySelector(".sheetview-canvas svg")!.children].map((g) => g.getAttribute("class"));
-    expect(groups()).toEqual(["copper-front", "copper-back", "labels"]);
-    (p.element.querySelector(".sheetview-bottom") as HTMLButtonElement).click();
-    expect(groups()).toEqual(["copper-back", "copper-front", "labels"]);
+    (p.element.querySelector(".sheetview-flip-h") as HTMLButtonElement).click();
+    expect([p.element.dataset.side, groups()]).toEqual(["back", ["copper-front", "copper-back", "labels"]]);
+    (p.element.querySelector(".sheetview-flip-v") as HTMLButtonElement).click();
+    expect([p.element.dataset.side, groups()]).toEqual(["front", ["copper-back", "copper-front", "labels"]]);
+    (p.element.querySelector(".sheetview-flip-h") as HTMLButtonElement).click();
+    expect([p.element.dataset.side, groups()]).toEqual(["back", ["copper-front", "copper-back", "labels"]]);
   });
 
-  it("offers the bottom view on the board alone", async () => {
+  it("mirrors a schematic sheet without calling it the back", async () => {
     const { p } = turned();
     await p.open("s1");
-    expect((p.element.querySelector(".sheetview-bottom") as HTMLElement).style.display).toBe("none");
+    (p.element.querySelector(".sheetview-flip-h") as HTMLButtonElement).click();
+    expect(p.element.dataset.side).toBe("front");
+  });
+
+  it("keeps a flip button pressed while its flip is on, along the screen axis after a turn", async () => {
+    const { p } = turned();
+    await p.open("board");
+    const pressed = () => [".sheetview-flip-h", ".sheetview-flip-v"].map((c) => p.element.querySelector(c)!.getAttribute("aria-pressed"));
+    expect(pressed()).toEqual(["false", "false"]);
+    (p.element.querySelector(".sheetview-flip-h") as HTMLButtonElement).click();
+    expect(pressed()).toEqual(["true", "false"]);
+    expect(p.element.querySelector(".sheetview-flip-h")!.classList.contains("active")).toBe(true);
+    (p.element.querySelector(".sheetview-rotate") as HTMLButtonElement).click();
+    expect(pressed()).toEqual(["false", "true"]);
+    (p.element.querySelector(".sheetview-flip-v") as HTMLButtonElement).click();
+    expect(pressed()).toEqual(["false", "false"]);
+    expect(p.turnOf().orientation).toEqual({ rot: 90, flipH: false, flipV: false });
+  });
+
+  it("has no Bottom button, since the flips turn the board over", async () => {
+    const { p } = turned();
+    await p.open("board");
+    expect(p.element.querySelector('[data-action="bottom"]')).toBeNull();
+  });
+
+  it("takes the side from the flips when an older page kept a bottom field", async () => {
+    const { p } = turned({ board: JSON.stringify({ orientation: { rot: 0, flipH: false, flipV: false }, bottom: true }) });
+    await p.open("board");
+    expect(p.element.dataset.side).toBe("front");
   });
 
   it("reads back only a turn it wrote", () => {
     expect(parseTurn(null)).toBeNull();
     expect(parseTurn("{not json")).toBeNull();
     expect(parseTurn(JSON.stringify({ orientation: { rot: 45, flipH: false, flipV: false } }))).toBeNull();
-    expect(parseTurn(JSON.stringify({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true }))).toEqual({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true });
+    expect(parseTurn(JSON.stringify({ orientation: { rot: 90, flipH: false, flipV: true }, bottom: true }))).toEqual({ orientation: { rot: 90, flipH: false, flipV: true } });
   });
 });
 
@@ -229,10 +258,10 @@ describe("the names a turned view answers to", () => {
     const { p } = pane([]);
     await p.open("board");
     const act = (a: string) => p.element.querySelector(`[data-action="${a}"]`) as HTMLButtonElement;
-    for (const a of ["rotate", "flip-h", "flip-v", "bottom"]) expect(act(a), a).not.toBeNull();
+    for (const a of ["rotate", "flip-h", "flip-v"]) expect(act(a), a).not.toBeNull();
     expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["0", "front"]);
     act("rotate").click();
-    act("bottom").click();
+    act("flip-h").click();
     expect([p.element.dataset.rotation, p.element.dataset.side]).toEqual(["90", "back"]);
   });
 });
@@ -341,7 +370,7 @@ describe("a sheet view in WebGL", () => {
     const { gl, calls } = fakeGl();
     const { p, asked } = glPane(gl);
     await p.open("board");
-    p.element.querySelector<HTMLButtonElement>('[data-action="bottom"]')!.click();
+    p.element.querySelector<HTMLButtonElement>('[data-action="flip-h"]')!.click();
     expect(gl.strata).toEqual({ rows: ROWS.length, fromBelow: true });
     expect(gl.orientation.flipH).toBe(true);
     await p.setRenderer("svg");

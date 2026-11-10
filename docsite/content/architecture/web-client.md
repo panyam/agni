@@ -67,8 +67,10 @@ panel from the ones above.
   flips either way, which gives the board's eight orientations (`web/src/orient.ts`). The orientation
   is a CSS transform on an element between the pan and zoom layer and the drawing, turning about the
   drawing's centre. So pan and zoom stay a translate and a scale, and the browser hit-tests through the
-  turn. Fit and reveal map their boxes through it. **The bottom view** flips the board left to right
-  and redraws its strata with the back copper nearest (`orderStrata` in `web/src/boardstrata.ts`). A
+  turn. Fit and reveal map their boxes through it. **The bottom view** is any board turn with one flip on,
+  since a board turned over is the top's mirror image and two flips are the top turned half round
+  (`fromBelow`, agni issue 1472). It redraws the strata with the back copper nearest (`orderStrata` in
+  `web/src/boardstrata.ts`). A flip button stays pressed while its flip is on along that screen axis. A
   sheet's turn is kept per design and sheet in `localStorage`, so a board view opened again comes back
   turned. Locked views exchange the drawing point at their centre and the zoom (`getCentre`), so a top
   view and a bottom view of one board stay over the same spot. **A WebGL view turns the same way**.

@@ -59,7 +59,7 @@ describe("turning a board view", () => {
       expect(await mirrored(page, "Demo Board")).toBe(true);
       expect(await mirrored(page, "R1")).toBe(false);
 
-      await page.locator(`${PANE} .sheetview-bottom`).click();
+      await page.locator(`${PANE} .sheetview-flip-h`).click();
       expect(await mirrored(page, "Demo Board")).toBe(false);
       expect(await mirrored(page, "R1")).toBe(true);
       const order = await page.$$eval(`${PANE} .sheetview-canvas svg > g`, (gs) => gs.map((g) => g.getAttribute("class") ?? ""));
@@ -72,7 +72,7 @@ describe("turning a board view", () => {
       await openBoardView(page);
       await page.locator(`${PANE} .sheetview-rotate`).click();
       await page.locator(`${PANE} .sheetview-flip-v`).click();
-      await page.locator(`${PANE} .sheetview-bottom`).click();
+      expect(await page.locator(PANE).getAttribute("data-side")).toBe("back");
       await click(page, `${PANE} [data-kind="pin"][data-ref="R1"][data-pin="1"]`);
       await page.waitForFunction(() => document.querySelector('[data-component="properties"] .pr-title')?.textContent === "R1.1", null, { timeout: 30_000 });
     });
@@ -82,7 +82,7 @@ describe("turning a board view", () => {
     await withPage(browser, async (page) => {
       await openBoardView(page);
       await page.locator(`${PANE} .sheetview-rotate`).click();
-      await page.locator(`${PANE} .sheetview-bottom`).click();
+      await page.locator(`${PANE} .sheetview-flip-h`).click();
       const turn = () => page.$eval(`${PANE} .sheetview-canvas > div > div`, (d) => (d as HTMLElement).style.transform);
       const before = await turn();
       expect(before).toContain("rotate(90deg)");

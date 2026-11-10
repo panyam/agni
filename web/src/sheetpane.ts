@@ -13,17 +13,16 @@ import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
-import { UPRIGHT, flip, rotateBy, type Orientation } from "./orient.js";
+import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from "./orient.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
-// board again comes back the way the bench has it (agni issue 1327). bottom draws the board from
-// underneath, the back copper nearest.
+// board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
+// times is seen from underneath, the back copper nearest (fromBelow, agni issue 1472).
 export interface ViewTurn {
   orientation: Orientation;
-  bottom: boolean;
 }
 
 // turnKey names a sheet's kept turn in storage, by the design's mount and path and the sheet.
@@ -32,14 +31,15 @@ export function turnKey(mount: string, path: string, sheetId: string): string {
 }
 
 // parseTurn reads a kept turn back, and returns null for anything that is not one, such as a value
-// an older page wrote under the same key.
+// an older page wrote under the same key. An older page also kept a bottom field, which the flips
+// now decide, so it is ignored.
 export function parseTurn(text: string | null): ViewTurn | null {
   if (!text) return null;
   try {
-    const v = JSON.parse(text) as { orientation?: Partial<Orientation>; bottom?: unknown };
+    const v = JSON.parse(text) as { orientation?: Partial<Orientation> };
     const o = v.orientation;
     if (!o || ![0, 90, 180, 270].includes(o.rot as number) || typeof o.flipH !== "boolean" || typeof o.flipV !== "boolean") return null;
-    return { orientation: { rot: o.rot as Orientation["rot"], flipH: o.flipH, flipV: o.flipV }, bottom: v.bottom === true };
+    return { orientation: { rot: o.rot as Orientation["rot"], flipH: o.flipH, flipV: o.flipV } };
   } catch {
     return null;
   }
@@ -123,8 +123,8 @@ export class SheetPane {
   private readonly layerList: ReturnType<typeof boardLayerListIsland>;
   private layerRows: BoardLayerRow[] = [];
   private hiddenLayers = new Set<string>();
-  private readonly bottomButton: HTMLButtonElement;
-  private turn: ViewTurn = { orientation: UPRIGHT, bottom: false };
+  private readonly flipButtons: Record<"h" | "v", HTMLButtonElement>;
+  private turn: ViewTurn = { orientation: UPRIGHT };
   private readonly linkSelect: HTMLSelectElement;
   private readonly also: HTMLElement;
   private sel: Selection | null = null;
@@ -169,17 +169,15 @@ export class SheetPane {
     const rotate = button("sheetview-rotate", "rotate", "⟳ 90°", "turn this view a quarter turn clockwise", () =>
       this.setTurn({ ...this.turn, orientation: rotateBy(this.turn.orientation) }),
     );
-    const flipH = button("sheetview-flip-h", "flip-h", "⇆", "flip this view left to right", () =>
+    // A flip button stays pressed while its flip is on. On the board one flip turns the board over,
+    // so the view draws the back copper nearest, as the board looks from underneath.
+    const flipH = button("sheetview-flip-h", "flip-h", "⇆", "flip this view left to right (on the board, one flip shows it from underneath)", () =>
       this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") }),
     );
-    const flipV = button("sheetview-flip-v", "flip-v", "⇅", "flip this view top to bottom", () =>
+    const flipV = button("sheetview-flip-v", "flip-v", "⇅", "flip this view top to bottom (on the board, one flip shows it from underneath)", () =>
       this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "v") }),
     );
-    // The bottom view turns the board over left to right and draws its back copper nearest, as the
-    // board looks from underneath.
-    this.bottomButton = button("sheetview-bottom", "bottom", "Bottom", "look at the board from underneath", () =>
-      this.setTurn({ orientation: flip(this.turn.orientation, "h"), bottom: !this.turn.bottom }),
-    );
+    this.flipButtons = { h: flipH, v: flipV };
     const float = el("button", "mode-btn sheetview-float") as HTMLButtonElement;
     float.type = "button";
     float.textContent = "Float";
@@ -218,7 +216,7 @@ export class SheetPane {
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.bottomButton, this.linkSelect, float, close, this.layerPop);
+    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
     // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
     // panel does (#view, #text-overlay, #svg-view).
@@ -301,9 +299,9 @@ export class SheetPane {
     }
     if (n !== this.drawing) return;
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
-    this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT, bottom: false };
+    this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT };
     // The turn goes to the surface first, so a WebGL sheet draws turned from its first frame.
-    this.surface.setTurn(this.turn.orientation, sheetId === BOARD_SHEET && this.turn.bottom, this.layerRows);
+    this.surface.setTurn(this.turn.orientation, this.seenFromBelow(), this.layerRows);
     // Where WebGL2 is missing, a WebGL view draws its sheet as SVG instead.
     const drawnInGl = mode === "webgl" && drawing.packed !== undefined && this.surface.showPacked(drawing.packed);
     if (!drawnInGl) {
@@ -321,7 +319,6 @@ export class SheetPane {
     this.applyTurn();
     this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
     if (this.layerRows.length === 0) this.showLayerPop(false);
-    this.bottomButton.style.display = sheetId === BOARD_SHEET ? "" : "none";
     await this.paint(false);
   }
 
@@ -420,12 +417,22 @@ export class SheetPane {
   }
 
   private applyTurn(): void {
-    this.surface.setTurn(this.turn.orientation, this.sheet === BOARD_SHEET && this.turn.bottom, this.layerRows);
-    this.bottomButton.classList.toggle("active", this.turn.bottom);
+    this.surface.setTurn(this.turn.orientation, this.seenFromBelow(), this.layerRows);
+    for (const axis of ["h", "v"] as const) {
+      const on = flipped(this.turn.orientation, axis);
+      this.flipButtons[axis].classList.toggle("active", on);
+      this.flipButtons[axis].setAttribute("aria-pressed", String(on));
+    }
     // The view states how it is turned, for a walk or a test to read without decoding a transform.
     // data-side is the side of the board nearest the reader, "back" in the bottom view.
     this.element.dataset.rotation = String(this.turn.orientation.rot);
-    this.element.dataset.side = this.turn.bottom ? "back" : "front";
+    this.element.dataset.side = this.seenFromBelow() ? "back" : "front";
+  }
+
+  // seenFromBelow says whether this view shows the board from underneath. A schematic sheet has no
+  // underside, so its flips are mirrors alone.
+  private seenFromBelow(): boolean {
+    return this.sheet === BOARD_SHEET && fromBelow(this.turn.orientation);
   }
 
   // hiddenLayersOf names the board layers this view hides.
