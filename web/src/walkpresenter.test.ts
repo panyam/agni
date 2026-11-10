@@ -58,6 +58,7 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
   } as any;
   const order: string[] = [];
   const onWalk = vi.fn();
+  const walkLit = vi.fn();
   const reveal = vi.fn(() => order.push("reveal"));
   canvas.setHighlights.mockImplementation((specs: { components?: string[] }[]) => order.push(specs.length === 1 ? "start" : "walk"));
   const presenter = new ViewerPresenter(client, checks, canvas, render, {
@@ -66,11 +67,12 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
     expectationCaption: vi.fn(), undrawnNote: vi.fn(), staleLinkNote: vi.fn(), hierarchyNote: vi.fn(), drawingNote: vi.fn(),
     rules: { setState: vi.fn() }, report: vi.fn(), query: stubQueryView(),
     walk: { setWalk: onWalk },
+    walkLit,
     reveal,
     showPanel: vi.fn(),
     location: opts.onLocation,
   }, undefined, undefined, undefined, undefined, fakeSnapshots());
-  return { presenter, walkDesign, canvas, onWalk, reveal, order, getSheet: client.getSheet };
+  return { presenter, walkDesign, canvas, onWalk, reveal, order, walkLit, getSheet: client.getSheet };
 }
 
 const lastWalk = (onWalk: Mock): WalkState => onWalk.mock.calls[onWalk.mock.calls.length - 1][0] as WalkState;
@@ -132,6 +134,19 @@ describe("walk presenter", () => {
     const specs = hl[hl.length - 1][0] as { nets?: string[]; components?: string[]; shape?: HighlightShape }[];
     expect(specs.flatMap((s) => s.nets ?? [])).toContain("SDA");
     expect(specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["C1", "R1"]));
+  });
+
+  // The walk's shades reach the sheet views beside the canvas too (agni issue 1480).
+  it("hands the walk's shades to the views beside the canvas, and takes them back when it clears", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [] });
+    const lit = h.walkLit.mock.calls[h.walkLit.mock.calls.length - 1][0] as { nets?: string[] }[];
+    expect(lit.flatMap((s) => s.nets ?? [])).toEqual(expect.arrayContaining(["SDA", "GND"]));
+    await h.presenter.locateInWalk("component", "C1", "s2");
+    expect(h.walkLit).toHaveBeenCalledTimes(1);
+    await h.presenter.clearWalk();
+    expect(h.walkLit).toHaveBeenLastCalledWith([]);
   });
 
   it("sends a goal question on the walk's own request", async () => {

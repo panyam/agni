@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { SvgView, computeReveal, drawnOnSheet, unitAround } from "./svgview.js";
 
 describe("computeReveal (WS9-006)", () => {
@@ -312,5 +312,92 @@ describe("drawnOnSheet", () => {
 
   it("is null when the view holds no drawing", () => {
     expect(drawnOnSheet(document.createElement("div"))).toBeNull();
+  });
+});
+
+// An idle view shows an image of its drawing, so an SVG board beside the canvas adds nothing to the
+// canvas's pan (agni issue 1482).
+describe("a view that parks while idle", () => {
+  const blobs: Blob[] = [];
+  let host: HTMLElement;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    blobs.length = 0;
+    URL.createObjectURL = vi.fn((b: Blob) => {
+      blobs.push(b);
+      return `blob:${blobs.length}`;
+    }) as never;
+    URL.revokeObjectURL = vi.fn();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    host.remove();
+  });
+
+  const SHEET = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" data-sheet="board"><g data-layer="In1.Cu"><path d="M0 0"/></g></svg>`;
+  const idle = async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  };
+  const live = () => host.querySelector("svg[data-sheet]") as SVGSVGElement;
+  const image = () => host.querySelector("img.svg-parked") as HTMLImageElement | null;
+
+  it("shows an image once idle, keeps the drawing out of paint, and comes back when the pointer enters", async () => {
+    const v = new SvgView(host);
+    v.setSvg(SHEET);
+    v.parkWhenIdle(() => `:is([data-layer="In1.Cu"]) { display: none; }`, 1000);
+    await idle();
+    expect(v.parked).toBe(true);
+    expect(image()?.getAttribute("src")).toBe("blob:1");
+    expect([image()?.width, image()?.height]).toEqual([100, 50]);
+    expect(live().style.display).toBe("none");
+    const text = await blobs[0].text();
+    expect(text).toContain(`<style><![CDATA[:is([data-layer="In1.Cu"]) { display: none; }]]></style>`);
+    expect(text).toContain(`data-layer="In1.Cu"`);
+    host.dispatchEvent(new Event("pointerenter"));
+    expect(v.parked).toBe(false);
+    expect(image()).toBeNull();
+    expect(live().style.display).toBe("");
+  });
+
+  it("never parks while the pointer is over it", async () => {
+    const v = new SvgView(host);
+    v.setSvg(SHEET);
+    v.parkWhenIdle(() => "", 1000);
+    host.dispatchEvent(new Event("pointerenter"));
+    await idle();
+    expect(v.parked).toBe(false);
+    // A change made while the reader is over the view, such as hiding a layer, does not park it.
+    v.touch();
+    await idle();
+    expect(v.parked).toBe(false);
+    host.dispatchEvent(new Event("pointerleave"));
+    await idle();
+    expect(v.parked).toBe(true);
+  });
+
+  it("parks again with the same image after a wake, and makes a new one after a touch", async () => {
+    const v = new SvgView(host);
+    v.setSvg(SHEET);
+    v.parkWhenIdle(() => "", 1000);
+    await idle();
+    v.wake();
+    expect(v.parked).toBe(false);
+    await idle();
+    expect(v.parked).toBe(true);
+    expect(blobs.length).toBe(1);
+    v.touch();
+    await idle();
+    expect(blobs.length).toBe(2);
+    expect(image()?.getAttribute("src")).toBe("blob:2");
+  });
+
+  it("never parks a view that did not ask", async () => {
+    const v = new SvgView(host);
+    v.setSvg(SHEET);
+    await idle();
+    expect(v.parked).toBe(false);
+    expect(image()).toBeNull();
   });
 });

@@ -57,10 +57,26 @@ panel from the ones above.
   every view, and the canvas follows a pick made in a view. Each one moves by `chooseSheet`
   (`web/src/sheetfollow.ts`). It stays on a sheet that draws the selection, switches to the first that
   does otherwise, and offers the others as chips. Then it centres on the highlight. The presenter's
-  `sheetToOpen` calls the same function, so a finding opens a sheet the same way.
+  `sheetToOpen` calls the same function, so a finding opens a sheet the same way. **A view showing the
+  board stays on the board** (agni issue 1481). Say the reader picks a DNP part, or one renumbered
+  after layout. `chooseSheet` marks the answer `absent`, and the view keeps its camera, lights
+  nothing of the selection and says "C7 is not on the board" in its bar. The canvas does the same
+  when it shows the board, through the `#board-absent-note` strip.
+- **A walk lights every view** (agni issue 1480). The presenter hands the walk's shades to
+  `SheetViews.setUnderlay` through `ViewSink.walkLit`, and each view lights them under its selection.
+  A walk row selects its net or part as a query cell does, so a board view centres on it. The pane
+  fetches the underlay and the selection as two overlay documents, and its reveal frames the last one
+  alone, so a click on one part does not zoom out to the whole walk.
 - **A view's link** is `follow`, `locked` or `off`. Locked views on the SAME sheet mirror pan and zoom.
   Two sheets have different frames, so the schematic and the board never share a camera. A WebGL view
   and an SVG view measure their centres in different units, so they do not lock either.
+- **An idle SVG view shows an image of its drawing** (agni issue 1482). Chrome layerizes every paint
+  chunk in the document on each frame, and an inline board adds thousands, so an idle board beside the
+  schematic slowed its pan. A second after the pointer leaves, `SvgView.park` serializes the drawing
+  into a blob `<img>` with the hidden layers' rules inside it, and sets the live `<svg>` to
+  `display: none`. The overlay stays live over the image. The pointer entering brings the drawing back,
+  and so do a reveal, an area and a pin's framing, since each one measures the drawing. A turn or a
+  layer change also makes a new image (`touch`). The canvas never parks.
 - **A view floats** through dockview's floating groups. With the `always` renderer its content then
   sits in a `dv-render-overlay-float` element, not inside the floating group's own container.
 - **A view turns** to match the board on the bench (agni issue 1327). It rotates by quarter turns and

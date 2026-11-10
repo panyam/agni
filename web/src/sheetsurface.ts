@@ -54,6 +54,11 @@ export class SheetSurface {
   private fromBelow = false;
   private hiddenGroups: number[] = [];
   private highlights: HighlightSpec[] = [];
+  // parkCss hides the board's hidden layers inside a parked image, where the scoped page rules never
+  // reach.
+  private parkCss = "";
+  // revealFrom is the first SVG overlay document a reveal frames.
+  private revealFrom = 0;
 
   onPick: ((sel: Selection) => void) | null = null;
   onPickEmpty: (() => void) | null = null;
@@ -75,6 +80,7 @@ export class SheetSurface {
     this.svg.onToggle = (sel) => this.onToggle?.(sel);
     this.svg.onViewChange = () => this.viewChanged();
     this.svg.onArea = (r) => {
+      this.svg.wake();
       const doc = parts.svgHost.querySelector("svg");
       if (doc) this.onArea?.(membersIn(doc, r));
     };
@@ -98,6 +104,12 @@ export class SheetSurface {
   private viewChanged(): void {
     this.profile?.input();
     this.onViewChange?.();
+  }
+
+  // parkWhenIdle lets the SVG drawing show as an image while nobody is using it (agni issue 1482),
+  // so an idle board beside the canvas adds nothing to the canvas's pan. Only a sheet view asks.
+  parkWhenIdle(idleMs: number): void {
+    this.svg.parkWhenIdle(() => this.parkCss, idleMs);
   }
 
   // setMode picks the renderer for the next sheet. Leaving WebGL frees a sheet view's GPU copy.
@@ -152,6 +164,14 @@ export class SheetSurface {
 
   setSvgOverlay(markup: string): void {
     this.svg.setOverlay(markup);
+    this.revealFrom = 0;
+  }
+
+  // setSvgOverlays stacks an underlay's overlay and a selection's, so reveal frames the selection
+  // alone (agni issue 1480).
+  setSvgOverlays(under: string, over: string): void {
+    this.svg.setOverlays([under, over]);
+    this.revealFrom = 1;
   }
 
   // setGhost draws another sheet's matches for specs over the WebGL drawing, as the visual diff's
@@ -161,9 +181,22 @@ export class SheetSurface {
   }
 
   // reveal frames the highlight on the drawing on screen. A pin frames the unit that draws it.
-  reveal(pin?: { ref: string; pin: string }): void {
-    if (this.drawnBy === "webgl") this.parts.gl(false)?.reveal(pin);
-    else this.svg.revealOverlay(pin);
+  //
+  // only names the specs to frame when more is lit than the selection, such as a walk under it. WebGL
+  // lights them alone for the reveal and lights everything again in the same turn, so no frame draws
+  // the difference.
+  reveal(pin?: { ref: string; pin: string }, only?: HighlightSpec[]): void {
+    if (this.drawnBy === "webgl") {
+      const gl = this.parts.gl(false);
+      if (!gl) return;
+      if (only) gl.setHighlights(only);
+      gl.reveal(pin);
+      if (only) gl.setHighlights(this.highlights);
+    } else {
+      // A reader looks at a view that moved for them, and a spec measures it, so it wakes.
+      this.svg.wake();
+      this.svg.revealOverlay(pin, this.revealFrom);
+    }
   }
 
   // getView and setView snapshot and restore the pan and zoom of one renderer. The value is opaque
@@ -205,6 +238,7 @@ export class SheetSurface {
       gl?.setStrata(this.strata, this.fromBelow);
       return;
     }
+    this.svg.touch();
     const doc = this.parts.svgHost.querySelector("svg");
     if (doc) orderStrata(doc, this.fromBelow);
     this.svg.setOrientation(this.orientation);
@@ -214,7 +248,9 @@ export class SheetSurface {
   // surface's SVG drawing and by packed group in WebGL (agni issues 1351, 1401).
   setBoardLayers(rows: BoardLayerRow[], hidden: ReadonlySet<string>): void {
     const h = layerHiding(rows, hidden, this.parts.layerScope);
+    this.svg.touch();
     this.parts.layerStyle.textContent = h.css;
+    this.parkCss = layerHiding(rows, hidden, "").css;
     this.hiddenGroups = h.groups;
     this.parts.gl(false)?.setHiddenGroups(h.groups);
   }
@@ -227,6 +263,7 @@ export class SheetSurface {
   // membersIn returns what a client rectangle holds on the drawing on screen.
   membersIn(r: { left: number; top: number; right: number; bottom: number }): Members | null {
     if (this.drawnBy === "webgl") return this.parts.gl(false)?.membersIn(r) ?? null;
+    this.svg.wake();
     const doc = this.parts.svgHost.querySelector("svg");
     return doc ? membersIn(doc, r as ClientRect) : null;
   }

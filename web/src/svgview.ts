@@ -25,6 +25,18 @@ export class SvgView {
   private orientation: Orientation = UPRIGHT;
   private readonly base: HTMLDivElement;
   private readonly overlay: HTMLDivElement;
+  // live is the drawing while an image of it stands in its place (park), and null otherwise. The
+  // drawing stays in the document with display none, so it adds no paint and a selector still finds
+  // it.
+  private live: SVGSVGElement | null = null;
+  private parkImage: HTMLImageElement | null = null;
+  // parkUrl is the image's blob URL, kept while the drawing is unchanged, so parking again after a
+  // follow reuses it rather than serializing a large board again.
+  private parkUrl = "";
+  // parking is set by parkWhenIdle. Without it the view never parks.
+  private parking: { css: () => string; idleMs: number } | null = null;
+  private parkTimer: ReturnType<typeof setTimeout> | null = null;
+  private pointerIn = false;
   private tx = 0;
   private ty = 0;
   private scale = 1;
@@ -86,6 +98,8 @@ export class SvgView {
   // overlay, which described the previous document. The caller re-fetches one framed for the new
   // sheet if highlights are active.
   setSvg(markup: string): void {
+    this.unpark();
+    this.dropParkImage();
     this.base.innerHTML = markup;
     this.overlay.innerHTML = "";
     this.applyOrientation();
@@ -93,6 +107,120 @@ export class SvgView {
     // it, and the resize refit is live again.
     this.touched = false;
     this.fit();
+    this.scheduleParking();
+  }
+
+  // parkWhenIdle lets this view show an image of its drawing while nobody is using it (agni issue
+  // 1482). An inline SVG board adds thousands of paint chunks, and Chrome layerizes every chunk in
+  // the document on each frame, so an idle board slowed the schematic's pan beside it. An <img> is
+  // one chunk. The view parks idleMs after the pointer leaves it and whenever it is touched with the
+  // pointer away, and wakes when the pointer enters. css returns rules that apply to the drawing,
+  // such as its hidden layers, since a page's styles never reach inside an image.
+  parkWhenIdle(css: () => string, idleMs: number): void {
+    this.parking = { css, idleMs };
+    this.host.addEventListener("pointerenter", () => {
+      this.pointerIn = true;
+      this.unpark();
+    });
+    this.host.addEventListener("pointerleave", () => {
+      this.pointerIn = false;
+      this.scheduleParking();
+    });
+    this.scheduleParking();
+  }
+
+  // wake puts the live drawing back for a caller about to measure it or move the camera, and parks
+  // again with the same image once the view is idle.
+  wake(): void {
+    this.unpark();
+    this.scheduleParking();
+  }
+
+  // touch says the drawing is about to change. It wakes the view and forgets the image.
+  touch(): void {
+    this.wake();
+    this.dropParkImage();
+  }
+
+  // parked says an image stands in for the drawing.
+  get parked(): boolean {
+    return this.live !== null;
+  }
+
+  private scheduleParking(): void {
+    if (!this.parking) return;
+    if (this.parkTimer) clearTimeout(this.parkTimer);
+    this.parkTimer = setTimeout(() => {
+      this.parkTimer = null;
+      void this.park();
+    }, this.parking.idleMs);
+  }
+
+  // park swaps the drawing for an image of it, once the image has decoded, so the view never shows
+  // a blank frame. The image is serialized from the drawing as it stands, so a board's draw order
+  // from below and its hidden layers come with it.
+  async park(): Promise<void> {
+    if (!this.parking || this.pointerIn || this.live || this.host.style.display === "none") return;
+    const svg = this.base.querySelector(":scope > svg") as SVGSVGElement | null;
+    if (!svg || svg.style.display === "none") return;
+    if (!this.parkImage) {
+      // The rules go in after the root's opening tag, as text, so the drawing on screen is never
+      // restyled to make the image.
+      const css = this.parking.css();
+      let text = new XMLSerializer().serializeToString(svg);
+      if (css) text = text.replace(/^(<svg\b[^>]*>)/, `$1<style><![CDATA[${css.split("]]>").join("")}]]></style>`);
+      this.parkUrl = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" }));
+      const img = svg.ownerDocument.createElement("img");
+      img.className = "svg-parked";
+      img.alt = "";
+      img.draggable = false;
+      img.width = svgLen(svg, "width") || 1;
+      img.height = svgLen(svg, "height") || 1;
+      img.style.display = "block";
+      img.src = this.parkUrl;
+      this.parkImage = img;
+    }
+    const img = this.parkImage;
+    try {
+      await img.decode?.();
+    } catch {
+      return;
+    }
+    // The reader came back, or the drawing changed, while the image decoded.
+    if (this.pointerIn || this.live || this.parkImage !== img || this.base.querySelector(":scope > svg") !== svg) return;
+    this.base.insertBefore(img, svg);
+    svg.style.display = "none";
+    this.live = svg;
+  }
+
+  // unpark puts the live drawing back in place of its image.
+  unpark(): void {
+    if (this.parkTimer) {
+      clearTimeout(this.parkTimer);
+      this.parkTimer = null;
+    }
+    if (!this.live) return;
+    this.live.style.display = "";
+    this.parkImage?.remove();
+    this.live = null;
+  }
+
+  private dropParkImage(): void {
+    if (this.parkUrl) URL.revokeObjectURL(this.parkUrl);
+    this.parkUrl = "";
+    this.parkImage = null;
+  }
+
+  // dispose stops parking and frees the image.
+  dispose(): void {
+    this.parking = null;
+    this.unpark();
+    this.dropParkImage();
+  }
+
+  // doc is the drawing, the live one while an image stands in for it.
+  private doc(): SVGSVGElement | null {
+    return this.base.querySelector(":scope > svg") as SVGSVGElement | null;
   }
 
   // setOverlay stacks a transparent SVG document (a HighlightSheet overlay, framed like the
@@ -118,7 +246,7 @@ export class SvgView {
   // stats counts the drawable elements in the current SVG, for a readout comparable to the WebGL
   // primitive count. SVG has no vertex buffer, so it reports element count rather than vertices.
   stats(): { elements: number } {
-    const svg = this.base.querySelector("svg");
+    const svg = this.doc();
     if (!svg) return { elements: 0 };
     return { elements: svg.querySelectorAll("path, line, rect, circle, ellipse, polyline, polygon, text").length };
   }
@@ -139,17 +267,25 @@ export class SvgView {
   // A pin's highlight is a dot at the pin's tip. Passing the pin frames the unit of its part that
   // draws it instead, since a part drawn at the end of a long leg sits outside a window sized to a
   // dot (agni issue 1419).
-  revealOverlay(pin?: { ref: string; pin: string }): SvgViewState | null {
+  //
+  // from skips the overlay documents before it, so a view lighting a walk under a selection frames
+  // the selection alone (agni issue 1480).
+  revealOverlay(pin?: { ref: string; pin: string }, from = 0): SvgViewState | null {
     let box: RevealBox | null = null;
     // Each drawn element is measured on its own. An <svg>'s own getBBox leaves out a child with no
     // size, and a pin's highlight is a point, a box with no size (agni issue 1326). computeReveal
     // frames a point with its minimum extent.
-    for (const el of this.overlay.querySelectorAll(":scope > svg > *")) {
+    const docs = [...this.overlay.querySelectorAll(":scope > svg")].slice(from);
+    for (const el of docs.flatMap((d) => [...d.children])) {
       const b = measure(el);
       if (b) box = box ? union(box, b) : b;
     }
     if (!box) return null;
-    if (pin) box = this.unitOfPin(box, pin.ref, pin.pin);
+    // A pin is framed by measuring its part on the drawing, which an image cannot answer.
+    if (pin) {
+      this.wake();
+      box = this.unitOfPin(box, pin.ref, pin.pin);
+    }
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
     const { w, h } = this.docSize();
@@ -247,13 +383,13 @@ export class SvgView {
   }
 
   private docSize(): { w: number; h: number } {
-    const svg = this.base.querySelector("svg");
+    const svg = this.doc();
     return { w: svgLen(svg, "width") || 1, h: svgLen(svg, "height") || 1 };
   }
 
   // fit scales the oriented SVG to contain within the host and centers it.
   private fit(): void {
-    const svg = this.base.querySelector("svg");
+    const svg = this.doc();
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
     const turned = orientedSize(this.orientation, svgLen(svg, "width") || hw, svgLen(svg, "height") || hh);

@@ -5,6 +5,7 @@ import { SheetPane, type SheetPaneDeps } from "./sheetpane.js";
 import type { SurfaceMode } from "./sheetsurface.js";
 import { lockedPeers } from "./sheetfollow.js";
 import type { Selection } from "./selection.js";
+import type { HighlightSpec } from "./highlights.js";
 
 // SheetViewDock is what the manager asks of the dock.
 export interface SheetViewDock {
@@ -26,6 +27,8 @@ type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn
 export class SheetViews {
   private readonly panes = new Map<string, SheetPane>();
   private next = 1;
+  // underlay is the page's highlight that every view lights under its selection, such as a walk.
+  private underlay: HighlightSpec[] = [];
 
   constructor(
     private readonly dock: SheetViewDock,
@@ -63,6 +66,7 @@ export class SheetViews {
       pane.dispose();
       this.panes.delete(id);
     });
+    if (this.underlay.length > 0) await pane.setUnderlay(this.underlay);
     await pane.open(sheetId);
     return pane;
   }
@@ -73,6 +77,13 @@ export class SheetViews {
     await Promise.all(
       [...this.panes.values()].map((p) => (p.id === pickedIn && sel ? p.lightPick(sel) : p.follow(sel))),
     );
+  }
+
+  // setUnderlay lights specs in every view under its selection, and in each view opened later (agni
+  // issue 1480). An empty list takes it away.
+  async setUnderlay(specs: HighlightSpec[]): Promise<void> {
+    this.underlay = specs;
+    await Promise.all([...this.panes.values()].map((p) => p.setUnderlay(specs)));
   }
 
   // close closes one view. It returns false when no open view has that id.
@@ -94,6 +105,7 @@ export class SheetViews {
     for (const id of [...this.panes.keys()]) this.dock.close(id);
     for (const p of this.panes.values()) p.dispose();
     this.panes.clear();
+    this.underlay = [];
   }
 
   list(): SheetPane[] {

@@ -10,7 +10,7 @@ import type { SvgView, SvgViewState } from "./svgview.js";
 import { SheetSurface, type SurfaceMode } from "./sheetsurface.js";
 import { CanvasComponent } from "./canvas.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
-import { pinOf, type Selection } from "./selection.js";
+import { labelFor, pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from "./orient.js";
@@ -123,7 +123,14 @@ export interface SheetPaneDeps {
   renderer?: () => SurfaceMode;
   // gl builds the WebGL drawing when the reader turns WebGL on. glDrawing when unset.
   gl?: GlFactory;
+  // parkAfterMs is how long an SVG drawing sits idle before an image stands in for it. PARK_AFTER_MS
+  // when unset.
+  parkAfterMs?: number;
 }
+
+// PARK_AFTER_MS is how long a view's SVG drawing sits with the pointer away before the view shows
+// an image of it (agni issue 1482).
+export const PARK_AFTER_MS = 1000;
 
 export class SheetPane {
   readonly element: HTMLElement;
@@ -151,7 +158,13 @@ export class SheetPane {
   private turn: ViewTurn = { orientation: UPRIGHT };
   private readonly linkSelect: HTMLSelectElement;
   private readonly also: HTMLElement;
+  // absentNote says the board does not place the selection, on a view that keeps the board.
+  private readonly absentNote: HTMLElement;
   private sel: Selection | null = null;
+  // absent is set while the board view stays on the board without the selection, so it lights none.
+  private absent = false;
+  // underlay is the page's highlight under the selection's, such as a walk's shades (agni issue 1480).
+  private underlay: HighlightSpec[] = [];
   // drawnOn is the last answer to where the selection is drawn, so a chip can offer the rest.
   private drawnOnLast: string[] = [];
   // drawing counts renders, so a late answer for a sheet the reader has left draws nothing.
@@ -245,6 +258,7 @@ export class SheetPane {
     close.addEventListener("click", () => this.deps.onClose(this));
     bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
+    this.absentNote = el("span", "sheetview-absent");
     // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
     // panel does (#view, #text-overlay, #svg-view).
     const stage = el("div", "sheetview-stage");
@@ -282,6 +296,7 @@ export class SheetPane {
     this.surface.onPickEmpty = () => this.deps.onPickEmpty(this);
     this.surface.onViewChange = () => this.deps.onViewChange(this, this.surface.svg.getView());
     this.surface.setMode(this.deps.renderer?.() ?? "svg");
+    this.surface.parkWhenIdle(this.deps.parkAfterMs ?? PARK_AFTER_MS);
     this.webglBox.checked = this.surface.mode === "webgl";
   }
 
@@ -382,6 +397,7 @@ export class SheetPane {
   // it when its own does not, and centres on it. A view that is off lights it where it is drawn.
   async follow(sel: Selection | null): Promise<void> {
     this.sel = sel;
+    this.setAbsent(null);
     if (!sel || this.link === "off") {
       this.drawnOnLast = [];
       this.offer([]);
@@ -399,13 +415,34 @@ export class SheetPane {
     this.drawnOnLast = drawnOn;
     if (choice.open) await this.open(choice.open);
     if (this.sel !== sel) return;
-    this.offer(choice.others);
+    this.offer(choice.others, choice.absent ? "drawn on " : "also on ");
+    if (choice.absent) {
+      this.setAbsent(sel);
+      await this.paint(false);
+      return;
+    }
     await this.paint(true);
+  }
+
+  // setUnderlay lays the page's highlight under the selection's in this view, and an empty list
+  // takes it away.
+  async setUnderlay(specs: HighlightSpec[]): Promise<void> {
+    this.underlay = specs;
+    await this.paint(false);
+  }
+
+  // setAbsent states that the board does not place sel, or clears the note when sel is null.
+  private setAbsent(sel: Selection | null): void {
+    this.absent = sel !== null;
+    this.absentNote.textContent = sel ? `${labelFor(sel)} is not on the board` : "";
+    if (sel) this.also.prepend(this.absentNote);
+    else this.absentNote.remove();
   }
 
   // lightPick takes a selection picked in this view, which it lights and does not move to.
   async lightPick(sel: Selection): Promise<void> {
     this.sel = sel;
+    this.setAbsent(null);
     this.drawnOnLast = [];
     this.offer([]);
     await this.paint(false);
@@ -413,32 +450,33 @@ export class SheetPane {
 
   private async paint(reveal: boolean): Promise<void> {
     const sel = this.sel;
-    const specs = sel ? this.deps.specs(sel) : [];
+    const underlay = this.underlay;
+    const own = sel && !this.absent ? this.deps.specs(sel) : [];
+    const specs = [...underlay, ...own];
     this.surface.setHighlights(specs);
     if (!this.sheet || specs.length === 0) {
       this.surface.setSvgOverlay("");
       return;
     }
-    // WebGL lights the specs against the keys it holds, and only an SVG drawing needs the overlay.
+    // WebGL lights the specs against the keys it holds, and only an SVG drawing needs the overlay. An
+    // underlay with a selection over it comes as two documents, so a reveal frames the selection.
+    const split = underlay.length > 0 && own.length > 0;
     if (this.surface.drawnBy === "svg") {
-      let markup = "";
-      try {
-        markup = await this.deps.overlay(this.sheet, specs);
-      } catch {
-        markup = "";
-      }
-      if (this.sel !== sel) return;
-      this.surface.setSvgOverlay(markup);
+      const fetch = (s: HighlightSpec[]) => this.deps.overlay(this.sheet, s).catch(() => "");
+      const [under, over] = split ? await Promise.all([fetch(underlay), fetch(own)]) : ["", await fetch(specs)];
+      if (this.sel !== sel || this.underlay !== underlay) return;
+      if (split) this.surface.setSvgOverlays(under, over);
+      else this.surface.setSvgOverlay(over);
     }
-    if (reveal && sel) this.surface.reveal(pinOf(sel));
+    if (reveal && sel && !this.absent) this.surface.reveal(pinOf(sel), split ? own : undefined);
   }
 
   // offer names the other sheets that draw the selection, each a button that opens it.
-  private offer(others: string[]): void {
+  private offer(others: string[], lead = "also on "): void {
     this.also.replaceChildren();
     if (others.length === 0) return;
     const doc = this.element.ownerDocument;
-    this.also.append(doc.createTextNode("also on "));
+    this.also.append(doc.createTextNode(lead));
     for (const id of others) {
       const b = doc.createElement("button");
       b.type = "button";
@@ -498,6 +536,7 @@ export class SheetPane {
 
   // dispose unmounts the layer list and frees the WebGL drawing, for a view the dock has closed.
   dispose(): void {
+    this.surface.svg.dispose();
     this.layerList.island.deactivate();
     this.gl?.dispose();
     this.gl = null;

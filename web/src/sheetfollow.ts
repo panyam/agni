@@ -13,16 +13,24 @@ export type Link = "follow" | "locked" | "off";
 
 export const LINKS: readonly Link[] = ["follow", "locked", "off"];
 
+// BOARD is the board's sheet id.
+export const BOARD = "board";
+
 // SheetChoice is what a view does about a selection drawn on `drawnOn`. open is the sheet to switch
-// to, or "" to stay. others are the sheets that also draw it, for the view to offer.
+// to, or "" to stay. others are the sheets that also draw it, for the view to offer. absent says the
+// view stays on the board though the board does not place the selection.
 export interface SheetChoice {
   open: string;
   others: string[];
+  absent?: true;
 }
 
 // chooseSheet stays when the shown sheet draws the selection, and otherwise opens the first sheet
-// that does, in the design's order. Nothing drawn anywhere stays put with nothing to offer.
+// that does, in the design's order. Nothing drawn anywhere stays put with nothing to offer. A view
+// showing the board never leaves it for a schematic sheet (agni issue 1481), because a reader who put
+// the board there wants the board. It stays, marked absent, and offers the sheets that draw the part.
 export function chooseSheet(current: string, drawnOn: readonly string[]): SheetChoice {
+  if (current === BOARD && !drawnOn.includes(BOARD)) return { open: "", others: [...drawnOn], absent: true };
   if (drawnOn.length === 0) return { open: "", others: [] };
   if (drawnOn.includes(current)) return { open: "", others: drawnOn.filter((s) => s !== current) };
   return { open: drawnOn[0], others: drawnOn.slice(1) };

@@ -17,6 +17,20 @@ describe("which sheet a view shows for a selection", () => {
   it("stays with nothing to offer when nothing draws it", () => {
     expect(chooseSheet("s1", [])).toEqual({ open: "", others: [] });
   });
+
+  // A view showing the board keeps the board when the board does not place the part (agni issue
+  // 1481), and offers the sheets that draw it instead.
+  it("keeps the board when the board does not place it, and says it is absent", () => {
+    expect(chooseSheet("board", ["s1", "s2"])).toEqual({ open: "", others: ["s1", "s2"], absent: true });
+  });
+
+  it("keeps the board with nothing to offer when nothing draws it", () => {
+    expect(chooseSheet("board", [])).toEqual({ open: "", others: [], absent: true });
+  });
+
+  it("stays on the board when the board places it", () => {
+    expect(chooseSheet("board", ["s1", "board"])).toEqual({ open: "", others: ["s1"] });
+  });
 });
 
 describe("which views a locked camera mirrors", () => {
