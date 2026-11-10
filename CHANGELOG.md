@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-10
+
+Every board layer draws in KiCad's colour (PR 1476). Each side's silkscreen, fab and courtyard has a
+colour of its own, and an inner copper layer takes KiCad's colour for its number. `render.Style`
+renames its silk and fab fields. The full write-up is [RELEASES/v0.6.6.md](RELEASES/v0.6.6.md).
+
 ## [0.6.5] - 2026-11-10
 
 KiCad text draws where KiCad draws it. A KiCad 6 or 7 sheet hides its hidden fields (PR 1473). Board
