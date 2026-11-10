@@ -18,12 +18,16 @@ function setup(drawnOn: string[] = ["s1"]) {
     },
   };
   const asked: string[] = [];
+  const lit: { sheet: string; specs: unknown[] }[] = [];
   const views = new SheetViews(
     dock,
     {
       sheets: () => [{ id: "s1", name: "Root" }, { id: "board", name: "Board" }],
       render: async (id) => ({ svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: [] }),
-      overlay: async () => "<svg width='100' height='100'><circle r='1'/></svg>",
+      overlay: async (sheet, specs) => {
+        lit.push({ sheet, specs });
+        return "<svg width='100' height='100'><circle r='1'/></svg>";
+      },
       drawnOn: async (sel) => {
         asked.push(sel.ref ?? "");
         return drawnOn;
@@ -32,7 +36,7 @@ function setup(drawnOn: string[] = ["s1"]) {
     },
     { onPick: vi.fn(), onPickEmpty: vi.fn() },
   );
-  return { views, dock, docked, asked };
+  return { views, dock, docked, asked, lit };
 }
 
 const U1: Selection = { kind: "component", ref: "U1" };
@@ -44,6 +48,23 @@ describe("the sheet views beside the canvas", () => {
     const b = await views.open("board");
     expect([a.id, b.id]).toEqual(["sheetview-1", "sheetview-2"]);
     expect([...docked.keys()]).toEqual(["sheetview-1", "sheetview-2"]);
+  });
+
+  // A walk lights every view beside the canvas, and a view opened during the walk (agni issue 1480).
+  it("lights the page's underlay in every open view and in a view opened after it", async () => {
+    const { views, lit } = setup();
+    await views.open("s1");
+    await views.open("board");
+    const walk = { nets: ["SDA"] };
+    await views.setUnderlay([walk] as never);
+    expect(lit.filter((l) => l.specs.includes(walk)).map((l) => l.sheet).sort()).toEqual(["board", "s1"]);
+    lit.length = 0;
+    await views.open("board");
+    expect(lit.filter((l) => l.specs.includes(walk)).map((l) => l.sheet)).toEqual(["board"]);
+    views.reset();
+    lit.length = 0;
+    await views.open("s1");
+    expect(lit).toEqual([]);
   });
 
   it("lets the view a pick came from light it, and the others follow it", async () => {

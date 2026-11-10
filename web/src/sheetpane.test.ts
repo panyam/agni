@@ -99,6 +99,72 @@ describe("a sheet view", () => {
     expect(calls.drawnOn).toEqual([false, true]);
   });
 
+  // A view showing the board keeps it when the board does not place the part (agni issue 1481).
+  it("stays on the board when the board does not place the part, and says so", async () => {
+    const { p, deps } = pane(["s2"]);
+    const lit: HighlightSpec[][] = [];
+    await p.open("board");
+    const surface = p.surface;
+    const set = surface.setHighlights.bind(surface);
+    surface.setHighlights = (specs) => {
+      lit.push(specs);
+      set(specs);
+    };
+    await p.follow({ kind: "component", ref: "C7" });
+    expect(shown(p)).toBe("board");
+    expect(p.element.querySelector(".sheetview-absent")?.textContent).toBe("C7 is not on the board");
+    expect(lit[lit.length - 1]).toEqual([]);
+    expect(p.element.querySelector(".highlight-overlay svg")).toBeNull();
+    expect(chips(p)).toEqual(["Power"]);
+    expect(deps.onOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops the not-on-the-board note once the board places the selection", async () => {
+    const { p, deps } = pane(["s2"]);
+    await p.open("board");
+    await p.follow({ kind: "component", ref: "C7" });
+    deps.drawnOn = async () => ["board"];
+    await p.follow(U1);
+    expect(shown(p)).toBe("board");
+    expect(p.element.querySelector(".sheetview-absent")?.textContent ?? "").toBe("");
+    expect(p.element.querySelector(".highlight-overlay svg")).not.toBeNull();
+  });
+
+  // A walk's shades reach every view, under the selection (agni issue 1480).
+  it("lights the page's underlay with nothing selected, and the selection over it", async () => {
+    const { p, deps } = pane(["s1"]);
+    const asked: HighlightSpec[][] = [];
+    deps.overlay = async (_id, specs) => {
+      asked.push(specs);
+      return `<svg width="100" height="100"><circle r="1"/></svg>`;
+    };
+    const walk = { nets: ["N1"] } as unknown as HighlightSpec;
+    await p.open("s1");
+    await p.setUnderlay([walk]);
+    expect(asked[asked.length - 1]).toEqual([walk]);
+    expect(p.element.querySelector(".highlight-overlay svg")).not.toBeNull();
+    await p.follow(U1);
+    // The underlay and the selection come as two documents, so a reveal frames the selection alone.
+    expect(asked.slice(-2)).toEqual([[walk], [{ components: ["U1"] }]]);
+    expect(p.element.querySelectorAll(".highlight-overlay > svg").length).toBe(2);
+    await p.setUnderlay([]);
+    expect(asked[asked.length - 1]).toEqual([{ components: ["U1"] }]);
+  });
+
+  it("keeps the underlay lit on the board when the board does not place the selection", async () => {
+    const { p, deps } = pane(["s2"]);
+    const asked: HighlightSpec[][] = [];
+    deps.overlay = async (_id, specs) => {
+      asked.push(specs);
+      return `<svg width="100" height="100"><circle r="1"/></svg>`;
+    };
+    const walk = { nets: ["N1"] } as unknown as HighlightSpec;
+    await p.open("board");
+    await p.setUnderlay([walk]);
+    await p.follow({ kind: "component", ref: "C7" });
+    expect(asked[asked.length - 1]).toEqual([walk]);
+  });
+
   it("lights a selection where it is drawn, and never moves, when its link is off", async () => {
     const { p, calls } = pane(["s3"]);
     await p.open("s1");

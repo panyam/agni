@@ -63,7 +63,7 @@ import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
 import { hierarchyStrip } from "./hierarchy.js";
 import { drawingStrip } from "./drawingnote.js";
-import { pinOf, selectionFromCell, type Selection } from "./selection.js";
+import { labelFor, pinOf, selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
@@ -170,6 +170,9 @@ class AppRoot extends BaseComponent {
       pageFlattens(window.location.search) ? undefined : () => window.location.assign(withFlatten(window.location.pathname + window.location.search)),
     );
     const setDrawingNote = drawingStrip(document.getElementById("drawing-note"));
+    // The canvas keeps the board when the board does not place a part picked in a sheet view (agni
+    // issue 1481), and this strip says so until the next selection or sheet.
+    const setBoardAbsentNote = drawingStrip(document.getElementById("board-absent-note"));
     const readoutEl = document.getElementById("readout");
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
     // wiring is deferred to the end of this method because it needs the query panel, which is built
@@ -597,6 +600,7 @@ class AppRoot extends BaseComponent {
       onSelect: (focus) => {
         const from = pickedIn;
         pickedIn = "";
+        setBoardAbsentNote(null);
         // An agent hears which view the reader picked in (agni issue 1370), so it can tell a pick on
         // the board view from one on the schematic.
         roomTab?.select(focus, from || CANVAS_VIEW);
@@ -623,7 +627,12 @@ class AppRoot extends BaseComponent {
     // centres on it. A pick on the canvas itself does not move the canvas.
     const followOnCanvas = async (sel: Selection): Promise<void> => {
       const current = presenter.currentSheetId();
-      const { open } = chooseSheet(current, await drawnOnFor(sel, current === "board"));
+      const { open, absent } = chooseSheet(current, await drawnOnFor(sel, current === "board"));
+      if (absent) {
+        await presenter.releaseFocus();
+        setBoardAbsentNote(`${labelFor(sel)} is not on the board`);
+        return;
+      }
       if (open) await presenter.showSheet(open);
       if (sel.kind === "area") await presenter.locateArea(sel);
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
@@ -763,7 +772,13 @@ class AppRoot extends BaseComponent {
       // The walk outwards from one part shows above the two-pin trace (agni issue 1341).
       walk: {
         onWalk: (r) => void presenter.runWalk(r),
-        onLocate: (kind, name, sheet) => void presenter.locateInWalk(kind, name, sheet || undefined),
+        // A located row is also selected, as a query cell is, so a board view beside the canvas
+        // centres on the part or lights the net (agni issue 1480).
+        onLocate: (kind, name, sheet) => {
+          void presenter.locateInWalk(kind, name, sheet || undefined);
+          const sel = selectionFromCell(kind, name);
+          if (sel) propertiesPresenter.selectEntity(sel);
+        },
         onClear: () => void presenter.clearWalk(),
       },
     });
@@ -870,7 +885,10 @@ class AppRoot extends BaseComponent {
         undrawnNote: setUndrawnNote,
         staleLinkNote: setStaleLinkNote,
         hierarchyNote: setHierarchyNote,
-        drawingNote: setDrawingNote,
+        drawingNote: (note) => {
+          setDrawingNote(note);
+          setBoardAbsentNote(null);
+        },
         rules: rules.view,
         report: (report) => propertiesPresenter.setReport(report),
         // A saved report goes to the visitor's machine as a download, and its rows link back to this
@@ -896,6 +914,7 @@ class AppRoot extends BaseComponent {
         coverage: coverage.view,
         trace: trace.view,
         walk: trace.view,
+        walkLit: (specs) => void sheetViews.setUnderlay(specs),
         reveal: () => surface.reveal(),
         review: review.view,
         conventionBar: conventionBar.view,

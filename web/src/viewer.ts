@@ -193,6 +193,9 @@ export interface ViewSink {
   // walk receives each walk outwards from a part (agni issue 1341), shown in the Trace tab. Optional
   // like trace; runWalk no-ops when the host left it out.
   walk?: WalkView;
+  // walkLit hears the walk's shades whenever the walk changes, so the sheet views beside the canvas
+  // light it too (agni issue 1480). An empty list says no walk is lit.
+  walkLit?: (specs: HighlightSpec[]) => void;
   // reveal zooms the canvas to the highlight on screen, as the host does after a locate. runWalk calls
   // it with the start alone lit, so the view zooms to the start before the walk is drawn around it.
   reveal?: () => void;
@@ -1878,6 +1881,7 @@ export class ViewerPresenter {
     this.walkState = state;
     this.walked = req;
     this.syncLocation();
+    this.views.walkLit?.(walkSpecs(state));
     this.views.showPanel?.("trace");
     if (state.reason) return;
     if (this.mode === "native") await this.setMode("svg");
@@ -1908,6 +1912,7 @@ export class ViewerPresenter {
     this.walkState = emptyWalk();
     this.views.walk?.setWalk(emptyWalk());
     this.syncLocation();
+    this.views.walkLit?.([]);
     await this.setHighlights([]);
   }
 

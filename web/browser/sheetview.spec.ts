@@ -2,10 +2,12 @@
 // layout and no elementFromPoint, so only a browser shows that a pick in one view lights and centres
 // the same part in the other, in either direction, and that a view keeps following once it floats.
 
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";
+
+const base = (): string => inject("baseUrl");
 
 let browser: Browser;
 beforeAll(async () => {
@@ -119,6 +121,158 @@ describe("a sheet view beside the canvas", () => {
       await picked(page, second.ref);
       await page.waitForTimeout(1500);
       expect(await page.$eval(`${PANE} .sheetview-canvas > div`, (d) => (d as HTMLElement).style.transform)).toBe(before);
+    });
+  }, 120_000);
+
+  // A board view keeps the board when the board does not place the part (agni issue 1481). Every part
+  // of the gateway is on its board, so the page's LocateSubjects answer for one part leaves the board
+  // out, as the engine answers for a DNP part or one renumbered after layout.
+  const withoutBoard = async (page: Page, ref: string) => {
+    await page.route("**/LocateSubjects", async (route) => {
+      const body = route.request().postData() ?? "";
+      if (!body.includes(`"${ref}"`)) return route.continue();
+      const resp = await route.fetch();
+      const json = (await resp.json()) as { subjects?: { sheetIds?: string[] }[] };
+      for (const s of json.subjects ?? []) s.sheetIds = (s.sheetIds ?? []).filter((id) => id !== "board");
+      await route.fulfill({ response: resp, json });
+    });
+  };
+
+  it("stays on the board when the board does not place the part, and says so", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut/designs/gateway");
+      await openBeside(page, "Board");
+      const absent = await firstClear(page, "#svg-view");
+      await withoutBoard(page, absent.ref);
+      await page.mouse.click(absent.x, absent.y);
+      await picked(page, absent.ref);
+      await page.waitForFunction(
+        ({ pane, want }) => document.querySelector(`${pane} .sheetview-absent`)?.textContent === want,
+        { pane: PANE, want: `${absent.ref} is not on the board` },
+        { timeout: 30_000 },
+      );
+      expect(await page.$eval(`${PANE} .sheetview-sheet`, (s) => (s as HTMLSelectElement).value)).toBe("board");
+      expect(await page.$$eval(`${PANE} .highlight-overlay svg *`, (els) => els.length)).toBe(0);
+
+      // A part the board places still centres there, and the note goes.
+      const placed = await firstClear(page, "#svg-view", [absent.ref]);
+      await page.mouse.click(placed.x, placed.y);
+      await picked(page, placed.ref);
+      await lit(page, `${PANE} .sheetview-canvas`);
+      expect(await page.$eval(`${PANE} .sheetview-sheet`, (s) => (s as HTMLSelectElement).value)).toBe("board");
+      expect(await page.$$eval(`${PANE} .sheetview-absent`, (els) => els.length)).toBe(0);
+    });
+  }, 120_000);
+
+  it("keeps the board on the canvas when a part picked beside it is not on the board", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut/designs/gateway");
+      const schematic = (await page.locator(".sheet-tile.active .sheet-tile-name").textContent()) ?? "";
+      await openBeside(page, schematic);
+      await page.locator(".sheet-tile", { hasText: /^Board$/ }).click();
+      await page.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "Board", null, { timeout: 30_000 });
+      await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
+      const absent = await firstClear(page, `${PANE} .sheetview-canvas`);
+      await withoutBoard(page, absent.ref);
+      await page.mouse.click(absent.x, absent.y);
+      await picked(page, absent.ref);
+      await page.waitForFunction((want) => document.querySelector("#board-absent-note")?.textContent === want, `${absent.ref} is not on the board`, { timeout: 30_000 });
+      expect(await page.locator(".sheet-tile.active .sheet-tile-name").textContent()).toBe("Board");
+    });
+  }, 120_000);
+
+  // A walk lights the board beside the schematic, and a walk row moves the board view (agni issue 1480).
+  it("lights a walk on the board beside the canvas, and a walk row moves the board there", async () => {
+    await withPage(browser, async (page) => {
+      const boardSpecs: string[] = [];
+      await page.route("**/HighlightSheet", (route) => {
+        const body = route.request().postData() ?? "";
+        if (body.includes('"sheet":"board"')) boardSpecs.push(body);
+        return route.continue();
+      });
+      await page.goto(`${base()}/designs/tut/designs/gateway/view?walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
+      await page.waitForSelector(".walk-net-name", { timeout: 30_000 });
+      const net = (await page.locator(".walk-net").first().getAttribute("data-walk-net"))!;
+      await openBeside(page, "Board");
+      await lit(page, `${PANE} .sheetview-canvas`);
+      await expect.poll(() => boardSpecs.some((b) => b.includes(`"${net}"`)), { timeout: 30_000 }).toBe(true);
+
+      // A part row selects the part, and the board view centres its footprint.
+      const part = page.locator(".walk-net .walk-part").first();
+      const ref = (await part.textContent())!.trim().split(/[\s.]/)[0];
+      await part.click();
+      await picked(page, ref);
+      await page.waitForFunction(
+        ({ pane, ref }) => {
+          const e = document.querySelector(`${pane} .picks-front [data-ref="${ref}"]`)?.getBoundingClientRect();
+          const h = document.querySelector(`${pane} .sheetview-canvas`)!.getBoundingClientRect();
+          if (!e) return false;
+          const cx = e.left + e.width / 2;
+          return cx > h.left + h.width / 3 && cx < h.right - h.width / 3;
+        },
+        { pane: PANE, ref },
+        { timeout: 30_000 },
+      );
+
+      // A net row lights that net on the board, over the walk.
+      boardSpecs.length = 0;
+      const other = page.locator(".walk-net").nth(1);
+      const otherNet = (await other.getAttribute("data-walk-net"))!;
+      await other.locator(".walk-net-name").click();
+      await picked(page, otherNet);
+      await expect.poll(() => boardSpecs.some((b) => b.includes(`"${otherNet}"`) && b.includes(`"${net}"`)), { timeout: 30_000 }).toBe(true);
+    });
+  }, 120_000);
+
+  // An idle SVG board shows an image of itself, so it adds nothing to the canvas's pan (agni issue
+  // 1482). A pick, a highlight and a hidden layer still work on it.
+  it("shows an image of an idle board, and a pick, a highlight and a hidden layer still work", async () => {
+    await withPage(browser, async (page) => {
+      const parkedSrc = () => page.$eval(`${PANE} img.svg-parked`, (i) => (i as HTMLImageElement).src).catch(() => "");
+      const away = async () => {
+        const b = (await page.locator("#svg-view").boundingBox())!;
+        await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+      };
+      const parks = () =>
+        page.waitForFunction(
+          (pane) => {
+            const img = document.querySelector(`${pane} img.svg-parked`) as HTMLImageElement | null;
+            const svg = document.querySelector(`${pane} img.svg-parked + svg`) as SVGElement | null;
+            return !!img && img.complete && img.naturalWidth > 0 && svg?.style.display === "none";
+          },
+          PANE,
+          { timeout: 30_000 },
+        );
+      await openViewer(page, "tut/designs/gateway");
+      await openBeside(page, "Board");
+      await away();
+      await parks();
+      const first = await parkedSrc();
+
+      // A pick on the schematic lights the part on the parked board.
+      const part = await firstClear(page, "#svg-view");
+      await page.mouse.click(part.x, part.y);
+      await picked(page, part.ref);
+      await lit(page, `${PANE} .sheetview-canvas`);
+      await parks();
+      expect(await parkedSrc()).toBe(first);
+
+      // The pointer over the board brings the drawing back, and a click there picks.
+      const box = (await page.locator(`${PANE} .sheetview-canvas`).boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForFunction((pane) => !document.querySelector(`${pane} img.svg-parked`), PANE, { timeout: 30_000 });
+      const pad = `${PANE} [data-kind="pin"][data-ref="${part.ref}"]`;
+      const pin = await page.$eval(pad, (e) => e.getAttribute("data-pin")!);
+      await page.mouse.click(...(Object.values(await centreOf(page, `${pad}[data-pin="${pin}"]`)) as [number, number]));
+      await picked(page, `${part.ref}.${pin}`);
+
+      // A hidden layer makes a new image once the board is idle again.
+      await page.locator(`${PANE} [data-action="layers"]`).click();
+      await page.locator(`${PANE} .board-layer-row`, { has: page.locator('input[aria-label="F.Cu"]') }).click();
+      await page.locator(`${PANE} [data-action="layers"]`).click();
+      await away();
+      await parks();
+      expect(await parkedSrc()).not.toBe(first);
     });
   }, 120_000);
 });
