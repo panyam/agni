@@ -225,10 +225,14 @@ async function panZoom(page: Page, mode: Mode, within = ""): Promise<FrameSummar
   return summarize(frames);
 }
 
-// anchors reads every label drawn once in a mode, as the client point of its text anchor.
+// anchors reads every label drawn in a mode, as the client point of its text anchor. A board draws
+// a designator on its silkscreen and again on its fab layer, so a text can repeat. The two modes
+// differ by a scale and an offset on each axis, which keeps the order along x, so the copies of one
+// text are keyed by their rank along x and their count. A text with two copies nearly level in x
+// could swap ranks between the modes, so it is left out.
 async function anchors(page: Page, mode: Mode): Promise<Map<string, Point>> {
   const entries = await page.evaluate((sel) => {
-    const seen = new Map<string, [number, number] | null>();
+    const seen = new Map<string, [number, number][]>();
     const view = document.querySelector(sel.view)!.getBoundingClientRect();
     // The SVG host holds the drawn sheet's <svg> and the highlight overlay's, and only the first is
     // the sheet.
@@ -243,9 +247,15 @@ async function anchors(page: Page, mode: Mode): Promise<Map<string, Point>> {
       const y = t.y.baseVal.numberOfItems ? t.y.baseVal.getItem(0).value : 0;
       const px = ctm.a * x + ctm.c * y + ctm.e, py = ctm.b * x + ctm.d * y + ctm.f;
       if (px < view.left || px > view.right || py < view.top || py > view.bottom) continue;
-      seen.set(s, seen.has(s) ? null : [px, py]);
+      seen.set(s, [...(seen.get(s) ?? []), [px, py]]);
     }
-    return [...seen].filter((e): e is [string, [number, number]] => e[1] !== null);
+    const out: [string, [number, number]][] = [];
+    for (const [s, ps] of seen) {
+      ps.sort((a, b) => a[0] - b[0]);
+      if (ps.some((p, i) => i > 0 && p[0] - ps[i - 1][0] < 4)) continue;
+      ps.forEach((p, i) => out.push([`${s}#${i}/${ps.length}`, p]));
+    }
+    return out;
   }, mode === "svg" ? { view: SVG, svg: true } : { view: CANVAS, svg: false });
   return new Map(entries);
 }

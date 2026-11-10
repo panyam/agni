@@ -62,6 +62,11 @@ message BoardText {
   string justify = 7;       // horizontal justify verbatim: "left" / "right" / "" (center)
   string ref_des = 8;       // owning placement's ref for footprint text; "" for free text
   string kind = 9;          // source role: "reference" | "value" | "user" | "gr"
+  // font names the face the source tool draws the text in, when a renderer can match it. "" is the
+  // renderer's own font. "kicad_stroke" is KiCad's built-in stroke font, whose advances the board
+  // renderers know, so a run starts and ends where KiCad draws it.
+  string font = 10;
+  int64 thickness = 11;     // stroke width in source units (unit_nm); 0 when the source gives none
 }
 
 // BoardGraphic is one piece of non-copper board artwork. It may be a footprint's silkscreen or

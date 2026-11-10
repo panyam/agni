@@ -209,12 +209,17 @@ export class TextOverlay {
         t.setAttribute("fill", l.color);
         t.setAttribute("text-anchor", labelAnchor(l.justify));
         t.setAttribute("dominant-baseline", labelBaseline(l.justify));
-        // A box-bounded caption (maxWidth > 0) is condensed to fit its symbol box width rather than
-        // spilling past it, matching core/render/svg.go's drawText. textLength forces the run to that
-        // width (baked by k, like x/height) and lengthAdjust squeezes glyphs horizontally, keeping
-        // the font height. This applies only when the caption would otherwise overflow, so a short
-        // caption is not stretched.
-        if (l.maxWidth > 0) {
+        // A board text whose run length the engine knows draws at exactly that length, as the SVG
+        // backend's BoardSVG does.
+        if (l.width && l.width > 0) {
+          t.setAttribute("textLength", String(l.width * k));
+          t.setAttribute("lengthAdjust", "spacingAndGlyphs");
+        } else if (l.maxWidth > 0) {
+          // A box-bounded caption (maxWidth > 0) is condensed to fit its symbol box width rather
+          // than spilling past it, matching core/render/svg.go's drawText. textLength forces the run
+          // to that width (baked by k, like x/height) and lengthAdjust squeezes glyphs
+          // horizontally, keeping the font height. This applies only when the caption would
+          // otherwise overflow, so a short caption is not stretched.
           const maxW = l.maxWidth * k;
           if (naturalTextWidth(line.text, fontPx) > maxW) {
             t.setAttribute("textLength", String(maxW));
