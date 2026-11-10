@@ -17,6 +17,7 @@ import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from ".
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
+import { delayedBusy, type Busy } from "./busy.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
@@ -76,6 +77,26 @@ export const glDrawing: GlFactory = (id, canvas, textHost) => {
   return gl.ready() ? gl : null;
 };
 
+// HEAVY_DRAWING_BYTES is the size of a drawing that blocks the page long enough to need the loader
+// on screen before it starts. Jetson's 5.6 MB board SVG blocked the page for about 190 ms.
+export const HEAVY_DRAWING_BYTES = 1_000_000;
+
+// heavyDrawing says whether drawing a sheet in mode will block the page for long, by the size of the
+// SVG document or of the packed sheet's buffers.
+export function heavyDrawing(d: SheetDrawing, mode: SurfaceMode): boolean {
+  if (mode === "webgl" && d.packed) return (d.packed.vertices?.length ?? 0) + (d.packed.primitives?.length ?? 0) > HEAVY_DRAWING_BYTES;
+  return d.svg.length > HEAVY_DRAWING_BYTES;
+}
+
+// nextPaint resolves once the browser has painted, so an element shown just before is on screen
+// before the page blocks. A page with no animation frames waits a timer's tick instead.
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(resolve, 0));
+    else setTimeout(resolve, 0);
+  });
+}
+
 // SheetPaneDeps are what a pane asks of the page.
 export interface SheetPaneDeps {
   // sheets lists the open design's sheets, for the picker and for naming the other sheets.
@@ -132,6 +153,9 @@ export class SheetPane {
   private drawnOnLast: string[] = [];
   // drawing counts renders, so a late answer for a sheet the reader has left draws nothing.
   private drawing = 0;
+  // setBusy shows or hides this view's loader, and busyEl is the loader itself.
+  private readonly setBusy: (busy: Busy, label?: string) => void;
+  private readonly busyEl: HTMLElement;
 
   constructor(
     readonly id: string,
@@ -224,7 +248,17 @@ export class SheetPane {
     this.glCanvas = el("canvas", "sheetview-gl") as HTMLCanvasElement;
     this.textHost = el("div", "text-overlay sheetview-text");
     this.host = el("div", "sheetview-canvas");
-    stage.append(this.glCanvas, this.textHost, this.host);
+    // A large board takes seconds to draw, so the view shows its own loader over its stage while it
+    // does, after the page loader's show delay, so a quick draw does not flash it.
+    const busy = el("div", "render-busy sheetview-busy");
+    this.busyEl = busy;
+    busy.setAttribute("role", "status");
+    busy.setAttribute("aria-live", "polite");
+    const busyLabel = el("span", "render-busy-label");
+    busyLabel.textContent = "rendering…";
+    busy.append(busyLabel);
+    this.setBusy = delayedBusy(busy);
+    stage.append(this.glCanvas, this.textHost, this.host, busy);
     this.element.append(this.layerStyle, bar, this.also, stage);
     this.surface = new SheetSurface({
       svgHost: this.host,
@@ -285,11 +319,21 @@ export class SheetPane {
     return this.nameOf(this.sheet) || "Sheet";
   }
 
-  // open draws a sheet and lights the current selection on it.
+  // open draws a sheet and lights the current selection on it. The view's loader shows while it does.
+  // A reader can pick another sheet before the first is drawn, so only the latest draw hides it.
   async open(sheetId: string): Promise<void> {
+    const n = ++this.drawing;
+    this.setBusy(true);
+    try {
+      await this.draw(sheetId, n);
+    } finally {
+      if (n === this.drawing) this.setBusy(false);
+    }
+  }
+
+  private async draw(sheetId: string, n: number): Promise<void> {
     this.sheet = sheetId;
     this.fillPicker();
-    const n = ++this.drawing;
     let drawing: SheetDrawing = { svg: "", boardLayers: [] };
     const mode = this.surface.mode;
     try {
@@ -298,6 +342,14 @@ export class SheetPane {
       this.also.textContent = `could not draw this sheet: ${String(e)}`;
     }
     if (n !== this.drawing) return;
+    // Drawing a large sheet blocks the page, and the loader's show delay cannot run out while it
+    // does. When the engine answered inside the delay, the loader is not up yet, so it goes up now
+    // and paints before the drawing starts.
+    if (heavyDrawing(drawing, mode)) {
+      this.busyEl.classList.add("on");
+      await nextPaint();
+      if (n !== this.drawing) return;
+    }
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
     this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT };
     // The turn goes to the surface first, so a WebGL sheet draws turned from its first frame.

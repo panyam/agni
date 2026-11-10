@@ -84,6 +84,14 @@ panel from the ones above.
   (`[data-sheetview="<id>"] .sheetview-canvas`), so a reader can show In2.Cu alone beside the canvas
   and keep the whole board on the canvas. The set lasts as long as the view, since a view's id does
   not outlive the page.
+- **A view shows its own loader while it draws.** A large board takes a second or more to draw, so
+  the view covers its stage with a `.sheetview-busy` loader, and the canvas and the other views stay
+  usable. It uses the page loader's `delayedBusy` (`web/src/busy.ts`), so a quick draw does not
+  flash it. A reader can pick another sheet before the first is drawn, so only the latest draw takes
+  the loader down. Putting a drawing on screen blocks the page, and the show delay cannot run out
+  while it does. On a fast engine the answer arrives inside the delay, so a drawing over
+  `HEAVY_DRAWING_BYTES` puts the loader up at once and waits for a paint before it draws. Jetson's
+  5.6 MB board SVG blocked the page for about 190 ms after a server answered in 80 ms.
 
 ## A board the design does not declare
 

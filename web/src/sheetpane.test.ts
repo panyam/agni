@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { SheetPane, parseTurn, type SheetPaneDeps } from "./sheetpane.js";
+import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
@@ -164,6 +164,127 @@ describe("a sheet view", () => {
     // A schematic sheet in the same view takes no board rule.
     await p.open("s1");
     expect(p.element.querySelector("style")!.textContent).toBe("");
+  });
+});
+
+// A large board takes seconds to draw, so a view shows its own loader over its stage while it draws.
+describe("a sheet view's loader", () => {
+  // held returns a pane whose renders wait until the test releases them, one per open.
+  function held() {
+    const made = pane([]);
+    const waits: (() => void)[] = [];
+    made.deps.render = (id) =>
+      new Promise((resolve) => {
+        waits.push(() => resolve({ svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: [] }));
+      });
+    return { ...made, release: (i: number) => waits[i]() };
+  }
+  const loader = (p: SheetPane) => p.element.querySelector<HTMLElement>(".sheetview-stage > .sheetview-busy");
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it("covers the view's own stage while a sheet draws, and clears once it is drawn", async () => {
+    const { p, release } = held();
+    const opening = p.open("board");
+    expect(loader(p)?.dataset.busy).toBe("on");
+    expect(loader(p)?.textContent).toBe("rendering…");
+    release(0);
+    await opening;
+    expect(shown(p)).toBe("board");
+    expect(loader(p)?.dataset.busy).toBeUndefined();
+  });
+
+  it("shows only after the page loader's delay, so a quick draw does not flash it", async () => {
+    vi.useFakeTimers();
+    try {
+      const { p, release } = held();
+      const opening = p.open("board");
+      expect(loader(p)?.classList.contains("on")).toBe(false);
+      vi.advanceTimersByTime(200);
+      expect(loader(p)?.classList.contains("on")).toBe(true);
+      release(0);
+      await opening;
+      expect(loader(p)?.classList.contains("on")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stays up while a later sheet draws, after an earlier one the reader left comes back", async () => {
+    const { p, release } = held();
+    const first = p.open("s1");
+    const second = p.open("board");
+    release(0);
+    await first;
+    expect(loader(p)?.dataset.busy).toBe("on");
+    await tick();
+    release(1);
+    await second;
+    expect(shown(p)).toBe("board");
+    expect(loader(p)?.dataset.busy).toBeUndefined();
+  });
+
+  it("clears when the sheet fails to draw", async () => {
+    const { p, deps } = pane([]);
+    deps.render = async () => {
+      throw new Error("engine gone");
+    };
+    await p.open("board");
+    expect(loader(p)?.dataset.busy).toBeUndefined();
+  });
+
+  it("shows while the view draws again in the other renderer", async () => {
+    const { p, release } = held();
+    const opening = p.open("board");
+    release(0);
+    await opening;
+    const switching = p.setRenderer("svg");
+    expect(loader(p)?.dataset.busy).toBe("on");
+    release(1);
+    await switching;
+    expect(loader(p)?.dataset.busy).toBeUndefined();
+  });
+
+  // upWhenDrawn opens a sheet whose SVG is size characters long, answered at once, and says whether
+  // the loader was on screen when the drawing went in.
+  async function upWhenDrawn(size: number): Promise<boolean> {
+    const { p, deps } = pane([]);
+    deps.render = async () => ({ svg: `<svg width="100" height="100">${" ".repeat(size)}</svg>`, boardLayers: [] });
+    let up = false;
+    vi.spyOn(p.surface, "showSvg").mockImplementation(() => {
+      up = loader(p)?.classList.contains("on") ?? false;
+    });
+    await p.open("board");
+    expect(loader(p)?.classList.contains("on")).toBe(false);
+    return up;
+  }
+
+  it("puts the loader up before a large drawing blocks the page, though the engine answered at once", async () => {
+    expect(await upWhenDrawn(HEAVY_DRAWING_BYTES + 1)).toBe(true);
+  });
+
+  it("draws a small sheet the engine answered at once with no loader", async () => {
+    expect(await upWhenDrawn(100)).toBe(false);
+  });
+
+  it("sizes a WebGL drawing by its packed buffers and an SVG one by its document", () => {
+    const big = new Uint8Array(HEAVY_DRAWING_BYTES + 1);
+    const packed = { vertices: big, primitives: new Uint8Array(0) } as never;
+    expect(heavyDrawing({ svg: "", packed, boardLayers: [] }, "webgl")).toBe(true);
+    expect(heavyDrawing({ svg: "", packed, boardLayers: [] }, "svg")).toBe(false);
+    expect(heavyDrawing({ svg: "x".repeat(HEAVY_DRAWING_BYTES + 1), boardLayers: [] }, "svg")).toBe(true);
+  });
+
+  it("leaves the page's own loader alone", async () => {
+    const page = document.createElement("div");
+    page.id = "render-busy";
+    page.className = "render-busy";
+    document.body.appendChild(page);
+    const { p, release } = held();
+    const opening = p.open("board");
+    expect(page.dataset.busy).toBeUndefined();
+    release(0);
+    await opening;
+    page.remove();
   });
 });
 
