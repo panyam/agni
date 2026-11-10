@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-10
+
+KiCad text draws where KiCad draws it. A KiCad 6 or 7 sheet hides its hidden fields (PR 1473). Board
+text keeps its line breaks, starts and ends where KiCad's does, and footprint user text and logos
+draw (PR 1475). Command-F opens Find by name, and a board view's flips show as toggles (PR 1474). It
+is a patch, with no Go API change. The full write-up is [RELEASES/v0.6.5.md](RELEASES/v0.6.5.md).
+
 ## [0.6.4] - 2026-11-09
 
 jaala moves to v0.1.101 (PR 1471). A query naming a value that no rule writes now answers nothing
