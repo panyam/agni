@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-10
+
+A sheet view shows its own loader while it draws, and WebGL frames each placement of a ref-des on
+its own (PR 1478). `PrimitiveKey` gains `placement`. It is a patch, with no Go API change. The full
+write-up is [RELEASES/v0.6.7.md](RELEASES/v0.6.7.md).
+
 ## [0.6.6] - 2026-11-10
 
 Every board layer draws in KiCad's colour (PR 1476). Each side's silkscreen, fab and courtyard has a
