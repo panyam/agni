@@ -214,7 +214,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		}
 		labels = append(labels, &geom.PackedLabel{
 			X: num.Int32(t.GetAt().X - ox), Y: num.Int32(t.GetAt().Y - oy),
-			Text: boardTextLine(t), Height: num.Int32(boardTextEm(t)),
+			Text: t.GetText(), Height: num.Int32(boardTextEm(t)),
 			RotationDeg: int32(math.Round(t.GetRotationDeg())),
 			Justify:     justifyWord(t), Color: boardTextColor(style, t.GetLayer()),
 			Group:  uint32(strata.art[t.GetLayer()]),

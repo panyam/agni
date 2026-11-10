@@ -40,6 +40,7 @@
 <text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">10k</text>
 <text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">J1</text>
 <text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">CONN</text>
-<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)" data-layer="B.SilkS">Demo Board</text>
+<text x="790.0" y="109.5" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 109.5) scale(-1 1) translate(-790.0 -109.5)" data-layer="B.SilkS">Demo</text>
+<text x="790.0" y="270.5" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 270.5) scale(-1 1) translate(-790.0 -270.5)" data-layer="B.SilkS">Board</text>
 </g>
 </svg>

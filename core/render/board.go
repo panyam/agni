@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/svg"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
+	"google.golang.org/protobuf/proto"
 )
 
 // boardTextMinPx is the legibility floor for silkscreen/fab text. Board text is authored at a
@@ -213,7 +214,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 		if t.GetLayer() != "" {
 			attrs = append(attrs, svg.AEsc("data-layer", t.GetLayer()))
 		}
-		c.Text(boardTextLine(t), attrs...)
+		c.Text(t.GetText(), attrs...)
 	}
 	c.GroupEnd()
 
@@ -241,10 +242,15 @@ func boardTextTransform(rot float64, mirror bool, x, y float64) string {
 // only what its silkscreen draws, and KiCad exports a board with no silkscreen with no text at
 // all. Without the added designators those parts would go unlabelled, while the same board read
 // from its .kicad_pcb is labelled (agni issue 1263). A board whose silkscreen draws its
-// designators gets none added, as in the Altium case.
+// designators gets none added, as in the Altium case. A text of several lines comes back as one
+// text per line (boardTextLines).
 func boardLabels(b *geom.BoardGeometry) []*geom.BoardText {
 	if len(b.GetTexts()) > 0 {
-		return b.GetTexts()
+		var out []*geom.BoardText
+		for _, t := range b.GetTexts() {
+			out = append(out, boardTextLines(t)...)
+		}
+		return out
 	}
 	for _, gr := range b.GetGraphics() {
 		if strings.HasSuffix(gr.GetLayer(), ".SilkS") {
@@ -279,10 +285,35 @@ func boardLabels(b *geom.BoardGeometry) []*geom.BoardText {
 // boardDesignatorGap is how far above its pads a placement's own designator sits, 1 mm.
 const boardDesignatorGap = 1_000_000
 
-// boardTextLine flattens a board text's authored string to one line (newlines, escaped or
-// literal, become spaces) for the single-line label backends.
-func boardTextLine(t *geom.BoardText) string {
-	return strings.NewReplacer("\n", " ", `\n`, " ").Replace(t.GetText())
+// boardTextPitch is the distance from one line of a board text to the next, in glyph heights.
+// kicad-cli strokes a 1 mm note's lines 1.61 mm apart.
+const boardTextPitch = 1.61
+
+// boardTextLines splits a board text at its newlines into one text per line, so that each renderer
+// draws a single line at its own anchor. The anchor holds the middle of the block, as KiCad
+// centres a note of three lines on its middle line. The lines step down the text's own frame, so a
+// turned note stacks along its turn. A literal \n counts as a newline, as a format that does not
+// decode it writes one. Empty lines keep their place and draw nothing.
+func boardTextLines(t *geom.BoardText) []*geom.BoardText {
+	lines := strings.Split(strings.ReplaceAll(t.GetText(), `\n`, "\n"), "\n")
+	if len(lines) < 2 || t.GetAt() == nil {
+		return []*geom.BoardText{t}
+	}
+	step := boardTextPitch * float64(boardTextHeight(t))
+	r := t.GetRotationDeg() * math.Pi / 180
+	downX, downY := math.Sin(r), -math.Cos(r) // one line down, in the Y-up board frame
+	var out []*geom.BoardText
+	for n, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		off := (float64(n) - float64(len(lines)-1)/2) * step
+		l := proto.Clone(t).(*geom.BoardText)
+		l.Text = line
+		l.At = &geom.Point{X: t.GetAt().GetX() + int64(math.Round(off*downX)), Y: t.GetAt().GetY() + int64(math.Round(off*downY))}
+		out = append(out, l)
+	}
+	return out
 }
 
 // capHeightEm is a capital letter's height as a fraction of the font size in SchematicFontStack's

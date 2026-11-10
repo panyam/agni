@@ -235,10 +235,11 @@ func TestPackBoard(t *testing.T) {
 	for _, l := range ps.GetLabels() {
 		labelText[l.GetText()] = true
 	}
-	if len(ps.GetLabels()) != 5 {
-		t.Errorf("labels = %d, want 5 (ref-des + value for R1 and J1, plus the gr_text title); got %v", len(ps.GetLabels()), labelText)
+	// The gr_text title is "Demo\nBoard", one label per line.
+	if len(ps.GetLabels()) != 6 {
+		t.Errorf("labels = %d, want 6 (ref-des + value for R1 and J1, plus the two lines of the gr_text title); got %v", len(ps.GetLabels()), labelText)
 	}
-	for _, want := range []string{"R1", "10k", "J1", "CONN", "Demo Board"} {
+	for _, want := range []string{"R1", "10k", "J1", "CONN", "Demo", "Board"} {
 		if !labelText[want] {
 			t.Errorf("packed board labels missing %q; got %v", want, labelText)
 		}
