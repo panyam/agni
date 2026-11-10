@@ -28,6 +28,7 @@ export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
     askAbout: () => {},
     setQuerySets: () => {},
     openSet: () => {},
+    findByName: () => false,
     ...over,
   };
 }
