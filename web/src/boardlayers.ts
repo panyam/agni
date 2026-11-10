@@ -27,6 +27,14 @@ export function presetHidden(rows: BoardLayerRow[], preset: LayerPreset): Set<st
   return new Set(rows.filter(hide).map((r) => r.name));
 }
 
+// defaultHidden is the set of rows a board opens with hidden, before a reader has chosen any. It
+// hides the fab rows. Their text is each part's value and reference, often long, and on a dense
+// board it covers the copper and runs past the edges. On Jetson's board most of the 5,732 texts are
+// fab text (agni issue 1486). A reader turns them on in the layer list or with the "all" preset.
+export function defaultHidden(rows: BoardLayerRow[]): Set<string> {
+  return new Set(rows.filter((r) => r.kind === "fab").map((r) => r.name));
+}
+
 // soloHidden shows one row alone.
 export function soloHidden(rows: BoardLayerRow[], name: string): Set<string> {
   return new Set(rows.filter((r) => r.name !== name).map((r) => r.name));
@@ -79,7 +87,8 @@ export function parseHidden(raw: string | null): string[] | null {
   return null;
 }
 
-// LayerStore keeps a design's hidden layers between visits.
+// LayerStore keeps a design's hidden layers between visits. load returns null when the reader has
+// never chosen for that design, and an empty list when they chose to show every layer.
 export interface LayerStore {
   load(mount: string, path: string): string[] | null;
   save(mount: string, path: string, hidden: string[]): void;
@@ -98,8 +107,8 @@ export function storageLayers(storage: () => Storage): LayerStore {
     },
     save: (mount, path, hidden) => {
       try {
-        if (hidden.length === 0) storage().removeItem(layersKey(mount, path));
-        else storage().setItem(layersKey(mount, path), JSON.stringify(hidden));
+        // An empty list is stored too, since a board with no choice opens with its fab rows hidden.
+        storage().setItem(layersKey(mount, path), JSON.stringify(hidden));
       } catch {
         // the choice still holds on this page
       }

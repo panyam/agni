@@ -19,13 +19,13 @@ const SHEETS = [
 
 let panes = 0;
 
-function pane(drawnOn: string[]) {
+function pane(drawnOn: string[], rows: BoardLayerRow[] = ROWS) {
   const calls = { render: [] as string[], overlay: [] as string[], drawnOn: [] as boolean[] };
   const deps: SheetPaneDeps = {
     sheets: () => SHEETS,
     render: async (id) => {
       calls.render.push(id);
-      return { svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: id === "board" ? ROWS : [] };
+      return { svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: id === "board" ? rows : [] };
     },
     overlay: async (id) => {
       calls.overlay.push(id);
@@ -145,6 +145,22 @@ describe("a sheet view", () => {
     expect([...pop.querySelectorAll(".board-layer-name")].map((n) => n.textContent)).toEqual(["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]);
     await p.open("s1");
     expect(pop.hidden).toBe(true);
+  });
+
+  // agni issue 1486: a board view opens with the fab rows hidden, as the canvas does, and keeps the
+  // reader's choice when the board is drawn again.
+  it("opens the board with its fab rows hidden until the reader chooses", async () => {
+    const fab = { name: "F.Fab", kind: "fab", color: "#888", svgSelector: '[data-layer="F.Fab"]', groups: [] } as unknown as BoardLayerRow;
+    const { p } = pane([], [...ROWS, fab]);
+    await p.open("board");
+    expect(p.hiddenLayersOf()).toEqual(new Set(["F.Fab"]));
+    (p.element.querySelector('[data-action="layers"]') as HTMLButtonElement).click();
+    const row = [...p.element.querySelectorAll(".board-layer-row")].find((r) => r.textContent === "F.Fab") as HTMLElement;
+    row.click();
+    expect(p.hiddenLayersOf().size).toBe(0);
+    await p.open("s1");
+    await p.open("board");
+    expect(p.hiddenLayersOf().size).toBe(0);
   });
 
   // agni issue 1401: a view beside the canvas hides a layer in its own drawing alone.
