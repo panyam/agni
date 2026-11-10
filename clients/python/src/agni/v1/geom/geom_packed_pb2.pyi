@@ -21,20 +21,22 @@ HIGHLIGHT_SHAPE_BOUNDING_CIRCLE: HighlightShape
 HIGHLIGHT_SHAPE_PATH: HighlightShape
 
 class PrimitiveKey(_message.Message):
-    __slots__ = ("primitive", "ref_des", "net", "pin", "net_id", "bus_id")
+    __slots__ = ("primitive", "ref_des", "net", "pin", "net_id", "bus_id", "placement")
     PRIMITIVE_FIELD_NUMBER: _ClassVar[int]
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     NET_FIELD_NUMBER: _ClassVar[int]
     PIN_FIELD_NUMBER: _ClassVar[int]
     NET_ID_FIELD_NUMBER: _ClassVar[int]
     BUS_ID_FIELD_NUMBER: _ClassVar[int]
+    PLACEMENT_FIELD_NUMBER: _ClassVar[int]
     primitive: int
     ref_des: str
     net: str
     pin: str
     net_id: str
     bus_id: str
-    def __init__(self, primitive: _Optional[int] = ..., ref_des: _Optional[str] = ..., net: _Optional[str] = ..., pin: _Optional[str] = ..., net_id: _Optional[str] = ..., bus_id: _Optional[str] = ...) -> None: ...
+    placement: int
+    def __init__(self, primitive: _Optional[int] = ..., ref_des: _Optional[str] = ..., net: _Optional[str] = ..., pin: _Optional[str] = ..., net_id: _Optional[str] = ..., bus_id: _Optional[str] = ..., placement: _Optional[int] = ...) -> None: ...
 
 class PinRef(_message.Message):
     __slots__ = ("ref_des", "pin")

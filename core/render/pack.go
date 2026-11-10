@@ -134,11 +134,14 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 			add(primLineStrip, groupFree, "", "", "", xy(pts))
 		}
 	}
-	for _, pl := range sheet.Placements {
+	for i, pl := range sheet.Placements {
 		sym := symbolFor(syms, pl)
 		if sym == nil {
 			continue
 		}
+		// Each placement's primitives carry its index, so two placements of one ref-des light as
+		// two entities (agni issue 1477).
+		c.placement = num.Uint32(i + 1)
 		// A glyph that names a net (a ground or rail symbol) keys as that net, as symbolKeys does
 		// for SVG, so a click on it picks the net (agni issue 764). Its pins key nothing, since a
 		// pin needs a ref-des.
@@ -163,6 +166,8 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 			}
 		}
 	}
+
+	c.placement = 0
 
 	vertices, records, keys, ox, oy := c.build()
 

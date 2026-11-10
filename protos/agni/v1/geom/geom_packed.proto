@@ -37,6 +37,11 @@ message PrimitiveKey {
   // primitive, so a bus-not-modeled finding highlights its own bus rather than a net (WS7-042b). A
   // bus has no net/net_id, so this is its only join key. Empty for a non-bus primitive.
   string bus_id = 6;
+  // placement is the 1-based index of the symbol placement a symbol, pin or DNP primitive belongs
+  // to, among SheetGeometry.placements, so a sheet that places one ref-des twice frames each
+  // placement on its own, as the SVG overlay does (agni issue 1477). 0 on a board and on every
+  // primitive no placement drew.
+  uint32 placement = 7;
 }
 
 // PinRef names one pin of one placed component, the pin-granularity highlight target.

@@ -317,3 +317,47 @@ describe("framing a point (agni issue 1374)", () => {
     expect(entityFrame(5, 5, 5, 5).maxX).toBe(13);
   });
 });
+
+// A sheet that places R2 twice, far apart, mirroring twoR2 in core/render/highlight_placement_test.go.
+// Placement 3 draws its rect at the origin and placement 4 at (5000, 5000), each with two pins
+// (agni issue 1477).
+describe("a ref-des placed twice", () => {
+  const rect = (x: number, y: number) => [x, y, x + 40, y, x + 40, y + 20, x, y + 20];
+  const vertices = Int32Array.from([...rect(0, 0), 0, 10, 40, 10, ...rect(5000, 5000), 5000, 5010, 5040, 5010]);
+  const prims: Primitive[] = [
+    { kind: 2, group: 0, firstVertex: 0, count: 4 },
+    { kind: 3, group: 2, firstVertex: 4, count: 1 },
+    { kind: 3, group: 2, firstVertex: 5, count: 1 },
+    { kind: 2, group: 0, firstVertex: 6, count: 4 },
+    { kind: 3, group: 2, firstVertex: 10, count: 1 },
+    { kind: 3, group: 2, firstVertex: 11, count: 1 },
+  ];
+  const r2 = (primitive: number, pin: string, placement: number): PrimitiveKey => ({ primitive, refDes: "R2", net: "", netId: "", pin, busId: "", placement });
+  const twice = [r2(0, "", 3), r2(1, "1", 3), r2(2, "2", 3), r2(3, "", 4), r2(4, "1", 4), r2(5, "2", 4)];
+  const contains = (b: { minX: number; minY: number; maxX: number; maxY: number }, x: number, y: number) =>
+    x >= b.minX && x <= b.maxX && y >= b.minY && y <= b.maxY;
+
+  it("frames each placement on its own, and neither frame reaches the other placement", () => {
+    const [g] = resolveHighlights(twice, [{ components: ["R2"], shape: HighlightShape.BOUNDING_RECT }]);
+    expect(g.entities).toHaveLength(2);
+    expect(g.subjects).toEqual(["component:R2"]);
+    const boxes = g.entities.map((e) => entityBounds(vertices, prims, e)!);
+    expect(boxes.map((b) => [b.minX, b.minY, b.maxX, b.maxY])).toEqual([
+      [0, 0, 40, 20],
+      [5000, 5000, 5040, 5020],
+    ]);
+    expect(contains(boxes[0], 5000, 5000)).toBe(false);
+    expect(contains(boxes[1], 0, 0)).toBe(false);
+  });
+
+  it("lights a listed pin on each placement apart", () => {
+    const [g] = resolveHighlights(twice, [{ pins: [{ refDes: "R2", pin: "1" }] }]);
+    expect(g.entities).toEqual([[1], [4]]);
+    expect(g.subjects).toEqual(["pin:R2.1"]);
+  });
+
+  it("keeps one frame for a part placed once", () => {
+    const [g] = resolveHighlights(keys, [{ components: ["R1"], shape: HighlightShape.BOUNDING_RECT }]);
+    expect(g.entities).toEqual([[2, 3, 4]]);
+  });
+});

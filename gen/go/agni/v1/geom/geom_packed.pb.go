@@ -162,7 +162,12 @@ type PrimitiveKey struct {
 	// bus_id is the bus's NAME (its range-label identity, WireGeometry.net) for a bus trunk/entry
 	// primitive, so a bus-not-modeled finding highlights its own bus rather than a net (WS7-042b). A
 	// bus has no net/net_id, so this is its only join key. Empty for a non-bus primitive.
-	BusId         string `protobuf:"bytes,6,opt,name=bus_id,json=busId,proto3" json:"bus_id,omitempty"`
+	BusId string `protobuf:"bytes,6,opt,name=bus_id,json=busId,proto3" json:"bus_id,omitempty"`
+	// placement is the 1-based index of the symbol placement a symbol, pin or DNP primitive belongs
+	// to, among SheetGeometry.placements, so a sheet that places one ref-des twice frames each
+	// placement on its own, as the SVG overlay does (agni issue 1477). 0 on a board and on every
+	// primitive no placement drew.
+	Placement     uint32 `protobuf:"varint,7,opt,name=placement,proto3" json:"placement,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -237,6 +242,13 @@ func (x *PrimitiveKey) GetBusId() string {
 		return x.BusId
 	}
 	return ""
+}
+
+func (x *PrimitiveKey) GetPlacement() uint32 {
+	if x != nil {
+		return x.Placement
+	}
+	return 0
 }
 
 // PinRef names one pin of one placed component, the pin-granularity highlight target.
@@ -1111,14 +1123,15 @@ var File_agni_v1_geom_geom_packed_proto protoreflect.FileDescriptor
 
 const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/geom/geom_packed.proto\x12\fagni.v1.geom\"\x97\x01\n" +
+	"\x1eagni/v1/geom/geom_packed.proto\x12\fagni.v1.geom\"\xb5\x01\n" +
 	"\fPrimitiveKey\x12\x1c\n" +
 	"\tprimitive\x18\x01 \x01(\rR\tprimitive\x12\x17\n" +
 	"\aref_des\x18\x02 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03net\x18\x03 \x01(\tR\x03net\x12\x10\n" +
 	"\x03pin\x18\x04 \x01(\tR\x03pin\x12\x15\n" +
 	"\x06net_id\x18\x05 \x01(\tR\x05netId\x12\x15\n" +
-	"\x06bus_id\x18\x06 \x01(\tR\x05busId\"3\n" +
+	"\x06bus_id\x18\x06 \x01(\tR\x05busId\x12\x1c\n" +
+	"\tplacement\x18\a \x01(\rR\tplacement\"3\n" +
 	"\x06PinRef\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03pin\x18\x02 \x01(\tR\x03pin\"\xa2\x02\n" +
