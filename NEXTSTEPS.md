@@ -9,35 +9,36 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-09, at `5eecfbdb`.
+Last pruned 2026-11-10, at `b3cfe8e4`.
 
 ## At a glance
 
-Two missions are active, each worked in its own clone. `MISSION=mission_<slug> queue.sh` (the
+Three missions are active, each worked in its own clone. `MISSION=mission_<slug> queue.sh` (the
 retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 20 of
-  20 tickets closed. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 21 of
+  22 tickets closed, next ready #1482. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
   The mission still has to pass beside a real board before it closes.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
   the formats clone, 17 of 17 closed. `make exercise-allegro` and `make exercise-altium` passed at
   `e4394b70`, and a native board now opens on the board alone (#1466). Its "Done when" line still
   wants someone to open a real board of their own in each format. Whether to close the mission before
   that run is the user's call. #1355, #1362, #1393, #1430 and #1437 are its `waiting` follow-ups.
-- **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06, and **#1329
-  `mission_webgl`** on 2026-11-09, with every ticket done and their exercises passing. #1329 left
-  SVG the default renderer (DECISIONS.md) and #1331 parked. Each still wants a person's run on a
-  real board, and either reopens if that run finds something.
+- **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), 15 of 16
+  closed. #1484 is `waiting` on a lagging team's `agni draw` lines from `?timing`. `make
+  exercise-webgl` last ran on Jetson at `b3cfe8e4`, and #1329's latest log comment has the result.
+- **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06. Each still
+  wants a person's run on a real board, and either reopens if that run finds something.
 - **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
   runs agni serve for more than one person.
 - **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1465 (#1335), #1468 (#1466) and #1470 (#1469) merged, #1329 closed, and v0.6.3 is
-  cut. agni-samples v0.1.16 reads with agni v0.6.2 in CI, and three Allegro folders gained
-  descriptors naming their Capture schematics.
+- This run: #1485 (the `?timing` draw profile, closing #1331) and #1487 (fab hidden by default,
+  outlines at their width in WebGL, closing #1486) merged. #1329 was never closed, and this file and
+  CLAUDE.md now say so.
 
 ## Open, ranked
 

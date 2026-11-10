@@ -761,6 +761,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the copper, so export the copper and silk layers without Edge.Cuts. Export from a scratch copy in
   any case, since kicad-cli writes a `.kicad_prl` beside the board. A text is mirrored exactly when
   its effects say `(justify mirror)`, which kicad-cli confirmed on a back footprint that names none.
+  **A board compared against `pcb export svg --mode-single` hides its front copper** whenever the
+  export names an inner layer, since the plot paints inner pours over F.Cu and Jetson's plane covers
+  the board. F.Mask plots as a solid sheet too. So the frame for a board PR names F.Cu and B.Cu and no
+  inner layer (agni 1486). `--fit-page-to-board` also crops any text past the outline.
 - **A label's text is also its net's name, so KiCad markup is drawn and never stripped** (agni 1344).
   `~{RESET}`, `V_{OUT}` and `{slash}` stay in the text; `SchematicGeometry.text_markup` says the
   text is KiCad's, `core/render/markupRuns` splits it, and the packer sends the runs to the overlay
@@ -1187,7 +1191,10 @@ it from the server or the browser engine. A stage is recorded with `timing.Begin
 from `core/timing`, a no-op when nobody asked, and the record travels in headers so no answer
 changes run to run. Under `?timing` the page also logs each request's start and wall time on its own
 clock, and the exercise's `--timing` turns them into a `checks breakdown` row, every request of a
-Run checks plus the page's own time (agni 968). **A walk reports loading a design apart from asking
+Run checks plus the page's own time (agni 968). **`?timing` also logs one `agni draw <view>` line per
+burst of pan and zoom** (`web/src/drawprofile.ts`, agni 1331), with the GPU, the scene's counts and
+each frame's draw, text-layer and draw-call figures. Its type has no field for design text, so a team
+can paste the line into a public issue, and `drawprofile.test.ts` fails on any other string. **A walk reports loading a design apart from asking
 it questions** (agni 1060). `1. load` and `checks load` happen once per visit. `checks rules`,
 `checks again` and the query rows show what a question costs on a loaded design, so a mission log
 leads with those, and `wasm-bench` prints its rows in the same two groups. **A browser worker's
@@ -1426,9 +1433,11 @@ passes FAILS the walk, so the PR that makes a step pass also removes its wait in
 closed (`hack/closed_tickets.sh`), and a step waiting only on closed ones must pass. That catches a
 ticket closed by a PR that never touched the walk, which is how #1326 closed while the walk still
 read its steps "not available". The gate runs offline and skips that half.
-#1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) closed
-on 2026-11-09, and `make exercise-webgl` is still its exercise (agni 1330). SVG stays the default
-renderer (DECISIONS.md), and #1331 (batching draws) is parked. It runs
+#1329 `mission_webgl` (pan, zoom and click Jetson's whole board in the browser without lag) is
+active, and `make exercise-webgl` is its exercise (agni 1330). SVG stays the default renderer
+(DECISIONS.md). Its last ticket, #1484 (batching draws, chunk culling, windowing the text layer), is
+`waiting` on a lagging team's `agni draw` lines, since Jetson draws in under 1 ms a frame on an M5
+Pro and batching had nothing to show there (#1331). It runs
 `web/browser/webgl-walk.spec.ts` in SVG and then in WebGL. It lines the two views up by fitting their
 label anchors (`browser/frametimes.ts`), so a click lands on one place in both. Its timings mean
 something only headed on an idle machine, since headless Chrome draws WebGL in SwiftShader, so the
@@ -1446,6 +1455,11 @@ only within one renderer, since SVG and WebGL measure a centre in different unit
 `OpenSheetView` takes a `renderer`. Each `agni:sheet-drawn` mark names its drawing in
 `detail.view` (`canvas` or a view's id), so a spec timing the canvas skips a view's draws. A zone
 fill blends (`enableBlending` in `web/src/webgl.ts`, agni 1334), and the canvas must stay OPAQUE.
+A board opens with its fab rows hidden, and storage keeps "show every layer" as `[]`, since `null`
+means never chosen (agni 1486). **A board's outlines carry their width in the packed record's
+`stroke_um`**, and WebGL draws a line as triangles once that width spans a canvas pixel. They stay
+line primitives because the picker reads a part's triangles as the part, so a triangle outline would
+take clicks that pass through it to the pick area.
 The browser composites a WebGL canvas as premultiplied alpha, so a translucent pixel drew white
 over the page. **The visual diff draws in the canvas's renderer too** (agni 1335). Each side is a
 `SheetSurface`, and the union draws the old sheet's removed parts as ghosts (`ghostOverlays` in
