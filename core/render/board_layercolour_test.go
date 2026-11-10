@@ -53,3 +53,27 @@ func TestEachSidesLayersTakeTheirOwnColour(t *testing.T) {
 		}
 	}
 }
+
+// An inner layer takes KiCad's colour for its number, whichever inner layers the board uses, as
+// kicad-cli draws In5 lavender on any board. An inner layer named otherwise takes the colour for its
+// place among the inner layers.
+func TestAnInnerLayerTakesTheColourOfItsNumber(t *testing.T) {
+	seg := func(layer string) *geom.NetCopper {
+		return &geom.NetCopper{Net: layer, Segments: []*geom.TrackSegment{{A: &geom.Point{X: 0, Y: 0}, B: &geom.Point{X: 1_000_000, Y: 0}, Width: 200_000, Layer: layer}}}
+	}
+	b := &geom.BoardGeometry{
+		Layers: []*geom.BoardLayer{{Name: "F.Cu", Kind: "signal", Number: 0}, {Name: "In5.Cu", Kind: "signal", Number: 12}, {Name: "GND_PLANE", Kind: "signal", Number: 20}, {Name: "B.Cu", Kind: "signal", Number: 2}},
+		Nets:   []*geom.NetCopper{seg("F.Cu"), seg("In5.Cu"), seg("GND_PLANE"), seg("B.Cu")},
+	}
+	for name, style := range Themes {
+		colour := copperColors(style, b)
+		for layer, want := range map[string]string{"In5.Cu": style.CopperInners[4], "GND_PLANE": style.CopperInners[1], "F.Cu": style.CopperFront, "B.Cu": style.CopperBack} {
+			if got := colour(layer); got != want {
+				t.Errorf("%s: %s draws in %s, want %s", name, layer, got, want)
+			}
+		}
+	}
+	if got := DarkStyle.CopperInners[4]; got != "#a7a5c6" {
+		t.Errorf("In5.Cu is %s in the dark style, want KiCad's #a7a5c6", got)
+	}
+}

@@ -621,24 +621,24 @@ func copperStrokePx(widthNm int64, scale float64) float64 {
 	return math.Max(float64(widthNm), minStrokeNm) * scale
 }
 
-// copperColor picks the layer's copper color from the style.
-// copperColors returns each copper layer's colour on one board. An inner layer takes the next of
-// Style.CopperInners in stack order (agni issue 1401). The SVG board, the packed groups and the
-// layer rows all ask it, so the two renderers and every swatch agree (C12).
+// copperColors returns each copper layer's colour on one board. InN.Cu takes Style.CopperInners[N-1],
+// as KiCad colours an inner layer by its number. An inner layer of another name takes the entry for
+// its place among the board's inner layers in stack order (agni issue 1401). The SVG board, the
+// packed groups and the layer rows all ask it, so the two renderers and every swatch agree (C12).
 func copperColors(s Style, b *geom.BoardGeometry) func(layer string) string {
-	var palette []string
-	for _, c := range s.CopperInners {
-		if c == "" {
-			break
-		}
-		palette = append(palette, c)
-	}
 	inner := map[string]string{}
-	if len(palette) > 0 {
-		for _, ly := range copperStack(b) {
-			if layerSide(ly) == "inner" {
-				inner[ly] = palette[len(inner)%len(palette)]
-			}
+	place := 0
+	for _, ly := range copperStack(b) {
+		if layerSide(ly) != "inner" {
+			continue
+		}
+		place++
+		n := place
+		if k, ok := innerNumber(ly); ok {
+			n = k
+		}
+		if c := s.CopperInners[(n-1)%len(s.CopperInners)]; c != "" {
+			inner[ly] = c
 		}
 	}
 	return func(layer string) string {
@@ -653,6 +653,23 @@ func copperColors(s Style, b *geom.BoardGeometry) func(layer string) string {
 		}
 		return s.CopperInner
 	}
+}
+
+// innerNumber reads N off a layer named InN.Cu.
+func innerNumber(layer string) (int, bool) {
+	digits, ok := strings.CutPrefix(layer, "In")
+	if !ok {
+		return 0, false
+	}
+	digits, ok = strings.CutSuffix(digits, ".Cu")
+	if !ok {
+		return 0, false
+	}
+	n, err := strconv.Atoi(digits)
+	if err != nil || n < 1 {
+		return 0, false
+	}
+	return n, true
 }
 
 // copperLayersBackToFront lists the signal layers that actually carry drawn geometry,

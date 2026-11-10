@@ -25,22 +25,23 @@ type Style struct {
 	Page           string // page background
 	TitleBlockFill string // title-block box fill
 
-	// Board colors (WS7-034). Copper follows KiCad's habit of front red and back blue. Each inner
-	// layer takes the next colour of CopperInners in stack order, so In1.Cu and In2.Cu read apart
-	// (agni issue 1401). CopperInner colours a layer past the packed group limit, and every inner
-	// layer when CopperInners is empty. Via colors the barrel ring and through-hole pad lands, and a
-	// drill hole is drawn in Page. CopperInners is an array rather than a slice, so a Style still
-	// compares with ==, and a blank entry ends the palette.
-	BoardOutline string    // Edge.Cuts outline
-	CopperFront  string    // F.Cu segments, SMD pads on the front
-	CopperBack   string    // B.Cu
-	CopperInner  string    // an inner layer with no colour of its own
-	CopperInners [6]string // the inner layers' colours, from the front, repeating past the last set one
-	Via          string    // via rings + through-hole pad lands
+	// Board colors (WS7-034). Copper takes the colours of KiCad's default theme, read off kicad-cli's
+	// export. InN.Cu takes CopperInners[N-1], as KiCad colours an inner layer by its number, so a
+	// board's In5 draws in In5's colour whichever inner layers it uses. An inner layer of another
+	// name takes the colour of its place among the inner layers (agni issue 1401). CopperInner
+	// colours a layer past the packed group limit, and an inner layer whose entry is blank. Via
+	// colors the barrel ring and through-hole pad lands, and a drill hole is drawn in Page.
+	// CopperInners is an array rather than a slice, so a Style still compares with ==.
+	BoardOutline string     // Edge.Cuts outline
+	CopperFront  string     // F.Cu segments, SMD pads on the front
+	CopperBack   string     // B.Cu
+	CopperInner  string     // an inner layer with no colour of its own
+	CopperInners [30]string // In1.Cu to In30.Cu
+	Via          string     // via rings + through-hole pad lands
 	// Each side's silkscreen, fab and courtyard layers take their own colour, as KiCad's do, so the
-	// back's legend reads apart from the front's. DarkStyle uses the colours of KiCad's default
-	// theme, read off kicad-cli's export. DefaultStyle darkens the same hues, since KiCad's pale
-	// front silk all but vanishes on a light page.
+	// back's legend reads apart from the front's. Both styles use the colours of KiCad's default
+	// theme. DefaultStyle darkens the few that fall under 1.5:1 on its light page to 2:1, in the same
+	// hue, since KiCad's pale front silk all but vanishes there.
 	SilkFront      string // F.SilkS graphics and text, and a graphics layer of no known kind
 	SilkBack       string // B.SilkS
 	FabFront       string // F.Fab, such as body outlines and values (agni issue 1366)
@@ -105,32 +106,37 @@ const SchematicFontStack = "Arial, 'Liberation Sans', Helvetica, sans-serif"
 
 // DefaultStyle is the built-in palette and font. Override per render call with WithStyle.
 var DefaultStyle = Style{
-	Wire:           "#0a7d2c",
-	Bus:            "#1a4de0",
-	Symbol:         "#222222",
-	Pin:            "#dd1111",
-	Frame:          "#8a6d3b",
-	Field:          "#1560bd",
-	Label:          "#555555",
-	Annotation:     "#333333",
-	Ruler:          "#8a6d3b",
-	PinName:        "#2a7d5a",
-	Free:           "#333333",
-	DNP:            "#d42020",
-	ShapeFill:      "#fdf6d0",
-	Page:           "#fdfdfb",
-	BoardOutline:   "#8a6d3b",
-	CopperFront:    "#c83434",
-	CopperBack:     "#3050c8",
-	CopperInner:    "#8a8a8a",
-	CopperInners:   [6]string{"#c08a1e", "#2f8f5b", "#8a4fb0", "#1f8a96", "#a8642f", "#6f7d2a"},
+	Wire:         "#0a7d2c",
+	Bus:          "#1a4de0",
+	Symbol:       "#222222",
+	Pin:          "#dd1111",
+	Frame:        "#8a6d3b",
+	Field:        "#1560bd",
+	Label:        "#555555",
+	Annotation:   "#333333",
+	Ruler:        "#8a6d3b",
+	PinName:      "#2a7d5a",
+	Free:         "#333333",
+	DNP:          "#d42020",
+	ShapeFill:    "#fdf6d0",
+	Page:         "#fdfdfb",
+	BoardOutline: "#8a6d3b",
+	CopperFront:  "#c83434",
+	CopperBack:   "#4d7fc4",
+	CopperInner:  "#8a8a8a",
+	CopperInners: [30]string{
+		"#7fc87f", "#ce7d2c", "#4fcbcb", "#db628b", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b",
+		"#8dcb81", "#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b",
+		"#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b", "#ed7c33",
+		"#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b",
+	},
 	Via:            "#9aa0a6",
-	SilkFront:      "#8f7f00",
-	SilkBack:       "#b0533f",
-	FabFront:       "#7d7d7d",
+	SilkFront:      "#c1b61b",
+	SilkBack:       "#e8b2a7",
+	FabFront:       "#afafaf",
 	FabBack:        "#585d84",
-	CourtyardFront: "#c414ac",
-	CourtyardBack:  "#0b8fa3",
+	CourtyardFront: "#ff26e2",
+	CourtyardBack:  "#00c7de",
 	TitleBlockFill: "#fffef8",
 	Font:           SchematicFontStack,
 }
@@ -138,25 +144,30 @@ var DefaultStyle = Style{
 // DarkStyle is a dark-background preset. A WithStyle override recolors every surface (SVG,
 // WebGL geometry and the text overlay) from one palette.
 var DarkStyle = Style{
-	Wire:           "#4ade80",
-	Bus:            "#60a5fa",
-	Symbol:         "#e5e5e5",
-	Pin:            "#f87171",
-	Frame:          "#b0895a",
-	Free:           "#bbbbbb",
-	DNP:            "#f87171",
-	Field:          "#7aa2f7",
-	Label:          "#aaaaaa",
-	Annotation:     "#dddddd",
-	Ruler:          "#b0895a",
-	PinName:        "#5eead4",
-	ShapeFill:      "#1a1a1a",
-	Page:           "#111111",
-	BoardOutline:   "#b0895a",
-	CopperFront:    "#f87171",
-	CopperBack:     "#7aa2f7",
-	CopperInner:    "#9aa0a6",
-	CopperInners:   [6]string{"#f5b942", "#4fc98a", "#b98ae0", "#4ec3cf", "#e0955a", "#b3c25a"},
+	Wire:         "#4ade80",
+	Bus:          "#60a5fa",
+	Symbol:       "#e5e5e5",
+	Pin:          "#f87171",
+	Frame:        "#b0895a",
+	Free:         "#bbbbbb",
+	DNP:          "#f87171",
+	Field:        "#7aa2f7",
+	Label:        "#aaaaaa",
+	Annotation:   "#dddddd",
+	Ruler:        "#b0895a",
+	PinName:      "#5eead4",
+	ShapeFill:    "#1a1a1a",
+	Page:         "#111111",
+	BoardOutline: "#b0895a",
+	CopperFront:  "#c83434",
+	CopperBack:   "#4d7fc4",
+	CopperInner:  "#9aa0a6",
+	CopperInners: [30]string{
+		"#7fc87f", "#ce7d2c", "#4fcbcb", "#db628b", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1",
+		"#8dcb81", "#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1",
+		"#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1", "#ed7c33",
+		"#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1",
+	},
 	Via:            "#c0c6cc",
 	SilkFront:      "#f2eda1",
 	SilkBack:       "#e8b2a7",
