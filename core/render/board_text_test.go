@@ -87,7 +87,7 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 	// number out rather than reading capHeightEm, which would agree with itself whatever it held.
 	wantPx := 1_000_000 / 0.716 * scale
 	doc := BoardSVG(b)
-	for text, colour := range map[string]string{"U1": DefaultStyle.Silk, "10K": DefaultStyle.Fab, "NOTE": DefaultStyle.Field} {
+	for text, colour := range map[string]string{"U1": DefaultStyle.SilkFront, "10K": DefaultStyle.FabBack, "NOTE": DefaultStyle.Field} {
 		var line string
 		for _, l := range strings.Split(doc, "\n") {
 			if strings.Contains(l, ">"+text+"</text>") {
@@ -104,8 +104,8 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 			t.Errorf("%s draws as %s, want %s, the em that draws a 1 mm glyph", text, line, want)
 		}
 	}
-	if !strings.Contains(doc, `stroke="`+DefaultStyle.Fab+`"`) {
-		t.Error("a fab outline must draw in the fab colour")
+	if !strings.Contains(doc, `stroke="`+DefaultStyle.FabFront+`"`) {
+		t.Error("a front fab outline must draw in the front fab colour")
 	}
 
 	p := PackBoard(b)
@@ -114,7 +114,7 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 		labels = append(labels, fmt.Sprintf("%s %d %s", l.GetText(), l.GetHeight(), l.GetColor()))
 	}
 	em := int64(math.Round(1_000_000 / 0.716))
-	for _, want := range []string{fmt.Sprintf("U1 %d %s", em, DefaultStyle.Silk), fmt.Sprintf("10K %d %s", em, DefaultStyle.Fab)} {
+	for _, want := range []string{fmt.Sprintf("U1 %d %s", em, DefaultStyle.SilkFront), fmt.Sprintf("10K %d %s", em, DefaultStyle.FabBack)} {
 		found := false
 		for _, l := range labels {
 			found = found || l == want
@@ -123,7 +123,7 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 			t.Errorf("packed labels %v, want %q", labels, want)
 		}
 	}
-	if got := p.GetGroupColors()[boardRow(t, BoardLayers(b), "F.Fab").GetGroups()[0]]; got != DefaultStyle.Fab {
-		t.Errorf("the packed fab group draws in %q, want %q", got, DefaultStyle.Fab)
+	if got := p.GetGroupColors()[boardRow(t, BoardLayers(b), "F.Fab").GetGroups()[0]]; got != DefaultStyle.FabFront {
+		t.Errorf("the packed fab group draws in %q, want %q", got, DefaultStyle.FabFront)
 	}
 }
