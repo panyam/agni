@@ -386,3 +386,31 @@ as it ended, and each rule what it allocated.
 
 Stages nest, so `build.model` includes the reads beneath it (`read.netlist`, `read.board`) and the
 model it builds, and the stage list says when each started as well as how long it took.
+
+`?timing` also times the drawing (agni issue 1331). Say a board lags when you pan it. Open the page
+with `?timing`, open the board, and pan and zoom for a few seconds. Each drawing logs one line when
+it opens a sheet and one more each time you stop moving it. Each line covers every pan since the
+sheet opened, so the last one is enough. This one is Jetson's board on an M5 Pro, folded here one
+key per line, though the console prints it on one.
+
+```text
+agni draw canvas: {
+  "renderer": "webgl",
+  "env": {"gpu":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)","gpuVendor":"Google Inc. (Apple)","dpr":1,"cores":18,"memoryGb":32,"cssWidth":930,"cssHeight":608},
+  "scene": {"primitives":40937,"vertices":778326,"labels":5732,"images":0,"elements":0,"buildMs":56.2},
+  "bursts": 1,
+  "frame": {"n":19,"p50":8.3,"p95":9.3,"max":9.3},
+  "draw": {"n":20,"p50":0.6,"p95":0.9,"max":1.4},
+  "text": {"n":20,"p50":0,"p95":0.1,"max":0.1},
+  "drawCalls": {"n":20,"p50":5069,"p95":37591,"max":39817}
+}
+```
+
+`frame` is the time from one animation frame to the next one after an input, so it counts everything
+the browser did to show that input. `draw` and `text` are what the WebGL drawing itself spent per
+frame, in its draw calls and in moving its text layer. So when `frame` is far above `draw` plus `text`, the
+browser spent the frame on layout and compositing, which on a board often means the text layer.
+An SVG drawing reports `frame` and `scene.elements` alone. The line holds numbers, the renderer's
+name and the GPU's name. It has no field that could carry a net name, a part or a sheet name, so a
+line from a private board can go in a public issue. Send the request timings above with it, since a
+slow first open shows up in those.

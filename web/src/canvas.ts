@@ -18,6 +18,7 @@ import {
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
 import { DrawGate } from "./drawgate.js";
+import type { DrawScene } from "./drawprofile.js";
 import { PickIndex, drawnOnPacked } from "./canvaspick.js";
 import { rectOf, type Members } from "./area.js";
 import { AreaBand } from "./areaband.js";
@@ -26,6 +27,12 @@ import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { UPRIGHT, orientTurn, type Orientation, type Point } from "./orient.js";
 import { strataDrawOrder, type StrataRow } from "./boardstrata.js";
 import { unitAround, type RevealBox } from "./svgview.js";
+
+// CanvasProfile hears a WebGL drawing's costs. SheetSurface hands its DrawProfile over as one.
+export interface CanvasProfile {
+  sheet(scene: Partial<DrawScene>): void;
+  rendered(drawMs: number, textMs: number, drawCalls: number): void;
+}
 
 // CanvasComponent owns one WebGL2 drawing as a tsappkit lifecycle component. The canvas mounts it on
 // #view, and each sheet view in WebGL mounts one on a canvas of its own (agni issue 1368). It renders
@@ -91,6 +98,9 @@ export class CanvasComponent extends BaseComponent {
   onToggle: ((sel: Selection) => void) | null = null;
   // onViewChange fires when the reader pans or zooms, so a locked view can follow.
   onViewChange: (() => void) | null = null;
+  // profile hears what each drawn sheet holds and what each drawn frame cost, for a page opened with
+  // ?timing (drawprofile.ts). It is null otherwise, and then nothing is timed.
+  profile: CanvasProfile | null = null;
 
   activate(): void {
     const canvas = this.rootElement as HTMLCanvasElement;
@@ -227,6 +237,7 @@ export class CanvasComponent extends BaseComponent {
     cancelAnimationFrame(this.frameId);
     this.resizeObserver?.disconnect();
     this.overlay?.hide();
+    this.renderer?.dispose();
     this.gl?.getExtension("WEBGL_lose_context")?.loseContext();
     this.gl = undefined;
     this.renderer = undefined;
@@ -242,6 +253,8 @@ export class CanvasComponent extends BaseComponent {
     const canvas = this.rootElement as HTMLCanvasElement;
     this.sheet = sheet;
     this.picks = undefined;
+    const built = performance.now();
+    this.renderer?.dispose();
     this.renderer = new Renderer(gl, sheet);
     this.renderer.setHiddenGroups(this.hidden);
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
@@ -255,6 +268,13 @@ export class CanvasComponent extends BaseComponent {
     this.resize();
     this.camera.fit(canvas.width, canvas.height);
     this.marked = false;
+    this.profile?.sheet({
+      primitives: sheet.primitives.length,
+      vertices: sheet.vertices.length / 2,
+      labels: sheet.labels.length,
+      images: sheet.images.length,
+      buildMs: performance.now() - built,
+    });
     this.setReadout(`sheet ${sheet.sheetId} — ${sheet.primitives.length} primitives, ${sheet.vertices.length / 2} vertices`);
     this.start();
   }
@@ -459,11 +479,14 @@ export class CanvasComponent extends BaseComponent {
         matrix &&
         this.gate.shouldDraw({ matrix, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: this.renderer, version: this.renderer.version })
       ) {
-        this.renderer.render(matrix, this.camera.viewRect());
+        const t0 = performance.now();
+        const calls = this.renderer.render(matrix, this.camera.viewRect());
+        const t1 = performance.now();
         canvas.dataset.draws = String(++this.draws);
         // The overlay reads the same camera in the same tick, so text moves and turns with the
         // geometry.
         this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr(), orientTurn(this.orientation));
+        this.profile?.rendered(t1 - t0, performance.now() - t1, calls);
         if (!this.marked) {
           this.marked = true;
           const view = this.markView;

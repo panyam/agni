@@ -16,6 +16,8 @@ import { membersIn, type Members } from "./area.js";
 import type { Selection } from "./selection.js";
 import type { PackedSheet, BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { SHEET_DRAWN } from "./drawmark.js";
+import { DrawProfile, pageEnv } from "./drawprofile.js";
+import { timingMode } from "./api.js";
 
 // SurfaceMode is the renderer a surface draws in. Native draws the tool's own SVG into the SVG host,
 // so a surface sees it as "svg".
@@ -59,12 +61,19 @@ export class SheetSurface {
   onToggle: ((sel: Selection) => void) | null = null;
   onViewChange: (() => void) | null = null;
 
+  // profile times pan and zoom on this surface when the page's address carries ?timing, and logs an
+  // "agni draw" line per burst (drawprofile.ts, agni issue 1331). It is null otherwise.
+  readonly profile: DrawProfile | null;
+
   constructor(private readonly parts: SurfaceParts) {
+    // The SVG host hides in WebGL, so the size is read off whichever element draws.
+    const drawing = (): HTMLElement => (this.drawnBy === "webgl" ? (parts.gl(false)?.rootElement ?? parts.svgHost) : parts.svgHost);
+    this.profile = timingMode() ? new DrawProfile(parts.markView, () => pageEnv(drawing())) : null;
     this.svg = new SvgView(parts.svgHost);
     this.svg.onPick = (sel) => this.onPick?.(sel);
     this.svg.onPickEmpty = () => this.onPickEmpty?.();
     this.svg.onToggle = (sel) => this.onToggle?.(sel);
-    this.svg.onViewChange = () => this.onViewChange?.();
+    this.svg.onViewChange = () => this.viewChanged();
     this.svg.onArea = (r) => {
       const doc = parts.svgHost.querySelector("svg");
       if (doc) this.onArea?.(membersIn(doc, r));
@@ -80,8 +89,15 @@ export class SheetSurface {
     gl.onPickEmpty = () => this.onPickEmpty?.();
     gl.onArea = (m) => this.onArea?.(m);
     gl.onToggle = (sel) => this.onToggle?.(sel);
-    gl.onViewChange = () => this.onViewChange?.();
+    gl.onViewChange = () => this.viewChanged();
+    const p = this.profile;
+    gl.profile = p ? { sheet: (scene) => p.sheet("webgl", scene), rendered: (d, t, c) => p.rendered(d, t, c) } : null;
     return gl;
+  }
+
+  private viewChanged(): void {
+    this.profile?.input();
+    this.onViewChange?.();
   }
 
   // setMode picks the renderer for the next sheet. Leaving WebGL frees a sheet view's GPU copy.
@@ -113,8 +129,10 @@ export class SheetSurface {
     this.parts.gl(false)?.hideText();
     // Show before setSvg so fit() measures a laid-out (non-zero) host.
     this.svg.show();
+    const built = performance.now();
     this.svg.setSvg(markup);
     this.applyTurn();
+    this.profile?.sheet("svg", { elements: this.svg.stats().elements, buildMs: performance.now() - built });
     const view = this.parts.markView;
     requestAnimationFrame(() => requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "svg", view } })));
     if (this.parts.readout) {
