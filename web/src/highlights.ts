@@ -126,6 +126,9 @@ export function normalizePathAlpha(a: number | undefined): number {
 // render.HighlightPacked. A listed component matches every primitive keyed to its ref_des
 // (symbol graphics and pins), a listed net matches its wire primitives, and a listed pin
 // matches just that (ref_des, pin) primitive. One (possibly empty) result per spec, in order.
+// A sheet can place one ref-des twice, so a component or pin is one entity per placement
+// (PrimitiveKey.placement) and frames where each placement sits, as the SVG overlay does (agni
+// issue 1477). It is still one subject.
 export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]): ResolvedHighlight[] {
   return specs.map((spec) => {
     const comps = new Set(spec.components ?? []);
@@ -141,7 +144,7 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
       let entity: string;
       let subject: string;
       if (k.refDes !== "" && comps.has(k.refDes)) {
-        entity = `c ${k.refDes}`;
+        entity = `c ${k.refDes} ${k.placement ?? 0}`;
         subject = `component:${k.refDes}`;
       } else if (k.netId !== "" && netIds.has(k.netId)) {
         entity = `n ${k.netId}`; // per-instance: two same-named nets are two entities
@@ -153,7 +156,7 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
         entity = `b ${k.busId}`; // a bus joins by source id, having no net (WS7-042b)
         subject = `bus:${k.busId}`;
       } else if (k.pin !== "" && pins.has(`${k.refDes} ${k.pin}`)) {
-        entity = `p ${k.refDes} ${k.pin}`;
+        entity = `p ${k.refDes} ${k.pin} ${k.placement ?? 0}`;
         subject = `pin:${k.refDes}.${k.pin}`;
       } else {
         continue;

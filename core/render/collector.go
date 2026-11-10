@@ -13,6 +13,7 @@ import (
 type wprim struct {
 	kind, group                    uint8
 	refDes, net, netID, pin, busID string
+	placement                      uint32
 	pts                            [][2]int64
 }
 
@@ -24,6 +25,9 @@ type wprim struct {
 type primCollector struct {
 	prims  []wprim
 	bounds geomath.Bounds
+	// placement stamps every primitive added while it is set, the 1-based index of the symbol
+	// placement being drawn (PrimitiveKey.placement). PackSheet sets it per placement.
+	placement uint32
 }
 
 // Add records one primitive, growing the bounds to include its points. Empty primitives are
@@ -53,6 +57,7 @@ func (c *primCollector) add(p wprim) {
 	for _, pt := range p.pts {
 		c.bounds.Add(&geom.Point{X: pt[0], Y: pt[1]})
 	}
+	p.placement = c.placement
 	c.prims = append(c.prims, p)
 }
 
@@ -80,7 +85,7 @@ func (c *primCollector) build() (vertices, records []byte, keys []*geom.Primitiv
 		}
 		records = appendRecord(records, p.kind, p.group, first, num.Uint32(len(p.pts)))
 		if p.refDes != "" || p.net != "" || p.busID != "" {
-			keys = append(keys, &geom.PrimitiveKey{Primitive: uint32(i), RefDes: p.refDes, Net: p.net, NetId: p.netID, Pin: p.pin, BusId: p.busID})
+			keys = append(keys, &geom.PrimitiveKey{Primitive: uint32(i), RefDes: p.refDes, Net: p.net, NetId: p.netID, Pin: p.pin, BusId: p.busID, Placement: p.placement})
 		}
 	}
 	return vertices, records, keys, ox, oy

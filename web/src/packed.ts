@@ -79,6 +79,10 @@ export interface PrimitiveKey {
   // source id (KiCad uuid, geom PrimitiveKey.bus_id) for a bus trunk/entry primitive, so a
   // bus-not-modeled finding highlights its own bus (WS7-042b); empty for every other primitive.
   busId: string;
+  // the 1-based index of the symbol placement a symbol, pin or DNP primitive belongs to (geom
+  // PrimitiveKey.placement), so two placements of one ref-des light apart (agni issue 1477). 0 or
+  // absent on a board and on every primitive no placement drew.
+  placement?: number;
 }
 
 // A text label in sheet-relative world coordinates (rebased like the vertex blob). The WebGL
@@ -197,7 +201,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
     originY: Number(msg.originY),
     vertices: asInt32Array(msg.vertices),
     primitives: parsePrimitives(msg.primitives),
-    keys: msg.keys.map((k) => ({ primitive: k.primitive, refDes: k.refDes, net: k.net, netId: k.netId ?? "", pin: k.pin, busId: k.busId ?? "" })),
+    keys: msg.keys.map((k) => ({ primitive: k.primitive, refDes: k.refDes, net: k.net, netId: k.netId ?? "", pin: k.pin, busId: k.busId ?? "", placement: k.placement ?? 0 })),
     labels: msg.labels.map((l) => ({
       x: l.x,
       y: l.y,

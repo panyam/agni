@@ -123,7 +123,7 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
       originY: -2000n,
       vertices: new Uint8Array(vbuf),
       primitives: new Uint8Array(pbuf),
-      keys: [{ primitive: 0, refDes: "", net: "N1" }],
+      keys: [{ primitive: 0, refDes: "", net: "N1" }, { primitive: 0, refDes: "R2", pin: "1", placement: 4 }],
     });
     const encoded = toBinary(PackedSheetSchema, msg);
 
@@ -136,7 +136,9 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
     expect(sheet.primitives).toEqual([
       { kind: KIND_LINE_STRIP, group: GROUP_WIRE, firstVertex: 0, count: 2 },
     ]);
-    expect(sheet.keys[0]).toEqual({ primitive: 0, refDes: "", net: "N1", netId: "", pin: "", busId: "" });
+    expect(sheet.keys[0]).toEqual({ primitive: 0, refDes: "", net: "N1", netId: "", pin: "", busId: "", placement: 0 });
+    // A key carries the placement it was drawn by, so two placements of one ref-des light apart.
+    expect(sheet.keys[1]).toEqual({ primitive: 0, refDes: "R2", net: "", netId: "", pin: "1", busId: "", placement: 4 });
   });
 
   it("decodes a bus triangle primitive in GROUP_BUS (WS7-042)", () => {

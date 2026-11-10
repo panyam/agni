@@ -62,6 +62,12 @@ The board view picks with the same `Selection` and the same priority (agni issue
   carries the name of each net it lists by id (`HighlightSpec.netIdNames`). `resolveHighlights`
   joins a wire with no id through that name, and `HighlightSheet` adds the name to the spec for
   the SVG overlay. Both nets of a shared name then light, as they did before.
+- **A ref-des placed twice on one sheet lights as two parts** (agni issue 1477). A design that
+  repeats a block can place R2 twice. The SVG overlay frames each placement, and the WebGL canvas
+  once drew one frame from the first placement to the second, covering everything between them.
+  `PackSheet` now stamps each symbol, pin and DNP primitive with its placement's 1-based index
+  (`PrimitiveKey.placement`). `resolveHighlights` keys a component or pin entity by ref-des and
+  placement, so each placement frames on its own. The part is still one subject in `data-lit`.
 - A footprint's body is an invisible rect over its pads' bounds, drawn above the zones and under the
   copper. A click between two pads then picks the part, and a pad or a track drawn over the body
   still wins where it is drawn. `footprintBody` computes the rect once, and `PackBoard` packs the
