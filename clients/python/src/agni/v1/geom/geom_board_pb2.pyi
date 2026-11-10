@@ -34,7 +34,7 @@ class BoardGeometry(_message.Message):
     def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class BoardText(_message.Message):
-    __slots__ = ("text", "at", "rotation_deg", "height", "layer", "mirror", "justify", "ref_des", "kind")
+    __slots__ = ("text", "at", "rotation_deg", "height", "layer", "mirror", "justify", "ref_des", "kind", "font", "thickness")
     TEXT_FIELD_NUMBER: _ClassVar[int]
     AT_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
@@ -44,6 +44,8 @@ class BoardText(_message.Message):
     JUSTIFY_FIELD_NUMBER: _ClassVar[int]
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
+    FONT_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_FIELD_NUMBER: _ClassVar[int]
     text: str
     at: _geom_pb2.Point
     rotation_deg: float
@@ -53,7 +55,9 @@ class BoardText(_message.Message):
     justify: str
     ref_des: str
     kind: str
-    def __init__(self, text: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., height: _Optional[int] = ..., layer: _Optional[str] = ..., mirror: _Optional[bool] = ..., justify: _Optional[str] = ..., ref_des: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+    font: str
+    thickness: int
+    def __init__(self, text: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., height: _Optional[int] = ..., layer: _Optional[str] = ..., mirror: _Optional[bool] = ..., justify: _Optional[str] = ..., ref_des: _Optional[str] = ..., kind: _Optional[str] = ..., font: _Optional[str] = ..., thickness: _Optional[int] = ...) -> None: ...
 
 class BoardGraphic(_message.Message):
     __slots__ = ("shape", "layer", "ref_des", "width")

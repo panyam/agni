@@ -36,10 +36,11 @@
 </g>
 </g>
 <g class="labels">
-<text x="440.0" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">R1</text>
-<text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">10k</text>
-<text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">J1</text>
-<text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">CONN</text>
-<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)" data-layer="B.SilkS">Demo Board</text>
+<text x="393.1" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="start" dominant-baseline="central" textLength="96.8" lengthAdjust="spacingAndGlyphs" data-layer="F.SilkS">R1</text>
+<text x="565.9" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="start" dominant-baseline="central" textLength="148.2" lengthAdjust="spacingAndGlyphs" data-layer="F.Fab">10k</text>
+<text x="994.6" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="start" dominant-baseline="central" textLength="87.7" lengthAdjust="spacingAndGlyphs" data-layer="F.SilkS">J1</text>
+<text x="920.6" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="start" dominant-baseline="central" textLength="235.9" lengthAdjust="spacingAndGlyphs" data-layer="F.Fab">CONN</text>
+<text x="971.0" y="109.5" fill="#7a7f88" font-size="139.7" text-anchor="start" dominant-baseline="central" textLength="366.7" lengthAdjust="spacingAndGlyphs" transform="translate(971.0 109.5) scale(-1 1) translate(-971.0 -109.5)" data-layer="B.SilkS">Demo</text>
+<text x="982.9" y="270.5" fill="#7a7f88" font-size="139.7" text-anchor="start" dominant-baseline="central" textLength="385.7" lengthAdjust="spacingAndGlyphs" transform="translate(982.9 270.5) scale(-1 1) translate(-982.9 -270.5)" data-layer="B.SilkS">Board</text>
 </g>
 </svg>

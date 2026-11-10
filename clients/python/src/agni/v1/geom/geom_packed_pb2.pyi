@@ -102,7 +102,7 @@ class TextRun(_message.Message):
     def __init__(self, text: _Optional[str] = ..., kind: _Optional[_Union[TextRun.Kind, str]] = ...) -> None: ...
 
 class PackedLabel(_message.Message):
-    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width", "runs", "group", "mirror")
+    __slots__ = ("x", "y", "text", "height", "rotation_deg", "justify", "color", "max_width", "runs", "group", "mirror", "width")
     X_FIELD_NUMBER: _ClassVar[int]
     Y_FIELD_NUMBER: _ClassVar[int]
     TEXT_FIELD_NUMBER: _ClassVar[int]
@@ -114,6 +114,7 @@ class PackedLabel(_message.Message):
     RUNS_FIELD_NUMBER: _ClassVar[int]
     GROUP_FIELD_NUMBER: _ClassVar[int]
     MIRROR_FIELD_NUMBER: _ClassVar[int]
+    WIDTH_FIELD_NUMBER: _ClassVar[int]
     x: int
     y: int
     text: str
@@ -125,7 +126,8 @@ class PackedLabel(_message.Message):
     runs: _containers.RepeatedCompositeFieldContainer[TextRun]
     group: int
     mirror: bool
-    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ..., group: _Optional[int] = ..., mirror: _Optional[bool] = ...) -> None: ...
+    width: int
+    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., text: _Optional[str] = ..., height: _Optional[int] = ..., rotation_deg: _Optional[int] = ..., justify: _Optional[str] = ..., color: _Optional[str] = ..., max_width: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ..., group: _Optional[int] = ..., mirror: _Optional[bool] = ..., width: _Optional[int] = ...) -> None: ...
 
 class PackedImage(_message.Message):
     __slots__ = ("x", "y", "w", "h", "mime", "data", "rotation_deg", "mirror")

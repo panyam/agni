@@ -335,7 +335,17 @@ the silk colour on a silkscreen and the fab colour on a fab layer. A footprint f
 size is 1.27 mm, and one that names no layer is a Reference on F.SilkS or a Value on F.Fab, even on
 a back footprint. kicad-cli is the oracle. `hack/kicad_text_oracle.sh` writes how it strokes each
 text on the fixture board, gateway and Jetson, and `TestBoardTextAgainstKiCad` holds the reader to
-it. **Back-side text draws mirrored** about its anchor in `BoardSVG` (agni issue 1327), as KiCad draws it, because seen from the front it sits on the copper reversed. A board view turned to the bottom view then reads it the right way round. The WebGL board text does not mirror yet (#1368).
+it. A footprint's user text draws too, with `${REFERENCE}` and `${VALUE}` filled from its fields,
+since most libraries put the designator inside a part's outline that way. Some footprints carry a
+placeholder reference such as `REF**`, as a logo or a panel tab does. Such a footprint is no part,
+but its artwork and user text still draw, owned by no part. **A KiCad text runs as long as KiCad's
+stroke font runs** (`core/render/strokefont.go`). The reader marks the text `font: kicad_stroke`
+and records its pen width. The renderer holds each glyph's advance and bearings, measured off
+kicad-cli, and moves the run to where KiCad's ink starts. Both renderers then stretch Arial to the
+ink's length, through `textLength` in the SVG and `PackedLabel.width` in the viewer.
+`TestBoardRunsAgainstKiCad` holds both ends of every run to the same oracles, within 0.1 mm. A text
+of several lines draws one line at a time, 1.61 heights apart, with the block centred on its anchor.
+**Back-side text draws mirrored** about its anchor in `BoardSVG` (agni issue 1327), as KiCad draws it, because seen from the front it sits on the copper reversed. A board view turned to the bottom view then reads it the right way round. The WebGL board text does not mirror yet (#1368).
 
 **Silkscreen and fab graphics travel in `BoardGraphic`** the same way, which carries a footprint's silk and fab body outlines, courtyards, and polarity marks, plus free graphics that are not the board edge (the edge is still `BoardOutline`). It reuses `geom.Shape` for the geometry itself (polyline, rect, circle, with arcs approximated to polylines under the same lossy bound), adds only a stroke width, carries the source layer verbatim, and, like `BoardText`, pre-composes footprint graphics to board coordinates so they sit on their part. Both renderers draw them in a silk group, and per-layer visibility is the same client-side concern as the copper strata. This is universal across board formats, so it is a shared-contract field rather than a reader's, and a second producer fills it too. Filled zone regions and per-side silk and fab default-visibility remain a later refinement.
 
