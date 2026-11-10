@@ -19,7 +19,7 @@ import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
-import { type LayerPreset, type LayerStore, presetHidden, soloHidden, toggled } from "./boardlayers.js";
+import { type LayerPreset, type LayerStore, defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emptyLocation, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
@@ -782,13 +782,14 @@ export class ViewerPresenter {
   }
 
   // adoptBoardRows takes a board's rows from its sheet and loads the design's kept choice the first
-  // time the design's board is drawn.
+  // time the design's board is drawn. A design with no kept choice opens with defaultHidden.
   private adoptBoardRows(rows: BoardLayerRow[]): void {
     this.boardRows = rows;
     const key = `${this.doc.mount}/${this.doc.path}`;
     if (this.layersFor !== key) {
       this.layersFor = key;
-      this.hiddenLayers = new Set(this.layerStore?.load(this.doc.mount, this.doc.path) ?? []);
+      const kept = this.layerStore?.load(this.doc.mount, this.doc.path) ?? null;
+      this.hiddenLayers = kept ? new Set(kept) : defaultHidden(rows);
     }
   }
 

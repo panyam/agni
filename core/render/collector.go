@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/binary"
+	"math"
 
 	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -12,6 +13,7 @@ import (
 // origin. Both the schematic packer (PackSheet) and the board packer (PackBoard) gather these.
 type wprim struct {
 	kind, group                    uint8
+	strokeUm                       uint16
 	refDes, net, netID, pin, busID string
 	placement                      uint32
 	pts                            [][2]int64
@@ -34,6 +36,26 @@ type primCollector struct {
 // dropped so they never open a degenerate vertex range.
 func (c *primCollector) Add(kind, group uint8, refDes, net, pin string, pts [][2]int64) {
 	c.add(wprim{kind: kind, group: group, refDes: refDes, net: net, pin: pin, pts: pts})
+}
+
+// AddStroked records a line primitive that its source draws at a width, such as a board's courtyard
+// or silkscreen outline. The width rides in the record (strokeMicrons), so WebGL can draw the line
+// as wide as SVG strokes it once the line spans a pixel (agni issue 1486). A width of 0 is a hairline.
+func (c *primCollector) AddStroked(kind, group uint8, refDes string, widthNm int64, pts [][2]int64) {
+	c.add(wprim{kind: kind, group: group, refDes: refDes, strokeUm: strokeMicrons(widthNm), pts: pts})
+}
+
+// strokeMicrons rounds a width in nanometres to the record's whole micrometres, saturating at the
+// u16's 65 mm.
+func strokeMicrons(widthNm int64) uint16 {
+	um := (widthNm + 500) / 1000
+	switch {
+	case um <= 0:
+		return 0
+	case um > math.MaxUint16:
+		return math.MaxUint16
+	}
+	return uint16(um)
 }
 
 // AddWire records a schematic wire primitive carrying its per-instance net id (WS9) alongside the
@@ -83,7 +105,7 @@ func (c *primCollector) build() (vertices, records []byte, keys []*geom.Primitiv
 			vertices = binary.LittleEndian.AppendUint32(vertices, uint32(num.Int32(pt[1]-oy))) // #nosec G115 -- the int32's two's-complement bits, which the reader decodes as an int32
 			vcount++
 		}
-		records = appendRecord(records, p.kind, p.group, first, num.Uint32(len(p.pts)))
+		records = appendRecord(records, p.kind, p.group, p.strokeUm, first, num.Uint32(len(p.pts)))
 		if p.refDes != "" || p.net != "" || p.busID != "" {
 			keys = append(keys, &geom.PrimitiveKey{Primitive: uint32(i), RefDes: p.refDes, Net: p.net, NetId: p.netID, Pin: p.pin, BusId: p.busID, Placement: p.placement})
 		}

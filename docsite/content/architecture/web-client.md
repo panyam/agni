@@ -84,6 +84,12 @@ panel from the ones above.
   (`[data-sheetview="<id>"] .sheetview-canvas`), so a reader can show In2.Cu alone beside the canvas
   and keep the whole board on the canvas. The set lasts as long as the view, since a view's id does
   not outlive the page.
+- **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
+  reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
+  the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`
+  picks the rows whose kind is `fab`, and the canvas and every board view start from it until the
+  reader chooses. The canvas keeps a choice per design in browser storage. Showing every layer is
+  stored as `[]`, so it survives a reload, and only a design with no stored choice gets the default.
 - **A view costs nothing per frame while nobody touches it** (agni issue 1479). Every WebGL drawing,
   the canvas, each view and each side of the visual diff, asks a `DrawGate` (`web/src/drawgate.ts`)
   before it draws a frame. It draws only when the camera's matrix, its size, the pixel ratio or

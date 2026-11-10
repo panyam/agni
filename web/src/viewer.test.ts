@@ -1338,6 +1338,7 @@ describe("board layer visibility (agni 1351)", () => {
     { name: "In1.Cu", kind: "copper", side: "inner", color: "#8a6d3b", svgSelector: '[data-layer="In1.Cu"]', groups: [13] },
     { name: "B.Cu", kind: "copper", side: "back", color: "#3050c8", svgSelector: '[data-layer="B.Cu"]', groups: [7] },
     { name: "Edge", kind: "edge", side: "", color: "#8a6d3b", svgSelector: ".edge", groups: [5] },
+    { name: "F.Fab", kind: "fab", side: "front", color: "#afafaf", svgSelector: '[data-layer="F.Fab"]', groups: [16] },
   ];
   function boardHarness() {
     const h = harness();
@@ -1372,17 +1373,17 @@ describe("board layer visibility (agni 1351)", () => {
     const h = boardHarness();
     await h.presenter.openFile("m", "x.kicad_pcb");
     await h.presenter.showSheet("board");
-    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith(rows, new Set());
-    expect(lastOverview(h).boardLayers.map((r: { name: string }) => r.name)).toEqual(["F.Cu", "In1.Cu", "B.Cu", "Edge"]);
+    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith(rows, new Set(["F.Fab"]));
+    expect(lastOverview(h).boardLayers.map((r: { name: string }) => r.name)).toEqual(["F.Cu", "In1.Cu", "B.Cu", "Edge", "F.Fab"]);
 
     h.presenter.presetBoardLayers("front");
     expect(lastHidden(h)).toEqual(["B.Cu", "In1.Cu"]);
     expect(lastOverview(h).hiddenLayers.sort()).toEqual(["B.Cu", "In1.Cu"]);
 
     h.presenter.soloBoardLayer("In1.Cu");
-    expect(lastHidden(h)).toEqual(["B.Cu", "Edge", "F.Cu"]);
+    expect(lastHidden(h)).toEqual(["B.Cu", "Edge", "F.Cu", "F.Fab"]);
     h.presenter.toggleBoardLayer("Edge");
-    expect(lastHidden(h)).toEqual(["B.Cu", "F.Cu"]);
+    expect(lastHidden(h)).toEqual(["B.Cu", "F.Cu", "F.Fab"]);
     h.presenter.presetBoardLayers("all");
     expect(lastHidden(h)).toEqual([]);
   });
@@ -1395,7 +1396,22 @@ describe("board layer visibility (agni 1351)", () => {
     await h.presenter.showSheet("graph");
     expect(h.render.setBoardLayers).toHaveBeenLastCalledWith([], new Set());
     await h.presenter.showSheet("board");
-    expect(lastHidden(h)).toEqual(["F.Cu", "In1.Cu"]);
+    expect(lastHidden(h)).toEqual(["F.Cu", "F.Fab", "In1.Cu"]);
+  });
+
+  // agni issue 1486: a board nobody has chosen layers for opens with its fab rows hidden, and a
+  // reader's choice, showing every layer included, wins on the next open.
+  it("opens a board with its fab rows hidden until the reader chooses", async () => {
+    const h = boardHarness();
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    expect(lastHidden(h)).toEqual(["F.Fab"]);
+    expect(lastOverview(h).hiddenLayers).toEqual(["F.Fab"]);
+
+    h.kept.set("m/shown.kicad_pcb", []);
+    await h.presenter.openFile("m", "shown.kicad_pcb");
+    await h.presenter.showSheet("board");
+    expect(lastHidden(h)).toEqual([]);
   });
 
   it("keeps each design's choice in its store", async () => {
@@ -1404,7 +1420,7 @@ describe("board layer visibility (agni 1351)", () => {
     await h.presenter.openFile("m", "x.kicad_pcb");
     await h.presenter.showSheet("board");
     h.presenter.presetBoardLayers("back");
-    expect(h.store.save).toHaveBeenLastCalledWith("m", "x.kicad_pcb", ["F.Cu", "In1.Cu"]);
+    expect(h.store.save).toHaveBeenLastCalledWith("m", "x.kicad_pcb", ["F.Cu", "F.Fab", "In1.Cu"]);
 
     await h.presenter.openFile("m", "y.kicad_pcb");
     await h.presenter.showSheet("board");

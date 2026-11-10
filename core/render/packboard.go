@@ -182,7 +182,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		add(primLineStrip, groupBoardEdge, "", "", "", xy(p.Points))
 	}
 
-	// Silkscreen and fab body graphics go through the schematic packer's shapeVerts, keyed by
+	// Silkscreen, fab and courtyard graphics go through the schematic packer's shapeVerts, keyed by
 	// ref_des so a component highlight picks them.
 	for _, gr := range b.GetGraphics() {
 		if gr.GetShape() == nil {
@@ -192,7 +192,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		if len(pts) == 0 {
 			continue
 		}
-		add(kind, strata.artGroup(gr.GetLayer()), gr.GetRefDes(), "", "", pts)
+		// A line keeps its source width, which BoardSVG strokes at (agni issue 1486).
+		c.AddStroked(kind, strata.artGroup(gr.GetLayer()), gr.GetRefDes(), gr.GetWidth(), pts)
 	}
 
 	vertices, records, keys, ox, oy := c.build()

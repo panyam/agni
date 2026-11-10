@@ -1,7 +1,7 @@
 // fakeGl is a WebGL2 context that draws nothing and records every call, for tests of the renderer
 // and the canvas that need no GPU. A create call returns a fresh object, so a test can tell which
-// buffer or program a delete call freed. A constant reads as a number, and a parameter query
-// answers true, so shaders compile and programs link.
+// buffer or program a delete call freed. A constant reads as a number of its own, so a test can tell
+// TRIANGLES from LINE_LOOP, and a parameter query answers true, so shaders compile and programs link.
 export interface FakeGl {
   gl: WebGL2RenderingContext;
   calls: { name: string; args: unknown[]; ret?: unknown }[];
@@ -11,12 +11,16 @@ export interface FakeGl {
 export function fakeGl(): FakeGl {
   const calls: { name: string; args: unknown[]; ret?: unknown }[] = [];
   let next = 1;
+  const constants = new Map<string, number>();
   const gl = new Proxy(
     {},
     {
       get(_t, prop) {
         if (typeof prop !== "string") return undefined;
-        if (/^[A-Z0-9_]+$/.test(prop)) return 0x1000 + prop.length;
+        if (/^[A-Z0-9_]+$/.test(prop)) {
+          if (!constants.has(prop)) constants.set(prop, 0x1000 + constants.size);
+          return constants.get(prop);
+        }
         if (prop === "canvas") return undefined;
         return (...args: unknown[]) => {
           const call: { name: string; args: unknown[]; ret?: unknown } = { name: prop, args };
