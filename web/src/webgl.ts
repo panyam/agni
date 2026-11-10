@@ -1,7 +1,7 @@
 // WebGL2 renderer for a decoded PackedSheet. The vertex positions are int32 and
 // sheet-relative, so the attribute is an INTEGER attribute (ivec2) fed with
 // gl.vertexAttribIPointer + gl.INT. The vertex buffer is uploaded ONCE; only the mat3
-// view uniform changes per frame. Each primitive record becomes one gl.drawArrays call,
+// view uniform changes between frames, and the canvas draws a frame only when something changed. Each primitive record becomes one gl.drawArrays call,
 // with the draw mode and color chosen per record. The renderer culls a record when its
 // precomputed world-space bounds fall entirely outside the current view rect.
 
@@ -143,6 +143,7 @@ function outside(b: Bounds, view: Bounds): boolean {
 export class Renderer {
   private program: WebGLProgram;
   private vao: WebGLVertexArrayObject;
+  private buf: WebGLBuffer;
   private uView: WebGLUniformLocation;
   private uColor: WebGLUniformLocation;
   private primitives: Primitive[];
@@ -181,6 +182,7 @@ export class Renderer {
     const vao = gl.createVertexArray();
     if (!buf || !vao) throw new Error("failed to create buffer/vao");
     this.vao = vao;
+    this.buf = buf;
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, sheet.vertices, gl.STATIC_DRAW);
@@ -273,9 +275,26 @@ export class Renderer {
     this.hiddenGroups = new Set(groups);
   }
 
-  // Draw one frame. viewMatrix is the mat3 (column-major) from Camera; viewRect is the
-  // world-space rectangle it maps to, used for culling.
-  render(viewMatrix: Float32Array, viewRect: Bounds): void {
+  // dispose deletes the vertex buffer, the overlay's buffer, both VAOs and the program. The canvas
+  // calls it when a new sheet replaces this one on the same context. A context keeps every object
+  // until it is deleted or lost, so each sheet switch used to leave the old sheet on the GPU (agni
+  // issue 1331).
+  dispose(): void {
+    const gl = this.gl;
+    gl.deleteBuffer(this.buf);
+    gl.deleteVertexArray(this.vao);
+    if (this.overlayBuf) gl.deleteBuffer(this.overlayBuf);
+    if (this.overlayVao) gl.deleteVertexArray(this.overlayVao);
+    gl.deleteProgram(this.program);
+    this.overlayBuf = null;
+    this.overlayVao = null;
+    this.overlayGroups = [];
+  }
+
+  // Draw one frame and return how many draw calls it made. viewMatrix is the mat3 (column-major)
+  // from Camera; viewRect is the world-space rectangle it maps to, used for culling.
+  render(viewMatrix: Float32Array, viewRect: Bounds): number {
+    let calls = 0;
     const gl = this.gl;
     gl.clearColor(this.background[0], this.background[1], this.background[2], this.background[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -303,6 +322,7 @@ export class Renderer {
         lastGroup = p.group;
       }
       gl.drawArrays(drawMode(gl, p.kind), p.firstVertex, p.count);
+      calls++;
     }
     gl.bindVertexArray(null);
 
@@ -314,8 +334,10 @@ export class Renderer {
       for (const g of this.overlayGroups) {
         gl.uniform4f(this.uColor, g.color[0], g.color[1], g.color[2], g.color[3]);
         gl.drawArrays(gl.TRIANGLES, g.first, g.count);
+        calls++;
       }
       gl.bindVertexArray(null);
     }
+    return calls;
   }
 }

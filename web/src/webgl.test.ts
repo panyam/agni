@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { enableBlending, hexToRgba } from "./webgl.js";
+import { Renderer, enableBlending, hexToRgba } from "./webgl.js";
+import { KIND_LINE_STRIP, type DecodedSheet } from "./packed.js";
+import { fakeGl } from "./fakegl.js";
 
 // hexToRgba turns the server-chosen palette ("#rrggbb") into GL's 0..1 RGBA, so WebGL colors
 // from the same render.Style as the SVG backend.
@@ -37,3 +39,42 @@ describe("enableBlending", () => {
     expect(calls).toEqual([["enable", 0x0be2], ["separate", 0x0302, 0x0303, 1, 0x0303]]);
   });
 });
+
+// A sheet switch builds a new Renderer on the same context, and a context keeps every object until
+// it is deleted (agni issue 1331).
+describe("Renderer.dispose", () => {
+  it("deletes the vertex buffer, the overlay's buffer, both VAOs and the program", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, tinySheet());
+    r.setOverlays([{ color: [1, 0, 0, 1], vertices: Int32Array.from([0, 0, 10, 0, 0, 10]) }]);
+    const created = (kind: string) => f.calls.filter((c) => c.name === `create${kind}`).map((c) => c.args);
+    expect(created("Buffer")).toHaveLength(2);
+    r.dispose();
+    const deleted = (name: string) => f.calls.filter((c) => c.name === name).map((c) => c.args[0]);
+    expect(deleted("deleteBuffer")).toHaveLength(2);
+    expect(deleted("deleteVertexArray")).toHaveLength(2);
+    expect(deleted("deleteProgram")).toHaveLength(1);
+    expect(new Set([...deleted("deleteBuffer"), ...deleted("deleteVertexArray"), ...deleted("deleteProgram")]).size).toBe(5);
+  });
+
+  it("counts a frame's draw calls", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, tinySheet());
+    const view = { minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9 };
+    expect(r.render(new Float32Array(9), view)).toBe(2);
+    expect(f.count("drawArrays")).toBe(2);
+  });
+});
+
+// tinySheet is two line strips on group 0.
+function tinySheet(): DecodedSheet {
+  return {
+    sheetId: "S", layoutVersion: 1, originX: 0, originY: 0,
+    vertices: Int32Array.from([0, 0, 10, 0, 0, 10, 10, 10]),
+    primitives: [
+      { kind: KIND_LINE_STRIP, group: 0, firstVertex: 0, count: 2 },
+      { kind: KIND_LINE_STRIP, group: 0, firstVertex: 2, count: 2 },
+    ],
+    keys: [], labels: [], images: [], fontFamily: "", groupColors: ["#000000"], backgroundColor: "#ffffff",
+  };
+}
