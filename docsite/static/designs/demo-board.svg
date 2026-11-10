@@ -26,20 +26,20 @@
 </g>
 <g class="silk">
 <g data-layer="F.SilkS">
-<polyline fill="none" stroke="#7a7f88" stroke-width="6.0" points="505.0,615.0 505.0,465.0"/>
+<polyline fill="none" stroke="#8f7f00" stroke-width="6.0" points="505.0,615.0 505.0,465.0"/>
 </g>
 <g data-layer="F.SilkS">
-<circle fill="none" stroke="#7a7f88" stroke-width="5.0" cx="540.0" cy="540.0" r="25.0"/>
+<circle fill="none" stroke="#8f7f00" stroke-width="5.0" cx="540.0" cy="540.0" r="25.0"/>
 </g>
 <g data-layer="F.SilkS">
-<polyline fill="none" stroke="#7a7f88" stroke-width="7.5" points="140.0,340.0 640.0,340.0"/>
+<polyline fill="none" stroke="#8f7f00" stroke-width="7.5" points="140.0,340.0 640.0,340.0"/>
 </g>
 </g>
 <g class="labels">
-<text x="440.0" y="540.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">R1</text>
-<text x="640.0" y="540.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">10k</text>
-<text x="1040.0" y="690.0" fill="#7a7f88" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">J1</text>
-<text x="1040.0" y="890.0" fill="#b4b8bf" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">CONN</text>
-<text x="790.0" y="190.0" fill="#7a7f88" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)" data-layer="B.SilkS">Demo Board</text>
+<text x="440.0" y="540.0" fill="#8f7f00" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">R1</text>
+<text x="640.0" y="540.0" fill="#7d7d7d" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">10k</text>
+<text x="1040.0" y="690.0" fill="#8f7f00" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.SilkS">J1</text>
+<text x="1040.0" y="890.0" fill="#7d7d7d" font-size="88.7" text-anchor="middle" dominant-baseline="central" data-layer="F.Fab">CONN</text>
+<text x="790.0" y="190.0" fill="#b0533f" font-size="139.7" text-anchor="middle" dominant-baseline="central" transform="translate(790.0 190.0) scale(-1 1) translate(-790.0 -190.0)" data-layer="B.SilkS">Demo Board</text>
 </g>
 </svg>

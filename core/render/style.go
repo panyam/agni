@@ -37,8 +37,16 @@ type Style struct {
 	CopperInner  string    // an inner layer with no colour of its own
 	CopperInners [6]string // the inner layers' colours, from the front, repeating past the last set one
 	Via          string    // via rings + through-hole pad lands
-	Silk         string    // silkscreen graphics and text (WS7)
-	Fab          string    // fab-layer graphics and text, such as body outlines and values (agni issue 1366)
+	// Each side's silkscreen, fab and courtyard layers take their own colour, as KiCad's do, so the
+	// back's legend reads apart from the front's. DarkStyle uses the colours of KiCad's default
+	// theme, read off kicad-cli's export. DefaultStyle darkens the same hues, since KiCad's pale
+	// front silk all but vanishes on a light page.
+	SilkFront      string // F.SilkS graphics and text, and a graphics layer of no known kind
+	SilkBack       string // B.SilkS
+	FabFront       string // F.Fab, such as body outlines and values (agni issue 1366)
+	FabBack        string // B.Fab
+	CourtyardFront string // F.CrtYd
+	CourtyardBack  string // B.CrtYd
 
 	// Font is the default font-family for all text, a CSS family list rather than one face
 	// (see SchematicFontStack). There is no per-element font.
@@ -117,8 +125,12 @@ var DefaultStyle = Style{
 	CopperInner:    "#8a8a8a",
 	CopperInners:   [6]string{"#c08a1e", "#2f8f5b", "#8a4fb0", "#1f8a96", "#a8642f", "#6f7d2a"},
 	Via:            "#9aa0a6",
-	Silk:           "#7a7f88",
-	Fab:            "#b4b8bf",
+	SilkFront:      "#8f7f00",
+	SilkBack:       "#b0533f",
+	FabFront:       "#7d7d7d",
+	FabBack:        "#585d84",
+	CourtyardFront: "#c414ac",
+	CourtyardBack:  "#0b8fa3",
 	TitleBlockFill: "#fffef8",
 	Font:           SchematicFontStack,
 }
@@ -146,8 +158,12 @@ var DarkStyle = Style{
 	CopperInner:    "#9aa0a6",
 	CopperInners:   [6]string{"#f5b942", "#4fc98a", "#b98ae0", "#4ec3cf", "#e0955a", "#b3c25a"},
 	Via:            "#c0c6cc",
-	Silk:           "#aab0bb",
-	Fab:            "#6b717c",
+	SilkFront:      "#f2eda1",
+	SilkBack:       "#e8b2a7",
+	FabFront:       "#afafaf",
+	FabBack:        "#585d84",
+	CourtyardFront: "#ff26e2",
+	CourtyardBack:  "#26e9ff",
 	TitleBlockFill: "#1a1a1a",
 	Font:           SchematicFontStack,
 }

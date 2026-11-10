@@ -221,7 +221,7 @@ func TestPackBoard(t *testing.T) {
 		t.Errorf("keys: SIG copper=%d (want >=2), R1 pads=%d (want 2)", sigCopper, r1Pads)
 	}
 	if got := ps.GetGroupColors(); len(got) <= int(silk.GetGroups()[0]) || got[groupBoardCopperFront] != DefaultStyle.CopperFront ||
-		got[groupBoardHole] != DefaultStyle.Page || got[silk.GetGroups()[0]] != DefaultStyle.Silk {
+		got[groupBoardHole] != DefaultStyle.Page || got[silk.GetGroups()[0]] != DefaultStyle.SilkFront {
 		t.Errorf("group colors not Style-indexed: %v", got)
 	}
 	// The highlight join works unchanged over the board keys.

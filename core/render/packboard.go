@@ -263,8 +263,8 @@ func boardGroupColors(style Style) []string {
 	colors[groupBoardCopperInner] = style.CopperInner
 	colors[groupBoardThrough] = style.Via
 	colors[groupBoardHole] = style.Page
-	colors[groupBoardSilk] = style.Silk
-	colors[groupBoardFab] = style.Fab
+	colors[groupBoardSilk] = style.SilkFront
+	colors[groupBoardFab] = style.FabFront
 	return colors
 }
 

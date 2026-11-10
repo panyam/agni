@@ -297,25 +297,44 @@ func boardTextEm(t *geom.BoardText) int64 {
 }
 
 // boardTextColor is the colour a board text draws in, its layer's, as KiCad colours text by layer.
-// Silkscreen text draws in the silk colour and fab text in the fab colour. Text on any other layer,
-// or none, such as a designator added for a board with no silkscreen, draws in the field colour.
+// Text on a layer of no known kind, or on none, such as a designator added for a board with no
+// silkscreen, draws in the field colour.
 func boardTextColor(s Style, layer string) string {
-	switch {
-	case strings.HasSuffix(layer, ".SilkS"):
-		return s.Silk
-	case strings.HasSuffix(layer, ".Fab"):
-		return s.Fab
+	if c := layerColor(s, layer); c != "" {
+		return c
 	}
 	return s.Field
 }
 
-// boardArtColor is the colour a footprint graphic draws in, the fab colour on a fab layer and the
-// silk colour otherwise (silkscreen and courtyard).
+// boardArtColor is the colour a footprint graphic draws in, its layer's, and the front silk colour
+// on a layer of no known kind.
 func boardArtColor(s Style, layer string) string {
-	if strings.HasSuffix(layer, ".Fab") {
-		return s.Fab
+	if c := layerColor(s, layer); c != "" {
+		return c
 	}
-	return s.Silk
+	return s.SilkFront
+}
+
+// layerColor is the colour of a silkscreen, fab or courtyard layer, by its kind and its side. A
+// layer of another kind answers "". Every reader names its layers in KiCad's vocabulary, so an
+// ODB++, Allegro or IPC-2581 board colours its layers the same way.
+func layerColor(s Style, layer string) string {
+	back := artSide(layer) == "back"
+	pick := func(front, rear string) string {
+		if back {
+			return rear
+		}
+		return front
+	}
+	switch artKind(layer) {
+	case "silk":
+		return pick(s.SilkFront, s.SilkBack)
+	case "fab":
+		return pick(s.FabFront, s.FabBack)
+	case "courtyard":
+		return pick(s.CourtyardFront, s.CourtyardBack)
+	}
+	return ""
 }
 
 // boardTextHeight returns a text's glyph height in source units, falling back to 1mm when
