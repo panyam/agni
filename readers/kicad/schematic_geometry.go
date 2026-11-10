@@ -803,15 +803,7 @@ func fieldsOf(ps *node) []*geom.Field {
 // fieldHidden reports whether a property's (effects ... (hide yes)) hides it. A bare (hide)
 // (legacy) also counts as hidden; (hide no) does not.
 func fieldHidden(p *node) bool {
-	e := p.Child("effects")
-	if e == nil {
-		return false
-	}
-	h := e.Child("hide")
-	if h == nil {
-		return false
-	}
-	return atomOf(h.Arg(1)) != "no"
+	return hideFlag(p.Child("effects"))
 }
 
 // hideFlag reports whether a lib-symbol (pin_numbers ...) / (pin_names ...) node, or a single
