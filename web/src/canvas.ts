@@ -17,6 +17,7 @@ import {
   type HighlightSpec,
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
+import { DrawGate } from "./drawgate.js";
 import { PickIndex, drawnOnPacked } from "./canvaspick.js";
 import { rectOf, type Members } from "./area.js";
 import { AreaBand } from "./areaband.js";
@@ -62,6 +63,11 @@ export class CanvasComponent extends BaseComponent {
   private lit: Bounds[] = [];
   private frameId = 0;
   private disposed = false;
+  // gate lets a frame draw only when the camera, the size or the sheet's drawing changed, so a view
+  // nobody is touching costs nothing per frame (agni issue 1479). draws counts the frames drawn,
+  // and the canvas element carries it in data-draws for a spec to read.
+  private readonly gate = new DrawGate();
+  private draws = 0;
   private resizeObserver?: ResizeObserver;
 
   // textHost is where the text layer goes, and readout where the canvas reports what it drew. The
@@ -337,6 +343,7 @@ export class CanvasComponent extends BaseComponent {
   // view, so the composition root shows it in WebGL mode and hides it for SVG/Native.
   showText(): void {
     this.overlay?.show();
+    this.gate.invalidate();
   }
   hideText(): void {
     this.overlay?.hide();
@@ -445,8 +452,15 @@ export class CanvasComponent extends BaseComponent {
 
     const frame = (): void => {
       if (this.disposed) return;
-      if (this.renderer && this.camera) {
-        this.renderer.render(this.camera.matrix(), this.camera.viewRect());
+      const matrix = this.camera?.matrix();
+      if (
+        this.renderer &&
+        this.camera &&
+        matrix &&
+        this.gate.shouldDraw({ matrix, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: this.renderer, version: this.renderer.version })
+      ) {
+        this.renderer.render(matrix, this.camera.viewRect());
+        canvas.dataset.draws = String(++this.draws);
         // The overlay reads the same camera in the same tick, so text moves and turns with the
         // geometry.
         this.overlay?.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr(), orientTurn(this.orientation));

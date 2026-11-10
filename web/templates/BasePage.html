@@ -374,7 +374,10 @@
     /* A view's stage holds its WebGL canvas and text layer under its SVG host, as the canvas panel
        stacks #view, #text-overlay and #svg-view (agni issue 1368). */
     .sheetview-stage { position: relative; flex: 1 1 auto; overflow: hidden; }
-    .sheetview-canvas { position: absolute; inset: 0; overflow: hidden; background: #fff; }
+    /* A view's SVG drawing gets a compositor layer of its own and strict containment, so the
+       canvas's pan does not repaint or re-lay it out (agni issue 1479). Chrome still layerizes the
+       whole document every frame, so a large board still costs the canvas's pan something. */
+    .sheetview-canvas { position: absolute; inset: 0; overflow: hidden; background: #fff; will-change: transform; contain: strict; }
     .sheetview-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
     .sheetview-gl:active { cursor: grabbing; }
     /* A view's own loader covers its stage alone while it draws, so the canvas and other views stay
