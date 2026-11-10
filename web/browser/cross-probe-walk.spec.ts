@@ -13,9 +13,9 @@
 // lights the same part or net in the other and centres it there. Clicks land by point, as a reader's
 // do, at a point clear of pads and neighbours (picks.ts). Step 3 turns the board view as #1327 (PR
 // 1378) built it, through these names:
-// - the board view's controls data-action="rotate" (a quarter turn) and data-action="bottom" (the
-//   board turned over, seen from underneath). data-action="flip-h" and "flip-v" mirror the view
-//   without turning the board over.
+// - the board view's controls data-action="rotate" (a quarter turn) and data-action="flip-h" and
+//   "flip-v" (mirror the view). An odd number of flips turns the board over, seen from underneath
+//   (agni issue 1472).
 // - the view states its view as data-rotation (degrees) and data-side ("front" or "back")
 // A ticket that names them differently changes them here in the same PR.
 //
@@ -345,11 +345,11 @@ for (const name of chosen) {
 
         await step("turn the board over", { needs: [`click ${part.ref}`] }, async () => {
           const board = page.locator(PANE).first();
-          for (const a of ["rotate", "bottom"]) {
+          for (const a of ["rotate", "flip-h"]) {
             if ((await board.locator(`[data-action="${a}"]`).count()) === 0) throw new Error(`the board view has no data-action="${a}" control`);
           }
           await board.locator('[data-action="rotate"]').click({ timeout: 10_000 });
-          await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
+          await board.locator('[data-action="flip-h"]').click({ timeout: 10_000 });
           expect(await board.getAttribute("data-rotation")).toBe("90");
           expect(await board.getAttribute("data-side")).toBe("back");
           return `turned 90 and viewed from the back, ${await centres(page, footprintOf(part.ref), BOARD, `${part.ref}'s footprint`)}`;
@@ -359,7 +359,7 @@ for (const name of chosen) {
           // TP76 is on the front, and the bottom view draws the back copper over it, as the board looks
           // from underneath. So a reader turns the board back over to reach it.
           const board = page.locator(PANE).first();
-          if ((await board.getAttribute("data-side")) === "back") await board.locator('[data-action="bottom"]').click({ timeout: 10_000 });
+          if ((await board.getAttribute("data-side")) === "back") await board.locator('[data-action="flip-h"]').click({ timeout: 10_000 });
           // The board view is still zoomed in on the last part, so a reader zooms out to find this one
           // and back in to click it.
           await findIn(page, BOARD, footprintOf(footprint.ref));

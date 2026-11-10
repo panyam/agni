@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { UPRIGHT, flip, orientBox, orientPoint, orientedSize, rotateBy, unorientPoint, type Orientation, type Rotation } from "./orient.js";
+import { UPRIGHT, flip, flipped, fromBelow, orientBox, orientPoint, orientedSize, rotateBy, unorientPoint, type Orientation, type Rotation } from "./orient.js";
 
 const W = 200;
 const H = 100;
@@ -57,6 +57,25 @@ describe("an orientation of a 200 by 100 drawing", () => {
     const b = orientPoint(flipped, W, H, { x: 37, y: 81 });
     expect(b.x).toBeCloseTo(100 - a.x);
     expect(b.y).toBeCloseTo(a.y);
+  });
+
+  it("says a flip is on along the screen axis whose flip turned it on, whatever the turn", () => {
+    for (const rot of [0, 90, 180, 270] as Rotation[]) {
+      const o = { ...UPRIGHT, rot };
+      expect([flipped(flip(o, "h"), "h"), flipped(flip(o, "h"), "v")], `rot ${rot}`).toEqual([true, false]);
+      expect([flipped(flip(o, "v"), "h"), flipped(flip(o, "v"), "v")], `rot ${rot}`).toEqual([false, true]);
+    }
+  });
+
+  it("sees the board from below after an odd number of flips", () => {
+    let o = UPRIGHT;
+    expect(fromBelow(o)).toBe(false);
+    o = flip(o, "h");
+    expect(fromBelow(o)).toBe(true);
+    o = flip(rotateBy(o), "h");
+    expect(fromBelow(o)).toBe(false);
+    o = flip(o, "v");
+    expect(fromBelow(o)).toBe(true);
   });
 
   it("turns a quarter at a time and comes back round", () => {

@@ -551,6 +551,18 @@ class AppRoot extends BaseComponent {
         void presenter.runWalk({ start, kind, hops: DEFAULT_WALK_HOPS, through: [] });
       },
     });
+    // Command-F (Ctrl-F off a Mac) opens Find by name in the Query panel, so a part is found by its
+    // name rather than by reading the sheet (agni issue 1472). Another text field keeps the key, so
+    // the browser's own find still works there. In the Find by name box it selects the text again.
+    // With no Query panel docked, or no search served yet, the browser's find runs as before.
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() !== "f" || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey)) return;
+      if (isTextEntry(e.target) && !(e.target as HTMLElement).classList.contains("query-term")) return;
+      const panel = dockApi?.getPanel("query");
+      if (!panel) return;
+      panel.api.setActive();
+      if (query.view.findByName()) e.preventDefault();
+    });
     // The engine says where a selected part or net is drawn (LocateSubjects, agni issue 1325). It
     // adds the board only while the board is on screen, since this worker has read the board then, and
     // asking on a schematic would read a large board for one panel row (agni issue 943).

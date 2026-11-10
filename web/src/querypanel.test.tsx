@@ -573,6 +573,20 @@ describe("querypanel search", () => {
     expect(search(el)).toBeNull();
   });
 
+  it("finds by name on request, focusing the box with its text selected so typing replaces it", () => {
+    const { el, panel } = mountPanel();
+    expect(panel.view.findByName()).toBe(false);
+    expect(search(el)).toBeNull();
+    panel.view.setSearch(SEARCH);
+    expect(panel.view.findByName()).toBe(true);
+    expect(el.querySelector(".query-mode.on")!.textContent).toBe("Find by name");
+    expect(document.activeElement).toBe(search(el));
+    typeTerm(el, "CAN");
+    search(el)!.setSelectionRange(3, 3);
+    expect(panel.view.findByName()).toBe(true);
+    expect([search(el)!.selectionStart, search(el)!.selectionEnd]).toEqual([0, 3]);
+  });
+
   it("refuses an empty term rather than enumerating the whole design into the table", () => {
     const { el, panel, onRun } = mountPanel();
     panel.view.setSearch(SEARCH);
