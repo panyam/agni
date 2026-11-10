@@ -56,7 +56,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 				continue
 			}
 			// data-layer lets the zone hide with its copper layer as well as with the Zones row.
-			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)), svg.A("data-layer", z.GetLayer()),
+			c.El("polygon", append([]svg.Attr{svg.A("points", points(z.GetOutline().Points, tx, ty)), svg.AEsc("data-layer", z.GetLayer()),
 				svg.A("fill", copperColor(z.GetLayer())), svg.F("fill-opacity", zoneWashOpacity), svg.A("stroke", "none")},
 				pk.net(z.GetNet())...)...)
 		}
@@ -71,7 +71,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 
 	// Copper per layer, back-most first (higher KiCad layer number = further back).
 	for _, ly := range copperLayersBackToFront(b) {
-		c.Group(svg.A("class", "copper-"+layerSide(ly)), svg.A("data-layer", ly))
+		c.Group(svg.A("class", "copper-"+layerSide(ly)), svg.AEsc("data-layer", ly))
 		color := copperColor(ly)
 		// Filled copper first, so the tracks and lands on it draw over it (agni 1357).
 		for _, nc := range b.GetNets() {
@@ -185,7 +185,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 				continue
 			}
 			w := math.Max(float64(gr.GetWidth())*scale, strokePx)
-			c.Group(svg.A("data-layer", gr.GetLayer()))
+			c.Group(svg.AEsc("data-layer", gr.GetLayer()))
 			writeShape(c, gr.GetShape(), tx, ty, scale, w, style, boardArtColor(style, gr.GetLayer()))
 			c.GroupEnd()
 		}
@@ -211,7 +211,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 		}
 		// A text on a layer hides with it. A designator the renderer added has no layer and always draws.
 		if t.GetLayer() != "" {
-			attrs = append(attrs, svg.A("data-layer", t.GetLayer()))
+			attrs = append(attrs, svg.AEsc("data-layer", t.GetLayer()))
 		}
 		c.Text(boardTextLine(t), attrs...)
 	}
