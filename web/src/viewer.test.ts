@@ -2060,3 +2060,63 @@ describe("summaryLine", () => {
     expect(summaryLine("x.brd", "parasdr_layout", "", "allegro", 405, 89)).toBe("parasdr_layout · allegro · 405 comps · 89 nets");
   });
 });
+
+// agni issue 1501: a design opened on its board draws the board before anything else asks the engine.
+describe("opening a design on its board", () => {
+  const withBoard = async (req: { layout?: string }) => ({
+    name: "D",
+    layout: req.layout || "faithful",
+    sourceFormat: "",
+    componentCount: 0,
+    netCount: 0,
+    sheets: [
+      { id: "s1", name: "S1" },
+      { id: "board", name: "Board" },
+    ],
+    nativeAvailable: true,
+    availableLayouts: ["faithful"],
+  });
+  // A board answer always carries its layer rows (service/design.go GetSheet).
+  const svg = { content: { case: "svg", value: "<svg/>" }, boardLayers: [] };
+
+  it("asks for the board before the design's sheets, and draws it once", async () => {
+    const h = harness();
+    const order: string[] = [];
+    h.getDesign.mockImplementation(async (req) => (order.push("getDesign"), withBoard(req)));
+    h.getSheet.mockImplementation(async (req) => (order.push(`getSheet ${req.sheet}`), svg));
+    await h.presenter.openFile("m", "d.kicad_pcb", "board");
+    expect(order).toEqual(["getSheet board", "getDesign"]);
+    const last = h.navA.setState.mock.calls[h.navA.setState.mock.calls.length - 1][0];
+    expect(last).toMatchObject({ mount: "m", path: "d.kicad_pcb", activeId: "board" });
+    expect(last.sheets).toHaveLength(2);
+  });
+
+  it("sends GetDesign and pushes no sheet list until the board has drawn", async () => {
+    const h = harness();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    h.getDesign.mockImplementation(withBoard);
+    h.getSheet.mockImplementation(async () => (await held, svg));
+    const opening = h.presenter.openFile("m", "d.kicad_pcb", "board");
+    await vi.waitFor(() => expect(h.getSheet).toHaveBeenCalledOnce());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(h.getDesign).not.toHaveBeenCalled();
+    expect(h.navA.setState).not.toHaveBeenCalled();
+    release();
+    await opening;
+    expect(h.getDesign).toHaveBeenCalledOnce();
+    expect(h.navA.setState).toHaveBeenCalled();
+  });
+
+  it("falls back to the first sheet when the design has no board", async () => {
+    const h = harness();
+    h.getSheet.mockImplementation(async (req) => {
+      if (req.sheet === "board") throw new Error("no board");
+      return svg;
+    });
+    await h.presenter.openFile("m", "d.kicad_sch", "board");
+    expect(h.getSheet.mock.calls.map((c) => c[0].sheet)).toEqual(["board", "s1"]);
+    const last = h.navA.setState.mock.calls[h.navA.setState.mock.calls.length - 1][0];
+    expect(last).toMatchObject({ activeId: "s1" });
+  });
+});

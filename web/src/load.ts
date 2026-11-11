@@ -118,9 +118,14 @@ async function loadDesign(mount: string, path: string, drops: DropStore): Promis
         if (!l) throw new Error("This browser no longer keeps the files of this dropped design.");
         return l;
       },
-      drawing: async () => {
-        await designClient().getDesign({ snapshot: await snapshots().of(uri) });
-      },
+      // An address that opens on the board skips the schematic, which the board does not draw from
+      // (agni issue 1501). The viewer reads the sheets after the board is on screen.
+      drawing:
+        currentLocation().sheet === "board"
+          ? undefined
+          : async () => {
+              await designClient().getDesign({ snapshot: await snapshots().of(uri) });
+            },
       board: async () => {
         const t = (await snapshots().readBoard(uri)).tiers;
         return { boardRead: t?.boardRead ?? false, boardPersisted: t?.boardPersisted ?? false };

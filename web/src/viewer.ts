@@ -836,6 +836,15 @@ export class ViewerPresenter {
     this.setBusy(true, "loading design…");
     let soft = false;
     try {
+      // A design opened on its board draws the board first (agni issue 1501). The board draws from the
+      // board tier alone, while GetDesign lays out every schematic sheet. GetDesign waits for the draw.
+      // A browser engine's worker runs its requests on one thread, so a GetDesign sent alongside
+      // slowed the board's request to its own pace. The sheet list, the Properties panel's inventory
+      // and the project wait too.
+      // The previous design's sheets would otherwise be pushed with the board.
+      if (wantSheet === "board" && newFile) this.doc.sheets = [];
+      const drewBoard = wantSheet === "board" ? await this.showSheet("board") : false;
+      if (superseded()) return;
       const d = await this.client.getDesign({ snapshot: await this.snaps.of(artifactUri(mount, path)), layout: this.currentLayout });
       if (superseded()) return;
       this.doc.sheets = d.sheets;
@@ -868,7 +877,8 @@ export class ViewerPresenter {
       if (superseded()) return;
       const target = (wantSheet && d.sheets.find((s) => s.id === wantSheet)) || d.sheets[0];
       this.pushSheets(target?.id ?? "");
-      if (target) await this.showSheet(target.id);
+      if (drewBoard && target?.id === "board") this.views.drawingNote(drawingNote(this.servedDrawingNote, "board"));
+      else if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       if (superseded()) return;
       // The sheet is on screen. What follows is the design's rules, report, parts and reviews, which
@@ -2176,7 +2186,9 @@ export class ViewerPresenter {
   // showSheet renders one sheet of the current file in the active mode and marks it active.
   // Native rendering shells out to an external tool, which can fail on a given board/sheet; if
   // it does, fall back to the always-available SVG render rather than leaving an error on screen.
-  async showSheet(sheetId: string): Promise<void> {
+  // showSheet resolves true when the sheet drew, and false when its request failed and the summary
+  // says why.
+  async showSheet(sheetId: string): Promise<boolean> {
     this.currentSheet = sheetId;
     this.views.drawingNote(drawingNote(this.servedDrawingNote, sheetId));
     // The query panel marks the badge pointing at the sheet on screen, so it has to hear about
@@ -2194,8 +2206,10 @@ export class ViewerPresenter {
         await this.renderSheet(sheetId, SheetFormat.SVG);
         this.views.summary(`${this.doc.summary} · native unavailable, showing SVG`);
       }
+      return true;
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
+      return false;
     } finally {
       this.setBusy(false);
       this.syncLocation(); // the selected file/sheet/view is the URL, error or not

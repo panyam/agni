@@ -48,8 +48,10 @@ export interface LoadDeps {
   fetches: boolean;
   listing(): Promise<Listing>;
   // drawing reads the design's sheets (GetDesign), board its netlist and board (Ingest with
-  // read_board), each into the engine's store.
-  drawing(): Promise<void>;
+  // read_board), each into the engine's store. A load that opens on the board has no drawing step,
+  // since the board draws from the board tier alone and the viewer reads the sheets after it draws
+  // (agni issue 1501).
+  drawing?: () => Promise<void>;
   board(): Promise<BoardRead>;
   record(stamp: string): void;
   // open hands over to the viewer.
@@ -71,7 +73,7 @@ export class LoadFlow {
   ) {
     this.list = [
       ...(deps.fetches ? [{ id: "files" as const, label: "Fetching the design's files", state: "waiting" as const, detail: "" }] : []),
-      { id: "drawing", label: "Reading the schematic", state: "waiting", detail: "" },
+      ...(deps.drawing ? [{ id: "drawing" as const, label: "Reading the schematic", state: "waiting" as const, detail: "" }] : []),
       { id: "board", label: "Reading the netlist and the board", state: "waiting", detail: "" },
     ];
   }
@@ -96,9 +98,11 @@ export class LoadFlow {
       listing = await this.deps.listing();
       this.total = { files: listing.files, bytes: listing.bytes };
       if (this.deps.fetches) this.set("files", { detail: this.filesDetail() });
-      this.set("drawing", { state: "running" });
-      await this.deps.drawing();
-      this.set("drawing", { state: "done" });
+      if (this.deps.drawing) {
+        this.set("drawing", { state: "running" });
+        await this.deps.drawing();
+        this.set("drawing", { state: "done" });
+      }
       this.set("board", { state: "running" });
       const b = await this.deps.board();
       // Every file a read needs has arrived by now, the board's included.
