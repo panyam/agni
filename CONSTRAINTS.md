@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`)
 fails on a rule without one. A rule with nothing to run is not enforceable, and C6 went unchecked
-that way. A Verify is one of two things. Twenty-one are TESTS the gate runs, so a violation turns CI
+that way. A Verify is one of two things. Twenty-two are TESTS the gate runs, so a violation turns CI
 red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. Watch that
 second number. C32 once joined the review column because its test was missing, not because a machine
 could not answer it, and it left again once the test existed. So a review question means either "no
@@ -1219,3 +1219,17 @@ fail on a dropped column or an unordered row. In the Python client,
 `test_no_other_function_lays_out_an_answer` holds that the only public function of `agni.tables`
 taking an answer message is `rows_as_dicts`, which reads a query answer and lays out no table, so a
 new projection written in the client fails.
+
+## C36: Every CLAUDE.md fits in 10,000 characters
+**Rule:** No `CLAUDE.md` in the tree is longer than 10,000 characters, and the root aims for 6,000.
+The root file is a router. A fact that only matters in one directory goes in that directory's
+`CLAUDE.md`. Claude Code loads that file only when a session works there. A workflow rule goes in
+`CONTRIBUTING.md`, a design explanation goes in the docsite, and status goes in an issue or
+`NEXTSTEPS.md`. A trap is written as the rule and one ticket link, without its history.
+**Why:** every agent session loads the root file before it reads anything else. It grew from 3,567
+words on 2026-09-01 to 23,001 on 2026-11-10, about 30k tokens, because every checkpoint added a
+bullet and nothing moved one out (agni 1490).
+**Verify:** `TestC36EveryClaudeMDFitsItsBudget` (`internal/constraints`) walks the tree, skipping
+dot directories, `node_modules` and `tools/samples`, and fails on any `CLAUDE.md` over 10,000
+characters. It fails outright when it finds no root `CLAUDE.md`, so a walk that matches nothing
+cannot read as clean.
