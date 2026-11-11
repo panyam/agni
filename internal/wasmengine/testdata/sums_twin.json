@@ -1,0 +1,8 @@
+{
+  "_comment": "The manifest the page writes at a mount's root beside the files it brings into a worker, read by wasmengine's TestThePageAndTheEngineReadTheSumsAlike and web/src/wasm/client.test.ts, so the engine reads exactly what the page writes (agni issue 1515).",
+  "listing": [
+    { "path": "d/b.kicad_pcb", "sha256": "sha256:4b7c0e2d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e", "size": 85000000 },
+    { "path": "d/a.kicad_sch", "sha256": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", "size": 1200 }
+  ],
+  "manifest": "{\"files\":{\"d/a.kicad_sch\":{\"sha256\":\"sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0\",\"size\":1200},\"d/b.kicad_pcb\":{\"sha256\":\"sha256:4b7c0e2d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e\",\"size\":85000000}}}"
+}

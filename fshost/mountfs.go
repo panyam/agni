@@ -103,6 +103,22 @@ func (r rootFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return fs.ReadDir(fsys, rest)
 }
 
+// ContentSum asks the mount that holds name for the file's content sum (formats.ContentSummer), so a
+// mount that knows its files' hashes is checked by them through the composed FS (agni issue 1515).
+func (r rootFS) ContentSum(name string) (string, int64, bool) {
+	fsys, rest, err := r.split("sum", name)
+	if err != nil {
+		return "", 0, false
+	}
+	s, ok := fsys.(interface {
+		ContentSum(string) (string, int64, bool)
+	})
+	if !ok {
+		return "", 0, false
+	}
+	return s.ContentSum(rest)
+}
+
 func (r rootFS) Stat(name string) (fs.FileInfo, error) {
 	if name == "." {
 		return dirInfo("."), nil

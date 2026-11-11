@@ -159,7 +159,10 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	held := &withholding{}
 	withheld := make([]fshost.Mount, len(ms))
 	for i, m := range ms {
-		withheld[i] = fshost.Mount{Name: m.Name, FS: held.files(m.FS)}
+		// A mount whose files came with their listed hashes answers a stored read's check by them,
+		// so a placeholder board restores without its bytes (agni issue 1515). It goes outside the
+		// withholding layer, and peeks below it.
+		withheld[i] = fshost.Mount{Name: m.Name, FS: summed(held.files(m.FS), m.FS)}
 	}
 	ms = withheld
 	files := fshost.New(ms...)

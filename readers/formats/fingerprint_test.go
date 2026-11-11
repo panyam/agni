@@ -109,3 +109,47 @@ func TestAFileEditedSinceTheReadIsNotFingerprinted(t *testing.T) {
 		t.Fatal("the fingerprint hashed the edited file, which is not what the read saw")
 	}
 }
+
+// summingFS knows each listed file's sum, and refuses to open one, so a fingerprint over it proves
+// the file was never read.
+type summingFS struct {
+	fstest.MapFS
+	sums map[string]string
+}
+
+func (s summingFS) Open(name string) (fs.File, error) {
+	if _, ok := s.sums[name]; ok {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrPermission}
+	}
+	return s.MapFS.Open(name)
+}
+
+func (s summingFS) ContentSum(name string) (string, int64, bool) {
+	sum, ok := s.sums[name]
+	return sum, 85, ok
+}
+
+// TestAFileWithAKnownSumIsFingerprintedWithoutBeingRead covers agni issue 1515. A browser worker knows
+// a file's listed hash, and may hold only a placeholder for it. A read recorded over one copy is
+// checked over another by that hash, without opening either. As a control, a file system with no
+// sums fingerprints the same name by its bytes, and a different listed hash is a miss.
+func TestAFileWithAKnownSumIsFingerprintedWithoutBeingRead(t *testing.T) {
+	stored := summingFS{MapFS: fstest.MapFS{"b.pcb": {Data: []byte("the real board")}}, sums: map[string]string{"b.pcb": "sha256:aa"}}
+	rec := NewTouched()
+	rec.note(stored, "b.pcb")
+	fp, ok := rec.Fingerprint()
+	if !ok {
+		t.Fatal("a file with a known sum could not be fingerprinted")
+	}
+	held := summingFS{MapFS: fstest.MapFS{"b.pcb": {Data: []byte("\x00a placeholder")}}, sums: map[string]string{"b.pcb": "sha256:aa"}}
+	if _, ok := CheckFingerprint(held, fp); !ok {
+		t.Fatal("the same listed hash over a placeholder read as changed")
+	}
+	moved := summingFS{MapFS: held.MapFS, sums: map[string]string{"b.pcb": "sha256:bb"}}
+	if _, ok := CheckFingerprint(moved, fp); ok {
+		t.Fatal("another listed hash read as the same file")
+	}
+	if _, ok := CheckFingerprint(fstest.MapFS{"b.pcb": {Data: []byte("the real board")}}, fp); ok {
+		t.Fatal("a file system with no sums matched a fingerprint taken by sum")
+	}
+}
