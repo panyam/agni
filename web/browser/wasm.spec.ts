@@ -81,9 +81,11 @@ describe("one design under both engines", () => {
       expect(page.workers().filter((w) => new URL(w.url()).pathname.endsWith("/agni-worker.js"))).toHaveLength(2);
       expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(4);
       // The Load page's and the viewer's serve workers were each given a placeholder for the board,
-      // since opening the design and asking a query read none (agni issue 992), so the board was
-      // fetched twice, by the prepare worker and the jobs worker.
-      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.kicad_pcb")).toHaveLength(2);
+      // since opening the design and asking a query read none (agni issue 992). The Load page put the
+      // server's seed into the store first (agni issue 1525), so its prepare worker restored the board
+      // from a placeholder too. Only the jobs worker fetched the board.
+      expect(wasm.network.filter((p) => p === "/seed/tut/designs/gateway")).toHaveLength(1);
+      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.kicad_pcb")).toHaveLength(1);
     });
   });
 
