@@ -15,6 +15,8 @@ and the limit is the threshold divided by that resistance. The limit must be abo
 draw. When it is below, the switch opens at the load the design was drawn for. The rail then never
 comes up under load, and the protection is the fault.
 
+![a load switch that trips below its rail's declared peak is flagged; one that trips above the peak is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/load-switch-trip-below-budget.svg)
+
 The draw comes from the `peak` declared on the rail's `nets` entry. The threshold comes from the controller's seeded
 datasheet. The sense resistance comes from the design. All three are required, and any one missing
 means no verdict rather than a pass.

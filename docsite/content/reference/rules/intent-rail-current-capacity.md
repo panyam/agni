@@ -14,6 +14,8 @@ much must supply the rail. The budget comes from the declaration; the rating com
 part's seeded datasheet. When the rating is below the budget, the rail is over-subscribed by the
 design's own numbers.
 
+![a supply rated below its rail's declared peak is flagged; one rated above it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/rail-current-capacity.svg)
+
 Both halves are required. Without a declaration there is nothing to check against, and without a
 seeded datasheet there is no rating to check.
 

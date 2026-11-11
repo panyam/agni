@@ -6,6 +6,8 @@ Suppose the design intent declares a net as an active-low (or active-high) reset
 be **biased to its asserted level**. If a declared active-low reset has a pull-down, or a declared
 active-high reset has a pull-up, the design does the opposite of what it says it wants.
 
+![an active-low reset pulled down to its asserted level is flagged; the same reset pulled up is fine](images/property-reset-polarity.svg)
+
 ### What it does when it cannot tell
 
 **A netlist states polarity nowhere.** The only structural evidence is a bias resistor, and plenty
