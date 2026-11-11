@@ -348,6 +348,10 @@ export interface MountingOptions {
   maxBytes?: number;
   // onServer hears, once per design, that it went to the server and why.
   onServer?: (f: ServerFallback) => void;
+  // seeded names the designs whose store a seed from the server filled (agni issue 1525). Their
+  // prepare worker restores the board from the store, so it gets the board as a placeholder, as
+  // the serve worker does. A worker that turns out to need the bytes gets them and is asked again.
+  seeded?: ReadonlySet<string>;
 }
 
 // mountingFetch is the engine's fetch. It brings the design's files in first (agni issue 853). It
@@ -501,7 +505,8 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     const lane = engine.lanes[name];
     if (name === "jobs") await afterPrepares();
     const run = lane.begin ? await lane.begin() : undefined;
-    const withhold = name === "serve";
+    const seeded = o.seeded ?? new Set<string>();
+    const withhold = name === "serve" || (name === "prepare" && uris.size > 0 && [...uris].every((u) => seeded.has(u)));
     if (bringFiles) {
       try {
         await Promise.all([...uris].map((u) => bring(u, lane, run?.holder, withhold)));
@@ -540,6 +545,13 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     const again = req.clone();
     const resp = await ask(req);
     if (resp.ok || !(await asksForWithheld(resp.clone()))) return resp;
+    // A prepare worker answers one request and ends, so it is asked again on a fresh worker given
+    // the whole design.
+    if (run && lane.begin) {
+      const fresh = await lane.begin();
+      await Promise.all([...uris].map((u) => bring(u, lane, fresh.holder)));
+      return fresh.fetch(again);
+    }
     // The engine refuses every question once one has read a placeholder. So every design with a
     // placeholder in this worker gets its files, not only this request's design.
     await Promise.all([...new Set([...backs, ...uris])].map((u) => bring(u, lane, worker)));

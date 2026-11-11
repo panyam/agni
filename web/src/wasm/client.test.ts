@@ -47,6 +47,9 @@ function harness(listing: DesignFiles | Error, readsBoard: (path: string) => boo
     memoryBytes: async () => 0,
     stats: async () => ({ memoryBytes: 0 }),
   });
+  // Each prepare worker holds its own files, so a worker given a placeholder refuses a question
+  // that reads the board, as the engine does.
+  const preparedIn = new Map<object, Record<string, Uint8Array>>();
   const prepare: EngineLane = {
     ...lane("prepare"),
     begin: async () => {
@@ -60,6 +63,7 @@ function harness(listing: DesignFiles | Error, readsBoard: (path: string) => boo
           laneCalls.prepare.push(path);
           if (hold) await hold;
           ended = true;
+          if (readsBoard(path) && Object.values(preparedIn.get(w) ?? {}).some(isPlaceholder)) return withheldError();
           return new Response("{}");
         },
         release: () => {
@@ -68,7 +72,8 @@ function harness(listing: DesignFiles | Error, readsBoard: (path: string) => boo
         },
       };
     },
-    add: async (_holder, mount, files) => {
+    add: async (holder, mount, files) => {
+      preparedIn.set(holder as object, { ...(preparedIn.get(holder as object) ?? {}), ...files });
       Object.assign(given.prepare, files);
       mounted[mount] = [...(mounted[mount] ?? []), ...Object.keys(files)];
       laneMounted.prepare.push(...Object.keys(files));
@@ -508,5 +513,33 @@ describe("the sums manifest", () => {
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ingest(f, "mount://tut/designs/gateway", "s1");
     expect(h.given.serve[SUMS_FILE]).toBeUndefined();
+  });
+});
+
+// agni issue 1525: a design whose store a seed filled restores its board, so its prepare worker gets
+// the board as a placeholder too.
+describe("a seeded design", () => {
+  it("gives the prepare worker a placeholder for the board, and fetches no board", async () => {
+    const h = harness(withBoard);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000, seeded: new Set(["mount://tut/designs/gateway"]) });
+    expect((await ingest(f, "mount://tut/designs/gateway", "s1", true)).ok).toBe(true);
+    expect(isPlaceholder(h.given.prepare[BOARD])).toBe(true);
+    expect(h.fetched).not.toContain(BOARD);
+  });
+
+  it("asks a fresh prepare worker with the whole design when the engine needs the board after all", async () => {
+    const h = harness(withBoard, (p) => p === INGEST_PATH);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000, seeded: new Set(["mount://tut/designs/gateway"]) });
+    expect((await ingest(f, "mount://tut/designs/gateway", "s1", true)).ok).toBe(true);
+    expect(h.prepareWorkers).toHaveLength(2);
+    expect(h.laneCalls.prepare).toEqual([INGEST_PATH, INGEST_PATH]);
+    expect(h.fetched.filter((p) => p === BOARD)).toHaveLength(1);
+  });
+
+  it("gives an unseeded design's prepare worker the board's bytes, as before", async () => {
+    const h = harness(withBoard);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    expect(isPlaceholder(h.given.prepare[BOARD])).toBe(false);
   });
 });

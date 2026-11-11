@@ -13,6 +13,7 @@
 // child is alive, and getting that wrong killed unrelated servers on the developer's machine.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -45,7 +46,10 @@ let server: Server | undefined;
 // binary, on a laptop).
 export async function setup({ provide }: { provide: (key: string, value: unknown) => void }): Promise<void> {
   const agniBin = join(mkdtempSync(join(tmpdir(), "agni-browser-bin-")), "agni");
-  execFileSync("go", ["build", "-o", agniBin, "./cmd/agni"], { cwd: repoRoot, stdio: "inherit" });
+  // The same build id `make wasm` stamps, so this server's seeds carry the store version the page's
+  // agni.wasm expects, and a first wasm visit restores them on a dirty tree too (agni issue 1525).
+  const buildID = createHash("sha256").update(execFileSync("git", ["diff", "HEAD"], { cwd: repoRoot })).digest("hex").slice(0, 16);
+  execFileSync("go", ["build", "-ldflags", `-X github.com/panyam/agni/internal/wasmengine.buildID=${buildID}`, "-o", agniBin, "./cmd/agni"], { cwd: repoRoot, stdio: "inherit" });
   provide("agniBin", agniBin);
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;

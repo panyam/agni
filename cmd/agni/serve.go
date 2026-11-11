@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/wasmengine"
 	"io"
 	"io/fs"
 	"maps"
@@ -452,6 +453,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// API already serves everything in a mount through its answers, so this exposes no file a client
 	// could not reach before; ListDesignFiles says which ones a design needs.
 	mux.Handle("GET /raw/", rawFileHandler(mounts))
+	// A design's store as a browser worker would write it, so a first visit restores the parsed
+	// board rather than parsing it in the page (agni issue 1525).
+	mux.Handle("GET /seed/", seedHandler(api.Workspace, mounts, wasmengine.StoreVersion))
 	switch {
 	case !assets.viewer:
 		mux.Handle("/", apiOnlyHandler(apiPaths))

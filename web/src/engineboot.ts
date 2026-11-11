@@ -20,6 +20,9 @@ import { staticWorkspace, type SiteRead } from "./staticworkspace.js";
 export interface PageEngineOptions {
   // onFetched hears each design file the page fetched for the browser engine, with its size.
   onFetched?: (path: string, bytes: number) => void;
+  // seeded names the designs a seed filled the store for (seedDesign), so their prepare worker gets
+  // the board as a placeholder (agni issue 1525).
+  seeded?: ReadonlySet<string>;
 }
 
 // engineParams are the query parameters that choose this page's engine. The page adds them to every
@@ -190,6 +193,7 @@ export async function startPageEngine(opts: PageEngineOptions = {}): Promise<Was
       passthrough: (url) => !onStaticHost && url.pathname.startsWith(workspacePath),
       browserMounts: new Set([BROWSER_MOUNT]),
       maxBytes: wasmMaxBytes(),
+      seeded: opts.seeded,
       onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
     })),
   );
@@ -254,4 +258,40 @@ export function sharedListing(uri: string, ask: () => Promise<DesignFiles>): Pro
     p.catch(() => sharedListings.delete(uri));
   }
   return p;
+}
+
+// fetchSeed asks the server for a design's store as a browser worker would write it (agni issue
+// 1525). It resolves undefined where there is no seed: on a static host, for a dropped design, from a
+// server that cannot name its version, or on any failure. Start it early, since the server builds a
+// seed the first time it is asked.
+export function fetchSeed(mount: string, path: string): Promise<Response | undefined> {
+  if (onStaticHost || mount === BROWSER_MOUNT) return Promise.resolve(undefined);
+  const url = new URL(`${appBase()}seed/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href);
+  return globalThis.fetch(url).then(
+    (r) => (r.status === 200 ? r : undefined),
+    () => undefined,
+  );
+}
+
+// seedDesign puts a fetched seed into the engine's store before the design's first read, and
+// reports whether the engine took any of it. An engine built under another version than the
+// server's takes nothing, and the page then reads the design as before.
+export async function seedDesign(engine: WasmEngine, seed: Response | undefined): Promise<boolean> {
+  if (!seed) return false;
+  const started = performance.now();
+  try {
+    const body = await seed.arrayBuffer();
+    const r = await engine.fetch(
+      new Request(new URL("/agni-seed", location.origin), {
+        method: "POST",
+        headers: { "Agni-Store-Version": seed.headers.get("Agni-Store-Version") ?? "" },
+        body,
+      }),
+    );
+    const put = r.ok ? (((await r.json()) as { put?: number }).put ?? 0) : 0;
+    if (timingMode()) console.info(`agni seed: ${JSON.stringify({ bytes: body.byteLength, put, ms: Math.round(performance.now() - started) })}`);
+    return put > 0;
+  } catch {
+    return false;
+  }
 }
