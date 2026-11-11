@@ -76,7 +76,7 @@ func once(bin, mount, uri, wrap string, attached bool, wait time.Duration, secon
 	if wrap != "" {
 		args = append(strings.Fields(wrap), args...)
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) // #nosec G204 -- runs the agni binary, under a wrapper, that the person running this tool names in its flags
 	cmd.Env = os.Environ()
 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
 	if !attached {
