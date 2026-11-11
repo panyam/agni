@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/core/facts"
 )
 
 // relRe extracts the built-in relation names from their Rel* const declarations in facts.go. Those
@@ -34,18 +36,21 @@ func builtinRelationNames(t *testing.T) map[string]bool {
 	return names
 }
 
-// predicateDocs are non-EDB relation names that have a doc but no facts.go projector. They are
-// computed query built-ins, so they have no projector→doc back-link and are outside the EDB
-// require-all set. net.reaches is the reach-walk predicate, the recursive counterpart to
-// net.bus_like. net.route is the same walk with its path bound as a value. str.contains, str.prefix
-// and str.suffix are the string tests jaala's standard library registers (agni issue 75). Add a name
-// to this set when its doc is written.
-var predicateDocs = map[string]bool{
-	"net.reaches":  true,
-	"net.route":    true,
-	"str.contains": true,
-	"str.prefix":   true,
-	"str.suffix":   true,
+// vocabularyPredicates names every computed predicate the query vocabulary registers: the walks agni
+// adds (net.reaches, net.route) and jaala's standard library (str.*, num.*, list.*, path.*, absent,
+// coalesce). None is a stored fact, so none has a facts.go projector or a back-link. Each needs a
+// doc all the same (agni issue 1517). Reading the set from the registry means a predicate a jaala
+// bump adds fails here until its doc is written, rather than waiting for someone to add it to a list.
+func vocabularyPredicates(t *testing.T) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	for _, p := range facts.DefaultRegistry().Predicates() {
+		out[p.Name] = true
+	}
+	if len(out) == 0 {
+		t.Fatal("the default registry lists no predicates")
+	}
+	return out
 }
 
 // TestRelationDocsBidirectional couples facts/docs to the relation set in both directions
@@ -56,6 +61,7 @@ var predicateDocs = map[string]bool{
 // back-link resolves. Every referenced image exists.
 func TestRelationDocsBidirectional(t *testing.T) {
 	relations := builtinRelationNames(t)
+	predicates := vocabularyPredicates(t)
 
 	entries, err := relationDocs.ReadDir("facts/docs")
 	if err != nil {
@@ -72,7 +78,7 @@ func TestRelationDocsBidirectional(t *testing.T) {
 		}
 		stem := strings.TrimSuffix(name, ".md")
 		docStems[stem] = true
-		if !relations[stem] && !predicateDocs[stem] {
+		if !relations[stem] && !predicates[stem] {
 			t.Errorf("facts/docs/%s names no built-in relation (orphan doc)", name)
 		}
 		body := RelationDoc(stem)
@@ -110,15 +116,24 @@ func TestRelationDocsBidirectional(t *testing.T) {
 		}
 	}
 	imgRe := regexp.MustCompile(`!\[[^\]]*\]\(([^)]+)\)`)
+	referenced := map[string]bool{}
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".md") || strings.HasPrefix(e.Name(), "_") {
 			continue // _TEMPLATE.md's placeholder image ref is not a real reference
 		}
 		b, _ := relationDocs.ReadFile("facts/docs/" + e.Name())
 		for _, m := range imgRe.FindAllStringSubmatch(string(b), -1) {
+			referenced[m[1]] = true
 			if strings.HasPrefix(m[1], "images/") && !images[m[1]] {
 				t.Errorf("facts/docs/%s references missing image %q", e.Name(), m[1])
 			}
+		}
+	}
+	// An image no doc references ships in the binary and the docsite and is never shown (agni issue
+	// 1517).
+	for img := range images {
+		if !referenced[img] {
+			t.Errorf("facts/docs/%s is referenced by no doc; delete it or reference it", img)
 		}
 	}
 
@@ -130,10 +145,10 @@ func TestRelationDocsBidirectional(t *testing.T) {
 			t.Errorf("relation %q has no doc: write facts/docs/%s.md (require-all)", rel, rel)
 		}
 	}
-	// The allowlisted predicate docs must also be present.
-	for pred := range predicateDocs {
+	// So must every predicate the vocabulary registers.
+	for pred := range predicates {
 		if !docStems[pred] {
-			t.Errorf("predicate doc facts/docs/%s.md is missing", pred)
+			t.Errorf("predicate %q has no doc: write facts/docs/%s.md (require-all)", pred, pred)
 		}
 	}
 }
