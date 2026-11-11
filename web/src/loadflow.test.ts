@@ -76,3 +76,13 @@ describe("the Load page's flow", () => {
     expect(h.deps.open).not.toHaveBeenCalled();
   });
 });
+
+// agni issue 1501: a load that opens on the board reads no schematic first.
+describe("a load that opens on the board", () => {
+  it("reads the board without the drawing, then records the read and opens the viewer", async () => {
+    const h = harness({ drawing: undefined });
+    expect(await h.flow.run()).toBe(true);
+    expect(h.order).toEqual(["board", "record st", "open"]);
+    expect(h.last().map((s) => [s.id, s.state])).toEqual([["files", "done"], ["board", "done"]]);
+  });
+});
