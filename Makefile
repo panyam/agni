@@ -387,8 +387,11 @@ web-test:
 # HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
 # samples-oracle because site.spec.ts seeds the static demo with the RoyalBlue Feather board, which
 # testall used to fetch before this ran; run on its own, or as its own CI job, it fetches it itself.
+# SHARD=i/n runs one slice of the spec files, e.g. `make browser-test SHARD=2/4`. CI runs four shards
+# on four runners. Each shard has its own server and Chromium, so the specs inside a shard still run
+# one at a time and never compete for a CPU (agni issue 1147).
 browser-test: ui wasm samples-oracle
-	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser $(if $(SHARD),--shard=$(SHARD))
 
 # hooks installs an opt-in pre-push hook that runs the browser suite before a push (hack/pre-push.sh).
 # CI runs the suite on every push anyway; the hook is for hearing about a layout break in two minutes
@@ -630,9 +633,9 @@ catalog-docs-check: catalog-docs
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
 testall: testall-core browser-test
 
-# testall-core is the gate without the browser suite. CI runs it as three jobs beside browser-test,
-# so the gate takes as long as the slowest of the four rather than all of them in a row (agni issue
-# 1147). `make testall` still runs every target here, in the order below.
+# testall-core is the gate without the browser suite. CI runs it as three jobs beside four
+# browser-test shards, so the gate takes as long as the slowest job rather than all of them in a row
+# (agni issue 1147). `make testall` still runs every target here, in the order below.
 testall-core: testall-test testall-scan testall-docs
 
 # testall-test builds and tests the engine, the examples, the web bundle and the Python client, and
