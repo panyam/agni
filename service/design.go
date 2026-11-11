@@ -441,20 +441,17 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	// envelope matches the schematic pack, so the canvas draws it with one extra draw mode.
 	// NATIVE has no board pages and answers with the SVG document.
 	if req.GetSheet() == boardSheetID {
+		if f := req.GetFormat(); f != webapi.SheetFormat_SHEET_FORMAT_SVG && f != webapi.SheetFormat_SHEET_FORMAT_NATIVE {
+			return s.packedBoard(ctx, snap)
+		}
 		b, err := s.boardFor(ctx, snap)
 		if err != nil {
 			return nil, err
 		}
-		if f := req.GetFormat(); f == webapi.SheetFormat_SHEET_FORMAT_SVG || f == webapi.SheetFormat_SHEET_FORMAT_NATIVE {
-			return &webapi.GetSheetResponse{
-				// The served viewer picks on the board as on a sheet, so the board carries the same
-				// keys (render.Style.PickTargets).
-				Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets(), s.boardNetIDs(ctx, snap))},
-				BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
-			}, nil
-		}
 		return &webapi.GetSheetResponse{
-			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, render.WithStyle(s.styleOrDefault()), s.boardNetIDs(ctx, snap))},
+			// The served viewer picks on the board as on a sheet, so the board carries the same keys
+			// (render.Style.PickTargets).
+			Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets(), s.boardNetIDs(ctx, snap))},
 			BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
 		}, nil
 	}
