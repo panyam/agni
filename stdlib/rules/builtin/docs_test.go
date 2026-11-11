@@ -125,3 +125,64 @@ func firstBytes(b []byte) []byte {
 	}
 	return b
 }
+
+// cardDiagramExempt lists each card in docs/ that may ship without a diagram, with the reason (agni
+// issue 75). Every other card must reference an image. TestRuleCardsHaveDiagram fails on an entry
+// whose card now references one, and on an entry naming no card, so the list shrinks as drawings
+// are added.
+var cardDiagramExempt = map[string]string{
+	"bus-spelling-not-a-bus":            "not drawn yet (agni issue 75)",
+	"fet-vdss-below-switched-rail":      "not drawn yet (agni issue 75)",
+	"i2c-pull-up-split-rail":            "not drawn yet (agni issue 75)",
+	"i2c-redundant-pull-up":             "not drawn yet (agni issue 75)",
+	"load-switch-trip-above-fet-rating": "not drawn yet (agni issue 75)",
+	"pin-exceeds-abs-max":               "not drawn yet (agni issue 75)",
+	"pin-out-of-recommended":            "not drawn yet (agni issue 75)",
+	"pin-tracking-advisory":             "not drawn yet (agni issue 75)",
+	"pin-tracking-violated":             "not drawn yet (agni issue 75)",
+	"rail-not-classified":               "not drawn yet (agni issue 75)",
+	"regulator-output-exceeds-abs-max":  "not drawn yet (agni issue 75)",
+	"unannotated-components":            "not drawn yet (agni issue 75)",
+}
+
+// TestRuleCardsHaveDiagram holds every card in docs/ to the diagram convention (agni issue 75). A
+// card references an image under docs/images/, or cardDiagramExempt names it with a reason.
+// TestRuleDocsOneToOne already checks that a referenced image exists. This test checks that a card
+// references one at all.
+func TestRuleCardsHaveDiagram(t *testing.T) {
+	entries, err := ruleDocs.ReadDir("docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	imgRe := regexp.MustCompile(`!\[[^\]]*\]\(([^)]+)\)`)
+	cards := map[string]bool{}
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		card := strings.TrimSuffix(e.Name(), ".md")
+		cards[card] = true
+		b, err := ruleDocs.ReadFile("docs/" + e.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		drawn := imgRe.Match(b)
+		reason, exempt := cardDiagramExempt[card]
+		switch {
+		case drawn && exempt:
+			t.Errorf("docs/%s references a diagram, so remove its stale cardDiagramExempt entry (%q)", e.Name(), reason)
+		case !drawn && !exempt:
+			t.Errorf("docs/%s references no diagram. Draw one under docs/images/ and reference it as ![alt](images/<name>.svg), or add %q to cardDiagramExempt with a reason", e.Name(), card)
+		case exempt && strings.TrimSpace(reason) == "":
+			t.Errorf("cardDiagramExempt[%q] gives no reason", card)
+		}
+	}
+	for card := range cardDiagramExempt {
+		if !cards[card] {
+			t.Errorf("cardDiagramExempt names %q, which has no docs/%s.md", card, card)
+		}
+	}
+	if len(cards) == 0 {
+		t.Fatal("no rule cards found under docs/, so the diagram check asserted nothing")
+	}
+}

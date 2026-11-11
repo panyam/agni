@@ -37,10 +37,16 @@ func builtinRelationNames(t *testing.T) map[string]bool {
 // predicateDocs are non-EDB relation names that have a doc but no facts.go projector. They are
 // computed query built-ins, so they have no projector→doc back-link and are outside the EDB
 // require-all set. net.reaches is the reach-walk predicate, the recursive counterpart to
-// net.bus_like. net.route is the same walk with its path bound as a value. The string predicates
-// (contains/prefix/suffix) are deliberately not documented here (tracked in OUT_OF_SCOPE). Add a
-// name to this set when its doc is written.
-var predicateDocs = map[string]bool{"net.reaches": true, "net.route": true}
+// net.bus_like. net.route is the same walk with its path bound as a value. str.contains, str.prefix
+// and str.suffix are the string tests jaala's standard library registers (agni issue 75). Add a name
+// to this set when its doc is written.
+var predicateDocs = map[string]bool{
+	"net.reaches":  true,
+	"net.route":    true,
+	"str.contains": true,
+	"str.prefix":   true,
+	"str.suffix":   true,
+}
 
 // TestRelationDocsBidirectional couples facts/docs to the relation set in both directions
 // (WS14-005). It is the docs_test.go analogue for facts. It has been REQUIRE-ALL since the staged

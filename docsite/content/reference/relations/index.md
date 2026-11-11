@@ -117,15 +117,15 @@ Defined in Datalog over the relations above rather than projected from the desig
 | `path.step(path, index, from, to)` | binds each step of the path, index from 0 |
 | `str.capitalize(string, capitalized)` | binds the string with its first character in upper case and the rest as written |
 | `str.concat(head, tail, text)` | text is head followed by tail, run from any two of the three; cutting a head or tail off holds for none when text lacks it |
-| `str.contains(string, substring)` | reports whether a string contains a substring |
+| [`str.contains(string, substring)`](str.contains/) | reports whether a string contains a substring |
 | `str.distance(string, other, distance)` | binds the edit (Levenshtein) distance between two strings, in characters; both strings must be bound |
 | `str.find(string, regex, index, match)` | binds each non-empty match of an unanchored regular expression with its index from 0; given an index, binds that match alone, a negative index counting from the end |
 | `str.glob(string, pattern)` | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |
 | `str.lower(string, lower)` | binds the string in lower case |
 | `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
-| `str.prefix(string, prefix)` | reports whether a string starts with a prefix |
+| [`str.prefix(string, prefix)`](str.prefix/) | reports whether a string starts with a prefix |
 | `str.replace(string, old, new, result)` | binds the string with every occurrence of old replaced by new |
 | `str.split(string, separator, index, part)` | binds each part of the string between separators with its index from 0; given an index, binds that part alone, a negative index counting from the end (-1 is the last part) |
-| `str.suffix(string, suffix)` | reports whether a string ends with a suffix |
+| [`str.suffix(string, suffix)`](str.suffix/) | reports whether a string ends with a suffix |
 | `str.upper(string, upper)` | binds the string in upper case |
 
