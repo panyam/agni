@@ -26,13 +26,21 @@ func TestRuleDocsOneToOne(t *testing.T) {
 			t.Errorf("docs/%s.md must open with its own '## %s' heading", r.Name, r.Name)
 		}
 	}
+	// Diagrams live under docs/images/ and are referenced as "images/<file>", as in
+	// stdlib/rules/builtin (agni issue 75). A family with no diagram yet has no images/ directory.
 	images := map[string]bool{}
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".png") {
-			images[e.Name()] = true
-			continue
+	if imgEntries, err := ruleDocs.ReadDir("docs/images"); err == nil {
+		for _, e := range imgEntries {
+			if name := e.Name(); strings.HasSuffix(name, ".png") || strings.HasSuffix(name, ".svg") {
+				images["images/"+name] = true
+			}
 		}
-		if rule := strings.TrimSuffix(e.Name(), ".md"); !byName[rule] {
+	}
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".md") {
+			continue // the images/ subdir is not a card
+		}
+		if r := strings.TrimSuffix(e.Name(), ".md"); !byName[r] {
 			t.Errorf("docs/%s names no registered rule (orphan doc)", e.Name())
 		}
 	}
@@ -57,12 +65,7 @@ func TestRuleDocsOneToOne(t *testing.T) {
 // issue 75). Every other card must reference an image. TestRuleCardsHaveDiagram fails on an entry
 // whose card now references one, and on an entry naming no card, so the list shrinks as drawings
 // are added.
-//
-// This family has no docs/images/ yet, and tools/catalogdocs copies no images for it. The first
-// diagram here needs that plumbing as well as the drawing.
-var cardDiagramExempt = map[string]string{
-	"power-pin-mistyped": "not drawn yet (agni issue 75)",
-}
+var cardDiagramExempt = map[string]string{}
 
 // TestRuleCardsHaveDiagram holds every card in docs/ to the diagram convention (agni issue 75). A
 // card references an image, or cardDiagramExempt names it with a reason. TestRuleDocsOneToOne

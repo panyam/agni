@@ -3,7 +3,10 @@ package profiles
 import (
 	"embed"
 	"fmt"
+	"io/fs"
+	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -90,4 +93,27 @@ func ruleDoc(requirement string) string {
 		panic(fmt.Sprintf("profiles: no doc for requirement %q (want docs/%s.md): %v", requirement, requirement, err))
 	}
 	return string(b)
+}
+
+// RuleDocImageHandler serves this package's card diagrams, under docs/images/, read-only (agni issue
+// 75). It follows builtin.RuleDocImageHandler's contract. It serves .svg and .png only and answers
+// 404 for anything else, the markdown included. It is mounted under a prefix (e.g.
+// "images/profile-esd.svg") and sets an explicit SVG content-type.
+func RuleDocImageHandler() http.Handler {
+	sub, err := fs.Sub(ruleDocs, "docs")
+	if err != nil {
+		panic(fmt.Sprintf("profiles: rule docs sub-FS: %v", err)) // embed path is a constant; unreachable
+	}
+	files := http.FileServer(http.FS(sub))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		case strings.HasSuffix(r.URL.Path, ".png"):
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
 }

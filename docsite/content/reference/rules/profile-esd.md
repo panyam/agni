@@ -13,6 +13,8 @@ Some of the interface's signal nets leave the board through a connector. For eac
 checks whether anything clamps it. A net is reported when it is connector-facing and no TVS, no
 Zener, and no ESD-rated IC sits within two series crossings of it.
 
+![a connector-facing interface net with no clamp near the connector is flagged; one with a TVS beside it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/profile-esd.svg)
+
 If the design does not carry the interface, the check is silent. It is also silent when all of the
 interface's lines are on-board. In both cases silence is the correct answer, and it is not a pass.
 

@@ -167,6 +167,10 @@ the same package's `docs_test.go` names the card with a reason. The intent, data
 families keep the same list in their own `docs_test.go`. Agni issue 75 tracks the cards listed there
 as not drawn yet.
 
+All four families serve their images from one `/rule-docs/` route and copy them into one docsite
+folder, so an image name has to be unique across the families. `make catalog-docs` refuses a name
+two families ship. Profile card images take a `profile-` prefix for that reason.
+
 ## Say what to do about it
 
 A rule carries four pieces of prose. `Summary` is the one-liner, `Impact` is what goes wrong when the
