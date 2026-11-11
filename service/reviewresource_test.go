@@ -448,3 +448,49 @@ func TestValidateOnlyScoresWithoutStoring(t *testing.T) {
 		t.Errorf("the store holds %d runs after validate_only creates, want 0", n)
 	}
 }
+
+// CreateReview reads an item's answer from the imported report the request carries (agni issue
+// 152). The summary counts a clean report as covered-externally and never as a pass, and a report
+// naming no producer is refused rather than read as absent.
+func TestCreateReviewReadsExternalReports(t *testing.T) {
+	ctx := context.Background()
+	m, err := review.Load(strings.NewReader("name: drc\nareas:\n  - name: Board\n    items:\n" +
+		"      - {id: B1, title: copper clearance, external: {producer: kicad-cli pcb drc, rule: kicad-drc/clearance}}\n" +
+		"      - {id: B2, title: silkscreen, external: {producer: kicad-cli pcb drc, rule: kicad-drc/silk_overlap}}\n" +
+		"      - {id: B3, title: electrical rules, external: {producer: kicad-cli sch erc}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, _ := dirReviewSvc(t, nil)
+	drc := &checkspb.CheckResults{
+		Meta:     &checkspb.ResultsMeta{Schema: "agni.checks.results/v1", Producer: "kicad-cli pcb drc", ProducerVersion: "10.0.6"},
+		Findings: []*checkspb.Finding{{Rule: "kicad-drc/silk_overlap", Severity: "warning", Message: "silk over pad", Subject: &checkspb.Subject{}}},
+	}
+	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn"),
+		Manifest: ManifestProto(m), ValidateOnly: true, External: []*checkspb.CheckResults{drc}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	items := rv.GetResults().GetAreas()[0].GetItems()
+	if len(items) != 3 {
+		t.Fatalf("%d items scored, want 3", len(items))
+	}
+	for i, want := range []string{"covered-externally", "fail", "needs-data"} {
+		if got := items[i].GetOutcome(); got != want {
+			t.Errorf("%s: outcome %q, want %q (note %q)", items[i].GetId(), got, want, items[i].GetNote())
+		}
+	}
+	if n := len(items[1].GetFindings()); n != 1 {
+		t.Errorf("B2 carries %d findings, want the 1 from the report", n)
+	}
+	s := rv.GetSummary()
+	if s.GetCoveredExternally() != 1 || s.GetPass() != 0 || s.GetAnswered() != 1 || s.GetCovered() != 3 {
+		t.Errorf("summary %+v, want covered_externally 1, pass 0, answered 1 (the fail), covered 3", s)
+	}
+
+	_, err = svc.CreateReview(ctx, &webapi.CreateReviewRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn"),
+		Manifest: ManifestProto(m), ValidateOnly: true, External: []*checkspb.CheckResults{{}}})
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "names no producer") {
+		t.Errorf("a report with no producer: want invalid argument naming it, got %v", err)
+	}
+}

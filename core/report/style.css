@@ -64,6 +64,7 @@
           color: var(--muted); }
   td.o.provisional, td.o.needs-data, td.o.needs-design-intent { color: var(--warn); }
   td.o.not-applicable, td.o.not-automated, td.o.computed-na { color: var(--muted); }
+  td.o.covered-externally { color: var(--info); }
   .ev { margin: 0; padding: 0; list-style: none; }
   .ev li { margin-bottom: 3px; }
   .ev li:last-child { margin-bottom: 0; }

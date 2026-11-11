@@ -165,7 +165,11 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// The budget reaches every checklist query through ctx (agni issue 792). An item past it reads
 	// inconclusive and names the budget, and the others still answer.
 	loader := LoaderOr(snap, s.loader)
-	rep, cat, m, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), loader, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	external, err := externalReports(req.GetExternal())
+	if err != nil {
+		return nil, err
+	}
+	rep, cat, m, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), loader, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov, external)
 	if err != nil {
 		return nil, err
 	}
@@ -258,6 +262,7 @@ func ReviewOf(name string, doc *checkspb.CheckResults) *webapi.Review {
 	return &webapi.Review{Name: name, Results: doc, Summary: &webapi.ReviewSummary{
 		Total: num.Int32(t.Total), Covered: num.Int32(t.Covered()), Answered: num.Int32(t.Answered()),
 		Pass: num.Int32(t.Pass), Fail: num.Int32(t.Fail), Provisional: num.Int32(t.Provisional),
+		CoveredExternally: num.Int32(t.CoveredExternally),
 	}}
 }
 
@@ -373,7 +378,7 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 //
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
-func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, check.Model, error) {
+func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay, external []review.ExternalReport) (review.Report, *check.Catalog, check.Model, error) {
 	m, _, err := BuildModelCached(ctx, loader, designURI, boardURI, ov, s.specs)
 	if err != nil {
 		return review.Report{}, nil, nil, err
@@ -397,11 +402,37 @@ func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designU
 		// Injected to keep `review` decoupled from `intent`.
 		IntentRuleKnown: intent.Emits,
 		Vocabulary:      vocab,
+		External:        external,
 	})
 	if err != nil {
 		return review.Report{}, nil, nil, err
 	}
 	return rep, cat, m, nil
+}
+
+// externalReports converts the request's imported reports for review.Run (agni issue 152). A
+// document with no producer is refused, because no external binding could ever match it, and the
+// items naming its tool would read needs-data with the report sitting in the request.
+func externalReports(docs []*checkspb.CheckResults) ([]review.ExternalReport, error) {
+	out := make([]review.ExternalReport, 0, len(docs))
+	for i, d := range docs {
+		producer := d.GetMeta().GetProducer()
+		if producer == "" {
+			return nil, fmt.Errorf("%w: external report %d names no producer (write it with `agni import-results`)", ErrInvalidArgument, i+1)
+		}
+		r := review.ExternalReport{Producer: producer, Version: d.GetMeta().GetProducerVersion()}
+		for _, f := range d.GetFindings() {
+			r.Findings = append(r.Findings, FindingFromProto(f))
+		}
+		for _, sk := range d.GetSkipped() {
+			if r.Skipped == nil {
+				r.Skipped = map[string]string{}
+			}
+			r.Skipped[sk.GetName()] = sk.GetReason()
+		}
+		out = append(out, r)
+	}
+	return out, nil
 }
 
 // reviewClosures builds the presence and scope closures a review run needs over a design's Model and

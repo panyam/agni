@@ -111,10 +111,10 @@ describe("reviewPanel", () => {
 
   it("renders an unknown outcome under its own name rather than dropping or passing it", () => {
     const r = run();
-    r.areas[0].items = [{ id: "X", title: "future verdict", outcome: "covered-externally", note: "", findings: [] }];
+    r.areas[0].items = [{ id: "X", title: "future verdict", outcome: "signed-off-by-hand", note: "", findings: [] }];
     const { el } = mount({ ...withRun, runs: [r] });
     const chip = el.querySelector(".rv-outcome");
-    expect(chip?.textContent).toBe("covered-externally");
+    expect(chip?.textContent).toBe("signed-off-by-hand");
     expect(chip?.classList.contains(outcomeClass(OUTCOME_PASS))).toBe(false);
   });
 });

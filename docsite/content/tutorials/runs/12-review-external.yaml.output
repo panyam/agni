@@ -1,0 +1,26 @@
+#agni-run 4a5b098d24138890
+#agni-step
+# Review: Jetson board checks answered by KiCad's DRC
+
+Design: `designs/jetson`
+
+**1 pass, 1 fail, 0 n/a, 1 not-automated, 2 covered-externally (of 5)**
+
+## Copper
+
+1 pass, 1 fail, 0 n/a, 0 not-automated, 2 covered-externally (of 4)
+
+| # | Title | Outcome | Detail |
+|---|-------|---------|--------|
+| D1 | no track is below the board's minimum width | pass |  |
+| D2 | KiCad finds no track below the board's minimum width | covered-externally | no kicad-drc/track_width violation in the report from kicad-cli pcb drc 10.0.6 |
+| D3 | copper keeps its clearance | fail | kicad-drc/clearance: /CSI/CAM3.CSI6_D0- (Clearance violation (rule '(hs_zone_clearance' clearance 1.0000 mm; actual 0.4617 mm) — Track [/CSI/CAM3.CSI6_D0-] on In2.Cu, length 0.2475 mm); kicad-drc/clearance: +3V3 (Clearance violation (rule '(hs_zone_clearance' clearance 1.0000 mm; actual 0.4617 mm) — Zone [+3V3] on In2.Cu, priority 0); kicad-drc/clearance: /SoM_IO2/DP2.AUX_C- (Clearance violation (rule '(hs_zone_clearance' clearance 1.0000 mm; actual 0.9944 mm) — Track (arc) [/SoM_IO2/DP2.AUX_C-] on F.Cu, length 0.3770 mm); (+711 more) |
+| D4 | copper keeps clear of the board edge | covered-externally | no kicad-drc/copper_edge_clearance violation in the report from kicad-cli pcb drc 10.0.6 |
+
+## Footprints
+
+0 pass, 0 fail, 0 n/a, 1 not-automated (of 1)
+
+| # | Title | Outcome | Detail |
+|---|-------|---------|--------|
+| F1 | every footprint matches its library copy | not-automated | kicad-cli pcb drc 10.0.6 did not run kicad-drc/lib_footprint_mismatch: ignored by the design's rule settings (Footprint doesn't match copy in library) |

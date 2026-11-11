@@ -207,7 +207,7 @@ class ManifestItem(_message.Message):
     def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., note: _Optional[str] = ..., binding: _Optional[_Union[ItemBinding, _Mapping]] = ...) -> None: ...
 
 class ItemBinding(_message.Message):
-    __slots__ = ("rule", "tag", "profile", "query", "present", "scope", "requirement", "applies_to_class")
+    __slots__ = ("rule", "tag", "profile", "query", "present", "scope", "requirement", "applies_to_class", "external")
     RULE_FIELD_NUMBER: _ClassVar[int]
     TAG_FIELD_NUMBER: _ClassVar[int]
     PROFILE_FIELD_NUMBER: _ClassVar[int]
@@ -216,6 +216,7 @@ class ItemBinding(_message.Message):
     SCOPE_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENT_FIELD_NUMBER: _ClassVar[int]
     APPLIES_TO_CLASS_FIELD_NUMBER: _ClassVar[int]
+    EXTERNAL_FIELD_NUMBER: _ClassVar[int]
     rule: str
     tag: str
     profile: str
@@ -224,7 +225,16 @@ class ItemBinding(_message.Message):
     scope: ManifestScope
     requirement: str
     applies_to_class: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, rule: _Optional[str] = ..., tag: _Optional[str] = ..., profile: _Optional[str] = ..., query: _Optional[_Union[ManifestQuery, _Mapping]] = ..., present: _Optional[_Union[ManifestPresent, _Mapping]] = ..., scope: _Optional[_Union[ManifestScope, _Mapping]] = ..., requirement: _Optional[str] = ..., applies_to_class: _Optional[_Iterable[str]] = ...) -> None: ...
+    external: ManifestExternal
+    def __init__(self, rule: _Optional[str] = ..., tag: _Optional[str] = ..., profile: _Optional[str] = ..., query: _Optional[_Union[ManifestQuery, _Mapping]] = ..., present: _Optional[_Union[ManifestPresent, _Mapping]] = ..., scope: _Optional[_Union[ManifestScope, _Mapping]] = ..., requirement: _Optional[str] = ..., applies_to_class: _Optional[_Iterable[str]] = ..., external: _Optional[_Union[ManifestExternal, _Mapping]] = ...) -> None: ...
+
+class ManifestExternal(_message.Message):
+    __slots__ = ("producer", "rule")
+    PRODUCER_FIELD_NUMBER: _ClassVar[int]
+    RULE_FIELD_NUMBER: _ClassVar[int]
+    producer: str
+    rule: str
+    def __init__(self, producer: _Optional[str] = ..., rule: _Optional[str] = ...) -> None: ...
 
 class ManifestQuery(_message.Message):
     __slots__ = ("match", "subject", "kind", "message", "severity", "param_symbol")

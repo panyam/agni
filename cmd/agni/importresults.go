@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/results/foreign"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/spf13/cobra"
@@ -84,4 +85,23 @@ func writeImportSummary(w io.Writer, doc *checkspb.CheckResults) error {
 	fmt.Fprintln(w, "\nThis document carries no coverage axis: a vendor report lists violations and says")
 	fmt.Fprintln(w, "nothing about what it did not check, so its silence must not be read as a pass.")
 	return nil
+}
+
+// readExternalReports reads the documents `agni review --external` names (agni issue 152). Each must
+// be a check-result document, and a raw vendor JSON report is refused with the command that converts
+// it, since the review cannot join a vendor's prose to entities by itself.
+func readExternalReports(paths []string) ([]*checkspb.CheckResults, error) {
+	var out []*checkspb.CheckResults
+	for _, p := range paths {
+		b, err := os.ReadFile(p) // #nosec G304 -- reads a file the user named
+		if err != nil {
+			return nil, err
+		}
+		doc, err := results.Parse(b)
+		if err != nil {
+			return nil, fmt.Errorf("--external %s: %w (convert a vendor report first with `agni import-results --design <design> -o <doc.json> %s`)", p, err, p)
+		}
+		out = append(out, doc)
+	}
+	return out, nil
 }

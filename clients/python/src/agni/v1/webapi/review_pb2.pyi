@@ -39,35 +39,39 @@ class Review(_message.Message):
     def __init__(self, name: _Optional[str] = ..., results: _Optional[_Union[_checks_pb2.CheckResults, _Mapping]] = ..., summary: _Optional[_Union[ReviewSummary, _Mapping]] = ...) -> None: ...
 
 class ReviewSummary(_message.Message):
-    __slots__ = ("total", "covered", "answered", "fail", "provisional")
+    __slots__ = ("total", "covered", "answered", "fail", "provisional", "covered_externally")
     TOTAL_FIELD_NUMBER: _ClassVar[int]
     COVERED_FIELD_NUMBER: _ClassVar[int]
     ANSWERED_FIELD_NUMBER: _ClassVar[int]
     PASS_FIELD_NUMBER: _ClassVar[int]
     FAIL_FIELD_NUMBER: _ClassVar[int]
     PROVISIONAL_FIELD_NUMBER: _ClassVar[int]
+    COVERED_EXTERNALLY_FIELD_NUMBER: _ClassVar[int]
     total: int
     covered: int
     answered: int
     fail: int
     provisional: int
-    def __init__(self, total: _Optional[int] = ..., covered: _Optional[int] = ..., answered: _Optional[int] = ..., fail: _Optional[int] = ..., provisional: _Optional[int] = ..., **kwargs) -> None: ...
+    covered_externally: int
+    def __init__(self, total: _Optional[int] = ..., covered: _Optional[int] = ..., answered: _Optional[int] = ..., fail: _Optional[int] = ..., provisional: _Optional[int] = ..., covered_externally: _Optional[int] = ..., **kwargs) -> None: ...
 
 class CreateReviewRequest(_message.Message):
-    __slots__ = ("snapshot", "parent", "ratified_floor", "manifest", "work_budget", "validate_only")
+    __slots__ = ("snapshot", "parent", "ratified_floor", "manifest", "work_budget", "validate_only", "external")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     PARENT_FIELD_NUMBER: _ClassVar[int]
     RATIFIED_FLOOR_FIELD_NUMBER: _ClassVar[int]
     MANIFEST_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    EXTERNAL_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     parent: str
     ratified_floor: float
     manifest: _checks_pb2.ReviewManifest
     work_budget: int
     validate_only: bool
-    def __init__(self, snapshot: _Optional[str] = ..., parent: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., work_budget: _Optional[int] = ..., validate_only: _Optional[bool] = ...) -> None: ...
+    external: _containers.RepeatedCompositeFieldContainer[_checks_pb2.CheckResults]
+    def __init__(self, snapshot: _Optional[str] = ..., parent: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., work_budget: _Optional[int] = ..., validate_only: _Optional[bool] = ..., external: _Optional[_Iterable[_Union[_checks_pb2.CheckResults, _Mapping]]] = ...) -> None: ...
 
 class GetReviewRequest(_message.Message):
     __slots__ = ("name",)

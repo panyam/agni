@@ -23,6 +23,9 @@ export const OUTCOME_NEEDS_DESIGN_INTENT = "needs-design-intent";
 export const OUTCOME_COMPUTED_NA = "computed-n/a";
 export const OUTCOME_NEEDS_DATA = "needs-data";
 export const OUTCOME_INCONCLUSIVE = "inconclusive";
+// OUTCOME_COVERED_EXTERNALLY is an item another tool's imported report answered clean (agni issue
+// 152). It is covered and never a pass, because a vendor report cannot show what it checked.
+export const OUTCOME_COVERED_EXTERNALLY = "covered-externally";
 
 // Tally counts item outcomes, mirroring core/review's Tally field for field. Both surfaces DERIVE it
 // from the item outcomes rather than reading it off the wire. The shared fixture
@@ -37,6 +40,7 @@ export interface Tally {
   computedNA: number;
   needsData: number;
   inconclusive: number;
+  coveredExternally: number;
   total: number;
 }
 
@@ -44,7 +48,7 @@ export function emptyTally(): Tally {
   return {
     pass: 0, fail: 0, notApplicable: 0, notAutomated: 0,
     provisional: 0, needsDesignIntent: 0, computedNA: 0,
-    needsData: 0, inconclusive: 0, total: 0,
+    needsData: 0, inconclusive: 0, coveredExternally: 0, total: 0,
   };
 }
 
@@ -65,6 +69,7 @@ export function tally(outcomes: string[]): Tally {
       case OUTCOME_COMPUTED_NA: t.computedNA++; break;
       case OUTCOME_NEEDS_DATA: t.needsData++; break;
       case OUTCOME_INCONCLUSIVE: t.inconclusive++; break;
+      case OUTCOME_COVERED_EXTERNALLY: t.coveredExternally++; break;
     }
   }
   return t;
@@ -287,6 +292,7 @@ export const OUTCOME_LABEL: Record<string, string> = {
   [OUTCOME_COMPUTED_NA]: "computed n/a",
   [OUTCOME_NEEDS_DATA]: "needs data",
   [OUTCOME_INCONCLUSIVE]: "inconclusive",
+  [OUTCOME_COVERED_EXTERNALLY]: "covered externally",
 };
 
 // KNOWN_OUTCOMES is the set the panel styles explicitly. outcomeClass keys off it so an unknown

@@ -91,6 +91,44 @@ than the totals. The columns are complementary, because the two tools are answer
 questions, and no amount of careful layout gives a copper checker access to the fact that an I2C bus
 has no pull-up.
 
+## Hand checklist items to KiCad
+
+Your checklist probably asks questions your DRC already answers, such as whether copper keeps its
+clearance. Agni has no rule for most of them, so until now those items read `not-automated`. That
+undercounts the review, because something does check them.
+
+An `external:` binding hands an item to the other tool. It names the tool's producer, as the import
+summary prints it, and one of the tool's checks. The project's `drc` checklist binds four items
+this way and keeps one on agni's own `track-width` rule:
+
+```yaml
+- id: "D3"
+  title: copper keeps its clearance
+  external: {producer: kicad-cli pcb drc, rule: kicad-drc/clearance}
+```
+
+Run it with the imported report:
+
+{{ agniRun "content/tutorials/runs/12-review-external.yaml" }}
+
+Each external item took its answer from KiCad's report, in one of three ways.
+
+**D3 fails**, because KiCad reported clearance violations, and the detail lists KiCad's own
+findings.
+
+**D2 and D4 read `covered-externally`**, because KiCad reported no violation of those checks. That
+is a weaker claim than D1's `pass`, although D1 and D2 ask the same question. Agni's rule examined
+every track and saw none too narrow. KiCad's report lists violations and nothing else, so its
+silence cannot show what the check looked at. The tally counts the two outcomes apart, and
+`--min-answered` counts only D1.
+
+**F1 reads `not-automated`.** The board's rule settings tell KiCad to ignore the footprint-library
+check, and the report says so under `ignored_checks`. A check that never ran reports no violation,
+so without that list F1 would have read `covered-externally` when nothing checked it.
+
+The run also needs the report. Leave out `--external`, and every external item reads `needs-data`
+and names the tool it is waiting for.
+
 ## Using it as a gate
 
 `agni import-results` writes an ordinary check-result document, so everything from [rung

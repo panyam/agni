@@ -14,7 +14,7 @@ import {
   selectedRun,
   emptyReview,
   OUTCOME_LABEL,
-  OUTCOME_PASS,
+  OUTCOME_PASS, OUTCOME_COVERED_EXTERNALLY,
 } from "./review.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -51,6 +51,7 @@ describe("tally — twinned with core/review via tally_twin.json", () => {
       expect(got.computedNA).toBe(tc.want.computedNA);
       expect(got.needsData).toBe(tc.want.needsData);
       expect(got.inconclusive).toBe(tc.want.inconclusive);
+      expect(got.coveredExternally).toBe(tc.want.coveredExternally);
       expect(got.total).toBe(tc.want.total);
       expect(covered(got)).toBe(tc.want.covered);
     });
@@ -95,8 +96,14 @@ describe("outcomeClass", () => {
   // We cannot interpret that verdict, and an optimistic guess about it can report an unanswered
   // question as answered.
   it("styles an unknown outcome as unknown, never as a pass", () => {
-    expect(outcomeClass("covered-externally")).toBe("rv-unknown");
-    expect(outcomeClass("covered-externally")).not.toBe(outcomeClass(OUTCOME_PASS));
+    expect(outcomeClass("signed-off-by-hand")).toBe("rv-unknown");
+    expect(outcomeClass("signed-off-by-hand")).not.toBe(outcomeClass(OUTCOME_PASS));
+  });
+
+  // Another tool's clean report gets a style of its own, never the pass style (agni issue 152).
+  it("styles covered-externally apart from pass", () => {
+    expect(outcomeClass(OUTCOME_COVERED_EXTERNALLY)).toBe("rv-covered-externally");
+    expect(outcomeClass(OUTCOME_COVERED_EXTERNALLY)).not.toBe(outcomeClass(OUTCOME_PASS));
   });
 
   it("produces a css-safe class for outcomes with punctuation", () => {

@@ -1170,7 +1170,7 @@ func (x *ManifestItem) GetBinding() *ItemBinding {
 }
 
 // ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
-// profile, query, present). They are mutually exclusive, and a second one is a validation error,
+// profile, query, present, external). They are mutually exclusive, and a second one is a validation error,
 // not a precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than
 // selectors. They do not count toward that limit, and they compose with whichever selector is set.
 type ItemBinding struct {
@@ -1191,8 +1191,11 @@ type ItemBinding struct {
 	// applies_to_class gates the item on device class (WS10-014). The item is computed-n/a when no
 	// component has any of these classes. Values are component.class names, family tags included.
 	AppliesToClass []string `protobuf:"bytes,8,rep,name=applies_to_class,json=appliesToClass,proto3" json:"applies_to_class,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// external hands the item to another tool's imported report (agni issue 152). The item reads
+	// covered-externally when that report has no matching violation, and fail when it has one.
+	External      *ManifestExternal `protobuf:"bytes,9,opt,name=external,proto3" json:"external,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ItemBinding) Reset() {
@@ -1281,6 +1284,68 @@ func (x *ItemBinding) GetAppliesToClass() []string {
 	return nil
 }
 
+func (x *ItemBinding) GetExternal() *ManifestExternal {
+	if x != nil {
+		return x.External
+	}
+	return nil
+}
+
+// ManifestExternal names the other tool whose report answers an item. producer matches the
+// imported document's meta.producer, such as "kicad-cli pcb drc". rule narrows the item to one of
+// that tool's rules, such as "kicad-drc/clearance". An empty rule means any violation in the report.
+type ManifestExternal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Producer      string                 `protobuf:"bytes,1,opt,name=producer,proto3" json:"producer,omitempty"`
+	Rule          string                 `protobuf:"bytes,2,opt,name=rule,proto3" json:"rule,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ManifestExternal) Reset() {
+	*x = ManifestExternal{}
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ManifestExternal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ManifestExternal) ProtoMessage() {}
+
+func (x *ManifestExternal) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ManifestExternal.ProtoReflect.Descriptor instead.
+func (*ManifestExternal) Descriptor() ([]byte, []int) {
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ManifestExternal) GetProducer() string {
+	if x != nil {
+		return x.Producer
+	}
+	return ""
+}
+
+func (x *ManifestExternal) GetRule() string {
+	if x != nil {
+		return x.Rule
+	}
+	return ""
+}
+
 // ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
 // program, and its goal must project subject. message is the finding template, where {var} is
 // replaced by the bound value. kind defaults to "component" and severity to "warning".
@@ -1300,7 +1365,7 @@ type ManifestQuery struct {
 
 func (x *ManifestQuery) Reset() {
 	*x = ManifestQuery{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[12]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1312,7 +1377,7 @@ func (x *ManifestQuery) String() string {
 func (*ManifestQuery) ProtoMessage() {}
 
 func (x *ManifestQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[12]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1325,7 +1390,7 @@ func (x *ManifestQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManifestQuery.ProtoReflect.Descriptor instead.
 func (*ManifestQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ManifestQuery) GetMatch() string {
@@ -1382,7 +1447,7 @@ type ManifestPresent struct {
 
 func (x *ManifestPresent) Reset() {
 	*x = ManifestPresent{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[13]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1394,7 +1459,7 @@ func (x *ManifestPresent) String() string {
 func (*ManifestPresent) ProtoMessage() {}
 
 func (x *ManifestPresent) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[13]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1407,7 +1472,7 @@ func (x *ManifestPresent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManifestPresent.ProtoReflect.Descriptor instead.
 func (*ManifestPresent) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ManifestPresent) GetClass() string {
@@ -1428,7 +1493,7 @@ type ManifestScope struct {
 
 func (x *ManifestScope) Reset() {
 	*x = ManifestScope{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[14]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1440,7 +1505,7 @@ func (x *ManifestScope) String() string {
 func (*ManifestScope) ProtoMessage() {}
 
 func (x *ManifestScope) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[14]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1453,7 +1518,7 @@ func (x *ManifestScope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManifestScope.ProtoReflect.Descriptor instead.
 func (*ManifestScope) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ManifestScope) GetProfiles() []string {
@@ -1476,7 +1541,8 @@ type ReviewItem struct {
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Title string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// outcome is the review.Outcome string: pass | fail | not-applicable | not-automated |
-	// needs-data | needs-design-intent | computed-n/a | provisional. It is a string, not an enum, so
+	// needs-data | needs-design-intent | computed-n/a | provisional | inconclusive |
+	// covered-externally. It is a string, not an enum, so
 	// a new verdict is a review-layer change rather than a schema migration. Finding.severity takes
 	// the same approach.
 	Outcome  string     `protobuf:"bytes,3,opt,name=outcome,proto3" json:"outcome,omitempty"`
@@ -1491,7 +1557,7 @@ type ReviewItem struct {
 
 func (x *ReviewItem) Reset() {
 	*x = ReviewItem{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[15]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1503,7 +1569,7 @@ func (x *ReviewItem) String() string {
 func (*ReviewItem) ProtoMessage() {}
 
 func (x *ReviewItem) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[15]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1516,7 +1582,7 @@ func (x *ReviewItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewItem.ProtoReflect.Descriptor instead.
 func (*ReviewItem) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ReviewItem) GetId() string {
@@ -1580,7 +1646,7 @@ type WorkItem struct {
 
 func (x *WorkItem) Reset() {
 	*x = WorkItem{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[16]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1592,7 +1658,7 @@ func (x *WorkItem) String() string {
 func (*WorkItem) ProtoMessage() {}
 
 func (x *WorkItem) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[16]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1605,7 +1671,7 @@ func (x *WorkItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkItem.ProtoReflect.Descriptor instead.
 func (*WorkItem) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *WorkItem) GetDependency() *UnmetDependency {
@@ -1658,7 +1724,7 @@ type UnmetDependency struct {
 
 func (x *UnmetDependency) Reset() {
 	*x = UnmetDependency{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[17]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1670,7 +1736,7 @@ func (x *UnmetDependency) String() string {
 func (*UnmetDependency) ProtoMessage() {}
 
 func (x *UnmetDependency) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[17]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1683,7 +1749,7 @@ func (x *UnmetDependency) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnmetDependency.ProtoReflect.Descriptor instead.
 func (*UnmetDependency) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UnmetDependency) GetMpn() string {
@@ -1725,7 +1791,7 @@ type ReviewArea struct {
 
 func (x *ReviewArea) Reset() {
 	*x = ReviewArea{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[18]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1737,7 +1803,7 @@ func (x *ReviewArea) String() string {
 func (*ReviewArea) ProtoMessage() {}
 
 func (x *ReviewArea) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[18]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1750,7 +1816,7 @@ func (x *ReviewArea) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewArea.ProtoReflect.Descriptor instead.
 func (*ReviewArea) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ReviewArea) GetName() string {
@@ -1793,9 +1859,10 @@ type CheckResults struct {
 	// rule on a netlist or a datasheet rule with no corpus. Both kinds of silence read as coverage. A
 	// document with one list and not the other lets a reader conclude the run was broader than it was.
 	//
-	// An IMPORTED vendor report leaves it empty, for the same reason `meta.coverage_axis` is false on
-	// one. A foreign checker has no notion of a rule it declined to run, and manufacturing the field
-	// would give an import a property it does not have.
+	// An IMPORTED vendor report fills it only from what the vendor itself lists. KiCad names the checks
+	// the design's rule settings ignore, and the import records each one here (agni issue 152). A
+	// vendor that lists nothing leaves it empty, and the import manufactures no entry, for the same
+	// reason `meta.coverage_axis` is false on one.
 	Skipped []*SkippedRule `protobuf:"bytes,10,rep,name=skipped,proto3" json:"skipped,omitempty"`
 	// findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and lists
 	// its findings per item instead. That is deliberate. A review runs each item's bound rules scoped
@@ -1826,7 +1893,7 @@ type CheckResults struct {
 
 func (x *CheckResults) Reset() {
 	*x = CheckResults{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1838,7 +1905,7 @@ func (x *CheckResults) String() string {
 func (*CheckResults) ProtoMessage() {}
 
 func (x *CheckResults) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1851,7 +1918,7 @@ func (x *CheckResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckResults.ProtoReflect.Descriptor instead.
 func (*CheckResults) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *CheckResults) GetMeta() *ResultsMeta {
@@ -1944,7 +2011,7 @@ type ImportSummary struct {
 
 func (x *ImportSummary) Reset() {
 	*x = ImportSummary{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1956,7 +2023,7 @@ func (x *ImportSummary) String() string {
 func (*ImportSummary) ProtoMessage() {}
 
 func (x *ImportSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1969,7 +2036,7 @@ func (x *ImportSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportSummary.ProtoReflect.Descriptor instead.
 func (*ImportSummary) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ImportSummary) GetFindings() int32 {
@@ -2007,7 +2074,7 @@ type UnjoinedReason struct {
 
 func (x *UnjoinedReason) Reset() {
 	*x = UnjoinedReason{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2019,7 +2086,7 @@ func (x *UnjoinedReason) String() string {
 func (*UnjoinedReason) ProtoMessage() {}
 
 func (x *UnjoinedReason) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2032,7 +2099,7 @@ func (x *UnjoinedReason) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnjoinedReason.ProtoReflect.Descriptor instead.
 func (*UnjoinedReason) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UnjoinedReason) GetReason() string {
@@ -2081,7 +2148,7 @@ type ResultsMeta struct {
 
 func (x *ResultsMeta) Reset() {
 	*x = ResultsMeta{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2093,7 +2160,7 @@ func (x *ResultsMeta) String() string {
 func (*ResultsMeta) ProtoMessage() {}
 
 func (x *ResultsMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2106,7 +2173,7 @@ func (x *ResultsMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResultsMeta.ProtoReflect.Descriptor instead.
 func (*ResultsMeta) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ResultsMeta) GetSchema() string {
@@ -2168,7 +2235,7 @@ type DesignRef struct {
 
 func (x *DesignRef) Reset() {
 	*x = DesignRef{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[23]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2180,7 +2247,7 @@ func (x *DesignRef) String() string {
 func (*DesignRef) ProtoMessage() {}
 
 func (x *DesignRef) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[23]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2193,7 +2260,7 @@ func (x *DesignRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DesignRef.ProtoReflect.Descriptor instead.
 func (*DesignRef) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DesignRef) GetSource() string {
@@ -2241,7 +2308,7 @@ type RunConfig struct {
 
 func (x *RunConfig) Reset() {
 	*x = RunConfig{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[24]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2253,7 +2320,7 @@ func (x *RunConfig) String() string {
 func (*RunConfig) ProtoMessage() {}
 
 func (x *RunConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[24]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2266,7 +2333,7 @@ func (x *RunConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunConfig.ProtoReflect.Descriptor instead.
 func (*RunConfig) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{24}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RunConfig) GetParams() bool {
@@ -2322,7 +2389,7 @@ type SkippedRule struct {
 
 func (x *SkippedRule) Reset() {
 	*x = SkippedRule{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[25]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2334,7 +2401,7 @@ func (x *SkippedRule) String() string {
 func (*SkippedRule) ProtoMessage() {}
 
 func (x *SkippedRule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[25]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2347,7 +2414,7 @@ func (x *SkippedRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkippedRule.ProtoReflect.Descriptor instead.
 func (*SkippedRule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{25}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SkippedRule) GetName() string {
@@ -2380,7 +2447,7 @@ type RuleRecord struct {
 
 func (x *RuleRecord) Reset() {
 	*x = RuleRecord{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[26]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2392,7 +2459,7 @@ func (x *RuleRecord) String() string {
 func (*RuleRecord) ProtoMessage() {}
 
 func (x *RuleRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[26]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2405,7 +2472,7 @@ func (x *RuleRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleRecord.ProtoReflect.Descriptor instead.
 func (*RuleRecord) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{26}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RuleRecord) GetName() string {
@@ -2451,7 +2518,7 @@ type CheckReport_SeveritySection struct {
 
 func (x *CheckReport_SeveritySection) Reset() {
 	*x = CheckReport_SeveritySection{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2463,7 +2530,7 @@ func (x *CheckReport_SeveritySection) String() string {
 func (*CheckReport_SeveritySection) ProtoMessage() {}
 
 func (x *CheckReport_SeveritySection) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2511,7 +2578,7 @@ type CheckReport_RuleGroup struct {
 
 func (x *CheckReport_RuleGroup) Reset() {
 	*x = CheckReport_RuleGroup{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[28]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2523,7 +2590,7 @@ func (x *CheckReport_RuleGroup) String() string {
 func (*CheckReport_RuleGroup) ProtoMessage() {}
 
 func (x *CheckReport_RuleGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[28]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2643,7 +2710,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04note\x18\x04 \x01(\tR\x04note\x125\n" +
-	"\abinding\x18\x05 \x01(\v2\x1b.agni.v1.checks.ItemBindingR\abinding\"\xbe\x02\n" +
+	"\abinding\x18\x05 \x01(\v2\x1b.agni.v1.checks.ItemBindingR\abinding\"\xfc\x02\n" +
 	"\vItemBinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x10\n" +
 	"\x03tag\x18\x02 \x01(\tR\x03tag\x12\x18\n" +
@@ -2652,7 +2719,11 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\apresent\x18\x05 \x01(\v2\x1f.agni.v1.checks.ManifestPresentR\apresent\x123\n" +
 	"\x05scope\x18\x06 \x01(\v2\x1d.agni.v1.checks.ManifestScopeR\x05scope\x12 \n" +
 	"\vrequirement\x18\a \x01(\tR\vrequirement\x12(\n" +
-	"\x10applies_to_class\x18\b \x03(\tR\x0eappliesToClass\"\xac\x01\n" +
+	"\x10applies_to_class\x18\b \x03(\tR\x0eappliesToClass\x12<\n" +
+	"\bexternal\x18\t \x01(\v2 .agni.v1.checks.ManifestExternalR\bexternal\"B\n" +
+	"\x10ManifestExternal\x12\x1a\n" +
+	"\bproducer\x18\x01 \x01(\tR\bproducer\x12\x12\n" +
+	"\x04rule\x18\x02 \x01(\tR\x04rule\"\xac\x01\n" +
 	"\rManifestQuery\x12\x14\n" +
 	"\x05match\x18\x01 \x01(\tR\x05match\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
@@ -2765,7 +2836,7 @@ func file_agni_v1_checks_checks_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_checks_checks_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_checks_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_agni_v1_checks_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_agni_v1_checks_checks_proto_goTypes = []any{
 	(LocateReason)(0),                   // 0: agni.v1.checks.LocateReason
 	(Outcome)(0),                        // 1: agni.v1.checks.Outcome
@@ -2781,31 +2852,32 @@ var file_agni_v1_checks_checks_proto_goTypes = []any{
 	(*ManifestArea)(nil),                // 11: agni.v1.checks.ManifestArea
 	(*ManifestItem)(nil),                // 12: agni.v1.checks.ManifestItem
 	(*ItemBinding)(nil),                 // 13: agni.v1.checks.ItemBinding
-	(*ManifestQuery)(nil),               // 14: agni.v1.checks.ManifestQuery
-	(*ManifestPresent)(nil),             // 15: agni.v1.checks.ManifestPresent
-	(*ManifestScope)(nil),               // 16: agni.v1.checks.ManifestScope
-	(*ReviewItem)(nil),                  // 17: agni.v1.checks.ReviewItem
-	(*WorkItem)(nil),                    // 18: agni.v1.checks.WorkItem
-	(*UnmetDependency)(nil),             // 19: agni.v1.checks.UnmetDependency
-	(*ReviewArea)(nil),                  // 20: agni.v1.checks.ReviewArea
-	(*CheckResults)(nil),                // 21: agni.v1.checks.CheckResults
-	(*ImportSummary)(nil),               // 22: agni.v1.checks.ImportSummary
-	(*UnjoinedReason)(nil),              // 23: agni.v1.checks.UnjoinedReason
-	(*ResultsMeta)(nil),                 // 24: agni.v1.checks.ResultsMeta
-	(*DesignRef)(nil),                   // 25: agni.v1.checks.DesignRef
-	(*RunConfig)(nil),                   // 26: agni.v1.checks.RunConfig
-	(*SkippedRule)(nil),                 // 27: agni.v1.checks.SkippedRule
-	(*RuleRecord)(nil),                  // 28: agni.v1.checks.RuleRecord
-	(*CheckReport_SeveritySection)(nil), // 29: agni.v1.checks.CheckReport.SeveritySection
-	(*CheckReport_RuleGroup)(nil),       // 30: agni.v1.checks.CheckReport.RuleGroup
-	nil,                                 // 31: agni.v1.checks.RuleRecord.TagsEntry
-	(*ir.Provenance)(nil),               // 32: agni.v1.ir.Provenance
-	(*ir.UnexpandedHierarchy)(nil),      // 33: agni.v1.ir.UnexpandedHierarchy
+	(*ManifestExternal)(nil),            // 14: agni.v1.checks.ManifestExternal
+	(*ManifestQuery)(nil),               // 15: agni.v1.checks.ManifestQuery
+	(*ManifestPresent)(nil),             // 16: agni.v1.checks.ManifestPresent
+	(*ManifestScope)(nil),               // 17: agni.v1.checks.ManifestScope
+	(*ReviewItem)(nil),                  // 18: agni.v1.checks.ReviewItem
+	(*WorkItem)(nil),                    // 19: agni.v1.checks.WorkItem
+	(*UnmetDependency)(nil),             // 20: agni.v1.checks.UnmetDependency
+	(*ReviewArea)(nil),                  // 21: agni.v1.checks.ReviewArea
+	(*CheckResults)(nil),                // 22: agni.v1.checks.CheckResults
+	(*ImportSummary)(nil),               // 23: agni.v1.checks.ImportSummary
+	(*UnjoinedReason)(nil),              // 24: agni.v1.checks.UnjoinedReason
+	(*ResultsMeta)(nil),                 // 25: agni.v1.checks.ResultsMeta
+	(*DesignRef)(nil),                   // 26: agni.v1.checks.DesignRef
+	(*RunConfig)(nil),                   // 27: agni.v1.checks.RunConfig
+	(*SkippedRule)(nil),                 // 28: agni.v1.checks.SkippedRule
+	(*RuleRecord)(nil),                  // 29: agni.v1.checks.RuleRecord
+	(*CheckReport_SeveritySection)(nil), // 30: agni.v1.checks.CheckReport.SeveritySection
+	(*CheckReport_RuleGroup)(nil),       // 31: agni.v1.checks.CheckReport.RuleGroup
+	nil,                                 // 32: agni.v1.checks.RuleRecord.TagsEntry
+	(*ir.Provenance)(nil),               // 33: agni.v1.ir.Provenance
+	(*ir.UnexpandedHierarchy)(nil),      // 34: agni.v1.ir.UnexpandedHierarchy
 }
 var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	2,  // 0: agni.v1.checks.ContextSubject.subject:type_name -> agni.v1.checks.Subject
 	2,  // 1: agni.v1.checks.Finding.subject:type_name -> agni.v1.checks.Subject
-	32, // 2: agni.v1.checks.Finding.provenance:type_name -> agni.v1.ir.Provenance
+	33, // 2: agni.v1.checks.Finding.provenance:type_name -> agni.v1.ir.Provenance
 	0,  // 3: agni.v1.checks.Finding.locate_reason:type_name -> agni.v1.checks.LocateReason
 	4,  // 4: agni.v1.checks.Finding.datasheets:type_name -> agni.v1.checks.DatasheetCitation
 	3,  // 5: agni.v1.checks.Finding.context:type_name -> agni.v1.checks.ContextSubject
@@ -2815,36 +2887,37 @@ var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	2,  // 9: agni.v1.checks.Verdict.subjects:type_name -> agni.v1.checks.Subject
 	7,  // 10: agni.v1.checks.Verdict.witness:type_name -> agni.v1.checks.Witness
 	3,  // 11: agni.v1.checks.Verdict.context:type_name -> agni.v1.checks.ContextSubject
-	29, // 12: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection
+	30, // 12: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection
 	11, // 13: agni.v1.checks.ReviewManifest.areas:type_name -> agni.v1.checks.ManifestArea
 	12, // 14: agni.v1.checks.ManifestArea.items:type_name -> agni.v1.checks.ManifestItem
 	13, // 15: agni.v1.checks.ManifestItem.binding:type_name -> agni.v1.checks.ItemBinding
-	14, // 16: agni.v1.checks.ItemBinding.query:type_name -> agni.v1.checks.ManifestQuery
-	15, // 17: agni.v1.checks.ItemBinding.present:type_name -> agni.v1.checks.ManifestPresent
-	16, // 18: agni.v1.checks.ItemBinding.scope:type_name -> agni.v1.checks.ManifestScope
-	5,  // 19: agni.v1.checks.ReviewItem.findings:type_name -> agni.v1.checks.Finding
-	19, // 20: agni.v1.checks.ReviewItem.unmet:type_name -> agni.v1.checks.UnmetDependency
-	19, // 21: agni.v1.checks.WorkItem.dependency:type_name -> agni.v1.checks.UnmetDependency
-	17, // 22: agni.v1.checks.ReviewArea.items:type_name -> agni.v1.checks.ReviewItem
-	24, // 23: agni.v1.checks.CheckResults.meta:type_name -> agni.v1.checks.ResultsMeta
-	25, // 24: agni.v1.checks.CheckResults.design:type_name -> agni.v1.checks.DesignRef
-	26, // 25: agni.v1.checks.CheckResults.run:type_name -> agni.v1.checks.RunConfig
-	28, // 26: agni.v1.checks.CheckResults.catalog:type_name -> agni.v1.checks.RuleRecord
-	27, // 27: agni.v1.checks.CheckResults.skipped:type_name -> agni.v1.checks.SkippedRule
-	5,  // 28: agni.v1.checks.CheckResults.findings:type_name -> agni.v1.checks.Finding
-	20, // 29: agni.v1.checks.CheckResults.areas:type_name -> agni.v1.checks.ReviewArea
-	22, // 30: agni.v1.checks.CheckResults.import_summary:type_name -> agni.v1.checks.ImportSummary
-	10, // 31: agni.v1.checks.CheckResults.manifest_snapshot:type_name -> agni.v1.checks.ReviewManifest
-	23, // 32: agni.v1.checks.ImportSummary.unjoined:type_name -> agni.v1.checks.UnjoinedReason
-	33, // 33: agni.v1.checks.DesignRef.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	31, // 34: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
-	30, // 35: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
-	5,  // 36: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
-	37, // [37:37] is the sub-list for method output_type
-	37, // [37:37] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	15, // 16: agni.v1.checks.ItemBinding.query:type_name -> agni.v1.checks.ManifestQuery
+	16, // 17: agni.v1.checks.ItemBinding.present:type_name -> agni.v1.checks.ManifestPresent
+	17, // 18: agni.v1.checks.ItemBinding.scope:type_name -> agni.v1.checks.ManifestScope
+	14, // 19: agni.v1.checks.ItemBinding.external:type_name -> agni.v1.checks.ManifestExternal
+	5,  // 20: agni.v1.checks.ReviewItem.findings:type_name -> agni.v1.checks.Finding
+	20, // 21: agni.v1.checks.ReviewItem.unmet:type_name -> agni.v1.checks.UnmetDependency
+	20, // 22: agni.v1.checks.WorkItem.dependency:type_name -> agni.v1.checks.UnmetDependency
+	18, // 23: agni.v1.checks.ReviewArea.items:type_name -> agni.v1.checks.ReviewItem
+	25, // 24: agni.v1.checks.CheckResults.meta:type_name -> agni.v1.checks.ResultsMeta
+	26, // 25: agni.v1.checks.CheckResults.design:type_name -> agni.v1.checks.DesignRef
+	27, // 26: agni.v1.checks.CheckResults.run:type_name -> agni.v1.checks.RunConfig
+	29, // 27: agni.v1.checks.CheckResults.catalog:type_name -> agni.v1.checks.RuleRecord
+	28, // 28: agni.v1.checks.CheckResults.skipped:type_name -> agni.v1.checks.SkippedRule
+	5,  // 29: agni.v1.checks.CheckResults.findings:type_name -> agni.v1.checks.Finding
+	21, // 30: agni.v1.checks.CheckResults.areas:type_name -> agni.v1.checks.ReviewArea
+	23, // 31: agni.v1.checks.CheckResults.import_summary:type_name -> agni.v1.checks.ImportSummary
+	10, // 32: agni.v1.checks.CheckResults.manifest_snapshot:type_name -> agni.v1.checks.ReviewManifest
+	24, // 33: agni.v1.checks.ImportSummary.unjoined:type_name -> agni.v1.checks.UnjoinedReason
+	34, // 34: agni.v1.checks.DesignRef.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	32, // 35: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
+	31, // 36: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
+	5,  // 37: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
+	38, // [38:38] is the sub-list for method output_type
+	38, // [38:38] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_checks_proto_init() }
@@ -2858,7 +2931,7 @@ func file_agni_v1_checks_checks_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_checks_checks_proto_rawDesc), len(file_agni_v1_checks_checks_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   30,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

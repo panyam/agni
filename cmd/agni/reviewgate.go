@@ -77,6 +77,7 @@ var gatableOutcomes = []review.Outcome{
 	review.NeedsData,
 	review.NeedsDesignIntent,
 	review.ComputedNA,
+	review.CoveredExternally,
 }
 
 // parseReviewGate builds the gate from the two flag values. An unknown outcome is an ERROR naming the

@@ -22,6 +22,7 @@ type tallyTwin struct {
 			ComputedNA        int `json:"computedNA"`
 			NeedsData         int `json:"needsData"`
 			Inconclusive      int `json:"inconclusive"`
+			CoveredExternally int `json:"coveredExternally"`
 			Total             int `json:"total"`
 			Covered           int `json:"covered"`
 		} `json:"want"`
@@ -71,6 +72,7 @@ func TestTallyTwinFixture(t *testing.T) {
 			{"computedNA", got.ComputedNA, w.ComputedNA},
 			{"needsData", got.NeedsData, w.NeedsData},
 			{"inconclusive", got.Inconclusive, w.Inconclusive},
+			{"coveredExternally", got.CoveredExternally, w.CoveredExternally},
 			{"total", got.Total, w.Total},
 			{"covered", got.Covered(), w.Covered},
 		} {
@@ -102,7 +104,7 @@ func TestTallyTwinFixtureCoversEveryOutcome(t *testing.T) {
 	}
 	for _, o := range []Outcome{
 		Pass, Fail, NotApplicable, NotAutomated,
-		Provisional, NeedsDesignIntent, ComputedNA, NeedsData, Inconclusive,
+		Provisional, NeedsDesignIntent, ComputedNA, NeedsData, Inconclusive, CoveredExternally,
 	} {
 		if !seen[o] {
 			t.Errorf("outcome %q appears in no twin case; add it to testdata/tally_twin.json so both surfaces are checked on it", o)

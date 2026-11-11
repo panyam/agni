@@ -128,3 +128,32 @@ checklists:
           - id: "A2"
             title: every connector declared internal exists
             rule: intent/exposure-declared
+
+  # Rung 12's checklist. Most of its items are answered by KiCad's own DRC, through an external
+  # binding that names the tool and one of its checks. `agni review --checklist drc --external
+  # <doc>` reads them from a report `agni import-results` wrote. A violation fails the item. A clean
+  # report reads covered-externally, never pass, because KiCad's report lists violations and cannot
+  # show what each check examined. A check the board's rule settings ignore reads not-automated.
+  drc:
+    name: Jetson board checks answered by KiCad's DRC
+    areas:
+      - name: Copper
+        items:
+          - id: "D1"
+            title: no track is below the board's minimum width
+            description: agni's own rule, so its answer sits beside KiCad's in D2.
+            rule: track-width
+          - id: "D2"
+            title: KiCad finds no track below the board's minimum width
+            external: {producer: kicad-cli pcb drc, rule: kicad-drc/track_width}
+          - id: "D3"
+            title: copper keeps its clearance
+            external: {producer: kicad-cli pcb drc, rule: kicad-drc/clearance}
+          - id: "D4"
+            title: copper keeps clear of the board edge
+            external: {producer: kicad-cli pcb drc, rule: kicad-drc/copper_edge_clearance}
+      - name: Footprints
+        items:
+          - id: "F1"
+            title: every footprint matches its library copy
+            external: {producer: kicad-cli pcb drc, rule: kicad-drc/lib_footprint_mismatch}

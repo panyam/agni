@@ -20,7 +20,7 @@
       "want": {
         "pass": 0, "fail": 0, "notApplicable": 0, "notAutomated": 0,
         "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
-        "needsData": 0, "inconclusive": 0,
+        "needsData": 0, "inconclusive": 0, "coveredExternally": 0,
         "total": 0, "covered": 0
       }
     },
@@ -30,7 +30,7 @@
       "want": {
         "pass": 2, "fail": 1, "notApplicable": 0, "notAutomated": 0,
         "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
-        "needsData": 0, "inconclusive": 0,
+        "needsData": 0, "inconclusive": 0, "coveredExternally": 0,
         "total": 3, "covered": 3
       }
     },
@@ -40,7 +40,7 @@
       "want": {
         "pass": 1, "fail": 0, "notApplicable": 1, "notAutomated": 2,
         "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
-        "needsData": 0, "inconclusive": 0,
+        "needsData": 0, "inconclusive": 0, "coveredExternally": 0,
         "total": 4, "covered": 2
       }
     },
@@ -54,18 +54,28 @@
       "want": {
         "pass": 1, "fail": 1, "notApplicable": 1, "notAutomated": 1,
         "provisional": 1, "needsDesignIntent": 1, "computedNA": 1,
-        "needsData": 1, "inconclusive": 1,
+        "needsData": 1, "inconclusive": 1, "coveredExternally": 0,
         "total": 9, "covered": 8
       }
     },
     {
       "name": "an unknown outcome counts toward the total but no bucket",
-      "outcomes": ["pass", "covered-externally", "fail"],
+      "outcomes": ["pass", "signed-off-by-hand", "fail"],
       "want": {
         "pass": 1, "fail": 1, "notApplicable": 0, "notAutomated": 0,
         "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
-        "needsData": 0, "inconclusive": 0,
+        "needsData": 0, "inconclusive": 0, "coveredExternally": 0,
         "total": 3, "covered": 3
+      }
+    },
+    {
+      "name": "covered-externally is covered and neither answered nor a pass",
+      "outcomes": ["pass", "covered-externally", "covered-externally", "not-automated"],
+      "want": {
+        "pass": 1, "fail": 0, "notApplicable": 0, "notAutomated": 1,
+        "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
+        "needsData": 0, "inconclusive": 0, "coveredExternally": 2,
+        "total": 4, "covered": 3
       }
     },
     {
@@ -80,7 +90,7 @@
       "want": {
         "pass": 3, "fail": 2, "notApplicable": 2, "notAutomated": 3,
         "provisional": 1, "needsDesignIntent": 1, "computedNA": 0,
-        "needsData": 1, "inconclusive": 0,
+        "needsData": 1, "inconclusive": 0, "coveredExternally": 0,
         "total": 13, "covered": 10
       }
     }

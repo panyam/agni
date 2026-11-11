@@ -77,13 +77,16 @@ func bindingFromProto(p *checkspb.ItemBinding) review.Binding {
 	if pr := p.GetPresent(); pr != nil {
 		b.Present = &review.PresentBinding{Class: pr.GetClass()}
 	}
+	if e := p.GetExternal(); e != nil {
+		b.External = &review.ExternalBinding{Producer: e.GetProducer(), Rule: e.GetRule()}
+	}
 	if s := p.GetScope(); s != nil {
 		b.Scope = review.ScopeBinding{Profiles: s.GetProfiles()}
 	}
 	return b
 }
 
-// bindingProto mirrors bindingFromProto. The three sub-messages are emitted only when the binding
+// bindingProto mirrors bindingFromProto. The four sub-messages are emitted only when the binding
 // carries them, because presence is MEANINGFUL for two. A non-nil Present is a present binding (an
 // empty one fails validation for its missing class), and a non-nil Query counts toward the
 // mutually-exclusive binding limit.
@@ -103,6 +106,9 @@ func bindingProto(b review.Binding) *checkspb.ItemBinding {
 	}
 	if b.Present != nil {
 		p.Present = &checkspb.ManifestPresent{Class: b.Present.Class}
+	}
+	if b.External != nil {
+		p.External = &checkspb.ManifestExternal{Producer: b.External.Producer, Rule: b.External.Rule}
 	}
 	if len(b.Scope.Profiles) > 0 {
 		p.Scope = &checkspb.ManifestScope{Profiles: b.Scope.Profiles}

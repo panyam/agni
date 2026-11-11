@@ -47,8 +47,8 @@ type Item struct {
 	Binding     `yaml:",inline"`
 }
 
-// Binding selects the check that verifies an item. At most one of Rule, Tag, Profile, Query and
-// Present is set. Rule names a catalog rule exactly ("profile/can-termination-missing"). Tag is a
+// Binding selects the check that verifies an item. At most one of Rule, Tag, Profile, Query, Present
+// and External is set. Rule names a catalog rule exactly ("profile/can-termination-missing"). Tag is a
 // key=value pair that selects a set of rules. Profile names a profile, as sugar for the profile tag.
 // Query is an inline datalog query, and Present is a class-presence assertion. Several items may share
 // one Binding, since the profile signal-missing rule covers every signal at once. Title keeps those
@@ -60,7 +60,9 @@ type Binding struct {
 	Profile string          `yaml:"profile"`
 	Query   *QueryBinding   `yaml:"query"`
 	Present *PresentBinding `yaml:"present"`
-	Scope   ScopeBinding    `yaml:"scope"`
+	// External hands the item to another tool's imported report (agni issue 152). See ExternalBinding.
+	External *ExternalBinding `yaml:"external"`
+	Scope    ScopeBinding     `yaml:"scope"`
 	// Requirement narrows a Profile binding to ONE of that profile's declared requirements, by
 	// requirement type (WS3-115). It requires Profile to be set. Empty keeps the union semantics, where
 	// `profile: X` means "every rule profile X compiles". Like Scope it narrows rather than selects, so
@@ -90,6 +92,21 @@ type Binding struct {
 // not-applicable, because the component-class tier exists on any netlist.
 type PresentBinding struct {
 	Class string `yaml:"class"`
+}
+
+// ExternalBinding says another tool checks the item, such as the DRC a team already runs. Producer
+// matches the meta.producer of a document `agni import-results` wrote ("kicad-cli pcb drc"). Rule
+// narrows the item to one of that tool's rules ("kicad-drc/clearance"), and empty means any
+// violation in the report.
+//
+// The run reads the documents from RunParams.External. A matching violation makes the item fail. No
+// matching violation makes it CoveredExternally, never Pass. A vendor report lists violations and
+// nothing else. It cannot show which subjects a check examined, so a clean report is a weaker claim
+// than a rule agni ran and saw pass. A rule the report lists as skipped makes the item NotAutomated,
+// since nothing checked it. No document from Producer makes the item NeedsData.
+type ExternalBinding struct {
+	Producer string `yaml:"producer"`
+	Rule     string `yaml:"rule"`
 }
 
 // ScopeBinding narrows a rule/tag binding to one or more interfaces (WS3-058). The item runs the
@@ -142,6 +159,9 @@ func (b Binding) count() int {
 		n++
 	}
 	if b.Present != nil {
+		n++
+	}
+	if b.External != nil {
 		n++
 	}
 	return n
@@ -228,7 +248,7 @@ func ValidateStructure(m Manifest) error {
 				return fmt.Errorf("review manifest %q, area %q: an item is missing its \"id\"", m.Name, a.Name)
 			}
 			if it.Binding.count() > 1 {
-				return fmt.Errorf("review manifest item %q: declares more than one binding (rule/tag/profile/query are mutually exclusive)", it.ID)
+				return fmt.Errorf("review manifest item %q: declares more than one binding (rule/tag/profile/query/present/external are mutually exclusive)", it.ID)
 			}
 			if len(it.Binding.Scope.names()) > 0 && it.Binding.Rule == "" && it.Binding.Tag == "" {
 				return fmt.Errorf("review manifest item %q: scope filters a rule/tag binding, so one must be set", it.ID)
@@ -240,6 +260,9 @@ func ValidateStructure(m Manifest) error {
 				if strings.TrimSpace(q.Match) == "" || strings.TrimSpace(q.Subject) == "" || strings.TrimSpace(q.Message) == "" {
 					return fmt.Errorf("review manifest item %q: a query binding needs \"match\", \"subject\", and \"message\"", it.ID)
 				}
+			}
+			if e := it.Binding.External; e != nil && strings.TrimSpace(e.Producer) == "" {
+				return fmt.Errorf("review manifest item %q: an external binding needs \"producer\"", it.ID)
 			}
 			if it.Binding.Present != nil && strings.TrimSpace(it.Binding.Present.Class) == "" {
 				return fmt.Errorf("review manifest item %q: a present binding needs \"class\"", it.ID)

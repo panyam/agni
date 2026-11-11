@@ -47,6 +47,10 @@ func fullManifest() review.Manifest {
 					Binding: review.Binding{Present: &review.PresentBinding{Class: "test_connector"}},
 				},
 				{ID: "I4", Title: "reviewed by hand", Note: "the EE signs this off"},
+				{
+					ID: "I5", Title: "copper clearance",
+					Binding: review.Binding{External: &review.ExternalBinding{Producer: "kicad-cli pcb drc", Rule: "kicad-drc/clearance"}},
+				},
 			}},
 		},
 	}
