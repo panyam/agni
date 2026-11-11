@@ -104,6 +104,16 @@ describe("the sheet views beside the canvas", () => {
     expect(views.list().map((p) => p.id)).toEqual([b.id]);
   });
 
+  it("undocks and forgets every view on reset, as opening another design asks (agni issue 1425)", async () => {
+    const { views, docked } = setup();
+    await views.open("s1");
+    await views.open("board");
+    expect(views.list()).toHaveLength(2);
+    views.reset();
+    expect(views.list()).toEqual([]);
+    expect([...docked.keys()]).toEqual([]);
+  });
+
   it("forgets a view the dock closes", async () => {
     const { views, dock } = setup();
     const a = await views.open("s1");
