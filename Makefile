@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -471,6 +471,24 @@ exercise-webgl: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/webgl-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=0 VIDEO=$(VIDEO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/webgl-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/webgl.md 2>/dev/null; exit $$status
+
+# Mission #1499's exercise (agni issue 1500). It times Jetson's board from navigation to its first
+# WebGL draw five ways: against a fresh server cold, reloaded, and from a fresh browser on the warm
+# server, then in the browser engine cold and reloaded. Each row is the median of RUNS opens, judged
+# against 1.5 s cold and 0.5 s reloaded, and names the requests that held the page longest. It prints
+# the table and writes it to $(EXERCISE_OUT)/board-open.md, with every open's timing lines beside it.
+# Run it headed (the default) on an idle machine, since headless Chrome draws WebGL in software.
+# WALK_DESIGN=cut opens the gate's cut, which is not judged.
+#   make exercise-board-open
+#   make exercise-board-open RUNS=5
+exercise-board-open: HEADED ?= 1
+exercise-board-open: RUNS ?= 3
+exercise-board-open: WALK_DESIGN ?= jetson
+exercise-board-open: ui wasm agni $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT)
+	cd web && WALK_DESIGN=$(WALK_DESIGN) RUNS=$(RUNS) HEADED=$(HEADED) SLOWMO=0 EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/board-open.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/board-open.md 2>/dev/null; exit $$status
 
 # The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
 # one design through an MCP client, as the calls a model would make, over `agni serve --mcp` on a free

@@ -309,3 +309,39 @@ export function sumSplits(splits: readonly LoadSplit[]): LoadSplit {
   sum.cache = cache.join(" ");
   return sum;
 }
+
+// openDetail describes one open of a design from the lines its page logged under ?timing (agni issue
+// 1500). It names the three requests that held the page longest, each with its widest loading
+// stages, then the bytes a browser engine fetched and the Load page's own read, so a board-open row
+// says where its time went.
+export function openDetail(lines: readonly string[]): string {
+  const splits = lines.map(loadSplit).filter((s): s is LoadSplit => s !== undefined && s.wallMs !== undefined);
+  splits.sort((a, b) => (b.wallMs ?? 0) - (a.wallMs ?? 0));
+  const parts = splits.slice(0, 3).map((s) => `${s.rpc} ${sec(s.wallMs ?? 0)} (engine ${sec(s.engineMs)}${s.load.length ? `, ${s.load.slice(0, 2).join(", ")}` : ""})`);
+  let bytes = 0;
+  let files = 0;
+  for (const l of lines) {
+    const m = /^agni fetch (.+?): (\{.*\})$/.exec(l);
+    if (!m) continue;
+    try {
+      bytes += Number(JSON.parse(m[2]).bytes ?? 0);
+      files++;
+    } catch {
+      // A line that is not ours is skipped.
+    }
+  }
+  if (files > 0) parts.push(`fetched ${(bytes / 1e6).toFixed(1)} MB in ${files} files`);
+  for (const l of lines) {
+    const m = /^agni loaded \S+ in (\d+) ms/.exec(l);
+    if (m) parts.push(`/load read ${sec(Number(m[1]))}`);
+  }
+  return parts.join("; ") || "no timed requests";
+}
+
+// median of a list, or NaN for an empty one.
+export function median(xs: readonly number[]): number {
+  if (xs.length === 0) return NaN;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
