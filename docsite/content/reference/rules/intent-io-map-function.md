@@ -15,6 +15,8 @@ A map row may say which peripheral function the pin is switched to:
   - {net: BLE_UART_RX, device: U1, pin: PTB3, function: LPUART1_RX}
 ```
 
+![an IO map row naming a function the datasheet does not list for that pin is flagged; a listed function is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/io-map-function.svg)
+
 This rule looks the pin up in the part's datasheet entry and reports the rows whose function is not
 one the datasheet lists for that pin.
 

@@ -5,6 +5,8 @@
 It reports two declared strap groups on the **same bus** that encode the **same number**, meaning two
 devices answering to one address.
 
+![two strap groups on one bus that encode the same address are flagged; distinct addresses are fine](images/strap-address-collision.svg)
+
 ### For hardware engineers
 
 Of all the checks, this one most needs to be a rule rather than a reviewer.

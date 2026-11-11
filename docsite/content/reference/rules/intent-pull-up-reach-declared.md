@@ -20,6 +20,8 @@ intent:
     SDA_MAIN: {pull_up_reach_hops: 4}   # isolation resistor, then a level-shifting stage
 ```
 
+![a pull-up reach declared on a net name the design does not have is flagged; one on a real net is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/pull-up-reach-declared.svg)
+
 ### Why engineers want it
 
 The reach is looked up by the net's exact name, so a declaration spelled `SDA-MAIN` on a board whose

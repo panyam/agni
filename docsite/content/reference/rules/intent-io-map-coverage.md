@@ -12,6 +12,8 @@ Declare the nets the map does not cover, or accept the coverage and read the oth
 It reports which nets in the design the IO map declares, and which it says nothing about, with one
 verdict per net.
 
+![nets the IO map never names are reported not-considered, which is not a defect; nets it names are considered]({{.Site.PathPrefix}}/static/images/catalog/rules/io-map-coverage.svg)
+
 **Nothing here is a defect.** A net the map does not name is a question nobody asked, not a fault in
 the board. The rule exists so the count of such nets is visible rather than absent.
 

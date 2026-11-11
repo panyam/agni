@@ -200,18 +200,7 @@ func TestDocRules(t *testing.T) {
 // issue 75). Every other card must reference an image. TestRuleCardsHaveDiagram fails on an entry
 // whose card now references one, and on an entry naming no card, so the list shrinks as drawings
 // are added.
-var cardDiagramExempt = map[string]string{
-	"exposure-declared":       "not drawn yet (agni issue 75)",
-	"io-map-coverage":         "not drawn yet (agni issue 75)",
-	"io-map-far-end":          "not drawn yet (agni issue 75)",
-	"io-map-function":         "not drawn yet (agni issue 75)",
-	"io-map-net-absent":       "not drawn yet (agni issue 75)",
-	"io-map-pin-mismatch":     "not drawn yet (agni issue 75)",
-	"pull-up-reach-declared":  "not drawn yet (agni issue 75)",
-	"sequence":                "not drawn yet (agni issue 75)",
-	"strap-address-collision": "not drawn yet (agni issue 75)",
-	"strap-group":             "not drawn yet (agni issue 75)",
-}
+var cardDiagramExempt = map[string]string{}
 
 // TestRuleCardsHaveDiagram holds every card in docs/ to the diagram convention (agni issue 75). A
 // card references an image under docs/images/, or cardDiagramExempt names it with a reason.

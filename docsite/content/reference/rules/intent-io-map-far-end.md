@@ -15,6 +15,8 @@ A map row may declare where the net goes, not only where it starts:
   - {net: PMIC_PG, device: U101, pin: PTC11, to: {device: U7000, pin: PG}}
 ```
 
+![an IO map row whose net does not arrive at its declared far-end device is flagged; one that arrives is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/io-map-far-end.svg)
+
 This rule follows the net from the declared pin to the declared far end, through the series parts
 between them, and reports the rows where it does not arrive.
 

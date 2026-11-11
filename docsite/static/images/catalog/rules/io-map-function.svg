@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="io-map-function rule: an IO map row naming a function the datasheet does not list for that pin is flagged; a listed function is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">a function PTB3 does not offer</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">a function PTB3 offers</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">design.yaml io_map  {net: SER_RX, device: U1, pin: PTB3, function: ...}</text>
+  <text x="30" y="86" font-size="11.5" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">function: LPI2C1_SDA</text>
+  <rect x="30" y="98" width="180" height="112" rx="3" fill="#ffffff" stroke="#394049" stroke-width="1.5"/>
+  <text x="40" y="114" font-size="10" fill="#6b7280">PTB3 in the datasheet mux table</text>
+  <text x="46" y="134.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">ADC0_B13</text>
+  <text x="46" y="146.5" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">PTB3</text>
+  <text x="46" y="159.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">LPSPI1_SOUT</text>
+  <text x="46" y="171.5" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">LPUART1_RX</text>
+  <text x="46" y="184.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">TPM1_CH3</text>
+  <text x="46" y="196.5" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">FLEXIO0_D29</text>
+  <text x="262" y="160" font-size="11.5" fill="#d64545" text-anchor="middle">not in the list</text>
+  <text x="370" y="86" font-size="11.5" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">function: LPUART1_RX</text>
+  <rect x="370" y="98" width="180" height="112" rx="3" fill="#ffffff" stroke="#394049" stroke-width="1.5"/>
+  <text x="380" y="114" font-size="10" fill="#6b7280">PTB3 in the datasheet mux table</text>
+  <text x="386" y="134.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">ADC0_B13</text>
+  <text x="386" y="146.5" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">PTB3</text>
+  <text x="386" y="159.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">LPSPI1_SOUT</text>
+  <text x="386" y="171.5" font-size="10" fill="#2f9e57" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">LPUART1_RX</text>
+  <text x="386" y="184.0" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">TPM1_CH3</text>
+  <text x="386" y="196.5" font-size="10" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">FLEXIO0_D29</text>
+  <text x="602" y="160" font-size="11.5" fill="#2f9e57" text-anchor="middle">in the list</text>
+</svg>
