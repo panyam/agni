@@ -95,37 +95,37 @@ Defined in Datalog over the relations above rather than projected from the desig
 
 | Relation | Summary |
 |---|---|
-| `absent(value)` | reports whether the field carried no value at all, which is different from an empty string and from zero; `not absent(?x)` reads "this field is stated" |
-| `coalesce(value, fallback, result)` | binds the value, or the fallback when the value is absent |
-| `list.at(list, index, value)` | binds the value at an index from 0, a negative one counting from the end (-1 is the last) |
-| `list.length(list, length)` | binds how many values the list holds |
-| `list.member(list, index, value)` | binds each value of the list with its index from 0; given a value, binds where it is |
+| [`absent(value)`](absent/) | reports whether the field carried no value at all, which is different from an empty string and from zero; `not absent(?x)` reads "this field is stated" |
+| [`coalesce(value, fallback, result)`](coalesce/) | binds the value, or the fallback when the value is absent |
+| [`list.at(list, index, value)`](list.at/) | binds the value at an index from 0, a negative one counting from the end (-1 is the last) |
+| [`list.length(list, length)`](list.length/) | binds how many values the list holds |
+| [`list.member(list, index, value)`](list.member/) | binds each value of the list with its index from 0; given a value, binds where it is |
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
 | [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
-| `num.add(a, b, c)` | c = a + b, run from any two of the three; units follow the vocabulary's table |
-| `num.div(a, b, c)` | c = a / b, run from any two of the three; units follow the vocabulary's table |
-| `num.mul(a, b, c)` | c = a * b, run from any two of the three; units follow the vocabulary's table |
-| `num.neg(a, b)` | b = -a, run from either; the unit carries over |
-| `num.sub(a, b, c)` | c = a - b, run from any two of the three; units follow the vocabulary's table |
-| `num.unit(number, unit)` | binds the number's unit ("V", "A"), or absent for a number without one; the number must be bound |
-| `num.value(number, value)` | binds the number without its unit, so 5 V and 5 A both bind 5; the number must be bound |
-| `path.edge(path, index, edge)` | binds each edge of a path over a relation of three arguments, index from 0 |
-| `path.edges(path, edges)` | binds the path's edges as a list |
-| `path.length(path, steps)` | binds how many steps the path takes |
-| `path.node(path, index, node)` | binds each node of the path, index from 0 |
-| `path.nodes(path, nodes)` | binds the path's nodes as a list |
-| `path.step(path, index, from, to)` | binds each step of the path, index from 0 |
-| `str.capitalize(string, capitalized)` | binds the string with its first character in upper case and the rest as written |
-| `str.concat(head, tail, text)` | text is head followed by tail, run from any two of the three; cutting a head or tail off holds for none when text lacks it |
+| [`num.add(a, b, c)`](num.add/) | c = a + b, run from any two of the three; units follow the vocabulary's table |
+| [`num.div(a, b, c)`](num.div/) | c = a / b, run from any two of the three; units follow the vocabulary's table |
+| [`num.mul(a, b, c)`](num.mul/) | c = a * b, run from any two of the three; units follow the vocabulary's table |
+| [`num.neg(a, b)`](num.neg/) | b = -a, run from either; the unit carries over |
+| [`num.sub(a, b, c)`](num.sub/) | c = a - b, run from any two of the three; units follow the vocabulary's table |
+| [`num.unit(number, unit)`](num.unit/) | binds the number's unit ("V", "A"), or absent for a number without one; the number must be bound |
+| [`num.value(number, value)`](num.value/) | binds the number without its unit, so 5 V and 5 A both bind 5; the number must be bound |
+| [`path.edge(path, index, edge)`](path.edge/) | binds each edge of a path over a relation of three arguments, index from 0 |
+| [`path.edges(path, edges)`](path.edges/) | binds the path's edges as a list |
+| [`path.length(path, steps)`](path.length/) | binds how many steps the path takes |
+| [`path.node(path, index, node)`](path.node/) | binds each node of the path, index from 0 |
+| [`path.nodes(path, nodes)`](path.nodes/) | binds the path's nodes as a list |
+| [`path.step(path, index, from, to)`](path.step/) | binds each step of the path, index from 0 |
+| [`str.capitalize(string, capitalized)`](str.capitalize/) | binds the string with its first character in upper case and the rest as written |
+| [`str.concat(head, tail, text)`](str.concat/) | text is head followed by tail, run from any two of the three; cutting a head or tail off holds for none when text lacks it |
 | [`str.contains(string, substring)`](str.contains/) | reports whether a string contains a substring |
-| `str.distance(string, other, distance)` | binds the edit (Levenshtein) distance between two strings, in characters; both strings must be bound |
-| `str.find(string, regex, index, match)` | binds each non-empty match of an unanchored regular expression with its index from 0; given an index, binds that match alone, a negative index counting from the end |
-| `str.glob(string, pattern)` | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |
-| `str.lower(string, lower)` | binds the string in lower case |
-| `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
+| [`str.distance(string, other, distance)`](str.distance/) | binds the edit (Levenshtein) distance between two strings, in characters; both strings must be bound |
+| [`str.find(string, regex, index, match)`](str.find/) | binds each non-empty match of an unanchored regular expression with its index from 0; given an index, binds that match alone, a negative index counting from the end |
+| [`str.glob(string, pattern)`](str.glob/) | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |
+| [`str.lower(string, lower)`](str.lower/) | binds the string in lower case |
+| [`str.match(string, regex)`](str.match/) | reports whether the string matches an unanchored regular expression |
 | [`str.prefix(string, prefix)`](str.prefix/) | reports whether a string starts with a prefix |
-| `str.replace(string, old, new, result)` | binds the string with every occurrence of old replaced by new |
-| `str.split(string, separator, index, part)` | binds each part of the string between separators with its index from 0; given an index, binds that part alone, a negative index counting from the end (-1 is the last part) |
+| [`str.replace(string, old, new, result)`](str.replace/) | binds the string with every occurrence of old replaced by new |
+| [`str.split(string, separator, index, part)`](str.split/) | binds each part of the string between separators with its index from 0; given an index, binds that part alone, a negative index counting from the end (-1 is the last part) |
 | [`str.suffix(string, suffix)`](str.suffix/) | reports whether a string ends with a suffix |
-| `str.upper(string, upper)` | binds the string in upper case |
+| [`str.upper(string, upper)`](str.upper/) | binds the string in upper case |
 

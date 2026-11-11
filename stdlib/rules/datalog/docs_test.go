@@ -45,15 +45,24 @@ func TestRuleDocsOneToOne(t *testing.T) {
 		}
 	}
 	imgRe := regexp.MustCompile(`!\[[^\]]*\]\(([^)]+)\)`)
+	referenced := map[string]bool{}
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".md") {
 			continue
 		}
 		b, _ := ruleDocs.ReadFile("docs/" + e.Name())
 		for _, m := range imgRe.FindAllStringSubmatch(string(b), -1) {
+			referenced[m[1]] = true
 			if !images[m[1]] {
 				t.Errorf("docs/%s references missing image %q", e.Name(), m[1])
 			}
+		}
+	}
+	// An image no card references ships in the binary and the docsite and is never shown (agni issue
+	// 1517).
+	for img := range images {
+		if !referenced[img] {
+			t.Errorf("docs/%s is referenced by no card; delete it or reference it", img)
 		}
 	}
 	if len(byName) == 0 {
