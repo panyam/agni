@@ -1,5 +1,6 @@
-# The setup both gate jobs share (ci.yml): Go, the pnpm workspace, and the board corpus. Each job adds
-# only what its half of the gate needs, buf and Python for testall-core, Chromium for browser-test.
+# The setup every gate job shares (ci.yml): Go, the pnpm workspace, and the board corpus. Each job adds
+# only what its part of the gate needs, such as buf for testall-go, Python for testall-dist and
+# Chromium for browser-test.
 name: setup
 description: Go, the pnpm workspace and the samples corpus, for a job of the gate
 runs:
