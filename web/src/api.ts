@@ -83,8 +83,10 @@ export function newTransport(baseUrl = "/", recover = true) {
   const mode = timingMode();
   const interceptors = mode ? [timingInterceptor(mode)] : [];
   if (recover) interceptors.push(recoveringInterceptor(() => registry));
-  if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch, interceptors });
-  return createConnectTransport({ baseUrl, interceptors });
+  // Binary Connect (agni issue 1502). A board's packed geometry is mostly an int32 blob, which JSON
+  // sends as base64 and decodes twice. A page-side reader of request bodies goes through wirecodec.ts.
+  if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch, interceptors, useBinaryFormat: true });
+  return createConnectTransport({ baseUrl, interceptors, useBinaryFormat: true });
 }
 
 let registry: SnapshotRegistry | undefined;

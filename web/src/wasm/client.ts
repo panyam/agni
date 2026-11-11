@@ -15,6 +15,7 @@
 // a worker of its own that ends once it has answered, so no long-lived worker keeps the peak memory
 // of the board's parse. The jobs worker restores the parsed board from the shared store. Jobs
 // requests wait while a prepare is under way, so the two never parse one board side by side.
+import { requestJson } from "../wirecodec.js";
 import { startLane, startWorker, workerFetch, workerMemory, workerStats, addFiles, type Files, type Lane, type WorkerStats } from "@panyam/tsappkit/wasmhost";
 
 export type { Files, WorkerStats };
@@ -356,8 +357,9 @@ export interface MountingOptions {
 // instead, and `onServer` hears why once per design. Every later request naming it goes to the
 // network, so one design never has its answers split between two engines.
 //
-// The body is read as Connect JSON, since the viewer's transport sends that. A binary body names
-// no URI this can see, so it goes to the worker as is.
+// The body is read in either Connect codec, against its method's schema (wirecodec.ts), since the
+// viewer's transport sends binary (agni issue 1502). The ingest kept for a worker is sent as JSON,
+// which the engine reads as well.
 export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   const { engine, source, network } = o;
   const passthrough = o.passthrough ?? (() => false);
@@ -530,13 +532,12 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     const url = new URL(req.url);
     const uris = new Set<string>();
     const snaps = new Set<string>();
-    let body: Record<string, unknown> | undefined;
-    try {
-      body = JSON.parse(await req.clone().text());
+    // The body in its JSON form, whichever codec it came in (wirecodec.ts). A body neither codec
+    // reads names nothing to bring in.
+    const body = await requestJson(req);
+    if (body) {
       collectMountURIs(body, uris);
       collectSnapshots(body, snaps);
-    } catch {
-      // not JSON, so nothing to bring in
     }
     let ingestOf: string | undefined;
     let readBoard = false;

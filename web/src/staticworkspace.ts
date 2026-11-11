@@ -7,7 +7,8 @@
 // The page engine still lists any mount the site does not carry, such as the browser mount that a
 // dropped design is read from.
 
-import { create, fromJson, toJsonString, type JsonValue } from "@bufbuild/protobuf";
+import { create, fromJson, type JsonValue } from "@bufbuild/protobuf";
+import { answer, readRequest, readResponse } from "./wirecodec.js";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
 import {
   FileKind,
@@ -53,23 +54,21 @@ export function staticWorkspace(read: SiteRead, next: typeof globalThis.fetch): 
     const i = at.lastIndexOf(service);
     const method = i >= 0 ? at.slice(i + service.length) : "";
     if (method !== "ListMounts" && method !== "ListDir") return next(req);
-    const body = (await req.clone().text()) || "{}";
     try {
       if (method === "ListMounts") {
-        const r = fromJson(ListMountsRequestSchema, JSON.parse(body) as JsonValue, { ignoreUnknownFields: true });
+        const r = await readRequest(req, ListMountsRequestSchema);
         const [all, engine] = await Promise.all([mountList(), engineMounts(next, req)]);
         const opens = opensSet(r.opens);
         const kept = opens ? await filter(all.mounts, async (m) => holdsOpenable(await tree(m.name), "", opens)) : all.mounts;
         const carried = new Set(all.mounts.map((m) => m.name));
         const theirs = engine.mounts.filter((m) => !carried.has(m.name));
         return answer(
-          toJsonString(
-            ListMountsResponseSchema,
-            create(ListMountsResponseSchema, { mounts: [...kept, ...theirs], prunedMounts: all.mounts.length - kept.length + engine.prunedMounts }),
-          ),
+          req,
+          ListMountsResponseSchema,
+          create(ListMountsResponseSchema, { mounts: [...kept, ...theirs], prunedMounts: all.mounts.length - kept.length + engine.prunedMounts }),
         );
       }
-      const r = fromJson(ListDirRequestSchema, JSON.parse(body) as JsonValue, { ignoreUnknownFields: true });
+      const r = await readRequest(req, ListDirRequestSchema);
       const mount = uriMount(r.uri);
       if (!(await mountList()).mounts.some((m) => m.name === mount)) return next(req);
       const all = await tree(mount);
@@ -77,7 +76,7 @@ export function staticWorkspace(read: SiteRead, next: typeof globalThis.fetch): 
       if (dir !== "" && !all.some((e) => e.isDir && uriPath(e.uri) === dir)) return refuse("not_found", `${r.uri} is not a folder`);
       const opens = opensSet(r.opens);
       const entries = all.filter((e) => parentOf(uriPath(e.uri)) === dir && (!opens || !e.isDir || holdsOpenable(all, uriPath(e.uri), opens)));
-      return answer(toJsonString(ListDirResponseSchema, create(ListDirResponseSchema, { entries })));
+      return answer(req, ListDirResponseSchema, create(ListDirResponseSchema, { entries }));
     } catch (err) {
       return refuse("unavailable", `the site's listing could not be read (${String(err)})`);
     }
@@ -89,7 +88,7 @@ export function staticWorkspace(read: SiteRead, next: typeof globalThis.fetch): 
 async function engineMounts(next: typeof globalThis.fetch, req: Request): Promise<ListMountsResponse> {
   try {
     const res = await next(req);
-    if (res.ok) return fromJson(ListMountsResponseSchema, (await res.json()) as JsonValue, { ignoreUnknownFields: true });
+    if (res.ok) return await readResponse(res, ListMountsResponseSchema);
   } catch {
     // Answered below.
   }
@@ -117,10 +116,6 @@ function parentOf(path: string): string {
 async function filter<T>(xs: T[], keep: (x: T) => Promise<boolean>): Promise<T[]> {
   const kept = await Promise.all(xs.map(keep));
   return xs.filter((_, i) => kept[i]);
-}
-
-function answer(json: string): Response {
-  return new Response(json, { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
 // refuse answers with a Connect error, so the client reports it as it would report the server's.

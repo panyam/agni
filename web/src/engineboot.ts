@@ -3,6 +3,7 @@
 // (agni issue 1072). Importing this module reads the shell's base and host into the router, so it is
 // imported before anything builds or reads a URL.
 
+import { requestJson } from "./wirecodec.js";
 import { useEngineFetch, timingMode, workspaceClient } from "./api.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
 import { fetchFile } from "./wasm/fetchfile.js";
@@ -94,7 +95,8 @@ export function refuseBrowserMounts(): void {
   if (currentLocation().mount === BROWSER_MOUNT) showEngineNote(`${reason}.`);
   useEngineFetch(async (input, init) => {
     const req = new Request(input, init);
-    const body = await req.clone().text();
+    // The body in its JSON form, whichever codec it came in (wirecodec.ts, agni issue 1502).
+    const body = JSON.stringify((await requestJson(req)) ?? {});
     if (body.includes(`"mount://${BROWSER_MOUNT}/`) || body.includes(`"mount://${BROWSER_MOUNT}"`)) {
       showEngineNote(`${reason}.`);
       return new Response(JSON.stringify({ code: "failed_precondition", message: reason }), {
