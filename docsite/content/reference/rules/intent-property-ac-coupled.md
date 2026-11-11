@@ -12,6 +12,8 @@ Put a series capacitor in the net, sized for the lowest frequency the link has t
 When the design intent declares a net AC-coupled, a **series capacitor** must actually carry the net.
 If no series capacitor is on it, the net is DC-connected and the declaration is unmet.
 
+![a net declared AC-coupled with no series capacitor on it is flagged; the same net through a series capacitor is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/property-ac-coupled.svg)
+
 ### For hardware engineers
 
 AC coupling puts a capacitor in the signal path so the alternating signal passes while any steady DC

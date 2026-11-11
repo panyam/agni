@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="rail-current-margin rule: a supply that clears the peak but not the peak times the margin factor is flagged; one that clears both is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">clears the peak, short of the margin</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">clears peak times margin</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">design.yaml declares  VDD_3V3: {peak: 1.5}   margin_factor: 1.2</text>
+  <rect x="20" y="96" width="100" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="70.0" y="118.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U2</text>
+  <text x="70.0" y="133.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">IOUT 1.6 A</text>
+  <line x1="120" y1="120" x2="230" y2="120" stroke="#d64545" stroke-width="2.5"/>
+  <text x="175" y="112" font-size="10.5" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_3V3</text>
+  <rect x="230" y="96" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="270.0" y="124.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">loads</text>
+  <text x="165" y="190" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">1.6 A  &lt;  1.5 × 1.2 = 1.8 A</text>
+  <text x="165" y="214" font-size="11" fill="#6b7280" text-anchor="middle">below 1.5 A is rail-current-capacity</text>
+  <rect x="360" y="96" width="100" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="410.0" y="118.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U2</text>
+  <text x="410.0" y="133.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">IOUT 2 A</text>
+  <line x1="460" y1="120" x2="570" y2="120" stroke="#394049" stroke-width="2"/>
+  <text x="515" y="112" font-size="10.5" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_3V3</text>
+  <rect x="570" y="96" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="610.0" y="124.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">loads</text>
+  <text x="505" y="190" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">2 A  ≥  1.8 A</text>
+  <text x="505" y="214" font-size="11" fill="#6b7280" text-anchor="middle">20% headroom over the peak</text>
+</svg>

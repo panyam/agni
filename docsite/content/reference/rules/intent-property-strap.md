@@ -14,6 +14,8 @@ The design intent can declare a net as a boot/config strap. That net must not be
 `low` with a pull-up, means the part will come up configured the other way from what the design
 intended.
 
+![a strap declared high but pulled down is flagged; the same strap pulled up is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/property-strap.svg)
+
 ### It is not `property-reset-polarity` under another name
 
 The two read the same evidence and ask inverted questions. If a reviewer assumes they are the same

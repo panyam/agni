@@ -5,6 +5,8 @@
 A rail's supply must be rated for its declared peak budget multiplied by the declared margin factor.
 A factor of 1.2 asks for 20% headroom over the budget.
 
+![a supply that clears the peak but not the peak times the margin factor is flagged; one that clears both is fine](images/rail-current-margin.svg)
+
 The rule fires only in the band between the two thresholds, where the supply clears the peak but
 falls short of peak x factor. Below the peak it reports nothing. That shortfall is
 `intent/rail-current-capacity`'s finding, and one defect should not be reported under two review
