@@ -3,9 +3,20 @@
 // the same part in the other, in either direction, and that a view keeps following once it floats.
 
 import { beforeAll, afterAll, describe, expect, inject, it } from "vitest";
-import type { Browser, Page } from "playwright-core";
+import type { Browser, Page, Request } from "playwright-core";
+import { fromBinary, toBinary, toJson, type DescMessage } from "@bufbuild/protobuf";
+import { HighlightSheetRequestSchema, LocateSubjectsRequestSchema, LocateSubjectsResponseSchema } from "../src/gen/agni/v1/webapi/design_pb.js";
 import { launch, withPage } from "./browser.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";
+
+// bodyOf is a request's body in its JSON form. The viewer speaks binary Connect (agni issue 1502), so
+// a route reads the body against its method's schema.
+const bodyOf = (req: Request, schema: DescMessage): string => {
+  const buf = req.postDataBuffer();
+  if (!buf) return "";
+  if (!(req.headers()["content-type"] ?? "").startsWith("application/proto")) return buf.toString();
+  return JSON.stringify(toJson(schema, fromBinary(schema, new Uint8Array(buf))));
+};
 
 const base = (): string => inject("baseUrl");
 
@@ -129,12 +140,12 @@ describe("a sheet view beside the canvas", () => {
   // out, as the engine answers for a DNP part or one renumbered after layout.
   const withoutBoard = async (page: Page, ref: string) => {
     await page.route("**/LocateSubjects", async (route) => {
-      const body = route.request().postData() ?? "";
+      const body = bodyOf(route.request(), LocateSubjectsRequestSchema);
       if (!body.includes(`"${ref}"`)) return route.continue();
       const resp = await route.fetch();
-      const json = (await resp.json()) as { subjects?: { sheetIds?: string[] }[] };
-      for (const s of json.subjects ?? []) s.sheetIds = (s.sheetIds ?? []).filter((id) => id !== "board");
-      await route.fulfill({ response: resp, json });
+      const answer = fromBinary(LocateSubjectsResponseSchema, new Uint8Array(await resp.body()));
+      for (const s of answer.subjects) s.sheetIds = s.sheetIds.filter((id) => id !== "board");
+      await route.fulfill({ response: resp, body: Buffer.from(toBinary(LocateSubjectsResponseSchema, answer)) });
     });
   };
 
@@ -186,7 +197,7 @@ describe("a sheet view beside the canvas", () => {
     await withPage(browser, async (page) => {
       const boardSpecs: string[] = [];
       await page.route("**/HighlightSheet", (route) => {
-        const body = route.request().postData() ?? "";
+        const body = bodyOf(route.request(), HighlightSheetRequestSchema);
         if (body.includes('"sheet":"board"')) boardSpecs.push(body);
         return route.continue();
       });
