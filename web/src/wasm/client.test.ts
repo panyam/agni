@@ -5,7 +5,7 @@ import { CheckDesignRequestSchema } from "../gen/agni/v1/webapi/checks_pb.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { abortable, laneFor, mountingFetch, withheldPlaceholder, wouldShrink, SHRINK_RATIO, WITHHELD_PREFIX, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
+import { abortable, laneFor, mountingFetch, sumsManifest, withheldPlaceholder, SUMS_FILE, wouldShrink, SHRINK_RATIO, WITHHELD_PREFIX, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A fake engine that records its lanes, design source and network, so a test can see where each
 // request went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane
@@ -475,5 +475,38 @@ describe("binary request bodies", () => {
     expect(h.laneCalls.jobs).toEqual([INGEST_PATH, "/agni.v1.webapi.CheckService/CheckDesign"]);
     expect(JSON.parse(h.laneBodies.jobs[0])).toEqual({ snapshot: { uri: "mount://tut/designs/gateway" }, snapshotId: "s1" });
     expect(h.lists()).toBe(1);
+  });
+});
+
+// agni issue 1515: each worker is given the listed hash and size of every file, placeholders too, so
+// the engine restores a stored board it holds only as a placeholder.
+describe("the sums manifest", () => {
+  it("writes what the engine reads, twinned through sums_twin.json", () => {
+    const twin = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../internal/wasmengine/testdata/sums_twin.json"), "utf8")) as {
+      listing: { path: string; sha256: string; size: number }[];
+      manifest: string;
+    };
+    expect(new TextDecoder().decode(sumsManifest(twin.listing))).toBe(twin.manifest);
+  });
+
+  it("names the held-back board in the serve worker's manifest, and every file in the others'", async () => {
+    const sized: DesignFiles = { ...withBoard, files: withBoard.files.map((f, i) => ({ ...f, size: BigInt(100 + i) })) };
+    const h = harness(sized);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    const want = Object.fromEntries(sized.files.map((x) => [x.path, { sha256: x.sha256, size: Number(x.size) }]));
+    for (const lane of ["serve", "prepare"] as const) {
+      const got = JSON.parse(new TextDecoder().decode(h.given[lane][SUMS_FILE])) as { files: Record<string, unknown> };
+      expect(got.files, lane).toEqual(want);
+    }
+    expect(isPlaceholder(h.given.serve[BOARD])).toBe(true);
+  });
+
+  it("writes no manifest for a listing that gives no sizes", async () => {
+    const h = harness(withBoard);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    expect(h.given.serve[SUMS_FILE]).toBeUndefined();
   });
 });
