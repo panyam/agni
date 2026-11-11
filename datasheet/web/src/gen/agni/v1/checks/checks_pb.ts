@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/checks/checks.proto.
  */
 export const file_agni_v1_checks_checks: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkiSAoOQ29udGV4dFN1YmplY3QSKAoHc3ViamVjdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDAoEcm9sZRgCIAEoCSK1AQoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBEhQKDHZlcmlmaWNhdGlvbhgHIAEoCRIZChF2ZXJpZmllZF9yZXZpc2lvbhgIIAEoCRIOCgZjb3JwdXMYCSABKAki6AIKB0ZpbmRpbmcSDAoEcnVsZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIoCgdzdWJqZWN0GAMgASgLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBIPCgdtZXNzYWdlGAQgASgJEhQKDGluY29uY2x1c2l2ZRgKIAEoCBIqCgpwcm92ZW5hbmNlGAUgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlEg4KBnNoZWV0cxgGIAMoCRIzCg1sb2NhdGVfcmVhc29uGAcgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEjUKCmRhdGFzaGVldHMYCCADKAsyIS5hZ25pLnYxLmNoZWNrcy5EYXRhc2hlZXRDaXRhdGlvbhIvCgdjb250ZXh0GAsgAygLMh4uYWduaS52MS5jaGVja3MuQ29udGV4dFN1YmplY3QSEwoLdmVyZGljdF9pZHMYDCADKAkiKwoLV2l0bmVzc1Rlcm0SDQoFbGFiZWwYASABKAkSDQoFdmFsdWUYAiABKAkifgoHV2l0bmVzcxIRCglzdGF0ZW1lbnQYASABKAkSKgoFdGVybXMYAiADKAsyGy5hZ25pLnYxLmNoZWNrcy5XaXRuZXNzVGVybRI0CglkYXRhc2hlZXQYAyADKAsyIS5hZ25pLnYxLmNoZWNrcy5EYXRhc2hlZXRDaXRhdGlvbiLzAQoHVmVyZGljdBIKCgJpZBgBIAEoCRIMCgRydWxlGAIgASgJEigKB291dGNvbWUYAyABKA4yFy5hZ25pLnYxLmNoZWNrcy5PdXRjb21lEikKCHN1YmplY3RzGAQgAygLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBIoCgd3aXRuZXNzGAUgASgLMhcuYWduaS52MS5jaGVja3MuV2l0bmVzcxIOCgZyZWFzb24YBiABKAkSLwoHY29udGV4dBgHIAMoCzIeLmFnbmkudjEuY2hlY2tzLkNvbnRleHRTdWJqZWN0Eg4KBnNoZWV0cxgIIAMoCSKwAgoLQ2hlY2tSZXBvcnQSDgoGc291cmNlGAEgASgJEhEKCXJ1bGVzX3J1bhgCIAEoBRI9CghzZWN0aW9ucxgDIAMoCzIrLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0LlNldmVyaXR5U2VjdGlvbhpoCg9TZXZlcml0eVNlY3Rpb24SEAoIc2V2ZXJpdHkYASABKAkSDQoFY291bnQYAiABKAUSNAoFcnVsZXMYAyADKAsyJS5hZ25pLnYxLmNoZWNrcy5DaGVja1JlcG9ydC5SdWxlR3JvdXAaVQoJUnVsZUdyb3VwEgwKBHJ1bGUYASABKAkSDwoHc3VtbWFyeRgCIAEoCRIpCghmaW5kaW5ncxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmciSwoOUmV2aWV3TWFuaWZlc3QSDAoEbmFtZRgBIAEoCRIrCgVhcmVhcxgCIAMoCzIcLmFnbmkudjEuY2hlY2tzLk1hbmlmZXN0QXJlYSJJCgxNYW5pZmVzdEFyZWESDAoEbmFtZRgBIAEoCRIrCgVpdGVtcxgCIAMoCzIcLmFnbmkudjEuY2hlY2tzLk1hbmlmZXN0SXRlbSJ6CgxNYW5pZmVzdEl0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDAoEbm90ZRgEIAEoCRIsCgdiaW5kaW5nGAUgASgLMhsuYWduaS52MS5jaGVja3MuSXRlbUJpbmRpbmci9gEKC0l0ZW1CaW5kaW5nEgwKBHJ1bGUYASABKAkSCwoDdGFnGAIgASgJEg8KB3Byb2ZpbGUYAyABKAkSLAoFcXVlcnkYBCABKAsyHS5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFF1ZXJ5EjAKB3ByZXNlbnQYBSABKAsyHy5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFByZXNlbnQSLAoFc2NvcGUYBiABKAsyHS5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFNjb3BlEhMKC3JlcXVpcmVtZW50GAcgASgJEhgKEGFwcGxpZXNfdG9fY2xhc3MYCCADKAkidgoNTWFuaWZlc3RRdWVyeRINCgVtYXRjaBgBIAEoCRIPCgdzdWJqZWN0GAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIQCghzZXZlcml0eRgFIAEoCRIUCgxwYXJhbV9zeW1ib2wYBiABKAkiIAoPTWFuaWZlc3RQcmVzZW50Eg0KBWNsYXNzGAEgASgJIiEKDU1hbmlmZXN0U2NvcGUSEAoIcHJvZmlsZXMYASADKAkioQEKClJldmlld0l0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHb3V0Y29tZRgDIAEoCRIMCgRub3RlGAQgASgJEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZxIuCgV1bm1ldBgGIAMoCzIfLmFnbmkudjEuY2hlY2tzLlVubWV0RGVwZW5kZW5jeSJQCghXb3JrSXRlbRIzCgpkZXBlbmRlbmN5GAEgASgLMh8uYWduaS52MS5jaGVja3MuVW5tZXREZXBlbmRlbmN5Eg8KB2Jsb2NrZWQYAiADKAkiWQoPVW5tZXREZXBlbmRlbmN5EgsKA21wbhgBIAEoCRIUCgxtYW51ZmFjdHVyZXIYAiABKAkSDgoGc3ltYm9sGAMgASgJEhMKC3NwZWNfYWJzZW50GAQgASgIIkUKClJldmlld0FyZWESDAoEbmFtZRgBIAEoCRIpCgVpdGVtcxgCIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0l0ZW0iwQMKDENoZWNrUmVzdWx0cxIpCgRtZXRhGAEgASgLMhsuYWduaS52MS5jaGVja3MuUmVzdWx0c01ldGESKQoGZGVzaWduGAIgASgLMhkuYWduaS52MS5jaGVja3MuRGVzaWduUmVmEiYKA3J1bhgDIAEoCzIZLmFnbmkudjEuY2hlY2tzLlJ1bkNvbmZpZxIrCgdjYXRhbG9nGAQgAygLMhouYWduaS52MS5jaGVja3MuUnVsZVJlY29yZBIsCgdza2lwcGVkGAogAygLMhsuYWduaS52MS5jaGVja3MuU2tpcHBlZFJ1bGUSKQoIZmluZGluZ3MYBSADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nEhAKCG1hbmlmZXN0GAYgASgJEikKBWFyZWFzGAcgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3QXJlYRI1Cg5pbXBvcnRfc3VtbWFyeRgIIAEoCzIdLmFnbmkudjEuY2hlY2tzLkltcG9ydFN1bW1hcnkSOQoRbWFuaWZlc3Rfc25hcHNob3QYCSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdCJjCg1JbXBvcnRTdW1tYXJ5EhAKCGZpbmRpbmdzGAEgASgFEg4KBmpvaW5lZBgCIAEoBRIwCgh1bmpvaW5lZBgDIAMoCzIeLmFnbmkudjEuY2hlY2tzLlVuam9pbmVkUmVhc29uIkEKDlVuam9pbmVkUmVhc29uEg4KBnJlYXNvbhgBIAEoCRINCgVjb3VudBgCIAEoBRIQCghleGFtcGxlcxgDIAMoCSJ0CgtSZXN1bHRzTWV0YRIOCgZzY2hlbWEYASABKAkSEAoIcHJvZHVjZXIYAiABKAkSGAoQcHJvZHVjZXJfdmVyc2lvbhgDIAEoCRISCgpjcmVhdGVkX2F0GAQgASgJEhUKDWNvdmVyYWdlX2F4aXMYBSABKAgicAoJRGVzaWduUmVmEg4KBnNvdXJjZRgBIAEoCRIUCgxjb250ZW50X2hhc2gYAiABKAkSPQoUdW5leHBhbmRlZF9oaWVyYXJjaHkYAyADKAsyHy5hZ25pLnYxLmlyLlVuZXhwYW5kZWRIaWVyYXJjaHkiagoJUnVuQ29uZmlnEg4KBnBhcmFtcxgBIAEoCBIQCghwcm9maWxlcxgCIAEoCBIOCgZpbnRlbnQYAyABKAgSEwoLY29udmVudGlvbnMYBCABKAkSFgoOcmF0aWZpZWRfZmxvb3IYBSABKAEiKwoLU2tpcHBlZFJ1bGUSDAoEbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkingEKClJ1bGVSZWNvcmQSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEjIKBHRhZ3MYBCADKAsyJC5hZ25pLnYxLmNoZWNrcy5SdWxlUmVjb3JkLlRhZ3NFbnRyeRorCglUYWdzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASr+AQoMTG9jYXRlUmVhc29uEh0KGUxPQ0FURV9SRUFTT05fVU5TUEVDSUZJRUQQABIgChxMT0NBVEVfUkVBU09OX1ZJUlRVQUxfU1lNQk9MEAESJAogTE9DQVRFX1JFQVNPTl9QT1dFUl9SQUlMX05PX1dJUkUQAhIfChtMT0NBVEVfUkVBU09OX05PVF9JTl9ERVNJR04QAxIdChlMT0NBVEVfUkVBU09OX05PX0dFT01FVFJZEAQSHwobTE9DQVRFX1JFQVNPTl9CVVNfTk9UX0RSQVdOEAUSJgoiTE9DQVRFX1JFQVNPTl9TQ0hFTUFUSUNfVU5SRUFEQUJMRRAGKpIBCgdPdXRjb21lEhcKE09VVENPTUVfVU5TUEVDSUZJRUQQABIQCgxPVVRDT01FX1BBU1MQARIQCgxPVVRDT01FX0ZBSUwQAhIUChBPVVRDT01FX05PX0xJTUlUEAMSGgoWT1VUQ09NRV9OT1RfQ09OU0lERVJFRBAEEhgKFE9VVENPTUVfSU5DT05DTFVTSVZFEAVCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jaGVja3NiBnByb3RvMw", [file_agni_v1_ir_ir]);
+  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkiSAoOQ29udGV4dFN1YmplY3QSKAoHc3ViamVjdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDAoEcm9sZRgCIAEoCSK1AQoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBEhQKDHZlcmlmaWNhdGlvbhgHIAEoCRIZChF2ZXJpZmllZF9yZXZpc2lvbhgIIAEoCRIOCgZjb3JwdXMYCSABKAki6AIKB0ZpbmRpbmcSDAoEcnVsZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIoCgdzdWJqZWN0GAMgASgLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBIPCgdtZXNzYWdlGAQgASgJEhQKDGluY29uY2x1c2l2ZRgKIAEoCBIqCgpwcm92ZW5hbmNlGAUgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlEg4KBnNoZWV0cxgGIAMoCRIzCg1sb2NhdGVfcmVhc29uGAcgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEjUKCmRhdGFzaGVldHMYCCADKAsyIS5hZ25pLnYxLmNoZWNrcy5EYXRhc2hlZXRDaXRhdGlvbhIvCgdjb250ZXh0GAsgAygLMh4uYWduaS52MS5jaGVja3MuQ29udGV4dFN1YmplY3QSEwoLdmVyZGljdF9pZHMYDCADKAkiKwoLV2l0bmVzc1Rlcm0SDQoFbGFiZWwYASABKAkSDQoFdmFsdWUYAiABKAkifgoHV2l0bmVzcxIRCglzdGF0ZW1lbnQYASABKAkSKgoFdGVybXMYAiADKAsyGy5hZ25pLnYxLmNoZWNrcy5XaXRuZXNzVGVybRI0CglkYXRhc2hlZXQYAyADKAsyIS5hZ25pLnYxLmNoZWNrcy5EYXRhc2hlZXRDaXRhdGlvbiLzAQoHVmVyZGljdBIKCgJpZBgBIAEoCRIMCgRydWxlGAIgASgJEigKB291dGNvbWUYAyABKA4yFy5hZ25pLnYxLmNoZWNrcy5PdXRjb21lEikKCHN1YmplY3RzGAQgAygLMhcuYWduaS52MS5jaGVja3MuU3ViamVjdBIoCgd3aXRuZXNzGAUgASgLMhcuYWduaS52MS5jaGVja3MuV2l0bmVzcxIOCgZyZWFzb24YBiABKAkSLwoHY29udGV4dBgHIAMoCzIeLmFnbmkudjEuY2hlY2tzLkNvbnRleHRTdWJqZWN0Eg4KBnNoZWV0cxgIIAMoCSKwAgoLQ2hlY2tSZXBvcnQSDgoGc291cmNlGAEgASgJEhEKCXJ1bGVzX3J1bhgCIAEoBRI9CghzZWN0aW9ucxgDIAMoCzIrLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0LlNldmVyaXR5U2VjdGlvbhpoCg9TZXZlcml0eVNlY3Rpb24SEAoIc2V2ZXJpdHkYASABKAkSDQoFY291bnQYAiABKAUSNAoFcnVsZXMYAyADKAsyJS5hZ25pLnYxLmNoZWNrcy5DaGVja1JlcG9ydC5SdWxlR3JvdXAaVQoJUnVsZUdyb3VwEgwKBHJ1bGUYASABKAkSDwoHc3VtbWFyeRgCIAEoCRIpCghmaW5kaW5ncxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmciSwoOUmV2aWV3TWFuaWZlc3QSDAoEbmFtZRgBIAEoCRIrCgVhcmVhcxgCIAMoCzIcLmFnbmkudjEuY2hlY2tzLk1hbmlmZXN0QXJlYSJJCgxNYW5pZmVzdEFyZWESDAoEbmFtZRgBIAEoCRIrCgVpdGVtcxgCIAMoCzIcLmFnbmkudjEuY2hlY2tzLk1hbmlmZXN0SXRlbSJ6CgxNYW5pZmVzdEl0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDAoEbm90ZRgEIAEoCRIsCgdiaW5kaW5nGAUgASgLMhsuYWduaS52MS5jaGVja3MuSXRlbUJpbmRpbmciqgIKC0l0ZW1CaW5kaW5nEgwKBHJ1bGUYASABKAkSCwoDdGFnGAIgASgJEg8KB3Byb2ZpbGUYAyABKAkSLAoFcXVlcnkYBCABKAsyHS5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFF1ZXJ5EjAKB3ByZXNlbnQYBSABKAsyHy5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFByZXNlbnQSLAoFc2NvcGUYBiABKAsyHS5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdFNjb3BlEhMKC3JlcXVpcmVtZW50GAcgASgJEhgKEGFwcGxpZXNfdG9fY2xhc3MYCCADKAkSMgoIZXh0ZXJuYWwYCSABKAsyIC5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdEV4dGVybmFsIjIKEE1hbmlmZXN0RXh0ZXJuYWwSEAoIcHJvZHVjZXIYASABKAkSDAoEcnVsZRgCIAEoCSJ2Cg1NYW5pZmVzdFF1ZXJ5Eg0KBW1hdGNoGAEgASgJEg8KB3N1YmplY3QYAiABKAkSDAoEa2luZBgDIAEoCRIPCgdtZXNzYWdlGAQgASgJEhAKCHNldmVyaXR5GAUgASgJEhQKDHBhcmFtX3N5bWJvbBgGIAEoCSIgCg9NYW5pZmVzdFByZXNlbnQSDQoFY2xhc3MYASABKAkiIQoNTWFuaWZlc3RTY29wZRIQCghwcm9maWxlcxgBIAMoCSKhAQoKUmV2aWV3SXRlbRIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIPCgdvdXRjb21lGAMgASgJEgwKBG5vdGUYBCABKAkSKQoIZmluZGluZ3MYBSADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nEi4KBXVubWV0GAYgAygLMh8uYWduaS52MS5jaGVja3MuVW5tZXREZXBlbmRlbmN5IlAKCFdvcmtJdGVtEjMKCmRlcGVuZGVuY3kYASABKAsyHy5hZ25pLnYxLmNoZWNrcy5Vbm1ldERlcGVuZGVuY3kSDwoHYmxvY2tlZBgCIAMoCSJZCg9Vbm1ldERlcGVuZGVuY3kSCwoDbXBuGAEgASgJEhQKDG1hbnVmYWN0dXJlchgCIAEoCRIOCgZzeW1ib2wYAyABKAkSEwoLc3BlY19hYnNlbnQYBCABKAgiRQoKUmV2aWV3QXJlYRIMCgRuYW1lGAEgASgJEikKBWl0ZW1zGAIgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3SXRlbSLBAwoMQ2hlY2tSZXN1bHRzEikKBG1ldGEYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5SZXN1bHRzTWV0YRIpCgZkZXNpZ24YAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5EZXNpZ25SZWYSJgoDcnVuGAMgASgLMhkuYWduaS52MS5jaGVja3MuUnVuQ29uZmlnEisKB2NhdGFsb2cYBCADKAsyGi5hZ25pLnYxLmNoZWNrcy5SdWxlUmVjb3JkEiwKB3NraXBwZWQYCiADKAsyGy5hZ25pLnYxLmNoZWNrcy5Ta2lwcGVkUnVsZRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmcSEAoIbWFuaWZlc3QYBiABKAkSKQoFYXJlYXMYByADKAsyGi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdBcmVhEjUKDmltcG9ydF9zdW1tYXJ5GAggASgLMh0uYWduaS52MS5jaGVja3MuSW1wb3J0U3VtbWFyeRI5ChFtYW5pZmVzdF9zbmFwc2hvdBgJIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0ImMKDUltcG9ydFN1bW1hcnkSEAoIZmluZGluZ3MYASABKAUSDgoGam9pbmVkGAIgASgFEjAKCHVuam9pbmVkGAMgAygLMh4uYWduaS52MS5jaGVja3MuVW5qb2luZWRSZWFzb24iQQoOVW5qb2luZWRSZWFzb24SDgoGcmVhc29uGAEgASgJEg0KBWNvdW50GAIgASgFEhAKCGV4YW1wbGVzGAMgAygJInQKC1Jlc3VsdHNNZXRhEg4KBnNjaGVtYRgBIAEoCRIQCghwcm9kdWNlchgCIAEoCRIYChBwcm9kdWNlcl92ZXJzaW9uGAMgASgJEhIKCmNyZWF0ZWRfYXQYBCABKAkSFQoNY292ZXJhZ2VfYXhpcxgFIAEoCCJwCglEZXNpZ25SZWYSDgoGc291cmNlGAEgASgJEhQKDGNvbnRlbnRfaGFzaBgCIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgDIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeSJqCglSdW5Db25maWcSDgoGcGFyYW1zGAEgASgIEhAKCHByb2ZpbGVzGAIgASgIEg4KBmludGVudBgDIAEoCBITCgtjb252ZW50aW9ucxgEIAEoCRIWCg5yYXRpZmllZF9mbG9vchgFIAEoASIrCgtTa2lwcGVkUnVsZRIMCgRuYW1lGAEgASgJEg4KBnJlYXNvbhgCIAEoCSKeAQoKUnVsZVJlY29yZBIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEg8KB3N1bW1hcnkYAyABKAkSMgoEdGFncxgEIAMoCzIkLmFnbmkudjEuY2hlY2tzLlJ1bGVSZWNvcmQuVGFnc0VudHJ5GisKCVRhZ3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKv4BCgxMb2NhdGVSZWFzb24SHQoZTE9DQVRFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHExPQ0FURV9SRUFTT05fVklSVFVBTF9TWU1CT0wQARIkCiBMT0NBVEVfUkVBU09OX1BPV0VSX1JBSUxfTk9fV0lSRRACEh8KG0xPQ0FURV9SRUFTT05fTk9UX0lOX0RFU0lHThADEh0KGUxPQ0FURV9SRUFTT05fTk9fR0VPTUVUUlkQBBIfChtMT0NBVEVfUkVBU09OX0JVU19OT1RfRFJBV04QBRImCiJMT0NBVEVfUkVBU09OX1NDSEVNQVRJQ19VTlJFQURBQkxFEAYqkgEKB091dGNvbWUSFwoTT1VUQ09NRV9VTlNQRUNJRklFRBAAEhAKDE9VVENPTUVfUEFTUxABEhAKDE9VVENPTUVfRkFJTBACEhQKEE9VVENPTUVfTk9fTElNSVQQAxIaChZPVVRDT01FX05PVF9DT05TSURFUkVEEAQSGAoUT1VUQ09NRV9JTkNPTkNMVVNJVkUQBUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NoZWNrc2IGcHJvdG8z", [file_agni_v1_ir_ir]);
 
 /**
  * Subject identifies the entity a finding is about, so a consumer can group and highlight by entity
@@ -723,7 +723,7 @@ export const ManifestItemSchema: GenMessage<ManifestItem> = /*@__PURE__*/
 
 /**
  * ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
- * profile, query, present). They are mutually exclusive, and a second one is a validation error,
+ * profile, query, present, external). They are mutually exclusive, and a second one is a validation error,
  * not a precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than
  * selectors. They do not count toward that limit, and they compose with whichever selector is set.
  *
@@ -786,6 +786,14 @@ export type ItemBinding = Message<"agni.v1.checks.ItemBinding"> & {
    * @generated from field: repeated string applies_to_class = 8;
    */
   appliesToClass: string[];
+
+  /**
+   * external hands the item to another tool's imported report (agni issue 152). The item reads
+   * covered-externally when that report has no matching violation, and fail when it has one.
+   *
+   * @generated from field: agni.v1.checks.ManifestExternal external = 9;
+   */
+  external?: ManifestExternal | undefined;
 };
 
 /**
@@ -794,6 +802,32 @@ export type ItemBinding = Message<"agni.v1.checks.ItemBinding"> & {
  */
 export const ItemBindingSchema: GenMessage<ItemBinding> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_checks, 11);
+
+/**
+ * ManifestExternal names the other tool whose report answers an item. producer matches the
+ * imported document's meta.producer, such as "kicad-cli pcb drc". rule narrows the item to one of
+ * that tool's rules, such as "kicad-drc/clearance". An empty rule means any violation in the report.
+ *
+ * @generated from message agni.v1.checks.ManifestExternal
+ */
+export type ManifestExternal = Message<"agni.v1.checks.ManifestExternal"> & {
+  /**
+   * @generated from field: string producer = 1;
+   */
+  producer: string;
+
+  /**
+   * @generated from field: string rule = 2;
+   */
+  rule: string;
+};
+
+/**
+ * Describes the message agni.v1.checks.ManifestExternal.
+ * Use `create(ManifestExternalSchema)` to create a new message.
+ */
+export const ManifestExternalSchema: GenMessage<ManifestExternal> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_checks, 12);
 
 /**
  * ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
@@ -842,7 +876,7 @@ export type ManifestQuery = Message<"agni.v1.checks.ManifestQuery"> & {
  * Use `create(ManifestQuerySchema)` to create a new message.
  */
 export const ManifestQuerySchema: GenMessage<ManifestQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 12);
+  messageDesc(file_agni_v1_checks_checks, 13);
 
 /**
  * ManifestPresent asserts that a class of component must EXIST on the design. The item passes when
@@ -863,7 +897,7 @@ export type ManifestPresent = Message<"agni.v1.checks.ManifestPresent"> & {
  * Use `create(ManifestPresentSchema)` to create a new message.
  */
 export const ManifestPresentSchema: GenMessage<ManifestPresent> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 13);
+  messageDesc(file_agni_v1_checks_checks, 14);
 
 /**
  * ManifestScope names the interfaces a rule/tag binding is filtered to. The effective scope is the
@@ -883,7 +917,7 @@ export type ManifestScope = Message<"agni.v1.checks.ManifestScope"> & {
  * Use `create(ManifestScopeSchema)` to create a new message.
  */
 export const ManifestScopeSchema: GenMessage<ManifestScope> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 14);
+  messageDesc(file_agni_v1_checks_checks, 15);
 
 /**
  * ReviewItem is one checklist item's outcome, the wire form of review.ItemResult.
@@ -910,7 +944,8 @@ export type ReviewItem = Message<"agni.v1.checks.ReviewItem"> & {
 
   /**
    * outcome is the review.Outcome string: pass | fail | not-applicable | not-automated |
-   * needs-data | needs-design-intent | computed-n/a | provisional. It is a string, not an enum, so
+   * needs-data | needs-design-intent | computed-n/a | provisional | inconclusive |
+   * covered-externally. It is a string, not an enum, so
    * a new verdict is a review-layer change rather than a schema migration. Finding.severity takes
    * the same approach.
    *
@@ -946,7 +981,7 @@ export type ReviewItem = Message<"agni.v1.checks.ReviewItem"> & {
  * Use `create(ReviewItemSchema)` to create a new message.
  */
 export const ReviewItemSchema: GenMessage<ReviewItem> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 15);
+  messageDesc(file_agni_v1_checks_checks, 16);
 
 /**
  * WorkItem is one datasheet fact to go and find, and what finding it would unblock. It is the
@@ -979,7 +1014,7 @@ export type WorkItem = Message<"agni.v1.checks.WorkItem"> & {
  * Use `create(WorkItemSchema)` to create a new message.
  */
 export const WorkItemSchema: GenMessage<WorkItem> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 16);
+  messageDesc(file_agni_v1_checks_checks, 17);
 
 /**
  * UnmetDependency names ONE datasheet fact that a check reached for and did not find. The
@@ -1040,7 +1075,7 @@ export type UnmetDependency = Message<"agni.v1.checks.UnmetDependency"> & {
  * Use `create(UnmetDependencySchema)` to create a new message.
  */
 export const UnmetDependencySchema: GenMessage<UnmetDependency> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 17);
+  messageDesc(file_agni_v1_checks_checks, 18);
 
 /**
  * ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
@@ -1064,7 +1099,7 @@ export type ReviewArea = Message<"agni.v1.checks.ReviewArea"> & {
  * Use `create(ReviewAreaSchema)` to create a new message.
  */
 export const ReviewAreaSchema: GenMessage<ReviewArea> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 18);
+  messageDesc(file_agni_v1_checks_checks, 19);
 
 /**
  * CheckResults is a self-contained check-result document. It says what was checked, by what, and
@@ -1113,9 +1148,10 @@ export type CheckResults = Message<"agni.v1.checks.CheckResults"> & {
    * rule on a netlist or a datasheet rule with no corpus. Both kinds of silence read as coverage. A
    * document with one list and not the other lets a reader conclude the run was broader than it was.
    *
-   * An IMPORTED vendor report leaves it empty, for the same reason `meta.coverage_axis` is false on
-   * one. A foreign checker has no notion of a rule it declined to run, and manufacturing the field
-   * would give an import a property it does not have.
+   * An IMPORTED vendor report fills it only from what the vendor itself lists. KiCad names the checks
+   * the design's rule settings ignore, and the import records each one here (agni issue 152). A
+   * vendor that lists nothing leaves it empty, and the import manufactures no entry, for the same
+   * reason `meta.coverage_axis` is false on one.
    *
    * @generated from field: repeated agni.v1.checks.SkippedRule skipped = 10;
    */
@@ -1174,7 +1210,7 @@ export type CheckResults = Message<"agni.v1.checks.CheckResults"> & {
  * Use `create(CheckResultsSchema)` to create a new message.
  */
 export const CheckResultsSchema: GenMessage<CheckResults> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 19);
+  messageDesc(file_agni_v1_checks_checks, 20);
 
 /**
  * ImportSummary accounts for an import. A foreign checker names the entity a violation is about in
@@ -1215,7 +1251,7 @@ export type ImportSummary = Message<"agni.v1.checks.ImportSummary"> & {
  * Use `create(ImportSummarySchema)` to create a new message.
  */
 export const ImportSummarySchema: GenMessage<ImportSummary> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 20);
+  messageDesc(file_agni_v1_checks_checks, 21);
 
 /**
  * UnjoinedReason is one class of finding the import could not attach, with a few verbatim examples so
@@ -1246,7 +1282,7 @@ export type UnjoinedReason = Message<"agni.v1.checks.UnjoinedReason"> & {
  * Use `create(UnjoinedReasonSchema)` to create a new message.
  */
 export const UnjoinedReasonSchema: GenMessage<UnjoinedReason> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 21);
+  messageDesc(file_agni_v1_checks_checks, 22);
 
 /**
  * ResultsMeta is who produced the document and when. The producer matters because this contract is
@@ -1305,7 +1341,7 @@ export type ResultsMeta = Message<"agni.v1.checks.ResultsMeta"> & {
  * Use `create(ResultsMetaSchema)` to create a new message.
  */
 export const ResultsMetaSchema: GenMessage<ResultsMeta> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 22);
+  messageDesc(file_agni_v1_checks_checks, 23);
 
 /**
  * DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
@@ -1351,7 +1387,7 @@ export type DesignRef = Message<"agni.v1.checks.DesignRef"> & {
  * Use `create(DesignRefSchema)` to create a new message.
  */
 export const DesignRefSchema: GenMessage<DesignRef> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 23);
+  messageDesc(file_agni_v1_checks_checks, 24);
 
 /**
  * RunConfig records the inputs that changed what was even EVALUABLE. A reader can then tell a
@@ -1409,7 +1445,7 @@ export type RunConfig = Message<"agni.v1.checks.RunConfig"> & {
  * Use `create(RunConfigSchema)` to create a new message.
  */
 export const RunConfigSchema: GenMessage<RunConfig> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 24);
+  messageDesc(file_agni_v1_checks_checks, 25);
 
 /**
  * SkippedRule is one selected rule that could not evaluate, and the reason the rule itself gave.
@@ -1442,7 +1478,7 @@ export type SkippedRule = Message<"agni.v1.checks.SkippedRule"> & {
  * Use `create(SkippedRuleSchema)` to create a new message.
  */
 export const SkippedRuleSchema: GenMessage<SkippedRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 25);
+  messageDesc(file_agni_v1_checks_checks, 26);
 
 /**
  * RuleRecord is one rule as the run saw it, with enough to render and group a report without the
@@ -1485,7 +1521,7 @@ export type RuleRecord = Message<"agni.v1.checks.RuleRecord"> & {
  * Use `create(RuleRecordSchema)` to create a new message.
  */
 export const RuleRecordSchema: GenMessage<RuleRecord> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 26);
+  messageDesc(file_agni_v1_checks_checks, 27);
 
 /**
  * LocateReason is why an entity a consumer wants to highlight may not be locatable in the canvas

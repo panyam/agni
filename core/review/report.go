@@ -16,6 +16,7 @@ type Tally struct {
 	Provisional, NeedsDesignIntent, ComputedNA     int
 	NeedsData                                      int
 	Inconclusive                                   int
+	CoveredExternally                              int
 }
 
 // TallyOf counts a list of outcomes, for a caller holding outcomes rather than a Report, such as a
@@ -49,6 +50,8 @@ func (t *Tally) add(o Outcome) {
 		t.NeedsData++
 	case Inconclusive:
 		t.Inconclusive++
+	case CoveredExternally:
+		t.CoveredExternally++
 	}
 }
 
@@ -66,7 +69,8 @@ func (t Tally) Covered() int { return t.Total - t.NotAutomated }
 //
 // Pass, Fail and Provisional are verdicts. ComputedNA is also an answer, because the DESIGN determined
 // the item does not apply (no crystal on the board). NotApplicable, NotAutomated, NeedsData,
-// NeedsDesignIntent and Inconclusive are unanswered. See
+// NeedsDesignIntent and Inconclusive are unanswered. CoveredExternally is unanswered too, because
+// another tool answered it and agni checked nothing. See
 // docsite/content/architecture/checks-contract.md#covered-and-answered-are-two-numbers.
 func (t Tally) Answered() int { return t.Pass + t.Fail + t.Provisional + t.ComputedNA }
 
@@ -87,6 +91,9 @@ func (t Tally) String() string {
 	}
 	if t.ComputedNA > 0 {
 		s += fmt.Sprintf(", %d computed-n/a", t.ComputedNA)
+	}
+	if t.CoveredExternally > 0 {
+		s += fmt.Sprintf(", %d covered-externally", t.CoveredExternally)
 	}
 	return s + fmt.Sprintf(" (of %d)", t.Total)
 }
@@ -152,16 +159,29 @@ func RenderCoverageMarkdown(r Report) string {
 	// declaration. Those two states are the HITL worklists.
 	fmt.Fprintf(&b, "**%d of %d covered**, **%d answered** — %d pass, %d fail, %d n/a; %d not-automated",
 		tot.Covered(), tot.Total, tot.Answered(), tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
-	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 || tot.Inconclusive > 0 {
+	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 || tot.Inconclusive > 0 || tot.CoveredExternally > 0 {
 		fmt.Fprintf(&b, "\n\nOf the covered: %d provisional (awaiting datasheet data), %d needs-design-intent (awaiting a declaration), %d needs-data (awaiting a datasheet seed), %d inconclusive (the check ran and could not decide), %d computed-n/a",
 			tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.Inconclusive, tot.ComputedNA)
+		// The clause appears only on a run that read another tool's report, so a run with none reads
+		// as it did before agni issue 152.
+		if tot.CoveredExternally > 0 {
+			fmt.Fprintf(&b, ", %d covered-externally (another tool's report shows no violation)", tot.CoveredExternally)
+		}
 	}
 	b.WriteString("\n\n")
-	b.WriteString("| Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |\n")
-	b.WriteString("|------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|\n")
+	ext := tot.CoveredExternally > 0
+	head, rule := "| Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |", "|------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|"
+	if ext {
+		head, rule = head+" Covered-externally |", rule+"--------------------|"
+	}
+	b.WriteString(head + "\n" + rule + "\n")
 	row := func(name string, t Tally) {
-		fmt.Fprintf(&b, "| %s | %d/%d | %d | %d | %d | %d | %d | %d | %d | %d | %d |\n",
+		fmt.Fprintf(&b, "| %s | %d/%d | %d | %d | %d | %d | %d | %d | %d | %d | %d |",
 			name, t.Covered(), t.Total, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.Inconclusive, t.ComputedNA, t.NotApplicable, t.NotAutomated)
+		if ext {
+			fmt.Fprintf(&b, " %d |", t.CoveredExternally)
+		}
+		b.WriteString("\n")
 	}
 	for _, a := range r.Areas {
 		row(a.Area.Name, a.Tally())
@@ -198,7 +218,7 @@ func detail(it ItemResult) string {
 			s += fmt.Sprintf("; (+%d more)", n-shown)
 		}
 		return s
-	case NotApplicable, ComputedNA, NeedsDesignIntent, NeedsData, Inconclusive, NotAutomated:
+	case NotApplicable, ComputedNA, NeedsDesignIntent, NeedsData, Inconclusive, NotAutomated, CoveredExternally:
 		// NotAutomated may carry a runtime reason (WS3-090: a host-bound interface declared on no
 		// component), and NeedsData the unseeded-symbol reason (WS3-097), so join the runtime note with
 		// any manifest note. For needs-data, the note names WHICH SYMBOL is missing design-wide and the

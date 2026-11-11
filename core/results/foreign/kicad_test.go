@@ -144,3 +144,26 @@ func TestUnrecognizedReportIsAnError(t *testing.T) {
 		}
 	}
 }
+
+// KiCad lists the checks a design's rule settings ignore. A clean report says nothing about those, so
+// the import records each as skipped, under the same namespaced name a finding would carry (agni
+// issue 152).
+func TestIgnoredChecksBecomeSkipped(t *testing.T) {
+	const rep = `{"$schema": "https://schemas.kicad.org/drc.v1.json", "kicad_version": "10.0.6",
+		"ignored_checks": [{"key": "lib_footprint_mismatch", "description": "Footprint doesn't match copy in library"}],
+		"violations": []}`
+	doc, err := ReadKiCad(strings.NewReader(rep), time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sk := doc.GetSkipped()
+	if len(sk) != 1 {
+		t.Fatalf("%d skipped rules, want 1", len(sk))
+	}
+	if sk[0].GetName() != RulePrefixDRC+"lib_footprint_mismatch" || !strings.Contains(sk[0].GetReason(), "Footprint doesn't match copy in library") {
+		t.Errorf("skipped = %v, want kicad-drc/lib_footprint_mismatch with KiCad's description", sk[0])
+	}
+	if got := len(readFixture(t, "drc.json").GetSkipped()); got != 0 {
+		t.Errorf("a report listing no ignored checks gained %d skipped rules", got)
+	}
+}

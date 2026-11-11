@@ -147,6 +147,9 @@ message ReviewSummary {
   int32 pass = 4;
   int32 fail = 5;
   int32 provisional = 6;
+  // covered_externally counts the items another tool's report answered clean (agni issue 152). They
+  // count toward covered and never toward answered or pass, since agni checked none of them.
+  int32 covered_externally = 7;
 }
 
 message CreateReviewRequest {
@@ -178,6 +181,12 @@ message CreateReviewRequest {
   // it to ask a server for a review (`agni review --remote`) without leaving a run in that server's
   // list.
   bool validate_only = 9;
+  // external holds other tools' check reports, each an agni.checks.results document that `agni
+  // import-results` wrote (agni issue 152). An item with an external binding reads its answer from
+  // the document whose meta.producer it names. Every document must be about this run's design. The
+  // server cannot check that, because a vendor report may name the board while the run reads the
+  // schematic.
+  repeated agni.v1.checks.CheckResults external = 11;
   reserved 1, 2, 4, 7;
   reserved "design_uri", "board_uri", "overlay", "as_named";
 }

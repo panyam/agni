@@ -49,6 +49,11 @@ const (
 	//
 	// It is COVERED and NEVER a pass. The per-finding Message states the remedy.
 	Inconclusive Outcome = "inconclusive"
+	// CoveredExternally means another tool's imported report answers the item and shows no matching
+	// violation (agni issue 152). It is COVERED and NEVER a pass. A vendor report lists violations
+	// only. It has no coverage axis, so it cannot show the check ran on every subject. It is not
+	// answered either, because agni checked nothing. The Note names the producer and its version.
+	CoveredExternally Outcome = "covered-externally"
 )
 
 // ItemResult is one item's outcome, with the findings that made it fail (or the reason it did not
@@ -146,6 +151,20 @@ type RunParams struct {
 	// Vocabulary is the relation vocabulary an inline query compiles against: the shipped one plus
 	// the run's library (agni issue 779). Nil is the process default.
 	Vocabulary *facts.Registry
+	// External holds other tools' imported reports, which items with an ExternalBinding read (agni
+	// issue 152). Nil means none was supplied, and every external item reads needs-data.
+	External []ExternalReport
+}
+
+// ExternalReport is one imported report from another tool, in the engine's own finding form. The
+// caller converts the agni.checks.results document, so this package reads no wire type.
+type ExternalReport struct {
+	Producer string // the document's meta.producer, matched against ExternalBinding.Producer
+	Version  string // the document's meta.producer_version, named in the item's note
+	Findings []check.Finding
+	// Skipped maps each rule the tool did not run to its reason, from the document's skipped list.
+	// KiCad lists the checks a design's rule settings ignore.
+	Skipped map[string]string
 }
 
 // DefaultRatifiedFloor is the default ratification floor. A datasheet value with this confidence or
@@ -233,6 +252,9 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 	if classes := it.Binding.AppliesToClass; len(classes) > 0 && !anyComponentHasClass(m, classes) {
 		return ItemResult{Item: it, Outcome: ComputedNA, Note: "no " + strings.Join(classes, "/") + " part on this design"}
 	}
+	if eb := it.Binding.External; eb != nil {
+		return externalResult(it, eb, p.External)
+	}
 	rules := resolve(cat, it, p.Vocabulary)
 	if len(rules) == 0 {
 		// An intent-bound item (WS3-084) resolves to zero rules when no declaration was supplied, because
@@ -317,6 +339,51 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 			Note: "the check ran but could not decide for " + subjectList(undecided)}
 	}
 	return ItemResult{Item: it, Outcome: Pass}
+}
+
+// externalResult answers an external item from the reports its producer supplied. Several documents
+// from one producer pool their findings, so a team may import its DRC and a later re-run together.
+func externalResult(it Item, eb *ExternalBinding, reports []ExternalReport) ItemResult {
+	var versions, skipped []string
+	var fs []check.Finding
+	found := false
+	for _, r := range reports {
+		if r.Producer != eb.Producer {
+			continue
+		}
+		found = true
+		if r.Version != "" {
+			versions = append(versions, r.Version)
+		}
+		if why, ok := r.Skipped[eb.Rule]; ok && eb.Rule != "" {
+			skipped = append(skipped, why)
+		}
+		for _, f := range r.Findings {
+			if eb.Rule == "" || f.Rule == eb.Rule {
+				fs = append(fs, f)
+			}
+		}
+	}
+	if !found {
+		return ItemResult{Item: it, Outcome: NeedsData,
+			Note: "no report from " + eb.Producer + " was supplied (import one with `agni import-results`, then pass it with --external)"}
+	}
+	if len(fs) > 0 {
+		return ItemResult{Item: it, Outcome: Fail, Findings: fs}
+	}
+	by := eb.Producer
+	if len(versions) > 0 {
+		by += " " + strings.Join(versions, ", ")
+	}
+	// The tool was told not to run this rule, so its silence covers nothing. Nothing checks the item.
+	if len(skipped) > 0 {
+		return ItemResult{Item: it, Outcome: NotAutomated, Note: by + " did not run " + eb.Rule + ": " + skipped[0]}
+	}
+	what := "no violation"
+	if eb.Rule != "" {
+		what = "no " + eb.Rule + " violation"
+	}
+	return ItemResult{Item: it, Outcome: CoveredExternally, Note: what + " in the report from " + by}
 }
 
 // splitInconclusive partitions findings into real defects and the ones the rule could not decide, so

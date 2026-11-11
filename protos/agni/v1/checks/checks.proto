@@ -371,7 +371,7 @@ message ManifestItem {
 }
 
 // ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
-// profile, query, present). They are mutually exclusive, and a second one is a validation error,
+// profile, query, present, external). They are mutually exclusive, and a second one is a validation error,
 // not a precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than
 // selectors. They do not count toward that limit, and they compose with whichever selector is set.
 message ItemBinding {
@@ -391,6 +391,17 @@ message ItemBinding {
   // applies_to_class gates the item on device class (WS10-014). The item is computed-n/a when no
   // component has any of these classes. Values are component.class names, family tags included.
   repeated string applies_to_class = 8;
+  // external hands the item to another tool's imported report (agni issue 152). The item reads
+  // covered-externally when that report has no matching violation, and fail when it has one.
+  ManifestExternal external = 9;
+}
+
+// ManifestExternal names the other tool whose report answers an item. producer matches the
+// imported document's meta.producer, such as "kicad-cli pcb drc". rule narrows the item to one of
+// that tool's rules, such as "kicad-drc/clearance". An empty rule means any violation in the report.
+message ManifestExternal {
+  string producer = 1;
+  string rule = 2;
 }
 
 // ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
@@ -432,7 +443,8 @@ message ReviewItem {
   string id = 1;
   string title = 2;
   // outcome is the review.Outcome string: pass | fail | not-applicable | not-automated |
-  // needs-data | needs-design-intent | computed-n/a | provisional. It is a string, not an enum, so
+  // needs-data | needs-design-intent | computed-n/a | provisional | inconclusive |
+  // covered-externally. It is a string, not an enum, so
   // a new verdict is a review-layer change rather than a schema migration. Finding.severity takes
   // the same approach.
   string outcome = 3;
@@ -519,9 +531,10 @@ message CheckResults {
   // rule on a netlist or a datasheet rule with no corpus. Both kinds of silence read as coverage. A
   // document with one list and not the other lets a reader conclude the run was broader than it was.
   //
-  // An IMPORTED vendor report leaves it empty, for the same reason `meta.coverage_axis` is false on
-  // one. A foreign checker has no notion of a rule it declined to run, and manufacturing the field
-  // would give an import a property it does not have.
+  // An IMPORTED vendor report fills it only from what the vendor itself lists. KiCad names the checks
+  // the design's rule settings ignore, and the import records each one here (agni issue 152). A
+  // vendor that lists nothing leaves it empty, and the import manufactures no entry, for the same
+  // reason `meta.coverage_axis` is false on one.
   repeated SkippedRule skipped = 10;
   // findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and lists
   // its findings per item instead. That is deliberate. A review runs each item's bound rules scoped

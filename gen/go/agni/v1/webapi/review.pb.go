@@ -232,15 +232,18 @@ func (x *Review) GetSummary() *ReviewSummary {
 // answered. provisional counts each fail that depends on unratified datasheet data. It is broken
 // out because each team chooses whether to gate on it.
 type ReviewSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Total         int32                  `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	Covered       int32                  `protobuf:"varint,2,opt,name=covered,proto3" json:"covered,omitempty"`
-	Answered      int32                  `protobuf:"varint,3,opt,name=answered,proto3" json:"answered,omitempty"`
-	Pass          int32                  `protobuf:"varint,4,opt,name=pass,proto3" json:"pass,omitempty"`
-	Fail          int32                  `protobuf:"varint,5,opt,name=fail,proto3" json:"fail,omitempty"`
-	Provisional   int32                  `protobuf:"varint,6,opt,name=provisional,proto3" json:"provisional,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Total       int32                  `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
+	Covered     int32                  `protobuf:"varint,2,opt,name=covered,proto3" json:"covered,omitempty"`
+	Answered    int32                  `protobuf:"varint,3,opt,name=answered,proto3" json:"answered,omitempty"`
+	Pass        int32                  `protobuf:"varint,4,opt,name=pass,proto3" json:"pass,omitempty"`
+	Fail        int32                  `protobuf:"varint,5,opt,name=fail,proto3" json:"fail,omitempty"`
+	Provisional int32                  `protobuf:"varint,6,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	// covered_externally counts the items another tool's report answered clean (agni issue 152). They
+	// count toward covered and never toward answered or pass, since agni checked none of them.
+	CoveredExternally int32 `protobuf:"varint,7,opt,name=covered_externally,json=coveredExternally,proto3" json:"covered_externally,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ReviewSummary) Reset() {
@@ -315,6 +318,13 @@ func (x *ReviewSummary) GetProvisional() int32 {
 	return 0
 }
 
+func (x *ReviewSummary) GetCoveredExternally() int32 {
+	if x != nil {
+		return x.CoveredExternally
+	}
+	return 0
+}
+
 type CreateReviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
@@ -344,7 +354,13 @@ type CreateReviewRequest struct {
 	// back with no name, and its document with no created_at. It needs no review store. The CLI uses
 	// it to ask a server for a review (`agni review --remote`) without leaving a run in that server's
 	// list.
-	ValidateOnly  bool `protobuf:"varint,9,opt,name=validate_only,json=validateOnly,proto3" json:"validate_only,omitempty"`
+	ValidateOnly bool `protobuf:"varint,9,opt,name=validate_only,json=validateOnly,proto3" json:"validate_only,omitempty"`
+	// external holds other tools' check reports, each an agni.checks.results document that `agni
+	// import-results` wrote (agni issue 152). An item with an external binding reads its answer from
+	// the document whose meta.producer it names. Every document must be about this run's design. The
+	// server cannot check that, because a vendor report may name the board while the run reads the
+	// schematic.
+	External      []*checks.CheckResults `protobuf:"bytes,11,rep,name=external,proto3" json:"external,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -419,6 +435,13 @@ func (x *CreateReviewRequest) GetValidateOnly() bool {
 		return x.ValidateOnly
 	}
 	return false
+}
+
+func (x *CreateReviewRequest) GetExternal() []*checks.CheckResults {
+	if x != nil {
+		return x.External
+	}
+	return nil
 }
 
 type GetReviewRequest struct {
@@ -844,14 +867,15 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
 	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\x127\n" +
-	"\asummary\x18\x03 \x01(\v2\x1d.agni.v1.webapi.ReviewSummaryR\asummary\"\xa5\x01\n" +
+	"\asummary\x18\x03 \x01(\v2\x1d.agni.v1.webapi.ReviewSummaryR\asummary\"\xd4\x01\n" +
 	"\rReviewSummary\x12\x14\n" +
 	"\x05total\x18\x01 \x01(\x05R\x05total\x12\x18\n" +
 	"\acovered\x18\x02 \x01(\x05R\acovered\x12\x1a\n" +
 	"\banswered\x18\x03 \x01(\x05R\banswered\x12\x12\n" +
 	"\x04pass\x18\x04 \x01(\x05R\x04pass\x12\x12\n" +
 	"\x04fail\x18\x05 \x01(\x05R\x04fail\x12 \n" +
-	"\vprovisional\x18\x06 \x01(\x05R\vprovisional\"\xb4\x02\n" +
+	"\vprovisional\x18\x06 \x01(\x05R\vprovisional\x12-\n" +
+	"\x12covered_externally\x18\a \x01(\x05R\x11coveredExternally\"\xee\x02\n" +
 	"\x13CreateReviewRequest\x12\x1a\n" +
 	"\bsnapshot\x18\n" +
 	" \x01(\tR\bsnapshot\x12\x16\n" +
@@ -860,7 +884,8 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x1f\n" +
 	"\vwork_budget\x18\b \x01(\x03R\n" +
 	"workBudget\x12#\n" +
-	"\rvalidate_only\x18\t \x01(\bR\fvalidateOnlyJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\a\x10\bR\n" +
+	"\rvalidate_only\x18\t \x01(\bR\fvalidateOnly\x128\n" +
+	"\bexternal\x18\v \x03(\v2\x1c.agni.v1.checks.CheckResultsR\bexternalJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\a\x10\bR\n" +
 	"design_uriR\tboard_uriR\aoverlayR\bas_named\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
@@ -935,28 +960,29 @@ var file_agni_v1_webapi_review_proto_depIdxs = []int32{
 	14, // 2: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
 	3,  // 3: agni.v1.webapi.Review.summary:type_name -> agni.v1.webapi.ReviewSummary
 	15, // 4: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
-	2,  // 5: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
-	15, // 6: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
-	16, // 7: agni.v1.webapi.ListChecklistsResponse.checklists:type_name -> agni.v1.webapi.NamedChecklist
-	4,  // 8: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
-	5,  // 9: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
-	6,  // 10: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
-	8,  // 11: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
-	9,  // 12: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
-	11, // 13: agni.v1.webapi.ReviewService.ListChecklists:input_type -> agni.v1.webapi.ListChecklistsRequest
-	0,  // 14: agni.v1.webapi.ReviewService.RenderReviewReport:input_type -> agni.v1.webapi.RenderReviewReportRequest
-	2,  // 15: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
-	2,  // 16: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
-	7,  // 17: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
-	17, // 18: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
-	10, // 19: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
-	12, // 20: agni.v1.webapi.ReviewService.ListChecklists:output_type -> agni.v1.webapi.ListChecklistsResponse
-	1,  // 21: agni.v1.webapi.ReviewService.RenderReviewReport:output_type -> agni.v1.webapi.RenderReviewReportResponse
-	15, // [15:22] is the sub-list for method output_type
-	8,  // [8:15] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	14, // 5: agni.v1.webapi.CreateReviewRequest.external:type_name -> agni.v1.checks.CheckResults
+	2,  // 6: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
+	15, // 7: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
+	16, // 8: agni.v1.webapi.ListChecklistsResponse.checklists:type_name -> agni.v1.webapi.NamedChecklist
+	4,  // 9: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
+	5,  // 10: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
+	6,  // 11: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
+	8,  // 12: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
+	9,  // 13: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
+	11, // 14: agni.v1.webapi.ReviewService.ListChecklists:input_type -> agni.v1.webapi.ListChecklistsRequest
+	0,  // 15: agni.v1.webapi.ReviewService.RenderReviewReport:input_type -> agni.v1.webapi.RenderReviewReportRequest
+	2,  // 16: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
+	2,  // 17: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
+	7,  // 18: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
+	17, // 19: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
+	10, // 20: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
+	12, // 21: agni.v1.webapi.ReviewService.ListChecklists:output_type -> agni.v1.webapi.ListChecklistsResponse
+	1,  // 22: agni.v1.webapi.ReviewService.RenderReviewReport:output_type -> agni.v1.webapi.RenderReviewReportResponse
+	16, // [16:23] is the sub-list for method output_type
+	9,  // [9:16] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }

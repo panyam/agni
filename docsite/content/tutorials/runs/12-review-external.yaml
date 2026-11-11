@@ -1,0 +1,7 @@
+# Rung 12: a checklist whose items KiCad's DRC answers, scored from the imported report.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+steps:
+  - script: agni import-results reports/kicad-drc.json --design designs/jetson -o kicad.results.json > /dev/null
+  - script: agni review designs/jetson --checklist drc --external kicad.results.json

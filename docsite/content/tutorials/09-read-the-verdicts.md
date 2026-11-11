@@ -24,6 +24,7 @@ outcome vocabulary exists to keep them apart.
 | `computed-n/a` | the design itself rules the question out |
 | `inconclusive` | the check ran and could not decide |
 | `not-automated` | nothing automated is bound to this item |
+| `covered-externally` | another tool's report shows no violation ([rung 12](../12-reconcile-existing-tools/)) |
 
 Only the first two are verdicts about your board. Everything else is a verdict about the *check*.
 `pass` is a claim, and a claim needs someone to have looked.

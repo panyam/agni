@@ -936,7 +936,7 @@ func reviewCmd() *cobra.Command {
 	var ratifiedFloor float64
 	var failOnOutcome string
 	var minAnswered int
-	var reviewLibs, orderBy []string
+	var reviewLibs, orderBy, externalPaths []string
 	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
@@ -1040,6 +1040,15 @@ func reviewCmd() *cobra.Command {
 				}
 				svc, snaps, addr = r.review(), r.snapshots(), r.uri
 			}
+			// An imported report is about one design, so it cannot be shared across several (agni
+			// issue 152).
+			if len(externalPaths) > 0 && len(args) != 1 {
+				return fmt.Errorf("--external is a report about one design; got %d designs (run it per design)", len(args))
+			}
+			external, err := readExternalReports(externalPaths)
+			if err != nil {
+				return err
+			}
 			// One create per design, since a stored run is about ONE design. The loop is the rollup.
 			var docs []*checkspb.CheckResults
 			var reviews []*webapi.Review
@@ -1085,7 +1094,7 @@ func reviewCmd() *cobra.Command {
 					// project other than the one whose rules scored it.
 					Parent:   parent,
 					Manifest: service.ManifestProto(man), Snapshot: snap, RatifiedFloor: ratifiedFloor,
-					ValidateOnly: true,
+					ValidateOnly: true, External: external,
 				})
 				drop()
 				if err != nil {
@@ -1208,6 +1217,7 @@ func reviewCmd() *cobra.Command {
 	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
+	cmd.Flags().StringArrayVar(&externalPaths, "external", nil, "another tool's report, as the check-result document `agni import-results -o` wrote. A checklist item with an external: binding reads its answer from it: fail on a matching violation, covered-externally on none. One design only. Repeatable")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; one design only. Render it later with `agni results`")
 	cmd.Flags().StringVar(&failOnOutcome, "fail-on-outcome", "", "exit non-zero when any checklist ITEM sits at one of these outcomes (comma-separated, e.g. fail or fail,provisional). This is the coverage axis, not `check --fail-on`'s severity axis: it asks whether a question was answered, not how bad the answer was. Off by default")
 	cmd.Flags().IntVar(&minAnswered, "min-answered", 0, "exit non-zero when fewer than N checklist items produced an ANSWER (pass, fail, provisional, or computed-n/a). Distinct from the covered count, which still counts an item whose rule is present but whose inputs are absent; that is the regression a severity gate cannot see. Off by default")

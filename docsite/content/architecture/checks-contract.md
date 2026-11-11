@@ -100,7 +100,9 @@ A flat violation list can express two verdicts, `pass` and `fail`, and any incum
 report carries only those. The review layer adds verdicts for every distinct way a question went
 unanswered. They are `not-applicable`, `not-automated`, `needs-data`, `needs-design-intent`,
 `computed-n/a`, and `provisional` for an answer based on data that is not yet trustworthy. Each of
-those exists because a check that did not evaluate had been scoring as a pass.
+those exists because a check that did not evaluate had been scoring as a pass. A seventh,
+`covered-externally`, records an item that another tool's imported report answers clean. The
+section on importing explains why it never reads as a pass.
 
 The schema keeps that asymmetry on purpose. When a foreign tool's results are
 imported, they must arrive visibly weaker than a native run rather than having a coverage axis
@@ -136,7 +138,8 @@ They are opposite events wearing the same word. In `computed-n/a` the DESIGN set
 The board has no crystal, so the crystal rule does not apply. A human reviewer takes the same
 branch, and it is a real determination. In `not-applicable` the rule's inputs are absent, so the
 question goes unasked. `NeedsData`, `NeedsDesignIntent` and `Inconclusive` are on the unanswered
-side for the same reason.
+side for the same reason. `CoveredExternally` is covered and unanswered. Another tool answered it,
+and agni checked nothing.
 
 {{ includeFile "figures/covered-vs-answered.svg" }}
 
@@ -391,6 +394,45 @@ able to tell "the tool found 40 things" from "the tool found 60 and we understoo
 {{ explainable "reference-designator" "ref-des" }} that names no component in the loaded design
 leaves the finding unattached rather than inventing a subject. A wrong join attaches a real violation to an innocent part, and that is worse
 than no join.
+
+### A checklist item can hand its question to another tool
+
+Suppose a team already runs KiCad's DRC, and its checklist asks whether copper keeps its clearance.
+Agni has no rule for that, so the item read `not-automated`, and the tally understated the review.
+An `external:` binding names the tool and one of its checks (agni issue 152):
+
+```yaml
+- id: D3
+  title: copper keeps its clearance
+  external: {producer: kicad-cli pcb drc, rule: kicad-drc/clearance}
+```
+
+`agni review --external doc.json` reads the document `agni import-results` wrote, and the service
+takes the same documents in `CreateReviewRequest.external`. `producer` matches the document's
+`meta.producer`, and an empty `rule` takes every violation in the report. The item resolves four
+ways:
+
+| The report | The item |
+|---|---|
+| has a matching violation | `fail`, with the vendor's findings |
+| has none | `covered-externally`, naming the tool and its version |
+| lists the rule as skipped | `not-automated`, naming the setting that turned it off |
+| was not supplied | `needs-data`, naming the tool |
+
+A clean report never reads `pass`. A native pass comes from a rule that examined each subject, and
+a vendor report lists violations and nothing else. So "KiCad reported nothing" is a weaker claim
+than "agni checked and found nothing", and the tally counts it apart. It is covered, since a
+mechanism stands behind it, and not answered, since agni decided nothing. `ReviewSummary` carries
+its own `covered_externally` count, and `--fail-on-outcome covered-externally` gates on it.
+
+KiCad's report names the checks a board's rule settings ignore, under `ignored_checks`. The import
+writes each one to the document's `skipped` list. Without that, an ignored check would read
+`covered-externally`, because a check that never ran reports no violation.
+
+The service cannot check that a report is about the design under review. A KiCad DRC report names
+the board, and the review reads the schematic, so their content hashes differ even when they agree.
+The CLI refuses `--external` with more than one design, and pairing the right report with the right
+revision is the caller's job.
 
 ### The oracle becomes a harness
 

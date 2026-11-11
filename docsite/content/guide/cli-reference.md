@@ -89,6 +89,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--intent-path <file>` | a design-intent declaration sent with the run, so intent-bound items resolve instead of reading `needs-design-intent`. It replaces the design's own `intent:` for this run rather than adding to it |
 | `--board-path <file>` | a board-geometry file attached to a netlist design, so board-tier items resolve instead of `n/a` |
 | `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report. Renders as markdown only, so it refuses an explicit `--format`; the `--format html` page carries the same rollup in its header |
+| `--external <file>` | another tool's report, as the document `agni import-results -o` wrote. An item with an `external:` binding reads its answer from it: `fail` on a matching violation, `covered-externally` on none, and `not-automated` when the tool's settings ignore the check. Repeatable, one design only |
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |

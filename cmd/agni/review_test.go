@@ -845,3 +845,48 @@ func TestReviewHTMLIsTheRenderedReviewReport(t *testing.T) {
 		t.Errorf("review --format html differs from RenderReviewReport's page for the same run:\n--- cli\n%s\n--- rpc\n%s", got, want)
 	}
 }
+
+// --external reads another tool's report into the review (agni issue 152). It takes the document
+// `agni import-results` writes, refuses a raw vendor report with the command that converts one, and
+// refuses more than one design, since a report is about one board.
+func TestReviewCmdExternal(t *testing.T) {
+	freshWorkspace(t)
+	dir := t.TempDir()
+	man := filepath.Join(dir, "drc.yaml")
+	if err := os.WriteFile(man, []byte("name: drc\nareas:\n  - name: Board\n    items:\n"+
+		"      - {id: d1, title: copper edge clearance, external: {producer: kicad-cli pcb drc, rule: kicad-drc/copper_edge_clearance}}\n"+
+		"      - {id: d2, title: silkscreen, external: {producer: kicad-cli pcb drc, rule: kicad-drc/silk_over_copper}}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	doc := filepath.Join(dir, "kicad.results.json")
+	imp := importResultsCmd()
+	imp.SetOut(&bytes.Buffer{})
+	imp.SetArgs([]string{"../../core/results/foreign/testdata/drc.json", "-o", doc})
+	if err := imp.Execute(); err != nil {
+		t.Fatalf("import-results: %v", err)
+	}
+	run := func(args ...string) (string, error) {
+		cmd := reviewCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(&bytes.Buffer{})
+		cmd.SetArgs(append([]string{"--checklist", man}, args...))
+		err := cmd.Execute()
+		return out.String(), err
+	}
+	s, err := run("--external", doc, "testdata/review/can-broken.edn")
+	if err != nil {
+		t.Fatalf("review --external: %v", err)
+	}
+	for _, want := range []string{"| d1 | copper edge clearance | fail |", "| d2 | silkscreen | covered-externally |"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("report missing %q\n---\n%s", want, s)
+		}
+	}
+	if _, err := run("--external", "../../core/results/foreign/testdata/drc.json", "testdata/review/can-broken.edn"); err == nil || !strings.Contains(err.Error(), "agni import-results") {
+		t.Errorf("a raw KiCad report: want an error naming import-results, got %v", err)
+	}
+	if _, err := run("--external", doc, "testdata/review/can-broken.edn", "testdata/profiles/overlay-bus.edn"); err == nil || !strings.Contains(err.Error(), "one design") {
+		t.Errorf("two designs: want an error saying a report is about one design, got %v", err)
+	}
+}

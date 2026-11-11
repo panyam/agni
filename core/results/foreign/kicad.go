@@ -49,6 +49,13 @@ type kicadReport struct {
 	Source       string `json:"source"`
 	KiCadVersion string `json:"kicad_version"`
 	Units        string `json:"coordinate_units"`
+	// IgnoredChecks are the checks the design's own rule settings turn off. Both DRC and ERC reports
+	// carry them. A clean report says nothing about these rules, so they become the document's
+	// skipped list (agni issue 152).
+	IgnoredChecks []struct {
+		Key         string `json:"key"`
+		Description string `json:"description"`
+	} `json:"ignored_checks"`
 
 	Violations       []kicadViolation `json:"violations"`
 	UnconnectedItems []kicadViolation `json:"unconnected_items"`
@@ -93,6 +100,12 @@ func ReadKiCad(r io.Reader, now time.Time) (*checkspb.CheckResults, error) {
 			CoverageAxis: false,
 		},
 		Design: &checkspb.DesignRef{Source: rep.Source},
+	}
+	for _, ig := range rep.IgnoredChecks {
+		doc.Skipped = append(doc.Skipped, &checkspb.SkippedRule{
+			Name:   prefix + ig.Key,
+			Reason: "ignored by the design's rule settings (" + ig.Description + ")",
+		})
 	}
 	for _, v := range rep.Violations {
 		doc.Findings = append(doc.Findings, findings(v, prefix, rep.Source)...)
