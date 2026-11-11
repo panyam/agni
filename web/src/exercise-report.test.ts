@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, pendingFiles, slowestFetch, sumSplits, table, waitedOn, type Row } from "../browser/exercise-report.js";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, median, openDetail, pendingFiles, slowestFetch, sumSplits, table, waitedOn, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -180,5 +180,32 @@ describe("a step that waits on the ticket that builds it", () => {
     expect(passed.detail).toContain("stop waiting on #1325, #1326");
     expect(exitCode([{ step: "s", design: "d", ...passed }])).toBe(1);
     expect(exitCode([{ step: "s", design: "d", ...waitedOn(false, ["#1326"], "x") }])).toBe(0);
+  });
+});
+
+// Lines a page logged while the browser engine opened the Jetson cut's board (agni issue 1500).
+const getSheet =
+  'agni timing GetSheet: {"procedure":"/agni.v1.webapi.DesignService/GetSheet","totalMicros":"21100","stages":[{"name":"restore.board","micros":"2899"},{"name":"collect.board","startMicros":"2899","micros":"4499"},{"name":"restore.design","startMicros":"8199","micros":"1900"},{"name":"collect.design","startMicros":"10100","micros":"4699"}],"lookups":[{"layer":"board","source":"store"},{"layer":"design","source":"store"}],"page":{"startMs":384.09999990463257,"wallMs":80.29999995231628}}';
+const ingest = 'agni timing Ingest: {"procedure":"/agni.v1.webapi.SnapshotService/Ingest","totalMicros":"938000","stages":[{"name":"build.model","micros":"750000"}],"page":{"startMs":12,"wallMs":1210}}';
+const fetchedBoard = 'agni fetch probe/designs/jetson-cut/jetson-cut.kicad_pcb: {"bytes":259498,"ms":3,"attempts":1}';
+const fetchedSheet = 'agni fetch probe/designs/jetson-cut/power.kicad_sch: {"bytes":63397,"ms":3,"attempts":1}';
+const loaded = "agni loaded mount://probe/designs/jetson-cut in 282 ms: board persisted";
+
+describe("a board open's detail", () => {
+  it("names each request's page and engine time with its widest loading stages, then the fetched bytes and the Load page's read", () => {
+    expect(openDetail([getSheet, fetchedBoard, fetchedSheet, loaded])).toBe(
+      "GetSheet 80 ms (engine 21 ms, collect.design 5 ms, collect.board 4 ms); fetched 0.3 MB in 2 files; /load read 282 ms",
+    );
+  });
+  it("lists the request that held the page longest first", () => {
+    expect(openDetail([getSheet, ingest])).toBe("Ingest 1.2 s (engine 938 ms, build.model 750 ms); GetSheet 80 ms (engine 21 ms, collect.design 5 ms, collect.board 4 ms)");
+  });
+  it("says so when the page logged no timing", () => {
+    expect(openDetail(["agni draw canvas: {}"])).toBe("no timed requests");
+  });
+  it("takes the middle of an odd list and the mean of the middle two of an even one", () => {
+    expect(median([3, 1, 2])).toBe(2);
+    expect(median([4, 1, 3, 2])).toBe(2.5);
+    expect(median([])).toBeNaN();
   });
 });

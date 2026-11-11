@@ -42,6 +42,8 @@ This file covers the browser specs, the walks they drive, and the `make exercise
 - Its timings mean something only headed on an idle machine. Headless Chrome draws WebGL in SwiftShader, so the gate's cut run never judges them.
 - Its compare step needs Jetson's rev B, which `make exercise-webgl` builds. It clicks the first change, because the first sheet pair need not draw one.
 - Its last steps pan a board view beside the schematic. A headless Jetson walk takes most of an hour, and `WALK_TIMEOUT_MS` in the spec bounds it.
+- **`make exercise-board-open` runs `web/browser/board-open.spec.ts`** (agni 1500, mission #1499). It times Jetson's board to its first WebGL draw against a fresh server cold, reloaded and from a new browser, then in the browser engine cold and reloaded. It judges medians of `RUNS` against 1.5 s cold and 0.5 s reloaded. The gate opens the cut once and judges nothing.
+- Each row keeps only the requests that started before the draw. The page's clock restarts at the `/load` redirect, so the spec places a line by its arrival less its `wallMs`. Every open's lines go to `board-open-lines.json` beside the table.
 - **`make exercise-allegro` and `make exercise-altium`** each run their example, then open the native board in the viewer and click a pad (`web/browser/native-board.spec.ts`, agni 1383).
 - **`make exercise-walk` runs `web/browser/walk-mission.spec.ts`** (agni 1338). Each step has an engine row that asks `WalkDesign` and a viewer row that drives the Trace tab's walk by the names the spec lists (agni 1341).
 - The gate walks the cut from R119. `WALK_DESIGN=jetson` walks from R361, because every pull-up on U80's 1.8 V side is do-not-populate. The cut holds no pull-up, so its pull-up step expects no route.
