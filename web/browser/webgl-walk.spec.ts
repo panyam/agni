@@ -124,10 +124,12 @@ afterAll(async () => {
 const sheetParam = (name: string): string => (name === "Board" ? "board" : `/${name}`);
 
 // open loads a design in one mode on one sheet and waits for it to be drawn.
-async function open(page: Page, walk: Walk, mode: Mode, sheet: string, extra = ""): Promise<void> {
+// view names the drawing to wait for. A comparison covers the canvas, and a WebGL view with no size
+// draws nothing (agni issue 1479), so a compare step waits for its old side instead.
+async function open(page: Page, walk: Walk, mode: Mode, sheet: string, extra = "", view = "canvas"): Promise<void> {
   const q = `mode=${mode}&sheet=${encodeURIComponent(sheetParam(sheet))}${extra}`;
   await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?${q}`, { waitUntil: "networkidle", timeout: 180_000 });
-  await drawnSince(page, mode, 0);
+  await drawnSince(page, mode, 0, view);
   await idle(page);
 }
 
@@ -451,8 +453,9 @@ const EDGE_PX = 3;
 
 // clearBox returns a box around `ref` on the SVG view, with between 20 and 80 px to spare, that no
 // keyed element's edge lies within EDGE_PX of.
-async function clearBox(page: Page, ref: string): Promise<[Point, Point]> {
+async function clearBox(page: Page, ref: string): Promise<[Point, Point] | null> {
   const found = await page.evaluate(({ view, ref, edge }) => {
+    const host = document.querySelector(view)!.getBoundingClientRect();
     const part = [...document.querySelectorAll(`${view} [data-kind="component"][data-ref="${ref}"]`)].map((el) => el.getBoundingClientRect());
     if (part.length === 0) return null;
     const left = Math.min(...part.map((r) => r.left)), top = Math.min(...part.map((r) => r.top));
@@ -460,6 +463,8 @@ async function clearBox(page: Page, ref: string): Promise<[Point, Point]> {
     const keyed = [...document.querySelectorAll(`${view} [data-kind]`)].flatMap((el) => (el.tagName.toLowerCase() === "g" ? [...el.children] : [el])).map((el) => el.getBoundingClientRect());
     for (let m = 20; m <= 80; m += 2) {
       const b = { left: left - m, top: top - m, right: right + m, bottom: bottom + m };
+      // A drag that starts off the drawing lands on whatever lies there, such as a dock tab.
+      if (b.left < host.left + edge || b.top < host.top + edge || b.right > host.right - edge || b.bottom > host.bottom - edge) return null;
       const near = (v: number, side: number) => Math.abs(v - side) <= edge;
       const touches = keyed.some((r) => r.right >= b.left - edge && r.left <= b.right + edge && r.bottom >= b.top - edge && r.top <= b.bottom + edge &&
         (near(r.left, b.left) || near(r.right, b.left) || near(r.left, b.right) || near(r.right, b.right) ||
@@ -468,8 +473,7 @@ async function clearBox(page: Page, ref: string): Promise<[Point, Point]> {
     }
     return null;
   }, { view: SVG, ref, edge: EDGE_PX });
-  if (!found) throw new Unwalkable(`no box around ${ref} keeps every element ${EDGE_PX} px from its sides`);
-  return found as [Point, Point];
+  return found as [Point, Point] | null;
 }
 
 // lonePins keeps the pin points whose pin target lies EDGE_PX or more from any other pin's. A click
@@ -789,9 +793,11 @@ for (const name of chosen) {
 
         await step("box select", {}, async () => {
           await open(page, walk, "svg", walk.sheet);
-          const near = (await candidates(page, { name: "part", sheet: walk.sheet, sel: `${SVG} [data-kind="component"]`, kind: "component", waitsOn: [] }))[0];
-          if (!near) throw new Unwalkable(`${walk.sheet} draws no part to box`);
-          const corners = await clearBox(page, near.ref);
+          const parts = await candidates(page, { name: "part", sheet: walk.sheet, sel: `${SVG} [data-kind="component"]`, kind: "component", waitsOn: [] }, 20);
+          if (parts.length === 0) throw new Unwalkable(`${walk.sheet} draws no part to box`);
+          let corners: [Point, Point] | null = null;
+          for (const p of parts) if ((corners = await clearBox(page, p.ref))) break;
+          if (!corners) throw new Unwalkable(`no box around the ${parts.length} parts nearest the middle fits the drawing and keeps every element ${EDGE_PX} px from its sides`);
           const svgFit = await anchors(page, "svg");
           await open(page, walk, "webgl", walk.sheet);
           const frame = frameBetween(svgFit, await anchors(page, "webgl"));
@@ -939,7 +945,7 @@ for (const name of chosen) {
           await step(`compare two revisions (${mode})`, {}, async () => {
             if (!walk.revB) throw new NotJudged(`${name} has no second revision to compare against`);
             const t0 = Date.now();
-            await open(page, walk, mode, walk.sheet, `&against=${encodeURIComponent(`${walk.mount}/${walk.revB}`)}`);
+            await open(page, walk, mode, walk.sheet, `&against=${encodeURIComponent(`${walk.mount}/${walk.revB}`)}`, "diff-a");
             const drawn = (side: "a" | "b") =>
               mode === "webgl"
                 ? page.waitForFunction((s) => !!document.getElementById(`diff-gl-${s}`)?.dataset.lit, side, { timeout: 180_000 })
