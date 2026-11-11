@@ -188,9 +188,9 @@ export type HighlightSpec = Message<"agni.v1.geom.HighlightSpec"> & {
   shape: HighlightShape;
 
   /**
-   * stroke_scale multiplies the PATH highlighter's width (WS9-044), so a user can make the
-   * focus marker thicker or thinner. 0/unset means 1 (the default width). Only PATH reads it;
-   * OUTLINE and the bounding shapes ignore it.
+   * stroke_scale multiplies the PATH highlighter's width (WS9-044) and the stroke around a
+   * bounding shape (agni issue 1536), so a user can make the focus marker thicker or thinner.
+   * 0/unset means 1 (the default width). OUTLINE ignores it.
    *
    * @generated from field: float stroke_scale = 7;
    */

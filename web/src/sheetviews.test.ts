@@ -66,6 +66,21 @@ describe("the sheet views beside the canvas", () => {
     expect(rendered[0]).toBe("board:webgl");
   });
 
+  it("takes the new sheet's renderer when a view moves, until its reader picks one", async () => {
+    const { views, rendered } = setup(["s1"], { canvas: "svg", board: "webgl" });
+    const view = await views.open("s1");
+    await view.open("board");
+    expect(rendered[rendered.length - 1]).toBe("board:svg"); // jsdom has no WebGL2, so it draws SVG
+    expect(rendered).toContain("board:webgl");
+    rendered.length = 0;
+    await view.open("s1");
+    expect(rendered).toEqual(["s1:svg"]);
+    await view.setRenderer("svg");
+    rendered.length = 0;
+    await view.open("board");
+    expect(rendered).toEqual(["board:svg"]);
+  });
+
   it("keeps a board view in SVG on a software GPU, and lets a caller name the renderer", async () => {
     const soft = setup(["s1"], { canvas: "svg", board: "svg" });
     await soft.views.open("board");

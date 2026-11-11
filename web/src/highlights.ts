@@ -96,9 +96,12 @@ export interface ResolvedHighlight {
   color: string;
   alpha: number;
   shape: HighlightShape; // UNSPECIFIED resolves to OUTLINE
-  strokeScale: number; // PATH width multiplier (WS9-044); 1 when unset or <= 0
+  strokeScale: number; // PATH width and bounding-shape stroke multiplier (WS9-044, agni 1536); 1 when unset or <= 0
   primitives: Set<number>;
   entities: number[][];
+  // parts says, for each entity in entities, whether it is a whole component. Only a part's frame
+  // takes the span floor (frameFloor), so a picked pin keeps a small frame (agni issue 1536).
+  parts: boolean[];
   // subjects names each matched entity once in check.SubjectParam's spelling (`component:R1`,
   // `net:SDA`, `pin:U7.3`, `bus:<id>`), in the order the keys first matched it. A net matched by its
   // id is named by its name when the key carries one. The canvas writes them to data-lit, so a
@@ -189,6 +192,7 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
       strokeScale: spec.strokeScale && spec.strokeScale > 0 ? spec.strokeScale : 1,
       primitives,
       entities: [...byEntity.values()],
+      parts: [...byEntity.keys()].map((k) => k[0] === "c"),
       subjects: [...subjects],
     };
   });
@@ -258,13 +262,33 @@ export function entityBounds(
   return minX > maxX ? null : { minX, minY, maxX, maxY };
 }
 
-// FRAME_FLOOR_FRACTION and FRAME_STROKE_FRACTION size a frame against the sheet it sits on, as
-// fractions of the sheet's smaller world span. The floor is the least pad around an entity, so a
+// FRAME_FLOOR_FRACTION and FRAME_STROKE_FRACTION size a part's frame against the sheet it sits on,
+// as fractions of the sheet's smaller world span. The floor is the least pad around a part, so a
 // small part on a dense board frames at about twice its old width. The stroke is the frame's
-// opaque outline width, before the user's strokeScale. Both are twinned with frameFloorFraction and
-// frameStrokeFraction in core/render/highlight.go (agni issue 1536).
+// outline width, before the user's strokeScale (agni issue 1536).
 export const FRAME_FLOOR_FRACTION = 0.015;
 export const FRAME_STROKE_FRACTION = 0.003;
+
+// frameFloor, frameStroke and frameStrokeAlpha are twinned with the functions of the same names in
+// core/render/highlight.go. highlights.test.ts and highlight_frame_test.go assert the same numbers
+// for one fixture, so WebGL and SVG size a frame alike.
+
+// frameFloor is the least world pad around a part on a sheet whose smaller world span is minSpan.
+export function frameFloor(minSpan: number): number {
+  return FRAME_FLOOR_FRACTION * minSpan;
+}
+
+// frameStroke is a frame's stroke width in world units, scaled by the spec's strokeScale.
+export function frameStroke(minSpan: number, strokeScale: number): number {
+  return FRAME_STROKE_FRACTION * minSpan * strokeScale;
+}
+
+// frameStrokeAlpha is a frame stroke's opacity for a normalized fill alpha. The default fill of 0.3
+// and anything above it give an opaque stroke, and a fainter fill gives a stroke as faint in
+// proportion.
+export function frameStrokeAlpha(fill: number): number {
+  return Math.min(1, fill / 0.3);
+}
 
 // rectRing tessellates a stroke of the given width centred on a frame's padded bbox, as four
 // quads, so the GL overlay draws the opaque outline an SVG stroke draws.

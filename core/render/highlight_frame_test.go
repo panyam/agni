@@ -104,8 +104,8 @@ func TestBoardFramesASmallPartAtTwiceItsOldSpan(t *testing.T) {
 // A large part keeps its 10% pad, since the floor only lifts small parts.
 func TestFrameFloorLeavesALargePartAlone(t *testing.T) {
 	fr := frameBoard(twoPadBoard())
-	e := &highlightEntity{pins: []*geom.Point{{X: 0, Y: 0}, {X: 30_000_000, Y: 30_000_000}}}
-	fb, ok := framedBounds(e, fr.frameFloor())
+	e := &highlightEntity{pins: []*geom.Point{{X: 0, Y: 0}, {X: 30_000_000, Y: 30_000_000}}, part: true}
+	fb, ok := framedBounds(e, fr.entityFloor(e))
 	if !ok {
 		t.Fatal("no bounds")
 	}
@@ -114,9 +114,95 @@ func TestFrameFloorLeavesALargePartAlone(t *testing.T) {
 	}
 }
 
-// The frame's fractions are twinned with web/src/highlights.ts, which asserts the same numbers.
-func TestFrameFractionsTwin(t *testing.T) {
-	if frameFloorFraction != 0.015 || frameStrokeFraction != 0.003 {
-		t.Errorf("fractions = %v, %v; change web/src/highlights.ts with them", frameFloorFraction, frameStrokeFraction)
+// A picked pin keeps the pixel floor, so its frame does not cover the pins beside it. Only a part
+// takes the span floor.
+func TestAPinFramesByThePixelFloor(t *testing.T) {
+	g := highlightFixture()
+	svg := HighlightSVG(g, g.Sheets[0], []*geom.HighlightSpec{{Pins: []*geom.PinRef{{RefDes: "U1", Pin: "1"}}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	fr := frameSheet(g.Sheets[0], indexSymbols(g))
+	want := 2 * max(8, pointPadPx/fr.scale) * fr.scale // the pad before agni issue 1536
+	if w := elemAttr(t, svg, "rect", "width"); math.Abs(w-want) > 0.1 {
+		t.Errorf("a pin's frame is %v px wide, want %v", w, want)
+	}
+	b := twoPadBoard()
+	pin := HighlightBoardSVG(b, []*geom.HighlightSpec{{Pins: []*geom.PinRef{{RefDes: "C1", Pin: "2"}}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	part := HighlightBoardSVG(b, []*geom.HighlightSpec{{Components: []string{"C1"}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	if pw, cw := elemAttr(t, pin, "rect", "width"), elemAttr(t, part, "rect", "width"); pw*3 > cw {
+		t.Errorf("a pad's frame is %v px wide beside its part's %v, want it far smaller", pw, cw)
+	}
+}
+
+// A faint fill gets a stroke as faint in proportion, and the default fill an opaque one.
+func TestFrameStrokeFollowsAFaintFill(t *testing.T) {
+	g := highlightFixture()
+	svg := HighlightSVG(g, g.Sheets[0], []*geom.HighlightSpec{{Components: []string{"R1"}, Alpha: 0.1, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	if got := elemAttr(t, svg, "rect", "stroke-opacity"); math.Abs(got-1.0/3) > 0.05 {
+		t.Errorf("stroke-opacity = %v for fill 0.1, want about 0.33", got)
+	}
+}
+
+// A part with no pads and no art still frames, around its origin.
+func TestBoardFramesAPartWithNoPads(t *testing.T) {
+	b := twoPadBoard()
+	b.Placements = append(b.Placements, &geom.ComponentPlacement{RefDes: "FID1", At: &geom.Point{X: 20_000_000, Y: 20_000_000}, Layer: "F.Cu"})
+	svg := HighlightBoardSVG(b, []*geom.HighlightSpec{{Components: []string{"FID1"}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	if n := strings.Count(svg, "<rect"); n != 1 {
+		t.Errorf("a padless part drew %d frames, want 1: %s", n, svg)
+	}
+}
+
+// A spec that lists a part and a net keeps the net's rings on that part's pads.
+func TestBoardFrameKeepsAListedNetsRings(t *testing.T) {
+	b := twoPadBoard()
+	b.Placements[0].Pads[0].Net = "GND"
+	svg := HighlightBoardSVG(b, []*geom.HighlightSpec{{Components: []string{"C1"}, Nets: []string{"GND"}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	if strings.Count(svg, "<rect") != 1 || strings.Count(svg, "<circle") != 1 {
+		t.Errorf("want C1's frame and one ring on its GND pad: %s", svg)
+	}
+}
+
+// A padstack pad frames by its land, which has its own size and offset, as WebGL packs it.
+func TestBoardFrameBoundsAPadstackLand(t *testing.T) {
+	b := twoPadBoard()
+	b.Layers = []*geom.BoardLayer{{Number: 0, Name: "F.Cu", Kind: "signal"}}
+	b.Padstacks = []*geom.Padstack{{Id: "OFF", Layers: []*geom.PadstackLayer{{Layer: "F.Cu",
+		Pad: &geom.PadShape{Shape: "rect", Size: &geom.Point{X: 600_000, Y: 600_000}, Offset: &geom.Point{X: 0, Y: 5_000_000}}}}}}
+	b.Placements[0].Pads = []*geom.Pad{{Number: "1", At: &geom.Point{}, Padstack: "OFF", Layers: []string{"F.Cu"}}}
+	fr := frameBoard(b)
+	svg := HighlightBoardSVG(b, []*geom.HighlightSpec{{Pins: []*geom.PinRef{{RefDes: "C1", Pin: "1"}}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
+	h := elemAttr(t, svg, "rect", "height") / fr.scale
+	top := elemAttr(t, svg, "rect", "y")
+	_, landTop := worldToPx(fr, 0, 40_000_000+5_300_000)
+	if h < 600_000 || top > landTop {
+		t.Errorf("the pin frame (top %v px, %v nm tall) misses the land 5 mm off the pad (top %v px)", top, h, landTop)
+	}
+}
+
+// TestFrameTwin pins the frame numbers for one fixture. web/src/highlights.test.ts asserts the same
+// numbers, so a change to how either side sizes a frame fails on both.
+func TestFrameTwin(t *testing.T) {
+	const minSpan = 87_000_000
+	if got := frameFloor(minSpan); got != 1305000 {
+		t.Errorf("frameFloor = %v", got)
+	}
+	if got := frameStroke(minSpan, 2); got != 522000 {
+		t.Errorf("frameStroke = %v", got)
+	}
+	if got := frameStrokeAlpha(0.1); got != 0.33333333333333337 {
+		t.Errorf("frameStrokeAlpha(0.1) = %v", got)
+	}
+	if got := frameStrokeAlpha(0.3); got != 1 {
+		t.Errorf("frameStrokeAlpha(0.3) = %v", got)
+	}
+	e := &highlightEntity{pins: []*geom.Point{{X: 0, Y: 0}, {X: 1_600_000, Y: 600_000}}}
+	fb, _ := framedBounds(e, frameFloor(minSpan))
+	cx, cy, r := fb.circle()
+	got := []float64{fb.minX, fb.minY, fb.maxX, fb.maxY, cx, cy, r}
+	want := []float64{-1305000, -1305000, 2905000, 1905000, 800000, 300000, 2159400.3745317534}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("frame = %v, want %v", got, want)
+			break
+		}
 	}
 }

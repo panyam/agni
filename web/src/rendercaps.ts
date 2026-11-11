@@ -11,7 +11,7 @@ export type GpuProbe = () => { renderer: string } | null;
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render/i;
 
-export function defaultRenderMode(probe: GpuProbe = probeGpu): RenderMode {
+export function defaultRenderMode(probe: GpuProbe = probeGpu): Exclude<RenderMode, "native"> {
   const gpu = probe();
   if (!gpu) return "svg";
   return SOFTWARE.test(gpu.renderer) ? "svg" : "webgl";

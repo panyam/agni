@@ -23,9 +23,9 @@ export interface SheetViewHooks {
 }
 
 type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl"> & {
-  // boardRenderer is the renderer a board view opens in when the caller names none and the canvas
-  // draws in SVG, WebGL on a hardware GPU and SVG on a software one (agni issue 1536). Without it a
-  // board view opens in the canvas's renderer, as a schematic view does.
+  // boardRenderer picks a board view's renderer when the caller names none and the canvas draws in
+  // SVG. It answers WebGL on a hardware GPU and SVG on a software one (agni issue 1536). Without it,
+  // a board view opens in the canvas's renderer, as a schematic view does.
   boardRenderer?: () => SurfaceMode;
 };
 
@@ -46,13 +46,12 @@ export class SheetViews {
   // WebGL. Without it a board view opens in WebGL when the canvas does, and otherwise in
   // boardRenderer (agni issue 1536). Any other sheet opens in the canvas's renderer (agni issue 1368).
   async open(sheetId: string, renderer?: SurfaceMode): Promise<SheetPane> {
-    if (!renderer && sheetId === BOARD_SHEET && this.engine.renderer?.() !== "webgl") renderer = this.engine.boardRenderer?.();
     const id = `sheetview-${this.next++}`;
     const pane = new SheetPane(
       id,
       {
         ...this.engine,
-        renderer: renderer ? () => renderer : this.engine.renderer,
+        renderer: renderer ? () => renderer : (sheet) => this.rendererFor(sheet),
         onPick: (p, sel) => this.hooks.onPick(p, sel),
         onPickEmpty: (p) => this.hooks.onPickEmpty(p),
         // A locked peer takes the drawing point at this view's centre and its zoom, so two views of
@@ -76,6 +75,15 @@ export class SheetViews {
     if (this.underlay.length > 0) await pane.setUnderlay(this.underlay);
     await pane.open(sheetId);
     return pane;
+  }
+
+  // rendererFor is the renderer a view takes on a sheet when nobody named one. A board takes WebGL
+  // when the canvas draws in WebGL, and otherwise boardRenderer's answer (agni issue 1536). Any other
+  // sheet takes the canvas's renderer (agni issue 1368).
+  private rendererFor(sheetId: string): SurfaceMode {
+    const canvas = this.engine.renderer?.("") ?? "svg";
+    if (sheetId !== BOARD_SHEET || canvas === "webgl") return canvas;
+    return this.engine.boardRenderer?.() ?? canvas;
   }
 
   // follow hands a selection to every view. The view it was picked in lights it where it is, and the

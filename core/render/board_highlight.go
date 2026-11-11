@@ -21,6 +21,11 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts 
 	fr := frameBoard(b)
 	netID := boardNetIDs(b, resolveStyle(opts))
 	c := svg.Open(fr.pxW, fr.pxH) // transparent, no background rect
+	stacks := padstacksOf(b)
+	copper := map[string]bool{}
+	for _, ly := range copperLayersBackToFront(b) {
+		copper[ly] = true
+	}
 	art := map[string][]*geom.Shape{}
 	for _, gr := range b.GetGraphics() {
 		if gr.GetRefDes() != "" && gr.GetShape() != nil {
@@ -35,7 +40,7 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts 
 		shape := spec.GetShape()
 		framed := shape == geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT || shape == geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_CIRCLE
 		frame := func(e *highlightEntity) {
-			if fb, ok := framedBounds(e, fr.frameFloor()); ok {
+			if fb, ok := framedBounds(e, fr.entityFloor(e)); ok {
 				drawFrame(c, fb, fr, shape == geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_CIRCLE, color,
 					highlightFillAlpha(spec.GetAlpha()), strokeScaleOr1(spec.GetStrokeScale()))
 			}
@@ -74,9 +79,13 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts 
 		for _, pl := range b.GetPlacements() {
 			wholeComp := m.comps[pl.GetRefDes()]
 			if framed && wholeComp {
-				e := &highlightEntity{shapes: art[pl.GetRefDes()]}
+				// The origin keeps a part with no pads and no art framed, as the origin dot marked it.
+				e := &highlightEntity{shapes: art[pl.GetRefDes()], part: true}
+				if pl.GetAt() != nil {
+					e.pins = append(e.pins, pl.GetAt())
+				}
 				for _, pad := range pl.GetPads() {
-					e.pins = append(e.pins, padCorners(pl, pad)...)
+					e.pins = append(e.pins, padCorners(pl, pad, stacks, copper)...)
 				}
 				frame(e)
 			}
@@ -86,9 +95,11 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts 
 				if !wholeComp && !onNet && !onPin {
 					continue
 				}
-				if framed && (wholeComp || onPin && !onNet) {
+				// In a framed spec, a part's or pin's frame stands in for the pad's ring. A pad on a
+				// listed net keeps its ring too, as the net's other pads have one.
+				if framed && !onNet {
 					if !wholeComp {
-						frame(&highlightEntity{pins: padCorners(pl, pad)})
+						frame(&highlightEntity{pins: padCorners(pl, pad, stacks, copper)})
 					}
 					continue
 				}
@@ -107,22 +118,39 @@ func HighlightBoardSVG(b *geom.BoardGeometry, specs []*geom.HighlightSpec, opts 
 	return c.String()
 }
 
-// padCorners returns the world points a pad's packed primitive spans, the corners of its turned
-// rectangle or the rim of its disk, so a board frame bounds the pads WebGL bounds (packPad).
-func padCorners(pl *geom.ComponentPlacement, pad *geom.Pad) []*geom.Point {
+// padCorners returns the world points of a pad's lands, so a board frame bounds the same copper
+// that WebGL bounds. A pad with a padstack has a land on each copper layer, which packStackLayer
+// packs from its outline, its offset and its own size. A pad without one packs as packPad does,
+// a turned rectangle or a disk. A pad with no size falls back to its centre.
+func padCorners(pl *geom.ComponentPlacement, pad *geom.Pad, stacks stackIndex, copper map[string]bool) []*geom.Point {
 	wx, wy := padWorld(pl, pad)
-	var pts [][2]int64
-	if pad.GetShape() == "circle" {
-		pts = diskPts(wx, wy, float64(pad.GetSize().GetX())/2)
+	var out []*geom.Point
+	if st := stacks.of(pad.GetPadstack()); st != nil {
+		deg := geomath.PadAngle(pl, pad)
+		for _, l := range st.ps.GetLayers() {
+			p := l.GetPad()
+			if p == nil || !copper[l.GetLayer()] {
+				continue
+			}
+			cx, cy, ring := landAt(pl, pad, p)
+			if ring == nil {
+				ring = outlinePts(cx, cy, p.GetShape(), p.GetSize(), deg)
+			}
+			out = append(out, ring...)
+		}
 	} else {
-		pts = padQuadPts(wx, wy, pad.GetSize(), geomath.PadAngle(pl, pad))
+		var pts [][2]int64
+		if pad.GetShape() == "circle" {
+			pts = diskPts(wx, wy, float64(pad.GetSize().GetX())/2)
+		} else {
+			pts = padQuadPts(wx, wy, pad.GetSize(), geomath.PadAngle(pl, pad))
+		}
+		for _, p := range pts {
+			out = append(out, &geom.Point{X: p[0], Y: p[1]})
+		}
 	}
-	if len(pts) == 0 {
+	if len(out) == 0 {
 		return []*geom.Point{{X: wx, Y: wy}}
-	}
-	out := make([]*geom.Point, len(pts))
-	for i, p := range pts {
-		out[i] = &geom.Point{X: p[0], Y: p[1]}
 	}
 	return out
 }

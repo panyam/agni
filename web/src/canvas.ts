@@ -6,8 +6,9 @@ import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
-  FRAME_FLOOR_FRACTION,
-  FRAME_STROKE_FRACTION,
+  frameFloor,
+  frameStroke,
+  frameStrokeAlpha,
   HighlightShape,
   PATH_WIDTH_FRACTION,
   circleRing,
@@ -337,18 +338,20 @@ export class CanvasComponent extends BaseComponent {
         // A frame is a translucent fill under an opaque stroke in the same color (agni issue 1536).
         // Both size from the sheet's smaller span, as core/render/highlight.go does, so a small part
         // reads on a dense board and the frame matches the SVG one.
+        // A pin keeps the path marker's width as its floor, a fraction of the sheet that reads at any
+        // coordinate scale, and only a part takes the span floor.
         const ring: number[] = [];
-        const strokeWidth = FRAME_STROKE_FRACTION * minSpan * g.strokeScale;
-        for (const entity of g.entities) {
+        const strokeWidth = frameStroke(minSpan, g.strokeScale);
+        for (const [i, entity] of g.entities.entries()) {
           const b = entityBounds(sheet.vertices, sheet.primitives, entity);
           if (!b) continue;
-          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY, FRAME_FLOOR_FRACTION * minSpan);
+          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY, g.parts[i] ? Math.max(pathHalfWidth, frameFloor(minSpan)) : pathHalfWidth);
           const rect = g.shape === HighlightShape.BOUNDING_RECT;
           tris.push(...(rect ? rectTriangles(frame) : circleTriangles(frame)));
           for (const v of rect ? rectRing(frame, strokeWidth) : circleRing(frame, strokeWidth)) ring.push(v);
         }
         overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });
-        overlays.push({ color: hexToRgba(g.color, fallback, 1), vertices: Int32Array.from(ring, Math.round) });
+        overlays.push({ color: hexToRgba(g.color, fallback, frameStrokeAlpha(g.alpha)), vertices: Int32Array.from(ring, Math.round) });
         continue;
       }
       overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });

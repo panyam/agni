@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_HIGHLIGHT_COLOR, FRAME_FLOOR_FRACTION, FRAME_STROKE_FRACTION, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
+import { DEFAULT_HIGHLIGHT_COLOR, frameFloor, frameStroke, frameStrokeAlpha, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
 import { KIND_LINE_STRIP, type Primitive, type PrimitiveKey } from "./packed.js";
 
 // The fixture mirrors core/render/highlight_test.go, with R1 (rect prim 2, pins 3/4), U1 (rect 5,
@@ -387,7 +387,23 @@ describe("a frame's stroke ring", () => {
     }
   });
 
-  it("sizes against the sheet with the fractions core/render/highlight.go uses", () => {
-    expect([FRAME_FLOOR_FRACTION, FRAME_STROKE_FRACTION]).toEqual([0.015, 0.003]);
+  // TestFrameTwin in core/render/highlight_frame_test.go asserts the same numbers.
+  it("sizes a frame with the numbers core/render/highlight.go gives for the same fixture", () => {
+    const minSpan = 87_000_000;
+    expect(frameFloor(minSpan)).toBe(1305000);
+    expect(frameStroke(minSpan, 2)).toBe(522000);
+    expect(frameStrokeAlpha(0.1)).toBe(0.33333333333333337);
+    expect(frameStrokeAlpha(0.3)).toBe(1);
+    const f = entityFrame(0, 0, 1_600_000, 600_000, frameFloor(minSpan));
+    expect([f.minX, f.minY, f.maxX, f.maxY, f.cx, f.cy, f.r]).toEqual([-1305000, -1305000, 2905000, 1905000, 800000, 300000, 2159400.3745317534]);
+  });
+
+  it("marks which entities are whole parts, so only a part takes the span floor", () => {
+    const keys = [
+      { primitive: 0, refDes: "R1", net: "", netId: "", pin: "", busId: "" },
+      { primitive: 1, refDes: "U1", net: "", netId: "", pin: "7", busId: "" },
+    ];
+    const [g] = resolveHighlights(keys as never, [{ components: ["R1"], pins: [{ refDes: "U1", pin: "7" }] }]);
+    expect(g.parts).toEqual([true, false]);
   });
 });

@@ -119,8 +119,9 @@ export interface SheetPaneDeps {
   onOpened: (pane: SheetPane) => void;
   // turns keeps each sheet's turn for the open design.
   turns?: TurnStore;
-  // renderer is the renderer a new view starts in, the canvas's own (agni issue 1368).
-  renderer?: () => SurfaceMode;
+  // renderer picks the renderer for a sheet, the canvas's own by default (agni issue 1368). The view
+  // asks again each time it moves to another sheet, until its reader picks one (agni issue 1536).
+  renderer?: (sheetId: string) => SurfaceMode;
   // gl builds the WebGL drawing when the reader turns WebGL on. glDrawing when unset.
   gl?: GlFactory;
   // parkAfterMs is how long an SVG drawing sits idle before an image stands in for it. PARK_AFTER_MS
@@ -153,6 +154,8 @@ export class SheetPane {
   private hiddenLayers = new Set<string>();
   // layersChosen says the reader picked this view's layers, so a board drawn again keeps them rather
   // than going back to defaultHidden.
+  // rendererChosen is set once the reader picks this view's renderer, which then holds across sheets.
+  private rendererChosen = false;
   private layersChosen = false;
   private readonly flipButtons: Record<"h" | "v", HTMLButtonElement>;
   private turn: ViewTurn = { orientation: UPRIGHT };
@@ -295,7 +298,7 @@ export class SheetPane {
     this.surface.onPick = (sel) => this.deps.onPick(this, sel);
     this.surface.onPickEmpty = () => this.deps.onPickEmpty(this);
     this.surface.onViewChange = () => this.deps.onViewChange(this, this.surface.svg.getView());
-    this.surface.setMode(this.deps.renderer?.() ?? "svg");
+    this.surface.setMode(this.deps.renderer?.("") ?? "svg");
     this.surface.parkWhenIdle(this.deps.parkAfterMs ?? PARK_AFTER_MS);
     this.webglBox.checked = this.surface.mode === "webgl";
   }
@@ -317,6 +320,7 @@ export class SheetPane {
 
   // setRenderer switches this view to SVG or WebGL and draws its sheet again in it.
   async setRenderer(mode: SurfaceMode): Promise<void> {
+    this.rendererChosen = true;
     this.surface.setMode(mode);
     this.webglBox.checked = mode === "webgl";
     if (this.sheet) await this.open(this.sheet);
@@ -350,6 +354,12 @@ export class SheetPane {
   }
 
   private async draw(sheetId: string, n: number): Promise<void> {
+    // A view moved to another sheet takes that sheet's renderer, so a board view opens in WebGL and a
+    // schematic in the canvas's renderer, unless the reader picked one for this view.
+    if (sheetId !== this.sheet && !this.rendererChosen && this.deps.renderer) {
+      this.surface.setMode(this.deps.renderer(sheetId));
+      this.webglBox.checked = this.surface.mode === "webgl";
+    }
     this.sheet = sheetId;
     this.fillPicker();
     let drawing: SheetDrawing = { svg: "", boardLayers: [] };
