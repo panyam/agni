@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, median, openDetail, pendingFiles, slowestFetch, sumSplits, table, waitedOn, type Row } from "../browser/exercise-report.js";
+import { bootTimeline, breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, median, openDetail, pendingFiles, slowestFetch, sumSplits, table, waitedOn, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -207,5 +207,29 @@ describe("a board open's detail", () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([4, 1, 3, 2])).toBe(2.5);
     expect(median([])).toBeNaN();
+  });
+});
+
+// agni issue 1524: each page an open passes through logs its startup on its own clock.
+describe("an open's startup timeline", () => {
+  const loadBoot = 'agni boot: {"page":"load","engine":"wasm","scriptMs":95,"serveWorkerMs":412,"jobsWorkerMs":431,"engineMs":433}';
+  const viewerBoot = 'agni boot: {"page":"viewer","engine":"wasm","scriptMs":88,"serveWorkerMs":301,"jobsWorkerMs":318,"engineMs":320}';
+  const timed = (rpc: string, startMs: number) => `agni timing ${rpc}: {"totalMicros":"1000","page":{"startMs":${startMs},"wallMs":10}}`;
+
+  it("lays out each page from its boot line, its first request and the draw on the last page's clock", () => {
+    expect(bootTimeline([loadBoot, timed("Ingest", 440), timed("ListDesignFiles", 436), viewerBoot, timed("GetSheet", 331)], 590)).toBe(
+      "load page: scripts 95 ms, serve worker 412 ms, jobs worker 431 ms, engine 433 ms, first request 436 ms; " +
+        "viewer page: scripts 88 ms, serve worker 301 ms, jobs worker 318 ms, engine 320 ms, first request 331 ms, drawn 590 ms",
+    );
+  });
+
+  it("shows the stages a server-engine page logs, and leads the open's detail with the timeline", () => {
+    const serverBoot = 'agni boot: {"page":"viewer","engine":"server","scriptMs":61}';
+    expect(bootTimeline([serverBoot, timed("GetSheet", 70)], 412)).toBe("viewer page: scripts 61 ms, first request 70 ms, drawn 412 ms");
+    expect(openDetail([serverBoot, timed("GetSheet", 70)], 412)).toMatch(/^viewer page: scripts 61 ms, first request 70 ms, drawn 412 ms; GetSheet /);
+  });
+
+  it("says nothing when no page logged a boot line", () => {
+    expect(bootTimeline([timed("GetSheet", 70)], 412)).toBe("");
   });
 });

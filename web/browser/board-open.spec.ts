@@ -78,6 +78,8 @@ interface Open {
   // rawBytes is what the design's files cost over the network before the draw. A file the browser
   // revalidated arrives as a 304 with no body (agni issue 1502).
   rawBytes: number;
+  // drawnMs is the draw on the drawing page's own clock, for its startup timeline (agni issue 1524).
+  drawnMs: number;
 }
 
 // timed runs a navigation and waits for the canvas's first WebGL draw in the document it lands on.
@@ -127,13 +129,13 @@ async function timed(page: Page, navigate: () => Promise<unknown>): Promise<Open
             const d = (e as PerformanceMark).detail as { mode?: string; view?: string } | null;
             return d?.mode === "webgl" && (d.view ?? "canvas") === "canvas";
           });
-          return m ? performance.timeOrigin + m.startTime : null;
+          return m ? { wall: performance.timeOrigin + m.startTime, page: m.startTime } : null;
         }, DRAWN)
         .catch(() => null);
       if (at !== null) {
         // A request that started before the draw may answer after it. Give those a moment to log.
         await new Promise((r) => setTimeout(r, 1000));
-        return { ms: at - t0, lines: before(at), rawBytes };
+        return { ms: at.wall - t0, lines: before(at.wall), rawBytes, drawnMs: at.page };
       }
       await new Promise((r) => setTimeout(r, 25));
     }
@@ -188,7 +190,7 @@ it(
         design: chosen,
         status: judged && ms > target(k) ? "fail" : "ok",
         ms,
-        detail: `${judge}${all}${openDetail(nearest.lines)}; ${(nearest.rawBytes / 1e6).toFixed(1)} MB of files over the network; load average ${load}`,
+        detail: `${judge}${all}${openDetail(nearest.lines, nearest.drawnMs)}; ${(nearest.rawBytes / 1e6).toFixed(1)} MB of files over the network; load average ${load}`,
       };
     });
     const report = `## Board open, ${design.about}\n\n${table(rows)}\n`;
@@ -203,6 +205,9 @@ it(
     // Every open drew, or timed() threw. Each row also names at least one timed request, so a page
     // that stopped logging under ?timing fails here rather than reporting a bare time.
     expect(rows.filter((r) => r.detail.includes("no timed requests")).map((r) => r.step)).toEqual([]);
+    // Every page logs its startup timeline, and a page in the browser engine names its workers.
+    expect(rows.filter((r) => !r.detail.includes("viewer page: scripts")).map((r) => r.step)).toEqual([]);
+    expect(rows.filter((r) => r.step.startsWith("wasm") && !/viewer page: [^;]*serve worker [^;]*engine /.test(r.detail)).map((r) => r.step)).toEqual([]);
     expect(rows).toHaveLength(KINDS.length);
     expect(exitCode(rows)).toBe(0);
   },

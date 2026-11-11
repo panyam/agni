@@ -106,6 +106,10 @@ export interface EngineOptions {
   // oneLane runs both kinds of request on one worker, as the engine did before #911. It is for
   // measuring what the lanes save; no page sets it.
   oneLane?: boolean;
+  // onReady hears when each lane's first worker has loaded, on the page's clock (agni issue 1524).
+  // Loading covers fetching, compiling and starting agni.wasm. One worker serving both lanes is
+  // heard once, as serve.
+  onReady?: (lane: LaneName, atMs: number) => void;
   // serveMaxBytes is the serve lane's memory limit. Wasm memory never shrinks, so a worker that
   // read a large design keeps the read's peak for the rest of the visit. Once the worker is past
   // the limit and idle, the lane replaces it only when a fresh one would come back smaller
@@ -222,7 +226,8 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
         stats: async () => ({ memoryBytes: 0 }),
       };
   const lanes: Record<LaneName, EngineLane> = { serve, jobs, prepare };
-  await Promise.all([serve.holder(), jobs.holder()]);
+  const ready = (lane: LaneName, l: EngineLane) => l.holder().then(() => opts.onReady?.(lane, performance.now()));
+  await Promise.all(jobs === serve ? [ready("serve", serve)] : [ready("serve", serve), ready("jobs", jobs)]);
 
   return {
     fetch: (input, init) => lanes[laneFor(new URL(input instanceof Request ? input.url : String(input), location.href))].fetch(input, init),
