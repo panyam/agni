@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-11-11
+
+A board opens faster in the browser (issue 1499). On Jetson a server reload draws in 302 ms, a
+browser-engine reload in 491 ms and a first browser-engine visit in 1.9 s. A page opens in WebGL on
+a hardware GPU (PR 1505), a board draws before the schematic (PR 1511), the viewer speaks binary
+Connect (PR 1516), and the packed board is kept in the cache (PR 1523). A browser worker restores a
+stored board by the listed hashes (PR 1520), and `agni serve` seeds a first visit's store (PR 1530).
+A checklist item can take its answer from another tool's report (PR 1496). It is a patch, with no
+change to an existing Go API. The full write-up is [RELEASES/v0.6.9.md](RELEASES/v0.6.9.md).
+
 ## [0.6.8] - 2026-11-10
 
 A board view beside the schematic stays on the board when the board does not place a part, lights
