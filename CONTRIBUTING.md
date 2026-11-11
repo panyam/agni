@@ -24,7 +24,7 @@ the full list and the ways a run misreads.
 
 ## Read this first
 
-- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C35). They keep
+- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C36). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change. If a PR
   violates one, the review asks it to change, or to justify amending the constraint.
 - The [docs site](https://panyam.github.io/agni/overview/) is the engineering source of truth, and
@@ -76,6 +76,105 @@ sample export.
 **The rest of this file is operating discipline for maintainers and coding agents running several
 checkouts of this repo at once.** An outside contributor sending a single PR does not need it. Every
 rule below is here because it cost real work at least once.
+
+## The gate
+
+`make testall` is the full gate. CI runs exactly it, as four parallel jobs (agni 1147). The jobs are
+`testall-test`, `testall-scan`, `testall-docs` and `browser-test`, and `testall-core` runs the first
+three. Read `docsite/content/build/the-gate.md` before trusting a run. It lists three ways to misread
+the gate. A wrapper can report its own status rather than make's and turn red into green. A
+commit-first ordering rule applies. Each clone needs its own `pnpm install`. The page also lists one
+way a fine tree reads red. A stray `agni serve` on :8080 fails three verdict-link tests, so reproduce
+against unmodified `main` before reporting a regression. It also covers what a run leaves behind and
+the rules for generated code.
+
+- **From a worktree, run `make -k testall`.** A plain `make` stops at the first failure, and then
+  `python-test`, `tutorial-runs-check` and `docsite-images-check` never run.
+- **Build in a worktree with the default Go, never `GOTOOLCHAIN=go1.26.9`.** Go 1.26 finds a
+  repository only by a `.git` directory. A linked worktree's `.git` is a file, so Go 1.26 runs no git
+  and stamps `(devel)` (golang/go#58218, fixed in go1.27). A `(devel)` wasm has an empty
+  `StoreVersion` and keeps nothing. `browser-test` and rung 12's capture then fail, and a timed walk
+  reports `design=built` where it should read `design=store` (#957).
+- **`tutorial-runs-check` regenerates captures and does not read the prose quoting them.** A
+  tutorial can cite numbers that a change moved, and the gate stays green. A capture step that exits
+  non-zero and captures nothing is a build error unless its spec sets `exit: true` (agni 825).
+- A checkout from before agni 853 may hold an untracked `web/static/seed/`. `fixture-copies-check`
+  flags it, so delete it.
+- `make browser-test` is in the gate and needs a Chromium. `docsite/content/build/the-gate.md` says
+  what belongs in it.
+
+### Security scanners
+
+The Makefile pins `STATICCHECK`, `GOSEC`, `GITLEAKS` and `GOVULNCHECK`, and each scanner runs through
+`go run` at its pinned version. They scan the two shipped modules, the root and `datasheet`.
+
+- The gate runs `lint` (staticcheck), `seccheck` (gosec, medium and up) and `secrets` (gitleaks over
+  the whole history).
+- The gate also runs `binaries-check` (`hack/check_no_binaries.sh`). It refuses a tracked compiled
+  executable by its magic bytes, and any tracked file over 5 MB. A bare `go build` in an example's
+  folder writes a binary named after the folder (#1405).
+- `vulncheck` stays out of the gate, since the advisory database moves without the code.
+  `vulncheck.yml` runs it weekly and per tag, and `make audit` runs all four scanners.
+- Fix a gosec finding, or annotate it on its own line as `// #nosec G<n> -- <why>`. Never exclude it
+  in the Makefile. The annotation carries the reason to an outside scanner too.
+- **gosec runs under the Go version that `go.mod` names (`GOTOOLCHAIN`).** Under a newer Go its SSA
+  rules (G115, G703, G710, G112, G122) skip silently, and a local run reads clean.
+- A narrowing of a count or coordinate goes through `core/num`, which saturates. A design file can
+  come from anyone, and a wrapped `int32` reads as a real value.
+- gitleaks installs as `github.com/zricethezav/gitleaks/v8`. That is its module path, whatever its
+  repo is called.
+- `SECURITY.md` is the reporting policy.
+
+### Tidy modules
+
+**A module that builds may still be untidy, and the gate checks both.** `tidyall-check` runs `go mod
+tidy` over the root and every example module, and fails on any difference. It takes about 5 s and
+runs near the front. So a stale `go.mod` shows up there rather than as a later `examples-test`
+failure. An untidy module keeps building until a later change needs a requirement it never recorded.
+`make tidyall` fixes it.
+
+`.github/dependabot.yml` lists every module directory, with the examples by glob, and groups security
+updates (PR 782). A bump that touches the root alone leaves every nested module stale and fails
+`tidyall-check`. A new module outside `examples/` needs a line there.
+
+## Wiring, per subsystem
+
+Each kind of addition below has a fixed edit list, and a missed edit fails silently. Most rows name a
+test that catches the miss. Where the last column says NOTHING, no test guards the gap, and the row
+names the gap so a reader sees it.
+
+| Adding | Edits | Read | Enforced by |
+|---|---|---|---|
+| A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
+| A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
+| A web viewer panel | 4, plus 2 more if it docks | `docsite/content/architecture/web-client.md` | `web/src/composition.test.ts`, `dock.test.ts` |
+| A canvas note strip (undrawn, stale-link, hierarchy) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples; the hole goes inside `.canvas-notes` in `ViewerPage.html`, which stacks the strips so two never paint over each other | the compiler for the `ViewSink` channel, `composition.test.ts` for the template hole |
+| A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
+| A field in the viewer shell (`ViewerPage.html`) | 3 (the template, the page struct in `cmd/agni/webpage.go`, `servedFields` in `web/src/composition.test.ts`) | `docsite/content/architecture/web-services.md` | `composition.test.ts` throws on an unfilled field; `agni site` renders the same struct |
+| A format reader | see the page | `docsite/content/build/format-reader.md` | see the page |
+| A check rule | see the page | `docsite/content/build/check-rule.md` | see the page |
+| A query relation | 7, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check`, `TestColumnKindsMatchGolden` |
+| A library member (derived relation) | 4 (the rule in a `stdlib/lib/*.dl` file with a `#` summary and typed head, its page in `stdlib/lib/docs/`, `columnkinds.golden`, `make catalog-docs`) | `docsite/content/build/library-member.md` | `TestEveryMemberIsDocumentedAndTyped`, `TestEveryMemberHasItsDoc`, `TestDocQueriesValidate`, `TestColumnKindsMatchGolden`, `catalog-docs-check` |
+| A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
+| A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
+| A multi-command `agniRun` block | 1 (`steps:` in the spec, one per command) | `docsite/README.md` | `tutorial-runs-check` |
+| A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
+| A file added to a capture's fixture directory | 1, plus `make tutorial-runs` AFTER committing it | `build/the-gate.md` | `tutorial-runs-check`, but only once the file is committed |
+| A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
+| A new EVIDENCE TIER for a derived IR field | 7 (the pass, the source enum value, the `Loader` field, the `Loader.ReadDesign` call, `service.ReadOptions` + `Overlay.ReadOptions`, the `check.Model` call, `hack/ir_model_baseline.txt`) | C9's evidence-tier variant, `architecture/ingestion-and-ir.md` | the C19 ratchet catches the pass; NOTHING catches a tier that reaches one surface and not the other (agni 710) |
+| A host that reads designs | 1 (go through `formats.Loader`, never a bare reader, and through `service.LoaderIn` so its reads can be kept, agni 895) | `build/evidence.md` | `TestReadCarriesTheIngestionPasses` in `examples/common`; nothing guards a NEW host |
+| An engine-drawn image that the docs embed | 1 (a line in `docsite/images.sh`, then `make -C docsite images`) | `build/the-gate.md` | `docsite-images-check` |
+| A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
+| An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of four homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote; NOTHING checks that a rule has one |
+
+**The relation row's sixth edit is `service/testdata/columnkinds.golden`.** The file snapshots how
+every query column types (agni 687). Regenerate it with `UPDATE_GOLDEN=1 go test ./service/ -run
+TestColumnKindsMatchGolden`, and read the diff. A new relation only adds lines, so any other change
+means an existing column retyped.
+
+**The seventh is `dimensionlessNumericRelations` in `stdlib/relations/facts_test.go`.** It applies to
+a relation whose number is a bare count. `TestNoRelationPublishesAnUnlabelledNumber` fails until the
+relation is listed there on purpose (agni 727).
 
 ## Working across multiple checkouts
 
@@ -209,6 +308,7 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   additionally RAN the `> review.html` redirect inside an example command and left the empty file in
   the tree. The edit reported success, so the damage was only visible by reading the result back.
   Quote the delimiter whenever the body is prose, and read the output back before pushing it.
+  `gh pr edit` fed that way returns 0 with the body damaged, so read a PR body back after every edit.
 - **zsh reads `$var:r` as a history modifier.** `git push origin $c:refs/heads/x` strips the
   colon and what follows from `$c` and pushes a nonsense refspec. Write `"${c}:refs/heads/x"`.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
@@ -230,13 +330,18 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 - **Piping a long-running script into `head` makes it look like it fell through.** `head` exits after
   its lines, the writer takes SIGPIPE, and with no `set -e` bash carries on to the next command, so
   output appears past the point the script should have blocked. Redirect to a file and read the file.
-- **To undo a temporary red-check edit, reverse it with the tool that made it, never `git checkout`.**
-  `git checkout <file>` and `git checkout HEAD -- <file>` restore from a COMMIT, not from "before I
-  typed that", so on a file carrying uncommitted work they destroy all of it including the change the
-  red-check was proving. This cost real work three times in one session. Commit first, even a WIP
-  commit, before any red-check pass; then break and un-break with the same replace run applied
-  backwards. The symptom is confusing rather than obvious, since a test that just passed starts
-  failing and the cause looks like the change rather than the undo.
+- **To undo a temporary red-check edit, restore a copy of the file or reverse the edit with the tool
+  that made it, never `git checkout`.** `git checkout <file>` and `git checkout HEAD -- <file>`
+  restore from a COMMIT, not from "before I typed that". On a file carrying uncommitted work they
+  destroy all of it, including the change the red-check was proving, and the next run passes over
+  nothing. Commit first, even a WIP commit, or copy the file aside before breaking it. Restore it in
+  a command of its own. Chained after the test with `&&`, the restore is skipped when the broken file
+  fails to build, and the next backup copies the broken file. Removing a package's last use of an
+  import breaks the build the same way, so disable a call in place (`&& false`) rather than deleting
+  it. The symptom is confusing rather than obvious, since a test that just passed starts failing and
+  the cause looks like the change rather than the undo.
+- **`go test -cpuprofile` leaves `<pkg>.test`, a 30 MB binary, in the working directory.** The file
+  is untracked and not ignored. Delete it before staging, and never `git add -A`.
 - **A capture restamp belongs in its OWN commit, after the fixture that moved it.** A capture's stamp
   hashes every TRACKED file in its fixture directory, so adding one file there restamps every capture
   rooted at it. One change put 25 `.output` files in the diff, each a single `#agni-run` line, none of
@@ -258,6 +363,62 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   reason you think, rather than red because the package does not compile. The
   [evidence page](docsite/content/build/evidence.md) says what that red-check tells you and the two
   ways it misleads.
+
+## Ways to be told a thing worked when it did not
+
+Each of these exits 0.
+
+- **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
+  negative result needs a positive control. A positive rate needs a precision check. Every new test
+  needs a red-check.
+- **A stray `agni serve` answers instead of yours.** A newer binary can fail to bind its port, and
+  the "address already in use" line scrolls past. Run `pkill -f "agni serve"` before believing
+  anything served, and re-check the version that answered. **That `pkill` also matches the shell
+  running it.** Typed ahead of `make testall` on one command line, it kills the gate with exit 144
+  and no output. Run `pgrep -af` first. Something other than agni may hold :8080, such as a
+  code-server, and that process is not yours to kill.
+- **`go test` prints FAIL for a build failure too.** A red-check that greps for `^ok` reads a package
+  that does not compile as a pass. Confirm that a red-check names the assertion it failed on. A
+  red-check that reverts a declaration fails the same way. Suppose a new test refers to a symbol in a
+  source file, and the red-check reverts that file. The test then fails to compile and proves
+  nothing. Disable the behaviour and keep the symbol.
+- **`catalog-docs-check` reads `git status`, not a diff against a temp copy.** Regenerating is not
+  enough. The generated file has to be committed, or the gate stays red on a correct tree.
+  `tutorial-runs` works the same way.
+- **A new test file can replace an existing one of the same name** (agni 987). The gate stays green,
+  because the old file's test is gone. `git status` showing `M` for a file you meant to create is the
+  sign, so check the name first.
+- **A test that loops over rows passes over zero rows.** Give it a count guard (agni 727).
+- **Time two tools on the same clock.** A timer started inside Python runs after the interpreter and
+  the client library load. That time does not compare with another tool's launch-to-exit time.
+  Compare launch to exit on an idle machine, checking the load average first, or say which clock a
+  number is.
+
+## A new constraint owes a test
+
+A rule in `CONSTRAINTS.md` owes a test, never a command typed into the document. The file's header
+keeps the count of rules the gate enforces and rules that stay review questions. What a test reads
+decides which of four homes it goes in.
+
+- A test of the package graph or the module goes in the root `deps_test.go`.
+- A test of one package's own rule goes beside that package, as in `service/transport_guard_test.go`
+  and `core/facts`.
+- A sweep over source goes in `internal/constraints`.
+- A parity test of what two surfaces print for one answer goes beside the surface, as C35 does in
+  `cmd/agni/tabulate_test.go`.
+
+`docsite/content/build/the-gate.md` has the full account. Two shapes from it are worth copying. A
+graph or single-writer check needs a positive control, so a pattern matching nothing fails rather
+than reading as clean. An invariant narrower than any sweep becomes a ratchet with an allowlist
+rather than being weakened, as C24's "never compared" did.
+
+## Proving a comment-only change
+
+Compare the code with its comments stripped, rather than reading the diff. A sweep over hundreds of
+files hides one edited code line easily. For Go, compare the `go/scanner` token streams of each file
+and of `git show <base>:<file>`, skipping comments. For TypeScript, print both through the compiler
+API's printer with `removeComments`. Give the check a positive control, such as a deliberate `var _ =
+0`. A control that only adds whitespace changes no token and proves nothing (PR #754).
 
 ## Check a ticket against the tree before planning against it
 
