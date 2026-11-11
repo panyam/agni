@@ -9,8 +9,8 @@ A board takes power from either a wall adapter or a USB port, whichever is prese
 feeds the rail through something one-way, so the adapter cannot push current back into the USB host
 and the USB host can't push it into the adapter. That arrangement is called ORing.
 
-A plain diode does the job and costs about 0.4 V of drop, which at a few amps is a hot part and a
-lower rail. An ideal diode does it with a [MOSFET](../mosfet/) and a controller instead.
+A diode does the job, and even a Schottky costs about 0.4 V of drop, against about 0.7 V for a
+silicon one. At a few amps that is a hot part and a lower rail. An ideal diode does it with a [MOSFET](../mosfet/) and a controller instead.
 
 {{ includeFile "figures/ideal-diode.svg" }}
 
