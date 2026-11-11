@@ -6,6 +6,8 @@ A component is joined to a seeded datasheet spec, and one of its supply pins is 
 rail's name states a nominal voltage above **that pin's own** absolute-maximum rating. The rating
 comes from a limit row that the datasheet binds to that terminal.
 
+![a supply pin on a rail above that pin's own absolute maximum is flagged; each pin under its own limit is fine](images/pin-exceeds-abs-max.svg)
+
 ### Why engineers want it
 
 A part can have several supply pins rated differently. A voltage translator sits between two

@@ -6,6 +6,8 @@ A component is joined to a seeded datasheet spec. The datasheet **requires** a t
 between two of its pins, stated with a modal verb like "shall never exceed". The difference between
 those two pins breaks the bound.
 
+![a datasheet requiring VCCA at or below VCCB, broken by the rails, is flagged; rails that keep the bound are fine](images/pin-tracking-violated.svg)
+
 ### Why engineers want it
 
 A part with several supplies routinely constrains them against **each other**, not just against

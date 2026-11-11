@@ -13,6 +13,8 @@ A net's **name declares a voltage** and the net **feeds at least one supply pin*
 carry the rail role. Two independent channels say "rail" and the engine's classification says
 otherwise, so every rail-quantified rule skips it.
 
+![a net whose name states a voltage and which feeds a supply pin, but is not a rail, is flagged; the same net with the project's rail pattern is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/rail-not-classified.svg)
+
 This is a read-health tripwire, not a design defect. Nothing here says the board is wrong.
 
 ### Why engineers want it

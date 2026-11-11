@@ -7,6 +7,8 @@ the source format reads as one ordinary net. KiCad writes a bus as `DATA[0..7]` 
 that. A KiCad label written `DATA[7:0]`, the spelling xschem and gEDA use, is a plain scalar net
 whose name happens to contain brackets and a colon.
 
+![in KiCad a range label spelled with a colon is one net, while KiCad's own two-dot spelling is a bus of eight](images/bus-spelling-not-a-bus.svg)
+
 ### Why engineers want it
 
 Whoever typed `DATA[7:0]` meant eight signals. KiCad makes one net of it. Wherever that label

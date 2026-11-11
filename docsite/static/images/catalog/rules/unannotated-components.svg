@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="unannotated-components rule: parts still carrying placeholder designators such as R? are flagged; annotated parts are fine">
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">placeholder designators</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">annotated</text>
+  <rect x="60" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <line x1="46" y1="115" x2="60" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="110" y1="115" x2="124" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="85" y="96" font-size="13" fill="#d64545" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R?</text>
+  <rect x="150" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <line x1="136" y1="115" x2="150" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="200" y1="115" x2="214" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="175" y="96" font-size="13" fill="#d64545" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R?</text>
+  <rect x="240" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <line x1="226" y1="115" x2="240" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="290" y1="115" x2="304" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="265" y="96" font-size="13" fill="#d64545" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">C?</text>
+  <rect x="400" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="386" y1="115" x2="400" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="450" y1="115" x2="464" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="425" y="96" font-size="13" fill="#394049" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <rect x="490" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="476" y1="115" x2="490" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="540" y1="115" x2="554" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="515" y="96" font-size="13" fill="#394049" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R2</text>
+  <rect x="580" y="104" width="50" height="22" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="566" y1="115" x2="580" y2="115" stroke="#394049" stroke-width="2"/>
+  <line x1="630" y1="115" x2="644" y2="115" stroke="#394049" stroke-width="2"/>
+  <text x="605" y="96" font-size="13" fill="#394049" font-weight="600" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">C1</text>
+  <text x="170" y="172" font-size="12" fill="#d64545" text-anchor="middle">no BOM line, no board match</text>
+  <text x="170" y="196" font-size="11" fill="#6b7280" text-anchor="middle">every R? shares one name</text>
+  <text x="510" y="172" font-size="12" fill="#2f9e57" text-anchor="middle">sheet, BOM and board join</text>
+  <text x="510" y="196" font-size="11" fill="#6b7280" text-anchor="middle">on the designator</text>
+</svg>

@@ -4,6 +4,8 @@
 
 An I2C net reaches one rail through more than one resistor. The bus is pulled up twice.
 
+![an I2C net pulled up twice to one rail is flagged; a single pull-up is fine](images/i2c-redundant-pull-up.svg)
+
 The check counts DISTINCT resistors that take the net to a rail, within three series crossings. Two
 routes through one resistor are one pull-up; two resistors are two, however they are drawn.
 

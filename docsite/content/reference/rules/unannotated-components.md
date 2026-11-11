@@ -14,6 +14,8 @@ A part's reference designator is still a placeholder rather than an assigned nam
 and turns every `R?` into `R1`, `R2`, `R3`. Until it runs, or for parts added after it last ran, the
 file carries the placeholder.
 
+![parts still carrying placeholder designators such as R? are flagged; annotated parts are fine]({{.Site.PathPrefix}}/static/images/catalog/rules/unannotated-components.svg)
+
 The parts are drawn, placed and connected. Only their names are missing.
 
 ### Why engineers want it
