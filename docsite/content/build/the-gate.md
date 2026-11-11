@@ -390,8 +390,10 @@ red for a reason unrelated to the change under test. Then v0.2.0 shipped a viewe
 surface booted hidden behind the Trace tab, and that overturned the argument. Every jsdom assertion
 passed, because the textarea was present the whole time and only its visibility was wrong. The
 browser suite did catch it, but it ran after the tag was pushed. If a suite runs only when somebody
-remembers, it runs after the release. The specs take about 16 seconds; the real cost was always the
-browser download, which is now a cached CI step and a one-time cost for a developer.
+remembers, it runs after the release. The browser download is a cached CI step and a one-time cost
+for a developer. On 2026-11-11 the suite took about five minutes run serially on a laptop and eight
+on one CI runner. Its spec files run one at a time, so CI splits them into four shards on four
+runners (agni 1147).
 
 **Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, which runs in a
 fraction of the time and on any machine. A test belongs here only when its claim is about pixels.

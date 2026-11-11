@@ -378,8 +378,9 @@ web-test:
 # would have caught it only ran after the tag was pushed. A suite that runs when somebody remembers
 # is a suite that runs after the release.
 #
-# The speed objection did not survive measurement either: the specs take about 16 seconds. The cost
-# is the browser download, which CI caches and a developer pays once.
+# The suite has grown since then. On 2026-11-11 it took about five minutes run serially on a laptop
+# and eight on one CI runner, so CI runs it as four shards of two to five minutes each (agni issue
+# 1147). The browser download is a cached CI step and a one-time cost for a developer.
 #
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
@@ -394,8 +395,8 @@ browser-test: ui wasm samples-oracle
 	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser $(if $(SHARD),--shard=$(SHARD))
 
 # hooks installs an opt-in pre-push hook that runs the browser suite before a push (hack/pre-push.sh).
-# CI runs the suite on every push anyway; the hook is for hearing about a layout break in two minutes
-# on your own machine rather than after the CI queue. `git push --no-verify` skips it.
+# CI runs the suite on every push anyway. The full suite takes about five minutes locally, which is
+# why the hook is opt-in. `git push --no-verify` skips it.
 hooks:
 	ln -sf ../../hack/pre-push.sh "$$(git rev-parse --git-common-dir)/hooks/pre-push"
 	@echo "installed $$(git rev-parse --git-common-dir)/hooks/pre-push"
