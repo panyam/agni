@@ -15,7 +15,7 @@ arriving there is dissipated as heat. A plain inductor would reflect it back dow
 
 The usual job is to stop one part of a board polluting another. A switching regulator makes a rail
 carrying tens of millivolts of ripple at its switching frequency and every harmonic above it. That
-ripple is fine for logic and not fine for an ADC reference. Put a bead in series between the two,
+ripple is fine for logic and not fine for an ADC reference. Put a bead {{ explainable "series-and-shunt" "in series" }} between the two,
 with decoupling on each side of it. The bead gives that noise somewhere to go, and the quiet side
 keeps the DC it needs.
 

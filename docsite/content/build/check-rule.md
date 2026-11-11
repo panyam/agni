@@ -121,7 +121,7 @@ highlights the right instance rather than all of them.
 Proven vocabulary goes in the Spec AST. Anything multi-clause goes behind a registered SpecFunc that
 declares its own reads and primitives, so the derived reads still cover the code behind that
 boundary. The example uses two FFIs plus existing facts. `has_test_points` is the channel gate.
-`not_a_supply` recognises a floating pad or a divider tap by structure.
+`not_a_supply` recognises a floating pad or a {{ explainable "voltage-divider" }} tap by structure.
 
     Over: nets
     Scope: has_test_points(design)
@@ -280,7 +280,7 @@ apart lets a report say what the design lacks rather than guess.
 |---|---|---|
 | `Pass` | `pass` | the subject reached the comparison and cleared it |
 | `Fail` | `fail` | the subject reached the comparison and did not clear it |
-| `Inconclusive` | `inconclusive` | every input was present and the rule reached its decision, but the design cannot discriminate between the cases. A transistor in a power path may be an ideal-diode controller giving reverse protection or a plain switch giving none, and a netlist cannot tell them apart |
+| `Inconclusive` | `inconclusive` | every input was present and the rule reached its decision, but the design cannot discriminate between the cases. A transistor in a power path may be an {{ explainable "ideal-diode" "ideal-diode controller" }} giving reverse protection or a plain switch giving none, and a netlist cannot tell them apart |
 | `NotConsidered` | `not-considered` | the rule applied to the subject and never reached a comparison. `Reason` names the step that stopped it |
 | `NoLimit` | `no-limit` | the subject DID reach the comparison and the datasheet row stated no bound, so nothing was checked |
 

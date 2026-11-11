@@ -13,7 +13,7 @@ This page teaches at [EE3](../levels/#roles-ee3), [EE4](../levels/#failure-modes
 
 ## Nothing is a voltage nothing has (EE3)
 
-A logic input on a modern chip is the gate of a MOSFET, and a gate is one plate of a very small capacitor with an insulating layer underneath. Almost no current flows into it. The input leakage on a typical part is measured in nanoamps, which means the input presents an impedance of hundreds of megohms or more.
+A logic input on a modern chip is the gate of a {{ explainable "mosfet" }}, and a gate is one plate of a very small capacitor with an insulating layer underneath. Almost no current flows into it. The input leakage on a typical part is measured in nanoamps, which means the input presents an impedance of hundreds of megohms or more.
 
 **A node with enormous impedance has its voltage set by whatever tiny currents happen to reach it.** That means capacitive coupling from a trace running alongside, leakage across the board surface, or charge left over from the last time something did drive it. None of those are big enough to matter anywhere else on the board, and on a floating input they are the only thing there is.
 
