@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-10, at `9783fb9d`.
+Last pruned 2026-11-11, at `b0ef532e`.
 
 ## At a glance
 
@@ -18,42 +18,36 @@ mission's queue, and the order lives in GitHub labels and blocked-by links rathe
 exercise run on the mission issue.
 
 - **#1499 `mission_board_open`** (open Jetson's board in the browser in under 1.5 s, and reopen it in
-  under 0.5 s). Next ready is #1500, which writes `make exercise-board-open`. #1501 (draw the board
-  before the check model) and #1502 (cache the packed board, send it as binary) follow at P1. #1484,
-  #1503 and #1504 are P2. A profile at `9783fb9d` measured a cold open at about 4.0 s in wasm and 1.9 s
-  against a server. #1499's body gives the stages.
-- **#1321 `mission_cross_probe`** and **#1353 `mission_board_formats`** closed on 2026-11-10. Each
-  reopens if a run on a real board finds something. #1353's `waiting` follow-ups keep its label.
-- **#1329 `mission_webgl`** closes with #1505, which opens a page in WebGL on a hardware GPU.
-- **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
-  runs agni serve for more than one person.
-- **#1442 `mission_demo_journeys`** has no tickets yet. Its first PR adds `make demo-video`.
-- **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
-  `guide/older-comparison-tools.md` its first page.
-- This run: a retriage on 2026-11-10 closed 21 issues, filed #1497 and #1498 for their leftovers,
-  and moved 13 labels. Each change has a comment on its issue.
+  under 0.5 s), 8 of 12 closed. `make exercise-board-open RUNS=5` at `fc4b6481`: server reload 302 ms,
+  server new browser 573 ms and wasm reload 491 ms pass, and server cold (1.7 s) and wasm cold (1.9 s)
+  fail. The latest log comment on #1499 has the timelines.
+- Next ready: #1531 (P1, why a fresh server's first board parse takes 1.36 s about half the time) and
+  #1503 (P1, keys and labels after the first draw, the margin for the wasm reload). #1484 and #1504
+  are P2. A cold wasm open still compiles `agni.wasm` and starts two workers on both the Load page and
+  the viewer, and no ticket covers that yet.
+- **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
+  serve for more than one person. **#1442 `mission_demo_journeys`** has no tickets yet.
+- This run: v0.6.9 released, carrying #1499's work so far. NEXTSTEPS caught up with the mission, and a
+  stale `agnids` note and #523 (closed) dropped.
 
 ## Open, ranked
 
-1. **Jetson's board open**, the #1499 mission above. #1061's load-once work closed, and its edit-session
-   half moved to #1027.
+1. **Jetson's board open**, the #1499 mission above.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
 roadmap lives on panyam/jaala. Modules (jaala#3) and aggregation inside rules (jaala#4) have both shipped, and agni tracks the latest jaala, so a
 derived question goes in `stdlib/lib` before it becomes a Go relation.
 
-#799 (the PartSpec contract module) waits for a second implementer or consumer. The first release
-since #744 publishes `agnids` for the first time, and `RELEASING.md`'s checklist now carries the
-anonymous-pull check for that release.
+#799 (the PartSpec contract module) waits for a second implementer or consumer.
 
 `OUT_OF_SCOPE.md` has five rows waiting on a decision about the ledger itself, not on code: the
 `core/svg` move, the `.edn` sniffing row (its WS6-008 ticket was wrong), the WS9-035 row (agni
 issue 541 half-settled it), the `Witness.Statement` row that asks for a ticket, and the
 `agni version` row whose trigger is "never".
 
-Three items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #681
-and #523.
+Two items are gated, #677 (only the "declare a NEW class" half, gated on the class registry) and
+#681.
 
 ## Worth knowing before the next change
 
