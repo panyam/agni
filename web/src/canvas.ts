@@ -17,6 +17,7 @@ import {
   type HighlightSpec,
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
+import { timingMode } from "./api.js";
 import { DrawGate } from "./drawgate.js";
 import type { DrawScene } from "./drawprofile.js";
 import { PickIndex, drawnOnPacked } from "./canvaspick.js";
@@ -122,8 +123,30 @@ export class CanvasComponent extends BaseComponent {
   // repeatedly to switch sheets.
   showSheet(sheet: PackedSheet): void {
     if (!this.gl) return;
-    this.draw(toRenderable(sheet));
+    const t = performance.now();
+    const decoded = toRenderable(sheet);
+    this.stages = { renderableMs: performance.now() - t };
+    this.draw(decoded);
   }
+  // pendingText is the sheet whose labels and images wait for its first frame (agni issue 1503).
+  private pendingText: DecodedSheet | null = null;
+
+  // fillText puts the drawn sheet's labels and images into the text layer, once its geometry has
+  // painted. A sheet replaced before then never fills.
+  private fillText(stages: Record<string, number> | null): void {
+    const sheet = this.pendingText;
+    this.pendingText = null;
+    if (!sheet || sheet !== this.sheet || !this.overlay || !this.camera) return;
+    const t = performance.now();
+    this.overlay.setContent(sheet.images, sheet.labels, sheet.fontFamily);
+    const canvas = this.rootElement as HTMLCanvasElement;
+    this.overlay.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr(), orientTurn(this.orientation));
+    if (stages) stages.labelsMs = performance.now() - t;
+  }
+
+  // stages times a sheet's way to its first frame under ?timing (agni issue 1503), logged once as
+  // "agni sheet <view>: {...}" after the frame is marked.
+  private stages: Record<string, number> | null = null;
 
   // setHiddenGroups forwards board layer visibility to the renderer (WS7-035); kept and
   // re-applied when a new sheet arrives, so the chosen view survives sheet swaps.
@@ -255,7 +278,14 @@ export class CanvasComponent extends BaseComponent {
     this.picks = undefined;
     const built = performance.now();
     this.renderer?.dispose();
+    let at = performance.now();
+    const lap = (name: string) => {
+      const now = performance.now();
+      if (this.stages) this.stages[name] = now - at;
+      at = now;
+    };
     this.renderer = new Renderer(gl, sheet);
+    lap("rendererMs");
     this.renderer.setHiddenGroups(this.hidden);
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
     this.camera.setOrientation(this.orientation);
@@ -263,8 +293,13 @@ export class CanvasComponent extends BaseComponent {
     this.applyOrder();
     this.overlay ??= this.makeOverlay();
     this.overlay?.setHiddenGroups(this.hidden);
-    this.overlay?.setContent(sheet.images, sheet.labels, sheet.fontFamily);
+    lap("cameraMs");
+    // The labels go in after the first frame (agni issue 1503). Laying out a board's text, 5,732
+    // labels on Jetson, held the first paint of its copper. Until then the layer shows nothing.
+    this.overlay?.setContent([], [], sheet.fontFamily);
+    this.pendingText = sheet;
     this.applyHighlights(); // highlights chosen before this sheet was (re)drawn are reapplied
+    lap("highlightsMs");
     this.resize();
     this.camera.fit(canvas.width, canvas.height);
     this.marked = false;
@@ -490,7 +525,22 @@ export class CanvasComponent extends BaseComponent {
         if (!this.marked) {
           this.marked = true;
           const view = this.markView;
-          requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "webgl", view } }));
+          const stages = this.stages;
+          this.stages = null;
+          if (stages) {
+            stages.firstRenderMs = t1 - t0;
+            stages.overlayUpdateMs = performance.now() - t1;
+          }
+          const painted = performance.now();
+          requestAnimationFrame(() => {
+            performance.mark(SHEET_DRAWN, { detail: { mode: "webgl", view } });
+            this.fillText(stages);
+            if (stages && timingMode()) {
+              stages.toPaintMs = performance.now() - painted;
+              const ms = Object.fromEntries(Object.entries(stages).map(([k, v]) => [k, Math.round(v * 10) / 10]));
+              console.info(`agni sheet ${view}: ${JSON.stringify(ms)}`);
+            }
+          });
         }
       }
       this.frameId = requestAnimationFrame(frame);
