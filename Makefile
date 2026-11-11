@@ -122,12 +122,14 @@ build: ui
 	$(GO) build -o bin ./...
 
 # Build the agni CLI into bin/.
+# agni carries the same build id as agni.wasm, so a dev server and its page agree on the store
+# version a seed is built under (agni issue 1525).
 agni:
-	$(GO) build -o bin/agni ./cmd/agni
+	$(GO) build -ldflags "-X github.com/panyam/agni/internal/wasmengine.buildID=$(WASM_BUILD_ID)" -o bin/agni ./cmd/agni
 
 # Install the agni CLI into GOBIN (falls back to GOPATH/bin).
 install:
-	$(GO) install ./cmd/agni
+	$(GO) install -ldflags "-X github.com/panyam/agni/internal/wasmengine.buildID=$(WASM_BUILD_ID)" ./cmd/agni
 
 # Static analysis over the engine module (the examples-test loop builds the example modules).
 vet:

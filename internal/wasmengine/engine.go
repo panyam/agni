@@ -200,6 +200,11 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 		Query:     service.NewQueryService(host, nil, resolver),
 		Review:    review,
 	}.Register(mux)
+	// A page puts a seed built by its server into this engine's store before a first read (agni issue
+	// 1525). An engine with no store, or one built under another version, puts nothing.
+	if o.Store != nil {
+		mux.Handle("POST "+SeedPath, seedHandler(o.Store, o.Version))
+	}
 	var h http.Handler = mux
 	if gc != nil {
 		h = gc.after(mux)

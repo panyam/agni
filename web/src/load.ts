@@ -6,7 +6,7 @@
 // The page is plain DOM. Every string it shows about a drop came from the visitor's files, so each is
 // set as text and never parsed as markup.
 
-import { designListing, loadedKey, pageEngine, refuseBrowserMounts, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
+import { designListing, fetchSeed, loadedKey, pageEngine, refuseBrowserMounts, seedDesign, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
 import { designClient, snapshots, workspaceClient } from "./api.js";
 import { currentLocation, dropPageUrl, emptyLocation, hasFile, keepTiming, locationToUrl, swapPage } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
@@ -102,13 +102,18 @@ async function loadDesign(mount: string, path: string, drops: DropStore): Promis
   }
   let flow: LoadFlow | undefined;
   let engine: WasmEngine | undefined;
+  // A first browser-engine visit restores the server's seed rather than parsing the board (agni
+  // issue 1525). The seed is asked for now, so it builds while the engine starts.
+  const seed = wasm ? fetchSeed(mount, path) : Promise.resolve(undefined);
+  const seeded = new Set<string>();
   try {
-    engine = await startPageEngine({ onFetched: (p, bytes) => flow?.fetched(p, bytes) });
+    engine = await startPageEngine({ onFetched: (p, bytes) => flow?.fetched(p, bytes), seeded });
   } catch (e) {
     fail(`The browser engine would not start: ${e instanceof Error ? e.message : String(e)}.`, false);
     return;
   }
   if (engine && dropped) await engine.add(BROWSER_MOUNT, dropped);
+  if (engine && (await seedDesign(engine, await seed))) seeded.add(uri);
   flow = new LoadFlow(
     {
       uri,
