@@ -1,0 +1,38 @@
+<svg viewBox="0 0 640 310" role="img" aria-labelledby="voltage-divider-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="voltage-divider-title">Three ways resistors set a net's resting level. A pull-up joins the net to the rail, so it rests at the rail. A pull-down joins it to ground, so it rests at ground. A divider joins the net to both through two resistors, R1 to the rail and R2 to ground, so the tap rests in between, at the rail voltage times R2 over R1 plus R2.</title>
+  <g fill="currentColor" font-size="12.5" font-weight="600" text-anchor="middle">
+  <text x="110" y="24">pull-up</text>
+  <text x="320" y="24">pull-down</text>
+  <text x="530" y="24">divider</text></g>
+  <g stroke="currentColor" stroke-width="2" opacity="0.85">
+  <path d="M40 50 H600 M40 230 H600"/></g>
+  <g fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">
+  <text x="40" y="42">+3V3</text>
+  <text x="600" y="222" text-anchor="end">ground</text></g>
+  <g stroke="currentColor" stroke-width="2" fill="none" opacity="0.85">
+  <path d="M110 50 V70 M110 116 V150 M60 150 H110"/>
+  <path d="M270 150 H320 V164 M320 210 V230"/>
+  <path d="M530 50 V70 M530 116 V164 M530 210 V230"/></g>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.7">
+  <rect x="100" y="70" width="20" height="46" rx="2"/>
+  <rect x="310" y="164" width="20" height="46" rx="2"/>
+  <rect x="520" y="70" width="20" height="46" rx="2"/>
+  <rect x="520" y="164" width="20" height="46" rx="2"/></g>
+  <path d="M470 150 H530" stroke="var(--accent-color)" stroke-width="2.6"/>
+  <g fill="currentColor">
+  <circle cx="110" cy="150" r="3.4"/>
+  <circle cx="320" cy="150" r="3.4"/></g>
+  <circle cx="530" cy="150" r="3.6" fill="var(--accent-color)"/>
+  <g fill="currentColor" font-size="11.5" opacity="0.75">
+  <text x="60" y="142">net</text>
+  <text x="270" y="142">net</text>
+  <text x="546" y="97">R1</text>
+  <text x="546" y="191">R2</text></g>
+  <text x="470" y="142" fill="var(--accent-color)" font-size="11.5" font-weight="600">tap</text>
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.7">
+  <text x="110" y="252">rests at the rail</text>
+  <text x="320" y="252">rests at ground</text>
+  <text x="530" y="252">rests in between, at</text>
+  <text x="530" y="268">3.3 V &#215; R2 / (R1 + R2)</text></g>
+  <text x="320" y="298" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">A rule asking which way a net is pulled reads the third as neither, because it is pulled both ways.</text>
+</svg>

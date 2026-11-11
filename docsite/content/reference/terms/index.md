@@ -38,6 +38,9 @@ question it helps answer.
 
 - [Pull-up](./pull-up/), the resistor that holds a signal high when nothing is driving it
 - [Pull-down](./pull-down/), the same with the other default
+- [Series and shunt](./series-and-shunt/), whether a part sits in a signal's path or beside it
+- [Voltage divider](./voltage-divider/), two resistors setting a net to a fraction of a rail
+- [MOSFET](./mosfet/), the gate, drain, source and body diode every load-switch rule talks about
 - [Decoupling capacitor](./decoupling-capacitor/), the local charge store at a chip's supply pin
 - [Ferrite bead](./ferrite-bead/), a near short at DC that turns high-frequency noise into heat
 - [Termination](./termination/), the resistor that stops a signal reflecting off the end of a bus
@@ -47,6 +50,8 @@ question it helps answer.
 ## Failure modes (EE4)
 
 - [Port protection](./port-protection/), what absorbs a static discharge arriving on a connector
+- [Ideal diode](./ideal-diode/), a MOSFET and a controller that block reverse current with almost
+  no drop
 
 ## Numbers (EE5)
 

@@ -1,0 +1,30 @@
+<svg viewBox="0 0 640 300" role="img" aria-labelledby="mosfet-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="mosfet-title">An N-channel MOSFET with its three terminals labelled. The gate on the left is insulated from the channel and draws almost no current. The drain at the top and the source at the bottom are the two ends of the switch, which the gate voltage turns on and off. A body diode runs from the source up to the drain, and it conducts whenever the source is above the drain, whether the switch is on or off.</title>
+  <g stroke="currentColor" stroke-width="2" fill="none" opacity="0.85">
+  <path d="M100 150 H196 M196 112 V188"/>
+  <path d="M260 115 V56 M260 185 V244"/>
+  <path d="M260 80 H330 V138 M330 164 V220 H260"/></g>
+  <g stroke="var(--accent-color)" stroke-width="2.6" fill="none">
+  <path d="M208 106 V194 M208 115 H260 M208 185 H260"/></g>
+  <g fill="currentColor" opacity="0.85">
+  <polygon points="320,164 340,164 330,140"/></g>
+  <path d="M318 138 H342" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <g fill="currentColor" font-size="12" font-weight="600">
+  <text x="100" y="140">gate</text>
+  <text x="270" y="62">drain</text>
+  <text x="270" y="250">source</text></g>
+  <text x="350" y="156" fill="currentColor" font-size="11.5" opacity="0.75">body diode</text>
+  <g fill="currentColor" font-size="11.5" opacity="0.75">
+  <text x="430" y="70">The gate is insulated and</text>
+  <text x="430" y="86">draws almost no current.</text>
+  <text x="430" y="102">Its voltage against the</text>
+  <text x="430" y="118">source turns the switch on.</text>
+  <text x="430" y="214">The body diode is always</text>
+  <text x="430" y="230">there, and conducts source</text>
+  <text x="430" y="246">to drain with the switch off.</text></g>
+  <g fill="var(--accent-color)" font-size="11.5" font-weight="600">
+  <text x="430" y="150">The drain-source path is</text>
+  <text x="430" y="166">the switch, rated for a</text>
+  <text x="430" y="182">maximum voltage.</text></g>
+  <text x="320" y="288" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">A P-channel part is the mirror image, and turns on with its gate below its source.</text>
+</svg>

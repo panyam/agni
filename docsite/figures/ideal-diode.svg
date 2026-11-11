@@ -1,0 +1,35 @@
+<svg viewBox="0 0 640 310" role="img" aria-labelledby="ideal-diode-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="ideal-diode-title">Two ways to stop current flowing backwards from a load into its input. On the left a series Schottky diode does it, and drops about 0.4 volts in the forward direction. On the right a P-channel MOSFET does it, with a controller that senses both sides and turns the transistor on only while the input is above the load. The transistor's body diode points from input to load, so with the transistor off nothing flows backwards.</title>
+  <g fill="currentColor" font-size="12.5" font-weight="600" text-anchor="middle">
+  <text x="150" y="32">a series diode</text>
+  <text x="480" y="32">an ideal diode</text></g>
+  <g stroke="currentColor" stroke-width="2" fill="none" opacity="0.85">
+  <path d="M40 140 H120 M146 140 H260"/>
+  <path d="M360 140 H430"/>
+  <path d="M500 140 H600"/>
+  <path d="M415 140 V190 H450 M472 190 H515 V140"/></g>
+  <g fill="currentColor" opacity="0.85">
+  <polygon points="120,126 120,154 146,140"/>
+  <polygon points="450,180 450,200 470,190"/></g>
+  <g stroke="currentColor" stroke-width="2" opacity="0.85">
+  <path d="M146 126 V154 M472 180 V200"/></g>
+  <rect x="430" y="126" width="70" height="28" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="2.4"/>
+  <rect x="420" y="60" width="90" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+  <g stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.45" stroke-dasharray="3 3">
+  <path d="M420 76 H390 V140 M510 76 H560 V140"/></g>
+  <path d="M465 92 V126" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+  <g fill="currentColor" font-size="11.5" opacity="0.75">
+  <text x="40" y="128">input</text>
+  <text x="260" y="128" text-anchor="end">load</text>
+  <text x="360" y="128">input</text>
+  <text x="600" y="128" text-anchor="end">load</text>
+  <text x="465" y="80" text-anchor="middle">controller</text>
+  <text x="493" y="216" text-anchor="middle">body diode</text></g>
+  <text x="465" y="144" text-anchor="middle" fill="var(--accent-color)" font-size="11.5" font-weight="600">P-FET</text>
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.7">
+  <text x="150" y="182">a Schottky drops about 0.4 V,</text>
+  <text x="150" y="198">and blocks current backwards</text>
+  <text x="480" y="240">on while the input is above the load,</text>
+  <text x="480" y="256">and off when it is not</text></g>
+  <text x="320" y="296" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">In a netlist the right panel is just a transistor and a chip in a power path.</text>
+</svg>
