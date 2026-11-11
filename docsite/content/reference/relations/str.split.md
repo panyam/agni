@@ -5,13 +5,13 @@ description: "binds each part of the string between separators with its index fr
 
 ### What it is
 
-`str.split(string, separator, index, part)` binds each part of `string` between separators,
-numbered from 0. With `index` bound it binds that part alone. A negative index counts from the end,
-so -1 is the last part and -2 the one before it. An index past either end gives no row.
+`str.split(string, separator, index, part)` binds each part of `string` between separators, numbered
+from 0.
 
-`string` and `separator` must be bound. A string without the separator is one part, itself, and an
-empty separator splits between characters. `str.split` is a computed predicate (kind `predicate` in
-the catalog), not a stored fact.
+`str.split` comes from jaala's standard library. The [Building
+text](https://panyam.github.io/jaala/reference/builtins/#building-text) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -21,14 +21,7 @@ depth. Splitting a flat name on `_` and reading -1 gives the signal.
 
 ### For software engineers
 
-It is Go's `strings.Split` with each part numbered, plus negative indexing from the end, as in
-Python.
-
-### Go projector
-
-`str.split` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it in `Strings` in jaala's `stdlib/strings.go`, and
-`core/facts/registry.go` installs that library into the vocabulary every query uses.
+It is Go's `strings.Split`, one row per part.
 
 ### Datalog
 

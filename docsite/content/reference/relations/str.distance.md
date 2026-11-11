@@ -5,14 +5,12 @@ description: "binds the edit (Levenshtein) distance between two strings, in char
 
 ### What it is
 
-`str.distance(string, other, distance)` binds the edit distance between two strings. That is the
-fewest single-character insertions, deletions and substitutions that turn one into the other, the
-Levenshtein distance. It counts characters rather than bytes, so a non-ASCII letter is one edit.
+`str.distance(string, other, distance)` binds the edit distance between two strings.
 
-Both strings must be bound. Listing every string within a distance of another has no finite answer,
-so a query that leaves either unbound is an error naming what it needs. With `distance` bound as
-well, the predicate tests rather than binds. `str.distance` is a computed predicate (kind
-`predicate` in the catalog), not a stored fact.
+`str.distance` comes from jaala's standard library. The [Edit
+distance](https://panyam.github.io/jaala/reference/builtins/#edit-distance) section of jaala's
+built-ins reference says which arguments must be bound and what an absent or malformed input does,
+and its examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -25,12 +23,6 @@ correct.
 
 It is the textbook Levenshtein distance over runes, run on one row of the table. Put a bound on it
 with a comparison, as `?d <= 1`, the way a fuzzy search does.
-
-### Go projector
-
-`str.distance` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it in `Strings` in jaala's `stdlib/strings.go`, and
-`core/facts/registry.go` installs that library into the vocabulary every query uses.
 
 ### Datalog
 

@@ -2,34 +2,26 @@
 
 ### What it is
 
-`path.edges(path, edges)` binds `edges` to the edges of `path` as one list value, in walk order. The
-path must be bound. Calling it with an unbound path is an evaluation error. Only a path over a
-relation of three arguments names its edges. A path over a relation of two arguments gives no row,
-and so does a value that is not a path, absent included. `path.edges` is a computed predicate (kind
-`predicate` in the catalog), not a stored fact.
+`path.edges(path, edges)` binds `edges` to the edges of `path` as one list value, in walk order.
 
-`graph.paths` binds a path value as text. Over a relation of two arguments the path lists its
-nodes, as in `["a","b","c"]`. Over a relation of three arguments, from, edge and to, it names the
-edges too, as in `{"nodes":["a","b"],"edges":["R1"]}`. The `path` column of `net.route` is display
-text, not a path value, and every `path.*` function gives no row on it.
+`graph.paths` binds the path value these functions read. The `path` column of `net.route` is display
+text, not a path value, so no `path.*` function reads it.
+
+`path.edges` comes from jaala's standard library. The
+[Paths](https://panyam.github.io/jaala/reference/builtins/#paths) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
-The parts on a path are the evidence for a connection. A row that lists `["U1","U2"]` beside a
-rail says that both regulators sit between the input and that rail. `path.edges` puts the parts in
-one cell, so a reviewer reads them without opening the schematic.
+The parts on a path are the evidence for a connection. A row that lists `["U1","U2"]` beside a rail
+says that both regulators sit between the input and that rail. `path.edges` puts the parts in one
+cell, so a reviewer reads them without opening the schematic.
 
 ### For software engineers
 
 `path.edges` is the `Edges` slice of a path as a value. It is the list form of `path.edge`, and
 `list.length` and `list.at` read it.
-
-### Go projector
-
-`path.edges` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The Datalog
-engine's standard library registers it, together with the other `path.*` functions, in
-`PathValues` in jaala's `stdlib/paths.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
 
 ### Datalog
 

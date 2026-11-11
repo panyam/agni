@@ -5,16 +5,15 @@ description: "binds each step of the path, index from 0"
 
 ### What it is
 
-`path.step(path, index, from, to)` binds one row per step of `path`. `index` counts from 0, and
-`from` and `to` are the two nodes the step joins, in walk order. The path must be bound. Calling it
-with an unbound path is an evaluation error. With `index` bound it answers that one step, and an
-index outside the path gives no row. A value that is not a path gives no row, absent included.
-`path.step` is a computed predicate (kind `predicate` in the catalog), not a stored fact.
+`path.step(path, index, from, to)` binds one row per step of `path`.
 
-`graph.paths` binds a path value as text. Over a relation of two arguments the path lists its
-nodes, as in `["a","b","c"]`. Over a relation of three arguments, from, edge and to, it names the
-edges too, as in `{"nodes":["a","b"],"edges":["R1"]}`. The `path` column of `net.route` is display
-text, not a path value, and every `path.*` function gives no row on it.
+`graph.paths` binds the path value these functions read. The `path` column of `net.route` is display
+text, not a path value, so no `path.*` function reads it.
+
+`path.step` comes from jaala's standard library. The
+[Paths](https://panyam.github.io/jaala/reference/builtins/#paths) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -26,13 +25,6 @@ voltages.
 
 `path.step` is the pairwise window over a path's nodes, `zip(nodes, nodes[1:])` with the position.
 It gives the adjacent pairs without a self-join on `path.node`.
-
-### Go projector
-
-`path.step` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The Datalog
-engine's standard library registers it, together with the other `path.*` functions, in
-`PathValues` in jaala's `stdlib/paths.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
 
 ### Datalog
 

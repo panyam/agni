@@ -5,9 +5,12 @@ description: "binds the string in lower case"
 
 ### What it is
 
-`str.lower(string, lower)` binds `lower` as `string` in lower case. It runs forward only, so `string`
-must be bound. With `lower` bound too, it tests rather than binds. `str.lower` is a computed predicate
-(kind `predicate` in the catalog), not a stored fact.
+`str.lower(string, lower)` binds `lower` as `string` in lower case.
+
+`str.lower` comes from jaala's standard library. The [Building
+text](https://panyam.github.io/jaala/reference/builtins/#building-text) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -17,12 +20,6 @@ one case lets a query compare names from two tools, or two revisions, that disag
 ### For software engineers
 
 It is Go's `strings.ToLower`, which folds by Unicode rules rather than ASCII alone.
-
-### Go projector
-
-`str.lower` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it in `Strings` in jaala's `stdlib/strings.go`, and
-`core/facts/registry.go` installs that library into the vocabulary every query uses.
 
 ### Datalog
 

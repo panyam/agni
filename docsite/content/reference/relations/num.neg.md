@@ -5,10 +5,12 @@ description: "b = -a, run from either; the unit carries over"
 
 ### What it is
 
-`num.neg(a, b)` relates two numbers by `b = -a`. It runs from either side. With `a` bound it binds
-`b`, and with `b` bound it binds `a`. With neither bound it is an evaluation error. The unit carries
-over, so the negation of 3.3 V is -3.3 V. A value that is not a number gives no row. `num.neg` is a
-computed predicate (kind `predicate` in the catalog), not a stored fact.
+`num.neg(a, b)` relates two numbers by `b = -a`.
+
+`num.neg` comes from jaala's standard library. The
+[Arithmetic](https://panyam.github.io/jaala/reference/builtins/#arithmetic) section of jaala's
+built-ins reference says which arguments must be bound and what an absent or malformed input does,
+and its examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -18,16 +20,8 @@ positive one.
 
 ### For software engineers
 
-`num.neg` is unary minus as a relation. Since it runs both ways, a test on the result also works,
-as in `num.neg(?x, -3.3V)`. The agni table prints the number alone, and `num.unit` reads the unit
-back.
-
-### Go projector
-
-`num.neg` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The Datalog
-engine's standard library registers it, together with `num.add`, `num.sub`, `num.mul` and
-`num.div`, in `Arithmetic` in jaala's `stdlib/arith.go`. `core/facts/registry.go` installs that
-library into the vocabulary every query uses.
+`num.neg` is unary minus as a relation. Since it runs both ways, a test on the result also works, as
+in `num.neg(?x, -3.3V)`. The agni table prints the number alone, and `num.unit` reads the unit back.
 
 ### Datalog
 

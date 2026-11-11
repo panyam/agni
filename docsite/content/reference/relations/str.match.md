@@ -5,13 +5,12 @@ description: "reports whether the string matches an unanchored regular expressio
 
 ### What it is
 
-`str.match(string, regex)` is true when the regular expression matches anywhere in `string`. The
-expression is unanchored, so write `^` and `$` to pin it to the start or end. The syntax is Go's
-RE2, which has no backreferences.
+`str.match(string, regex)` is true when the regular expression matches anywhere in `string`.
 
-Both arguments must be bound. A malformed expression is an error rather than a non-match, so a
-typo in a completeness check cannot read as "the data is clean". `str.match` is a computed
-predicate (kind `predicate` in the catalog), not a stored fact.
+`str.match` comes from jaala's standard library. The [String
+tests](https://panyam.github.io/jaala/reference/builtins/#string-tests) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -21,14 +20,7 @@ it.
 
 ### For software engineers
 
-It is Go's `regexp.MatchString`, compiled once per pattern. Compared with `str.glob` it is
-unanchored and far more expressive.
-
-### Go projector
-
-`str.match` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it in `Strings` in jaala's `stdlib/strings.go`, and
-`core/facts/registry.go` installs that library into the vocabulary every query uses.
+It is Go's `regexp.MatchString`, compiled once per pattern.
 
 ### Datalog
 

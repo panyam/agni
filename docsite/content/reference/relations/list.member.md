@@ -6,13 +6,12 @@ description: "binds each value of the list with its index from 0; given a value,
 ### What it is
 
 `list.member(list, index, value)` binds one row per member of `list`, with `index` counting from 0
-and `value` holding that member. The list must be bound. Calling it with an unbound list is an
-evaluation error. `index` and `value` may each be bound or free. With `value` bound it answers where
-that value sits, one row per occurrence. With `index` bound it answers the member there.
+and `value` holding that member.
 
-A value that is not a list gives no row, absent included. `list.member` takes no negative index. Use
-`list.at` to count from the end. `list.member` is a computed predicate (kind `predicate` in the
-catalog), not a stored fact.
+`list.member` comes from jaala's standard library. The
+[Lists](https://panyam.github.io/jaala/reference/builtins/#lists) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -24,13 +23,6 @@ group into one row per reference designator, so the next clause can join each pa
 
 `list.member` is `for i, x := range xs` as a relation, or SQL's `UNNEST ... WITH ORDINALITY`. Bound
 to a value it acts as `slices.Index`, except that a repeated value answers every position.
-
-### Go projector
-
-`list.member` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it, together with `list.length` and `list.at`, in
-`ListValues` in jaala's `stdlib/lists.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
 
 ### Datalog
 

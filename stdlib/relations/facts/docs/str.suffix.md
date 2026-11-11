@@ -2,14 +2,12 @@
 
 ### What it is
 
-`str.suffix(string, suffix)` is true when `string` ends with `suffix`. The first argument is the
-text under test, and the second is the ending to look for. The order matters. `str.suffix(?n,
-"_CS")` asks whether a net name ends in `_CS`. `str.suffix("_CS", ?n)` asks the reverse.
+`str.suffix(string, suffix)` is true when `string` ends with `suffix`.
 
-The match is exact and case-sensitive, so `"_cs"` does not match `FLASH_CS`. A string counts as its
-own suffix, and an empty suffix matches every string. `str.suffix` is a computed predicate (kind
-`predicate` in the catalog), not a stored fact. It is a filter, so both arguments must be bound
-before it runs.
+`str.suffix` comes from jaala's standard library. The [String
+tests](https://panyam.github.io/jaala/reference/builtins/#string-tests) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -23,24 +21,16 @@ net in that role, and a negated test finds the ones missing something the role n
 the `LIKE '%x'` of the query language, without wildcards and without case folding. The profile
 matchers in `stdlib/profiles` build their name tests from it and from `str.prefix`.
 
-### Go projector
-
-`str.suffix` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it, together with `str.contains` and `str.prefix`, in
-`Strings` in jaala's `stdlib/strings.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses. Calling it with an unbound argument is an evaluation error rather than
-an empty answer.
-
 ### Datalog
 
-Every chip-select net, with the parts on it:
+Every I2C clock net, with the parts on it:
 
 ```
-component.net(?r, ?n), str.suffix(?n, "_CS") => ?n, ?r
+component.net(?r, ?n), str.suffix(?n, "_SCL") => ?n, ?r
 ```
 
-The chip-select nets that are not rails:
+Every net named for a 3.3 V supply, with the parts on it:
 
 ```
-component.net(?r, ?n), str.suffix(?n, "_CS"), not net.rail(?n) => ?n
+component.net(?r, ?n), str.suffix(?n, "_3V3") => ?n, ?r
 ```
