@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { reply } from "./testconnect.js";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -71,14 +72,12 @@ beforeAll(async () => {
   vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
     bootErrors.push(args[0]);
   });
-  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
-    const url = typeof input === "string" ? input : (input as Request).url;
+  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(new URL(String(input), window.location.href), init);
+    const url = req.url;
     const method = url.split("/").pop() ?? "";
     called.push(method);
-    return new Response(JSON.stringify(REPLIES[method] ?? {}), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
+    return reply(req, REPLIES[method]);
   };
   // Leaving the page is a real document navigation (routing is server-owned, C11), which jsdom
   // does not implement. Recording it is the assertion, since Open's only job is to hand off a URL.

@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { create, toBinary } from "@bufbuild/protobuf";
+import { IngestRequestSchema } from "../gen/agni/v1/webapi/snapshot_pb.js";
+import { CheckDesignRequestSchema } from "../gen/agni/v1/webapi/checks_pb.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -453,5 +456,24 @@ describe("holding the board back from the serve lane", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const twin = JSON.parse(readFileSync(join(here, "..", "..", "..", "internal", "wasmengine", "testdata", "withheld_twin.json"), "utf8")) as { sha256: string; placeholder: string };
     expect(new TextDecoder().decode(withheldPlaceholder(twin.sha256))).toBe(twin.placeholder);
+  });
+});
+
+// agni issue 1502: the viewer's transport sends binary Connect, so mountingFetch reads a binary body
+// against its method's schema.
+describe("binary request bodies", () => {
+  const binary = (path: string, body: Uint8Array<ArrayBuffer>) =>
+    new Request(`http://h${path}`, { method: "POST", headers: { "content-type": "application/proto" }, body });
+
+  it("brings the files a binary ingest named into the worker a binary question reaches, and keeps the ingest without read_board", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await f(binary(INGEST_PATH, toBinary(IngestRequestSchema, create(IngestRequestSchema, { snapshot: { uri: "mount://tut/designs/gateway" }, snapshotId: "s1", readBoard: true }))));
+    await f(binary("/agni.v1.webapi.CheckService/CheckDesign", toBinary(CheckDesignRequestSchema, create(CheckDesignRequestSchema, { snapshot: "snapshots/s1" }))));
+    expect(h.laneCalls.prepare).toEqual([INGEST_PATH]);
+    expect(h.laneMounted.jobs).toEqual(["designs/gateway/gateway.edn", "project.yaml"]);
+    expect(h.laneCalls.jobs).toEqual([INGEST_PATH, "/agni.v1.webapi.CheckService/CheckDesign"]);
+    expect(JSON.parse(h.laneBodies.jobs[0])).toEqual({ snapshot: { uri: "mount://tut/designs/gateway" }, snapshotId: "s1" });
+    expect(h.lists()).toBe(1);
   });
 });

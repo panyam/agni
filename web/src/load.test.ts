@@ -1,6 +1,7 @@
 // The Load page's boot test (agni issue 1072). It runs the real load.ts against the real
 // LoadPage.html under jsdom, on the server engine, so it exercises the page's wiring as a visitor's
 // browser runs it.
+import { bodyText, reply } from "./testconnect.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -36,8 +37,8 @@ async function boot(url: string): Promise<{ called: { method: string; body: stri
   (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(String(input), init);
     const method = req.url.split("/").pop() ?? "";
-    called.push({ method, body: await req.clone().text() });
-    return new Response(JSON.stringify(REPLIES[method] ?? {}), { status: 200, headers: { "content-type": "application/json" } });
+    called.push({ method, body: await bodyText(req) });
+    return reply(req, REPLIES[method]);
   };
   window.history.replaceState(null, "", url);
   document.body.innerHTML = pageBody();
@@ -76,11 +77,11 @@ describe("the Load page boots", () => {
       (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: RequestInit) => {
         const req = input instanceof Request ? input : new Request(String(input), init);
         const method = req.url.split("/").pop() ?? "";
-        if (method === "Ingest" && (await req.clone().text()).includes('"readBoard":true')) {
+        if (method === "Ingest" && (await bodyText(req)).includes('"readBoard":true')) {
           return new Response(JSON.stringify({ code: "invalid_argument", message: "no netlist" }), { status: 400, headers: { "content-type": "application/json" } });
         }
-        const reply = method === "Ingest" ? { name: "snapshots/abc" } : (REPLIES[method] ?? {});
-        return new Response(JSON.stringify(reply), { status: 200, headers: { "content-type": "application/json" } });
+        const answer = method === "Ingest" ? { name: "snapshots/abc" } : (REPLIES[method] ?? {});
+        return reply(req, answer);
       };
       window.history.replaceState(null, "", "/designs/m/d/b.edn/load?sheet=s1");
       document.body.innerHTML = pageBody();

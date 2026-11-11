@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { reply } from "./testconnect.js";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { loadRecents } from "@agni/web-shared/recents.js";
@@ -123,14 +124,12 @@ beforeAll(async () => {
   vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
     bootErrors.push(args[0]);
   });
-  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown) => {
-    const url = typeof input === "string" ? input : (input as Request).url;
+  (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(String(input), init);
+    const url = req.url;
     const method = url.split("/").pop() ?? "";
     called.push(method);
-    return new Response(JSON.stringify(REPLIES[method] ?? {}), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
+    return reply(req, REPLIES[method]);
   };
 
   // A DESIGN url, not the bare page. With it, the test exercises the restore loop rather than only

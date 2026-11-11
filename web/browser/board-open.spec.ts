@@ -75,6 +75,9 @@ async function serve(): Promise<Server> {
 interface Open {
   ms: number;
   lines: string[];
+  // rawBytes is what the design's files cost over the network before the draw. A file the browser
+  // revalidated arrives as a 304 with no body (agni issue 1502).
+  rawBytes: number;
 }
 
 // timed runs a navigation and waits for the canvas's first WebGL draw in the document it lands on.
@@ -102,6 +105,15 @@ async function timed(page: Page, navigate: () => Promise<unknown>): Promise<Open
       })
       .map((l) => l.text);
   page.on("console", onConsole);
+  let rawBytes = 0;
+  const onFinished = (req: { url(): string; sizes(): Promise<{ responseBodySize: number }> }) => {
+    if (!new URL(req.url()).pathname.includes("/raw/")) return;
+    void req
+      .sizes()
+      .then((z) => (rawBytes += z.responseBodySize))
+      .catch(() => {});
+  };
+  page.on("requestfinished", onFinished);
   const t0 = Date.now();
   await navigate();
   const deadline = t0 + 300_000;
@@ -121,12 +133,13 @@ async function timed(page: Page, navigate: () => Promise<unknown>): Promise<Open
       if (at !== null) {
         // A request that started before the draw may answer after it. Give those a moment to log.
         await new Promise((r) => setTimeout(r, 1000));
-        return { ms: at - t0, lines: before(at) };
+        return { ms: at - t0, lines: before(at), rawBytes };
       }
       await new Promise((r) => setTimeout(r, 25));
     }
   } finally {
     page.off("console", onConsole);
+    page.off("requestfinished", onFinished);
   }
 }
 
@@ -175,7 +188,7 @@ it(
         design: chosen,
         status: judged && ms > target(k) ? "fail" : "ok",
         ms,
-        detail: `${judge}${all}${openDetail(nearest.lines)}; load average ${load}`,
+        detail: `${judge}${all}${openDetail(nearest.lines)}; ${(nearest.rawBytes / 1e6).toFixed(1)} MB of files over the network; load average ${load}`,
       };
     });
     const report = `## Board open, ${design.about}\n\n${table(rows)}\n`;

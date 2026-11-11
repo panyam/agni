@@ -39,6 +39,10 @@ func rawFileHandler(ms []mounts.Mount) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/octet-stream")
+		// A browser engine fetches the design's files on every page (agni issue 1502). no-cache keeps
+		// a copy but asks first, so a reload of an unchanged 85 MB board gets a 304 from ServeContent's
+		// Last-Modified.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeContent(w, r, st.Name(), st.ModTime(), f)
 	})
 }
