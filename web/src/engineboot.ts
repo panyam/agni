@@ -169,7 +169,7 @@ export async function startPageEngine(opts: PageEngineOptions = {}): Promise<Was
               if (!res.ok) throw new Error(`${mountOf(uri)}: ${res.status}`);
               return (await res.json()) as DesignFiles;
             }
-          : (uri) => files.listDesignFiles({ uri }),
+          : (uri) => sharedListing(uri, () => files.listDesignFiles({ uri })),
         // A transfer that stops sending is abandoned and asked for again, and the top bar says which
         // file is slow, rather than the page waiting on it forever (agni issue 1002).
         fetchFile: (mount, path) =>
@@ -233,6 +233,25 @@ export async function designListing(mount: string, path: string, drops: DropStor
     const l = (await res.json()) as DesignFiles;
     return { stamp: filesStamp(l.files ?? []), files: l.files?.length ?? 0, bytes: Number(l.totalSize ?? 0) };
   }
-  const resp = await workspaceClient().listDesignFiles({ uri: artifactUri(mount, path) });
+  const uri = artifactUri(mount, path);
+  const resp = await sharedListing(uri, () => workspaceClient().listDesignFiles({ uri }));
   return { stamp: filesStamp(resp.files), files: resp.files.length, bytes: Number(resp.totalSize) };
+}
+
+// sharedListings holds one listing per design for the page, by its `mount://` URI (agni issue 1527).
+const sharedListings = new Map<string, Promise<DesignFiles>>();
+
+// sharedListing answers a design's file listing once per page. The viewer lists a design to check
+// the Load page's record (designListing), and the browser engine lists it again before it brings the
+// files into a worker. On a Jetson reload the second ask held the first question up by 53 ms. Both
+// ask by the design's artifactUri, the URI an Ingest names. A listing that fails is forgotten, so
+// the next ask tries again.
+export function sharedListing(uri: string, ask: () => Promise<DesignFiles>): Promise<DesignFiles> {
+  let p = sharedListings.get(uri);
+  if (!p) {
+    p = ask();
+    sharedListings.set(uri, p);
+    p.catch(() => sharedListings.delete(uri));
+  }
+  return p;
 }
