@@ -235,8 +235,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		OriginY:         oy,
 		Vertices:        vertices,
 		Primitives:      records,
-		Keys:            keys,
-		Labels:          labels,
+		KeyColumns:      packKeys(keys),
+		LabelColumns:    packLabels(labels),
 	}
 }
 

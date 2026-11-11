@@ -123,11 +123,11 @@ func TestPackSheetLabelsRebased(t *testing.T) {
 	}}}
 
 	ps := PackSheet(g, g.Sheets[0])
-	if len(ps.Labels) != 1 {
-		t.Fatalf("labels = %d, want 1", len(ps.Labels))
+	if len(PackedLabels(ps)) != 1 {
+		t.Fatalf("labels = %d, want 1", len(PackedLabels(ps)))
 	}
 	// Origin is the wire's min corner (100,100); the label at (150,130) rebases to (50,30).
-	if l := ps.Labels[0]; l.X != 50 || l.Y != 30 || l.Text != "NET" {
+	if l := PackedLabels(ps)[0]; l.X != 50 || l.Y != 30 || l.Text != "NET" {
 		t.Errorf("rebased label = {x:%d y:%d text:%q}, want (50,30) NET", l.X, l.Y, l.Text)
 	}
 }

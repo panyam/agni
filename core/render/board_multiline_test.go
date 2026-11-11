@@ -34,7 +34,7 @@ func TestABoardNoteDrawsEachLine(t *testing.T) {
 		}
 	}
 	var packed []string
-	for _, l := range PackBoard(b).GetLabels() {
+	for _, l := range PackedLabels(PackBoard(b)) {
 		packed = append(packed, l.GetText())
 	}
 	if strings.Join(packed, "|") != "Caution:|Check washer|conflicts" {

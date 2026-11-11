@@ -1,0 +1,5 @@
+[
+  {"x":-120,"y":340,"text":"U1","height":900,"rotationDeg":90,"justify":"left bottom","color":"#112233","maxWidth":4000,"runs":[{"text":"U","kind":"KIND_OVERBAR"},{"text":"1"}],"group":11,"mirror":true,"width":2500},
+  {"x":50,"y":-60,"text":"~RESET","height":700,"rotationDeg":270,"justify":"center center","color":"#445566","maxWidth":1,"runs":[{"text":"RESET","kind":"KIND_SUBSCRIPT"}],"group":3,"mirror":true,"width":1},
+  {"x":7,"y":8,"text":"U1","height":1}
+]

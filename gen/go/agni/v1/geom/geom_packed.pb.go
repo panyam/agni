@@ -145,7 +145,8 @@ func (TextRun_Kind) EnumDescriptor() ([]byte, []int) {
 }
 
 // PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
-// element it belongs to, for view-local picking/highlight.
+// element it belongs to, for view-local picking/highlight. A PackedSheet carries its keys as
+// PackedKeys columns, and a reader decodes them into these (agni issue 1532).
 type PrimitiveKey struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Primitive uint32                 `protobuf:"varint,1,opt,name=primitive,proto3" json:"primitive,omitempty"`        // index into PackedSheet.primitives
@@ -481,6 +482,11 @@ func (x *PackedHighlight) GetGroups() []*PackedHighlight_Group {
 }
 
 // PackedLabel is one text label positioned in sheet-relative world coordinates (rebased by
+// origin_x/origin_y, the same as the vertex blob). A PackedSheet carries its labels as PackedLabels
+// columns, and a reader decodes them into these (agni issue 1532). The rest of this comment covers
+// one label as decoded.
+//
+// A label is positioned in sheet-relative world coordinates (rebased by
 // origin_x/origin_y, the same as the vertex blob). A GPU line pipeline draws no glyphs, so
 // an overlay above the geometry draws the text. The browser owns text metrics (docsite
 // architecture/geometry-and-rendering.md). The server computes the world position and the
@@ -805,9 +811,7 @@ type PackedSheet struct {
 	// Fixed-width LE records: (kind:u8, group:u8, stroke_um:u16, first_vertex:u32, count:u32).
 	// stroke_um is the width a line's source draws it at, in micrometres, and 0 is a hairline. Only
 	// a board's graphics set it (agni issue 1486), and a reader that ignores it draws hairlines.
-	Primitives []byte          `protobuf:"bytes,6,opt,name=primitives,proto3" json:"primitives,omitempty"`
-	Keys       []*PrimitiveKey `protobuf:"bytes,7,rep,name=keys,proto3" json:"keys,omitempty"`     // O(primitives), stays structured
-	Labels     []*PackedLabel  `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty"` // O(labels), stays structured; drawn by the text overlay
+	Primitives []byte `protobuf:"bytes,6,opt,name=primitives,proto3" json:"primitives,omitempty"`
 	// The default font-family for the sheet's text (render.Style.Font), so the overlay draws in
 	// the same face as the SVG backend. One face per sheet; per-element font is not sent yet.
 	FontFamily string `protobuf:"bytes,9,opt,name=font_family,json=fontFamily,proto3" json:"font_family,omitempty"`
@@ -825,7 +829,13 @@ type PackedSheet struct {
 	// end, draw opaque. A board's zones draw as a wash, 18% of their layer's copper over whatever is
 	// under them, as the SVG backend fills them (agni issue 1334), so two overlapping zones darken
 	// as they do in SVG.
-	GroupAlphas   []float32 `protobuf:"fixed32,13,rep,packed,name=group_alphas,json=groupAlphas,proto3" json:"group_alphas,omitempty"`
+	GroupAlphas []float32 `protobuf:"fixed32,13,rep,packed,name=group_alphas,json=groupAlphas,proto3" json:"group_alphas,omitempty"`
+	// key_columns holds a PrimitiveKey per keyed primitive, the joins that picking and highlighting
+	// read. render.PackedKeys and web/src/packed.ts decode it.
+	KeyColumns *PackedKeys `protobuf:"bytes,14,opt,name=key_columns,json=keyColumns,proto3" json:"key_columns,omitempty"`
+	// label_columns holds a PackedLabel per text the overlay draws. render.PackedLabels and
+	// web/src/packed.ts decode it.
+	LabelColumns  *PackedLabels `protobuf:"bytes,15,opt,name=label_columns,json=labelColumns,proto3" json:"label_columns,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -902,20 +912,6 @@ func (x *PackedSheet) GetPrimitives() []byte {
 	return nil
 }
 
-func (x *PackedSheet) GetKeys() []*PrimitiveKey {
-	if x != nil {
-		return x.Keys
-	}
-	return nil
-}
-
-func (x *PackedSheet) GetLabels() []*PackedLabel {
-	if x != nil {
-		return x.Labels
-	}
-	return nil
-}
-
 func (x *PackedSheet) GetFontFamily() string {
 	if x != nil {
 		return x.FontFamily
@@ -951,6 +947,199 @@ func (x *PackedSheet) GetGroupAlphas() []float32 {
 	return nil
 }
 
+func (x *PackedSheet) GetKeyColumns() *PackedKeys {
+	if x != nil {
+		return x.KeyColumns
+	}
+	return nil
+}
+
+func (x *PackedSheet) GetLabelColumns() *PackedLabels {
+	if x != nil {
+		return x.LabelColumns
+	}
+	return nil
+}
+
+// PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a
+// few thousand names tens of thousands of times, so each name goes into strings once and a record
+// points at it. Index 0 of strings is always "", the value of an unset field.
+type PackedKeys struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Strings []string               `protobuf:"bytes,1,rep,name=strings,proto3" json:"strings,omitempty"`
+	// Fixed-width LE records of 7 u32s, one per key, in primitive order:
+	// (primitive, ref_des, net, net_id, pin, bus_id, placement). ref_des, net, net_id, pin and bus_id
+	// index strings. primitive and placement are PrimitiveKey's own values. PackedSheet.layout_version
+	// names this layout.
+	Records       []byte `protobuf:"bytes,2,opt,name=records,proto3" json:"records,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackedKeys) Reset() {
+	*x = PackedKeys{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackedKeys) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackedKeys) ProtoMessage() {}
+
+func (x *PackedKeys) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackedKeys.ProtoReflect.Descriptor instead.
+func (*PackedKeys) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PackedKeys) GetStrings() []string {
+	if x != nil {
+		return x.Strings
+	}
+	return nil
+}
+
+func (x *PackedKeys) GetRecords() []byte {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+// PackedLabels is a sheet's PackedLabels as columns (agni issue 1532). Index 0 of strings is
+// always "".
+type PackedLabels struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Strings []string               `protobuf:"bytes,1,rep,name=strings,proto3" json:"strings,omitempty"`
+	// Fixed-width LE records of 11 32-bit words, one per label, in draw order:
+	// (x i32, y i32, height i32, rotation_deg i32, max_width i32, width i32, text u32, justify u32,
+	// color u32, group u32, mirror u32). text, justify and color index strings, and mirror is 0 or 1.
+	// PackedSheet.layout_version names this layout.
+	Records []byte `protobuf:"bytes,2,opt,name=records,proto3" json:"records,omitempty"`
+	// runs holds the markup runs of the few labels that have them (PackedLabel.runs), by label index.
+	Runs          []*PackedLabelRuns `protobuf:"bytes,3,rep,name=runs,proto3" json:"runs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackedLabels) Reset() {
+	*x = PackedLabels{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackedLabels) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackedLabels) ProtoMessage() {}
+
+func (x *PackedLabels) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackedLabels.ProtoReflect.Descriptor instead.
+func (*PackedLabels) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PackedLabels) GetStrings() []string {
+	if x != nil {
+		return x.Strings
+	}
+	return nil
+}
+
+func (x *PackedLabels) GetRecords() []byte {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+func (x *PackedLabels) GetRuns() []*PackedLabelRuns {
+	if x != nil {
+		return x.Runs
+	}
+	return nil
+}
+
+// PackedLabelRuns is one label's markup runs, for PackedLabels.runs.
+type PackedLabelRuns struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Label         uint32                 `protobuf:"varint,1,opt,name=label,proto3" json:"label,omitempty"` // index of the label in PackedLabels.records
+	Runs          []*TextRun             `protobuf:"bytes,2,rep,name=runs,proto3" json:"runs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackedLabelRuns) Reset() {
+	*x = PackedLabelRuns{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackedLabelRuns) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackedLabelRuns) ProtoMessage() {}
+
+func (x *PackedLabelRuns) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackedLabelRuns.ProtoReflect.Descriptor instead.
+func (*PackedLabelRuns) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PackedLabelRuns) GetLabel() uint32 {
+	if x != nil {
+		return x.Label
+	}
+	return 0
+}
+
+func (x *PackedLabelRuns) GetRuns() []*TextRun {
+	if x != nil {
+		return x.Runs
+	}
+	return nil
+}
+
 // BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes
 // under the Board entry in its Sheets panel (agni 1351). The rows come in the order a reader
 // expects, copper in stackup order from the front, then the edge, the through copper, the zones,
@@ -980,7 +1169,7 @@ type BoardLayerRow struct {
 
 func (x *BoardLayerRow) Reset() {
 	*x = BoardLayerRow{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -992,7 +1181,7 @@ func (x *BoardLayerRow) String() string {
 func (*BoardLayerRow) ProtoMessage() {}
 
 func (x *BoardLayerRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1194,7 @@ func (x *BoardLayerRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardLayerRow.ProtoReflect.Descriptor instead.
 func (*BoardLayerRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *BoardLayerRow) GetName() string {
@@ -1065,7 +1254,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1077,7 +1266,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,7 +1378,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x04mime\x18\x05 \x01(\tR\x04mime\x12\x12\n" +
 	"\x04data\x18\x06 \x01(\fR\x04data\x12!\n" +
 	"\frotation_deg\x18\a \x01(\x05R\vrotationDeg\x12\x16\n" +
-	"\x06mirror\x18\b \x01(\bR\x06mirror\"\xe9\x03\n" +
+	"\x06mirror\x18\b \x01(\bR\x06mirror\"\x9c\x04\n" +
 	"\vPackedSheet\x12\x19\n" +
 	"\bsheet_id\x18\x01 \x01(\tR\asheetId\x12%\n" +
 	"\x0elayout_version\x18\x02 \x01(\x05R\rlayoutVersion\x12\x19\n" +
@@ -1198,16 +1387,28 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\bvertices\x18\x05 \x01(\fR\bvertices\x12\x1e\n" +
 	"\n" +
 	"primitives\x18\x06 \x01(\fR\n" +
-	"primitives\x12.\n" +
-	"\x04keys\x18\a \x03(\v2\x1a.agni.v1.geom.PrimitiveKeyR\x04keys\x121\n" +
-	"\x06labels\x18\b \x03(\v2\x19.agni.v1.geom.PackedLabelR\x06labels\x12\x1f\n" +
+	"primitives\x12\x1f\n" +
 	"\vfont_family\x18\t \x01(\tR\n" +
 	"fontFamily\x12!\n" +
 	"\fgroup_colors\x18\n" +
 	" \x03(\tR\vgroupColors\x12)\n" +
 	"\x10background_color\x18\v \x01(\tR\x0fbackgroundColor\x121\n" +
 	"\x06images\x18\f \x03(\v2\x19.agni.v1.geom.PackedImageR\x06images\x12!\n" +
-	"\fgroup_alphas\x18\r \x03(\x02R\vgroupAlphas\"\x9c\x01\n" +
+	"\fgroup_alphas\x18\r \x03(\x02R\vgroupAlphas\x129\n" +
+	"\vkey_columns\x18\x0e \x01(\v2\x18.agni.v1.geom.PackedKeysR\n" +
+	"keyColumns\x12?\n" +
+	"\rlabel_columns\x18\x0f \x01(\v2\x1a.agni.v1.geom.PackedLabelsR\flabelColumnsJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x04keysR\x06labels\"@\n" +
+	"\n" +
+	"PackedKeys\x12\x18\n" +
+	"\astrings\x18\x01 \x03(\tR\astrings\x12\x18\n" +
+	"\arecords\x18\x02 \x01(\fR\arecords\"u\n" +
+	"\fPackedLabels\x12\x18\n" +
+	"\astrings\x18\x01 \x03(\tR\astrings\x12\x18\n" +
+	"\arecords\x18\x02 \x01(\fR\arecords\x121\n" +
+	"\x04runs\x18\x03 \x03(\v2\x1d.agni.v1.geom.PackedLabelRunsR\x04runs\"R\n" +
+	"\x0fPackedLabelRuns\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\rR\x05label\x12)\n" +
+	"\x04runs\x18\x02 \x03(\v2\x15.agni.v1.geom.TextRunR\x04runs\"\x9c\x01\n" +
 	"\rBoardLayerRow\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
@@ -1235,7 +1436,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -1247,24 +1448,29 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*PackedLabel)(nil),           // 7: agni.v1.geom.PackedLabel
 	(*PackedImage)(nil),           // 8: agni.v1.geom.PackedImage
 	(*PackedSheet)(nil),           // 9: agni.v1.geom.PackedSheet
-	(*BoardLayerRow)(nil),         // 10: agni.v1.geom.BoardLayerRow
-	(*PackedHighlight_Group)(nil), // 11: agni.v1.geom.PackedHighlight.Group
+	(*PackedKeys)(nil),            // 10: agni.v1.geom.PackedKeys
+	(*PackedLabels)(nil),          // 11: agni.v1.geom.PackedLabels
+	(*PackedLabelRuns)(nil),       // 12: agni.v1.geom.PackedLabelRuns
+	(*BoardLayerRow)(nil),         // 13: agni.v1.geom.BoardLayerRow
+	(*PackedHighlight_Group)(nil), // 14: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	11, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	14, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
-	2,  // 5: agni.v1.geom.PackedSheet.keys:type_name -> agni.v1.geom.PrimitiveKey
-	7,  // 6: agni.v1.geom.PackedSheet.labels:type_name -> agni.v1.geom.PackedLabel
-	8,  // 7: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
-	0,  // 8: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	8,  // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
+	10, // 6: agni.v1.geom.PackedSheet.key_columns:type_name -> agni.v1.geom.PackedKeys
+	11, // 7: agni.v1.geom.PackedSheet.label_columns:type_name -> agni.v1.geom.PackedLabels
+	12, // 8: agni.v1.geom.PackedLabels.runs:type_name -> agni.v1.geom.PackedLabelRuns
+	6,  // 9: agni.v1.geom.PackedLabelRuns.runs:type_name -> agni.v1.geom.TextRun
+	0,  // 10: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -1278,7 +1484,7 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

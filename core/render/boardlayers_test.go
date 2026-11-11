@@ -104,7 +104,7 @@ func TestEveryPackedPrimitiveHidesWithARow(t *testing.T) {
 	if len(in2) != 2 || len(zones) != 1 || in2[1] != zones[0] || groups[zones[0]] == 0 {
 		t.Errorf("In2.Cu groups %v, Zones groups %v, want the zone group in both", in2, zones)
 	}
-	for _, l := range PackBoard(b).GetLabels() {
+	for _, l := range PackedLabels(PackBoard(b)) {
 		if l.GetText() == "BOTTOM" && l.GetGroup() != boardRow(t, rows, "B.SilkS").GetGroups()[0] {
 			t.Errorf("B.SilkS text packs in group %d", l.GetGroup())
 		}
@@ -207,7 +207,7 @@ func TestPackBoardWashesAZone(t *testing.T) {
 	ps := PackBoard(b)
 	recs := decodeRecords(ps.GetPrimitives())
 	zones := 0
-	for _, k := range ps.GetKeys() {
+	for _, k := range PackedKeys(ps) {
 		r := recs[k.GetPrimitive()]
 		if k.GetNet() != "GND" || r.group == groupBoardCopperBack || r.group == groupBoardPickBack || r.group == groupBoardThrough {
 			continue

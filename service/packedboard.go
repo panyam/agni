@@ -13,7 +13,7 @@ import (
 
 // packedBoardVersion names the layout of a kept packed board. Change it when PackBoard or
 // BoardLayers writes something new, so a store written by an older build reads as a miss.
-const packedBoardVersion = "1"
+const packedBoardVersion = "2"
 
 var packedBoardCodec = &protoCodec{empty: func() proto.Message { return &webapi.GetSheetResponse{} }}
 

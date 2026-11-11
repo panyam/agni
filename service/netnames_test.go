@@ -39,7 +39,7 @@ func TestGetSheetKeysANameOnlyCanvasByNetID(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := map[string][]string{}
-	for _, k := range resp.GetPacked().GetKeys() {
+	for _, k := range render.PackedKeys(resp.GetPacked()) {
 		if k.GetNet() != "" {
 			ids[k.GetNet()] = append(ids[k.GetNet()], k.GetNetId())
 		}
@@ -88,7 +88,7 @@ func TestHighlightSheetLightsANameOnlyCanvasByID(t *testing.T) {
 		t.Fatal(err)
 	}
 	netOf := map[uint32]string{}
-	for _, k := range sheet.GetPacked().GetKeys() {
+	for _, k := range render.PackedKeys(sheet.GetPacked()) {
 		netOf[k.GetPrimitive()] = k.GetNet()
 	}
 	lit := func(id string) map[string]int {

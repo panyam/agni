@@ -62,7 +62,7 @@ func TestWithStyleOverrides(t *testing.T) {
 		t.Errorf("packed font = %q, want serif", ps.FontFamily)
 	}
 	var found bool
-	for _, l := range ps.Labels {
+	for _, l := range PackedLabels(ps) {
 		if l.Text == "NET" {
 			found = l.Color == "#ff0000"
 		}

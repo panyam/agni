@@ -82,7 +82,7 @@ func main() {
 			return demokit.Errf("write %s: %v", out, err)
 		}
 		fmt.Printf("PackedSheet: %d vertices, %d primitives, %d keys.\n",
-			len(ps.Vertices)/8, len(ps.Primitives)/12, len(ps.Keys))
+			len(ps.Vertices)/8, len(ps.Primitives)/12, len(render.PackedKeys(ps)))
 		fmt.Printf("Wrote web/%s. Start the viewer (cd ../../web && pnpm dev), then open:\n", name)
 		fmt.Printf("  http://localhost:5178/?src=%s\n", name)
 		return nil

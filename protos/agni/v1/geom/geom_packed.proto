@@ -20,7 +20,8 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/geom";
 // architecture/geometry-and-rendering.md.
 
 // PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
-// element it belongs to, for view-local picking/highlight.
+// element it belongs to, for view-local picking/highlight. A PackedSheet carries its keys as
+// PackedKeys columns, and a reader decodes them into these (agni issue 1532).
 message PrimitiveKey {
   uint32 primitive = 1;  // index into PackedSheet.primitives
   string ref_des = 2;    // set for symbol/pin primitives
@@ -124,6 +125,11 @@ message PackedHighlight {
 }
 
 // PackedLabel is one text label positioned in sheet-relative world coordinates (rebased by
+// origin_x/origin_y, the same as the vertex blob). A PackedSheet carries its labels as PackedLabels
+// columns, and a reader decodes them into these (agni issue 1532). The rest of this comment covers
+// one label as decoded.
+//
+// A label is positioned in sheet-relative world coordinates (rebased by
 // origin_x/origin_y, the same as the vertex blob). A GPU line pipeline draws no glyphs, so
 // an overlay above the geometry draws the text. The browser owns text metrics (docsite
 // architecture/geometry-and-rendering.md). The server computes the world position and the
@@ -204,8 +210,11 @@ message PackedSheet {
   // stroke_um is the width a line's source draws it at, in micrometres, and 0 is a hairline. Only
   // a board's graphics set it (agni issue 1486), and a reader that ignores it draws hairlines.
   bytes primitives = 6;
-  repeated PrimitiveKey keys = 7;   // O(primitives), stays structured
-  repeated PackedLabel labels = 8;  // O(labels), stays structured; drawn by the text overlay
+  // keys and labels went out as one message each until agni issue 1532. Jetson's board held 37,320
+  // keys and 5,732 labels, and decoding them took a browser about 35 ms of the reload. They now
+  // travel as columns, in key_columns and label_columns.
+  reserved 7, 8;
+  reserved "keys", "labels";
   // The default font-family for the sheet's text (render.Style.Font), so the overlay draws in
   // the same face as the SVG backend. One face per sheet; per-element font is not sent yet.
   string font_family = 9;
@@ -224,6 +233,43 @@ message PackedSheet {
   // under them, as the SVG backend fills them (agni issue 1334), so two overlapping zones darken
   // as they do in SVG.
   repeated float group_alphas = 13;
+  // key_columns holds a PrimitiveKey per keyed primitive, the joins that picking and highlighting
+  // read. render.PackedKeys and web/src/packed.ts decode it.
+  PackedKeys key_columns = 14;
+  // label_columns holds a PackedLabel per text the overlay draws. render.PackedLabels and
+  // web/src/packed.ts decode it.
+  PackedLabels label_columns = 15;
+}
+
+// PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a
+// few thousand names tens of thousands of times, so each name goes into strings once and a record
+// points at it. Index 0 of strings is always "", the value of an unset field.
+message PackedKeys {
+  repeated string strings = 1;
+  // Fixed-width LE records of 7 u32s, one per key, in primitive order:
+  // (primitive, ref_des, net, net_id, pin, bus_id, placement). ref_des, net, net_id, pin and bus_id
+  // index strings. primitive and placement are PrimitiveKey's own values. PackedSheet.layout_version
+  // names this layout.
+  bytes records = 2;
+}
+
+// PackedLabels is a sheet's PackedLabels as columns (agni issue 1532). Index 0 of strings is
+// always "".
+message PackedLabels {
+  repeated string strings = 1;
+  // Fixed-width LE records of 11 32-bit words, one per label, in draw order:
+  // (x i32, y i32, height i32, rotation_deg i32, max_width i32, width i32, text u32, justify u32,
+  // color u32, group u32, mirror u32). text, justify and color index strings, and mirror is 0 or 1.
+  // PackedSheet.layout_version names this layout.
+  bytes records = 2;
+  // runs holds the markup runs of the few labels that have them (PackedLabel.runs), by label index.
+  repeated PackedLabelRuns runs = 3;
+}
+
+// PackedLabelRuns is one label's markup runs, for PackedLabels.runs.
+message PackedLabelRuns {
+  uint32 label = 1;  // index of the label in PackedLabels.records
+  repeated TextRun runs = 2;
 }
 
 // BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes

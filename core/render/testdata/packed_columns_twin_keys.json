@@ -1,0 +1,5 @@
+[
+  {"primitive":3,"refDes":"U1","net":"SDA","pin":"4","netId":"n-7","busId":"D[0..7]","placement":2},
+  {"primitive":9,"refDes":"R12","net":"SDA","pin":"1","netId":"n-8","busId":"A[0..3]","placement":5},
+  {"primitive":11,"net":"GND"}
+]

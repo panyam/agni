@@ -111,9 +111,17 @@ message PackedSheet {
   int64  origin_x = 6; int64 origin_y = 7;  // sheet min corner; blob coords are relative to this
   bytes  vertices = 3;                // int32 LE pairs, sheet-relative: [x0,y0,x1,y1,...]
   bytes  primitives = 4;              // fixed-width records: kind,group,first_vertex,vertex_count
-  repeated PrimitiveKey keys = 5;     // O(primitives): primitive index -> ref_des / net (for picking)
+  PackedKeys key_columns = 14;        // O(primitives): primitive index -> ref_des / net (for picking)
+  PackedLabels label_columns = 15;    // O(labels): the text the overlay draws
 }
 ```
+
+Keys and labels travel as columns, a string table and fixed-width little-endian records (agni issue
+1532). Jetson's board holds 37,320 keys and 5,732 labels. As one message each they took a browser
+about 35 ms to decode, and as columns they take about 1 ms. The columns are about 13% larger on the
+wire (1.35 MB against 1.19 MB), because a fixed word takes more room than a varint. Go reads them
+with `render.PackedKeys` and `render.PackedLabels`, and the page with `decodeKeys` and `decodeLabels`
+in `web/src/packed.ts`. Both decode one twin fixture, `core/render/testdata/packed_columns_twin.binpb`.
 
 The reader emits tier 1 always. Tier 2 is generated for the scale path (per-sheet GPU upload) and shares the same underlying vertex data. Tier 1's `Point`, `Shape`, and `Polyline` are for reads and small designs. They are not the bulk carrier.
 
@@ -138,7 +146,7 @@ The reader emits tier 1 always. Tier 2 is generated for the scale path (per-shee
 
 The WebGL path draws a schematic sheet as the SVG backend draws it, and its picks, highlights and area select match SVG's (agni issues 1330 to 1336). A board draws its zones as the same translucent wash (agni issue 1334). The visual diff draws in WebGL too, when the canvas does (agni issue 1335). Each side draws its revision's packed sheet and lights its changes over the keys it holds, and the union draws the new revision with the old revision's removed parts as ghosts. A ghost is the old sheet's matched primitives, lines as thin quads and fills as they are, moved by the difference between the two sheets' packed origins (`ghostOverlays` in `web/src/canvas.ts`). Each sheet is packed about its own origin, so the two sides mirror pan and zoom through the point at the middle in the design's own coordinates rather than the sheet's. WebGL2, upload-once, view-local camera, and per-sheet loading all held. The runtime and a few mechanics differ from the plan:
 
-- **Join by embedded keys, not a separate IR load.** `PackedSheet` carries `PrimitiveKey{ref_des, net}` inline, so picking reads the key off the packed primitive with no second IR fetch.
+- **Join by embedded keys, not a separate IR load.** `PackedSheet` carries each `PrimitiveKey{ref_des, net}` in its key columns, so picking reads the key off the packed primitive with no second IR fetch.
 - **Coordinates are Y-up end to end.** geom is Y-up and WebGL NDC is Y-up, so the camera matrix does **not** flip Y. An early bug did flip it, and the sheet rendered upside-down against the SVG oracle. The SVG backend flips once, only because SVG pixel space is Y-down.
 - **Worksheet furniture is synthesized in the packer**, in world units, under a frame group. The furniture is the frame border, the zone-ruler ticks, and the title-block box and dividers. The packer draws it only when the sheet has a page, meaning `sheet.Size` is set. It mirrors the SVG worksheet drawing, and the frame extends the packed bounds so the camera fits the whole page. Ruler and title-block text is not geometry (see the overlay below). Both renderers size the title block, its text and its indent by one formula, in SheetSVG's drawing pixels (`titleBlockPx`), and the packer turns them into world units through the sheet's scale (agni issue 765). Before, WebGL's block was 32% of the frame's width and SVG's 36%.
 - **Text draws as an SVG overlay.** A GPU line pipeline draws no glyphs. Labels travel on the wire as packed labels. Each carries a world position, height, rotation, justify and color, computed server-side with the same transform math as SVG. The client draws them as a second SVG layer over the canvas. Each `<text>` is placed once in a Y-flipped world space (`y -> -y`), so glyphs are upright. Pan and zoom are a single CSS transform on the layer, which the GPU composites with one style write per frame. Both layers read the same camera in the same `requestAnimationFrame`, so text is locked to geometry and never drifts. The layer is `pointer-events:none` and shows only in WebGL mode. Text metrics are browser-owned, so there is no glyph atlas. There is one font per sheet. A per-element font has to wait until the IR carries one.

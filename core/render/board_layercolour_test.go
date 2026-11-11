@@ -45,7 +45,7 @@ func TestEachSidesLayersTakeTheirOwnColour(t *testing.T) {
 			if got := packed.GetGroupColors()[row.GetGroups()[0]]; got != c {
 				t.Errorf("%s: the packed %s group draws in %s, want %s", name, ly, got, c)
 			}
-			for _, l := range packed.GetLabels() {
+			for _, l := range PackedLabels(packed) {
 				if l.GetText() == "T"+ly && l.GetColor() != c {
 					t.Errorf("%s: the packed %s label draws in %s, want %s", name, ly, l.GetColor(), c)
 				}

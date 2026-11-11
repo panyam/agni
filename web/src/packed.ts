@@ -7,7 +7,7 @@
 // backing store goes straight to gl.bufferData without a copy.
 
 import { fromBinary } from "@bufbuild/protobuf";
-import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedSheetSchema, type PackedKeys, type PackedLabels, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // DEFAULT_FONT_STACK mirrors render.SchematicFontStack (core/render/style.go). The server sends
 // the family list on every sheet, so this is only the fallback for a sheet packed before the field
@@ -195,6 +195,64 @@ function parsePrimitives(bytes: Uint8Array): Primitive[] {
   return out;
 }
 
+// A packed sheet sends its keys and labels as columns, a string table and fixed-width LE records,
+// rather than one message each (agni issue 1532). On Jetson's board the messages took about 35 ms to
+// decode, and the columns take about 1 ms. render.PackedKeys and render.PackedLabels decode the same
+// layout in Go (core/render/packcolumns.go), and both suites decode core/render/testdata's twin.
+const KEY_RECORD_WORDS = 7; // primitive, ref_des, net, net_id, pin, bus_id, placement
+const LABEL_RECORD_WORDS = 11; // x, y, height, rotation_deg, max_width, width, text, justify, color, group, mirror
+
+// recordWords views a column's records as u32 words. A trailing partial record is dropped.
+function recordWords(bytes: Uint8Array | undefined, width: number): { words: DataView; n: number } {
+  const b = bytes ?? new Uint8Array();
+  return { words: new DataView(b.buffer, b.byteOffset, b.byteLength), n: Math.floor(b.byteLength / (width * 4)) };
+}
+
+// decodeKeys turns key columns into one PrimitiveKey per keyed primitive. A string index past the
+// table reads as "", as render.PackedKeys reads it.
+export function decodeKeys(cols: PackedKeys | undefined): PrimitiveKey[] {
+  const strs = cols?.strings ?? [];
+  const { words, n } = recordWords(cols?.records, KEY_RECORD_WORDS);
+  const w = (i: number, j: number) => words.getUint32((i * KEY_RECORD_WORDS + j) * 4, true);
+  const str = (i: number) => strs[i] ?? "";
+  const out: PrimitiveKey[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = { primitive: w(i, 0), refDes: str(w(i, 1)), net: str(w(i, 2)), netId: str(w(i, 3)), pin: str(w(i, 4)), busId: str(w(i, 5)), placement: w(i, 6) };
+  }
+  return out;
+}
+
+// decodeLabels turns label columns into one Label per text, in draw order, with each label's markup
+// runs.
+export function decodeLabels(cols: PackedLabels | undefined): Label[] {
+  const strs = cols?.strings ?? [];
+  const { words, n } = recordWords(cols?.records, LABEL_RECORD_WORDS);
+  const u = (i: number, j: number) => words.getUint32((i * LABEL_RECORD_WORDS + j) * 4, true);
+  const s = (i: number, j: number) => words.getInt32((i * LABEL_RECORD_WORDS + j) * 4, true);
+  const str = (i: number) => strs[i] ?? "";
+  const out: Label[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = {
+      x: s(i, 0),
+      y: s(i, 1),
+      height: s(i, 2),
+      rotationDeg: s(i, 3),
+      maxWidth: s(i, 4),
+      width: s(i, 5),
+      text: str(u(i, 6)),
+      justify: str(u(i, 7)),
+      color: str(u(i, 8)),
+      group: u(i, 9),
+      mirror: u(i, 10) !== 0,
+      runs: [],
+    };
+  }
+  for (const r of cols?.runs ?? []) {
+    if (r.label < n) out[r.label].runs = r.runs.map((x) => ({ text: x.text, kind: x.kind }));
+  }
+  return out;
+}
+
 // toRenderable maps a decoded PackedSheet message into the renderer's upload-ready shape.
 // The RPC path (GetSheet) already holds a PackedSheet message, so it calls this directly;
 // decodePackedSheet is the binary-blob entry point built on top of it, and the decode tests use it.
@@ -206,21 +264,8 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
     originY: Number(msg.originY),
     vertices: asInt32Array(msg.vertices),
     primitives: parsePrimitives(msg.primitives),
-    keys: msg.keys.map((k) => ({ primitive: k.primitive, refDes: k.refDes, net: k.net, netId: k.netId ?? "", pin: k.pin, busId: k.busId ?? "", placement: k.placement ?? 0 })),
-    labels: msg.labels.map((l) => ({
-      x: l.x,
-      y: l.y,
-      text: l.text,
-      height: l.height,
-      rotationDeg: l.rotationDeg,
-      justify: l.justify,
-      color: l.color,
-      maxWidth: l.maxWidth,
-      width: l.width,
-      runs: l.runs.map((r) => ({ text: r.text, kind: r.kind })),
-      group: l.group,
-      mirror: l.mirror,
-    })),
+    keys: decodeKeys(msg.keyColumns),
+    labels: decodeLabels(msg.labelColumns),
     images: msg.images.map((im) => ({
       x: im.x,
       y: im.y,
