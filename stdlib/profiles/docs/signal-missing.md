@@ -8,6 +8,8 @@ present, but a required signal net is absent. Signals are matched by net name, u
 though a profile may also match by prefix, glob or regex. On a design that declares a host,
 `host-incomplete` reports instead and this rule stands down.
 
+![an in-use SPI-NOR interface missing one of its required signals is flagged; one with all six is fine](images/profile-signal-missing.svg)
+
 The shipped eMMC profile has an `instance` key, and a profile with that key asks this of each bus on
 its own. A bus is the nets named from one anchor net's stem, so `SD2_CMD`'s bus is `SD2_CLK`,
 `SD2_DATA0` and so on, and a signal on another bus does not count. A bus that carries one of the

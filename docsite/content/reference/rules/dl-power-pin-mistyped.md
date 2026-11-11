@@ -15,6 +15,8 @@ when the pin sits alone on its net (a single-connection stub). The names are `VD
 symbol author named the pin like a supply but typed it like a signal, and then left it wired to
 nothing.
 
+![a pin named VDD but typed passive, alone on its net, is flagged; the same pin wired to its rail is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/power-pin-mistyped.svg)
+
 ### Why engineers want it
 
 `power-input-not-driven` already flags an unconnected power pin, but only when the symbol types the

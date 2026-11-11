@@ -6,6 +6,8 @@ A profile's bus needs termination, as a differential pair like CAN's CANH/CANL o
 profile is in use, but nothing bridges its two designated signal nets through series passives, so
 the terminating resistor is missing.
 
+![a differential pair with nothing bridging its two nets is flagged; one with a resistor across them is fine](images/profile-termination.svg)
+
 ### Why engineers want it
 
 A differential bus with no termination reflects its own signal off the unterminated end. At low

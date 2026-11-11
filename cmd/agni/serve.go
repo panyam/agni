@@ -34,8 +34,10 @@ import (
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
+	datalogrules "github.com/panyam/agni/stdlib/rules/datalog"
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
@@ -437,11 +439,11 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 	}
 	// The rule-doc explainer diagrams (WS3-025) are served read-only, images only and from the embed
-	// FS only, so the rules/expectations panels resolve their relative image refs (WS9-030). The
-	// built-in and intent docs live in separate embed FSes (WS3-093) behind one route, so the two
-	// handlers are composed by firstImageHandler.
-	mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
-		firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
+	// FS only, so the rules/expectations panels resolve their relative image refs (WS9-030). Each card
+	// family keeps its docs in its own embed FS (WS3-093, agni issue 75), and all four share one
+	// route, so firstImageHandler tries each in turn. catalogdocs refuses an image name two families
+	// both ship, since only the first would ever be served.
+	mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/", ruleDocImages()))
 	// The per-relation fact-doc cards (WS14-005), read-only and image-only like the rule docs, so
 	// the query panel resolves a relation Detail's image refs.
 	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
@@ -771,6 +773,12 @@ func firstImageHandler(handlers ...http.Handler) http.Handler {
 		}
 		http.NotFound(w, r)
 	})
+}
+
+// ruleDocImages is the /rule-docs/ handler, every card family's diagrams behind one route.
+func ruleDocImages() http.Handler {
+	return firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler(),
+		profiles.RuleDocImageHandler(), datalogrules.RuleDocImageHandler())
 }
 
 // bufferedResponse captures a handler's status, headers, and body in memory so firstImageHandler can

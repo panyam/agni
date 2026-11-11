@@ -4,19 +4,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/panyam/agni/stdlib/rules/builtin"
-	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// TestFirstImageHandlerComposesSources checks the /rule-docs/ composition (WS3-093). A request for
-// a built-in card and a request for an intent card both resolve 200 through the one handler, and a
-// card in neither source 404s. The web takes this runtime path to render an intent rule's schematic
-// card, so it must serve both embed FSes from the single namespace. A built-in-only
-// handler (the pre-WS3-093 wiring) would 404 the intent card and the panel would show "no card
-// yet".
+// TestFirstImageHandlerComposesSources checks the /rule-docs/ composition (WS3-093, agni issue 75).
+// A card from each of the four families resolves 200 through the one handler, and a card in none
+// 404s. The web takes this one route for every rule's card, so a family missing from the composition
+// would 404 its cards and the panel would show "no card yet".
 func TestFirstImageHandlerComposesSources(t *testing.T) {
-	h := firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())
+	h := ruleDocImages()
 	get := func(path string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
@@ -34,7 +29,13 @@ func TestFirstImageHandlerComposesSources(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "image/svg+xml" {
 		t.Errorf("intent card content-type = %q, want image/svg+xml", ct)
 	}
-	// A card in neither source 404s.
+	// A profile card and a datalog card resolve through the same route (agni issue 75).
+	for _, p := range []string{"/images/profile-termination.svg", "/images/power-pin-mistyped.svg"} {
+		if rec := get(p); rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "image/svg+xml" {
+			t.Errorf("%s: status %d, content-type %q, want 200 image/svg+xml", p, rec.Code, rec.Header().Get("Content-Type"))
+		}
+	}
+	// A card in no source 404s.
 	if rec := get("/images/does-not-exist.svg"); rec.Code != http.StatusNotFound {
 		t.Errorf("unknown card status = %d, want 404", rec.Code)
 	}

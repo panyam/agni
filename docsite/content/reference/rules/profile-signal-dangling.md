@@ -13,6 +13,8 @@ It reports a profile signal net that exists by name but carries fewer than two c
 net is present in the netlist, so a presence check passes. But it is wired to only one pin, so the
 far end of the bus is not actually reached.
 
+![a profile signal net wired to only one pin is flagged; one reaching both ends is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/profile-signal-dangling.svg)
+
 ### Why engineers want it
 
 "Present by name" and "actually connected" are different. A net can be labelled `SPI_IO2` and touch

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="profile-termination rule: a differential pair with nothing bridging its two nets is flagged; one with a resistor across them is fine">
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">nothing across the pair</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">120 Ω across the pair</text>
+  <rect x="20" y="90" width="76" height="90" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="58.0" y="133.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U1</text>
+  <text x="58.0" y="148.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">transceiver</text>
+  <rect x="256" y="90" width="56" height="90" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="284.0" y="133.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J1</text>
+  <text x="284.0" y="148.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">conn</text>
+  <line x1="96" y1="112" x2="256" y2="112" stroke="#d64545" stroke-width="2.5"/>
+  <text x="102" y="106" font-size="10.5" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">CANH</text>
+  <line x1="96" y1="158" x2="256" y2="158" stroke="#d64545" stroke-width="2.5"/>
+  <text x="102" y="152" font-size="10.5" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">CANL</text>
+  <text x="170" y="216" font-size="12" fill="#d64545" text-anchor="middle">CANH reaches CANL through nothing</text>
+  <text x="170" y="236" font-size="11" fill="#6b7280" text-anchor="middle">the walk does not cross U1</text>
+  <rect x="360" y="90" width="76" height="90" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="398.0" y="133.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U1</text>
+  <text x="398.0" y="148.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">transceiver</text>
+  <rect x="596" y="90" width="56" height="90" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="624.0" y="133.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J1</text>
+  <text x="624.0" y="148.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">conn</text>
+  <line x1="436" y1="112" x2="596" y2="112" stroke="#394049" stroke-width="2"/>
+  <text x="442" y="106" font-size="10.5" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">CANH</text>
+  <line x1="436" y1="158" x2="596" y2="158" stroke="#394049" stroke-width="2"/>
+  <text x="442" y="152" font-size="10.5" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">CANL</text>
+  <circle cx="540" cy="112" r="3.5" fill="#394049"/>
+  <circle cx="540" cy="158" r="3.5" fill="#394049"/>
+  <line x1="540" y1="112" x2="540" y2="119.0" stroke="#394049" stroke-width="2"/>
+  <rect x="533" y="119.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="540" y1="151.0" x2="540" y2="158" stroke="#394049" stroke-width="2"/>
+  <text x="552" y="139.0" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <text x="510" y="216" font-size="12" fill="#2f9e57" text-anchor="middle">CANH reaches CANL through R1</text>
+  <text x="510" y="236" font-size="11" fill="#6b7280" text-anchor="middle">the walk does not cross U1</text>
+</svg>

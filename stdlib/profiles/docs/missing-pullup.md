@@ -6,6 +6,8 @@ The profile marks some signals as needing a pull-up, such as a chip-select or an
 The rule reports such a signal when its net reaches no power rail through a resistor, so no pull-up
 sits in its path.
 
+![a chip-select that reaches no rail through a resistor is flagged, even with a pull-down; one pulled up to a rail is fine](images/profile-missing-pullup.svg)
+
 ### Why engineers want it
 
 An open-drain or chip-select line with no pull-up floats between drives. At power-up, before any

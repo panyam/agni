@@ -21,11 +21,19 @@ func TestRuleDocsOneToOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Diagrams live under docs/images/ and are referenced as "images/<file>", as in
+	// stdlib/rules/builtin (agni issue 75). A family with no diagram yet has no images/ directory.
 	images := map[string]bool{}
+	if imgEntries, err := ruleDocs.ReadDir("docs/images"); err == nil {
+		for _, e := range imgEntries {
+			if name := e.Name(); strings.HasSuffix(name, ".png") || strings.HasSuffix(name, ".svg") {
+				images["images/"+name] = true
+			}
+		}
+	}
 	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".png") {
-			images[e.Name()] = true
-			continue
+		if !strings.HasSuffix(e.Name(), ".md") {
+			continue // the images/ subdir is not a card
 		}
 		if r := strings.TrimSuffix(e.Name(), ".md"); !want[r] {
 			t.Errorf("docs/%s is not a known requirement (orphan doc)", e.Name())
@@ -74,16 +82,7 @@ func TestDocRules(t *testing.T) {
 // issue 75). Every other card must reference an image. TestRequirementCardsHaveDiagram fails on an
 // entry whose card now references one, and on an entry naming no card, so the list shrinks as
 // drawings are added.
-//
-// This family has no docs/images/ yet, and tools/catalogdocs copies no images for it. The first
-// diagram here needs that plumbing as well as the drawing.
-var cardDiagramExempt = map[string]string{
-	"esd":             "not drawn yet (agni issue 75)",
-	"missing-pullup":  "not drawn yet (agni issue 75)",
-	"signal-dangling": "not drawn yet (agni issue 75)",
-	"signal-missing":  "not drawn yet (agni issue 75)",
-	"termination":     "not drawn yet (agni issue 75)",
-}
+var cardDiagramExempt = map[string]string{}
 
 // TestRequirementCardsHaveDiagram holds every card in docs/ to the diagram convention (agni issue
 // 75). A card references an image, or cardDiagramExempt names it with a reason. TestRuleDocsOneToOne

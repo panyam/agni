@@ -37,6 +37,8 @@ var (
 	staticDir    = flag.String("static", "docsite/static/images/catalog", "docsite static dir for catalog images")
 	ruleImgSrc   = flag.String("rule-images", "stdlib/rules/builtin/docs/images", "source dir for built-in rule doc images")
 	intentImgSrc = flag.String("intent-images", "stdlib/rules/intent/docs/images", "source dir for intent rule doc images")
+	dlImgSrc     = flag.String("datalog-images", "stdlib/rules/datalog/docs/images", "source dir for datalog rule doc images")
+	profImgSrc   = flag.String("profile-images", "stdlib/profiles/docs/images", "source dir for profile requirement doc images")
 	relImgSrc    = flag.String("relation-images", "stdlib/relations/facts/docs/images", "source dir for relation doc images")
 )
 
@@ -112,8 +114,8 @@ func genRules() error {
 	sources := []ruleSource{
 		{rules: check.BuiltinRules(), label: "built-in", prefix: "", imgSrc: *ruleImgSrc},
 		{rules: intent.DocRules(), label: "intent", prefix: "intent", imgSrc: *intentImgSrc},
-		{rules: datalog.DocRules(), label: "datalog", prefix: "dl", imgSrc: ""},
-		{rules: profiles.DocRules(), label: "profile", prefix: "profile", imgSrc: ""},
+		{rules: datalog.DocRules(), label: "datalog", prefix: "dl", imgSrc: *dlImgSrc},
+		{rules: profiles.DocRules(), label: "profile", prefix: "profile", imgSrc: *profImgSrc},
 	}
 
 	outDir := filepath.Join(*contentDir, "rules")
@@ -126,6 +128,10 @@ func genRules() error {
 	}
 
 	var rows []catalogRow
+	// owner names the source that ships each image. Every source copies into one directory and the
+	// app serves them all from one route, so a name two sources share would show one family's
+	// diagram on the other's card (agni issue 75).
+	owner := map[string]string{}
 	for _, s := range sources {
 		images := map[string]bool{}
 		for _, r := range s.rules {
@@ -150,6 +156,12 @@ func genRules() error {
 				severity: r.Severity,
 				summary:  r.Summary,
 			})
+		}
+		for name := range images {
+			if prev, ok := owner[name]; ok && prev != s.label {
+				return fmt.Errorf("image %q is shipped by both the %s and %s cards; give one a distinct name", name, prev, s.label)
+			}
+			owner[name] = s.label
 		}
 		if s.imgSrc != "" {
 			if err := copyImages(s.imgSrc, imgOut, images); err != nil {
