@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="io-map-net-absent rule: an IO map row naming a net the netlist does not have is flagged; a net that exists is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">the declared net is not in the netlist</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">the net exists</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">design.yaml io_map  {net: SPI_MISO, device: U1, pin: PTA2}</text>
+  <rect x="190" y="80" width="90" height="100" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="270" y="98" font-size="13" fill="#394049" font-weight="600" text-anchor="end">U1</text>
+  <text x="198" y="118" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA1</text>
+  <text x="198" y="142" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA2</text>
+  <text x="198" y="166" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA3</text>
+  <line x1="30" y1="138" x2="190" y2="138" stroke="#d64545" stroke-width="1.6" stroke-dasharray="5 4"/>
+  <text x="30" y="131" font-size="11" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">SPI_MISO</text>
+  <text x="170" y="224" font-size="12" fill="#d64545" text-anchor="middle">no net of that name: a disconnection</text>
+  <rect x="530" y="80" width="90" height="100" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="610" y="98" font-size="13" fill="#394049" font-weight="600" text-anchor="end">U1</text>
+  <text x="538" y="118" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA1</text>
+  <text x="538" y="142" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA2</text>
+  <text x="538" y="166" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">PTA3</text>
+  <line x1="370" y1="138" x2="530" y2="138" stroke="#394049" stroke-width="2"/>
+  <text x="370" y="131" font-size="11" fill="#394049" font-family="ui-monospace, Menlo, Consolas, monospace">SPI_MISO</text>
+  <text x="510" y="224" font-size="12" fill="#2f9e57" text-anchor="middle">found, on PTA2</text>
+</svg>

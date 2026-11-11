@@ -14,6 +14,8 @@ power-good/enable chain. This is the family doc for every `intent/sequence-<name
 sequence compiles to its own rule, so a SoC's power tree and a modem's rails bind and report
 independently, and each judges the adjacent links its declaration names.
 
+![a declared power-up order whose power-good does not reach the next stage's enable is flagged; a connected chain is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/sequence.svg)
+
 For each adjacent pair of stages, the rule asserts on the earlier stage's `good` net and the later
 stage's `enable` net. It fires three ways:
 

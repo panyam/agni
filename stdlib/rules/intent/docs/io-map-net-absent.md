@@ -4,6 +4,8 @@
 
 The IO map declares a net and the netlist does not have it.
 
+![an IO map row naming a net the netlist does not have is flagged; a net that exists is fine](images/io-map-net-absent.svg)
+
 The rule gives one verdict per declared NET rather than per row. It is ordinary for a map to name
 one net on several rows. Repeating an absence per row would inflate the count, and a reader uses
 that count to judge how bad the disagreement is.

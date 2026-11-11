@@ -12,6 +12,8 @@ Re-strap one of the two devices to a free address, taking the address map from e
 It reports two declared strap groups on the **same bus** that encode the **same number**, meaning two
 devices answering to one address.
 
+![two strap groups on one bus that encode the same address are flagged; distinct addresses are fine]({{.Site.PathPrefix}}/static/images/catalog/rules/strap-address-collision.svg)
+
 ### For hardware engineers
 
 Of all the checks, this one most needs to be a rule rather than a reviewer.

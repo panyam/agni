@@ -6,6 +6,8 @@ It reads several strap nets together as one binary number, MSB-first, and compar
 design intent's declared value, such as a device's address on a shared bus, its boot source or its
 bus width.
 
+![strap nets that together encode a different number from the declared value are flagged; ones that encode it are fine](images/strap-group.svg)
+
 `property-strap` asks whether one pin latches the intended level. This asks whether the pins
 *together* encode the intended number. A per-net declaration has no vocabulary for that. Nothing
 ties `PHYAD2/1/0` together as one value, and nothing says which device they belong to.

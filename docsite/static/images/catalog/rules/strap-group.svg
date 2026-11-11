@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="strap-group rule: strap nets that together encode a different number from the declared value are flagged; ones that encode it are fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">the straps encode 6</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">the straps encode 5</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">strap_groups  {name: PHYAD, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 5}</text>
+  <text x="60" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD2</text>
+  <text x="60" y="96" font-size="10" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+  <line x1="46" y1="100" x2="74" y2="100" stroke="#394049" stroke-width="2"/>
+  <line x1="60" y1="100" x2="60" y2="109.0" stroke="#394049" stroke-width="2"/>
+  <rect x="53" y="109.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="60" y1="141.0" x2="60" y2="150" stroke="#394049" stroke-width="2"/>
+  <circle cx="60" cy="150" r="3.5" fill="#394049"/>
+  <text x="70" y="166" font-size="14" fill="#394049" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="156" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD1</text>
+  <text x="156" y="96" font-size="10" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+  <line x1="142" y1="100" x2="170" y2="100" stroke="#394049" stroke-width="2"/>
+  <line x1="156" y1="100" x2="156" y2="109.0" stroke="#394049" stroke-width="2"/>
+  <rect x="149" y="109.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="156" y1="141.0" x2="156" y2="150" stroke="#394049" stroke-width="2"/>
+  <circle cx="156" cy="150" r="3.5" fill="#394049"/>
+  <text x="166" y="166" font-size="14" fill="#d64545" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="252" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD0</text>
+  <line x1="252" y1="150" x2="252" y2="152.0" stroke="#394049" stroke-width="2"/>
+  <rect x="245" y="152.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="252" y1="184.0" x2="252" y2="186" stroke="#394049" stroke-width="2"/>
+  <line x1="240" y1="186" x2="264" y2="186" stroke="#394049" stroke-width="2"/>
+  <line x1="245" y1="191" x2="259" y2="191" stroke="#394049" stroke-width="2"/>
+  <line x1="249" y1="196" x2="255" y2="196" stroke="#394049" stroke-width="2"/>
+  <circle cx="252" cy="150" r="3.5" fill="#394049"/>
+  <text x="262" y="140" font-size="14" fill="#d64545" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">0</text>
+  <text x="170" y="234" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">110 = 6, declared 5</text>
+  <text x="400" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD2</text>
+  <text x="400" y="96" font-size="10" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+  <line x1="386" y1="100" x2="414" y2="100" stroke="#394049" stroke-width="2"/>
+  <line x1="400" y1="100" x2="400" y2="109.0" stroke="#394049" stroke-width="2"/>
+  <rect x="393" y="109.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="400" y1="141.0" x2="400" y2="150" stroke="#394049" stroke-width="2"/>
+  <circle cx="400" cy="150" r="3.5" fill="#394049"/>
+  <text x="410" y="166" font-size="14" fill="#2f9e57" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="496" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD1</text>
+  <line x1="496" y1="150" x2="496" y2="152.0" stroke="#394049" stroke-width="2"/>
+  <rect x="489" y="152.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="496" y1="184.0" x2="496" y2="186" stroke="#394049" stroke-width="2"/>
+  <line x1="484" y1="186" x2="508" y2="186" stroke="#394049" stroke-width="2"/>
+  <line x1="489" y1="191" x2="503" y2="191" stroke="#394049" stroke-width="2"/>
+  <line x1="493" y1="196" x2="499" y2="196" stroke="#394049" stroke-width="2"/>
+  <circle cx="496" cy="150" r="3.5" fill="#394049"/>
+  <text x="506" y="140" font-size="14" fill="#2f9e57" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">0</text>
+  <text x="592" y="76" font-size="10.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHYAD0</text>
+  <text x="592" y="96" font-size="10" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+  <line x1="578" y1="100" x2="606" y2="100" stroke="#394049" stroke-width="2"/>
+  <line x1="592" y1="100" x2="592" y2="109.0" stroke="#394049" stroke-width="2"/>
+  <rect x="585" y="109.0" width="14" height="32" rx="2" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <line x1="592" y1="141.0" x2="592" y2="150" stroke="#394049" stroke-width="2"/>
+  <circle cx="592" cy="150" r="3.5" fill="#394049"/>
+  <text x="602" y="166" font-size="14" fill="#2f9e57" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="510" y="234" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">101 = 5, as declared</text>
+</svg>

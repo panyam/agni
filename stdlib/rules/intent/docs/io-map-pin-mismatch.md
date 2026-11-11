@@ -6,6 +6,8 @@ Every row of the declared IO map names a net, a device and a pin. This rule look
 netlist. It reports a row when the map assigns one net to the pin and the netlist puts another net
 there.
 
+![an IO map row whose net the netlist puts on a different pin is flagged; the net on its declared pin is fine](images/io-map-pin-mismatch.svg)
+
 The map is the declaration; the netlist is the design. Neither is derived from the other, so a
 disagreement between them means something.
 

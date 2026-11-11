@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="strap-address-collision rule: two strap groups on one bus that encode the same address are flagged; distinct addresses are fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">two devices at address 5</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">addresses 5 and 6</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">strap_groups  PHYAD U12 and PHYAD U13, both with bus: MDIO</text>
+  <line x1="30" y1="96" x2="310" y2="96" stroke="#394049" stroke-width="3"/>
+  <text x="30" y="88" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">MDIO</text>
+  <line x1="100" y1="96" x2="100" y2="120" stroke="#394049" stroke-width="2"/>
+  <rect x="60" y="120" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="100.0" y="142.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U12</text>
+  <text x="100.0" y="157.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHY</text>
+  <text x="100" y="190" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">address 5</text>
+  <line x1="240" y1="96" x2="240" y2="120" stroke="#394049" stroke-width="2"/>
+  <rect x="200" y="120" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="240.0" y="142.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U13</text>
+  <text x="240.0" y="157.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHY</text>
+  <text x="240" y="190" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">address 5</text>
+  <text x="170" y="228" font-size="11.5" fill="#d64545" text-anchor="middle">both answer every read of 5</text>
+  <line x1="370" y1="96" x2="650" y2="96" stroke="#394049" stroke-width="3"/>
+  <text x="370" y="88" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">MDIO</text>
+  <line x1="440" y1="96" x2="440" y2="120" stroke="#394049" stroke-width="2"/>
+  <rect x="400" y="120" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="440.0" y="142.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U12</text>
+  <text x="440.0" y="157.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHY</text>
+  <text x="440" y="190" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">address 5</text>
+  <line x1="580" y1="96" x2="580" y2="120" stroke="#394049" stroke-width="2"/>
+  <rect x="540" y="120" width="80" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="580.0" y="142.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U13</text>
+  <text x="580.0" y="157.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">PHY</text>
+  <text x="580" y="190" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">address 6</text>
+  <text x="510" y="228" font-size="11.5" fill="#2f9e57" text-anchor="middle">each answers its own address</text>
+</svg>

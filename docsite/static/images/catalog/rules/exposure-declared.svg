@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="exposure-declared rule: an internal-exposure declaration naming a ref-des that is not a connector on the design is flagged; one naming a connector is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">J18 is not on this board</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">J18 is a connector</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">design.yaml components  {J18: {exposure: internal}}</text>
+  <rect x="30" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="70.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J1</text>
+  <text x="70.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">connector</text>
+  <rect x="126" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="166.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J17</text>
+  <text x="166.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">connector</text>
+  <rect x="222" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="262.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">R18</text>
+  <text x="262.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">resistor</text>
+  <text x="170" y="190" font-size="12" fill="#d64545" text-anchor="middle">the declaration changes nothing</text>
+  <text x="170" y="212" font-size="11" fill="#6b7280" text-anchor="middle">J18 is still checked as external</text>
+  <rect x="370" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="410.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J1</text>
+  <text x="410.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">connector</text>
+  <rect x="466" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="506.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J17</text>
+  <text x="506.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">connector</text>
+  <rect x="562" y="100" width="80" height="44" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="602.0" y="120.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">J18</text>
+  <text x="602.0" y="135.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">connector</text>
+  <text x="510" y="190" font-size="12" fill="#2f9e57" text-anchor="middle">the exposure rules treat J18 as internal</text>
+</svg>

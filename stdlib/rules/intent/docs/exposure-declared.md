@@ -15,6 +15,8 @@ intent:
     J18: {exposure: internal}   # the expansion mezzanine
 ```
 
+![an internal-exposure declaration naming a ref-des that is not a connector on the design is flagged; one naming a connector is fine](images/exposure-declared.svg)
+
 ### Why engineers want it
 
 Exposure is a fact about one product rather than about the part. The same board-to-board connector

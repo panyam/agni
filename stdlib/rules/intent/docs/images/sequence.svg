@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="sequence rule: a declared power-up order whose power-good does not reach the next stage's enable is flagged; a connected chain is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="30" y="42" font-size="15" fill="#d64545" font-weight="600">Flagged</text>
+  <text x="30" y="60" font-size="11.5" fill="#6b7280">nothing holds VDD_IO off</text>
+  <text x="370" y="42" font-size="15" fill="#2f9e57" font-weight="600">Fine</text>
+  <text x="370" y="60" font-size="11.5" fill="#6b7280">CORE_PG gates IO_EN</text>
+  <text x="340" y="266" font-size="11.5" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">sequences  order: [{rail: VDD_CORE, good: CORE_PG}, {rail: VDD_IO, enable: IO_EN}]</text>
+  <rect x="20" y="80" width="100" height="56" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="70.0" y="106.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U1</text>
+  <text x="70.0" y="121.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_CORE</text>
+  <rect x="210" y="150" width="100" height="56" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="260.0" y="176.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U2</text>
+  <text x="260.0" y="191.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_IO</text>
+  <text x="116" y="124" font-size="10" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">PG</text>
+  <text x="214" y="182" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">EN</text>
+  <line x1="120" y1="120" x2="150" y2="120" stroke="#d64545" stroke-width="2.5"/>
+  <circle cx="150" cy="120" r="3.5" fill="#d64545"/>
+  <text x="156" y="116" font-size="10" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">CORE_PG</text>
+  <line x1="160" y1="178" x2="210" y2="178" stroke="#d64545" stroke-width="2.5"/>
+  <circle cx="160" cy="178" r="3.5" fill="#d64545"/>
+  <text x="120" y="182" font-size="10" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">IO_EN</text>
+  <text x="165" y="236" font-size="12" fill="#d64545" text-anchor="middle">the two nets never meet</text>
+  <rect x="360" y="80" width="100" height="56" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="410.0" y="106.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U1</text>
+  <text x="410.0" y="121.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_CORE</text>
+  <rect x="550" y="150" width="100" height="56" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="600.0" y="176.0" font-size="13" fill="#394049" font-weight="600" text-anchor="middle">U2</text>
+  <text x="600.0" y="191.0" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VDD_IO</text>
+  <text x="456" y="124" font-size="10" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">PG</text>
+  <text x="554" y="182" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">EN</text>
+  <path d="M460 120 H510 V178 H550" fill="none" stroke="#394049" stroke-width="2"/>
+  <text x="516" y="112" font-size="10" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">CORE_PG</text>
+  <text x="505" y="236" font-size="12" fill="#2f9e57" text-anchor="middle">VDD_IO waits for VDD_CORE</text>
+</svg>
