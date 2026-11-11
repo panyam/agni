@@ -57,7 +57,9 @@ func main() {
 	}
 	sorted := append([]time.Duration(nil), boards...)
 	sort.Slice(sorted, func(a, b int) bool { return sorted[a] < sorted[b] })
-	fmt.Printf("build.board: %d of %d under 500 ms, median %d ms, min %d ms, max %d ms\n", fast, len(boards), sorted[len(sorted)/2].Milliseconds(), sorted[0].Milliseconds(), sorted[len(sorted)-1].Milliseconds())
+	ingests := append([]time.Duration(nil), totals...)
+	sort.Slice(ingests, func(a, b int) bool { return ingests[a] < ingests[b] })
+	fmt.Printf("build.board: %d of %d under 500 ms, median %d ms, min %d ms, max %d ms; ingest median %d ms\n", fast, len(boards), sorted[len(sorted)/2].Milliseconds(), sorted[0].Milliseconds(), sorted[len(sorted)-1].Milliseconds(), ingests[len(ingests)/2].Milliseconds())
 }
 
 func once(bin, mount, uri, wrap string, attached bool, wait time.Duration, second string) (time.Duration, time.Duration, error) {
