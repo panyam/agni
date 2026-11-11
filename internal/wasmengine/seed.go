@@ -181,7 +181,7 @@ func decodeSeed(b []byte) ([]seedEntry, error) {
 	var out []seedEntry
 	next := func() ([]byte, error) {
 		n, k := binary.Uvarint(b)
-		if k <= 0 || uint64(len(b)-k) < n {
+		if k <= 0 || uint64(len(b)-k) < n { // #nosec G115 -- k > 0 is the varint's length within b, so len(b)-k is not negative
 			return nil, errors.New("a seed entry runs past the end")
 		}
 		v := b[k : k+int(n)] // #nosec G115 -- n <= len(b)-k, checked just above

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -63,7 +65,7 @@ func seedHandler(ws *service.WorkspaceService, ms []mounts.Mount, version func()
 					http.NotFound(w, r)
 					return
 				}
-				b, err := os.ReadFile(abs) // #nosec G304 -- abs comes from mounts.Resolve, which refuses a path outside its mount
+				b, err := os.ReadFile(abs) // #nosec G304 G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
 				if err != nil {
 					http.NotFound(w, r)
 					return
@@ -86,6 +88,6 @@ func seedHandler(ws *service.WorkspaceService, ms []mounts.Mount, version func()
 		}
 		w.Header().Set(wasmengine.SeedVersionHeader, v)
 		w.Header().Set("Content-Type", "application/octet-stream")
-		_, _ = w.Write(seed)
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(seed))
 	})
 }
