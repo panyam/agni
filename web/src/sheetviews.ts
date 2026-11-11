@@ -1,7 +1,7 @@
 // SheetViews owns the sheet views open beside the canvas (agni issue 1326). It opens one on request,
 // hands each a selection made anywhere on the page, and mirrors the camera between locked views on
 // one sheet. The dock is reached through SheetViewDock, so a test runs the manager with no dock.
-import { SheetPane, type SheetPaneDeps } from "./sheetpane.js";
+import { BOARD_SHEET, SheetPane, type SheetPaneDeps } from "./sheetpane.js";
 import type { SurfaceMode } from "./sheetsurface.js";
 import { lockedPeers } from "./sheetfollow.js";
 import type { Selection } from "./selection.js";
@@ -22,7 +22,12 @@ export interface SheetViewHooks {
   onPickEmpty: (pane: SheetPane) => void;
 }
 
-type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl">;
+type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl"> & {
+  // boardRenderer is the renderer a board view opens in when the caller names none and the canvas
+  // draws in SVG, WebGL on a hardware GPU and SVG on a software one (agni issue 1536). Without it a
+  // board view opens in the canvas's renderer, as a schematic view does.
+  boardRenderer?: () => SurfaceMode;
+};
 
 export class SheetViews {
   private readonly panes = new Map<string, SheetPane>();
@@ -38,8 +43,10 @@ export class SheetViews {
   ) {}
 
   // open adds a view showing sheetId and returns it once the sheet is drawn. renderer picks SVG or
-  // WebGL, and without it the view opens in the canvas's renderer (agni issue 1368).
+  // WebGL. Without it a board view opens in WebGL when the canvas does, and otherwise in
+  // boardRenderer (agni issue 1536). Any other sheet opens in the canvas's renderer (agni issue 1368).
   async open(sheetId: string, renderer?: SurfaceMode): Promise<SheetPane> {
+    if (!renderer && sheetId === BOARD_SHEET && this.engine.renderer?.() !== "webgl") renderer = this.engine.boardRenderer?.();
     const id = `sheetview-${this.next++}`;
     const pane = new SheetPane(
       id,

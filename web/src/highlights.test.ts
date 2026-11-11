@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_HIGHLIGHT_COLOR, HighlightShape, circleTriangles, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
+import { DEFAULT_HIGHLIGHT_COLOR, FRAME_FLOOR_FRACTION, FRAME_STROKE_FRACTION, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
 import { KIND_LINE_STRIP, type Primitive, type PrimitiveKey } from "./packed.js";
 
 // The fixture mirrors core/render/highlight_test.go, with R1 (rect prim 2, pins 3/4), U1 (rect 5,
@@ -200,8 +200,8 @@ describe("withFocusShape with a user style (WS9-044)", () => {
     ]);
   });
 
-  it("stamps only the color on a component box, keeping its default opacity", () => {
-    expect(withFocusShape([{ components: ["R1"] }], style)).toEqual([{ components: ["R1"], shape: HighlightShape.BOUNDING_RECT, color: "#00ff00" }]);
+  it("stamps the color and width scale on a component box, keeping its default opacity (agni issue 1536)", () => {
+    expect(withFocusShape([{ components: ["R1"] }], style)).toEqual([{ components: ["R1"], shape: HighlightShape.BOUNDING_RECT, color: "#00ff00", strokeScale: 2 }]);
   });
 
   it("leaves specs unstyled when no style is passed (built-in look, minimal specs)", () => {
@@ -359,5 +359,35 @@ describe("a ref-des placed twice", () => {
   it("keeps one frame for a part placed once", () => {
     const [g] = resolveHighlights(keys, [{ components: ["R1"], shape: HighlightShape.BOUNDING_RECT }]);
     expect(g.entities).toEqual([[2, 3, 4]]);
+  });
+});
+
+// A frame's opaque stroke, as the GL overlay draws it (agni issue 1536).
+describe("a frame's stroke ring", () => {
+  const f = entityFrame(0, 0, 10, 10); // pad floors at 8, so the frame is (-8,-8)-(18,18)
+
+  it("covers a band of the given width centred on the rect's edge, and nothing inside it", () => {
+    const ring = rectRing(f, 2);
+    expect(ring).toHaveLength(4 * 12);
+    expect([Math.min(...ring), Math.max(...ring)]).toEqual([-9, 19]);
+    // Every vertex sits on the outer or inner edge of the band.
+    for (let i = 0; i < ring.length; i += 2) {
+      const [x, y] = [ring[i], ring[i + 1]];
+      const onBand = [-9, -7, 17, 19].includes(x) || [-9, -7, 17, 19].includes(y);
+      expect(onBand).toBe(true);
+    }
+  });
+
+  it("covers an annulus of the given width around the frame's circle", () => {
+    const ring = circleRing(f, 2);
+    expect(ring.length % 12).toBe(0);
+    for (let i = 0; i < ring.length; i += 2) {
+      const d = Math.sqrt((ring[i] - f.cx) ** 2 + (ring[i + 1] - f.cy) ** 2);
+      expect(Math.min(Math.abs(d - (f.r - 1)), Math.abs(d - (f.r + 1)))).toBeLessThan(1e-9);
+    }
+  });
+
+  it("sizes against the sheet with the fractions core/render/highlight.go uses", () => {
+    expect([FRAME_FLOOR_FRACTION, FRAME_STROKE_FRACTION]).toEqual([0.015, 0.003]);
   });
 });

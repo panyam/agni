@@ -75,7 +75,8 @@ ended up without asking again.
 - `OpenSheetView` opens a sheet view beside the canvas on one sheet, as the Sheets panel's open
   beside button does. It answers the new view's id, such as `sheetview-2`. A page numbers its views
   from 1 and never reuses a number, so the id of a closed view names nothing. Its `renderer` is
-  `svg` or `webgl`, and with none the view draws in the canvas's renderer. The answer says which
+  `svg` or `webgl`. With none, a board view draws in WebGL when the canvas does or the GPU is
+  hardware, and any other view draws in the canvas's renderer. The answer says which
   renderer drew the view, since a browser with no WebGL2 draws it in SVG.
 - `CloseSheetView` closes one view by its id.
 

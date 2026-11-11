@@ -328,3 +328,49 @@ describe("a sheet view in WebGL", () => {
     });
   }, 120_000);
 });
+
+// A board view opens in WebGL on a hardware GPU, even beside a canvas the reader keeps in SVG, and a
+// schematic view keeps the canvas's SVG (agni issue 1536). Headless Chrome draws WebGL in software,
+// so the hardware case reports a hardware renderer to the page's GPU probe (rendercaps.ts) and lets
+// it take a context Chrome would refuse.
+describe("the renderer a sheet view opens in", () => {
+  const hardwareGpu = () => {
+    const getContext = HTMLCanvasElement.prototype.getContext as (this: HTMLCanvasElement, id: string, opts?: object) => unknown;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, opts?: Record<string, unknown>) {
+      return getContext.call(this, id, opts && { ...opts, failIfMajorPerformanceCaveat: false });
+    } as never;
+    const getParameter = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function (this: WebGL2RenderingContext, p: number) {
+      return p === 0x9246 ? "ANGLE (Apple, Apple M1, OpenGL 4.1)" : getParameter.call(this, p);
+    };
+  };
+  const besideTile = (page: Page, name: RegExp) =>
+    page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: name }) }).first().locator(".sheet-tile-beside");
+  const view = (page: Page, n: number) => page.locator(PANE).nth(n);
+
+  it("draws the board in WebGL beside an SVG canvas on a hardware GPU, and a schematic in SVG", async () => {
+    await withPage(browser, async (page) => {
+      await page.addInitScript(hardwareGpu);
+      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
+      await besideTile(page, /^Board$/).click();
+      await expect.poll(() => view(page, 0).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("webgl");
+      expect(await view(page, 0).locator(".sheetview-webgl").isChecked()).toBe(true);
+      expect(await page.locator("#svg-view svg").count()).toBe(1);
+
+      await besideTile(page, /^(?!Board$)/).click();
+      await expect.poll(() => view(page, 1).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("svg");
+      expect(await view(page, 1).locator(".sheetview-webgl").isChecked()).toBe(false);
+    });
+  }, 120_000);
+
+  it("keeps the board in SVG on a software GPU", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
+      await besideTile(page, /^Board$/).click();
+      await expect.poll(() => view(page, 0).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("svg");
+      expect(await view(page, 0).locator(".sheetview-webgl").isChecked()).toBe(false);
+    });
+  }, 120_000);
+});

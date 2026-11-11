@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { SheetViews, type SheetViewDock } from "./sheetviews.js";
 import type { Selection } from "./selection.js";
 
-function setup(drawnOn: string[] = ["s1"]) {
+function setup(drawnOn: string[] = ["s1"], modes: { canvas?: "svg" | "webgl"; board?: "svg" | "webgl" } = {}) {
   const docked = new Map<string, () => void>();
   const dock: SheetViewDock = {
     add: (id, _t, el, closed) => {
@@ -18,12 +18,18 @@ function setup(drawnOn: string[] = ["s1"]) {
     },
   };
   const asked: string[] = [];
+  const rendered: string[] = [];
   const lit: { sheet: string; specs: unknown[] }[] = [];
   const views = new SheetViews(
     dock,
     {
       sheets: () => [{ id: "s1", name: "Root" }, { id: "board", name: "Board" }],
-      render: async (id) => ({ svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: [] }),
+      render: async (id, mode) => {
+        rendered.push(`${id}:${mode}`);
+        return { svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`, boardLayers: [] };
+      },
+      renderer: modes.canvas ? () => modes.canvas! : undefined,
+      boardRenderer: modes.board ? () => modes.board! : undefined,
       overlay: async (sheet, specs) => {
         lit.push({ sheet, specs });
         return "<svg width='100' height='100'><circle r='1'/></svg>";
@@ -36,12 +42,39 @@ function setup(drawnOn: string[] = ["s1"]) {
     },
     { onPick: vi.fn(), onPickEmpty: vi.fn() },
   );
-  return { views, dock, docked, asked, lit };
+  return { views, dock, docked, asked, lit, rendered };
 }
 
 const U1: Selection = { kind: "component", ref: "U1" };
 
 describe("the sheet views beside the canvas", () => {
+  // A board view opens in WebGL on a hardware GPU beside an SVG canvas, and a schematic view keeps
+  // the canvas's SVG (agni issue 1536).
+  it("opens a board view in the board renderer and a schematic view in the canvas's", async () => {
+    const { views, rendered } = setup(["s1"], { canvas: "svg", board: "webgl" });
+    const board = await views.open("board");
+    const sheet = await views.open("s1");
+    expect(rendered[0]).toBe("board:webgl");
+    expect(rendered[rendered.length - 1]).toBe("s1:svg");
+    expect(sheet.renderer()).toBe("svg");
+    expect(board.id).toBe("sheetview-1");
+  });
+
+  it("opens a board view in WebGL beside a WebGL canvas, even on a software GPU", async () => {
+    const { views, rendered } = setup(["s1"], { canvas: "webgl", board: "svg" });
+    await views.open("board");
+    expect(rendered[0]).toBe("board:webgl");
+  });
+
+  it("keeps a board view in SVG on a software GPU, and lets a caller name the renderer", async () => {
+    const soft = setup(["s1"], { canvas: "svg", board: "svg" });
+    await soft.views.open("board");
+    expect(soft.rendered).toEqual(["board:svg"]);
+    const named = setup(["s1"], { canvas: "svg", board: "webgl" });
+    await named.views.open("board", "svg");
+    expect(named.rendered).toEqual(["board:svg"]);
+  });
+
   it("opens views with their own ids and docks each one", async () => {
     const { views, docked } = setup();
     const a = await views.open("s1");

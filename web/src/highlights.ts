@@ -55,11 +55,11 @@ export interface HighlightSpec {
   color?: string; // "#rrggbb"; empty -> DEFAULT_HIGHLIGHT_COLOR
   alpha?: number; // (0,1]; unset/0 -> fully opaque (outline) / 0.3 (bounding shapes) / 0.4 (path)
   shape?: HighlightShape; // unset -> OUTLINE (the WS9-016 re-stroke behavior)
-  strokeScale?: number; // PATH width multiplier (WS9-044); unset/0 -> 1
+  strokeScale?: number; // PATH width and bounding-shape stroke multiplier (WS9-044, agni 1536); unset/0 -> 1
 }
 
 // FocusStyle is the part of a user highlight style that withFocusShape stamps onto the focus
-// specs (WS9-044), namely the marker color, opacity, and PATH width scale.
+// specs (WS9-044), namely the marker color, opacity, and width scale.
 export interface FocusStyle {
   color: string;
   alpha: number;
@@ -72,8 +72,8 @@ export interface FocusStyle {
 // endpoints. A component or pin keeps the bounding rect. Each focus spec is built from a single
 // subject (findingSpec, entitySpecs), so the presence of net names or ids alone selects the shape.
 // selectFinding and locateEntity both go through here. An optional user style (WS9-044) sets the
-// color on any focus and the opacity and width scale on a PATH marker. Without one the specs keep
-// the built-in look.
+// color on any focus, the opacity and width scale on a PATH marker, and the width scale on a box's
+// stroke (agni issue 1536). Without one the specs keep the built-in look.
 export function withFocusShape(specs: HighlightSpec[], style?: FocusStyle): HighlightSpec[] {
   return specs.map((s) => {
     const isNet = (s.nets && s.nets.length > 0) || (s.netIds && s.netIds.length > 0);
@@ -83,7 +83,8 @@ export function withFocusShape(specs: HighlightSpec[], style?: FocusStyle): High
     const shape = isNet ? HighlightShape.PATH : isBus ? HighlightShape.OUTLINE : HighlightShape.BOUNDING_RECT;
     if (!style) return { ...s, shape };
     if (shape === HighlightShape.PATH) return { ...s, shape, color: style.color, alpha: style.alpha, strokeScale: style.scale };
-    return { ...s, shape, color: style.color }; // a box keeps its default opacity; only the color follows the style
+    if (shape === HighlightShape.BOUNDING_RECT) return { ...s, shape, color: style.color, strokeScale: style.scale }; // a box keeps its default fill opacity
+    return { ...s, shape, color: style.color };
   });
 }
 
@@ -255,6 +256,42 @@ export function entityBounds(
     }
   }
   return minX > maxX ? null : { minX, minY, maxX, maxY };
+}
+
+// FRAME_FLOOR_FRACTION and FRAME_STROKE_FRACTION size a frame against the sheet it sits on, as
+// fractions of the sheet's smaller world span. The floor is the least pad around an entity, so a
+// small part on a dense board frames at about twice its old width. The stroke is the frame's
+// opaque outline width, before the user's strokeScale. Both are twinned with frameFloorFraction and
+// frameStrokeFraction in core/render/highlight.go (agni issue 1536).
+export const FRAME_FLOOR_FRACTION = 0.015;
+export const FRAME_STROKE_FRACTION = 0.003;
+
+// rectRing tessellates a stroke of the given width centred on a frame's padded bbox, as four
+// quads, so the GL overlay draws the opaque outline an SVG stroke draws.
+export function rectRing(f: EntityFrame, width: number): number[] {
+  const h = width / 2;
+  const [ox0, oy0, ox1, oy1] = [f.minX - h, f.minY - h, f.maxX + h, f.maxY + h];
+  const [ix0, iy0, ix1, iy1] = [f.minX + h, f.minY + h, f.maxX - h, f.maxY - h];
+  const quad = (x0: number, y0: number, x1: number, y1: number) => [x0, y0, x1, y0, x1, y1, x0, y0, x1, y1, x0, y1];
+  return [...quad(ox0, oy0, ox1, iy0), ...quad(ox0, iy1, ox1, oy1), ...quad(ox0, iy0, ix0, iy1), ...quad(ix1, iy0, ox1, iy1)];
+}
+
+// circleRing tessellates a stroke of the given width centred on a frame's circle, as an annulus.
+export function circleRing(f: EntityFrame, width: number): number[] {
+  const ro = f.r + width / 2;
+  const ri = Math.max(f.r - width / 2, 0);
+  const out: number[] = [];
+  for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
+    const a0 = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
+    const a1 = (2 * Math.PI * (i + 1)) / CIRCLE_SEGMENTS;
+    const [c0, s0, c1, s1] = [Math.cos(a0), Math.sin(a0), Math.cos(a1), Math.sin(a1)];
+    const o0 = [f.cx + ro * c0, f.cy + ro * s0];
+    const o1 = [f.cx + ro * c1, f.cy + ro * s1];
+    const i0 = [f.cx + ri * c0, f.cy + ri * s0];
+    const i1 = [f.cx + ri * c1, f.cy + ri * s1];
+    out.push(...i0, ...o0, ...o1, ...i0, ...o1, ...i1);
+  }
+  return out;
 }
 
 // CIRCLE_SEGMENTS is the framing circle's tessellation for the GL overlay (the SVG side
