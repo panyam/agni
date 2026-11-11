@@ -122,15 +122,28 @@ export const SERVE_LANE_MAX_BYTES = 512 << 20;
 // the mount namespace. It must finish before the app root builds its clients. The assets sit beside
 // this bundle, so the page works under any path prefix.
 export async function startPageEngine(opts: PageEngineOptions = {}): Promise<WasmEngine | undefined> {
+  // Under ?timing the page logs one "agni boot" line, on its own clock (agni issue 1524). scriptMs
+  // is when the page's script got here, each worker's time is when it had loaded agni.wasm, and
+  // engineMs is when clients can be built. make exercise-board-open reads it as the page's timeline.
+  const scriptMs = performance.now();
+  const boot = (more: Record<string, number> = {}) => {
+    if (!timingMode()) return;
+    const page = location.pathname.endsWith("/load") ? "load" : "viewer";
+    const ms = Object.fromEntries(Object.entries({ scriptMs, ...more }).map(([k, v]) => [k, Math.round(v)]));
+    console.info(`agni boot: ${JSON.stringify({ page, engine: pageEngine(), ...ms })}`);
+  };
   if (pageEngine() !== "wasm") {
     refuseBrowserMounts();
+    boot();
     return undefined;
   }
+  const workers: Record<string, number> = {};
   const asset = (name: string) => new URL(name, import.meta.url).href;
   const engine = await startEngine(
     { worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") },
     {
       serveMaxBytes: SERVE_LANE_MAX_BYTES,
+      onReady: (lane, at) => (workers[`${lane}WorkerMs`] = at),
       onRestart: (lane, s) =>
         console.info(
           `agni: the ${lane} worker held ${Math.round(s.memoryBytes / (1 << 20))} MB, ${Math.round((s.heap?.heapAlloc ?? 0) / (1 << 20))} MB of it live, and was replaced`,
@@ -180,6 +193,7 @@ export async function startPageEngine(opts: PageEngineOptions = {}): Promise<Was
       onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
     })),
   );
+  boot({ ...workers, engineMs: performance.now() });
   return engine;
 }
 

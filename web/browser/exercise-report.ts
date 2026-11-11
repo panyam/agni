@@ -314,10 +314,12 @@ export function sumSplits(splits: readonly LoadSplit[]): LoadSplit {
 // 1500). It names the three requests that held the page longest, each with its widest loading
 // stages, then the bytes a browser engine fetched and the Load page's own read, so a board-open row
 // says where its time went.
-export function openDetail(lines: readonly string[]): string {
+export function openDetail(lines: readonly string[], drawnMs?: number): string {
   const splits = lines.map(loadSplit).filter((s): s is LoadSplit => s !== undefined && s.wallMs !== undefined);
   splits.sort((a, b) => (b.wallMs ?? 0) - (a.wallMs ?? 0));
-  const parts = splits.slice(0, 3).map((s) => `${s.rpc} ${sec(s.wallMs ?? 0)} (engine ${sec(s.engineMs)}${s.load.length ? `, ${s.load.slice(0, 2).join(", ")}` : ""})`);
+  const timeline = bootTimeline(lines, drawnMs);
+  const parts = timeline ? [timeline] : [];
+  parts.push(...splits.slice(0, 3).map((s) => `${s.rpc} ${sec(s.wallMs ?? 0)} (engine ${sec(s.engineMs)}${s.load.length ? `, ${s.load.slice(0, 2).join(", ")}` : ""})`));
   let bytes = 0;
   let files = 0;
   for (const l of lines) {
@@ -344,4 +346,46 @@ export function median(xs: readonly number[]): number {
   const s = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// bootTimeline lays out each page an open passed through, from its "agni boot" line (agni issue 1524).
+// The lines a page logged after its boot line are its own, so its first request is the earliest
+// request those lines started, on the same clock. drawnMs is the draw on the last page's clock. It
+// returns "" when no page logged a boot line.
+export function bootTimeline(lines: readonly string[], drawnMs?: number): string {
+  const pages: { boot: Record<string, unknown>; starts: number[] }[] = [];
+  for (const l of lines) {
+    const b = /^agni boot: (\{.*\})$/.exec(l);
+    if (b) {
+      try {
+        pages.push({ boot: JSON.parse(b[1]) as Record<string, unknown>, starts: [] });
+      } catch {
+        // A line that is not ours is skipped.
+      }
+      continue;
+    }
+    const m = TIMING.exec(l);
+    if (!m || !pages.length) continue;
+    try {
+      const start = JSON.parse(m[2])?.page?.startMs;
+      if (typeof start === "number") pages[pages.length - 1].starts.push(start);
+    } catch {
+      // As above.
+    }
+  }
+  return pages
+    .map((p, i) => {
+      const at = (k: string) => (typeof p.boot[k] === "number" ? (p.boot[k] as number) : undefined);
+      const stages: [string, number | undefined][] = [
+        ["scripts", at("scriptMs")],
+        ["serve worker", at("serveWorkerMs")],
+        ["jobs worker", at("jobsWorkerMs")],
+        ["engine", at("engineMs")],
+        ["first request", p.starts.length ? Math.min(...p.starts) : undefined],
+        ["drawn", i === pages.length - 1 ? drawnMs : undefined],
+      ];
+      const shown = stages.filter((x): x is [string, number] => x[1] !== undefined).map(([n, v]) => `${n} ${sec(v)}`);
+      return `${String(p.boot.page ?? "page")} page: ${shown.join(", ")}`;
+    })
+    .join("; ");
 }
