@@ -302,7 +302,7 @@ for (const name of chosen) {
         // Two controls, which pass today. The design opens and lists both the part's sheet and its
         // board, and the board draws the part's footprint with its data-ref key.
         await step("open", {}, async () => {
-          await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
+          await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
           for (const title of [`/${part.sheet}`, `/${footprint.sheet}`, "board"]) {
             await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ timeout: 30_000 });

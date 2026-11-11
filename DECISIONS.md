@@ -2162,7 +2162,7 @@ holes read the same from its `.brd` and its IPC-2581 export.
 rest, has no sample yet, so `CopperShape` has no polarity field. KiCad fills stay out unless a
 consumer needs the fill without KiCad to compute it.
 
-## SVG stays the default renderer until WebGL draws everything SVG draws
+## A page opens in WebGL on a hardware GPU, and in SVG otherwise
 
 **Question.** The WebGL canvas pans Jetson's board about three times as smoothly as SVG, and its
 clicks, areas and highlights now agree with SVG's. Should a page open in WebGL?
@@ -2185,3 +2185,11 @@ with the renderer that is fast everywhere.
 **What this leaves open.** A per-sheet default (WebGL for a board, SVG for a schematic) would give
 most readers the faster board now. It waits on the same tickets, since the board is where #1334's
 gaps show.
+
+**Update (agni 1329).** All four tickets closed, and a page now opens in WebGL on a hardware GPU.
+`defaultRenderMode` (`web/src/rendercaps.ts`) reads the WebGL2 renderer name. A software renderer
+such as SwiftShader, llvmpipe or Microsoft Basic Render opens the page in SVG, as does a browser with
+no WebGL2. So the reader the answer above protected still gets SVG. An address's `?mode=` overrides
+the default either way. The WebGL walk at `9783fb9d` measured Jetson's board pan at p95 7.5 ms in
+WebGL against 20.9 ms in SVG. Headless Chrome reports SwiftShader, so the gate's specs still open in
+SVG, and each spec that reads the SVG view names `mode=svg` so a headed run tests the same thing.

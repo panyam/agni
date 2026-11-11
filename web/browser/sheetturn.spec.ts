@@ -25,7 +25,7 @@ afterAll(async () => {
 const PANE = "[data-sheetview]";
 
 async function openBoardView(page: Page): Promise<void> {
-  await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
   const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
   await row.locator(".sheet-tile-beside").click();

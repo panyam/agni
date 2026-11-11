@@ -18,7 +18,7 @@ afterAll(async () => {
 
 // openBehindTrace opens a design and puts the Trace tab in front of the Query panel.
 async function openBehindTrace(page: Page): Promise<void> {
-  await page.goto(`${base()}/designs/kicad/hier_bus_root.kicad_sch/view`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/designs/kicad/hier_bus_root.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector(".query-mode", { timeout: 30_000 });
   await page.locator(".dv-default-tab-content", { hasText: /^Trace$/ }).first().click();
   await page.waitForSelector(".query-modes", { state: "hidden", timeout: 10_000 });
@@ -57,7 +57,7 @@ describe("Command-F", () => {
 
   it("leaves the key to the query box", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/kicad/hier_bus_root.kicad_sch/view`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/designs/kicad/hier_bus_root.kicad_sch/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector(".query-mode", { timeout: 30_000 });
       await page.locator("textarea.query-text").click();
       await page.keyboard.press("Control+f");

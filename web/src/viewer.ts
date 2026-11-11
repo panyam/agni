@@ -244,8 +244,8 @@ export class ViewerPresenter {
   // config. This class is the interaction half and reads it; document.ts reads nothing back.
   readonly doc = new DocumentStore();
   private currentSheet = "";
-  // Default to SVG, since it renders faithfully (with text) for every design, where WebGL is
-  // currently lower-fidelity and native is per-format/opt-in.
+  // The page sets the default with useDefaultMode (agni issue 1329): WebGL on a hardware GPU, and SVG
+  // otherwise. A test that sets none draws in SVG. An address's ?mode= overrides both.
   private mode: RenderMode = "svg";
   // currentLayout is the geometry axis (faithful / grid / layered / ...), empty until the first
   // design load fills it with the effective layout. It is orthogonal to mode.
@@ -376,6 +376,11 @@ export class ViewerPresenter {
   // renderMode is the canvas's renderer. A sheet view opens in it (agni issue 1368).
   renderMode(): RenderMode {
     return this.mode;
+  }
+
+  // useDefaultMode sets the renderer for an address that names none. Call it before restore.
+  useDefaultMode(mode: RenderMode): void {
+    this.mode = mode;
   }
 
   currentSheetId(): string {
