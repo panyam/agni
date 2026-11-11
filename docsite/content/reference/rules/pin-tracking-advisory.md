@@ -13,6 +13,8 @@ A component joined to a seeded datasheet spec has two pins, and the datasheet **
 tracking bound between them. The datasheet states the bound with a verb like "should" or a phrase
 like "for best operation", and the difference between the two pins breaks it.
 
+![a datasheet recommending OE at least 1 V above VREF, missed by the rails, is flagged as advice; rails that meet it are fine]({{.Site.PathPrefix}}/static/images/catalog/rules/pin-tracking-advisory.svg)
+
 ### Why engineers want it
 
 The vendor is telling you how the part works best, not where it breaks. Take a level shifter whose

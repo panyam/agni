@@ -5,6 +5,8 @@
 A load switch is built from a **switch controller**, an **external MOSFET** and an **external sense
 resistor**. The controller trips at a current higher than the MOSFET's continuous rating.
 
+![a controller that trips above its external FET's continuous rating is flagged; one that trips below it is fine](images/load-switch-trip-above-fet-rating.svg)
+
 Both numbers are vendor values and the finding cites the page each came from. The third input, the
 sense resistance, comes from the design, because no datasheet knows it.
 

@@ -130,20 +130,7 @@ func firstBytes(b []byte) []byte {
 // issue 75). Every other card must reference an image. TestRuleCardsHaveDiagram fails on an entry
 // whose card now references one, and on an entry naming no card, so the list shrinks as drawings
 // are added.
-var cardDiagramExempt = map[string]string{
-	"bus-spelling-not-a-bus":            "not drawn yet (agni issue 75)",
-	"fet-vdss-below-switched-rail":      "not drawn yet (agni issue 75)",
-	"i2c-pull-up-split-rail":            "not drawn yet (agni issue 75)",
-	"i2c-redundant-pull-up":             "not drawn yet (agni issue 75)",
-	"load-switch-trip-above-fet-rating": "not drawn yet (agni issue 75)",
-	"pin-exceeds-abs-max":               "not drawn yet (agni issue 75)",
-	"pin-out-of-recommended":            "not drawn yet (agni issue 75)",
-	"pin-tracking-advisory":             "not drawn yet (agni issue 75)",
-	"pin-tracking-violated":             "not drawn yet (agni issue 75)",
-	"rail-not-classified":               "not drawn yet (agni issue 75)",
-	"regulator-output-exceeds-abs-max":  "not drawn yet (agni issue 75)",
-	"unannotated-components":            "not drawn yet (agni issue 75)",
-}
+var cardDiagramExempt = map[string]string{}
 
 // TestRuleCardsHaveDiagram holds every card in docs/ to the diagram convention (agni issue 75). A
 // card references an image under docs/images/, or cardDiagramExempt names it with a reason.

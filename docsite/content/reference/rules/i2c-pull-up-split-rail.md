@@ -12,6 +12,8 @@ Pull the bus to one rail. Where the bus genuinely crosses supply domains, that i
 An I2C net reaches TWO different rails through its pull-up resistors. One part pulls the bus to one
 supply and another pulls it to a second.
 
+![an I2C net pulled up to two different rails is flagged; one pull-up to one rail is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/i2c-pull-up-split-rail.svg)
+
 ### Why engineers want it
 
 Two pull-ups to two rails tie those rails together through the bus. Whenever one supply is up and

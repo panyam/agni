@@ -12,6 +12,8 @@ Reprogram the regulator's output to a voltage the downstream part is rated for, 
 A regulator's datasheet **output** voltage against the **absolute-maximum supply** rating of a part it
 feeds. Both numbers come from vendor documents, and the finding cites both.
 
+![a regulator whose datasheet output exceeds the absolute maximum of a part it feeds is flagged; an output under it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/regulator-output-exceeds-abs-max.svg)
+
 It is the first rule that compares a parameter on one part against a parameter on another part across
 the net joining them. Every datasheet rule before it read one spec against one rail.
 

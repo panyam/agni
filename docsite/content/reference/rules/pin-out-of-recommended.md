@@ -13,6 +13,8 @@ A component is joined to a seeded datasheet spec. One of its supply pins is on a
 rail's name states a nominal voltage outside **that pin's own** recommended operating range, above
 its maximum or below its minimum.
 
+![a supply pin on a rail outside that pin's own recommended range is flagged; each pin inside its own range is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/pin-out-of-recommended.svg)
+
 ### Why engineers want it
 
 Outside the recommended operating range the datasheet's guaranteed specifications no longer hold.

@@ -13,6 +13,8 @@ A MOSFET sits on a power rail, and the rail's voltage is at or above the part's 
 **drain-source breakdown** rating (VDSS). When the rail's voltage comes from a datasheet, both
 numbers are vendor values, and the finding cites each one it used.
 
+![a FET on a rail at or above its VDSS is flagged; a FET rated above its rail is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/fet-vdss-below-switched-rail.svg)
+
 ### For hardware engineers
 
 VDSS rates how much voltage a FET can block across drain and source while it is off. Past it the
