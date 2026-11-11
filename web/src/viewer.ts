@@ -196,6 +196,9 @@ export interface ViewSink {
   // walkLit hears the walk's shades whenever the walk changes, so the sheet views beside the canvas
   // light it too (agni issue 1480). An empty list says no walk is lit.
   walkLit?: (specs: HighlightSpec[]) => void;
+  // closeSheetViews closes every sheet view beside the canvas when another design opens, since each
+  // view names a sheet of the design it was opened on (agni issue 1425). Optional like walkLit.
+  closeSheetViews?: () => void;
   // reveal zooms the canvas to the highlight on screen, as the host does after a locate. runWalk calls
   // it with the start alone lit, so the view zooms to the start before the walk is drawn around it.
   reveal?: () => void;
@@ -816,6 +819,7 @@ export class ViewerPresenter {
     if (newFile) {
       this.linkHash = "";
       this.views.staleLinkNote(null);
+      this.views.closeSheetViews?.();
       this.doc.catalogLoading = true;
       this.pushFindings();
     }

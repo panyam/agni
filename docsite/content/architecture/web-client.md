@@ -43,7 +43,9 @@ panel from the ones above.
   (`web/src/sheetviews.ts`) makes each one, and `addSheetView` in `dock.ts` docks it under an id
   starting `sheetview-`. The dock's component factory hands that id its element. A saved layout that
   names a view restores without it, since `prunePanels` drops every id that the registry lacks. A view
-  names a sheet of one design, and the next page may open another.
+  names a sheet of one design, and the next page may open another. The same holds within one page.
+  When a link, `ApplyLocation` or back and forward opens another design, `openFile` calls the view
+  sink's `closeSheetViews`, and `SheetViews.reset` closes every view (agni issue 1425).
 - **It draws through a `SheetSurface`** (`web/src/sheetsurface.ts`), as the canvas does (agni issue
   1368). A surface holds an `SvgView` and, once the reader picks WebGL, a `CanvasComponent` with a
   canvas of its own. It draws from the canvas's snapshot, layout and symbol source

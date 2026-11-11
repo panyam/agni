@@ -134,6 +134,7 @@ function harness() {
   const onOverview = vi.fn();
   const onCompare = vi.fn();
   const onShowPanel = vi.fn();
+  const onCloseSheetViews = vi.fn();
   const presenter = new ViewerPresenter(client, checks, canvas, render, {
     sheetNavs: [navA, navB],
     summary: onSummary,
@@ -149,13 +150,14 @@ function harness() {
     location: onLocation,
     compare: onCompare,
     showPanel: onShowPanel,
+    closeSheetViews: onCloseSheetViews,
     overview: { setState: onOverview },
     query: stubQueryView(query),
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel };
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel, onCloseSheetViews };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -407,6 +409,17 @@ describe("ViewerPresenter", () => {
     expect(h.onReport.mock.calls.length).toBe(reports);
     const busy = (h.render.setBusy as ReturnType<typeof vi.fn>).mock.calls;
     expect(busy[busy.length - 1][0]).toBe(false);
+  });
+
+  it("closes the sheet views when another design opens, and keeps them on the same one (agni issue 1425)", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.eds");
+    h.onCloseSheetViews.mockClear();
+    await h.presenter.applyLocation({ mode: "webgl" });
+    await h.presenter.openFile("m", "a.eds");
+    expect(h.onCloseSheetViews).not.toHaveBeenCalled();
+    await h.presenter.applyLocation({ mount: "m", path: "b.eds" });
+    expect(h.onCloseSheetViews).toHaveBeenCalledTimes(1);
   });
 
   it("switching designs drops the sticky layout and adopts the new design's default", async () => {
