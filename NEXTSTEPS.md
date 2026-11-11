@@ -9,46 +9,38 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-10, at `68f4722a`.
+Last pruned 2026-11-10, at `9783fb9d`.
 
 ## At a glance
 
-Three missions are active, each worked in its own clone. `MISSION=mission_<slug> queue.sh` (the
-retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
-blocked-by links rather than here. Log each exercise run on the mission issue.
+One mission is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
+mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
+exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 24 of
-  24 tickets closed. `make exercise-cross-probe` passed at `68f4722a` on Jetson and Clay R6. The
-  mission still has to pass beside a real board before it closes, and closing it is the user's call.
-- **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
-  the formats clone, 17 of 17 closed. `make exercise-allegro` and `make exercise-altium` passed at
-  `e4394b70`, and a native board now opens on the board alone (#1466). Its "Done when" line still
-  wants someone to open a real board of their own in each format. Whether to close the mission before
-  that run is the user's call. #1355, #1362, #1393, #1430 and #1437 are its `waiting` follow-ups.
-- **#1329 `mission_webgl`** (pan, zoom and click Jetson's whole board without lag), 15 of 16
-  closed. #1484 is `waiting` on a lagging team's `agni draw` lines from `?timing`. `make
-  exercise-webgl` last ran on Jetson at `b3cfe8e4`, and #1329's latest log comment has the result.
-- **#1194 `mission_pin_functions`** and **#1337 `mission_walk`** closed on 2026-11-06. Each still
-  wants a person's run on a real board, and either reopens if that run finds something.
+- **#1499 `mission_board_open`** (open Jetson's board in the browser in under 1.5 s, and reopen it in
+  under 0.5 s). Next ready is #1500, which writes `make exercise-board-open`. #1501 (draw the board
+  before the check model) and #1502 (cache the packed board, send it as binary) follow at P1. #1484,
+  #1503 and #1504 are P2. A profile at `9783fb9d` measured a cold open at about 4.0 s in wasm and 1.9 s
+  against a server. #1499's body gives the stages.
+- **#1321 `mission_cross_probe`** and **#1353 `mission_board_formats`** closed on 2026-11-10. Each
+  reopens if a run on a real board finds something. #1353's `waiting` follow-ups keep its label.
+- **#1329 `mission_webgl`** closes with #1505, which opens a page in WebGL on a hardware GPU.
 - **#1176 `mission_shared_viewer_rooms`**, 0 of 1 and not active. #1173 is `waiting` until someone
   runs agni serve for more than one person.
+- **#1442 `mission_demo_journeys`** has no tickets yet. Its first PR adds `make demo-video`.
 - **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
   `guide/older-comparison-tools.md` its first page.
-- **Candidate**: more tours of the viewer, each touring another workflow the way
-  `web/src/reviewtour.ts` tours a review.
-- This run: #1488 (a board view stays on the board, a walk lights beside the canvas, an idle board
-  view parks, closing #1480, #1481 and #1482) merged, and the cross-probe exercise passed after it.
+- This run: a retriage on 2026-11-10 closed 21 issues, filed #1497 and #1498 for their leftovers,
+  and moved 13 labels. Each change has a comment on its issue.
 
 ## Open, ranked
 
-1. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
-   `--timing`, `make wasm-bench` and `make wasm-layers` (pass `BOARD` and `DESIGN`, since a shell's own
-   `DESIGN` overrides the Makefile's), and read CLAUDE.md on the bench's two misleading rows first.
+1. **Jetson's board open**, the #1499 mission above. #1061's load-once work closed, and its edit-session
+   half moved to #1027.
 
-Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`, after #1061), #370 then #373, #380,
-#456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,
-gzipped, in release binaries). The query language roadmap lives on panyam/jaala. Modules (jaala#3)
-and aggregation inside rules (jaala#4) have both shipped, and agni tracks the latest jaala, so a
+Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
+#373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
+roadmap lives on panyam/jaala. Modules (jaala#3) and aggregation inside rules (jaala#4) have both shipped, and agni tracks the latest jaala, so a
 derived question goes in `stdlib/lib` before it becomes a Go relation.
 
 #799 (the PartSpec contract module) waits for a second implementer or consumer. The first release
