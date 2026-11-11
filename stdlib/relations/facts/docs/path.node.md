@@ -3,18 +3,15 @@
 ### What it is
 
 `path.node(path, index, node)` binds one row per node of `path`, with `index` counting from 0 and
-`node` holding that node. The path must be bound. Calling it with an unbound path is an evaluation
-error. `index` and `node` may each be bound or free. With `index` bound it answers the node at that
-position, and with `node` bound it tests whether the path passes through it.
+`node` holding that node.
 
-`path.node` takes no negative index. An index of -1 gives no row. To read the last node, take
-`path.nodes` and `list.at` with -1. A value that is not a path gives no row, absent included.
-`path.node` is a computed predicate (kind `predicate` in the catalog), not a stored fact.
+`graph.paths` binds the path value these functions read. The `path` column of `net.route` is display
+text, not a path value, so no `path.*` function reads it.
 
-`graph.paths` binds a path value as text. Over a relation of two arguments the path lists its
-nodes, as in `["a","b","c"]`. Over a relation of three arguments, from, edge and to, it names the
-edges too, as in `{"nodes":["a","b"],"edges":["R1"]}`. The `path` column of `net.route` is display
-text, not a path value, and every `path.*` function gives no row on it.
+`path.node` comes from jaala's standard library. The
+[Paths](https://panyam.github.io/jaala/reference/builtins/#paths) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -26,13 +23,6 @@ in walk order, so a query can find the intermediate rail.
 
 `path.node` is `for i, n := range path.Nodes` as a relation. With the node bound it is a membership
 test, and `not path.node(?p, _, "X")` keeps the paths that avoid X.
-
-### Go projector
-
-`path.node` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The Datalog
-engine's standard library registers it, together with the other `path.*` functions, in
-`PathValues` in jaala's `stdlib/paths.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
 
 ### Datalog
 

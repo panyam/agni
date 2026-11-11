@@ -6,13 +6,12 @@ description: "binds each non-empty match of an unanchored regular expression wit
 ### What it is
 
 `str.find(string, regex, index, match)` binds each match of a regular expression in `string`,
-numbered from 0. The expression is unanchored, so it matches anywhere in the string. Matches do not
-overlap, and an empty match is dropped before the numbering.
+numbered from 0.
 
-With `index` bound it binds that match alone. A negative index counts from the end, so -1 is the
-last match. An index past either end gives no row. `string` and `regex` must be bound, and a
-malformed expression is an error rather than no match. `str.find` is a computed predicate (kind
-`predicate` in the catalog), not a stored fact.
+`str.find` comes from jaala's standard library. The [Building
+text](https://panyam.github.io/jaala/reference/builtins/#building-text) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -22,14 +21,7 @@ digits, including the 2 inside `I2C_SCL`, so write the expression to match only 
 
 ### For software engineers
 
-It is Go's `regexp.FindAllString` with the empty matches removed and each match numbered, plus
-negative indexing from the end, as in Python.
-
-### Go projector
-
-`str.find` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it in `Strings` in jaala's `stdlib/strings.go`, and
-`core/facts/registry.go` installs that library into the vocabulary every query uses.
+It is Go's `regexp.FindAllString`, one row per match.
 
 ### Datalog
 

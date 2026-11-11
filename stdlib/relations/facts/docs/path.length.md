@@ -2,15 +2,15 @@
 
 ### What it is
 
-`path.length(path, steps)` binds `steps` to how many steps `path` takes. A path through three nodes
-takes two steps. The path must be bound. Calling it with an unbound path is an evaluation error. A
-value that is not a path gives no row, absent included. `path.length` is a computed predicate (kind
-`predicate` in the catalog), not a stored fact.
+`path.length(path, steps)` binds `steps` to how many steps `path` takes.
 
-`graph.paths` binds a path value as text. Over a relation of two arguments the path lists its
-nodes, as in `["a","b","c"]`. Over a relation of three arguments, from, edge and to, it names the
-edges too, as in `{"nodes":["a","b"],"edges":["R1"]}`. The `path` column of `net.route` is display
-text, not a path value, and every `path.*` function gives no row on it.
+`graph.paths` binds the path value these functions read. The `path` column of `net.route` is display
+text, not a path value, so no `path.*` function reads it.
+
+`path.length` comes from jaala's standard library. The
+[Paths](https://panyam.github.io/jaala/reference/builtins/#paths) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -22,13 +22,6 @@ efficiency depend on the stage in between. `path.length` counts those stages.
 
 `path.length` is the edge count of a graph path, one less than its node count. Filter on it to keep
 only the paths of a given depth, as a BFS keeps its frontier by level.
-
-### Go projector
-
-`path.length` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The
-Datalog engine's standard library registers it, together with the other `path.*` functions, in
-`PathValues` in jaala's `stdlib/paths.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
 
 ### Datalog
 

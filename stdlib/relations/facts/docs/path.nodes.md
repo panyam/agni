@@ -2,15 +2,15 @@
 
 ### What it is
 
-`path.nodes(path, nodes)` binds `nodes` to the nodes of `path` as one list value, in walk order. The
-path must be bound. Calling it with an unbound path is an evaluation error. A value that is not a
-path gives no row, absent included. The list works with every `list.*` function. `path.nodes` is a
-computed predicate (kind `predicate` in the catalog), not a stored fact.
+`path.nodes(path, nodes)` binds `nodes` to the nodes of `path` as one list value, in walk order.
 
-`graph.paths` binds a path value as text. Over a relation of two arguments the path lists its
-nodes, as in `["a","b","c"]`. Over a relation of three arguments, from, edge and to, it names the
-edges too, as in `{"nodes":["a","b"],"edges":["R1"]}`. The `path` column of `net.route` is display
-text, not a path value, and every `path.*` function gives no row on it.
+`graph.paths` binds the path value these functions read. The `path` column of `net.route` is display
+text, not a path value, so no `path.*` function reads it.
+
+`path.nodes` comes from jaala's standard library. The
+[Paths](https://panyam.github.io/jaala/reference/builtins/#paths) section of jaala's built-ins
+reference says which arguments must be bound and what an absent or malformed input does, and its
+examples run in jaala's own tests.
 
 ### For hardware engineers
 
@@ -19,22 +19,14 @@ A review wants the whole chain from the input to a rail in one cell, not one row
 
 ### For software engineers
 
-`path.nodes` is the `Nodes` slice of a path as a value. Once it is a list, `list.length`,
-`list.at` and `list.member` read it, and `list.at` accepts a negative index where `path.node` does
-not.
-
-### Go projector
-
-`path.nodes` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The Datalog
-engine's standard library registers it, together with the other `path.*` functions, in
-`PathValues` in jaala's `stdlib/paths.go`. `core/facts/registry.go` installs that library into the
-vocabulary every query uses.
+`path.nodes` is the `Nodes` slice of a path as a value. Once it is a list, `list.length`, `list.at`
+and `list.member` read it.
 
 ### Datalog
 
 These examples walk a `hop` relation of the examples' own. It steps from one net to another through
-any part on both, and it leaves ground out. The nets and parts from the 12 V input to the 1.8 V rail,
-as two lists:
+any part on both, and it leaves ground out. The nets and parts from the 12 V input to the 1.8 V
+rail, as two lists:
 
 ```
 hop(?a, ?r, ?b) :- component.net(?r, ?a), component.net(?r, ?b), ?a != ?b,
