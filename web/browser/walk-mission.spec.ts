@@ -270,7 +270,7 @@ describe("the walk mission", () => {
 
     try {
       await step("open", {}, async () => {
-        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
         await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
         await page.locator(`#sheet-overview .sheet-tile[title="/${walk.sheet}"]`).click({ timeout: 30_000 });
         await page.locator(`#svg-view [data-kind="component"][data-ref="${walk.start}"]`).first().waitFor({ state: "attached", timeout: 30_000 });

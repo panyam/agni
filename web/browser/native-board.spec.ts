@@ -23,7 +23,7 @@ const boards = [
 ];
 
 async function openBoard(page: Page, design: string): Promise<void> {
-  await page.goto(`${base()}/designs/${design}/view`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/designs/${design}/view?mode=svg`, { waitUntil: "networkidle" });
   // A board-only design opens on its board, its only sheet (agni issue 1466).
   await page.waitForSelector("#svg-view .copper-front [data-kind=\"pin\"][data-net]", { timeout: 60_000 });
 }

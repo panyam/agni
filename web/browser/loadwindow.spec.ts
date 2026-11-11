@@ -23,7 +23,7 @@ describe("while a design's rules load", () => {
     await withPage(browser, async (page) => {
       const held: Route[] = [];
       await page.route(/\/ListRules$/, (route) => void held.push(route));
-      await page.goto(`${base()}/designs/kicad/geom.kicad_sch/view`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/kicad/geom.kicad_sch/view?mode=svg`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector('#svg-view svg [data-kind="component"]', { timeout: 30_000 });
       await expect.poll(() => held.length, { timeout: 30_000 }).toBeGreaterThan(0);
       expect(await page.evaluate(() => document.getElementById("render-busy")?.dataset.busy)).toBe("on");

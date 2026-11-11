@@ -22,7 +22,7 @@ afterAll(async () => {
 
 // A board opened on its own opens on the board, its only sheet (agni issue 1466).
 async function openBoard(page: Page): Promise<void> {
-  await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
 }
 
@@ -119,7 +119,7 @@ describe("picking the board", () => {
   // (agni issue 1325), so a reader can open the schematic from the copper.
   it("lists the schematic sheet and the board for a part picked on the board", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/tut/designs/gateway/view`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       // Exactly "Board", since gateway's schematic sheet is called "Sample Board".
       await page.locator(".sheet-tile", { hasText: /^\s*Board\s*$/ }).first().click();
       await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
@@ -167,7 +167,7 @@ describe("hiding a board layer", () => {
         await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
         await page.waitForSelector('#svg-view [data-layer="In1.Cu"]', { state: "attached", timeout: 30_000 });
       };
-      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
       await open();
       const net = await page.$eval(track, (el) => el.parentElement!.getAttribute("data-net")!);
       const at = await clearPoint(page, track, "net");
@@ -213,7 +213,7 @@ describe("hiding a board layer", () => {
     await withPage(browser, async (page) => {
       const inner = (scope: string) => `${scope} .copper-inner[data-layer="In1.Cu"] g[data-kind="net"] > line`;
       const drawn = (sel: string) => page.$eval(sel, (el) => el.getClientRects().length > 0);
-      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
       await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
       await page.waitForSelector(inner("#svg-view"), { state: "attached", timeout: 30_000 });
       await openBeside(page, "Board");

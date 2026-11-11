@@ -74,6 +74,7 @@ import { ViewerRoomService } from "./gen/agni/v1/webapi/viewerroom_pb.js";
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { verdictItem } from "./document.js";
+import { defaultRenderMode } from "./rendercaps.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
@@ -939,6 +940,8 @@ class AppRoot extends BaseComponent {
       workspaceClient(),
       projectClient(),
     );
+    // An address with no ?mode= opens in WebGL on a hardware GPU, and in SVG otherwise (agni 1329).
+    presenter.useDefaultMode(defaultRenderMode());
     // A design's hidden board layers are kept in this browser (agni 1351), as a board view's turn is.
     presenter.layerStore = storageLayers(() => window.localStorage);
     this.presenter = presenter;

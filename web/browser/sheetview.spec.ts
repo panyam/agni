@@ -190,7 +190,7 @@ describe("a sheet view beside the canvas", () => {
         if (body.includes('"sheet":"board"')) boardSpecs.push(body);
         return route.continue();
       });
-      await page.goto(`${base()}/designs/tut/designs/gateway/view?walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg&walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
       await page.waitForSelector(".walk-net-name", { timeout: 30_000 });
       const net = (await page.locator(".walk-net").first().getAttribute("data-walk-net"))!;
       await openBeside(page, "Board");
