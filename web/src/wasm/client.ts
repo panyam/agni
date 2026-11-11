@@ -269,8 +269,25 @@ export function wouldShrink(s: WorkerStats, ratio: number): boolean {
 // file when it is a file of its own (agni issue 992).
 export interface DesignFiles {
   mount: string;
-  files: { path: string; sha256: string; board?: boolean }[];
+  files: { path: string; sha256: string; size?: bigint | number | string; board?: boolean }[];
   totalSize: bigint | number;
+}
+
+// SUMS_FILE is the manifest the page writes at a mount's root beside the files it brings into a
+// worker (agni issue 1515). It names each file's listed sha256 and size, so the engine checks a
+// stored read by them and restores a board it holds only as a placeholder
+// (internal/wasmengine/sums.go). internal/wasmengine/testdata/sums_twin.json holds the two sides to
+// one format.
+export const SUMS_FILE = ".agni-sums.json";
+
+// sumsManifest writes the manifest for rows, sorted by path, or returns undefined when no row has
+// both a hash and a size. A row without them is left out, and the engine reads that file as before.
+export function sumsManifest(rows: Iterable<{ path: string; sha256: string; size?: bigint | number | string }>): Uint8Array | undefined {
+  const sorted = [...rows].filter((r) => r.sha256 && r.size !== undefined && r.size !== "").sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  if (!sorted.length) return undefined;
+  const files: Record<string, { sha256: string; size: number }> = {};
+  for (const r of sorted) files[r.path] = { sha256: r.sha256, size: Number(r.size) };
+  return new TextEncoder().encode(JSON.stringify({ files }));
 }
 
 // WITHHELD_PREFIX starts a placeholder. The serve worker is given the placeholder in place of a
@@ -370,6 +387,7 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   const held = new WeakMap<object, Map<string, Map<string, string>>>(); // worker -> mount -> path -> sha256, or HELD + sha256 for a placeholder
   const heldBack = new WeakMap<object, Set<string>>(); // worker -> the uris it holds a placeholder of
   const bringing = new WeakMap<object, Map<string, Promise<void>>>(); // worker -> uri -> the bring under way
+  const listed = new WeakMap<object, Map<string, Map<string, DesignFiles["files"][number]>>>(); // worker -> mount -> path -> its listing row, for SUMS_FILE
   const onServerSide = new Set<string>(); // uris analysed by the server engine
   const preparing = new Set<Promise<void>>(); // prepare requests under way, settled when each answers
   const afterPrepares = async () => {
@@ -431,6 +449,14 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
             files[f.path] = placeholder(f) ? withheldPlaceholder(f.sha256) : await source.fetchFile(set.mount, f.path);
           }),
         );
+        // The manifest covers every file this worker has been given in the mount, placeholders too.
+        let byMount = listed.get(holder);
+        if (!byMount) listed.set(holder, (byMount = new Map()));
+        const rows = byMount.get(set.mount) ?? new Map<string, DesignFiles["files"][number]>();
+        for (const f of set.files) rows.set(f.path, f);
+        byMount.set(set.mount, rows);
+        const manifest = sumsManifest(rows.values());
+        if (manifest) files[SUMS_FILE] = manifest;
         await lane.add(holder, set.mount, files);
         for (const f of want) have.set(f.path, placeholder(f) ? HELD + f.sha256 : f.sha256);
         mounts.set(set.mount, have);

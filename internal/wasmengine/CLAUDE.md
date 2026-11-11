@@ -9,7 +9,8 @@ This file covers the engine as it runs in the browser, and the traps in its work
 - On wasm the page lists a design's files (`ListDesignFiles`) and fetches them from `/raw/<mount>/<path>`.
 - The page sends a design over `--wasm-max-bytes` to the server instead. The limit is 128 MB, measured with `make wasm-bench`.
 - The engine runs as a `serve` worker and a `jobs` worker (#911).
-- Every worker keeps what it parsed in the origin's private file system, keyed on `wasmengine.StoreVersion`. A wasm built with plain `go build` from a dirty tree persists nothing. A wasm built by `make wasm` names its uncommitted diff.
+- Every worker keeps what it parsed in the origin's private file system, keyed on `wasmengine.StoreVersion`.
+- **A worker checks what it restores by the page's listed hashes** (agni 1515). The page writes `.agni-sums.json` at each mount's root with every file's listed sha256 and size. So the serve worker restores a board it holds only as a placeholder, without the board's bytes. A mount without the manifest is checked by CRC-64 of its bytes, as the server is. A wasm built with plain `go build` from a dirty tree persists nothing. A wasm built by `make wasm` names its uncommitted diff.
 - Dropped files go into the browser mount `local` and the browser's IndexedDB (`web/src/drops.ts`, agni 1072), so they survive a reload. Nothing ever lists `local` on a server. `ProposeDesigns` and `agni propose` group the dropped files into designs.
 - `agni site` (`make demo-site`) writes the whole thing as static files under a prefix.
 - `make wasm wasm-test` builds the engine and smoke-tests it under Node.
