@@ -1456,7 +1456,12 @@ only within one renderer, since SVG and WebGL measure a centre in different unit
 `detail.view` (`canvas` or a view's id), so a spec timing the canvas skips a view's draws. A zone
 fill blends (`enableBlending` in `web/src/webgl.ts`, agni 1334), and the canvas must stay OPAQUE.
 A board opens with its fab rows hidden, and storage keeps "show every layer" as `[]`, since `null`
-means never chosen (agni 1486). **A board's outlines carry their width in the packed record's
+means never chosen (agni 1486). **An idle SVG board view parks as an `<img>`** (agni 1482,
+`SvgView.parkWhenIdle`). A second of no pointer over it serialises the svg into a blob image and
+hides the live svg, since Chrome's layerization cost every canvas pan about 450 ms of task time on
+Jetson. The svg stays in the DOM, so a spec finds it as `img.svg-parked + svg`. A pointer or a
+reveal wakes it. A board view whose board does not place the selected part says so and stays put
+rather than following to a schematic sheet (`chooseSheet`'s `absent`, agni 1481). **A board's outlines carry their width in the packed record's
 `stroke_um`**, and WebGL draws a line as triangles once that width spans a canvas pixel. They stay
 line primitives because the picker reads a part's triangles as the part, so a triangle outline would
 take clicks that pass through it to the pick area.

@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-10, at `b3cfe8e4`.
+Last pruned 2026-11-10, at `68f4722a`.
 
 ## At a glance
 
@@ -17,9 +17,9 @@ Three missions are active, each worked in its own clone. `MISSION=mission_<slug>
 retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 21 of
-  22 tickets closed, next ready #1482. `make exercise-cross-probe` last passed at `2673d973` on Jetson and Clay R6.
-  The mission still has to pass beside a real board before it closes.
+- **#1321 `mission_cross_probe`** (find a schematic part on the board beside you, and back), 24 of
+  24 tickets closed. `make exercise-cross-probe` passed at `68f4722a` on Jetson and Clay R6. The
+  mission still has to pass beside a real board before it closes, and closing it is the user's call.
 - **#1353 `mission_board_formats`** (open an Altium or Allegro board with no export step), worked in
   the formats clone, 17 of 17 closed. `make exercise-allegro` and `make exercise-altium` passed at
   `e4394b70`, and a native board now opens on the board alone (#1466). Its "Done when" line still
@@ -36,9 +36,8 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer, each touring another workflow the way
   `web/src/reviewtour.ts` tours a review.
-- This run: #1485 (the `?timing` draw profile, closing #1331) and #1487 (fab hidden by default,
-  outlines at their width in WebGL, closing #1486) merged. #1329 was never closed, and this file and
-  CLAUDE.md now say so.
+- This run: #1488 (a board view stays on the board, a walk lights beside the canvas, an idle board
+  view parks, closing #1480, #1481 and #1482) merged, and the cross-probe exercise passed after it.
 
 ## Open, ranked
 
