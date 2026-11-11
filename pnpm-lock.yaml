@@ -233,8 +233,8 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/mcpkit-rooms':
-        specifier: 0.8.20
-        version: 0.8.20
+        specifier: 0.8.21
+        version: 0.8.21
       '@panyam/tsappkit':
         specifier: ^0.7.7
         version: 0.7.7
@@ -773,8 +773,8 @@ packages:
       '@bufbuild/protobuf': ^2.0.0
       '@panyam/servicekit-client': ^0.0.7 || ^0.1.9 || ^0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.20':
-    resolution: {integrity: sha512-piSR4XB7KPWujU8cV8iuoyXI3sESMRMp6T74zCiIgMBA8aX3/hWpAFxcDVnLNwDrwZRlU2SpMCJpN/L5LHBf8A==}
+  '@panyam/mcpkit-rooms@0.8.21':
+    resolution: {integrity: sha512-JO6LEvcE52VBOHmtQyBNqI2Sj0/n/wKzomAi5OCkpqinnO1A7whuY5ZMNlZ1O4GPMeQT4vT3UNWUZAM2KMK4zw==}
 
   '@panyam/servicekit-client@0.2.0':
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
@@ -1888,7 +1888,7 @@ snapshots:
       '@bufbuild/protobuf': 2.12.1
       '@panyam/servicekit-client': 0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.20':
+  '@panyam/mcpkit-rooms@0.8.21':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
       '@panyam/massrelay': 0.3.6(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
