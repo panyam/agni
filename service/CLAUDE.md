@@ -30,6 +30,7 @@ This file covers the transport-neutral services, their ports, snapshots, kept re
 - **The browser's serve worker gets no board bytes** (agni 992). `ListDesignFiles` flags the board file (`DesignFile.board`), and the serve lane gets a placeholder at its path. An engine that opens a placeholder refuses every question until the files arrive (`internal/wasmengine/withheld.go`). `mountingFetch` then brings the board and asks again. A page-side rule that decides which rpcs read the board is the bug shape, since a library member can read `board.*` under a query that never names it.
 - **`DesignService.LocateSubjects` says where a part, pin or net is drawn** (agni 1325). It and a check run's findings read one index, so a subject locates where its finding badges. A pin answers the sheets that draw its own unit.
 - **The board sheet joins a locate only when the request sets `board`.** It matches by ref-des and net NAME, since an EDIF schematic and an ODB++ job share no net id.
+- **The packed Board sheet is a cache layer of its own, `packedboard`** (agni 1522, `service/packedboard.go`). A board view restores the packed answer rather than the board. Bump `packedBoardVersion` when `PackBoard` or `BoardLayers` writes something new.
 - **A per-click caller goes through `boardIndexFor`, never `Board`.** The caching loader's `Board` returns a COPY of the whole board. A run whose model read the board badges its findings with `"board"` after the schematic sheets.
 
 ## Kept reads
