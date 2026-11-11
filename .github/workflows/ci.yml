@@ -1,9 +1,10 @@
-# The repo gate: `make testall`, run as four parallel jobs. `make testall-test` builds and tests the
-# engine, the examples, the web bundle and the Python client. `make testall-scan` runs the static
-# scanners. `make testall-docs` regenerates the docsite's captures and images. `make browser-test` is
-# the browser layout suite, split into four shards. Together they are exactly `make testall`. Keep this in lockstep with the
-# Makefile; a step added to one of those targets runs here for free. The split is only about wall
-# time, since the gate takes as long as its slowest job (agni issue 1147).
+# The repo gate: `make testall`, run as parallel jobs. `make testall-test` builds and tests the engine,
+# the examples, the web bundle and the Python client, as three jobs: testall-go, testall-web and
+# testall-dist. `make testall-scan` runs the static scanners. `make testall-docs` regenerates the
+# docsite's captures and images. `make browser-test` is the browser layout suite, split into four
+# shards. Together they are exactly `make testall`. Keep this in lockstep with the Makefile; a step
+# added to one of those targets runs here for free. The split is only about wall time, since the gate
+# takes as long as its slowest job (agni issue 1147).
 name: ci
 
 on:
@@ -18,14 +19,15 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  testall:
+  # The Go engine and the generated-tree checks.
+  testall-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
-      # buf drives `make proto-check`, the generated-code freshness gate inside testall-test. Only buf
+      # buf drives `make proto-check`, the generated-code freshness gate inside testall-go. Only buf
       # itself is installed here: both protoc plugins are pinned as `tool` directives in go.mod and
       # run via `go tool`, so they come from the module graph rather than a separate install whose
       # version could drift from the one that produced the committed output.
@@ -35,12 +37,6 @@ jobs:
           version: 1.61.0
           github_token: ${{ github.token }}
 
-      # `make python-test` builds its own small venv (protobuf, openpyxl, pytest) from
-      # clients/python/pyproject.toml. Pinned here so the runner's default python cannot move under it.
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
       # The remote boards come from their publishers' repos, so they are cached on the samples pin
       # rather than downloaded every run (agni issue 1446).
       - uses: actions/cache@v6
@@ -48,8 +44,46 @@ jobs:
           path: ~/.cache/agni/samples
           key: remote-boards-${{ hashFiles('hack/samples.pin') }}
 
-      - name: make testall-test
-        run: make testall-test
+      - name: make testall-go
+        run: make testall-go
+
+  # The wasm engine and the web packages' unit suites.
+  testall-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+
+      - name: make testall-web
+        run: make testall-web
+
+  # The examples, the Python client and the release archives.
+  testall-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # `make python-test` builds its own small venv (protobuf, openpyxl, pytest) from
+      # clients/python/pyproject.toml. Pinned here so the runner's default python cannot move under it.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/agni/samples
+          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+
+      - name: make testall-dist
+        run: make testall-dist
 
   # The scanners read source alone, so this job needs Go and nothing the other jobs build.
   scan:
