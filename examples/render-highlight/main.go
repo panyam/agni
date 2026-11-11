@@ -85,8 +85,9 @@ func main() {
 
 // specsForFindings maps each finding's subject to one HighlightSpec. It uses the same
 // net/component/pin vocabulary as the web click-to-locate. A net draws as a PATH marker along its
-// wire and has its per-instance net id, so two same-named nets are kept distinct. A component or
-// pin draws as a translucent bounding box, one per matched placement. Findings are computed on the
+// wire and has its per-instance net id, so two same-named nets are kept distinct. A component draws
+// as a translucent bounding box with an opaque outline, one per matched placement, and a pin draws
+// as an outline. Findings are computed on the
 // netlist and located on the geometry by name/id (CONSTRAINTS C21).
 func specsForFindings(findings []check.Finding) []*geom.HighlightSpec {
 	var specs []*geom.HighlightSpec

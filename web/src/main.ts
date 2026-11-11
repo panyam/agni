@@ -639,6 +639,8 @@ class AppRoot extends BaseComponent {
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
       surface.reveal(pinOf(sel));
     };
+    // One probe of the GPU serves the canvas's first renderer and a board view's (agni 1329, 1536).
+    const gpuMode = defaultRenderMode();
     const sheetViews = (this.sheetViews = new SheetViews(
       {
         add: (id, title, element, closed) => dockApi && addSheetView(dockApi, id, title, element, closed),
@@ -667,6 +669,9 @@ class AppRoot extends BaseComponent {
         // A view opens in the canvas's renderer. The native tool's pages carry no picks, so a view
         // opened beside a native canvas draws in SVG.
         renderer: () => (presenter.renderMode() === "webgl" ? "webgl" : "svg"),
+        // Beside an SVG canvas, a board view opens in WebGL on a hardware GPU, since WebGL pans a board
+        // about three times faster (agni issues 1329, 1536). A software GPU keeps SVG.
+        boardRenderer: () => gpuMode,
         overlay: async (sheetId, specs) => {
           const d = presenter.drawing();
           const resp = await designClient().highlightSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG, specs });
@@ -941,7 +946,7 @@ class AppRoot extends BaseComponent {
       projectClient(),
     );
     // An address with no ?mode= opens in WebGL on a hardware GPU, and in SVG otherwise (agni 1329).
-    presenter.useDefaultMode(defaultRenderMode());
+    presenter.useDefaultMode(gpuMode);
     // A design's hidden board layers are kept in this browser (agni 1351), as a board view's turn is.
     presenter.layerStore = storageLayers(() => window.localStorage);
     this.presenter = presenter;

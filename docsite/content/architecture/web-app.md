@@ -161,6 +161,15 @@ the keys it already holds, with no round-trip, and the Go and TypeScript resolve
 twinned test fixture so a divergence fails a test on both sides. The SVG path fetches the overlay document
 and stacks it over the same frame.
 
+A bounding shape draws a translucent fill under a stroke in the same color, so the copper under a
+part still shows and the part's edge still reads on a dense board (agni issue 1536). The stroke is
+opaque at the default fill, and a fainter fill makes it fainter in proportion. A part's least pad
+and the stroke are fractions of the drawing's smaller span, so a two-pad footprint frames at about
+twice its own span and a large part keeps a 10% pad. A picked pin keeps a pad a few pixels wide, so
+its frame does not cover the pins beside it. The Highlight menu's width control scales the stroke
+as it scales a net's path. Go and TypeScript size a frame with twinned functions, `frameFloor`,
+`frameStroke` and `frameStrokeAlpha`, and both test them against one fixture.
+
 After a check run the drawing shows nothing until a finding is focused (agni issue 356). A reader
 can opt in to every finding at once, the run-wide field, through Highlight › Show every finding,
 which is kept in `localStorage`. When the field is on, a focus stacks over it as muted context. The

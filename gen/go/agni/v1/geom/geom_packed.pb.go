@@ -330,9 +330,9 @@ type HighlightSpec struct {
 	// the entity it frames, and a caller never means that either.
 	Alpha float32        `protobuf:"fixed32,5,opt,name=alpha,proto3" json:"alpha,omitempty"`
 	Shape HighlightShape `protobuf:"varint,6,opt,name=shape,proto3,enum=agni.v1.geom.HighlightShape" json:"shape,omitempty"` // how matched entities draw; unset means OUTLINE (WS9-016)
-	// stroke_scale multiplies the PATH highlighter's width (WS9-044), so a user can make the
-	// focus marker thicker or thinner. 0/unset means 1 (the default width). Only PATH reads it;
-	// OUTLINE and the bounding shapes ignore it.
+	// stroke_scale multiplies the PATH highlighter's width (WS9-044) and the stroke around a
+	// bounding shape (agni issue 1536), so a user can make the focus marker thicker or thinner.
+	// 0/unset means 1 (the default width). OUTLINE ignores it.
 	StrokeScale   float32 `protobuf:"fixed32,7,opt,name=stroke_scale,json=strokeScale,proto3" json:"stroke_scale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

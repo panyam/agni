@@ -159,6 +159,9 @@ type highlightEntity struct {
 	shapes    []*geom.Shape
 	polylines []*geom.Polyline
 	pins      []*geom.Point
+	// part is set on a whole component. Only a part's frame takes the span floor (frameFloor), so a
+	// lone pin keeps a frame a few pixels across and does not cover its neighbours (agni issue 1536).
+	part bool
 }
 
 // highlightStrategy is HighlightSVG's shape dispatch. It decides how one matched entity draws into
@@ -216,7 +219,7 @@ func collectEntities(syms map[string]*geom.SymbolDef, sheet *geom.SheetGeometry,
 		wholeComp := m.comps[pl.GetRefDes()]
 		var comp *highlightEntity
 		if wholeComp {
-			comp = &highlightEntity{shapes: placedShapes(syms, pl)}
+			comp = &highlightEntity{shapes: placedShapes(syms, pl), part: true}
 			out = append(out, comp)
 		}
 		sym := symbolFor(syms, pl)
@@ -350,13 +353,14 @@ func SheetSVGHighlighted(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, s
 }
 
 // strategyFor maps a spec's shape to its strategy; unspecified draws as outline. strokeScale
-// tunes the PATH width (WS9-044); the other strategies ignore it.
+// tunes the PATH width (WS9-044) and the bounding shapes' stroke (agni issue 1536). Outline
+// ignores it.
 func strategyFor(shape geom.HighlightShape, strokeScale float32) highlightStrategy {
 	switch shape {
 	case geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT:
-		return boundingRectStrategy{}
+		return boundingRectStrategy{strokeScale: strokeScaleOr1(strokeScale)}
 	case geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_CIRCLE:
-		return boundingCircleStrategy{}
+		return boundingCircleStrategy{strokeScale: strokeScaleOr1(strokeScale)}
 	case geom.HighlightShape_HIGHLIGHT_SHAPE_PATH:
 		return pathStrategy{width: pathStrokePx * strokeScaleOr1(strokeScale)}
 	default:
@@ -434,6 +438,51 @@ func framedBounds(e *highlightEntity, minPad float64) (framedBox, bool) {
 // as a dot a few pixels across rather than a rect with no size (agni issue 1374).
 const pointPadPx = 4
 
+// frameFloorFraction and frameStrokeFraction size a part's frame against the drawing it sits on,
+// as fractions of the drawing's smaller span. The floor lets a small part, such as a two-pad
+// footprint on a dense board, frame at about twice its old width, while a large part keeps its 10%
+// pad. The stroke is a few pixels at the fitted zoom (agni issue 1536).
+const (
+	frameFloorFraction  = 0.015
+	frameStrokeFraction = 0.003
+)
+
+// frameFloor, frameStroke and frameStrokeAlpha are twinned with the functions of the same names in
+// web/src/highlights.ts. highlight_frame_test.go and highlights.test.ts assert the same numbers for
+// one fixture, so SVG and WebGL size a frame alike.
+
+// frameFloor is the least world pad around a part on a drawing whose smaller world span is minSpan.
+func frameFloor(minSpan float64) float64 {
+	return frameFloorFraction * minSpan
+}
+
+// frameStroke is a frame's stroke width in world units, scaled by the spec's stroke_scale.
+func frameStroke(minSpan, strokeScale float64) float64 {
+	return frameStrokeFraction * minSpan * strokeScale
+}
+
+// frameStrokeAlpha is a frame stroke's opacity for a normalized fill alpha. The default fill of 0.3
+// and anything above it give an opaque stroke, and a fainter fill gives a stroke as faint in
+// proportion, so a caller's alpha still sets how loud a frame is.
+func frameStrokeAlpha(fill float64) float64 {
+	return min(1, fill/0.3)
+}
+
+// minSpanWorld is the drawing's smaller side in world units, without the margin.
+func (f sheetFrame) minSpanWorld() float64 {
+	return max(min(f.pxW, f.pxH)-2*sheetMarginPx, 0) / f.scale
+}
+
+// entityFloor is the least world pad for one entity's frame. A part takes the span floor, and
+// anything else the pixel floor alone.
+func (f sheetFrame) entityFloor(e *highlightEntity) float64 {
+	floor := pointPadPx / f.scale
+	if e.part {
+		floor = max(floor, frameFloor(f.minSpanWorld()))
+	}
+	return floor
+}
+
 // worldToPx maps fractional world coordinates (padded bounds) through the frame's affine
 // int64 maps. tx is linear so tx(x) = tx(0) + x*scale, and ty flips Y so
 // ty(y) = ty(0) - y*scale.
@@ -441,38 +490,50 @@ func worldToPx(fr sheetFrame, x, y float64) (float64, float64) {
 	return fr.tx(0) + x*fr.scale, fr.ty(0) - y*fr.scale
 }
 
-// boundingRectStrategy frames each matched entity with one translucent filled rect over
-// its padded bbox, for dense entities where a re-stroke reads poorly.
-type boundingRectStrategy struct{}
-
-func (boundingRectStrategy) normAlpha(a float32) float64 { return highlightFillAlpha(a) }
-
-func (boundingRectStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
-	b, ok := framedBounds(e, pointPadPx/fr.scale)
-	if !ok {
+// drawFrame draws one framed entity as a translucent fill at alpha under a stroke in the same
+// color. The fill lets the copper or symbol under it show, and the stroke keeps a small part
+// visible on a dense board (agni issue 1536). strokeScale multiplies the stroke width, so the
+// Highlight menu's width control sizes it.
+func drawFrame(c *svg.Canvas, b framedBox, fr sheetFrame, circle bool, color string, alpha, strokeScale float64) {
+	paint := []svg.Attr{
+		svg.A("fill", color), svg.F("fill-opacity", alpha),
+		svg.A("stroke", color), svg.F("stroke-width", frameStroke(fr.minSpanWorld(), strokeScale)*fr.scale),
+	}
+	if sa := frameStrokeAlpha(alpha); sa < 1 {
+		paint = append(paint, svg.F("stroke-opacity", sa))
+	}
+	if circle {
+		cx, cy, r := b.circle()
+		px, py := worldToPx(fr, cx, cy)
+		c.El("circle", append([]svg.Attr{svg.F("cx", px), svg.F("cy", py), svg.F("r", r*fr.scale)}, paint...)...)
 		return
 	}
 	x, y := worldToPx(fr, b.minX, b.maxY) // world top-left is the px top-left (Y flips)
-	c.El("rect", svg.F("x", x), svg.F("y", y),
-		svg.F("width", (b.maxX-b.minX)*fr.scale), svg.F("height", (b.maxY-b.minY)*fr.scale),
-		svg.A("fill", color), svg.F("fill-opacity", alpha))
+	c.El("rect", append([]svg.Attr{svg.F("x", x), svg.F("y", y),
+		svg.F("width", (b.maxX-b.minX)*fr.scale), svg.F("height", (b.maxY-b.minY)*fr.scale)}, paint...)...)
 }
 
-// boundingCircleStrategy frames each matched entity with one translucent filled circle
-// circumscribing its bbox.
-type boundingCircleStrategy struct{}
+// boundingRectStrategy frames each matched entity with one rect over its padded bbox, for dense
+// entities where a re-stroke reads poorly.
+type boundingRectStrategy struct{ strokeScale float64 }
+
+func (boundingRectStrategy) normAlpha(a float32) float64 { return highlightFillAlpha(a) }
+
+func (s boundingRectStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
+	if b, ok := framedBounds(e, fr.entityFloor(e)); ok {
+		drawFrame(c, b, fr, false, color, alpha, s.strokeScale)
+	}
+}
+
+// boundingCircleStrategy frames each matched entity with one circle circumscribing its bbox.
+type boundingCircleStrategy struct{ strokeScale float64 }
 
 func (boundingCircleStrategy) normAlpha(a float32) float64 { return highlightFillAlpha(a) }
 
-func (boundingCircleStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
-	b, ok := framedBounds(e, pointPadPx/fr.scale)
-	if !ok {
-		return
+func (s boundingCircleStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string, alpha float64) {
+	if b, ok := framedBounds(e, fr.entityFloor(e)); ok {
+		drawFrame(c, b, fr, true, color, alpha, s.strokeScale)
 	}
-	cx, cy, r := b.circle()
-	px, py := worldToPx(fr, cx, cy)
-	c.El("circle", svg.F("cx", px), svg.F("cy", py), svg.F("r", r*fr.scale),
-		svg.A("fill", color), svg.F("fill-opacity", alpha))
 }
 
 // writeHighlightShape re-strokes one placed shape in the highlight style, outline only (a DOT

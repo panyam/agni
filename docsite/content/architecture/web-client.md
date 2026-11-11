@@ -50,8 +50,10 @@ panel from the ones above.
   1368). A surface holds an `SvgView` and, once the reader picks WebGL, a `CanvasComponent` with a
   canvas of its own. It draws from the canvas's snapshot, layout and symbol source
   (`ViewerPresenter.drawing`), so a pick in a view reads the keys that a pick on the canvas reads.
-  The bar's renderer picker chooses SVG or WebGL per view, and a view opens in the canvas's
-  renderer. A WebGL view lights a selection against the packed keys it holds, and frames it through
+  The bar's renderer picker chooses SVG or WebGL per view. A board view opens in WebGL when the
+  canvas draws in WebGL or the GPU is hardware, and in SVG otherwise (agni issue 1536). Any other
+  view opens in the canvas's renderer. A view moved to another sheet takes that sheet's renderer by
+  the same rule, until its reader picks one with the checkbox. A WebGL view lights a selection against the packed keys it holds, and frames it through
   its camera (`CanvasComponent.reveal`). Leaving WebGL frees the view's GPU copy of the sheet, since
   each WebGL view holds one.
 - **The selection is shared and the camera is not.** A pick in a view selects through

@@ -6,12 +6,17 @@ import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
+  frameFloor,
+  frameStroke,
+  frameStrokeAlpha,
   HighlightShape,
   PATH_WIDTH_FRACTION,
+  circleRing,
   circleTriangles,
   entityBounds,
   entityFrame,
   pathQuads,
+  rectRing,
   rectTriangles,
   resolveHighlights,
   type HighlightSpec,
@@ -304,7 +309,8 @@ export class CanvasComponent extends BaseComponent {
     // PATH marker half-width in world units, a fraction of the sheet's smaller span (WS9-043) so
     // it is visible at any coordinate scale (geometry is in nanometers for KiCad).
     const sb = boundsOfVertices(sheet.vertices);
-    const pathHalfWidth = PATH_WIDTH_FRACTION * Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
+    const minSpan = Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
+    const pathHalfWidth = PATH_WIDTH_FRACTION * minSpan;
     // A pick area is never drawn, so no highlight lights it (packed.ts, pickOnly).
     const drawn = sheet.keys.filter((k) => !pickOnly(sheet.primitives[k.primitive]?.group ?? 0));
     for (const g of resolveHighlights(drawn, this.highlights)) {
@@ -329,14 +335,24 @@ export class CanvasComponent extends BaseComponent {
         // ground net makes too many quads for the call stack (agni issue 1330, on Jetson's GND).
         for (const entity of g.entities) for (const v of pathQuads(sheet.vertices, sheet.primitives, entity, w)) tris.push(v);
       } else {
-        for (const entity of g.entities) {
+        // A frame is a translucent fill under an opaque stroke in the same color (agni issue 1536).
+        // Both size from the sheet's smaller span, as core/render/highlight.go does, so a small part
+        // reads on a dense board and the frame matches the SVG one.
+        // A pin keeps the path marker's width as its floor, a fraction of the sheet that reads at any
+        // coordinate scale, and only a part takes the span floor.
+        const ring: number[] = [];
+        const strokeWidth = frameStroke(minSpan, g.strokeScale);
+        for (const [i, entity] of g.entities.entries()) {
           const b = entityBounds(sheet.vertices, sheet.primitives, entity);
           if (!b) continue;
-          // A point (a picked pin) frames by the floor alone, so the floor is the path marker's
-          // width, a fraction of the sheet, which reads at any coordinate scale.
-          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY, pathHalfWidth);
-          tris.push(...(g.shape === HighlightShape.BOUNDING_RECT ? rectTriangles(frame) : circleTriangles(frame)));
+          const frame = entityFrame(b.minX, b.minY, b.maxX, b.maxY, g.parts[i] ? Math.max(pathHalfWidth, frameFloor(minSpan)) : pathHalfWidth);
+          const rect = g.shape === HighlightShape.BOUNDING_RECT;
+          tris.push(...(rect ? rectTriangles(frame) : circleTriangles(frame)));
+          for (const v of rect ? rectRing(frame, strokeWidth) : circleRing(frame, strokeWidth)) ring.push(v);
         }
+        overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });
+        overlays.push({ color: hexToRgba(g.color, fallback, frameStrokeAlpha(g.alpha)), vertices: Int32Array.from(ring, Math.round) });
+        continue;
       }
       overlays.push({ color, vertices: Int32Array.from(tris, Math.round) });
     }
