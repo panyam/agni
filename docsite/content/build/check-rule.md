@@ -161,6 +161,12 @@ structure, and a "For software readers" section. That last section maps the EE c
 analogies, with a diagram beside it. For example, a test point is a metrics endpoint, and the rule
 reads as "critical paths must emit telemetry".
 
+Every card references a diagram under `docs/images/`, drawn as the flagged case beside the fine
+case. A card with no image reference fails `TestRuleCardsHaveDiagram` unless `cardDiagramExempt` in
+the same package's `docs_test.go` names the card with a reason. The intent, datalog and profile
+families keep the same list in their own `docs_test.go`. Agni issue 75 tracks the cards listed there
+as not drawn yet.
+
 ## Say what to do about it
 
 A rule carries four pieces of prose. `Summary` is the one-liner, `Impact` is what goes wrong when the
