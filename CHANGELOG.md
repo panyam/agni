@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-11-10
+
+A board view beside the schematic stays on the board when the board does not place a part, lights
+a walk, and parks as an image while idle (PR 1488). A WebGL view draws only when what it shows
+changes (PR 1483). A board opens with its fab layers hidden, and WebGL draws outlines at their width
+(PR 1487). `?timing` logs a draw profile per burst of pan and zoom (PR 1485). It is a patch, with no
+Go API change. The full write-up is [RELEASES/v0.6.8.md](RELEASES/v0.6.8.md).
+
 ## [0.6.7] - 2026-11-10
 
 A sheet view shows its own loader while it draws, and WebGL frames each placement of a ref-des on
