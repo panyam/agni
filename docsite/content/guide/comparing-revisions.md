@@ -111,8 +111,9 @@ renderer the canvas draws in, SVG or WebGL, so a large board compares at the spe
 
 A comparison opens with the **Changes** list in a rail beside the two drawings, grouped by the
 taxonomy above. Clicking a part or a net there takes both drawings to the sheet that draws it and
-centres the new revision on it. Closing the comparison tabs Changes back beside Diff (agni issue
-1559).
+centres the new revision on it. A net that runs between sheets shows on the top sheet only through
+its sheet pins, so from the top sheet the click goes to the first sheet below it that draws the net
+(agni issue 1560). Closing the comparison tabs Changes back beside Diff (agni issue 1559).
 
 Jetson's baseboard comes in two real revisions to try this on. Antmicro's rev 1.1.2 adds a fan
 regulator on the DCDC sheet, a recovery and reset header (J21) and test points on the power rails:

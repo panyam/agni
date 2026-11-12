@@ -315,6 +315,48 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
     expect(h.b.reveal).toHaveBeenCalledTimes(1); // a rename reveals on the new side
   });
 
+  // agni issue 1560. A net that crosses sheets shows on the top sheet through its sheet pins, so the
+  // top pair "showed" it and a click left the drawings there at fit, with nothing to look at.
+  function crossingNet() {
+    const h = harness({
+      diffDesigns: vi.fn(async () => ({
+        report: { componentsAdded: [], componentsRemoved: [], componentsChanged: [], nets: [{ kind: "new", name: "/DCDC/FAN_PWM", oldName: "", added: [], removed: [] }] },
+        componentStatus: {},
+        netStatus: { "/DCDC/FAN_PWM": "new" },
+        componentSheetsA: {},
+        componentSheetsB: {},
+        netSheetsA: {},
+        netSheetsB: { "/DCDC/FAN_PWM": { ids: ["s1", "s2", "s3"] } },
+      })),
+    });
+    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+      layout: `layout-${snapPath(req.snapshot)}`,
+      sheets: [
+        { id: "s1", name: "Top" },
+        { id: "s2", name: "DCDC" },
+        { id: "s3", name: "Peripherals" },
+      ],
+    }));
+    return h;
+  }
+
+  it("takes a net that crosses sheets from the top pair to the first sheet that draws it", async () => {
+    const h = crossingNet();
+    await h.presenter.open(h.A, h.B);
+    expect(last(h.states).activePair).toBe(0);
+    await h.presenter.selectItem("net:/DCDC/FAN_PWM");
+    expect(last(h.states).activePair).toBe(1);
+    expect(h.b.reveal).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a reader on a sub-sheet that draws the net where they are", async () => {
+    const h = crossingNet();
+    await h.presenter.open(h.A, h.B);
+    await h.presenter.selectPair(2);
+    await h.presenter.selectItem("net:/DCDC/FAN_PWM");
+    expect(last(h.states).activePair).toBe(2);
+  });
+
   it("stays on the current pair for an item with no sheet entries (no geometry / KiCad nets)", async () => {
     const h = harness({
       diffDesigns: vi.fn(async () => ({

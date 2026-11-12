@@ -319,7 +319,7 @@ func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open
 		// names that the netlist read produces. A per-sheet solve would mis-number N$ stubs and
 		// mis-qualify some names.
 		wireNets: hierWireNets(rootName, rootContent, open, openSym),
-		aliases:  projectBusAliases(rootContent, open),
+		aliases:  projectBusAliases(rootName, rootContent, open),
 		open:     open,
 	}
 	if err := w.walk(rootContent, rootName, "/", "", "", map[string]bool{}); err != nil {

@@ -59,7 +59,10 @@ func TestHierBusMemberQualification(t *testing.T) {
 	localBus := func(b []byte) []byte {
 		return bytes.ReplaceAll(b, []byte(`(label "DATA[1:0]"`), []byte(`(label "DATA[0..1]"`))
 	}
-	open := func(rel string) ([]byte, error) { return localBus(readFixture(t, rel)), nil }
+	open := func(rel string) ([]byte, error) {
+		b, err := hierOpen(t)(rel)
+		return localBus(b), err
+	}
 	d, _, err := ReadSchematicHierarchyNets("hier_bus_root.kicad_sch", localBus(readFixture(t, "hier_bus_root.kicad_sch")), open)
 	if err != nil {
 		t.Fatal(err)

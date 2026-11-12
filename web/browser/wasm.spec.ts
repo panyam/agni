@@ -135,8 +135,9 @@ describe("a link to a design this browser has not read", () => {
       // A trace link carries its question in the address, which the viewer keeps as its own state, so
       // arriving where it pointed shows as the same question in the final address.
       await page.goto(`${base()}${gateway}?engine=wasm&trace=R1.1%2CR1.2`, { waitUntil: "domcontentloaded" });
-      await showPanel(page, "checks");
-      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      // The Checks button means the viewer is up. It sits in a closed drawer, so it is waited on in the
+      // DOM. Opening the drawer here raced the Load page's redirect, which opens a fresh viewer.
+      await page.waitForSelector(".checks-run", { state: "attached", timeout: 60_000 });
       await expect.poll(() => new URL(page.url()).searchParams.get("trace"), { timeout: 60_000 }).toBe("R1.1,R1.2");
       const at = new URL(page.url());
       expect(at.pathname).toBe(gateway);
@@ -146,8 +147,7 @@ describe("a link to a design this browser has not read", () => {
 
       pages.length = 0;
       await page.reload({ waitUntil: "domcontentloaded" });
-      await showPanel(page, "checks");
-      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      await page.waitForSelector(".checks-run", { state: "attached", timeout: 60_000 });
       expect(pages).toEqual([gateway]);
     });
   });
