@@ -29,6 +29,7 @@ export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
     setQuerySets: () => {},
     openSet: () => {},
     findByName: () => false,
+    focusQuery: () => {},
     ...over,
   };
 }

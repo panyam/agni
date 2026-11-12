@@ -18,6 +18,18 @@
     .panels-item { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; padding: 4px 10px; cursor: pointer; white-space: pre; }
     .panels-item:hover { background: #eef; }
     .panels-reset { border-top: 1px solid #ddd; margin-top: 2px; }
+    /* tsappkit-dock's Panels menu (agni issue 1549) and the drawer buttons beside it (agni issue
+       1542), drawn like the header's other buttons and menus. */
+    .panels-menu { display: flex; align-items: center; gap: 4px; }
+    .dock-panels-btn { border: 1px solid #ccc; background: #eee; padding: 3px 10px; border-radius: 4px; cursor: pointer; font: inherit; white-space: nowrap; }
+    .dock-panels-list { position: absolute; right: 6px; top: 100%; z-index: 1000; min-width: 160px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+    .dock-panels-item { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; padding: 4px 10px; cursor: pointer; white-space: pre; }
+    .dock-panels-item:hover { background: #eef; }
+    .dock-panels-reset { border-top: 1px solid #ddd; margin-top: 2px; }
+    .dock-drawer-tabs { display: flex; gap: 2px; background: #f3f4f6; border-bottom: 1px solid #ddd; padding: 2px 4px 0; }
+    .dock-drawer-tab { border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; padding: 6px 10px; cursor: pointer; color: #555; white-space: nowrap; }
+    .dock-drawer-tab-active { color: #111; border-bottom-color: #2563eb; }
+    .dock-drawer-tab-menu { border: 0; background: none; font: inherit; color: #888; cursor: pointer; padding: 0 0 0 6px; }
     .highlight-menu { position: relative; flex: 0 0 auto; padding: 4px 6px; }
     .highlight-panel { padding: 8px; min-width: 190px; }
     .highlight-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }

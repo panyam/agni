@@ -45,7 +45,7 @@ import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { browserDropStore, dropOf } from "./drops.js";
 import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
-import { createViewerDock, openDiffPanel, closeDiffPanel, addSheetView } from "./dock.js";
+import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
 import { glDrawing, parseTurn, turnKey } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
@@ -314,7 +314,7 @@ class AppRoot extends BaseComponent {
         // Each side's WebGL drawing holds a GPU copy of its sheet, so a closed comparison frees it.
         diffA.setMode("svg");
         diffB.setMode("svg");
-        if (dockApi) closeDiffPanel(dockApi);
+        if (viewerDock) closeDiffPanel(viewerDock.dock);
       },
     });
     // The changes panel (WS9-006) renders from the same DiffState push; clicking an item
@@ -340,7 +340,7 @@ class AppRoot extends BaseComponent {
       // A table cell finds its subject as a sheet view's pick does: on a sheet that draws it, selected so
       // board views follow, and framed (agni issue 1539). A verdicts row finds its verdict.
       onLocate: (kind, subject, pin) => {
-        if (dockApi) dockApi.getPanel("canvas")?.api.setActive();
+        viewerDock?.dock.show("canvas");
         if (kind === "verdict") {
           void locateVerdictOnCanvas(subject);
           return;
@@ -388,7 +388,7 @@ class AppRoot extends BaseComponent {
     const compareWith = (target: CompareTarget, opts?: { nearRenames?: boolean }): void => {
       if (!openFile) return;
       if (opts?.nearRenames) tablesPresenter.setNearRenames(true);
-      if (dockApi) openDiffPanel(dockApi);
+      if (viewerDock) openDiffPanel(viewerDock.dock);
       void diffPresenter.open(openFile, target);
     };
     const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, compareWith);
@@ -554,7 +554,7 @@ class AppRoot extends BaseComponent {
       },
       onAsk: (sel, question) => {
         query.view.askAbout(sel, question);
-        if (dockApi) dockApi.getPanel("query")?.api.setActive();
+        viewerDock?.dock.show("query");
       },
       // A verdict in the selection's checks shows its proof, as a verdict row in the checks panel does.
       onVerdict: (id) => void presenter.locateVerdict(id),
@@ -562,12 +562,12 @@ class AppRoot extends BaseComponent {
       onTrace: (end, sel) => {
         // The tab comes forward first. Focusing the field opens its list, and a hidden field takes
         // no focus.
-        if (dockApi) dockApi.getPanel("trace")?.api.setActive();
+        viewerDock?.dock.show("trace");
         trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
       },
       // A walk starts on the selected part or pin, at its first hop (agni issue 1341).
       onWalk: (kind, sel) => {
-        if (dockApi) dockApi.getPanel("trace")?.api.setActive();
+        viewerDock?.dock.show("trace");
         const start = sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : (sel.ref ?? "");
         void presenter.runWalk({ start, kind, hops: DEFAULT_WALK_HOPS, through: [] });
       },
@@ -579,10 +579,24 @@ class AppRoot extends BaseComponent {
     document.addEventListener("keydown", (e) => {
       if (e.key.toLowerCase() !== "f" || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey)) return;
       if (isTextEntry(e.target) && !(e.target as HTMLElement).classList.contains("query-term")) return;
-      const panel = dockApi?.getPanel("query");
-      if (!panel) return;
-      panel.api.setActive();
+      if (!viewerDock?.dock.show("query")) return;
       if (query.view.findByName()) e.preventDefault();
+    });
+    // ⌘/Ctrl+Shift+F focuses the query box, and ⌘/Ctrl+G shows or hides the Sheets drawer (agni issue
+    // 1542). Another text field keeps both keys.
+    document.addEventListener("keydown", (e) => {
+      if (!viewerDock || e.altKey || !(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === "f" && e.shiftKey) {
+        if (isTextEntry(e.target) && !(e.target as HTMLElement).classList.contains("query-text")) return;
+        e.preventDefault();
+        viewerDock.dock.show("query");
+        query.view.focusQuery();
+      } else if (key === "g" && !e.shiftKey) {
+        if (isTextEntry(e.target)) return;
+        e.preventDefault();
+        viewerDock.toggleShown("overview");
+      }
     });
     // The engine says where a selected part or net is drawn (LocateSubjects, agni issue 1325). It
     // adds the board only while the board is on screen, since this worker has read the board then, and
@@ -666,7 +680,7 @@ class AppRoot extends BaseComponent {
     // The panel already opened its sheet and lit it.
     const revealOnCanvas = (sel: Selection | null) => {
       if (!sel) return;
-      if (dockApi) dockApi.getPanel("canvas")?.api.setActive();
+      viewerDock?.dock.show("canvas");
       frameLocated(sel);
     };
     // locateVerdictOnCanvas lights a verdict's proof, selects its first subject so board views follow,
@@ -682,15 +696,11 @@ class AppRoot extends BaseComponent {
     const gpuMode = defaultRenderMode();
     const sheetViews = (this.sheetViews = new SheetViews(
       {
-        add: (id, title, element, closed) => dockApi && addSheetView(dockApi, id, title, element, closed),
-        setTitle: (id, title) => dockApi?.getPanel(id)?.api.setTitle(title),
-        float: (id) => {
-          const panel = dockApi?.getPanel(id);
-          if (panel) dockApi?.addFloatingGroup(panel);
-        },
+        add: (id, title, element, closed) => viewerDock?.addSheetView(id, title, element, closed),
+        setTitle: (id, title) => viewerDock?.setTitle(id, title),
+        float: (id) => void viewerDock?.dock.place(id, { kind: "float" }),
         close: (id) => {
-          const panel = dockApi?.getPanel(id);
-          if (panel) dockApi?.removePanel(panel);
+          if (viewerDock?.dock.where(id)) viewerDock.dock.toggle(id);
         },
       },
       {
@@ -744,7 +754,7 @@ class AppRoot extends BaseComponent {
           pickedIn = pane.id;
           propertiesPresenter.select({ level: "entity", sel, sheetId: pane.sheet });
           void followOnCanvas(sel);
-          if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+          viewerDock?.dock.show("properties");
         },
         onPickEmpty: (pane) => {
           pickedIn = pane.id;
@@ -764,13 +774,13 @@ class AppRoot extends BaseComponent {
       const sel = areaSelection(members, (ref) => propertiesPresenter.pinNets(ref));
       locateSelection(sel);
       propertiesPresenter.selectEntity(sel);
-      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+      viewerDock?.dock.show("properties");
       emit("area.selected", { components: members.refs.length });
     };
     // A tour's Show me on the area step selects the middle of the view, since a Shift-drag is not
     // something a click can make.
     this.tourHost = {
-      show: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
+      show: (panel) => void viewerDock?.dock.show(panel),
       selectArea: () => {
         const v = surface.element(canvasEl).getBoundingClientRect();
         const r = { left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 };
@@ -791,12 +801,12 @@ class AppRoot extends BaseComponent {
     surface.onPick = (sel: Selection) => {
       locateSelection(sel);
       propertiesPresenter.selectEntity(sel);
-      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+      viewerDock?.dock.show("properties");
     };
     // A click on empty paper names the sheet being looked at.
     surface.onPickEmpty = () => {
       propertiesPresenter.selectSheet();
-      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+      viewerDock?.dock.show("properties");
     };
 
     // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
@@ -956,7 +966,7 @@ class AppRoot extends BaseComponent {
           syncUrl(loc);
         },
         compare: compareWith,
-        showPanel: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
+        showPanel: (panel) => void viewerDock?.dock.show(panel),
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,
@@ -1055,8 +1065,9 @@ function saveFile(file: SavedFile): void {
 const dockEl = document.getElementById("dock");
 const parkEl = document.getElementById("panel-park");
 const menuEl = document.getElementById("panels-menu");
-// dockApi is kept so entering a comparison can open/focus the Diff panel (WS9-005).
-const dockApi = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, menuEl, window.localStorage) : null;
+// viewerDock is kept so a panel can be brought forward, a comparison can open the Diff panel
+// (WS9-005), and the shortcuts can open the drawers (agni issue 1542).
+const viewerDock = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, menuEl, storage() ?? null) : null;
 
 // drops are the files dropped into this browser, which the Load page kept (agni issue 1072).
 const drops = browserDropStore();

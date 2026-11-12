@@ -1,459 +1,160 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
-import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel, queryHeight, resetLayout } from "./dock.js";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { DockviewApi } from "dockview-core";
+import { DRAWER_PANELS, LAYOUT_KEY, VIEWER_PANELS, createViewerDock, defaultLayout, queryHeight, type ViewerDock } from "./dock.js";
 
-function memStorage(initial: Record<string, string> = {}): Pick<Storage, "getItem" | "setItem" | "removeItem"> & { data: Map<string, string> } {
-  const data = new Map(Object.entries(initial));
-  return {
-    data,
-    getItem: (k) => data.get(k) ?? null,
-    setItem: (k, v) => void data.set(k, v),
-    removeItem: (k) => void data.delete(k),
-  };
-}
+// The dock is goapplib's tsappkit-dock (agni issue 1549), which tests its own restore, reconcile,
+// prune, reset and Panels menu. These cover what agni gives it: the registry and where each panel
+// starts, the grid's default arrangement, and the viewer's drawers, buttons and sheet views (agni
+// issue 1542).
 
-describe("layout persistence", () => {
-  it("returns null when nothing is saved", () => {
-    expect(loadLayout(memStorage())).toBeNull();
-  });
-
-  it("round-trips a layout, stamped with the panel registry at save time", () => {
-    const storage = memStorage();
-    const layout = { grid: { root: { type: "branch" } }, panels: { canvas: {} } };
-    saveLayout(storage, layout);
-    const loaded = loadLayout(storage)!;
-    expect(loaded.layout).toEqual(layout);
-    expect(loaded.savedPanels).toEqual(VIEWER_PANELS.map((p) => p.id));
-  });
-
-  it("accepts a pre-versioning raw save as an unknown registry", () => {
-    // Layouts persisted before the version wrapper are bare dockview JSON; they restore
-    // with an empty savedPanels, so every non-on-demand panel counts as newly added once.
-    const raw = { grid: { root: {} }, panels: { canvas: {} } };
-    const storage = memStorage({ [LAYOUT_KEY]: JSON.stringify(raw) });
-    const loaded = loadLayout(storage)!;
-    expect(loaded.layout).toEqual(raw);
-    expect(loaded.savedPanels).toEqual([]);
-  });
-
-  it("returns null for a corrupt save instead of throwing", () => {
-    const storage = memStorage({ [LAYOUT_KEY]: "{not json" });
-    expect(loadLayout(storage)).toBeNull();
-  });
-
-  it("swallows storage write failures", () => {
-    const storage = {
-      getItem: () => null,
-      setItem: () => {
-        throw new Error("quota");
-      },
-      removeItem: () => {},
-    };
-    expect(() => saveLayout(storage, { a: 1 })).not.toThrow();
-  });
-});
-
-// The opening tab of every stack the boot layout builds.
-//
-// This asserts the setActive CALL and not the pixels. A unit test here cannot see that a tab is
-// actually on top, and the resizeGroup comment in dock.ts records the same limit. The browser suite
-// covers that half. This test covers the cheap half, and that half went wrong once, when a stack
-// gained a second panel and nobody added it to the setActive list.
-describe("default layout opening tabs", () => {
-  function fakeApi(): { api: any; added: string[]; activated: string[] } {
-    const added: string[] = [];
-    const activated: string[] = [];
-    const api: any = {
-      width: 1600,
-      height: 900,
-      addPanel: (p: { id: string }) => void added.push(p.id),
-      getPanel: (id: string) =>
-        added.includes(id) ? { api: { setActive: () => void activated.push(id), group: undefined } } : undefined,
-    };
-    return { api, added, activated };
-  }
-
-  it("opens the Query/Trace stack on Query, not on the panel added last", () => {
-    const { api, added, activated } = fakeApi();
-    defaultLayout(api);
-    // Trace is added within the query group and after it, so dockview would otherwise leave Trace
-    // active. Regression guard for the v0.2.0 defect where the query surface booted hidden.
-    expect(added.indexOf("trace")).toBeGreaterThan(added.indexOf("query"));
-    expect(added.indexOf("tables")).toBeGreaterThan(added.indexOf("query"));
-    expect(activated).toContain("query");
-  });
-
-  it("names an opening tab for every stack that holds more than one panel", () => {
-    const { api, added, activated } = fakeApi();
-    defaultLayout(api);
-    // Each of these shares a tab strip with at least one sibling. A stack with no entry here opens
-    // on whichever panel happened to be added last, and this suite exists to prevent that.
-    for (const id of ["canvas", "properties", "checks", "review", "query"]) {
-      expect(added).toContain(id);
-      expect(activated).toContain(id);
-    }
-  });
+beforeAll(() => {
+  // jsdom has no ResizeObserver, and dockview-core watches its container with one.
+  globalThis.ResizeObserver ??= class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
 });
 
 describe("panel registry", () => {
-  it("covers exactly the twelve viewer panels with unique ids", () => {
+  it("lists every viewer panel once, with no retired one", () => {
     const ids = VIEWER_PANELS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.sort()).toEqual([
-      "canvas",
-      "changes",
-      "checks",
-      "coverage",
-      "diff",
-      "lexicon",
-      "overview",
-      "parts",
-      "properties",
-      "query",
-      "review",
-      "rules",
-      "tables",
-      "trace",
+    expect([...ids].sort()).toEqual(
+      ["canvas", "changes", "checks", "coverage", "diff", "lexicon", "overview", "parts", "properties", "query", "review", "rules", "tables", "trace"].sort(),
+    );
+    expect(ids).not.toContain("files");
+    expect(ids).not.toContain("details");
+  });
+
+  it("starts Sheets in the left drawer, and the engine's findings and their references in the right one", () => {
+    const at = (id: string) => VIEWER_PANELS.find((p) => p.id === id)?.defaultPlacement;
+    expect(at("overview")).toEqual({ kind: "drawer", edge: "left" });
+    for (const id of ["checks", "review", "rules", "lexicon", "coverage"]) expect(at(id)).toEqual({ kind: "drawer", edge: "right" });
+    for (const id of ["canvas", "properties", "parts", "query", "trace", "tables", "diff", "changes"]) expect(at(id)).toBeUndefined();
+    // Checks and Review open first in the right drawer, since a drawer's tabs follow the registry.
+    const right = VIEWER_PANELS.filter((p) => p.defaultPlacement?.kind === "drawer" && p.defaultPlacement.edge === "right").map((p) => p.id);
+    expect(right.slice(0, 2)).toEqual(["checks", "review"]);
+    expect([...DRAWER_PANELS]).toEqual(["overview", "checks", "review"]);
+  });
+
+  it("saves under a key the old dock never used, so every reader starts on the drawers once", () => {
+    expect(LAYOUT_KEY).not.toBe("agni-work-page-dockview-layout-v3");
+  });
+});
+
+describe("defaultLayout", () => {
+  function fakeApi() {
+    const added: { id: string; direction?: string; ref?: string }[] = [];
+    const sizes: Record<string, { width?: number; height?: number }> = {};
+    const active: string[] = [];
+    const panel = (id: string) => ({
+      api: { setActive: () => active.push(id), group: { api: { setSize: (s: { width?: number; height?: number }) => (sizes[id] = s) } } },
+    });
+    const api = {
+      width: 1400,
+      height: 1000,
+      addPanel: (o: { id: string; position?: { direction: string; referencePanel?: string } }) =>
+        added.push({ id: o.id, direction: o.position?.direction, ref: o.position?.referencePanel }),
+      getPanel: (id: string) => (added.some((a) => a.id === id) ? panel(id) : undefined),
+    } as unknown as DockviewApi;
+    return { api, added, sizes, active };
+  }
+
+  it("builds the west rail, then splits the centre for the query strip, with no drawer panel in the grid", () => {
+    const { api, added } = fakeApi();
+    defaultLayout(api);
+    expect(added).toEqual([
+      { id: "canvas", direction: undefined, ref: undefined },
+      { id: "properties", direction: "left", ref: "canvas" },
+      { id: "parts", direction: "within", ref: "properties" },
+      { id: "query", direction: "below", ref: "canvas" },
+      { id: "trace", direction: "within", ref: "query" },
+      { id: "tables", direction: "within", ref: "query" },
+      { id: "diff", direction: "within", ref: "canvas" },
+      { id: "changes", direction: "within", ref: "canvas" },
     ]);
   });
 
-  // Phase 1 demoted Files to secondary and kept it registered only because the old Compare flow
-  // needed a tree to click side B in. The picker replaced that flow, so the panel is gone. Pinned
-  // separately from the id list because re-adding it there would read as an ordinary new panel.
-  it("no longer registers Files (WS9-049 phase 3)", () => {
-    expect(VIEWER_PANELS.find((p) => p.id === "files")).toBeUndefined();
-  });
-
-  it("leaves Sheets default-open as the work page's navigation surface", () => {
-    expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
-  });
-
-  // The secondary tier is gone. The layout puts crowded panels in tabs rather than hiding them
-  // behind a menu, so every registered panel is placed at boot. A future menu-only panel omits the
-  // flag. This assertion then fails, so adding one is a deliberate act rather than an oversight.
-  it("places every registered panel at boot, with no menu-only tier", () => {
-    const menuOnly = VIEWER_PANELS.filter((p) => !p.defaultOpen).map((p) => p.id);
-    expect(menuOnly).toEqual([]);
-  });
-});
-
-describe("prunePanels", () => {
-  // A fake DockviewApi exposing the open panels as `panels` and recording removals.
-  function fakeApi(open: string[]) {
-    const panels = open.map((id) => ({ id }));
-    const removed: string[] = [];
-    return {
-      removed,
-      panels,
-      api: {
-        get panels() {
-          return panels;
-        },
-        removePanel: (p: { id: string }) => {
-          removed.push(p.id);
-          panels.splice(panels.findIndex((x) => x.id === p.id), 1);
-        },
-      } as never,
-    };
-  }
-
-  it("closes a panel the registry no longer has", () => {
-    const { api, removed } = fakeApi(["canvas", "checks", "retired-panel"]);
-    prunePanels(api);
-    expect(removed).toEqual(["retired-panel"]);
-  });
-
-  it("leaves every registered panel alone", () => {
-    const { api, removed } = fakeApi(VIEWER_PANELS.map((p) => p.id));
-    prunePanels(api);
-    expect(removed).toEqual([]);
-  });
-
-  // This is the WS9-049 phase 3 migration, and the reason prunePanels was added in phase 1. An
-  // existing user's saved layout still names "files"; its hole is gone from the template, so
-  // without the prune adoptPanel falls back to a blank div and they get an empty "Files" tab.
-  it("closes a restored Files panel now that the registry has dropped it", () => {
-    const { api, removed } = fakeApi(["overview", "canvas", "properties", "checks", "files"]);
-    prunePanels(api);
-    expect(removed).toEqual(["files"]);
-  });
-
-  // Properties replaced Details (agni issue 902). A layout saved before then names "details", and
-  // its hole is gone, so it would otherwise restore as an empty tab beside the Properties panel
-  // that the reconcile adds.
-  it("closes a restored Details panel now that Properties replaced it", () => {
-    const { api, removed } = fakeApi(["overview", "canvas", "details", "checks"]);
-    prunePanels(api);
-    expect(removed).toEqual(["details"]);
-  });
-
-  it("removes several retired panels in one pass without skipping any", () => {
-    // Guards the snapshot in prunePanels, since removePanel mutates the collection being walked, so
-    // iterating it live would skip the entry that slides into the removed one's index.
-    const { api, removed } = fakeApi(["gone-a", "gone-b", "canvas"]);
-    prunePanels(api);
-    expect(removed.sort()).toEqual(["gone-a", "gone-b"]);
-  });
-
-  it("tolerates an api that reports no panels", () => {
-    expect(() => prunePanels({ removePanel: () => {} } as never)).not.toThrow();
-  });
-
-  // A sheet view is opened for one sheet of the open design (agni issue 1326), so a restored layout
-  // never brings one back.
-  it("drops a sheet view from a restored layout", () => {
-    const { api, removed } = fakeApi(["canvas", "sheetview-3"]);
-    prunePanels(api as never);
-    expect(removed).toEqual(["sheetview-3"]);
-  });
-});
-
-describe("reconcilePanels", () => {
-  // A fake DockviewApi recording addPanel calls; `open` seeds the currently open ids.
-  function fakeApi(open: string[]) {
-    const added: string[] = [];
-    return {
-      added,
-      api: {
-        getPanel: (id: string) => (open.includes(id) || added.includes(id) ? { api: { setActive: () => {} } } : undefined),
-        addPanel: (opts: { id: string }) => void added.push(opts.id),
-      } as never,
-    };
-  }
-  const openIds = VIEWER_PANELS.map((p) => p.id);
-
-  it("opens panels added to the registry since the layout was saved", () => {
-    const savedWithoutChecks = VIEWER_PANELS.map((p) => p.id).filter((id) => id !== "checks");
-    const { api, added } = fakeApi(openIds.filter((id) => id !== "checks"));
-    reconcilePanels(api, savedWithoutChecks);
-    expect(added).toEqual(["checks"]);
-  });
-
-  it("leaves user-closed panels closed (present in the saved registry, absent from the layout)", () => {
-    const { api, added } = fakeApi(openIds.filter((id) => id !== "rules")); // user closed rules
-    reconcilePanels(api, VIEWER_PANELS.map((p) => p.id)); // registry unchanged since save
-    expect(added).toEqual([]);
-  });
-
-  it("never opens on-demand panels, even for a pre-versioning save", () => {
-    const { api, added } = fakeApi(openIds);
-    reconcilePanels(api, []); // legacy save, unknown registry
-    expect(added).toEqual([]); // everything default-open already open; diff/changes stay closed
-  });
-
-  it("reopens only missing DEFAULT-OPEN panels for a legacy save; secondaries stay closed (WS9-042)", () => {
-    // Legacy save (unknown registry) missing a core panel (properties) and a secondary (report).
-    // Only the core one is reconciled open; the secondary is discoverable in the Panels menu.
-    const { api, added } = fakeApi(openIds.filter((id) => id !== "properties" && id !== "report"));
-    reconcilePanels(api, []);
-    expect(added).toEqual(["properties"]);
-  });
-
-  // This test used to cover a newly-registered SECONDARY panel, which was menu-only. That tier no
-  // longer has an instance to test with, since every panel is placed at boot. The test still covers
-  // a rule that matters more. A panel the user closed is not reopened, and the saved registry tells
-  // it apart from a new one.
-  it("leaves a panel the user closed alone when it was in the saved registry", () => {
-    const savedWithQuery = VIEWER_PANELS.map((p) => p.id);
-    const { api, added } = fakeApi(openIds.filter((id) => id !== "query"));
-    reconcilePanels(api, savedWithQuery);
-    expect(added).toEqual([]);
-  });
-});
-
-// dockStub is a minimal DockviewApi tracking which panel ids are open, enough to drive
-// defaultLayout, openPanel, and the menu toggle. getPanel returns a handle whose id lets
-// removePanel find it; the nested `api` no-ops absorb the deferred sizing calls.
-interface Placement {
-  id: string;
-  direction?: string;
-  reference?: string;
-}
-
-function dockStub(open: string[] = []) {
-  const ids = [...open];
-  const placed: Placement[] = [];
-  const api = {
-    addPanel: (o: { id: string; position?: { direction?: string; referencePanel?: string } }) => {
-      placed.push({ id: o.id, direction: o.position?.direction, reference: o.position?.referencePanel });
-      if (!ids.includes(o.id)) ids.push(o.id);
-    },
-    getPanel: (id: string) =>
-      ids.includes(id) ? { id, api: { setActive() {}, group: { api: { setSize() {} } } } } : undefined,
-    removePanel: (p: { id: string }) => {
-      const i = ids.indexOf(p.id);
-      if (i >= 0) ids.splice(i, 1);
-    },
-    clear: () => {
-      ids.splice(0);
-    },
-  };
-  return { api: api as never, ids, placed };
-}
-
-describe("defaultLayout", () => {
-  // This function exists to arrange the panels, and nothing asserted the arrangement before. The
-  // previous test checked WHICH panels opened and not WHERE, so any reshuffle was invisible.
-  //
-  // Ordering matters here. Each position is relative to the reference panel's GROUP, so
-  // query splitting the centre depends on both rails already existing; place it earlier and it
-  // becomes a full-width strip under all three columns.
-  it("builds the two rails, then splits the centre for query", () => {
-    const { api, placed } = dockStub();
+  it("sizes the rail and the query strip, and opens each stack on its first tab", () => {
+    const { api, sizes, active } = fakeApi();
     defaultLayout(api);
-    const at = (id: string) => placed.find((p) => p.id === id);
-
-    expect(at("canvas")?.direction).toBeUndefined(); // the centre is the anchor
-
-    expect(at("overview")).toMatchObject({ direction: "left", reference: "canvas" });
-    expect(at("properties")).toMatchObject({ direction: "below", reference: "overview" });
-    expect(at("parts")).toMatchObject({ direction: "within", reference: "properties" });
-
-    // The east rail is two stacks of two, not one stack of four, because a 15% column clips a four-tab
-    // strip, and dockview gives no overflow affordance, so the fourth tab becomes unreachable.
-    expect(at("checks")).toMatchObject({ direction: "right", reference: "canvas" });
-    expect(at("rules")).toMatchObject({ direction: "within", reference: "checks" });
-    expect(at("review")).toMatchObject({ direction: "below", reference: "checks" });
-    expect(at("coverage")).toMatchObject({ direction: "within", reference: "review" });
-
-    for (const tab of ["diff", "changes"]) {
-      expect(at(tab), `${tab} should tab with the canvas`).toMatchObject({ direction: "within", reference: "canvas" });
-    }
-
-    const order = placed.map((p) => p.id);
-    expect(at("query")).toMatchObject({ direction: "below", reference: "canvas" });
-    expect(order.indexOf("query")).toBeGreaterThan(order.indexOf("checks"));
-    expect(order.indexOf("query")).toBeGreaterThan(order.indexOf("overview"));
-  });
-
-  it("opens every registered panel", () => {
-    const { api, ids } = dockStub();
-    defaultLayout(api);
-    expect(ids.slice().sort()).toEqual(VIEWER_PANELS.map((p) => p.id).sort());
+    expect(sizes.properties).toEqual({ width: 260 });
+    expect(sizes.query).toEqual({ height: 320 });
+    expect(active).toEqual(["query", "properties", "canvas"]);
   });
 });
 
-describe("panelsMenu toggle", () => {
-  function openMenu(open: string[]) {
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const { api, ids } = dockStub(open);
-    panelsMenu(host, api);
-    const btn = host.querySelector<HTMLButtonElement>(".panels-btn")!;
-    btn.click(); // rebuild + show the list
-    const itemFor = (title: string) =>
-      Array.from(host.querySelectorAll<HTMLButtonElement>(".panels-item")).find((b) => b.textContent?.includes(title))!;
-    return { host, ids, itemFor };
-  }
-
-  it("hides an open panel when its menu item is clicked", () => {
-    const { ids, itemFor } = openMenu(["canvas", "checks"]);
-    expect(itemFor("Checks").textContent).toContain("✓");
-    itemFor("Checks").click();
-    expect(ids).not.toContain("checks");
-    document.body.replaceChildren();
-  });
-
-  it("shows a closed panel when its menu item is clicked", () => {
-    const { ids, itemFor } = openMenu(["canvas"]);
-    expect(itemFor("Rules").textContent).not.toContain("✓");
-    itemFor("Rules").click();
-    expect(ids).toContain("rules");
-    document.body.replaceChildren();
-  });
-});
-
-// agni issue 759. A saved layout is restored as it was, so Reset layout is how a reader gets the
-// current default back.
-describe("resetLayout", () => {
-  function memoryStorage(saved: string | null) {
-    const m = new Map<string, string>();
-    if (saved !== null) m.set(LAYOUT_KEY, saved);
-    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), m };
-  }
-
-  it("forgets the saved layout and opens every panel again", () => {
-    const { api, ids } = dockStub(["canvas", "checks"]);
-    const storage = memoryStorage('{"layout":{}}');
-    resetLayout(api, storage);
-    expect(storage.m.has(LAYOUT_KEY)).toBe(false);
-    expect(ids.slice().sort()).toEqual(VIEWER_PANELS.map((p) => p.id).sort());
-  });
-
-  it("is the Panels menu's last item, and only when the menu can reach the storage", () => {
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const { api, ids } = dockStub(["canvas"]);
-    const storage = memoryStorage('{"layout":{}}');
-    panelsMenu(host, api, storage);
-    host.querySelector<HTMLButtonElement>(".panels-btn")!.click();
-    const items = Array.from(host.querySelectorAll<HTMLButtonElement>(".panels-item"));
-    expect(items[items.length - 1].textContent).toContain("Reset layout");
-    items[items.length - 1].click();
-    expect(storage.m.has(LAYOUT_KEY)).toBe(false);
-    expect(ids).toContain("rules");
-    document.body.replaceChildren();
-
-    const bare = document.createElement("div");
-    document.body.appendChild(bare);
-    panelsMenu(bare, dockStub(["canvas"]).api);
-    bare.querySelector<HTMLButtonElement>(".panels-btn")!.click();
-    expect(bare.querySelector(".panels-reset")).toBeNull();
-    document.body.replaceChildren();
-  });
-});
-
-describe("openPanel", () => {
-  it("adds the panel by id so the menu can reopen a closed one", () => {
-    const { api, ids } = dockStub();
-    openPanel(api, { id: "query", title: "Query" });
-    expect(ids).toEqual(["query"]);
-  });
-});
-
-describe("adoptPanel", () => {
-  it("adopts the server-rendered hole and parks it back on dispose, preserving identity", () => {
-    const park = document.createElement("div");
-    const hole = document.createElement("div");
-    hole.setAttribute("data-dock-panel", "rules");
-    park.appendChild(hole);
-    document.body.appendChild(park);
-
-    const renderer = adoptPanel(park, "rules");
-    expect(renderer.element).toBe(hole);
-
-    // Simulate dockview mounting the panel, then the user closing it.
-    const dock = document.createElement("div");
-    document.body.appendChild(dock);
-    dock.appendChild(renderer.element);
-    expect(park.contains(hole)).toBe(false);
-    renderer.dispose?.();
-    expect(park.contains(hole)).toBe(true);
-
-    // Reopening resolves the SAME element, so the island mounted in it is still live.
-    const reopened = adoptPanel(park, "rules");
-    expect(reopened.element).toBe(hole);
-
-    document.body.replaceChildren();
-  });
-
-  it("yields an empty element for an unknown panel name instead of crashing", () => {
-    const park = document.createElement("div");
-    document.body.appendChild(park);
-    const renderer = adoptPanel(park, "no-such-panel");
-    expect(renderer.element).toBeInstanceOf(HTMLElement);
-    expect(renderer.element.childNodes.length).toBe(0);
-    document.body.replaceChildren();
-  });
-});
-
-// agni issue 759. The Query panel opens at a fifth of the dock, floored at 320px so its first result
-// rows fit under the tab strip and query box, and capped at 45% so a short window keeps its drawing.
 describe("queryHeight", () => {
   it("gives a tall dock its fifth, a 1000px dock the floor, and a short one the cap", () => {
-    expect(queryHeight(2000)).toBe(400);
+    expect(queryHeight(2400)).toBe(480);
     expect(queryHeight(1000)).toBe(320);
-    expect(queryHeight(600)).toBe(270);
+    expect(queryHeight(500)).toBe(225);
     expect(queryHeight(0)).toBe(320);
+  });
+});
+
+describe("the viewer's dock", () => {
+  let made: ViewerDock | null = null;
+  afterEach(() => {
+    made?.dock.dispose();
+    made = null;
+    document.body.replaceChildren();
+  });
+
+  function boot() {
+    const container = document.createElement("div");
+    const park = document.createElement("div");
+    const menu = document.createElement("div");
+    for (const p of VIEWER_PANELS) {
+      const hole = document.createElement("div");
+      hole.dataset.dockPanel = p.id;
+      hole.textContent = p.id;
+      park.appendChild(hole);
+    }
+    document.body.append(container, park, menu);
+    made = createViewerDock(container, park, menu, null);
+    return { v: made, container, park, menu };
+  }
+
+  it("puts the server-rendered holes in the grid and the drawers, the same element each time", () => {
+    const { v, park } = boot();
+    const canvasHole = document.querySelector('[data-dock-panel="canvas"]');
+    expect(canvasHole?.parentElement).not.toBe(park);
+    expect(v.dock.where("overview")).toEqual({ kind: "drawer", edge: "left" });
+    expect(v.dock.where("checks")).toEqual({ kind: "drawer", edge: "right" });
+    expect(v.dock.where("canvas")).toEqual({ kind: "grid" });
+    v.dock.place("checks", { kind: "grid" });
+    expect(document.querySelectorAll('[data-dock-panel="checks"]').length).toBe(1);
+    expect(v.dock.where("checks")).toEqual({ kind: "grid" });
+  });
+
+  it("adds a drawer button for Sheets, Checks and Review beside the Panels menu, which opens and closes its drawer", () => {
+    const { v, menu } = boot();
+    const buttons = [...menu.querySelectorAll<HTMLButtonElement>(".dock-drawer-btn")];
+    expect(buttons.map((b) => b.textContent)).toEqual(["Sheets", "Checks", "Review"]);
+    expect(menu.querySelector(".dock-panels-btn")).not.toBeNull();
+    const toggled = vi.spyOn(v.dock, "toggleDrawer");
+    buttons[0].click();
+    expect(buttons[0].classList.contains("active")).toBe(true);
+    buttons[0].click();
+    expect(toggled).toHaveBeenLastCalledWith("left", false);
+    expect(buttons[0].classList.contains("active")).toBe(false);
+  });
+
+  it("docks a sheet view beside the canvas, tabs the next one with it, and says when one closes", () => {
+    const { v } = boot();
+    const closed: string[] = [];
+    v.addSheetView("sheetview-1", "Power", document.createElement("div"), () => closed.push("sheetview-1"));
+    v.addSheetView("sheetview-2", "Board", document.createElement("div"), () => closed.push("sheetview-2"));
+    expect(v.dock.where("sheetview-1")).toEqual({ kind: "grid" });
+    expect(v.dock.api.getPanel("sheetview-1")?.group.id).toBe(v.dock.api.getPanel("sheetview-2")?.group.id);
+    expect(v.dock.api.getPanel("sheetview-1")?.group.id).not.toBe(v.dock.api.getPanel("canvas")?.group.id);
+    v.setTitle("sheetview-2", "Board, bottom");
+    expect(v.dock.api.getPanel("sheetview-2")?.title).toBe("Board, bottom");
+    v.dock.toggle("sheetview-1");
+    expect(closed).toEqual(["sheetview-1"]);
+    expect(v.dock.where("sheetview-1")).toBeNull();
   });
 });
