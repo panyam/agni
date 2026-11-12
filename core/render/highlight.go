@@ -118,10 +118,11 @@ func (m specMatcher) matchKey(k *geom.PrimitiveKey) bool {
 // belongs to each matching group. The renderer owns paint order, where a later spec wins.
 func HighlightPacked(sheet *geom.PackedSheet, specs []*geom.HighlightSpec) *geom.PackedHighlight {
 	out := &geom.PackedHighlight{}
+	keys := PackedKeys(sheet)
 	for _, spec := range specs {
 		m := matcherFor(spec)
 		g := &geom.PackedHighlight_Group{Color: spec.GetColor(), Alpha: spec.GetAlpha(), Shape: spec.GetShape()}
-		for _, k := range sheet.GetKeys() {
+		for _, k := range keys {
 			if m.matchKey(k) && !pickOnly(sheet, k.GetPrimitive()) {
 				g.Primitives = append(g.Primitives, k.GetPrimitive())
 			}

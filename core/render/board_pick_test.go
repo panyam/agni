@@ -211,7 +211,7 @@ func TestPackBoardPacksEachFootprintsPickArea(t *testing.T) {
 	}
 	want := map[string]uint8{`R"1`: groupBoardPickFront, "C9": groupBoardPickBack}
 	found := map[string]bool{}
-	for _, k := range p.GetKeys() {
+	for _, k := range PackedKeys(p) {
 		r := recs[k.GetPrimitive()]
 		if r.group != groupBoardPickFront && r.group != groupBoardPickBack {
 			continue
@@ -287,7 +287,7 @@ func TestPackBoardPacksInPaintOrder(t *testing.T) {
 	p := PackBoard(b)
 	recs := decodeRecords(p.GetPrimitives())
 	first := map[string]int{}
-	for _, k := range p.GetKeys() {
+	for _, k := range PackedKeys(p) {
 		r := recs[k.GetPrimitive()]
 		key := k.GetNet() + "/" + map[uint8]string{groupBoardCopperFront: "front", groupBoardCopperBack: "back"}[r.group]
 		if r.group != groupBoardCopperFront && r.group != groupBoardCopperBack {

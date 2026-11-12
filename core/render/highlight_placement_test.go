@@ -24,7 +24,7 @@ func TestPackSheetKeysEachPlacement(t *testing.T) {
 	g := twoR2()
 	ps := PackSheet(g, g.Sheets[0])
 	byPlacement := map[uint32]int{}
-	for _, k := range ps.GetKeys() {
+	for _, k := range PackedKeys(ps) {
 		switch {
 		case k.GetRefDes() == "R2":
 			byPlacement[k.GetPlacement()]++

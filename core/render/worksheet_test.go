@@ -79,7 +79,7 @@ func TestTitleBlockMatchesAcrossRenderers(t *testing.T) {
 			t.Errorf("%s: packed title block is %.1f px tall, SVG's %.1f", page.name, got, svgH)
 		}
 		var font float64
-		for _, l := range PackSheet(g, sh).GetLabels() {
+		for _, l := range PackedLabels(PackSheet(g, sh)) {
 			if l.GetText() == "Title: MyTitle" {
 				font = float64(l.GetHeight()) * fl.scale
 			}

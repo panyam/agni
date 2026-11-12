@@ -298,7 +298,7 @@ func TestPackSheetPinKeys(t *testing.T) {
 	g := highlightFixture()
 	ps := PackSheet(g, g.Sheets[0])
 	var pins []string
-	for _, k := range ps.Keys {
+	for _, k := range PackedKeys(ps) {
 		if k.Pin != "" {
 			pins = append(pins, k.RefDes+"."+k.Pin)
 		}

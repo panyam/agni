@@ -49,7 +49,7 @@ func TestPlacedAlternateDrawsAsKiCadDraws(t *testing.T) {
 		t.Errorf("the SVG draws the library's GPIO1 for a pin the part gave UART_TX")
 	}
 	drawn := map[string]bool{}
-	for _, l := range PackSheet(g, g.Sheets[0]).GetLabels() {
+	for _, l := range PackedLabels(PackSheet(g, g.Sheets[0])) {
 		drawn[l.GetText()] = true
 	}
 	if !drawn["UART_TX"] || !drawn["GPIO2"] || drawn["GPIO1"] {
@@ -86,7 +86,7 @@ func TestKiCadMarkupDrawsInBothBackends(t *testing.T) {
 		runs []geom.TextRun_Kind
 	}
 	got := map[string]packed{}
-	for _, l := range PackSheet(g, g.Sheets[0]).GetLabels() {
+	for _, l := range PackedLabels(PackSheet(g, g.Sheets[0])) {
 		var kinds []geom.TextRun_Kind
 		for _, r := range l.GetRuns() {
 			kinds = append(kinds, r.GetKind())

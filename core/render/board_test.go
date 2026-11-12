@@ -209,7 +209,7 @@ func TestPackBoard(t *testing.T) {
 	}
 	// Keys: SIG copper joins by net; R1's pads join by (ref_des, number).
 	var sigCopper, r1Pads int
-	for _, k := range ps.GetKeys() {
+	for _, k := range PackedKeys(ps) {
 		if k.GetNet() == "SIG" && k.GetRefDes() == "" {
 			sigCopper++
 		}
@@ -232,12 +232,12 @@ func TestPackBoard(t *testing.T) {
 	// Silk labels are the authored ref-des AND value of each real placement, R1/10k and J1/CONN.
 	// The REF** placeholder and the Reference-less logo are skipped upstream.
 	labelText := map[string]bool{}
-	for _, l := range ps.GetLabels() {
+	for _, l := range PackedLabels(ps) {
 		labelText[l.GetText()] = true
 	}
 	// The gr_text title is "Demo\nBoard", one label per line.
-	if len(ps.GetLabels()) != 6 {
-		t.Errorf("labels = %d, want 6 (ref-des + value for R1 and J1, plus the two lines of the gr_text title); got %v", len(ps.GetLabels()), labelText)
+	if len(PackedLabels(ps)) != 6 {
+		t.Errorf("labels = %d, want 6 (ref-des + value for R1 and J1, plus the two lines of the gr_text title); got %v", len(PackedLabels(ps)), labelText)
 	}
 	for _, want := range []string{"R1", "10k", "J1", "CONN", "Demo", "Board"} {
 		if !labelText[want] {
@@ -274,7 +274,7 @@ func TestBoardDesignatorsWhenTheBoardDrawsNone(t *testing.T) {
 func packedLabelTexts(t *testing.T, b *geom.BoardGeometry) []string {
 	t.Helper()
 	var out []string
-	for _, l := range PackBoard(b).GetLabels() {
+	for _, l := range PackedLabels(PackBoard(b)) {
 		out = append(out, l.GetText())
 	}
 	return out

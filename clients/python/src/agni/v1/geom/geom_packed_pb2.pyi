@@ -152,34 +152,60 @@ class PackedImage(_message.Message):
     def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., w: _Optional[int] = ..., h: _Optional[int] = ..., mime: _Optional[str] = ..., data: _Optional[bytes] = ..., rotation_deg: _Optional[int] = ..., mirror: _Optional[bool] = ...) -> None: ...
 
 class PackedSheet(_message.Message):
-    __slots__ = ("sheet_id", "layout_version", "origin_x", "origin_y", "vertices", "primitives", "keys", "labels", "font_family", "group_colors", "background_color", "images", "group_alphas")
+    __slots__ = ("sheet_id", "layout_version", "origin_x", "origin_y", "vertices", "primitives", "font_family", "group_colors", "background_color", "images", "group_alphas", "key_columns", "label_columns")
     SHEET_ID_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_VERSION_FIELD_NUMBER: _ClassVar[int]
     ORIGIN_X_FIELD_NUMBER: _ClassVar[int]
     ORIGIN_Y_FIELD_NUMBER: _ClassVar[int]
     VERTICES_FIELD_NUMBER: _ClassVar[int]
     PRIMITIVES_FIELD_NUMBER: _ClassVar[int]
-    KEYS_FIELD_NUMBER: _ClassVar[int]
-    LABELS_FIELD_NUMBER: _ClassVar[int]
     FONT_FAMILY_FIELD_NUMBER: _ClassVar[int]
     GROUP_COLORS_FIELD_NUMBER: _ClassVar[int]
     BACKGROUND_COLOR_FIELD_NUMBER: _ClassVar[int]
     IMAGES_FIELD_NUMBER: _ClassVar[int]
     GROUP_ALPHAS_FIELD_NUMBER: _ClassVar[int]
+    KEY_COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    LABEL_COLUMNS_FIELD_NUMBER: _ClassVar[int]
     sheet_id: str
     layout_version: int
     origin_x: int
     origin_y: int
     vertices: bytes
     primitives: bytes
-    keys: _containers.RepeatedCompositeFieldContainer[PrimitiveKey]
-    labels: _containers.RepeatedCompositeFieldContainer[PackedLabel]
     font_family: str
     group_colors: _containers.RepeatedScalarFieldContainer[str]
     background_color: str
     images: _containers.RepeatedCompositeFieldContainer[PackedImage]
     group_alphas: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, sheet_id: _Optional[str] = ..., layout_version: _Optional[int] = ..., origin_x: _Optional[int] = ..., origin_y: _Optional[int] = ..., vertices: _Optional[bytes] = ..., primitives: _Optional[bytes] = ..., keys: _Optional[_Iterable[_Union[PrimitiveKey, _Mapping]]] = ..., labels: _Optional[_Iterable[_Union[PackedLabel, _Mapping]]] = ..., font_family: _Optional[str] = ..., group_colors: _Optional[_Iterable[str]] = ..., background_color: _Optional[str] = ..., images: _Optional[_Iterable[_Union[PackedImage, _Mapping]]] = ..., group_alphas: _Optional[_Iterable[float]] = ...) -> None: ...
+    key_columns: PackedKeys
+    label_columns: PackedLabels
+    def __init__(self, sheet_id: _Optional[str] = ..., layout_version: _Optional[int] = ..., origin_x: _Optional[int] = ..., origin_y: _Optional[int] = ..., vertices: _Optional[bytes] = ..., primitives: _Optional[bytes] = ..., font_family: _Optional[str] = ..., group_colors: _Optional[_Iterable[str]] = ..., background_color: _Optional[str] = ..., images: _Optional[_Iterable[_Union[PackedImage, _Mapping]]] = ..., group_alphas: _Optional[_Iterable[float]] = ..., key_columns: _Optional[_Union[PackedKeys, _Mapping]] = ..., label_columns: _Optional[_Union[PackedLabels, _Mapping]] = ...) -> None: ...
+
+class PackedKeys(_message.Message):
+    __slots__ = ("strings", "records")
+    STRINGS_FIELD_NUMBER: _ClassVar[int]
+    RECORDS_FIELD_NUMBER: _ClassVar[int]
+    strings: _containers.RepeatedScalarFieldContainer[str]
+    records: bytes
+    def __init__(self, strings: _Optional[_Iterable[str]] = ..., records: _Optional[bytes] = ...) -> None: ...
+
+class PackedLabels(_message.Message):
+    __slots__ = ("strings", "records", "runs")
+    STRINGS_FIELD_NUMBER: _ClassVar[int]
+    RECORDS_FIELD_NUMBER: _ClassVar[int]
+    RUNS_FIELD_NUMBER: _ClassVar[int]
+    strings: _containers.RepeatedScalarFieldContainer[str]
+    records: bytes
+    runs: _containers.RepeatedCompositeFieldContainer[PackedLabelRuns]
+    def __init__(self, strings: _Optional[_Iterable[str]] = ..., records: _Optional[bytes] = ..., runs: _Optional[_Iterable[_Union[PackedLabelRuns, _Mapping]]] = ...) -> None: ...
+
+class PackedLabelRuns(_message.Message):
+    __slots__ = ("label", "runs")
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    RUNS_FIELD_NUMBER: _ClassVar[int]
+    label: int
+    runs: _containers.RepeatedCompositeFieldContainer[TextRun]
+    def __init__(self, label: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ...) -> None: ...
 
 class BoardLayerRow(_message.Message):
     __slots__ = ("name", "kind", "side", "color", "svg_selector", "groups")

@@ -721,7 +721,7 @@ func TestBoardJoinsANetByItsSchematicID(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := map[string]string{}
-	for _, k := range resp.GetPacked().GetKeys() {
+	for _, k := range render.PackedKeys(resp.GetPacked()) {
 		ids[k.GetNet()] = k.GetNetId()
 	}
 	if ids["SIG"] != "sig-1" || ids["DUP"] != "" {

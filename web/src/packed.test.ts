@@ -23,6 +23,8 @@ import {
   GROUP_FRAME,
   GROUP_BUS,
 } from "./packed.js";
+import { fromBinary } from "@bufbuild/protobuf";
+import { keyColumns, labelColumns } from "./testpacked.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -32,7 +34,7 @@ describe("decodePackedSheet — sample.pb fixture from the Go packer", () => {
 
   it("decodes the sheet header", () => {
     expect(sheet.sheetId).toBe("P1");
-    expect(sheet.layoutVersion).toBe(1);
+    expect(sheet.layoutVersion).toBe(2); // 2 sends keys and labels as columns (agni issue 1532)
     expect(sheet.originX).toBe(1);
     expect(sheet.originY).toBe(2);
   });
@@ -123,7 +125,7 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
       originY: -2000n,
       vertices: new Uint8Array(vbuf),
       primitives: new Uint8Array(pbuf),
-      keys: [{ primitive: 0, refDes: "", net: "N1" }, { primitive: 0, refDes: "R2", pin: "1", placement: 4 }],
+      keyColumns: keyColumns([{ primitive: 0, refDes: "", net: "N1" }, { primitive: 0, refDes: "R2", pin: "1", placement: 4 }]),
     });
     const encoded = toBinary(PackedSheetSchema, msg);
 
@@ -179,5 +181,58 @@ describe("decodePackedSheet — hand-built PackedSheet", () => {
       { kind: KIND_LINE_LOOP, group: 0, firstVertex: 0, count: 4, width: 50_000 },
       { kind: KIND_LINE_STRIP, group: 0, firstVertex: 4, count: 2 },
     ]);
+  });
+});
+
+// The Go packer's twin (core/render/packcolumns_test.go, TestPackedColumnsTwin). Both suites decode
+// the same packed sheet and assert the same keys and labels, so the TypeScript decoder cannot drift
+// from render.PackedKeys and render.PackedLabels (agni issue 1532, C26).
+describe("the packed columns twin", () => {
+  const dir = join(here, "..", "..", "core", "render", "testdata");
+  const sheet = decodePackedSheet(new Uint8Array(readFileSync(join(dir, "packed_columns_twin.binpb"))));
+  const wantKeys = JSON.parse(readFileSync(join(dir, "packed_columns_twin_keys.json"), "utf8")) as Record<string, unknown>[];
+  const wantLabels = JSON.parse(readFileSync(join(dir, "packed_columns_twin_labels.json"), "utf8")) as Record<string, unknown>[];
+
+  it("decodes every key field the Go decoder decodes", () => {
+    expect(wantKeys.length).toBeGreaterThan(1);
+    expect(sheet.keys).toEqual(
+      wantKeys.map((k) => ({ primitive: k.primitive ?? 0, refDes: k.refDes ?? "", net: k.net ?? "", netId: k.netId ?? "", pin: k.pin ?? "", busId: k.busId ?? "", placement: k.placement ?? 0 })),
+    );
+  });
+
+  it("decodes every label field the Go decoder decodes, runs included", () => {
+    expect(wantLabels.length).toBeGreaterThan(1);
+    const kinds: Record<string, number> = { KIND_PLAIN: 0, KIND_OVERBAR: 1, KIND_SUBSCRIPT: 2, KIND_SUPERSCRIPT: 3 };
+    expect(sheet.labels).toEqual(
+      wantLabels.map((l) => ({
+        x: l.x ?? 0,
+        y: l.y ?? 0,
+        height: l.height ?? 0,
+        rotationDeg: l.rotationDeg ?? 0,
+        maxWidth: l.maxWidth ?? 0,
+        width: l.width ?? 0,
+        text: l.text ?? "",
+        justify: l.justify ?? "",
+        color: l.color ?? "",
+        group: l.group ?? 0,
+        mirror: l.mirror ?? false,
+        runs: ((l.runs ?? []) as { text?: string; kind?: string }[]).map((r) => ({ text: r.text ?? "", kind: kinds[r.kind ?? "KIND_PLAIN"] })),
+      })),
+    );
+  });
+
+  it("writes labels as the Go packer does (testpacked.labelColumns)", () => {
+    const msg = fromBinary(PackedSheetSchema, new Uint8Array(readFileSync(join(dir, "packed_columns_twin.binpb"))));
+    const mine = labelColumns(sheet.labels);
+    expect(mine.strings).toEqual(msg.labelColumns?.strings);
+    expect(Array.from(mine.records)).toEqual(Array.from(msg.labelColumns?.records ?? []));
+    expect(mine.runs.map((r) => [r.label, r.runs.map((x) => [x.text, x.kind])])).toEqual(msg.labelColumns?.runs.map((r) => [r.label, r.runs.map((x) => [x.text, x.kind])]));
+  });
+
+  it("writes keys as the Go packer does (testpacked.keyColumns)", () => {
+    const msg = fromBinary(PackedSheetSchema, new Uint8Array(readFileSync(join(dir, "packed_columns_twin.binpb"))));
+    const mine = keyColumns(sheet.keys);
+    expect(mine.strings).toEqual(msg.keyColumns?.strings);
+    expect(Array.from(mine.records)).toEqual(Array.from(msg.keyColumns?.records ?? []));
   });
 });

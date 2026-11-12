@@ -14,7 +14,9 @@ import (
 // primitives are flattened into a single int32 vertex pool plus fixed-width primitive
 // records, so the browser can make typed-array views and upload once (C4).
 
-const packLayoutVersion = 1
+// packLayoutVersion names the layout of the blobs and columns. 2 sends keys and labels as columns
+// (agni issue 1532).
+const packLayoutVersion = 2
 
 // Primitive kinds, the GPU draw mode for a primitive's vertex range.
 const (
@@ -219,8 +221,8 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		OriginY:         oy,
 		Vertices:        vertices,
 		Primitives:      records,
-		Keys:            keys,
-		Labels:          labels,
+		KeyColumns:      packKeys(keys),
+		LabelColumns:    packLabels(labels),
 		Images:          images,
 	}
 }

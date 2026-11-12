@@ -5,6 +5,7 @@ import { CanvasComponent } from "./canvas.js";
 import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { GROUP_WIRE, KIND_LINE_STRIP } from "./packed.js";
 import { fakeGl, type FakeGl } from "./fakegl.js";
+import { keyColumns } from "./testpacked.js";
 
 // Each sheet switch built a new Renderer on the same context and left the old one's buffers, VAO and
 // program on the GPU (agni issue 1331).
@@ -25,7 +26,7 @@ function wire(): PackedSheet {
     sheetId: "S",
     vertices: new Uint8Array(v),
     primitives: new Uint8Array(p.buffer),
-    keys: [{ primitive: 0, net: "N1" }],
+    keyColumns: keyColumns([{ primitive: 0, net: "N1" }]),
     groupColors: ["#000000", "#00aa00"],
     backgroundColor: "#ffffff",
   });

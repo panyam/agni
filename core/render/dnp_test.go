@@ -31,7 +31,7 @@ func TestEachBackendCrossesOutADoNotPopulatePart(t *testing.T) {
 		t.Fatalf("packed palette %v has no DNP color at %d", ps.GroupColors, groupDNP)
 	}
 	refOf := map[uint32]string{}
-	for _, k := range ps.Keys {
+	for _, k := range PackedKeys(ps) {
 		refOf[k.Primitive] = k.RefDes
 	}
 	packed := map[string]int{}

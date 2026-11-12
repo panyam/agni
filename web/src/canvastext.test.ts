@@ -5,6 +5,7 @@ import { CanvasComponent } from "./canvas.js";
 import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { GROUP_WIRE, KIND_LINE_STRIP } from "./packed.js";
 import { fakeGl } from "./fakegl.js";
+import { keyColumns, labelColumns } from "./testpacked.js";
 
 // agni issue 1503: a sheet's copper paints before its text. A board's labels, 5,732 on Jetson, took
 // about 12 ms to lay out ahead of the first frame.
@@ -24,8 +25,8 @@ function labelled(text: string): PackedSheet {
     sheetId: "S",
     vertices: new Uint8Array(v),
     primitives: new Uint8Array(p.buffer),
-    keys: [{ primitive: 0, net: "N1" }],
-    labels: [{ x: 10, y: 10, text, height: 50, justify: "left bottom", color: "#000000" }],
+    keyColumns: keyColumns([{ primitive: 0, net: "N1" }]),
+    labelColumns: labelColumns([{ x: 10, y: 10, text, height: 50, justify: "left bottom", color: "#000000" }]),
     groupColors: ["#000000", "#00aa00"],
     backgroundColor: "#ffffff",
   });

@@ -60,7 +60,7 @@ func TestPackBoardMirrorsBackText(t *testing.T) {
 		{Text: "BOTTOM", At: &geom.Point{X: 10_000_000, Y: 0}, Layer: "B.SilkS", Mirror: true},
 	}}
 	got := map[string]bool{}
-	for _, l := range PackBoard(b).GetLabels() {
+	for _, l := range PackedLabels(PackBoard(b)) {
 		got[l.GetText()] = l.GetMirror()
 	}
 	if len(got) != 2 || got["TOP"] || !got["BOTTOM"] {
@@ -110,7 +110,7 @@ func TestBoardTextSizeAndColour(t *testing.T) {
 
 	p := PackBoard(b)
 	var labels []string
-	for _, l := range p.GetLabels() {
+	for _, l := range PackedLabels(p) {
 		labels = append(labels, fmt.Sprintf("%s %d %s", l.GetText(), l.GetHeight(), l.GetColor()))
 	}
 	em := int64(math.Round(1_000_000 / 0.716))

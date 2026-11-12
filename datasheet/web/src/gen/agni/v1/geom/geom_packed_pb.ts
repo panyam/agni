@@ -10,11 +10,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_packed.proto.
  */
 export const file_agni_v1_geom_geom_packed: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJ/CgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJEhEKCXBsYWNlbWVudBgHIAEoDSImCgZQaW5SZWYSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAki2AEKDUhpZ2hsaWdodFNwZWMSEgoKY29tcG9uZW50cxgBIAMoCRIMCgRuZXRzGAIgAygJEiIKBHBpbnMYAyADKAsyFC5hZ25pLnYxLmdlb20uUGluUmVmEg8KB25ldF9pZHMYCCADKAkSDwoHYnVzX2lkcxgJIAMoCRINCgVjb2xvchgEIAEoCRINCgVhbHBoYRgFIAEoAhIrCgVzaGFwZRgGIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZRIUCgxzdHJva2Vfc2NhbGUYByABKAIirgEKD1BhY2tlZEhpZ2hsaWdodBIzCgZncm91cHMYASADKAsyIy5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0Lkdyb3VwGmYKBUdyb3VwEg0KBWNvbG9yGAEgASgJEg0KBWFscGhhGAIgASgCEhIKCnByaW1pdGl2ZXMYAyADKA0SKwoFc2hhcGUYBCABKA4yHC5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U2hhcGUilQEKB1RleHRSdW4SDAoEdGV4dBgBIAEoCRIoCgRraW5kGAIgASgOMhouYWduaS52MS5nZW9tLlRleHRSdW4uS2luZCJSCgRLaW5kEg4KCktJTkRfUExBSU4QABIQCgxLSU5EX09WRVJCQVIQARISCg5LSU5EX1NVQlNDUklQVBACEhQKEEtJTkRfU1VQRVJTQ1JJUFQQAyLdAQoLUGFja2VkTGFiZWwSCQoBeBgBIAEoBRIJCgF5GAIgASgFEgwKBHRleHQYAyABKAkSDgoGaGVpZ2h0GAQgASgFEhQKDHJvdGF0aW9uX2RlZxgFIAEoBRIPCgdqdXN0aWZ5GAYgASgJEg0KBWNvbG9yGAcgASgJEhEKCW1heF93aWR0aBgIIAEoBRIjCgRydW5zGAkgAygLMhUuYWduaS52MS5nZW9tLlRleHRSdW4SDQoFZ3JvdXAYCiABKA0SDgoGbWlycm9yGAsgASgIEg0KBXdpZHRoGAwgASgFInsKC1BhY2tlZEltYWdlEgkKAXgYASABKAUSCQoBeRgCIAEoBRIJCgF3GAMgASgFEgkKAWgYBCABKAUSDAoEbWltZRgFIAEoCRIMCgRkYXRhGAYgASgMEhQKDHJvdGF0aW9uX2RlZxgHIAEoBRIOCgZtaXJyb3IYCCABKAgi3AIKC1BhY2tlZFNoZWV0EhAKCHNoZWV0X2lkGAEgASgJEhYKDmxheW91dF92ZXJzaW9uGAIgASgFEhAKCG9yaWdpbl94GAMgASgDEhAKCG9yaWdpbl95GAQgASgDEhAKCHZlcnRpY2VzGAUgASgMEhIKCnByaW1pdGl2ZXMYBiABKAwSKAoEa2V5cxgHIAMoCzIaLmFnbmkudjEuZ2VvbS5QcmltaXRpdmVLZXkSKQoGbGFiZWxzGAggAygLMhkuYWduaS52MS5nZW9tLlBhY2tlZExhYmVsEhMKC2ZvbnRfZmFtaWx5GAkgASgJEhQKDGdyb3VwX2NvbG9ycxgKIAMoCRIYChBiYWNrZ3JvdW5kX2NvbG9yGAsgASgJEikKBmltYWdlcxgMIAMoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRJbWFnZRIUCgxncm91cF9hbHBoYXMYDSADKAIibgoNQm9hcmRMYXllclJvdxIMCgRuYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSDAoEc2lkZRgDIAEoCRINCgVjb2xvchgEIAEoCRIUCgxzdmdfc2VsZWN0b3IYBSABKAkSDgoGZ3JvdXBzGAYgAygNKrABCg5IaWdobGlnaHRTaGFwZRIfChtISUdITElHSFRfU0hBUEVfVU5TUEVDSUZJRUQQABIbChdISUdITElHSFRfU0hBUEVfT1VUTElORRABEiEKHUhJR0hMSUdIVF9TSEFQRV9CT1VORElOR19SRUNUEAISIwofSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX0NJUkNMRRADEhgKFEhJR0hMSUdIVF9TSEFQRV9QQVRIEARCLFoqZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9nZW9tYgZwcm90bzM");
+  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJ/CgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJEhEKCXBsYWNlbWVudBgHIAEoDSImCgZQaW5SZWYSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAki2AEKDUhpZ2hsaWdodFNwZWMSEgoKY29tcG9uZW50cxgBIAMoCRIMCgRuZXRzGAIgAygJEiIKBHBpbnMYAyADKAsyFC5hZ25pLnYxLmdlb20uUGluUmVmEg8KB25ldF9pZHMYCCADKAkSDwoHYnVzX2lkcxgJIAMoCRINCgVjb2xvchgEIAEoCRINCgVhbHBoYRgFIAEoAhIrCgVzaGFwZRgGIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZRIUCgxzdHJva2Vfc2NhbGUYByABKAIirgEKD1BhY2tlZEhpZ2hsaWdodBIzCgZncm91cHMYASADKAsyIy5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0Lkdyb3VwGmYKBUdyb3VwEg0KBWNvbG9yGAEgASgJEg0KBWFscGhhGAIgASgCEhIKCnByaW1pdGl2ZXMYAyADKA0SKwoFc2hhcGUYBCABKA4yHC5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U2hhcGUilQEKB1RleHRSdW4SDAoEdGV4dBgBIAEoCRIoCgRraW5kGAIgASgOMhouYWduaS52MS5nZW9tLlRleHRSdW4uS2luZCJSCgRLaW5kEg4KCktJTkRfUExBSU4QABIQCgxLSU5EX09WRVJCQVIQARISCg5LSU5EX1NVQlNDUklQVBACEhQKEEtJTkRfU1VQRVJTQ1JJUFQQAyLdAQoLUGFja2VkTGFiZWwSCQoBeBgBIAEoBRIJCgF5GAIgASgFEgwKBHRleHQYAyABKAkSDgoGaGVpZ2h0GAQgASgFEhQKDHJvdGF0aW9uX2RlZxgFIAEoBRIPCgdqdXN0aWZ5GAYgASgJEg0KBWNvbG9yGAcgASgJEhEKCW1heF93aWR0aBgIIAEoBRIjCgRydW5zGAkgAygLMhUuYWduaS52MS5nZW9tLlRleHRSdW4SDQoFZ3JvdXAYCiABKA0SDgoGbWlycm9yGAsgASgIEg0KBXdpZHRoGAwgASgFInsKC1BhY2tlZEltYWdlEgkKAXgYASABKAUSCQoBeRgCIAEoBRIJCgF3GAMgASgFEgkKAWgYBCABKAUSDAoEbWltZRgFIAEoCRIMCgRkYXRhGAYgASgMEhQKDHJvdGF0aW9uX2RlZxgHIAEoBRIOCgZtaXJyb3IYCCABKAgigwMKC1BhY2tlZFNoZWV0EhAKCHNoZWV0X2lkGAEgASgJEhYKDmxheW91dF92ZXJzaW9uGAIgASgFEhAKCG9yaWdpbl94GAMgASgDEhAKCG9yaWdpbl95GAQgASgDEhAKCHZlcnRpY2VzGAUgASgMEhIKCnByaW1pdGl2ZXMYBiABKAwSEwoLZm9udF9mYW1pbHkYCSABKAkSFAoMZ3JvdXBfY29sb3JzGAogAygJEhgKEGJhY2tncm91bmRfY29sb3IYCyABKAkSKQoGaW1hZ2VzGAwgAygLMhkuYWduaS52MS5nZW9tLlBhY2tlZEltYWdlEhQKDGdyb3VwX2FscGhhcxgNIAMoAhItCgtrZXlfY29sdW1ucxgOIAEoCzIYLmFnbmkudjEuZ2VvbS5QYWNrZWRLZXlzEjEKDWxhYmVsX2NvbHVtbnMYDyABKAsyGi5hZ25pLnYxLmdlb20uUGFja2VkTGFiZWxzSgQIBxAISgQICBAJUgRrZXlzUgZsYWJlbHMiLgoKUGFja2VkS2V5cxIPCgdzdHJpbmdzGAEgAygJEg8KB3JlY29yZHMYAiABKAwiXQoMUGFja2VkTGFiZWxzEg8KB3N0cmluZ3MYASADKAkSDwoHcmVjb3JkcxgCIAEoDBIrCgRydW5zGAMgAygLMh0uYWduaS52MS5nZW9tLlBhY2tlZExhYmVsUnVucyJFCg9QYWNrZWRMYWJlbFJ1bnMSDQoFbGFiZWwYASABKA0SIwoEcnVucxgCIAMoCzIVLmFnbmkudjEuZ2VvbS5UZXh0UnVuIm4KDUJvYXJkTGF5ZXJSb3cSDAoEbmFtZRgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHNpZGUYAyABKAkSDQoFY29sb3IYBCABKAkSFAoMc3ZnX3NlbGVjdG9yGAUgASgJEg4KBmdyb3VwcxgGIAMoDSqwAQoOSGlnaGxpZ2h0U2hhcGUSHwobSElHSExJR0hUX1NIQVBFX1VOU1BFQ0lGSUVEEAASGwoXSElHSExJR0hUX1NIQVBFX09VVExJTkUQARIhCh1ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfUkVDVBACEiMKH0hJR0hMSUdIVF9TSEFQRV9CT1VORElOR19DSVJDTEUQAxIYChRISUdITElHSFRfU0hBUEVfUEFUSBAEQixaKmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZ2VvbWIGcHJvdG8z");
 
 /**
  * PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
- * element it belongs to, for view-local picking/highlight.
+ * element it belongs to, for view-local picking/highlight. A PackedSheet carries its keys as
+ * PackedKeys columns, and a reader decodes them into these (agni issue 1532).
  *
  * @generated from message agni.v1.geom.PrimitiveKey
  */
@@ -273,6 +274,11 @@ export const PackedHighlight_GroupSchema: GenMessage<PackedHighlight_Group> = /*
 
 /**
  * PackedLabel is one text label positioned in sheet-relative world coordinates (rebased by
+ * origin_x/origin_y, the same as the vertex blob). A PackedSheet carries its labels as PackedLabels
+ * columns, and a reader decodes them into these (agni issue 1532). The rest of this comment covers
+ * one label as decoded.
+ *
+ * A label is positioned in sheet-relative world coordinates (rebased by
  * origin_x/origin_y, the same as the vertex blob). A GPU line pipeline draws no glyphs, so
  * an overlay above the geometry draws the text. The browser owns text metrics (docsite
  * architecture/geometry-and-rendering.md). The server computes the world position and the
@@ -562,20 +568,6 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
   primitives: Uint8Array;
 
   /**
-   * O(primitives), stays structured
-   *
-   * @generated from field: repeated agni.v1.geom.PrimitiveKey keys = 7;
-   */
-  keys: PrimitiveKey[];
-
-  /**
-   * O(labels), stays structured; drawn by the text overlay
-   *
-   * @generated from field: repeated agni.v1.geom.PackedLabel labels = 8;
-   */
-  labels: PackedLabel[];
-
-  /**
    * The default font-family for the sheet's text (render.Style.Font), so the overlay draws in
    * the same face as the SVG backend. One face per sheet; per-element font is not sent yet.
    *
@@ -617,6 +609,22 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
    * @generated from field: repeated float group_alphas = 13;
    */
   groupAlphas: number[];
+
+  /**
+   * key_columns holds a PrimitiveKey per keyed primitive, the joins that picking and highlighting
+   * read. render.PackedKeys and web/src/packed.ts decode it.
+   *
+   * @generated from field: agni.v1.geom.PackedKeys key_columns = 14;
+   */
+  keyColumns?: PackedKeys | undefined;
+
+  /**
+   * label_columns holds a PackedLabel per text the overlay draws. render.PackedLabels and
+   * web/src/packed.ts decode it.
+   *
+   * @generated from field: agni.v1.geom.PackedLabels label_columns = 15;
+   */
+  labelColumns?: PackedLabels | undefined;
 };
 
 /**
@@ -625,6 +633,100 @@ export type PackedSheet = Message<"agni.v1.geom.PackedSheet"> & {
  */
 export const PackedSheetSchema: GenMessage<PackedSheet> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_packed, 7);
+
+/**
+ * PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a
+ * few thousand names tens of thousands of times, so each name goes into strings once and a record
+ * points at it. Index 0 of strings is always "", the value of an unset field.
+ *
+ * @generated from message agni.v1.geom.PackedKeys
+ */
+export type PackedKeys = Message<"agni.v1.geom.PackedKeys"> & {
+  /**
+   * @generated from field: repeated string strings = 1;
+   */
+  strings: string[];
+
+  /**
+   * Fixed-width LE records of 7 u32s, one per key, in primitive order:
+   * (primitive, ref_des, net, net_id, pin, bus_id, placement). ref_des, net, net_id, pin and bus_id
+   * index strings. primitive and placement are PrimitiveKey's own values. PackedSheet.layout_version
+   * names this layout.
+   *
+   * @generated from field: bytes records = 2;
+   */
+  records: Uint8Array;
+};
+
+/**
+ * Describes the message agni.v1.geom.PackedKeys.
+ * Use `create(PackedKeysSchema)` to create a new message.
+ */
+export const PackedKeysSchema: GenMessage<PackedKeys> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 8);
+
+/**
+ * PackedLabels is a sheet's PackedLabels as columns (agni issue 1532). Index 0 of strings is
+ * always "".
+ *
+ * @generated from message agni.v1.geom.PackedLabels
+ */
+export type PackedLabels = Message<"agni.v1.geom.PackedLabels"> & {
+  /**
+   * @generated from field: repeated string strings = 1;
+   */
+  strings: string[];
+
+  /**
+   * Fixed-width LE records of 11 32-bit words, one per label, in draw order:
+   * (x i32, y i32, height i32, rotation_deg i32, max_width i32, width i32, text u32, justify u32,
+   * color u32, group u32, mirror u32). text, justify and color index strings, and mirror is 0 or 1.
+   * PackedSheet.layout_version names this layout.
+   *
+   * @generated from field: bytes records = 2;
+   */
+  records: Uint8Array;
+
+  /**
+   * runs holds the markup runs of the few labels that have them (PackedLabel.runs), by label index.
+   *
+   * @generated from field: repeated agni.v1.geom.PackedLabelRuns runs = 3;
+   */
+  runs: PackedLabelRuns[];
+};
+
+/**
+ * Describes the message agni.v1.geom.PackedLabels.
+ * Use `create(PackedLabelsSchema)` to create a new message.
+ */
+export const PackedLabelsSchema: GenMessage<PackedLabels> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 9);
+
+/**
+ * PackedLabelRuns is one label's markup runs, for PackedLabels.runs.
+ *
+ * @generated from message agni.v1.geom.PackedLabelRuns
+ */
+export type PackedLabelRuns = Message<"agni.v1.geom.PackedLabelRuns"> & {
+  /**
+   * index of the label in PackedLabels.records
+   *
+   * @generated from field: uint32 label = 1;
+   */
+  label: number;
+
+  /**
+   * @generated from field: repeated agni.v1.geom.TextRun runs = 2;
+   */
+  runs: TextRun[];
+};
+
+/**
+ * Describes the message agni.v1.geom.PackedLabelRuns.
+ * Use `create(PackedLabelRunsSchema)` to create a new message.
+ */
+export const PackedLabelRunsSchema: GenMessage<PackedLabelRuns> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 10);
 
 /**
  * BoardLayerRow is one row of a board sheet's layer list, which the viewer shows as checkboxes
@@ -686,7 +788,7 @@ export type BoardLayerRow = Message<"agni.v1.geom.BoardLayerRow"> & {
  * Use `create(BoardLayerRowSchema)` to create a new message.
  */
 export const BoardLayerRowSchema: GenMessage<BoardLayerRow> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_packed, 8);
+  messageDesc(file_agni_v1_geom_geom_packed, 11);
 
 /**
  * HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).

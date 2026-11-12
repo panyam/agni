@@ -46,7 +46,7 @@ func TestBoardHighlightJoinsANetByItsID(t *testing.T) {
 func TestPackedBoardKeysCarryNetIDs(t *testing.T) {
 	b := boardFixtureGeometry(t)
 	sig, other := 0, 0
-	for _, k := range PackBoard(b, WithNetIDs(sigID(nil))).GetKeys() {
+	for _, k := range PackedKeys(PackBoard(b, WithNetIDs(sigID(nil)))) {
 		switch {
 		case k.GetNet() == "SIG" && k.GetNetId() == "sig-1":
 			sig++
@@ -61,7 +61,7 @@ func TestPackedBoardKeysCarryNetIDs(t *testing.T) {
 	if sig == 0 || other == 0 {
 		t.Fatalf("SIG keys with id = %d, other net keys = %d, want both above 0", sig, other)
 	}
-	for _, k := range PackBoard(b).GetKeys() {
+	for _, k := range PackedKeys(PackBoard(b)) {
 		if k.GetNetId() != "" {
 			t.Fatalf("with no NetIDFunc key %d carries id %q", k.GetPrimitive(), k.GetNetId())
 		}

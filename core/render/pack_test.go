@@ -66,16 +66,16 @@ func TestPackSheet(t *testing.T) {
 		}
 	}
 
-	if len(ps.Keys) != 3 {
-		t.Fatalf("keys = %d, want 3", len(ps.Keys))
+	if len(PackedKeys(ps)) != 3 {
+		t.Fatalf("keys = %d, want 3", len(PackedKeys(ps)))
 	}
-	if k := ps.Keys[0]; k.Primitive != 0 || k.Net != "NET1" || k.RefDes != "" {
+	if k := PackedKeys(ps)[0]; k.Primitive != 0 || k.Net != "NET1" || k.RefDes != "" {
 		t.Errorf("wire key = %+v, want primitive 0 net NET1", k)
 	}
-	if k := ps.Keys[1]; k.Primitive != 1 || k.RefDes != "R1" {
+	if k := PackedKeys(ps)[1]; k.Primitive != 1 || k.RefDes != "R1" {
 		t.Errorf("symbol key = %+v, want primitive 1 ref_des R1", k)
 	}
-	if k := ps.Keys[2]; k.Primitive != 2 || k.RefDes != "R1" {
+	if k := PackedKeys(ps)[2]; k.Primitive != 2 || k.RefDes != "R1" {
 		t.Errorf("pin key = %+v, want primitive 2 ref_des R1", k)
 	}
 }
@@ -149,8 +149,8 @@ func TestPackSheetFreeGraphics(t *testing.T) {
 		t.Errorf("free polyline record = %+v, want line-strip/groupFree at vertex 3", recs[2])
 	}
 	// Free graphics carry no ref_des/net, so only the wire produces a key.
-	if len(ps.Keys) != 1 {
-		t.Fatalf("keys = %d, want 1 (wire only)", len(ps.Keys))
+	if len(PackedKeys(ps)) != 1 {
+		t.Fatalf("keys = %d, want 1 (wire only)", len(PackedKeys(ps)))
 	}
 }
 
@@ -243,7 +243,7 @@ func TestPackBusKey(t *testing.T) {
 	}
 	ps := PackSheet(g, g.Sheets[0])
 	var busKeys, netKeys int
-	for _, k := range ps.Keys {
+	for _, k := range PackedKeys(ps) {
 		if k.GetBusId() == "DATA[7:0]" {
 			busKeys++
 			if k.GetNet() != "" || k.GetNetId() != "" {
@@ -304,7 +304,7 @@ func TestPackSheetKeysNetAnchorsAsNets(t *testing.T) {
 	})
 	p := PackSheet(g, sheet)
 	anchored := 0
-	for _, k := range p.GetKeys() {
+	for _, k := range PackedKeys(p) {
 		if k.GetRefDes() == "#PWR01" {
 			t.Errorf("the anchor keyed as a part: %v", k)
 		}
@@ -316,11 +316,11 @@ func TestPackSheetKeysNetAnchorsAsNets(t *testing.T) {
 		}
 	}
 	if anchored == 0 {
-		t.Fatalf("no primitive keys the anchor's net DGND, keys %v", p.GetKeys())
+		t.Fatalf("no primitive keys the anchor's net DGND, keys %v", PackedKeys(p))
 	}
 	// The ordinary part beside it still keys by its ref-des.
 	r7 := 0
-	for _, k := range p.GetKeys() {
+	for _, k := range PackedKeys(p) {
 		if k.GetRefDes() == "R7" {
 			r7++
 		}
