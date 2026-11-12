@@ -22,7 +22,7 @@ A 33-second walkthrough on Antmicro's open-source Jetson AGX Thor baseboard. It 
 name, and the schematic and the board beside it both go to it. Then a click on a test point on the
 board takes the schematic to that point's page. `make demo-video JOURNEY=find-a-part` records it.
 
-https://github.com/user-attachments/assets/f38300ad-33ca-49bb-885d-2b927573ba32
+https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf
 
 ## What does it do
 

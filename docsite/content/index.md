@@ -16,8 +16,8 @@ hideTitle: true
 </div>
 
 <div class="home-video" id="demo">
-<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/user-attachments/assets/f38300ad-33ca-49bb-885d-2b927573ba32">
-<a href="https://github.com/user-attachments/assets/f38300ad-33ca-49bb-885d-2b927573ba32">Download the walkthrough video</a>
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">
+<a href="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">Download the walkthrough video</a>
 </video>
 <p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
 </div>
