@@ -38,6 +38,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { loadavg } from "node:os";
 import { join } from "node:path";
 import { headed, launch, viewportFor } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
 import { fitFrame, mapPoint, summarize, zoomFrame, type Frame, type FrameSummary, type Point } from "./frametimes.js";
 import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
@@ -161,9 +162,10 @@ async function drawnSince(page: Page, mode: Mode, since: number, view = "canvas"
 
 // tile clicks a Sheets tile by its exact name.
 async function tile(page: Page, name: string): Promise<void> {
+  await showPanel(page, "overview");
   const tiles = page.locator(".sheet-tile");
   for (let i = 0; i < (await tiles.count()); i++) {
-    if ((await tiles.nth(i).locator(".sheet-tile-name").innerText()).trim() === name) {
+    if (((await tiles.nth(i).locator(".sheet-tile-name").textContent()) ?? "").trim() === name) {
       await tiles.nth(i).click();
       return;
     }
@@ -573,7 +575,7 @@ async function compareLit(page: Page, walk: Walk, extra: string): Promise<string
     await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=${mode}${extra}`, { waitUntil: "networkidle", timeout: 180_000 });
     await drawnSince(page, mode, 0);
     const lit = await litSubjects(page, mode);
-    const sheet = (await page.locator(".sheet-tile.active .sheet-tile-name").innerText().catch(() => "")).trim();
+    const sheet = ((await page.locator(".sheet-tile.active .sheet-tile-name").textContent().catch(() => "")) ?? "").trim();
     got.push({ sheet, lit });
   }
   const [s, g] = got;
@@ -602,6 +604,7 @@ async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number
   const all = page.locator(".highlight-show-all");
   if (!(await all.isChecked())) await all.check();
   await page.click(".highlight-btn");
+  await showPanel(page, "checks");
   await page.click(".checks-run");
   await page
     .waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, { timeout: 600_000 })
@@ -609,6 +612,8 @@ async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number
       throw new Unwalkable("Run checks did not finish within 10 minutes");
     });
   const findings = await page.locator(".check-locate").count();
+  // The dock saves an open drawer, so the walk's next page would open with Checks over the board.
+  await hideDrawers(page);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(1000);
   const badged = await page.evaluate(() => {

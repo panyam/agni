@@ -214,6 +214,9 @@ export interface QueryView {
   // panel offers no search, before the find-by-name template arrives. The host brings the panel
   // forward first, since a hidden box takes no focus.
   findByName: () => boolean;
+  // focusQuery selects the Query tab and focuses its query box, for the page's ⌘/Ctrl+Shift+F (agni
+  // issue 1542). The host brings the panel forward first.
+  focusQuery: () => void;
 }
 
 // QuerySetItem is one set that a project keeps, with its name (the file's stem), the file, and the

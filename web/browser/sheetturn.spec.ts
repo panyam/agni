@@ -11,6 +11,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -28,6 +29,7 @@ async function openBoardView(page: Page): Promise<void> {
   await page.goto(`${base()}/designs/kicad/board.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
   const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
+  await showPanel(page, "overview");
   await row.locator(".sheet-tile-beside").click();
   await page.waitForSelector(`${PANE} .picks-front`, { timeout: 30_000 });
 }
@@ -91,6 +93,7 @@ describe("turning a board view", () => {
       expect(await page.locator(PANE).count()).toBe(0);
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
+      await showPanel(page, "overview");
       await row.locator(".sheet-tile-beside").click();
       await page.waitForSelector(`${PANE} .picks-front`, { timeout: 30_000 });
       expect(await turn()).toBe(before);

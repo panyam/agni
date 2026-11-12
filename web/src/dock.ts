@@ -1,252 +1,66 @@
-// dock.ts is the dockable panel shell (WS9-021). dockview-core drives the viewer layout, and each
-// Solid island mounts once at boot in a server-rendered hole that the dock adopts. The holes live in
-// a hidden "park" container. createComponent moves a hole into its dockview panel and dispose parks
-// it again. So an island survives its panel being closed and reopened, and C11's shell + islands
-// split is untouched. The reference implementation (lilbattle's GameViewerPage) clones hidden
-// templates lazily instead. That would break this app's boot, where AppRoot resolves every hole by
-// id up front and the presenter wires all island callbacks at construction.
-import { DockviewComponent, type DockviewApi, type IContentRenderer } from "dockview-core";
+// dock.ts is the dockable panel shell (WS9-021), built on goapplib's tsappkit-dock (agni issues 1549
+// and 1542). Each Solid island mounts once at boot in a server-rendered hole, and the holes live in a
+// hidden "park" container. The dock asks for a panel's hole (hostFor) whenever the panel arrives in
+// the grid, a float or a drawer, and hands it back (release) when it leaves, so an island survives
+// its panel being closed, reopened or moved, and C11's shell + islands split is untouched.
+//
+// The design's own navigation (Sheets) opens from a drawer on the left, and what the engine found and
+// what a person asked for (Checks, Review and their reference panels) from a drawer on the right, so
+// the drawing and the board beside it keep the width (agni issue 1542). A reader can dock any of
+// them back into the grid from its ⋯ menu, and Reset layout puts them back in their drawers.
+import { createDock, loadLayout, saveLayout, type Dock, type PanelDef } from "@panyam/tsappkit-dock";
+import type { DockviewApi } from "dockview-core";
 import "dockview-core/dist/styles/dockview.css";
 
-export interface DockPanelDef {
-  id: string;
-  title: string;
-  // defaultOpen marks a panel that the boot layout places (defaultLayout). Every panel sets it,
-  // since the layout tabs panels rather than hiding them in a menu (#325). It also gates the
-  // reconcile, so a panel added in a later release opens for existing users only if it sets this,
-  // and a menu-only panel would omit it.
-  defaultOpen?: boolean;
-}
+const LEFT = { kind: "drawer", edge: "left" } as const;
+const RIGHT = { kind: "drawer", edge: "right" } as const;
 
-// VIEWER_PANELS is the registry that the dock is built from. Panel ids double as dockview component
-// names and as the data-dock-panel key of the server-rendered hole.
-export const VIEWER_PANELS: readonly DockPanelDef[] = [
-  // Files was retired in WS9-049. prunePanels drops it from a saved layout that still names it.
-  // The birds-eye sheet list (WS9-025).
-  { id: "overview", title: "Sheets", defaultOpen: true },
-  { id: "canvas", title: "Canvas", defaultOpen: true },
-  // Properties describes whatever is selected (agni issue 902), so a fresh page needs it visible or
-  // a click on the drawing paints nowhere. It replaced Details, which prunePanels drops from a saved
-  // layout that still names it.
-  { id: "properties", title: "Properties", defaultOpen: true },
-  // Rules is a static reference catalog, tabbed in the east stack beside the findings it explains.
-  { id: "rules", title: "Rules", defaultOpen: true },
-  // Lexicon lists the naming vocabulary that the run reads with, and edits and tries it (agni issue
-  // 1267).
-  { id: "lexicon", title: "Lexicon", defaultOpen: true },
-  // Checks is the findings table (WS9), server-sourced and grouped and sorted on the client, with
-  // the on-demand Run button. Its severity grouping covers what a separate Report panel did.
-  { id: "checks", title: "Checks", defaultOpen: true },
-  // The datalog query panel (WS9-036) for ad-hoc search over the fact base. It holds the centre
-  // column's bottom strip, under the drawing it asks about.
-  { id: "query", title: "Query", defaultOpen: true },
-  // The interface-coverage panel (WS9-041), a per-interface signal matrix tabbed with Review.
-  { id: "coverage", title: "Coverage", defaultOpen: true },
-  // The trace panel (agni issue 600) follows one pin to another and lights the route on the
-  // canvas. It tabs with Query (see defaultLayout).
-  { id: "trace", title: "Trace", defaultOpen: true },
-  // The Tables panel (agni issues 898 and 956) shows an answer as the tables that Tabulate projects,
-  // and saves them as csv. It tabs with Query and Trace, the other answers in the bottom strip.
-  { id: "tables", title: "Tables", defaultOpen: true },
-  // The datasheet-params panel (WS9-035), a per-component parameter tree tabbed with Properties since
-  // both answer "what is this thing I selected". Populated only when serve was started with --params.
-  { id: "parts", title: "Parts", defaultOpen: true },
-  // The review panel (WS9-052) shows the project's checklist verdict for the open design (see
-  // review.ts). Useful when serve was started with --review-store.
-  { id: "review", title: "Review", defaultOpen: true },
-  // Diff (WS9-005) and its changed-item list (WS9-006) are tabs beside the canvas, and starting a
-  // comparison activates them (openDiffPanel).
-  { id: "diff", title: "Diff", defaultOpen: true },
-  { id: "changes", title: "Changes", defaultOpen: true },
+// VIEWER_PANELS is the registry that the dock is built from. Panel ids double as dockview ids and as
+// the data-dock-panel key of the server-rendered hole. Every panel opens on a fresh page, in the grid
+// or in its drawer. The order is the Panels menu's, and the drawers' tab order.
+export const VIEWER_PANELS: readonly PanelDef[] = [
+  { id: "canvas", title: "Canvas" },
+  // Properties describes whatever is selected (agni issue 902), so a fresh page needs it visible or a
+  // click on the drawing paints nowhere. Parts tabs with it, since both answer "what is this".
+  { id: "properties", title: "Properties" },
+  { id: "parts", title: "Parts" },
+  // The datalog query panel (WS9-036) holds the centre column's bottom strip, under the drawing it
+  // asks about. Trace (agni issue 600) and Tables (agni issues 898 and 956) tab with it.
+  { id: "query", title: "Query" },
+  { id: "trace", title: "Trace" },
+  { id: "tables", title: "Tables" },
+  // Diff (WS9-005) and its changed-item list (WS9-006) tab beside the canvas.
+  { id: "diff", title: "Diff" },
+  { id: "changes", title: "Changes" },
+  // The birds-eye sheet list (WS9-025), in the left drawer (agni issue 1542).
+  { id: "overview", title: "Sheets", defaultPlacement: LEFT },
+  // The findings with the Run button (WS9), the checklist verdict (WS9-052), and the references that
+  // explain them, as tabs in the right drawer (agni issue 1542).
+  { id: "checks", title: "Checks", defaultPlacement: RIGHT },
+  { id: "review", title: "Review", defaultPlacement: RIGHT },
+  { id: "rules", title: "Rules", defaultPlacement: RIGHT },
+  { id: "lexicon", title: "Lexicon", defaultPlacement: RIGHT },
+  { id: "coverage", title: "Coverage", defaultPlacement: RIGHT },
 ];
 
-// Bump LAYOUT_KEY whenever the DEFAULT ARRANGEMENT changes. A saved layout wins over the default
-// and the reconcile only ADDS panels, so without a bump anyone who has opened the viewer before
-// keeps their old arrangement and never sees the change. Bumped for the WS9-049 work page and for
-// the tabbed layout (#325), and for Properties replacing Details (agni issue 902).
-export const LAYOUT_KEY = "agni-work-page-dockview-layout-v3";
+// LAYOUT_KEY is where the dock saves its layout. tsappkit-dock saves a different shape from the
+// layout agni's own dock saved under "agni-work-page-dockview-layout-v3", so a new key starts every
+// reader on the default once, with Sheets, Checks and Review in their drawers. Bump it when the
+// default arrangement changes, since a saved layout wins over the default.
+export const LAYOUT_KEY = "agni-dock-v4";
 
-type LayoutStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-
-// SavedLayout is the persisted shape, the dockview layout plus the panel-registry ids that existed
-// at save time. The ids are a version marker that needs no manual bump, since they derive from
-// VIEWER_PANELS. They let the restore tell a NEWLY ADDED panel (absent from panels) apart from a
-// USER-CLOSED one (present in panels, absent from the layout). Without them a saved layout freezes
-// the panel set, and panels added later never appear for anyone with a saved arrangement.
-interface SavedLayout {
-  v: 1;
-  panels: string[];
-  layout: unknown;
-}
-
-// LoadedLayout is what loadLayout hands the restore. savedPanels is empty for a pre-versioning raw
-// save, which makes every current defaultOpen panel count as newly added. That happens once, since
-// the next save is wrapped.
-export interface LoadedLayout {
-  layout: unknown;
-  savedPanels: string[];
-}
-
-// loadLayout returns the saved layout, or null when there is none or it does not parse. The
-// caller falls back to the default layout in both cases. It reads both the versioned wrapper and
-// the bare dockview JSON that predates it.
-export function loadLayout(storage: LayoutStorage): LoadedLayout | null {
-  const raw = storage.getItem(LAYOUT_KEY);
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && "v" in parsed && "layout" in parsed) {
-      const s = parsed as SavedLayout;
-      return { layout: s.layout, savedPanels: Array.isArray(s.panels) ? s.panels : [] };
-    }
-    return { layout: parsed, savedPanels: [] };
-  } catch {
-    return null;
-  }
-}
-
-// saveLayout persists the layout stamped with the current panel registry. A storage failure
-// (quota, private mode) is swallowed so it cannot take the viewer down.
-export function saveLayout(storage: LayoutStorage, layout: unknown): void {
-  try {
-    const wrapped: SavedLayout = { v: 1, panels: VIEWER_PANELS.map((p) => p.id), layout };
-    storage.setItem(LAYOUT_KEY, JSON.stringify(wrapped));
-  } catch {
-    // best-effort persistence
-  }
-}
-
-// reconcilePanels runs after a saved layout is restored. Take a defaultOpen panel that is not open.
-// If the registry saved with the layout does NOT have it either, a later release added it, so it
-// opens at openPanel's position. Panels the user closed remain closed, since they were in the saved
-// registry. A new panel without defaultOpen is closed too and appears only in the Panels menu
-// (WS9-042), so a new feature does not re-crowd an existing user's layout.
-export function reconcilePanels(api: DockviewApi, savedPanels: string[]): void {
-  for (const def of VIEWER_PANELS) {
-    if (!def.defaultOpen || api.getPanel(def.id) || savedPanels.includes(def.id)) continue;
-    openPanel(api, def);
-  }
-}
-
-// prunePanels closes each panel that a restored layout names and the registry no longer has. It is
-// the counterpart to reconcilePanels, which only ever ADDS. Without it a removed panel restores as an
-// empty tab, because adoptPanel falls back to a blank element when the hole is gone. The user's
-// arrangement of the surviving panels is untouched.
-export function prunePanels(api: DockviewApi): void {
-  const known = new Set(VIEWER_PANELS.map((p) => p.id));
-  // Snapshot first, because removePanel mutates the collection being walked.
-  for (const panel of [...(api.panels ?? [])]) {
-    if (!known.has(panel.id)) api.removePanel(panel);
-  }
-}
-
-// adoptPanel is the dockview content renderer for a panel. It adopts the server-rendered hole,
-// found by data-dock-panel in the park, and parks it again on dispose. Element identity survives
-// close and reopen, so the island mounted in the hole keeps working. An unknown name yields an
-// empty div rather than a crash, so a stale saved layout naming a removed panel still loads.
-export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
-  const doc = park.ownerDocument;
-  const hole = doc.querySelector<HTMLElement>(`[data-dock-panel="${name}"]`);
-  const element = hole ?? doc.createElement("div");
-  return {
-    element,
-    init: () => {},
-    dispose: () => {
-      park.appendChild(element);
-    },
-  };
-}
-
-// RAIL_FRACTION and QUERY_FRACTION size the boot layout, two 15% side rails around a centre column
-// whose bottom fifth is the query panel. Fractions rather than pixels, so the rails' tab labels are
-// readable on a laptop and the rails do not become a canyon on a desktop.
+// RAIL_FRACTION and QUERY_FRACTION size the boot layout, a west rail for Properties beside a centre
+// column whose bottom fifth is the query panel. Fractions rather than pixels, so the rail's tab labels
+// are readable on a laptop and it doesn't become a canyon on a desktop.
 const RAIL_FRACTION = 0.15;
+const RAIL_MIN_PX = 260;
 const QUERY_FRACTION = 0.2;
-const RAIL_FALLBACK_PX = 260;
 const QUERY_FALLBACK_PX = 320;
 // QUERY_MIN_PX is the shortest the Query panel opens. Its tab strip, query box and Run row take about
-// 190px, so a fifth of a 1000px window showed no result row at all, and a reader asking a question
-// from Properties found the answer below the fold (agni issue 759). 320px shows the first five rows.
-// QUERY_MAX_FRACTION keeps the floor from taking most of a short window from the drawing.
+// 190px, so a fifth of a 1000px window showed no result row at all (agni issue 759). QUERY_MAX_FRACTION
+// keeps the floor from taking most of a short window from the drawing.
 const QUERY_MIN_PX = 320;
 const QUERY_MAX_FRACTION = 0.45;
-// EAST_MIN_PX keeps the east stacks readable on a small window. dockview clips a tab strip that does
-// not fit rather than scrolling it, and two tabs need ~190px (four needed ~380, which ruled out one
-// stack of four). The Checks table needs more than its tabs: at 15% of a 1400px window its four
-// columns had ~210px and squeezed the message column to a few words a line (agni issue 759).
-const EAST_MIN_PX = 260;
-// CHANGES_RAIL_PX is the Changes list's width when a comparison adds it back beside the diff.
-const CHANGES_RAIL_PX = 260;
-
-// defaultLayout is the boot arrangement, and it opens EVERY panel, with four surfaces visible and
-// the rest tabbed behind them (#325). Tabs handle the crowding and keep every panel one labelled
-// click away. The layout it replaced left five panels in a menu, and a first-time reader landed on
-// a schematic with no visible way to ask anything about it.
-//
-//   west 15%   centre 80% h                    east 15%
-//   ┌────────┬────────────────────────────────┬─────────────┐
-//   │ Sheets │ [Canvas] Diff  Changes         │[Checks]Rules│
-//   │        │                                │             │
-//   ├────────┤                                ├─────────────┤
-//   │[Details│                                │[Review] Cov.│
-//   │ Parts  ├────────────────────────────────┤             │
-//   │        │ Query     20% h, at least 320px │             │
-//   └────────┴────────────────────────────────┴─────────────┘
-//
-// Order matters. Each position is relative to the reference panel's GROUP, so the side rails are
-// built before the centre is split. Adding query below canvas afterwards divides the centre column
-// alone, where doing it first would put a full-width strip under all three.
-export function defaultLayout(api: DockviewApi): void {
-  api.addPanel({ id: "canvas", component: "canvas", title: "Canvas" });
-
-  // West rail, with the design's own navigation above what one selection is made of.
-  api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "left", referencePanel: "canvas" } });
-  api.addPanel({ id: "properties", component: "properties", title: "Properties", position: { direction: "below", referencePanel: "overview" } });
-  api.addPanel({ id: "parts", component: "parts", title: "Parts", position: { direction: "within", referencePanel: "properties" } });
-
-  // East rail, split north/south like the west rail. dockview clips a tab strip rather than
-  // scrolling it or offering an overflow menu, so four tabs in one 15% stack left the fourth
-  // reachable only through the Panels menu (those four labels need ~380px, 30% of a 1280px laptop).
-  // Two stacks of two fit, with what the engine found above what a person asked for.
-  api.addPanel({ id: "checks", component: "checks", title: "Checks", position: { direction: "right", referencePanel: "canvas" } });
-  api.addPanel({ id: "rules", component: "rules", title: "Rules", position: { direction: "within", referencePanel: "checks" } });
-  api.addPanel({ id: "lexicon", component: "lexicon", title: "Lexicon", position: { direction: "within", referencePanel: "checks" } });
-  api.addPanel({ id: "review", component: "review", title: "Review", position: { direction: "below", referencePanel: "checks" } });
-  api.addPanel({ id: "coverage", component: "coverage", title: "Coverage", position: { direction: "within", referencePanel: "review" } });
-
-  // The centre column's bottom fifth, after both rails exist so it splits the centre alone.
-  api.addPanel({ id: "query", component: "query", title: "Query", position: { direction: "below", referencePanel: "canvas" } });
-  // Trace tabs with Query and has to be added AFTER it. dockview resolves referencePanel against
-  // panels that already exist, so naming one the layout has not placed yet throws rather than
-  // deferring. Both are questions a reader asks ABOUT the drawing, so they share a strip.
-  api.addPanel({ id: "trace", component: "trace", title: "Trace", position: { direction: "within", referencePanel: "query" } });
-  api.addPanel({ id: "tables", component: "tables", title: "Tables", position: { direction: "within", referencePanel: "query" } });
-
-  // Diff and Changes are placed at boot rather than opened on demand. Both render an empty state
-  // naming the Compare button, so a reader who clicks one learns the feature exists instead of
-  // meeting a blank pane.
-  api.addPanel({ id: "diff", component: "diff", title: "Diff", position: { direction: "within", referencePanel: "canvas" } });
-  api.addPanel({ id: "changes", component: "changes", title: "Changes", position: { direction: "within", referencePanel: "canvas" } });
-
-  // Sizes and active tabs take effect only once dockview has laid the grid out, so this waits for
-  // the grid to HAVE a size rather than guessing a delay. dockview measures itself from a
-  // ResizeObserver on its container, which has not fired by the end of the current task. Sizing on
-  // setTimeout(0) divides up a 0x0 grid, and dockview drops it. So the earlier layout's pixel widths
-  // never applied, and a 250ms sleep "fixed" it.
-  whenSized(api, () => {
-    const rail = api.width ? Math.round(api.width * RAIL_FRACTION) : RAIL_FALLBACK_PX;
-    resizeGroup(api, "overview", { width: rail });
-    resizeGroup(api, "checks", { width: Math.max(rail, EAST_MIN_PX) });
-    resizeGroup(api, "query", { height: queryHeight(api.height) });
-    // Each stack opens on its first tab. Query needs this explicitly, because dockview makes the
-    // last panel added the active one and Trace is added to that stack after Query.
-    api.getPanel("query")?.api.setActive();
-    api.getPanel("properties")?.api.setActive();
-    api.getPanel("checks")?.api.setActive();
-    api.getPanel("review")?.api.setActive();
-    api.getPanel("canvas")?.api.setActive();
-  });
-}
 
 // queryHeight is the Query panel's opening height for a dock that tall: a fifth of it, but never
 // less than QUERY_MIN_PX, and never more than QUERY_MAX_FRACTION of it.
@@ -255,9 +69,72 @@ export function queryHeight(dockHeight: number): number {
   return Math.round(Math.min(Math.max(dockHeight * QUERY_FRACTION, QUERY_MIN_PX), dockHeight * QUERY_MAX_FRACTION));
 }
 
+// defaultLayout is the grid's boot arrangement. The drawers' panels go to their drawers after it.
+//
+//   west 15%     centre
+//   ┌──────────┬───────────────────────────────────────┐
+//   │Properties│ [Canvas] Diff  Changes                │
+//   │ Parts    │                                       │
+//   │          ├───────────────────────────────────────┤
+//   │          │ [Query] Trace Tables  20% h, ≥ 320px  │
+//   └──────────┴───────────────────────────────────────┘
+//
+// Each position is relative to the reference panel's GROUP, so the rail is built before the centre
+// is split, and the query strip then divides the centre column alone.
+export function defaultLayout(api: DockviewApi, whenReady: (apply: () => void) => void = (apply) => whenSized(api, apply)): void {
+  api.addPanel({ id: "canvas", component: "canvas", title: "Canvas" });
+  api.addPanel({ id: "properties", component: "properties", title: "Properties", position: { direction: "left", referencePanel: "canvas" } });
+  api.addPanel({ id: "parts", component: "parts", title: "Parts", position: { direction: "within", referencePanel: "properties" } });
+  api.addPanel({ id: "query", component: "query", title: "Query", position: { direction: "below", referencePanel: "canvas" } });
+  api.addPanel({ id: "trace", component: "trace", title: "Trace", position: { direction: "within", referencePanel: "query" } });
+  api.addPanel({ id: "tables", component: "tables", title: "Tables", position: { direction: "within", referencePanel: "query" } });
+  api.addPanel({ id: "diff", component: "diff", title: "Diff", position: { direction: "within", referencePanel: "canvas" } });
+  api.addPanel({ id: "changes", component: "changes", title: "Changes", position: { direction: "within", referencePanel: "canvas" } });
+  // Each stack opens on its first tab, since dockview makes the last panel added the active one. This
+  // runs at once rather than with the sizes, since a page that isn't in front gets no animation
+  // frames, and a hidden Query tab would wait on a reader who never arrives.
+  const fronts = (): void => {
+    api.getPanel("query")?.api.setActive();
+    api.getPanel("properties")?.api.setActive();
+    api.getPanel("canvas")?.api.setActive();
+  };
+  fronts();
+  whenReady(() => {
+    api.getPanel("properties")?.api.group?.api.setSize({ width: Math.max(Math.round(api.width * RAIL_FRACTION), RAIL_MIN_PX) });
+    api.getPanel("query")?.api.group?.api.setSize({ height: queryHeight(api.height) });
+    fronts();
+  });
+}
+
+// whenLaidOut runs apply once dockview has laid its grid out over the container. Before its first
+// layout dockview reports a 100 by 100 grid, which passes a plain size check and then drops every
+// group size set against it. A container that already has its size gets laid out before the
+// current task ends, so the sizes go into the first saved layout. A page that redirects as it opens
+// (agni issue 1549) would otherwise save the grid unsized and restore it that way. A container with
+// no size yet waits.
+function whenLaidOut(container: HTMLElement, api: DockviewApi, apply: () => void, framesLeft = 60): void {
+  if (framesLeft === 60 && container.clientWidth > 0 && container.clientHeight > 0) {
+    // A microtask, since createViewerDock adds its buttons to the header after the dock exists and
+    // the header's height settles with them.
+    queueMicrotask(() => {
+      api.layout(container.clientWidth, container.clientHeight);
+      apply();
+    });
+    return;
+  }
+  const w = container.clientWidth;
+  if ((w > 0 && Math.abs(api.width - w) <= 1 && api.height > 0) || framesLeft <= 0) {
+    apply();
+    return;
+  }
+  // A timer rather than an animation frame, since a page that isn't in front gets no frames.
+  setTimeout(() => whenLaidOut(container, api, apply, framesLeft - 1), 16);
+}
+
 // whenSized runs apply once the dock has a non-zero size, or after about 30 frames if it never does
-// (a hidden container, a headless host with no animation frames). The bound is there because a
-// layout that never sizes must still get its active tabs set.
+// (a hidden container, a headless host with no animation frames). Sizes take effect only once
+// dockview has laid the grid out, and it measures itself from a ResizeObserver that hasn't fired by
+// the end of the current task.
 function whenSized(api: DockviewApi, apply: () => void, framesLeft = 30): void {
   if ((api.width > 0 && api.height > 0) || framesLeft <= 0) {
     apply();
@@ -268,197 +145,190 @@ function whenSized(api: DockviewApi, apply: () => void, framesLeft = 30): void {
   else setTimeout(next, 16);
 }
 
-// resizeGroup sizes the GROUP that holds a panel. A group is the only thing dockview will resize.
-//
-// `panel.api.setSize()` looks like it does this and does nothing. It fires onDidSizeChange, and the
-// listener for that event is installed by the GRIDVIEW panel (the group), not by the dockview panel
-// inside it, so the call type-checks, runs, and is dropped. Every boot width was silently ignored
-// from WS9-021 until #325 (the rails were three equal columns), and a unit test asserting the layout
-// saw only that the CALL was made, never that the pixels moved.
-function resizeGroup(api: DockviewApi, panelId: string, size: { width?: number; height?: number }): void {
-  api.getPanel(panelId)?.api.group?.api.setSize(size);
-}
-
-// openDiffPanel focuses the diff view and its changed-item list, adding either back first if the
-// user closed it. The default layout already places both beside the canvas, so on an untouched
-// layout this is a tab switch, and the add path covers a layout where they were closed.
-export function openDiffPanel(api: DockviewApi): void {
-  const existing = api.getPanel("diff");
-  if (!existing) {
-    const canvas = api.getPanel("canvas");
-    api.addPanel({
-      id: "diff",
-      component: "diff",
-      title: "Diff",
-      position: canvas ? { direction: "within", referencePanel: "canvas" } : { direction: "right" },
-    });
-  }
-  if (!api.getPanel("changes")) {
-    api.addPanel({
-      id: "changes",
-      component: "changes",
-      title: "Changes",
-      position: { direction: "right", referencePanel: "diff" },
-    });
-    // Keeps the new column a 260px rail rather than half the centre. By the time a reader opens a
-    // comparison the grid has its size, so the group takes the width once it exists. Without it,
-    // Changes opened at half the canvas column (agni issue 759).
-    whenSized(api, () => resizeGroup(api, "changes", { width: CHANGES_RAIL_PX }));
-  }
-  api.getPanel("diff")?.api.setActive();
-}
-
-// closeDiffPanel ends a comparison by returning attention to the drawing. It LEAVES the diff and
-// changes tabs in place, because the default layout places them (#325) and a tab strip that loses
-// two tabs on close reads as the app breaking. Both panels render "No comparison open" on their own.
-export function closeDiffPanel(api: DockviewApi): void {
-  api.getPanel("canvas")?.api.setActive();
-}
-
-// openPanel re-adds a closed panel from the menu, on the right edge. The user drags it where they
-// want and persistence keeps it.
-export function openPanel(api: DockviewApi, def: DockPanelDef): void {
-  api.addPanel({
-    id: def.id,
-    component: def.id,
-    title: def.title,
-    position: { direction: "right" },
-  });
-}
-
-// resetLayout puts the dock back to the default layout and forgets the saved one. A saved layout is
-// restored as it was, so without this a reader kept whatever sizes the dock had when they first used
-// it, including ones a later default fixed (agni issue 759). Panels keep their content, since a
-// cleared panel hands its element back to the park and the new layout adopts it again.
-export function resetLayout(api: DockviewApi, storage: LayoutStorage): void {
-  storage.removeItem(LAYOUT_KEY);
-  api.clear();
-  defaultLayout(api);
-}
-
-// panelsMenu adds the Panels button. It has one item per registered panel, and each item toggles its
-// panel open or closed (WS9-042), and a ✓ marks the open ones. So the menu both reopens a panel the
-// tab-× closed and hides one. With storage, a last item resets the layout. Panel layout is dock
-// chrome, not presenter state, so this is a plain DOM widget rather than an island.
-export function panelsMenu(host: HTMLElement, api: DockviewApi, storage?: LayoutStorage): void {
-  const doc = host.ownerDocument;
-  const btn = doc.createElement("button");
-  btn.type = "button";
-  btn.className = "mode-btn panels-btn";
-  btn.textContent = "Panels ▾";
-  const list = doc.createElement("div");
-  list.className = "panels-list";
-  list.style.display = "none";
-  const rebuild = (): void => {
-    list.replaceChildren();
-    for (const def of VIEWER_PANELS) {
-      const item = doc.createElement("button");
-      item.type = "button";
-      item.className = "panels-item";
-      item.textContent = `${api.getPanel(def.id) ? "✓" : "  "} ${def.title}`;
-      item.addEventListener("click", () => {
-        const panel = api.getPanel(def.id);
-        if (panel) api.removePanel(panel);
-        else openPanel(api, def);
-        list.style.display = "none";
-      });
-      list.appendChild(item);
-    }
-    if (storage) {
-      const reset = doc.createElement("button");
-      reset.type = "button";
-      reset.className = "panels-item panels-reset";
-      reset.textContent = "  Reset layout";
-      reset.title = "Put every panel back where it starts, at its default size";
-      reset.addEventListener("click", () => {
-        resetLayout(api, storage);
-        list.style.display = "none";
-      });
-      list.appendChild(reset);
-    }
-  };
-  btn.addEventListener("click", () => {
-    const show = list.style.display === "none";
-    if (show) rebuild();
-    list.style.display = show ? "block" : "none";
-  });
-  doc.addEventListener("click", (e) => {
-    if (!host.contains(e.target as Node)) list.style.display = "none";
-  });
-  host.appendChild(btn);
-  host.appendChild(list);
-}
-
-// createViewerDock boots the dock. It restores the saved layout when there is one, falling back to
-// the default when it fails to apply (a corrupt or incompatible save), then persists every layout
-// change. The page is light-only, so the theme class is fixed and there is no theme observer.
 // SHEET_VIEW_PREFIX marks a sheet view's panel id (agni issue 1326). A sheet view is made at run time
-// for one sheet of the open design, so it is not in VIEWER_PANELS and has no hole in the page. A
-// saved layout that names one restores without it, since prunePanels drops every id the registry
-// lacks. A reader opens one, and the next page opens none.
+// for one sheet of the open design, so it is not in VIEWER_PANELS and has no hole in the page. The
+// dock resolves it while it is open, and a saved layout that names one restores without it, since
+// nothing resolves it on the next page.
 export const SHEET_VIEW_PREFIX = "sheetview-";
 
-// sheetViews holds each open sheet view's element and what to do when the dock closes it, keyed by
-// panel id, for the dock's component factory to hand over.
-const sheetViews = new Map<string, { element: HTMLElement; closed: () => void }>();
+interface SheetViewEntry {
+  title: string;
+  element: HTMLElement;
+  closed: () => void;
+  position: PanelDef["position"];
+}
 
-function sheetViewRenderer(id: string, doc: Document): IContentRenderer {
-  const v = sheetViews.get(id);
+// ViewerDock is the viewer's dock: tsappkit-dock's Dock plus the sheet views it holds.
+export interface ViewerDock {
+  dock: Dock;
+  // addSheetView docks a sheet view. The first opens to the right of the canvas, and a later one tabs
+  // with the last sheet view still open, so views gather in one group until the reader moves them.
+  // closed runs when the view closes, from its tab or from its own Close.
+  addSheetView(id: string, title: string, element: HTMLElement, closed: () => void): void;
+  setTitle(id: string, title: string): void;
+  // toggleShown brings a panel to the front, opening its drawer, or closes the drawer when the panel
+  // is already in front in it. The header's drawer buttons and ⌘/Ctrl+G use it.
+  toggleShown(id: string): void;
+  // hideDrawerOf closes the drawer a panel is in, and does nothing for a panel in the grid.
+  hideDrawerOf(id: string): void;
+  // reveal brings a panel to the front. A drawer would cover part of the grid, so for a panel in the
+  // grid it also closes both drawers. A tour step and the Query shortcuts use it.
+  reveal(id: string): boolean;
+  // drawerOpen reports whether either drawer is open.
+  drawerOpen(): boolean;
+}
+
+// DRAWER_PANELS are the panels the header's drawer buttons show, each opening the drawer that holds
+// it (agni issue 1542).
+export const DRAWER_PANELS = ["overview", "checks", "review"] as const;
+
+// createViewerDock boots the dock, restoring the saved layout when there is one, and adds the Panels
+// menu and the drawer buttons to menuHost.
+export function createViewerDock(container: HTMLElement, park: HTMLElement, menuHost: HTMLElement, storage: Storage | null): ViewerDock {
+  const doc = container.ownerDocument;
+  const sheetViews = new Map<string, SheetViewEntry>();
+  const holes = new Map<string, HTMLElement>();
+  const hostFor = (id: string): HTMLElement => {
+    const view = sheetViews.get(id);
+    if (view) return view.element;
+    let hole = holes.get(id);
+    if (!hole) {
+      hole = doc.querySelector<HTMLElement>(`[data-dock-panel="${id}"]`) ?? doc.createElement("div");
+      holes.set(id, hole);
+    }
+    return hole;
+  };
+  const buttons: HTMLButtonElement[] = [];
+  // fronts is the panel in front in each open drawer, as drawerChanged reports it.
+  const fronts = new Map<string, string>();
+  const inFront = (id: string): boolean => {
+    const at = dock.where(id);
+    return at?.kind === "drawer" && fronts.get(at.edge) === id;
+  };
+  const markButtons = (): void => {
+    for (const b of buttons) b.classList.toggle("active", inFront(b.dataset.panel ?? ""));
+  };
+  const toggleShown = (id: string): void => {
+    const at = dock.where(id);
+    if (at?.kind === "drawer" && inFront(id)) dock.toggleDrawer(at.edge, false);
+    else dock.show(id);
+  };
+  // The dock saves as it restores, before dockview has laid the grid out, and a save then writes
+  // dockview's 100 by 100 grid over the reader's. A group's setSize makes no save either. So the
+  // dock's saves wait until the grid is laid out, and the grid is saved once then.
+  let laidOut = false;
+  const guarded = storage && {
+    getItem: (k: string) => storage.getItem(k),
+    setItem: (k: string, v: string) => {
+      if (laidOut) storage.setItem(k, v);
+    },
+    removeItem: (k: string) => storage.removeItem(k),
+  };
+  const dock: Dock = createDock({
+    container,
+    panels: VIEWER_PANELS,
+    resolve: (id) => {
+      const v = sheetViews.get(id);
+      return v ? { id, title: v.title, position: v.position } : undefined;
+    },
+    defaultLayout: (api) => defaultLayout(api, (apply) => whenLaidOut(container, api, apply)),
+    hostFor,
+    release: (id, el) => {
+      if (!sheetViews.has(id)) park.appendChild(el);
+    },
+    // A sheet view that leaves the dock altogether is closed, and one that only moves is not.
+    moved: (id, _el, to) => {
+      const v = sheetViews.get(id);
+      if (v && to === null) {
+        sheetViews.delete(id);
+        v.closed();
+      }
+    },
+    drawerChanged: (edge, open, active) => {
+      if (open && active) fronts.set(edge, active);
+      else fronts.delete(edge);
+      markButtons();
+    },
+    storage: guarded,
+    key: LAYOUT_KEY,
+    // The viewer's page is light-only.
+    theme: () => "light",
+    drawers: { left: { size: 280 }, right: { size: 0.34 } },
+  });
+  for (const id of DRAWER_PANELS) {
+    const def = VIEWER_PANELS.find((p) => p.id === id)!;
+    const b = doc.createElement("button");
+    b.type = "button";
+    b.className = "mode-btn dock-drawer-btn";
+    b.dataset.panel = id;
+    b.textContent = def.title;
+    b.title = id === "overview" ? `Show or hide ${def.title} (⌘/Ctrl+G)` : `Show or hide ${def.title}`;
+    b.addEventListener("click", () => toggleShown(id));
+    buttons.push(b);
+    menuHost.appendChild(b);
+  }
+  dock.panelsMenu(menuHost);
+  whenLaidOut(container, dock.api, () => {
+    laidOut = true;
+    if (storage) saveLayout(storage, LAYOUT_KEY, VIEWER_PANELS, dock.api.toJSON(), loadLayout(storage, LAYOUT_KEY)?.drawers);
+  });
   return {
-    element: v?.element ?? doc.createElement("div"),
-    init: () => {},
-    dispose: () => {
-      sheetViews.delete(id);
-      v?.closed();
+    dock,
+    toggleShown,
+    hideDrawerOf: (id) => {
+      const at = dock.where(id);
+      if (at?.kind === "drawer") dock.toggleDrawer(at.edge, false);
+    },
+    drawerOpen: () => fronts.size > 0,
+    reveal: (id) => {
+      if (!dock.show(id)) return false;
+      if (dock.where(id)?.kind === "grid") for (const edge of ["left", "right"] as const) dock.toggleDrawer(edge, false);
+      // dockview shows a panel brought forward in its group on the next animation frame, and a hidden
+      // field takes no focus. The panel sits where its group's last tab sat, so it is shown now.
+      const overlay = container.querySelector<HTMLElement>(`[data-dock-panel="${id}"]`)?.closest<HTMLElement>(".dv-render-overlay");
+      if (overlay && dock.api.getPanel(id)?.api.isVisible) {
+        overlay.style.visibility = "";
+        overlay.style.pointerEvents = "";
+      }
+      return true;
+    },
+    addSheetView: (id, title, element, closed) => {
+      const open = [...sheetViews.keys()].filter((k) => k !== id && dock.where(k) !== null);
+      const last = open[open.length - 1];
+      sheetViews.set(id, {
+        title,
+        element,
+        closed,
+        position: last ? { direction: "within", referencePanel: last } : { direction: "right", referencePanel: "canvas" },
+      });
+      dock.show(id);
+    },
+    setTitle: (id, title) => {
+      const v = sheetViews.get(id);
+      if (v) v.title = title;
+      dock.api.getPanel(id)?.api.setTitle(title);
     },
   };
 }
 
-// addSheetView docks a sheet view. The first opens to the right of the canvas, and a later one tabs
-// with the last sheet view still open, so views gather in one group until the reader moves them.
-// closed runs when the dock closes the panel, from its tab or from the view's own Close.
-export function addSheetView(api: DockviewApi, id: string, title: string, element: HTMLElement, closed: () => void): void {
-  sheetViews.set(id, { element, closed });
-  const open = api.panels.filter((p) => p.id.startsWith(SHEET_VIEW_PREFIX) && p.id !== id);
-  const last = open[open.length - 1];
-  api.addPanel({
-    id,
-    component: "sheetview",
-    title,
-    position: last ? { direction: "within", referencePanel: last.id } : { direction: "right", referencePanel: "canvas" },
-  });
+// openDiffPanel focuses the diff view and its changed-item list, opening either first if the reader
+// closed it.
+export function openDiffPanel(dock: Dock): void {
+  if (!dock.where("changes")) {
+    dock.show("changes");
+    // A reopened Changes goes to a rail right of the diff, rather than half the centre (agni issue 759).
+    const diff = dock.api.getPanel("diff")?.group;
+    const changes = dock.api.getPanel("changes");
+    if (diff && changes) {
+      changes.api.moveTo({ group: diff, position: "right" });
+      whenSized(dock.api, () => changes.api.group?.api.setSize({ width: RAIL_MIN_PX }));
+    }
+  }
+  dock.show("diff");
 }
 
-export function createViewerDock(container: HTMLElement, park: HTMLElement, menuHost: HTMLElement, storage: LayoutStorage): DockviewApi {
-  container.classList.add("dockview-theme-light");
-  const component = new DockviewComponent(container, {
-    createComponent: (options) =>
-      options.id.startsWith(SHEET_VIEW_PREFIX) ? sheetViewRenderer(options.id, container.ownerDocument) : adoptPanel(park, options.name),
-    // "always" keeps every panel's content element attached (hidden) when its tab is not in
-    // front. The default ("onlyWhenVisible") DETACHES hidden tab content, and AppRoot resolves
-    // every island hole by id at boot, so a hole in a background tab (Rules behind Checks, or any
-    // tab in a saved layout) would be missing and its island would never mount.
-    defaultRenderer: "always",
-  });
-  const api = component.api;
-  const saved = loadLayout(storage);
-  if (saved !== null) {
-    try {
-      api.fromJSON(saved.layout as Parameters<typeof api.fromJSON>[0]);
-      // Panels added to the registry since this layout was saved appear now, and ones removed
-      // from it go away, without touching the user's arrangement of the rest.
-      reconcilePanels(api, saved.savedPanels);
-      prunePanels(api);
-    } catch (err) {
-      console.warn("dock: saved layout rejected, using default", err);
-      storage.removeItem(LAYOUT_KEY);
-      api.clear();
-      defaultLayout(api);
-    }
-  } else {
-    defaultLayout(api);
-  }
-  api.onDidLayoutChange(() => saveLayout(storage, api.toJSON()));
-  panelsMenu(menuHost, api, storage);
-  return api;
+// closeDiffPanel ends a comparison by returning attention to the drawing. It leaves the diff and
+// changes tabs in place, since both render "No comparison open" on their own.
+export function closeDiffPanel(dock: Dock): void {
+  dock.show("canvas");
 }

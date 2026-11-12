@@ -186,6 +186,8 @@ function QueryPanel(props: {
   registerAsk?: (ask: (sel: Selection, question?: EntityQueryItem) => void) => void;
   // registerFind hands the island the panel's findByName, for the page's Command-F.
   registerFind?: (find: () => boolean) => void;
+  // registerFocus hands the island the panel's focusQuery, for the page's ⌘/Ctrl+Shift+F.
+  registerFocus?: (focus: () => void) => void;
 }) {
   // The tab in front, whose question the editor shows and whose answer the table renders.
   const front = () => activeTab(props.strip());
@@ -478,6 +480,11 @@ function QueryPanel(props: {
     return true;
   };
   props.registerFind?.(findByName);
+  // focusQuery switches to the query mode and focuses its box once the box is rendered.
+  props.registerFocus?.(() => {
+    setMode("query");
+    queueMicrotask(() => taRef?.focus());
+  });
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
   // selects it, so one answer becomes the subject of the next question. A kind with no selection
   // shape (scalars never reach here) locates and deselects rather than leaving the bar naming the
@@ -1241,6 +1248,7 @@ export function queryPanelIsland(
   let askHook: (sel: Selection, question?: EntityQueryItem) => void = () => {};
   let openSetHook: (set: QuerySet) => void = () => {};
   let findHook: () => boolean = () => false;
+  let focusHook: () => void = () => {};
   const [querySets, setQuerySets] = signalView<QuerySetItem[]>([]);
   // A fresh answer for the tab in front clears any stale locate note from its previous run.
   const setTabState = (s: QueryResult, tab?: string) => {
@@ -1289,6 +1297,7 @@ export function queryPanelIsland(
         onSetFile={handlers.onSetFile}
         registerOpenSet={(open) => (openSetHook = open)}
         registerFind={(find) => (findHook = find)}
+        registerFocus={(focus) => (focusHook = focus)}
         emit={viewerEmitter(eventBus)}
       />
     ),
@@ -1317,6 +1326,7 @@ export function queryPanelIsland(
       setQuerySets,
       openSet: (set: QuerySet) => openSetHook(set),
       findByName: () => findHook(),
+      focusQuery: () => focusHook(),
     },
   };
 }

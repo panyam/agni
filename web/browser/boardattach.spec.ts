@@ -8,6 +8,7 @@ import type { Browser, Page } from "playwright-core";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 
 const odbFolder = join(resolve(fileURLToPath(new URL("../..", import.meta.url))), "examples", "common", "designs", "odb");
 
@@ -28,7 +29,7 @@ const BOARD = `${JOB}/matrix/matrix`;
 
 async function open(page: Page, query = ""): Promise<void> {
   await page.goto(`${base()}/designs/${DESIGN}/view${query}`, { waitUntil: "networkidle" });
-  await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+  await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
 }
 
 const tiles = (page: Page) => page.$$eval(".sheet-tile-name", (ns) => ns.map((n) => n.textContent?.trim() ?? ""));
@@ -41,16 +42,18 @@ describe("attaching a board the design does not declare", () => {
         await open(page, q);
         expect(await tiles(page)).not.toContain("Board");
 
+        await showPanel(page, "overview");
         await page.locator(".sheet-board-pick").click();
         await page.waitForSelector(`.board-picker-row[data-uri="mount://${JOB}"] .board-picker-use`, { timeout: 30_000 });
         await Promise.all([page.waitForURL(/[?&]board=/, { timeout: 30_000 }), page.locator(`.board-picker-row[data-uri="mount://${JOB}"] .board-picker-use`).click()]);
-        await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+        await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         expect(new URL(page.url()).searchParams.get("board")).toBe(BOARD);
         await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
-        expect(await page.locator(".sheet-board-attached").innerText()).toContain(JOB);
+        expect(await page.locator(".sheet-board-attached").textContent()).toContain(JOB);
 
         // The board draws, from the job's own files, in a view beside the canvas.
         const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
+        await showPanel(page, "overview");
         await row.locator(".sheet-tile-beside").click();
         await page.waitForSelector("[data-sheetview] .picks-front", { timeout: 60_000 });
         expect(await page.locator("[data-sheetview] .picks-front [data-ref]").count()).toBeGreaterThan(3);
@@ -58,8 +61,9 @@ describe("attaching a board the design does not declare", () => {
         // A reload keeps it, and the design's own board takes it away again.
         await page.reload({ waitUntil: "networkidle" });
         await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
+        await showPanel(page, "overview");
         await Promise.all([page.waitForURL((u) => !u.searchParams.has("board"), { timeout: 30_000 }), page.locator(".sheet-board-clear").click()]);
-        await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+        await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         expect(await tiles(page)).not.toContain("Board");
       });
     }, 180_000);
@@ -70,6 +74,7 @@ describe("saving an attached board to the design's design.yaml", () => {
   it("shows a served design's descriptor for the reader to commit", async () => {
     await withPage(browser, async (page) => {
       await open(page, `?board=${BOARD}`);
+      await showPanel(page, "overview");
       await page.locator(".sheet-board-save").click();
       const text = page.locator(".board-declared-yaml");
       await text.waitFor({ timeout: 30_000 });
@@ -90,7 +95,7 @@ describe("saving an attached board to the design's design.yaml", () => {
       const dialog = page.locator("#drop-dialog");
       await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
       await dialog.locator(".drop-design", { has: page.locator(".drop-design-name", { hasText: /^gateway\s+\(/ }) }).locator(".drop-design-open").click();
-      await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+      await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
       const viewer = new URL(page.url());
       expect(viewer.pathname).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/odb\/gateway\.edn\/view/);
       expect(await tiles(page)).not.toContain("Board");
@@ -98,6 +103,7 @@ describe("saving an attached board to the design's design.yaml", () => {
       const folder = viewer.pathname.replace(/^.*\/designs\/(local\/drop-[a-z0-9]+\/odb)\/gateway\.edn\/view$/, "$1");
       await page.goto(`${viewer.origin}${viewer.pathname}?engine=wasm&board=${folder}/gateway-layout/matrix/matrix`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
+      await showPanel(page, "overview");
       await Promise.all([page.waitForURL((u) => !u.searchParams.has("board"), { timeout: 30_000 }), page.locator(".sheet-board-save").click()]);
       await page.waitForFunction(() => [...document.querySelectorAll(".sheet-tile-name")].some((n) => n.textContent?.trim() === "Board"), null, { timeout: 60_000 });
       expect(await page.locator(".sheet-board-attached").count()).toBe(0);

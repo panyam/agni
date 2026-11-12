@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 import { serveStatic, type StaticServer } from "./staticserver.js";
 import { expectCompareTables, gatewayDiffRows } from "./comparetables.js";
 
@@ -81,15 +82,19 @@ function record(page: Page) {
 }
 
 async function checks(page: Page): Promise<number> {
+  await showPanel(page, "checks");
   await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
-  return page.locator(".check-locate").count();
+  const n = await page.locator(".check-locate").count();
+  await hideDrawers(page);
+  return n;
 }
 
 // serverOrFlagText lists every text node and hover text on the page that names a server or a
 // command-line flag, hidden panels included, since a visitor to the static demo has neither (agni
 // 894). Reading the DOM rather than innerText reaches the tabs that are not in front.
 async function serverOrFlagText(page: Page): Promise<string[]> {
+  await showPanel(page, "review");
   await page.waitForSelector(".review .rv-empty, .review .rv-controls", { state: "attached", timeout: 60_000 });
   return page.evaluate(() => {
     const re = /\bserver\b|\bserve\b|--[a-z][a-z-]+/i;
@@ -208,7 +213,7 @@ describe("the static demo under /agni/demo/", () => {
       const log = record(page);
       await page.goto(base, { waitUntil: "domcontentloaded" });
       await page.click("text=Sample Board");
-      await page.locator(".dv-default-tab-content", { hasText: /^Lexicon$/ }).first().click({ timeout: 120_000 });
+      await showPanel(page, "lexicon");
       await page.locator('.lex-group[data-vocabulary="net.control"] summary').click({ timeout: 120_000 });
       await page.locator('.lex-group[data-vocabulary="net.control"] .lex-off-switch input').check();
       await page.locator('.lex-group[data-vocabulary="net.control"] .lex-row-replaced').first().waitFor({ state: "attached" });
@@ -227,6 +232,7 @@ describe("the static demo under /agni/demo/", () => {
       await page.click("text=Sample Board");
       const rows = await checks(page);
       const saved = async (format: string) => {
+        await showPanel(page, "checks");
         const [dl] = await Promise.all([page.waitForEvent("download"), page.click(`.checks-save[data-format="${format}"]`)]);
         return { name: dl.suggestedFilename(), text: readFileSync(await dl.path(), "utf8") };
       };
@@ -275,6 +281,7 @@ describe("the static demo under /agni/demo/", () => {
           if (files.size === 2) done();
         });
       });
+      await showPanel(page, "checks");
       await page.click('.checks-save[data-format="csv"]');
       await two;
       expect([...files.keys()].sort()).toEqual(["gateway.findings.csv", "gateway.verdicts.csv"]);

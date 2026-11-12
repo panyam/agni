@@ -8,21 +8,21 @@
 
 Agni checks schematics and boards for design mistakes, such as an I2C bus with no pull-up, a power
 rail with no decoupling, a USB connector with no ESD protection, or a track narrower than the
-board's own rules. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs, and every finding names the net or
-part it fired on and locates it on the schematic.
+board's own rules. It reads KiCad, OrCAD Capture, EDIF, xschem and gEDA schematics, and KiCad,
+Allegro, Altium, ODB++ and IPC-2581 boards. Every finding names the net or part it fired on and
+locates it on the schematic.
 
 **[Open the demo in your browser](https://panyam.github.io/agni/demo/)** and drop a KiCad or EDIF
 design on the page, or open one of the example boards. The engine runs in the page as WebAssembly,
 so your design is never uploaded.
 
-![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
+## Watch a walkthrough
 
-**[Watch a 33-second walkthrough](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)** on Antmicro's open-source Jetson AGX Thor baseboard. It
-finds a resistor by name, and the schematic and the board beside it both go to it. Then a click on a
-test point on the board takes the schematic to that point's page. `make demo-video
-JOURNEY=find-a-part` records it.
+A 33-second walkthrough on Antmicro's open-source Jetson AGX Thor baseboard. It finds a resistor by
+name, and the schematic and the board beside it both go to it. Then a click on a test point on the
+board takes the schematic to that point's page. `make demo-video JOURNEY=find-a-part` records it.
 
-[![Find a part on the board: R361 framed on its schematic page, with its footprint centred on the board beside it](docsite/static/images/demo-find-a-part.jpg)](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)
+https://github.com/user-attachments/assets/f38300ad-33ca-49bb-885d-2b927573ba32
 
 ## What does it do
 
@@ -160,8 +160,12 @@ it. N datasheet extractors fill a parameter IR and the checks read it.
 | KiCad | `.kicad_sch` `.kicad_pcb` `.kicad_pro` | yes | schematic + board |
 | IPC-2581 | `.xml` `.cvg` | yes | board |
 | xschem | `.sch` (sniffed) | yes | schematic |
-| gEDA gschem | `.sch` (sniffed) | yes | schematic |
+| gEDA gschem and Lepton | `.sch` (sniffed) | yes | schematic |
 | Telesis | `.tel` | yes | none |
+| OrCAD Capture | `.dsn` | yes | schematic |
+| Cadence Allegro | `.brd`, from Allegro 16.6 and 17.2 | yes | board |
+| Altium Designer | `.PcbDoc` | yes | board |
+| ODB++ | a job directory, `.tgz`, `.zip` | yes | board |
 
 A hierarchical EDIF netlist reads its top cell by default and says which blocks it left out. To
 read every block it places, pass `--flatten-hierarchy`, set `flatten_hierarchy: true` in the
