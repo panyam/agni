@@ -763,8 +763,10 @@ describe("a query link", () => {
       expect(await page.locator(".query-row").count()).toBe(4);
       await expect.poll(() => page.locator(".query-locate-note").innerText(), { timeout: 10_000 }).toContain("the 4 rows below");
       expect(await page.locator(".query-locate.on").count()).toBe(0);
-      const note = await paintedAt(page, ".query-locate-note");
-      expect(note.ownedByProbe, `the note is on screen, not behind another panel (painted: ${note.painted})`).toBe(true);
+      // dockview paints a panel it brought forward on its next frame, so this waits for that frame.
+      await expect
+        .poll(async () => (await paintedAt(page, ".query-locate-note")).ownedByProbe, { message: "the note is on screen, not behind another panel", timeout: 5_000 })
+        .toBe(true);
     });
   }, 90_000);
 });
@@ -789,22 +791,29 @@ describe("the default dock", () => {
 
   // agni issue 1549. A design folder's URL boots the viewer, saves its dock, and redirects back to
   // itself. Sizes that waited on a timer missed that save, so the reload restored a half-height
-  // query strip and a half-width rail.
-  it("sizes the rail and the query strip on a first visit that redirects", async () => {
+  // query strip and a half-width rail. A restore also saved before dockview laid the grid out, which
+  // wrote a 100 by 100 grid over it, so the next visit came back unsized.
+  it("sizes the rail and the query strip on a first visit that redirects, and on the next visit", async () => {
     await withPage(browser, async (page) => {
-      await openViewer(page, "tut", "designs/gateway");
-      const sizes = await page.evaluate(() => {
-        const group = (title: string) =>
-          Array.from(document.querySelectorAll(".dv-tab"))
-            .find((t) => t.textContent?.trim() === title)
-            ?.closest(".dv-groupview")
-            ?.getBoundingClientRect();
-        return { rail: Math.round(group("Properties")?.width ?? 0), query: Math.round(group("Query")?.height ?? 0) };
-      });
-      expect(sizes.rail, "the Properties rail's width").toBeGreaterThan(240);
-      expect(sizes.rail).toBeLessThan(300);
-      expect(sizes.query, "the query strip's height").toBeGreaterThan(290);
-      expect(sizes.query).toBeLessThan(340);
+      const sizes = () =>
+        page.evaluate(() => {
+          const group = (title: string) =>
+            Array.from(document.querySelectorAll(".dv-tab"))
+              .find((t) => t.textContent?.trim() === title)
+              ?.closest(".dv-groupview")
+              ?.getBoundingClientRect();
+          return { rail: Math.round(group("Properties")?.width ?? 0), query: Math.round(group("Query")?.height ?? 0) };
+        });
+      // Jetson's cut opened on its board takes long enough that its restore saved before the layout.
+      for (const visit of ["first", "second"]) {
+        await page.goto(`${base()}/designs/probe/designs/jetson-cut/view?mode=svg&sheet=board`, { waitUntil: "networkidle", timeout: 120_000 });
+        await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
+        const s = await sizes();
+        expect(s.rail, `the Properties rail's width on the ${visit} visit`).toBeGreaterThan(240);
+        expect(s.rail).toBeLessThan(300);
+        expect(s.query, `the query strip's height on the ${visit} visit`).toBeGreaterThan(290);
+        expect(s.query).toBeLessThan(340);
+      }
     });
   }, 90_000);
 

@@ -101,6 +101,27 @@ describe("the dock's shortcuts", () => {
     });
   }, 90_000);
 
+  it("closes an open drawer on Escape and keeps the highlight, which the next Escape clears", async () => {
+    await withPage(browser, async (page) => {
+      await open(page);
+      const lit = () => page.evaluate(() => (document.querySelector("[data-highlight]") as HTMLElement | null)?.dataset.highlight ?? "");
+      await page.keyboard.press("Control+f");
+      await page.keyboard.type("R1");
+      await page.keyboard.press("Enter");
+      await page.locator(".query-row .query-locate", { hasText: /^R1$/ }).first().click({ timeout: 30_000 });
+      await expect.poll(lit, { timeout: 30_000 }).toContain('"R1"');
+
+      await page.locator('.dock-drawer-btn[data-panel="checks"]').click();
+      await expect.poll(() => shown(page, "checks")).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect.poll(() => shown(page, "checks")).toBe(false);
+      expect(await lit()).toContain('"R1"');
+
+      await page.keyboard.press("Escape");
+      await expect.poll(lit).not.toContain('"R1"');
+    });
+  }, 90_000);
+
   it("leaves Control+G to a text field", async () => {
     await withPage(browser, async (page) => {
       await open(page);

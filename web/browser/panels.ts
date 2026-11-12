@@ -71,8 +71,15 @@ const GRID_TITLES: Record<string, string> = {
   tables: "Tables", diff: "Diff", changes: "Changes",
 };
 
-// hideDrawers closes any open drawer, as Escape does for a reader, so a click on the drawing lands
-// on it rather than on a drawer's scrim.
+// hideDrawers closes any open drawer with a click on its scrim, as a reader would, so a click on the
+// drawing lands on it rather than on the scrim.
 export async function hideDrawers(page: Page): Promise<void> {
-  if (await page.locator(".dock-drawer-btn.active").count()) await page.keyboard.press("Escape");
+  const scrims = page.locator(".dock-drawer-scrim:visible");
+  for (let n = await scrims.count(); n > 0; n = await scrims.count()) {
+    // The drawer sits over its own edge of the scrim, so the click goes to the far edge.
+    const scrim = scrims.first();
+    const box = (await scrim.boundingBox())!;
+    const left = ((await scrim.getAttribute("class")) ?? "").includes("dock-drawer-scrim-left");
+    await scrim.click({ position: { x: left ? box.width - 4 : 4, y: box.height / 2 } });
+  }
 }
