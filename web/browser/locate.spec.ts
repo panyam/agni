@@ -92,17 +92,21 @@ describe("locating a subject from a panel", () => {
 });
 
 describe("the Query panel's inputs", () => {
-  it("scrolls an answer longer than the panel", async () => {
+  it("keeps rows for a Find by name answer, with its chip and the selection bar above it, and scrolls it", async () => {
     await withPage(browser, async (page) => {
       await open(page);
-      await page.locator("textarea.query-text").fill("component.net(?ref, ?net)");
-      await page.click(".query-run");
-      await page.waitForSelector(".query-results .query-row", { timeout: 30_000 });
+      await page.keyboard.press("Control+f");
+      await page.keyboard.type("R");
+      await page.keyboard.press("Enter");
+      await page.locator(".query-row .query-locate").first().click({ timeout: 30_000 });
+      await page.waitForSelector(".query-selection", { timeout: 30_000 });
       const box = page.locator(".query-results");
-      const size = await box.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
-      // At least six rows show, though the query box, its chips and Run sit above them. Before,
-      // they left the answer about 100 px on Jetson, and macOS hides a scrollbar until it scrolls.
-      expect(size.client).toBeGreaterThanOrEqual(150);
+      const size = await box.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight, bottom: el.getBoundingClientRect().bottom }));
+      const panel = await page.locator(".query").evaluate((el) => el.getBoundingClientRect().bottom);
+      // At least five rows show under the query box, its ?pattern chip and the selection bar, and none
+      // is cut off at the panel's foot. Before, they left this answer about 90 px.
+      expect(size.client).toBeGreaterThanOrEqual(120);
+      expect(size.bottom).toBeLessThanOrEqual(panel + 1);
       expect(size.scroll).toBeGreaterThan(size.client);
       await box.hover();
       await page.mouse.wheel(0, 400);

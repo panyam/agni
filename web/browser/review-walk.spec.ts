@@ -352,7 +352,7 @@ describe("the browser-review walk", () => {
       // most a fortieth of the view, so an IC rather than a board-wide connector. It also takes in
       // whatever sits within three quarters of that part's size.
       await step("select an area", async () => {
-        const box = await page.evaluate(() => {
+        const block = () => page.evaluate(() => {
           const parts = new Map<string, DOMRect>();
           for (const el of document.querySelectorAll('#svg-view [data-kind="component"][data-ref]')) {
             const ref = el.getAttribute("data-ref") ?? "";
@@ -370,6 +370,19 @@ describe("the browser-review walk", () => {
           const pad = (Math.max(big.width, big.height) * 3) / 4;
           return { l: Math.max(view.left + 2, big.left - pad), t: Math.max(view.top + 2, big.top - pad), r: Math.min(view.right - 2, big.right + pad), b: Math.min(view.bottom - 2, big.bottom + pad) };
         });
+        // A located cell zooms the canvas to its part (agni issue 1539), so the walk zooms out with the
+        // wheel until a part fits on screen, as a reader would before dragging a block.
+        let box = await block();
+        for (let i = 0; !box && !stepByStep && i < 8; i++) {
+          const view = await page.locator("#svg-view").boundingBox();
+          if (!view) break;
+          await act(page, async () => {
+            await page.mouse.move(view.x + view.width / 2, view.y + view.height / 2);
+            await page.mouse.wheel(0, 300);
+          });
+          await page.waitForTimeout(150);
+          box = await block();
+        }
         if (!box && !stepByStep) throw new Error("no part is drawn wholly on screen to select an area around");
         await tourAct(page, "select-area", async () => {
           if (!box) throw new Error("no part is drawn wholly on screen to select an area around");

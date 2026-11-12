@@ -561,9 +561,9 @@
     .query-empty { color: #999; font-size: 12px; padding: 4px 0; }
     /* The results are the panel's own scroll region. A wide table scrolls horizontally here without
        moving the query box, and long results scroll vertically under a sticky header. The answer
-       keeps at least six rows (agni issue 1540). Before, the query box kept its height and left the
-       answer a strip of about four rows on a laptop. */
-    .query-results { flex: 1 1 0; min-height: 150px; overflow: auto; }
+       keeps about half the panel, and at least five rows (agni issue 1540). Before, the query box
+       kept its height and left the answer a strip of two to four rows on a laptop. */
+    .query-results { flex: 1 1 0; min-height: max(120px, 48%); overflow: auto; }
     /* fixed layout is what makes the columns equal by default and a dragged width stick. Under the
        old auto layout the browser sized each column to its widest cell, so one long provenance
        string or net name ate the panel and the rest were slivers. */
