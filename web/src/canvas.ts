@@ -6,6 +6,7 @@ import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
+  boardNetAlpha,
   frameFloor,
   frameStroke,
   frameStrokeAlpha,
@@ -363,6 +364,13 @@ export class CanvasComponent extends BaseComponent {
         draws.push({ color, primitives: g.primitives });
         continue;
       }
+      // On the board a net repaints its own copper (agni issue 1543), since the path marker is about
+      // as wide as a track and disappears into it.
+      const repaint = boardNetDraws(sheet, g, fallback);
+      if (repaint) {
+        draws.push(...repaint);
+        continue;
+      }
       const tris: number[] = [];
       if (g.shape === HighlightShape.PATH) {
         const w = pathHalfWidth * g.strokeScale; // user width scale (WS9-044)
@@ -622,6 +630,29 @@ function askedSubjects(spec: HighlightSpec): Pick<HighlightSpec, "components" | 
 // ghostOverlays tessellates a ghost sheet's matches for specs into overlay triangles in the drawn
 // sheet's frame, the two sheets lined up by their origins. A line becomes quads halfWidth to either
 // side, a fill keeps its triangles, and a point becomes a small disc.
+// boardNetDraws repaints a net lit on the board in its highlight colour (agni issue 1543): its
+// tracks, pads and vias at boardNetAlpha, and its pours at their own wash times that, so a lit ground
+// tints the plane rather than covering the board. It answers null for anything but a net's PATH on
+// the board sheet, which keeps its marker. core/render.HighlightBoardSVG draws the SVG board the same
+// way.
+export function boardNetDraws(
+  sheet: DecodedSheet,
+  g: { shape: HighlightShape; color: string; alpha: number; primitives: Set<number> },
+  fallback: ReturnType<typeof hexToRgba>,
+): { color: ReturnType<typeof hexToRgba>; primitives: Set<number> }[] | null {
+  if (sheet.sheetId !== "board" || g.shape !== HighlightShape.PATH) return null;
+  const alpha = boardNetAlpha(g.alpha);
+  const byAlpha = new Map<number, Set<number>>();
+  for (const p of g.primitives) {
+    const wash = sheet.groupAlphas?.[sheet.primitives[p]?.group ?? 0] || 1;
+    const a = alpha * wash;
+    const set = byAlpha.get(a) ?? new Set<number>();
+    set.add(p);
+    byAlpha.set(a, set);
+  }
+  return [...byAlpha].map(([a, primitives]) => ({ color: hexToRgba(g.color, fallback, a), primitives }));
+}
+
 export function ghostOverlays(
   ghost: DecodedSheet,
   specs: HighlightSpec[],

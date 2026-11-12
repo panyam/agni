@@ -34,6 +34,13 @@ func highlightPathAlpha(a float32) float64 {
 	return float64(a)
 }
 
+// boardNetAlpha is the opacity a net lit on the board repaints its copper at, twinned with
+// web/src/highlights.ts boardNetAlpha (agni issue 1543). The default path alpha of 0.4 gives opaque
+// copper, and a fainter alpha fades it in proportion.
+func boardNetAlpha(a float32) float64 {
+	return math.Min(1, highlightPathAlpha(a)/0.4)
+}
+
 // highlightColor normalizes a spec color, defaulting an empty one.
 func highlightColor(c string) string {
 	if c == "" {

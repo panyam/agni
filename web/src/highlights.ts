@@ -290,6 +290,14 @@ export function frameStrokeAlpha(fill: number): number {
   return Math.min(1, fill / 0.3);
 }
 
+// boardNetAlpha is the opacity a net lit on the board repaints its copper at, for a normalized path
+// alpha, twinned with render.boardNetAlpha (agni issue 1543). The viewer's default path alpha of 0.4
+// gives opaque copper, since a translucent track over a track of the same width cannot be seen, and
+// a reader who asks for a fainter highlight still gets one.
+export function boardNetAlpha(path: number): number {
+  return Math.min(1, path / 0.4);
+}
+
 // rectRing tessellates a stroke of the given width centred on a frame's padded bbox, as four
 // quads, so the GL overlay draws the opaque outline an SVG stroke draws.
 export function rectRing(f: EntityFrame, width: number): number[] {
