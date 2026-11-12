@@ -15,8 +15,6 @@ part it fired on and locates it on the schematic.
 design on the page, or open one of the example boards. The engine runs in the page as WebAssembly,
 so your design is never uploaded.
 
-![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
-
 **[Watch a 33-second walkthrough](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)** on Antmicro's open-source Jetson AGX Thor baseboard. It
 finds a resistor by name, and the schematic and the board beside it both go to it. Then a click on a
 test point on the board takes the schematic to that point's page. `make demo-video
