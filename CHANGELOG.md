@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.13] - 2026-11-12
+
+agni compares two real revisions of Antmicro's Jetson baseboard, revs 1.1.2 and 1.1.3 against
+rev 1.1.0, and reads KiCad 10 schematics, whose bus aliases and hidden fields moved (PRs 1561, 1563
+and 1564). A comparison opens with the Changes list beside the drawings, and a net clicked there goes
+to a sheet that draws it. `make demo-video JOURNEY=compare-revisions` records a walk through one
+change of each kind. It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.13.md](RELEASES/v0.6.13.md).
+
 ## [0.6.12] - 2026-11-12
 
 The last tickets of the demo mission (issue 1442). The viewer's dock moves onto goapplib's
