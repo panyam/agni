@@ -181,11 +181,11 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/tsappkit':
-        specifier: ^0.7.7
-        version: 0.7.7
+        specifier: ^0.7.11
+        version: 0.7.11
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.7
-        version: 0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.18)
+        specifier: ^0.7.11
+        version: 0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -236,14 +236,17 @@ importers:
         specifier: 0.8.21
         version: 0.8.21
       '@panyam/tsappkit':
-        specifier: ^0.7.7
-        version: 0.7.7
+        specifier: ^0.7.11
+        version: 0.7.11
+      '@panyam/tsappkit-dock':
+        specifier: ^0.7.11
+        version: 0.7.11(dockview-core@7.0.4)
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.7
-        version: 0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.18)
+        specifier: ^0.7.11
+        version: 0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)
       dockview-core:
-        specifier: ^1.17.2
-        version: 1.17.2
+        specifier: ^7.0.4
+        version: 7.0.4
       marked:
         specifier: ^18.0.6
         version: 18.0.6
@@ -780,14 +783,19 @@ packages:
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
     engines: {node: '>=16.0.0'}
 
-  '@panyam/tsappkit-solid@0.7.7':
-    resolution: {integrity: sha512-NZyVpLu9D30xd1lvju6iYT1PjhxAqzoojZfwll6NPL92shmEjknEKkj97pln3wf1aMVZ8Gq3Tsf8PmhRI2unKQ==}
+  '@panyam/tsappkit-dock@0.7.11':
+    resolution: {integrity: sha512-wJ/9PSaQoRTBArhP9DCqDp83Hgmp6ruXp4XLXZ8llHT+TKETjvlPVjYXpooCC0/OJQepWSH0a0i7rTQ2EDp5iA==}
+    peerDependencies:
+      dockview-core: '>=4.13.0 <9.0.0'
+
+  '@panyam/tsappkit-solid@0.7.11':
+    resolution: {integrity: sha512-Zta3jzClUm+oKBR7mkChZ0dj6X3kBQkUmvomzCCg85ZKSJ0uwdwWY3hByubBV4pGmphlCUfEt4aIOpwuoDwwzg==}
     peerDependencies:
       '@panyam/tsappkit': '>=0.0.5 <1.0.0'
       solid-js: ^1.9.0
 
-  '@panyam/tsappkit@0.7.7':
-    resolution: {integrity: sha512-RGEGE8IEdOW9YaojkXEWv3XcprPHOeMPgn3AaOIEQi13jawJFBw/cklc1UnTa9dBMtt2u3vhGobg12e+5sV85g==}
+  '@panyam/tsappkit@0.7.11':
+    resolution: {integrity: sha512-VDIc47FejXZfmsPxHWgrH0z6DiPxUorhUN1Z2EzyYy5H4ltZHpXxdMTiCfxsQxwRodZ0VxhT70gQq0+8z+LCuA==}
     peerDependencies:
       ace-builds: ^1.0.0
     peerDependenciesMeta:
@@ -1004,8 +1012,8 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  dockview-core@1.17.2:
-    resolution: {integrity: sha512-eHMVEo4ckOc+ieFm5gSM/vE0niGojNQP/9z6l5JqGNqCcxWWnvu6PRTuTYIg5XCENpk1XIa/El/uIOOtTaafUw==}
+  dockview-core@7.0.4:
+    resolution: {integrity: sha512-AiIzD6ov153L/VuhqVBg5KD5oSAgJGH7L1xvzV/X+ghIEOTFfEQYEBGNd/ys+ZjQfdGRogHSeQ0v9JF/L6JrPg==}
 
   electron-to-chromium@1.5.472:
     resolution: {integrity: sha512-s4+nfT29b0FKpVKoaIxl2pWsoNcn7A/nMPSrxayw4T3BsmPeV2lF9Y06BsAQeMGhCTQ4nYJ5XST7jkqe4ZEqFw==}
@@ -1896,12 +1904,16 @@ snapshots:
 
   '@panyam/servicekit-client@0.2.0': {}
 
-  '@panyam/tsappkit-solid@0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.18)':
+  '@panyam/tsappkit-dock@0.7.11(dockview-core@7.0.4)':
     dependencies:
-      '@panyam/tsappkit': 0.7.7
+      dockview-core: 7.0.4
+
+  '@panyam/tsappkit-solid@0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)':
+    dependencies:
+      '@panyam/tsappkit': 0.7.11
       solid-js: 1.9.18
 
-  '@panyam/tsappkit@0.7.7': {}
+  '@panyam/tsappkit@0.7.11': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     optional: true
@@ -2062,7 +2074,7 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  dockview-core@1.17.2: {}
+  dockview-core@7.0.4: {}
 
   electron-to-chromium@1.5.472: {}
 
