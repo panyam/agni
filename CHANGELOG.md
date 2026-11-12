@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.12] - 2026-11-12
+
+The last tickets of the demo mission (issue 1442). The viewer's dock moves onto goapplib's
+`tsappkit-dock`, so Sheets, Checks and Review open as drawers and the drawing gets most of the window
+(PR 1555). ⌘/Ctrl+G shows Sheets and ⌘/Ctrl+Shift+F focuses the query box. The dock keeps its sizes
+across visits, and a drawer left open comes back closed (PR 1556). The README and the docsite's front
+page play the find-a-part walkthrough (PR 1554). It is a patch with no API changes. The full write-up
+is [RELEASES/v0.6.12.md](RELEASES/v0.6.12.md).
+
 ## [0.6.11] - 2026-11-12
 
 Most of the demo mission (issue 1442). On Jetson's board beside its schematic, a subject clicked in
