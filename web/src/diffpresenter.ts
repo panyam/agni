@@ -247,7 +247,9 @@ export class DiffPresenter {
 
   // selectItem focuses one changed item for the changes panel. The overlays emphasize only it
   // and the view reveals its location. When the current pair does not show the item, it first
-  // switches to the first pair that does. An item with no sheet entries (no geometry) keeps the
+  // switches to the first pair that does. A net that crosses sheets shows on the top sheet only
+  // through its sheet pins, so on the top pair (index 0) such a net goes to the first other pair
+  // that shows it (agni issue 1560). An item with no sheet entries (no geometry) keeps the
   // current pair. Clicking the focused item again clears the focus. An explicit
   // pair (a sheet-badge click) never toggles off, matching the findings panel's badges.
   async selectItem(id: string, pair?: number): Promise<void> {
@@ -255,9 +257,14 @@ export class DiffPresenter {
     const toggleOff = !item || (this.focusItem !== null && itemId(this.focusItem) === id && pair === undefined);
     this.focusItem = toggleOff ? null : item!;
     let target = pair ?? this.activePair;
-    if (!toggleOff && pair === undefined && !this.pairShowsItem(this.pairs[this.activePair], item!)) {
-      const i = this.pairs.findIndex((p) => this.pairShowsItem(p, item!));
-      if (i >= 0) target = i;
+    if (!toggleOff && pair === undefined) {
+      const shown = (p: SheetPair) => this.pairShowsItem(p, item!);
+      const onTop = item!.kind === "net" && this.activePair === 0 && this.pairs.some((p, i) => i > 0 && shown(p));
+      if (onTop) target = this.pairs.findIndex((p, i) => i > 0 && shown(p));
+      else if (!shown(this.pairs[this.activePair])) {
+        const i = this.pairs.findIndex(shown);
+        if (i >= 0) target = i;
+      }
     }
     const pairChanged = target !== this.activePair && target >= 0 && target < this.pairs.length;
     if (pairChanged) this.activePair = target;
