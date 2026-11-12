@@ -6,3 +6,5 @@ designs/jetson-rev-b/*
 !designs/jetson-rev-b/design.yaml
 designs/jetson-1.1.2/*
 !designs/jetson-1.1.2/design.yaml
+designs/jetson-1.1.3/*
+!designs/jetson-1.1.3/design.yaml

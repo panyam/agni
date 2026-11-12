@@ -1,0 +1,37 @@
+# Rev 1.1.3 of Antmicro's Jetson baseboard, its current revision and the first saved by KiCad 10
+# (agni issues 1559 and 1560). The KiCad files beside it are Antmicro's, copied in by `make revision` from the
+# samples corpus's `revisions` tarball. This descriptor matches rev 1.1.0's, so the two revisions are
+# read the same way and a diff shows only what Antmicro changed.
+name: jetson-agx-thor-baseboard-1.1.3
+title: Jetson AGX Thor baseboard, rev 1.1.3
+extends: ../../project.yaml
+entry: jetson-agx-thor-baseboard.kicad_sch
+companions:
+  - jetson-agx-thor-baseboard.kicad_pcb
+
+# Every connector is a way into the board unless declared otherwise, which is right for a cable
+# entry and wrong for a module socket. These are the ones that join this board to another part of
+# the same product. The USB-C ports, the SFP cage, the power entry and the two JST-SH I2C ports are
+# left undeclared, because a user plugs cables into them.
+intent:
+  components:
+    J1:  {exposure: internal}   # Jetson AGX Thor module, board-to-board
+    J8:  {exposure: internal}   # FMC+ expansion power, mates with J18's accessory
+    J18: {exposure: internal}   # FMC+ expansion mezzanine
+    J13: {exposure: internal}   # M.2 key-M, NVMe card
+    J14: {exposure: internal}   # M.2 key-E, wireless card
+    J10: {exposure: internal}   # CSI camera FFC, cabled to a camera inside the product
+    J11: {exposure: internal}   # CSI camera FFC
+    J15: {exposure: internal}   # fan
+    J4:  {exposure: internal}   # Tag-Connect debug pads, used in manufacturing
+    J20: {exposure: internal}   # Tag-Connect debug pads
+
+  # The supplies the board makes, each in a named domain at one voltage. The standby domains stay up
+  # while the module sleeps, so a load placed on one by mistake keeps drawing in standby.
+  nets:
+    +5V:      {nominal: 5.0, domain: main}
+    +3V3:     {nominal: 3.3, domain: io}
+    +1V8:     {nominal: 1.8, domain: logic}
+    +5V_SOM:  {nominal: 5.0, domain: module}
+    +5V_AON:  {nominal: 5.0, domain: standby}
+    +3V3_AON: {nominal: 3.3, domain: standby-io}
