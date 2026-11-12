@@ -109,6 +109,10 @@ those revisions are compared side by side rather than overlaid. The comparison d
 renderer the canvas draws in, SVG or WebGL, so a large board compares at the speed it pans.
 [The web app](../../architecture/web-app/) page covers the visual diff in detail.
 
+A click on a change in the **Changes** list takes both drawings to a sheet that draws it. A net that
+runs between sheets shows on the top sheet only through its sheet pins, so from the top sheet the
+click goes to the first sheet below it that draws the net (agni issue 1560).
+
 While a comparison is open, the **Tables** panel offers it as a table, a row per change in the
 taxonomy above. `agni diff --format csv` writes the same rows. The engine lays them out (the
 `Tabulate` rpc) and the panel only shows them. Tick **near-renames** for `--rename-approx` and
