@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-11-12
+
+Most of the demo mission (issue 1442). On Jetson's board beside its schematic, a subject clicked in
+Query, Tables or Checks opens its sheet and glides to it (PRs 1544 and 1552), a lit net repaints its
+copper on the board (PR 1550), and a trace lights its route on the board too (PR 1553). The Trace
+panel offers only the end pins a trace can reach, and `agni trace --reachable` lists them (PR 1548).
+`make demo-video JOURNEY=find-a-part` records a demo journey as a 1080p mp4 (PR 1547). It is a
+patch, and `DesignService` gains a method. The full write-up is
+[RELEASES/v0.6.11.md](RELEASES/v0.6.11.md).
+
 ## [0.6.10] - 2026-11-11
 
 Both board-open reload targets pass (issue 1499). On Jetson a server reload draws in 306 ms and a
