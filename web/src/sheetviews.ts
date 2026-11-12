@@ -95,10 +95,11 @@ export class SheetViews {
   }
 
   // setUnderlay lights specs in every view under its selection, and in each view opened later (agni
-  // issue 1480). An empty list takes it away.
-  async setUnderlay(specs: HighlightSpec[]): Promise<void> {
+  // issue 1480). An empty list takes it away. reveal asks each following view to frame them, as a
+  // trace's route is framed (agni issue 1551).
+  async setUnderlay(specs: HighlightSpec[], reveal = false): Promise<void> {
     this.underlay = specs;
-    await Promise.all([...this.panes.values()].map((p) => p.setUnderlay(specs)));
+    await Promise.all([...this.panes.values()].map((p) => p.setUnderlay(specs, reveal)));
   }
 
   // close closes one view. It returns false when no open view has that id.

@@ -962,7 +962,7 @@ class AppRoot extends BaseComponent {
         coverage: coverage.view,
         trace: trace.view,
         walk: trace.view,
-        walkLit: (specs) => void sheetViews.setUnderlay(specs),
+        underlay: (specs, reveal) => void sheetViews.setUnderlay(specs, reveal),
         closeSheetViews: () => sheetViews.reset(),
         reveal: () => surface.reveal(),
         review: review.view,

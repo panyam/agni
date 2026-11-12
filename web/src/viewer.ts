@@ -194,11 +194,13 @@ export interface ViewSink {
   // walk receives each walk outwards from a part (agni issue 1341), shown in the Trace tab. Optional
   // like trace; runWalk no-ops when the host left it out.
   walk?: WalkView;
-  // walkLit hears the walk's shades whenever the walk changes, so the sheet views beside the canvas
-  // light it too (agni issue 1480). An empty list says no walk is lit.
-  walkLit?: (specs: HighlightSpec[]) => void;
+  // underlay hears what the sheet views beside the canvas light under their own selection: a walk's
+  // shades (agni issue 1480) or a trace's route (agni issue 1551), whichever ran last. An empty list
+  // says nothing is lit. reveal asks a following view to frame it, which a trace does and a walk
+  // does not.
+  underlay?: (specs: HighlightSpec[], reveal?: boolean) => void;
   // closeSheetViews closes every sheet view beside the canvas when another design opens, since each
-  // view names a sheet of the design it was opened on (agni issue 1425). Optional like walkLit.
+  // view names a sheet of the design it was opened on (agni issue 1425). Optional like underlay.
   closeSheetViews?: () => void;
   // reveal zooms the canvas to the highlight on screen, as the host does after a locate. runWalk calls
   // it with the start alone lit, so the view zooms to the start before the walk is drawn around it.
@@ -1872,7 +1874,10 @@ export class ViewerPresenter {
     this.tracedHops = hops;
     this.syncLocation();
     const subjects = traceSubjects(state);
-    if (subjects.length === 0) return;
+    if (subjects.length === 0) {
+      this.views.underlay?.([], false);
+      return;
+    }
     if (this.mode === "native") await this.setMode("svg");
     // Go to a sheet the answer is ON, the way selectFinding does, or a cold link draws on the
     // design's first sheet, which on an 82-sheet export is a table of contents with no wires (agni
@@ -1883,6 +1888,8 @@ export class ViewerPresenter {
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
     this.lastFocus = focus;
     await this.setHighlights(focusStack(this.field(), subjects, focus));
+    // The sheet views light the route too, and a following one frames it (agni issue 1551).
+    this.views.underlay?.(focus, true);
   }
 
   // reachFrom asks what a trace from one pin reaches within hops crossings, for the Trace panel's end
@@ -1944,7 +1951,7 @@ export class ViewerPresenter {
     this.walkState = state;
     this.walked = req;
     this.syncLocation();
-    this.views.walkLit?.(walkSpecs(state));
+    this.views.underlay?.(walkSpecs(state));
     this.views.showPanel?.("trace");
     if (state.reason) return;
     if (this.mode === "native") await this.setMode("svg");
@@ -1975,7 +1982,7 @@ export class ViewerPresenter {
     this.walkState = emptyWalk();
     this.views.walk?.setWalk(emptyWalk());
     this.syncLocation();
-    this.views.walkLit?.([]);
+    this.views.underlay?.([]);
     await this.setHighlights([]);
   }
 

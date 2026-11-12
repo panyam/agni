@@ -78,6 +78,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
   const onTrace = vi.fn();
+  const underlay = vi.fn();
   const presenter = new ViewerPresenter(client, checks, canvas, render, {
     sheetNavs: [],
     summary: vi.fn(),
@@ -92,9 +93,10 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     report: vi.fn(),
     query: stubQueryView(),
     trace: wireTrace ? { setState: onTrace } : undefined,
+    underlay,
     location: opts.onLocation,
   }, undefined, undefined, undefined, undefined, fakeSnapshots());
-  return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet, reachablePins: client.reachablePins };
+  return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet, reachablePins: client.reachablePins, underlay };
 }
 
 function lastState(onTrace: ReturnType<typeof vi.fn>): TraceState {
@@ -285,5 +287,29 @@ describe("reach presenter", () => {
     expect((await h.presenter.reachFrom("U99.1", 6))?.reason).toBe("no component U99 in this design");
     expect(await h.presenter.reachFrom("U1", 6)).toBeNull();
     expect(h.reachablePins).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A trace lights its route on the sheet views beside the canvas too, and a following view frames it
+// (agni issue 1551). Before, only the canvas lit it.
+describe("trace on the sheet views", () => {
+  it("hands the views the route the canvas lights, to frame", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runTrace("U1.3", "J1.1");
+    expect(h.underlay).toHaveBeenCalledTimes(1);
+    const [specs, reveal] = h.underlay.mock.calls[0] as [{ nets?: string[]; components?: string[] }[], boolean];
+    expect(reveal).toBe(true);
+    expect(specs.flatMap((s) => s.nets ?? []).sort()).toEqual(["SDA", "VCC"]);
+    expect(specs.flatMap((s) => s.components ?? [])).toEqual(["R1"]);
+  });
+
+  it("leaves the views as they were when the next trace fails, as the canvas is left", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runTrace("U1.3", "J1.1");
+    h.traceDesign.mockRejectedValueOnce(new Error("the server went away"));
+    await h.presenter.runTrace("U1.3", "J1.2");
+    expect(h.underlay).toHaveBeenCalledTimes(1);
   });
 });

@@ -560,6 +560,33 @@ describe("a sheet view in WebGL", () => {
     expect(calls).toContain("reveal U1.3");
   });
 
+  // A trace lights its route in every view beside the canvas, and a following view frames it (agni
+  // issue 1551). A view whose link is off lights it where it is and doesn't move.
+  it("frames an underlay it is asked to reveal while it follows, and only lights it when its link is off", async () => {
+    const route = { nets: ["SDA"], components: ["R1"] } as unknown as HighlightSpec;
+    const { gl, calls } = fakeGl();
+    const { p } = glPane(gl);
+    await p.open("board");
+    await p.setUnderlay([route], true);
+    expect(gl.specs).toEqual([route]);
+    expect(calls.filter((c) => c.startsWith("reveal"))).toEqual(["reveal "]);
+
+    const off = fakeGl();
+    const { p: still } = glPane(off.gl);
+    await still.open("board");
+    still.link = "off";
+    await still.setUnderlay([route], true);
+    expect(off.gl.specs).toEqual([route]);
+    expect(off.calls.filter((c) => c.startsWith("reveal"))).toEqual([]);
+
+    // A walk's shades light the view and leave it where it is, as before.
+    const walk = fakeGl();
+    const { p: walked } = glPane(walk.gl);
+    await walked.open("board");
+    await walked.setUnderlay([route]);
+    expect(walk.calls.filter((c) => c.startsWith("reveal"))).toEqual([]);
+  });
+
   it("draws in SVG where the browser has no WebGL2, and says so", async () => {
     const { p, asked } = glPane(null);
     await p.open("s1");

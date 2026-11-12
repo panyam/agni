@@ -67,10 +67,14 @@ panel from the ones above.
   nothing of the selection and says "C7 is not on the board" in its bar. The canvas does the same
   when it shows the board, through the `#board-absent-note` strip.
 - **A walk lights every view** (agni issue 1480). The presenter hands the walk's shades to
-  `SheetViews.setUnderlay` through `ViewSink.walkLit`, and each view lights them under its selection.
+  `SheetViews.setUnderlay` through `ViewSink.underlay`, and each view lights them under its selection.
   A walk row selects its net or part as a query cell does, so a board view centres on it. The pane
   fetches the underlay and the selection as two overlay documents, and its reveal frames the last one
   alone, so a click on one part does not zoom out to the whole walk.
+- **A trace lights every view too** (agni issue 1551). `runTrace` hands the views the route it lit on
+  the canvas through the same `underlay`, and asks them to reveal it, so a view that follows glides to
+  frame the route and a view whose link is off lights it where it is. A walk doesn't ask, since it
+  widens hop by hop. Whichever of the two ran last owns the underlay.
 - **A view's link** is `follow`, `locked` or `off`. Locked views on the SAME sheet mirror pan and zoom.
   Two sheets have different frames, so the schematic and the board never share a camera. A WebGL view
   and an SVG view measure their centres in different units, so they do not lock either.
