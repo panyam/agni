@@ -17,6 +17,13 @@ so your design is never uploaded.
 
 ![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
 
+**[Watch a 33-second walkthrough](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)** on Antmicro's open-source Jetson AGX Thor baseboard. It
+finds a resistor by name, and the schematic and the board beside it both go to it. Then a click on a
+test point on the board takes the schematic to that point's page. `make demo-video
+JOURNEY=find-a-part` records it.
+
+[![Find a part on the board: R361 framed on its schematic page, with its footprint centred on the board beside it](docsite/static/images/demo-find-a-part.jpg)](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)
+
 ## What does it do
 
 - **Runs ERC/DRC-like structural checks.** They catch missing I2C pull-ups, unprotected
