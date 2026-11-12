@@ -24,6 +24,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, viewportFor } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { table, type Row } from "./exercise-report.js";
 import { act, busy, intro, lastEvent, pause, pressedAt, stepByStep, tourAct } from "./walkguide.js";
 
@@ -109,6 +110,7 @@ async function lit(page: Page, what: string): Promise<string> {
 }
 
 async function runChecklist(page: Page, name: string): Promise<string> {
+  await showPanel(page, "review");
   await act(page, () => page.selectOption("select.rv-checklist", { label: name }));
   await act(page, () => page.click("button.rv-run"));
   return checklistRan(page);
@@ -216,6 +218,7 @@ describe("the browser-review walk", () => {
       await step("open", async () => {
         await act(page, () => page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg&tour=review&tourpace=host`, { waitUntil: "networkidle" }));
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
+        await showPanel(page, "checks");
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {
           timeout: 60_000,
         });
@@ -224,6 +227,7 @@ describe("the browser-review walk", () => {
 
       let checklists: string[] = [];
       await step("checklist picker", async () => {
+        await showPanel(page, "review");
         await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
         const picker = (await page.$$eval("select.rv-checklist option[value]", (os) =>
           os.map((o) => o.textContent?.trim() ?? "").filter((t) => t !== ""),
@@ -243,6 +247,7 @@ describe("the browser-review walk", () => {
         "run checklist",
         async () => {
           await tourAct(page, "run-checklist", async () => {
+            await showPanel(page, "review");
             await page.selectOption("select.rv-checklist", { label: checklists[0] });
             await page.click("button.rv-run");
           });
@@ -256,6 +261,7 @@ describe("the browser-review walk", () => {
       }
 
       await step("run checks", async () => {
+        await showPanel(page, "checks");
         await tourAct(page, "run-checks", () => page.click(".checks-run"));
         await page.waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, {
           timeout: 120_000,
@@ -268,6 +274,7 @@ describe("the browser-review walk", () => {
       }, { tour: "run-checks" });
 
       await step("click a finding", async () => {
+        await showPanel(page, "checks");
         await tourAct(page, "click-finding", () => page.locator(".check-locate").first().click());
         const f = await lastEvent<{ rule: string; subject: string }>(page, "finding.selected");
         return `${f ? `${f.rule} ${f.subject}` : "a finding"}: ${await lit(page, "the finding")}`;

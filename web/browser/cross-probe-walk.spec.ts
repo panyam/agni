@@ -34,6 +34,7 @@ import type { Browser, Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { launch, viewportFor } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, extent, lit, openBeside, picked, zoomTo } from "./picks.js";
 
@@ -241,9 +242,10 @@ async function inReach(page: Page, panel: string, items: string): Promise<string
 
 // tile clicks a Sheets tile by its exact name, which puts that sheet on the canvas.
 async function tile(page: Page, name: string): Promise<void> {
+  await showPanel(page, "overview");
   const tiles = page.locator(".sheet-tile");
   for (let i = 0; i < (await tiles.count()); i++) {
-    if ((await tiles.nth(i).locator(".sheet-tile-name").innerText()).trim() === name) {
+    if (((await tiles.nth(i).locator(".sheet-tile-name").textContent()) ?? "").trim() === name) {
       await tiles.nth(i).click();
       await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, name, { timeout: 30_000 });
       return;
@@ -305,7 +307,7 @@ for (const name of chosen) {
           await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
           for (const title of [`/${part.sheet}`, `/${footprint.sheet}`, "board"]) {
-            await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ timeout: 30_000 });
+            await page.locator(`#sheet-overview .sheet-tile[title="${title}"]`).waitFor({ state: "attached", timeout: 30_000 });
           }
           return `${await page.locator("#sheet-overview .sheet-tile").count()} sheets listed, ${part.sheet}, ${footprint.sheet} and the board among them`;
         });
@@ -386,7 +388,7 @@ for (const name of chosen) {
           await picked(page, net);
           await page.waitForFunction((n) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === n, part.sheet, { timeout: 30_000 })
             .catch(async () => {
-              throw new Error(`the canvas stayed on ${(await page.locator(".sheet-tile.active .sheet-tile-name").innerText()).trim()}, which does not draw ${net}`);
+              throw new Error(`the canvas stayed on ${((await page.locator(".sheet-tile.active .sheet-tile-name").textContent()) ?? "").trim()}, which does not draw ${net}`);
             });
           await lit(page, SHEET);
           const wires = await page.locator(`${SHEET} [data-kind="net"][data-net="${net}"]`).count();

@@ -9,6 +9,7 @@ import type { Browser, Page } from "playwright-core";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 import { storedZip, walk } from "./storedzip.js";
 
 // The design's summary line, which Properties shows at the design level (agni issue 902). It names
@@ -37,9 +38,12 @@ function record(page: Page): { network: string[]; errors: string[] } {
 }
 
 async function runChecks(page: Page): Promise<string[]> {
+  await showPanel(page, "checks");
   await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
-  return page.locator(".check-locate").allTextContents();
+  const rows = await page.locator(".check-locate").allTextContents();
+  await hideDrawers(page);
+  return rows;
 }
 
 describe("dropping files on the Load page", () => {

@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { agniBin } from "./agnibin.js";
+import { showPanel } from "./panels.js";
 
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const board = "tools/samples/boards/mnt-reform-motherboard30";
@@ -49,7 +50,7 @@ describe("the Lexicon panel", () => {
     expect(want.finding_changes.length).toBeGreaterThan(0);
     await withPage(browser, async (page) => {
       await page.goto(`${inject("baseUrl")}${view}`, { waitUntil: "domcontentloaded" });
-      await page.locator(".dv-default-tab-content", { hasText: /^Lexicon$/ }).first().click({ timeout: 120_000 });
+      await showPanel(page, "lexicon");
       const rail = page.locator('.lex-group[data-vocabulary="net.rail"]');
       await rail.locator("summary").click({ timeout: 120_000 });
       await page.fill('[aria-label="convention name"]', "exercise-naming");

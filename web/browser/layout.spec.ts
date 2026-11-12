@@ -19,7 +19,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
-import { growQueryPanel } from "./panels.js";
+import { growQueryPanel, showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -261,6 +261,7 @@ describe("highlight layers", () => {
       await page.check(".highlight-show-all");
       await page.click(".highlight-btn");
 
+      await showPanel(page, "checks");
       await page.click(".checks-run");
       // This design raises 12 findings across two rules, so there is a field for a focus to sit in.
       // With one finding the base would be empty and the test would pass on a single layer.
@@ -310,6 +311,7 @@ describe("the run-wide field", () => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
       await page.uncheck(".render-webgl");
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
+      await showPanel(page, "checks");
       await page.click(".checks-run");
       await page.waitForSelector(".check-locate", { timeout: 30_000 });
       expect(await page.locator(".check-locate").count()).toBeGreaterThan(1);
@@ -494,6 +496,7 @@ describe("the checks table's severity marks", () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "conformance", "reverse-blocking.undecided.kicad_sch");
       await page.getByText("Checks", { exact: true }).first().click();
+      await showPanel(page, "checks");
       await page.click(".checks-run");
       await page.waitForSelector(".check-row", { timeout: 60_000 });
 
@@ -654,6 +657,7 @@ describe("Review", () => {
   it("runs a checklist and saves it as the checklist page", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");
+      await showPanel(page, "review");
       await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
       await page.selectOption("select.rv-checklist", { label: "review" });
       await page.click("button.rv-run");
@@ -682,6 +686,7 @@ describe("Review", () => {
   it("opens a query item's finding onto how it holds", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");
+      await showPanel(page, "review");
       await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
       await page.selectOption("select.rv-checklist", { label: "house" });
       await page.click("button.rv-run");
@@ -722,15 +727,15 @@ describe("a query link", () => {
   // inFront reports whether a dock tab is the one its group shows.
   const inFront = (page: Page, title: string) =>
     page.evaluate((t) => {
-      const tab = Array.from(document.querySelectorAll(".tab")).find((e) => e.textContent?.trim() === t);
-      return !!tab?.classList.contains("active-tab");
+      const tab = Array.from(document.querySelectorAll(".dv-tab")).find((e) => e.textContent?.trim() === t);
+      return !!tab?.classList.contains("dv-active-tab");
     }, title);
   // traceInFront leaves the reader's saved layout with Trace in front of Query, as a reader who last
   // traced a pin has it. The reload is the positive control. Without it the test could pass on a
   // layout that never kept the choice.
   const traceInFront = async (page: Page) => {
     await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
-    await page.locator(".tab", { hasText: "Trace" }).click();
+    await page.locator(".dv-tab", { hasText: "Trace" }).click();
     await page.reload({ waitUntil: "networkidle" });
     await page.waitForSelector(".query textarea.query-text", { state: "attached", timeout: 30_000 });
     await expect.poll(() => inFront(page, "Trace"), { timeout: 10_000 }).toBe(true);
@@ -758,7 +763,8 @@ describe("a query link", () => {
       expect(await page.locator(".query-row").count()).toBe(4);
       await expect.poll(() => page.locator(".query-locate-note").innerText(), { timeout: 10_000 }).toContain("the 4 rows below");
       expect(await page.locator(".query-locate.on").count()).toBe(0);
-      expect((await paintedAt(page, ".query-locate-note")).ownedByProbe, "the note is on screen, not behind another panel").toBe(true);
+      const note = await paintedAt(page, ".query-locate-note");
+      expect(note.ownedByProbe, `the note is on screen, not behind another panel (painted: ${note.painted})`).toBe(true);
     });
   }, 90_000);
 });
@@ -781,9 +787,31 @@ describe("the default dock", () => {
     });
   }, 90_000);
 
+  // agni issue 1549. A design folder's URL boots the viewer, saves its dock, and redirects back to
+  // itself. Sizes that waited on a timer missed that save, so the reload restored a half-height
+  // query strip and a half-width rail.
+  it("sizes the rail and the query strip on a first visit that redirects", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      const sizes = await page.evaluate(() => {
+        const group = (title: string) =>
+          Array.from(document.querySelectorAll(".dv-tab"))
+            .find((t) => t.textContent?.trim() === title)
+            ?.closest(".dv-groupview")
+            ?.getBoundingClientRect();
+        return { rail: Math.round(group("Properties")?.width ?? 0), query: Math.round(group("Query")?.height ?? 0) };
+      });
+      expect(sizes.rail, "the Properties rail's width").toBeGreaterThan(240);
+      expect(sizes.rail).toBeLessThan(300);
+      expect(sizes.query, "the query strip's height").toBeGreaterThan(290);
+      expect(sizes.query).toBeLessThan(340);
+    });
+  }, 90_000);
+
   it("keeps every checks-table header on one line", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");
+      await showPanel(page, "checks");
       await page.click(".checks-run");
       await page.waitForSelector(".check-row", { timeout: 60_000 });
       const lines = await page.$$eval(".checks-table th", (ths) =>
@@ -809,23 +837,23 @@ describe("the default dock", () => {
       await openViewer(page, "tut", "designs/gateway");
       const queryHeight = () =>
         page.evaluate(() => {
-          const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.trim().startsWith("Query"));
-          return Math.round(tab?.closest(".groupview")?.getBoundingClientRect().height ?? 0);
+          const tab = Array.from(document.querySelectorAll(".dv-tab")).find((t) => t.textContent?.trim().startsWith("Query"));
+          return Math.round(tab?.closest(".dv-groupview")?.getBoundingClientRect().height ?? 0);
         });
-      const hasTab = (title: string) => page.locator(".tab", { hasText: title }).count();
+      const hasTab = (title: string) => page.locator(".dv-tab", { hasText: title }).count();
       const defaultHeight = await queryHeight();
 
       await page.fill("textarea.query-text", "component.class(?c, \"resistor\") => ?c");
-      const rules = page.locator(".tab", { hasText: "Rules" });
-      await rules.hover();
-      await rules.locator(".dv-default-tab-action").click();
-      await expect.poll(() => hasTab("Rules")).toBe(0);
+      const tables = page.locator(".dv-tab", { hasText: "Tables" });
+      await tables.hover();
+      await tables.locator(".dv-default-tab-action").click();
+      await expect.poll(() => hasTab("Tables")).toBe(0);
       await growQueryPanel(page);
       expect(await queryHeight(), "the drag made the query panel taller").toBeGreaterThan(defaultHeight + 100);
 
-      await page.click(".panels-btn");
-      await page.click(".panels-reset");
-      await expect.poll(() => hasTab("Rules")).toBe(1);
+      await page.click(".dock-panels-btn");
+      await page.click(".dock-panels-reset");
+      await expect.poll(() => hasTab("Tables")).toBe(1);
       // Within a few pixels. At boot the dock is resized once more after the layout applies (the
       // header settles), and dockview shares that out. So the boot height comes out a little under
       // the 320px asked for.
@@ -835,7 +863,7 @@ describe("the default dock", () => {
       // The browser now keeps the default, so a reload opens it rather than the old arrangement.
       await page.reload({ waitUntil: "networkidle" });
       await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
-      await expect.poll(() => hasTab("Rules")).toBe(1);
+      await expect.poll(() => hasTab("Tables")).toBe(1);
       await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
     });
   }, 90_000);
@@ -875,17 +903,17 @@ describe("the default dock", () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base()}/designs/tut/designs/gateway/gateway.edn/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
-      const tab = page.locator(".tab", { hasText: "Changes" });
+      const tab = page.locator(".dv-tab", { hasText: "Changes" });
       await tab.hover();
       await tab.locator(".dv-default-tab-action").click();
-      await expect.poll(() => page.locator(".tab", { hasText: "Changes" }).count()).toBe(0);
+      await expect.poll(() => page.locator(".dv-tab", { hasText: "Changes" }).count()).toBe(0);
       await page.click("#compare button");
       await page.locator("#compare-tree").getByText("gateway-rev-c.edn").click();
-      await page.locator(".tab", { hasText: "Changes" }).waitFor({ timeout: 30_000 });
+      await page.locator(".dv-tab", { hasText: "Changes" }).waitFor({ timeout: 30_000 });
       await page.waitForTimeout(500);
       const width = await page.evaluate(() => {
-        const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.includes("Changes"));
-        return tab?.closest(".groupview")?.getBoundingClientRect().width ?? 0;
+        const tab = Array.from(document.querySelectorAll(".dv-tab")).find((t) => t.textContent?.includes("Changes"));
+        return tab?.closest(".dv-groupview")?.getBoundingClientRect().width ?? 0;
       });
       expect(width, "the Changes column's width").toBeGreaterThan(220);
       expect(width).toBeLessThan(300);
@@ -901,7 +929,7 @@ describe("the top bar's menu buttons", () => {
       await page.setViewportSize({ width: 700, height: 900 });
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
       const heights = await page.evaluate(() =>
-        [".panels-btn", ".highlight-btn", ".clear-highlights"].map((sel) => {
+        [".dock-panels-btn", ".highlight-btn", ".clear-highlights"].map((sel) => {
           const b = document.querySelector<HTMLElement>(sel);
           return { sel, h: b ? b.getBoundingClientRect().height : -1 };
         }),
@@ -975,6 +1003,7 @@ describe("a rule group's docs link", () => {
   it("sits beside the group's count, on the same line", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "tut", "designs/gateway");
+      await showPanel(page, "checks");
       await page.click(".checks-run:not([disabled])", { timeout: 30_000 });
       await page.waitForSelector("tr.check-row", { timeout: 60_000 });
       await page.selectOption(".checks-groupby select", "rule");
@@ -998,6 +1027,7 @@ describe("the Sheets dock on a hierarchical design", () => {
   it("nests each sheet under its parent and tells two sheets named 1 apart", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_numeric_root.kicad_sch");
+      await showPanel(page, "overview");
       await page.waitForFunction(() => document.querySelectorAll(".sheet-tile-name").length === 5, null, { timeout: 30_000 });
       const rows = await page.evaluate(() =>
         [...document.querySelectorAll(".sheet-tile-name")].map((n) => ({ name: n.textContent, left: Math.round(n.getBoundingClientRect().left) })),

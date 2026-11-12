@@ -5,6 +5,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 import type { DrawReport } from "../src/drawprofile.js";
 
 const base = (): string => inject("baseUrl");
@@ -45,7 +46,7 @@ describe("?timing's draw profile", () => {
       await withPage(browser, async (page) => {
         const lines = drawLines(page);
         await page.goto(`${base()}/designs/${DESIGN}/view?mode=${mode}&timing`, { waitUntil: "networkidle" });
-        await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+        await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
         await expect.poll(() => lines.length, { timeout: 30_000 }).toBeGreaterThan(0);
         expect(lines[0]).toMatchObject({ renderer: mode, bursts: 0 });

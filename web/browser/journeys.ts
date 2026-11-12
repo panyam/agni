@@ -84,7 +84,7 @@ export interface Journey {
 
 const SHEET = "#svg-view";
 const BOARD = `${PANE} .sheetview-canvas`;
-const activeSheet = (page: Page) => page.locator(".sheet-tile.active .sheet-tile-name").innerText().then((t) => t.trim());
+const activeSheet = (page: Page) => page.locator(".sheet-tile.active .sheet-tile-name").textContent().then((t) => (t ?? "").trim());
 
 async function onSheet(page: Page, name: string): Promise<void> {
   await page
@@ -146,8 +146,9 @@ export const journeys: Journey[] = [
         },
       },
       {
-        caption: "Open the board beside it",
+        caption: "Open the board beside it from the Sheets drawer",
         run: async (r) => {
+          await r.press("Control+g");
           const row = r.page.locator(".sheet-tile-row", { has: r.page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
           const b = await row.locator(".sheet-tile-beside").boundingBox({ timeout: 30_000 });
           if (!b) throw new Error("the Sheets panel lists no Board");

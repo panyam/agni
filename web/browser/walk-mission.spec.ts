@@ -33,6 +33,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, viewportFor } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
 import { picked, zoomTo } from "./picks.js";
 
@@ -272,6 +273,7 @@ describe("the walk mission", () => {
       await step("open", {}, async () => {
         await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
         await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
+        await showPanel(page, "overview");
         await page.locator(`#sheet-overview .sheet-tile[title="/${walk.sheet}"]`).click({ timeout: 30_000 });
         await page.locator(`#svg-view [data-kind="component"][data-ref="${walk.start}"]`).first().waitFor({ state: "attached", timeout: 30_000 });
         return `${walk.sheet} drawn, with ${walk.start} on it`;

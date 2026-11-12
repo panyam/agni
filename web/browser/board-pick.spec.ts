@@ -8,6 +8,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 import { PANE, openBeside, pickPoint as clearPoint } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
@@ -46,7 +47,7 @@ describe("picking the board", () => {
   it("opens a board on its own as the board alone", async () => {
     await withPage(browser, async (page) => {
       await openBoard(page);
-      await page.waitForSelector(".sheet-tile", { timeout: 30_000 });
+      await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 30_000 });
       expect(await tileNames(page)).toEqual(["Board"]);
     });
   }, 60_000);
@@ -121,6 +122,7 @@ describe("picking the board", () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       // Exactly "Board", since gateway's schematic sheet is called "Sample Board".
+      await showPanel(page, "overview");
       await page.locator(".sheet-tile", { hasText: /^\s*Board\s*$/ }).first().click();
       await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
       // The first front part whose body has a point clear of its pads at fit zoom.
@@ -149,8 +151,10 @@ describe("picking the board", () => {
       const at = await clearPoint(page, back, "component");
       await clickAndRead(page, at, ref);
 
+      await showPanel(page, "overview");
       await page.locator(".board-layer-preset", { hasText: /^Front$/ }).click();
       await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length === 0, back, { timeout: 30_000 });
+      await hideDrawers(page);
       const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest(".picks-back") !== null, at);
       expect(hit).toBe(false);
     });
@@ -164,6 +168,7 @@ describe("hiding a board layer", () => {
     await withPage(browser, async (page) => {
       const track = '#svg-view .copper-inner[data-layer="In1.Cu"] g[data-kind="net"] > line';
       const open = async () => {
+        await showPanel(page, "overview");
         await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
         await page.waitForSelector('#svg-view [data-layer="In1.Cu"]', { state: "attached", timeout: 30_000 });
       };
@@ -174,8 +179,10 @@ describe("hiding a board layer", () => {
       // The positive control. Shown, the track picks its net.
       await clickAndRead(page, at, net);
 
+      await showPanel(page, "overview");
       await page.locator(".board-layer-row", { hasText: "In1.Cu" }).locator("input").click();
       await page.waitForFunction((sel) => document.querySelector(sel)!.getClientRects().length === 0, track, { timeout: 30_000 });
+      await hideDrawers(page);
       const reached = (p: { x: number; y: number }) =>
         page.evaluate(({ x, y }) => {
           const nets = [-5, 0, 5].flatMap((dx) => [-5, 0, 5].map((dy) => document.elementFromPoint(x + dx, y + dy)?.closest("[data-net]")?.getAttribute("data-net") ?? ""));
@@ -193,6 +200,7 @@ describe("hiding a board layer", () => {
 
       // A double-click shows one layer alone. The panel draws its rows again after the first click's
       // toggle, so this is a real double-click, not two calls on one element.
+      await showPanel(page, "overview");
       await page.locator(".board-layer-row", { hasText: "B.Cu" }).dblclick();
       await page.waitForFunction(() => document.querySelector('#svg-view [data-layer="F.Cu"]')!.getClientRects().length === 0, null, { timeout: 30_000 });
       const shown = await page.$$eval(".board-layer-row", (rs) => rs.filter((r) => (r.querySelector("input") as HTMLInputElement).checked).map((r) => r.textContent!.trim()));
@@ -214,6 +222,7 @@ describe("hiding a board layer", () => {
       const inner = (scope: string) => `${scope} .copper-inner[data-layer="In1.Cu"] g[data-kind="net"] > line`;
       const drawn = (sel: string) => page.$eval(sel, (el) => el.getClientRects().length > 0);
       await page.goto(`${base()}/designs/kicad/board_inner.kicad_pcb/view?mode=svg`, { waitUntil: "networkidle" });
+      await showPanel(page, "overview");
       await page.locator(".sheet-tile-name", { hasText: /^Board$/ }).click();
       await page.waitForSelector(inner("#svg-view"), { state: "attached", timeout: 30_000 });
       await openBeside(page, "Board");

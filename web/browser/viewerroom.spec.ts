@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { wsUrl } from "@panyam/mcpkit-rooms";
 import { launch } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { freePort, start, type Server } from "./childserver.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -114,7 +115,7 @@ const text = (r: CallResult): string => (r.content ?? []).map((c) => c.text ?? "
 async function openTab(design: string, agents: boolean): Promise<Page> {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   await page.goto(`${server.base}/designs/${design}/view?devpage`);
-  await page.locator(".sheet-tile-name").first().waitFor({ timeout: 60_000 });
+  await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 60_000 });
   // The switch shows once the tab is in its design's room.
   const box = page.locator("#agents-switch input[type=checkbox]");
   await box.waitFor({ state: "visible", timeout: 30_000 });
@@ -150,9 +151,11 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
 
     // A sheet id, read off A1 by hand, for the agent to open in A2.
     const rootTile = await activeTile(tabs.A1);
+    await showPanel(tabs.A1, "overview");
     await tabs.A1.locator(".sheet-tile", { hasText: "IO/1" }).click();
     await tabs.A1.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "IO/1", null, { timeout: 30_000 });
     const ioSheet = await tabs.A1.evaluate(() => (globalThis as unknown as { __agniViewerPage: { location(): { sheet: string } } }).__agniViewerPage.location().sheet);
+    await showPanel(tabs.A1, "overview");
     await tabs.A1.locator(".sheet-tile", { hasText: rootTile }).click();
     await tabs.A1.waitForFunction((t) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === t, rootTile, { timeout: 30_000 });
 

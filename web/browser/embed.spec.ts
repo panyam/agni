@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { freePort, start, type Server } from "./childserver.js";
 import { serveStatic, type StaticServer } from "./staticserver.js";
 
@@ -59,7 +60,7 @@ describe("a parent page on another origin", () => {
       const design = `${viewer.base}/designs/kicad/hier_numeric_root.kicad_sch/view`;
       await page.goto(`${parent.base}parent.html?viewer=${encodeURIComponent(design)}`);
       const frame = page.frameLocator("#viewer");
-      await frame.locator(".sheet-tile-name").nth(4).waitFor({ timeout: 60_000 });
+      await frame.locator(".sheet-tile-name").nth(4).waitFor({ state: "attached", timeout: 60_000 });
       const viewerFrame = page.frames().find((f) => f.url().startsWith(viewer.base));
       if (!viewerFrame) throw new Error("the viewer frame never loaded");
 
@@ -78,6 +79,7 @@ describe("a parent page on another origin", () => {
       expect(rootSheet).not.toBe("");
 
       // The reader moves the viewer by hand, and the parent reads the move.
+      await showPanel(viewerFrame, "overview");
       await frame.locator(".sheet-tile", { hasText: "IO/1" }).click();
       await viewerFrame.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "IO/1", null, { timeout: 30_000 });
       const moved = await call(page, "GetLocation");
@@ -128,7 +130,7 @@ describe("a check report beside the viewer", () => {
       const viewerUrl = `${viewerBase}/designs/kicad/${design}/view`;
       await page.goto(`${site.base}two-pane.html?viewer=${encodeURIComponent(viewerUrl)}&report=report.html`);
       const viewer = page.frameLocator("#viewer");
-      await viewer.locator(".sheet-tile-name").nth(4).waitFor({ timeout: 60_000 });
+      await viewer.locator(".sheet-tile-name").nth(4).waitFor({ state: "attached", timeout: 60_000 });
       const viewerFrame = page.frames().find((f) => f.name() === "agni-viewer");
       if (!viewerFrame) throw new Error("the viewer frame never loaded");
       await viewerFrame.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "Hier numeric root", null, { timeout: 30_000 });
