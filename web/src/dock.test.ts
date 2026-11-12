@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { DockviewApi } from "dockview-core";
-import { DRAWER_PANELS, LAYOUT_KEY, VIEWER_PANELS, createViewerDock, defaultLayout, queryHeight, type ViewerDock } from "./dock.js";
+import { DRAWER_PANELS, LAYOUT_KEY, VIEWER_PANELS, closeDiffPanel, createViewerDock, defaultLayout, openDiffPanel, queryHeight, type ViewerDock } from "./dock.js";
 
 // The dock is goapplib's tsappkit-dock (agni issue 1549), which tests its own restore, reconcile,
 // prune, reset and Panels menu. These cover what agni gives it: the registry and where each panel
@@ -171,6 +171,29 @@ describe("the viewer's dock", () => {
     expect(v.reveal("checks")).toBe(true);
     expect(toggled).not.toHaveBeenCalled();
     expect(v.reveal("no-such-panel")).toBe(false);
+  });
+
+  it("opens a comparison with Changes in a rail beside Diff, and tabs it back with Diff once closed", () => {
+    const { v } = boot();
+    const group = (id: string) => v.dock.api.getPanel(id)?.group;
+    expect(group("changes"), "the default layout tabs Changes with Diff").toBe(group("diff"));
+    openDiffPanel(v.dock);
+    expect(group("changes")).not.toBe(group("diff"));
+    expect(group("changes")?.panels.map((p) => p.id)).toEqual(["changes"]);
+    expect(group("diff")?.activePanel?.id).toBe("diff");
+    expect(group("changes")?.activePanel?.id).toBe("changes");
+    closeDiffPanel(v.dock);
+    expect(group("changes")).toBe(group("diff"));
+    expect(group("canvas")?.activePanel?.id).toBe("canvas");
+  });
+
+  it("leaves a Changes the reader moved where they put it", () => {
+    const { v } = boot();
+    v.dock.place("changes", { kind: "drawer", edge: "right" });
+    openDiffPanel(v.dock);
+    expect(v.dock.where("changes")).toEqual({ kind: "drawer", edge: "right" });
+    closeDiffPanel(v.dock);
+    expect(v.dock.where("changes")).toEqual({ kind: "drawer", edge: "right" });
   });
 
   it("docks a sheet view beside the canvas, tabs the next one with it, and says when one closes", () => {

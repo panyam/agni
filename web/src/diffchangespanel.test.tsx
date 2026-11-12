@@ -88,6 +88,20 @@ describe("diffChangesPanelIsland", () => {
     expect(el.querySelector(".sheet-badge")).toBeNull();
   });
 
+  // agni issue 1559. A click on a row rebuilt every row, so a long list jumped back to its top and the
+  // reader lost the row they clicked.
+  it("keeps every row's element when only the selection changes, so the list keeps its place", () => {
+    const { el, view } = mountPanel();
+    const items = [item({}), item({ kind: "net", cls: "new", key: "FAN_PWM" })];
+    view.setState(state({ items }));
+    const rows = () => [...el.querySelectorAll<HTMLElement>("button.finding")];
+    const before = rows();
+    view.setState(state({ items, selected: "net:FAN_PWM" }));
+    expect(rows()).toHaveLength(2);
+    rows().forEach((r, i) => expect(r, `row ${i}`).toBe(before[i]));
+    expect(el.querySelector(".finding.selected .finding-subject")?.textContent).toBe("FAN_PWM");
+  });
+
   it("distinguishes empty states: inactive vs no changes", () => {
     const { el, view } = mountPanel();
     expect(el.textContent).toContain("No comparison open");
