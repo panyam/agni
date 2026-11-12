@@ -1,0 +1,12 @@
+{
+  "_comment": "How a scoped check spells a subject (agni issue 897). core/check's SubjectParam writes these and ParseSubjectParam reads them; the viewer's subjectFromParam (web/src/router.ts) reads them too. Each case is read back to kind, ref and pin; a bad case is refused by both.",
+  "cases": [
+    { "param": "net:SDA0", "kind": "net", "ref": "SDA0", "pin": "" },
+    { "param": "net:/CSI/I2C_MUX_SCL", "kind": "net", "ref": "/CSI/I2C_MUX_SCL", "pin": "" },
+    { "param": "net:Net-(U1:A-Pad3)", "kind": "net", "ref": "Net-(U1:A-Pad3)", "pin": "" },
+    { "param": "component:U7", "kind": "component", "ref": "U7", "pin": "" },
+    { "param": "pin:U7.3", "kind": "pin", "ref": "U7", "pin": "3" },
+    { "param": "pin:J1.A.1", "kind": "pin", "ref": "J1.A", "pin": "1" }
+  ],
+  "bad": ["U7", "net:", "pin:U7", "pin:U7.", "pin:.3", "bus:DATA[7:0]", "endpoint:0,0"]
+}

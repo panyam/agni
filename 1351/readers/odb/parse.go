@@ -1,0 +1,107 @@
+package odb
+
+import (
+	"fmt"
+	"io/fs"
+	"path"
+	"strings"
+)
+
+// parsedJob holds everything both reads share. That is the job, its eda/data, and the components of
+// each side in file order. eda/data's TOP subnets number components in that order.
+type parsedJob struct {
+	*job
+	eda     *eda
+	sides   [][]component // one slice per component layer, in componentLayers order
+	sideTop []bool        // whether each side is the front
+	info    map[string]string
+	odx     *odxTier // set for an ODX file, whose features arrive parsed rather than as files
+}
+
+// odxTier holds what an ODX file carries in place of a job's per-layer files. Its maps are keyed by
+// the upper-cased layer name and the lower-cased symbol name.
+type odxTier struct {
+	profile *featuresFile
+	layers  map[string]*featuresFile
+	symbols map[string]*featuresFile
+}
+
+// parseJob opens a job and reads the files both the netlist and the board need.
+func parseJob(fsys fs.FS) (*parsedJob, error) {
+	j, err := openJob(fsys)
+	if err != nil {
+		return nil, err
+	}
+	p := &parsedJob{job: j, info: map[string]string{}}
+	if b, err := j.readOptional("misc/info"); err != nil {
+		return nil, err
+	} else if b != nil {
+		if blocks, perr := parseStructured(b); perr == nil && len(blocks) > 0 {
+			p.info = blocks[0].kv
+		}
+	}
+	b, err := j.readOptional(j.stepFile("eda/data"))
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("odb: step %q has no eda/data, so the job carries no netlist", j.step)
+	}
+	if p.eda, err = parseEDA(b); err != nil {
+		return nil, err
+	}
+	names, back := j.matrix.componentLayers()
+	for i, name := range names {
+		cb, err := j.readOptional(j.layerFile(name, "components"))
+		if err != nil {
+			return nil, err
+		}
+		comps, err := parseComponents(cb, back[i])
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", strings.ToLower(name), err)
+		}
+		p.sides = append(p.sides, comps)
+		p.sideTop = append(p.sideTop, !back[i])
+	}
+	return p, nil
+}
+
+// allComponents lists every component, front side first.
+func (p *parsedJob) allComponents() []*component {
+	var out []*component
+	for i := range p.sides {
+		for k := range p.sides[i] {
+			out = append(out, &p.sides[i][k])
+		}
+	}
+	return out
+}
+
+// jobName returns the job's name as misc/info states it. Altium writes no misc/info. For a job
+// without one, jobName returns the name of the folder or archive the job came in. So
+// `boards/master-odb/matrix/matrix` and `master.odb.zip` are both "master", and an ODX file
+// `board.xml` is "board".
+func (p *parsedJob) jobName(src string) string {
+	if n := p.info["JOB_NAME"]; n != "" {
+		return n
+	}
+	src = strings.ReplaceAll(src, "\\", "/")
+	if IsMatrixPath(src) {
+		src = JobDir(src)
+	}
+	name := path.Base(src)
+	low := strings.ToLower(name)
+	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".tar", ".xml"} {
+		if strings.HasSuffix(low, ext) {
+			name, low = name[:len(name)-len(ext)], low[:len(low)-len(ext)]
+			break
+		}
+	}
+	if strings.HasSuffix(low, ".odb") {
+		name = name[:len(name)-len(".odb")]
+	}
+	if name == "." || name == "/" {
+		return ""
+	}
+	return name
+}

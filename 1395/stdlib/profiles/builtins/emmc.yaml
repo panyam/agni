@@ -1,0 +1,26 @@
+name: eMMC
+host: {attr: interface, value: eMMC}
+# Each net ending _CMD is its own bus, so an SD card slot and an eMMC on one board are judged apart
+# and another bus's _CLK is never this one's clock (agni issue 1246).
+instance: anchor_stem
+signals:
+  - {name: CMD,  suffix: _CMD, pullup: true, anchor: true}
+  - {name: CLK,  suffix: _CLK}
+  - {name: DAT0, regex: '_DATA?0$'}
+  - {name: DAT1, regex: '_DATA?1$'}
+  - {name: DAT2, regex: '_DATA?2$'}
+  - {name: DAT3, regex: '_DATA?3$'}
+  - {name: DAT4, regex: '_DATA?4$'}
+  - {name: DAT5, regex: '_DATA?5$'}
+  - {name: DAT6, regex: '_DATA?6$'}
+  - {name: DAT7, regex: '_DATA?7$'}
+  - {name: RST,  suffix: _RST}
+# A card detect line means a removable SD card, which shares eMMC's CMD, CLK and DAT names but has
+# four data lines and no reset, so a bus carrying one is not an eMMC.
+excludes:
+  - {name: CD, regex: '_(CD|CD_B|CD_N|CDn|nCD|DET)$'}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

@@ -1,0 +1,97 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+
+	"github.com/panyam/agni/core/check"
+)
+
+// unconnectedComponent flags a component that appears on no net. See Detail.
+var unconnectedComponent = &check.Rule{
+	Name:       "unconnected-component",
+	Severity:   "warning",
+	Summary:    "A component appears on no net (none of its pins land on any signal).",
+	Impact:     "A part on no net is either a placement mistake, a forgotten connection, or dead weight in the BOM. If it was meant to do something, the circuit is missing whatever it was meant to do.",
+	Remedy:     "Wire the part into the circuit it belongs to, or delete it from the schematic if it is left over from an earlier revision. Placed and unwired is neither.",
+	Primitives: []string{"select", "traverse"},
+	Reads:      []string{"on_net"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryConnectivity,
+		check.KeyTier:         "R",
+		check.KeyDistribution: check.DistOpen,
+	},
+	Detail:              ruleDoc("unconnected-component"),
+	Eval:                unconnectedComponentVerdicts,
+	Scoping:             check.ScopeSubjects,
+	StatesConsideredSet: true,
+}
+
+// unconnectedComponentVerdicts decides every component in the design and returns one verdict each.
+//
+// A part with an empty ref-des is NotConsidered rather than skipped, since it has no identity to key
+// connectivity on or to name in a report, and a dropped subject answers 404 as though it did not
+// exist (#395).
+//
+// The pass witness counts the part's nets. The count comes from the SAME net walk that backs
+// Model.IsConnected, so the evidence cannot disagree with the outcome. Do not count pins instead,
+// because a design read with no symbol library has no pin records and a connected part would witness
+// "0 pins" beside a Pass.
+//
+// The nets are NOT carried as Context. A large part has dozens, and the viewer renders each as a
+// chip, so the list would read worse than the count.
+func unconnectedComponentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	netsOn := map[string]int{}
+	for _, n := range m.Nets() {
+		seen := map[string]bool{}
+		for _, c := range n.Connections {
+			if seen[c.ComponentRef] {
+				continue // one net counts once for a part, however many of its pins land on it
+			}
+			seen[c.ComponentRef] = true
+			netsOn[c.ComponentRef]++
+		}
+	}
+
+	var out []check.Verdict
+	for _, c := range check.ScopedComponents(ctx, m) {
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}}
+		switch {
+		case c.RefDes == "":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the part carries no reference designator, so there is no identity to judge its connectivity by"
+		case !m.IsConnected(c.RefDes) && m.IsPinlessPart(c.RefDes):
+			// A mounting hole, a logo or a module's assembly symbol has no pins, so "none land on a net"
+			// is true of it vacuously (agni issue 937). A part whose pins are merely unknown still fails.
+			v.Outcome = check.NotConsidered
+			v.Reason = "the part has no pins, so there is nothing for it to connect"
+		case m.IsConnected(c.RefDes):
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("component's pins land on %d net(s)", netsOn[c.RefDes]),
+				Terms:     []check.WitnessTerm{{Label: "nets reached", Value: strconv.Itoa(netsOn[c.RefDes])}},
+			}
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: "none of the component's pins land on any net",
+				Terms:     []check.WitnessTerm{{Label: "nets reached", Value: "0"}},
+			}
+			f := check.CompFinding("component has no net connections")(c)
+			v.Finding = &f
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// unconnectedComponentSpec is the rule's declarative twin (WS3-003).
+var unconnectedComponentSpec = &check.Spec{
+	Over: "components",
+	Where: check.And{Xs: []check.Expr{
+		check.Cmp{L: check.Fact{Name: "component.ref_des"}, Op: "!=", R: check.Lit{V: ""}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "on_net"}}},
+	}},
+	Message: "component has no net connections",
+}

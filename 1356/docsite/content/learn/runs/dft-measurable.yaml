@@ -1,0 +1,7 @@
+# Chapter 13's in-circuit test section. One part has both nodes probed, and the parts with one end
+# probed group by the net that would recover them, which puts GND at the top.
+fixture: examples/common/designs
+from_root: true
+steps:
+  - script: agni query examples/common/designs/probe-coverage.edn 'component.probed_both(?r) => ?r'
+  - script: agni query examples/common/designs/probe-coverage.edn 'component.probed_one(?r, ?p, ?u) => ?u, count(?r), list(?r)'

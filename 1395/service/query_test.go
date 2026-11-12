@@ -1,0 +1,1117 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"github.com/panyam/agni/artifact"
+	"os"
+	"path/filepath"
+	"slices"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/readers/formats"
+
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/netgraph"
+)
+
+// queryDesign has two parts on one net, so component.net(?r,?n) yields two answer rows.
+func queryDesign() *ir.Design {
+	return &ir.Design{
+		Nets: []*ir.Net{{
+			Name:        "SDA",
+			Prov:        &ir.Provenance{SourceFile: "x.edn", NativeId: "SDA"},
+			Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "5"}},
+		}},
+	}
+}
+
+func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"),
+		Query:    `component.net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetColumns(); len(got) != 2 || got[0] != "r" || got[1] != "n" {
+		t.Fatalf("columns = %v, want [r n]", got)
+	}
+	got := map[string]bool{}
+	for _, row := range resp.GetRows() {
+		cells := row.GetCells()
+		if len(cells) != 2 {
+			t.Fatalf("row cells = %v, want 2", cells)
+		}
+		got[cells[0]+"@"+cells[1]] = true
+	}
+	for _, want := range []string{"R1@SDA", "U1@SDA"} {
+		if !got[want] {
+			t.Errorf("missing answer row %q; got %v", want, got)
+		}
+	}
+	// Every answer row carries the provenance of the facts that produced it.
+	for _, row := range resp.GetRows() {
+		if len(RowCites(resp, row)) == 0 {
+			t.Errorf("row %v carries no provenance", row.GetCells())
+		}
+	}
+}
+
+// column_kinds is derived from the relation arg-labels, not the cell values. A ref_des column is
+// "component", a net column is "net", and anything else (an mpn string, a scalar) is "". It is
+// returned for the query shape regardless of whether any row matched (WS9-038).
+func TestRunQueryColumnKinds(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	cases := []struct {
+		query string
+		want  []string
+	}{
+		{`component.net(?r,?n) => ?r, ?n`, []string{"component", "net"}},
+		{`component.mpn(?r,?m) => ?r, ?m`, []string{"component", ""}}, // mpn is a scalar label
+	}
+	for _, tc := range cases {
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: tc.query})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.query, err)
+		}
+		got := resp.GetColumnKinds()
+		if len(got) != len(tc.want) {
+			t.Fatalf("%s: column_kinds = %v, want %v", tc.query, got, tc.want)
+		}
+		for i := range tc.want {
+			if got[i] != tc.want[i] {
+				t.Errorf("%s: column_kinds[%d] = %q, want %q", tc.query, i, got[i], tc.want[i])
+			}
+		}
+	}
+}
+
+// searchDesign holds one of each kind of named thing (a component, a net, an unmodeled bus), so
+// entity(?name, ?kind) yields an answer set whose rows are NOT all the same kind. A search result
+// poses that difficulty, and no other fixture here has it.
+func searchDesign() *ir.Design {
+	return &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "U1"}}},
+		Nets: []*ir.Net{{
+			Name:        "SDA",
+			Prov:        &ir.Provenance{SourceFile: "x.edn", NativeId: "SDA"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}},
+		}},
+		InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: []*ir.BusNotModeled{
+			{Label: "DATA[1:0]", Kind: "bus", Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "DATA[1:0]"}},
+		}},
+	}
+}
+
+// A search result is polymorphic. One answer set holds a component, a net and a bus, so the kind of
+// the `name` cell is whatever THAT ROW says (agni issue 338). The name column therefore types as a
+// scalar (column_kinds is the wrong place to say it) and each row carries its own cell_kinds.
+// Without this, a reader cannot click the answer they most want to click.
+func TestRunQueryPolymorphicCellKinds(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetColumnKinds(); len(got) != 2 || got[0] != "" || got[1] != "" {
+		t.Errorf("column_kinds = %v, want two empties: a polymorphic column has no column kind", got)
+	}
+	got := map[string]string{}
+	for _, row := range resp.GetRows() {
+		cells, kinds := row.GetCells(), row.GetCellKinds()
+		if len(kinds) != len(cells) {
+			t.Fatalf("row %v: cell_kinds = %v, want one per cell", cells, kinds)
+		}
+		got[cells[0]] = kinds[0]
+		// Only the polymorphic column is typed per row; the kind column is a plain string.
+		if kinds[1] != "" {
+			t.Errorf("row %v: cell_kinds[1] = %q, want \"\" (the kind column is not itself an entity)", cells, kinds[1])
+		}
+	}
+	want := map[string]string{"U1": "component", "SDA": "net", "DATA[1:0]": "bus"}
+	for name, kind := range want {
+		if got[name] != kind {
+			t.Errorf("cell_kinds for %q = %q, want %q (rows: %v)", name, got[name], kind, got)
+		}
+	}
+}
+
+// A per-row kind is a value out of the FACT BASE, not out of the query, so it is checked against
+// the vocabulary a client can act on rather than forwarded. Nothing in the shipped catalog can emit
+// another value today, so this is a unit test. The guard exists for a relation somebody adds later.
+// An end-to-end test of it would have to fake a fact base that cannot occur. If the viewer gets a
+// kind it has no highlighter for, every click does nothing.
+func TestEntityKindRejectsUnknownKinds(t *testing.T) {
+	for _, k := range []string{"component", "net", "bus"} {
+		if entityKind(k) != k {
+			t.Errorf("entityKind(%q) = %q, want it passed through", k, entityKind(k))
+		}
+	}
+	// "pin" is rejected with the rest, because entity() does not enumerate pins, and one cell could not
+	// name one anyway, since a pin's identity is its designator AND its component's ref.
+	for _, k := range []string{"pin", "sandwich", "", "Net", "netlist"} {
+		if got := entityKind(k); got != "" {
+			t.Errorf("entityKind(%q) = %q, want \"\"", k, got)
+		}
+	}
+}
+
+// A CONSTANT kind argument types the column statically after all, because every row then answers
+// the same way. This is the common search ("find a net whose name contains CAN"), and it should
+// come back as a plain net column without running the per-row machinery.
+func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, "net")`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetColumnKinds(); len(got) != 1 || got[0] != "net" {
+		t.Fatalf("column_kinds = %v, want [net]", got)
+	}
+	for _, row := range resp.GetRows() {
+		if len(row.GetCellKinds()) != 0 {
+			t.Errorf("row %v carries cell_kinds %v, want none: the column already says it", row.GetCells(), row.GetCellKinds())
+		}
+	}
+}
+
+// An ordinary query does no extra work for the polymorphic path. No row carries cell_kinds, so the
+// wire is as wide as before and column_kinds means what it always meant.
+func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range resp.GetRows() {
+		if len(row.GetCellKinds()) != 0 {
+			t.Errorf("row %v carries cell_kinds %v on a fixed-kind query", row.GetCells(), row.GetCellKinds())
+		}
+	}
+}
+
+// A search hit is only half-clickable without its sheet badge and its locate reason, and both of
+// those hang off the same kind. A bus would break quietly. It is neither a
+// placement nor a named wire, so the drawn-component and drawn-net sets cannot speak for it, and
+// the real test is whether it resolved to a sheet at all (the rule AnnotateSheets already uses).
+func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}}, Wires: []*geom.WireGeometry{{Net: "SDA"}}},
+	}}
+	svc := NewQueryService(fakeLoader{design: searchDesign(), geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sheets := map[string][]string{}
+	reasons := map[string]checkspb.LocateReason{}
+	for _, row := range resp.GetRows() {
+		sheets[row.GetCells()[0]], reasons[row.GetCells()[0]] = CellLocation(resp, row, 0)
+	}
+	for _, name := range []string{"U1", "SDA"} {
+		if !slices.Equal(sheets[name], []string{"s1"}) {
+			t.Errorf("%s sheets = %v, want [s1]: a per-row kind must reach the sheet lookup", name, sheets[name])
+		}
+		if reasons[name] != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
+			t.Errorf("%s reason = %v, want UNSPECIFIED: it is drawn", name, reasons[name])
+		}
+	}
+	// The bus is on no drawn sheet, so it says why rather than clicking to nothing.
+	if got := reasons["DATA[1:0]"]; got != checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN {
+		t.Errorf("undrawn bus reason = %v, want BUS_NOT_DRAWN", got)
+	}
+}
+
+// A relation carrying a `kind` that is not an ENTITY kind must not be dragged into the polymorphic
+// path. bus(label, kind) and param.range(mpn, symbol, kind, ...) both have one. Only the pairing
+// with a `name` argument keeps them out.
+func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `bus(?label, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, k := range resp.GetColumnKinds() {
+		if k != "" {
+			t.Errorf("bus column_kinds[%d] = %q, want \"\"", i, k)
+		}
+	}
+	for _, row := range resp.GetRows() {
+		for i, k := range row.GetCellKinds() {
+			if k != "" {
+				t.Errorf("bus row %v: cell_kinds[%d] = %q, want \"\", since its kind is a bus flavour and not an entity kind", row.GetCells(), i, k)
+			}
+		}
+	}
+}
+
+// pinDesign declares a part with pins and places two instances of it. pin.net has no facts without
+// both. Pins live on a PartType, not on a Component, so a design that lists components without a
+// library has no pins at all.
+func pinDesign() *ir.Design {
+	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
+		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+		{Name: "SDA", Designator: "5", Direction: ir.PinDirection_PIN_DIRECTION_INOUT},
+	}}
+	comp := func(ref string) *ir.Component {
+		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "x.edn"},
+			Sections: []*ir.ComponentSection{{PartRef: "MCU", LibraryRef: "lib"}}}
+	}
+	// #PWR01 is a virtual power-port symbol, never placed and never drawable. Its pins separate
+	// "explain a pin through its component" from "call it NO_GEOMETRY and move on".
+	return &ir.Design{
+		Libraries:  []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{mcu}}},
+		Components: []*ir.Component{comp("U1"), comp("U2"), comp("#PWR01")},
+		Nets: []*ir.Net{{
+			Name: "SDA",
+			Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "SDA"},
+			Connections: []*ir.Connection{
+				{ComponentRef: "U1", PinRef: "5"},
+				{ComponentRef: "U2", PinRef: "5"},
+				{ComponentRef: "#PWR01", PinRef: "5"},
+			},
+		}},
+	}
+}
+
+// A pin is two fields, so a table cell cannot name one on its own. The server types the pin column
+// and sends the row's ref beside it. Without that ref a pin result is not clickable at all.
+func TestRunQueryPinColumnCarriesItsRef(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net(?ref, ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := resp.GetColumnKinds()
+	if len(kinds) != 3 || kinds[0] != "component" || kinds[1] != "pin" || kinds[2] != "net" {
+		t.Fatalf("column_kinds = %v, want [component pin net]", kinds)
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Fatal("no rows; the fixture should place U1 pin 5 on SDA")
+	}
+	for _, row := range resp.GetRows() {
+		refs := row.GetCellRefs()
+		if len(refs) != len(row.GetCells()) {
+			t.Fatalf("row %v: cell_refs = %v, want one per cell", row.GetCells(), refs)
+		}
+		// The pin cell carries its component; nothing else does, since every other cell names its
+		// entity by itself.
+		if refs[1] != row.GetCells()[0] {
+			t.Errorf("row %v: pin cell_refs = %q, want the row's ref %q", row.GetCells(), refs[1], row.GetCells()[0])
+		}
+		if refs[0] != "" || refs[2] != "" {
+			t.Errorf("row %v: cell_refs = %v, want them empty outside the pin column", row.GetCells(), refs)
+		}
+	}
+}
+
+// A CONSTANT ref is the common shape of a pin question ("what is U1 pin 5 on"), and the pin column
+// still has to know which component it belongs to even though no column carries it.
+func TestRunQueryPinRefFromAConstant(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net("U1", ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kinds := resp.GetColumnKinds(); len(kinds) != 2 || kinds[0] != "pin" {
+		t.Fatalf("column_kinds = %v, want the pin column typed", kinds)
+	}
+	for _, row := range resp.GetRows() {
+		if got := row.GetCellRefs()[0]; got != "U1" {
+			t.Errorf("row %v: pin cell_refs = %q, want the constant U1", row.GetCells(), got)
+		}
+	}
+}
+
+// The trap this rule has to avoid. param.pin's `pin` is a datasheet pin of a part TYPE, keyed by
+// mpn, and there is nothing on a canvas to highlight for it. The pairing with ref_des is the whole
+// test, so a relation that pairs `pin` with `mpn` must type as a scalar.
+func TestRunQueryDatasheetPinIsNotADesignPin(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `param.pin(?mpn, ?pin, ?name, ?function)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, k := range resp.GetColumnKinds() {
+		if k != "" {
+			t.Errorf("param.pin column_kinds[%d] = %q, want \"\": no column here is a design entity", i, k)
+		}
+	}
+}
+
+// A pin's sheets are its COMPONENT's, and so is the reason it may not highlight. Asking either
+// question about the designator would be asking about a thing called "5".
+func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}}},
+	}}
+	svc := NewQueryService(fakeLoader{design: pinDesign(), geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net(?ref, ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// U1 is placed and U2 is not. So this tests "its OWN component" rather than "some component",
+	// since a pin resolving through the wrong ref would answer s1 for both.
+	sheets := map[string][]string{}
+	reasons := map[string]checkspb.LocateReason{}
+	for _, row := range resp.GetRows() {
+		ref := row.GetCells()[0]
+		sheets[ref], reasons[ref] = CellLocation(resp, row, 1)
+	}
+	if got := sheets["U1"]; !slices.Equal(got, []string{"s1"}) {
+		t.Errorf("U1's pin sheets = %v, want its component's [s1]", got)
+	}
+	if got := reasons["U1"]; got != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
+		t.Errorf("U1's pin reason = %v, want UNSPECIFIED since U1 is placed", got)
+	}
+	if got := sheets["U2"]; len(got) != 0 {
+		t.Errorf("U2's pin sheets = %v, want none since U2 is not placed", got)
+	}
+	if got := reasons["U2"]; got != checkspb.LocateReason_LOCATE_REASON_NO_GEOMETRY {
+		t.Errorf("U2's pin reason = %v, want NO_GEOMETRY, the reason its COMPONENT is undrawn", got)
+	}
+	// The pin of a virtual `#` symbol is explained by what its component IS, not by the absence of
+	// geometry. Both are undrawn and only one of them is a gap in the render.
+	if got := reasons["#PWR01"]; got != checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL {
+		t.Errorf("a virtual symbol's pin reason = %v, want VIRTUAL_SYMBOL", got)
+	}
+}
+
+// A component cell's sheet membership comes from the schematic geometry placements (WS9-038). The
+// finding sheet badges use the same source. So a component cell can navigate to its sheet.
+func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "s1"},
+		{Id: "s2", Placements: []*geom.SymbolPlacement{{RefDes: "R1"}}},
+	}}
+	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r1sheets []string
+	for _, row := range resp.GetRows() {
+		if row.GetCells()[0] == "R1" {
+			r1sheets, _ = CellLocation(resp, row, 0) // cell 0 is the component column
+		}
+	}
+	if len(r1sheets) != 1 || r1sheets[0] != "s2" {
+		t.Errorf("R1 component cell sheets = %v, want [s2]", r1sheets)
+	}
+}
+
+// A net cell's sheet membership comes from the netlist AttrSheets attribute (WS9-028), so a net
+// cell locates without any geometry loaded (WS9-038).
+func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
+	d := queryDesign()
+	d.Nets[0].Attributes = map[string]string{netgraph.AttrSheets: netgraph.EncodeSheets([]string{"s1", "s2"})}
+	svc := NewQueryService(fakeLoader{design: d}, nil, nil) // no geometry
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range resp.GetRows() {
+		got, _ := CellLocation(resp, row, 1) // cell 1 is the net column (SDA)
+		if len(got) != 2 || got[0] != "s1" || got[1] != "s2" {
+			t.Errorf("net cell sheets = %v, want [s1 s2]", got)
+		}
+	}
+}
+
+// A navigable cell gets a locate reason (WS9-039) only for an entity the faithful geometry does not
+// draw: a drawn part/wire (R1, SIG) is UNSPECIFIED, an undrawn `#`-ref is virtual, an undrawn rail
+// (GND) is a power rail. A drawn rail would report UNSPECIFIED (the VBUS case), because geometry wins
+// over the name heuristic.
+func TestRunQueryCellReasons(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "SIG", Prov: &ir.Provenance{SourceFile: "x.kicad_sch", NativeId: "SIG"},
+			Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "2"}}},
+		{Name: "GND", Prov: &ir.Provenance{SourceFile: "x.kicad_sch", NativeId: "GND"},
+			Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "2"}, {ComponentRef: "#PWR02", PinRef: "1"}}},
+	}}
+	// Faithful geometry draws R1/U1 (placements) and SIG (a wire); #PWR02 and GND are not drawn.
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
+		Id:         "root",
+		Placements: []*geom.SymbolPlacement{{RefDes: "R1"}, {RefDes: "U1"}},
+		Wires:      []*geom.WireGeometry{{Net: "SIG"}},
+	}}}
+	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range resp.GetRows() {
+		if len(row.GetCellEntity()) != 2 {
+			t.Fatalf("cell_entity = %v, want 2 aligned to cells", row.GetCellEntity())
+		}
+		_, r0 := CellLocation(resp, row, 0)
+		_, r1 := CellLocation(resp, row, 1)
+		reasons := []checkspb.LocateReason{r0, r1}
+		// the net column: the drawn SIG is UNSPECIFIED, the undrawn GND is a power rail.
+		wantNet := checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+		if row.GetCells()[1] == "GND" {
+			wantNet = checkspb.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
+		}
+		if reasons[1] != wantNet {
+			t.Errorf("net %q reason = %v, want %v", row.GetCells()[1], reasons[1], wantNet)
+		}
+		// the component column: drawn R1/U1 are UNSPECIFIED, the undrawn #-ref is virtual.
+		wantComp := checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+		if row.GetCells()[0] == "#PWR02" {
+			wantComp = checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
+		}
+		if reasons[0] != wantComp {
+			t.Errorf("component %q reason = %v, want %v", row.GetCells()[0], reasons[0], wantComp)
+		}
+	}
+}
+
+// A typo'd relation name reaches the panel/CLI as an invalid-argument whose message suggests the
+// closest catalog relation (WS14-003), which teaches the vocabulary at the point of the mistake.
+func TestRunQueryUnknownRelationSuggests(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: "compnent.net(?r,?n) => ?r",
+	})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("err = %v, want ErrInvalidArgument", err)
+	}
+	if !strings.Contains(err.Error(), "did you mean") || !strings.Contains(err.Error(), "component.net") {
+		t.Errorf("error should suggest the relation, got: %v", err)
+	}
+}
+
+func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n =>`,
+	})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("err = %v, want ErrInvalidArgument for a parse failure", err)
+	}
+}
+
+func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"),
+		Query:    `component.net(?r,?n), ?n = "NOSUCHNET" => ?r`,
+	})
+	if err != nil {
+		t.Fatalf("a well-formed no-match query should not error: %v", err)
+	}
+	if len(resp.GetRows()) != 0 {
+		t.Errorf("rows = %v, want none", resp.GetRows())
+	}
+}
+
+func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
+	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil, nil)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds"), Query: "component.class(?r, ?c) => ?r"})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("err = %v, want ErrInvalidArgument for an unloadable design", err)
+	}
+}
+
+func TestRunQueryNotFoundPropagates(t *testing.T) {
+	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil, nil)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://bad/x.edn"), Query: "component.class(?r, ?c) => ?r"})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound to pass through", err)
+	}
+}
+
+func TestListRelationsReturnsCatalog(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil) // no design needed, since the catalog is static
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]*webapi.RelationInfo{}
+	for _, r := range resp.GetRelations() {
+		byName[r.GetName()] = r
+	}
+	con := byName["component.net"]
+	if con == nil {
+		t.Fatalf("component.net missing from catalog; got %d relations", len(resp.GetRelations()))
+	}
+	if got := con.GetArgs(); len(got) != 2 || got[0] != "ref_des" || got[1] != "net" {
+		t.Errorf("component.net args = %v, want [ref_des net]", con.GetArgs())
+	}
+	if con.GetKind() != "netlist" {
+		t.Errorf("component.net kind = %q, want netlist", con.GetKind())
+	}
+	if byName["net.reaches"] == nil || byName["net.reaches"].GetKind() != "predicate" {
+		t.Errorf("reaches should be catalogued as a predicate")
+	}
+	// route goes through the same generic path and needs no proto of its own. RelationInfo is
+	// populated by iterating query.Catalog(), and column_kinds is a repeated string rather than an
+	// enum, so a new predicate reaches a client without a schema change. This assertion checks that.
+	if rt := byName["net.route"]; rt == nil || rt.GetKind() != "predicate" {
+		t.Errorf("route should be catalogued as a predicate")
+	} else if got := rt.GetArgs(); len(got) != 3 || got[0] != "from" || got[2] != "path" {
+		t.Errorf("route args = %v, want [from net path]", got)
+	} else if !strings.HasPrefix(rt.GetDetail(), "## net.route") {
+		t.Errorf("route Detail should be its reference doc, got %.40q", rt.GetDetail())
+	}
+	// The catalog includes Detail (WS14-005). A documented relation has its reference markdown. An
+	// undocumented one has "", so the panel falls back to the summary.
+	if bl := byName["net.bus_like"]; bl == nil || !strings.HasPrefix(bl.GetDetail(), "## net.bus_like") {
+		t.Errorf("net.bus_like Detail should be its reference doc, got %q", bl.GetDetail())
+	}
+}
+
+// TestListRelationsCarriesTheLibrary pins that a derived member lists beside the base relations. It
+// comes with its typed signature and its definition, which a reader drills into (agni issue 751).
+func TestListRelationsCarriesTheLibrary(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tp *webapi.RelationInfo
+	for _, r := range resp.GetRelations() {
+		if r.GetName() == "net.has_test_point" {
+			tp = r
+		}
+	}
+	if tp == nil {
+		t.Fatal("net.has_test_point missing from the catalog; the shipped library did not list")
+	}
+	if tp.GetKind() != "derived" {
+		t.Errorf("net.has_test_point kind = %q, want derived", tp.GetKind())
+	}
+	if got := tp.GetSignature(); got != "net.has_test_point(n: net)" {
+		t.Errorf("signature = %q, want net.has_test_point(n: net)", got)
+	}
+	if len(tp.GetDefinition()) != 1 || !strings.Contains(tp.GetDefinition()[0], "component.class(?tp, \"test_point\")") {
+		t.Errorf("definition = %q, want its one clause", tp.GetDefinition())
+	}
+}
+
+// TestListRelationsDescribesAPath covers the three places a drill-down can name, and the error for a
+// place that does not exist.
+func TestListRelationsDescribesAPath(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	ask := func(path string) *webapi.RelationEntry {
+		t.Helper()
+		resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: path})
+		if err != nil {
+			t.Fatalf("ListRelations(%q): %v", path, err)
+		}
+		if len(resp.GetRelations()) != 0 {
+			t.Errorf("ListRelations(%q) also returned the flat catalog", path)
+		}
+		return resp.GetEntry()
+	}
+	member := ask("component.probed_one")
+	if member.GetEntryKind() != "derived" || member.GetModule() != "component" || len(member.GetDefinition()) != 2 {
+		t.Errorf("component.probed_one = kind %q module %q with %d clauses, want derived in component with 2", member.GetEntryKind(), member.GetModule(), len(member.GetDefinition()))
+	}
+	if member.GetDoc() == "" || !strings.HasPrefix(member.GetSignature(), "component.probed_one(r: component") {
+		t.Errorf("component.probed_one doc %q signature %q", member.GetDoc(), member.GetSignature())
+	}
+	paths := func(e *webapi.RelationEntry) map[string]string {
+		out := map[string]string{}
+		for _, m := range e.GetMembers() {
+			out[m.GetPath()] = m.GetEntryKind()
+		}
+		return out
+	}
+	net := ask("net")
+	if got := paths(net); net.GetEntryKind() != "module" || got["net.has_test_point"] != "derived" || got["net.pin_count"] != "base" || got["net.reaches"] != "predicate" {
+		t.Errorf("net = %q holding %v, want a module holding a derived, a base and a predicate member", net.GetEntryKind(), got)
+	}
+	if got := paths(ask(".")); got["net"] != "module" || got["entity"] != "base" || got["str"] != "module" {
+		t.Errorf("root holds %v, want the net and str modules and the entity relation", got)
+	}
+	_, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: "net.has_testpoint"})
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "net.has_test_point") {
+		t.Errorf("unknown path error = %v, want invalid argument suggesting net.has_test_point", err)
+	}
+}
+
+// A drilled-into member names its arguments as the flat catalog does, so a client inserts the same
+// template from either answer without parsing a signature (agni issue 774). A module has none.
+func TestARelationEntryCarriesTheCatalogsArgs(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	flat, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog := map[string][]string{}
+	for _, r := range flat.GetRelations() {
+		catalog[r.GetName()] = r.GetArgs()
+	}
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: "net"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetEntry().GetArgs()) != 0 {
+		t.Errorf("the net module carries args %v, want none", resp.GetEntry().GetArgs())
+	}
+	compared := 0
+	for _, m := range resp.GetEntry().GetMembers() {
+		want, ok := catalog[m.GetPath()]
+		if !ok || m.GetEntryKind() == "module" {
+			continue
+		}
+		compared++
+		if !slices.Equal(m.GetArgs(), want) {
+			t.Errorf("%s args %v, the catalog says %v", m.GetPath(), m.GetArgs(), want)
+		}
+	}
+	if compared < 5 {
+		t.Fatalf("compared %d of net's members, so the check proves little", compared)
+	}
+}
+
+func TestListRelationsIncludesExamples(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetExamples()) == 0 {
+		t.Fatal("no examples in ListRelations response")
+	}
+	for _, e := range resp.GetExamples() {
+		if e.GetLabel() == "" || e.GetQuery() == "" || e.GetTeaches() == "" {
+			t.Errorf("example missing fields: %+v", e)
+		}
+	}
+}
+
+// Every shipped example must actually evaluate against a real design, not just parse, so a
+// relation renamed out from under an example fails here (RunQuery returns InvalidArgument on a bad
+// relation), not silently in the panel.
+func TestExamplesEvaluate(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range resp.GetExamples() {
+		if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+			Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: e.GetQuery(),
+		}); err != nil {
+			t.Errorf("example %q failed to evaluate: %v", e.GetLabel(), err)
+		}
+	}
+}
+
+// The click-to-ask presets get the same guard as the examples, and need it more, because nobody
+// reads a preset before it runs. A reader clicks a pin and the browser executes whatever the server
+// handed it. So a relation renamed out from under a preset has to fail here rather than in
+// someone's viewer. Binding a real entity from the fixture makes this an EVALUATION rather than a
+// second parse check. Each answer is also compared with the same query with the values written in
+// as constants, since a binding promises to mean exactly that (agni issue 793).
+func TestEntityQueriesEvaluate(t *testing.T) {
+	// The project's corpus, so the datasheet question has a spec to answer from.
+	project := filepath.Join("..", "examples", "tutorial-project")
+	specs, err := param.LoadSet(os.DirFS(filepath.Join(project, "params")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewQueryService(fsQueryLoader{base: project}, specs, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetEntityQueries()) == 0 {
+		t.Fatal("no entity presets served, so a click in the viewer would do nothing")
+	}
+	// These values come from the tutorial board. They are a part, one of its pins, and that pin's
+	// net, which has a test point. The board has no bus, so the bus presets are evaluated and answer
+	// nothing.
+	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
+	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
+	for _, e := range resp.GetEntityQueries() {
+		if e.GetKind() == "area" {
+			continue // bound to sets, which TestAreaQuestionsAnswerForTheWholeSet asks
+		}
+		if len(e.GetBinds()) == 0 {
+			t.Errorf("preset for %q binds nothing, so every click asks the same question", e.GetKind())
+		}
+		bind := map[string]*webapi.QueryValue{}
+		written := e.GetQuery()
+		for _, v := range e.GetBinds() {
+			bind[v] = &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: values[v]}}
+			written = strings.ReplaceAll(written, "?"+v+",", `"`+values[v]+`",`)
+			written = strings.ReplaceAll(written, "?"+v+")", `"`+values[v]+`")`)
+			written = strings.ReplaceAll(written, "?"+v+" ", `"`+values[v]+`" `)
+		}
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: e.GetQuery(), Bindings: bind})
+		if err != nil {
+			t.Errorf("%s %q failed to evaluate: %v\n  query: %s", e.GetKind(), e.GetLabel(), err, e.GetQuery())
+			continue
+		}
+		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: written})
+		if err != nil {
+			t.Fatalf("the preset with its values written in (%s): %v", written, err)
+		}
+		if e.GetKind() != "bus" && len(got.GetRows()) == 0 {
+			t.Errorf("%s %q answered no rows on the fixture, so the comparison below proves nothing", e.GetKind(), e.GetLabel())
+		}
+		if g, w := rowCells(got), rowCells(want); g != w {
+			t.Errorf("%s %q: bound answer %s differs from the written-in answer %s", e.GetKind(), e.GetLabel(), g, w)
+		}
+	}
+}
+
+// rowCells is a response's rows as one comparable string.
+func rowCells(r *webapi.RunQueryResponse) string {
+	var rows []string
+	for _, row := range r.GetRows() {
+		rows = append(rows, strings.Join(row.GetCells(), "|"))
+	}
+	sort.Strings(rows)
+	return strings.Join(rows, "; ")
+}
+
+// guard: the malformed-query message reaches the caller (the panel shows it inline).
+func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `!!!`})
+	if err == nil || strings.TrimSpace(err.Error()) == "" {
+		t.Fatalf("want a non-empty parse error message, got %v", err)
+	}
+}
+
+// fsQueryLoader reads a real design file and HONORS the read options. A
+// lexicon is applied at ingestion, so a loader that discarded the option would make the test below
+// assert nothing. It embeds fakeLoader for the methods a query never calls.
+type fsQueryLoader struct {
+	fakeLoader
+	base string
+}
+
+func (l fsQueryLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, uri.Path))
+}
+
+// houseConvention is the fixture project's vocabulary. Its rails are named function-first
+// ("PMIC_VDD_LPM_1V8"), and the built-in rail vocabulary, start-anchored on VCC/VDD/+3V3, matches
+// none of them.
+func houseConvention(t *testing.T) *configpb.NamingConvention {
+	t.Helper()
+	cfg, err := naming.Load(filepath.Join("..", "cmd", "agni", "testdata", "review", "conventions.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg
+}
+
+func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
+	t.Helper()
+	var out []string
+	for _, row := range resp.GetRows() {
+		if len(row.GetCells()) > 0 {
+			out = append(out, row.GetCells()[0])
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TestRunQueryHonorsTheRequestLexicon covers the gap this feature closes, using the issue's own
+// example.
+//
+// A convention does not ADD `net.rail(?n)`. A convention changes that relation's ANSWER. Net roles
+// are resolved once at the design read, and the lexicon decides which names have which role.
+// Without the project's vocabulary the engine reports one rail on a board with more. That answer is
+// correct for a question the project did not ask, and there was previously no way to ask theirs.
+//
+// So `query` needed the flag more than a missing flag usually does. Authoring a lexicon is a loop of
+// writing a pattern and asking which nets are rails now, and query is the tool for that loop.
+func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}, nil, nil)
+	ask := func(ov *webapi.OverlayConfig) []string {
+		t.Helper()
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+			Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/review/conv-demo.edn", Overlay: ov}), Query: "net.rail(?n) => ?n",
+		})
+		if err != nil {
+			t.Fatalf("RunQuery: %v", err)
+		}
+		return queryColumn(t, resp)
+	}
+
+	builtin := ask(nil)
+	if slices.Contains(builtin, "PMIC_VDD_LPM_1V8") {
+		t.Fatal("the built-in vocabulary already matches the project's rail names; the fixture no longer demonstrates the gap")
+	}
+
+	house := ask(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: houseConvention(t)}})
+	if !slices.Contains(house, "PMIC_VDD_LPM_1V8") {
+		t.Errorf("net.rail(?n) under the project's own vocabulary = %v, want it to include PMIC_VDD_LPM_1V8", house)
+	}
+	if len(house) <= len(builtin) {
+		t.Errorf("the project's vocabulary found no more rails than the built-ins: %v vs %v", house, builtin)
+	}
+}
+
+// TestRunQueryIgnoresTheConventionsRulesHalf covers a project keeping ONE conventions file with both
+// halves, where a query legitimately consumes only the lexicon. Sending one whose rules would not even
+// compile into a catalog must still answer, because a query composes no catalog at all. The
+// alternative is refusing a config that is fine for the question being asked.
+func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}, nil, nil)
+	conv := houseConvention(t)
+	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
+	conv.Rules = append(conv.Rules, &configpb.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/review/conv-demo.edn", Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}}),
+		Query:    "net.rail(?n) => ?n",
+	})
+	if err != nil {
+		t.Fatalf("a query must not fail on the rules half of a convention it does not use: %v", err)
+	}
+	if !slices.Contains(queryColumn(t, resp), "PMIC_VDD_LPM_1V8") {
+		t.Error("the lexicon half did not reach the read")
+	}
+}
+
+// TestPortableCites covers the fix for a cite that named a host directory.
+//
+// A reader stamps provenance with the path it was handed, and the loader hands it an ABSOLUTE host
+// path. So "/Users/someone/work/..." escaped into query's output, and a user pastes that output
+// into issues and commits it into reports. No other surface leaked the path, since `review` prints
+// the design as given and a finding's source_file is relative.
+func TestPortableCites(t *testing.T) {
+	const design = "designs/gateway/gateway.edn"
+	for name, tc := range map[string]struct{ in, want string }{
+		"an absolute host path is cut back to the design": {
+			"/Users/someone/work/agni/examples/tutorial-project/designs/gateway/gateway.edn:GND",
+			"designs/gateway/gateway.edn:GND"},
+		"a cite already relative is untouched": {
+			"designs/gateway/gateway.edn:GND", "designs/gateway/gateway.edn:GND"},
+		// A datasheet citation names a document and a page, never a file. Truncating it on a guess
+		// would destroy provenance that was correct.
+		"a citation that is not a path is left alone": {
+			"ACME-LDO-1V8 Datasheet Rev A page 7", "ACME-LDO-1V8 Datasheet Rev A page 7"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := portableCites([]string{tc.in}, design)
+			if got[0] != tc.want {
+				t.Errorf("got %q, want %q", got[0], tc.want)
+			}
+		})
+	}
+	if got := portableCites(nil, design); got != nil {
+		t.Errorf("no cites should stay nil, got %v", got)
+	}
+}
+
+// TestQueryServiceUsesItsResolver guards against a bug the type system could not catch.
+// NewQueryService took a *ProjectResolver and never assigned it, so s.projects was always nil and
+// every query silently ran against the built-in vocabulary.
+//
+// Nothing caught it. It compiles, because an unused parameter is legal. It passes every service test,
+// because those construct the service and assert on what they pass IN the request. And it fails
+// silently at runtime, because a nil resolver is a SUPPORTED state (it means "this deployment
+// resolves no projects"), so the code path taken is a real one, just the wrong one for a caller that
+// handed over a resolver.
+//
+// The assertion is on the field rather than through a run, because the invariant is that a
+// constructor given a collaborator must keep it.
+func TestQueryServiceUsesItsResolver(t *testing.T) {
+	r := &ProjectResolver{}
+	if svc := NewQueryService(nil, nil, r); svc.projects != r {
+		t.Error("NewQueryService dropped its ProjectResolver, so every query would run against the built-in vocabulary with no error")
+	}
+}
+
+// kindsOf parses a query and reports the entity kind of each answer column. The web panel uses
+// those kinds to decide whether a result cell can be clicked.
+func kindsOf(t *testing.T, src string) []string {
+	t.Helper()
+	q, err := query.Parse(src)
+	if err != nil {
+		t.Fatalf("parse %q: %v", src, err)
+	}
+	kinds, _, _ := columnKinds(q)
+	return kinds
+}
+
+// A variable projected through a derived relation used to lose its entity kind, so a query that was
+// correct and complete could not be clicked in the viewer (agni issue 654). The catalog does not
+// describe a user rule, so the lookup missed and the column fell back to scalar even though the
+// rule's own body had bound the variable from a relation that declares one.
+//
+// It broke the queries most worth clicking. The querying guide teaches derived relations as the
+// idiom for anything past one clause, and negation REQUIRES a unary helper rule.
+func TestColumnKindsFollowDerivedRelations(t *testing.T) {
+	for _, tc := range []struct {
+		name, query, want string
+	}{
+		{
+			"a catalog atom is unchanged",
+			`component.class(?p,"ferrite") => ?p`, "component",
+		},
+		{
+			"one hop through a rule",
+			`ferr(?p) :- component.class(?p,"ferrite"); ferr(?p) => ?p`, "component",
+		},
+		{
+			// A rule defined in terms of another rule is ordinary. Stopping at the first hop would give
+			// a silent partial answer. That answer is the bug itself, not a smaller version of it.
+			"two hops",
+			`a(?p) :- component.class(?p,"ferrite"); b(?p) :- a(?p); b(?p) => ?p`, "component",
+		},
+		{
+			// This matters most for a bucket built with negation, which needs a unary helper.
+			"a bucket through negation",
+			`p(?c) :- component.class(?c,"capacitor"); cov(?c) :- p(?c), component.net(?c,?n); ` +
+				`nocov(?c) :- p(?c), not cov(?c); nocov(?c) => ?c`, "component",
+		},
+		{
+			// THE CONTROL. Two rules define one head and bind that position to different kinds, so a
+			// column typed from whichever was written first is wrong for half the rows. Without this
+			// case a first-wins implementation passes every other row in this table.
+			"rules that disagree stay scalar",
+			`x(?v) :- component.class(?v,"ferrite"); x(?v) :- net.ground(?v); x(?v) => ?v`, "",
+		},
+		{
+			// entity()'s kind is per-row, carried by kindVars, and a head argument has no per-row
+			// identity to carry it through. Better a scalar than a kind invented for the column.
+			"a rule wrapping entity() stays scalar",
+			`e(?n) :- entity(?n,?k); e(?n) => ?n`, "",
+		},
+		{
+			"an aggregate is a number whatever it reduces",
+			`ferr(?p) :- component.class(?p,"ferrite"); ferr(?p) => count(?p)`, "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := kindsOf(t, tc.query); len(got) != 1 || got[0] != tc.want {
+				t.Errorf("columnKinds = %v, want [%q]", got, tc.want)
+			}
+		})
+	}
+}
+
+// A rule set may be recursive, and a cycle must end the walk rather than the process.
+func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
+	done := make(chan []string, 1)
+	go func() {
+		done <- kindsOf(t, `r(?a,?b) :- component.net(?a,?b); r(?a,?b) :- r(?a,?c), r(?c,?b); r(?a,?b) => ?a`)
+	}()
+	select {
+	case got := <-done:
+		if len(got) != 1 || got[0] != "component" {
+			t.Errorf("columnKinds = %v, want [component]", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("columnKinds did not terminate on a recursive rule set")
+	}
+}
+
+// TestACancelledQueryStopsAsCancelled covers cancellation reaching a query (jaala v0.1.9 passes the
+// context through Eval and into the walks). When a query's caller has gone, the query stops and
+// says so. The stop is not the caller's mistake, so it must not come back as ErrInvalidArgument. A
+// set stops at it rather than recording the same cancellation against every query left.
+func TestACancelledQueryStopsAsCancelled(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := svc.RunQuery(ctx, &webapi.RunQueryRequest{Snapshot: snap, Query: "net.reaches(?a, ?b) => ?a, ?b"})
+	if !errors.Is(err, context.Canceled) || errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("RunQuery with a cancelled context: err = %v, want context.Canceled and not invalid argument", err)
+	}
+	set := &webapi.QuerySet{Title: "t", Queries: []*webapi.NamedQuery{
+		{Name: "a", Query: "net.reaches(?a, ?b) => ?a, ?b"},
+		{Name: "b", Query: "component.net(?r, ?n) => ?r"},
+	}}
+	if _, err := svc.RunQueries(ctx, &webapi.RunQueriesRequest{Snapshot: snap, Set: set}); !errors.Is(err, context.Canceled) {
+		t.Errorf("RunQueries with a cancelled context: err = %v, want context.Canceled", err)
+	}
+	if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: "net.reaches(?a, ?b) => ?a, ?b"}); err != nil {
+		t.Errorf("the same query with a live context failed, so the cancelled run proves nothing: %v", err)
+	}
+}
+
+// An area's questions bind every member at once and answer in one evaluation (agni issue 904). On
+// the gateway, U1 with its two capacitors reaches five nets. Each of them has pins outside the
+// three parts, and those five nets are the block's interface.
+func TestAreaQuestionsAnswerForTheWholeSet(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
+	list := func(vals ...string) *webapi.QueryValue {
+		l := &webapi.QueryValueList{}
+		for _, v := range vals {
+			l.Values = append(l.Values, &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v}})
+		}
+		return &webapi.QueryValue{Kind: &webapi.QueryValue_List{List: l}}
+	}
+	values := map[string]*webapi.QueryValue{"ref": list("U1", "C1", "C2"), "net": list("PMIC_EN", "PMIC_CORE_3V3")}
+	answers := map[string]string{}
+	n := 0
+	for _, e := range query.EntityQueries() {
+		if e.Kind != "area" {
+			continue
+		}
+		n++
+		bind := map[string]*webapi.QueryValue{}
+		for _, v := range e.Binds {
+			bind[v] = values[v]
+		}
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: e.Query, Bindings: bind})
+		if err != nil {
+			t.Fatalf("%q: %v\n  query: %s", e.Label, err, e.Query)
+		}
+		if len(got.GetRows()) == 0 {
+			t.Errorf("%q answered no rows over U1, C1 and C2", e.Label)
+		}
+		answers[e.Label] = rowCells(got)
+	}
+	if n < 2 {
+		t.Fatalf("%d area questions served, want at least 2", n)
+	}
+	boundary := answers["What does this block connect to?"]
+	for _, net := range []string{"GND", "PMIC_CORE_3V3", "PMIC_EN", "PMIC_MAIN_12V0", "PMIC_PG"} {
+		if !strings.Contains(boundary, net) {
+			t.Errorf("the boundary answer lacks %s: %s", net, boundary)
+		}
+	}
+	if !strings.Contains(answers["What parts are in it, by class?"], `["C1","C2"]`) {
+		t.Errorf("the class answer should list both capacitors together: %s", answers["What parts are in it, by class?"])
+	}
+}

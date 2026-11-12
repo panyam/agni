@@ -1,0 +1,125 @@
+// Command render-highlight is the explainability rung of the Agni examples ladder. It runs the
+// rule catalog over a design, then BAKES each finding's subject as a highlight into one rendered
+// SVG, so a report finding becomes a picture of the design. It is the offline twin of the web
+// viewer's click-to-locate. It makes one render.SheetSVGHighlighted call over the HighlightSpec
+// vocabulary, and the server projects the same vocabulary as a live overlay. Narration is in the
+// sidecar walkthrough.md, and this file only binds the steps that run engine code.
+//
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
+package main
+
+import (
+	_ "embed"
+	"fmt"
+	"os"
+
+	"github.com/panyam/demokit"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/examples/common"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/formats"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog RunDesign runs
+)
+
+//go:embed walkthrough.md
+var walkthroughMD []byte
+
+func main() {
+	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding. Two symbols
+	// share ref-des U1, so the component finding draws a box on each real placement.
+	design := common.AskPath("design", "../common/designs/duplicate-refdes.kicad_sch")
+
+	demo := demokit.New("render-highlight").
+		Dir("render-highlight").
+		FromMarkdownBytes(walkthroughMD)
+
+	demo.Bind("pick").Input(design.Def()).Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		design.Capture(ctx)
+		fmt.Printf("Selected %s.\n", design.Path())
+		return nil
+	})
+
+	demo.Bind("check").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := common.Load(design.Path())
+		if err != nil {
+			return demokit.Errf("load %s: %v", design.Path(), err)
+		}
+		findings := check.RunDesign(d)
+		fmt.Println(common.FindingsLines(findings))
+		return nil
+	})
+
+	demo.Bind("render").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := common.Load(design.Path())
+		if err != nil {
+			return demokit.Errf("load %s: %v", design.Path(), err)
+		}
+		// FaithfulGeometry dispatches by extension (KiCad, EDIF .eds, ...), as the CLI does, so the
+		// highlight is drawn on the design's own drawing. common.Load read the netlist, and this
+		// reads the render canvas.
+		g, err := (&formats.Loader{}).FaithfulGeometry(design.Path())
+		if err != nil {
+			return demokit.Errf("load geometry %s: %v", design.Path(), err)
+		}
+		if len(g.Sheets) == 0 {
+			return demokit.Errf("no sheets in %s", design.Path())
+		}
+		findings := check.RunDesign(d)
+		specs := specsForFindings(findings)
+		svg := render.SheetSVGHighlighted(g, g.Sheets[0], specs)
+		if err := os.WriteFile("render.svg", []byte(svg), 0o644); err != nil {
+			return demokit.Errf("write render.svg: %v", err)
+		}
+		fmt.Printf("Wrote render.svg (%d bytes): sheet %q with %d finding(s) baked in as highlights.\n",
+			len(svg), g.Sheets[0].Name, len(specs))
+		fmt.Println("Open it: each flagged net/component/pin is drawn framed, in place, on the real schematic.")
+		return nil
+	})
+
+	common.SetupRenderer(demo)
+	demo.Execute()
+}
+
+// specsForFindings maps each finding's subject to one HighlightSpec. It uses the same
+// net/component/pin vocabulary as the web click-to-locate. A net draws as a PATH marker along its
+// wire and has its per-instance net id, so two same-named nets are kept distinct. A component or
+// pin draws as a translucent bounding box, one per matched placement. Findings are computed on the
+// netlist and located on the geometry by name/id (CONSTRAINTS C21).
+func specsForFindings(findings []check.Finding) []*geom.HighlightSpec {
+	var specs []*geom.HighlightSpec
+	for _, f := range findings {
+		e := f.Subject
+		spec := &geom.HighlightSpec{Color: colorFor(f.Severity)}
+		switch e.Kind {
+		case check.KindNet:
+			spec.Nets = []string{e.Ref}
+			if e.NetID != "" {
+				spec.NetIds = []string{e.NetID}
+			}
+			spec.Shape = geom.HighlightShape_HIGHLIGHT_SHAPE_PATH
+		case check.KindPin:
+			spec.Pins = []*geom.PinRef{{RefDes: e.Ref, Pin: e.Pin}}
+		default: // KindComponent
+			spec.Components = []string{e.Ref}
+			spec.Shape = geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT
+		}
+		specs = append(specs, spec)
+	}
+	return specs
+}
+
+// colorFor maps a finding severity to a highlight color, error hot red and warning amber. Anything
+// else returns "", which lets render pick DefaultHighlightColor.
+func colorFor(severity string) string {
+	switch severity {
+	case "error":
+		return "#e11d48"
+	case "warning":
+		return "#f59e0b"
+	default:
+		return ""
+	}
+}

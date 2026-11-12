@@ -1,0 +1,15 @@
+(kicad_sch
+	(version 20240620)
+	(generator "test")
+	(lib_symbols
+		(symbol "test:R"
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(pin passive line (at 0 0 0) (length 2) (name "~") (number "1")))))
+	(symbol (lib_id "test:R") (unit 1) (uuid "aaa")
+		(property "Reference" "U1") (property "Value" "R"))
+	(symbol (lib_id "test:R") (unit 1) (uuid "bbb")
+		(property "Reference" "U1") (property "Value" "C"))
+	(symbol (lib_id "test:R") (unit 1) (uuid "ccc")
+		(property "Reference" "R7") (property "Value" "10k"))
+)

@@ -1,0 +1,11 @@
+(edif OVERLAYBUS
+  (edifVersion 2 0 0)
+  (design OVERLAYBUS (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef A)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef B)) (designator "U2"))
+          (net BUS_TBA (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U2))))
+          (net BUS_TBB (joined (portRef 2 (instanceRef U1)))))))))

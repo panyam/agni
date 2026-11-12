@@ -1,0 +1,9 @@
+# kicad-cli 10.0.6, readers/kicad/testdata/board.kicad_pcb. layer, text, glyph box x0 y0 x1 y1 in mm, Y down.
+F.SilkS	C?1845	6.644	2.249	13.356	3.579
+F.SilkS	J1	19.093	12.309	20.847	13.579
+F.SilkS	R1	7.063	9.309	8.998	10.579
+F.SilkS	REF**	5.581	2.309	10.540	3.579
+B.SilkS	Board	11.143	3.522	18.857	5.522
+B.SilkS	Demo	11.286	0.302	18.619	2.302
+F.Fab	10k	10.518	9.309	13.482	10.579
+F.Fab	CONN	17.611	16.309	22.328	17.579

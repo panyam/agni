@@ -1,0 +1,18 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "External symbol lib"))
+	(lib_symbols)
+	(symbol (lib_id "ext:R") (at 50 46.19 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 47 45 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "ext:R_Derived") (at 80 46.19 0) (unit 1) (uuid "r2")
+		(property "Reference" "R2"
+			(at 77 45 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 50 50) (xy 80 50)))
+	(label "SIG" (at 65 50 0)
+		(effects (font (size 1.27 1.27)))))

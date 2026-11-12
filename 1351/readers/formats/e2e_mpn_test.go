@@ -1,0 +1,68 @@
+package formats
+
+import (
+	"testing"
+)
+
+// TestMPNResolvesOnEveryFormat adds the guard agni issue 519 needed and did not have. It asserts
+// the same claim through the real loader for more than one format.
+//
+// Each format's tests only ever checked that format, so no existing test could see the bug. EDIF
+// resolved part numbers, because its reader had a private promotion pass. Telesis did not. It
+// recorded the number on the PART TYPE, and the model only read the COMPONENT. Nothing compared the
+// two. So `component.mpn` came back empty for every component of every .tel design. The datasheet
+// tier joins component.mpn -> param, and a parameter rule cannot tell "no datasheet seeded" from
+// "this format never delivers a part number". The whole tier was silently off on that format.
+//
+// A single-format test would have passed throughout the bug's life. So this one is table-driven
+// ACROSS formats. A new reader inherits the guarantee by adding a row.
+func TestMPNResolvesOnEveryFormat(t *testing.T) {
+	for _, tc := range []struct {
+		name, path  string
+		wantAtLeast int
+	}{
+		// Records its part number on the part type, under a lowercase key. The regression case.
+		{"telesis", "../telesis/testdata/basic.tel", 8},
+		// Records it per instance under a vendor alias, and on the cell for shared part types.
+		{"edif", "../edif/testdata/mpn.edn", 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d, err := (&Loader{}).ReadDesign(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var resolved int
+			for _, c := range d.GetComponents() {
+				if c.GetMpn() != "" {
+					resolved++
+				}
+			}
+			if resolved < tc.wantAtLeast {
+				t.Errorf("%d component(s) resolved a part number, want at least %d: the datasheet tier joins on this, and zero of them reports as a clean run",
+					resolved, tc.wantAtLeast)
+			}
+		})
+	}
+}
+
+// TestMPNNeverInvented is the other half, and it keeps the pass from guessing. If a component's
+// source states no part number, the component must come back with none. A guessing fallback is worse
+// than the gap it fills. A wrong part number joins to a real datasheet and produces confident
+// findings about a part that is not on the board.
+func TestMPNNeverInvented(t *testing.T) {
+	d, err := (&Loader{}).ReadDesign("../telesis/testdata/basic.tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A package line with no `!` discriminator places R1, so the source states no part number for
+	// it. In readers/telesis, a line with two quoted strings and no bang is a property entry, not a
+	// package one.
+	for _, c := range d.GetComponents() {
+		if c.GetRefDes() != "R1" {
+			continue
+		}
+		if got := c.GetMpn(); got != "" && got != "RC0603FR-0710KL" {
+			t.Errorf("R1 resolved %q, which its source does not state", got)
+		}
+	}
+}

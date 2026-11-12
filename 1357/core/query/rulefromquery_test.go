@@ -1,0 +1,491 @@
+package query
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// pinDesign has U1 (part MCU) with a power pin "1" (VDD) alone on net STUB (one connection). U1
+// also has a signal pin "2" (IO) on net SHARED with R1 (two connections).
+func pinDesign() *ir.Design {
+	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
+		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+		{Name: "IO", Designator: "2", Direction: ir.PinDirection_PIN_DIRECTION_INPUT},
+	}}
+	res := &ir.PartType{Name: "RES", Pins: []*ir.Pin{
+		{Name: "~", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_PASSIVE},
+	}}
+	comp := func(ref, part string) *ir.Component {
+		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"},
+			Sections: []*ir.ComponentSection{{PartRef: part, LibraryRef: "lib"}}}
+	}
+	return &ir.Design{
+		Libraries:  []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{mcu, res}}},
+		Components: []*ir.Component{comp("U1", "MCU"), comp("R1", "RES")},
+		Nets: []*ir.Net{
+			{Name: "STUB", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}},
+			{Name: "SHARED", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "R1", PinRef: "1"}}},
+		},
+	}
+}
+
+// The pin relations resolve: role from the pin name, type from the direction, net membership, and
+// per-net fan-out.
+func TestPinRelationsQuery(t *testing.T) {
+	b := NewBase(check.NewModel(pinDesign()))
+	q, err := Parse(`pin.role(?r, ?p, ?role), pin.type(?r, ?p, ?etype), pin.net(?r, ?p, ?net) => ?r, ?p, ?role, ?etype, ?net`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := Naive{}.Eval(context.Background(), q, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Only the VDD pin has a derived role (power); IO is RoleUnknown so pin.role omits it.
+	if len(rows) != 1 {
+		t.Fatalf("want 1 role-bearing pin, got %d: %+v", len(rows), rows)
+	}
+	got := rows[0].Bind
+	if got[Var("r")].S != "U1" || got[Var("p")].S != "1" || got[Var("role")].S != "power" ||
+		got[Var("etype")].S != "power_in" || got[Var("net")].S != "STUB" {
+		t.Fatalf("unexpected bindings: %+v", got)
+	}
+}
+
+// TestEsdRatedQuery (WS3-076) expresses the IC-ESD credit as datalog. component.esd_rated joins
+// with component.net to name the signals a rated transceiver protects. The relation is empty
+// without --params, so the query is authored against a params-seeded Base.
+func TestEsdRatedQuery(t *testing.T) {
+	esd := func(mpn string, volts float64) *parampb.PartSpec {
+		v := volts
+		return &parampb.PartSpec{Mpn: mpn, Docs: []*parampb.SourceDoc{{Id: "ds", Title: mpn + " Rev A"}},
+			Parameters: []*parampb.Parameter{{
+				Symbol: "V_ESD", LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, Unit: "V",
+				Value:             &parampb.RangeValue{Max: &v},
+				ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+				Attributes:        map[string]string{"esd_test_model": "iec"}, // system-level (WS3-077)
+				Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 1},
+			}}}
+	}
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "U9", Mpn: "XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U8", Mpn: "PLAIN", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "CAN_H", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U9", PinRef: "1"}}},
+			{Name: "GPIO", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U8", PinRef: "1"}}},
+		},
+	}
+	set := param.ParamSet{"XCVR": esd("XCVR", 8000), "PLAIN": esd("PLAIN", 500)} // only XCVR clears the floor
+	b := NewBase(check.NewModel(d, check.WithParamProvider(set)))
+	q, err := Parse(`component.esd_rated(?r), component.net(?r, ?n) => ?n`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := Naive{}.Eval(context.Background(), q, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Bind[Var("n")].S != "CAN_H" {
+		t.Fatalf("esd-rated join = %+v, want one net (CAN_H); the below-floor PLAIN part must not credit GPIO", rows)
+	}
+}
+
+// TestDiagnosticRelationsQuery (WS3-081) checks that the entity-keyed reader diagnostics are
+// queryable and join. The fixture has a ref-des collision on U1, and U2 pin 1 claimed by two nets
+// (a pin-net conflict). Both relations answer, and reader.pin_net_conflict returns one row per net
+// the conflicted pin touches.
+func TestDiagnosticRelationsQuery(t *testing.T) {
+	d := &ir.Design{
+		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{
+			{RefDes: "U1", Instances: []*ir.Provenance{{NativeId: "a"}, {NativeId: "b"}}},
+		}},
+		// U2 (no collision) has pin 1 claimed by both nets -> pin-net conflict. It must be a
+		// DIFFERENT component from the collided U1, because a duplicate designator legitimately
+		// spans nets, so the conflict detector excludes a ref-des that already collided.
+		Components: []*ir.Component{
+			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "NETA", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U2", PinRef: "1"}}},
+			{Name: "NETB", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U2", PinRef: "1"}}},
+		},
+	}
+	b := NewBase(check.NewModel(d))
+
+	rc, err := Naive{}.Eval(context.Background(), MustParse(`reader.ref_des_collision(?r) => ?r`), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rc) != 1 || rc[0].Bind[Var("r")].S != "U1" {
+		t.Fatalf("reader.ref_des_collision = %+v, want one (U1)", rc)
+	}
+
+	pc, err := Naive{}.Eval(context.Background(), MustParse(`reader.pin_net_conflict(?r, ?p, ?net) => ?net`), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nets := map[string]bool{}
+	for _, r := range pc {
+		nets[r.Bind[Var("net")].S] = true
+	}
+	if !nets["NETA"] || !nets["NETB"] {
+		t.Fatalf("reader.pin_net_conflict nets = %v, want NETA and NETB (a pin on two nets)", nets)
+	}
+}
+
+// param.prov exposes a datasheet value's citation as a query relation. A component-subject datalog
+// rule can declare ParamSymbol, and it then attaches the FULL citation
+// (doc/page/section/method/confidence) to its findings via check.DatasheetProvFor. That is the
+// datalog analogue of the built-in datasheet rules' dual provenance (WS10-010). Both need a
+// params-seeded Model.
+func TestParamProvRelationAndFindingAttach(t *testing.T) {
+	iout := 1.0
+	spec := &parampb.PartSpec{
+		Mpn:  "BUCKPART",
+		Docs: []*parampb.SourceDoc{{Id: "snas870b", Title: "LMR60410-Q1 Buck (SNAS870B Rev. B)"}},
+		Parameters: []*parampb.Parameter{{
+			Symbol: "IOUT", LimitKind: parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, Unit: "A",
+			Value: &parampb.RangeValue{Max: &iout},
+			Prov: &parampb.ParamProvenance{
+				DocRef: "snas870b", Page: 5, TableOrFigure: "6.3 Recommended Operating Conditions",
+				Method: "hand", Confidence: 1.0,
+			},
+		}},
+	}
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "BUCKPART", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "V1", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
+	}
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"BUCKPART": spec}))
+
+	// (1) the relation surfaces the citation columns (doc title / page / section).
+	rows, err := Naive{}.Eval(context.Background(), MustParse(`param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?doc, ?page, ?section`), NewBase(m))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("want 1 param.prov row, got %d: %+v", len(rows), rows)
+	}
+	b := rows[0].Bind
+	if b[Var("doc")].S != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || b[Var("section")].S != "6.3 Recommended Operating Conditions" {
+		t.Fatalf("citation columns wrong: %+v", b)
+	}
+	// The page binds as a STRING. It is a document locator rather than a quantity. A number in a
+	// numeric slot has no BaseUnit, and that made it unify with a voltage (agni issue 545).
+	if b[Var("page")].S != "5" || b[Var("page")].Num != nil {
+		t.Fatalf("page should bind as the string \"5\" with no number: %+v", b[Var("page")])
+	}
+
+	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence. The
+	// report uses confidence to flag a value that should be verified before it is trusted.
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:        check.Rule{Name: "iout-check", Severity: "warning"},
+		Query:       MustParse(`component.mpn(?r, ?m), param.max(?m, "IOUT", ?v), ?v < 6 => ?r`),
+		Kind:        check.KindComponent,
+		SubjectVar:  "r",
+		Message:     "{r}: IOUT below requirement",
+		ParamSymbol: "IOUT",
+	})
+	fs := rule.Findings(context.Background(), m)
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+	if len(fs[0].DatasheetProv) != 1 {
+		t.Fatalf("want 1 citation on a ParamSymbol datalog finding, got %d", len(fs[0].DatasheetProv))
+	}
+	dp := fs[0].DatasheetProv[0]
+	if dp.Doc != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || dp.DocRef != "snas870b" || dp.Page != 5 ||
+		dp.Section != "6.3 Recommended Operating Conditions" || dp.Method != "hand" || dp.Confidence != 1.0 {
+		t.Fatalf("citation not fully attached: %+v", dp)
+	}
+
+	// (3) without ParamSymbol, no citation is attached (the opt-in gates it).
+	plain := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "iout-plain", Severity: "warning"},
+		Query:      MustParse(`component.mpn(?r, ?m), param.max(?m, "IOUT", ?v), ?v < 6 => ?r`),
+		Kind:       check.KindComponent,
+		SubjectVar: "r",
+		Message:    "{r}",
+	})
+	if pf := plain.Findings(context.Background(), m); len(pf) != 1 || pf[0].DatasheetProv != nil {
+		t.Fatalf("no ParamSymbol should mean no citation: %+v", pf)
+	}
+}
+
+// RuleFromQuery turns a datalog goal into a check.Rule. Every answer row becomes a Finding, with
+// the subject's provenance resolved and the message template filled from the row.
+func TestMustRuleFromQuery(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule: check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		// A pin alone on its net (fan-out < 2). Reads is left empty to exercise auto-derivation.
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+	})
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+	f := fs[0]
+	if f.Subject.Kind != check.KindPin || f.Subject.Ref != "U1" || f.Subject.Pin != "1" {
+		t.Fatalf("wrong subject/pin: %+v", f)
+	}
+	if f.Message != "pin 1 sits alone on net STUB" {
+		t.Fatalf("template not filled: %q", f.Message)
+	}
+	if f.Prov == nil || f.Prov.SourceFile != "t" {
+		t.Fatalf("provenance not resolved from the model: %+v", f.Prov)
+	}
+}
+
+// TestRuleFromQueryCarriesContext is the authoring half of agni issue 349.
+//
+// The fix is a FIELD rather than a convention. The message names an entity, and that entity is
+// already bound in the answer row. Building the Finding simply threw it away. Nothing downstream
+// could recover it without parsing prose. Declaring the variable is all it takes.
+//
+// This test uses the power-pin-mistyped shape, a component subject with a message naming both a pin
+// and a net.
+func TestRuleFromQueryCarriesContext(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "pin {pin} sits alone on net {net}",
+		ContextVars: []ContextVar{
+			{Var: "net", Kind: check.KindNet, Role: "net"},
+		},
+	})
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+	if n := len(fs[0].Context); n != 1 {
+		t.Fatalf("want 1 context entity, got %d: %+v", n, fs[0].Context)
+	}
+	c := fs[0].Context[0]
+	if c.Role != "net" || c.Kind != check.KindNet {
+		t.Errorf("context = (kind %q, role %q), want (net, net)", c.Kind, c.Role)
+	}
+	// The SENTENCE names this entity, resolved from the same row that produced the message. If the
+	// two ever disagree, the chip sends the reader somewhere the message did not mention. That
+	// would be the original bug in another form.
+	if !strings.Contains(fs[0].Message, c.Ref) {
+		t.Errorf("context entity %q is not named in the message %q", c.Ref, fs[0].Message)
+	}
+}
+
+// TestRuleFromQueryContextKeepsAuthorOrder checks that entries come out in the order the rule
+// DECLARED them. That is also the order in which the message names them, so a panel's chips read
+// like the sentence above them. A map-based implementation would pass every other assertion here
+// and fail this one at random.
+func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "ordered", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "{pin} then {net}",
+		ContextVars: []ContextVar{
+			{Var: "pin", Kind: check.KindPin, Role: "pin"},
+			{Var: "net", Kind: check.KindNet, Role: "net"},
+		},
+	})
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
+	if len(fs) != 1 || len(fs[0].Context) != 2 {
+		t.Fatalf("want 1 finding with 2 context entities, got %+v", fs)
+	}
+	if fs[0].Context[0].Role != "pin" || fs[0].Context[1].Role != "net" {
+		t.Errorf("context order = [%s %s], want [pin net] (the declared order)",
+			fs[0].Context[0].Role, fs[0].Context[1].Role)
+	}
+}
+
+// TestRuleFromQueryNoContextVarsIsClean checks that a rule declaring no context vars gets no
+// context. That is the common case. The context must be nil rather than an empty slice, so a wire
+// encoder omits the field entirely.
+func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "plain", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "no context here",
+	})
+	fs := rule.Findings(context.Background(), check.NewModel(pinDesign()))
+	if len(fs) != 1 || fs[0].Context != nil {
+		t.Errorf("a rule declaring no context vars must carry none, got %+v", fs[0].Context)
+	}
+}
+
+// TestRuleFromQueryWithoutDomainStatesNothing is the negative control for the whole considered-set
+// mechanism (agni issue 424). Leaving Domain unset must keep the failures-only shape. Every query
+// rule compiled through this bridge so far still leaves Domain unset. If an author declares
+// nothing, the rule CLAIMS nothing. RunVerdicts then filters it out rather than counting its
+// failures as its coverage.
+func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+	})
+	if rule.StatesConsideredSet {
+		t.Fatal("a query rule with no declared Domain must not claim a considered set")
+	}
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
+		if v.Outcome != check.Fail {
+			t.Fatalf("want failures only, got a %s verdict: %+v", v.Outcome, v)
+		}
+	}
+}
+
+// TestRuleFromQueryDomainReportsPasses declares a Domain. The subjects the finding goal passed over
+// come back as Pass verdicts with a witness, and the rule says so.
+//
+// pinDesign has two pins. Pin U1.1 sits alone on STUB and fails. Pin U1.2 shares SHARED with R1 and
+// is the pass. R1.1 is on SHARED too, so the domain is three pins wide.
+func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "pin {pin} shares net {net} with another pin",
+		},
+	})
+	if !rule.StatesConsideredSet {
+		t.Fatal("a query rule with a declared Domain must state its considered set")
+	}
+	var pass, fail []check.Verdict
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
+		switch v.Outcome {
+		case check.Pass:
+			pass = append(pass, v)
+		case check.Fail:
+			fail = append(fail, v)
+		}
+	}
+	if len(fail) != 1 || len(pass) != 2 {
+		t.Fatalf("want 1 fail and 2 pass, got %d and %d", len(fail), len(pass))
+	}
+	// The failing subject must NOT also appear as a pass. The domain enumerates everything, and the
+	// finding goal selects the bad ones. They agree only if the difference is taken by subject. A
+	// key built from the wrong field would pass every other assertion here.
+	if check.VerdictID(fail[0]) == check.VerdictID(pass[0]) {
+		t.Fatal("the failing subject was also reported as a pass")
+	}
+	for _, v := range pass {
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Fatalf("a pass without a witness is the silence verdicts exist to remove: %+v", v)
+		}
+		if !strings.Contains(v.Witness.Statement, "shares net SHARED") {
+			t.Errorf("witness template not filled from the domain row: %q", v.Witness.Statement)
+		}
+	}
+	// Declaring a domain leaves the findings contract unchanged. There is still one violation, and
+	// the passes do not leak into it.
+	if fs := rule.Findings(context.Background(), check.NewModel(pinDesign())); len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+}
+
+// TestRuleFromQueryTupleVarsSeparateVerdictIDs covers a rule reporting one row per (subject, second
+// element). The rule needs that element in the verdict tuple. Otherwise every row about one subject
+// answers to one id, and a reader following a link gets whichever was written last.
+//
+// This is the host-incomplete shape reduced to the pin fixture. It has two verdicts about U1, told
+// apart only by the net each concerns.
+func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "comp-pin", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 1 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "{ref} on {net}",
+		TupleVars:  []TupleVar{{Var: "net", Kind: check.KindNet}},
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "{ref} sits on {net}",
+		},
+	})
+	if want := []string{check.KindComponent, check.KindNet}; len(rule.SubjectShape) != 2 ||
+		rule.SubjectShape[0] != want[0] || rule.SubjectShape[1] != want[1] {
+		t.Fatalf("SubjectShape = %v, want %v", rule.SubjectShape, want)
+	}
+	seen := map[string]int{}
+	var u1 int
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
+		seen[check.VerdictID(v)]++
+		if v.Subjects[0].Ref == "U1" {
+			u1++
+		}
+	}
+	if u1 != 2 {
+		t.Fatalf("want 2 verdicts about U1 (one per net it sits on), got %d", u1)
+	}
+	for id, n := range seen {
+		if n > 1 {
+			t.Errorf("verdict id %q was issued %d times; the tuple does not separate these rows", id, n)
+		}
+	}
+}
+
+// TestRuleFromQueryDomainFailuresCarryAWitness pins one half of the contract. A rendered report
+// caught a bug in that half, and no unit test would have.
+//
+// Verdict.Witness is REQUIRED on Fail as well as Pass. The WIRE form of a Verdict deliberately
+// holds no Finding, because a defect travels once, in the findings array. Some failing verdicts had
+// their only sentence on their Finding. Every consumer that reads verdicts back from the service
+// rendered such a verdict as a blank line. The docsite capture showed it, and an in-process test
+// did not.
+func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "pin {pin} shares net {net} with another pin",
+		},
+	})
+	fails := 0
+	for _, v := range rule.Eval(context.Background(), check.NewModel(pinDesign())) {
+		if v.Outcome != check.Fail {
+			continue
+		}
+		fails++
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Fatalf("a failing verdict must carry a witness, or it crosses the service seam mute: %+v", v)
+		}
+		// The witness says what the finding says, because for a datalog rule the matched row IS the
+		// proof and there is nothing else to state. They must not drift apart.
+		if v.Finding == nil || v.Witness.Statement != v.Finding.Message {
+			t.Errorf("witness %q and finding message %q disagree", v.Witness.Statement, v.Finding.Message)
+		}
+	}
+	if fails != 1 {
+		t.Fatalf("want 1 failing verdict, got %d", fails)
+	}
+}

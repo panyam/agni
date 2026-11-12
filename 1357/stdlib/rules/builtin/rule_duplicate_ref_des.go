@@ -1,0 +1,110 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// duplicateRefDes reports reference-designator collisions the reader detected. See Detail.
+var duplicateRefDes = &check.Rule{
+	Name:       "duplicate-ref-des",
+	Severity:   "error",
+	Summary:    "A reference designator is claimed by more than one distinct physical part.",
+	Impact:     "Two parts sharing a ref-des collapse into one in the BOM and corrupt the net join key: one part is dropped from the build, or connections meant for two parts land on one. It is an annotation slip that silently falsifies both the BOM and the netlist.",
+	Remedy:     "Re-annotate the schematic so each physical part holds its own designator, then re-check the BOM, since whichever part was silently merged is the one to look at first.",
+	Primitives: []string{"select"},
+	Reads:      []string{"reader.ref_des_collision"},
+	// The rule IS the reader's diagnostic, so a reader that does not compute it leaves this rule
+	// with nothing to report, the same output as a clean design. Gating on the capability makes the
+	// rule not-applicable, with a reason, instead of a pass with no check behind it (agni issue 309).
+	RequiresCapability: []check.Capability{check.CapRefDesCollisions},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryConnectivity,
+		check.KeyTier:         "P",
+		check.KeyDistribution: check.DistOpen,
+		check.KeySite:         check.SiteDiagnostic, // the reader decides duplicate vs multi-unit (docsite/content/architecture/rules-and-checks.md)
+	},
+	Detail:              ruleDoc("duplicate-ref-des"),
+	Eval:                duplicateRefDesVerdicts,
+	StatesConsideredSet: true,
+}
+
+// duplicateRefDesVerdicts decides every designator the design carries, a wider set than the reader's
+// collision list. A collision list alone answers "which designators are claimed twice". The
+// considered set answers "which designators were checked for that", and the two differ by every part
+// on the board.
+//
+// THE CAPABILITY GATE IS RESTATED HERE, over the PASSES ONLY. `Run` does not consult
+// RequiresCapability (the review layer does). Imagine a format whose reader never looks for
+// collisions. This Eval still runs there and finds none, and that reads as a clean design. The
+// rule-level gate from agni issue 309 covers only callers that ask Available first. A caller that
+// skipped Available must not be told "R7 has no collision", so those subjects come back
+// NotConsidered instead. A reported collision needs no such hedge, since the reader cannot report
+// one without having looked.
+//
+// The fails come first and in the reader's own order so the findings projection is byte-identical to
+// what this rule has always reported. Passes follow in design order, deduplicated by designator,
+// because the subject is the DESIGNATOR rather than the placement. A verdict is keyed by
+// (rule, kind, ref), so a second verdict about the same ref-des would be a duplicate identity.
+func duplicateRefDesVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	collided := map[string]bool{}
+	out := make([]check.Verdict, 0, len(m.Components()))
+	for _, c := range m.RefDesCollisions() {
+		collided[c.RefDes] = true
+		var prov *ir.Provenance
+		if len(c.Instances) > 0 {
+			prov = c.Instances[0]
+		}
+		out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Fail, Witness: &check.Witness{
+			Statement: fmt.Sprintf("%d placements claim the designator %q", len(c.Instances), c.RefDes),
+			Terms:     []check.WitnessTerm{{Label: "placements", Value: fmt.Sprint(len(c.Instances))}},
+		}, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: fmt.Sprintf("ref-des claimed by %d placements; expected one physical part", len(c.Instances)), Prov: prov}})
+	}
+
+	looked := m.SuppliesDiagnostic(string(check.CapRefDesCollisions))
+	for _, ref := range dedupedRefDes(m) {
+		if collided[ref] {
+			continue
+		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}}
+		if !looked {
+			v.Outcome = check.NotConsidered
+			v.Reason = "this format's reader does not detect ref-des collisions, so nothing was compared"
+		} else {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				// The reader is the authority on multi-unit versus duplicate (one part drawn as
+				// three sections is not a collision). So the pass uses the same judgement as the
+				// failure, not a second count taken here that could disagree with it.
+				Statement: fmt.Sprintf("the reader found no second physical part claiming %q", ref),
+			}
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// dedupedRefDes yields the design's designators once each, in design order, skipping the empty one.
+// A part with no designator has no identity to collide on and nothing to name in a report, so it is
+// not a subject of this rule at all. unannotated-components reports it instead.
+func dedupedRefDes(m check.Model) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, c := range m.Components() {
+		if c.RefDes == "" || seen[c.RefDes] {
+			continue
+		}
+		seen[c.RefDes] = true
+		out = append(out, c.RefDes)
+	}
+	return out
+}
+
+// duplicateRefDesSpec is the rule's declarative twin (WS3-003).
+var duplicateRefDesSpec = &check.Spec{
+	Over:    "ref_des_collisions",
+	Message: "ref-des claimed by {collision.instance_count} placements; expected one physical part",
+}

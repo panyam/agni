@@ -1,0 +1,178 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it, expect, vi } from "vitest";
+import { DocumentStore } from "./document.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const source = (name: string) => readFileSync(join(here, name), "utf8");
+// code drops comments, so a comment explaining the split cannot trip the check or satisfy it.
+const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+// The interaction half holds who is selected and focused, what is lit, the camera, the busy state
+// and the panel tabs. The document half must name none of it.
+const INTERACTION_MODULES = ["./selection.js", "./highlights.js", "./highlightstyle.js", "./camera.js", "./busy.js", "./querytabs.js", "./viewer.js"];
+const INTERACTION_STATE = /\b(selectedSubject|selectedNetId|focusedVerdict|highlights|highlightStyle|viewMemory|busyDepth|tracedPins|ViewerPresenter)\b/;
+
+// The dependency runs one way (agni issue 390). Interaction reads the document. The document never
+// reads interaction, or the two halves would form a cycle across what may become a WebAssembly
+// boundary.
+describe("the document half reads no interaction state", () => {
+  it("imports no interaction module and names no interaction state", () => {
+    const doc = code(source("document.ts"));
+    const imports = [...doc.matchAll(/from "([^"]+)"/g)].map((m) => m[1]);
+    expect(imports.length).toBeGreaterThan(3);
+    for (const m of INTERACTION_MODULES) expect(imports).not.toContain(m);
+    expect(doc.match(INTERACTION_STATE)?.[0] ?? null).toBeNull();
+    expect(doc).not.toMatch(/\.tsx"/);
+  });
+
+  // This is the positive control. The presenter does hold interaction state and does read the
+  // store, so the checks above can fail, and the store is the one it uses.
+  it("is what the interaction half reads, and the patterns above match the interaction half", () => {
+    const viewer = code(source("viewer.ts"));
+    expect(viewer).toMatch(/from "\.\/document\.js"/);
+    expect(viewer).toMatch(INTERACTION_STATE);
+    expect([...viewer.matchAll(/from "([^"]+)"/g)].map((m) => m[1])).toEqual(expect.arrayContaining(["./selection.js"]));
+  });
+});
+
+// The store works with no presenter at all. It loads a catalog and folds runs on its own.
+describe("DocumentStore on its own", () => {
+  it("loads the catalog, runs only the rules it lacks, and folds each answer into one run", async () => {
+    const doc = new DocumentStore();
+    doc.mount = "m";
+    doc.path = "b.edn";
+    const listRules = vi.fn(async () => ({
+      rules: [
+        { name: "a", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        { name: "b", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+      ],
+    }));
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    expect(doc.selectedRules).toEqual(["a", "b"]);
+    const checkDesign = vi.fn(async (req: { rules: string[] }) => ({
+      findings: req.rules.map((r) => ({ rule: r, severity: "info", message: r, subject: { kind: "net", ref: "N" } })),
+      verdicts: [],
+      skipped: [],
+    }));
+    doc.selectedRules = ["a"];
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    doc.selectedRules = ["a", "b"];
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    expect(checkDesign.mock.calls.map((c) => c[0].rules)).toEqual([["a"], ["b"]]);
+    // Each run names the open design's snapshot (agni issue 1061), and so does the catalog.
+    expect(checkDesign.mock.calls.map((c) => (c[0] as { snapshot?: string }).snapshot)).toEqual(["snapshots/t", "snapshots/t"]);
+    expect(listRules.mock.calls[0]).toEqual([{ snapshot: "snapshots/t" }]);
+    expect(doc.run?.resp.findings.map((f) => f.rule)).toEqual(["a", "b"]);
+    expect(doc.heldRun()?.names).toEqual(["a", "b"]);
+  });
+});
+
+// A saved report is rendered from heldRun, which rebuilds the run rule by rule (agni issue 717).
+// The read's omissions belong to the design rather than to a rule. They must survive the rebuild
+// whole, every entry and field, or the saved page reads as the whole design.
+describe("the held run keeps what the read left out", () => {
+  it("carries every unexpanded block into the run a report is saved from", async () => {
+    const doc = new DocumentStore();
+    doc.mount = "m";
+    doc.path = "hier.edn";
+    const listRules = vi.fn(async () => ({
+      rules: [{ name: "a", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" }],
+    }));
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    const blocks = [
+      { name: "SUB", kind: "edif_cell", instanceCount: 212, prov: { sourceFile: "hier.edn", nativeId: "SUB", nativeIdKind: "edif-cell", span: { byteOffset: 40n, byteLength: 120n, line: 5, column: 5 } } },
+      { name: "PSU", kind: "edif_cell", instanceCount: 9, prov: { sourceFile: "hier.edn", nativeId: "PSU", nativeIdKind: "edif-cell", span: { byteOffset: 400n, byteLength: 90n, line: 40, column: 5 } } },
+    ];
+    const checkDesign = vi.fn(async () => ({ findings: [], verdicts: [], skipped: [], unexpandedHierarchy: blocks }));
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    // toMatchObject because the rebuilt run is a created message, which adds its type names.
+    const held = doc.heldRun()?.run.unexpandedHierarchy;
+    expect(held).toHaveLength(2);
+    expect(held).toMatchObject(blocks);
+  });
+});
+
+// A failed run keeps its reason and the rules it left pending, and so does a failed catalog (agni
+// issue 1117). A bare catch used to swallow both.
+describe("the store keeps why a request failed", () => {
+  const listRules = vi.fn(async () => ({
+    rules: ["a", "b"].map((name) => ({ name, severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" })),
+  }));
+  async function opened(): Promise<DocumentStore> {
+    const doc = new DocumentStore();
+    doc.mount = "m";
+    doc.path = "b.edn";
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    return doc;
+  }
+
+  it("keeps a failed run's reason and rules, folds in nothing, and clears it on the next run", async () => {
+    const doc = await opened();
+    const checkDesign = vi.fn().mockRejectedValueOnce(new Error("[invalid_argument] invalid argument: mount://m/b.svg carries no netlist"));
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    expect(doc.runError).toEqual({ message: "[invalid_argument] invalid argument: mount://m/b.svg carries no netlist", rules: ["a", "b"] });
+    expect(doc.run).toBeNull();
+
+    checkDesign.mockResolvedValueOnce({ findings: [], verdicts: [], skipped: [] });
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    expect(doc.runError).toBeNull();
+    expect(doc.ran("a") && doc.ran("b")).toBe(true);
+  });
+
+  it("counts a snapshot that cannot be had as a failed run", async () => {
+    const doc = await opened();
+    const checkDesign = vi.fn();
+    await doc.runMissing({ checkDesign } as never, async () => {
+      throw new Error("snapshot is stale");
+    });
+    expect(checkDesign).not.toHaveBeenCalled();
+    expect(doc.runError).toEqual({ message: "snapshot is stale", rules: ["a", "b"] });
+  });
+
+  it("keeps no failure for a run the reader stopped", async () => {
+    const doc = await opened();
+    const abort = new AbortController();
+    abort.abort();
+    const checkDesign = vi.fn().mockRejectedValueOnce(new DOMException("stopped", "AbortError"));
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t", abort.signal);
+    expect(checkDesign).toHaveBeenCalledOnce();
+    expect(doc.runError).toBeNull();
+  });
+
+  it("drops a failure with the run", async () => {
+    const doc = await opened();
+    await doc.runMissing({ checkDesign: vi.fn().mockRejectedValueOnce(new Error("boom")) } as never, async () => "snapshots/t");
+    expect(doc.runError).not.toBeNull();
+    doc.dropRun();
+    expect(doc.runError).toBeNull();
+  });
+
+  it("merges scoped verdicts into the panel list without folding them into the run", async () => {
+    const doc = await opened();
+    doc.keepScoped([
+      {
+        id: "a:(net:N1)",
+        rule: "a",
+        outcome: 2,
+        subjects: [{ kind: "net", ref: "N1", pin: "", netId: "", busId: "" }],
+        witness: { statement: "bad" },
+      },
+    ] as never);
+    expect(doc.verdictList()).toEqual([]);
+    expect(doc.panelVerdictList().map((v) => v.id)).toEqual(["a:(net:N1)"]);
+  });
+
+  it("keeps why the catalog did not load, and clears it when one does", async () => {
+    const doc = new DocumentStore();
+    await doc.loadCatalog({ listRules: vi.fn().mockRejectedValueOnce(new Error("snapshot not found")) } as never, async () => "snapshots/t");
+    expect(doc.rules).toEqual([]);
+    expect(doc.catalogError).toBe("snapshot not found");
+    expect(doc.catalogLoading).toBe(false);
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    expect(doc.catalogError).toBe("");
+    expect(doc.selectedRules).toEqual(["a", "b"]);
+  });
+});

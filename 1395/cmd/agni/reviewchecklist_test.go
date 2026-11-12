@@ -1,0 +1,247 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// checklistProject writes a project around a copy of the CAN fixture and returns the design folder.
+// checklists maps each name the project declares to the manifest fixture written under it, in the
+// order given, so the first is the project's default. None declares no checklists section at all.
+func checklistProject(t *testing.T, root, id string, checklists ...[2]string) string {
+	t.Helper()
+	write := func(rel, body string) {
+		t.Helper()
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	design, err := os.ReadFile("testdata/review/can-broken.edn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("designs/d/board.edn", string(design))
+	write("designs/d/design.yaml", "name: "+id+"-d\ntitle: D\nextends: ../../project.yaml\nentry: board.edn\n")
+	project := "name: " + id + "\ntitle: " + id + "\n"
+	if len(checklists) > 0 {
+		project += "checklists:\n"
+	}
+	for _, c := range checklists {
+		man, err := os.ReadFile(c[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		project += "  " + c[0] + ":\n"
+		for _, line := range strings.Split(strings.TrimRight(string(man), "\n"), "\n") {
+			project += "    " + line + "\n"
+		}
+	}
+	write("project.yaml", project)
+	return filepath.Join(root, "designs", "d")
+}
+
+// mini and rails are the two manifest fixtures a project declares, by name.
+var (
+	mini  = [2]string{"review", "testdata/review/mini.yaml"}
+	rails = [2]string{"rails", "testdata/intent/rails-checklist.yaml"}
+)
+
+// runReviewCapturing runs review and returns stdout, stderr, and the error.
+func runReviewCapturing(t *testing.T, args ...string) (string, string, error) {
+	t.Helper()
+	cmd := reviewCmd()
+	var out, errb bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errb)
+	cmd.SetArgs(args)
+	err := cmd.Execute()
+	return out.String(), errb.String(), err
+}
+
+// TestReviewUsesProjectChecklist checks that a design whose project declares a checklist needs no
+// --checklist. Before this, `agni review designs/gateway` errored out before
+// reading anything, even with the project's review.yaml sitting two directories up.
+func TestReviewUsesProjectChecklist(t *testing.T) {
+	design := checklistProject(t, t.TempDir(), "proj", mini)
+	out, errOut, err := runReviewCapturing(t, design)
+	if err != nil {
+		t.Fatalf("review: %v\n%s", err, errOut)
+	}
+	if !strings.Contains(out, "Mini board review") {
+		t.Errorf("the project's manifest should have run, got:\n%s", out)
+	}
+	// The outcomes do not say which checklist scored a run. So a checklist that nobody typed has to
+	// announce itself.
+	if !strings.Contains(errOut, "projects/proj") || !strings.Contains(errOut, `"review"`) {
+		t.Errorf("stderr should name the project and the checklist it declared, got %q", errOut)
+	}
+}
+
+// TestReviewPicksAChecklistByName covers a project declaring two checklists (agni issue 828). With no
+// --checklist the first one WRITTEN runs, whatever its name, and --checklist NAME runs another. A run
+// that sorted the names, or that looked for one called "review", would fail here, since the default
+// is called "rails".
+func TestReviewPicksAChecklistByName(t *testing.T) {
+	design := checklistProject(t, t.TempDir(), "proj", rails, mini)
+	out, errOut, err := runReviewCapturing(t, design)
+	if err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	if !strings.Contains(out, "Rail sizing review") || !strings.Contains(errOut, `"rails"`) {
+		t.Errorf("the first declared checklist should run by default, got:\n%s\n%s", out, errOut)
+	}
+	out, _, err = runReviewCapturing(t, "--checklist", "review", design)
+	if err != nil {
+		t.Fatalf("review --checklist review: %v", err)
+	}
+	if !strings.Contains(out, "Mini board review") {
+		t.Errorf("--checklist review should run the checklist of that name, got:\n%s", out)
+	}
+	_, _, err = runReviewCapturing(t, "--checklist", "nope", design)
+	if err == nil || !strings.Contains(err.Error(), `no checklist named "nope"`) || !strings.Contains(err.Error(), "rails, review") {
+		t.Errorf("an unknown name should fail and list what the project declares, got %v", err)
+	}
+}
+
+// TestReviewChecklistFlagWins keeps the flag meaningful on a design that DOES belong to a project.
+// The flag also suppresses the resolution note, because nothing was resolved.
+func TestReviewChecklistFlagWins(t *testing.T) {
+	design := checklistProject(t, t.TempDir(), "proj", mini)
+	_, errOut, err := runReviewCapturing(t, "--checklist", "testdata/intent/rails-checklist.yaml", design)
+	if err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	if strings.Contains(errOut, "declares") {
+		t.Errorf("an explicit --checklist resolves nothing, so it must emit no resolution note, got %q", errOut)
+	}
+}
+
+// TestReviewChecklistErrorsAreActionable checks that the three no-checklist states produce three
+// different messages. Collapsing them would tell an operator with a real project to pass a flag
+// when the actionable fix is a line in the project.yaml they already have.
+func TestReviewChecklistErrorsAreActionable(t *testing.T) {
+	t.Run("no project", func(t *testing.T) {
+		_, _, err := runReviewCapturing(t, "testdata/review/can-broken.edn")
+		if err == nil {
+			t.Fatal("a loose design with no --checklist must still error")
+		}
+		if !strings.Contains(err.Error(), "belongs to no project") {
+			t.Errorf("message should say the design has no project, got %v", err)
+		}
+	})
+	t.Run("project declares none", func(t *testing.T) {
+		design := checklistProject(t, t.TempDir(), "bare")
+		_, _, err := runReviewCapturing(t, design)
+		if err == nil {
+			t.Fatal("a project with no checklist must error")
+		}
+		for _, want := range []string{"bare", "checklists:", "project.yaml"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("message should name the project and the fix, missing %q: %v", want, err)
+			}
+		}
+	})
+}
+
+// TestReviewRollupRefusesMixedChecklists guards the rollup renderer's documented assumption that
+// every report shares the manifest structure. RenderAggregateMarkdown builds its traceability matrix
+// from Reports[0].Areas. With two manifests, it would label the rows from the first design's
+// checklist and fill the cells from the second's. Every row would then look answered under the wrong
+// labels.
+func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
+	a := checklistProject(t, t.TempDir(), "proj-a", mini)
+	b := checklistProject(t, t.TempDir(), "proj-b", mini)
+	_, _, err := runReviewCapturing(t, a, b)
+	if err == nil {
+		t.Fatal("two designs resolving to different checklists must refuse rather than score one against the other's manifest")
+	}
+	if !strings.Contains(err.Error(), "different checklists") || !strings.Contains(err.Error(), "--checklist") {
+		t.Errorf("message should name the disagreement and the way out, got %v", err)
+	}
+	// And --checklist is genuinely the way out, so the message is not advice that fails when followed.
+	if _, _, err := runReviewCapturing(t, "--checklist", "testdata/review/mini.yaml", a, b); err != nil {
+		t.Errorf("--checklist should score both against one manifest: %v", err)
+	}
+}
+
+// TestReviewRollupAcceptsOneChecklist checks that two designs under the SAME project resolve to one
+// checklist and roll up without a flag. A gate in CI most likely runs this case.
+func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
+	root := t.TempDir()
+	first := checklistProject(t, root, "proj", mini)
+	second := filepath.Join(root, "designs", "d2")
+	if err := os.MkdirAll(second, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	design, err := os.ReadFile("testdata/review/can-broken.edn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, "board.edn"), design, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, "design.yaml"), []byte("name: proj-d2\ntitle: D2\nextends: ../../project.yaml\nentry: board.edn\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, _, err := runReviewCapturing(t, first, second)
+	if err != nil {
+		t.Fatalf("one project, two designs: %v", err)
+	}
+	if !strings.Contains(out, "Review rollup") {
+		t.Errorf("expected a rollup, got:\n%s", out)
+	}
+}
+
+// breakDescriptor overwrites a descriptor written by checklistProject with one that exists and does
+// not parse. The resolution has to tell that case apart from "no descriptor at all".
+func breakDescriptor(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("name: My Board\ntitle: D\nentry: board.edn\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestReviewRefusesMalformedDesignDescriptor covers a design.yaml that exists and does not parse.
+// That file is THIS design's own configuration. Reading it as "no project" sends the operator to
+// --checklist when the actionable fix is the descriptor, and would score the run against the
+// built-in vocabulary while looking authoritative.
+func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {
+	root := t.TempDir()
+	design := checklistProject(t, root, "proj", mini)
+	breakDescriptor(t, filepath.Join(design, "design.yaml"))
+	_, _, err := runReviewCapturing(t, design)
+	if err == nil {
+		t.Fatal("a malformed design.yaml reviewed cleanly")
+	}
+	if strings.Contains(err.Error(), "belongs to no project") {
+		t.Errorf("a broken descriptor was reported as an absent one: %v", err)
+	}
+	for _, want := range []string{"design.yaml", "not a valid id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("message should carry the parse failure, missing %q: %v", want, err)
+		}
+	}
+}
+
+// TestReviewRefusesMalformedProjectDescriptor covers the same thing one descriptor up, with
+// --checklist passed so the checklist resolution is bypassed and the failure has to come from the
+// run's own project resolution rather than from the checklist lookup.
+func TestReviewRefusesMalformedProjectDescriptor(t *testing.T) {
+	root := t.TempDir()
+	design := checklistProject(t, root, "proj", mini)
+	breakDescriptor(t, filepath.Join(root, "project.yaml"))
+	_, _, err := runReviewCapturing(t, "--checklist", "testdata/intent/rails-checklist.yaml", design)
+	if err == nil {
+		t.Fatal("a malformed project.yaml reviewed cleanly")
+	}
+	if !strings.Contains(err.Error(), "project.yaml") {
+		t.Errorf("message should name the descriptor that failed: %v", err)
+	}
+}

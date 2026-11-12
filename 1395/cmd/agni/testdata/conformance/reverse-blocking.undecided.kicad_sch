@@ -1,0 +1,67 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Reverse Blocking Undecided"))
+	(lib_symbols
+		(symbol "test:CONN"
+			(property "Reference" "J")
+			(symbol "CONN_1_1"
+				(rectangle (start -5.08 -5.08) (end 0 5.08))
+				(pin passive line (at 0 2.54 0) (length 0) (name "1") (number "1"))
+				(pin passive line (at 0 -2.54 0) (length 0) (name "2") (number "2"))))
+		(symbol "test:FET"
+			(property "Reference" "Q")
+			(symbol "FET_1_1"
+				(polyline (pts (xy 0 2.54) (xy 5.08 2.54)))
+				(polyline (pts (xy 0 -2.54) (xy 5.08 -2.54)))
+				(polyline (pts (xy 2.54 2.54) (xy 2.54 -2.54)))
+				(pin passive line (at 0 2.54 0) (length 0) (name "S") (number "1"))
+				(pin passive line (at 5.08 2.54 0) (length 0) (name "D") (number "2"))
+				(pin passive line (at 0 -2.54 0) (length 0) (name "G") (number "3"))))
+		(symbol "test:R"
+			(property "Reference" "R")
+			(symbol "R_1_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54))
+				(pin passive line (at 0 2.54 270) (length 0) (name "~") (number "1"))
+				(pin passive line (at 0 -2.54 90) (length 0) (name "~") (number "2"))))
+		(symbol "test:MCU"
+			(property "Reference" "U")
+			(symbol "MCU_1_1"
+				(rectangle (start 0 -5.08) (end 10.16 5.08))
+				(pin power_in line (at 0 2.54 0) (length 0) (name "VDD") (number "1"))
+				(pin power_in line (at 0 -2.54 0) (length 0) (name "GND") (number "2"))))
+		(symbol "power:PWR_FLAG"
+			(property "Reference" "#FLG")
+			(symbol "PWR_FLAG_1_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27) (xy -1.016 2.286) (xy 0 3.302) (xy 1.016 2.286) (xy 0 1.27)))
+				(pin power_out line (at 0 0 0) (length 0) (name "pwr") (number "1")))))
+	(symbol (lib_id "test:CONN") (at 38.1 50.8 0) (unit 1) (uuid "j1")
+		(property "Reference" "J1") (property "Value" "BARREL_JACK"))
+	(symbol (lib_id "test:FET") (at 55.88 50.8 0) (unit 1) (uuid "q1")
+		(property "Reference" "Q1") (property "Value" "PMOS"))
+	(symbol (lib_id "test:R") (at 55.88 60.96 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1") (property "Value" "100k"))
+	(symbol (lib_id "test:MCU") (at 78.74 50.8 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "MCU"))
+	(symbol (lib_id "power:PWR_FLAG") (at 45.72 48.26 0) (unit 1) (uuid "flg1")
+		(property "Reference" "#FLG01") (property "Value" "PWR_FLAG"))
+	(symbol (lib_id "power:PWR_FLAG") (at 38.1 53.34 0) (unit 1) (uuid "flg2")
+		(property "Reference" "#FLG02") (property "Value" "PWR_FLAG"))
+	(wire (pts (xy 38.1 48.26) (xy 55.88 48.26)))
+	(label "VIN_CONN" (at 45.72 48.26 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 60.96 48.26) (xy 78.74 48.26)))
+	(label "VIN" (at 69.85 48.26 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 55.88 53.34) (xy 55.88 58.42)))
+	(label "VGATE" (at 55.88 55.88 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 38.1 53.34 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 55.88 63.5 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 78.74 53.34 0)
+		(effects (font (size 1.27 1.27))))
+)

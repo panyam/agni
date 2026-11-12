@@ -1,0 +1,11 @@
+# kicad-cli 10.0.6's drawn texts on text-markup.kicad_sch, one per line, as its <desc> records them.
+# The markup stays as written there; the strokes draw it. Written once and committed (agni issue 1344).
+~{RESET}
+GPIO2
+I^{2}C
+IO
+SDA/MOSI
+SWD.~{RST}_{n}
+U1
+UART_TX
+V_{OUT}

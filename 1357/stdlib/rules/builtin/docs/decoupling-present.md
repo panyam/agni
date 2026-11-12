@@ -1,0 +1,94 @@
+## decoupling-present
+
+### What it means
+
+Every supply rail that feeds a power-input pin (a chip's VCC/VDD) should carry
+at least one capacitor. The cap is the local charge reservoir that serves the chip's switching
+transients; the regulator is electrically far away.
+
+### Why engineers want it
+
+Missing decoupling is a classic review catch and a recurring field-reliability defect, where the
+design works at the bench and then resets or corrupts under load or temperature. Vendor app notes
+(TI, ST, NXP) specify decoupling per power pin because it is external and easy to forget.
+
+### Impact
+
+Supply sag and ground bounce at the pin, showing up as intermittent resets, logic corruption and EMC
+failures. Rarely visible at first power-on, expensive to find later.
+
+![Power rail with no capacitor is flagged; rail with a decoupling cap is fine](images/decoupling-present.svg)
+
+### Scope note
+
+This is the netlist presence check, asking only for "a capacitor somewhere on the rail". It does not
+check value, count-per-pin, or placement distance, since proximity is a board-tier notion and the
+value/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are
+skipped even though their pins are power_in too, because decoupling is a supply-rail concept and the
+same capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
+sheet we did not read). Capacitor identity is the shared component.class fact. The schematic may mark
+a supply pin no-connect and leave it alone on its net. Such a pin is not considered, since an unused
+supply pin draws nothing to decouple (agni issue 1244).
+
+A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
+for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a
+0 Ohm resistor that sizes the current path or lets a bench measure it, and the capacitors sit on the
+converter's side. A link counts when its value is zero ohms. That includes a value written as a
+library's part name, such as `R_0R_22.4A_0603`, which ingestion reads as 0 Ohm (agni issue 1115).
+The walk never crosses into a ground, and a series resistor of any other value still ends the rail.
+A pass names the link beside the capacitor.
+
+### Two nets that declare a supply pin and are not rails
+
+A power-input pin is much weaker evidence of a supply rail than it looks, and on one real
+multi-thousand-component board every one of this rule's 14 findings was a false positive. Two shapes
+account for most of them and the rule now excludes both.
+
+**A net driving a transistor's GATE is a control node.** A gate drive carries a controller output and
+a FET gate, and nothing about it wants a capacitor to ground.
+
+The guard asks about the gate rather than about the transistor, deliberately. A high-side load
+switch's OUTPUT carries the FET's source, feeds downstream supply pins, and wants decoupling exactly
+as much as a regulator output does. Excluding every net with a transistor on it would silence that.
+
+**A net carrying an inductor beside a transistor is a switching node.** That is a buck converter's
+switch node, and the advice to fit a capacitor there would short the switch to ground every cycle.
+
+The inductor only disqualifies alongside a transistor. On its own it is an LC or ferrite FILTER, and
+a filtered supply is a rail that genuinely wants decoupling on the far side.
+
+Two more shapes carry a power-input pin and draw no supply, and this rule and power-input-not-driven
+both leave them alone (agni issue 935). Many parts' datasheets allow an **exposed thermal pad left
+unconnected** to float. Such a pad is a pin named `EP`, `EPAD`, `PAD` or `THERMAL_PAD` alone on its
+net, and vendor symbols type it power_in. Only the pad's name exempts it, because these rules exist
+to find a VDD pin left unwired. A **divider tap into a sense pin** is a measurement, not a supply. It
+is a net of resistors whose legs run to a supply and to ground beside a power_in pin, such as a USB
+hub's VBUS-detect input. A supply fed through a single series resistor or a 0 Ohm link
+still wants its decoupling, so a divider needs both legs.
+
+A **connector's own pin** does not make a net a subject. A receptacle's symbol types VBUS power_in.
+When a net's only supply pin is on a connector, power leaves the board there, so the net has no load
+to decouple here (agni issue 1254).
+
+Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter"
+is a topology question. It asks for an inductor between a switch node and an output, with the
+capacitor beyond it. Agni issue 374 covers that topology pattern work. Expect a pattern that states
+the question properly to replace these class checks.
+
+### Query structure
+
+select power nets that are plausibly rails and carry no capacitor member.
+
+    select N in nets where any(power_in(P)) and not ground(N)
+      and not exists Q in N.connections where class(Q) == transistor and role(Q) == gate
+      and not (exists L in N.connections where class(L) == inductor
+               and exists Q in N.connections where class(Q) == transistor)
+      and not rail_capacitor(N)
+
+Reads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,
+pin.electrical_type. Tier R.
+
+The gate guard also consults pin.role. The declared read set does not list it, because that field
+is validated against the declarative twin, and the twin holds the comparison without the scope
+guards. The omission is safe in the direction that matters, since a format carrying no pin data
+yields RoleUnknown and the guard does not fire there.

@@ -1,0 +1,335 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+)
+
+// runCLI executes one cobra command with args and returns its stdout.
+func runCLI(t *testing.T, cmd *cobra.Command, args ...string) string {
+	t.Helper()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("%v: %v\n%s", args, err, out.String())
+	}
+	return out.String()
+}
+
+// isolatedDesign copies a fixture into a fresh temp dir and returns its path, so a test can DELETE
+// the design and still be sure the tracked fixture survives.
+func isolatedDesign(t *testing.T, fixture string) string {
+	t.Helper()
+	b, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(t.TempDir(), filepath.Base(fixture))
+	if err := os.WriteFile(p, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// TestResultsRoundTripWithoutTheDesign is the acceptance test for the results half of the checks
+// contract (WS3-103), that a written document must be SELF-CONTAINED, not a view over live state.
+//
+// It proves that by deleting the design before re-rendering. Every format the live command emits has
+// to come back byte for byte from the document alone, with no design file and no re-run of a single
+// rule. A document that merely round-tripped its own fields would pass a weaker test. It could still
+// be unreadable to anyone without the design, and this artifact exists for those readers.
+func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
+	design := isolatedDesign(t, "testdata/conformance/fires.edn")
+	doc := filepath.Join(t.TempDir(), "run.results.json")
+
+	formats := []string{"text", "json", "csv", "markdown", "report"}
+	live := map[string]string{}
+	for _, f := range formats {
+		live[f] = runCLI(t, checkCmd(), "--format", f, design)
+	}
+	// One write, then every format re-rendered from it, because the document is not per-format.
+	written := runCLI(t, checkCmd(), "--format", "text", "--results-out", doc, design)
+	if written != live["text"] {
+		t.Errorf("--results-out changed the terminal output:\n got %q\nwant %q", written, live["text"])
+	}
+
+	if err := os.Remove(design); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range formats {
+		got := runCLI(t, resultsCmd(), "--format", f, doc)
+		want := live[f]
+		if f == "text" {
+			// THE ONE THING A DOCUMENT CANNOT REPLAY. The live text output closes with what the run
+			// considered, and CheckResults has no field for a considered set (OUT_OF_SCOPE.md), so a
+			// replay states no coverage rather than inventing one from the findings it does carry.
+			// Everything else must still come back byte for byte, so the strip below removes the
+			// coverage lines and nothing else.
+			want = stripCoverage(want)
+			if want == live[f] {
+				t.Fatal("live text output no longer states coverage; this exemption is now hiding a real diff")
+			}
+		}
+		if got != want {
+			t.Errorf("results --format %s differs from check --format %s\n got:\n%s\nwant:\n%s", f, f, got, want)
+		}
+	}
+}
+
+// stripCoverage removes the run-coverage lines. The live command adds them and a document cannot
+// hold them.
+func stripCoverage(s string) string {
+	keep := []string{}
+	for _, ln := range strings.Split(s, "\n") {
+		if strings.Contains(ln, "subject(s) considered by") ||
+			strings.Contains(ln, "reported violations without stating what they examined") {
+			continue
+		}
+		keep = append(keep, ln)
+	}
+	return strings.Join(keep, "\n")
+}
+
+// TestResultsDocumentRecordsTheRun checks that a document records what produced it, which revision it
+// is about, and which overlay tiers were in effect. A later reader needs those to interpret it.
+// Without them a reader cannot tell a design with no datasheet violations from a run that had no
+// datasheet corpus. The review outcomes exist to prevent the same silence-reads-as-coverage failure.
+func TestResultsDocumentRecordsTheRun(t *testing.T) {
+	design := isolatedDesign(t, "testdata/conformance/fires.edn")
+	path := filepath.Join(t.TempDir(), "run.results.json")
+	runCLI(t, checkCmd(), "--format", "text", "--results-out", path, design)
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Meta struct {
+			Schema, Producer, ProducerVersion, CreatedAt string
+		}
+		Design struct {
+			Source, ContentHash string
+		}
+		Run struct {
+			Params, Profiles, Intent bool
+			Conventions              string
+		}
+		Catalog []struct {
+			Name, Severity, Summary string
+			Tags                    map[string]string
+		}
+		Findings []struct{ Rule string }
+	}
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("document is not valid JSON: %v\n%s", err, b)
+	}
+	if got.Meta.Schema != "agni.checks.results/v1" {
+		t.Errorf("meta.schema = %q", got.Meta.Schema)
+	}
+	if got.Meta.Producer != "agni" || got.Meta.ProducerVersion == "" || got.Meta.CreatedAt == "" {
+		t.Errorf("meta = %+v, want a named producer with a build identity and a timestamp", got.Meta)
+	}
+	// The document records the design's URI, not the path as typed, because a stored document
+	// outlives the machine that made it, and a renderer shortens the URI for reading (displayName).
+	wantURI, err := cliArgURI(design)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Design.Source != wantURI {
+		t.Errorf("design.source = %q, want the design URI %q", got.Design.Source, wantURI)
+	}
+	if !strings.HasPrefix(got.Design.ContentHash, "sha256:") || len(got.Design.ContentHash) != len("sha256:")+64 {
+		t.Errorf("design.contentHash = %q, want a sha256 hex digest", got.Design.ContentHash)
+	}
+	if got.Run.Params || got.Run.Profiles || got.Run.Intent || got.Run.Conventions != "" {
+		t.Errorf("run = %+v, want every overlay tier absent for a bare check", got.Run)
+	}
+	if len(got.Catalog) == 0 {
+		t.Fatal("catalog snapshot is empty; a reader cannot tell a clean design from a run that checked nothing")
+	}
+	for _, r := range got.Catalog {
+		if r.Name == "" || r.Severity == "" || r.Summary == "" {
+			t.Errorf("catalog entry %+v is missing identity or prose", r)
+		}
+	}
+	if len(got.Findings) == 0 {
+		t.Error("fires.edn should produce findings")
+	}
+}
+
+// TestResultsDocumentRecordsOverlayTiers pins the other half of the run record. With a convention
+// attached, the document names it. The name matters more than a flag would, because the convention's
+// rules are also reported under it as their namespace.
+func TestResultsDocumentRecordsOverlayTiers(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/conv-demo.edn")
+	path := filepath.Join(t.TempDir(), "run.results.json")
+	runCLI(t, checkCmd(), "--format", "text", "--conventions", "testdata/review/conventions.yaml", "--results-out", path, design)
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Run struct{ Conventions string }
+	}
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Run.Conventions == "" {
+		t.Error("run.conventions is empty with --conventions supplied; a reader cannot resolve the namespaced rule names in the findings")
+	}
+}
+
+// TestReviewResultsRoundTripWithoutTheDesign is the review half of the self-containment proof. The
+// outcome vocabulary is the part of the document with no incumbent equivalent, so it is the part most
+// worth pinning. Every item's verdict, note and findings must survive the write.
+func TestReviewResultsRoundTripWithoutTheDesign(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/can-broken.edn")
+	doc := filepath.Join(t.TempDir(), "review.results.json")
+
+	live := map[string]string{}
+	for _, f := range []string{"markdown", "json"} {
+		live[f] = runCLI(t, reviewCmd(), "--checklist", "testdata/review/mini.yaml", "--format", f, design)
+	}
+	liveCoverage := runCLI(t, reviewCmd(), "--checklist", "testdata/review/mini.yaml", "--coverage", design)
+	runCLI(t, reviewCmd(), "--checklist", "testdata/review/mini.yaml", "--format", "markdown", "--results-out", doc, design)
+
+	if err := os.Remove(design); err != nil {
+		t.Fatal(err)
+	}
+	if got := runCLI(t, resultsCmd(), "--format", "markdown", doc); got != live["markdown"] {
+		t.Errorf("results --format markdown differs from review --format markdown\n got:\n%s\nwant:\n%s", got, live["markdown"])
+	}
+	// The json is the whole Review, document metadata included, so the two runs differ in when they
+	// were made and in nothing else (agni issue 734).
+	if got, want := reviewAt(t, runCLI(t, resultsCmd(), "--format", "json", doc)), reviewAt(t, live["json"]); !proto.Equal(got, want) {
+		t.Errorf("results --format json differs from review --format json\n got:\n%v\nwant:\n%v", got, want)
+	}
+	if got := runCLI(t, resultsCmd(), "--coverage", doc); got != liveCoverage {
+		t.Errorf("results --coverage differs from review --coverage\n got:\n%s\nwant:\n%s", got, liveCoverage)
+	}
+}
+
+// TestReviewResultsRejectsARollup pins that --results-out refuses a multi-design run rather than
+// silently documenting the first. A document claims to be about ONE design (it carries one
+// DesignRef), so a rollup cannot be encoded faithfully here.
+func TestReviewResultsRejectsARollup(t *testing.T) {
+	a := isolatedDesign(t, "testdata/review/can-broken.edn")
+	b := isolatedDesign(t, "testdata/review/conv-demo.edn")
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml", "--results-out", filepath.Join(t.TempDir(), "x.json"), a, b})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("--results-out with two designs should error, not document one of them")
+	}
+	if !strings.Contains(err.Error(), "one design's document") {
+		t.Errorf("error = %v, want it to say the document is per-design", err)
+	}
+}
+
+// TestResultsRejectsAForeignDocument pins the schema gate. Imagine this build half-reads a document
+// it does not understand. It produces a findings list shorter than the run that made it, with nothing
+// to say so. The contract exists to rule out that silence-as-coverage failure, so an unknown schema
+// is an error rather than a best-effort read.
+func TestResultsRejectsAForeignDocument(t *testing.T) {
+	dir := t.TempDir()
+	cases := map[string]string{
+		"future.json":  `{"meta":{"schema":"agni.checks.results/v9"},"findings":[]}`,
+		"notadoc.json": `{"findings":[]}`,
+	}
+	for name, body := range cases {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		cmd := resultsCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{p})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("%s: rendering should fail, got %q", name, out.String())
+		}
+	}
+}
+
+// TestResultsCarriesSkippedRules checks that a document records what could NOT be checked as well as
+// what was.
+//
+// It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design from
+// a run that checked nothing; this separates a clean design from one whose questions were GATED. A
+// document carrying one without the other lets a reader conclude the run was broader than it was. A
+// re-render is meant to reproduce the original output. It could not do that while one surface knew
+// something the other did not.
+func TestResultsCarriesSkippedRules(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/can-broken.edn")
+	out := filepath.Join(t.TempDir(), "run.results.json")
+	runCLI(t, checkCmd(), "--results-out", out, design)
+
+	b, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Skipped []struct{ Name, Reason string } `json:"skipped"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Skipped) == 0 {
+		t.Fatal("a netlist cannot support every shipped rule; the document must say which it could not run")
+	}
+	for _, s := range doc.Skipped {
+		if s.Name == "" || s.Reason == "" {
+			t.Errorf("a skipped rule needs both a name and the engine's reason, got %+v", s)
+		}
+	}
+}
+
+// results shares review's shadowing. Its render switch tests coverage before format, so an explicit
+// --format was discarded silently. The rollup renders as markdown alone, so an explicit request for
+// anything else is refused rather than quietly answered with markdown.
+func TestReviewResultsCoverageRefusesAFormatItCannotRender(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/can-broken.edn")
+	doc := filepath.Join(t.TempDir(), "review.results.json")
+	runCLI(t, reviewCmd(), "--checklist", "testdata/review/mini.yaml", "--results-out", doc, design)
+
+	cmd := resultsCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--coverage", "--format", "json", doc})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("wanted a refusal for --coverage --format json")
+	}
+	if !strings.Contains(err.Error(), "would be discarded") {
+		t.Errorf("the refusal should say the format was going to be thrown away: %v", err)
+	}
+	// --coverage on its own is the supported spelling and still works.
+	if got := runCLI(t, resultsCmd(), "--coverage", doc); !strings.Contains(got, "Review coverage") {
+		t.Errorf("--coverage alone should still render the rollup, got:\n%s", got)
+	}
+}
+
+// reviewAt parses a review's json with its creation time cleared. Two runs of the same review over
+// the same design differ in that field alone.
+func reviewAt(t *testing.T, js string) *webapi.Review {
+	t.Helper()
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(js), &rv); err != nil {
+		t.Fatalf("not a Review: %v\n%s", err, js)
+	}
+	rv.GetResults().GetMeta().CreatedAt = ""
+	return &rv
+}

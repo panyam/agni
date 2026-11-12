@@ -1,0 +1,155 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/ident"
+)
+
+// i2cRedundantPullUp flags an I2C net pulled to ONE rail by more than one resistor. See Detail.
+//
+// It asks the count question, and PullUpReachesRail cannot. Reachability reports a rail as reached
+// however many resistors reach it, so a doubly-pulled bus and a correct one are the same answer, and
+// only AllPullUpPathsToRail can tell them apart.
+var i2cRedundantPullUp = &check.Rule{
+	Name:     "i2c-redundant-pull-up",
+	Severity: "warning",
+	Summary:  "An I2C net is pulled to one rail by more than one resistor.",
+	Impact:   "Pull-ups in parallel are one smaller resistor. Two 2.2k become an effective 1.1k, so the bus sinks roughly twice the current it was sized for and a device driving low may not reach its VOL, which reads as a bus that works on some parts and not others. It usually arrives when a module carries its own termination for a bus the board already pulls, which is the ordinary consequence of designing a mezzanine to work standalone.",
+	Remedy:   "Remove one of the pull-ups, or depopulate it. Which one is a board decision: keep the pull-up sized for the bus capacitance and clock rate this design actually runs at, and take out the one that came along with a module.",
+	// A warning rather than an error, because a jumper-selectable or DNP termination is legal by
+	// design and the netlist cannot see the fit status.
+	Primitives: []string{"select", "pattern", "traverse", "exists", "reach"},
+	Reads:      []string{"net.names", "on_net", "component.class"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryConnectivity,
+		check.KeyTier:         "R",
+		check.KeyDistribution: check.DistOpen,
+	},
+	Detail:              ruleDoc("i2c-redundant-pull-up"),
+	Eval:                i2cRedundantPullUpVerdicts,
+	Scoping:             check.ScopeSubjects,
+	StatesConsideredSet: true,
+}
+
+// i2cPullUpSplitRail flags an I2C net pulled to MORE THAN ONE rail. See Detail.
+//
+// A separate rule rather than a clause, because its remedy is deciding which supply this bus belongs
+// to rather than removing a resistor. The two rules are mutually exclusive by construction, so a bus
+// is never reported twice (see pullUpCountVerdicts).
+var i2cPullUpSplitRail = &check.Rule{
+	Name:       "i2c-pull-up-split-rail",
+	Severity:   "warning",
+	Summary:    "An I2C net is pulled up to two different rails.",
+	Impact:     "The bus ties two supplies together through its pull-ups whenever one rail is up and the other is not, so a rail that is meant to be off is fed through the bus during sequencing. It also means the bus idles at whichever voltage wins, which may exceed the input rating of a device on the lower supply. Sequencing faults of this kind pass on the bench, where everything powers at once, and appear as a board that fails only on a particular power-up order.",
+	Remedy:     "Pull the bus to one rail. Where the bus genuinely crosses supply domains, that is a level translator's job rather than two pull-ups, and the translator's own pull-ups belong one per side of it.",
+	Primitives: []string{"select", "pattern", "traverse", "exists", "reach"},
+	Reads:      []string{"net.names", "on_net", "component.class"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryConnectivity,
+		check.KeyTier:         "R",
+		check.KeyDistribution: check.DistOpen,
+	},
+	Detail:              ruleDoc("i2c-pull-up-split-rail"),
+	Eval:                i2cPullUpSplitRailVerdicts,
+	Scoping:             check.ScopeSubjects,
+	StatesConsideredSet: true,
+}
+
+// i2cRedundantPullUpVerdicts decides every I2C net. It fails a net with more than one resistor when
+// all of them end on ONE rail.
+//
+// Its considered set is every I2C net, including the ones pulled correctly. "This bus has exactly one
+// pull-up" is a fact worth stating, and a rule reporting only the doubled ones could not distinguish a
+// clean board from an unexamined one.
+func i2cRedundantPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	return pullUpCountVerdicts(ctx, m, "i2c-redundant-pull-up", func(rails []string) bool {
+		return len(rails) == 1
+	}, func(n string, terms []check.PullUpTermination) string {
+		return fmt.Sprintf("I2C net has %d pull-up resistors to %s", len(terms), terms[0].Rail)
+	})
+}
+
+// i2cPullUpSplitRailVerdicts decides every I2C net. It fails a net with more than one resistor when
+// they end on DIFFERENT rails.
+func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	return pullUpCountVerdicts(ctx, m, "i2c-pull-up-split-rail", func(rails []string) bool {
+		return len(rails) > 1
+	}, func(n string, terms []check.PullUpTermination) string {
+		return fmt.Sprintf("I2C net is pulled up to %s", strings.Join(distinctRails(terms), " and "))
+	})
+}
+
+// pullUpCountVerdicts enumerates the I2C nets, counts their distinct terminating resistors, and lets
+// the caller decide which rail arrangement is its defect.
+//
+// One walk, two rules, and the two fire on disjoint conditions (one rail versus several), so a bus
+// with a genuine problem is named once by the rule whose remedy applies to it. A rule has one
+// severity and one remedy (see docsite/content/build/check-rule.md). So this is two rules over one
+// walker rather than one rule with a clause.
+//
+// A net with ZERO pull-ups is NOT considered here. It is i2c-pull-up's subject, that rule is an
+// error where these are warnings, and reporting the same absence three times would treble one defect.
+func pullUpCountVerdicts(ctx context.Context, m check.Model, rule string, fires func(rails []string) bool, message func(string, []check.PullUpTermination) string) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range check.ScopedNets(ctx, m) {
+		if !m.IsI2CName(n.Name) {
+			continue
+		}
+		terms := check.AllPullUpPathsToRail(m, n)
+		if len(terms) == 0 {
+			continue // i2c-pull-up's subject, not this rule's
+		}
+		subject := check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{subject}, Rule: rule, Outcome: check.Pass}
+		rails := distinctRails(terms)
+		v.Witness, v.Context = pullUpCountWitness(n.Name, terms, rails)
+		if len(terms) > 1 && fires(rails) {
+			v.Outcome = check.Fail
+			f := check.NetFinding(message(n.Name, terms))(n)
+			v.Finding = &f
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// pullUpCountWitness proves the count with the parts it counted, on a pass as much as on a failure.
+// A statement like "SDA is pulled to +3V3 by R7" makes a passing bus checkable. PullUpVerdict
+// applies the same proof-on-pass discipline to the absence question. The context and the path
+// terms are PullUpVerdict's own (check.PullUpEvidence), so a bus pulled up behind a series resistor
+// names every hop here too, and several pull-ups each get a `path` (agni issue 1165).
+func pullUpCountWitness(net string, terms []check.PullUpTermination, rails []string) (*check.Witness, []check.ContextSubject) {
+	check.SortPullUpTerminations(terms)
+	refs := make([]string, 0, len(terms))
+	for _, e := range terms {
+		refs = append(refs, e.Resistor)
+	}
+	ctx, paths := check.PullUpEvidence(net, terms)
+	w := &check.Witness{
+		Statement: fmt.Sprintf("%s is pulled to %s by %s", net,
+			strings.Join(rails, " and "), strings.Join(refs, ", ")),
+		Terms: append([]check.WitnessTerm{{Label: "pull-ups", Value: fmt.Sprintf("%d", len(terms))}}, paths...),
+	}
+	return w, ctx
+}
+
+// distinctRails returns the terminations' rails as a sorted set. The sort makes a message and a
+// witness read the same way on every run, and a committed capture depends on that. The sort is
+// natural, so +1V8 lists before +12V as it does in every table.
+func distinctRails(terms []check.PullUpTermination) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, e := range terms {
+		if !seen[e.Rail] {
+			seen[e.Rail] = true
+			out = append(out, e.Rail)
+		}
+	}
+	slices.SortFunc(out, ident.CompareNatural)
+	return out
+}

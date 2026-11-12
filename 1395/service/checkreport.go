@@ -1,0 +1,156 @@
+package service
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"path"
+	"strings"
+	"time"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/report"
+	"github.com/panyam/agni/core/results"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// WithEnv sets the deployment provenance that a written document records. That is the producer
+// version, and whether profiles and intent were composed into the catalog. A review run records the
+// same ReviewEnv, so a check document and a review document from one deployment state the same
+// build.
+func (s *CheckService) WithEnv(env ReviewEnv) *CheckService {
+	s.env = env
+	return s
+}
+
+// RenderCheckReport writes a run the caller already holds as a file to keep (agni issue 127). It runs
+// no rules. The JSON form is a CheckResults document, the same one `agni check --results-out`
+// writes. The HTML form is the page that `agni check --verdicts --format html` writes. It has a
+// Queries section per query set the caller answered and sent (agni issue 1190). Both CLI paths call
+// this, so a report saved from the viewer and one the CLI wrote differ only in their timestamps.
+//
+// The request has to name the snapshot and rules the run used. They decide which catalog the report
+// describes and which netlist tier's content hash it records. Nothing here can check them against
+// the run.
+func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.RenderCheckReportRequest) (*webapi.RenderCheckReportResponse, error) {
+	if req.GetRun() == nil {
+		return nil, fmt.Errorf("%w: RenderCheckReport needs the run to write", ErrInvalidArgument)
+	}
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
+	if err != nil {
+		return nil, err
+	}
+	u, ov, nu := snap.Design, snap.Overlay, snap.Netlist
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return nil, err
+	}
+	// The hash is provenance, so an unreadable source records none, as a review's does. It is the
+	// netlist tier's, since a design folder does not hash.
+	hash, err := LoaderOr(snap, s.loader).DesignHash(ctx, nu)
+	if err != nil {
+		hash = ""
+	}
+	run := req.GetRun()
+	name := reportBaseName(u.Path)
+	switch req.GetFormat() {
+	case webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON:
+		doc := &checkspb.CheckResults{
+			Meta: &checkspb.ResultsMeta{
+				Schema:          results.Schema,
+				Producer:        results.Producer,
+				ProducerVersion: s.env.ProducerVersion,
+				CreatedAt:       time.Now().UTC().Format(time.RFC3339),
+				// A native run records what it could NOT check as well as what it found. See
+				// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
+				CoverageAxis: true,
+			},
+			Design: &checkspb.DesignRef{Source: u.String(), ContentHash: hash, UnexpandedHierarchy: run.GetUnexpandedHierarchy()},
+			// Provenance is read off the run's resolved overlay, as a review's is. See
+			// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
+			Run: RunConfigProto(ov.Provenance(RunProvenance{
+				Params:      s.specs != nil,
+				Profiles:    s.env.Profiles,
+				Intent:      s.env.Intent,
+				Conventions: snap.Config.GetConfig().GetConventions().GetName(),
+			}), 0),
+			Catalog:  results.RuleRecords(cat.Filter(check.Facets{Names: req.GetRules()})),
+			Skipped:  SkippedRuleDocs(run.GetSkipped()),
+			Findings: run.GetFindings(),
+		}
+		b, err := results.Marshal(doc)
+		if err != nil {
+			return nil, err
+		}
+		return &webapi.RenderCheckReportResponse{Content: b, ContentType: "application/json", Filename: name + ".agni-check.json"}, nil
+	case webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML:
+		links := req.GetLinks()
+		mountPath, err := linkMountPath(ctx, s.projects, links.GetDesignUri())
+		if err != nil {
+			return nil, err
+		}
+		meta := report.Report{
+			Design:        u.String(),
+			Generated:     time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+			ContentHash:   hash,
+			URLBase:       strings.TrimSuffix(links.GetUrlBase(), "/"),
+			MountPath:     mountPath,
+			LinksWithheld: links.GetWithheld(),
+			// This is the run's own record of what its read left out, in the sentence the CLI prints
+			// (agni issue 717).
+			HierarchyNote: report.HierarchyNote(u.String(), run.GetUnexpandedHierarchy()),
+		}
+		var buf bytes.Buffer
+		// This is the composed catalog, not the selection, so a rule an overlay added has its prose as
+		// a built-in does (agni issue 411).
+		page := VerdictReport(run, cat.Rules(), meta)
+		for _, qs := range req.GetQuerySets() {
+			page.QuerySets = append(page.QuerySets, QuerySetTable(qs, nil))
+		}
+		if err := report.HTML(&buf, page); err != nil {
+			return nil, err
+		}
+		return &webapi.RenderCheckReportResponse{Content: buf.Bytes(), ContentType: "text/html; charset=utf-8", Filename: name + ".agni-check.html"}, nil
+	default:
+		return nil, fmt.Errorf("%w: RenderCheckReport needs a format", ErrInvalidArgument)
+	}
+}
+
+// VerdictReport aggregates one run into a report model. The HTML page and the CLI's verdict text
+// both render that model, so the two cannot disagree about what the run held or in what order (agni
+// issue 380). rules is the composed catalog the run read, overlay rules included.
+func VerdictReport(run *webapi.CheckDesignResponse, rules []*check.Rule, meta report.Report) report.Report {
+	verdicts := make([]check.Verdict, 0, len(run.GetVerdicts()))
+	for _, v := range run.GetVerdicts() {
+		verdicts = append(verdicts, VerdictFromProto(v))
+	}
+	r := report.Build(verdicts, FindingsFromProto(run.GetFindings()), rules, meta)
+	r.PinMaps = PinMapSections(PinMapTable(run.GetIoMap(), run.GetVerdicts()))
+	return r
+}
+
+// SkippedRuleDocs carries a run's skipped rules into a document's form.
+func SkippedRuleDocs(in []*webapi.SkippedRule) []*checkspb.SkippedRule {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.SkippedRule, len(in))
+	for i, s := range in {
+		out[i] = &checkspb.SkippedRule{Name: s.GetName(), Reason: s.GetReason()}
+	}
+	return out
+}
+
+// reportBaseName names a saved report after the design. It uses the design's file without the
+// extension, or its folder when the uri names one.
+func reportBaseName(p string) string {
+	b := path.Base(strings.TrimSuffix(p, "/"))
+	if b == "." || b == "/" || b == "" {
+		return "design"
+	}
+	if ext := path.Ext(b); ext != "" && ext != b {
+		b = strings.TrimSuffix(b, ext)
+	}
+	return b
+}

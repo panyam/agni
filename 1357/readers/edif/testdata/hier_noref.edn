@@ -1,0 +1,27 @@
+(edif NOREF
+  (edifVersion 2 0 0)
+  (design NOREF (cellRef TOP (libraryRef WORK)))
+  (library WORK
+    (cell RES (cellType GENERIC)
+      (view V (viewType NETLIST) (interface (port A) (port B))))
+    (cell SHEET_A (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface (port P))
+        (contents
+          (instance R1 (viewRef V (cellRef RES)))
+          (instance R2 (viewRef V (cellRef RES)))
+          (net P (joined (portRef P) (portRef A (instanceRef R1)) (portRef A (instanceRef R2)))))))
+    (cell SHEET_B (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface (port P))
+        (contents
+          (instance R1 (viewRef V (cellRef RES)))
+          (net P (joined (portRef P) (portRef A (instanceRef R1)))))))
+    (cell TOP (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)))
+          (instance SA (viewRef V (cellRef SHEET_A)))
+          (instance SB (viewRef V (cellRef SHEET_B)))
+          (net SIG (joined (portRef A (instanceRef R1)) (portRef P (instanceRef SA)) (portRef P (instanceRef SB)))))))))

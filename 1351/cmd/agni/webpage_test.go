@@ -1,0 +1,294 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestViewerPageRendersShell(t *testing.T) {
+	// newPageApp joins dir + "/templates"; "../../web" resolves to the repo's web/templates
+	// relative to this package (cmd/agni), the go-test working directory.
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	// A work-page URL, not "/", which serves the landing page, so the viewer shell is reached by
+	// addressing a design (WS9-049).
+	const workURL = "/designs/corpus/boards/b.kicad_sch/view"
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, workURL, nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET %s = %d, want 200; body:\n%s", workURL, rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		`id="compare-picker"`,          // WS9-049 phase 3: the compare picker modal
+		`id="compare-tree"`,            // its file-tree island hole
+		`id="view"`,                    // canvas region
+		`id="dock"`,                    // WS9-021: dockview mounts here
+		`id="panel-park"`,              // WS9-021: server-rendered holes park here
+		`data-dock-panel="properties"`, // agni issue 902: the Properties hole the dock adopts, which replaced Details
+		`data-dock-panel="checks"`,     // WS9: the merged checks panel hole (findings + report)
+		`data-component`,               // islands mount by this marker
+		`id="sheet-tabs"`,              // WS9-049: hole for the visited-sheet tab strip
+		"/static/app.js",               // the bundle reference
+		"Agni viewer",                  // page title from Load
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("rendered page missing %q", want)
+		}
+	}
+	// The Files dock panel is retired (WS9-049 phase 3). The test checks for its HOLE. The dock
+	// adopts panels by finding a data-dock-panel element, so a stale hole would let a saved layout
+	// bring the panel back even with the registry entry deleted.
+	for _, deny := range []string{
+		`data-dock-panel="files"`,
+		`id="file-tree"`,
+	} {
+		if strings.Contains(body, deny) {
+			t.Errorf("rendered page still contains retired Files panel markup %q", deny)
+		}
+	}
+}
+
+// TestWorkPageServesDesignsSpace asserts that the WS9-049 work-page URL space renders the shell. It
+// also asserts that the shell renders because /designs/ is registered, not because the root pattern
+// catches everything. Only the pattern check can fail, since "/" is a catch-all. A 200 alone would
+// pass even with no /designs/ registration at all. Phase 2 hangs the browse page off this same
+// pattern, and the /view suffix splits the two, since a ServeMux pattern cannot put a wildcard
+// segment before a literal one.
+func TestWorkPageServesDesignsSpace(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, path := range []string{
+		"/designs/",        // the space root
+		"/designs/corpus/", // a mount root (folder form)
+		"/designs/corpus/boards/b.kicad_sch/view", // a design (work page)
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if _, pattern := mux.Handler(req); pattern != "/designs/" {
+			t.Errorf("GET %s matched pattern %q, want %q", path, pattern, "/designs/")
+		}
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", path, rec.Code)
+		}
+	}
+}
+
+// TestDesignsSpaceSplitsBrowseFromWork is the phase-2 contract: one registered pattern, two
+// different shells, chosen by the /view suffix. Each case asserts BOTH that the expected shell
+// rendered and that the other one did not. Both pages descend from BasePage and share a lot of
+// markup, so a one-sided check would pass even if the dispatcher sent every request to the same
+// page.
+// "/" is the landing page rather than the design browser, and it is also the catch-all. A URL that
+// matches no other pattern then reaches a page offering the destinations instead of an empty tree.
+// The browser did not move, so the same test asserts /designs/ still serves it.
+func TestRootServesLandingPage(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, path := range []string{"/", "/not-a-page"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, rec.Code)
+		}
+		body := rec.Body.String()
+		// Both destinations are plain server-rendered links, so the page routes with no JavaScript.
+		for _, want := range []string{`href="/designs/"`, `id="landing-recents"`, "/static/landing.js"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("GET %s missing %q", path, want)
+			}
+		}
+		// The browser's own markers must be absent, or "/" is still serving the tree.
+		for _, deny := range []string{`id="browse-tree"`, "/static/browse.js", "/static/app.js"} {
+			if strings.Contains(body, deny) {
+				t.Errorf("GET %s unexpectedly contains %q (landing page is serving another shell)", path, deny)
+			}
+		}
+	}
+}
+
+// Every page a person can open offers a way back to the landing page. This is a cross-page
+// omission test, and it is written that way because the omission is invisible from inside any one
+// page. The viewer shipped with no route out of itself. People share design URLs, so the viewer is
+// the page most likely to be somebody's first (PR 318 deferred it, this closes it).
+//
+// A page is checked for the crumb's own markup rather than a bare href="/", which any stylesheet or
+// icon reference would satisfy.
+func TestEveryPageOffersAWayHome(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, path := range []string{
+		"/designs/",                          // the folder browser
+		"/designs/m/boards/b.kicad_sch/view", // a design's work page
+		"/designs/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
+		"/designs/local/load/",               // where files are dropped
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), `class="ld-home" href="/"`) {
+			t.Errorf("GET %s has no link back to the landing page", path)
+		}
+	}
+}
+
+func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	// browse markers / work markers. The bundle reference is the sharpest discriminator, since a page
+	// loading app.js IS the viewer, whatever else it renders.
+	browseMarkers := []string{`id="browse-tree"`, `id="browse-preview"`, "/static/browse.js"}
+	workMarkers := []string{`id="dock"`, `id="panel-park"`, "/static/app.js"}
+	// The Load page (agni issue 1072) reads a design, or takes dropped files, before the viewer opens.
+	loadMarkers := []string{`id="load-steps"`, `id="saved-drops"`, "/static/load.js"}
+
+	for _, tc := range []struct {
+		path       string
+		want, deny []string
+	}{
+		{"/designs/", browseMarkers, workMarkers},               // the space root
+		{"/designs/corpus/", browseMarkers, workMarkers},        // a mount root
+		{"/designs/corpus/boards/", browseMarkers, workMarkers}, // a subfolder
+		{"/designs/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
+		{"/designs/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
+		{"/designs/corpus/b.kicad_sch/load", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/designs/corpus/boards/b.kicad_sch/load?verdict=x&rule=r", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/designs/local/load/", loadMarkers, append(workMarkers, browseMarkers...)},
+		// The suffix is matched as a whole segment, so a folder named loads is still a folder.
+		{"/designs/corpus/loads/", browseMarkers, append(workMarkers, loadMarkers...)},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", tc.path, rec.Code)
+			continue
+		}
+		body := rec.Body.String()
+		for _, want := range tc.want {
+			if !strings.Contains(body, want) {
+				t.Errorf("GET %s missing %q", tc.path, want)
+			}
+		}
+		for _, deny := range tc.deny {
+			if strings.Contains(body, deny) {
+				t.Errorf("GET %s unexpectedly contains %q (wrong page served)", tc.path, deny)
+			}
+		}
+	}
+}
+
+// TestBrowsePageOmitsAnalysisChrome pins the ticket's structural promise that the browse preview is
+// read-only, so the page must not ship the viewer's analysis surfaces. These are template-level
+// holes. The islands resolve their holes by id at boot and bail when they are missing, so without
+// the holes the presenter, WebGL canvas and checks machinery never mount.
+func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/", nil))
+
+	body := rec.Body.String()
+	for _, deny := range []string{
+		`id="view"`,     // the WebGL canvas
+		`id="controls"`, // the render-mode / layout control bar
+		`id="findings"`, // the checks panel
+		`id="rules"`,    // the rule catalog
+		`id="query-panel"`,
+		`id="diff-bar"`,   // the comparison chrome (phase 3 initiates a diff, it does not host one)
+		`id="sheet-tabs"`, // sheet navigation belongs to the work page
+	} {
+		if strings.Contains(body, deny) {
+			t.Errorf("browse page unexpectedly contains %q", deny)
+		}
+	}
+}
+
+// TestLegacyFilesRedirect pins the WS9-049 migration promise that a /files/ deep link shared before
+// the split still resolves, landing on the same design and sheet in the new space.
+func TestLegacyFilesRedirect(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, tc := range []struct{ from, want string }{
+		{"/files/corpus/boards/b.kicad_sch", "/designs/corpus/boards/b.kicad_sch/view"},
+		// The knobs travel in the query string in both spaces, so they carry over verbatim.
+		{"/files/corpus/b.eds?sheet=root&mode=svg", "/designs/corpus/b.eds/view?sheet=root&mode=svg"},
+		// A folder keeps its trailing slash and does NOT gain /view.
+		{"/files/corpus/boards/", "/designs/corpus/boards/"},
+		{"/files/corpus/", "/designs/corpus/"},
+		{"/files/", "/designs/"},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.from, nil))
+		if rec.Code != http.StatusMovedPermanently {
+			t.Errorf("GET %s = %d, want 301", tc.from, rec.Code)
+			continue
+		}
+		if got := rec.Header().Get("Location"); got != tc.want {
+			t.Errorf("GET %s redirected to %q, want %q", tc.from, got, tc.want)
+		}
+	}
+}
+
+// The workbench is a separate service, so the landing page links it only when `--datasheets-url` says
+// where it is, and then at that address (agni issue 744). Without one, a Datasheets card would open a
+// page this server does not have.
+func TestLandingLinksTheWorkbenchOnlyWhenConfigured(t *testing.T) {
+	render := func(url string) string {
+		mux := http.NewServeMux()
+		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{datasheetsURL: url}), mux)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET / = %d", rec.Code)
+		}
+		return rec.Body.String()
+	}
+	with := render("http://ds:8090")
+	for _, want := range []string{`id="ld-datasheets"`, `href="http://ds:8090/datasheets/"`, `data-datasheets-url="http://ds:8090"`} {
+		if !strings.Contains(with, want) {
+			t.Errorf("with --datasheets-url, landing page missing %q", want)
+		}
+	}
+	if without := render(""); strings.Contains(without, `id="ld-datasheets"`) || strings.Contains(without, `href="/datasheets/"`) {
+		t.Error("without --datasheets-url, the landing page still links a workbench this server does not serve")
+	}
+}
+
+// TestViewerPageCarriesItsEngine checks that `--engine` reaches the shell the bundle reads, and that
+// a server given none tells the page to use its own engine (agni issue 853).
+func TestViewerPageCarriesItsEngine(t *testing.T) {
+	for _, c := range []struct{ engine, want string }{{"", engineServer}, {engineWasm, engineWasm}} {
+		mux := http.NewServeMux()
+		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{engine: c.engine}), mux)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		if want := `data-engine="` + c.want + `"`; !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("engine %q: the shell does not carry %s", c.engine, want)
+		}
+	}
+	// The browser engine's size limit travels the same way, defaulting to the measured one (agni 852).
+	for _, c := range []struct{ max, want int64 }{{0, defaultWasmMaxBytes}, {1000, 1000}} {
+		mux := http.NewServeMux()
+		registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{wasmMaxBytes: c.max}), mux)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/tut/designs/gateway/view", nil))
+		if want := fmt.Sprintf(`data-wasm-max-bytes="%d"`, c.want); !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("--wasm-max-bytes %d: the shell does not carry %s", c.max, want)
+		}
+	}
+}

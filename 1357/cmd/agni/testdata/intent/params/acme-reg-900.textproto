@@ -1,0 +1,24 @@
+# Seeded spec for the rail-sizing fixture: a fictional 0.9A regulator (synthetic part and datasheet,
+# C16). It clears a 0.8A budget and falls short of a 1.2x margin over it, which is the band the margin
+# rule owns and the capacity rule stays out of.
+mpn: "ACME-REG-900"
+manufacturer: "Agni Conformance Works"
+device_class: "regulator"
+
+docs {
+  id: "reg900"
+  title: "ACME-REG-900 Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Output current"
+  symbol: "IOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 0.9 }
+  unit: "A"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "reg900" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

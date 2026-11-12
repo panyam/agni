@@ -1,0 +1,8 @@
+# The signals on U2, each with the partner pin it must reach. MDIO reaches U3 through R1; the reset
+# is left open, so its far end fails.
+name: demo-phy
+entry: demo_phy.edn
+intent:
+  io_map:
+    - {device: U2, pin: MDIO, function: MDIO, net: MDIO_NET, to: {device: U3, pin: MDIO}}
+    - {device: U2, pin: RST, function: RESET, net: RST_N, to: {device: U3, pin: RST}}

@@ -1,0 +1,6 @@
+# Every failing or inconclusive verdict the full catalog makes on this seeded design, each with
+# a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
+# and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
+# needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
+design: tools/samples/boards/royalblue54L-feather/nfc_antenna/RoyalBlue54L-NFC-Antenna
+findings: {}

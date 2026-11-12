@@ -1,0 +1,450 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/panyam/agni/artifact"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/review"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// dirReviewLoader reads its checklist from a real directory, so a test can EDIT the manifest
+// between a create and a get. Editing the file is the only way to exercise the snapshot's purpose.
+// With a manifest value alone there is no file to go stale.
+type dirReviewLoader struct{ dir string }
+
+func (l dirReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
+	return &ir.Design{}, nil
+}
+func (l dirReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+	return nil, nil
+}
+func (l dirReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+	return "sha256:fixed", nil
+}
+func (l dirReviewLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+	f, err := os.Open(filepath.Join(l.dir, uri.Path))
+	if err != nil {
+		return review.Manifest{}, err
+	}
+	defer f.Close()
+	return review.Load(f)
+}
+
+func writeManifest(t *testing.T, dir, name, body string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func dirReviewSvc(t *testing.T, store ReviewStore) (*ReviewService, string) {
+	t.Helper()
+	dir := t.TempDir()
+	return NewReviewService(dirReviewLoader{dir: dir}, store, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil), dir
+}
+
+// TestStoredRunKeepsTheChecklistItScored is the test this feature exists to make possible.
+//
+// A run is created against a checklist, and the checklist file is then EDITED, so an item is
+// removed and another's title is rewritten. Refetching the stored run must still describe what was
+// actually asked at the time, not what the file says now.
+//
+// Before the snapshot, a document recorded only the manifest's NAME, so re-rendering an archived run
+// meant re-reading whatever that name resolves to today. The failure is quiet and total. Last
+// quarter's review renders against this quarter's checklist, with every outcome intact and the
+// questions swapped underneath it. That is worse than losing the run.
+func TestStoredRunKeepsTheChecklistItScored(t *testing.T) {
+	svc, dir := dirReviewSvc(t, NewMemReviewStore())
+	ctx := context.Background()
+	writeManifest(t, dir, "review.yaml", `
+name: gateway review
+areas:
+  - name: Power
+    items:
+      - {id: "P1", title: "every rail carries a bulk capacitor", rule: bulk-cap}
+      - {id: "P2", title: "reviewed by hand", note: "the EE signs this off"}
+`)
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/review.yaml"})
+	if err != nil {
+		t.Fatalf("GetReviewManifest: %v", err)
+	}
+	created, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
+		Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/board.edn"),
+	})
+	if err != nil {
+		t.Fatalf("CreateReview: %v", err)
+	}
+
+	// The checklist changes after the run. P2 is dropped and P1 is reworded.
+	writeManifest(t, dir, "review.yaml", `
+name: gateway review
+areas:
+  - name: Power
+    items:
+      - {id: "P1", title: "COMPLETELY DIFFERENT QUESTION", rule: bulk-cap}
+`)
+
+	got, err := svc.GetReview(ctx, &webapi.GetReviewRequest{Name: created.GetName()})
+	if err != nil {
+		t.Fatalf("GetReview: %v", err)
+	}
+	snap := got.GetResults().GetManifestSnapshot()
+	if snap == nil {
+		t.Fatal("the stored run carries no manifest snapshot, so it cannot say what it asked")
+	}
+	items := snap.GetAreas()[0].GetItems()
+	if len(items) != 2 {
+		t.Fatalf("snapshot has %d items, want the 2 the run actually scored", len(items))
+	}
+	if got := items[0].GetTitle(); got != "every rail carries a bulk capacitor" {
+		t.Errorf("snapshot item P1 title = %q; the archived run adopted the edited checklist", got)
+	}
+	if got := items[1].GetId(); got != "P2" {
+		t.Errorf("snapshot item 1 = %q, want P2: an item removed after the run vanished from its own record", got)
+	}
+	// The outcomes must still line up with the snapshot, or the document contradicts itself.
+	if n := len(got.GetResults().GetAreas()[0].GetItems()); n != 2 {
+		t.Errorf("stored run has %d outcomes for %d asked items", n, len(items))
+	}
+}
+
+// TestCreateReviewRecordsProvenance checks that a stored run holds what a reader needs to trust it
+// later. A consumer would otherwise have to guess each field here. The design hash is the revision
+// identity, and a later diff joins on it. The catalog snapshot tells a clean design apart from a run
+// that checked nothing. RunConfig.params says whether a datasheet-backed item COULD have resolved.
+func TestCreateReviewRecordsProvenance(t *testing.T) {
+	svc, dir := dirReviewSvc(t, NewMemReviewStore())
+	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
+	ctx := context.Background()
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/board.edn"), RatifiedFloor: 0.5})
+	if err != nil {
+		t.Fatalf("CreateReview: %v", err)
+	}
+	doc := rv.GetResults()
+	if doc.GetDesign().GetSource() != "mount://m/board.edn" || doc.GetDesign().GetContentHash() != "sha256:fixed" {
+		t.Errorf("design ref = %+v, want the design URI and its hash", doc.GetDesign())
+	}
+	if doc.GetMeta().GetProducerVersion() != "test" || !doc.GetMeta().GetCoverageAxis() {
+		t.Errorf("meta = %+v, want the producer version and a declared coverage axis", doc.GetMeta())
+	}
+	if len(doc.GetCatalog()) == 0 {
+		t.Error("catalog snapshot is empty: a reader cannot tell a clean design from a run that asked nothing")
+	}
+	if doc.GetRun().GetRatifiedFloor() != 0.5 || doc.GetRun().GetParams() {
+		t.Errorf("run config = %+v, want the floor recorded and params false (no corpus wired)", doc.GetRun())
+	}
+	if doc.GetManifest() != "t" {
+		t.Errorf("manifest name = %q, want it alongside the snapshot for cheap listing", doc.GetManifest())
+	}
+}
+
+// TestReviewResourceLifecycle walks create, get, list and delete over one service, in the order a
+// client actually performs them.
+func TestReviewResourceLifecycle(t *testing.T) {
+	svc, dir := dirReviewSvc(t, NewMemReviewStore())
+	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
+	ctx := context.Background()
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	create := func(design string) string {
+		t.Helper()
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+design)})
+		if err != nil {
+			t.Fatalf("CreateReview(%s): %v", design, err)
+		}
+		return rv.GetName()
+	}
+	first := create("a.edn")
+	second := create("b.edn")
+	third := create("a.edn")
+
+	// Newest first, so a client sees the most recent run without paging.
+	list, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{})
+	if err != nil {
+		t.Fatalf("ListReviews: %v", err)
+	}
+	if got := names(list); len(got) != 3 || got[0] != third || got[2] != first {
+		t.Fatalf("listing = %v, want newest first (%s, %s, %s)", got, third, second, first)
+	}
+
+	// The design filter answers the question a client actually has.
+	only, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{Filter: `design="mount://m/a.edn"`})
+	if err != nil {
+		t.Fatalf("ListReviews(filter): %v", err)
+	}
+	if got := names(only); len(got) != 2 || got[0] != third || got[1] != first {
+		t.Errorf("filtered listing = %v, want the two a.edn runs newest first", got)
+	}
+
+	if _, err := svc.DeleteReview(ctx, &webapi.DeleteReviewRequest{Name: second}); err != nil {
+		t.Fatalf("DeleteReview: %v", err)
+	}
+	if _, err := svc.GetReview(ctx, &webapi.GetReviewRequest{Name: second}); err == nil {
+		t.Error("a deleted review still resolves")
+	}
+	if _, err := svc.DeleteReview(ctx, &webapi.DeleteReviewRequest{Name: second}); err == nil {
+		t.Error("deleting an absent review reported success; a client acting on a stale listing is never told")
+	}
+}
+
+// TestListReviewsPaging checks that a page carries at most page_size, the token resumes AFTER the
+// last item without repeating or skipping it, and the final page reports no token. A token is only
+// emitted when there is genuinely something after it, so a client never follows one into an empty
+// page.
+func TestListReviewsPaging(t *testing.T) {
+	svc, dir := dirReviewSvc(t, NewMemReviewStore())
+	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
+	ctx := context.Background()
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var created []string
+	for i := range 5 {
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+fmt.Sprintf("d%d.edn", i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+		created = append(created, rv.GetName())
+	}
+	var walked []string
+	token := ""
+	for pages := 0; ; pages++ {
+		if pages > 5 {
+			t.Fatal("paging did not terminate")
+		}
+		page, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{PageSize: 2, PageToken: token})
+		if err != nil {
+			t.Fatalf("ListReviews: %v", err)
+		}
+		if len(page.GetReviews()) > 2 {
+			t.Fatalf("page carried %d reviews, want at most 2", len(page.GetReviews()))
+		}
+		walked = append(walked, names(page)...)
+		if page.GetNextPageToken() == "" {
+			break
+		}
+		token = page.GetNextPageToken()
+	}
+	if len(walked) != 5 {
+		t.Fatalf("walked %d reviews across pages, want 5 with none skipped or repeated: %v", len(walked), walked)
+	}
+	for i, name := range walked {
+		if want := created[len(created)-1-i]; name != want {
+			t.Errorf("page walk position %d = %s, want %s (newest first)", i, name, want)
+		}
+	}
+}
+
+// TestReviewResourcesNeedAStore checks that without a configured store every resource method
+// reports it, and the message names the flag. A create that ran the whole sweep and silently
+// dropped the result would cost the most and leave the least.
+func TestReviewResourcesNeedAStore(t *testing.T) {
+	svc := NewReviewService(dirReviewLoader{dir: t.TempDir()}, nil, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil)
+	ctx := context.Background()
+	man := &checkspb.ReviewManifest{Name: "t", Areas: []*checkspb.ManifestArea{{
+		Name: "A", Items: []*checkspb.ManifestItem{{Id: "i"}},
+	}}}
+	calls := map[string]func() error{
+		"CreateReview": func() error {
+			_, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man, Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn")})
+			return err
+		},
+		"GetReview": func() error {
+			_, err := svc.GetReview(ctx, &webapi.GetReviewRequest{Name: "reviews/x"})
+			return err
+		},
+		"ListReviews": func() error {
+			_, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{})
+			return err
+		},
+		"DeleteReview": func() error {
+			_, err := svc.DeleteReview(ctx, &webapi.DeleteReviewRequest{Name: "reviews/x"})
+			return err
+		},
+	}
+	for name, call := range calls {
+		err := call()
+		if err == nil {
+			t.Errorf("%s with no store: want an error, got nil", name)
+			continue
+		}
+		if !errors.Is(err, ErrReviewStoreNotConfigured) {
+			t.Errorf("%s with no store: err = %v, want ErrReviewStoreNotConfigured so the transport can say which flag is missing", name, err)
+		}
+	}
+}
+
+// TestParseReviewFilter checks that the supported filter parses with or without quotes, and
+// anything else is REJECTED. Silently ignoring an unsupported filter is the dangerous case, because
+// a client that believed it had narrowed to its own board would read another board's verdicts as
+// its own.
+func TestParseReviewFilter(t *testing.T) {
+	ok := map[string]string{
+		``:                   "",
+		`design="a/b.edn"`:   "a/b.edn",
+		`design=a/b.edn`:     "a/b.edn",
+		` design="a/b.edn" `: "a/b.edn",
+	}
+	for in, want := range ok {
+		got, err := parseReviewFilter(in)
+		if err != nil {
+			t.Errorf("parseReviewFilter(%q): %v", in, err)
+			continue
+		}
+		if got != want {
+			t.Errorf("parseReviewFilter(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for _, bad := range []string{`manifest="t"`, `design`, `design=""`, `design = "a"`, `name!="x"`} {
+		if _, err := parseReviewFilter(bad); err == nil {
+			t.Errorf("parseReviewFilter(%q): want an error, got nil (an ignored filter reads as a narrowed one)", bad)
+		}
+	}
+}
+
+// TestReviewNameRoundTrip checks that a name survives the id boundary, and a name that could steer a
+// filesystem-backed store out of its directory is rejected rather than resolved.
+func TestReviewNameRoundTrip(t *testing.T) {
+	if parent, id, ok := SplitReviewName(ReviewName("", "abc")); !ok || id != "abc" || parent != "" {
+		t.Errorf("unparented round trip = %q/%q,%v", parent, id, ok)
+	}
+	// A parented run round-trips through both halves, so a store can key by (project, id) without
+	// re-deriving the shape.
+	if parent, id, ok := SplitReviewName(ReviewName("projects/gateway", "abc")); !ok || id != "abc" || parent != "projects/gateway" {
+		t.Errorf("parented round trip = %q/%q,%v", parent, id, ok)
+	}
+	for _, bad := range []string{
+		"abc", "reviews/", "reviews/../etc/passwd", "reviews/a/b", `reviews/a\b`, "reviews/.", "reviews/..",
+		// A parented name is rejected on the same terms, in either half.
+		"projects//reviews/abc", "projects/../reviews/abc", "projects/gateway/reviews/", "projects/gateway/reviews/..",
+	} {
+		if _, _, ok := SplitReviewName(bad); ok {
+			t.Errorf("SplitReviewName(%q) accepted a name that must not reach a store", bad)
+		}
+	}
+}
+
+func names(list *webapi.ListReviewsResponse) []string {
+	var out []string
+	for _, rv := range list.GetReviews() {
+		out = append(out, rv.GetName())
+	}
+	return out
+}
+
+// TestRunsNestUnderTheirProject covers what this shape is for. A project's runs list under that
+// project, and a run made against a design in no project is still creatable and still listable.
+//
+// The second half matters as much as the first. A design that belongs to no project is the ORDINARY
+// state of a mounted folder, so "I reviewed a loose file" must not become an error, and its run must
+// not be filed under a project that does not own it.
+func TestRunsNestUnderTheirProject(t *testing.T) {
+	st := NewMemReviewStore()
+	ctx := context.Background()
+
+	parented, _, err := st.Create(ctx, "projects/gateway", nestDoc("mount://m/gw.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parented != "projects/gateway/reviews/00000001" {
+		t.Errorf("parented name = %q", parented)
+	}
+	loose, _, err := st.Create(ctx, "", nestDoc("mount://m/loose.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loose != "reviews/00000002" {
+		t.Errorf("unparented name = %q, want the flat form: a run with no project has no parent", loose)
+	}
+
+	// Narrowed to the project, only its own runs come back.
+	_, got, _, err := st.List(ctx, "projects/gateway", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != parented {
+		t.Errorf("listing projects/gateway = %v, want just its own run", got)
+	}
+
+	// Empty parent lists EVERYTHING, so the two name shapes never cost a client an extra call. A
+	// viewer asking "what runs exist" asks once.
+	_, all, _, err := st.List(ctx, "", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("unfiltered listing = %v, want both runs", all)
+	}
+
+	// Both fetch and delete by their own name, so neither shape is a second-class citizen.
+	for _, name := range []string{parented, loose} {
+		if _, err := st.Get(ctx, name); err != nil {
+			t.Errorf("Get(%q): %v", name, err)
+		}
+		if err := st.Delete(ctx, name); err != nil {
+			t.Errorf("Delete(%q): %v", name, err)
+		}
+	}
+}
+
+// nestDoc is the smallest document a store will accept, since the nesting tests care about where a
+// run is filed, not what it found.
+func nestDoc(design string) *checkspb.CheckResults {
+	return &checkspb.CheckResults{
+		Meta:   &checkspb.ResultsMeta{ProducerVersion: "test"},
+		Design: &checkspb.DesignRef{Source: design},
+	}
+}
+
+// TestValidateOnlyScoresWithoutStoring holds `agni review --remote` to what the local CLI does. The
+// run is scored and returned, nothing is added to the server's list, and a server with no review
+// store still answers.
+func TestValidateOnlyScoresWithoutStoring(t *testing.T) {
+	ctx := context.Background()
+	m, err := review.Load(strings.NewReader("name: dry run\nareas:\n  - name: Power\n    items:\n      - {id: P1, title: every rail carries a bulk capacitor, rule: bulk-cap}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	man := ManifestProto(m)
+	store := NewMemReviewStore()
+	store.Clock = func() string { return "2026-10-15T00:00:00Z" }
+	stored, _ := dirReviewSvc(t, store)
+	unstored, _ := dirReviewSvc(t, nil)
+	for name, svc := range map[string]*ReviewService{"with a store": stored, "with no store": unstored} {
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn"), Manifest: man, ValidateOnly: true})
+		if err != nil {
+			t.Fatalf("%s: CreateReview: %v", name, err)
+		}
+		if rv.GetName() != "" || rv.GetResults().GetMeta().GetCreatedAt() != "" {
+			t.Errorf("%s: name %q, created_at %q, want both empty for a run never stored", name, rv.GetName(), rv.GetResults().GetMeta().GetCreatedAt())
+		}
+		if got := len(rv.GetResults().GetAreas()); got != 1 {
+			t.Errorf("%s: %d areas scored, want 1", name, got)
+		}
+	}
+	list, err := stored.ListReviews(ctx, &webapi.ListReviewsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(list.GetReviews()); n != 0 {
+		t.Errorf("the store holds %d runs after validate_only creates, want 0", n)
+	}
+}

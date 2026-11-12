@@ -1,0 +1,174 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// supplyExceedsAbsMax flags a power-input pin fed by a rail whose nominal voltage
+// exceeds the part's absolute-maximum supply rating from its seeded datasheet spec.
+// It was the first datasheet-backed rule (WS10-003). It is Go rather than a spec because the join
+// is not spec vocabulary yet, and it is silent without a seeded set.
+var supplyExceedsAbsMax = &check.Rule{
+	Name:       "supply-exceeds-abs-max",
+	Severity:   "error",
+	Summary:    "A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating.",
+	Impact:     "Exceeding an absolute-maximum rating is outside the vendor's stress envelope: the part may be damaged immediately or degrade in the field. Unlike a heuristic, this limit is the vendor's own number, with the page it came from.",
+	Remedy:     "Feed the part from a rail inside its rated supply range, or change the part for one rated to the rail it sits on. An absolute maximum is a damage threshold rather than a tolerance to design against.",
+	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
+	Reads:      []string{"param.supply_abs_max", "pin.electrical_type", "net.name", "on_net"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryDatasheet,
+		check.KeyTier:         "R",
+		check.KeyDistribution: check.DistOpen,
+		"evidence":            "datasheet",
+	},
+	Detail: ruleDoc("supply-exceeds-abs-max"),
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
+		return aliasSupplyVerdicts(m, check.SupplyAbsMaxLimits, mostRestrictiveMax,
+			"absolute-maximum supply", "absolute maximum",
+			func(p *parampb.Parameter) check.Bound { return check.Bound{Max: p.Value.Max} },
+			func(ev aliasSupplyEvent, binding *parampb.Parameter, _ check.Bound) *check.Finding {
+				return &check.Finding{
+					Subject: check.Entity{Kind: check.KindComponent, Ref: ev.comp.RefDes},
+					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV — %s",
+						ev.pin, ev.net, ev.nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(ev.spec, binding)),
+					Prov:          ev.comp.Prov,
+					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, binding)},
+					// The pin, then the rail, in message order (see aliasSupplyContext). No NetID,
+					// since this rule knows the rail by name only.
+					Context: aliasSupplyContext(ev),
+				}
+			})
+	},
+	StatesConsideredSet: true,
+}
+
+// aliasSupplyEvent is one supply terminal of one alias-path part. The alias path reaches a rating
+// through the vendor symbol table rather than through pin bindings, so these two rules are
+// part-scoped where pin-exceeds-abs-max is terminal-scoped.
+type aliasSupplyEvent struct {
+	comp    *ir.Component
+	pin     string
+	net     string
+	nominal float64
+	spec    *parampb.PartSpec
+}
+
+// aliasSupplyContext is the pin and the rail. These rules' subject is the whole part, and a part with
+// several supply pins is not located by its ref des alone (agni issue 349).
+func aliasSupplyContext(ev aliasSupplyEvent) []check.ContextSubject {
+	return []check.ContextSubject{
+		{Entity: check.Entity{Kind: check.KindPin, Ref: ev.comp.RefDes, Pin: ev.pin}, Role: "pin"},
+		{Entity: check.Entity{Kind: check.KindNet, Ref: ev.net}, Role: "rail"},
+	}
+}
+
+// mostRestrictiveMax picks the lowest stated maximum as the binding row for a one-sided ceiling.
+// Applying the tightest row across all of a part's supply pins is conservative, so the alias path is
+// safe for a ceiling and unsafe for a two-sided range.
+func mostRestrictiveMax(rows []*parampb.Parameter) (*parampb.Parameter, string) {
+	binding := rows[0]
+	for _, p := range rows[1:] {
+		if p.Value.GetMax() < binding.Value.GetMax() {
+			binding = p
+		}
+	}
+	return binding, ""
+}
+
+// aliasSupplyVerdicts is the body both alias-path datasheet rules share. It walks every supply
+// terminal of every seeded part the per-pin rules do not own and decides it against the part-level row.
+//
+// THE SUBJECT IS THE TERMINAL and the Finding is still part-scoped, because a reviewer changes the
+// part and the viewer highlights it. pin-exceeds-abs-max draws the same split. A part with three VDD
+// pins on one rail gives three verdicts and one finding, one per (part, rail). The extra terminals
+// fail on the same evidence and get no Finding (#400).
+//
+// Three cases are each NotConsidered with the step that stopped them. A part has no comparable row
+// of this kind, a pin is on no net, or a rail's name states no voltage. A row stating no bound is
+// NoLimit, which check.CompareToBound returns itself.
+func aliasSupplyVerdicts(
+	m check.Model,
+	limitsOf func(*parampb.PartSpec) []*parampb.Parameter,
+	bindingOf func([]*parampb.Parameter) (*parampb.Parameter, string), // row, or a reason it cannot pick one
+	kindName string, // names the row kind in a drop reason: "absolute-maximum supply"
+	limitName string, // names the bound in a witness: "absolute maximum"
+	boundOf func(*parampb.Parameter) check.Bound,
+	findingFor func(aliasSupplyEvent, *parampb.Parameter, check.Bound) *check.Finding,
+) []check.Verdict {
+	var out []check.Verdict
+	for _, c := range m.Components() {
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil {
+			continue // no seeded datasheet, so no rating to compare against and not a subject
+		}
+		// A spec with pin bindings belongs to the per-pin rules, which emit their own verdicts over
+		// the same pins.
+		if pinBoundSpec(m, c.RefDes) != nil {
+			continue
+		}
+		binding, cannot := pickBinding(limitsOf(spec), bindingOf, kindName)
+
+		seen := map[string]bool{} // rails this part has already filed a finding about
+		for _, pin := range m.Pins() {
+			if pin.Component.RefDes != c.RefDes || !check.SupplyInputPin(m, c.RefDes, pin.Designator) {
+				continue // not a supply terminal, so not a subject of these rules
+			}
+			ev := aliasSupplyEvent{comp: c, pin: pin.Designator, spec: spec}
+			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: c.RefDes, Pin: pin.Designator}}}
+			if cannot != "" {
+				v.Outcome, v.Reason = check.NotConsidered, cannot
+				out = append(out, v)
+				continue
+			}
+			ev.net = m.PinNetName(c.RefDes, pin.Designator)
+			if ev.net == "" {
+				v.Outcome, v.Reason = check.NotConsidered, "pin is not connected to a net"
+				out = append(out, v)
+				continue
+			}
+			nominal, ok := m.NominalVoltage(ev.net)
+			if !ok {
+				v.Outcome = check.NotConsidered
+				v.Reason = fmt.Sprintf("rail %q does not name a nominal voltage", ev.net)
+				out = append(out, v)
+				continue
+			}
+			ev.nominal = nominal
+			v.Context = aliasSupplyContext(ev)
+
+			b := boundOf(binding)
+			outcome, w := check.CompareToBound(nominal, "V", b, "nominal", limitName)
+			if w != nil {
+				w.Datasheet = []*check.DatasheetCitation{check.DatasheetCitationOf(spec, binding)}
+			}
+			v.Outcome, v.Witness = outcome, w
+			if outcome == check.Fail && !seen[ev.net] {
+				seen[ev.net] = true
+				v.Finding = findingFor(ev, binding, b)
+			}
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// pickBinding reduces a part's rows of one kind to the row that governs, or returns the reason no row
+// can be chosen. "No row of this kind" and "several rows and nothing says which pin each belongs to"
+// are separate reasons. The second keeps rail-nominal-out-of-recommended off multi-supply parts
+// rather than inventing an over- or under-voltage on one.
+func pickBinding(rows []*parampb.Parameter, bindingOf func([]*parampb.Parameter) (*parampb.Parameter, string), kindName string) (*parampb.Parameter, string) {
+	if len(rows) == 0 {
+		return nil, "the datasheet states no comparable " + kindName + " row for this part"
+	}
+	binding, cannot := bindingOf(rows)
+	if cannot != "" {
+		return nil, cannot
+	}
+	return binding, ""
+}

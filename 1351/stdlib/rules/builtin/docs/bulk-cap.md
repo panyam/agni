@@ -1,0 +1,51 @@
+## bulk-cap
+
+### What it means
+
+Every named power rail should carry at least one capacitor. A named power
+rail is a net that an author gave a power symbol or asserted with a power flag.
+
+### Why engineers want it
+
+Decoupling is per-pin; bulk capacitance is per-rail. A rail with
+no capacitance at all sags on every load step, and LDO datasheets require an output
+capacitor for loop stability. This is the aggregate per-rail complement to
+decoupling-present.
+
+### Impact
+
+Rail droop under transients, regulator instability, resets that only reproduce
+under real load patterns.
+
+![A power rail with no capacitor anywhere is flagged; a rail carrying bulk and decoupling caps is fine](images/bulk-cap.svg)
+
+### Scope note
+
+Rail identity is a power symbol on the net, a power flag, or a global net that also reads as a
+rail, not pin directions, so a rail feeding only passives is still covered. A global label alone is
+not enough, because many boards draw signals with global labels, and on three public boards those
+signals were most of this rule's findings (agni issue 1252). decoupling-present quantifies over
+power-input pins instead, and the two deliberately overlap on a rail that has power pins and no caps.
+Ground nets are excluded, by role or by name where no role was stamped. Every rail's capacitors end
+ON ground, so "ground has no bulk cap" is not a defect. Unresolved external nets are skipped (the cap
+may live in an unread sheet). Distinguishing
+bulk from local decoupling by value is a datasheet-joined refinement (WS10).
+
+A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
+for one rail (agni issue 1015). A 0 Ohm resistor often splits a converter's output node from the
+rail it feeds. The resistor sizes the current path or lets a bench measure it, and the capacitors sit
+on the converter's side. A link counts when its value is zero ohms. That includes a library that
+wrote the value as its part name, such as `R_0R_22.4A_0603`, which ingestion reads as 0 Ohm (agni
+issue 1115). The walk
+never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
+names the link beside the capacitor.
+
+### Query structure
+
+select rails by fact, require a capacitor member.
+
+    select N in nets where (power_symbol(N) or power_driven(N) or (global(N) and rail(N)))
+      and not ground_name(N) and not rail_capacitor(N)
+
+Reads: component.class, net.attributes (global, power_driven, external), net.names (the
+ground-name skip), on_net, pin.electrical_type (a power symbol's virtual pin). Tier R.

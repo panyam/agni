@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="wire-no-junction rule: a wire endpoint touching another wire body with no junction dot is flagged as two separate nets; the same T with a junction dot is one net and fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged (no dot) ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: no junction dot</text>
+
+  <!-- horizontal wire body (net A) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="40" y1="120" x2="240" y2="120"/>
+  </g>
+  <text x="60" y="110" font-size="12" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">net A</text>
+
+  <!-- vertical wire ending ON the body, no dot: separate net B (flagged endpoint) -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="140" y1="126" x2="140" y2="196"/>
+  </g>
+  <!-- open node marks the un-joined touch point -->
+  <circle cx="140" cy="120" r="6" fill="#f8f9fb" stroke="#d64545" stroke-width="2"/>
+  <text x="176" y="170" font-size="12" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">net B</text>
+
+  <text x="150" y="220" font-size="13" fill="#d64545" text-anchor="middle">endpoint on body, no dot</text>
+  <text x="150" y="238" font-size="13" fill="#d64545" text-anchor="middle">-> two nets, flagged</text>
+
+  <!-- ================= RIGHT: fine (dotted T) ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: junction dot present</text>
+
+  <!-- horizontal wire body -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="400" y1="120" x2="600" y2="120"/>
+  </g>
+
+  <!-- vertical wire ending on the body with a dot -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="500" y1="120" x2="500" y2="196"/>
+  </g>
+  <!-- filled junction dot: the wires join into one net -->
+  <circle cx="500" cy="120" r="4" fill="#394049"/>
+  <text x="536" y="170" font-size="12" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">one net</text>
+
+  <text x="500" y="220" font-size="13" fill="#2f9e57" text-anchor="middle">dot marks the join</text>
+  <text x="500" y="238" font-size="13" fill="#2f9e57" text-anchor="middle">-> one net, fine</text>
+</svg>

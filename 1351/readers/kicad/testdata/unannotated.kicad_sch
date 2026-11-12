@@ -1,0 +1,45 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Unannotated Fixture"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "test:R") (at 50 50 0) (unit 1) (uuid "r-un-1")
+		(property "Reference" "R?"
+			(at 48 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 52 46 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 60 50 0) (unit 1) (uuid "r-un-2")
+		(property "Reference" "R?"
+			(at 58 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "4k7"
+			(at 62 46 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 70 50 0) (unit 1) (uuid "c-un-1")
+		(property "Reference" "C?1845"
+			(at 68 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "100n"
+			(at 72 46 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r-named")
+		(property "Reference" "R1"
+			(at 78 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "1k"
+			(at 82 46 0)
+			(effects (font (size 1.27 1.27))))))

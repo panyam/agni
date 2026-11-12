@@ -1,0 +1,5 @@
+# Rung 1: the same command on the design, for the count the sub-sheet read is compared against.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni check .
+match: 'finding\(s\) total|considered by'

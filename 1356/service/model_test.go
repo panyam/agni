@@ -1,0 +1,137 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"github.com/panyam/agni/artifact"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	param "github.com/panyam/agni/core/param"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// thinBoard is a one-net board whose only track is 0.05mm wide, below the 0.127mm fab floor, so
+// track-width fires on it. Enough to prove a board tier reached the model.
+func thinBoard() *geom.BoardGeometry {
+	pt := func(x, y int64) *geom.Point { return &geom.Point{X: x, Y: y} }
+	return &geom.BoardGeometry{UnitNm: 1, Nets: []*geom.NetCopper{{
+		Net:      "THIN",
+		Segments: []*geom.TrackSegment{{A: pt(0, 0), B: pt(4_000_000, 0), Width: 50_000, Layer: "F.Cu"}},
+	}}}
+}
+
+// someSpecs is a non-nil param provider. Its contents are irrelevant here, since HasParams reports
+// that a provider was attached, not that a part is seeded.
+func someSpecs() param.ParamProvider {
+	return param.ProviderFunc(func(string) *parampb.PartSpec { return nil })
+}
+
+// TestBuildModelAttachesTiers checks that BuildModel attaches BOTH the board and params tiers.
+// Services were building plain netlist models that dropped both, and WS9-048 closed that drift.
+func TestBuildModelAttachesTiers(t *testing.T) {
+	m, err := BuildModel(context.Background(), fakeLoader{design: &ir.Design{}, board: thinBoard()}, testURI(t, "m", "d"), artifact.URI{}, someSpecs())
+	if err != nil {
+		t.Fatalf("BuildModel: %v", err)
+	}
+	if !m.HasBoard() {
+		t.Error("HasBoard() = false; board tier not attached")
+	}
+	if !m.HasParams() {
+		t.Error("HasParams() = false; params tier not attached")
+	}
+}
+
+// TestBuildModelBoardPathNonBoard checks that a board_path override that reads no board is a loud
+// error, never a silent nil (WS3-089), so an explicit board request can't report clean without
+// checking.
+func TestBuildModelBoardPathNonBoard(t *testing.T) {
+	// The fake returns a nil board for the override path; BuildModel must reject it.
+	_, err := BuildModel(context.Background(), fakeLoader{design: &ir.Design{}, board: nil}, testURI(t, "m", "d"), testURI(t, "m", "board.override"), someSpecs())
+	if err == nil {
+		t.Fatal("board_path with no board did not error")
+	}
+}
+
+// TestBuildGeometryBestEffort checks that BuildGeometry passes a loaded geometry through and returns
+// nil (not an error) when the load fails. This best-effort contract lets a caller degrade to "no
+// sheet badges" rather than fail. So geometry is a separate helper, not a BuildModel tier.
+func TestBuildGeometryBestEffort(t *testing.T) {
+	g := &geom.SchematicGeometry{}
+	if got := BuildGeometry(context.Background(), fakeLoader{geom: g}, testURI(t, "m", "d")); got != g {
+		t.Errorf("loaded geometry = %v, want the passed value", got)
+	}
+	if got := BuildGeometry(context.Background(), fakeLoader{geomErr: errors.New("boom")}, testURI(t, "m", "d")); got != nil {
+		t.Errorf("failed load = %v, want nil (best-effort)", got)
+	}
+}
+
+// TestCheckDesignRunsBoardRules checks that served CheckDesign fires a board-DRC rule when the design
+// has board geometry. WS9-048 fixed this observable bug. CheckDesign built check.NewModel(d), so
+// check.Available gated every board.* rule to not-applicable and the panel showed nothing.
+func TestCheckDesignRunsBoardRules(t *testing.T) {
+	svc := NewCheckService(fakeLoader{design: &ir.Design{}, board: thinBoard()}, check.DefaultCatalog(), nil, "", nil, nil)
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d"), Rules: []string{"track-width"}})
+	if err != nil {
+		t.Fatalf("CheckDesign: %v", err)
+	}
+	found := false
+	for _, f := range resp.GetFindings() {
+		if f.GetRule() == "track-width" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("track-width did not fire on a board-bearing design; findings = %+v", resp.GetFindings())
+	}
+}
+
+// testURI builds an artifact URI for a test, failing rather than returning an error, because a
+// hard-coded fixture URI that will not parse is a broken test, not a condition under test.
+func testURI(t *testing.T, mount, p string) artifact.URI {
+	t.Helper()
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+	}
+	return u
+}
+
+// prefetchSpy is a Prefetcher that records what it was asked to fetch and can fail.
+type prefetchSpy struct {
+	asked []string
+	err   error
+}
+
+func (p *prefetchSpy) Lookup(mpn string) *parampb.PartSpec {
+	if mpn == "U-SEEDED" {
+		return &parampb.PartSpec{Mpn: mpn}
+	}
+	return nil
+}
+
+func (p *prefetchSpy) Prefetch(_ context.Context, mpns []string) error {
+	p.asked = append(p.asked, mpns...)
+	return p.err
+}
+
+// A remote corpus is fetched for the design's parts before the model is built, and an unreachable one
+// fails the request as unavailable instead of every part reading as unseeded (agni issue 749).
+func TestBuildModelPrefetchesARemoteCorpus(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Mpn: "U-SEEDED"}, {RefDes: "R1", Mpn: "RC0603"}}}
+	spy := &prefetchSpy{}
+	if _, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy); err != nil {
+		t.Fatal(err)
+	}
+	if len(spy.asked) != 2 || spy.asked[0] != "U-SEEDED" || spy.asked[1] != "RC0603" {
+		t.Errorf("Prefetch asked for %v, want the design's two MPNs", spy.asked)
+	}
+	spy = &prefetchSpy{err: errors.New("connection refused")}
+	_, err := BuildModel(context.Background(), fakeLoader{design: d}, testURI(t, "m", "d"), artifact.URI{}, spy)
+	if !errors.Is(err, ErrUnavailable) {
+		t.Errorf("an unreachable corpus gave %v, want ErrUnavailable", err)
+	}
+}

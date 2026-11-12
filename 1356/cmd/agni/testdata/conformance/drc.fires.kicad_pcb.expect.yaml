@@ -1,0 +1,22 @@
+# The geometric DRC fires board (WS3-008): each violation class once, on its own net.
+# THIN routes a 0.05mm trace; CLOSE_A/CLOSE_B run parallel with a 0.04mm edge gap on
+# F.Cu; SMALLHOLE's via drills 0.1mm; THINRING's via ring is 0.05mm. Incidentals: every
+# net is a single-pad stub off connector J1, so single-pin-net and esd-protection fire
+# per net (GND-less test board, no TVS).
+fires:
+  track-width:
+    subjects: [THIN]
+    why: "a 0.05mm trace is below the loosest fab floor (0.127mm)"
+  copper-clearance:
+    subjects: [CLOSE_A]
+    why: "CLOSE_A and CLOSE_B run 0.04mm apart edge-to-edge on the same layer"
+  hole-size:
+    subjects: [SMALLHOLE]
+    why: "a 0.1mm drill is below the 0.2mm mechanical floor"
+  annular-width:
+    subjects: [THINRING]
+    why: "a 0.05mm ring is below the 0.075mm breakout floor"
+  single-pin-net:
+    subjects: [CLOSE_A, CLOSE_B, SMALLHOLE, THIN, THINRING]
+  esd-protection:
+    subjects: [CLOSE_A, CLOSE_B, SMALLHOLE, THIN, THINRING]

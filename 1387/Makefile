@@ -1,0 +1,1057 @@
+GO ?= go
+
+.PHONY: hooks dist dist-check testall-core testall-test testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+
+all: proto build
+
+# Regenerate Go from the proto IR. Two buf modules share one workspace (the root buf.yaml): the
+# engine's protos/, generated from inside protos/ into gen/go, and the datasheet producer's
+# datasheet/protos (agni issue 744), generated into datasheet/gen/go from the repo ROOT so its
+# `go tool` plugins resolve against the root go.mod that pins them (see datasheet/buf.gen.yaml).
+#
+# Both Go generations run under the Go go.mod names, as gosec does, because protoc-gen-go formats
+# comments with the Go running it and 1.27 rewrote comments in files no proto change touched (agni
+# 994). Under a newer local Go, proto-check then failed a branch CI passed.
+proto:
+	cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate
+	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml
+
+# Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
+# additive proto changes leave stale TS building green, so the drift only surfaces on the next
+# regen. proto-check below is what makes forgetting it fail instead.
+# Two TS outputs since agni issue 744: the viewer's (web/src/gen, from the engine's protos alone)
+# and the datasheets workbench's (datasheet/web/src/gen, from the whole buf workspace, because its
+# API imports engine messages).
+proto-web:
+	cd web && pnpm run gen
+	cd datasheet/web && pnpm run gen
+
+# Regenerate the Python half (agni issue 728) into the client package. Its template writes into the
+# package's own src/, which also holds hand-written code, so it cannot use buf's `clean` and removes
+# the generated subtree itself instead.
+proto-py:
+	rm -rf clients/python/src/agni/v1
+	cd clients/python && buf generate ../../protos --template buf.gen.py.yaml
+
+# Freshness gate: fail when the committed generated code does not match the protos it came from.
+#
+# WHY THIS IS NOT GIT-STATUS-BASED like catalog-docs-check. That target regenerates IN PLACE and
+# inspects `git status`, which forces a regenerate -> COMMIT -> gate ordering: freshly regenerated
+# but uncommitted output reads as stale. Proto edits are far more frequent than catalog edits and
+# the natural workflow is to regenerate and run the gate before committing, so inheriting that
+# ordering would make the gate a tax. Generating into a throwaway tree and diffing has no such
+# constraint, and it cannot leave the working tree dirty on failure.
+#
+# THE TEMP TREE MIRRORS THE REPO LAYOUT ON PURPOSE. The buf templates write to RELATIVE paths that
+# climb out of their config directory (`out: ../gen/go` from protos/, `out: src/gen` from web/), and
+# `-o` resolves those relative to whatever it is given. Pointing `-o` straight at a bare temp dir
+# makes `../gen/go` escape it and land beside the temp dir instead. So `-o $$tmp/protos`,
+# `-o $$tmp/web` and `-o $$tmp/py` reproduce the config directories' positions and the outputs land
+# inside. The Go and TS templates also set `clean: true`, which is another reason never to aim this at
+# the real tree. The Python diff skips __pycache__, which importing the package writes beside the
+# generated modules.
+proto-check:
+	@tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py"; \
+	(cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate -o "$$tmp/protos") || exit 1; \
+	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
+	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
+	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
+	fail=0; \
+	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
+		echo "generated Go is stale — run 'make proto' and commit the result:"; \
+		diff -rq gen/go "$$tmp/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r datasheet/gen/go "$$tmp/root/datasheet/gen/go" >/dev/null 2>&1; then \
+		echo "generated Go for the datasheet module is stale — run 'make proto' and commit the result:"; \
+		diff -rq datasheet/gen/go "$$tmp/root/datasheet/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r datasheet/web/src/gen "$$tmp/dsweb/src/gen" >/dev/null 2>&1; then \
+		echo "generated TypeScript for the datasheets workbench is stale — run 'make proto-web' and commit the result:"; \
+		diff -rq datasheet/web/src/gen "$$tmp/dsweb/src/gen" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
+		echo "generated TypeScript is stale — run 'make proto-web' and commit the result:"; \
+		diff -rq web/src/gen "$$tmp/web/src/gen" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" >/dev/null 2>&1; then \
+		echo "generated Python is stale — run 'make proto-py' and commit the result:"; \
+		diff -rq -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	exit $$fail
+
+# Fetch and prune module dependencies (engine module only).
+tidy:
+	$(GO) mod tidy
+
+# Tidy every module in the repo, found the way hack/tidy_check.sh finds them, so the module the check
+# fails on is always one this target tidies. It walked a hand-kept list (the root and examples/*)
+# until datasheet/ became its own module (agni issue 744), when the check's advice to run
+# `make tidyall` stopped fixing what it reported. Run after changing imports or a shared dependency.
+# Freshness gate: fail when any module's go.mod/go.sum disagrees with a fresh `go mod tidy`.
+#
+# The gate BUILT every module and never asked whether one was tidy, and those are different
+# questions: an untidy module keeps building until some later change happens to need a requirement it
+# never recorded. Eleven example modules had drifted before anyone looked, and it took an unrelated
+# root dependency change to surface them all at once.
+#
+# It snapshots and restores rather than reading `git status`, for the reason tutorial-runs-check
+# gives. ~5s, and it runs near the FRONT of testall so "updates to go.mod needed" is diagnosed here
+# rather than surfacing later as a confusing examples-test failure (proto-check's placement argument).
+tidyall-check:
+	./hack/tidy_check.sh
+
+tidyall:
+	@find . -name go.mod -not -path './.git/*' | sort | while read -r m; do \
+		d=$$(dirname "$$m"); \
+		echo "== tidy $$d =="; \
+		( cd "$$d" && $(GO) mod tidy ) || exit 1; \
+	done
+	@echo "tidy: all modules tidied"
+
+# Build all packages.
+build: ui
+	mkdir -p bin
+	$(GO) build -o bin ./...
+
+# Build the agni CLI into bin/.
+agni:
+	$(GO) build -o bin/agni ./cmd/agni
+
+# Install the agni CLI into GOBIN (falls back to GOPATH/bin).
+install:
+	$(GO) install ./cmd/agni
+
+# Static analysis over the engine module (the examples-test loop builds the example modules).
+vet:
+	$(GO) vet ./...
+
+# Security and lint scanners. Each runs through `go run` at the version pinned here, so CI and a
+# developer's machine run the same one with nothing installed. Bump a version here, never to @latest.
+# They cover the two modules agni ships, the root and datasheet (the agnids binary and image); the
+# examples are not shipped and stay out of scope.
+STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.2
+GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
+GOSEC := github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+GITLEAKS := github.com/zricethezav/gitleaks/v8@v8.30.1
+SHIPPED_MODULES := . datasheet
+
+# staticcheck over each shipped module.
+lint:
+	@for m in $(SHIPPED_MODULES); do echo "==> staticcheck $$m"; (cd $$m && $(GO) run $(STATICCHECK) ./...) || exit 1; done
+
+# Known vulnerabilities reachable from each shipped module. It is time-sensitive rather than
+# change-sensitive, because the advisory database moves on its own, so it runs weekly and on each
+# release tag (.github/workflows/vulncheck.yml) and in `make audit`, not in the gate.
+vulncheck:
+	@GOVULNCHECK=$(GOVULNCHECK) MODULES="$(SHIPPED_MODULES)" hack/vulncheck.sh
+
+# gosec at medium severity and above over each shipped module. A finding is fixed, or annotated on its
+# line as `// #nosec G<n> -- <why>`, so the reason travels with the code to any scanner that reads it.
+#
+# It runs under the Go that go.mod names, as CI does. Under a newer Go than gosec's analysis library
+# reads, its SSA-based rules (G115 integer overflow, G703 and G710 taint, G112, G122) skip without a
+# word, so a developer on Go 1.27 saw a clean run where CI on 1.26.4 found 100 more.
+GO_MOD_VERSION := $(shell awk '/^go /{print $$2; exit}' go.mod)
+seccheck:
+	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m (go$(GO_MOD_VERSION))"; (cd $$m && GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) run $(GOSEC) -quiet -severity=medium ./...) || exit 1; done
+
+# Committed secrets, over the whole history. A known-fake value is allowlisted by exact value in
+# .gitleaks.toml, so a real secret of the same shape is still reported.
+secrets:
+	$(GO) run $(GITLEAKS) detect --source . --config .gitleaks.toml --redact
+
+# Every scanner, vulncheck included. lint, seccheck and secrets also run in the gate (testall).
+audit: lint seccheck secrets vulncheck
+
+# CONSTRAINT C19 ratchet (WS1-042): fail on a NEW `func ... *ir.Design` outside the allowed
+# producer/entry paths — engine processing reads through check.Model. Run --dump to rebaseline.
+ir-model-check:
+	./hack/ir_model_check.sh
+
+# Fail when two files declared to be copies of each other have drifted, or when a copy exists that
+# hack/fixture_copies.txt does not declare. It reads the working tree including new unstaged files,
+# so it does not have catalog-docs-check's commit-first ordering.
+fixture-copies-check:
+	./hack/fixture_copies_check.sh
+
+# Fetch the pinned board corpora from https://github.com/panyam/agni-samples into tools/samples/.
+#
+# Those boards are real, publicly-licensed designs that are NOT ours: each carries its own licence,
+# and keeping them out of this tree is what lets this repo stay uniformly Apache-2.0. hack/samples.pin
+# names the release and the checksum; see it for how to bump.
+#
+# There is no offline escape hatch, deliberately. A corpus that silently fails to arrive turns every
+# test reading it into a test that passes over an empty set, which is the exact failure shape
+# docsite/content/build/the-gate.md exists to warn about. The fetch is a no-op once the stamp matches,
+# so it costs one 3MB download per pin bump rather than one per run.
+samples:
+	./hack/fetch_samples.sh tutorial-board
+
+# The oracle corpus adds every board's copper, for the KiCad reader cross-check and for the test that
+# compares a design's schematic and board views against each other. The gate takes THIS one rather
+# than `samples` alone, because a test whose corpus is absent skips, and a skipped test is a test that
+# proves nothing (agni issue 591). 19MB against tutorial-board's 3MB, fetched once per pin bump.
+samples-oracle:
+	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports
+
+# The KiCad reader cross-check against real boards: read a design's schematic our way, read the same
+# design's .kicad_pcb for the netlist KiCad itself resolved, and require the two to agree on which
+# pins share a net. NOT in the gate, because it needs the 19MB both-views corpus; a separate suite
+# like browser-test. AGNI_ORACLE_UPDATE=1 rewrites the baseline instead of asserting it.
+oracle: samples-oracle odb-oracle
+	AGNI_ORACLE=1 $(GO) test ./readers/kicad/ -run TestOracleCorpus -count=1 -v
+
+# The ODB++ reader cross-check against real boards (agni issue 1268): each samples board read from its
+# .kicad_pcb and from kicad-cli's ODB++ export of it, held to readers/formats/testdata/odb_oracle.baseline,
+# the exporter's known differences. Its own target so it runs alone or beside the KiCad one, and out
+# of the gate for the 15 MB export corpus. AGNI_ODB_ORACLE_UPDATE=1 rewrites the baseline.
+odb-oracle: samples-oracle
+	./hack/fetch_samples.sh odb-kicad
+	AGNI_ODB_ORACLE=1 $(GO) test ./readers/formats/ -run TestODBOracleCorpus -count=1 -v
+
+# Engine (Go) tests. The example modules have their own go.mod; see examples-test.
+test:
+	$(GO) test ./...
+
+# The Python client (agni issue 728) against a real binary and a real server. Its venv is its own and
+# small (protobuf, openpyxl, pytest), separate from the docling one `make setup` builds, and is rebuilt
+# when pyproject.toml changes. Its server runs with no web dir, the API-only path an installed binary
+# takes (agni issue 735), so it needs no viewer bundle. PYTHONDONTWRITEBYTECODE keeps __pycache__ out
+# of the generated tree that proto-check diffs.
+PY_CLIENT := clients/python
+PY_VENV := $(PY_CLIENT)/.venv
+
+$(PY_VENV)/.installed: $(PY_CLIENT)/pyproject.toml
+	python3 -m venv $(PY_VENV)
+	$(PY_VENV)/bin/pip install -q -e '$(PY_CLIENT)[test]'
+	touch $@
+
+python-venv: $(PY_VENV)/.installed
+
+python-test: agni python-venv
+	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
+
+# The Python client as PyPI publishes it, `agni-eda`: an sdist and a wheel with V's version stamped in,
+# written to PY_DIST, then installed into a fresh venv outside the checkout and checked
+# (hack/python_dist_smoke.sh). The release workflow runs this before it publishes. The build works on
+# a copy, since the tree's pyproject.toml carries a placeholder version and the licence lives at the
+# repo root, outside the package directory setuptools reads.
+#   make python-dist V=v0.3.12
+PY_DIST ?= dist/python
+
+python-dist:
+	@$(check_semver)
+	@set -e; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	rsync -a --exclude .venv --exclude __pycache__ --exclude .pytest_cache --exclude '*.egg-info' \
+		$(PY_CLIENT)/ "$$tmp/src/"; \
+	cp LICENSE "$$tmp/src/LICENSE"; \
+	ver=$$(echo "$(V)" | sed 's/^v//'); \
+	case "$$ver" in *-*) echo "python-dist publishes release tags only, not $(V)"; exit 1;; esac; \
+	sed -i.orig "s/^version = \"0.0.0\"$$/version = \"$$ver\"/" "$$tmp/src/pyproject.toml"; \
+	grep -q "^version = \"$$ver\"$$" "$$tmp/src/pyproject.toml" || { echo "pyproject.toml was not stamped with $$ver"; exit 1; }; \
+	rm "$$tmp/src/pyproject.toml.orig"; \
+	python3 -m venv "$$tmp/build-venv"; \
+	PIP_DISABLE_PIP_VERSION_CHECK=1 "$$tmp/build-venv/bin/pip" install -q build; \
+	rm -rf "$(PY_DIST)"; mkdir -p "$(PY_DIST)"; out=$$(cd "$(PY_DIST)" && pwd); \
+	"$$tmp/build-venv/bin/python" -m build -q --outdir "$$out" "$$tmp/src"; \
+	hack/python_dist_smoke.sh $(PY_DIST) "$$ver"
+
+# The gate's run of python-dist, so a packaging break shows on the PR rather than on the release.
+python-dist-check:
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	$(MAKE) --no-print-directory python-dist V=v0.0.1 PY_DIST="$$tmp/dist"
+
+# The release's binaries (WS16-003): one tarball per platform holding an agni that embeds the viewer,
+# the viewer alone as agni-web-<tag>.tar.gz for a `go install` binary to download, and checksums.txt
+# over all of them. It needs the built bundle, so it runs `make ui`'s viewer build first. The release
+# workflow runs this and attaches dist/release; hack/dist_smoke.sh runs the host's binary at the end.
+#   make dist V=v0.3.13
+DIST_DIR ?= dist/release
+DIST_PLATFORMS ?= darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
+
+dist:
+	@$(check_semver)
+	cd web && pnpm build
+	@# COPYFILE_DISABLE keeps macOS tar from adding a ._name shadow beside every file, which the
+	@# viewer's template loader would read as a template.
+	@set -e; export COPYFILE_DISABLE=1; rm -rf "$(DIST_DIR)"; mkdir -p "$(DIST_DIR)"; out=$$(cd "$(DIST_DIR)" && pwd); \
+	(cd web && tar --no-xattrs -czf "$$out/agni-web-$(V).tar.gz" templates static/*.js static/*.css); \
+	for p in $(DIST_PLATFORMS); do \
+		os=$${p%/*}; arch=$${p#*/}; name=agni_$(V)_$${os}_$${arch}; \
+		echo "building $$name"; \
+		mkdir -p "$$out/$$name"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build -trimpath -tags embedweb \
+			-ldflags "-s -w -X github.com/panyam/agni/internal/version.stamped=$(V)" \
+			-o "$$out/$$name/agni" ./cmd/agni; \
+		cp LICENSE README.md "$$out/$$name/"; \
+		tar --no-xattrs -C "$$out" -czf "$$out/$$name.tar.gz" "$$name"; \
+		rm -rf "$$out/$$name"; \
+	done; \
+	cd "$$out" && shasum -a 256 *.tar.gz > checksums.txt
+	hack/dist_smoke.sh $(DIST_DIR) $(V)
+
+# The gate's run of dist for this machine's platform alone, so a packaging or smoke break shows on the
+# PR rather than on the release, as v0.3.13's did.
+dist-check:
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	$(MAKE) --no-print-directory dist V=v0.0.1 DIST_DIR="$$tmp/dist" DIST_PLATFORMS="$$($(GO) env GOOS)/$$($(GO) env GOARCH)"
+
+# The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
+# workbook plus a markdown summary of every tab, the example agni issue 823 finished.
+# It runs the checkout's binary and the client's venv, so neither a stale agni on PATH nor a python3
+# without the client changes what it reports. Writes outside the repo, under EXERCISE_OUT.
+EXERCISE_OUT ?= /tmp/agni-exercise
+
+exercise-revision-audit: agni python-venv
+	$(PY_VENV)/bin/python $(PY_CLIENT)/examples/revision_audit.py --agni $(CURDIR)/bin/agni -o $(EXERCISE_OUT)/revision-audit.xlsx
+
+# Checking a layout handed off as ODB++ against its schematic (agni issue 1250): the odb-verification
+# example over the gateway's rev B layout, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it
+# would replace both the schematic and the layout with one personal board.
+exercise-odb:
+	cd examples/odb-verification && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
+
+# Mission #1353's exercise for Allegro (agni issue 1350): the allegro-board example over the BeagleBone
+# AI from the samples corpus, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it would
+# replace the board with a personal design.
+exercise-allegro: samples-oracle
+	cd examples/allegro-board && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
+
+# Regenerates the ODB++ fixtures from the synthetic KiCad boards with kicad-cli (KiCad 9 or later).
+odb-fixtures:
+	hack/odb_fixtures.sh
+
+# Web unit tests: TypeScript typecheck + the vitest suite, in each of the three workspace packages
+# (the viewer, the datasheets workbench, and what they share). No browser, no server.
+web-test:
+	cd web-shared && pnpm run typecheck && pnpm test
+	cd web && pnpm run typecheck && pnpm test
+	cd datasheet/web && pnpm run typecheck && pnpm test
+
+# Browser tests (agni issue 323): the handful of assertions that need real layout, run against a
+# real Chromium driving a real server. Part of testall since PR 629, so a machine running the gate
+# needs a Chromium (cd web && pnpm exec playwright-core install chromium).
+#
+# jsdom has no layout engine, so the unit suite can prove what a panel renders and nothing about
+# what a reader can see; a CSS bug once shipped through a fully green run.
+#
+# IN THE GATE since PR 629, having been deliberately outside it before. The argument for keeping
+# it out was that a machine without a browser would go red for a reason unrelated to the change. What
+# settled it was v0.2.0 shipping a viewer whose query surface booted hidden behind the Trace tab: the
+# textarea was in the DOM the whole time, so every jsdom assertion passed, and the browser suite that
+# would have caught it only ran after the tag was pushed. A suite that runs when somebody remembers
+# is a suite that runs after the release.
+#
+# The speed objection did not survive measurement either: the specs take about 16 seconds. The cost
+# is the browser download, which CI caches and a developer pays once.
+#
+# Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
+# The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
+# with a dev server you already have running.
+# HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
+# samples-oracle because site.spec.ts seeds the static demo with the RoyalBlue Feather board, which
+# testall used to fetch before this ran; run on its own, or as its own CI job, it fetches it itself.
+browser-test: ui wasm samples-oracle
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser
+
+# hooks installs an opt-in pre-push hook that runs the browser suite before a push (hack/pre-push.sh).
+# CI runs the suite on every push anyway; the hook is for hearing about a layout break in two minutes
+# on your own machine rather than after the CI queue. `git push --no-verify` skips it.
+hooks:
+	ln -sf ../../hack/pre-push.sh "$$(git rev-parse --git-common-dir)/hooks/pre-push"
+	@echo "installed $$(git rev-parse --git-common-dir)/hooks/pre-push"
+
+# The viewer page API mission's exercise (agni issues 1150, 1152, 1154): a parent page on a second
+# origin frames the viewer and drives it over postMessage, through examples/embed-viewer/parent.html,
+# and an agent on each MCP wire drives tabs on two designs under `serve --mcp --viewer-rooms`. It is
+# web/browser/embed.spec.ts and viewerroom.spec.ts run on their own; both run in browser-test on
+# every push. HEADED=1 shows them in a visible Chrome.
+exercise-viewer-page: ui
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm exec vitest run -c vitest.browser.config.ts browser/embed.spec.ts browser/viewerroom.spec.ts
+
+# The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
+# web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
+# markdown for the mission log. The same walk runs in browser-test on every push. It runs HEADED by
+# default, in a visible Chrome where you take the viewer's review tour yourself, each step dimming the
+# page around what it needs while the walk checks the result, and the walk's own steps stop to explain
+# what they check until you press Next. STEP_BY_STEP=0 has the walk take the tour itself, straight
+# through, and HEADED=0 runs it headless, which never stops (an agent or a script logging the mission
+# passes that). SLOWMO=<ms> paces each action (250 by default when headed).
+# WALK_DESIGN picks the board: jetson (the default, Antmicro's baseboard in examples/jetson-project, copied
+# in from the samples corpus) or gateway (the tutorial project's small synthetic board the gate walks).
+#   make exercise-browser-review
+#   make exercise-browser-review STEP_BY_STEP=0
+#   make exercise-browser-review HEADED=0
+#   make exercise-browser-review WALK_DESIGN=gateway
+WALK_DESIGN ?= jetson
+exercise-browser-review: HEADED ?= 1
+exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT) && rm -f $(EXERCISE_OUT)/headed-trace.txt
+	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
+
+# The cross-probe mission's exercise (#1321, agni issue 1323): open a design's schematic and board as
+# two linked views, click a part in one and find it in the other, and turn the board over. Each step names the
+# tickets it waits on, so a step the viewer cannot do yet reads "not available" rather than failing,
+# and the gate walks the same spec on examples/cross-probe-project's cut of Jetson. It writes the step
+# table and a screenshot per step to $(EXERCISE_OUT), headed unless HEADED=0. WALK_DESIGN=jetson (the
+# default) walks the whole board, and WALK_DESIGN=cut the gate's cut. It asks GitHub which tickets the
+# steps wait on are closed (hack/closed_tickets.sh), and a step waiting only on closed ones must pass.
+#   make exercise-cross-probe
+#   make exercise-cross-probe HEADED=0
+#   make exercise-cross-probe WALK_DESIGN=cut
+exercise-cross-probe: HEADED ?= 1
+exercise-cross-probe: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT)
+	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/cross-probe-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/cross-probe.md 2>/dev/null; exit $$status
+
+# The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
+# one design through an MCP client, as the calls a model would make, over `agni serve --mcp` on a free
+# port. Each reply must state its question, carry links that open in the viewer, hold the rows the CLI
+# answers to the same request, and contain what examples/ask-over-mcp/exercise/<design>.yaml pins. It
+# prints one row per call and writes them as markdown to $(EXERCISE_OUT)/mcp-ask.md for the mission
+# log. It asks twice, on the stateless wire and then on the session wire (mcp-ask-session.md), since
+# the server accepts both and a host speaks whichever it prefers (agni issue 1172). WALK_DESIGN picks
+# the board as exercise-browser-review does: jetson (the default) or gateway.
+#   make exercise-mcp-ask
+#   make exercise-mcp-ask WALK_DESIGN=gateway
+exercise-mcp-ask: agni ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board rev-b)
+	mkdir -p $(EXERCISE_OUT)
+	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire stateless --out $(EXERCISE_OUT)/mcp-ask.md exercise/$(WALK_DESIGN).yaml
+	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire session --out $(EXERCISE_OUT)/mcp-ask-session.md exercise/$(WALK_DESIGN).yaml
+
+# The pin-map sign-off mission's exercise (#1194, agni issue 667): a design's IO map laid out one row
+# per declared pin, beside the net the netlist puts there and the functions the part's datasheet lists
+# for the pin, as the pin_map table and the HTML report's "Pins on" sections. PIN_DESIGN names any
+# design whose design.yaml declares an io_map; the default is the repo's fixture, where PTB5 fails
+# because the map puts SDA on the pin that offers SCL.
+PIN_DESIGN ?= cmd/agni/testdata/pin-functions
+exercise-pin-functions: agni
+	mkdir -p $(EXERCISE_OUT)
+	bin/agni check --format html -o $(EXERCISE_OUT)/pin-functions.html $(PIN_DESIGN)
+	bin/agni check --verdicts --format csv --table pin_map $(PIN_DESIGN)
+
+# Mission #1264's exercise, steps 1 to 3, over the MNT Reform motherboard 3.0 from the oracle corpus
+# (agni issue 1266): the effective vocabulary with each pattern's source, why LPC_VCC is a rail, and
+# what a rail pattern for USBH_3V3 would change. Step 4 is the viewer's Lexicon panel (#1267).
+NAMING_DESIGN ?= tools/samples/boards/mnt-reform-motherboard30
+exercise-naming: agni ui samples-oracle
+	mkdir -p $(EXERCISE_OUT)
+	bin/agni lexicon $(NAMING_DESIGN) -o $(EXERCISE_OUT)/naming-1-lexicon.txt
+	bin/agni lexicon $(NAMING_DESIGN) --net LPC_VCC | tee $(EXERCISE_OUT)/naming-2-net.txt
+	grep -q "rail (convention): the name's token VCC is a supply word" $(EXERCISE_OUT)/naming-2-net.txt
+	bin/agni lexicon $(NAMING_DESIGN) --try hack/exercise-naming-usbh.yaml | tee $(EXERCISE_OUT)/naming-3-try.txt
+	grep -q "USBH_3V3" $(EXERCISE_OUT)/naming-3-try.txt
+	cd web && HEADED=0 pnpm exec vitest run -c vitest.browser.config.ts browser/lexicon-walk.spec.ts
+
+# WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
+# build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).
+WASM_BUILD_ID = $(shell git diff HEAD 2>/dev/null | sha256sum | cut -c1-16)
+
+# The engine as WebAssembly (agni issue 178), for the viewer's `?engine=wasm` mode, which runs it in
+# a Web Worker with no server answering the API. Writes the wasm and Go's loader script beside the
+# viewer bundle; both are gitignored build output. The loader is installed writable, since a toolchain
+# GOTOOLCHAIN downloaded lives read-only in the module cache, and a cp keeps that mode, so the next
+# build could not overwrite its own copy.
+wasm:
+	GOOS=js GOARCH=wasm $(GO) build -ldflags "-X github.com/panyam/agni/internal/wasmengine.buildID=$(WASM_BUILD_ID)" -o web/static/agni.wasm ./cmd/agni-wasm
+	install -m 644 "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
+
+# Measure the engine on one board natively and in a Chromium Web Worker, side by side (agni issue
+# 852). Not in the gate: a real board takes minutes and lives in the samples corpus.
+#   make wasm-bench BOARD=tools/samples/boards/royalblue54L-feather DESIGN=RoyalBlue54L-Feather.kicad_sch
+BOARD ?= examples/tutorial-project
+DESIGN ?= designs/gateway
+wasm-bench: agni ui wasm
+	cd web && node browser/bench.mjs $(abspath $(BOARD)) $(DESIGN)
+
+# What each layer of an open design holds on the heap (the files, the IR, the drawing, the board, the
+# check model, the fact base), from a fresh read and from a restore, natively and then compiled to wasm
+# under Node, where the live heap matches native and the runtime's memory is the worker's (agni issue
+# 981). Not in the gate, for the same reason as wasm-bench. env -i because the wasm runtime copies the
+# whole environment into its memory and refuses one over its limit, with GOGC, GOMEMLIMIT and GODEBUG
+# passed through so a sweep or a gctrace reaches the wasm half too (agni issues 988, 1010).
+#   make wasm-layers BOARD=tools/samples/boards/jetson-agx-thor-baseboard DESIGN=.
+wasm-layers:
+	$(GO) run ./tools/wasmbench --layers --dir $(abspath $(BOARD)) --design $(DESIGN)
+	tmp=$$(mktemp -d) && GOOS=js GOARCH=wasm $(GO) build -o $$tmp/wasmbench.wasm ./tools/wasmbench && \
+	env -i PATH="$$PATH" HOME=$$tmp $(if $(GOGC),GOGC=$(GOGC)) $(if $(GOMEMLIMIT),GOMEMLIMIT=$(GOMEMLIMIT)) $(if $(GODEBUG),GODEBUG=$(GODEBUG)) node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
+		--layers --dir $(abspath $(BOARD)) --design $(DESIGN); rc=$$?; rm -rf $$tmp; exit $$rc
+
+# The browser-only public demo as static files (agni issue 856): a landing page over the seeded
+# boards, the viewer at each, the drop page, and the built engine, served under DEMO_BASE. Seeds come
+# from the tutorial and the fetched samples corpus, whose licences travel with them.
+#   make demo-site && python3 -m http.server -d $(DEMO_ROOT) 8000   then /agni/demo/
+# DEMO_OUT is the folder written, which defaults to the base's place under DEMO_ROOT; docs-site points
+# it into the docsite's dist instead, which is served at /agni/.
+DEMO_ROOT ?= /tmp/agni-demo-site
+DEMO_BASE ?= /agni/demo/
+DEMO_OUT ?= $(DEMO_ROOT)$(DEMO_BASE)
+DEMO_SEEDS ?= --seed gateway=examples/tutorial-project \
+	--seed royalblue=tools/samples/boards/royalblue54L-feather \
+	--seed jetson=tools/samples/boards/jetson-agx-thor-baseboard
+# Rewrite the seeded boards' triage records (hack/seed-triage, agni issue 857) against what the engine
+# finds now: vanished findings drop out and new ones land as untriaged, which TestSeedTriage fails on
+# until someone classifies them.
+seed-triage: samples-oracle
+	AGNI_SEED_TRIAGE_UPDATE=1 $(GO) test ./cmd/agni/ -run TestSeedTriage -count=1
+
+demo-site: ui wasm samples-oracle
+	rm -rf $(DEMO_OUT)
+	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(if $(DEMO_SOCIAL_IMAGE),--social-image $(DEMO_SOCIAL_IMAGE)) $(DEMO_SEEDS)
+
+# The public demo walk, mission #851's exercise (agni issue 878): builds the static demo, serves it
+# under DEMO_BASE, and walks it in Chromium, printing one row per step and writing them as markdown
+# for the mission log. A step with nothing to run against yet prints "not available" with its ticket,
+# and the run fails only on a step that exists. DEMO_URL walks a deployed demo instead of building one.
+# Not in the gate: Jetson alone takes minutes. EXERCISE_FLAGS passes --only <mount,...> or --control.
+#   make exercise-public-demo
+#   make exercise-public-demo DEMO_URL=https://panyam.github.io/agni/demo/
+exercise-public-demo: $(if $(DEMO_URL),,demo-site)
+	cd web && node browser/exercise.mjs $(if $(DEMO_URL),--url $(DEMO_URL),--site $(DEMO_OUT) --prefix $(DEMO_BASE)) --out $(EXERCISE_OUT)/public-demo.md $(EXERCISE_FLAGS)
+
+# The docs site as Pages serves it: the docsite under /agni/ with the demo at /agni/demo/, then the
+# static demo's browser spec against the files written. docs.yml runs exactly this. Preview it under
+# the prefix, since at a server's root every asset 404s (docsite/README.md):
+#   mkdir -p /tmp/agni-docs && ln -sfn $$PWD/docsite/dist /tmp/agni-docs/agni
+#   python3 -m http.server -d /tmp/agni-docs 8000   then /agni/ and /agni/demo/
+docs-site:
+	$(MAKE) -C docsite build
+	$(MAKE) demo-site DEMO_OUT=docsite/dist/demo/ DEMO_SOCIAL_IMAGE=https://panyam.github.io/agni/static/images/social-preview.png
+	cd web && AGNI_SITE_DIR=$(CURDIR)/docsite/dist/demo pnpm exec vitest run -c vitest.site.config.ts
+
+# Publish the docs site. Pages serves only the docs.yml workflow's artifact, so a deploy is that
+# workflow run on main, followed here until it finishes.
+docs-deploy:
+	./hack/docs_deploy.sh
+
+# The wasm entry point under Node, as the browser's worker runs it: the exports take bytes and answer
+# without deadlocking. What the engine ANSWERS is held to the server's natively, by
+# TestWasmEngineAnswersAsTheServerDoes in cmd/agni.
+# env -i because the wasm runtime copies the whole environment into its memory and refuses one over its
+# limit, which a developer's 7.5 KB shell passes and CI's does not, so the target failed only locally.
+wasm-test:
+	env -i PATH="$$PATH" HOME="$$HOME" GOPATH="$$($(GO) env GOPATH)" GOCACHE="$$($(GO) env GOCACHE)" GOMODCACHE="$$($(GO) env GOMODCACHE)" \
+		GOOS=js GOARCH=wasm $(GO) test -exec="$$($(GO) env GOROOT)/lib/wasm/go_js_wasm_exec" ./cmd/agni-wasm/ -count=1
+
+# Regenerate the docsite rule + relation catalog (issue 14) from the shipped engine catalog and
+# the embedded per-rule/per-relation Detail markdown. The stdlib docs stay the source of truth;
+# this projects them into docsite/content/reference/{rules,relations}/ and the SVG cards under
+# docsite/static/images/catalog/. Commit the result.
+catalog-docs:
+	$(GO) run ./tools/catalogdocs
+
+# Freshness gate: fail when the committed catalog drifts from a fresh run, so a rule or relation
+# whose doc changed cannot silently desync the site (the make-roadmap / roadmap-check pattern).
+catalog-docs-check: catalog-docs
+	@if [ -n "$$(git status --porcelain -- docsite/content/reference/rules docsite/content/reference/relations docsite/static/images/catalog)" ]; then \
+		echo "catalog docs are stale — run 'make catalog-docs' and commit the result:"; \
+		git status --short -- docsite/content/reference/rules docsite/content/reference/relations docsite/static/images/catalog; \
+		exit 1; \
+	fi
+
+# The full deterministic gate: vet, generated-code freshness, the browser bundle build (which
+# enforces the single-Solid-core invariant, see web/build.mjs), engine (Go) tests, example modules,
+# web unit tests, and the docsite catalog freshness check. Green = ship-ready. CI runs exactly this
+# (.github/workflows/ci.yml). The bundle build comes before the engine tests: TestCheckWebAssets
+# (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
+# proto-check sits near the front because stale generated code makes every later failure a red
+# herring: it compiles and tests green while describing a different schema.
+# browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
+# took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
+# "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
+testall: testall-core browser-test
+
+# testall-core is the gate without the browser suite. CI runs it as three jobs beside browser-test,
+# so the gate takes as long as the slowest of the four rather than all of them in a row (agni issue
+# 1147). `make testall` still runs every target here, in the order below.
+testall-core: testall-test testall-scan testall-docs
+
+# testall-test builds and tests the engine, the examples, the web bundle and the Python client, and
+# checks every committed tree that a generator writes. tidyall-check comes first, so "updates to go.mod
+# needed" is diagnosed there rather than as a later examples-test failure.
+testall-test: tidyall-check ir-model-check fixture-copies-check proto-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check
+
+# testall-scan is the static scanners. They read source alone, so they need no build and no corpus.
+testall-scan: vet lint seccheck secrets
+
+# testall-docs regenerates what the docsite captures and draws, and checks the committed copies still
+# match. tutorial-runs-check is the slowest single step of the gate, which is why this is a job of its
+# own.
+testall-docs: samples-oracle catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+
+# Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
+# the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
+# corpus with EXTRA_MOUNTS, e.g.
+#   make serve EXTRA_MOUNTS="--mount corpus=/path/to/designs --mount boards=$$HOME/boards"
+# Override ADDR to change the port, or MOUNTS to replace the fixture set entirely.
+ADDR ?= :8080
+MOUNTS ?= --mount edif=readers/edif/testdata --mount kicad=readers/kicad/testdata --mount ipc=readers/ipc2581/testdata
+EXTRA_MOUNTS ?=
+# NATIVE_TOOLS enables native golden renderers by tool name (space-separated), e.g.
+#   make serve NATIVE_TOOLS=kicad-cli
+NATIVE_TOOLS ?=
+NATIVE_FLAGS := $(foreach t,$(NATIVE_TOOLS),--enable-native $(t))
+# PDF2DOC configures the doc-IR producer the datasheets workbench's "Extract (first pass)" action
+# shells out to (invoked as "<PDF2DOC> <pdf> -o <sibling>"). The workbench is agnids, so it is
+# `make dsserve` that passes it. Empty disables extraction, which is what you get
+# until `make setup` has built the docling venv: the default below turns the button on exactly when
+# there is an interpreter that can serve it, rather than wiring up a command that fails on click.
+# Absolute, because the value outlives this make and is run by the server process. Override with a
+# command of your own, or with PDF2DOC= to leave the action off.
+#   make dsserve PDF2DOC="python3 datasheet/tools/pdf2doc/pdf2doc.py"
+# PDF2DOC_PY and the rest of the datasheet tooling are defined in their own section further down.
+PDF2DOC ?= $(if $(wildcard $(PDF2DOC_PY)),$(abspath $(PDF2DOC_PY)) $(abspath datasheet/tools/pdf2doc/pdf2doc.py))
+# Recursive, not `:=`, because PDF2DOC above reads a variable defined later in this file.
+PDF2DOC_FLAG = $(if $(strip $(PDF2DOC)),--pdf2doc '$(PDF2DOC)')
+# SYMBOL_PATH points --symbol-path at an xschem/gEDA symbol library dir (repeatable flag,
+# space-separated dirs here) for pin-level nets and faithful symbol artwork on .sch files;
+# empty means components + net names + placeholder boxes (see docs/GETTING_STARTED.md).
+SYMBOL_PATH ?=
+SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
+# OVERLAY_FLAGS carries the catalog overlay a deployment serves with: --profile-path,
+# --intent-path, --conventions. Separate from EXTRA_MOUNTS because these are not mounts but CATALOG
+# inputs, and since WS3-109 they compose into every rule-running surface the server exposes. E.g.
+#   make serve OVERLAY_FLAGS="--profile-path /path/to/profiles --conventions /path/to/conventions.yaml"
+# An overlay is per-DEPLOYMENT config: a profile named after a built-in supersedes it for every
+# design this server reads, so point it at an overlay that suits the whole mounted set.
+OVERLAY_FLAGS ?=
+# REVIEW_STORE is the WRITABLE directory stored review runs live in (--review-store), created if
+# absent. It is what the viewer's Review panel reads: without it the review resource methods answer
+# "no review store configured" and the panel can show nothing, on any design. Deliberately separate
+# from the read-only design mounts. Set it empty to serve without a store:
+#   make serve REVIEW_STORE=
+#
+# The default is per-USER rather than per-checkout, and outside the repo on purpose. A stored run is
+# about a DESIGN, not about which clone was serving when you saved it, so several checkouts sharing
+# one store is the behaviour you want, and runs saved from a lane do not become untracked noise in
+# it. The CLI flag itself stays explicit, with no default of its own: a deployed server should say
+# where it writes rather than inherit a guess. This is the dev-convenience layer, where the cost of
+# no default is a Review panel that is empty on every design until someone finds out why.
+REVIEW_STORE ?= $(HOME)/.agni/reviews
+REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
+# DATASHEETS_URL is where the datasheets workbench (agnids, `make dsserve`) is served, so the viewer's
+# landing page links its Datasheets card there. Empty hides the card.
+#   make serve DATASHEETS_URL=http://localhost:8090
+DATASHEETS_URL ?=
+DATASHEETS_FLAG := $(if $(strip $(DATASHEETS_URL)),--datasheets-url $(DATASHEETS_URL))
+serve: ui
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) $(DATASHEETS_FLAG)
+
+# The datasheets workbench is agnids, built from the datasheet module (agni issue 744), so it serves
+# separately from the viewer. It mounts DATASHEET_DIR as `ds`, reads the workbench assets out of this
+# checkout's datasheet/web/, and passes PDF2DOC so Extract works once `make setup` has built the
+# docling venv. VIEWER_URL links the workbench's heading back to a running viewer.
+#
+# CORPUS_DIR is the corpus store: the workbench's drafts and the published specs, which `agni serve
+# --params-url http://localhost:8090` reads (agni issue 749). A fresh one is created on first use,
+# and agnids indexes it at start.
+#   make dsserve DATASHEET_DIR=/path/to/datasheets
+#   make dsserve DATASHEET_DIR=/path/to/datasheets CORPUS_DIR=/path/to/corpus
+DS_ADDR ?= :8090
+CORPUS_DIR ?= $(DATASHEET_DIR)/corpus
+dsserve: ui
+	mkdir -p $(abspath $(CORPUS_DIR))
+	cd datasheet && $(GO) run ./cmd/agnids serve --addr $(DS_ADDR) --web-dir $(CURDIR)/datasheet/web --mount ds=$(abspath $(DATASHEET_DIR)) --corpus $(abspath $(CORPUS_DIR)) $(PDF2DOC_FLAG) $(if $(strip $(VIEWER_URL)),--viewer-url $(VIEWER_URL))
+
+# Build the datasheet service binary beside bin/agni.
+agnids:
+	cd datasheet && $(GO) build -o $(CURDIR)/bin/agnids ./cmd/agnids
+
+# One-command self-contained demo. Builds the web bundle and serves the viewer with only the
+# shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
+# left tree, and explore the render, checks, and query panels. See demo/README.md.
+demo: ui
+	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
+	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo
+
+# Documentation site. The live site is the s3gen app in docsite/, which owns its own targets
+# (make -C docsite run|build|gh-pages) and deploys via the docs.yml GitHub Actions workflow on
+# every push to main. ghserve/ghbuild are thin aliases to the docsite targets for muscle memory.
+# docs-site builds what Pages serves, the demo included, and docs-deploy publishes by dispatching
+# that workflow, since Pages serves only its artifact. Regenerate the rule/relation catalog with
+# catalog-docs first if the engine catalog changed.
+ghserve:
+	$(MAKE) -C docsite run
+
+ghbuild:
+	$(MAKE) -C docsite build
+
+# Install the node dependencies of the whole pnpm workspace (the root pnpm-workspace.yaml: web/,
+# web-shared/, datasheet/web/), into one lockfile. Run once before the first build (or after
+# dependency changes); ui and web-test assume it has run.
+web-install:
+	pnpm install
+
+# Build the browser bundles (esbuild + Solid): the viewer's into web/static/ and the datasheets
+# workbench's into datasheet/web/static/. Run web-install once first (or after dependency changes).
+ui:
+	cd web && pnpm build
+	cd datasheet/web && pnpm build
+
+# Native-tools container (Dockerfile.nattools): a Linux/X11 tool host with kicad-cli, xschem,
+# Lepton, and agni, reached over SSH. The agni SERVER runs on the host; this is only the tools.
+# natup runs sshd detached and authorizes PUBKEY; natrender/natopen below drive the tools over that
+# connection. Pass your design folders in with NATIVE_DOCKER_MOUNTS (docker -v), e.g.
+#   make natup NATIVE_DOCKER_MOUNTS="-v $$HOME/boards:/boards"
+NATIVE_IMAGE ?= agni-native
+NATIVE_NAME ?= agni-nattools
+SSH_PORT ?= 2222
+NATIVE_DOCKER_MOUNTS ?=
+PUBKEY ?= $(HOME)/.ssh/id_ed25519.pub
+
+natimage:
+	docker build -f Dockerfile.nattools -t $(NATIVE_IMAGE) .
+
+natup: natimage
+	-docker rm -f $(NATIVE_NAME) 2>/dev/null
+	docker run -d --name $(NATIVE_NAME) -p $(SSH_PORT):22 \
+		-v "$(PUBKEY):/home/agni/.ssh/authorized_keys:ro" $(NATIVE_DOCKER_MOUNTS) $(NATIVE_IMAGE)
+	@echo "nattools up: ssh -p $(SSH_PORT) agni@localhost   (X11: ssh -X ...)"
+
+natdown:
+	-docker rm -f $(NATIVE_NAME)
+
+natlogs:
+	docker logs -f $(NATIVE_NAME)
+
+# The ssh invocation the two file-driven targets below share. LC_ALL is forced to a locale the slim
+# image actually has: Lepton's guile aborts on a forwarded LANG it cannot find.
+SSH := ssh -p $(SSH_PORT) -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o SetEnv=LC_ALL=C.UTF-8
+
+# Native render inside the running container, written back to the bind mount. FILE and OUT are
+# paths INSIDE the container, so both must fall under a directory natup mounted.
+#   make natrender FILE=/boards/amp/amp.sch OUT=/boards/amp.svg
+natrender:
+	@[ -n "$(FILE)" ] && [ -n "$(OUT)" ] || { echo "usage: make natrender FILE=<path in container> OUT=<path in container>"; exit 2; }
+	$(SSH) agni@localhost agni native render $(FILE) -o $(OUT)
+
+# Open a design's native GUI in the container; the window appears via XQuartz, so install and start
+# that first. FILE is a path inside the container. Blocks until you close the window.
+#   make natopen FILE=/boards/amp/amp.sch
+natopen:
+	@[ -n "$(FILE)" ] || { echo "usage: make natopen FILE=<path in container>"; exit 2; }
+	$(SSH) -X agni@localhost agni native open $(FILE)
+
+# The examples under examples/ are each their own Go module (their own go.mod, to keep demokit
+# and its terminal-UI deps out of the engine go.mod), so `test` above does not reach them.
+# Build and test each example module explicitly. Run this after changing anything the examples
+# consume (the public reader/diff/check/render APIs or examples/common).
+# The docsite is its own Go module, so the engine's `test` target never reaches it. Its tests are
+# the nav-wiring invariants: adding a section takes five coordinated edits across four files and
+# nothing else checks them.
+docsite-test:
+	@cd docsite && go test ./...
+
+EXAMPLE_MODS := $(dir $(wildcard examples/*/go.mod))
+# The datasheet module (agni issue 744) is its own module downstream of this one, so `go test ./...`
+# from the root never reaches it.
+datasheet-test:
+	cd datasheet && $(GO) vet ./... && $(GO) test ./...
+
+examples-test: agni python-venv samples-oracle
+	@for d in $(EXAMPLE_MODS); do \
+		echo "== $$d =="; \
+		( cd $$d && $(GO) build ./... && $(GO) test ./... ) || exit 1; \
+	done
+	@echo "== clients/python/examples =="
+	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q tests/test_example.py
+	@echo "examples: all modules build + test OK"
+
+# =============================================================================
+# Container image
+# =============================================================================
+
+# The packaged server (Dockerfile): engine + web viewer + the KiCad/xschem/gEDA symbol
+# libraries. Designs come in as bind mounts under /workspace, one -v per folder, no flags.
+#   make image                      # build ghcr.io/panyam/agni:dev
+#   make image IMAGE_TAG=v0.1.0     # build the release tag
+#   make dockserve DESIGNS=~/boards # serve those designs on :8080 from the image
+IMAGE_NAME ?= ghcr.io/panyam/agni
+IMAGE_TAG ?= dev
+IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+
+# VERSION reaches the build as --build-arg because the image has no .git to derive it from; see
+# the ARG in the Dockerfile. It defaults to IMAGE_TAG so `make image IMAGE_TAG=v0.1.0` produces a
+# binary that reports v0.1.0, keeping the image tag and the build's own claim about itself in step.
+image:
+	docker build --build-arg VERSION=$(IMAGE_TAG) -t $(IMAGE) .
+
+# The datasheet service (Dockerfile.agnids): agnids, the workbench, and the docling stack with its
+# models prefetched, so Extract works offline. Same IMAGE_TAG, so one release names both images.
+#   make dsimage
+#   docker run -p 8090:8090 --user $$(id -u) -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:dev
+DS_IMAGE_NAME ?= ghcr.io/panyam/agnids
+DS_IMAGE := $(DS_IMAGE_NAME):$(IMAGE_TAG)
+dsimage:
+	docker build -f Dockerfile.agnids --build-arg VERSION=$(IMAGE_TAG) -t $(DS_IMAGE) .
+
+# dockserve is serve's container twin: same MOUNTS / EXTRA_MOUNTS / DESIGNS / ADDR, run from the
+# image instead of `go run`.
+#
+#   make dockserve                                     # the fixture mounts, from the image
+#   make dockserve DESIGNS=~/boards                    # plus a folder of your own
+#   make dockserve EXTRA_MOUNTS="--mount corpus=/data" # the same flag serve takes
+#
+# The work is in tools/dockserve.sh, whose header documents the whole contract: which of serve's
+# parameters cannot cross into a container, and why refusing one the caller typed but dropping one
+# the environment supplied is the same rule rather than two.
+DESIGNS ?=
+# The overlay catalog (profiles/, conventions.yaml) as a single host DIRECTORY, mounted read-only.
+# serve takes assembled flags; the container needs the folder, since it has to cross the boundary.
+OVERLAY_DIR ?=
+# Escape hatch for anything else the run needs: extra -v, --user, -e, a different --network.
+DOCKER_FLAGS ?=
+DOCKER_NAME ?= agni-dockserve
+
+# The names the CALLER typed on this command line, out of the two the script may have to refuse.
+# $(origin) is the only thing that can tell a typed argument from ambient config, and it exists only
+# here, so the answer is computed in make and passed down.
+DOCKSERVE_CLI_SET = $(foreach v,NATIVE_TOOLS OVERLAY_FLAGS,$(if $(filter command line,$(origin $(v))),$(v)))
+
+dockserve:
+	@MAKE='$(MAKE)' IMAGE='$(IMAGE)' ADDR='$(ADDR)' \
+	  MOUNTS='$(MOUNTS)' EXTRA_MOUNTS='$(EXTRA_MOUNTS)' DESIGNS='$(strip $(DESIGNS))' \
+	  OVERLAY_DIR='$(strip $(OVERLAY_DIR))' OVERLAY_FLAGS='$(strip $(OVERLAY_FLAGS))' \
+	  REVIEW_STORE='$(strip $(REVIEW_STORE))' NATIVE_TOOLS='$(strip $(NATIVE_TOOLS))' \
+	  SYMBOL_PATH='$(strip $(SYMBOL_PATH))' \
+	  DOCKER_FLAGS='$(DOCKER_FLAGS)' DOCKER_NAME='$(DOCKER_NAME)' \
+	  CLI_SET='$(DOCKSERVE_CLI_SET)' \
+	  tools/dockserve.sh
+
+# Stop a detached dockserve (one started with DOCKER_FLAGS=-d). A foreground one ends on Ctrl-C.
+dockstop:
+	-docker rm -f $(DOCKER_NAME)
+
+# =============================================================================
+# Release
+# =============================================================================
+#
+# For the CLI, a release is a git tag and nothing else. Go modules resolve versions from tags, so
+# `go install github.com/panyam/agni/cmd/agni@v0.1.0` works the moment the tag is pushed, with no
+# build artifacts to upload and no separate release pipeline to keep green.
+#
+# The container image follows automatically. Pushing the tag triggers .github/workflows/release.yml,
+# which builds the image FROM that tag, stamps the same version into the binary, pushes it to GHCR,
+# and then pulls it back to confirm it reports the tag it is labelled with. So the whole release is:
+#
+#   make testall                    # the gate; CI runs exactly this
+#   make tag-push V=v0.1.0          # the Go release AND, via the workflow, the image
+#
+# The two versions are no longer kept in step by hand. They were, briefly, and the hazard was that
+# `make image IMAGE_TAG=` taking a different value than `make tag-push V=` would ship an image
+# labelled one version whose binary reported another, which is the confusion the version stamp
+# exists to remove. The tag is now the only input.
+#
+# `make image` below still exists for building locally without publishing.
+
+# Sub-modules that get tagged alongside the root module. Every IMPORTABLE sub-module (one with
+# its own go.mod that a downstream user would `go get`) needs its own tag here, because a
+# `replace` directive in it is ignored once someone imports it rather than building it.
+#
+# Empty on purpose today. The other go.mod files in this tree are examples/*/ (the demokit
+# walkthroughs, kept out of the engine go.mod so its dependency set stays lean, per
+# examples/CONVENTIONS.md) and docsite/ (the s3gen site). Neither is meant to be imported. Add a
+# path here the moment one is, or `go get` against it resolves to a pseudo-version instead of the
+# release.
+SUB_MODS_TO_TAG :=
+
+# Every ref a release creates: the root tag plus one per importable sub-module. Computed rather
+# than repeated so tag and tag-push cannot disagree about what a release consists of, and so an
+# empty SUB_MODS_TO_TAG yields exactly one ref rather than a stray "/$(V)".
+TAG_REFS = $(V) $(foreach m,$(SUB_MODS_TO_TAG),$(m)/$(V))
+
+# Shared preconditions. V must be present and must be v-prefixed semver, which is not style
+# preference: the Go module proxy will not serve a tag in any other shape, and a mistagged
+# release is only fixable by deleting a published tag. The already-exists check catches a re-run
+# before it half-creates a set of refs.
+# check_semver checks V's shape alone. compose-release runs after the tag exists, so it cannot use
+# check_version, which also refuses a tag already made.
+define check_semver
+	if [ -z "$(V)" ]; then echo "Usage: make $@ V=v0.1.0"; exit 1; fi; \
+	case "$(V)" in \
+		v[0-9]*.[0-9]*.[0-9]*) ;; \
+		*) echo "V must be v-prefixed semver, e.g. v0.1.0 (the Go module proxy will not serve other shapes)"; exit 1;; \
+	esac
+endef
+
+define check_version
+	$(check_semver); \
+	if git rev-parse -q --verify "refs/tags/$(V)" >/dev/null; then \
+		echo "tag $(V) already exists locally; pick the next version or delete it first"; exit 1; \
+	fi
+endef
+
+# Create the release tags locally without pushing, so you can inspect them first.
+#   make tag V=v0.1.0
+tag:
+	@$(check_version)
+	@echo "Tagging $(V) at $$(git rev-parse --short HEAD) on $$(git branch --show-current)..."
+	@for ref in $(TAG_REFS); do \
+		echo "  $$ref"; \
+		git tag -a $$ref -m "$$ref" || exit 1; \
+	done
+	@echo ""
+	@echo "Tags created locally. Push with:"
+	@echo "  git push origin $(TAG_REFS)"
+	@echo "or re-run as: make tag-push V=$(V)"
+
+# Tag and push in one step. This is the one that publishes: a pushed tag is immediately
+# resolvable by the Go module proxy and is not safely retractable afterwards.
+#   make tag-push V=v0.1.0
+# The compose bundle a release attaches (agni issue 1057): deploy/compose.yaml with the release's
+# version as its default, and the env example beside it, written to dist/ for `gh release create`.
+#   make compose-release V=v0.2.4
+compose-release:
+	@$(check_semver)
+	mkdir -p dist
+	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/compose.yaml > dist/compose.yaml
+	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/env.example > dist/env.example
+	@grep -q 'AGNI_VERSION:-$(V)' dist/compose.yaml || { echo "dist/compose.yaml was not pinned to $(V)"; exit 1; }
+
+# Run deploy/compose.yaml over the tutorial project against an image, as the images and release
+# workflows do (agni issue 1057). CONTAINER=podman uses podman compose.
+#   make compose-smoke                      the image `make image` built
+compose-smoke:
+	hack/compose_smoke.sh $(IMAGE_NAME) $(IMAGE_TAG)
+
+tag-push:
+	@$(MAKE) tag V=$(V)
+	git push origin $(TAG_REFS)
+
+# Force-regenerate every tutorial command capture, ignoring the input stamps, and report what moved.
+# Commit whatever it changes, after reading it.
+#
+# The FORCING is the whole point, and it is why tutorial-runs-check below has to run this rather than
+# an ordinary docsite build. A capture's stamp hashes its spec and its fixture, NOT the engine, so an
+# engine change that alters output leaves every stamp valid and the cached build regenerates nothing.
+# Measured: after changing the coverage line's wording, a plain `go run . -build` rewrote 0 captures
+# and this target rewrote 12.
+#
+# Every runs/ directory under content/, not just the tutorials' one. A second section with generated
+# captures (learn/) went stale silently the moment it existed, because this target named one path.
+tutorial-runs:
+	@find docsite/content -path '*/runs/*.output' -delete
+	@cd docsite && $(GO) run . -build >/dev/null 2>&1
+	@git status --short -- docsite/content || true
+	@echo "tutorial captures regenerated; review the diff above before committing"
+
+# Fail when a committed capture disagrees with what the engine produces today.
+#
+# This was left out of `testall` on purpose, to keep the docs pipeline off the per-push path and
+# accept that a regression surfaced later rather than immediately. The measurement that reopened that
+# trade is 15 seconds for a full regeneration, against a gate already minutes long.
+#
+# What went uncaught meanwhile is wider than engine drift. A capture edited BY HAND keeps its stamp
+# and passes every existing check, because nothing compared a committed body against a fresh run.
+#
+# IT SNAPSHOTS AND RESTORES rather than inspecting `git status` like catalog-docs-check, for the
+# reason proto-check spells out above: a git-status check forces a regenerate -> COMMIT -> gate
+# ordering, so freshly regenerated but uncommitted output reads as stale. Captures move on any
+# fixture or output change, which is often, and the natural loop is to regenerate and run the gate
+# before committing. This leaves the tree exactly as it found it, pass or fail, and says which target
+# to run. The snapshot goes through tar rather than `cp --parents`, which is GNU-only and is not
+# on macOS.
+tutorial-runs-check:
+	./hack/tutorial_runs_check.sh
+
+# Fail when an engine-drawn image the docsite embeds disagrees with what the engine draws today.
+# Same posture as tutorial-runs-check (snapshot, regenerate, compare, restore), over what
+# docsite/images.sh renders. About two seconds once the engine is built. It needs the Jetson board, so
+# it names samples-oracle rather than trusting the order testall lists it in (agni issue 453).
+docsite-images-check: samples-oracle
+	./hack/docsite_images_check.sh
+
+# =============================================================================
+# Datasheet tooling
+# =============================================================================
+#
+# datasheet/tools/pdf2doc derives doc-IR from a datasheet PDF. It is prototype Python, never in CI, and needs
+# docling, so it runs out of a venv `make setup` builds rather than the engine toolchain.
+#
+# The corpus it sweeps is a folder of parts laid out as <vendor>/<PART>/, each part dir holding its
+# source PDF(s) and every generated or HITL artifact beside them (doc-IR, PartSpec). Vendor PDFs are
+# licensed material and must not be committed here, so DATASHEET_DIR names a local, gitignored
+# folder by default and takes an absolute path to one kept anywhere else.
+
+# One-time (idempotent): build the venv, install docling, and PREFETCH its models so the first
+# `make pdf2doc` (or the workbench's Extract button) does not stall on a model download. Re-run to
+# refresh docling or repair the env. torch has no wheels for python 3.14, so the venv is built with
+# 3.12; override VENV_PY for another base.
+#
+# The prefetch RUNS pdf2doc once over a synthetic page (datasheet-models), because that is the only
+# prefetch that provably fetches what Extract loads. docling's converter reads its models from the
+# Hugging Face cache, and `docling-tools models download` fills a different directory
+# (~/.cache/docling/models, 1.4GB) that this path never reads, so after it an offline Extract failed
+# and an online one downloaded again (agni issue 786). The agnids image prefetches the same way.
+#
+# WHERE THE VENV LIVES is a lookup rather than a fixed path, because the docling dependency set runs
+# to gigabytes and several worktrees of this repo should not each carry one. The search order is
+# repo-local .venv first, then the PARENT directory's, which is the shared slot when clones sit side
+# by side under one root (~/work/agni/{main,feature-x}/ all find ~/work/agni/.venv). Nothing found
+# means `make setup` builds the repo-local one. Override VENV_DIR for an env somewhere else, or
+# extend VENV_SEARCH to add a slot to the order.
+VENV_PY ?= /opt/homebrew/bin/python3.12
+VENV_SEARCH ?= .venv ../.venv
+VENV_DIR ?= $(patsubst %/bin/python,%,$(firstword $(wildcard $(addsuffix /bin/python,$(VENV_SEARCH))) .venv/bin/python))
+$(VENV_DIR)/bin/python:
+	$(VENV_PY) -m venv $(VENV_DIR)
+	$(VENV_DIR)/bin/python -m pip install --upgrade pip
+setup: $(VENV_DIR)/bin/python
+	$(VENV_DIR)/bin/python -m pip install --upgrade docling
+	$(MAKE) datasheet-models
+	@echo "setup: $(VENV_DIR) ready (docling + prefetched models)"
+
+# Fetch the models Extract uses by running pdf2doc once over the synthetic warm-up page, into the
+# Hugging Face cache docling reads. The output is thrown away.
+datasheet-models:
+	@out=$$(mktemp -d) && \
+	$(VENV_DIR)/bin/python datasheet/tools/pdf2doc/pdf2doc.py datasheet/tools/pdf2doc/testdata/warmup.pdf -o $$out/warmup.doc.textproto && \
+	rm -rf $$out
+
+# The python pdf2doc runs under: the venv once setup has built one, else whatever python3 is on the
+# PATH (which works only if docling is installed there).
+PDF2DOC_PY ?= $(if $(wildcard $(VENV_DIR)/bin/python),$(VENV_DIR)/bin/python,python3)
+DATASHEET_DIR ?= datasheets
+
+# Derive doc-IR from one PDF and validate it against the contract. OUT is conventionally the PDF's
+# sibling <stem>.doc.textproto, which is where the datasheets workbench (agnids) looks for it.
+#   make pdf2doc PDF=datasheets/ti/LM1117/LM1117.pdf OUT=datasheets/ti/LM1117/LM1117.doc.textproto
+pdf2doc:
+	@[ -n "$(PDF)" ] && [ -n "$(OUT)" ] || { echo "usage: make pdf2doc PDF=<file.pdf> OUT=<file.doc.textproto>"; exit 2; }
+	$(PDF2DOC_PY) datasheet/tools/pdf2doc/pdf2doc.py $(PDF) -o $(OUT)
+	cd datasheet && $(GO) run ./tools/pdf2doc/validate $(abspath $(OUT))
+
+# Report-only extraction status: per part, whether each PDF has a fresh, stale, or absent doc-IR, and,
+# when CORPUS_DIR exists, which drafts cite the part's PDFs and whether each is published (agni issue
+# 749). Reads doc-IR content_hash + producer and the corpus store, and writes nothing.
+#
+# The --toolchain value is the producer string the INSTALLED docling would stamp now, which is what
+# lets the walker flag a doc-IR that predates a toolchain bump. It is computed in the recipe rather
+# than in a variable so that an unrelated `make test` never pays for a python startup, and it is
+# best-effort: docling missing means the flag is omitted and only hash freshness gets reported.
+datasheets-status:
+	@v=$$($(PDF2DOC_PY) -c "import importlib.metadata as m; print(m.version('docling'))" 2>/dev/null); \
+	cd datasheet && $(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(if $(wildcard $(CORPUS_DIR)),--corpus $(abspath $(CORPUS_DIR))) $(abspath $(DATASHEET_DIR))
+
+# Run pdf2doc on exactly the PDFs the walker flags as not-extracted or stale-source (fresh ones are
+# skipped; a stale-toolchain refresh stays a deliberate `make pdf2doc PDF=... OUT=...`). Each PDF's
+# doc-IR is written to its sibling <stem>.doc.textproto in the same part dir.
+pdf2doc-all:
+	@cd datasheet && $(GO) run ./tools/datasheetstatus --list $(abspath $(DATASHEET_DIR)) | while read -r pdf; do \
+		out="$${pdf%.pdf}.doc.textproto"; \
+		echo "pdf2doc: $$pdf -> $$out"; \
+		$(PDF2DOC_PY) $(CURDIR)/datasheet/tools/pdf2doc/pdf2doc.py "$$pdf" -o "$$out"; \
+	done

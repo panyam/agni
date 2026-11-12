@@ -1,0 +1,1221 @@
+# CONSTRAINTS
+
+Enforceable architectural rules for this project. Background and rationale in
+[stack and architecture](https://panyam.github.io/agni/architecture/stack/),
+[presenter contract](https://panyam.github.io/agni/architecture/web-app/), and
+[ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/).
+
+## How these are enforced
+
+Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`)
+fails on a rule without one. A rule with nothing to run is not enforceable, and C6 went unchecked
+that way. A Verify is one of two things. Twenty-one are TESTS the gate runs, so a violation turns CI
+red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. Watch that
+second number. C32 once joined the review column because its test was missing, not because a machine
+could not answer it, and it left again once the test existed. So a review question means either "no
+test is possible" or "no test yet", and from here the two read alike. C15 carries no Verify at all,
+because it was merged into C17 and kept as a tombstone. No Verify is a bare command that the gate
+does not run, and a new rule must not add one.
+
+A test goes in one of three places, and what it READS decides which. The package graph and the module
+go in the root `deps_test.go`, beside the embedding surface (C13) and the rule primitive (C30). A rule
+whose subject is one package is tested there: `service/transport_guard_test.go` for C13's transport
+and filesystem clauses, `core/facts` for C29, `hack/ir_model_check.sh` for C19. When a violation
+would be a line of source somewhere nobody would think to guard, the test goes in
+`internal/constraints`.
+
+The no-commands rule comes from the September 2026 audit. It read every constraint against the tree.
+Nine had a test; the rest were prose or a command nobody ran, and the commands had rotted in every
+way a command can. Two returned hits on a clean tree, because the code they swept had grown
+legitimate new call sites (C12, C24). Two deferred themselves to work that had since merged, so they
+still read as "not checkable yet" when they already were (C20, C21). One could not fail at all,
+because it grepped for something in a separate Go module (C18). And two rules had no Verify while
+the tree already violated them: `readers/telesis` declared no fidelity contract (C6) and
+`stdlib/rules/intent/protections.go` re-derived ground from net names in the check path (C20).
+
+Both violations were found by reading, not by anything failing. Both halves of a structural
+violation compile and pass, so nothing surfaces one until somebody re-reads the rule. A test in the
+gate surfaces it, and a command in this document does not. C29's Verify was a command for exactly
+three PRs before it went stale, and C13's was one for one PR.
+
+## C1: Engine logic in Go, view in TS, core runtime-agnostic
+**Rule:** All domain/business logic (parsing, IR, diff, rules, simulation) lives in Go
+and is **runtime-agnostic**: no `syscall/js`, no DB handles, no file paths baked in (take
+`io.Reader`/bytes). Platform effects and persistence are injected at the edge, so the same
+code runs on the server, in WASM, and in CLI/tests. TypeScript never hosts domain logic;
+it hosts the view adapter (rendering, input capture, DOM/CSS) and, on high-frequency
+surfaces, an in-process presenter (C7). The presenter's *runtime* is per-surface, so it is
+not necessarily Go; the domain logic behind it always is.
+**Why:** Go-maximal; one source of logic, three runtimes (thesis Principle 1).
+**Verify:** no `syscall/js` or DB imports in core packages; readers take `io.Reader`.
+
+## C2: IR defined in protobuf only
+**Rule:** The IR is defined in `.proto` and consumed via generated code in Go and TS.
+No hand-written or duplicated IR types. This extends to the application/web API (WS9):
+its request/response messages and services are defined in `.proto` and served over
+**Connect** (connect-go on the server, connect-web in the browser), with no hand-written
+JSON DTOs or ad-hoc `net/http` handlers for a proto-defined service.
+This extends again to ENGINE CONFIG schemas an operator authors and the engine reads
+(the naming lexicon in `agni.v1.config`): one message, consumed by the engine directly,
+with no Go struct mirroring its shape for a converter to copy field by field.
+**Why:** one schema, no drift between Go and TS, free unknown-field retention. The web API
+is a cross-runtime contract just like the IR, so it gets the same guarantee. Config gets it
+for a narrower reason, and with more history behind it. A Go mirror of `NamingLexicon` lost three
+vocabularies to a hand-copy in WS3-117 and three more in agni 680. Each loss was silent, because
+only someone's memory kept the two shapes in step. `naming.proto`'s own header records the
+first; agni 690 deleted the mirror.
+**Verify:** IR types are imported from generated packages; web API endpoints are the
+generated Connect handlers (`*connect` packages), not hand-rolled JSON routes. The config
+clause is a REVIEW QUESTION, and no sweep enforces it yet. Ask whether a new Go type mirrors
+a message field-for-field, and whether a converter exists between them that could leave out a
+future field.
+
+## C3: Duplex presenter contract, semantic both ways, camera/picking view-local
+**Rule:** The view<->presenter contract is a duplex of **semantic** messages expressed as
+**typed view interfaces** (typed method calls, not an event bus and not a shared store):
+**intents up** (what the user meant) and **commands down** (what should be true on
+screen). The contract is proto services when it crosses a WASM/network boundary, and a
+plain typed TS interface when the presenter is in-process. Intents and commands are
+DOM-free and framework-free: no event objects, no nodes, no pixels, no framework types.
+Picking/hit-testing and camera pan/zoom are **view-local** (the view turns a cursor
+position into a semantic intent like `NetHovered(netId)`). Framework reactivity (e.g. a
+Solid signal) is confined to the island that implements the interface; the presenter
+imports no framework and no DOM. The **semantic command is the primitive**;
+HTML-over-the-wire is one renderer on top, not the only shape. The presenter pattern is
+**mandatory for interactive surfaces**; its runtime (Go/WASM vs in-process TS) is a
+per-surface choice (see C7).
+**Why:** decouple what/how to render from how actions are processed; keep the frontend
+swappable and dragging smooth (thesis Principles 2-4).
+**Verify:** presenter/core packages have no `solid-js` / `react` / `vue` / DOM imports;
+contract methods carry domain data or HTML, never event objects, DOM nodes, or framework
+types.
+**Note:** this duplex presenter contract is a distinct proto surface from the
+request/response application API (WS9: WorkspaceService and later DesignService /
+DiffService). Both are proto-defined (C2); the presenter duplex carries view<->presenter
+intents/commands, while the web API carries browse/load/diff calls.
+
+## C4: Coarse WASM boundary
+**Rule:** Cross the JS/WASM boundary O(a few) times per frame with bulk data (typed
+arrays). No per-primitive or per-raw-event crossings. Static geometry uploaded once;
+only the dynamic overlay crosses per frame. Input batched to requestAnimationFrame.
+**Why:** Go/WASM per-call overhead; keep interop well under 1ms per frame.
+**Verify:** no `js.Value` calls inside per-primitive loops in hot paths.
+
+## C5: Sanctioned ingestion only
+**Rule:** Ingest via open formats, official APIs, or official extractors.
+Reverse-engineering a proprietary format requires explicit approval.
+**Why:** EULA/DMCA risk plus enterprise-sales blocker (see the ingestion doc's legal-ingress ordering).
+**Verify:** by REVIEW, and no test is possible, because this rule turns on a fact about a
+conversation rather than about the tree. A reverse-engineered parser and a spec-derived one are the
+same Go code. A reviewer asks where a new reader's grammar came from. A published specification, an
+official exporter's output, or a vendor's own API is sanctioned. Reading a proprietary binary format
+by inspecting files is not, absent explicit approval. Cite the source in the reader's package doc
+beside its fidelity declaration (C6), since review reads that doc.
+
+## C6: Readers declare a fidelity contract
+**Rule:** Each reader declares its fidelity (lossless or lossy-bounded). Lossless
+readers must pass the round-trip oracle (parse then emit is identity) on the corpus.
+**Why:** a lossless claim is proved by the round-trip oracle rather than asserted, and automated
+validation tames the parser treadmill.
+**Verify:** `TestC6EveryReaderDeclaresFidelity` (`internal/constraints`) requires every package under
+`readers/` other than the registry to carry a `// Fidelity: ...` line in a non-test file. The
+declaration is a doc comment rather than a typed field, because it has to say in prose WHICH subset
+survives the read and what is dropped. A `Fidelity` enum would reduce that to the word
+"lossy-bounded" and lose the bound itself. A machine can check that the line exists. Whether the
+bound it states is accurate is a review question. `readers/telesis` shipped in August 2026 with no
+declaration at all and nothing said so, because this constraint carried no Verify until the audit.
+
+## C7: Heavy ops server-side; presenter runtime is per-surface
+**Rule:** Large-file parsing, simulation, and other heavy operations run server-side.
+The presenter pattern is mandatory, but its runtime is chosen per surface: WASM (Go
+reuse) for lower-frequency surfaces, TS for high-frequency ones (continuous dragging /
+live editing) to avoid per-event boundary cost. Core domain logic is Go and
+authoritative wherever the presenter runs. A presenter is per-surface in a
+second sense: a static or read-only surface has no interactive intent loop and therefore
+no presenter, so the server just renders it.
+**Why:** avoid shipping a large engine before first paint, and avoid WASM boundary
+latency on high-frequency input (thesis cost section; lilbattle Viewer=WASM, Editor=TS).
+**Verify:** by REVIEW. The enforceable halves of this rule live elsewhere and are tested there: C1
+keeps domain logic in Go and out of TypeScript, C3 keeps the presenter free of framework and DOM
+imports, C4 bounds the WASM crossing. This rule keeps only the per-surface CHOICE of runtime. That
+choice is a judgement about a surface's input frequency, and no test can make it. A reviewer asks a
+new surface two things. First, does it have an interactive intent loop at all? A read-only surface
+needs no presenter, and the server just renders it. Second, if it has one, is its input continuous
+enough (dragging, live editing) to want a TS presenter over a WASM one?
+
+## C8: Proto is the contract; optimized in-memory forms are derived projections
+**Rule:** Proto is the single source of truth for any cross-runtime **contract** (IR and
+sidecars like geometry). Performance-oriented in-memory representations (e.g. a columnar
+Go struct for bulk geometry) are **derived projections** of that proto, not a second
+hand-maintained schema, and must map to/from it at the edges. Bulk data may cross as an
+opaque `bytes` blob with an explicit, versioned layout when per-element proto messages
+would be too costly (see the geometry doc); the structural/logical tier is still modeled in proto.
+**Why:** keep C2's one-schema no-drift guarantee while allowing allocation-light compute
+and near-free wire serialization for high-volume geometry. Storage optimization must not
+leak into the public API.
+**Verify:** no parallel hand-written schema for a proto-defined contract; bytes blobs
+carry a `layout_version`.
+
+## C9: Semantic-layer fields earn their place (promotion rule)
+**Rule:** A field enters the IR's normalized **semantic** layer only once a **second
+format's** reader would populate it. Until then it lives in a node's `attributes` map or
+the format-fidelity layer (`FidelityFragment`). Entities with no reader yet are labeled
+**provisional** in the proto and are not relied on until verified against real files.
+
+**DERIVED-NORMALIZATION fields are a carve-out (WS3-071).** Sometimes no reader populates a field,
+and a **format-neutral shared pass** derives it once at ingestion instead. The pass runs over the
+already-read IR, in `formats`/`classify`, never per-reader. Such a field is admitted directly. Every
+format populates it through the same pass, so it is format-neutral by construction rather than by
+the two-reader test. Such a field MUST: (a) be derived by one shared pass, not by any reader; (b)
+carry a doc comment marking it DERIVED-NORMALIZATION and naming the pass; (c) degrade safely when
+absent. Under (c), a design built without the pass, such as a hand-authored test IR, leaves the
+field empty, and the consumer re-derives as a fallback and never treats empty as a fact.
+
+Rule (c) also binds a SECOND tier that writes the same field. EMPTY is the signal to re-derive.
+Suppose a tier writes its own answer into a set that no earlier tier has filled. The set is then
+partial but not empty, so the consumer never re-derives and the fallback is defeated.
+`check.WithParamProvider` runs the convention pass first to prevent this (agni issue 710).
+First instance: `Component.device_classes` (the classify pass); second:
+`ir.Net.roles` (the WS3-072 naming pass, `classify.StampNetRoles`); third: `Component.value` (the
+WS3-118 value pass, `classify.StampValues`). This is the **left-shift** rule. It interprets
+conventions at the edge and carries normalized facts in the core.
+
+**The carve-out has an attribute variant (agni issue 519).** `classify.StampMPN` normalizes an
+ATTRIBUTE rather than a typed field, promoting a manufacturer part number to the canonical `MPN` component attribute from
+whatever key the format spelled it in, and from the part type when the placement carried none. It
+obeys (a)-(c) unchanged. It is called out separately because attributes are normally the
+PRE-promotion home under this constraint, so a shared pass writing one is worth noticing rather than
+copying by reflex. It raises an open question, whether `mpn` should become a typed IR field. It
+would now pass the two-reader test. Until someone answers that, the pass keeps every format
+consistent without a proto change. The pass must NOT become a per-reader promotion again. That was
+the old bug: EDIF carried both halves privately, and every other format silently resolved nothing.
+
+**A fill variant covers an under-specified value (WS3-072).** The same discipline extends to FILLING an EXISTING reader-populated field to
+a more-specific value where the reader was UNDER-SPECIFIED, not only to ADDING a new field. A shared
+ingestion pass may promote an under-specified value under the same (a)–(c) rules (one shared pass; a doc
+comment naming it; degrade-safe, so the reader's original value stands if the pass did not run), with one
+added guard: it promotes ONLY where the reader was under-specified and NEVER overwrites a confident
+value. A format that cannot type power pins, such as EDIF, leaves a VDD pin plain INPUT. The first
+instance, `classify.StampPowerInPins`, fills `ir.Pin.direction = POWER_IN` on a supply-named pin
+whose direction is input/inout/unspecified, so `PinDir == POWER_IN` works format-neutrally. It
+leaves a confident OUTPUT/POWER_OUT untouched. The fill variant normalizes and does not fabricate.
+It writes the value the format could not express, not a guess.
+
+**An evidence-tier variant relaxes the one-pass rule (agni issue 280).** "ONE shared pass" assumed
+that a derived field's inputs are all available at ingestion. That stopped being true when the
+datasheet tier arrived: params are attached at MODEL construction, after the read, so a field
+derivable from a vendor pin function cannot be filled by the ingestion pass at all. The rule softens
+to **one shared pass PER EVIDENCE TIER**, under two conditions that preserve everything it was
+protecting:
+
+- **The field records WHICH tier established each value.** `ir.Net.roles` is the first instance: each
+  role carries a `RoleSource` (convention / declared, with more to come), so a consumer can weigh a
+  value instead of only reading it, and "how do we know this" is answerable at the point of use.
+  `ir.Component.device_classes` is the second, each tag carrying a `ClassSource` (agni issue 710),
+  and it shows what the condition is FOR rather than what it costs. With nowhere to record its
+  evidence the datasheet tier had nowhere to write at all, so it enriched `check.Model` privately and
+  the IR never carried its answer. A query then said a part was a `tvs` while a drawing of the same
+  design called it a diode, and neither was wrong about what it had read.
+- **A later tier may only ADD, never remove or downgrade what an earlier one established.** This
+  makes extension safe. Admitting a new kind of evidence can never remove a value that an earlier
+  tier would have found, so no tier's absence can silently narrow an answer. The declared-role union
+  already followed this rule, and the variant generalizes it.
+
+Everything else holds unchanged: still format-neutral, still never per-reader, still degrade-safe
+when a tier is absent. The variant drops only the assumption that one pass can see everything.
+
+**Why:** keep the neutral IR from overfitting to whichever format we read most (EDIF
+today). The two-layer split (C1, and the ingestion doc) only works if the semantic layer is
+format-neutral, and this rule keeps it so. Background: the IR-v0 discussion in the ingestion doc and
+the cross-format survey it references.
+**Verify:** each first-class semantic field is justified by >=2 formats in the
+cross-format map OR is a DERIVED-NORMALIZATION field meeting (a)-(c) above;
+provisional messages carry a "PROVISIONAL" marker in `ir.proto`. Every new-reader ticket
+reconciles its concepts against the map before adding fields (the drift trigger).
+
+## C10: Shippable features ship a runnable example
+**Rule:** A user-facing engine capability (a reader, an analysis like diff/checks, a render
+surface) ships with a runnable example under `examples/`, following
+[examples/CONVENTIONS.md](examples/CONVENTIONS.md): a demokit walkthrough whose narration
+lives in a sidecar `walkthrough.md`, reading only bundled synthetic fixtures, in its own Go
+module so demokit and its terminal-UI deps stay out of the engine's go.mod. A reader of a vendor
+format whose files only the vendor's tool can write may instead read a public board from a pinned
+agni-samples artifact under `tools/samples/`.
+**Why:** the examples are executable docs and a second consumer of the public API, which
+exercises that API from outside the engine and gives every feature a legible entry point. Per-example modules
+preserve the shippable-engine goal (the engine `go.mod` is kept lean, C1). Nobody can author a
+synthetic Allegro `.brd` without Allegro or a writer of our own, so that reader's example reads the
+BeagleBone AI, which is public, licensed for redistribution, and fetched by checksum rather than
+committed (agni issue 1350).
+**Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
+`go.mod`; examples read fixtures from `examples/common/designs/` (synthetic and
+redistributable, never a private board, C5), or, for a vendor format with no synthetic fixture, a
+board from an artifact `hack/samples.pin` names. Such an example's test fails rather than skips
+when the artifact is absent, and its `examples-test` run fetches it first. Five directories owe no `walkthrough.md` and are not
+exceptions to the rule so much as not capabilities. `examples/common` is the shared harness the
+walkthroughs run on, `examples/tutorial-project` is the fixture the docsite tutorial runs on, and
+`examples/extension` and `examples/extension-template` demonstrate the extension POINTS (C18) rather
+than an engine capability, so each of those two carries a `README.md` and a test instead of a
+narrated run. `examples/embed-viewer` is a parent web page for the viewer's postMessage protocol (agni
+issue 1152), a browser capability with no engine call to narrate, so it carries a `README.md` and its
+test is `web/browser/embed.spec.ts`.
+
+## C11: Server-rendered shell, framework islands at the leaves
+**Rule:** Web pages are server-rendered (goapplib + templar) and routing is server-owned:
+one document per page, no client-side SPA router. Interactive UI mounts as **islands** into
+declared holes in that page via tsappkit / tsappkit-solid (`SolidIsland` + `signalView`),
+not as a full single-page app. Framework dependencies (e.g. `solid-js`) live only in leaf
+island/adapter packages, never in the core, the presenter, or shared TS utilities. The
+bespoke WebGL canvas is one such island and is still a semantic-command surface (C3).
+**Why:** stay backend-controlled and keep the frontend swappable (the presenter contract,
+one level up in the build system) while still using modern reactivity where it is worth its
+cost. Server routing plus per-page islands, not an SPA (thesis Principles 3, 5, 7; the
+goapplib presenter-contract reference).
+**As a corollary, the composition root is the fourth edit, and it is tested.** An island is only real
+once `main.ts` constructs it and passes its view to the presenter. The `ViewSink` ports are optional,
+so an embedding host may leave a panel out (C13, `build/extending.md`). An unwired port is then a
+silent no-op rather than a type error. No panel-level test can see it either, because every one of
+them supplies its own collaborators. That gap shipped a broken feature twice, once with a client
+never passed (WS9-052) and once with a view never wired (agni issue 175). The rule is that the four
+registration points move together: island, template hole, `ViewSink` field, `main.ts` wiring.
+
+**Verify:** no client-side router; `solid-js` appears only in island/adapter package
+dependencies; each interactive surface is an island mounted into a server-rendered hole;
+`cd web && pnpm exec vitest run src/composition.test.ts src/browse.test.ts src/datasheets.test.ts`
+boots each page's real entry point against its real template and fails on a hole that nothing mounts,
+a `ViewSink` port nothing wires, or a client the presenter never receives. **Every page has a
+composition root, so every page needs one of these.** The viewer's test was the only one for a while,
+and in that time the browse page's root went untested and the workbench's shipped a deep link that
+recorded nothing (agni issues 136 and 318).
+
+## C12: Render style is injectable data, not scattered literals
+**Rule:** Colors and the default font are view **policy expressed as data**: a single
+`render.Style` (with `DefaultStyle`) is the one source of truth, and both the SVG backend and
+the WebGL text-label path resolve from it (via `WithStyle` options), so the two renderers
+agree by construction rather than by copied hex strings. No bare color/font literals in the
+render layer; a caller overrides per render call. Colors the server decides travel on the
+wire (`PackedLabel.color`, `PackedSheet.font_family`) so the client renders without a second
+palette. Per-element font/style overrides wait until the geom IR carries them.
+**Why:** kill the duplication that let the SVG and label colors drift (`#555` vs `#555555`),
+and keep styling overridable (theming, dark mode, accessibility) without editing the engine.
+**Verify:** `TestC12RenderLayerHasNoStyleLiterals` (`internal/constraints`) sweeps the non-test
+files of `core/render/` outside `style.go` for `"#rrggbb"` and `font-family=`; plus, by review,
+`SheetSVG`/`PackSheet` take render options and label colors come from `Style`. The naive sweep gets
+two exclusions wrong, and until the audit it returned two dozen hits on a clean tree. TEST files
+name colours legitimately, since asserting that a custom style reaches the output means naming one.
+And the sweep must match `font-family=` rather than the bare word: the three renderers pass
+`svg.A("font-family", style.Font)`, where the literal is the ATTRIBUTE NAME. The value already
+comes from `Style`, so that call obeys the rule.
+
+## C13: Service impls are importable, transport-neutral, and take I/O via injected ports
+**Rule:** The service implementations (`WorkspaceService`, `DesignService`, `CheckService`,
+`DiffService`, and any future service such as the WS10 parameter service) live in an
+importable package (`service/`), never in `package main` and never under `internal/`, and are
+**transport-neutral**: every method carries a plain protobuf signature
+(`(ctx, *pb.XRequest) (*pb.XResponse, error)`) and classifies its errors with the package's
+sentinels, with no `connectrpc`/gRPC/transport imports. Transports are thin adapters over them:
+Connect today (`internal/server`, wrap/unwrap plus one sentinel-to-code table), grpc-gateway
+or a real gRPC server later as siblings. The services take their I/O concerns as **injected
+ports** and never touch `os`/`syscall/js` directly. One is a filesystem/opener interface for reading
+mounted designs and resolving secondary files (KiCad sibling schematics, xschem/gEDA
+`--symbol-path`), and a persistence port for the core/parameter store comes later. `cmd/agni` (and any
+other entrypoint: a WASM build, a cloud function) is thin wiring that constructs the platform
+adapter and hands the services to a transport. Protos split **per service concern**
+(`workspace.proto`, `design.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
+bucket file. This is C1 applied to the application tier: the service orchestration is
+runtime-agnostic; only the adapters (I/O and transport) are per-runtime.
+**Why:** the services are reusable orchestration, not domain core. They were first grown onto
+`agni serve` fused to the OS filesystem, then to the Connect generics, so the same code could
+not run in WASM, be served over gRPC, or be reused from a second entrypoint. C1 wants "the
+same code runs on the server, in WASM, and in CLI/tests"; that must hold for the service tier
+too (the lilbattle services.go shape: gRPC-style impls, transports as translation layers).
+"Importable" means importable by an EMBEDDER, not merely by a second package in this module. The tier
+lived in `internal/service/` until the SDK work. That location satisfied every clause of this rule
+except the first one, and it made the heading false. An extension at `github.com/yourorg/...` could
+not name the package at all, so option 3 (embed the engine as a library) could not reach option 1
+(the web console) without forking `cmd/agni`. `examples/resolve-design` shows the gap was real. It
+reaches the tier only because its own module path is nested under `github.com/panyam/agni/`. So we
+shipped an embedding example that no embedder could reproduce. `artifact` moved with it, because
+`artifact.URI` is in the loader ports' signatures.
+**Verify:** no `os.`, `syscall/js`, or `connectrpc.com` imports in `service/` impl
+files (`service/transport_guard_test.go` runs the transport check in CI); service
+constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
+`internal/server` wrappers via the generated Connect handlers (C2); `protos/agni/v1/webapi/`
+holds one file per service; and `TestEmbeddingSurfaceIsImportable` (`deps_test.go`) fails if any
+package an embedder is documented to import moves back under `internal/`. When the tier moved, that
+check was a `go list` line here. C29's Verify had the same shape until #542 replaced it with a test,
+because nothing ran the command and it went stale within three PRs.
+
+## C14: Rule classification is open tags, not typed fields
+**Rule:** A `check.Rule`'s typed fields are only what the engine acts on: `Name`, `Severity`,
+`Reads` (its fact dependencies), `Eval` (which MAPS every subject to a verdict), and
+`StatesConsideredSet` (whether those verdicts are the full considered set or only the failures),
+and the other behavioural fields the engine reads, such as `OptionalReads` and `SubjectShape`,
+plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
+classificatory axis (category, tier, distribution, and any provider-defined one) lives in an open
+`Tags map[string]string`, never as a typed struct field. Availability derives from `Reads`, not a
+stored track/label field. A rule that reads a fact whose provider layer is absent is unavailable.
+Consumers take the rule catalog as an injected value (a composed `*check.Catalog`), never a package global.
+**Why:** the set of classification axes is open and provider-specific, because rules will come from a
+Phase-2 DSL and from integrators embedding Agni (customer suites outside `core/check`), so a closed
+column schema would force a core change per axis and force external authors to populate
+Agni-internal fields. Tags keep the catalog extensible (a browsable UI groups/filters by whatever
+keys are present) and keep the rule model from overfitting to today's axes. That is C9's promotion
+discipline applied to the rule catalog. (This reversed a first cut that typed `Track` and
+`Distribution` as fields.)
+**Verify:** the `check.Rule` struct carries a `Tags map[string]string` and no per-axis
+classification fields beyond the behavioral core; `check.Available` reads `r.Reads`, not a track
+field; `NewCheckService` and `NewReviewService` take the composed catalog as a `*check.Catalog` parameter.
+
+## C15: Readers never import the presentation tier (MERGED INTO C17)
+
+**Superseded by [C17](#c17-the-contract-and-reader-tiers-depend-downward-only).**
+C17 always said outright that it "subsumes C15 and generalizes it to the whole heavy tail", and its
+check is a strict superset: `core/render` and `core/svg` are two of the seven paths C17 forbids the
+reader tier. Two constraints over one invariant meant two places to update and two Verifies to keep
+current, so the specific case folded into the general one and C17 absorbed what C15 said about
+`internal/geomath` and about pins landing where symbols are drawn.
+
+The number is retired rather than reused, so a comment or commit citing C15 still resolves.
+
+## C16: Internal-seed posture (datasheet data never leaves the customer boundary)
+**Rule:** Datasheet documents, doc-IRs derived from them, and extracted parameter data
+(PartSpecs, run manifests) are customer-boundary data: they are never committed to this
+repo, never redistributed, and never assumed to exist outside one deployment
+(`SourceDoc.locator` is corpus-local by design). The shippable artifacts of the
+datasheet layer are the engine, the schemas (param/doc/derive protos), the rules, and
+recipes. A recipe carries vendor LAYOUT knowledge (which table headings mean what), never
+extracted values. Stores for the customer-boundary artifacts sit behind injected ports
+(C13). Committed fixtures are hand-authored or synthetic; hand-transcribed real values
+in test fixtures cite their source (facts are not copyrightable; documents are).
+**Why:** vendors license and watermark datasheets, so a redistributed spec DB is a
+liability; the internal-seed / bring-your-own-corpus posture dissolves the licensing
+problem and makes the customer's accumulated seed + patches their compounding asset
+(the WS10-002 posture on component data).
+**Verify:** no PDFs and no derived PartSpec/manifest corpora under version control here
+(fixtures under `*/testdata/` excepted); `param`/`doc`/`derive` packages take `fs.FS`
+or readers, never fetch.
+
+## C17: The contract and reader tiers depend downward only
+**Rule:** The dependency graph is layered so the low tiers can be consumed (and one day carved
+into their own modules) without dragging the application tail. The generated contract
+(`gen/`: IR + geom + param/doc protos) imports no first-party `agni` package. Format readers
+(under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, `telesis`, and any future reader) and
+the reader registry (`readers/formats`) depend
+only downward, on the contract and shared parse/geom helpers, and never on the presentation tier
+(`core/render`, `core/svg`) or the application tiers
+(`service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
+`readers/formats` is public (not `internal/`) precisely so an out-of-module reader registers through it
+(WS12-003); that is the ONE extension point for readers. This absorbs the retired C15 (readers ⊅
+`render`/`svg`) and generalizes it to the whole heavy tail. Geometry math a reader and a renderer both
+need (placement transforms, pin world positions) lives in `internal/geomath`, imported by both sides,
+so "pins land where symbols are drawn" holds by shared code rather than by a reader reaching up into
+the renderer for its helper.
+**Why:** the open-core extension, and any future ecosystem reader, depends on the contract plus the
+registry, not on the web/serve tier. Go module-graph pruning already keeps that dependency light
+*because* the layering holds; a stray import from a reader up into `internal/server` would pull
+servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
+the reader tier's imports clean now so the split is still a rename later, not a refactor.
+**Verify:** `TestReaderTierDependsDownwardOnly` and `TestContractImportsNoFirstPartyPackage`
+(`deps_test.go`), which run `go list -deps` over the two tiers, so the check is over the
+TRANSITIVE graph rather than over anyone's import block. Both carry a positive control. A result
+naming no package under the pattern fails rather than reading as clean. Without it, a mistyped
+pattern, or one whose packages were renamed away, would leave a graph check vacuous.
+
+## C18: The public engine never imports the extension (dependencies point extension → engine)
+**Rule:** The open-core structure is a public Apache-2.0 engine and a private *extension* that
+depends on it (Go `require github.com/panyam/agni`) to add proprietary-format readers,
+house-style/private rules, and private design data. Dependencies point **extension → engine
+only**: no engine package may import an extension, and the engine `go.mod` requires no extension
+module. An extension contributes exclusively through the public extension points, `formats.Register`
+(readers, WS12-003) and `check.RegisterSource` (rules, WS12-004), never by the engine reaching
+into it. The reference extension lives at `examples/extension/` (its own module, `replace => ../..`);
+a real extension is a separate private repo (the open-core doc).
+**Why:** the split only holds if the arrow points one way. If the engine imported an extension, it
+would drag private/customer code into the shareable, open-source repo. The extension exists to keep
+that code out (the C16 datasheet posture generalized to all of readers, rules, and data). The
+one-way arrow also lets the engine be published while extensions are kept closed. The extension
+points are global registries. The extension writes into them at init/main, so the engine is composed
+*by* the extension, never coupled to one.
+**Verify:** `TestEngineModuleRequiresNoExtension` (`deps_test.go`), which reads `go.mod`
+and fails on any `require` or `replace` naming a module inside this repo. A `replace` counts as much
+as a `require`. A `replace` makes a local extension resolvable, and somebody adds one while debugging
+and forgets to remove it.
+**Note:** the graph half of this rule is not tested, because it cannot fail. `examples/extension` is
+its own module, so `go list -deps ./...` from the engine module can never name it whatever anyone
+writes in an engine package; an import would fail to compile first. Until the audit, that command
+sat in this document as the headline Verify. It read as enforcement and proved nothing. The arrow
+could actually reverse only in `go.mod`, so the test reads `go.mod`.
+
+## C19: Engine processing reads the design through check.Model, not raw ir.Design
+**Rule:** Engine/processing code reads a loaded design through the composed `check.Model` (a proto
+projection with indexes and member-method reads), not by taking a raw `*ir.Design` and scanning its
+slices. The target is a *helper handed the whole design to scan*, not an *analysis that takes designs
+as its input*. A raw `*ir.Design` (or `*ir.Net`/`*ir.Component`) parameter is allowed in three
+categories: (1) **producing** the IR, meaning the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `telesis`,
+`geda`), the `readers/formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
+**loading** the design, meaning `check`'s `NewModel` (with its `WithBoard`/`WithParamProvider` options)/`RunDesign`,
+and the `cmd/agni`/`service` loaders that read a file and build the Model; (3) a
+**top-level analysis/transform that takes designs as its input and uses no Model index**, meaning `diff`
+(compares two designs, builds its own by-key match maps), `validate`, and `graph` (netlist→layout).
+These consumer packages (`diff`, `validate`, `graph`) and the producers are excluded from the
+`make ir-model-check` scan wholesale; `examples/` too (demos). Everywhere else goes through
+`model.Model`, such as a helper in `check`, `service` or `cmd` handed a design to read. When the
+Model lacks a read, the read is added as an indexed member method (the
+`HasComponent`/`IsPowerRail`/`SourceFormat` precedent), never re-scanned inline.
+**Why:** `ir.Design` is an index-less message, so every helper that scans it re-walks O(n) per call;
+the Model builds the indexes once and hands out O(1) reads, and a hot read is optimized there once,
+without touching call sites. The Model is also a readability contract, because a `Model` parameter
+marks processing code, a `*ir.Design` parameter marks the I/O boundary. Enforced **incrementally** (a
+ratchet, `make ir-model-check`): the rule binds new code immediately; the existing raw-`*ir.Design`
+sites are grandfathered in `hack/ir_model_baseline.txt` and migrate opportunistically, each removal
+ratcheting the baseline down, never in a big-bang rewrite. The read-surface contract itself lives in
+package `model` (WS1-043): the `Model` interface and its value types, importing only the generated
+`ir`/`geom`/`param` protos, so a consumer depends on the contract, not the `check` implementation
+(rules + `param` logic + `irModel`); `check` implements it and re-exports the names as aliases. The
+genuine helper smells have been migrated (`LocateReason`, the `service` sheet-annotate
+helpers, `check.Available`); the remaining baseline is the sanctioned construction/loading sites
+(`NewModel*`, `readDesign`, the loader) plus a CLI render helper (`compareLayouts`), which the
+ratchet holds flat.
+**Verify:** `make ir-model-check` returns clean, meaning no `func … *ir.Design …` parameter outside the
+allowed paths that is not already grandfathered in `hack/ir_model_baseline.txt`; a new one fails the
+gate (which `make testall` runs).
+
+## C20: Convention interpretation is left-shifted to ingestion; the check path reads normalized facts
+**Rule:** Convention-specific interpretation, such as net names to roles (rail/ground/feedback), part text to
+a class, or house naming to meaning, happens once at ingestion/normalization and is stored as a
+normalized IR fact (`net.role`, `device_classes`). The check path (rules, the query engine) reads those
+facts and MUST NOT re-run convention matching per-entity-per-rule. Convention VOCABULARIES are config
+with built-in defaults (the naming lexicon WS3-069, the class lexicon WS3-070); they are APPLIED at the
+edge, not consulted in the hot path. Structural evidence (a power pin, a resistor's presence) is
+preferred over names where available; the name/text lexicon is the fallback for what a directionless
+netlist carries.
+**Why:** the catalog runs many rules over many entities, so re-deriving "is this a rail / a TVS" in the
+check path is O(rules x entities) of the same string parsing, and it couples the core to vendor
+conventions. Interpreting once at the boundary keeps the core convention-agnostic (it reads facts),
+makes the expensive path cheap, and puts house-style config in the extension/edge (the C16/C18 posture
+generalized). The interim in-check heuristics are gone. Both left-shift tickets merged, so
+`Loader.ReadDesign` stamps `device_classes` (WS3-071) and net roles (WS3-072) once per read and the
+check path reads them.
+**Verify:** `TestC20CheckPathReadsStampedFacts` (`internal/constraints`) sweeps `stdlib/rules/` and
+`stdlib/relations/` for `classify.Active` and `check.Active`, the two spellings of the process-wide
+vocabulary (the second is an alias of the first, in `core/check/aliases.go`). Reaching for it is two
+violations in one call: the convention matching runs in the hot path, and the vocabulary arrives as
+ambient state rather than travelling with the run (C22). Read the fact off the model instead, through
+`m.IsGroundNet`, `m.IsRailNet` or `check.NetHasRole`, which trust `ir.Net.roles` and fall back to
+THIS model's lexicon for an IR that skipped the loader. `TestC20CheckHelpersAskTheModel` holds
+`core/check` itself to the same rule, past an allowlist of the package-level fallbacks.
+**Note:** this Verify still read "becomes checkable once those land" long after they had, and in
+that window `stdlib/rules/intent/protections.go` matched ground net names itself in `groundRefs`. A
+deferred Verify is not a Verify, and nothing re-reads the sentence that defers it.
+
+## C21: The netlist is the source of truth for connectivity and component IDENTITY; schematic/board files are geometry companions
+**Rule:** Component IDENTITY and CONNECTIVITY are sourced from the NETLIST, which the design team
+produces. They cover which components exist, their ref-des, the nets, and the rules and findings
+computed over them. For OrCAD/Allegro the netlist is the `.edn` netlist view; for KiCad it is the
+schematic/PCB, which carry the netlist inline. A schematic-view or board file may be supplied
+ALONGSIDE it, such as an OrCAD `.eds`, a `.kicad_pcb` or an IPC-2581 board. Such a file is a GEOMETRY
+companion, a canvas for rendering and for locating/highlighting findings, and MUST NOT be treated as
+a second, independent COMPONENT source to be reconciled or merged against the netlist. Findings
+computed on the netlist join to a companion's geometry by NET NAME (primary, drift-resistant) and
+ref-des (secondary, degrading to a "couldn't locate" note), never by inventing identity the companion
+lacks. When no real netlist exists, a netlist may be SYNTHESIZED from an `.eds`. That netlist is a
+degraded, explicitly-labeled fallback with tool-synthesized ref-des. Its net-level findings are
+authoritative and its component-identity cross-reference is not. It is never promoted to the source
+of truth.
+
+Part ATTRIBUTES are a separate question and this rule does not answer it. MPN, manufacturer,
+quantity as ordered, do-not-populate status and approved alternates may be sourced from a declared
+BOM (`ir.BomLine`, keyed by ref-des), because the netlist frequently does not carry them and is not
+authoritative for them where it does. That is an ATTRIBUTE JOIN onto components that the netlist
+already established. It may enrich a component, and it may be RECONCILED against the netlist and
+report the disagreement as a finding, but it MUST NOT add, remove, or rename one. The netlist alone
+defines the component set.
+**Why:** an exported schematic is a lossy, point-in-time SNAPSHOT, not the design's system of record.
+Reference designators (`C1`, `R3005`) are the OUTPUT of a stateful authoring process. Annotation and
+layout back-annotation run inside the native project, and the tool's netlister assigns numbers as it
+emits the netlist. So a schematic export can carry placeholder (`C?`) or per-sheet-duplicate
+designators for parts that the netlist numbers uniquely (observed: a real EDIF `.eds` export ≈ 50%
+un-back-annotated vs a flat, fully-numbered `.edn`, WS1-046). The identity simply is not in the file,
+and no reader can recover it, any more than a database's auto-increment keys can be regenerated from
+a keyless dump. WS1-047 treats the netlist as truth and the schematic/board as a companion to
+highlight. That makes the join drift-resistant, since net names are stable across annotation. It
+keeps analysis off an assumption we cannot verify, that two exports are from the same instant. And
+it matches the real workflow: the team gets the netlist by one click on the project, and we render
+their drawing beside it.
+
+This rule used to be over-broad, because it did not split identity from attributes. The argument
+above is about IDENTITY, and it is strong: a ref-des is the output of a stateful annotation process,
+so a file that did not run that process cannot carry it. None of that reasoning transfers to what a
+part IS. A netlist does not know do-not-populate status, an approved alternate, or the quantity
+actually ordered, and those live in a bill of materials maintained alongside the design. Suppose
+someone read the rule as "the netlist is authoritative for part attributes too". Analysis would then
+read the least authoritative copy of a part number in the building. The rule exists to keep analysis
+on the authoritative copy. Note
+that the `.eds` measurement cited above was recorded outside this repository, so a reader here
+cannot reproduce it. The annotation argument stands without it.
+**Verify:** analysis/rule code sources components + nets from the loaded netlist model, not from a
+geometry reader; a geometry companion contributes only render + locate. A BOM source contributes
+only attributes onto an existing ref-des, so the component COUNT of a design is unchanged by
+declaring one. Companion association has shipped (WS1-047, then agni issue 528). A descriptor
+declares its `companions`, and `service.SourcesFor` keeps `NetlistURI` on the entry while the other
+tiers move, so a geometry-only reader feeds no component or net into the rule model. REVIEW, not a
+test, still checks the direction of the join, since a rule sourcing components from a geometry model
+compiles and passes.
+
+## C22: Configuration travels as a value, never as ambient state or a locator the callee resolves
+**Rule:** Some configuration changes what a run CHECKS or how it INTERPRETS a design: naming
+conventions and their vocabularies, interface profiles, design intent, a review manifest, house policy
+thresholds. Such configuration is passed as a VALUE to the code that uses it, along the same call it
+configures. Two things it must not be. It must not be **ambient process state**. A caller may install
+a package-level vocabulary before invoking (`SetActiveRoleVocab` and friends), but that vocabulary
+may exist only as a startup DEFAULT, never mutated per run. Ambient state cannot be scoped to one
+request, so one caller's config then reaches another caller's work. It must not be a **locator the
+callee resolves**. A wire request carries the config as a message (`OverlayConfig.conventions` is a
+`NamingConvention`, not a `conventions_path`), so `service` composes it with NO file I/O. How the
+caller obtained it is the caller's business, whether from a YAML file the CLI read, a form a browser
+filled, or a registry a deployment queried.
+
+**As amended by agni issue 224, a config tier that is a CORPUS travels as a ref, resolved through
+an injected port, and a host that cannot resolve one refuses.** The value rule above holds for config
+that is small enough to inline. A naming convention is a message, never a `conventions_path`, so a
+filesystem-free host can honour one. The value rule never held for interface profiles, seeded
+parameters, or a design's intent. Those are DIRECTORIES of many files, and a project has always named
+them as URIs that `ConfigResolver` reads. So "the service composes with no file I/O" described the
+request tier only. The schema froze that asymmetry, and a request could carry only one config tier
+out of five.
+
+`AnalysisConfig` is one shape for all of them, carried by a request and declared by a project alike,
+and `ConfigResolver` is the one port that resolves the ref-shaped tiers of either. The no-I/O property
+becomes a property of the DEPLOYMENT rather than of the schema: a host wired with no resolver still
+composes a value-shaped config with no file access, and REFUSES a config naming a directory rather
+than silently dropping the tier. Without the refusal, a dropped tier reports a clean run
+against config that never loaded. `GetNamingConvention` already refused the same way for a host that
+cannot resolve a stored convention.
+
+What is still forbidden is unchanged: ambient process state, and a config tier whose only form is a
+locator when a value would do.
+
+ARTIFACTS are the deliberate exception: a design, a board export, and any large parsed input are named
+by an opaque URI (`mount://<mount>/<path>`) that the injected Loader port resolves (C13), because they
+are megabytes, need format-reader dispatch, and are re-requested across many RPCs.
+
+**As amended by agni issue 1061, a question names a SNAPSHOT, and only an ingest names files.**
+`SnapshotService.Ingest` takes the design's URI, its board and drawing overrides, `as_named`, and the
+overlay config, resolves the tiers and composes the config once, and returns `snapshots/{id}`. Every
+analysis request then carries that name and nothing else about the design: no `uri`, no `*_uri`, no
+`as_named`, and no `overlay`. If a question could also name files or config, it could read the
+design a second way beside its snapshot. C32 exists to stop that shape, two reads of one design. The
+config still travels as a value, on the ingest rather than on each question. `ListRelations` keeps an
+`overlay` for the vocabulary asked about before any design is read, and refuses one beside a snapshot.
+An ingest's source is one of two things. It is either files the host serves, named by that URI, or
+the files themselves. The files themselves arrive as a manifest of paths within the URI's mount, with
+their hashes, and the contents are sent apart (step 4b). The manifest is part of the definition, so
+a snapshot still names the design it reads by value. The authority is a key in a server-defined
+namespace and the URI is not a host path; nothing above the Loader may treat it as a filesystem path.
+
+The URI replaced a `(mount, path)` PAIR (agni issue 177). The Loader was indifferent to which form it
+got, but nothing above it was: two fields that mean one thing must travel together, and 24 request
+messages repeated that pairing by hand. Two properties came with the collapse. **Parsing IS the
+containment check**, so a parsed `artifact.URI` cannot name a location outside the mount it claims and
+the 26 call sites that re-checked stopped needing to. An adapter can no longer forget, because it
+cannot receive a bad value. And **relative resolution became specified rather than hand-rolled**, so a
+schematic naming its sub-sheets or a symbol library resolves against the file being read. A URI path
+is always slash-separated, so the `path`-vs-`filepath` split can no longer occur. `formats.Loader`
+had warned that the split was "invisible on unix, breaks every sibling lookup on Windows".
+
+The authority is always `mount`, never `s3://` or `db://`. The deployment decides what a mount
+resolves to. A per-store scheme would put the storage kind in the client's hands, and the Loader and
+ProjectStore ports exist to keep that choice out of them.
+
+RESOURCE NAMES are a different system and are NOT URIs. `projects/{project}` and `reviews/{review}`
+are AIP paths naming IDENTITY rather than location, and a project keeps its name when its folder is
+renamed or moved between mounts because its id is declared rather than derived. Addressing
+answers "where are the bytes"; a resource name answers "what is this thing". Collapsing them would
+give up that stability (C23).
+
+**Why:** both failure modes were shipped and both cost real time. `agni review` could not load a
+`--conventions` config at all (WS3-102), so any review item bound to a naming rule read `not-automated`
+forever with no error to explain it. A project's lexicon teaches the engine its rail names, and that
+lexicon could not reach a review either, so unrelated rules reported failures that config would have
+fixed. The vocabulary was a process global, and that blocked making the config per-request (WS3-106).
+On serve, one request's conventions would have reached another request's design read, silently
+producing wrong `net.roles`. Passing a PATH instead was the second wrong answer: it forces the
+service to own file I/O to do its job, contradicts C13's os-free posture, and bakes a deployment's
+filesystem into the API contract, so a host with no filesystem (WASM, an embedder, a test) then
+cannot call it. Carrying the value instead DELETED a loader interface and seven methods. Values also
+compose: one `service.ComposeOverlay` is pure, so CLI, serve, and web cannot drift, and a test needs
+no filesystem.
+
+Corollary, from C20: a convention VOCABULARY is applied at the READ as a value carried on the loader
+(`formats.Loader.Lexicon`). That makes "applied at the edge" scopeable rather than global.
+
+When a client does not already hold a config value, it obtains the value through that value's OWN
+rpc. The rpc that consumes the value never resolves it (WS9-050). `ReviewService.GetReviewManifest`
+turns a stored checklist into a `ReviewManifest`, and `CreateReview` takes only the value. That split
+keeps the consuming call free of I/O while still serving a browser, which holds a ref and no
+filesystem. The read still happens, but the contract names it instead of hiding it inside a run, and
+a caller that already has the value never triggers it.
+
+**Verify:** `TestC22AnalysisRequestsNameASnapshot` (`internal/constraints`) sweeps the analysis
+services' request messages by descriptor and fails on one carrying a `uri`, a `*_uri`, `as_named` or
+an `overlay`, or naming no snapshot; its exempt methods ask about a stored convention, checklist or
+review, or a set's text, rather than a loaded design. `TestC22WebAPICarriesNoLocatorPair` (`internal/constraints`) fails on a `*_path` or
+`*_ref` FIELD in `protos/agni/v1/webapi/`, because an
+artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
+travels as a value. It reads field declarations rather than the whole line, so `ref_des` and
+`cell_refs` (domain names, not locators) and the several comments mentioning a `board_ref` do not
+match. Plus no `os`/`path/filepath`/`io/fs` import in `service/`
+impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
+(`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
+(`cmd/agni`), never from a service method or any per-run path.
+
+
+## C23: Stateful resources are AIP-shaped; stateless compute stays verb-shaped
+**Rule:** An API surface that owns state with a lifetime of its own is modelled as a RESOURCE:
+a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
+`filter` and AIP-158 `page_size` / `page_token` on the list. Everything else in
+`protos/agni/v1/webapi/` is verb-shaped (`GetDesign`, `ListDir`, `RunQuery`, `DiffDesigns`,
+`CheckDesign`), addressed by a snapshot (C22). The resources today are `ReviewService`'s
+`Review` (WS9-053), `ProjectService`'s `Project` / `Design` (agni issue 170) and `SnapshotService`'s
+`Snapshot` (agni issue 1061). A new rpc picks its
+side by ONE question: does what it returns still exist after the call? A derived view of files on
+disk does not, and is verb-shaped. Persisted state does, and is a resource.
+
+**In a third case, a DECLARED-identity resource is AIP-shaped and READ-ONLY.** Sometimes an OPERATOR
+declares a resource's id by writing a `name:` in a descriptor, and the server neither assigns the id
+nor derives it from a path. Such a resource is AIP-shaped with `Get` and `List` and NO mutators. This
+is a real third case rather than a loosening of the first two. A second question separates it: is
+the identity the caller's to invent (verb-shaped, the arguments ARE the input), the server's to
+assign (a full resource), or the operator's to declare (this case)?
+
+A `Project` is derived from files, so by the question above it sounds verb-shaped. It is not, for
+two reasons, and `GetDesign(uri)` can claim neither. Its id is DECLARED, so it is not a cache key
+over its arguments: the project keeps its identity when its folder is renamed or moved between
+mounts, and a URI does not. And it is a PARENT (reviews nest under
+`projects/{p}/reviews/{r}`), which a thing with no name cannot be. Mutators are absent because
+creation is genuinely out of scope rather than pending: scaffolding a project means authoring design
+intent, a judgment step with a confidentiality boundary, not a server operation.
+
+**A snapshot is a full resource whose create is a custom method, `Ingest`** (agni issue 1061, AIP-136).
+It is the server's state: a loaded design with its tiers and config resolved, held until it is
+deleted or evicted, and changed in place by `UpdateSnapshot` with an `update_mask` over its
+definition. Its id is random, so two ingests of one design are two snapshots, and a client can
+change each apart from the other. What they read is still shared beneath them in the DesignCache,
+keyed on content. It is not AIP-133's `Create`, because a client may send its ingest again under an
+id it chose. The same definition answers with the snapshot that already exists. So a client
+recovering from a host that lost it, or a browser page giving each worker its own copy, need not ask
+first. A different definition under that
+id is `ALREADY_EXISTS`.
+
+The contents a client uploads for an ingest (`UploadBlobs`) are not a resource. They have no name
+beyond their hash, no lifetime a client can rely on, and nothing to get, list or delete: the server
+keeps them as a cache it may drop, and an ingest that needs one it dropped says so, so the client
+sends it again.
+
+The read-only carve-out is narrow on purpose. It does NOT license a stateless query to wear a
+`name`; that failure is called out below and is unchanged. It licenses exactly the case where an
+identity exists in the world, was written down by a person, and the server only reads it.
+
+**Why:** two conventions in one API is a cost, and this one is deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
+takes a URI, and that one argument IS its whole input, so a resource name would be
+ceremony over a cache key. A review run is different in kind. It is produced rather than read, it
+outlives the request that made it, two runs over the same design at different times are different
+things a team wants to compare, and none of that is expressible by naming its inputs. Retrofitting
+the whole API to AIP would be a wire break across every service and every web client in exchange
+for consistency rather than capability. One surface genuinely has resources. A bespoke shape there
+would mean inventing pagination and filtering semantics that already have a well-specified answer.
+
+The boundary also has to be defended in the other direction: a stateless rpc dressed as a resource
+is worse than either convention. It invites clients to hold a `name` that is really a query, cache
+what was never stable, and eventually ask why deleting it does not work.
+
+**Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
+standard methods and no bespoke mutator, meaning the four of them for a server-assigned id (with
+`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one; every rpc
+that reads a design and returns a derived view takes a snapshot and returns no `name`
+(`TestC22AnalysisRequestsNameASnapshot`); a resource's `List` carries `page_size`, `page_token`, and
+`filter`, and its service rejects a filter it does not implement rather than ignoring it
+(`service.parseReviewFilter`, `service.parseProjectFilter`).
+
+**Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
+has no authentication at all. That is a deployment assumption (one team, one trusted network), not
+an access-control boundary, and it is recorded rather than implied so nobody reads the resource
+model as having brought isolation with it. Auth is deliberately deferred; see
+[running the server](https://panyam.github.io/agni/guide/running-the-server/).
+
+## C24: A datasheet parameter is compared in SI base units, converted in one place
+**Rule:** Any code that COMPARES a seeded datasheet parameter's value against anything reads the
+row through `param.InBaseUnit` and gates on the CONVERTED row's unit. No package outside
+`core/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
+A unit the conversion table does not recognize is skipped, never scaled by a guess or assumed to
+be the base unit. Storage is unaffected: a `PartSpec` keeps every row exactly as the datasheet
+printed it, and only the value handed to a comparison is reduced.
+
+**Why:** this is the C20 left-shift rule applied to units, and it is here because the alternative
+already shipped a wrong answer. Before agni issue 148 each extractor gated on the printed unit
+string, so a row in a prefixed unit was DROPPED from the slice it returned. A rule that receives an
+empty list compares nothing, reports nothing, and the runner scores the item a **pass**. Neither
+existing guard could catch it: `check.Available` saw a params tier attached, and the `needs-data`
+gate saw the symbol seeded. Milliamps are the ordinary spelling for a sub-amp regulator and
+millivolts for a controller's sense threshold, so a spec transcribed as printed hit this without
+doing anything unusual, and five rule families silently passed designs with genuine defects.
+
+The constraint is about LOCATION rather than caution. The original instinct was correct. A unit bug
+does hide in a silent scale factor inside a pass/fail rule. But refusing to convert did not remove
+that risk. It moved it from "wrong number" to "no check at all", and this codebase treats that
+failure as the most serious. One table beside `UnderSpecified` and `MachineComparable` is
+auditable in a way ten hand-written unit gates were not.
+
+The conversion returns a CONVERTED ROW rather than exposing a "convert this for me" accessor, and
+that makes the rule structural instead of advisory. Membership in an extractor's result set IS the
+guarantee that the number is in base units, so a consumer cannot forget to convert. An accessor
+would relocate the same bug to whichever call site forgot it, silently.
+
+**Verify:** `TestC24RawUnitIsReadOnlyToDisplay` (`internal/constraints`), a RATCHET over the same
+sweep rather than a clean one, the shape `hack/ir_model_baseline.txt` uses for C19. The naive sweep
+for `.Unit != "` does NOT work and must not be substituted: the extractors legitimately compare
+`q.Unit` on the converted row, so the invariant that actually discriminates is about the RAW row's
+unit. But that invariant is "never COMPARED outside `core/param`", and no grep can tell a
+comparison from a display. So from the day `param.unit` and `agni params` shipped, the plain command
+returned two hits on a clean tree. Both read the printed unit to PUBLISH it, and publishing it is the
+job of that relation and that table. The two sites are allowlisted in the test, and a new
+one is one of two things: if it compares, it is the bug this constraint exists for and it converts
+through `core/param` first; if it displays, it joins the allowlist, and that addition is the
+review moment. `core/param` itself is skipped rather than allowlisted, because it IS the one
+place. The conversion happens there, and every other tier compares through it. Also
+`TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base spellings to
+`core/classify`'s, since drift between the two would break cross-tier comparison.
+
+**This covers the query surface too.** The `param.max(...)`, `param.range(...)` and `param.typ(...)`
+datalog relations project their numbers through the same conversion, so a datalog-authored rule
+compares base units without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
+separately, because a `facts.Row` has no unit column and adding one would be advisory. A rule could
+ignore it and compare raw numbers, and this constraint exists to prevent that failure.
+
+A row whose unit has no known scale keeps its symbol, kind, conditions and citation and loses only
+its NUMBER, so a relation that answers "what does this part specify" never shortens its list
+silently.
+
+That is safe because ORDERING REFUSES TO MIX AN ABSENT NUMBER WITH A PRESENT ONE (`evalCompare` in jaala's `datalog`).
+Absence is not otherwise representable in a bound value: `query.fieldValue` yields an empty `Value`
+for a nil `Num`, and ordering used to fall back to string comparison, where `"" < "5.0"` is true and
+`"" <= "-2"` is also true, since the empty string precedes everything. The answer depended on the
+author's phrasing and on the sign of the constant. The guard is not specific to the datasheet tier.
+`param.range` emits a one-sided row for any ordinary max-only datasheet limit, so partial ranges are
+safe at all only because of the same guard. Equality is untouched (asking whether two values are the
+same is meaningful across kinds) and so is ordering two non-numbers. AGGREGATION was never exposed,
+because `reduce` (in jaala's `datalog`) skips a nil `Num` rather than falling back.
+
+Since `query.Value` carries `Absent` and `BaseUnit`, the guard is REPRESENTED rather than inferred
+from a nil pointer, `absent(?x)` selects the rows with no number, and an ordering comparison across
+unlike dimensions (volts against amps) refuses as well. Bare literals are still
+dimension-polymorphic, since a query constant cannot state a unit. `Value.BaseUnit` holds an SI BASE
+symbol only, never a prefixed spelling: scale is normalized once upstream by `param.InBaseUnit`, so
+the query layer checks DIMENSION and never converts SCALE. `TestRelationBaseUnitsAreCanonical`
+enforces that on every relation, including ones added later.
+
+**Known limitation:** equality is deliberately NOT dimension-checked, because the same values also
+unify implicitly when a variable repeats across atoms and unification is identity rather than
+physics. And `absent = absent` is TRUE here rather than SQL's UNKNOWN, since full three-valued logic
+would have to thread UNKNOWN through negation, aggregation and the index.
+
+## C25: A run's recorded provenance is derived from the resolved overlay, never from the caller's flags
+**Rule:** A results document records a `RunConfig`, which names the datasheet corpus, interface
+profiles, design intent and naming convention a run had attached. That `RunConfig` is computed from
+the RESOLVED `service.Overlay`, through `Overlay.Provenance` and `service.RunConfigProto`. No other
+code constructs a `checkspb.RunConfig`. A surface must not derive it from its own flags, its startup
+config, or the request message. Once a design resolves to a project, none of those says what the run
+used.
+**Why:** the alternative already shipped a wrong document, and it was wrong in the reassuring
+direction. `agni check designs/gateway --results-out` inside a project declaring conventions,
+`profiles/` and `params/` composed all three and recorded `"run": {}`, because no flag named any of
+them. `RunConfig` exists precisely so a reader can tell a design with no datasheet violations from a
+run that had no datasheet corpus, so recording `false` for an attached corpus makes a clean report
+read as better founded than it is. Nothing in the document contradicts it except the `catalog`
+snapshot, which nobody cross-reads. This is C22's value-not-locator rule applied to the RECORD of a
+run rather than to its inputs, and it is a single-writer constraint for the same reason
+`service.FindingProto` is: two places that build one message agree until the day they do not.
+**Verify:** `TestC25RunConfigHasOneWriter` (`internal/constraints`) holds `checkspb.RunConfig{` to
+one non-test site, `service/projectoverlay.go`. Test files are excluded because a fixture
+legitimately builds a document to render (`core/results/results_test.go`); the rule is about who
+WRITES a run's record. The test carries the positive control a grep cannot: finding NO site fails
+too, since a rename would otherwise leave it reading as clean.
+**Note:** after composition, nothing can recover which tier a rule source came from. A compiled
+interface profile and a compiled intent declaration are both just rules in a catalog, so the flags
+travel on `service.ResolvedConfig` rather than being derived from `Overlay.Sources`. Rationale in
+[the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
+
+**The same shape recurred outside `RunConfig` (agni issue 489).** A verdict link took its PATH from the
+caller's argument and its HASH from the resolved design, which is the same "provenance from the flag
+rather than from the resolution" shape one layer down. It cost the same kind of wrong-but-reassuring
+artifact: a link built from a declared companion carried the entry's hash, so the viewer reported a
+revision mismatch on a design nobody had edited. `verdictLinkTarget` now resolves once and returns
+both halves. That enforces the shape more cheaply than a rule would, since a disagreeing pair can no
+longer be represented. Reach for the same move whenever a value and the provenance qualifying it are
+computed by two calls: make it one call returning both.
+
+## C26: One schema per contract; a hand-written twin carries a round-trip guard
+**Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
+and YAML is authoring SYNTAX rather than a second schema. Bind it with `internal/yamlpb`, which walks
+the YAML beside the message so a scalar takes its field's type, an unknown key fails naming its line,
+and protojson does the binding. The plain YAML-to-JSON-to-protojson route types a scalar by its
+spelling and reports a line in the intermediate JSON, and every config file had moved off it by agni
+827 (design intent, project conventions, `--conventions`, profile files). Where a hand-written Go
+twin genuinely must exist (a domain type that carries behaviour, an AST, a struct whose zero values
+mean something a message cannot express), the twin and its converter carry a **deep-equality
+round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go
+domain -> proto -> domain, and require `reflect.DeepEqual`. Some domain types are DERIVED from the
+message in one direction, such as a design's intent compiled into `intent.Declaration`. Such a type
+has no inverse to round-trip, so it carries a field census instead: a test that walks the message's
+descriptors and fails on any field without a check that its fixture value arrived
+(`TestFromProtoCarriesEveryField`).
+**Why:** two hand-maintained schemas for one contract drift, and they drift SILENTLY, because a field
+that the converter never learned is absent from both sides of any assertion made on the proto. This
+has now shipped twice. `naming.Lexicon` grew gate/source/drain terminal vocabularies with no wire
+fields, so a project declaring them had them dropped on every path except `serve`'s startup install
+and `BuildRoleVocab` substituted the built-in names. `Profile.HostClass` (WS3-044) was added with no
+wire field, so an extension profile binding its host by datasheet device class lost the binding
+crossing `stdlib/ruledef`, `HasHost` went false, and the host requirement compiled to nothing. Both
+failures are indistinguishable from a legitimately quiet run. `core/review`'s manifest conversion
+has had the guard since it was written and has never drifted. That record is the evidence that the
+cheap half works. Owning the converter is NOT enough on its own. `stdlib/ruledef` claimed that a
+body's wire form is owned beside its vocabulary, so an omission is a compile error. That holds for a
+new NODE TYPE covered by a type switch. It does not hold for a new FIELD on an already-mapped
+struct.
+**Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All six pairs are
+covered: `TestManifestProtoRoundTrip` (`service`), `TestProfileProtoRoundTrip`
+(`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
+(`core/query`), `TestRuleMetaProtoRoundTrip` (`core/check`), and `TestVerdictProtoRoundTrip`
+(`service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
+ships, not after it drifts.
+
+`RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four.
+The gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
+auditing against the constraint. An enumeration in a Verify block is only as current as the last
+person who edited it.
+
+The remaining asymmetry is `query.FindingQueryProto`, which has no `FindingQueryFromProto`: its decode
+is inlined in `ruledef.Compile`, so there is no pair to round-trip and its field coverage depends on
+that one call site. Give it an inverse if it grows.
+**Verify (node vocabularies):** a body whose AST is a CLOSED vocabulary already fails loudly on a new
+NODE, because `check.termProto`/`exprProto` panic on a type with no case. That protection does not
+extend to a new FIELD, and the round-trip guard covers fields. Do not read the panic as covering
+both.
+**Note:** the guard is only as good as its fixture. A field left at its zero value round-trips cleanly
+through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
+fixture reports success while covering nothing.
+
+**A REPEATED field needs more than one element in the fixture**, which is the same trap one level in.
+A converter that drops everything past the first element round-trips a one-element slice perfectly, so
+the guard passes over exactly the bug it exists to catch. `Verdict.subjects` became repeated when a
+rule's subject grew to a tuple, and its fixture was widened to two entities in the same change for
+this reason.
+
+## C27: A committed generated artifact is checked by REGENERATING it
+**Rule:** If a file is both committed and produced by a command in this repo, the gate regenerates it
+from its inputs and fails on any difference. Inspecting `git status`, trusting a stamp the artifact
+carries, or hashing the inputs does not count. Where regeneration cannot run in the gate yet, the
+artifact carries a NAMED exemption in a checked-in ignore file and every entry cites the issue that
+will remove it, rather than being quietly absent from the gate.
+**Why:** a generated file nothing regenerates drifts from its source and nothing says so. A stamp
+does not save you, because it hashes what the generator was pointed at rather than the generator. A
+tutorial capture's stamp hashes its spec and its fixture and never the engine, so an engine change
+that alters the output leaves every stamp valid. Changing one rule's coverage wording rewrote 0
+captures on a plain docsite build and 12 on a forced regeneration. Before `tutorial-runs-check`
+existed, a capture edited by hand passed the entire gate.
+**Verify:** `proto-check`, `catalog-docs-check`, `tutorial-runs-check` and `docsite-images-check`
+are all in `testall`, and each regenerates its artifact. `catalog-docs-check` then reads `git status` to compare, so it still
+forces the commit-first ordering that the next Note describes. Exemptions live in
+`hack/tutorial_runs_check.ignore`, and a line belongs there only when its command is not a function
+of this repo, never because the artifact merely went stale.
+**Note:** a regeneration check must SNAPSHOT AND RESTORE rather than read `git status`. A
+git-status check forces a regenerate-then-commit-then-gate ordering, so the first run after an edit
+fails for a reason unrelated to the edit. `proto-check` spells this out and
+`hack/tutorial_runs_check.sh` follows it.
+**Note:** the GENERATOR still has an ordering rule, and it is enforced rather than remembered (agni
+issue 588). A capture's stamp hashes `git ls-files` for its fixture, so a fixture file that is not
+committed yet is not in the hash: the local gate passes, the commit moves the hash, and CI fails on a
+tree whose content never changed. `inputHash` refuses a fixture holding files git neither tracks nor
+ignores. IGNORED files are still invisible to the hash, because of agni issue 357. The hash used to
+count the tutorial's own `make report` output, so everyone who had run the tutorial rewrote the
+committed stamp on every gate run.
+**Note:** the docsite's `guide/` section was the un-generated counterpart and showed the cost. Its
+command fences were typed by hand with no `runs/` directory, so nothing regenerated them and nothing
+read them. Four went stale without a word: `getting-started.md` reported 10
+findings where its fixture produces 11 and named 29 rules where it runs 78, with the prose beneath it
+quoting the wrong number back, and it was found by grepping for the shape rather than by any check.
+A hand-written fence is not a generated artifact, so this was never a violation of the constraint,
+but it shows why the constraint exists. `hack/tutorial_runs_check.sh` walks
+`docsite/content/**/runs/` rather than a fixed pair of sections, so the guide joined the gate by
+gaining `guide/runs/` and one spec per fence, with no harness change. A fence still typed by hand is
+parsed, though not run, by `TestDocumentedCommandsParse` (`cmd/agni`).
+
+## C28: A recorded locator names the artifact, never the machine that produced it
+**Rule:** A path stored in an `ir.Provenance` or `geom.Provenance`, or printed by any writer that
+renders one, is relative to the design's mount. It is never an absolute host path. Readers keep
+stamping whatever path they are handed; the rename happens ONCE, immediately after the read, through
+`Loader.SourceName` and `relocateSources`. No writer relativises a path on its way out.
+**Why:** a results document is a separate contract from the wire API precisely so it can be written
+on one machine and re-read on another (`agni.v1.checks` declares no service and imports no
+transport). An absolute source path makes that untrue in a way nothing in the document admits: the
+reader holds the design and still cannot resolve a finding to a file. It also publishes a directory
+layout out of a PUBLIC repo, since a capture, a pasted report and an archived run all carry it. The
+single-writer half is the same argument as C25: two repairs already existed, `portableCites` for
+`query` and `forDisplay` for `results`, and `--results-out` went through neither, because a
+write-time fix covers the surface its author was looking at and the next output format starts
+uncovered.
+**Verify:** `TestC28SourceRenameHasOneImplementation` (`internal/constraints`) holds
+`relocateSources` to `readers/formats/`, so the rename has one implementation and one call site per
+read entry point. Acceptance for the BEHAVIOUR is
+`go test ./cmd/agni/ -run TestCheckProvenanceIsMountRelative`, which asserts the shape on both the
+printed and the STORED document, since different code writes the two, and the stored one outlives
+the machine. The structural test stops a new output format or a new host from growing a second
+implementation. A second implementation is how host paths would start being published again.
+**Note:** a host that reads through `Loader.FS` leaves `SourceName` nil, and that is correct rather
+than an exemption: an `fs.ValidPath` is unrooted, so those paths already satisfy the rule. The
+constraint matters for a NEW host that opens files by absolute path. A file outside every mount is
+recorded by base name. That loses its directory, and the loss is deliberate, because then no
+directory is ever published.
+Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at read time".
+
+**As amended by agni issue 1061, a design a client SENDS records its locators as the client names
+them.** An uploaded design is a manifest of files, each named by its path within the design's mount,
+and the server reads them as that one mount, under the client's own mount name. So an answer
+records what the same command run on the client records, in a finding's source file, a query's
+citation and the design's URI. `TestRemoteAnswersAsTheLocalCommandDoes` holds that byte for byte
+against a server with no mounts at all. The rule is unchanged in what it forbids: the server's
+machine appears in nothing, since it never had a path for these files, and the client chose paths
+relative to its own mount, never its host paths.
+
+## C29: The fact layer is the primitive and depends on no query engine
+**Rule:** `core/facts` holds relations, the tuple they project into, and the registry they install
+themselves in. It imports `core/check` and nothing that answers queries. A query engine depends on
+the fact layer, never the reverse. `stdlib/relations` is the shipped netlist/board/datasheet relation
+catalog, and it imports `core/facts` only. Every name a query can call registers in `core/facts` at
+a PATH of one vocabulary, jaala's `ns.Vocabulary` (agni issue 751). `jaala/ns` holds names,
+signatures and values with no parser or evaluator, so importing it names things without answering
+anything about them. `jaala/stdlib` holds the standard predicates the fact layer registers (`str.*`,
+`absent`) and imports `ns` only. The fact layer may import only those two parts of jaala. A RELATION
+is data derived from the Model (`facts.RegisterRelation`). A PREDICATE is an `ns.Builtin`, a filter
+or a generator reaching the design through `facts.EnvOf` (`facts.RegisterPredicate`). A MODULE of
+derived relations is text in a language some engine registered (`facts.RegisterModules`,
+`facts.RegisterLanguage`), and the fact layer stores it without reading it. The vocabulary applies
+the tree's two rules as each name arrives, so a path has one definer, and a segment is a module or a
+member depending on which side registered first. A join strategy, a parser and an evaluator belong
+to whichever engine computes them (`core/query` is agni's adapter over
+`github.com/panyam/jaala/datalog`, which registers its language and builds a fact base per design
+over the one vocabulary). A DERIVED relation belongs to the engine that reads its language. If a Go
+rule or a Spec needs one, it is promoted to a base relation rather than read across engines
+(DECISIONS, "The Datalog engine lives in jaala"). **No package under `core/` outside `core/query`
+may name a query syntax at all**: `core/review` compiles a manifest's inline query through a
+registered `QueryCompiler` returning a `*check.Rule`. `check.RegisterSource` trades in the same
+neutral currency.
+**Why:** the primitive is the design graph and a tuple view over it, not any one way of asking
+questions. Datalog answers set-of-tuples questions well and cannot return a path, a subgraph, or a
+shortest route at all (issues 374, 518). So it is one query shape among several, beside `check.Spec`
+for per-entity questions and Go for the rest. If one shape owned the fact tuple, it would make the
+other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
+require picking an engine. This is the query-side twin of C17's downward-only layering and of the
+`check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
+**Verify:** `go test ./core/facts/ -run 'NoQueryEngine|ReachesTheDatalogEngine|VocabularyIsNoEngine|ReachesTheVocabulary|TreeRulesHoldAcrossEveryKind'`,
+which sweeps every package under `core/...` and the relation catalog for either engine path, with a
+positive control that the adapter really does reach the engine; holds `jaala/ns` itself free of the
+evaluator, with a positive control that the fact layer really imports it; and holds the tree's two
+rules across relations, predicates and modules. It is a TEST rather than a command in this document.
+The first draft of this constraint was a command, and it went stale within three PRs of being
+written. Both halves of a violation compile and pass, so nothing surfaces one until someone re-reads
+the rule.
+The shape is `core/model/deps_test.go`'s, for the same reason.
+**Note:** installing NO relation catalog still builds and still runs, and the fact base is then
+empty, so every relation is unknown and a datalog-authored rule reports clean, passing quietly on a
+design nobody checked. `Registry.Installed` separates "matched nothing" from "nothing
+installed", and the unknown-relation error says which it was. The same shape one layer up: a binary
+that registers no `review.QueryCompiler` fails at manifest Load rather than resolving an inline query
+to no rules. Do not make a build-tag or a dropped blank import the way to ship without an engine; a
+removal that fails silently is worse than one that does not happen.
+
+**A relation vocabulary is a composed VALUE, not ambient state.** The package globals are an
+append-only buffer of registration options and nothing reads them directly: `facts.DefaultRegistry`
+composes a `*Registry` from them, exactly as `check.DefaultCatalog` composes a `*Catalog`, and a
+`Registry` is immutable once built. A `query.Base` captures the one it was built from, so a
+registration cannot change how an in-flight query reads. The registration half is still global,
+because it is the extension point (C18) and C22 permits a startup default. The READ half must not be
+global. Composition runs in a known order, so collisions need no order-dependent check. Every option
+is applied first, and clashes are swept once at the end.
+
+## C30: The rule primitive is `check.Rule`, and no authoring shape owns it
+**Rule:** A rule is a `check.Rule`, and the ways to write one are peers: Go, datalog
+(`stdlib/rules/datalog`), an interface profile (`stdlib/profiles`), a design-intent declaration
+(`stdlib/rules/intent`), and whatever an extension adds. Each COMPILES to `[]*check.Rule` and reaches a
+catalog as a `check.RuleSource`, which is the only currency the catalog trades in. `core/check`
+depends on none of them. A new authoring shape is a package that compiles to rules and registers a
+source; it is never a new field on `Rule`, a new case in the catalog, or a second thing a catalog can
+hold.
+**Why:** this is C29 one layer over. C29 keeps the fact tuple free of any one query engine because a
+shape that owned the tuple would make its limits everyone's limits; the same is true of rules.
+Datalog cannot express a path question at all (#374, #518) and `check.Spec` answers per-entity
+questions with no fact base, so a catalog built around either would foreclose the rules that need the
+other. The peer rule also makes an interface a DATA value rather than new code. Treating interfaces
+as data collapsed roughly 130 near-identical "verify signal X connected" review items into one
+mechanism. The failure is quiet in the usual way: `core/check` importing an authoring shape
+compiles, passes, and only shows up later as a rule someone cannot write.
+**Verify:** `TestRulePrimitiveNamesNoAuthoringShape` and
+`TestAuthoringShapesReachTheCatalogAsRuleSources` (`deps_test.go`) watch both halves, the arrow's
+direction and the fact that each shape still compiles to rules.
+**Note:** the direction is the checkable part. An authoring shape depending on `core/check` is
+correct and every one of them does; only the reverse is a violation. `stdlib/profiles` importing
+`core/query` is likewise fine, since a profile that targets one engine is a shape making a choice,
+not the catalog making it for everyone.
+
+## C31: A command's `--format json` emits the wire message, in protojson
+**Rule:** Where a command has a `--format json` (or `--report-format json`), it emits **protojson of
+the message that command's rpc returns**, with `EmitUnpopulated` so a field never appears and
+vanishes between runs. Where no rpc serves the answer, it emits the contract TYPE rather than a
+wrapper invented for one consumer (`agni params` emits a bare `PartSpec`). A command with neither has
+no wire form yet, and adding one is the work rather than hand-rolling a second shape. A command that
+evaluates two ways renders BOTH paths from the same message, so a format cannot work on one and not
+the other. **A failed request is a wire message too.** When the command's rpc fails, `--format json`
+writes the error as the Connect protocol encodes it (`code`, `message`, `details`), through connect's
+own error writer, to where the answer would have gone, and the command still exits non-zero with the
+text error on stderr. Only the request's own failure is written that way, never a flag mistake before
+it or a status the command reports after writing its answer, so stdout never holds two documents.
+**Why:** the CLI's json is a contract, and it was two. `check`, `check --report`, `diff`, `validate`
+and `params` emitted the wire message; `query`, `render --report` and `intake` emitted hand-rolled
+shapes, so what a client learned from one command told it nothing about the next. Two of those were
+worse than inconsistent: `query` received a `RunQueryResponse` and re-encoded a different shape of it,
+and `render` encoded the Go `graph.ConversionReport` while `service` converted the same struct through
+`reportToProto` for `GetLayoutReport`, so the two publishers of one report disagreed by construction
+(`class` against `deviceClass`) and nothing could detect it. This is C26 one layer out: two
+hand-maintained shapes for one answer drift, and they drift silently, because a field that the
+renderer never learned is absent from both sides of any assertion made on the proto.
+**Verify:** `TestEveryJSONFormatEmitsAProto` (`cmd/agni`) scans the command tree's json paths and
+fails on a hand-rolled encoder outside the declared exception list. `TestAFailedRequestWritesTheWireErrorUnderJSON`
+holds a failed query's json to the server's error, byte for byte under `--remote`, and
+`TestASetsStatusAfterItsAnswerAddsNoSecondDocument` holds the second half.
+**`agni intake` is the one exception, and it is declared rather than tolerated.** `intake.Skeleton`'s
+confidentiality guarantee is STRUCTURAL, meaning the type has no field that can hold a net name or a
+connection, so an intake summary cannot express the confidential parts of a design (C16). A proto twin
+would have to carry that guarantee into a file that people edit to add fields for other reasons.
+There the guarantee would survive only as long as everyone remembered it, and this design replaced
+exactly that policy. It
+keeps `encoding/json` until something needs it on a wire, and then the guarantee gets designed rather
+than inherited. The reasoning lives on the type in `intake/intake.go`, where someone adding a field
+will read it.
+
+## C32: One design resolves the same way on every surface, and so do the links to it
+**Rule:** A design resolves to the same TIERS however it is named and whichever surface reads it. The
+entry, the enclosing folder, and a declared companion all name one design, and the CLI and the
+service compose it identically. Since agni issue 1061 that resolution happens ONCE, when the design is
+ingested, and every question about it reads the tiers its snapshot holds, so no rpc can skip it. An answer that names an entity carries that entity's KIND wherever it
+is produced, so a client can act on the answer without re-deriving what a column meant. When one
+surface mints a link, it resolves and opens the same as the equivalent link from the other surface.
+**Why:** `service.SourcesFor` resolves a named path to a design's tiers, and for most of 2026
+it had two callers, both outside the served path. So one design was two: the CLI read a netlist entry
+and attached the schematic companion its descriptor declared, while the server handed the same URI
+straight to the loader, found no faithful geometry on a netlist, and fell back to a computed layout.
+Same file, same spelling, same mount, different design.
+
+Nothing errored. Four symptoms followed and each was chased as
+its own defect before the common cause turned up: findings came back with no sheet badges, query
+cells reported `LOCATE_REASON_NO_GEOMETRY` with empty sheet lists, `trace --render` wrote the
+design's first sheet whatever the route crossed, and every link the CLI minted opened on an
+auto-layout. Every one of those is a well-formed empty answer. It reads as "this design has no
+geometry" rather than "the companion was not attached".
+
+This is C31 one layer out. C31 makes the two surfaces agree about the SHAPE of an answer; this makes
+them agree about what the answer is ABOUT. The kind clause is the same rule at cell granularity: a
+variable projected through a derived relation lost the entity kind that its defining rule
+established, so the same question answered the same rows and only one spelling of it could be
+clicked.
+**Verify:** `TestC32SurfacesResolveOneDesignAlike` and `TestC32LeavesAnUndeclaredSiblingAlone`
+(`cmd/agni`), which resolve one fixture design through the CLI's resolver and through the service's
+and assert the same artifact for every tier, under all three spellings.
+
+It lives in `cmd/agni`, the only package that can see BOTH surfaces. The CLI's resolver is
+unexported, and `service` cannot import package main. The test is behavioural rather than a source
+sweep, so by `internal/constraints`' own rule that package is the wrong home. C32's violation was a
+function that was never CALLED, and no sweep over source can see one.
+
+The second test is the POSITIVE CONTROL. Without it the check would be a bare equality assertion, and
+that would pass with both surfaces resolving nothing, the state the constraint exists to catch. It
+pins an undeclared sibling revision to being read as named on both sides, and then asserts that the
+design's own entry DOES resolve. So "read as named" is shown to be a decision rather than a resolver
+that never works. Reverting 656 fails the first test alone; disabling resolution entirely fails both.
+
+The KIND clause gained its own tests with agni 654 (`TestColumnKindsFollowDerivedRelations`,
+`service`). Still open: the LINK clause is asserted only through the two surfaces agreeing on tiers,
+rather than on what a minted link opens, which needs a served viewer rather than a resolver.
+
+Per-rpc coverage is the other half, and it was missing where it mattered: 656 fixed check, query,
+report and trace and left `CreateReview` resolving nothing, so a browser review read no board for
+another two weeks (agni 646). `TestCreateReviewReadsTheDeclaredBoard` (`service`) pins that rpc.
+A resolver test cannot catch this shape, because the resolver was right and one caller never asked
+it, so an rpc that reads a design owed a test that it resolved tiers first. Since agni issue 1061 the
+rpcs cannot ask, since a question carries only a snapshot, and `Ingest` is the one caller of
+`TierURIs` on the served path. DiffDesigns read each side's raw URI until then, with no test noticing.
+
+## C33: A function body is not copied into a second package
+**Rule:** When code in one package needs logic another package already has, the logic moves to a
+package both can import, named for what it does. It is not copied. There is no `utils` package, and
+C33 does not create one: `internal/geomath` is the precedent for a focused helper package.
+**Why:** Two copies agree until one is edited, and nothing notices when they stop. Agni issue 698
+audited the engine tree for this and found the shape repeatedly. `model.RenderRoute` was written
+twice in one week. `isRegulatorInternal` had a private copy in `stdlib/relations` that would have
+missed the next regulator role. A net-class cascade decides which class's track width binds a net.
+It lived in both the `net.declared_*` relations and the `netclass-conformance` rules, and the two
+agreed only because nobody had touched either. Two more had already drifted when the audit found
+them, and they are tracked as issues rather than hidden behind this rule.
+**Verify:** `TestC33NoFunctionBodyIsCopiedAcrossPackages` (`internal/constraints`) sweeps the engine
+tiers for any function body of six or more lines that appears in more than one package, comments
+ignored. `TestC33DetectsACopiedBody` is its positive control. A duplicate that is coincidence goes
+in the test's allowlist with its reason, and an entry that no longer matches fails.
+
+The sweep fires at the COPY, the one moment when the two are identical. It cannot see copies that
+have since diverged, so "does this already exist somewhere" is still a review question. The example
+modules are outside the sweep because they cannot import `internal/`, so the module boundary causes
+any duplicate there. Which ones matter is agni issue 380's question.
+
+## C34: The engine depends on the datasheet tier through its contract, never through the producer
+**Rule:** The engine's datasheet input is the PartSpec contract: `core/param` and
+`param.proto`. An extraction pipeline produces PartSpecs: `datasheet/doc`, `datasheet/derive`,
+`datasheet/docindex`, `datasheet/candidate`, their protos, and the producer's API `agni.v1.dsapi`.
+That pipeline is one producer among several, beside a hand-written textproto and any future vendor
+feed or parts database. It is its own Go module, `datasheet/`, downstream of the engine, with its
+own binary `agnids`. No package of the engine module imports it, directly or transitively.
+**Why:** This is C29 and C30 applied to component knowledge. A rule reads a part's absolute maximum
+from a PartSpec and must not care whether a person, our extractor or a vendor wrote it, so the engine
+must not privilege the extractor any more than the rule catalog privileges datalog. The producer also
+deploys differently from the engine. It writes into mounts, needs the docling environment, and
+handles vendor PDFs that C16 keeps inside one deployment. So it runs as a separate service.
+**Verify:** since agni issue 744 the rule is mostly structural. An engine package cannot import a
+module the root `go.mod` does not require, and `TestEngineModuleRequiresNoExtension` (C18) fails if
+it ever requires one inside this repo. `TestDatasheetIsItsOwnModule` (`deps_test.go`) holds that
+`datasheet/go.mod` declares the module and that no root package lives under `datasheet/`.
+`TestEngineImportsNoProducerProto` holds that the producer's protos live in `datasheet/protos`, that
+none generate into the root's `gen/`, and that no package of the root module imports one.
+`TestDatasheetProducerIsVisibleFromItsHost` is the positive control: inside the datasheet module,
+`agnids` depends on the pipeline and on a producer proto, so the names that both checks look for are
+real.
+
+## C35: An answer has one projection to rows, and every table of it encodes that projection
+**Rule:** One step turns a wire message into rows. It decides which columns a reader needs, how an
+entity is spelled, how a relation's tuple fits one cell, and how rows order. That step happens once,
+in `service/tabulate.go`, and the `TableService` serves it. Every table of that answer encodes those
+rows, including `check`, `query`, `diff` and `review` with `--format csv`, and a workbook a client
+writes. A table adds its own escaping, styling and layout, and nothing that decides a cell. A client
+never derives rows from an answer message; it asks `Tabulate`.
+**Why:** a table is a view, and two views of one answer drifted the first time a second one was
+written. `check --verdicts --format csv` spelled a subject `net:SDA` under nine columns while the
+Python client's `verdict_sheets` spelled it `net SDA` under a different nine, so a csv and a workbook
+of one run disagreed, and a diff had a single table in one and a tab per kind in the other (agni
+issue 862). The projection is domain judgement, so it belongs to the engine. The encoding is format
+work, so it belongs to whoever writes the bytes.
+**Verify:** `TestCheckCSVIsTheTabulatedTable`, `TestQueryCSVIsTheTabulatedTable`,
+`TestDiffCSVIsTheTabulatedTable` and `TestReviewCSVIsTheTabulatedTable` (`cmd/agni`) hold every csv the
+CLI prints for an answer to the table `agni tabulate` returns for it, header, cells and order, and
+fail on a dropped column or an unordered row. In the Python client,
+`test_no_other_function_lays_out_an_answer` holds that the only public function of `agni.tables`
+taking an answer message is `rows_as_dicts`, which reads a query answer and lays out no table, so a
+new projection written in the client fails.

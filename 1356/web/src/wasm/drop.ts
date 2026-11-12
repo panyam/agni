@@ -1,0 +1,156 @@
+// Dropping files on the Load page (agni issues 854 and 1072). The files go into the browser mount,
+// never to the server, and into the page's saved drops, so the design survives a reload and the
+// navigation to the viewer. The engine proposes designs from the files. The visitor reads and edits
+// each proposal's design.yaml before one is opened.
+//
+// The dialog is plain DOM. Every string in it came from the visitor's files, so it is set as text and
+// never parsed as markup.
+import { filesFromDrop, filesFromFileList } from "@panyam/tsappkit/wasmhost";
+import type { ProposeDesignsResponse } from "../gen/agni/v1/webapi/workspace_pb.js";
+import { mountOf, type Files, type WasmEngine } from "./client.js";
+import { OVERLAY_DIR, type DropStore } from "../drops.js";
+
+// BROWSER_MOUNT is the mount that holds dropped files, wasmengine.BrowserMount on the Go side.
+export const BROWSER_MOUNT = "local";
+
+export interface DropDeps {
+  // engine holds the dropped files. Without one the page is on the server engine, and a drop is
+  // refused with `refuse`'s reason rather than uploaded.
+  engine?: WasmEngine;
+  propose(uri: string): Promise<ProposeDesignsResponse>;
+  // drops keeps each drop's files, and the design.yaml written for it. A drop it cannot keep is
+  // refused, since the viewer could not read it after the page moves on.
+  drops: DropStore;
+  // open shows a design, by its path in the browser mount, without reloading the page.
+  open(path: string): void;
+  refuse(reason: string): void;
+  target: HTMLElement;
+  dialog: HTMLDialogElement;
+  button: HTMLElement;
+  input: HTMLInputElement;
+  // folderButton and folderInput pick a whole folder (agni issue 878). The input carries
+  // webkitdirectory, so each file arrives with its path inside the folder, as a dragged folder does.
+  folderButton?: HTMLElement;
+  folderInput?: HTMLInputElement;
+}
+
+// installDrop wires the drop target, the "Open files" and "Open folder" buttons and the proposal
+// dialog.
+export function installDrop(d: DropDeps): void {
+  pick(d, d.button, d.input);
+  if (d.folderButton && d.folderInput) pick(d, d.folderButton, d.folderInput);
+  d.target.addEventListener("dragover", (ev) => {
+    if (ev.dataTransfer?.types.includes("Files")) ev.preventDefault();
+  });
+  d.target.addEventListener("drop", (ev) => {
+    if (!ev.dataTransfer?.types.includes("Files")) return;
+    ev.preventDefault();
+    void bring(d, filesFromDrop(ev.dataTransfer)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
+  });
+}
+
+// pick shows a button that opens a file input, and brings in whatever the input picks.
+function pick(d: DropDeps, button: HTMLElement, input: HTMLInputElement): void {
+  button.hidden = false;
+  button.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (input.files?.length) void bring(d, filesFromFileList(input.files)).catch((err: unknown) => d.refuse(`Could not read those files: ${String(err)}`));
+    input.value = "";
+  });
+}
+
+// bring puts one drop into the browser mount under a folder of its own. It then asks which designs
+// the drop makes, and shows them.
+async function bring(d: DropDeps, read: Promise<Files>): Promise<void> {
+  if (!d.engine) {
+    d.refuse("Dropped files are analysed in your browser and never sent to the server, so this page needs the browser engine: add ?engine=wasm to its address");
+    return;
+  }
+  const files = await read;
+  const id = `drop-${Date.now().toString(36)}`;
+  const placed: Files = {};
+  for (const [p, b] of Object.entries(files)) placed[`${id}/${p}`] = b;
+  try {
+    await d.drops.save(id, dropName(Object.keys(files)), placed);
+  } catch (err) {
+    d.refuse(`This browser would not keep those files (${String(err)}), and the viewer reads a dropped design from what the page keeps`);
+    return;
+  }
+  await proposeDrop(d, id, placed);
+}
+
+// proposeDrop puts a kept drop's files into the browser mount and shows the designs they make.
+export async function proposeDrop(d: DropDeps, id: string, files: Files): Promise<void> {
+  if (!d.engine) {
+    d.refuse("A dropped design is analysed in your browser, so this page needs the browser engine: add ?engine=wasm to its address");
+    return;
+  }
+  await d.engine.add(BROWSER_MOUNT, files);
+  const proposal = await d.propose(`mount://${BROWSER_MOUNT}/${id}`);
+  render(d, id, proposal);
+}
+
+// dropName is a drop's name in a listing. It is the folder or file dropped, or a count of them.
+export function dropName(paths: string[]): string {
+  const tops = new Set(paths.map((p) => p.split("/")[0]));
+  if (tops.size === 1) return [...tops][0];
+  return `${paths.length} files`;
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function render(d: DropDeps, id: string, r: ProposeDesignsResponse): void {
+  const dlg = d.dialog;
+  dlg.replaceChildren();
+  dlg.append(el("h2", "drop-title", r.designs.length ? "What these files make" : "These files make no design"));
+  const editable = new Set<string>();
+  for (const pd of r.designs) {
+    const sec = el("section", "drop-design");
+    // A declared design is named by its folder, which names the same design as its entry (C32).
+    const entry = pd.design?.entryUri || pd.design?.uri || "";
+    const path = entry.replace(/^mount:\/\/[^/]+\//, "");
+    sec.append(el("h3", "drop-design-name", `${pd.design?.name ?? path}  (${pd.files.length} file${pd.files.length === 1 ? "" : "s"})`));
+    if (pd.note) sec.append(el("p", "drop-design-note", pd.note));
+    // Each folder gets one design.yaml. The first proposal in a folder can be declared by it, and any
+    // other is opened by its file.
+    const declarable = !pd.declared && !editable.has(pd.folder);
+    if (declarable) editable.add(pd.folder);
+    const yaml = el("textarea", "drop-design-yaml");
+    yaml.value = pd.designYaml;
+    yaml.readOnly = !declarable;
+    yaml.rows = Math.min(14, pd.designYaml.split("\n").length + 1);
+    yaml.spellcheck = false;
+    sec.append(yaml);
+    const open = el("button", "drop-design-open", "Open");
+    open.type = "button";
+    open.addEventListener("click", () => {
+      void (async () => {
+        if (declarable && yaml.value.trim() && d.engine) {
+          const written = { [`${OVERLAY_DIR}/${pd.folder}/design.yaml`]: new TextEncoder().encode(yaml.value) };
+          await d.drops.put(id, written);
+          await d.engine.add(BROWSER_MOUNT, written);
+        }
+        dlg.close();
+        d.open(mountOf(entry) === BROWSER_MOUNT ? path : entry);
+      })().catch((err: unknown) => d.refuse(`Could not open ${path}: ${String(err)}`));
+    });
+    sec.append(open);
+    dlg.append(sec);
+  }
+  if (r.unread.length) {
+    dlg.append(el("h3", "drop-unread-title", "Not read"));
+    const ul = el("ul", "drop-unread");
+    for (const u of r.unread) ul.append(el("li", "", `${u.path}: ${u.reason}`));
+    dlg.append(ul);
+  }
+  const close = el("button", "drop-close", "Close");
+  close.type = "button";
+  close.addEventListener("click", () => dlg.close());
+  dlg.append(close);
+  dlg.showModal();
+}

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agni check — {{.Design}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>agni check — {{.Design}}</h1>
+<div class="sub">
+  {{if .Generated}}{{.Generated}}{{end}}
+  {{if .ContentHash}} · <code>{{.ContentHash}}</code>{{end}}
+</div>
+
+{{if .HierarchyNote}}
+<div class="read-limit">{{.HierarchyNote}}</div>
+{{end}}
+
+<div class="stats">
+  <div class="stat"><span class="n">{{.Totals.Findings}}</span><span class="l">findings</span></div>
+  <div class="stat"><span class="n">{{.Totals.Considered}}</span><span class="l">considered</span></div>
+  <div class="stat"><span class="n">{{.Totals.Pass}}</span><span class="l">pass</span></div>
+  <div class="stat"><span class="n">{{.Totals.Fail}}</span><span class="l">fail</span></div>
+  {{if .Totals.Inconclusive}}<div class="stat"><span class="n">{{.Totals.Inconclusive}}</span><span class="l">undecided</span></div>{{end}}
+  {{if .Totals.NotConsidered}}<div class="stat"><span class="n">{{.Totals.NotConsidered}}</span><span class="l">not considered</span></div>{{end}}
+  {{if .Totals.NoLimit}}<div class="stat"><span class="n">{{.Totals.NoLimit}}</span><span class="l">no limit</span></div>{{end}}
+</div>
+
+<p class="note">
+  {{.Totals.RulesReporting}} rule(s) reported what they looked at.
+  {{if .Totals.RulesFindingsOnly}}
+  {{.Totals.RulesFindingsOnly}} reported violations only, so silence from those is not evidence of anything.
+  {{end}}
+</p>
+
+{{if .LinksWithheld}}
+<div class="links-withheld">
+  Subjects on this page are not linked to the viewer. {{.LinksWithheld}}
+</div>
+{{end}}
+
+{{range .PinMaps}}
+<section class="pin-map">
+<h2>Pins on {{.Device}}</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>outcome</th><th>pin</th><th>function</th><th>declared net</th><th>netlist net</th><th>far end</th><th>route</th><th>checks</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td class="o {{outcomeClass .Outcome}}">{{outcomeLabel .Outcome}}</td>
+      <td class="subject">{{.Pin}}</td>
+      <td>{{.Function}}</td>
+      <td>{{.Net}}</td>
+      <td>{{if .WiredNet}}{{.WiredNet}}{{else}}(none){{end}}</td>
+      <td>{{.FarEnd}}</td>
+      <td>{{.Route}}</td>
+      <td class="terms">pin {{checkWord .PinCheck}} · net {{checkWord .NetCheck}} · far end {{checkWord .FarEndCheck}} · function {{checkWord .FunctionCheck}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+</section>
+{{end}}
+
+{{range .Rules}}
+<details {{if .Failed}}open{{end}}>
+  <summary>
+    <span class="rule">{{.Name}}</span>
+    <span class="rule-summary">{{.Summary}}</span>
+    {{if count .Counts fail}}<span class="pill fail">{{count .Counts fail}} fail</span>{{end}}
+    {{if count .Counts pass}}<span class="pill pass">{{count .Counts pass}} pass</span>{{end}}
+    {{if not .StatesConsideredSet}}<span class="pill">findings only</span>{{end}}
+  </summary>
+  <div class="body">
+    <div class="prose">
+      {{if .Impact}}<div class="impact">{{.Impact}}</div>{{end}}
+      {{if and .Remedy .Failed}}<div class="remedy">{{.Remedy}}</div>{{end}}
+    </div>
+
+    {{if not .StatesConsideredSet}}
+    <div class="findings-only">
+      This rule reports violations without stating what it examined, so the rows below are what it
+      found and not what it checked. Absence here is not evidence of correctness.
+    </div>
+    {{end}}
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>outcome</th><th>subject</th><th>what it rests on</th></tr></thead>
+      <tbody>
+      {{range .Rows}}
+        <tr>
+          <td class="o {{outcomeClass .Outcome}}">{{outcomeLabel .Outcome}}</td>
+          <td class="subject">
+            {{if .URL}}<a href="{{.URL}}" target="{{viewerTarget}}">{{subjectOf .}}</a>{{else}}{{subjectOf .}}{{end}}
+          </td>
+          <td>
+            {{.Detail}}
+            {{if .Terms}}<div class="terms">
+              {{range $i, $t := .Terms}}{{if $i}} · {{end}}{{$t.Label}}: {{$t.Value}}{{end}}
+            </div>{{end}}
+          </td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</details>
+{{end}}
+{{range .QuerySets}}{{with setview .}}
+<section class="query-set">
+<h2>Queries: {{.Title}}</h2>
+{{if .Preamble}}<p class="note">Shared rules:</p>
+<pre class="q">{{.Preamble}}</pre>{{end}}
+{{template "querysections" .Sections}}
+</section>
+{{end}}{{end}}
+</div>
+{{if .HasLinks}}<script>{{viewerScript}}</script>{{end}}
+</body>
+</html>

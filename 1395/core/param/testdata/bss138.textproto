@@ -1,0 +1,115 @@
+# Hand-encoded worked example for the parameter-IR (WS10-001): BSS138 N-channel
+# MOSFET (Fairchild sheet; Fairchild is now part of onsemi). Demonstrates the
+# canonical conditional parameter: RDS(on) specified three times under three
+# condition sets (VGS = 10 V, VGS = 4.5 V, and VGS = 10 V at TJ = 125C), each a
+# distinct row. The abs-max table header's "TA = 25C unless otherwise noted"
+# default is encoded as an explicit condition.
+mpn: "BSS138"
+manufacturer: "Fairchild Semiconductor"
+device_class: "nfet"
+
+docs {
+  id: "bss138-rev-cw"
+  title: "BSS138 Rev C(W), October 2005"
+  vendor: "Fairchild Semiconductor"
+  locator: "datasheets/onsemi/BSS138.pdf"
+}
+
+parameters {
+  name: "Drain-Source Voltage"
+  symbol: "VDSS"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 50 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C unless otherwise noted" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "bss138-rev-cw" page: 1 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Gate-Source Voltage"
+  symbol: "VGSS"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -20 max: 20 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C unless otherwise noted" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "printed_as" value: "+/-20" }
+  prov { doc_ref: "bss138-rev-cw" page: 1 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Drain Current - Continuous"
+  symbol: "ID"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 0.22 }
+  unit: "A"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C unless otherwise noted" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note 1: RthJA is defined with the drain solder pad as case reference" }
+  prov { doc_ref: "bss138-rev-cw" page: 1 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Operating and Storage Junction Temperature Range"
+  symbol: "TJ, TSTG"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -55 max: 150 }
+  unit: "C"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "bss138-rev-cw" page: 1 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Gate Threshold Voltage"
+  symbol: "VGS(th)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { min: 0.8 typ: 1.3 max: 1.5 }
+  unit: "V"
+  conditions { symbol: "VDS" raw: "VDS = VGS" }
+  conditions { symbol: "ID" eq: 1 unit: "mA" raw: "ID = 1 mA" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "bss138-rev-cw" page: 2 table_or_figure: "Electrical Characteristics - On Characteristics" method: "hand" confidence: 1 }
+}
+
+# The three RDS(on) rows. Source note 2 applies to the On Characteristics section:
+# pulse test, pulse width <= 300 us, duty cycle <= 2.0%.
+parameters {
+  name: "Static Drain-Source On-Resistance"
+  symbol: "RDS(on)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 0.7 max: 3.5 }
+  unit: "Ohm"
+  conditions { symbol: "VGS" eq: 10 unit: "V" raw: "VGS = 10 V" }
+  conditions { symbol: "ID" eq: 0.22 unit: "A" raw: "ID = 0.22 A" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note 2: pulse test, PW <= 300 us, duty <= 2.0%" }
+  prov { doc_ref: "bss138-rev-cw" page: 2 table_or_figure: "Electrical Characteristics - On Characteristics" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Static Drain-Source On-Resistance"
+  symbol: "RDS(on)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 1.0 max: 6.0 }
+  unit: "Ohm"
+  conditions { symbol: "VGS" eq: 4.5 unit: "V" raw: "VGS = 4.5 V" }
+  conditions { symbol: "ID" eq: 0.22 unit: "A" raw: "ID = 0.22 A" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note 2: pulse test, PW <= 300 us, duty <= 2.0%" }
+  prov { doc_ref: "bss138-rev-cw" page: 2 table_or_figure: "Electrical Characteristics - On Characteristics" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Static Drain-Source On-Resistance"
+  symbol: "RDS(on)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 1.1 max: 5.8 }
+  unit: "Ohm"
+  conditions { symbol: "VGS" eq: 10 unit: "V" raw: "VGS = 10 V" }
+  conditions { symbol: "ID" eq: 0.22 unit: "A" raw: "ID = 0.22 A" }
+  conditions { symbol: "TJ" eq: 125 unit: "C" raw: "TJ = 125C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note 2: pulse test, PW <= 300 us, duty <= 2.0%" }
+  prov { doc_ref: "bss138-rev-cw" page: 2 table_or_figure: "Electrical Characteristics - On Characteristics" method: "hand" confidence: 1 }
+}

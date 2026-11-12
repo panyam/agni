@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// This file holds the wire shapes of `agni validate` (WS6-007). No service serves them yet. A
+// Validate RPC will serve them once the viewer wants a validation panel (see OUT_OF_SCOPE.md).
+
+// ValidateReport is the canonical wire form of `agni validate` (WS6-007). It holds per-file
+// reader-health results over a corpus sweep. Like CheckReport, it is a wire shape rather than
+// a CLI-side pivot, so `validate --format json`, a future RPC and any tooling parse one
+// message. A file's format is the registry label. An empty format means no reader claims the
+// extension. Such a file is reported when it was named explicitly and skipped in a dir walk.
+message ValidateReport {
+  repeated FileValidation files = 1;
+  int32 passed = 2;
+  int32 failed = 3;
+  int32 skipped = 4; // dir-walk entries with no reader (never counted as failures)
+}
+
+// FileValidation is one file's reader-health result. A counts message is present only when
+// the format has that tier. A netlist-only format has no geometry counts, and a drawing-only
+// format has no netlist counts. problems lists the failed invariants in human-readable form,
+// and it is empty when ok.
+message FileValidation {
+  string path = 1;
+  string format = 2;
+  bool ok = 3;
+  repeated string problems = 4;
+  NetlistCounts netlist = 5;
+  GeometryCounts geometry = 6;
+}
+
+// NetlistCounts is a structural summary of the netlist tier. validate reports one per file.
+message NetlistCounts {
+  int32 components = 1;
+  int32 nets = 2;
+}
+
+// GeometryCounts is a structural summary of the drawing tier. validate reports one per file.
+// resolved counts the placements whose (cell_ref, library_ref) joins a symbol definition.
+message GeometryCounts {
+  int32 sheets = 1;
+  int32 symbols = 2;
+  int32 placements = 3;
+  int32 wires = 4;
+  int32 resolved = 5;
+}

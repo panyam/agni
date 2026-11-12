@@ -1,0 +1,17 @@
+(edif DIRECTIONS
+  (edifVersion 2 0 0)
+  (design DIRECTIONS (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell DRV (view V (viewType NETLIST)
+      (interface (port O (direction OUTPUT) (designator "1")))))
+    (cell RCV (view V (viewType NETLIST)
+      (interface (port I (direction INPUT) (designator "1")))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef DRV)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef DRV)) (designator "U2"))
+          (instance U3 (viewRef V (cellRef RCV)) (designator "U3"))
+          (instance U4 (viewRef V (cellRef RCV)) (designator "U4"))
+          (net FIGHT (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U2))))
+          (net FLOAT (joined (portRef 1 (instanceRef U3)) (portRef 1 (instanceRef U4)))))))))

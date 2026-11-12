@@ -1,0 +1,1983 @@
+import { emptyLocation } from "./router.js";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { TextPositionSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { describe, it, expect, vi } from "vitest";
+import { artifactUri } from "@agni/web-shared/uri.js";
+import { ViewerPresenter, type RenderView } from "./viewer.js";
+import { stubQueryView } from "./testviews.js";
+import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
+import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import type { Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
+
+// Fakes for the presenter's collaborators. The presenter only calls typed methods, so plain
+// stubs suffice, with no DOM and no transport. getSheet returns the oneof-shaped response the real
+// client would, keyed on the requested format.
+function harness() {
+  // getDesign echoes the requested layout (empty -> faithful) so the presenter's adopted
+  // layout reflects the request, as the real server's effective-layout does.
+  // undrawn is OPTIONAL here as it is on the wire, so a response that omits it means a complete
+  // drawing, and every existing override in this file predates the field (agni issue 354).
+  type DesignReply = {
+    name: string;
+    layout: string;
+    sourceFormat: string;
+    componentCount: number;
+    netCount: number;
+    sheets: { id: string; name: string }[];
+    nativeAvailable: boolean;
+    availableLayouts: string[];
+    undrawn?: { refDes: string; cellRef: string; libraryRef: string; sheetId: string }[];
+    // Optional for the same reason undrawn is, and its absence is MEANINGFUL. A server that did not
+    // hash sends nothing. That absence means the link is unverifiable, not that it agrees (agni
+    // issue 392).
+    contentHash?: string;
+    // Optional like undrawn: absent means the read left nothing out, and a server that predates the
+    // field sends nothing (agni issue 717).
+    hierarchyNote?: string;
+    drawingNote?: string;
+  };
+  const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
+    name: "D",
+    layout: req.layout || "faithful",
+    sourceFormat: "",
+    componentCount: 0,
+    netCount: 0,
+    sheets: [{ id: "s1", name: "S1" }],
+    nativeAvailable: true,
+    availableLayouts: ["faithful", "grid", "layered"],
+  }));
+  const getSheet = vi.fn(async (req: { mount?: string; path?: string; sheet?: string; format?: SheetFormat; layout?: string; symbols?: SymbolSource }) =>
+    req.format === SheetFormat.SVG || req.format === SheetFormat.NATIVE
+      ? { content: { case: "svg", value: "<svg data-mode='svg'/>" } }
+      : { content: { case: "packed", value: { sheetId: "s1" } } },
+  );
+  const checkDesign = vi.fn(async (_req: { snapshot: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[]; inconclusive?: boolean }[] }));
+  // listRules returns a small two-rule catalog by default (one connectivity, one naming), both
+  // available, so opening a file default-selects both. Tests that need a specific catalog override.
+  const listRules = vi.fn(async (_req: { snapshot: string }) => ({
+    rules: [
+      { name: "single-pin-net", severity: "info", summary: "stub net", reads: ["net.pin_count"], tags: { category: "connectivity" }, available: true, unavailableReason: "" },
+      { name: "diff-pair-naming", severity: "warning", summary: "diff pair", reads: ["net.names"], tags: { category: "naming" }, available: true, unavailableReason: "" },
+    ] as { name: string; severity: string; summary: string; reads: string[]; tags: Record<string, string>; available: boolean; unavailableReason: string }[],
+  }));
+  const getLayoutReport = vi.fn(async (req: { symbols?: SymbolSource }) => ({
+    report: { components: [{ refDes: "R1", deviceClass: "resistor", kind: "glyph" }] },
+  }));
+  // highlightSheet returns a canned SVG overlay; the presenter only fetches it in SVG mode.
+  const highlightSheet = vi.fn(async (_req: object) => ({ content: { case: "svg", value: "<svg data-overlay/>" } }));
+  // getExpectations returns no sidecar by default, so opening a file leaves the panel empty; tests
+  // that exercise the expectations panel override it.
+  const getExpectations = vi.fn(async (_req: { snapshot: string }) => ({
+    expectations: [] as { rule: string; subjects: string[]; pending: boolean }[],
+    hasSidecar: false,
+  }));
+  // Two mock clients mirror the WS9-026 service split, with rendering RPCs on the design client,
+  // rules/findings/expectations on the checks client.
+  const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
+  // readBoard answers like an engine that persisted the board; the open never waits on it.
+  const fake = fakeSnapshots();
+  const readBoard = vi.fn(fake.readBoard);
+  const snaps = { ...fake, readBoard };
+  const checks = { checkDesign, listRules, getExpectations } as any;
+  const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
+  // These tests assert on a few ports, and these are spies for them. Every other port defaults to
+  // a no-op in stubQueryView. So adding a method to QueryView takes one edit there, and a test that
+  // never mentions the method does not fail at runtime. The spies are held separately so they keep
+  // their Mock type.
+  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn(), setQuerySets: vi.fn(), setQuery: vi.fn(), openSet: vi.fn() };
+  // runQuery answers every query with one row naming the query it was asked, so a test can tell
+  // which answer went where.
+  const runQuery = vi.fn(async (req: { query: string }) => ({ columns: ["q"], columnKinds: [""], rows: [{ cells: [req.query] }], total: 0 }));
+  // A set's first query gets an answer and its second gets none. RunQueries reports a partial set
+  // in this shape.
+  const runQueries = vi.fn(async (req: { set: { queries: { name: string; query: string }[] } }) => ({
+    results: [
+      { name: req.set.queries[0].name, result: { columns: ["q"], columnKinds: [""], rows: [{ cells: [req.set.queries[0].query] }], total: 0 } },
+      { name: req.set.queries[1].name, error: "unknown relation" },
+    ],
+  }));
+  // listRelations describes one place in the namespace, as the relation picker asks (agni issue 774).
+  const listRelations = vi.fn(async (req: { snapshot: string; path: string }) => ({
+    entry: { path: req.path, entryKind: "module", signature: "", doc: "", detail: "", module: "", definition: [], inferred: [], args: [], members: [] },
+  }));
+  const listQuerySets = vi.fn(async (_req: { snapshot: string }) => ({
+    project: "projects/p",
+    querySets: [{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }],
+  }));
+  // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
+  const navA = { setState: vi.fn() };
+  const navB = { setState: vi.fn() };
+  // getView returns a distinct value per mode so save/restore can be asserted by identity.
+  const render: RenderView = {
+    showWebgl: vi.fn(),
+    showSvg: vi.fn(),
+    setSvgOverlay: vi.fn(),
+    setBusy: vi.fn(),
+    getView: vi.fn((mode) => `view-${mode}`),
+    setView: vi.fn(),
+    setBoardLayers: vi.fn(),
+  };
+  const onControls = vi.fn();
+  const onSummary = vi.fn();
+  const onFindings = vi.fn();
+  const onExpectCaption = vi.fn();
+  const onUndrawnNote = vi.fn();
+  const onStaleLinkNote = vi.fn();
+  const onHierarchyNote = vi.fn();
+  const onDrawingNote = vi.fn();
+  const onRules = vi.fn();
+  const onReport = vi.fn();
+  const onLocation = vi.fn();
+  const onOverview = vi.fn();
+  const onCompare = vi.fn();
+  const onShowPanel = vi.fn();
+  const presenter = new ViewerPresenter(client, checks, canvas, render, {
+    sheetNavs: [navA, navB],
+    summary: onSummary,
+    controls: { setState: onControls },
+    findings: { setState: onFindings, setFindingLocateNote: () => {} },
+    expectationCaption: onExpectCaption,
+    undrawnNote: onUndrawnNote,
+    staleLinkNote: onStaleLinkNote,
+    hierarchyNote: onHierarchyNote,
+    drawingNote: onDrawingNote,
+    rules: { setState: onRules },
+    report: onReport,
+    location: onLocation,
+    compare: onCompare,
+    showPanel: onShowPanel,
+    overview: { setState: onOverview },
+    query: stubQueryView(query),
+    // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
+    // port being present changes nothing else.
+    conventionBar: { setState: vi.fn() },
+  }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel };
+}
+
+// openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
+// user opens a design and presses Run. Checks no longer fire on open (WS9), so a test asserting on
+// findings/highlights/expectations must run them explicitly.
+async function openAndCheck(h: ReturnType<typeof harness>, mount: string, path: string, wantSheet = "") {
+  await h.presenter.openFile(mount, path, wantSheet);
+  await h.presenter.runChecks();
+}
+
+// deferred hands out a promise and its resolver, so a test can hold a call open while it acts.
+function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+// lastReport returns the argument of the most recent onReport push.
+function lastReport(h: ReturnType<typeof harness>) {
+  const calls = h.onReport.mock.calls;
+  return calls[calls.length - 1]?.[0];
+}
+
+// lastControls returns the ControlsState from the most recent onControls push.
+function lastControls(h: ReturnType<typeof harness>) {
+  const calls = h.onControls.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+// lastLocation returns the ViewerLocation from the most recent onLocation push.
+function lastLocation(h: ReturnType<typeof harness>) {
+  const calls = h.onLocation.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+// lastFindings returns the FindingsState from the most recent onFindings push.
+function lastFindings(h: ReturnType<typeof harness>) {
+  const calls = h.onFindings.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+// lastSpecs returns the HighlightSpec[] from the most recent canvas.setHighlights call. That array
+// is the presenter's real output for a highlight, and both renderers draw from it.
+function lastSpecs(h: ReturnType<typeof harness>) {
+  const calls = h.canvas.setHighlights.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+// lastRules returns the RulesState from the most recent onRules push.
+function lastRules(h: ReturnType<typeof harness>) {
+  const calls = h.onRules.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+describe("ViewerPresenter", () => {
+  it("opens a file in the default SVG mode: requests SVG and shows the svg", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    expect(h.getDesign).toHaveBeenCalledOnce();
+    expect(h.getSheet).toHaveBeenCalledOnce();
+    expect(h.getSheet.mock.calls[0][0].format).toBe(SheetFormat.SVG);
+    expect(h.render.showSvg).toHaveBeenCalledWith("<svg data-mode='svg'/>");
+    // Sheet state fans out to BOTH nav surfaces (tabs + tree), in sync, with the active sheet.
+    for (const nav of [h.navA, h.navB]) {
+      const last = nav.setState.mock.calls[nav.setState.mock.calls.length - 1][0];
+      expect(last).toMatchObject({ mount: "m", path: "board.eds", activeId: "s1" });
+      expect(last.sheets).toHaveLength(1);
+    }
+  });
+
+  it("switching to WebGL re-renders via GetSheet(format=PACKED) and reveals the canvas", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    await h.presenter.setMode("webgl");
+    const c = h.getSheet.mock.calls;
+    expect(c[c.length - 1][0].format).toBe(SheetFormat.PACKED);
+    expect(h.canvas.showSheet).toHaveBeenCalled();
+    expect(h.render.showWebgl).toHaveBeenCalled();
+  });
+
+  it("switching to Native mode requests format=NATIVE", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    await h.presenter.setMode("native");
+    const c = h.getSheet.mock.calls;
+    expect(c[c.length - 1][0].format).toBe(SheetFormat.NATIVE);
+  });
+
+  it("setMode to the current mode is a no-op", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    h.getSheet.mockClear();
+    await h.presenter.setMode("svg");
+    expect(h.getSheet).not.toHaveBeenCalled();
+  });
+
+  it("defaults to FAITHFUL symbols when the design provides its own", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    expect(h.getSheet.mock.calls[0][0].symbols).toBe(SymbolSource.FAITHFUL);
+  });
+
+  it("keeps GLYPH symbols for a netlist-only design (no faithful layout)", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValueOnce({
+      name: "N", layout: "grid", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid", "layered"],
+    });
+    await h.presenter.openFile("m", "netlist.edn");
+    expect(h.getSheet.mock.calls[0][0].symbols).toBe(SymbolSource.GLYPH);
+  });
+
+  it("toggling the symbol source off re-requests the sheet with SymbolSource.GLYPH", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // defaults to faithful
+    await h.presenter.setLayout("grid");
+    h.getSheet.mockClear();
+    await h.presenter.setSymbols(false);
+    const c = h.getSheet.mock.calls;
+    expect(c[c.length - 1][0].symbols).toBe(SymbolSource.GLYPH);
+  });
+
+  it("setSymbols to the current value is a no-op", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // default faithful
+    h.getSheet.mockClear();
+    await h.presenter.setSymbols(true); // already faithful
+    expect(h.getSheet).not.toHaveBeenCalled();
+  });
+
+  it("fetches the conversion report for an auto-layout and clears it for the faithful layout", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // opens in faithful -> no report
+    expect(lastReport(h)).toBeNull();
+    expect(h.getLayoutReport).not.toHaveBeenCalled();
+
+    await h.presenter.setLayout("grid"); // auto-layout -> report fetched
+    expect(h.getLayoutReport).toHaveBeenCalled();
+    expect(lastReport(h)?.components?.[0]?.refDes).toBe("R1");
+  });
+
+  it("re-fetches the report with the symbol source when the toggle flips", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // defaults to faithful
+    await h.presenter.setLayout("grid");
+    h.getLayoutReport.mockClear();
+    await h.presenter.setSymbols(false);
+    const c = h.getLayoutReport.mock.calls;
+    expect(c[c.length - 1][0].symbols).toBe(SymbolSource.GLYPH);
+  });
+
+  it("falls back to WebGL when opening a file whose format has no native render", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.kicad_sch");
+    await h.presenter.setMode("native");
+    h.getSheet.mockClear();
+    h.getDesign.mockResolvedValueOnce({
+      name: "B",
+      layout: "grid",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }],
+      nativeAvailable: false,
+    } as any);
+    await h.presenter.openFile("m", "b.edn");
+    const c = h.getSheet.mock.calls;
+    expect(c[c.length - 1][0].format).toBe(SheetFormat.SVG); // fell back to SVG, not NATIVE
+    expect(lastControls(h).nativeAvailable).toBe(false);
+  });
+
+  it("remembers each renderer's view and restores it on return", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // shown: svg|m|board.eds|s1
+    await h.presenter.setMode("webgl"); // saves the svg view; webgl has no memory yet -> no restore
+    (h.render.setView as any).mockClear();
+    await h.presenter.setMode("svg"); // saves the webgl view; svg has a remembered view -> restore it
+    expect(h.render.setView).toHaveBeenCalledWith("svg", "view-svg");
+  });
+
+  it("does not restore a view on first visit (lets the fresh fit stand)", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    expect(h.render.setView).not.toHaveBeenCalled();
+  });
+
+  it("falls back to SVG when the native render fails", async () => {
+    const h = harness();
+    // NATIVE rejects (external tool failure); SVG succeeds.
+    h.getSheet.mockImplementation(async (req: { format?: SheetFormat }) => {
+      if (req.format === SheetFormat.NATIVE) throw new Error("kicad-cli failed");
+      if (req.format === SheetFormat.SVG) return { content: { case: "svg", value: "<svg fallback/>" } };
+      return { content: { case: "packed", value: { sheetId: "s1" } } };
+    });
+    await h.presenter.openFile("m", "board.kicad_sch");
+    await h.presenter.setMode("native");
+    expect(h.render.showSvg).toHaveBeenCalledWith("<svg fallback/>");
+    const formats = h.getSheet.mock.calls.map((c: [{ format?: SheetFormat }]) => c[0].format);
+    expect(formats).toContain(SheetFormat.NATIVE); // it tried native first
+    expect(h.onSummary.mock.calls.some((c: string[]) => String(c[0]).includes("native unavailable"))).toBe(true);
+  });
+
+  it("toggles the loading indicator and reports native availability", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    // Busy went on then off, and ended off (balanced nesting).
+    const calls = (h.render.setBusy as any).mock.calls.map((c: [boolean]) => c[0]);
+    expect(calls[0]).toBe(true);
+    expect(calls[calls.length - 1]).toBe(false);
+    expect(lastControls(h).nativeAvailable).toBe(true);
+  });
+
+  it("switching designs drops the sticky layout and adopts the new design's default", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.eds"); // faithful
+    await h.presenter.setLayout("grid");
+    h.getDesign.mockClear();
+    await h.presenter.openFile("m", "b.eds");
+    // The new design is requested with no layout, so the server's effective default
+    // (faithful, per the fake's empty->faithful echo) wins over the previous grid choice.
+    expect(h.getDesign.mock.calls[0][0].layout).toBe("");
+    const shown = h.getSheet.mock.calls;
+    expect(shown[shown.length - 1][0].layout).toBe("faithful");
+  });
+
+  it("re-opening the same design keeps the chosen layout", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.eds");
+    await h.presenter.setLayout("grid");
+    h.getDesign.mockClear();
+    await h.presenter.openFile("m", "a.eds");
+    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+  });
+
+  it("changing layout re-opens the design and threads the layout through GetDesign and GetSheet", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn"); // opens at faithful
+    h.getDesign.mockClear();
+    h.getSheet.mockClear();
+    await h.presenter.setLayout("grid");
+    expect(h.getDesign).toHaveBeenCalledOnce();
+    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+    const gs = h.getSheet.mock.calls;
+    expect(gs[gs.length - 1][0].layout).toBe("grid"); // sheet render uses the new layout
+  });
+
+  it("setLayout to the current layout is a no-op", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn"); // faithful
+    h.getDesign.mockClear();
+    await h.presenter.setLayout("faithful");
+    expect(h.getDesign).not.toHaveBeenCalled();
+  });
+
+  it("reports the URL-addressable location on open and on sheet/mode/layout change", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    expect(lastLocation(h)).toMatchObject({ mount: "m", path: "board.eds", sheet: "s1", mode: "svg", layout: "faithful" });
+    await h.presenter.setMode("webgl");
+    expect(lastLocation(h).mode).toBe("webgl");
+    await h.presenter.setLayout("grid");
+    expect(lastLocation(h).layout).toBe("grid");
+  });
+
+  it("restore opens the named file at the requested sheet and adopts the URL's mode/layout/symbols", async () => {
+    const h = harness();
+    // A two-sheet design so restoring a non-first sheet is observable.
+    h.getDesign.mockResolvedValueOnce({
+      name: "D",
+      layout: "grid",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }],
+      nativeAvailable: true,
+      availableLayouts: ["faithful", "grid"],
+    } as any);
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false });
+    // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
+    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+    const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
+    expect(gs).toMatchObject({ sheet: "s2", format: SheetFormat.PACKED, layout: "grid", symbols: SymbolSource.FAITHFUL });
+    // Both nav surfaces mark the restored (non-first) sheet active.
+    for (const nav of [h.navA, h.navB]) {
+      const last = nav.setState.mock.calls[nav.setState.mock.calls.length - 1][0];
+      expect(last.activeId).toBe("s2");
+    }
+  });
+
+  // A diff link names the design to compare against (agni issue 1126), and restoring it hands that
+  // design to the host's Compare once the open design has loaded, so side A is set when it starts.
+  it("starts a comparison against the design a link names, after the design opens", async () => {
+    const h = harness();
+    h.onCompare.mockImplementation(() => expect(h.getDesign).toHaveBeenCalled());
+    await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn" });
+    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" }, { nearRenames: false });
+  });
+
+  // A link from a diff that paired near-renames asks the comparison to pair them too.
+  it("asks the comparison to pair near-renames when the link says the diff did", async () => {
+    const h = harness();
+    await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn", renameApprox: true });
+    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" }, { nearRenames: true });
+  });
+
+  // The picker refuses the open design as side B, and so does a link, and a link naming no file in a
+  // mount starts nothing.
+  it("starts no comparison against the open design itself or against nothing", async () => {
+    for (const against of ["m/d/board.edn", "m", "m/", "/d/board.edn", ""]) {
+      const h = harness();
+      await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against });
+      expect(h.onCompare, against).not.toHaveBeenCalled();
+    }
+  });
+
+  // A followed link asks about ONE verdict, and answering it used to cost the whole catalog. A cold
+  // page load has an empty cache. So restore ran every selected rule before it could resolve
+  // anything, and the selection defaults to every available rule. On a real board that was 56 rules
+  // and about fifteen seconds. Every click cost that again, because each click is a fresh page load.
+  describe("a verdict link runs only the rule it names", () => {
+    function linkLoc(rule: string, subjects: string[] = []) {
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
+    }
+    // The rules the run actually asked the server for, flattened across calls.
+    function asked(h: ReturnType<typeof harness>): string[] {
+      return h.checkDesign.mock.calls.flatMap((c) => (c[0] as { rules?: string[] }).rules ?? []);
+    }
+
+    it("asks for the named rule alone", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net"));
+      expect(asked(h)).toEqual(["single-pin-net"]);
+    });
+
+    it("falls back to the whole catalog when the link names no rule", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc(""));
+      expect(asked(h)).toEqual(expect.arrayContaining(["single-pin-net", "diff-pair-naming"]));
+    });
+
+    // A rule this catalog does not have cannot be run, and scoping to it would resolve nothing and
+    // report a working link as stale. The full run is the fallback.
+    it("falls back when the named rule is not in the catalog", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("a-rule-from-a-later-release"));
+      expect(asked(h)).toEqual(expect.arrayContaining(["single-pin-net", "diff-pair-naming"]));
+    });
+
+    // agni issue 897: a link that names its verdict's subjects asks the rule about them alone, and the
+    // answer resolves the verdict without counting as the rule's run.
+    it("asks the named rule about the link's subjects alone, resolves the verdict and leaves the rule pending", async () => {
+      const h = harness();
+      h.checkDesign.mockImplementation(async (req) =>
+        ((req as { subjects?: unknown[] }).subjects?.length
+          ? { findings: [], verdicts: [{ id: "single-pin-net:(net:VBUS)", rule: "single-pin-net", outcome: 2, subjects: [{ kind: "net", ref: "VBUS" }], witness: { statement: "one pin" } }] }
+          : { findings: [] }) as never,
+      );
+      await h.presenter.restore(linkLoc("single-pin-net", ["net:VBUS"]));
+      expect(h.checkDesign).toHaveBeenCalledOnce();
+      expect(h.checkDesign.mock.calls[0][0]).toMatchObject({ rules: ["single-pin-net"], subjects: [{ kind: "net", ref: "VBUS", pin: "" }] });
+      expect(h.presenter.verdictList()).toEqual([]); // the run holds no rule, so the panel shows it pending
+      expect(lastFindings(h).verdicts).toHaveLength(1); // scoped row still appears for the link
+      expect(lastFindings(h).pending).toBe(2);
+      // The address the focused verdict writes back names its subjects too.
+      expect(h.onLocation).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: "single-pin-net:(net:VBUS)", rule: "single-pin-net", subjects: ["net:VBUS"] }));
+    });
+
+    // agni issue 897: a rule the design cannot run at all is the Checks panel's to report, so a
+    // selection's answer names only the rules the scope left out.
+    it("names, of the rules a selection's answer skipped, only those its scope left out", async () => {
+      const h = harness();
+      h.listRules.mockResolvedValueOnce({
+        rules: [
+          { name: "single-pin-net", severity: "error", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+          { name: "symbol-unresolved", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+          { name: "wire-no-junction", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        ],
+      });
+      await h.presenter.openFile("m", "board.eds");
+      h.presenter.setRuleSelection(["single-pin-net", "symbol-unresolved", "wire-no-junction"]);
+      h.checkDesign.mockResolvedValueOnce({
+        findings: [],
+        verdicts: [],
+        skipped: [
+          { name: "symbol-unresolved", reason: "concludes about the design as a whole", designWide: true },
+          { name: "wire-no-junction", reason: "no wires", designWide: false },
+        ],
+      } as never);
+      const r = await h.presenter.checkSelection({ kind: "net", ref: "VBUS", pin: "" });
+      expect(r?.notAsked).toEqual([{ name: "symbol-unresolved", reason: "concludes about the design as a whole" }]);
+      expect(h.checkDesign).toHaveBeenLastCalledWith(expect.objectContaining({ subjects: [{ kind: "net", ref: "VBUS", pin: "" }] }));
+    });
+
+    it("runs the whole rule when the scoped answer lacks the verdict", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net", ["net:VBUS"]));
+      const calls = h.checkDesign.mock.calls.map((c) => c[0] as { rules?: string[]; subjects?: unknown[] });
+      expect(calls.map((c) => [c.rules, (c.subjects ?? []).length])).toEqual([[["single-pin-net"], 1], [["single-pin-net"], 0]]);
+    });
+
+    // The scoped run must not shrink the ruleset the Run button would use afterwards.
+    it("leaves the full selection in place for the next run", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net"));
+      h.checkDesign.mockClear();
+      await h.presenter.runChecks();
+      expect(asked(h)).toEqual(expect.arrayContaining(["diff-pair-naming"]));
+    });
+  });
+
+  // These tests guard the revision on the hop from the CLI to the viewer (agni issue 392). `agni
+  // check --url-base` mints a link carrying the revision it ran against. A verdict id is derived from
+  // a rule name and a subject ref, so it resolves against an EDITED design just as readily. It then
+  // draws its proof on whatever now answers to that ref. Nothing else on screen can tell the reader
+  // that happened.
+  describe("stale verdict links", () => {
+    // A location naming a verdict and the revision it was computed against.
+    function linkLoc(hash: string) {
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
+    }
+    function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
+      h.getDesign.mockResolvedValue({
+        name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+        sheets: [{ id: "s1", name: "S1" }], nativeAvailable: true, availableLayouts: ["faithful"],
+        contentHash,
+      });
+    }
+    function lastNote(h: ReturnType<typeof harness>) {
+      const calls = h.onStaleLinkNote.mock.calls;
+      return calls[calls.length - 1]?.[0];
+    }
+
+    it("says nothing when the link's revision is the one the server read", async () => {
+      const h = harness();
+      servedHash(h, "sha256:aaa");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toBeNull();
+    });
+
+    it("reports a mismatch when the server read different bytes", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toMatchObject({ trust: "mismatch" });
+    });
+
+    // This is the third state. A server that could not hash has not agreed with the link. The hash
+    // exists to break the silence about an edited design, and reporting nothing here would bring
+    // that silence back.
+    it("reports an unverifiable link when the server sent no hash", async () => {
+      const h = harness();
+      servedHash(h, undefined);
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toMatchObject({ trust: "unverifiable" });
+    });
+
+    it("says nothing when the link named no revision", async () => {
+      const h = harness();
+      servedHash(h, "sha256:aaa");
+      await h.presenter.restore(linkLoc(""));
+      expect(lastNote(h)).toBeNull();
+    });
+
+    // A warning that arrives with the drawing it warns about is not a warning. The reader must be
+    // told before the checks run and the proof paints, not at the same moment.
+    it("warns before running the checks that draw the proof", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      const warned = h.onStaleLinkNote.mock.invocationCallOrder;
+      const checked = h.checkDesign.mock.invocationCallOrder;
+      expect(checked.length).toBeGreaterThan(0);
+      expect(Math.max(...warned)).toBeLessThan(Math.min(...checked));
+    });
+
+    // The claim is about the bytes behind the OLD path. Carrying it to another design would compare
+    // two unrelated files and report a mismatch that means nothing.
+    it("retires the claim when a different design is opened", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).not.toBeNull();
+      await h.presenter.openFile("m", "other.eds");
+      expect(lastNote(h)).toBeNull();
+      expect(lastLocation(h).hash).toBe("");
+    });
+  });
+
+  it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
+    const h = harness(); // default design has only s1
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false });
+    expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
+  });
+
+  it("entering Native snaps the layout to faithful", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setLayout("grid"); // now on a non-faithful layout
+    await h.presenter.setMode("native");
+    const last = lastControls(h);
+    expect(last.mode).toBe("native");
+    const opened = h.getDesign.mock.calls;
+    expect(opened[opened.length - 1][0].layout).toBe("faithful"); // native forced the layout back to faithful
+  });
+
+  it("running checks runs the default selection and pushes the findings", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    // The active ruleset is the default (both catalog rules), run in one call by the Run button.
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
+    const last = lastFindings(h);
+    expect(last.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
+    expect(last.selected).toBe("");
+    expect(last.ruleCount).toBe(2);
+  });
+
+  // The query panel marks the badge pointing at the sheet on screen. That mark is only right if the
+  // presenter reports EVERY navigation, including those no result cell started. So this pins the
+  // wire rather than the mark. Navigating by any other route has to move it too.
+  it("tells the query panel which sheet is on screen, on every navigation", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch"); // opens on s1
+    expect(h.query.setCurrentSheet).toHaveBeenLastCalledWith("s1");
+
+    await h.presenter.showSheet("s2"); // the sheet tabs, not the query panel
+    expect(h.query.setCurrentSheet).toHaveBeenLastCalledWith("s2");
+  });
+
+  // The entity view is a PROJECTION of the pass, so the query panel has to receive the same state
+  // the checks panel does, from the same push. A separate call would be a second source of truth
+  // and would drift on the fields that make a zero readable.
+  it("hands the query panel the same findings state the checks panel gets", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub", sheets: [] }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    const queryCalls = h.query.setFindings.mock.calls;
+    const toQuery = queryCalls[queryCalls.length - 1][0];
+    const toChecks = lastFindings(h);
+    expect(toQuery).toEqual(toChecks);
+    expect(toQuery.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
+  });
+
+  // agni issue 74: the wire marks a finding the rule could not DECIDE, and the proto says a viewer
+  // should present it distinctly from a defect. The client dropped the field for its whole life, so
+  // every surface counted "could not decide" as "found a problem". This pins the carry.
+  it("carries a finding's inconclusive flag off the wire", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      // The rule names must be ones the harness SELECTS, since the presenter files findings into a
+      // per-rule cache keyed by the selected set and silently drops anything else.
+      findings: [
+        { rule: "single-pin-net", severity: "error", subject: { kind: "net", ref: "N1", pin: "" }, message: "defect", sheets: [] },
+        { rule: "diff-pair-naming", severity: "error", subject: { kind: "net", ref: "N2", pin: "" }, message: "undecided", sheets: [], inconclusive: true },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    const byRule = new Map(lastFindings(h).findings.map((f: { rule: string; inconclusive: boolean }) => [f.rule, f.inconclusive]));
+    expect(byRule.get("single-pin-net")).toBe(false);
+    expect(byRule.get("diff-pair-naming")).toBe(true);
+  });
+
+  it("maps finding sheets to named badges and navigates to the subject's sheet before highlighting (WS9-024)", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub", sheets: ["s2"] }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch"); // opens on s1
+    // The wire's sheet ids are denormalized to {id, name} badges for display.
+    expect(lastFindings(h).findings[0].sheets).toEqual([{ id: "s2", name: "Power" }]);
+
+    // Focusing the finding renders its sheet (s2) BEFORE applying the focused highlight.
+    await h.presenter.selectFinding("STUB");
+    const navIdx = h.getSheet.mock.calls.findIndex((c) => c[0].sheet === "s2");
+    expect(navIdx).toBeGreaterThanOrEqual(0);
+    const navOrder = h.getSheet.mock.invocationCallOrder[navIdx];
+    const hlOrders = h.canvas.setHighlights.mock.invocationCallOrder;
+    expect(navOrder).toBeLessThan(hlOrders[hlOrders.length - 1]);
+    // A net focus is a translucent PATH highlighter along its wire (WS9-040), and the focused
+    // net drops out of the base layer so the opaque underlay does not show through it. STUB is
+    // the only finding, so the base is empty and the stack is the highlighter alone.
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
+    // The nav surfaces now show s2 active.
+    const navCalls = h.navA.setState.mock.calls;
+    expect(navCalls[navCalls.length - 1][0].activeId).toBe("s2");
+  });
+
+  it("an explicit badge click navigates to that sheet even when the subject is already focused", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "i2c-pull-up", severity: "error", subject: { kind: "net", ref: "SDA", pin: "" }, message: "m", sheets: ["s1", "s2"] }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch");
+    await h.presenter.selectFinding("SDA"); // s1 is current and SDA is on it: no navigation
+    expect(h.getSheet.mock.calls.some((c) => c[0].sheet === "s2")).toBe(false);
+    await h.presenter.selectFinding("SDA", "s2"); // badge click: navigate, keep the focus
+    expect(h.getSheet.mock.calls.some((c) => c[0].sheet === "s2")).toBe(true);
+    expect(lastFindings(h).selected).toBe("SDA");
+  });
+
+  it("locateEntity navigates to a query cell's sheet then highlights the entity (WS9-038)", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    await h.presenter.openFile("m", "board.kicad_sch"); // opens on s1
+    h.canvas.setHighlights.mockClear();
+    await h.presenter.locateEntity("component", "R1", "s2");
+    // Navigates to s2 (the badge's sheet) and the last highlight frames R1 as a bounding rect.
+    expect(h.getSheet.mock.calls.some((c) => c[0].sheet === "s2")).toBe(true);
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([{ components: ["R1"], shape: HighlightShape.BOUNDING_RECT }]);
+  });
+
+  it("locateEntity highlights an entity on the current sheet with no navigation when no sheet is given", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    await h.presenter.openFile("m", "board.kicad_sch"); // s1 current
+    h.getSheet.mockClear();
+    await h.presenter.locateEntity("net", "SDA");
+    expect(h.getSheet).not.toHaveBeenCalled(); // no sheet argument -> stay put
+    // A located net is a translucent PATH highlighter along its wire (WS9-040).
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([{ nets: ["SDA"], shape: HighlightShape.PATH }]);
+  });
+
+  it("locateEntity explains an undrawn entity on a faithful layout, clears it for a drawn one (WS9-039)", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.kicad_sch"); // layout: faithful
+    // A server-set reason (an undrawn rail) surfaces as a note on the faithful layout.
+    await h.presenter.locateEntity("net", "GND", undefined, LocateReason.POWER_RAIL_NO_WIRE);
+    expect(h.query.setLocateNote).toHaveBeenLastCalledWith(expect.stringContaining("power rail"));
+    // A drawn entity (UNSPECIFIED) clears any prior note.
+    await h.presenter.locateEntity("component", "R1", undefined, LocateReason.UNSPECIFIED);
+    expect(h.query.setLocateNote).toHaveBeenLastCalledWith("");
+  });
+
+  it("locateEntity suppresses the locate note on an auto-layout, where every entity is drawn", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "grid",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }],
+      nativeAvailable: false,
+      availableLayouts: ["grid"],
+    });
+    await h.presenter.openFile("m", "board.edn"); // auto-layout: everything resolves
+    await h.presenter.locateEntity("net", "GND", undefined, LocateReason.POWER_RAIL_NO_WIRE);
+    expect(h.query.setLocateNote).toHaveBeenLastCalledWith(""); // no note on grid
+  });
+
+  it("suppresses sheet badges for a single-sheet design", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub", sheets: ["s1"] }],
+    });
+    await openAndCheck(h, "m", "board.edn"); // default harness design has one sheet
+    expect(lastFindings(h).findings[0].sheets).toEqual([]);
+  });
+
+  it("opening a file fetches the rule catalog and default-selects the available rules", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    expect(h.listRules).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) });
+    const rs = lastRules(h);
+    expect(rs.rules.map((r: { name: string }) => r.name)).toEqual(["single-pin-net", "diff-pair-naming"]);
+    expect(rs.selected).toEqual(["single-pin-net", "diff-pair-naming"]);
+  });
+
+  it("reconciles a design's expectation sidecar into a status-colored overlay + caption (WS9-045)", async () => {
+    const h = harness();
+    h.getExpectations.mockResolvedValueOnce({
+      expectations: [
+        { rule: "single-pin-net", subjects: ["STUB"], pending: false },
+        { rule: "net-naming-convention", subjects: ["BAD"], pending: true },
+      ],
+      hasSidecar: true,
+    });
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+
+    expect(h.getExpectations).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) }, { signal: expect.any(AbortSignal) });
+    // The caption holds the non-anchored verdict. It shows single-pin-net matched exactly and
+    // leaves the pending row out.
+    const capCalls = h.onExpectCaption.mock.calls;
+    expect(capCalls[capCalls.length - 1][0]).toMatchObject({ pass: true, expected: 1, matched: 1, unexpected: 0, silent: false });
+    // The overlay holds the anchored assertion, and it highlights matched subject STUB green.
+    type Spec = { color?: string; nets?: string[] };
+    const specs = h.canvas.setHighlights.mock.calls.flatMap((c: Spec[][]) => c[0]) as Spec[];
+    expect(specs.find((s) => s?.color === "#22c55e")?.nets).toEqual(["STUB"]);
+  });
+
+  it("a design with no sidecar shows no expectation caption (WS9-045)", async () => {
+    const h = harness(); // default getExpectations: hasSidecar=false
+    await h.presenter.openFile("m", "board.edn");
+    const capCalls = h.onExpectCaption.mock.calls;
+    expect(capCalls[capCalls.length - 1][0]).toBeNull();
+  });
+
+  it("an unavailable rule is not in the default selection", async () => {
+    const h = harness();
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "single-pin-net", severity: "info", summary: "s", reads: [], tags: { category: "connectivity" }, available: true, unavailableReason: "" },
+        { name: "cap-voltage", severity: "error", summary: "s", reads: ["param.max(mpn, v)"], tags: { category: "datasheet" }, available: false, unavailableReason: "needs datasheet layer" },
+      ],
+    });
+    await h.presenter.openFile("m", "board.edn");
+    expect(lastRules(h).selected).toEqual(["single-pin-net"]);
+  });
+
+  it("denormalizes the rule's profile tag onto its findings, for the by-interface group-by (WS9-041)", async () => {
+    const h = harness();
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "spi_nor-signal-missing", severity: "warning", summary: "s", reads: [], tags: { category: "connectivity", profile: "SPI_NOR" }, available: true, unavailableReason: "" },
+      ],
+    });
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "spi_nor-signal-missing", severity: "warning", subject: { kind: "net", ref: "SPI_CS", pin: "" }, message: "missing IO2" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    const f = lastFindings(h).findings.find((x: { rule: string }) => x.rule === "spi_nor-signal-missing");
+    expect(f?.profile).toBe("SPI_NOR");
+  });
+
+  it("caches findings per rule: a run does all, then unticking hides with no refetch", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    expect(lastFindings(h).findings.map((f: { subject: string }) => f.subject).sort()).toEqual(["STUB", "TXP"]);
+    h.checkDesign.mockClear();
+
+    // Both rules already ran, so unticking one refetches nothing; its finding is hidden.
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    expect(h.checkDesign).not.toHaveBeenCalled();
+    expect(lastFindings(h).findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
+    expect(lastRules(h).selected).toEqual(["single-pin-net"]);
+    // The deselected rule drops out of the fired counts (badges track the current selection).
+    expect(lastRules(h).fired["diff-pair-naming"]).toBeUndefined();
+    expect(lastRules(h).fired["single-pin-net"]).toBe(1);
+
+    // Re-ticking shows the cached finding again, still no refetch.
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]);
+    expect(h.checkDesign).not.toHaveBeenCalled();
+    expect(lastFindings(h).findings).toHaveLength(2);
+  });
+
+  // agni issue 390: the panel holds one run, and Run asks only for the selected rules it lacks, so a
+  // repeated Run asks nothing.
+  it("asks only for the rules the run lacks, and nothing on a repeated Run", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]);
+    expect(lastFindings(h).pending).toBe(1); // diff-pair-naming waits for a Run
+    h.checkDesign.mockClear();
+    await h.presenter.runChecks();
+    expect(h.checkDesign.mock.calls.map((c) => (c[0] as { rules?: string[] }).rules)).toEqual([["diff-pair-naming"]]);
+    expect(lastFindings(h).pending).toBe(0);
+    h.checkDesign.mockClear();
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+  });
+
+  it("folds a later run's answer into the one run, so both rules' findings show", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    h.checkDesign.mockResolvedValueOnce({ findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" }] });
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]);
+    h.checkDesign.mockResolvedValueOnce({ findings: [{ rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" }] });
+    await h.presenter.runChecks();
+    expect(lastFindings(h).findings.map((f: { subject: string }) => f.subject).sort()).toEqual(["STUB", "TXP"]);
+  });
+
+  it("keeps nothing of the last run after a convention change", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    expect(lastFindings(h).findings).toHaveLength(1);
+    await h.presenter.setConvention("");
+    expect(lastFindings(h).findings).toHaveLength(0);
+    expect(lastFindings(h).pending).toBe(lastFindings(h).ruleCount);
+  });
+
+  it("empty selection shows no rules selected and runs nothing", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockClear();
+    await h.presenter.setRuleSelection([]);
+    expect(h.checkDesign).not.toHaveBeenCalled();
+    const fs = lastFindings(h);
+    expect(fs.findings).toHaveLength(0);
+    expect(fs.ruleCount).toBe(0);
+  });
+
+  it("pushes per-rule fired counts to the rules panel (0 for a rule that ran clean)", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB2", pin: "" }, message: "s" },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    expect(lastRules(h).fired["single-pin-net"]).toBe(2);
+    expect(lastRules(h).fired["diff-pair-naming"]).toBe(0);
+  });
+
+  it("highlights every current finding's subject at once after a run", async () => {
+    const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    // The same spec drives both renderers (canvas.setHighlights is the WebGL half, always called).
+    const spec = h.canvas.setHighlights.mock.calls.at(-1)?.[0];
+    expect(new Set(spec[0].nets)).toEqual(new Set(["STUB", "TXP"]));
+  });
+
+  it("a CheckDesign failure clears the findings rather than erroring", async () => {
+    const h = harness();
+    h.checkDesign.mockRejectedValueOnce(new Error("no netlist"));
+    await openAndCheck(h, "m", "board.eds"); // geometry-only, no netlist
+    expect(h.onSummary.mock.calls.every((c) => !String(c[0]).startsWith("error:"))).toBe(true);
+    expect(lastFindings(h).findings).toHaveLength(0);
+  });
+
+  it("focusing a finding in SVG mode highlights just it (exact by kind) and toggles back to all", async () => {
+    const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn"); // opens in SVG mode; highlight is all subjects
+    h.canvas.setHighlights.mockClear();
+
+    await h.presenter.selectFinding("STUB");
+    expect(lastControls(h).mode).toBe("svg"); // no mode hop: the overlay draws in place
+    // Exact by kind. STUB is a net, so the focus spec lists it only under nets (not components).
+    // Focus stacks (WS9-017). TXP is the OTHER finding, and it keeps its outline. The focused net
+    // STUB drops out of the base and paints as a translucent PATH highlighter on top (WS9-040), so
+    // an opaque underlay does not muddy its marker.
+    // The base is stamped as context so the focus reads as figure (agni issue 348). The focus layer
+    // names no color and inherits the default, so a user style still wins.
+    const stack = [
+      { nets: ["TXP"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { nets: ["STUB"], shape: HighlightShape.PATH },
+    ];
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith(stack);
+    expect(h.highlightSheet).toHaveBeenCalledWith(
+      expect.objectContaining({ format: SheetFormat.SVG, specs: stack }),
+    );
+    expect(h.render.setSvgOverlay).toHaveBeenLastCalledWith("<svg data-overlay/>");
+    expect(lastFindings(h).selected).toBe("STUB");
+
+    await h.presenter.selectFinding("STUB"); // toggle off -> back to the whole-selection highlight
+    const spec = h.canvas.setHighlights.mock.calls.at(-1)?.[0];
+    expect(new Set(spec[0].nets)).toEqual(new Set(["STUB", "TXP"]));
+    expect(lastFindings(h).selected).toBe("");
+  });
+
+  it("focusing a component finding lights it up as a component (not a net)", async () => {
+    const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "warning", subject: { kind: "component", ref: "C1", pin: "" }, message: "c" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    h.canvas.setHighlights.mockClear();
+    await h.presenter.selectFinding("C1");
+    // Only a focused net is dropped from the base. A focused COMPONENT is kept, so C1 appears twice,
+    // once as muted context and once as the focus rect on top.
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
+      { components: ["C1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { components: ["C1"], shape: HighlightShape.BOUNDING_RECT },
+    ]);
+  });
+
+  it("focusing a finding in Native mode hops to SVG (no overlay for the golden document)", async () => {
+    const h = harness();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "warning", subject: { kind: "component", ref: "R1", pin: "" }, message: "r" }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    await h.presenter.setMode("native");
+    h.highlightSheet.mockClear();
+    await h.presenter.selectFinding("R1");
+    // SVG rather than WebGL, which lags on a large design (agni issue 1132).
+    expect(lastControls(h).mode).toBe("svg");
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
+      { components: ["R1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { components: ["R1"], shape: HighlightShape.BOUNDING_RECT },
+    ]);
+    expect(h.highlightSheet).toHaveBeenCalled(); // SVG draws the focus as a fetched overlay
+  });
+
+  it("setHighlights re-fetches the SVG overlay when the sheet re-renders", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds"); // SVG mode
+    await h.presenter.setHighlights([{ nets: ["NET1"], color: "#00ff00", alpha: 0.5 }]);
+    expect(h.render.setSvgOverlay).toHaveBeenLastCalledWith("<svg data-overlay/>");
+    const fetches = h.highlightSheet.mock.calls.length;
+    await h.presenter.showSheet("s1"); // re-render: the overlay must be re-framed with the sheet
+    expect(h.highlightSheet.mock.calls.length).toBe(fetches + 1);
+    expect(h.render.setSvgOverlay).toHaveBeenLastCalledWith("<svg data-overlay/>");
+  });
+});
+
+describe("on-demand checks (WS9)", () => {
+  it("opening a file does not run checks — they wait for the Run button", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    expect(h.checkDesign).not.toHaveBeenCalled();
+    const fs = lastFindings(h);
+    expect(fs.findings).toHaveLength(0);
+    expect(fs.ruleCount).toBe(2);
+    expect(fs.pending).toBe(2); // both selected rules await a run
+  });
+
+  // agni issue 950: a rule this design cannot run is listed unavailable and left unticked, and the
+  // Checks panel still names it with its reason, before any run, so it never reads as a clean board.
+  // A rule the reader unticked is not news and is left out.
+  it("names the rules this design cannot run, ticked or not, and leaves out a rule the reader unticked", async () => {
+    const h = harness();
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "single-pin-net", severity: "error", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        { name: "diff-pair-naming", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        { name: "unconnected-pin", severity: "warning", summary: "", reads: [], tags: {}, available: false, unavailableReason: "source format cannot express intentional no-connect" },
+      ],
+    });
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    expect(lastFindings(h).skipped).toEqual([{ rule: "unconnected-pin", reason: "source format cannot express intentional no-connect" }]);
+  });
+
+  // The Load page reads the board before the viewer opens (agni issue 1072), so opening a design with
+  // a board leaves it to the store rather than reading it again.
+  it("opens a design with a board without reading the board", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValueOnce({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
+      nativeAvailable: true, availableLayouts: ["faithful"],
+    });
+    await h.presenter.openFile("m", "board.edn");
+    expect(h.getSheet).toHaveBeenCalled();
+    expect(h.readBoard).not.toHaveBeenCalled();
+  });
+
+  // The first sheet draws before ListRules answers, and a Run pressed in that window used to run an
+  // empty selection and then be overwritten by the catalog's "Press Run checks" state (agni 868).
+  it("a Run pressed before the catalog arrives runs nothing, and the panel says the catalog is loading", async () => {
+    const h = harness();
+    const catalog = deferred<Awaited<ReturnType<typeof h.listRules>>>();
+    h.listRules.mockReturnValueOnce(catalog.promise);
+    const opening = h.presenter.openFile("m", "board.edn");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalledOnce());
+    expect(h.navA.setState).toHaveBeenCalled(); // the sheet is up, so the button is visible
+    expect(lastFindings(h).catalogLoading).toBe(true);
+
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+
+    catalog.resolve(await h.listRules.getMockImplementation()!({ snapshot: "" }));
+    await opening;
+    expect(lastFindings(h).catalogLoading).toBe(false);
+    await h.presenter.runChecks();
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
+  });
+
+  // The page boots its panels before it opens a design, and a push in that window (Escape clears the
+  // highlights) must not offer a Run that has no design to run against.
+  it("a push before any design opens says the catalog is loading", async () => {
+    const h = harness();
+    await h.presenter.clearHighlights();
+    expect(lastFindings(h).catalogLoading).toBe(true);
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+  });
+
+  it("a Run pressed while a second design's catalog loads does not run the first design's rules on it", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "a.edn");
+    const catalog = deferred<Awaited<ReturnType<typeof h.listRules>>>();
+    h.listRules.mockReturnValueOnce(catalog.promise);
+    const opening = h.presenter.openFile("m", "b.edn");
+    await vi.waitFor(() => expect(h.listRules).toHaveBeenCalledTimes(2));
+
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+
+    catalog.resolve({ rules: [] });
+    await opening;
+  });
+
+  it("an open that fails before the catalog loads leaves Run enabled", async () => {
+    const h = harness();
+    h.getDesign.mockRejectedValueOnce(new Error("unreadable"));
+    await h.presenter.openFile("m", "broken.edn");
+    expect(h.listRules).not.toHaveBeenCalled();
+    expect(lastFindings(h).catalogLoading).toBe(false);
+  });
+
+  it("runChecks evaluates the current selection and clears the running flag", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" }],
+    });
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.runChecks();
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
+    const fs = lastFindings(h);
+    expect(fs.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
+    expect(fs.pending).toBe(0);
+    expect(fs.running).toBe(false);
+  });
+
+  it("toggling a rule fetches nothing; a not-yet-run rule shows pending until the next run", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only, so no fetch
+    expect(h.checkDesign).not.toHaveBeenCalled();
+    await h.presenter.runChecks(); // runs only the selected rule
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net"] }, { signal: expect.any(AbortSignal) });
+    h.checkDesign.mockClear();
+    await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]); // adds an unrun rule
+    expect(h.checkDesign).not.toHaveBeenCalled(); // still no fetch on a toggle
+    expect(lastFindings(h).pending).toBe(1); // diff-pair-naming awaits the next run
+  });
+});
+
+describe("sheet overview push (WS9-025)", () => {
+  it("pushes tiles with the active sheet and re-pushes when the rule selection changes", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "d.edn");
+    const calls = h.onOverview.mock.calls;
+    const afterOpen = calls[calls.length - 1][0];
+    // In a single-sheet design the one tile carries the total findings count (none by default).
+    expect(afterOpen.tiles).toEqual([{ id: "s1", name: "S1", parentId: "", count: 0, unresolved: 0, local: 0 }]);
+    expect(afterOpen.activeId).toBe("s1");
+    expect(afterOpen.ruleCount).toBe(2); // the default catalog selects both rules
+    await h.presenter.setRuleSelection([]);
+    const afterClear = h.onOverview.mock.calls[h.onOverview.mock.calls.length - 1][0];
+    expect(afterClear.ruleCount).toBe(0);
+  });
+});
+
+describe("board layer visibility (agni 1351)", () => {
+  const rows = [
+    { name: "F.Cu", kind: "copper", side: "front", color: "#c83434", svgSelector: '[data-layer="F.Cu"]', groups: [6] },
+    { name: "In1.Cu", kind: "copper", side: "inner", color: "#8a6d3b", svgSelector: '[data-layer="In1.Cu"]', groups: [13] },
+    { name: "B.Cu", kind: "copper", side: "back", color: "#3050c8", svgSelector: '[data-layer="B.Cu"]', groups: [7] },
+    { name: "Edge", kind: "edge", side: "", color: "#8a6d3b", svgSelector: ".edge", groups: [5] },
+  ];
+  function boardHarness() {
+    const h = harness();
+    h.getDesign.mockImplementation(async (req: { layout?: string }) => ({
+      name: "B",
+      layout: req.layout || "grid",
+      sourceFormat: "kicad",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "graph", name: "netlist graph" },
+        { id: "board", name: "Board" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["grid"],
+    }));
+    h.getSheet.mockImplementation(async (req: { sheet?: string }) =>
+      req.sheet === "board"
+        ? ({ content: { case: "packed", value: { sheetId: "board" } }, boardLayers: rows } as never)
+        : { content: { case: "packed", value: { sheetId: "graph" } } },
+    );
+    const kept = new Map<string, string[]>();
+    const store = { load: vi.fn((m: string, p: string) => kept.get(`${m}/${p}`) ?? null), save: vi.fn((m: string, p: string, hidden: string[]) => kept.set(`${m}/${p}`, hidden)) };
+    h.presenter.layerStore = store;
+    return { ...h, kept, store };
+  }
+  const lastCall = (f: ReturnType<typeof vi.fn>) => f.mock.calls[f.mock.calls.length - 1];
+  const lastHidden = (h: ReturnType<typeof harness>) => [...lastCall(h.render.setBoardLayers as ReturnType<typeof vi.fn>)[1]].sort();
+  const lastOverview = (h: ReturnType<typeof harness>) => lastCall(h.onOverview)[0];
+
+  it("lists the board's layers under the Board tile and hides a preset's rows", async () => {
+    const h = boardHarness();
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith(rows, new Set());
+    expect(lastOverview(h).boardLayers.map((r: { name: string }) => r.name)).toEqual(["F.Cu", "In1.Cu", "B.Cu", "Edge"]);
+
+    h.presenter.presetBoardLayers("front");
+    expect(lastHidden(h)).toEqual(["B.Cu", "In1.Cu"]);
+    expect(lastOverview(h).hiddenLayers.sort()).toEqual(["B.Cu", "In1.Cu"]);
+
+    h.presenter.soloBoardLayer("In1.Cu");
+    expect(lastHidden(h)).toEqual(["B.Cu", "Edge", "F.Cu"]);
+    h.presenter.toggleBoardLayer("Edge");
+    expect(lastHidden(h)).toEqual(["B.Cu", "F.Cu"]);
+    h.presenter.presetBoardLayers("all");
+    expect(lastHidden(h)).toEqual([]);
+  });
+
+  it("keeps the choice across a sheet round trip and clears it for a schematic", async () => {
+    const h = boardHarness();
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    h.presenter.presetBoardLayers("back");
+    await h.presenter.showSheet("graph");
+    expect(h.render.setBoardLayers).toHaveBeenLastCalledWith([], new Set());
+    await h.presenter.showSheet("board");
+    expect(lastHidden(h)).toEqual(["F.Cu", "In1.Cu"]);
+  });
+
+  it("keeps each design's choice in its store", async () => {
+    const h = boardHarness();
+    h.kept.set("m/y.kicad_pcb", ["In1.Cu"]);
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    await h.presenter.showSheet("board");
+    h.presenter.presetBoardLayers("back");
+    expect(h.store.save).toHaveBeenLastCalledWith("m", "x.kicad_pcb", ["F.Cu", "In1.Cu"]);
+
+    await h.presenter.openFile("m", "y.kicad_pcb");
+    await h.presenter.showSheet("board");
+    expect(lastHidden(h)).toEqual(["In1.Cu"]);
+  });
+});
+
+// The viewer could not clear the highlight field at all until agni issue 348.
+//
+// setHighlights([]) was reachable from one place in the client, on opening a DIFFERENT design. So
+// once checks had run, the field remained on until the reader navigated away. Toggling the focused
+// row off does not clear, because it restores the base layer. That is correct for a toggle, and it
+// hid the gap.
+describe("clearHighlights (agni issue 348)", () => {
+  // Two component findings, so the field has something in it and a focus has a base to sit on.
+  function seeded() {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "component", ref: "R1", pin: "" }, message: "a", sheets: [] },
+        { rule: "single-pin-net", severity: "info", subject: { kind: "component", ref: "R2", pin: "" }, message: "b", sheets: [] },
+      ],
+    });
+    return h;
+  }
+
+  it("empties the highlight layers and deselects the focused finding", async () => {
+    const h = seeded();
+    await openAndCheck(h, "m", "d.edn");
+    await h.presenter.selectFinding("R1");
+    expect(lastSpecs(h).length).toBeGreaterThan(0);
+
+    await h.presenter.clearHighlights();
+    expect(lastSpecs(h)).toEqual([]);
+    // The panel has to agree, or the row is still lit while the drawing is bare.
+    expect(lastFindings(h).selected).toBe("");
+  });
+
+  it("reports through the control bar whether anything is lit, so the control can disable", async () => {
+    const h = seeded();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    await openAndCheck(h, "m", "d.edn");
+    expect(lastControls(h).hasHighlights).toBe(true);
+
+    await h.presenter.clearHighlights();
+    expect(lastControls(h).hasHighlights).toBe(false);
+  });
+
+  it("leaves the toggle-off path alone: re-clicking a focused finding still restores the field", async () => {
+    // This guards the fix against regressing. Clearing and toggling are different intents and must
+    // remain different. A toggle returns the reader to the overview, and only the clear turns it off.
+    const h = seeded();
+    await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
+    await openAndCheck(h, "m", "d.edn");
+    await h.presenter.selectFinding("R1");
+    await h.presenter.selectFinding("R1"); // same subject, no sheet: the toggle-off path
+    expect(lastSpecs(h).length).toBeGreaterThan(0);
+  });
+});
+
+// The presenter half of agni issue 354: the shortfall has to reach the view on open, because nothing
+// about the rendered sheet reveals it. Every ref des and wire still draws.
+describe("the incomplete-drawing notice", () => {
+  it("pushes a note when the design reports undrawn placements", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "Root" }], nativeAvailable: false, availableLayouts: ["faithful"],
+      undrawn: [
+        { refDes: "C1", cellRef: "CAP", libraryRef: "Acme", sheetId: "s1" },
+        { refDes: "C2", cellRef: "CAP", libraryRef: "Acme", sheetId: "s1" },
+      ],
+    });
+    await h.presenter.openFile("m", "board.kicad_sch");
+    const calls = h.onUndrawnNote.mock.calls;
+    const note = calls[calls.length - 1][0];
+    expect(note?.count).toBe(2);
+    expect(note?.libraries).toEqual([{ name: "Acme:CAP", count: 2 }]);
+  });
+
+  it("pushes null for a complete drawing, so the notice stays off", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    const calls = h.onUndrawnNote.mock.calls;
+    expect(calls[calls.length - 1][0]).toBeNull();
+  });
+});
+
+// The presenter half of agni issue 717: the server's sentence about a hierarchical read reaches the
+// view on open, as sent, because a top-cell-only drawing and its counts look complete.
+describe("the hierarchical-read notice", () => {
+  const sentence =
+    "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.";
+
+  it("pushes the served sentence unchanged", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "TEST", layout: "grid", sourceFormat: "edif", componentCount: 1, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid"],
+      hierarchyNote: sentence,
+    });
+    await h.presenter.openFile("edif", "hier.edn");
+    const calls = h.onHierarchyNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+  });
+
+  it("pushes null for a design read whole, so the notice stays off", async () => {
+    // The control: a strip shown on every open would satisfy the test above.
+    const h = harness();
+    await h.presenter.openFile("edif", "basic.edn");
+    const calls = h.onHierarchyNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[calls.length - 1][0]).toBeNull();
+  });
+});
+
+// The viewer offers no layout picker, so a computed layout says why it is one. The note shows on a
+// computed sheet and leaves the board alone, since the board draws itself.
+describe("the computed-layout notice", () => {
+  const sentence = "agni laid these sheets out itself, because x.kicad_pcb holds no schematic drawing.";
+  const reply = {
+    name: "TEST", layout: "grid", sourceFormat: "kicad", componentCount: 1, netCount: 0,
+    sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }], nativeAvailable: false, availableLayouts: ["grid"],
+    drawingNote: sentence,
+  };
+
+  it("shows the served sentence on the computed sheet and clears it on the board", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue(reply);
+    await h.presenter.openFile("m", "x.kicad_pcb");
+    const calls = h.onDrawingNote.mock.calls;
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+    await h.presenter.showSheet("board");
+    expect(calls[calls.length - 1][0]).toBeNull();
+    await h.presenter.showSheet("s1");
+    expect(calls[calls.length - 1][0]).toBe(sentence);
+  });
+
+  it("pushes null for a drawn design", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    const calls = h.onDrawingNote.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls[calls.length - 1][0]).toBeNull();
+  });
+});
+
+// The verdict cache holds a per-rule considered set, and these tests are about invalidating it. A
+// verdict is keyed by rule name, and rule names change when the convention changes. So a surviving
+// verdict can name a rule that no longer exists, and answer for a subject nothing re-examined. It
+// would then report "this was checked" under a vocabulary nobody ran. Verdicts exist to remove that
+// false coverage claim. So the test asserts it, rather than trusting by inspection that the two
+// caches mirror each other.
+describe("the considered set is invalidated with the findings", () => {
+  function withVerdicts(h: ReturnType<typeof harness>) {
+    h.checkDesign.mockImplementation(async () => ({
+      findings: [],
+      verdicts: [
+        {
+          id: "single-pin-net:(net:SDA)",
+          rule: "single-pin-net",
+          outcome: 1,
+          subject: { kind: "net", ref: "SDA", pin: "", netId: "" },
+          witness: { statement: "SDA has more than one pin", terms: [] },
+          context: [],
+          reason: "",
+        },
+      ],
+    })) as unknown as typeof h.checkDesign;
+  }
+
+  it("drops cached verdicts when the naming vocabulary changes", async () => {
+    const h = harness();
+    withVerdicts(h);
+    await openAndCheck(h, "m", "b.edn");
+    expect(h.presenter.verdictList()).toHaveLength(1);
+
+    await h.presenter.setConvention("");
+
+    expect(h.presenter.verdictList()).toHaveLength(0);
+  });
+
+  it("drops cached verdicts when a different design is opened", async () => {
+    const h = harness();
+    withVerdicts(h);
+    await openAndCheck(h, "m", "b.edn");
+    expect(h.presenter.verdictList()).toHaveLength(1);
+
+    await h.presenter.openFile("m", "other.edn", "");
+
+    expect(h.presenter.verdictList()).toHaveLength(0);
+  });
+})
+
+// agni issue 902: the query panel hosts tabs, and the presenter answers each in the tab that asked.
+describe("query tabs", () => {
+  it("sends each answer to the tab that asked, and saves the answer of the tab named", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("first(?x) => ?x", {}, 0, "q1");
+    await h.presenter.runQuery("second(?x) => ?x", {}, 0, "q2");
+    const landed = h.query.setState.mock.calls.filter((c) => !c[0].loading).map((c) => [c[1], c[0].rows[0].cells[0]]);
+    expect(landed).toEqual([
+      ["q1", "first(?x) => ?x"],
+      ["q2", "second(?x) => ?x"],
+    ]);
+    const saved: unknown[] = [];
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q1");
+    expect((saved[0] as { value: { rows: { cells: string[] }[] } }).value.rows[0].cells[0]).toBe("first(?x) => ?x");
+    h.presenter.forgetQueryTab("q1");
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q1");
+    expect(saved).toHaveLength(1);
+  });
+
+  it("empties every tab's answer when the vocabulary changes", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn", "");
+    await h.presenter.setConvention("");
+    expect(h.query.clearAnswers).toHaveBeenCalled();
+  });
+});
+
+describe("a finding click selects", () => {
+  it("returns what the focused finding is about, and nothing when the click toggles it off", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub" }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch");
+    expect(await h.presenter.selectFinding("STUB")).toMatchObject({ kind: "net", net: "STUB" });
+    expect(await h.presenter.selectFinding("STUB")).toBeNull();
+  });
+
+  it("puts the drawing back to the findings alone when a query tab with nothing located comes forward", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub" }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch");
+    const base = h.canvas.setHighlights.mock.calls.at(-1)![0];
+    await h.presenter.locateEntity("component", "U1");
+    expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).not.toEqual(base);
+    await h.presenter.releaseFocus();
+    expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).toEqual(base);
+  });
+});
+
+// agni issue 745: a project's query sets reach the panel, and a set opened as tabs is answered over
+// one read with each answer, or error, in its own tab.
+describe("query sets", () => {
+  it("lists the design's project sets when a design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn", "");
+    await vi.waitFor(() => expect(h.query.setQuerySets).toHaveBeenLastCalledWith([{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }]));
+    expect(h.listQuerySets).toHaveBeenCalledWith({ snapshot: snapName("mount://m/proj/board.edn") });
+  });
+
+  it("answers a set into its tabs, an error in the tab of the query that failed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    const set = { title: "T", preamble: "", queries: [{ name: "a", query: "first(?x) => ?x" }, { name: "b", query: "bad(?x) => ?x" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2", "q3"]);
+    expect(h.runQueries).toHaveBeenCalledTimes(1);
+    const landed = h.query.setState.mock.calls.filter((c) => !c[0].loading).map((c) => [c[1], c[0].error || c[0].rows[0].cells[0]]);
+    expect(landed).toEqual([
+      ["q2", "first(?x) => ?x"],
+      ["q3", "unknown relation"],
+    ]);
+    const saved: unknown[] = [];
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q2");
+    expect(saved).toHaveLength(1);
+  });
+});
+
+// agni issue 794: opening a row asks the tab's question again with witnesses, and only then.
+describe("explaining a query tab", () => {
+  it("asks the tab's last question again with witnesses, and lands the witnessed answer in that tab", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("component.net(?r, ?net) => ?r", { net: "GND" }, 50, "q1");
+    const first = h.runQuery.mock.lastCall![0] as unknown as { witnesses?: boolean };
+    expect(first.witnesses ?? false).toBe(false);
+    await h.presenter.explainQuery("q1");
+    expect(h.runQuery).toHaveBeenCalledTimes(2);
+    const again = h.runQuery.mock.lastCall![0] as unknown as { query: string; limit: number; witnesses: boolean; bindings: Record<string, unknown> };
+    expect(again).toMatchObject({ query: "component.net(?r, ?net) => ?r", limit: 50, witnesses: true });
+    expect(Object.keys(again.bindings)).toEqual(["net"]);
+    const last = h.query.setState.mock.lastCall!;
+    expect(last[1]).toBe("q1");
+    expect(last[0].witnessed).toBe(true);
+    expect(last[0].loading).toBe(false);
+  });
+
+  it("asks a set's tab through the set, with witnesses", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    const set = { title: "T", preamble: "p(?x) :- q(?x);", queries: [{ name: "a", query: "first(?x) => ?x" }, { name: "b", query: "bad(?x) => ?x" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2", "q3"]);
+    h.runQueries.mockResolvedValueOnce({ results: [{ name: "a", result: { columns: ["q"], columnKinds: [""], rows: [{ cells: ["x"] }], total: 0 } }] } as never);
+    await h.presenter.explainQuery("q2");
+    const req = h.runQueries.mock.lastCall![0] as unknown as { witnesses: boolean; set: { preamble: string; queries: { name: string }[] } };
+    expect(req.witnesses).toBe(true);
+    expect(req.set.preamble).toBe("p(?x) :- q(?x);");
+    expect(req.set.queries.map((q) => q.name)).toEqual(["a"]);
+    const last = h.query.setState.mock.lastCall!;
+    expect(last[1]).toBe("q2");
+    expect(last[0].witnessed).toBe(true);
+  });
+
+  it("asks nothing for a tab that has asked nothing, or one closed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.explainQuery("q9");
+    await h.presenter.runQuery("first(?x) => ?x", {}, 0, "q1");
+    h.presenter.forgetQueryTab("q1");
+    await h.presenter.explainQuery("q1");
+    expect(h.runQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A query that would not parse says where (jaala v0.1.62's ParseError), and the panel shows the line
+// it stopped on with a caret under the place.
+describe("a query that would not parse", () => {
+  it("points at the place, from RunQuery's error detail", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    h.runQuery.mockRejectedValueOnce(
+      new ConnectError("query: variable ?r ?n", Code.InvalidArgument, undefined, [{ desc: TextPositionSchema, value: { offset: 14, line: 1, column: 15, caret: "component.net(?r ?n)\n              ^" } }]),
+    );
+    await h.presenter.runQuery("component.net(?r ?n)", {}, 0, "q1");
+    const calls = h.query.setState.mock.calls;
+    const last = calls[calls.length - 1][0];
+    expect(last.error).toContain("variable ?r ?n");
+    expect(last.errorAt).toBe("component.net(?r ?n)\n              ^");
+  });
+
+  it("points at the place in a set's query, from its result", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    h.runQueries.mockResolvedValueOnce({
+      results: [{ name: "a", error: "query: variable ?r ?n", errorAt: { offset: 14, line: 1, column: 15, caret: "component.net(?r ?n)\n              ^" } }],
+    } as never);
+    const set = { title: "T", preamble: "", queries: [{ name: "a", query: "component.net(?r ?n)" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2"]);
+    const calls = h.query.setState.mock.calls;
+    const last = calls[calls.length - 1];
+    expect(last[1]).toBe("q2");
+    expect(last[0].errorAt).toBe("component.net(?r ?n)\n              ^");
+  });
+});
+
+// agni issue 634: a query link opens the question in a tab and asks it whole, and a set link opens the
+// named query of the design's project set.
+describe("a query arriving by link", () => {
+  const at = (over: object) => ({ ...emptyLocation(), mount: "m", path: "proj/board.edn", ...over });
+  it("opens a tab with the question, its bindings and title, and asks it whole", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "component.net(?r, ?n), ?n = ?net => ?r", title: "On ground", binds: ["net=GND"] }));
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true, arrived: true });
+  });
+
+  // agni issue 1236: the answer appears in the Query panel. A saved layout can leave that panel
+  // behind another tab, so the link brings it forward. A trace link does the same for Trace.
+  it("brings the panel its answer lands in forward", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "net.rail(?n) => ?n" }));
+    expect(h.onShowPanel).toHaveBeenCalledWith("query");
+    const t = harness();
+    await t.presenter.restore(at({ trace: "U1.1,U2.3" }));
+    expect(t.onShowPanel).toHaveBeenCalledWith("trace");
+    expect(t.onShowPanel).not.toHaveBeenCalledWith("query");
+  });
+
+  it("brings no panel forward for a link asking nothing", async () => {
+    const h = harness();
+    await h.presenter.restore(at({}));
+    expect(h.onShowPanel).not.toHaveBeenCalled();
+  });
+
+  // agni issue 1121: a link binding a name several times opens the tab with the list.
+  it("opens a tab with a list binding when the link repeats a name", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "component.net(?r, ?net) => ?r", binds: ["net=I2C_SDA", "net=I2C_SCL"] }));
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"] }, { title: "", whole: true, arrived: true });
+  });
+
+  it("sends a list binding as a list of text values", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"], r: "R1" }, 0, "q1");
+    const req = h.runQuery.mock.lastCall![0] as unknown as { bindings: unknown };
+    expect(req.bindings).toEqual({
+      net: { kind: { case: "list", value: { values: [{ kind: { case: "text", value: "I2C_SDA" } }, { kind: { case: "text", value: "I2C_SCL" } }] } } },
+      r: { kind: { case: "text", value: "R1" } },
+    });
+  });
+
+  // The picker asks under the open design's snapshot, and under none before a design is open.
+  // Asking under the snapshot lists a project's own library beside the shipped one (agni issue 774).
+  it("describes a place in the relation namespace under the open design's snapshot", async () => {
+    const h = harness();
+    await h.presenter.describeRelation(".");
+    expect(h.listRelations.mock.lastCall![0]).toEqual({ snapshot: "", path: "." });
+    await h.presenter.openFile("m", "board.edn", "");
+    const e = await h.presenter.describeRelation("net");
+    const req = h.listRelations.mock.lastCall![0];
+    expect(req.path).toBe("net");
+    expect(req.snapshot).not.toBe("");
+    expect(e).toMatchObject({ path: "net", kind: "module", members: [] });
+  });
+
+  it("opens the named query of a project set", async () => {
+    const h = harness();
+    h.listQuerySets.mockResolvedValue({
+      project: "projects/p",
+      querySets: [{ name: "power", source: "s", set: { title: "Power", queries: [{ name: "a", query: "x(?r)" }, { name: "Rails", query: "net.rail(?n) => ?n" }] } }],
+    } as never);
+    await h.presenter.restore(at({ set: "power", q: "Rails" }));
+    expect(h.query.openSet).toHaveBeenCalledWith({ title: "Power", queries: [{ name: "Rails", query: "net.rail(?n) => ?n" }] });
+    expect(h.onShowPanel).toHaveBeenCalledWith("query");
+  });
+
+  it("says so when the project keeps no such query", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ set: "power", q: "Gone" }));
+    expect(h.query.openSet).not.toHaveBeenCalled();
+    expect(h.query.setLocateNote).toHaveBeenLastCalledWith(expect.stringContaining('"Gone"'));
+  });
+});
+
+// agni issue 356: a run lights nothing on the drawing until a finding is clicked, unless the reader
+// asked for every finding at once.
+describe("the run-wide field is opt-in", () => {
+  const twoFindings = (h: ReturnType<typeof harness>) =>
+    h.checkDesign.mockResolvedValueOnce({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "s" },
+        { rule: "diff-pair-naming", severity: "warning", subject: { kind: "net", ref: "TXP", pin: "" }, message: "d" },
+      ],
+    });
+  const last = (h: ReturnType<typeof harness>) => h.canvas.setHighlights.mock.calls.at(-1)?.[0];
+
+  it("lights nothing after a run", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    expect(last(h)).toEqual([]);
+    expect(lastFindings(h).findings).toHaveLength(2); // the findings are there, only undrawn
+  });
+
+  it("draws a clicked finding alone, and nothing again when it is clicked off", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    await h.presenter.selectFinding("STUB");
+    expect(last(h)).toEqual([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
+    await h.presenter.selectFinding("STUB");
+    expect(last(h)).toEqual([]);
+  });
+
+  it("draws every finding when the reader turns it on, and keeps a focus while it changes", async () => {
+    const h = harness();
+    twoFindings(h);
+    await openAndCheck(h, "m", "board.edn");
+    await h.presenter.setShowAllFindings(true);
+    expect(new Set(last(h)[0].nets)).toEqual(new Set(["STUB", "TXP"]));
+    await h.presenter.selectFinding("STUB");
+    await h.presenter.setShowAllFindings(false);
+    expect(last(h)).toEqual([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
+  });
+});
+
+// agni issue 918: a run in flight can be stopped, and what it left unanswered reads as not run.
+describe("cancelling a check run", () => {
+  // untilAborted answers only by rejecting when the call's signal fires, as an engine abort does.
+  const untilAborted = (_req: unknown, opts?: { signal?: AbortSignal }) =>
+    new Promise<never>((_resolve, reject) => {
+      // A Connect client rejects a signal that has already fired, without sending anything.
+      if (opts?.signal?.aborted) reject(new DOMException("stopped", "AbortError"));
+      opts?.signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+    });
+
+  it("stops the run, leaves its rules pending, says it was cancelled, and the next run answers", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(untilAborted as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    const after = lastFindings(h);
+    expect(after.running).toBe(false);
+    expect(after.cancelled).toBe(true);
+    expect(after.pending).toBe(2);
+    // A stopped run goes no further, so the sidecar and coverage calls after it are not made.
+    expect(h.getExpectations).not.toHaveBeenCalled();
+
+    await h.presenter.runChecks();
+    expect(lastFindings(h).cancelled).toBe(false);
+    expect(lastFindings(h).pending).toBe(0);
+  });
+
+  it("forgets a cancel when another design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(untilAborted as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastFindings(h).cancelled).toBe(false);
+  });
+
+  // The page overlay would cover Cancel itself. The lanes exist so the rest of the page is still
+  // usable while rules run.
+  it("raises no page overlay for a run, which would cover Cancel", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    (h.render.setBusy as ReturnType<typeof vi.fn>).mockClear();
+    await h.presenter.runChecks();
+    expect(h.render.setBusy).not.toHaveBeenCalledWith(true, expect.anything());
+  });
+
+  it("does nothing with no run in flight", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.presenter.cancelChecks();
+    await h.presenter.runChecks();
+    expect(lastFindings(h).cancelled).toBe(false);
+  });
+});
+
+// agni issue 1117: a run that fails says why and which rules it left pending. It used to end with no
+// findings and no message, so the panel read as if Run had never been pressed.
+describe("a check run that fails", () => {
+  it("says why, names the rules it left pending, and the next run that answers clears it", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new ConnectError("work budget exhausted", Code.ResourceExhausted));
+    await h.presenter.runChecks();
+    const after = lastFindings(h);
+    expect(after.running).toBe(false);
+    expect(after.cancelled).toBe(false);
+    expect(after.pending).toBe(2);
+    expect(after.runError?.message).toContain("work budget exhausted");
+    expect(after.runError?.rules).toEqual(["single-pin-net", "diff-pair-naming"]);
+
+    await h.presenter.runChecks();
+    expect(lastFindings(h).runError).toBeUndefined();
+    expect(lastFindings(h).pending).toBe(0);
+  });
+
+  it("names only the rules still selected", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new Error("the engine worker stopped"));
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["diff-pair-naming"]);
+    expect(lastFindings(h).runError).toEqual({ message: "the engine worker stopped", rules: ["diff-pair-naming"] });
+  });
+
+  it("forgets a failure when another design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new Error("boom"));
+    await h.presenter.runChecks();
+    expect(lastFindings(h).runError).toBeDefined();
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastFindings(h).runError).toBeUndefined();
+  });
+
+  it("reports a cancelled run as cancelled, never as failed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(((_req: unknown, opts?: { signal?: AbortSignal }) =>
+      new Promise<never>((_resolve, reject) => {
+        opts?.signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+      })) as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    expect(lastFindings(h).cancelled).toBe(true);
+    expect(lastFindings(h).runError).toBeUndefined();
+  });
+
+  it("says why the rule catalog did not load, to both panels, and forgets it once a catalog loads", async () => {
+    const h = harness();
+    h.listRules.mockRejectedValueOnce(new ConnectError("snapshot not found", Code.NotFound));
+    await h.presenter.openFile("m", "board.edn");
+    expect(lastRules(h).rules).toEqual([]);
+    expect(lastRules(h).error).toContain("snapshot not found");
+    expect(lastFindings(h).catalogError).toContain("snapshot not found");
+    expect(lastFindings(h).ruleCount).toBe(0);
+
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastRules(h).error).toBe("");
+    expect(lastFindings(h).catalogError).toBe("");
+    expect(lastFindings(h).ruleCount).toBe(2);
+  });
+});
+
+describe("a rule's reference page reaches the Checks panel", () => {
+  it("passes each linked rule's page from the catalog, and none for a rule without one", async () => {
+    const h = harness();
+    const url = "https://panyam.github.io/agni/reference/rules/single-pin-net/";
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "single-pin-net", severity: "info", summary: "", reads: [], tags: {}, available: true, unavailableReason: "", docUrl: url },
+        { name: "acme/house-rule", severity: "info", summary: "", reads: [], tags: {}, available: true, unavailableReason: "", docUrl: "" },
+      ] as never,
+    });
+    await h.presenter.openFile("m", "board.eds");
+    expect(lastFindings(h).ruleDocs).toEqual({ "single-pin-net": url });
+  });
+});

@@ -1,0 +1,8 @@
+# The review item the load-switch sizing lower bound exists for (WS3-085). It is a separate ask from
+# the two rail-sizing items: those judge the SUPPLY against a rail's budget, this one judges the
+# PROTECTION on the way to it, and a design can pass either while failing the other.
+name: Load switch sizing review
+areas:
+  - name: Power
+    items:
+      - {id: "26", title: load switch current limit sizing, rule: intent/load-switch-trip-below-budget}

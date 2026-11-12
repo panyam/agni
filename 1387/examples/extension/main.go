@@ -1,0 +1,81 @@
+// Command agni-extension is the reference open-core extension skeleton (WS12-001). It is a binary
+// in a SEPARATE Go module. It depends on the public engine and adds a private format reader and a
+// private rule suite through the engine's public extension points, without forking it.
+//
+// The composition is two blank imports for the extension's own packages, plus agni.New for the
+// engine's. The extension's reader and rule packages register themselves via formats.Register
+// (WS12-003) and check.RegisterSource (WS12-004) in their init, and from there the engine resolves
+// the .acme format and runs the acme/ rule alongside the built-ins.
+//
+// The engine's four registration hooks arrive as the blank imports below and are CHECKED by
+// agni.New. Three of the four fail silently when a binary forgets one, leaving no built-in rules or
+// an empty fact base, and every design then reports clean.
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/panyam/agni"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/readers/formats"
+
+	_ "github.com/panyam/agni/examples/extension/acmeformat" // registers the .acme reader
+	_ "github.com/panyam/agni/examples/extension/acmerules"  // registers the acme/ rule suite
+
+	_ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
+	_ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a review manifest's inline queries
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // the shipped EE rule catalog
+	_ "github.com/panyam/agni/stdlib/rules/datalog" // the datalog-authored rule suite
+)
+
+func main() {
+	path := "testdata/example.acme"
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+	if err := run(path); err != nil {
+		fmt.Fprintln(os.Stderr, "agni-extension:", err)
+		os.Exit(1)
+	}
+}
+
+func run(path string) error {
+	// agni.New composes the catalog and the fact base together and refuses a composition that would
+	// run clean for a reason nobody could see. A warning names a legitimate absence, so it goes to
+	// stderr rather than stopping the run.
+	engine, err := agni.New()
+	if err != nil {
+		return err
+	}
+	for _, w := range engine.Warnings() {
+		fmt.Fprintln(os.Stderr, "note:", w)
+	}
+
+	// The extension's reader was registered by the blank import above, so the engine's Loader
+	// resolves .acme with no special-casing.
+	d, err := (&formats.Loader{}).ReadDesign(path)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("loaded %s: %d components, %d nets (via the extension's .acme reader)\n\n", path, len(d.Components), len(d.Nets))
+
+	// The engine's catalog is the built-ins PLUS every registered source, so the acme/ rule runs
+	// alongside the engine's own checks.
+	// Run takes a context so a long check stops when its caller does; a command line has none to
+	// cancel. It returns an error only when that context is done.
+	findings, err := check.Run(context.Background(), check.NewModel(d), engine.Catalog().Rules())
+	if err != nil {
+		return err
+	}
+	if len(findings) == 0 {
+		fmt.Println("no findings")
+		return nil
+	}
+	fmt.Printf("%d finding(s):\n", len(findings))
+	for _, f := range findings {
+		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
+	}
+	return nil
+}

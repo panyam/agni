@@ -1,0 +1,8 @@
+# The IO assignment for U1, as a design intent IO map. The issue's columns map onto it this way:
+# mcu is each row's device, ball is pin, assigned_function is function, expected_net is net.
+name: demo-mcu
+entry: demo_mcu.edn
+intent:
+  io_map:
+    - {device: U1, pin: PTA0, function: GPIO_LED, net: LED_NET}
+    - {device: U1, pin: PTA1, function: UART_TX, net: UART_TX_NET}

@@ -1,0 +1,4 @@
+{
+  "_comment": "The relation kinds in KindOrder, read by core/facts' TestKindOrderTwin and the web tier's query.test.ts, so the query panel's picker groups and labels every kind the catalog serves (agni issue 1045). A kind the panel lacked fell into an unlabelled group, which is how `extension` went missing after it was renamed from `overlay`.",
+  "kinds": ["netlist", "board", "datasheet", "derived", "predicate", "extension"]
+}

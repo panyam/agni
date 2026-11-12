@@ -1,0 +1,4 @@
+# A named net with one pin on it. agni lists it (agni issue 1097).
+fixture: cmd/agni/testdata/github-issues/1097-legacy-export-quirks
+script: |
+  agni query one_pin_net.tel 'net.pin_count(?n, ?c) => ?n, ?c'

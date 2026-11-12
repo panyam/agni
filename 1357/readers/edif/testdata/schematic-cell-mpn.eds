@@ -1,0 +1,31 @@
+
+(edif SCHEMCELLMPN
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string (stringDisplay "CELL-PART-9")))
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (designator (stringDisplay "U"))
+          (port (rename &1 "1") (direction INPUT) (designator (stringDisplay "1")))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (designator (stringDisplay "U9"))
+          (portInstance (rename &1 "1") (designator (stringDisplay "1"))))
+        (instance (rename &i2 "$i2")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (designator (stringDisplay "U10"))
+          (property (rename Manufacturer_PN "Manufacturer PN") (string (stringDisplay "INLINE-10")))
+          (portInstance (rename &1 "1") (designator (stringDisplay "1"))))
+        (net (rename &n1 "SIGA")
+          (joined (portRef &1 (instanceRef &i1)) (portRef &1 (instanceRef &i2))))))))

@@ -1,0 +1,450 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it, expect } from "vitest";
+import {
+  outcomeWord,
+  type FindingItem,
+  findingRank,
+  groupFindings,
+  subjectsToSpecs,
+  findingSpec,
+  collapseInstances,
+  findingKey,
+  focusStack,
+  sortFindings,
+  severityRank,
+  severitySections,
+  checkedState,
+  findingsFor,
+  selectionFromFinding,
+  tallySeverities,
+} from "./findings.js";
+import { reportFromWire } from "./report.js";
+import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, DEFAULT_HIGHLIGHT_COLOR } from "./highlights.js";
+
+function f(over: Partial<FindingItem>): FindingItem {
+  return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, context: [], sheets: [], locateReason: 0, ...over };
+}
+
+const findings: FindingItem[] = [
+  f({ rule: "i2c-pull-up", category: "connectivity", severity: "error", kind: "net", subject: "SCL" }),
+  f({ rule: "single-pin-net", category: "connectivity", severity: "info", kind: "net", subject: "STUB" }),
+  f({ rule: "unconnected-component", category: "connectivity", severity: "warning", kind: "component", subject: "C1" }),
+  f({ rule: "diff-pair-naming", category: "naming", severity: "warning", kind: "net", subject: "TX_P" }),
+];
+
+describe("groupFindings", () => {
+  it("by rule keeps one bucket per rule in first-appearance order", () => {
+    expect(groupFindings(findings, "rule").map(([v]) => v)).toEqual([
+      "i2c-pull-up",
+      "single-pin-net",
+      "unconnected-component",
+      "diff-pair-naming",
+    ]);
+  });
+  it("by category collapses rules sharing a category", () => {
+    const g = groupFindings(findings, "category");
+    expect(g.map(([v]) => v)).toEqual(["connectivity", "naming"]);
+    expect(g[0][1]).toHaveLength(3);
+  });
+  it("by severity groups by level", () => {
+    expect(groupFindings(findings, "severity").map(([v]) => v)).toEqual(["error", "info", "warning"]);
+  });
+  it("by kind (entity) separates net from component", () => {
+    const g = groupFindings(findings, "kind");
+    expect(g.map(([v]) => v)).toEqual(["net", "component"]);
+    expect(g[0][1].map((x) => x.subject)).toEqual(["SCL", "STUB", "TX_P"]);
+  });
+  it("by interface (profile) buckets a rule's findings under its profile, non-profile rules under \"\" (WS9-041)", () => {
+    const withProfiles: FindingItem[] = [
+      f({ rule: "spi_nor-signal-missing", profile: "SPI_NOR", subject: "SPI_CS" }),
+      f({ rule: "spi_nor-missing-pullup", profile: "SPI_NOR", subject: "SPI_CS" }),
+      f({ rule: "emmc-signal-missing", profile: "eMMC", subject: "EMMC_CLK" }),
+      f({ rule: "single-pin-net", profile: "", subject: "STUB" }),
+    ];
+    const g = groupFindings(withProfiles, "profile");
+    expect(g.map(([v]) => v)).toEqual(["SPI_NOR", "eMMC", ""]);
+    expect(g[0][1]).toHaveLength(2); // both SPI_NOR findings collapse together
+  });
+});
+
+describe("subjectsToSpecs", () => {
+  it("buckets subjects by kind into one spec", () => {
+    const specs = subjectsToSpecs(findings);
+    expect(specs).toHaveLength(1);
+    expect(new Set(specs[0].nets)).toEqual(new Set(["SCL", "STUB", "TX_P"]));
+    expect(specs[0].components).toEqual(["C1"]);
+    expect(specs[0].pins).toBeUndefined();
+  });
+  it("dedupes repeated subjects and keeps pins as PinTargets", () => {
+    const specs = subjectsToSpecs([
+      f({ kind: "net", subject: "GND" }),
+      f({ kind: "net", subject: "GND" }),
+      f({ kind: "pin", subject: "U1", pin: "5" }),
+      f({ kind: "pin", subject: "U1", pin: "5" }),
+    ]);
+    expect(specs[0].nets).toEqual(["GND"]);
+    expect(specs[0].pins).toEqual([{ refDes: "U1", pin: "5" }]);
+  });
+  it("returns no spec when there is nothing to highlight", () => {
+    expect(subjectsToSpecs([])).toEqual([]);
+    expect(subjectsToSpecs([f({ subject: "" })])).toEqual([]);
+  });
+  it("buckets a bus subject by bus id, never as a net/component (WS7-042b)", () => {
+    const specs = subjectsToSpecs([f({ kind: "bus", subject: "DATA[7:0]", busId: "bus-1" })]);
+    expect(specs[0].busIds).toEqual(["bus-1"]);
+    expect(specs[0].nets).toBeUndefined();
+    expect(specs[0].components).toBeUndefined();
+  });
+  it("ignores a bus with no id (an undrawable bus_alias; its note is WS7-042c)", () => {
+    expect(subjectsToSpecs([f({ kind: "bus", subject: "DATA" })])).toEqual([]);
+  });
+});
+
+describe("findingSpec", () => {
+  it("lights up a single finding exactly by kind", () => {
+    expect(findingSpec(f({ kind: "component", subject: "R9" }))).toEqual([{ components: ["R9"] }]);
+    expect(findingSpec(f({ kind: "net", subject: "SDA" }))).toEqual([{ nets: ["SDA"] }]);
+  });
+});
+
+describe("collapseInstances", () => {
+  it("folds findings identical in (rule, subject, pin, severity, message) into one row", () => {
+    const dup = Array.from({ length: 7 }, () => f({ rule: "duplicate-net-name", subject: "&1V8_ETH", severity: "warning", message: "7 nets" }));
+    const collapsed = collapseInstances(dup);
+    expect(collapsed).toHaveLength(1);
+    expect(collapsed[0].instances).toHaveLength(7);
+    expect(collapsed[0].head.subject).toBe("&1V8_ETH");
+  });
+
+  it("does not fold when subject, message, or severity differ", () => {
+    const items = [
+      f({ subject: "A", message: "m" }),
+      f({ subject: "B", message: "m" }), // different subject
+      f({ subject: "A", message: "n" }), // different message
+      f({ subject: "A", message: "m", severity: "error" }), // different severity
+    ];
+    expect(collapseInstances(items)).toHaveLength(4);
+  });
+
+  it("folds rows differing only in sheets (sheets are not part of the identity)", () => {
+    const items = [
+      f({ subject: "N", sheets: [{ id: "s1", name: "Root" }] }),
+      f({ subject: "N", sheets: [{ id: "s2", name: "Power" }] }),
+    ];
+    const collapsed = collapseInstances(items);
+    expect(collapsed).toHaveLength(1);
+    expect(collapsed[0].instances.map((i) => i.sheets[0].id)).toEqual(["s1", "s2"]);
+  });
+
+  it("preserves first-appearance order across collapsed groups", () => {
+    const items = [f({ subject: "A" }), f({ subject: "B" }), f({ subject: "A" })];
+    expect(collapseInstances(items).map((c) => c.head.subject)).toEqual(["A", "B"]);
+  });
+});
+
+describe("findingKey", () => {
+  it("is equal for two findings that should collapse and differs when a field changes", () => {
+    const a = f({ rule: "r", subject: "N", pin: "", severity: "info", message: "m" });
+    expect(findingKey(a)).toBe(findingKey(f({ ...a, sheets: [{ id: "x", name: "X" }] })));
+    expect(findingKey(a)).not.toBe(findingKey(f({ ...a, message: "n" })));
+  });
+});
+
+describe("sortFindings", () => {
+  it("sorts by severity worst-first, tiebreaking on rule then subject", () => {
+    // C1(warn, unconnected-component) and TX_P(warn, diff-pair-naming) share a severity, so rule
+    // breaks the tie.
+    expect(sortFindings(findings, "severity", 1).map((x) => x.subject)).toEqual(["SCL", "TX_P", "C1", "STUB"]);
+  });
+  it("reverses the whole order when dir is -1", () => {
+    expect(sortFindings(findings, "severity", -1).map((x) => x.subject)).toEqual(["STUB", "C1", "TX_P", "SCL"]);
+  });
+  it("sorts by subject and by rule", () => {
+    expect(sortFindings(findings, "subject", 1).map((x) => x.subject)).toEqual(["C1", "SCL", "STUB", "TX_P"]);
+    expect(sortFindings(findings, "rule", 1).map((x) => x.rule)).toEqual(["diff-pair-naming", "i2c-pull-up", "single-pin-net", "unconnected-component"]);
+  });
+  it("does not mutate the input", () => {
+    const before = findings.map((x) => x.subject);
+    sortFindings(findings, "subject", 1);
+    expect(findings.map((x) => x.subject)).toEqual(before);
+  });
+});
+
+describe("severityRank", () => {
+  // An unrecognised severity leads, as the engine's report has it (agni issue 1045).
+  it("orders unknown < error < warning < info", () => {
+    expect([severityRank("bogus"), severityRank("error"), severityRank("warning"), severityRank("info")]).toEqual([-1, 0, 1, 2]);
+  });
+});
+
+describe("per-instance net id (WS9)", () => {
+  it("subjectsToSpecs buckets a net with a netId by id, not name, so instances are distinct targets", () => {
+    const specs = subjectsToSpecs([
+      f({ kind: "net", subject: "PWR_A", netId: "aaa" }),
+      f({ kind: "net", subject: "PWR_A", netId: "bbb" }),
+      f({ kind: "net", subject: "GND", netId: "" }), // no id -> falls back to name
+    ]);
+    expect(specs).toHaveLength(1);
+    expect(new Set(specs[0].netIds)).toEqual(new Set(["aaa", "bbb"]));
+    expect(specs[0].nets).toEqual(["GND"]);
+  });
+
+  it("findingSpec targets one instance by id", () => {
+    expect(findingSpec(f({ kind: "net", subject: "PWR_A", netId: "aaa" }))).toEqual([{ netIds: ["aaa"] }]);
+  });
+
+  it("collapse folds same-key findings that differ only in netId, keeping each instance addressable", () => {
+    const items = [f({ subject: "PWR_A", netId: "aaa" }), f({ subject: "PWR_A", netId: "bbb" })];
+    const collapsed = collapseInstances(items);
+    expect(collapsed).toHaveLength(1);
+    expect(collapsed[0].instances.map((i) => i.netId)).toEqual(["aaa", "bbb"]);
+  });
+
+  it("focusStack drops only the focused instance from the base, keeping same-named siblings lit", () => {
+    const all = [f({ kind: "net", subject: "PWR_A", netId: "aaa" }), f({ kind: "net", subject: "PWR_A", netId: "bbb" })];
+    const stack = focusStack(all, [{ kind: "net", subject: "PWR_A", pin: "", netId: "aaa" }], [{ netIds: ["aaa"] }]);
+    // Base is the sibling (bbb) only, now stamped as context; the focus layer for aaa sits on top
+    // carrying no color, so it resolves to the default (agni issue 348).
+    expect(stack).toEqual([
+      { netIds: ["bbb"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { netIds: ["aaa"] },
+    ]);
+  });
+});
+
+// The focus layer and the base layer used to be the same color (agni issue 348).
+//
+// subjectsToSpecs returns a bare `{}`, so every field took its fallback and every finding was
+// re-stroked in opaque DEFAULT_HIGHLIGHT_COLOR. The focus layer went through withFocusShape stamped
+// with a user style that is undefined unless the reader opened the Highlight menu, so it took the
+// SAME fallback. The two differed only in alpha and shape, within one hue.
+//
+// These assert the separation at the spec level, since it is decidable there. Whether a reader can
+// actually TELL them apart is a pixel claim and belongs in the browser suite; jsdom has no compositor
+// and would pass on two colors a human could not distinguish.
+describe("focusStack separates the field from the figure (agni issue 348)", () => {
+  const findings = [f({ kind: "component", subject: "R1" }), f({ kind: "component", subject: "R2" })];
+
+  it("stamps the base layer as context and leaves the focus layer at the default", () => {
+    const [base, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
+    expect(base.color).toBe(BASE_HIGHLIGHT_COLOR);
+    expect(base.alpha).toBe(BASE_HIGHLIGHT_ALPHA);
+    // The focus names no color on purpose. It inherits the default, so a user style set through the
+    // Highlight menu still wins here rather than being overwritten by a hardcoded focus color.
+    expect(focus.color).toBeUndefined();
+  });
+
+  it("gives the two layers different hues, not one hue at two alphas", () => {
+    const [base] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
+    // toBeDefined FIRST, because `undefined !== DEFAULT` is true, so the not.toBe alone would pass
+    // on the very bug this describes (a base spec that names no color and falls back to the
+    // default).
+    expect(base.color).toBeDefined();
+    expect(base.color).not.toBe(DEFAULT_HIGHLIGHT_COLOR);
+  });
+
+  it("leaves the base at full strength when nothing is focused", () => {
+    // An empty focus means the subject was not found. The field is then the whole message rather
+    // than context for something in front of it, so muting it would dim the only layer there is.
+    const stack = focusStack(findings, [{ kind: "component", subject: "NOPE", pin: "" }], []);
+    expect(stack).toEqual([{ components: ["R1", "R2"] }]);
+  });
+
+  it("preserves a user style on the focus layer", () => {
+    const styled = [{ components: ["R1"], color: "#00ff00", alpha: 0.9 }];
+    const [, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], styled);
+    expect(focus).toEqual({ components: ["R1"], color: "#00ff00", alpha: 0.9 });
+  });
+});
+
+// agni issue 1045: the report and the panel rank and file findings by one fixture, which
+// core/results' TestSeverityTwinFixture reads too.
+const here = dirname(fileURLToPath(import.meta.url));
+
+describe("severitySections, twinned with core/results via severity_twin.json", () => {
+  const fixture = JSON.parse(readFileSync(join(here, "..", "..", "core", "results", "testdata", "severity_twin.json"), "utf8")) as {
+    cases: { name: string; findings: { severity: string; inconclusive?: boolean }[]; want: [string, number][] }[];
+  };
+  it("has cases to check", () => {
+    expect(fixture.cases.length).toBeGreaterThanOrEqual(5);
+  });
+  for (const tc of fixture.cases) {
+    it(`matches Pivot: ${tc.name}`, () => {
+      const items = tc.findings.map((x, i) => f({ severity: x.severity, inconclusive: !!x.inconclusive, subject: `N${i}` }));
+      expect(severitySections(items).map((s) => [s.severity, s.count])).toEqual(tc.want);
+    });
+  }
+});
+
+describe("severitySections parity with the server report (WS3-022)", () => {
+  // The server report (GetCheckReport) emits a worst-first order and per-severity counts. The
+  // client's severity rollup must reach the same ones, so the merged panel's severity grouping cannot
+  // drift from the CLI report. This pins severitySections against reportFromWire over the SAME
+  // finding set.
+  const mixed: FindingItem[] = [
+    f({ severity: "info", subject: "I1" }),
+    f({ severity: "error", subject: "E1" }),
+    f({ severity: "warning", subject: "W1" }),
+    f({ severity: "info", subject: "I2" }),
+    f({ severity: "error", subject: "E2" }),
+    f({ severity: "info", subject: "I3" }),
+  ];
+
+  it("matches the report's section order and counts", () => {
+    const client = severitySections(mixed).map((s) => [s.severity, s.count]);
+    // The server emits sections worst-first with per-severity counts; reportFromWire preserves them.
+    const wire = {
+      source: "x",
+      rulesRun: 1,
+      sections: [
+        { severity: "error", count: 2, rules: [] },
+        { severity: "warning", count: 1, rules: [] },
+        { severity: "info", count: 3, rules: [] },
+      ],
+    };
+    const report = reportFromWire(wire, () => "").sections.map((s) => [s.severity, s.count]);
+    expect(client).toEqual(report);
+  });
+});
+
+// These tests cover what a selection is CHECKED for (agni issue 259). The check is a FILTER over the
+// findings already computed. So the tests pin the matching rule and the meaning of a zero, and no
+// evaluation.
+describe("selectionFromFinding", () => {
+  it("reads each subject kind as the thing the finding is about", () => {
+    expect(selectionFromFinding(f({ kind: "component", subject: "R1" }))).toEqual({ kind: "component", ref: "R1" });
+    expect(selectionFromFinding(f({ kind: "net", subject: "SDA", netId: "n7" }))).toEqual({ kind: "net", net: "SDA", netId: "n7" });
+    expect(selectionFromFinding(f({ kind: "pin", subject: "U1", pin: "5" }))).toEqual({ kind: "pin", ref: "U1", pin: "5" });
+    expect(selectionFromFinding(f({ kind: "bus", subject: "D[7:0]", busId: "b1" }))).toEqual({ kind: "bus", busId: "b1" });
+  });
+
+  it("is null for a finding with no locatable subject", () => {
+    expect(selectionFromFinding(f({ kind: "net", subject: "", netId: "" }))).toBeNull();
+    expect(selectionFromFinding(f({ kind: "design", subject: "" }))).toBeNull();
+  });
+});
+
+describe("findingsFor", () => {
+  const onR1 = f({ rule: "a", kind: "component", subject: "R1" });
+  const onSDA = f({ rule: "b", kind: "net", subject: "SDA", netId: "n1" });
+  const onOtherSDA = f({ rule: "c", kind: "net", subject: "SDA", netId: "n2" });
+  const onU1p5 = f({ rule: "d", kind: "pin", subject: "U1", pin: "5" });
+  const all = [onR1, onSDA, onOtherSDA, onU1p5];
+
+  it("projects the findings owning one subject", () => {
+    expect(findingsFor(all, [{ kind: "component", ref: "R1" }])).toEqual([onR1]);
+  });
+
+  it("separates two nets that share a display name", () => {
+    expect(findingsFor(all, [{ kind: "net", net: "SDA", netId: "n2" }])).toEqual([onOtherSDA]);
+  });
+
+  it("matches a net named without an id against both instances, since the caller could not say", () => {
+    expect(findingsFor(all, [{ kind: "net", net: "SDA" }])).toEqual([onSDA, onOtherSDA]);
+  });
+
+  it("takes a SET, because one entity is the degenerate case of a selection", () => {
+    expect(findingsFor(all, [{ kind: "component", ref: "R1" }, { kind: "pin", ref: "U1", pin: "5" }])).toEqual([onR1, onU1p5]);
+  });
+
+  // A query answering R1 on five nets contributes R1 five times to the subject list; its one
+  // finding must still be counted once.
+  it("returns a finding once however many subjects it matches", () => {
+    const dupes = [{ kind: "net", net: "SDA" } as const, { kind: "net", net: "SDA", netId: "n1" } as const];
+    expect(findingsFor(all, dupes)).toEqual([onSDA, onOtherSDA]);
+  });
+
+  it("is empty for no subjects and ignores nulls, so an unselectable cell contributes nothing", () => {
+    expect(findingsFor(all, [])).toEqual([]);
+    expect(findingsFor(all, [null, null])).toEqual([]);
+    expect(findingsFor(all, [null, { kind: "component", ref: "R1" }])).toEqual([onR1]);
+  });
+
+  it("keeps the order the pass produced, so the projection is not a re-sort in disguise", () => {
+    expect(findingsFor(all, [{ kind: "pin", ref: "U1", pin: "5" }, { kind: "component", ref: "R1" }])).toEqual([onR1, onU1p5]);
+  });
+});
+
+describe("tallySeverities", () => {
+  it("counts by severity, since 3 findings and 3 errors are different news", () => {
+    const t = tallySeverities([f({ severity: "error" }), f({ severity: "error" }), f({ severity: "warning" }), f({ severity: "info" })]);
+    expect(t).toEqual({ error: 2, warning: 1, info: 1, total: 4, inconclusive: 0 });
+  });
+
+  // A severity nobody here recognises still exists, and a total that undercounted it would make the
+  // pips and the number disagree.
+  it("counts an unknown severity toward the total", () => {
+    expect(tallySeverities([f({ severity: "catastrophe" })])).toEqual({ error: 0, warning: 0, info: 0, total: 1, inconclusive: 0 });
+  });
+
+  // An inconclusive result is never a pass and never a fail (agni issue 74). Counting it as a defect
+  // states something the rule explicitly declined to state. Dropping it loses an item a reader could
+  // act on, by supplying what was missing.
+  it("counts an inconclusive result apart from the defects, and out of the total", () => {
+    const t = tallySeverities([
+      f({ severity: "error" }),
+      f({ severity: "error", inconclusive: true }),
+      f({ severity: "info", inconclusive: true }),
+    ]);
+    expect(t).toEqual({ error: 1, warning: 0, info: 0, total: 1, inconclusive: 2 });
+  });
+
+  // Its SEVERITY does not make it inconclusive, so an inconclusive error must not raise the error
+  // pip. A reviewer would act on that pip first.
+  it("keeps an inconclusive result out of its own severity bucket", () => {
+    expect(tallySeverities([f({ severity: "error", inconclusive: true })]).error).toBe(0);
+  });
+});
+
+// A zero has four meanings and only one is "nothing is wrong". This function keeps a panel from
+// showing the reassuring one when nothing supports it.
+describe("checkedState", () => {
+  it("names the state a count can be read in", () => {
+    expect(checkedState({ ruleCount: 0, pending: 0, running: false })).toBe("no-rules");
+    expect(checkedState({ ruleCount: 0, pending: 0, running: false, catalogLoading: true })).toBe("loading");
+    expect(checkedState({ ruleCount: 4, pending: 4, running: true })).toBe("running");
+    expect(checkedState({ ruleCount: 4, pending: 4, running: false })).toBe("not-run");
+    expect(checkedState({ ruleCount: 4, pending: 1, running: false })).toBe("partial");
+    expect(checkedState({ ruleCount: 4, pending: 0, running: false })).toBe("complete");
+  });
+
+  it("reports running before anything else, since a count mid-flight is a moving target", () => {
+    expect(checkedState({ ruleCount: 4, pending: 0, running: true })).toBe("running");
+  });
+});
+
+// An inconclusive result is a result the rule could not DECIDE, never a defect it found. It still
+// holds the severity it WOULD have reported. So every projection keyed on that string quietly filed
+// it with the failures (agni issue 350).
+describe("an inconclusive finding is not a defect", () => {
+  const undecided = f({ rule: "esd-protection", severity: "error", subject: "U3", inconclusive: true });
+
+  it("leaves the severity axis for its own group, and stays put on every other axis", () => {
+    const mixed = [f({ severity: "error", subject: "U7" }), undecided];
+    expect(groupFindings(mixed, "severity").map(([v]) => v)).toEqual(["error", "unresolved"]);
+    // The rule, category, kind and profile of an inconclusive result are all still true of it, so
+    // only the severity axis moves it.
+    expect(groupFindings(mixed, "rule").map(([v]) => v)).toEqual(["r", "esd-protection"]);
+  });
+
+  it("sorts after every defect rather than among the errors it is not one of", () => {
+    const mixed = [undecided, f({ severity: "info", subject: "R1" }), f({ severity: "error", subject: "U7" })];
+    expect(sortFindings(mixed, "severity", 1).map((x) => x.subject)).toEqual(["U7", "R1", "U3"]);
+    expect(findingRank(undecided)).toBeGreaterThan(findingRank(f({ severity: "catastrophe" })));
+  });
+
+  // The engine's report files it as unresolved too since agni issue 1045, so the parity oracle does.
+  it("reaches severitySections as unresolved, where the report puts it", () => {
+    expect(severitySections([undecided])).toEqual([{ severity: "unresolved", count: 1 }]);
+  });
+});
+
+// agni issue 1045: the enum decodes as the engine spells it.
+describe("outcomeWord, twinned with service.OutcomeWord via outcome_twin.json", () => {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(dir, "..", "..", "service", "testdata", "outcome_twin.json"), "utf8")) as { outcomes: { wire: number; word: string }[] };
+  it("has outcomes to check", () => expect(twin.outcomes.length).toBeGreaterThanOrEqual(6));
+  for (const o of twin.outcomes) it(`decodes ${o.wire} as ${o.word}`, () => expect(outcomeWord(o.wire)).toBe(o.word));
+});

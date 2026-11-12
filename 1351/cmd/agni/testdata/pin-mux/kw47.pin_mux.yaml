@@ -1,0 +1,22 @@
+# The KW47's pin-mux table as a board team keeps it, outside the published spec (agni issue 1200).
+# Transcribed by hand from the KW47 Product Family data sheet, Rev. 4 (18 December 2025), Table 58
+# "KW47 Package pinout", pages 58 and 59. Facts only; the document stays outside this repo.
+#
+# The pins carry no ids, because a mux table does not know the spec's. PTB3 and PTB4 join their
+# published pins by designator, and PTB5, given without one, joins by name.
+mpn: KW47
+pins:
+  - name: PTB3
+    numbers: [{package_ref: 48qfn, number: "1"}]
+    alternates:
+      [{name: ADC0_B13}, {name: PTB3}, {name: LPSPI1_SOUT}, {name: LPUART1_RX}, {name: TPM1_CH3},
+       {name: FLEXIO0_D29}, {name: WUU0_P14}]
+  - name: PTB4
+    numbers: [{package_ref: 48qfn, number: "2"}]
+    alternates:
+      [{name: PTB4}, {name: LPSPI1_PCS3}, {name: LPUART1_CTS_b}, {name: LPI2C1_SDA}, {name: I3C0_SDA},
+       {name: TRGMUX0_IN0}, {name: FLEXIO0_D30}, {name: WUU0_P15}]
+  - name: PTB5
+    alternates:
+      [{name: PTB5}, {name: LPSPI1_PCS2}, {name: LPUART1_RTS_b}, {name: LPI2C1_SCL}, {name: I3C0_SCL},
+       {name: TRGMUX0_OUT0}, {name: FLEXIO0_D31}]

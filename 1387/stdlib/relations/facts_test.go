@@ -1,0 +1,1376 @@
+package relations
+
+import (
+	"context"
+	"math"
+	"reflect"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/query"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/netgraph"
+)
+
+// factsByRelation indexes a projection by relation name for the assertions below.
+func factsByRelation(fs []facts.Row) map[string][]facts.Row {
+	out := map[string][]facts.Row{}
+	for _, f := range fs {
+		out[f.Relation] = append(out[f.Relation], f)
+	}
+	return out
+}
+
+// TestParamRangeAndNominalFacts (WS3-082) checks that the two enriched relations project as
+// expected. A recommended-operating row keeps BOTH bounds and its kind token, and a named rail
+// yields its name-derived nominal. The datasheet-range family joins these facts.
+func TestParamRangeAndNominalFacts(t *testing.T) {
+	set := param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)}
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(set))
+	byRel := factsByRelation(Facts(m))
+
+	// param.range(ACME-33, VDD, recommended_operating, 3.0, 3.6), with kind in Value, min in Min,
+	// max in Num.
+	pr := byRel[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want one", pr)
+	}
+	r := pr[0]
+	if r.Subject != "ACME-33" || r.Object != "VDD" || r.Value != "recommended_operating" {
+		t.Errorf("param.range subject/symbol/kind = %s/%s/%s, want ACME-33/VDD/recommended_operating", r.Subject, r.Object, r.Value)
+	}
+	if r.Min == nil || *r.Min != 3.0 || r.Num == nil || *r.Num != 3.6 {
+		t.Errorf("param.range min/max = %v/%v, want 3/3.6", r.Min, r.Num)
+	}
+
+	// net.nominal_voltage(+5V, 5) is a name-derived nominal, netlist-tier (no --params needed).
+	found := false
+	for _, f := range byRel[RelNetNominalVoltage] {
+		if f.Subject == "+5V" {
+			found = true
+			if f.Num == nil || *f.Num != 5 {
+				t.Errorf("net.nominal_voltage(+5V) num = %v, want 5", f.Num)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("net.nominal_voltage missing a +5V row: %+v", byRel[RelNetNominalVoltage])
+	}
+}
+
+// TestFactsProjectsSeedRelations (WS3-004) checks that the four seed relations are derived from a
+// datasheet-joined design with the right subjects, numeric values, param conditions, and
+// provenance. The cap-voltage rule runs on the same design and seeded spec, so the facts are
+// exactly the reads that rule declares, materialized as tuples.
+func TestFactsProjectsSeedRelations(t *testing.T) {
+	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
+	m := check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set))
+	byRel := factsByRelation(Facts(m))
+
+	// net.max_voltage(+10V, 10). GND yields none (no voltage token), so exactly one.
+	nv := byRel[RelNetMaxVoltage]
+	if len(nv) != 1 || nv[0].Subject != "+10V" || nv[0].Num == nil || *nv[0].Num != 10 {
+		t.Errorf("net.max_voltage = %+v, want one (+10V, 10)", nv)
+	}
+
+	// component.mpn(C1, DEMO-CAP-6V3)
+	mp := byRel[RelComponentMPN]
+	if len(mp) != 1 || mp[0].Subject != "C1" || mp[0].Value != "DEMO-CAP-6V3" {
+		t.Errorf("component.mpn = %+v, want one (C1, DEMO-CAP-6V3)", mp)
+	}
+
+	// param.max(DEMO-CAP-6V3, VDC, <=6.3, TA=25C) cited to the datasheet page.
+	pf := byRel[RelParam]
+	if len(pf) != 1 {
+		t.Fatalf("param facts = %+v, want one", pf)
+	}
+	p := pf[0]
+	if p.Subject != "DEMO-CAP-6V3" || p.Object != "VDC" || p.Num == nil || *p.Num != 6.3 {
+		t.Errorf("param subject/symbol/num = %s/%s/%v, want DEMO-CAP-6V3/VDC/6.3", p.Subject, p.Object, p.Num)
+	}
+	if p.Conditions != "TA = 25C" {
+		t.Errorf("param conditions = %q, want %q", p.Conditions, "TA = 25C")
+	}
+
+	// component.net(C1, +10V) and (C1, GND)
+	on := byRel[RelComponentOnNet]
+	if len(on) != 2 {
+		t.Fatalf("component.net = %+v, want two (C1 on +10V and GND)", on)
+	}
+	nets := map[string]bool{on[0].Object: true, on[1].Object: true}
+	if !nets["+10V"] || !nets["GND"] {
+		t.Errorf("component.net nets = %v, want +10V and GND", nets)
+	}
+}
+
+// TestTypesPowerOutFact (WS3-072) checks that the capability flag projects one row on a format that
+// types power outputs (KiCad) and zero on one that does not (EDIF). It is the queryable twin of the
+// design.types_power_out gate, so "is a driver-absence check sound on this design" is answerable
+// from a query.
+func TestTypesPowerOutFact(t *testing.T) {
+	k := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "kicad-sch"})))[RelTypesPowerOut]
+	if len(k) != 1 || k[0].Subject != "true" {
+		t.Errorf("kicad-sch: want one design.types_power_out row (true), got %+v", k)
+	}
+	e := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "edif-2.0.0"})))[RelTypesPowerOut]
+	if len(e) != 0 {
+		t.Errorf("edif: want no design.types_power_out row, got %+v", e)
+	}
+}
+
+// TestExternalSignalNetFacts (WS3-061) checks that the relation projects check.ExternalSignalNet,
+// so a datalog ESD check selects the same nets the Go rules do. The exclusions are the assertions
+// that matter. A rail and a ground net reaching the same connector must NOT appear, because a
+// dropped guard here is a false FAIL on a net that was never an ESD question.
+func TestExternalSignalNetFacts(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "BUS_CANH", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "1"}}},
+			{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "2"}, {ComponentRef: "U1", PinRef: "2"}}},
+			{Name: "+12V", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "3"}, {ComponentRef: "U1", PinRef: "3"}}},
+			{Name: "INTERNAL", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "U1", PinRef: "4"}}},
+		},
+	}
+	got := map[string]bool{}
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelExternalSignalNet] {
+		got[f.Subject] = true
+		if len(f.Cites) == 0 {
+			t.Errorf("net.connector_signal(%s) has no provenance cite", f.Subject)
+		}
+	}
+	if !got["BUS_CANH"] {
+		t.Errorf("want BUS_CANH (a signal net on a connector), got %v", got)
+	}
+	for _, excluded := range []string{"GND", "+12V", "INTERNAL"} {
+		if got[excluded] {
+			t.Errorf("%s must not be in the ESD scope: %v", excluded, got)
+		}
+	}
+}
+
+// TestNetClassFacts (WS3-105) checks that net.netclass projects the TOOL-assigned class verbatim,
+// one row per classed net, and leaves an unclassed net out (so `not net.netclass(?n, ?_)` reads as
+// unclassed). design.has_netclass is the design-level marker. It separates "no net is in class X"
+// from "this design assigns no classes". A netclass-scoped rule needs that distinction, or it
+// reads as a pass.
+func TestNetClassFacts(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "USB_D+", NetClasses: []string{"HighSpeed"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "VBUS", NetClasses: []string{"Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SCL", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]string{}
+	for _, f := range byRel[RelNetNetClass] {
+		got[f.Subject] = f.Value
+		if len(f.Cites) == 0 {
+			t.Errorf("net.netclass(%s) has no provenance cite", f.Subject)
+		}
+	}
+	want := map[string]string{"USB_D+": "HighSpeed", "VBUS": "Power"}
+	if len(got) != len(want) || got["USB_D+"] != want["USB_D+"] || got["VBUS"] != want["VBUS"] {
+		t.Errorf("net.netclass = %v, want %v (SCL is unclassed and must not appear)", got, want)
+	}
+
+	if mk := byRel[RelHasNetClass]; len(mk) != 1 || mk[0].Subject != "true" {
+		t.Errorf("want one design.has_netclass row (true), got %+v", mk)
+	}
+}
+
+// TestNetClassFactsFanOut (WS1-050) covers membership as a set, so the projection is 1:many. A net
+// in two classes emits one row per class and `?net` is NOT unique. A rule joining on ?net must
+// expect that. The relation shape did not change, since it was already {FieldSubject, FieldValue}.
+// Only the number of rows per net changed.
+func TestNetClassFactsFanOut(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "VBUS", NetClasses: []string{"HighCurrent", "Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SCL", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	rows := factsByRelation(Facts(check.NewModel(d)))[RelNetNetClass]
+	if len(rows) != 2 {
+		t.Fatalf("want 2 net.netclass rows for a two-class net, got %d: %+v", len(rows), rows)
+	}
+	got := []string{}
+	for _, r := range rows {
+		if r.Subject != "VBUS" {
+			t.Errorf("unexpected subject %q (SCL is unclassed and must not appear)", r.Subject)
+		}
+		got = append(got, r.Value)
+	}
+	sort.Strings(got)
+	if want := []string{"HighCurrent", "Power"}; !slices.Equal(got, want) {
+		t.Errorf("net.netclass values = %v, want %v", got, want)
+	}
+}
+
+// TestNetClassFactsAbsent (WS3-105) covers a design whose source has no net classes. Every format
+// but a KiCad project read is such a source, and so is a KiCad project that declares none. The
+// design must project neither the relation nor the marker. A class-scoped rule gates on the empty
+// marker. Without it, an empty net.netclass join is indistinguishable from a clean pass.
+func TestNetClassFactsAbsent(t *testing.T) {
+	d := &ir.Design{SourceFormat: "edif-2.0.0", Nets: []*ir.Net{
+		{Name: "USB_D+", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+	if n := byRel[RelNetNetClass]; len(n) != 0 {
+		t.Errorf("want no net.netclass rows on a classless design, got %+v", n)
+	}
+	if mk := byRel[RelHasNetClass]; len(mk) != 0 {
+		t.Errorf("want no design.has_netclass row on a classless design, got %+v", mk)
+	}
+}
+
+// TestFeedbackFacts (WS3-067) checks that a feedback-named net projects a feedback fact (the
+// datalog equivalent of the test-point rule's exclusion); a plain rail does not.
+func TestFeedbackFacts(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "VCC1V2_FB", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "VCC", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	fb := factsByRelation(Facts(check.NewModel(d)))[RelFeedback]
+	if len(fb) != 1 || fb[0].Subject != "VCC1V2_FB" {
+		t.Errorf("feedback facts = %+v, want one (VCC1V2_FB)", fb)
+	}
+}
+
+// TestEsdRatedFacts (WS3-076) checks that component.esd_rated projects a part whose seeded
+// datasheet declares an ESD rating at or above the credit floor. esd-protection's Go rule credits
+// the same concept, and this relation states it in datalog. A below-floor rating and an unseeded
+// part yield no row, and the relation is empty without --params.
+func TestEsdRatedFacts(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{
+		{RefDes: "U9", Mpn: "DEMO-XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "U8", Mpn: "DEMO-WEAK", Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}}, // no MPN, no spec
+	}}
+	set := param.ParamSet{
+		"DEMO-XCVR": esdSpec("DEMO-XCVR", 8000), // 8 kV, above the 2 kV floor -> rated
+		"DEMO-WEAK": esdSpec("DEMO-WEAK", 500),  // below floor -> not credited
+	}
+	rated := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(set))))[RelEsdRated]
+	if len(rated) != 1 || rated[0].Subject != "U9" {
+		t.Fatalf("component.esd_rated = %+v, want one (U9); DEMO-WEAK below floor and R1 unseeded must not appear", rated)
+	}
+	if len(rated[0].Cites) == 0 {
+		t.Error("component.esd_rated fact has no cite; it should point to the datasheet ESD row")
+	}
+	if got := factsByRelation(Facts(check.NewModel(d)))[RelEsdRated]; len(got) != 0 {
+		t.Errorf("component.esd_rated without --params = %+v, want none (silent by construction)", got)
+	}
+}
+
+// TestNetBusLikeFacts (WS3-080) checks that net.bus_like projects a shared-distribution net. Such a
+// net has rail-scale fan-out, a ground name, or the global fact. The reach walk stops at the same
+// nets. A point-to-point net does not project.
+func TestNetBusLikeFacts(t *testing.T) {
+	wide := &ir.Net{Name: "WIDE", Prov: &ir.Provenance{SourceFile: "t"}}
+	for i := 0; i < 17; i++ { // > maxWalkFan (16)
+		wide.Connections = append(wide.Connections, &ir.Connection{ComponentRef: "U1", PinRef: "p"})
+	}
+	d := &ir.Design{Nets: []*ir.Net{
+		wide,
+		{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}}, // ground name -> bus-like
+		{Name: "SIG", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+			{ComponentRef: "U1", PinRef: "a"}, {ComponentRef: "U2", PinRef: "b"}}}, // 2-pin -> not
+	}}
+	got := map[string]bool{}
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelNetBusLike] {
+		got[f.Subject] = true
+	}
+	if !got["WIDE"] || !got["GND"] {
+		t.Errorf("net.bus_like = %v, want WIDE (fan-out) and GND (ground name)", got)
+	}
+	if got["SIG"] {
+		t.Error("a 2-pin point-to-point net must not be bus_like")
+	}
+}
+
+// TestFactsAlwaysCited (WS3-004) checks that every fact has provenance. A fact you cannot cite is
+// not verifiable, and verifiability is the point of a provenance-carrying fact base. The param fact
+// cites the datasheet document/page; the IR facts cite the source file.
+func TestFactsAlwaysCited(t *testing.T) {
+	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
+	facts := Facts(check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set)))
+	if len(facts) == 0 {
+		t.Fatal("no facts derived")
+	}
+	for _, f := range facts {
+		if len(f.Cites) == 0 {
+			t.Errorf("fact %s(%s,%s) has no provenance cite", f.Relation, f.Subject, f.Object)
+		}
+	}
+	cite := strings.Join(factsByRelation(facts)[RelParam][0].Cites, " ")
+	for _, want := range []string{"ACME-CAP Rev C", "page 2", "Ratings"} {
+		if !strings.Contains(cite, want) {
+			t.Errorf("param cite = %q, missing %q (want the datasheet doc/page/table)", cite, want)
+		}
+	}
+}
+
+// TestFactsRegenerable (WS3-004) checks that the projection is a derived, deterministic view of the
+// Model (C8). Regenerating it yields an identical result, so it is safe to recompute rather than
+// store as a second authority.
+func TestFactsRegenerable(t *testing.T) {
+	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
+	m := check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set))
+	if !reflect.DeepEqual(Facts(m), Facts(m)) {
+		t.Error("Facts(m) is not deterministic across calls")
+	}
+}
+
+// TestBoardFacts (WS1-041) checks that the board tier projects per-net derived facts, reusing the
+// DRC board fixture. The facts are the minimum track width and via drill, and layer membership.
+// Board geometry is then queryable through the same fact base, with no query-engine change.
+func TestBoardFacts(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))))
+
+	tw := map[string]float64{}
+	for _, f := range byRel[RelBoardTrackWidth] {
+		if f.Num != nil {
+			if f.BaseUnit != "m" {
+				t.Errorf("%s track width published in %q, want m", f.Subject, f.BaseUnit)
+			}
+			tw[f.Subject] = mmOf(*f.Num)
+		}
+	}
+	if tw["THIN"] != 0.05 || tw["CLEAN"] != 0.25 {
+		t.Errorf("track widths = %v, want THIN=0.05 CLEAN=0.25 (mm, the per-net minimum)", tw)
+	}
+
+	vd := map[string]float64{}
+	for _, f := range byRel[RelBoardViaDrill] {
+		if f.Num != nil {
+			vd[f.Subject] = mmOf(*f.Num)
+		}
+	}
+	if vd["SMALLHOLE"] != 0.1 {
+		t.Errorf("SMALLHOLE via drill = %v, want 0.1mm", vd["SMALLHOLE"])
+	}
+
+	layers := map[string]bool{}
+	for _, f := range byRel[RelBoardLayer] {
+		if f.Subject == "CLOSE_B" {
+			layers[f.Object] = true
+		}
+	}
+	if !layers["F.Cu"] || !layers["B.Cu"] {
+		t.Errorf("CLOSE_B layers = %v, want F.Cu and B.Cu", layers)
+	}
+
+	for _, rel := range []string{RelBoardTrackWidth, RelBoardViaDrill, RelBoardLayer} {
+		for _, f := range byRel[rel] {
+			if len(f.Cites) == 0 {
+				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
+			}
+		}
+	}
+	// A netlist-only design yields no board facts (silent-by-construction, like the params tier).
+	if n := len(factsByRelation(Facts(check.NewModel(&ir.Design{})))[RelBoardTrackWidth]); n != 0 {
+		t.Errorf("board.track_width facts without a board tier = %d, want 0", n)
+	}
+}
+
+// TestComponentClassAndNetAttrFacts (WS3-074) checks that the class + net-attribute relations
+// project the datalog reads a class-quantified rule needs. component.class holds each component's
+// established device class and OMITS ClassUnknown, since a class is never guessed. net.rail covers
+// power AND ground, and net.ground isolates the ground-named nets from it. net.external marks
+// read-gap nets. All are cited.
+func TestComponentClassAndNetAttrFacts(t *testing.T) {
+	ext := tnet("XEXT", "Y1.1")
+	ext.Attributes = map[string]string{netgraph.AttrExternal: "true"}
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "Y1", Prov: &ir.Provenance{SourceFile: "t"}}, // clock family (bare Y prefix, WS10-015)
+			{RefDes: "C1", Prov: &ir.Provenance{SourceFile: "t"}}, // capacitor (C prefix)
+			{RefDes: "W1", Prov: &ir.Provenance{SourceFile: "t"}}, // unmapped prefix -> ClassUnknown, omitted
+		},
+		Nets: []*ir.Net{
+			tnet("XIN", "Y1.2", "C1.1"),
+			tnet("GND", "C1.2"),
+			ext,
+		},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	// component.class maps Y1->clock (bare Y is the ambiguous clock family, WS10-015),
+	// C1->capacitor; the unclassifiable W1 yields no row.
+	class := map[string]string{}
+	for _, f := range byRel[RelComponentClass] {
+		class[f.Subject] = f.Value
+	}
+	if class["Y1"] != "clock" || class["C1"] != "capacitor" {
+		t.Errorf("component.class = %v, want Y1=clock C1=capacitor", class)
+	}
+	if _, ok := class["W1"]; ok {
+		t.Errorf("component.class included W1 (ClassUnknown must be omitted): %v", class)
+	}
+
+	// net.ground holds exactly GND (rail would also match power rails, this isolates ground).
+	ground := map[string]bool{}
+	for _, f := range byRel[RelNetGround] {
+		ground[f.Subject] = true
+	}
+	if len(ground) != 1 || !ground["GND"] {
+		t.Errorf("net.ground = %v, want exactly {GND}", ground)
+	}
+
+	// net.external holds exactly the flagged read-gap net.
+	external := map[string]bool{}
+	for _, f := range byRel[RelNetExternal] {
+		external[f.Subject] = true
+	}
+	if len(external) != 1 || !external["XEXT"] {
+		t.Errorf("net.external = %v, want exactly {XEXT}", external)
+	}
+
+	for _, rel := range []string{RelComponentClass, RelNetGround, RelNetExternal} {
+		for _, f := range byRel[rel] {
+			if len(f.Cites) == 0 {
+				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
+			}
+		}
+	}
+}
+
+// TestFactsSilentWithoutDatasheet (WS3-004) checks that a design read without a seeded datasheet
+// set yields only the IR relations (net/connection) and no mpn/param facts. The datasheet rules are
+// silent by construction in the same way. The projection never fabricates a datasheet it does not
+// have.
+func TestFactsSilentWithoutDatasheet(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(capDesign("+10V", ""))))
+	if len(byRel[RelParam]) != 0 || len(byRel[RelComponentMPN]) != 0 {
+		t.Errorf("param/mpn facts without a seeded set = %d/%d, want 0/0", len(byRel[RelParam]), len(byRel[RelComponentMPN]))
+	}
+	if len(byRel[RelComponentOnNet]) == 0 || len(byRel[RelNetMaxVoltage]) == 0 {
+		t.Error("IR relations (net/connection) should still project from a bare design")
+	}
+}
+
+// TestNetBiasAndACCoupledFacts (WS3-088) checks that the two derived net properties project as
+// relations. The intent rules compare these properties against a declaration, and an engineer asks
+// about them in ad-hoc queries. Both read one definition rather than two.
+//
+// The assertions that matter are the negative ones. A DECOUPLING cap must not read as AC-coupled, or
+// nearly every net on a board would. A divider must not read as biased, since it holds neither
+// rail.
+func TestNetBiasAndACCoupledFacts(t *testing.T) {
+	net := func(name string, conns ...string) *ir.Net {
+		n := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "t"}}
+		for _, c := range conns {
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: c, PinRef: "1"})
+		}
+		return n
+	}
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}}, // PULLED_UP -> +3V3
+			{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}}, // DIVIDED  -> +3V3
+			{RefDes: "R3", Prov: &ir.Provenance{SourceFile: "t"}}, // DIVIDED  -> GND
+			{RefDes: "C1", Prov: &ir.Provenance{SourceFile: "t"}}, // COUPLED  -> FAR (a signal)
+			{RefDes: "C2", Prov: &ir.Provenance{SourceFile: "t"}}, // BYPASSED -> GND
+		},
+		Nets: []*ir.Net{
+			net("PULLED_UP", "R1"), net("DIVIDED", "R2", "R3"),
+			net("COUPLED", "C1"), net("BYPASSED", "C2"), net("FAR", "C1"),
+			net("+3V3", "R1", "R2"), net("GND", "R3", "C2"),
+		},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	bias := map[string]string{}
+	for _, f := range byRel[RelNetBias] {
+		bias[f.Subject] = f.Value
+	}
+	if bias["PULLED_UP"] != "high" {
+		t.Errorf("net.bias(PULLED_UP) = %q, want high", bias["PULLED_UP"])
+	}
+	if lv, ok := bias["DIVIDED"]; ok {
+		t.Errorf("a divider holds neither rail, want no row: got %q", lv)
+	}
+
+	coupled := map[string]bool{}
+	for _, f := range byRel[RelNetACCoupled] {
+		coupled[f.Subject] = true
+	}
+	if !coupled["COUPLED"] {
+		t.Errorf("a cap to another signal is coupling: %v", coupled)
+	}
+	if coupled["BYPASSED"] {
+		t.Errorf("a cap to GND decouples, it does not couple: %v", coupled)
+	}
+
+	// Neither property means anything on a supply net. Before this guard existed, BOTH answered from
+	// the wrong end. The rail read as biased high, because a pull-up connects it to the line it
+	// pulls. GND read as AC-coupled, because a crystal load cap puts a signal on its far side.
+	// Running the relations on a real board found this, and no fixture did. Excluding the far side
+	// was never enough. The SUBJECT has to be a signal too.
+	for _, supply := range []string{"+3V3", "GND"} {
+		if lv, ok := bias[supply]; ok {
+			t.Errorf("net.bias(%s) = %q: a supply net is not held at a level, it IS the level", supply, lv)
+		}
+		if coupled[supply] {
+			t.Errorf("net.ac_coupled(%s): a supply net is not a coupled signal", supply)
+		}
+	}
+}
+
+// netClassDef builds an ir.Constraint the way kicad.AnnotateNetClassDefs does. Only stated params
+// are set, because the cascade depends on telling an absent value from a zero.
+func netClassDef(name string, priority int, params map[string]string) *ir.Constraint {
+	p := map[string]string{"priority": strconv.Itoa(priority)}
+	for k, v := range params {
+		p[k] = v
+	}
+	return &ir.Constraint{Name: name, Kind: "netclass", Params: p}
+}
+
+// TestNetClassDefCascade (WS3-111) is the central test of the declared-vs-actual story. A net in
+// several classes does NOT take one class's values wholesale. KiCad fills each constraint from the
+// highest-priority class that states THAT constraint, with the default class last. Getting this
+// wrong produces confident, wrong findings. The per-net relation exists to get it right.
+func TestNetClassDefCascade(t *testing.T) {
+	d := &ir.Design{
+		Constraints: []*ir.Constraint{
+			// HighSpeed outranks Power but states no track width, so track width must fall through.
+			netClassDef("HighSpeed", 1, map[string]string{"clearance": "0.15"}),
+			netClassDef("Power", 5, map[string]string{"track_width": "0.8"}),
+			defaultNetClassDef("Default", map[string]string{"track_width": "0.25", "via_drill": "0.3"}),
+		},
+		Nets: []*ir.Net{
+			{Name: "VBUS", NetClasses: []string{"HighSpeed", "Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "PLAIN", NetClasses: []string{"Default"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "UNCLASSED", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]float64{}
+	cite := map[string]string{}
+	for _, f := range byRel[RelNetDeclaredTrackWidth] {
+		if f.Num == nil {
+			t.Fatalf("declared track width for %q has no Num", f.Subject)
+		}
+		got[f.Subject] = mmOf(*f.Num)
+		cite[f.Subject] = strings.Join(f.Cites, " ")
+	}
+	// VBUS is in HighSpeed (priority 1) and Power (5). HighSpeed states no track width, so the
+	// value cascades to Power, NOT to Default, and NOT to "HighSpeed states nothing so give up".
+	if got["VBUS"] != 0.8 {
+		t.Errorf("VBUS declared track width = %v, want 0.8 (cascades past HighSpeed, which states none)", got["VBUS"])
+	}
+	if cite["VBUS"] != "net_settings:Power" {
+		t.Errorf("VBUS cite = %q, want net_settings:Power (a finding must name the class that set the limit)", cite["VBUS"])
+	}
+	if got["PLAIN"] != 0.25 {
+		t.Errorf("PLAIN declared track width = %v, want 0.25", got["PLAIN"])
+	}
+	// The Default class is more than the lowest-priority one. KiCad assigns it to a net that is in
+	// NO class, so an unclassed net still has a limit the tool would enforce.
+	if got["UNCLASSED"] != 0.25 {
+		t.Errorf("UNCLASSED declared track width = %v, want 0.25 (Default applies to every net)", got["UNCLASSED"])
+	}
+	// One row per net per quantity. The cascade is resolved, and there is never one row per class.
+	if n := len(byRel[RelNetDeclaredTrackWidth]); n != 3 {
+		t.Errorf("declared track width rows = %d, want 3 (resolved per NET, not per class)", n)
+	}
+	// Only Default states via_drill. It fills via_drill for EVERY net, including VBUS, whose own two
+	// classes state none. A memberships-only cascade would silently miss this half.
+	if n := len(byRel[RelNetDeclaredViaDrill]); n != 3 {
+		t.Errorf("declared via drill rows = %d, want 3 (Default fills gaps for every net)", n)
+	}
+	// The raw per-class rows are still projected, and they are 1:many by class.
+	if n := len(byRel[RelNetClassTrackWidth]); n != 2 {
+		t.Errorf("netclass.track_width rows = %d, want 2 (Power and Default state one; HighSpeed does not)", n)
+	}
+	if mk := byRel[RelHasNetClassDefs]; len(mk) != 1 {
+		t.Errorf("want one design.has_netclass_defs row, got %+v", mk)
+	}
+}
+
+// TestNetClassDefAbsent (WS3-111) checks that a design with no class definitions projects none of
+// the per-class rows, the cascaded rows or the marker. Without the marker a declared-vs-actual rule
+// cannot tell "nothing to compare" from "everything conformed".
+func TestNetClassDefAbsent(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		// Membership WITHOUT definitions. net_settings allows it. Without the marker, this case
+		// would read as a clean pass over zero comparisons.
+		{Name: "VBUS", NetClasses: []string{"Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+	for _, rel := range []string{RelNetClassTrackWidth, RelNetDeclaredTrackWidth, RelHasNetClassDefs} {
+		if rows := byRel[rel]; len(rows) != 0 {
+			t.Errorf("%s on a design with membership but no definitions = %+v, want empty", rel, rows)
+		}
+	}
+	// design.has_netclass still fires because membership exists. The two markers are independent
+	// on purpose.
+	if mk := byRel[RelHasNetClass]; len(mk) != 1 {
+		t.Errorf("design.has_netclass = %+v, want one row (membership is present even with no definitions)", mk)
+	}
+}
+
+// defaultNetClassDef builds the DEFAULT class, which has KiCad's max-int priority and the flag
+// marking it as the class every net inherits from.
+func defaultNetClassDef(name string, params map[string]string) *ir.Constraint {
+	c := netClassDef(name, 2147483647, params)
+	c.Params["is_default"] = "true"
+	return c
+}
+
+// TestNetClassDefCascadeHonoursPriority exercises the cascade ORDER specifically. The cascade test
+// above cannot: there, only one of the net's classes stated a track width, so any ordering produced
+// the same answer. Here two classes state one and disagree, and the class names are chosen so
+// ALPHABETICAL order is the reverse of priority order. Membership arrives alphabetically sorted
+// (WS1-050), so a projector that forgot to sort would take the wrong class and look correct.
+func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
+	d := &ir.Design{
+		Constraints: []*ir.Constraint{
+			netClassDef("Zeta", 1, map[string]string{"track_width": "0.15"}),  // wins on priority
+			netClassDef("Alpha", 9, map[string]string{"track_width": "0.90"}), // sorts first, loses
+		},
+		Nets: []*ir.Net{{Name: "SIG", NetClasses: []string{"Alpha", "Zeta"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	rows := factsByRelation(Facts(check.NewModel(d)))[RelNetDeclaredTrackWidth]
+	if len(rows) != 1 {
+		t.Fatalf("rows = %+v, want exactly 1 (the cascade resolves to one value)", rows)
+	}
+	if rows[0].Num == nil || mmOf(*rows[0].Num) != 0.15 {
+		t.Errorf("declared track width = %v m, want 0.15 mm from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
+	}
+	if !slices.Equal(rows[0].Cites, []string{"net_settings:Zeta"}) {
+		t.Errorf("cites = %v, want exactly [net_settings:Zeta]", rows[0].Cites)
+	}
+}
+
+// TestRefDesCollisionFactsCiteEveryInstance covers why facts.Row holds a LIST of citations (agni
+// issue 546). A ref-des collision is several placements sharing one designator, so the plurality IS
+// the finding. A row that cites one of them withholds the half a reviewer needs. The reviewer
+// already knows R5 exists, and wants to know where the two R5s are.
+func TestRefDesCollisionFactsCiteEveryInstance(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "R5"}},
+		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{{
+			RefDes: "R5",
+			Instances: []*ir.Provenance{
+				{SourceFile: "sheet1.kicad_sch", NativeId: "aaa"},
+				{SourceFile: "sheet2.kicad_sch", NativeId: "bbb"},
+				{SourceFile: "sheet3.kicad_sch", NativeId: "ccc"},
+			},
+		}}},
+	}
+	rows := refDesCollisionFacts(check.NewModel(d))
+	if len(rows) != 1 {
+		t.Fatalf("rows = %d, want one per colliding designator", len(rows))
+	}
+	want := []string{"sheet1.kicad_sch:aaa", "sheet2.kicad_sch:bbb", "sheet3.kicad_sch:ccc"}
+	if !slices.Equal(rows[0].Cites, want) {
+		t.Errorf("cites = %v, want every colliding site %v", rows[0].Cites, want)
+	}
+}
+
+// TestEsdRatedFactsCiteEveryQualifyingRating covers the same shape on the datasheet tier. A part
+// may state several system-level ESD ratings above the credit floor, and the row cited limits[0].
+func TestEsdRatedFactsCiteEveryQualifyingRating(t *testing.T) {
+	spec := twoEsdRatingSpec("ACME-TVS")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-TVS"), check.WithParamProvider(param.ParamSet{"ACME-TVS": spec}))
+
+	rows := factsByRelation(Facts(m))[RelEsdRated]
+	if len(rows) != 1 {
+		t.Fatalf("component.esd_rated rows = %d, want 1", len(rows))
+	}
+	if len(rows[0].Cites) != 2 {
+		t.Errorf("cites = %v, want both qualifying ratings; citing one hides which rating earned the credit", rows[0].Cites)
+	}
+}
+
+// TestEveryFactCitesSomething guards a property that the change from one citation string to a
+// slice could quietly lose. A fact you cannot cite is not verifiable. The old empty-string check
+// caught a fact that cited nothing. An EMPTY SLICE is a new way to cite nothing, so this test
+// checks for it.
+func TestEveryFactCitesSomething(t *testing.T) {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{netClassDef("Power", 1, map[string]string{"track_width": "0.8"})}
+	d.Nets[0].NetClasses = []string{"Power"}
+	m := check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+
+	seen := 0
+	for _, f := range Facts(m) {
+		seen++
+		if len(f.Cites) == 0 {
+			t.Errorf("relation %q (subject %q, object %q) cites nothing", f.Relation, f.Subject, f.Object)
+			continue
+		}
+		for _, c := range f.Cites {
+			if c == "" {
+				t.Errorf("relation %q (subject %q) carries an empty citation among %v", f.Relation, f.Subject, f.Cites)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("the fixture produced no facts at all, so this proves nothing")
+	}
+}
+
+// TestUnresolvedSymbolFacts (WS1-052) checks that the relation is keyed by ref_des, one row per
+// PLACEMENT, so it joins to the components that lost pins. The rule gives one finding per reference
+// instead, and the asymmetry is deliberate. The rule reports a cause, and the relation shows every
+// placement that cause affects.
+func TestUnresolvedSymbolFacts(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}, {RefDes: "U1"}},
+		InputDiagnostics: &ir.InputDiagnostics{UnresolvedSymbols: []*ir.UnresolvedSymbol{
+			{Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1", "R2"}, Prov: &ir.Provenance{SourceFile: "b.sch"}},
+			{Symref: "ic.sym", Kind: "xschem_sym", RefDes: []string{"U1"}, Prov: &ir.Provenance{SourceFile: "b.sch"}},
+		}},
+	}
+	got := map[string]string{}
+	for _, r := range unresolvedSymbolFacts(check.NewModel(d)) {
+		if r.Relation != RelUnresolvedSymbol {
+			t.Errorf("relation = %q, want %q", r.Relation, RelUnresolvedSymbol)
+		}
+		got[r.Subject] = r.Value
+	}
+	want := map[string]string{"R1": "res.sym", "R2": "res.sym", "U1": "ic.sym"}
+	if len(got) != len(want) {
+		t.Fatalf("rows = %v, want one per affected placement %v", got, want)
+	}
+	for ref, sym := range want {
+		if got[ref] != sym {
+			t.Errorf("reader.unresolved_symbol(%s) = %q, want %q", ref, got[ref], sym)
+		}
+	}
+}
+
+// TestUnresolvedSymbolFactsEmptyWhenClean checks for no rows on a design whose symbols all
+// resolved, so a query can treat any row as evidence of a real gap.
+func TestUnresolvedSymbolFactsEmptyWhenClean(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
+	if rows := unresolvedSymbolFacts(check.NewModel(d)); len(rows) != 0 {
+		t.Errorf("rows = %v, want none", rows)
+	}
+}
+
+// TestParamFactsAreInBaseUnits (agni issue 165) checks that the query surface publishes a parameter's
+// number in its SI base unit, so a datalog threshold is written once and does not change meaning
+// because one vendor printed millivolts and another printed volts.
+//
+// A facts.Row has no unit column, so before this a rule comparing `?max < 5.0` against a spec seeded
+// 4600 mV compared 4600 against 5.0 with nothing anywhere to refuse it. The assertion is equality
+// against the volt-spelled twin rather than a literal, because the property is that two spellings of
+// ONE datasheet row project identically.
+func TestParamFactsAreInBaseUnits(t *testing.T) {
+	volts := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+
+	d := supplyDesign("+5V", false, "ACME-33")
+	inVolts := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-33": volts}))))
+	inMilli := factsByRelation(Facts(check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-33": milli}))))
+
+	v, mv := inVolts[RelParam], inMilli[RelParam]
+	if len(v) != 1 || len(mv) != 1 {
+		t.Fatalf("param rows = %d volt-spelled / %d millivolt-spelled, want 1 each", len(v), len(mv))
+	}
+	if mv[0].Num == nil || v[0].Num == nil || *mv[0].Num != *v[0].Num {
+		t.Errorf("param max = %v millivolt-spelled, %v volt-spelled; the two spellings must project identically", mv[0].Num, v[0].Num)
+	}
+}
+
+// TestParamRangeFactsConvertBothBounds covers param.range, the two-sided relation. A conversion that
+// scaled only the max would leave a "3000..3.6" row. That row reports the OPPOSITE finding. A 5V
+// rail reads as below a 3000V minimum rather than above a 3.6V maximum.
+func TestParamRangeFactsConvertBothBounds(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
+
+	pr := factsByRelation(Facts(m))[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want one", pr)
+	}
+	if pr[0].Min == nil || *pr[0].Min != 3.0 || pr[0].Num == nil || *pr[0].Num != 3.6 {
+		t.Errorf("param.range min/max = %v/%v, want 3/3.6", pr[0].Min, pr[0].Num)
+	}
+	if pr[0].Value != "recommended_operating" {
+		t.Errorf("kind token = %q, want recommended_operating (conversion must not disturb it)", pr[0].Value)
+	}
+}
+
+// TestParamUnitFactExposesPrintedUnit pins that normalizing the numbers keeps the unit the vendor
+// printed. A reviewer reads that unit when checking a citation against a datasheet page.
+func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
+
+	pu := factsByRelation(Facts(m))[RelParamUnit]
+	if len(pu) != 1 {
+		t.Fatalf("param.unit = %+v, want one", pu)
+	}
+	if pu[0].Subject != "ACME-33" || pu[0].Object != "VDD" || pu[0].Value != "mV" {
+		t.Errorf("param.unit = (%s, %s, %s), want (ACME-33, VDD, mV) as PRINTED", pu[0].Subject, pu[0].Object, pu[0].Value)
+	}
+}
+
+// TestParamFactsKeepUnconvertibleRowsWithoutNumbers checks that a row whose unit has no known scale
+// keeps its symbol, kind, conditions and citation, and loses only its NUMBER. `param.max` answers "what
+// does this part specify" as much as it feeds a comparison, so a silently shortened list would be
+// its own quiet wrong answer.
+//
+// This is safe only because jaala's evalCompare refuses to ORDER an absent number against a present
+// one (datalog.TestCompareRefusesToOrderAbsentAgainstPresent). Before that fix an absent Num bound
+// the variable to the empty string and ordering fell through to lexicography, where "" < "5.0" is
+// true, so a row with no number would have satisfied every upper-bound guard.
+func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	spec.Parameters[0].Unit = "dBm"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+	byRel := factsByRelation(Facts(m))
+
+	pf := byRel[RelParam]
+	if len(pf) != 1 {
+		t.Fatalf("param = %+v, want the row kept", pf)
+	}
+	if pf[0].Object != "VDD" || pf[0].Num != nil {
+		t.Errorf("param row = symbol %q num %v, want VDD with NO number", pf[0].Object, pf[0].Num)
+	}
+	if len(pf[0].Cites) == 0 {
+		t.Error("a kept row must still carry its citation; it is still a real datasheet row")
+	}
+
+	pr := byRel[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want the row kept", pr)
+	}
+	if pr[0].Min != nil || pr[0].Num != nil {
+		t.Errorf("param.range bounds = %v/%v, want both absent", pr[0].Min, pr[0].Num)
+	}
+	if pr[0].Value != "recommended_operating" {
+		t.Errorf("kind token = %q, want it preserved even with no numbers", pr[0].Value)
+	}
+
+	pu := byRel[RelParamUnit]
+	if len(pu) != 1 || pu[0].Value != "dBm" {
+		t.Errorf("param.unit = %+v, want the printed unit reported", pu)
+	}
+}
+
+// TestRelationBaseUnitsAreCanonical is the tripwire behind Value.BaseUnit's contract.
+//
+// The field must hold an SI BASE symbol, never a prefixed spelling, because scale normalization
+// happens once and far upstream (param.InBaseUnit, C24). A projector that set "mV" here would make a
+// volts-against-millivolts comparison REFUSE as a dimension mismatch rather than convert. That
+// refusal is a new silent wrong answer. Naming the field BaseUnit discourages it, and this test
+// prevents it, including for a relation added later.
+//
+// Since agni issue 1035 the board tier publishes metres (unitMetre) too, so no relation has an
+// exemption. The invariant that matters is one spelling per dimension across all relations.
+func TestRelationBaseUnitsAreCanonical(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
+
+	seen := map[string]string{} // base unit -> a relation that publishes it
+	for _, f := range Facts(m) {
+		u := f.BaseUnit
+		if u == "" {
+			continue // dimensionless (a count, or a non-numeric relation)
+		}
+		base, exp, ok := param.BaseUnit(u)
+		if !ok || base != u || exp != 0 {
+			t.Errorf("relation %q publishes BaseUnit %q, which is not a canonical base symbol "+
+				"(param.BaseUnit gives %q exp %d ok %v); scale is normalized upstream, so this field "+
+				"must never carry a prefixed spelling", f.Relation, u, base, exp, ok)
+		}
+		seen[u] = f.Relation
+	}
+	// The millivolt-seeded spec must reach the fact base as VOLTS. That shows end to end that
+	// upstream normalization and this field agree.
+	if got := seen["V"]; got == "" {
+		t.Error("no relation published volts; the mV-seeded fixture should have arrived as V")
+	}
+	if _, bad := seen["mV"]; bad {
+		t.Error("a relation published mV; scale must be normalized before it reaches a fact")
+	}
+}
+
+// TestParamTypFacts checks that the typical value is its own relation rather than a sixth column on
+// param.range, because a typ is not a bound. A parameter with no typ emits no row, so no query can
+// compare a rail against a zero the datasheet never stated.
+func TestParamTypFacts(t *testing.T) {
+	spec := typSpec("ACME-LDO", "A", 0.000042)
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want exactly 1: the VDD row states min and max but no typ, so it "+
+			"must not appear here", len(rows))
+	}
+	r := rows[0]
+	if r.Subject != "ACME-LDO" || r.Object != "IQ" {
+		t.Errorf("param.typ keyed (%q, %q), want (ACME-LDO, IQ)", r.Subject, r.Object)
+	}
+	if r.Num == nil || *r.Num != 0.000042 {
+		t.Errorf("param.typ Num = %v, want 0.000042", r.Num)
+	}
+	if r.BaseUnit != "A" {
+		t.Errorf("param.typ BaseUnit = %q, want A; a typ compares like any other quantity and needs its "+
+			"dimension to refuse an amps-against-volts comparison", r.BaseUnit)
+	}
+	if len(r.Cites) == 0 {
+		t.Error("param.typ has no citation; a typical value is an extracted claim like any other")
+	}
+}
+
+// TestParamTypFactsConvertToBaseUnit is the C24 end-to-end for the new relation. A printed
+// milliamp arrives as amps, so a query comparing it against another current never sees the vendor's
+// scale.
+func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
+	spec := typSpec("ACME-LDO", "mA", 42)
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want 1", len(rows))
+	}
+	if rows[0].BaseUnit != "A" {
+		t.Errorf("BaseUnit = %q, want A; scale is normalized upstream and must never reach a fact as mA", rows[0].BaseUnit)
+	}
+	if rows[0].Num == nil || *rows[0].Num != 0.042 {
+		t.Errorf("Num = %v, want 0.042 (42 mA in amps)", rows[0].Num)
+	}
+}
+
+// TestParamTypFactsKeepUnconvertibleRow follows specParamRangeRows. A unit with no known scale
+// removes the row's NUMBER and keeps the row, so the answer to "what does this part specify" never
+// shortens in silence.
+func TestParamTypFactsKeepUnconvertibleRow(t *testing.T) {
+	spec := typSpec("ACME-LDO", "dBm", 12)
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want the row kept", len(rows))
+	}
+	if rows[0].Num != nil || rows[0].BaseUnit != "" {
+		t.Errorf("row = %+v, want the symbol and citation kept with no number and no base unit", rows[0])
+	}
+}
+
+// TestSpecLibFactsCarryParamTyp checks that the library-wide projection answers the same relation
+// as the design-scoped one, so `agni query --speclib` is not a narrower vocabulary than a design
+// query.
+func TestSpecLibFactsCarryParamTyp(t *testing.T) {
+	rows := factsByRelation(SpecLibFacts([]*parampb.PartSpec{typSpec("ACME-LDO", "A", 0.000042)}))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ from SpecLibFacts = %d rows, want 1", len(rows))
+	}
+}
+
+// TestParamProvPageIsNotAQuantity checks that the page binds as a string. The page is a document
+// locator. As a number in a dimension-guarded slot, it would unify with a voltage (agni issue 545).
+func TestParamProvPageIsNotAQuantity(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+
+	rows := factsByRelation(Facts(m))[RelParamProv]
+	if len(rows) != 1 {
+		t.Fatalf("param.prov = %d rows, want 1", len(rows))
+	}
+	if rows[0].Num != nil {
+		t.Errorf("param.prov Num = %v, want nil: the page is a locator, not a quantity", rows[0].Num)
+	}
+	if rows[0].Qualifier != "6" {
+		t.Errorf("param.prov Qualifier = %q, want the page \"6\"", rows[0].Qualifier)
+	}
+}
+
+// dimensionlessNumericRelations names the relations whose number is legitimately a pure count with
+// no physical dimension. Membership is a decision someone makes once, never an exemption to reach
+// for when a guard complains. An unlabelled number compares against any bare literal and unifies
+// with a voltage, since unification is identity rather than physics (C24's stated limitation).
+var dimensionlessNumericRelations = map[string]bool{
+	RelNetPinCount:       true, // a count of connections
+	RelComponentNetCount: true, // a count of distinct nets
+}
+
+// numericRelationControl is the positive control for the sweep below. A projector that emits no rows
+// passes an "every row is clean" assertion by saying nothing, so the sweep has to prove it actually
+// looked at the families it claims to guard.
+var numericRelationControl = []string{
+	RelParam, RelParamRange, RelParamTyp,
+	RelNetPinCount, RelNetDeclaredTrackWidth, RelBoardTrackWidth,
+}
+
+// TestNoRelationPublishesAnUnlabelledNumber covers a gap in TestRelationBaseUnitsAreCanonical. That
+// test skips a row whose BaseUnit is empty, treating it as dimensionless. A projector putting a
+// NON-quantity in a numeric slot therefore passes it in silence. param.prov did exactly that with a
+// page number for as long as the relation existed (agni issue 545).
+//
+// A number in Num or Min must declare its dimension, or its relation must be on the short list
+// above.
+func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
+	seen := map[string]bool{}
+	for _, f := range Facts(everyNumericFamily()) {
+		if f.Num == nil && f.Min == nil {
+			continue
+		}
+		seen[f.Relation] = true
+		if f.BaseUnit == "" && !dimensionlessNumericRelations[f.Relation] {
+			t.Errorf("relation %q publishes a number with no BaseUnit (subject %q, object %q): a slot "+
+				"guarded for physical quantities is holding something else, so it compares against any "+
+				"bare literal and unifies with a voltage. Give it a dimension, move it to a string slot, "+
+				"or add the relation to dimensionlessNumericRelations deliberately",
+				f.Relation, f.Subject, f.Object)
+		}
+	}
+	for _, rel := range numericRelationControl {
+		if !seen[rel] {
+			t.Errorf("the sweep saw no numeric row from %q, so this fixture does not exercise it and a "+
+				"clean result there proves nothing", rel)
+		}
+	}
+}
+
+// everyNumericFamily is a model that publishes a row from each numeric relation family. The
+// families are a datasheet parameter, a rail voltage, a net class and the board.
+func everyNumericFamily() check.Model {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{
+		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
+	}
+	d.Nets[0].NetClasses = []string{"Power"}
+	return check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+}
+
+// perRowUnitRelations publish numbers whose unit varies from row to row, as a datasheet's parameters
+// do, so they declare none and the engine reads each value's own.
+var perRowUnitRelations = map[string]bool{
+	RelParam: true, RelParamRange: true, RelParamTyp: true, RelParamPinRange: true, RelParamPinRelation: true,
+}
+
+// TestEveryDimensionedRelationDeclaresItsUnit holds each relation's declared unit to the rows it
+// projects. The engine refuses an ordering comparison between two declared units (volts against
+// millimetres), so a declaration that disagreed with its rows would refuse a sound query, and a
+// relation that declared nothing would let the unsound one answer empty.
+func TestEveryDimensionedRelationDeclaresItsUnit(t *testing.T) {
+	declared := map[string]string{}
+	for _, info := range builtinCatalog {
+		for _, k := range info.ArgKinds {
+			if k.Unit != "" {
+				declared[info.Name] = k.Unit
+			}
+		}
+	}
+	checked := 0
+	for _, f := range Facts(everyNumericFamily()) {
+		if f.BaseUnit == "" {
+			continue
+		}
+		if perRowUnitRelations[f.Relation] {
+			if u := declared[f.Relation]; u != "" {
+				t.Errorf("%s varies its unit per row but declares %q", f.Relation, u)
+			}
+			continue
+		}
+		checked++
+		if u := declared[f.Relation]; u != f.BaseUnit {
+			t.Errorf("%s publishes %q and declares %q; declare the unit its rows carry, or list it in "+
+				"perRowUnitRelations if they vary", f.Relation, f.BaseUnit, u)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no row with a fixed unit was checked, so the fixture proves nothing")
+	}
+}
+
+// TestParamFactsCarryBaseUnit checks that the number and its dimension travel together, so a
+// comparison can refuse volts-against-amps without any rule having to remember to join a unit
+// column.
+func TestParamFactsCarryBaseUnit(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": milli}))
+	byRel := factsByRelation(Facts(m))
+
+	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].BaseUnit != "V" {
+		t.Errorf("param BaseUnit = %+v, want V (converted from the printed mV)", pf)
+	}
+	if pr := byRel[RelParamRange]; len(pr) != 1 || pr[0].BaseUnit != "V" {
+		t.Errorf("param.range BaseUnit = %+v, want V", pr)
+	}
+	// param.unit reports the PRINTED spelling; the two must not be confused.
+	if pu := byRel[RelParamUnit]; len(pu) != 1 || pu[0].Value != "mV" {
+		t.Errorf("param.unit = %+v, want the printed mV; it answers a different question from BaseUnit", pu)
+	}
+}
+
+// TestParamFactsMarkUnconvertibleRowsAbsent covers a row whose unit has no known scale, which has no
+// number to publish. That is now REPRESENTED rather than inferred from a nil pointer.
+func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	spec.Parameters[0].Unit = "dBm"
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+	byRel := factsByRelation(Facts(m))
+
+	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].Num != nil || pf[0].BaseUnit != "" {
+		t.Errorf("param = %+v, want the row kept with no number and no base unit", pf)
+	}
+	if pr := byRel[RelParamRange]; len(pr) != 1 || pr[0].Min != nil || pr[0].Num != nil {
+		t.Errorf("param.range = %+v, want the row kept with both bounds absent", pr)
+	}
+}
+
+// TestParamPinFactsDeclarePinsWithFunction checks that the pin dimension table is keyed by the
+// spec-local id, holds the printed name as a value, and renders the function as a token.
+func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
+
+	rows := factsByRelation(Facts(m))[RelParamPin]
+	if len(rows) != 4 {
+		t.Fatalf("param.pin = %d rows, want one per declared pin (4)", len(rows))
+	}
+	got := map[string][2]string{}
+	for _, r := range rows {
+		if r.Subject != "ACME-XLAT" {
+			t.Errorf("param.pin subject = %q, want the mpn", r.Subject)
+		}
+		if len(r.Cites) == 0 {
+			t.Errorf("param.pin %q has no citation; a pin function is an extracted claim", r.Object)
+		}
+		got[r.Object] = [2]string{r.Value, r.Qualifier}
+	}
+	if got["vcca"] != [2]string{"VCCA", "power_input"} {
+		t.Errorf("pin vcca = %v, want (VCCA, power_input)", got["vcca"])
+	}
+	if got["a1"] != [2]string{"A1", "bidirectional"} {
+		t.Errorf("pin a1 = %v, want (A1, bidirectional)", got["a1"])
+	}
+}
+
+// TestParamPinRangeFactsAnswerPerTerminal covers why the pin tier exists. Two supply pins
+// with different windows produce two DIFFERENT answers. param.range collapses them onto one
+// symbol-keyed pair of rows, and a query cannot tell those rows apart by terminal.
+func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
+
+	byPinKind := map[string]facts.Row{}
+	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
+		byPinKind[r.Object+"/"+r.Qualifier] = r
+	}
+
+	a := byPinKind["vcca/recommended_operating"]
+	b := byPinKind["vccb/recommended_operating"]
+	if a.Min == nil || b.Min == nil {
+		t.Fatalf("want a recommended row for each supply pin, got %+v", byPinKind)
+	}
+	if *a.Min != 1.2 || *a.Num != 3.6 {
+		t.Errorf("vcca recommended = %v..%v, want 1.2..3.6", *a.Min, *a.Num)
+	}
+	if *b.Min != 1.65 || *b.Num != 5.5 {
+		t.Errorf("vccb recommended = %v..%v, want 1.65..5.5", *b.Min, *b.Num)
+	}
+	if a.Value != "VCCA" || b.Value != "VCCB" {
+		t.Errorf("symbols = %q/%q, want VCCA/VCCB in the Value slot", a.Value, b.Value)
+	}
+	// The kind must survive in its own slot rather than displacing the symbol.
+	if absMax := byPinKind["vcca/absolute_max"]; absMax.Value != "VCCA" || absMax.Num == nil || *absMax.Num != 4.6 {
+		t.Errorf("vcca absolute_max = %+v, want the 4.6 V row distinct from the recommended one", absMax)
+	}
+}
+
+// TestParamPinRangeFanOutsAGroupBinding pins that a row stated once for several terminals must be
+// findable from each of them, or a rule asking about one pin misses a limit the datasheet does
+// state for it.
+func TestParamPinRangeFanOutsAGroupBinding(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
+
+	seen := map[string]bool{}
+	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
+		if r.Value == "VO" {
+			seen[r.Object] = true
+		}
+	}
+	if !seen["a1"] || !seen["b1"] || len(seen) != 2 {
+		t.Errorf("the VO row binds a1 and b1; want a row for each, got %v", seen)
+	}
+}
+
+// TestParamPinRangeOmitsPartWideRows covers an empty binding, which is a fact about the DIE.
+// Emitting it against every pin would read as each terminal having that limit itself. That would
+// re-create the collapse the pin tier undoes, one layer down. Those rows remain on param.range.
+func TestParamPinRangeOmitsPartWideRows(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
+	byRel := factsByRelation(Facts(m))
+
+	for _, r := range byRel[RelParamPinRange] {
+		if r.Value == "TJ" {
+			t.Errorf("part-wide TJ row must not appear on param.pin_range, got it on pin %q", r.Object)
+		}
+	}
+	var onRange bool
+	for _, r := range byRel[RelParamRange] {
+		if r.Object == "TJ" {
+			onRange = true
+		}
+	}
+	if !onRange {
+		t.Error("the part-wide TJ row must still be reachable on param.range")
+	}
+}
+
+// TestParamPinFactsEmptyWithoutPinData covers a spec with no pin data. Every spec seeded before pin
+// binding is in this state, so the pin relations must be silent rather than wrong.
+// Skip-not-false-pass by construction.
+func TestParamPinFactsEmptyWithoutPinData(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6) // no Pins, no Packages
+	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
+	byRel := factsByRelation(Facts(m))
+
+	if n := len(byRel[RelParamPin]); n != 0 {
+		t.Errorf("param.pin = %d rows for a spec with no pins, want 0", n)
+	}
+	if n := len(byRel[RelParamPinRange]); n != 0 {
+		t.Errorf("param.pin_range = %d rows for a spec with no pin bindings, want 0", n)
+	}
+	if n := len(byRel[RelParamRange]); n == 0 {
+		t.Error("the symbol-keyed tier must be unaffected; param.range should still have rows")
+	}
+}
+
+// TestPinRelationsBindPositionallyThroughDatalog is the field-layout guard. The projector tests in
+// facts_test.go read facts.Row fields directly, so they pass even if register.go binds the positional
+// arguments to the wrong slots. A swap of Value and Qualifier would leave every projector test green
+// and make every real query return the symbol where the kind belongs.
+//
+// This runs an actual query end to end, so the assertion is on what a rule author would SEE.
+func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
+	base := query.NewBase(m)
+
+	rows, err := (query.Naive{}).Eval(context.Background(),
+		query.MustParse(`param.pin(?mpn, "vccb", ?name, ?fn) => ?mpn, ?name, ?fn`), base)
+	if err != nil {
+		t.Fatalf("param.pin query errored: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("param.pin for vccb = %d rows, want 1", len(rows))
+	}
+	if got := rows[0].Bind["name"].S; got != "VCCB" {
+		t.Errorf("arg 3 (name) bound to %q, want VCCB", got)
+	}
+	if got := rows[0].Bind["fn"].S; got != "power_input" {
+		t.Errorf("arg 4 (function) bound to %q, want power_input", got)
+	}
+
+	// Six positional args, and the two that share the widened tuple must not cross.
+	rows, err = (query.Naive{}).Eval(context.Background(),
+		query.MustParse(`param.pin_range(?mpn, "vccb", ?sym, "recommended_operating", ?min, ?max) => ?sym, ?min, ?max`), base)
+	if err != nil {
+		t.Fatalf("param.pin_range query errored: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("param.pin_range recommended for vccb = %d rows, want 1", len(rows))
+	}
+	if got := rows[0].Bind["sym"].S; got != "VCCB" {
+		t.Errorf("arg 3 (symbol) bound to %q, want VCCB — Value and Qualifier are crossed", got)
+	}
+	if n := rows[0].Bind["max"].Num; n == nil || *n != 5.5 {
+		t.Errorf("arg 6 (max) bound to %v, want 5.5", rows[0].Bind["max"].S)
+	}
+	if n := rows[0].Bind["min"].Num; n == nil || *n != 1.65 {
+		t.Errorf("arg 5 (min) bound to %v, want 1.65", rows[0].Bind["min"].S)
+	}
+
+	// The kind must actually discriminate, so filtering to absolute_max returns the other row, not
+	// this one.
+	rows, err = (query.Naive{}).Eval(context.Background(),
+		query.MustParse(`param.pin_range(?mpn, "vcca", ?sym, "absolute_max", ?min, ?max) => ?max`), base)
+	if err != nil {
+		t.Fatalf("param.pin_range absolute_max query errored: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Bind["max"].Num == nil || *rows[0].Bind["max"].Num != 4.6 {
+		t.Fatalf("filtering vcca by absolute_max = %d rows (want the 4.6 V one), got %+v", len(rows), rows)
+	}
+}
+
+// TestEntityFacts checks that the enumeration relation names what EXISTS, so a search can start
+// from it. The case that matters is the isolated one. A part on no net and a net with nothing on
+// it are both invisible to component.net. A search over component.net's range therefore cannot
+// find them, and says nothing. A reviewer wants to find exactly those two.
+func TestEntityFacts(t *testing.T) {
+	d := supplyDesign("+3V3", false, "")
+	d.Components = append(d.Components, &ir.Component{
+		RefDes:     "TP1", // placed, wired to nothing
+		Sections:   []*ir.ComponentSection{{PartRef: "LDO", LibraryRef: "lib"}},
+		Attributes: map[string]string{},
+		Prov:       &ir.Provenance{SourceFile: "t"},
+	})
+	d.Nets = append(d.Nets, &ir.Net{Name: "SPARE", Prov: &ir.Provenance{SourceFile: "t"}}) // no connections
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]string{}
+	for _, f := range byRel[RelEntity] {
+		if prev, dup := got[f.Subject]; dup {
+			t.Errorf("entity(%q) emitted twice (%s, %s), want one row per name", f.Subject, prev, f.Value)
+		}
+		got[f.Subject] = f.Value
+	}
+	want := map[string]string{"U1": check.KindComponent, "TP1": check.KindComponent, "+3V3": check.KindNet, "SPARE": check.KindNet}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("entity rows = %v, want %v", got, want)
+	}
+
+	// This is the point of the relation. Neither isolated entity appears in the connection
+	// relation, so a name search over component.net cannot reach them.
+	for _, f := range byRel[RelComponentOnNet] {
+		if f.Subject == "TP1" || f.Object == "SPARE" {
+			t.Fatalf("fixture is not isolating: component.net carries %s/%s", f.Subject, f.Object)
+		}
+	}
+
+	for _, f := range byRel[RelEntity] {
+		if len(f.Cites) == 0 {
+			t.Errorf("entity(%q) has no citation; a search result must stay traceable", f.Subject)
+		}
+	}
+}
+
+// TestEntityFactsSkipsUnnamed covers a nameless net. Its name is "", so no name search could ever
+// match it. It is omitted rather than emitted as an empty row.
+func TestEntityFactsSkipsUnnamed(t *testing.T) {
+	d := supplyDesign("+3V3", false, "")
+	d.Nets = append(d.Nets, &ir.Net{Prov: &ir.Provenance{SourceFile: "t"}})
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelEntity] {
+		if f.Subject == "" {
+			t.Fatalf("entity emitted an empty name: %+v", f)
+		}
+	}
+}
+
+// mmOf converts a published length from metres (agni issue 1035) back to millimetres. It rounds to
+// the nanometre a board records, so a test states the number the board's own tools print.
+func mmOf(m float64) float64 { return math.Round(m*1e9) / 1e6 }

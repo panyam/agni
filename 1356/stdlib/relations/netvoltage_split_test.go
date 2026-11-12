@@ -1,0 +1,151 @@
+package relations
+
+import (
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// voltageNameDesign places two nets whose names BOTH parse a voltage token, one a rail and one an
+// ordinary signal between two pins. The signal name is the shape agni issue 194 verified, a house
+// convention encoding endpoints and a level, which token-scans to 3.3 while having no rail role.
+func voltageNameDesign() *ir.Design {
+	return &ir.Design{
+		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
+			Name: "IC",
+			Pins: []*ir.Pin{
+				{Name: "VDD", Designator: "12", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+				{Name: "IO", Designator: "4", Direction: ir.PinDirection_PIN_DIRECTION_INOUT},
+			},
+		}}}},
+		Components: []*ir.Component{
+			{RefDes: "U3", Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U7", Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "+3V3", Connections: []*ir.Connection{
+				{ComponentRef: "U3", PinRef: "12"}, {ComponentRef: "U7", PinRef: "12"}},
+				Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "U3_12_U7_4_3V3", Connections: []*ir.Connection{
+				{ComponentRef: "U3", PinRef: "4"}, {ComponentRef: "U7", PinRef: "4"}},
+				Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+}
+
+// In the issue-194 case, a signal net whose name token-scans to a voltage must NOT appear in a relation
+// documented as a rail nominal. Before the split it did. The number was right, and the relation
+// holding it was wrong.
+func TestSignalNetLevelIsNotARailNominal(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(voltageNameDesign())))
+
+	for _, f := range byRel[RelNetNominalVoltage] {
+		if f.Subject == "U3_12_U7_4_3V3" {
+			t.Errorf("a signal net must not project a rail nominal, got %+v", f)
+		}
+	}
+	found := false
+	for _, f := range byRel[RelNetSignalLevel] {
+		if f.Subject == "U3_12_U7_4_3V3" {
+			found = true
+			if f.Num == nil || *f.Num != 3.3 {
+				t.Errorf("net.signal_level num = %v, want 3.3", f.Num)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("the level must survive the split, not be dropped: %+v", byRel[RelNetSignalLevel])
+	}
+}
+
+// The other half. Gating must not drop the relation's actual subject. A named rail still projects
+// a nominal, and does not leak into the signal relation.
+func TestRailStillProjectsANominalAndNotALevel(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(voltageNameDesign())))
+
+	found := false
+	for _, f := range byRel[RelNetNominalVoltage] {
+		if f.Subject == "+3V3" {
+			found = true
+			if f.Num == nil || *f.Num != 3.3 {
+				t.Errorf("net.nominal_voltage(+3V3) num = %v, want 3.3", f.Num)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("a rail must still project its nominal: %+v", byRel[RelNetNominalVoltage])
+	}
+	for _, f := range byRel[RelNetSignalLevel] {
+		if f.Subject == "+3V3" {
+			t.Errorf("a rail must not also project a signal level, got %+v", f)
+		}
+	}
+}
+
+// The two relations partition the nets whose names parse, so every such net appears in exactly one.
+// A consumer that wants both can then ask for both without deduping. A consumer that wants rails
+// can be sure it never receives a level.
+func TestNominalAndLevelArePartitioned(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(voltageNameDesign())))
+
+	seen := map[string]int{}
+	for _, f := range byRel[RelNetNominalVoltage] {
+		seen[f.Subject]++
+	}
+	for _, f := range byRel[RelNetSignalLevel] {
+		seen[f.Subject]++
+	}
+	for _, n := range voltageNameDesign().Nets {
+		if got := seen[n.Name]; got != 1 {
+			t.Errorf("net %q appears in %d of the two relations, want exactly 1", n.Name, got)
+		}
+	}
+}
+
+// regulatorInternalDesign names one buck's output beside its feedback tap and switch node. All three
+// parse a voltage token and all three match the rail vocabulary. Two of them are not rails, and a
+// synthetic fixture that omits them never shows that.
+func regulatorInternalDesign() *ir.Design {
+	return &ir.Design{
+		Nets: []*ir.Net{
+			{Name: "12V_OUT", Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "12V_FB", Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "12V_SW", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+}
+
+// TestRegulatorInternalIsNeitherRailNorSignal covers the third outcome (agni 679). A feedback tap and a
+// switch node must project NO voltage row at all.
+//
+// The assertion that matters is the absence from BOTH relations. The obvious fix is to flip the
+// rail gate. That drops these nets from net.nominal_voltage and puts them in net.signal_level,
+// where they restate the identical wrong number under a relation that claims less. This test fails
+// for that fix as loudly as it does for no fix.
+func TestRegulatorInternalIsNeitherRailNorSignal(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(regulatorInternalDesign())))
+
+	for _, rel := range []string{RelNetNominalVoltage, RelNetSignalLevel} {
+		for _, f := range byRel[rel] {
+			if f.Subject == "12V_FB" || f.Subject == "12V_SW" {
+				t.Errorf("%s(%s) = %s: the number in the name is a DIFFERENT net's voltage, so neither relation can carry it", rel, f.Subject, f.Value)
+			}
+		}
+	}
+
+	// The positive control. The rail served by those internals still projects its nominal. Without
+	// this check, an implementation that emitted nothing at all would pass the half above.
+	found := false
+	for _, f := range byRel[RelNetNominalVoltage] {
+		if f.Subject == "12V_OUT" {
+			found = true
+			if f.Num == nil || *f.Num != 12 {
+				t.Errorf("net.nominal_voltage(12V_OUT) num = %v, want 12", f.Num)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("the rail itself must survive: %+v", byRel[RelNetNominalVoltage])
+	}
+}

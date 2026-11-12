@@ -1,0 +1,13 @@
+v {xschem version=3.4.4 file_version=1.2}
+G {}
+K {type=resistor
+template="name=R1 value=1k"}
+V {}
+S {}
+E {}
+L 4 0 -30 0 -12.5 {}
+L 4 0 12.5 0 30 {}
+B 5 -2.5 -32.5 2.5 -27.5 {name=A dir=inout pinnumber=1}
+B 5 -2.5 27.5 2.5 32.5 {name=B dir=inout pinnumber=2}
+T {@name} 8 -4 0 0 0.2 0.2 {}
+T {@value} 8 4 0 0 0.2 0.2 {}

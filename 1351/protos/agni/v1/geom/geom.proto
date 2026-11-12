@@ -1,0 +1,396 @@
+syntax = "proto3";
+
+package agni.v1.geom;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/geom";
+
+// Schematic geometry sidecar. It is a separate artifact from the core netlist IR
+// (agni.v1.ir). It references the IR by stable keys (ref_des, net name, port_ref, plus
+// provenance source_id), and the two are joined at render time. diff, rules and sim never
+// import it. See docsite/content/architecture/geometry-and-rendering.md and
+// docsite/content/reference/edif-primer.md.
+// Fidelity: lossy-bounded (render subset), CONSTRAINTS C6.
+//
+// This file is Tier 1 (CONSTRAINTS C8), the logical contract. It has nested messages, int64
+// raw source units, and the public API for reads, picking, and IR-keying. Storage and packing
+// detail never leaks in here. Tier 2 is the columnar GPU-transport projection, PackedSheet.
+// It lives in geom_packed.proto so this contract has no packing detail.
+
+// Provenance links a geometry node back to its source (schematic file + EDIF internal
+// id). source_id is the EDIF rename &id. It is the robust join key to the IR, since it is
+// identical across the .edn netlist and the .eds schematic.
+message Provenance {
+  string source_file = 1;
+  string source_id = 2;
+}
+
+// Point is a 2D coordinate in raw source units (SchematicGeometry.unit_nm nm per unit).
+message Point {
+  int64 x = 1;
+  int64 y = 2;
+}
+
+// BBox is an axis-aligned bounding box.
+message BBox {
+  Point min = 1;
+  Point max = 2;
+}
+
+// Transform places a symbol on a sheet. It is format-neutral, with origin + rotation +
+// mirror + optional scale. So readers for formats with arbitrary angles and scales (KiCad,
+// Altium, OrCAD, ...) map onto it, as well as EDIF's fixed orientation codes. Application
+// order is mirror, then rotate, then translate by origin. The EDIF 8 codes map exactly.
+// R0/R90/R180/R270 = rotation only; MX = mirror_x; MY = mirror_y; MXR90 = mirror_x +
+// rotation 90; MYR90 = mirror_y + rotation 90. EDIF scaleX/scaleY map to scale_x/scale_y.
+message Transform {
+  Point origin = 1;
+  int32 rotation_deg = 2;  // degrees counter-clockwise (0/90/180/270 typical)
+  bool mirror_x = 3;       // mirror across X axis (flip Y), applied before rotation
+  bool mirror_y = 4;       // mirror across Y axis (flip X), applied before rotation
+  double scale_x = 5;      // 0 means unset (treat as 1.0)
+  double scale_y = 6;      // 0 means unset (treat as 1.0)
+}
+
+// Shape is one drawable primitive of a symbol or free graphic.
+message Shape {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_POLYLINE = 1;  // open path: points in order
+    KIND_RECT = 2;      // two points: min/max corners
+    KIND_CIRCLE = 3;    // center = points[0], radius
+    KIND_ARC = 4;       // three points: start, mid, end
+    KIND_DOT = 5;       // single point (junction / connect location)
+  }
+  // Fill style of a closed shape. Formats distinguish how a body is filled, so this is not
+  // a bool. OUTLINE fills with the outline/stroke color, BACKGROUND with the symbol body
+  // color, and COLOR with an explicit fill_color. UNSPECIFIED, the default, is an unfilled
+  // outline. Set where the format expresses it (KiCad fill types; EDIF fill, if any).
+  enum Fill {
+    FILL_UNSPECIFIED = 0;  // not filled (outline only)
+    FILL_OUTLINE = 1;      // filled with the outline/stroke color
+    FILL_BACKGROUND = 2;   // filled with the symbol body/background color
+    FILL_COLOR = 3;        // filled with fill_color
+  }
+  Kind kind = 1;
+  repeated Point points = 2;
+  int64 radius = 3;         // CIRCLE only
+  string figure_group = 4;  // EDIF figureGroup (BOX/PIN/NET/...), a style hint
+  Fill fill = 5;
+  string fill_color = 6;    // "#rrggbb" when fill == FILL_COLOR
+}
+
+// PinPoint is a pin's connect location within a symbol, in symbol-local coordinates.
+message PinPoint {
+  string port_ref = 1;      // joins to ir.Port.designator / net PortRef.port_ref
+  Point loc = 2;            // connectLocation dot
+  string source_id = 3;     // EDIF port internal id (&id)
+  Point label_origin = 4;   // symbol-local origin of the pin NAME label (nil if hidden)
+  string justify = 5;       // pin name label alignment, canonical "<h> <v>" (see Label.justify)
+  string name = 6;          // pin name (e.g. "OUT"), distinct from the number in port_ref
+  // Glyph height of the pin's label text, in source units, with the same meaning as
+  // Label.height. Zero when the source states none, and a renderer then uses its own default.
+  // Before this field, both backends sized pin text from a constant while every other text run
+  // scaled with the sheet. So pin labels were the only text that ignored the drawing.
+  int64 height = 7;
+  // Where the pin NUMBER goes, when the source places it apart from the name. EDIF gives a pin
+  // two independent text positions. The name is on (name X (display ...)) and the number is on
+  // (keywordDisplay designator (display ...)). Nil means the source placed only one. A renderer
+  // should then offset the number from label_origin so the two do not overlap. Roughly half
+  // the pins in a real export set this.
+  Point number_origin = 8;
+  string number_justify = 9; // pin number alignment, canonical "<h> <v>"; empty with number_origin
+  // The angle of the pin's name and number in the symbol's own frame, in degrees counter-clockwise.
+  // A renderer adds the placement's rotation to it, as it does for a field. KiCad runs a vertical
+  // pin's text along the pin, at 90. Zero for every pin of a format that does not set it.
+  int32 text_rotation_deg = 10;
+}
+
+// Asset marks a geom object that was loaded as a self-contained unit from an external source
+// (a symbol file, an embedded/external image, an imported group) rather than drawn inline. It
+// records the origin, so attribution, licensing (symbol/image libraries are often GPL), and
+// round-tripping are traceable. It also has a kind, so consumers can iterate symbols, images,
+// and generic groups uniformly. Inline hand-drawn primitives have no Asset. An Asset's
+// presence signals that this content came from somewhere as a unit.
+message Asset {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_SYMBOL = 1;  // a symbol/cell loaded from a .sym or library
+    KIND_IMAGE = 2;   // a raster image, embedded in the source or an external file
+    KIND_GROUP = 3;   // a set of primitives imported as one unit
+  }
+  Kind kind = 1;
+  string id = 2;        // stable identity for dedup / cross-reference (e.g. the symbol/file name)
+  Provenance prov = 3;  // where the asset was loaded from
+  // placeholder is set when the asset could NOT be loaded (e.g. a referenced .sym file was not
+  // found) and the geometry is a stand-in box, not the real artwork. Consumers use it to tell a
+  // resolved symbol from a fallback (e.g. the render report's "pass --symbol-path" hint).
+  bool placeholder = 4;
+}
+
+// Image is a raster bitmap placed on a sheet or baked into a symbol (a logo, a title-block
+// graphic, an embedded photo). The bytes are inline, decoded from the source's base64, and are
+// drawn into bbox with the given rotation/mirror. bbox is in its owner's coordinate space. That
+// is sheet coordinates for SheetGeometry.images, and symbol-local for SymbolDef.images, which
+// each placement then transforms. Always an Asset (kind KIND_IMAGE).
+message Image {
+  BBox bbox = 1;
+  string mime = 2;         // e.g. "image/png", "image/jpeg"
+  bytes data = 3;          // raw image bytes (base64-decoded from the source)
+  int32 rotation_deg = 4;  // degrees counter-clockwise
+  bool mirror = 5;         // mirror across the y-axis (flip x) before rotation
+  Asset asset = 6;
+}
+
+// SymbolDef is the reusable graphic for a part type (an EDIF cell view symbol),
+// drawn once and placed many times. It is keyed by (cell_ref, library_ref, view_ref). A
+// multi-section cell (e.g. a connector with A/B/C/D banks) defines several views, each a
+// distinct symbol, and a placement selects one by view_ref.
+message SymbolDef {
+  string cell_ref = 1;     // joins to ir.ComponentInstance.cell_ref
+  string library_ref = 2;  // joins to ir.ComponentInstance.library_ref
+  BBox bbox = 3;
+  repeated Shape shapes = 4;
+  repeated PinPoint pins = 5;
+  string view_ref = 6;     // EDIF view display name; distinguishes multi-section banks
+  // Static free-text annotations baked into the symbol (e.g. a title-block's field
+  // labels), in symbol-local coordinates; drawn transformed by each placement.
+  repeated Label annotations = 7;
+  // asset marks a symbol loaded from a .sym/library (kind KIND_SYMBOL) and records its origin.
+  // prov (16) is kept for the EDIF/KiCad readers that already set it.
+  Asset asset = 8;
+  repeated Image images = 9;  // raster graphics baked into the symbol (symbol-local coords)
+  Provenance prov = 16;
+}
+
+// Field is a placed text field on a symbol instance (Reference, Value, or a custom field). It
+// holds the displayed value and where the format placed it. It is structured rather than a loose
+// sheet Label, so consumers know which text is which field and whether it is shown. The visual
+// diff and interaction use that, so a Value change highlights the right label. ref_des is still
+// the join key, and the Reference field is its drawn form.
+message Field {
+  string name = 1;         // "Reference", "Value", or a custom field name
+  string value = 2;        // the displayed text
+  Point origin = 3;        // placement (sheet coordinates)
+  string justify = 4;      // canonical justify (see Label.justify)
+  int64 height = 5;        // text height in source units
+  int32 rotation_deg = 6;  // degrees counter-clockwise
+  bool visible = 7;        // false = present but not drawn (a hidden field)
+}
+
+// SymbolPlacement is one placed component on a sheet, a symbol plus a transform.
+message SymbolPlacement {
+  string ref_des = 1;      // joins to ir.ComponentInstance.ref_des
+  string cell_ref = 2;     // which SymbolDef to draw
+  string library_ref = 3;
+  Transform transform = 4;
+  string view_ref = 5;     // which view/bank of the cell (joins to SymbolDef.view_ref)
+  repeated Field fields = 6;  // the instance's text fields (Reference, Value, custom)
+  // net_anchor is the net this placement NAMES rather than joins. A ground or rail symbol is drawn
+  // like a part but is not one, and its whole job is to give the net at its pin a name. Empty for an
+  // ordinary component placement.
+  //
+  // Every schematic format has this construct, and each spells it differently. KiCad uses a `#PWR`
+  // virtual with the name in its Value. xschem uses a gnd/vdd label symbol with a `lab` property.
+  // gEDA uses a power symbol with a `net=` attribute. Each reader translates its own spelling into
+  // this one neutral field (CONSTRAINTS C1), so no consumer has to know any of them.
+  //
+  // Before this field, these symbols could not be addressed. The KiCad reference is hidden, and
+  // KiCad's reader treated hiding it as dropping the identity. So it blanked the ref_des, and the
+  // glyph drew with nothing to key. xschem kept a ref_des that joins to no component. A viewer could
+  // select it and then ask a question about a part that does not exist. On a schematic, a reader
+  // often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
+  // not click.
+  string net_anchor = 7;
+  // The part is drawn on the schematic and left off the board (do not populate). KiCad marks one
+  // with a cross over its body, and both backends draw that cross. A format with no such flag
+  // leaves it false.
+  bool dnp = 8;
+  // pin_names replaces a pin's drawn name on this placement, keyed by the pin's number
+  // (PinPoint.port_ref). KiCad lets a placed part pick one of a pin's alternate functions,
+  // `(pin "G39" (alternate "CAN0_DIN"))`, and draws that name where the library's would go (agni
+  // issue 1344). A pin with no entry draws its symbol's name.
+  map<string, string> pin_names = 9;
+  Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
+}
+
+// Polyline is an ordered list of points (one wire run).
+message Polyline {
+  repeated Point points = 1;
+}
+
+// WireGeometry is the routed geometry for one net on a sheet.
+message WireGeometry {
+  // Kind distinguishes a plain net wire from a bus construct, so the renderers style a bus
+  // trunk/entry differently (thicker, distinct color) from a wire. Unset renders as a wire, so
+  // existing readers and goldens are unaffected until a reader sets it. It is format-neutral.
+  // KiCad sets BUS/BUS_ENTRY today, and gEDA/xschem will once their geometry readers emit bus
+  // segments.
+  enum Kind {
+    KIND_UNSPECIFIED = 0;  // treat as a plain wire
+    KIND_WIRE = 1;         // a net wire
+    KIND_BUS = 2;          // a bus trunk (KiCad `bus`)
+    KIND_BUS_ENTRY = 3;    // a bus entry / ripper stub (KiCad `bus_entry`)
+  }
+  string net = 1;                    // joins to ir.Net.name
+  // net_id joins to ir.Net.id, the deterministic per-instance net identity. A highlight can then
+  // target one of two nets that share a name (see ir.Net.id). Empty for a wire on a pinless net
+  // or a format whose solve produced no id; consumers fall back to net.
+  string net_id = 3;
+  repeated Polyline polylines = 2;
+  Kind kind = 4;
+  Provenance prov = 16;
+}
+
+// Label is free text placed on a sheet (annotations, net labels, notes).
+message Label {
+  string text = 1;
+  Point origin = 2;
+  int64 height = 3;         // text height in source units
+  // Alignment of the text relative to origin, in the canonical form "<h> <v>", with h in
+  // {left,center,right} and v in {top,middle,bottom}. Either token may be omitted, and then
+  // defaults to centered. Each reader maps its native codes onto this (EDIF LOWERLEFT ->
+  // "left bottom"; KiCad "left bottom").
+  string justify = 4;
+  int32 rotation_deg = 5;  // degrees counter-clockwise
+  // Flag is the outline a label is drawn inside. KiCad draws a global label in a box whose
+  // ends show the signal's direction, an arrow out for an output and arrows both ways for a
+  // bidirectional signal.
+  enum Flag {
+    FLAG_NONE = 0;           // text alone, as for a local label
+    FLAG_PASSIVE = 1;        // a plain box
+    FLAG_INPUT = 2;          // an arrow into the connection
+    FLAG_OUTPUT = 3;         // an arrow out of it
+    FLAG_BIDIRECTIONAL = 4;  // arrows both ways
+    FLAG_TRI_STATE = 5;      // drawn as bidirectional
+  }
+  Flag flag = 6;
+  // Where the label meets its wire, when a reader set the text apart from it. KiCad draws a
+  // label's text a little off its connect point, so its reader places origin where the text
+  // goes and keeps the connect point here. A flag's outline starts from it. Nil when the text
+  // sits on the connect point, so a consumer joining a label to its wire reads anchor first and
+  // origin otherwise.
+  Point anchor = 7;
+}
+
+// SheetGeometry is one schematic page/sheet (tier 1, logical).
+message SheetGeometry {
+  string id = 1;                             // page internal id
+  string name = 2;                           // page display name
+  // parent_id is the id of the sheet this one nests under, or empty for a top-level sheet.
+  // A design may have several top-level sheets (a forest). Readers with a sheet hierarchy
+  // (KiCad hierarchical schematics) fill it, and flat formats (EDIF pages) leave it empty.
+  // This is the rendering-side hierarchy in the geometry sidecar. The neutral IR does not
+  // model it yet, because only one format has it so far (CONSTRAINTS C9).
+  string parent_id = 8;
+  BBox size = 3;                             // pageSize
+  repeated SymbolPlacement placements = 4;
+  repeated WireGeometry wires = 5;
+  repeated Label labels = 6;
+  // Free graphics on the sheet that no placed symbol owns, such as junction dots,
+  // no-connect markers, and stand-alone drawing primitives (notes, lines, boxes). Any reader
+  // that has them fills this (KiCad junctions/no-connects/graphics, EDIF commentGraphics
+  // figures). Symbol graphics are in SymbolDef.shapes, and these are sheet-level.
+  repeated Shape shapes = 7;
+  TitleBlock title_block = 9;  // the sheet's worksheet title-block fields, if any (8 = parent_id)
+  repeated Image images = 10;  // sheet-level raster graphics (logos, notes) in sheet coordinates
+  // suppress_worksheet tells the renderer NOT to synthesize its KiCad-style drawing sheet
+  // (frame + ruler + title block) for this sheet, because the source format has its own
+  // (xschem title.sym, gEDA title-*.sym). Default false, so KiCad and EDIF still get the
+  // synthetic worksheet. xschem/gEDA readers set it true. A follow-up renders the format's own
+  // title block and annotations faithfully (WS7-036). Until then such a sheet draws without a
+  // title block rather than with a wrong synthetic one.
+  bool suppress_worksheet = 11;
+  Provenance prov = 16;
+}
+
+// TitleBlock holds the drawing-sheet title-block fields (the bottom-right info table). The
+// renderer synthesizes the worksheet frame/border/zone-ruler from the page size, as standard
+// furniture. Only these text fields hold per-design or per-sheet content. KiCad (title_block
+// ...) and EDIF title-block annotations both fill it. Any field may be empty.
+message TitleBlock {
+  string title = 1;
+  string rev = 2;
+  string date = 3;
+  string company = 4;
+  repeated string comments = 5;  // free comment lines
+  // Title-block fields with no typed slot here (e.g. EDIF's Drawing, Designer, Prototype,
+  // DV/PV/Checked signatures). They are in source order and deduped by key. Consumers keep the
+  // key/value split, which a "Key: Value" comment would lose. They are generic rather than
+  // typed fields, because so far only some formats populate them.
+  repeated KeyValue extra_fields = 6;
+}
+
+// KeyValue is a preserved-order named string. A format uses it for a field that the shared
+// geometry schema does not promote to a typed slot. Order is the producer's; keys are unique
+// within one list. Prefer this over map<string,string> when order matters or output must be
+// byte-stable (proto map iteration is unordered).
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
+// SchematicGeometry is the whole sidecar artifact for one design (tier 1, logical).
+message SchematicGeometry {
+  string design_ref = 1;            // joins to ir.Design.name
+  int64 unit_nm = 2;                // nanometers per source unit (10 for this EDIF)
+  repeated SymbolDef symbols = 3;   // the symbol library, keyed by cell_ref
+  repeated SheetGeometry sheets = 4;
+  // undrawn are the placements this geometry knows about and cannot draw, because nothing in
+  // `symbols` resolves for them (agni issue 354).
+  //
+  // A render that loses a symbol does not look broken. The placement contributes no shapes, so it
+  // vanishes along with the entity keys that make it pickable. The annotation pass still draws its
+  // reference designator. The sheet then shows every ref des, every wire and the title block, and
+  // every component on it is silently unclickable. A reader sees `C1` printed, clicks it, gets
+  // nothing, and reasonably concludes the tool knows nothing about C1.
+  //
+  // The list is on the GEOMETRY rather than a response field, so every consumer reads one answer.
+  // `agni render` prints it, the viewer shows it in a banner, and an embedder gets it without
+  // recomputing a join that could disagree with the renderer's. The producer of the geometry fills
+  // it with the same resolution geomath.SymbolFor performs. So the list cannot drift from what
+  // actually did not draw.
+  //
+  // Empty means every placement resolved, which is the normal case. A geometry with no placements at
+  // all also leaves it empty, because drawing nothing is not the same as failing to draw.
+  repeated UndrawnPlacement undrawn = 5;
+  // back_annotated lists the placements whose name comes from the design's back-annotation rather
+  // than from their page (agni issues 1228, 1230). An export can renumber parts after layout and
+  // record the new designator apart from the page. Every read keys the part by the new designator.
+  // A reader uses this list to audit which drawn labels were replaced. Empty when the file
+  // back-annotates nothing, or nothing it back-annotates differs from the page.
+  repeated BackAnnotatedPlacement back_annotated = 6;
+  // text_markup names the markup the geometry's text is written in, so a renderer knows to draw
+  // it rather than print it (agni issue 1344). "kicad" is KiCad's: `~{X}` draws X with an overbar,
+  // `_{X}` as a subscript, `^{X}` as a superscript, and `{slash}` and its siblings draw the
+  // character they escape. Empty means plain text, and a renderer prints it as written. The text
+  // itself is unchanged, since a net label's text is also the net's name.
+  string text_markup = 7;
+  Provenance prov = 16;
+}
+
+// BackAnnotatedPlacement is one placement whose page designator was replaced by back-annotation.
+// ref_des is the designator every read uses. drawn_ref_des is the one on the page, empty when the
+// page has none. sheet_id is the sheet the placement is drawn on.
+message BackAnnotatedPlacement {
+  string ref_des = 1;
+  string drawn_ref_des = 2;
+  string sheet_id = 3;
+}
+
+// UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.
+//
+// ref_des is what the reader SEES on the sheet, so a message can name the part they are looking at.
+// cell_ref and library_ref are what the placement asked for and nothing supplied. A reader pastes
+// them into a --symbol-path search or checks them against their library table. sheet_id says where
+// to look.
+//
+// It is keyed per PLACEMENT rather than per missing library, unlike ir.UnresolvedSymbol. That
+// message answers "which reference failed to resolve" for the netlist read, where one missing file
+// affecting forty parts is one fact. This message answers "what is missing from this drawing". There
+// the reader is looking at the forty unclickable parts.
+message UndrawnPlacement {
+  string ref_des = 1;
+  string cell_ref = 2;
+  string library_ref = 3;
+  string sheet_id = 4;
+}

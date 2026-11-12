@@ -1,0 +1,133 @@
+// pagegestures routes the datasheet workbench's pointer and keyboard input. It lives outside
+// regionview.tsx so it is testable without pdf.js or a DOM, like regions.ts.
+//
+// Wheel zooms and drag pans, as in the schematic viewers (see panzoom.ts, #297). Drawing a region
+// has two entrances, holding Shift or the sticky Draw mode for a long transcription session, and
+// both arrive here as one `drawIntent` flag.
+import type { Handle, Region } from "./regions.js";
+
+// PointerIntent is what a pointerdown starts. Everything except "pan" manipulates a region, and
+// "pan" is the fallback, so a drag anywhere else moves the page.
+export type PointerIntent =
+  | { kind: "delete" }
+  | { kind: "resize"; handle: Handle }
+  | { kind: "draw" }
+  | { kind: "move" }
+  | { kind: "pan" };
+
+// HitTarget describes what is under the pointer. The caller reads it off the DOM, so this file
+// remains pure. Only the selected user region draws resize handles, and `handle` is set only when
+// the pointer is on one.
+export interface HitTarget {
+  deleteButton: boolean;
+  handle: Handle | null;
+  regionId: string | null;
+  regionKind: Region["kind"] | null;
+}
+
+// classifyPointerDown decides the gesture, in priority order:
+//
+//  1. the on-box × deletes, and never starts a drag
+//  2. a resize handle resizes, even in Draw mode, so adjusting the box you just drew needs no mode
+//     toggle (the handles are small enough that hitting one is never accidental)
+//  3. drawIntent draws, outranking a region body so a new box can be drawn ON TOP of an existing
+//     one (datasheet tables overlap constantly)
+//  4. the SELECTED user region's body moves. Requiring selection first means a drag across a page
+//     dense with boxes pans instead of scattering them
+//  5. everything else pans
+export function classifyPointerDown(
+  hit: HitTarget,
+  opts: { selectedId: string; drawIntent: boolean },
+): PointerIntent {
+  if (hit.deleteButton) return { kind: "delete" };
+  if (hit.handle && hit.regionId === opts.selectedId) return { kind: "resize", handle: hit.handle };
+  if (opts.drawIntent) return { kind: "draw" };
+  if (hit.regionId && hit.regionId === opts.selectedId && hit.regionKind === "user") return { kind: "move" };
+  return { kind: "pan" };
+}
+
+// selectionAfterPointerDown returns the region id the pointerdown selects, or null to leave the
+// selection alone. Pressing on a region selects it even when the gesture turns out to be a pan, so
+// one press still both selects and starts moving the page. A draw leaves the selection alone,
+// because addUserRegion will select the new box on pointerup.
+export function selectionAfterPointerDown(hit: HitTarget, intent: PointerIntent): string | null {
+  if (intent.kind === "draw" || intent.kind === "delete") return null;
+  return hit.regionId;
+}
+
+// NavAction is a keyboard command against the workbench viewport.
+export type NavAction =
+  | { kind: "page"; to: "first" | "last" | "prev" | "next" }
+  | { kind: "zoom"; to: "in" | "out" | "fit" }
+  | { kind: "deleteRegion" }
+  | { kind: "toggleDraw" }
+  | { kind: "exitDraw" };
+
+// KeyEvent is the slice of KeyboardEvent the bindings read.
+export interface KeyEvent {
+  key: string;
+  shiftKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+}
+
+// ZOOM_KEY_FACTOR is one keyboard zoom step. Larger than a wheel notch because a key press is a
+// discrete act rather than a continuous gesture.
+export const ZOOM_KEY_FACTOR = 1.25;
+
+// classifyKey maps a keypress to a viewport command, or null to leave it to the browser.
+//
+// Paging has two bindings. PageUp/PageDown/Home/End works as in any paged-document reader, and
+// Shift+arrows gives the same four commands, left/right stepping and up/down jumping to the ends.
+//
+// `inField` suppresses everything while a form control has focus, so typing a value into the
+// transcribe panel cannot page the document out from under it. Ctrl/Cmd combinations are left
+// alone so browser shortcuts keep working.
+export function classifyKey(e: KeyEvent, inField: boolean): NavAction | null {
+  if (inField || e.ctrlKey || e.metaKey) return null;
+  switch (e.key) {
+    case "PageDown":
+      return { kind: "page", to: "next" };
+    case "PageUp":
+      return { kind: "page", to: "prev" };
+    case "Home":
+      return { kind: "page", to: "first" };
+    case "End":
+      return { kind: "page", to: "last" };
+    case "ArrowRight":
+      return e.shiftKey ? { kind: "page", to: "next" } : null;
+    case "ArrowLeft":
+      return e.shiftKey ? { kind: "page", to: "prev" } : null;
+    case "ArrowUp":
+      return e.shiftKey ? { kind: "page", to: "first" } : null;
+    case "ArrowDown":
+      return e.shiftKey ? { kind: "page", to: "last" } : null;
+    case "Delete":
+    case "Backspace":
+      return { kind: "deleteRegion" };
+    case "+":
+    case "=":
+      return { kind: "zoom", to: "in" };
+    case "-":
+    case "_":
+      return { kind: "zoom", to: "out" };
+    case "0":
+      return { kind: "zoom", to: "fit" };
+    case "r":
+    case "R":
+      return { kind: "toggleDraw" };
+    case "Escape":
+      return { kind: "exitDraw" };
+    default:
+      return null;
+  }
+}
+
+// isFormField reports whether an element swallows keystrokes, so classifyKey's `inField` can be
+// filled from document.activeElement.
+export function isFormField(el: Element | null): boolean {
+  if (!el) return false;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return true;
+  return (el as HTMLElement).isContentEditable === true;
+}

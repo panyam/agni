@@ -1,0 +1,55 @@
+# Mission #909's five questions of the Jetson AGX Thor baseboard, Antmicro's board from the samples
+# corpus (make samples-oracle, then make -C examples/jetson-project board rev-b). The board has no CAN
+# transceiver or MCU of its own, so the CAN question follows a CAN line from the module connector J1
+# to the expansion connector J18, and the trace runs the same way.
+folder: ../../jetson-project
+design: designs/jetson
+revision: designs/jetson-rev-b
+questions:
+  - ask: Which I2C nets have no pull-up, and which rail would one go to?
+    calls:
+      - tool: check
+        args: {design: "{design}", rules: [i2c-pull-up]}
+        cli: [check, "{design}", --rule, i2c-pull-up, --format, csv]
+        table: findings
+        has: ["| /CSI/I2C_MUX_SCL |", "| /CSI/I2C_MUX_SDA |"]
+      - tool: query
+        args:
+          design: "{design}"
+          program: pin.net(?r, ?p, ?bus), pin.net(?r, ?q, ?rail), net.rail(?rail), not net.ground(?rail) => ?r, ?rail
+          bind: {bus: [/CSI/I2C_MUX_SCL, /CSI/I2C_MUX_SDA]}
+        cli: [query, "{design}", "pin.net(?r, ?p, ?bus), pin.net(?r, ?q, ?rail), net.rail(?rail), not net.ground(?rail) => ?r, ?rail", --bind, bus=/CSI/I2C_MUX_SCL, --bind, bus=/CSI/I2C_MUX_SDA, --format, csv]
+        table: query
+        has: ["| U43 | +1V8 |"]
+  - ask: What does the CAN0 output connect to, and is it protected?
+    calls:
+      - tool: query
+        args: {design: "{design}", program: "pin.net(?r, ?p, ?n), component.class(?r, ?c) => ?r, ?p, ?c", bind: {n: /Expansion connector/CAN0.DOUT}}
+        cli: [query, "{design}", "pin.net(?r, ?p, ?n), component.class(?r, ?c) => ?r, ?p, ?c", --bind, n=/Expansion connector/CAN0.DOUT, --format, csv]
+        table: query
+        has: ["| J1 | G38 | connector |", "| J18 | H08 | connector |"]
+      - tool: query
+        args: {design: "{design}", program: "pin.net(?r, ?p, ?n), component.class(?r, \"tvs\") => ?r", bind: {n: /Expansion connector/CAN0.DOUT}}
+        cli: [query, "{design}", "pin.net(?r, ?p, ?n), component.class(?r, \"tvs\") => ?r", --bind, n=/Expansion connector/CAN0.DOUT, --format, csv]
+        table: query
+        has: ["no rows"]
+  - ask: Which rails have no test point?
+    calls:
+      - tool: query
+        args: {design: "{design}", program: "net.rail(?net), not net.has_test_point(?net) => ?net"}
+        cli: [query, "{design}", "net.rail(?net), not net.has_test_point(?net) => ?net", --format, csv]
+        table: query
+        has: ["| /CSI/CSIA_3V3 |"]
+  - ask: What changed on the power nets between rev A and rev B?
+    calls:
+      - tool: diff
+        args: {design: "{design}", against: "{revision}"}
+        cli: [diff, "{design}", "{revision}", --format, csv]
+        table: diff
+        has: ["| component-changed | R357 |", "| component-changed | R358 |"]
+  - ask: Trace from the module's pin to the expansion connector and tell me where I can probe.
+    calls:
+      - tool: trace
+        args: {design: "{design}", from: J1.G38, to: J18.H08}
+        cli: [trace, "{design}", --from, J1.G38, --to, J18.H08, --format, json]
+        has: ["net /Expansion connector/CAN0.DOUT", "routed: 0 crossings, 1 net"]

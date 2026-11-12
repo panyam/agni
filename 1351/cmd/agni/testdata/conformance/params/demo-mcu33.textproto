@@ -1,0 +1,42 @@
+# Seeded spec for the supplycheck conformance fixtures: a fictional 3.3V-class MCU
+# (synthetic part, synthetic datasheet — conformance fixtures are our own files, C10).
+# The abs-max VDD row is machine-comparable on purpose (structured TA condition):
+# rows with text-only conditions are skipped by the docs/20 comparison semantics, so
+# a fixture meant to FIRE must not carry one.
+mpn: "DEMO-MCU33"
+manufacturer: "Agni Conformance Works"
+device_class: "mcu"
+
+docs {
+  id: "demo33"
+  title: "DEMO-MCU33 Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Supply voltage"
+  symbol: "VDD"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 4.6 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "demo33" page: 3 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+# Recommended operating supply range for the same 3.3V-class MCU: the functional
+# envelope, distinct from the abs-max ceiling above. Machine-comparable (structured TA
+# condition). This drives rail-nominal-out-of-recommended: on the +5V fires fixture, 5V
+# is over the 3.6V recommended max (and also over the 4.6V abs-max, so both rules fire);
+# on the +3V3 passes fixture, 3.3V sits inside 3.0..3.6V and both stay silent.
+parameters {
+  name: "Supply voltage, recommended operating"
+  symbol: "VDD"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 3.0 max: 3.6 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "demo33" page: 3 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

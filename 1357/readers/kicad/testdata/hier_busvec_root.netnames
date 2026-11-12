@@ -1,0 +1,9 @@
+# KiCad's own net names for hier_busvec_root.kicad_sch, from `kicad-cli sch export netlist` (10.0.6).
+# Regenerate with hack/kicad_net_names.sh; do not hand-edit. Each line is a net name, a tab,
+# then the ref.pin pairs on it, so the test can pair our nets with KiCad's by their pins.
+/DATA0	R1.1 R101.1
+/DATA1	R102.1 R2.1
+unconnected-(R1-Pad2)	R1.2
+unconnected-(R101-Pad2)	R101.2
+unconnected-(R102-Pad2)	R102.2
+unconnected-(R2-Pad2)	R2.2

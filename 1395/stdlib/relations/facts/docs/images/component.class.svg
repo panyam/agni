@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 300" width="700" height="300" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="component.class emits one row per tag: a specific class plus its family tags. A TVS is both tvs and diode; an LED is both led and diode; a ferrite is both ferrite and inductor.">
+  <rect x="1" y="1" width="698" height="298" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <text x="30" y="38" font-size="14" font-weight="600" fill="#394049">component.class emits one row per tag: specific class plus family tags</text>
+
+  <!-- family parents -->
+  <rect x="120" y="72" width="90" height="40" rx="6" fill="#eef4ff" stroke="#3b6fb0" stroke-width="2"/>
+  <text x="165" y="97" font-size="14" font-weight="600" fill="#3b6fb0" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">diode</text>
+
+  <rect x="470" y="72" width="90" height="40" rx="6" fill="#eef4ff" stroke="#3b6fb0" stroke-width="2"/>
+  <text x="515" y="97" font-size="14" font-weight="600" fill="#3b6fb0" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">inductor</text>
+
+  <!-- specific classes -->
+  <rect x="60" y="188" width="80" height="38" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="100" y="212" font-size="13" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">tvs</text>
+
+  <rect x="190" y="188" width="80" height="38" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="230" y="212" font-size="13" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">led</text>
+
+  <rect x="445" y="188" width="90" height="38" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="490" y="212" font-size="13" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">ferrite</text>
+
+  <!-- edges: specific -> family (a part in the specific class also carries the family tag) -->
+  <g stroke="#3b6fb0" stroke-width="2" fill="#3b6fb0">
+    <line x1="100" y1="188" x2="150" y2="114"/>
+    <polygon points="150,112 144,122 156,120"/>
+    <line x1="230" y1="188" x2="182" y2="114"/>
+    <polygon points="180,112 178,124 189,119"/>
+    <line x1="490" y1="188" x2="514" y2="114"/>
+    <polygon points="515,112 509,121 521,122"/>
+  </g>
+
+  <text x="350" y="270" font-size="12" fill="#6b7280" text-anchor="middle">A TVS (D1) answers component.class(D1, "tvs") AND component.class(D1, "diode").</text>
+</svg>

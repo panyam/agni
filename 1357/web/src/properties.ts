@@ -1,0 +1,674 @@
+// The Properties panel's model: what is selected, at which level, and what the design says about it
+// (agni issue 902).
+//
+// A canvas click used to write a query into the query panel and run it. That mixed looking around
+// with asking a question, and it overwrote whatever the reader had typed. A click now selects. This
+// module describes the selection from data already in the viewer, namely the design's own IR (one
+// masked GetDesign per open), the findings of the run on screen, and the datasheet join. Asking a
+// question about the selection is a separate act. An Ask row opens the served question in a query
+// tab.
+//
+// Selection is a hierarchy with something always selected. The design is the root, the sheet on
+// screen is under it, and an entity (a component, net, pin or bus) is under the sheet it was picked
+// on. Everything here is pure, so the panel and its tests share one derivation.
+
+import type { Component, Design, Net } from "./gen/agni/v1/ir/ir_pb.js";
+import { ClassSource, Role } from "./gen/agni/v1/ir/ir_pb.js";
+import type { PartSpec } from "./gen/agni/v1/param/param_pb.js";
+import type { ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
+import { checkedState, findingsFor, type FindingItem, type FindingsState, type VerdictItem } from "./findings.js";
+import type { EntityQueryItem } from "./query.js";
+import { labelFor, type Selection } from "./selection.js";
+
+// Focus is what Properties describes. An entity carries the sheet it was picked on, so its breadcrumb
+// reads Design › Sheet › J1 › pin 2 rather than jumping straight from the design to the pin.
+export type Focus =
+  | { level: "design" }
+  | { level: "sheet"; sheetId: string }
+  | { level: "entity"; sel: Selection; sheetId?: string; within?: Selection };
+// within is the area that an entity was reached from (agni issue 904), so its breadcrumb steps back
+// out to that area rather than to the sheet. An area itself is an entity focus whose selection is
+// the area.
+
+// PIN_SEP joins a component and a pin designator into one map key. A designator can contain any
+// printable character, and no reader writes NUL.
+const PIN_SEP = "\u0000";
+
+// PinNet is one of a component's pins and the net it connects to, "" when the pin is unconnected.
+export interface PinNet {
+  pin: string;
+  name: string;
+  net: string;
+}
+
+// Inventory indexes the design's IR for the questions Properties asks, built once per open.
+export interface Inventory {
+  components: Map<string, Component>;
+  nets: Map<string, Net>;
+  // pinsOf lists every connected pin of a component with its net, sorted by designator.
+  pinsOf: Map<string, PinNet[]>;
+  // pinName maps ref + PIN_SEP + designator to the pin's functional name, the name a datasheet
+  // uses. The engine's pin.name supplies it (agni issue 1045). A name that only repeats the
+  // designator is left out, since it would say nothing beside it.
+  pinName: Map<string, string>;
+  // testPoints holds the components that the engine classes as test points (component.class). That
+  // class can come from conventions or a datasheet, and the IR's own tags do not show either.
+  testPoints: Set<string>;
+  // buses holds each bus a reader recorded, by label: the constructs it was drawn as and the member
+  // signals the reader could name. The netlist has no bus as such, so this is the read's own record.
+  buses: Map<string, { constructs: string[]; members: string[] }>;
+  // unexpanded lists the hierarchical blocks the read left out, largest first. The design level
+  // names them, since no count above covers any of them (agni issues 707, 717).
+  unexpanded: { name: string; instances: number }[];
+}
+
+// INVENTORY_PATHS is the read_mask for the one GetDesign Properties makes per open. It names the
+// fields the panel shows and nothing else, so provenance and section attributes are left on the
+// server. On the largest seed the masked answer is about 1.8 MB of JSON, against 3.9 MB for the
+// three collections whole.
+export const INVENTORY_PATHS = [
+  "design.components.ref_des",
+  "design.components.mpn",
+  "design.components.value",
+  "design.components.device_classes",
+  "design.components.attributes",
+  "design.nets.name",
+  "design.nets.id",
+  "design.nets.roles",
+  "design.nets.net_classes",
+  "design.nets.attributes",
+  "design.nets.connections.component_ref",
+  "design.nets.connections.pin_ref",
+  "design.input_diagnostics.unmodeled_buses.label",
+  "design.input_diagnostics.unmodeled_buses.kind",
+  "design.input_diagnostics.unmodeled_buses.members",
+  "design.input_diagnostics.unexpanded_hierarchy.name",
+  "design.input_diagnostics.unexpanded_hierarchy.instance_count",
+];
+
+// byDesignator orders pin designators the way a datasheet does, so pin 2 sorts before pin 10.
+const byDesignator = new Intl.Collator(undefined, { numeric: true }).compare;
+
+// ServedFacts holds two facts that Properties asks the engine for once per design, rather than
+// working them out from the IR. They are each pin's functional name (pin.name) and the test points
+// (component.class). The engine applies part resolution and class evidence, and a reading of the IR
+// alone would miss both (agni issue 1045).
+export interface ServedFacts {
+  pinNames: [ref: string, pin: string, name: string][];
+  testPoints: string[];
+}
+
+// SERVED_QUERIES are the two questions behind ServedFacts, in that order.
+export const SERVED_QUERIES = {
+  pinNames: "pin.name(?r, ?p, ?name) => ?r, ?p, ?name",
+  testPoints: 'component.class(?r, "test_point") => ?r',
+} as const;
+
+// inventoryFromDesign indexes a design read with INVENTORY_PATHS, with the engine's answers in served.
+export function inventoryFromDesign(d: Design, served: ServedFacts = { pinNames: [], testPoints: [] }): Inventory {
+  const components = new Map(d.components.map((c) => [c.refDes, c]));
+  const nets = new Map(d.nets.map((n) => [n.name, n]));
+  const pinsOf = new Map<string, PinNet[]>();
+  const pinName = new Map<string, string>();
+  for (const [ref, pin, name] of served.pinNames) {
+    if (name && name !== pin) pinName.set(ref + PIN_SEP + pin, name);
+  }
+  for (const n of d.nets) {
+    for (const conn of n.connections) {
+      const list = pinsOf.get(conn.componentRef) ?? [];
+      list.push({ pin: conn.pinRef, name: pinName.get(conn.componentRef + PIN_SEP + conn.pinRef) ?? "", net: n.name });
+      pinsOf.set(conn.componentRef, list);
+    }
+  }
+  for (const list of pinsOf.values()) list.sort((a, b) => byDesignator(a.pin, b.pin));
+  const buses = new Map<string, { constructs: string[]; members: string[] }>();
+  for (const b of d.inputDiagnostics?.unmodeledBuses ?? []) {
+    if (!b.label) continue;
+    const at = buses.get(b.label) ?? { constructs: [], members: [] };
+    if (!at.constructs.includes(b.kind)) at.constructs.push(b.kind);
+    for (const m of b.members) if (!at.members.includes(m)) at.members.push(m);
+    buses.set(b.label, at);
+  }
+  for (const b of buses.values()) b.members.sort(byDesignator);
+  const unexpanded = (d.inputDiagnostics?.unexpandedHierarchy ?? [])
+    .map((h) => ({ name: h.name, instances: h.instanceCount }))
+    .sort((a, b) => b.instances - a.instances || byDesignator(a.name, b.name));
+  return { components, nets, pinsOf, pinName, testPoints: new Set(served.testPoints), buses, unexpanded };
+}
+
+// Datasheet is the datasheet section's outcome. It keeps three outcomes apart, since a reader acts
+// on each differently. Nothing was asked (no corpus), the corpus was asked and has no spec for this
+// part number, or here is the spec. A part with no MPN is a fourth case, since there was nothing to
+// look up.
+export type Datasheet =
+  | { kind: "no-corpus" }
+  | { kind: "no-mpn" }
+  | { kind: "no-spec"; mpn: string }
+  | { kind: "spec"; mpn: string; spec: PartSpec; corpus: string };
+
+// DatasheetJoin is what the parts panel already fetched (GetComponentParams), shared with Properties.
+export interface DatasheetJoin {
+  corpusConnected: boolean;
+  parts: { refDes: string; mpn: string; spec: PartSpec | undefined; corpus?: string }[];
+}
+
+// Ref is one reference in a group. A target makes it clickable, and clicking moves the selection to
+// that entity, or to that sheet for a sheet reference.
+export interface Ref {
+  label: string;
+  detail?: string;
+  target?: Selection;
+  sheet?: string;
+  // verdict makes the reference show that verdict's proof on the drawing.
+  verdict?: string;
+}
+
+export interface Group {
+  name: string;
+  refs: Ref[];
+  // empty is what the group says when it has no refs, so an absent answer reads as a statement.
+  empty?: string;
+}
+
+export interface Row {
+  label: string;
+  value: string;
+}
+
+export interface Crumb {
+  label: string;
+  focus: Focus;
+}
+
+// PropertiesState is everything the panel renders for one focus.
+export interface PropertiesState {
+  crumbs: Crumb[];
+  kind: string;
+  title: string;
+  rows: Row[];
+  groups: Group[];
+  datasheet?: Datasheet;
+  // report is the auto-layout conversion report, shown at the design level as Details showed it.
+  report?: ConversionReport | null;
+  // ask holds the selection for the Ask rows and the served questions for its kind. It is absent
+  // when nothing selected can be bound by a question.
+  ask?: { sel: Selection; questions: EntityQueryItem[] };
+  // sel is the selected entity, absent at the design and sheet levels.
+  sel?: Selection;
+  // within is the area the selection sits in, so a reference followed from the panel remains inside
+  // it.
+  within?: Selection;
+  // note explains a gap in what the panel can say, such as the inventory still loading.
+  note?: string;
+}
+
+// SelectionChecks is what CheckDesign answered about the selection alone (agni issue 897). The
+// selected rules are asked about one net, part or pin. asking is the wait, no-rules says nothing
+// was selected to ask, failed carries the engine's reason. notAsked lists the rules that the answer
+// skipped, with the engine's reason for each, such as a rule that concludes about the design as a
+// whole.
+export type SelectionChecks =
+  | { state: "asking" }
+  | { state: "no-rules" }
+  | { state: "failed"; error: string }
+  | { state: "answered"; verdicts: VerdictItem[]; notAsked: { name: string; reason: string }[] };
+
+// PropertiesInput is what the panel's host holds when it asks for a state.
+export interface PropertiesInput {
+  focus: Focus;
+  designName: string;
+  summary: string;
+  sheets: { id: string; name: string }[];
+  report: ConversionReport | null;
+  inventory: Inventory | null;
+  findings: FindingsState | null;
+  datasheet: DatasheetJoin | null;
+  // drawn is what the sheet on screen draws, read off the rendered document, since a sheet's
+  // membership is a property of its drawing rather than of the netlist.
+  drawn: { refs: string[]; nets: string[] } | null;
+  // questions are the served questions about a selection, every kind's.
+  questions: EntityQueryItem[];
+  // drawnOn lists the sheets where the engine located the selected entity. It is null while that
+  // answer is on its way, and absent where nobody asks (a host with no engine to ask).
+  drawnOn?: string[] | null;
+  // checks is the selection's own check answer. It is absent where nobody asks, in a host with no
+  // engine to ask or for a bus, which no scope covers. The panel then lists the run's findings.
+  checks?: SelectionChecks;
+}
+
+// propertiesFor derives the panel's state for one focus.
+export function propertiesFor(input: PropertiesInput): PropertiesState {
+  const crumbs = crumbsFor(input);
+  const f = input.focus;
+  if (f.level === "design") return { crumbs, ...designView(input) };
+  if (f.level === "sheet") return { crumbs, ...sheetView(input, f.sheetId) };
+  const within = f.sel.kind === "area" ? f.sel : f.within;
+  return { crumbs, ...entityView(input, f.sel), within };
+}
+
+function sheetName(input: PropertiesInput, id: string | undefined): string {
+  return input.sheets.find((s) => s.id === id)?.name || id || "";
+}
+
+function crumbsFor(input: PropertiesInput): Crumb[] {
+  const out: Crumb[] = [{ label: input.designName || "Design", focus: { level: "design" } }];
+  const f = input.focus;
+  const sheetId = f.level === "sheet" ? f.sheetId : f.level === "entity" ? f.sheetId : undefined;
+  if (sheetId) out.push({ label: sheetName(input, sheetId), focus: { level: "sheet", sheetId } });
+  if (f.level !== "entity") return out;
+  if (f.within) out.push({ label: labelFor(f.within), focus: { level: "entity", sel: f.within, sheetId } });
+  if (f.sel.kind === "pin") {
+    out.push({ label: f.sel.ref ?? "", focus: { level: "entity", sel: { kind: "component", ref: f.sel.ref }, sheetId, within: f.within } });
+    out.push({ label: `pin ${f.sel.pin}`, focus: f });
+  } else {
+    out.push({ label: labelFor(f.sel), focus: f });
+  }
+  return out;
+}
+
+// findingsLine states a count with the run state that gives it meaning, since a zero before any run
+// is not a clean design (web-picking.md, "A count needs its state or it lies").
+function findingsLine(fs: FindingsState | null, items: FindingItem[]): string {
+  if (!fs) return "not checked yet";
+  switch (checkedState(fs)) {
+    case "loading":
+      return "rules loading";
+    case "no-rules":
+      return "no rules selected";
+    case "running":
+      return "running";
+    case "not-run":
+      return "not checked yet";
+    case "partial":
+      return `at least ${countWords(items)}, some selected rules not run`;
+    case "complete":
+      return countWords(items);
+  }
+}
+
+function countWords(items: FindingItem[]): string {
+  const unresolved = items.filter((f) => f.inconclusive).length;
+  const defects = items.length - unresolved;
+  const head = `${defects} finding${defects === 1 ? "" : "s"}`;
+  return unresolved ? `${head}, ${unresolved} unresolved` : head;
+}
+
+function findingRefs(items: FindingItem[]): Ref[] {
+  return items.map((f) => ({ label: f.rule, detail: f.message }));
+}
+
+function designView(input: PropertiesInput): Omit<PropertiesState, "crumbs"> {
+  const all = input.findings?.findings ?? [];
+  const rows: Row[] = [];
+  if (input.summary) rows.push({ label: "read", value: input.summary });
+  if (input.inventory) {
+    rows.push({ label: "components", value: String(input.inventory.components.size) });
+    rows.push({ label: "nets", value: String(input.inventory.nets.size) });
+  }
+  rows.push({ label: "sheets", value: String(input.sheets.length) });
+  rows.push({ label: "findings", value: findingsLine(input.findings, all) });
+  if (input.datasheet) {
+    const seeded = input.datasheet.parts.length;
+    rows.push({
+      label: "datasheets",
+      value: input.datasheet.corpusConnected ? `${seeded} part${seeded === 1 ? "" : "s"} with a spec` : "no corpus connected",
+    });
+  }
+  const groups: Group[] = [
+    {
+      name: "sheets",
+      refs: input.sheets.map((s) => ({ label: s.name || s.id })),
+    },
+  ];
+  // The blocks the read left out, each with what it holds. Only on a hierarchical read, since an
+  // empty group on every flat design would read as something to look at. The canvas strip says in a
+  // sentence what this means.
+  const unexpanded = input.inventory?.unexpanded ?? [];
+  if (unexpanded.length > 0) {
+    groups.push({
+      name: "not extracted",
+      refs: unexpanded.map((u) => ({ label: u.name, detail: `${u.instances} instance${u.instances === 1 ? "" : "s"}` })),
+    });
+  }
+  return { kind: "design", title: input.designName || "Design", rows, groups, report: input.report };
+}
+
+function sheetView(input: PropertiesInput, sheetId: string): Omit<PropertiesState, "crumbs"> {
+  const name = sheetName(input, sheetId);
+  const all = input.findings?.findings ?? [];
+  const onSheet = all.filter((f) => f.sheets.some((s) => s.id === sheetId));
+  const refs = [...(input.drawn?.refs ?? [])].sort(byDesignator);
+  const nets = [...(input.drawn?.nets ?? [])].sort(byDesignator);
+  return {
+    kind: "sheet",
+    title: name,
+    rows: [{ label: "findings", value: findingsLine(input.findings, onSheet) }],
+    groups: [
+      { name: "components", refs: refs.map((r) => ({ label: r, target: { kind: "component", ref: r } })), empty: "none drawn" },
+      { name: "nets", refs: nets.map((n) => ({ label: n, target: { kind: "net", net: n } })), empty: "none drawn" },
+      { name: "findings", refs: findingRefs(onSheet), empty: "none" },
+    ],
+    note: input.drawn ? undefined : "What this sheet draws is read off its SVG drawing, and none is on screen.",
+  };
+}
+
+// OUTCOME_ORDER puts what a reader acts on first: a failure, then a check that could not decide.
+const OUTCOME_ORDER = ["fail", "inconclusive"];
+
+// checksLine counts a selection's verdicts by outcome, worst first, in the checks panel's words. It
+// says when a rule was left out because it answers for the design as a whole.
+function checksLine(c: SelectionChecks): string {
+  switch (c.state) {
+    case "asking":
+      return "checking…";
+    case "no-rules":
+      return "no rules selected";
+    case "failed":
+      return `could not check: ${c.error}`;
+    case "answered": {
+      if (c.verdicts.length === 0) return "no selected rule considers it";
+      const n = new Map<string, number>();
+      for (const v of c.verdicts) n.set(v.outcome, (n.get(v.outcome) ?? 0) + 1);
+      const order = ["fail", "inconclusive", "pass", "no-limit", "not-considered"];
+      // An outcome this list does not know sorts last rather than first.
+      const rank = (o: string) => (order.includes(o) ? order.indexOf(o) : order.length);
+      const words: Record<string, string> = { "no-limit": "no limit", "not-considered": "not considered" };
+      return [...n.entries()]
+        .sort((a, b) => rank(a[0]) - rank(b[0]))
+        .map(([o, k]) => `${k} ${words[o] ?? o}`)
+        .join(", ");
+    }
+  }
+}
+
+// checksGroup is the selection's checks: each failing or undecided verdict, which shows its proof
+// when clicked, worst first. The counts and the rules not asked go in the rows.
+function checksGroup(c: SelectionChecks): Group {
+  const acted = c.state === "answered" ? c.verdicts.filter((v) => OUTCOME_ORDER.includes(v.outcome)) : [];
+  acted.sort((a, b) => OUTCOME_ORDER.indexOf(a.outcome) - OUTCOME_ORDER.indexOf(b.outcome) || (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0));
+  return {
+    name: "checks",
+    refs: acted.map((v) => ({ label: v.rule, detail: v.statement || v.outcome, verdict: v.id })),
+    empty: c.state === "answered" ? "nothing failing" : checksLine(c),
+  };
+}
+
+// checksRows are the selection's check counts and the rules the answer skipped, grouped by the
+// engine's reason, so a rule missing from the answer reads as not asked rather than as passing.
+function checksRows(c: SelectionChecks): Row[] {
+  const rows: Row[] = [{ label: "checks", value: checksLine(c) }];
+  if (c.state !== "answered") return rows;
+  const byReason = new Map<string, string[]>();
+  for (const r of c.notAsked) byReason.set(r.reason, [...(byReason.get(r.reason) ?? []), r.name]);
+  for (const [reason, names] of byReason) rows.push({ label: "not asked", value: `${[...names].sort().join(", ")}: ${reason}` });
+  return rows;
+}
+
+function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesState, "crumbs"> {
+  const mine = input.findings ? findingsFor(input.findings.findings, [sel]) : [];
+  // A selection checked on its own shows that answer, and only a host with nothing to ask falls back
+  // to the run's findings (agni issue 897).
+  const findingsGroup: Group = input.checks
+    ? checksGroup(input.checks)
+    : { name: "findings", refs: findingRefs(mine), empty: input.findings && checkedState(input.findings) === "complete" ? "none" : "not checked yet" };
+  const extraRows: Row[] = input.checks ? checksRows(input.checks) : [];
+  const questions = input.questions.filter((q) => q.kind === sel.kind);
+  const base = { kind: sel.kind, title: labelFor(sel), sel, ask: questions.length ? { sel, questions } : undefined };
+  const sheetsGroup: Group[] =
+    input.drawnOn === undefined
+      ? []
+      : [
+          {
+            name: "sheets",
+            refs: (input.drawnOn ?? []).map((id) => ({ label: sheetName(input, id), sheet: id })),
+            empty: input.drawnOn ? "drawn on no sheet" : "locating…",
+          },
+        ];
+  const inv = input.inventory;
+  const loading = inv ? undefined : "Reading the design…";
+  switch (sel.kind) {
+    case "area":
+      return { ...base, ...areaView(input, sel, findingsGroup) };
+    case "component": {
+      const c = inv?.components.get(sel.ref ?? "");
+      const pins = inv?.pinsOf.get(sel.ref ?? "") ?? [];
+      const nets = [...new Set(pins.map((p) => p.net))].sort(byDesignator);
+      return {
+        ...base,
+        rows: [...(c ? componentRows(c) : []), ...extraRows],
+        groups: [
+          ...sheetsGroup,
+          { name: "pins", refs: pins.map((p) => pinRef(sel.ref ?? "", p)), empty: "no connected pins" },
+          { name: "nets", refs: nets.map((n) => ({ label: n, target: { kind: "net", net: n } })), empty: "none" },
+          findingsGroup,
+          { name: "attributes", refs: attributeRefs(c?.attributes), empty: "none" },
+        ],
+        datasheet: c ? datasheetFor(c, input.datasheet) : undefined,
+        note: loading ?? (c ? undefined : "This design's netlist has no component by that name."),
+      };
+    }
+    case "net": {
+      const n = inv?.nets.get(sel.net ?? "");
+      const conns = [...(n?.connections ?? [])].sort((a, b) => byDesignator(a.componentRef, b.componentRef) || byDesignator(a.pinRef, b.pinRef));
+      const comps = [...new Set(conns.map((c) => c.componentRef))];
+      const testPoints = comps.filter((r) => inv?.testPoints.has(r));
+      return {
+        ...base,
+        rows: [...(n ? netRowsFor(n) : []), ...extraRows],
+        groups: [
+          ...sheetsGroup,
+          {
+            name: "pins",
+            refs: conns.map((c) => ({
+              label: `${c.componentRef}.${c.pinRef}`,
+              detail: inv?.pinName.get(c.componentRef + PIN_SEP + c.pinRef),
+              target: { kind: "pin", ref: c.componentRef, pin: c.pinRef },
+            })),
+            empty: "no pins",
+          },
+          { name: "components", refs: comps.map((r) => ({ label: r, target: { kind: "component", ref: r } })), empty: "none" },
+          { name: "test points", refs: testPoints.map((r) => ({ label: r, target: { kind: "component", ref: r } })), empty: "none" },
+          findingsGroup,
+          { name: "attributes", refs: attributeRefs(n?.attributes), empty: "none" },
+        ],
+        note: loading ?? (n ? undefined : "This design's netlist has no net by that name."),
+      };
+    }
+    case "pin": {
+      const ref = sel.ref ?? "";
+      const pin = sel.pin ?? "";
+      const at = inv?.pinsOf.get(ref)?.find((p) => p.pin === pin);
+      const name = inv?.pinName.get(ref + PIN_SEP + pin) ?? "";
+      const rows: Row[] = [{ label: "designator", value: pin }];
+      if (name) rows.push({ label: "name", value: name });
+      rows.push({ label: "net", value: at?.net || "unconnected" }, ...extraRows);
+      return {
+        ...base,
+        rows,
+        groups: [
+          { name: "part", refs: [{ label: ref, target: { kind: "component", ref } }] },
+          { name: "net", refs: at?.net ? [{ label: at.net, target: { kind: "net", net: at.net } }] : [], empty: "unconnected" },
+          findingsGroup,
+        ],
+        note: loading,
+      };
+    }
+    case "bus": {
+      const b = inv?.buses.get(sel.busId ?? "");
+      return {
+        ...base,
+        rows: b ? [{ label: "drawn as", value: b.constructs.join(", ") }] : [],
+        groups: [
+          {
+            name: "members",
+            // A member the netlist also names is a net to walk to. A member the netlist does not
+            // name is the bus's own name for a signal the read never connected. That is worth
+            // seeing rather than hiding.
+            refs: (b?.members ?? []).map((m) =>
+              inv?.nets.has(m) ? { label: m, target: { kind: "net", net: m } } : { label: m, detail: "no net by this name" },
+            ),
+            empty: "the read recorded no members for this bus",
+          },
+          findingsGroup,
+        ],
+        note: loading ?? (b ? undefined : "The netlist read records no bus by this name, which happens when the drawing comes from a companion file."),
+      };
+    }
+  }
+}
+
+// areaView is an area of a sheet (agni issue 904): its parts by class, its loose pins, the nets it
+// touches split into boundary and internal, its findings and its datasheet coverage.
+//
+// A net is never a member, since it may continue off the sheet. It is internal when every one of its
+// pins is in the area, through a member part or a member pin. Otherwise it is boundary, and the
+// boundary nets are the block's interface. A net wired through the area with none of its pins
+// inside is boundary too.
+function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group): Pick<PropertiesState, "rows" | "groups" | "note" | "datasheet"> {
+  const inv = input.inventory;
+  const refs = [...(sel.refs ?? [])].sort(byDesignator);
+  const inside = new Set<string>(sel.pins ?? []);
+  for (const r of refs) for (const p of inv?.pinsOf.get(r) ?? []) inside.add(`${r}.${p.pin}`);
+  const boundary: Ref[] = [];
+  const internal: Ref[] = [];
+  for (const name of [...(sel.nets ?? [])].sort(byDesignator)) {
+    const conns = inv?.nets.get(name)?.connections ?? [];
+    const pins = new Set(conns.map((c) => `${c.componentRef}.${c.pinRef}`));
+    const held = [...pins].filter((p) => inside.has(p)).length;
+    const ref: Ref = { label: name, detail: `${held} of ${pins.size} pin${pins.size === 1 ? "" : "s"} inside`, target: { kind: "net", net: name } };
+    (pins.size > 0 && held === pins.size ? internal : boundary).push(ref);
+  }
+  // A part counts under each of its classes, as the area's "by class" question counts it, so a
+  // regulator that is also an ic is in both and the panel and the answer agree.
+  const classesOf = (r: string) => (inv?.components.get(r)?.deviceClasses ?? []).map((t) => t.class);
+  const byClass = new Map<string, number>();
+  for (const r of refs) for (const c of classesOf(r).length ? classesOf(r) : ["unclassified"]) byClass.set(c, (byClass.get(c) ?? 0) + 1);
+  const classes = [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c, n]) => `${n} ${c}`).join(", ");
+  const rows: Row[] = [
+    { label: "parts", value: String(refs.length) },
+    ...(refs.length ? [{ label: "classes", value: classes }] : []),
+    { label: "nets", value: `${boundary.length} boundary, ${internal.length} internal` },
+  ];
+  if (input.datasheet) {
+    const seeded = refs.filter((r) => input.datasheet?.parts.some((p) => p.refDes === r && p.spec)).length;
+    rows.push({ label: "datasheets", value: input.datasheet.corpusConnected ? `${seeded} of ${refs.length} parts have a spec` : "no corpus connected" });
+  }
+  // An auto-layout drawing placed every part itself. On such a drawing, what sits near what says
+  // nothing about the design. An area drawn on one is a set the reader chose rather than a block of
+  // the board.
+  const computed = reportLines(input.report) !== null;
+  return {
+    rows,
+    groups: [
+      { name: "components", refs: refs.map((r) => ({ label: r, detail: classesOf(r).join(", "), target: { kind: "component", ref: r } })), empty: "none" },
+      {
+        name: "pins",
+        refs: (sel.pins ?? []).map((key) => {
+          const dot = key.lastIndexOf(".");
+          return { label: key, target: { kind: "pin", ref: key.slice(0, dot), pin: key.slice(dot + 1) } };
+        }),
+        empty: "none outside the parts above",
+      },
+      { name: "boundary nets", refs: boundary, empty: "none" },
+      { name: "internal nets", refs: internal, empty: "none" },
+      findingsGroup,
+    ],
+    note: !inv
+      ? "Reading the design…"
+      : computed
+        ? "This drawing was laid out by agni rather than drawn by the designer, so the parts near each other here are not a block of the design."
+        : undefined,
+  };
+}
+
+// pinRef is a component's pin as a reference: the designator, its functional name when the part
+// type gives one, and the net it connects to.
+function pinRef(ref: string, p: PinNet): Ref {
+  const detail = [p.name, p.net ? `→ ${p.net}` : "unconnected"].filter(Boolean).join(" ");
+  return { label: p.pin, detail, target: { kind: "pin", ref, pin: p.pin } };
+}
+
+function componentRows(c: Component): Row[] {
+  const rows: Row[] = [];
+  if (c.mpn) rows.push({ label: "mpn", value: c.mpn });
+  // The value as the design wrote it ("10k"), since a reader compares that against the drawing.
+  const value = c.value?.input || (c.value?.value !== undefined ? `${c.value.value}${c.value.unit ? " " + c.value.unit : ""}` : "");
+  if (value) rows.push({ label: "value", value });
+  if (c.deviceClasses.length) {
+    rows.push({ label: "classes", value: c.deviceClasses.map((t) => `${t.class} (${classSourceLabel(t.source)})`).join(", ") });
+  }
+  return rows;
+}
+
+// classSourceLabel names the evidence tier a class came from, since a class from a datasheet is a
+// stronger claim than one from a ref-des prefix.
+export function classSourceLabel(s: ClassSource): string {
+  switch (s) {
+    case ClassSource.CONVENTION:
+      return "convention";
+    case ClassSource.DATASHEET:
+      return "datasheet";
+    default:
+      return "unstated";
+  }
+}
+
+export function netRowsFor(n: Net): Row[] {
+  const rows: Row[] = [];
+  const roles = n.roles.map((r) => roleLabel(r.roleKind)).filter(Boolean);
+  rows.push({ label: "roles", value: roles.length ? roles.join(", ") : "none" });
+  for (const r of n.roles) {
+    if (r.reason && roleLabel(r.roleKind)) rows.push({ label: `why ${roleLabel(r.roleKind)}`, value: r.reason });
+  }
+  if (n.netClasses.length) rows.push({ label: "net classes", value: n.netClasses.join(", ") });
+  rows.push({ label: "pins", value: String(n.connections.length) });
+  return rows;
+}
+
+// roleLabel turns ROLE_RAIL into "rail", the spelling the query language uses.
+export function roleLabel(r: Role): string {
+  const name = Role[r];
+  if (!name || r === Role.UNSPECIFIED) return "";
+  return name.toLowerCase();
+}
+
+function attributeRefs(attrs: { [k: string]: string } | undefined): Ref[] {
+  return Object.entries(attrs ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => ({ label: k, detail: v }));
+}
+
+function datasheetFor(c: Component, join: DatasheetJoin | null): Datasheet | undefined {
+  if (!join) return undefined;
+  if (!join.corpusConnected) return { kind: "no-corpus" };
+  const hit = join.parts.find((p) => p.refDes === c.refDes);
+  if (hit?.spec) return { kind: "spec", mpn: hit.mpn, spec: hit.spec, corpus: hit.corpus ?? "" };
+  if (!c.mpn) return { kind: "no-mpn" };
+  return { kind: "no-spec", mpn: c.mpn };
+}
+
+// ReportLines is the conversion report as the design level shows it: a count per label, then the
+// components drawn as plain boxes and the ones whose symbol did not resolve. Those need a
+// --symbol-path. Empty for a faithful drawing, which classifies nothing.
+export interface ReportLines {
+  counts: string;
+  box: string[];
+  unresolved: string[];
+}
+
+export function reportLines(report: ConversionReport | null | undefined): ReportLines | null {
+  if (!report || report.components.length === 0) return null;
+  // Each component's group is the engine's label (a glyph's device class, else how it was drawn).
+  const byLabel = new Map<string, string[]>();
+  for (const c of report.components) {
+    const label = c.label;
+    const list = byLabel.get(label) ?? [];
+    list.push(c.refDes);
+    byLabel.set(label, list);
+  }
+  const counts = [...byLabel.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([label, refs]) => `${label} ${refs.length}`)
+    .join(" · ");
+  return { counts, box: byLabel.get("box") ?? [], unresolved: byLabel.get("unresolved") ?? [] };
+}

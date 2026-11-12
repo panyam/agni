@@ -1,0 +1,401 @@
+// The Lexicon panel's presenter and its edits (agni issue 1267). The panel edits a DRAFT of the
+// convention as written, not the effective lexicon. A saved file then holds what the team changed,
+// and later engine defaults still reach it. The draft also keeps a convention's rules in what Try
+// sends. CompareLexicons replaces rules as well as the lexicon, so a candidate without them would
+// report their findings as gone. The engine lists every draft (GetLexicon's candidate), so the page
+// merges nothing itself.
+import { clone, create } from "@bufbuild/protobuf";
+import {
+  AttributeKeysSchema,
+  AttributeVocabSchema,
+  ClassVocabSchema,
+  DiffPairVocabSchema,
+  DiffSuffixSchema,
+  NamingConventionSchema,
+  NamingLexiconSchema,
+  NetNameVocabSchema,
+  PinNameVocabSchema,
+  VocabPatternsSchema,
+  type AttributeKeys,
+  type ClassVocab,
+  type DiffPairVocab,
+  type DiffSuffix,
+  type NamingConvention,
+  type NamingLexicon,
+  type VocabPatterns,
+} from "./gen/agni/v1/config/naming_pb.js";
+import { LexiconSource, type CompareLexiconsResponse, type GetLexiconResponse, type LexiconEntry, type RenderConventionResponse } from "./gen/agni/v1/webapi/lexicon_pb.js";
+import type { Table } from "./gen/agni/v1/webapi/tables_pb.js";
+import { conventionError } from "./conventions.js";
+import { messageOf } from "./document.js";
+
+// LexiconRow is one entry of the list on screen. source is what the panel prints, and edited marks an
+// entry the draft added.
+export interface LexiconRow {
+  key: string;
+  vocabulary: string;
+  kind: string;
+  value: string;
+  source: string;
+  replaced: boolean;
+  edited: boolean;
+  builtin: boolean;
+}
+
+export interface LexiconState {
+  rows: LexiconRow[];
+  name: string;
+  // dirty says the draft differs from the convention in effect.
+  dirty: boolean;
+  busy: boolean;
+  error: string;
+  // tables is Try's answer, the role changes then the finding changes. Null until Try ran on this
+  // draft, since an answer about the previous draft would read as this one's.
+  tables: Table[] | null;
+}
+
+export interface LexiconView {
+  setState: (s: LexiconState) => void;
+}
+
+export function emptyLexicon(): LexiconState {
+  return { rows: [], name: "", dirty: false, busy: false, error: "", tables: null };
+}
+
+const SOURCE_LABELS: Partial<Record<LexiconSource, string>> = {
+  [LexiconSource.BUILTIN]: "built-in",
+  [LexiconSource.SERVER]: "server",
+  [LexiconSource.PROJECT]: "project",
+  [LexiconSource.DESIGN]: "design",
+  [LexiconSource.REQUEST]: "request",
+};
+
+function sourceLabel(e: LexiconEntry): string {
+  const s = SOURCE_LABELS[e.source] ?? "";
+  return e.convention ? `${s} (${e.convention})` : s;
+}
+
+const entryKey = (e: { vocabulary: string; kind: string; value: string }) => `${e.vocabulary}\u0000${e.kind}\u0000${e.value}`;
+
+// rowsOf turns a listing of the draft into rows. Each row keeps its source from the convention in
+// effect, so an edit does not relabel every project pattern as this request's.
+export function rowsOf(entries: LexiconEntry[], base: LexiconEntry[]): LexiconRow[] {
+  const was = new Map(base.map((e) => [entryKey(e), e]));
+  return entries.map((e) => {
+    const b = was.get(entryKey(e));
+    return {
+      key: `${entryKey(e)}\u0000${e.replaced}\u0000${e.source}`,
+      vocabulary: e.vocabulary,
+      kind: e.kind,
+      value: e.value,
+      source: b ? sourceLabel(b) : "this edit",
+      replaced: e.replaced,
+      edited: !b,
+      builtin: e.source === LexiconSource.BUILTIN,
+    };
+  });
+}
+
+// vocabOf finds a vocabulary of the draft by its path, the name LexiconEntry uses for it
+// ("net.gate_drive", "class.tvs"). It makes the vocabulary when make is set.
+function vocabOf(conv: NamingConvention, path: string, make: boolean): (VocabPatterns | ClassVocab) | undefined {
+  const [space, name] = path.split(".");
+  if (make) conv.lexicon ??= create(NamingLexiconSchema);
+  const lx: NamingLexicon | undefined = conv.lexicon;
+  if (!lx) return undefined;
+  if (space === "class") {
+    if (make) lx.class[name] ??= create(ClassVocabSchema);
+    return lx.class[name];
+  }
+  const field = name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+  if (space === "attribute") {
+    if (make) lx.attribute ??= create(AttributeVocabSchema);
+    const keys = lx.attribute as unknown as Record<string, AttributeKeys | undefined> | undefined;
+    if (make && keys) keys[field] ??= create(AttributeKeysSchema);
+    return keys?.[field] as unknown as VocabPatterns | undefined;
+  }
+  if (make && space === "net") lx.net ??= create(NetNameVocabSchema);
+  if (make && space === "pin") lx.pin ??= create(PinNameVocabSchema);
+  const group = (space === "net" ? lx.net : lx.pin) as unknown as Record<string, VocabPatterns | undefined> | undefined;
+  if (!group) return undefined;
+  if (make) group[field] ??= create(VocabPatternsSchema);
+  return group[field];
+}
+
+// A diff_pair vocabulary lists suffix pairs rather than patterns. An entry's value spells one as
+// "_P=_N", and LexiconService lists it in that form.
+const DIFF_PAIR = "net.diff_pair";
+
+function diffPairs(conv: NamingConvention): DiffPairVocab {
+  conv.lexicon ??= create(NamingLexiconSchema);
+  conv.lexicon.net ??= create(NetNameVocabSchema);
+  conv.lexicon.net.diffPair ??= create(DiffPairVocabSchema);
+  return conv.lexicon.net.diffPair;
+}
+
+function suffixOf(value: string): DiffSuffix {
+  // A value with no "=" leaves negative empty, which the engine refuses with its own message.
+  const [positive, ...negative] = value.split("=");
+  return create(DiffSuffixSchema, { positive, negative: negative.join("=") });
+}
+
+// A value_unit vocabulary is one class's entry in the lexicon's value_unit map, so it holds one unit
+// and a convention's unit replaces the built-in rather than adding to it.
+const VALUE_UNIT = "value_unit.";
+
+const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", exclude_prefix: "excludePrefixes", family: "families", key: "keys" };
+
+// kindsIn lists a vocabulary's entry kinds. When a built-in is removed, the vocabulary's live
+// entries are written back under these kinds.
+function kindsIn(vocabulary: string): string[] {
+  if (vocabulary.startsWith("attribute.")) return ["key"];
+  return vocabulary.startsWith("class.") ? ["pattern", "family"] : ["pattern", "exclude"];
+}
+
+function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
+  const lists = v as unknown as Record<string, string[] | undefined>;
+  const name = LIST_OF[kind];
+  lists[name] ??= [];
+  return lists[name] as string[];
+}
+
+// addEntry returns the draft with value added to a vocabulary's list of kind.
+export function addEntry(conv: NamingConvention, vocabulary: string, kind: string, value: string): NamingConvention {
+  const next = clone(NamingConventionSchema, conv);
+  if (vocabulary.startsWith(VALUE_UNIT)) {
+    next.lexicon ??= create(NamingLexiconSchema);
+    next.lexicon.valueUnit[vocabulary.slice(VALUE_UNIT.length)] = value;
+    return next;
+  }
+  if (vocabulary === DIFF_PAIR) {
+    const pairs = diffPairs(next).pairs;
+    if (!pairs.some((p) => `${p.positive}=${p.negative}` === value)) pairs.push(suffixOf(value));
+    return next;
+  }
+  const list = listOf(vocabOf(next, vocabulary, true)!, kind);
+  if (!list.includes(value)) list.push(value);
+  return next;
+}
+
+// canRemove says whether a row can be taken out. A built-in unit cannot, since a class always has one
+// and a convention replaces it by naming another. A switch is toggled rather than removed.
+export function canRemove(r: LexiconRow): boolean {
+  return !r.replaced && r.kind !== "switch" && !(r.builtin && r.kind === "unit");
+}
+
+// removeEntry returns the draft without one row. A convention's own entry leaves its list. A
+// built-in has no list to leave, so the vocabulary becomes `replace: true` with every other live
+// entry written out. A convention has no other way to drop a single built-in. A built-in prefix is
+// the exception. `replace` leaves the prefix table alone, so a removed built-in prefix goes under
+// exclude_prefixes.
+export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: LexiconRow): NamingConvention {
+  const next = clone(NamingConventionSchema, conv);
+  if (row.vocabulary.startsWith(VALUE_UNIT)) {
+    if (next.lexicon) delete next.lexicon.valueUnit[row.vocabulary.slice(VALUE_UNIT.length)];
+    return next;
+  }
+  if (row.builtin && row.kind === "prefix") {
+    const list = listOf(vocabOf(next, row.vocabulary, true)!, "exclude_prefix");
+    if (!list.includes(row.value)) list.push(row.value);
+    return next;
+  }
+  if (row.vocabulary === DIFF_PAIR) {
+    const v = diffPairs(next);
+    if (row.builtin) {
+      v.replace = true;
+      v.pairs = rows.filter((r) => r.vocabulary === DIFF_PAIR && !r.replaced && r.key !== row.key).map((r) => suffixOf(r.value));
+    } else {
+      v.pairs = v.pairs.filter((p) => `${p.positive}=${p.negative}` !== row.value);
+    }
+    return next;
+  }
+  const v = vocabOf(next, row.vocabulary, true)!;
+  if (!row.builtin) {
+    const list = listOf(v, row.kind);
+    const i = list.indexOf(row.value);
+    if (i >= 0) list.splice(i, 1);
+    return next;
+  }
+  v.replace = true;
+  for (const kind of kindsIn(row.vocabulary)) {
+    const live = rows.filter((r) => r.vocabulary === row.vocabulary && r.kind === kind && !r.replaced && r.key !== row.key);
+    const list = listOf(v, kind);
+    list.length = 0;
+    list.push(...live.map((r) => r.value));
+  }
+  return next;
+}
+
+// setOff switches a vocabulary's matching off, `replace: true` with nothing listed, or on again by
+// dropping what the draft says about it.
+export function setOff(conv: NamingConvention, vocabulary: string, off: boolean): NamingConvention {
+  const next = clone(NamingConventionSchema, conv);
+  const [space, name] = vocabulary.split(".");
+  // A class's bare-number unit has no off; dropping the draft's unit restores the built-in.
+  if (vocabulary.startsWith(VALUE_UNIT)) {
+    if (!off && next.lexicon) delete next.lexicon.valueUnit[name];
+    return next;
+  }
+  if (!off) {
+    if (space === "class") {
+      if (next.lexicon) delete next.lexicon.class[name];
+    } else {
+      const group = (space === "net" ? next.lexicon?.net : space === "pin" ? next.lexicon?.pin : next.lexicon?.attribute) as unknown as Record<string, unknown> | undefined;
+      if (group) group[name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())] = undefined;
+    }
+    return next;
+  }
+  if (vocabulary === DIFF_PAIR) {
+    const v = diffPairs(next);
+    v.replace = true;
+    v.pairs = [];
+    return next;
+  }
+  const v = vocabOf(next, vocabulary, true)!;
+  v.replace = true;
+  for (const kind of kindsIn(vocabulary)) listOf(v, kind).length = 0;
+  return next;
+}
+
+// setInference sets the rail-inference switch.
+export function setInference(conv: NamingConvention, on: boolean): NamingConvention {
+  const next = clone(NamingConventionSchema, conv);
+  next.lexicon ??= create(NamingLexiconSchema);
+  next.lexicon.net ??= create(NetNameVocabSchema);
+  next.lexicon.net.inferRailFromSupplyPins = on;
+  return next;
+}
+
+// LexiconClient is the part of LexiconService the panel calls.
+export interface LexiconClient {
+  getLexicon(req: { snapshot: string; candidate?: NamingConvention }): Promise<GetLexiconResponse>;
+  compareLexicons(req: { snapshot: string; conventions: NamingConvention }): Promise<CompareLexiconsResponse>;
+  renderConvention(req: { conventions: NamingConvention }): Promise<RenderConventionResponse>;
+}
+
+export interface LexiconPorts {
+  // snapshot is the open design under the convention in effect, "" with none open.
+  snapshot: () => Promise<string>;
+  download: (file: { filename: string; contentType: string; content: Uint8Array }) => void;
+  apply: (convention: NamingConvention) => Promise<void>;
+}
+
+// LexiconPresenter holds the draft and asks the engine about it.
+export class LexiconPresenter {
+  private draft = create(NamingConventionSchema, { name: "conventions" });
+  private base: LexiconEntry[] = [];
+  private state = emptyLexicon();
+  // ticket drops an answer once a later edit or design has overtaken it.
+  private ticket = 0;
+
+  constructor(
+    private client: LexiconClient,
+    private view: LexiconView,
+    private ports: LexiconPorts,
+  ) {}
+
+  private push(patch: Partial<LexiconState>): void {
+    this.state = { ...this.state, ...patch };
+    this.view.setState(this.state);
+  }
+
+  // reload starts over from the convention in effect.
+  reload(): void {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    const t = ++this.ticket;
+    try {
+      const snapshot = await this.ports.snapshot();
+      if (!snapshot) return;
+      const resp = await this.client.getLexicon({ snapshot });
+      if (t !== this.ticket) return;
+      this.base = resp.entries;
+      this.draft = resp.convention ? clone(NamingConventionSchema, resp.convention) : create(NamingConventionSchema, { name: "conventions" });
+      this.push({ rows: rowsOf(resp.entries, resp.entries), name: this.draft.name, dirty: false, busy: false, error: "", tables: null });
+    } catch (e) {
+      if (t === this.ticket) this.push({ busy: false, error: conventionError(messageOf(e)) });
+    }
+  }
+
+  // edit lists a new draft through the engine and takes it only if it compiles, so a bad pattern
+  // shows as an inline error and never reaches a run.
+  private async edit(next: NamingConvention): Promise<void> {
+    const t = ++this.ticket;
+    try {
+      const snapshot = await this.ports.snapshot();
+      if (!snapshot) return;
+      const resp = await this.client.getLexicon({ snapshot, candidate: next });
+      if (t !== this.ticket) return;
+      this.draft = next;
+      this.push({ rows: rowsOf(resp.entries, this.base), name: next.name, dirty: true, error: "", tables: null });
+    } catch (e) {
+      if (t === this.ticket) this.push({ error: conventionError(messageOf(e)) });
+    }
+  }
+
+  add(vocabulary: string, kind: string, value: string): Promise<void> {
+    return this.edit(addEntry(this.draft, vocabulary, kind, value.trim()));
+  }
+
+  remove(row: LexiconRow): Promise<void> {
+    return this.edit(removeEntry(this.draft, this.state.rows, row));
+  }
+
+  switchOff(vocabulary: string, off: boolean): Promise<void> {
+    return this.edit(setOff(this.draft, vocabulary, off));
+  }
+
+  infer(on: boolean): Promise<void> {
+    return this.edit(setInference(this.draft, on));
+  }
+
+  rename(name: string): Promise<void> {
+    const next = clone(NamingConventionSchema, this.draft);
+    next.name = name;
+    return this.edit(next);
+  }
+
+  async tryDraft(): Promise<void> {
+    const t = ++this.ticket;
+    this.push({ busy: true, error: "" });
+    try {
+      const snapshot = await this.ports.snapshot();
+      if (!snapshot) return;
+      const resp = await this.client.compareLexicons({ snapshot, conventions: this.draft });
+      if (t === this.ticket) this.push({ busy: false, tables: resp.tables });
+    } catch (e) {
+      if (t === this.ticket) this.push({ busy: false, error: conventionError(messageOf(e)) });
+    }
+  }
+
+  async save(): Promise<void> {
+    try {
+      const resp = await this.client.renderConvention({ conventions: this.draft });
+      this.ports.download({ filename: resp.filename, contentType: resp.contentType, content: resp.content });
+    } catch (e) {
+      this.push({ error: conventionError(messageOf(e)) });
+    }
+  }
+
+  async apply(): Promise<void> {
+    this.push({ busy: true, error: "" });
+    try {
+      await this.ports.apply(clone(NamingConventionSchema, this.draft));
+    } catch (e) {
+      this.push({ busy: false, error: conventionError(messageOf(e)) });
+    }
+  }
+}
+
+// subjectOf is what a comparison row selects: its net, or a finding's subject, since an appeared
+// finding is not in the page's run and has no row to focus.
+export function subjectOf(t: Table, cells: string[]): { kind: string; name: string } | null {
+  const at = (c: string) => t.columns.findIndex((x) => x.name === c);
+  const net = at("net");
+  if (net >= 0) return { kind: "net", name: cells[net] };
+  const subject = at("subject");
+  if (subject < 0 || !cells[subject]) return null;
+  return { kind: cells[at("subject_kind")] || "net", name: cells[subject] };
+}

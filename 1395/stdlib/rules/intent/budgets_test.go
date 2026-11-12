@@ -1,0 +1,342 @@
+package intent
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// regCurrentSpec hand-builds a regulator spec stating an output current the way a real one does, as a
+// recommended-operating row, not an absolute maximum. A rule filtering to ABSOLUTE_MAX would find
+// nothing on a real part. So OutputCurrentLimits does not constrain the kind.
+func regCurrentSpec(mpn, symbol string, iout float64) *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	return &parampb.PartSpec{
+		Mpn:          mpn,
+		Manufacturer: "Acme",
+		Docs:         []*parampb.SourceDoc{{Id: "ds", Title: mpn + " Rev A", Vendor: "Acme"}},
+		Parameters: []*parampb.Parameter{{
+			Name: "Output current", Symbol: symbol,
+			LimitKind:         parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING,
+			Value:             &parampb.RangeValue{Max: f(iout)},
+			Unit:              "A",
+			Conditions:        []*parampb.Condition{{Symbol: "TA", Eq: f(25), Unit: "C", Raw: "TA = 25C"}},
+			ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_COMPLETE,
+			Prov: &parampb.ParamProvenance{
+				DocRef: "ds", Page: 4, TableOrFigure: "Recommended Operating Conditions",
+				Method: "hand", Confidence: 1,
+			},
+		}},
+	}
+}
+
+// budgetDesign wires a regulator U1 and a load U2 onto the rail. When beadRef is non-empty a
+// two-terminal part of that ref-des sits between them. The load's rail is then one series crossing
+// away from the regulator.
+func budgetDesign(rail, beadRef string) *ir.Design {
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "U1", Mpn: "ACME-REG", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Mpn: "ACME-LOAD", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+	if beadRef == "" {
+		d.Nets = []*ir.Net{{Name: rail, Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+			{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U2", PinRef: "1"},
+		}}}
+		return d
+	}
+	d.Components = append(d.Components, &ir.Component{RefDes: beadRef, Prov: &ir.Provenance{SourceFile: "t"}})
+	d.Nets = []*ir.Net{
+		{Name: rail + "_PRE", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+			{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: beadRef, PinRef: "1"},
+		}},
+		{Name: rail, Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+			{ComponentRef: beadRef, PinRef: "2"}, {ComponentRef: "U2", PinRef: "1"},
+		}},
+	}
+	return d
+}
+
+// budgetModel attaches a seeded spec for the regulator rating iout amps under the given symbol.
+func budgetModel(d *ir.Design, symbol string, iout float64) check.Model {
+	return check.NewModel(d, check.WithParamProvider(param.ParamSet{
+		"ACME-REG": regCurrentSpec("ACME-REG", symbol, iout),
+	}))
+}
+
+// budgetDecl is a one-rail declaration with the given peak and margin factor (0 to omit the factor).
+func budgetDecl(rail string, peak, factor float64) Declaration {
+	return Declaration{
+		Name:         "t",
+		RailBudgets:  []RailBudget{{Rail: rail, Peak: peak}},
+		MarginFactor: factor,
+	}
+}
+
+// TestRailCapacityFiresWhenUnderRated is the WS3-095 acceptance for the capacity half. A rail declared
+// to draw 0.8A peak, supplied by a regulator rated 0.5A, is over-subscribed by the design's own
+// numbers. The finding names both figures and cites the datasheet that gave the rating.
+func TestRailCapacityFiresWhenUnderRated(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
+	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m)
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (0.5A supply on a 0.8A rail), got %d: %+v", len(fs), fs)
+	}
+	f := fs[0]
+	if check.EntityRef(f.Subject) != "3V3" || f.Subject.Kind != check.KindNet {
+		t.Errorf("subject = (%s, %q), want the rail net 3V3", f.Subject.Kind, f.Subject)
+	}
+	for _, want := range []string{"0.8", "U1", "0.5", "IOUT"} {
+		if !strings.Contains(f.Message, want) {
+			t.Errorf("message missing %q: %s", want, f.Message)
+		}
+	}
+	if len(f.DatasheetProv) != 1 || f.DatasheetProv[0].Doc != "ACME-REG Rev A" {
+		t.Errorf("want one citation of the supplying part's datasheet, got %+v", f.DatasheetProv)
+	}
+}
+
+// TestRailCapacitySilentWhenRated guards the comparison direction. A sign error would invert the rule
+// while every assertion in the firing test still passed.
+func TestRailCapacitySilentWhenRated(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 1.0)
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("a 1.0A supply on a 0.8A rail must be silent, got %+v", fs)
+	}
+}
+
+// TestRailMarginFiresInTheHeadroomBand is the acceptance for the margin half. 0.9A clears the 0.8A
+// peak but falls short of the 0.96A the declared 1.2 factor asks for.
+func TestRailMarginFiresInTheHeadroomBand(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.9)
+	fs := railBudgetMarginRule(budgetDecl("3V3", 0.8, 1.2)).Findings(context.Background(), m)
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (0.9A against a 0.96A margin), got %d: %+v", len(fs), fs)
+	}
+	for _, want := range []string{"0.8", "1.2", "0.96", "0.9"} {
+		if !strings.Contains(fs[0].Message, want) {
+			t.Errorf("message missing %q: %s", want, fs[0].Message)
+		}
+	}
+}
+
+// TestRailUnderPeakFiresCapacityOnlyNotMargin shows why these are TWO rules and not one rule at two
+// thresholds. A supply below the peak is below the margin too. A naive margin rule would fire as
+// well, and a reviewer would work two items for one defect. Capacity owns that range, and margin
+// declines it. The plan calls out this case, and the test holds it by name so a refactor cannot
+// quietly merge the two rules.
+func TestRailUnderPeakFiresCapacityOnlyNotMargin(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
+	d := budgetDecl("3V3", 0.8, 1.2)
+	if fs := railBudgetCapacityRule(d).Findings(context.Background(), m); len(fs) != 1 {
+		t.Fatalf("capacity must fire below the peak, got %d: %+v", len(fs), fs)
+	}
+	if fs := railBudgetMarginRule(d).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("margin must stay silent below the peak (capacity's range), got %+v", fs)
+	}
+}
+
+// TestRailMarginSilentAtExactlyTheMargin covers the boundary. A supply rated at exactly the margin
+// meets it and must not fire. The values matter. 0.1 x 1.5 is 0.15000000000000002 in float64 while
+// the literal 0.15 is 0.1499999999999999944, so a 150mA part on a 100mA rail at a 1.5 factor fails
+// a margin it meets exactly unless below() applies its relative tolerance. Some pairs round the
+// other way (0.8 x 1.2 is one). A test using such a pair would pass with the tolerance deleted, and
+// that is green for the wrong reason.
+func TestRailMarginSilentAtExactlyTheMargin(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.15)
+	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("a supply rated at exactly the margin must be silent, got %+v", fs)
+	}
+	// The same rail one milliamp short still fires, so the tolerance has not blunted the check.
+	short := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.149)
+	if fs := railBudgetMarginRule(budgetDecl("3V3", 0.1, 1.5)).Findings(context.Background(), short); len(fs) != 1 {
+		t.Errorf("a supply genuinely short of the margin must still fire, got %+v", fs)
+	}
+}
+
+// TestRailBudgetAcrossSeriesElement puts a ferrite between the regulator and the rail, as ordinary
+// layout does. The ferrite must not hide the supply, so the association walks one series crossing.
+func TestRailBudgetAcrossSeriesElement(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", "FB1"), "IOUT", 0.5)
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 1 {
+		t.Errorf("want the finding to survive one series crossing, got %d: %+v", len(fs), fs)
+	}
+}
+
+// TestRailBudgetSymbolAliases covers vendor spellings. The vendor spelling lives in the model
+// layer, so a spec printing I_OUT or IOUT(MAX) is read exactly like one printing IOUT. A rule matching
+// one spelling would go silent on most real datasheets, and that silence reads as a clean design.
+func TestRailBudgetSymbolAliases(t *testing.T) {
+	for _, sym := range []string{"IOUT", "I_OUT", "IOUT(MAX)", "IO", "ICONT"} {
+		t.Run(sym, func(t *testing.T) {
+			m := budgetModel(budgetDesign("3V3", ""), sym, 0.5)
+			if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 1 {
+				t.Errorf("symbol %q should be read as an output current, got %d findings", sym, len(fs))
+			}
+		})
+	}
+	// A current the rule must NOT credit as capacity. A quiescent current is not what the part
+	// delivers, and reading it would compare a rail's demand against an unrelated number.
+	m := budgetModel(budgetDesign("3V3", ""), "IQ", 0.5)
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("a quiescent-current row must not be read as output capacity, got %+v", fs)
+	}
+}
+
+// TestRailBudgetReadsMilliampRatings is the rule half of agni issue 148. It closes a wrong PASS on a
+// power rail, and the outcome vocabulary exists to prevent exactly that failure.
+//
+// Milliamps are the ordinary spelling for a sub-amp regulator. So a spec transcribed as the sheet
+// prints it hit this bug without doing anything unusual. The row used to fail the extractor's unit
+// gate. The rule then had no supply for the rail, nothing to compare, and no finding.
+// Neither guard caught it, because check.Available saw a params tier attached and the needs-data
+// gate saw the symbol seeded. The item scored a clean pass on a rail the design over-subscribes by
+// 60%.
+//
+// Both directions are asserted. A 500mA part under an 0.8A budget must fire, and the same part under a
+// 0.3A budget must not, because a conversion that fired unconditionally would look identical to a
+// correct one on the first case alone.
+func TestRailBudgetReadsMilliampRatings(t *testing.T) {
+	milliamps := func() *parampb.PartSpec {
+		spec := regCurrentSpec("ACME-REG", "IOUT", 500)
+		spec.Parameters[0].Unit = "mA"
+		return spec
+	}
+
+	d := budgetDesign("3V3", "")
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": milliamps()}))
+	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m)
+	if len(fs) != 1 {
+		t.Fatalf("a 500mA supply under an 0.8A budget must fire exactly once, got %d: %+v", len(fs), fs)
+	}
+	// The message quotes the rating in the base unit the extractor returns, so a reviewer reads the
+	// same number the comparison used rather than converting it back themselves.
+	if !strings.Contains(fs[0].Message, "0.5A") {
+		t.Errorf("finding must quote the converted rating: %s", fs[0].Message)
+	}
+
+	// The amp-spelled twin of the same part must reach the identical verdict. That makes the
+	// conversion a normalization rather than a new comparison.
+	inAmps := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": regCurrentSpec("ACME-REG", "IOUT", 0.5)}))
+	amps := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), inAmps)
+	if len(amps) != 1 || amps[0].Message != fs[0].Message {
+		t.Errorf("the mA and A spellings of one row must report identically:\n  mA: %+v\n   A: %+v", fs, amps)
+	}
+
+	// The rule is silent on a budget the part genuinely covers, so the conversion does not simply fire
+	// always.
+	if within := railBudgetCapacityRule(budgetDecl("3V3", 0.3, 0)).Findings(context.Background(), m); len(within) != 0 {
+		t.Errorf("a 500mA supply covers an 0.3A budget and must stay silent, got %+v", within)
+	}
+}
+
+// TestRailBudgetSkipsUnrecognizedUnits checks that the layer still refuses a unit it does not know,
+// now that it converts the units it knows. An unrecognized unit still yields no supply. The old
+// milliamp case documented a residual gap, and that gap is unchanged here. The symbol IS seeded, so
+// needs-data does not cover it and the item reads pass. The gap is now narrow, a vendor unit that no
+// SI scale applies to. It used to be the everyday milliamp row.
+func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
+	d := budgetDesign("3V3", "")
+	spec := regCurrentSpec("ACME-REG", "IOUT", 0.5)
+	spec.Parameters[0].Unit = "dBm"
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{"ACME-REG": spec}))
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("an unrecognized unit must be skipped, never scaled by a guess, got %+v", fs)
+	}
+	if !check.SeedsAnySymbol(m, check.OutputCurrentSymbols()) {
+		t.Error("the symbol IS seeded here, so needs-data is not what covers this case")
+	}
+}
+
+// TestRailBudgetSilentWithoutTheDatasheet covers the no-datasheet case. With no seeded spec there
+// is no rating, so the rule has nothing to compare and must not fire. The rail should read as
+// unevaluable rather than clean. The review runner's needs-data gate
+// (TestRuleBoundDatasheetItemNeedsData in core/review) supplies that unevaluable half. These rules
+// feed the gate by declaring ParamSymbols.
+func TestRailBudgetSilentWithoutTheDatasheet(t *testing.T) {
+	m := check.NewModel(budgetDesign("3V3", ""))
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("want no findings with no seeded params, got %+v", fs)
+	}
+	if ok, reason := check.Available(railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)), m); ok || reason == "" {
+		t.Errorf("Available = (%v, %q), want not-applicable with a reason", ok, reason)
+	}
+	// ParamSymbols lets the review runner tell "within budget" from "nothing states a current".
+	if len(railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).ParamSymbols) == 0 {
+		t.Error("the capacity rule must declare the datasheet symbols it joins on")
+	}
+	if len(railBudgetMarginRule(budgetDecl("3V3", 0.8, 1.2)).ParamSymbols) == 0 {
+		t.Error("the margin rule must declare the datasheet symbols it joins on")
+	}
+}
+
+// TestRailBudgetSilentOnUndeclaredAndAbsentRails holds the direction of the iteration. The rule walks
+// the DECLARATION and probes the design. It ignores a rail that the design has and the intent does
+// not budget. A budgeted rail missing from the design is a missing-rail defect, and the
+// voltage-domain and subsystem forms report it. Firing here would report one defect twice.
+func TestRailBudgetSilentOnUndeclaredAndAbsentRails(t *testing.T) {
+	m := budgetModel(budgetDesign("3V3", ""), "IOUT", 0.5)
+	if fs := railBudgetCapacityRule(budgetDecl("1V8", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("a budgeted rail the design does not carry must be silent, got %+v", fs)
+	}
+	if fs := railBudgetCapacityRule(Declaration{Name: "t"}).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("a design rail nobody budgeted must be silent, got %+v", fs)
+	}
+}
+
+// TestRailBudgetTakesTheBestSupply checks that with two seeded parts reaching one rail the rule
+// reads the highest rating. The reach radius can pull in a part that does not feed this rail. A
+// multi-channel regulator states a rating per channel, with no way to say which channel this net is.
+// So reading the smallest would report a shortfall the design does not have. Every fail must be a
+// genuine defect, so ambiguous evidence takes the reading that does not fire.
+func TestRailBudgetTakesTheBestSupply(t *testing.T) {
+	d := budgetDesign("3V3", "")
+	d.Components = append(d.Components, &ir.Component{
+		RefDes: "U3", Mpn: "ACME-REG2", Prov: &ir.Provenance{SourceFile: "t"},
+	})
+	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "U3", PinRef: "1"})
+	m := check.NewModel(d, check.WithParamProvider(param.ParamSet{
+		"ACME-REG":  regCurrentSpec("ACME-REG", "IOUT", 0.5),
+		"ACME-REG2": regCurrentSpec("ACME-REG2", "IOUT", 1.5),
+	}))
+	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Findings(context.Background(), m); len(fs) != 0 {
+		t.Errorf("the 1.5A supply covers the 0.8A budget, so the rail must be silent, got %+v", fs)
+	}
+}
+
+// TestMarginRuleNotCompiledWithoutAFactor is the no-default guard. margin_factor is house policy, so
+// with none declared the rule is not compiled at all and a bound review item reads needs-design-intent
+// rather than passing against a number nobody stated. Compiling it with a default would be the silent
+// false pass this family of checks exists to prevent.
+func TestMarginRuleNotCompiledWithoutAFactor(t *testing.T) {
+	names := func(d Declaration) map[string]bool {
+		out := map[string]bool{}
+		for _, r := range Compile(d) {
+			out[r.Name] = true
+		}
+		return out
+	}
+	no := names(budgetDecl("3V3", 0.8, 0))
+	if !no[RuleRailCurrentCapacity] {
+		t.Error("budgets alone must still compile the capacity rule")
+	}
+	if no[RuleRailCurrentMargin] {
+		t.Error("no margin_factor must leave the margin rule uncompiled (no default policy in a rule literal)")
+	}
+	with := names(budgetDecl("3V3", 0.8, 1.2))
+	if !with[RuleRailCurrentCapacity] || !with[RuleRailCurrentMargin] {
+		t.Errorf("a declared factor must compile both rules, got %v", with)
+	}
+	// No budgets at all compiles neither rule. So a declaration about something else entirely does not
+	// add a silently-passing sizing rule to the catalog.
+	none := names(Declaration{Name: "t", Modules: []Module{{Name: "MCU", Class: "soc"}}})
+	if none[RuleRailCurrentCapacity] || none[RuleRailCurrentMargin] {
+		t.Errorf("no declared peak must compile no sizing rule, got %v", none)
+	}
+}

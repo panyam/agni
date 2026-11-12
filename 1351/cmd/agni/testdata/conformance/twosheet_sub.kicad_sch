@@ -1,0 +1,75 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "cccc3333-0000-0000-0000-000000000000")
+	(paper "A4")
+	(title_block
+		(title "Hier child"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "power:VCC"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "VCC_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "VCC_1_1"
+				(pin power_in line (at 0 0 90) (length 0) (name "VCC") (number "1")))))
+	(symbol (lib_id "test:R") (at 100 50 0) (unit 1) (uuid "childra")
+		(property "Reference" "R?"
+			(at 97 49 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 103 49 0)
+			(effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/11111111-1111-1111-1111-111111111111/aaaa1111-0000-0000-0000-000000000000"
+					(reference "R101")
+					(unit 1))
+				(path "/11111111-1111-1111-1111-111111111111/bbbb2222-0000-0000-0000-000000000000"
+					(reference "R201")
+					(unit 1)))))
+	(symbol (lib_id "test:R") (at 110 50 0) (unit 1) (uuid "childrb")
+		(property "Reference" "R?"
+			(at 107 49 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "22k"
+			(at 113 49 0)
+			(effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/11111111-1111-1111-1111-111111111111/aaaa1111-0000-0000-0000-000000000000"
+					(reference "R102")
+					(unit 1))
+				(path "/11111111-1111-1111-1111-111111111111/bbbb2222-0000-0000-0000-000000000000"
+					(reference "R202")
+					(unit 1)))))
+	(symbol (lib_id "power:VCC") (at 110 40 0) (unit 1) (uuid "childvcc")
+		(property "Reference" "#PWR02"
+			(at 110 37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "VCC"
+			(at 110 43 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 100 46.19) (xy 100 40)))
+	(hierarchical_label "CTRL" (at 100 40 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 100 53.81) (xy 100 60)))
+	(label "SIG" (at 100 60 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 110 53.81) (xy 110 60)))
+	(label "SIG" (at 110 60 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 110 46.19) (xy 110 40)))
+	(wire (pts (xy 200 100) (xy 205 100))
+		(uuid "straywire")))

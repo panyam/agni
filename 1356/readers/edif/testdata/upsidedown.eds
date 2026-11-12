@@ -1,0 +1,46 @@
+(edif UPSIDEDOWN
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c "Conn")
+      (cellType GENERIC)
+      (view (rename &v "sym")
+        (viewType SCHEMATIC)
+        (interface (port P1 (direction INPUT) (designator "P1")) (port P2 (direction INPUT) (designator "P2")))
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 300 200)))
+          ; Visible body so the connector reads as a box in the render.
+          (figure BOX (rectangle (pt 60 0) (pt 240 200)))
+          (portImplementation
+            (name P1
+              (display (figureGroupOverride LABEL (textHeight 40) (visible (true))) (justify CENTERLEFT) (origin (pt 80 150))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 150)))))
+          (portImplementation
+            (name P2
+              (display (figureGroupOverride LABEL (textHeight 40) (visible (true))) (justify CENTERLEFT) (origin (pt 80 50))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 50)))))))))
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "S1")
+        (pageSize (rectangle (pt 0 0) (pt 1600 900)))
+        ; A connector placed at R180: without the readable-text fix its ref-des and pin
+        ; labels render upside down (this reproduces a real-corpus headers sheet).
+        (instance (rename &flip "$flip")
+          (viewRef v (cellRef (name &c) (libraryRef L)))
+          (transform (origin (pt 500 500)) (orientation R180))
+          (designator (stringDisplay "X4")))
+        ; The same connector placed upright, as a control.
+        (instance (rename &up "$up")
+          (viewRef v (cellRef (name &c) (libraryRef L)))
+          (transform (origin (pt 1100 500)) (orientation R0))
+          (designator (stringDisplay "X8")))
+        ; An off-page net stub whose own text orientation is R180 (a "pin" label that read
+        ; upside down before the fix).
+        (portImplementation (name NET_FLIP
+            (display (figureGroupOverride LABEL (textHeight 40) (visible (true))) (justify CENTERLEFT) (orientation R180) (origin (pt 500 750))))
+          (connectLocation (figure GRAPHICS (dot (pt 560 750)))))
+        (portImplementation (name NET_UP
+            (display (figureGroupOverride LABEL (textHeight 40) (visible (true))) (justify CENTERLEFT) (orientation R0) (origin (pt 1100 750))))
+          (connectLocation (figure GRAPHICS (dot (pt 1160 750)))))))))

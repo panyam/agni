@@ -1,0 +1,11 @@
+# The change taxonomy, on the two-revision pair the examples module already ships: one component
+# added, one net new, one deleted, one renamed by connectivity, one hard-changed.
+#
+# The page's prose names R4, OLD, NEW, CLK and SIG -> DATA one by one, so every line of this block
+# is load-bearing and nothing filters it.
+#
+# No from_root: the page names the two files bare, so the script runs INSIDE the copied designs
+# directory and `rev-a.edn rev-b.edn` resolve exactly as displayed.
+fixture: examples/common/designs
+script: |
+  agni diff rev-a.edn rev-b.edn

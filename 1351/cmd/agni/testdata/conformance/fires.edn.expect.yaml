@@ -1,0 +1,4 @@
+fires:
+  i2c-pull-up: [SDA]
+  single-pin-net: [STUB]
+  unconnected-component: [X1]

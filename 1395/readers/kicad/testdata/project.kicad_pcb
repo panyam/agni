@@ -1,0 +1,10 @@
+(kicad_pcb
+	(footprint "Pkg:SOIC-8"
+		(uuid "fp-u1")
+		(property "Reference" "U1") (property "Value" "DUAL")
+		(pad "1" smd rect (net "N1"))
+		(pad "2" smd rect (net "N2")))
+	(footprint "Pkg:MTG"
+		(uuid "fp-mh")
+		(property "Reference" "MH1") (property "Value" "MountingHole")
+		(pad "1" thru_hole circle)))

@@ -1,0 +1,143 @@
+# Example conventions
+
+Single source of truth for how an Agni example is laid out. Read this before adding a new
+example or upgrading an existing one. The reference example is
+[`read-and-stats/`](read-and-stats/).
+
+The style follows the demokit examples pattern (a shared `common` package plus one directory
+per example, each a narrated walkthrough), adapted to an engine rather than a server. Agni
+examples are **single-mode** because there is no server to run (mcpkit's examples are dual-mode
+with `--serve`), and the narration lives in a **sidecar markdown file** rather than in Go string
+literals.
+
+## 1. Directory layout
+
+```
+examples/
+├── CONVENTIONS.md        # this file
+├── README.md             # the index (table of examples)
+├── common/               # shared reuse package (its own module)
+│   ├── go.mod            # module .../examples/common; replace agni => ../..
+│   ├── designs.go        # Load / ReadDesign: reads through formats.Loader
+│   ├── fixtures.go       # go:embed designs/*; Designs(), ReadFixture()
+│   ├── geometry.go       # LoadSchematic: schematic geometry (.eds) at the I/O edge
+│   ├── input.go          # AskPath / AskReviewPath: the shared path prompt (§4)
+│   ├── present.go        # narration pretty-printers (StatsLines, NetLines, ...)
+│   ├── walkthrough.go    # SetupRenderer: --mode dispatch (plain/tui/notebook)
+│   ├── walkthrough.mk    # shared Makefile fragment
+│   └── designs/          # bundled synthetic fixtures (see rule in §5)
+└── <name>/               # one directory per example
+    ├── main.go           # thin: embed the sidecar, Bind the steps that run code
+    ├── walkthrough.md     # authored narration (demokit FromMarkdown sidecar)
+    ├── README.md          # short: what it shows, how to run, how it is built
+    ├── Makefile           # one line: include ../common/walkthrough.mk
+    └── go.mod / go.sum    # own module; replaces for agni + common
+```
+
+## 2. main.go (thin by design)
+
+Keep behavior in Go and prose in markdown. `main.go` should only:
+
+1. `//go:embed walkthrough.md` and load it via `demokit.New(name).FromMarkdownBytes(md)`.
+2. `demo.Bind("<step-id>").Run(...)` for each step that runs engine code. Steps that are
+   pure narration need no bind.
+3. `common.SetupRenderer(demo)` then `demo.Execute()`.
+
+Keep state that steps share, such as the fixture the user picked, in a closure variable. The
+bound `Run` funcs capture it, and its default keeps a `--non-interactive` run coherent.
+
+## 3. walkthrough.md (the sidecar)
+
+demokit's `FromMarkdown` decides step vs section by content shape:
+
+- YAML frontmatter sets `title`, `description`, `actors`.
+- `## Heading {#id}` starts an item; the `{#id}` is the `Bind` key.
+- A blockquote (`> ...`) becomes the step's note.
+- A ` ```mermaid ` block with `A ->> B: label` (solid) / `A -->> B: label` (dashed) lines
+  becomes sequence-diagram arrows.
+- A ` ```inputs ` block (YAML list of `{name, prompt, type, options, default}`) declares
+  step inputs. The one exception is a design-path input. It is declared in Go via
+  `common.AskPath(...).Def()` (see §4), so the prompt is identical across examples, and the
+  sidecar step then carries only its note.
+- A heading with any of [blockquote, mermaid, inputs, refs] is a **step**; a prose-only
+  heading is a **section**.
+
+Prose obeys the repo writing style (no em-dashes, plain declarative). The demokit renderer
+may insert its own separators in generated output. That is out of our control, but keep the
+authored `.md` clean.
+
+## 4. Design inputs are paths, asked via `common.AskPath`
+
+When an example asks the user which design to load, the input is a **filesystem path relative
+to the example directory**, defaulting to the bundled fixture. Every example asks the same
+way, through the shared **`common.AskPath(name, default)`** helper, so the prompt wording and
+load semantics never diverge:
+
+```go
+design := common.AskPath("design", "../common/designs/foo.edn")
+demo.Bind("pick").Input(design.Def()).Run(func(ctx demokit.StepContext) *demokit.StepResult {
+    design.Capture(ctx)            // record what the user typed
+    return nil
+})
+demo.Bind("run").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+    d, err := design.Load()        // read the chosen design in a later step
+    ...
+})
+```
+
+Setting **`AGNI_EXAMPLE_DESIGN`** replaces the default that every `AskPath` offers. This repo
+cannot carry some designs, and the variable lets a walkthrough run over one without anyone
+typing its path at the prompt or committing it anywhere. It moves the DEFAULT rather than the
+value. The prompt still shows it, a typed path still wins, and `--non-interactive` picks it up.
+A typed path cannot reach a `--non-interactive` run. A blank or whitespace-only value is not a
+value, so an `export AGNI_EXAMPLE_DESIGN=` left in a shell does not point every example at `""`.
+
+A review manifest works the same way. `common.AskReviewPath(name, default)` reads
+**`AGNI_EXAMPLE_REVIEW`** with the same semantics, because a team's checklist is as unshippable
+here as their board (`design-review` takes both). A package whose tests read either default must
+clear both variables in its `TestMain` (`os.Unsetenv(common.DesignPathEnv)` and
+`os.Unsetenv(common.ReviewPathEnv)`, as `design-review/outcomes_test.go` does). Otherwise
+imagine a developer exports one to drive a walkthrough over their own board. Their gate run
+fails, and the failure prints their path into the log.
+
+`design.Load()` calls `Load`. `Load` reads the path from disk first, so a user can point the
+example at their own design. When no file exists at the path, it falls back to the embedded
+fixture with the same base name, so the example still runs from any directory. When a file
+exists but fails to parse, `Load` reports the error rather than masking it. List the bundled
+designs as their relative paths in the asking step's note so it is clear where they live. This
+applies to every path an example prompts for.
+
+Some examples load schematic **geometry** rather than the netlist IR. Such an example uses the
+same `AskPath` for the path, but calls `common.LoadSchematic(design.Path())` (disk-first, embedded
+fixture fallback, EDIF `.eds` only) instead of `design.Load()`. See `render-schematic`.
+
+## 5. Fixtures
+
+Examples read bundled synthetic fixtures from `common/designs/`, and may also load any path
+the user supplies (see §4). The bundled fixtures are hand-authored, not real customer boards,
+so every example runs hermetically and the repo can be shared. **Never bundle a
+company-specific or otherwise protected netlist.** Bundle only hand-authored synthetic
+fixtures or a design that is redistributable under a license that permits it. New fixtures go
+in `common/designs/` and are reached through `common.Load` / `common.ReadFixture(name)` /
+`common.Designs()`.
+
+One exception follows from CONSTRAINTS C10. A reader of a vendor format whose files only the
+vendor's tool can write has no synthetic fixture, since writing one would need that tool or a
+writer of our own. Its example defaults to a public board from the pinned agni-samples corpus
+under `tools/samples/`, which `make samples-oracle` fetches. `allegro-board` and `altium-board`
+are the two examples of this.
+
+## 6. Modules
+
+Each example and `common` is its own Go module with local `replace` directives (mcpkit
+style). This keeps demokit and its terminal-UI dependency tree out of the shippable
+`github.com/panyam/agni` go.mod. `go build ./...` at the repo root does not descend into
+these nested modules, so they never enter the engine build.
+
+## 7. Makefile targets (from common/walkthrough.mk)
+
+`run` (plain), `demo` (TUI), `note` (notebook), `runquiet` (non-interactive), `record` /
+`replay` (deterministic trace), `doc` (render to markdown), `build`.
+
+`make build` writes a binary named after the directory; gitignore it with a one-line
+`.gitignore` (`/<name>`) so it never gets committed.

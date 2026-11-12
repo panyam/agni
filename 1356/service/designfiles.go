@@ -1,0 +1,261 @@
+package service
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"path"
+	"sort"
+	"strings"
+
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/readers/formats"
+)
+
+// FileReader reads one file inside a mount. ListDesignFiles sizes and hashes files through this
+// port. It is separate from Workspace, so the hosts that only browse (the datasheet service) need
+// not read.
+type FileReader interface {
+	ReadFile(ctx context.Context, uri artifact.URI) ([]byte, error)
+}
+
+// ProjectDescriptorName is the file that makes a folder a project. internal/projects owns the name
+// and a test there holds this copy to it, since this package cannot import that one.
+const ProjectDescriptorName = "project.yaml"
+
+// DesignFilesMaxBytes bounds a design's file set. A set over it is refused rather than truncated,
+// because a partial set analyses as a design missing its board or its profiles and reads clean. It
+// sits above the largest set the in-browser engine was measured to handle (a 97 MB KiCad board in
+// agni issue 852), so the page's own threshold, not this bound, decides which designs go to the
+// browser.
+const DesignFilesMaxBytes = 256 << 20
+
+// designFilesMaxDirs bounds the walk, for a design folder that turns out to hold a vendored tree.
+const designFilesMaxDirs = 2000
+
+// WithDesignFiles enables ListDesignFiles, which needs the project resolver to find a design's
+// project config and a reader to size and hash its files. Without it the rpc reports that this host
+// does not offer it.
+func (s *WorkspaceService) WithDesignFiles(projects *ProjectResolver, files FileReader) *WorkspaceService {
+	s.projects, s.files = projects, files
+	return s
+}
+
+// ListDesignFiles lists every file a design's analysis reads (agni issue 853). The list covers the
+// design's folder, recursively, which holds its entry, companions, revisions and descriptor. It
+// covers every file or directory the descriptor names. For each project up the extends chain, it
+// covers that project's descriptor and what it names (profiles, params, symbols, lib, queries). A
+// host that analyses the design somewhere else fetches this list, and the in-browser engine is the
+// first such host.
+//
+// Every listed path is in the design's own mount. A config URI naming another mount is refused,
+// since a client mounting the files under one name would resolve it to nothing and analyse the
+// design without that tier.
+func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.ListDesignFilesRequest) (*webapi.ListDesignFilesResponse, error) {
+	if s.files == nil {
+		return nil, fmt.Errorf("%w: this host does not list design files", ErrInvalidArgument)
+	}
+	u, err := ParseArtifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	var dirs, singles []string
+	isDir, err := s.isDir(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	designDir := u.Path
+	if !isDir {
+		designDir = parentPath(u.Path)
+		if root := formats.DesignRoot(u.Path); root != "" {
+			designDir = root
+		}
+	}
+	if s.projects != nil && s.projects.Store != nil {
+		design, project, err := s.projects.Store.ResolveDesign(ctx, u)
+		if err != nil {
+			return nil, ClassifyLoadErr(err)
+		}
+		if design != nil {
+			du, err := artifact.Parse(design.GetUri())
+			if err != nil {
+				return nil, err
+			}
+			designDir = du.Path
+		}
+		// What the design names itself, then each project up its extends chain, descriptor and sources.
+		addConfig := func(cfg *webapi.AnalysisConfig) error {
+			for _, list := range [][]string{cfg.GetProfileUris(), cfg.GetParamUris(), cfg.GetSymbolPathUris(), cfg.GetLibraryUris(), cfg.GetQuerySetUris()} {
+				for _, raw := range list {
+					cu, err := artifact.Parse(raw)
+					if err != nil {
+						return err
+					}
+					if cu.Mount != u.Mount {
+						return fmt.Errorf("%w: config %s is in another mount than the design", ErrInvalidArgument, raw)
+					}
+					// A source may name one file as well as a directory.
+					if dir, err := s.isDir(ctx, cu); err == nil && !dir {
+						singles = append(singles, cu.Path)
+					} else {
+						dirs = append(dirs, cu.Path)
+					}
+				}
+			}
+			return nil
+		}
+		if design != nil {
+			if err := addConfig(design.GetConfig()); err != nil {
+				return nil, err
+			}
+		}
+		for depth := 0; project != nil && depth <= maxExtendsDepth; depth++ {
+			pu, err := artifact.Parse(project.GetUri())
+			if err != nil {
+				return nil, err
+			}
+			if pu.Mount != u.Mount {
+				return nil, fmt.Errorf("%w: project %s is in another mount than the design", ErrInvalidArgument, project.GetName())
+			}
+			singles = append(singles, joinPath(pu.Path, ProjectDescriptorName))
+			if err := addConfig(project.GetConfig()); err != nil {
+				return nil, err
+			}
+			next := project.GetConfig().GetExtends()
+			if next == "" {
+				break
+			}
+			if project, err = s.projects.Store.Project(ctx, next); err != nil {
+				return nil, ClassifyLoadErr(err)
+			}
+		}
+	}
+	dirs = append([]string{designDir}, dirs...)
+
+	seen := map[string]bool{}
+	var paths []string
+	add := func(p string) {
+		if !seen[p] {
+			seen[p] = true
+			paths = append(paths, p)
+		}
+	}
+	budget := designFilesMaxDirs
+	for _, d := range dirs {
+		if err := s.walkFiles(ctx, u.Mount, d, add, &budget); err != nil {
+			return nil, err
+		}
+	}
+	for _, p := range singles {
+		add(p)
+	}
+	sort.Strings(paths)
+
+	resp := &webapi.ListDesignFilesResponse{Mount: u.Mount}
+	board := s.boardFile(ctx, u)
+	for _, p := range paths {
+		fu, err := artifact.New(u.Mount, p)
+		if err != nil {
+			return nil, err
+		}
+		b, err := s.files.ReadFile(ctx, fu)
+		if err != nil {
+			// The project may name a descriptor or config directory that the tree lacks. That is the
+			// project's error, and the analysis reports it when it composes. Listing what exists keeps
+			// the two hosts failing the same way.
+			continue
+		}
+		resp.TotalSize += int64(len(b))
+		if resp.TotalSize > DesignFilesMaxBytes {
+			return nil, fmt.Errorf("%w: the design's files exceed %d MB", ErrResourceExhausted, DesignFilesMaxBytes>>20)
+		}
+		sum := sha256.Sum256(b)
+		resp.Files = append(resp.Files, &webapi.DesignFile{Path: p, Size: int64(len(b)), Sha256: "sha256:" + hex.EncodeToString(sum[:]), Board: board != "" && p == board})
+	}
+	return resp, nil
+}
+
+// boardFile returns the path of the design's board tier within u's mount, as Ingest resolves it. It
+// returns that path only when the board is a file of its own, with neither the netlist nor the
+// drawing read from it, and "" otherwise.
+// The browser engine holds that file back from a worker until a question there reads the board (agni
+// issue 992).
+func (s *WorkspaceService) boardFile(ctx context.Context, u artifact.URI) string {
+	if s.projects == nil || s.projects.Store == nil {
+		return ""
+	}
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, false)
+	if err != nil || bu.IsZero() || bu.Mount != u.Mount || bu == nu || bu == gu {
+		return ""
+	}
+	return bu.Path
+}
+
+// isDir reports whether u names a directory, by listing its parent.
+func (s *WorkspaceService) isDir(ctx context.Context, u artifact.URI) (bool, error) {
+	if u.Path == "" {
+		return true, nil
+	}
+	pu, err := artifact.New(u.Mount, parentPath(u.Path))
+	if err != nil {
+		return false, err
+	}
+	entries, err := s.ws.ListDir(ctx, pu)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s", ErrNotFound, err)
+	}
+	base := path.Base(u.Path)
+	for _, e := range entries {
+		if e.Name == base {
+			return e.IsDir, nil
+		}
+	}
+	return false, fmt.Errorf("%w: %s", ErrNotFound, u)
+}
+
+// walkFiles adds every file under dir, depth-first, spending one unit of budget per directory.
+func (s *WorkspaceService) walkFiles(ctx context.Context, mount, dir string, add func(string), budget *int) error {
+	if *budget <= 0 {
+		return fmt.Errorf("%w: the design's folder holds more than %d directories", ErrResourceExhausted, designFilesMaxDirs)
+	}
+	*budget--
+	du, err := artifact.New(mount, dir)
+	if err != nil {
+		return err
+	}
+	entries, err := s.ws.ListDir(ctx, du)
+	if err != nil {
+		// The project names a config directory that the tree lacks. See ListDesignFiles.
+		return nil
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name, ".") {
+			continue
+		}
+		p := joinPath(dir, e.Name)
+		if e.IsDir {
+			if err := s.walkFiles(ctx, mount, p, add, budget); err != nil {
+				return err
+			}
+			continue
+		}
+		add(p)
+	}
+	return nil
+}
+
+func parentPath(p string) string {
+	if d := path.Dir(p); d != "." {
+		return d
+	}
+	return ""
+}
+
+func joinPath(dir, name string) string {
+	if dir == "" {
+		return name
+	}
+	return dir + "/" + name
+}

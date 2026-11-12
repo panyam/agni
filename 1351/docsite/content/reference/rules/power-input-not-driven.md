@@ -1,0 +1,65 @@
+---
+title: "power-input-not-driven"
+description: "A power-input pin sits on a net with no power source (no power-output and no power flag)."
+---
+
+### Remedy
+
+Connect the supply pin to the rail that feeds it, and check that the rail itself reaches its regulator. An undriven VDD is usually a missed wire rather than a missing supply.
+
+### What it means
+
+A net has a power-input pin (a VCC/VDD/rail-consuming pin) but no power source. No power flag on
+the net asserts that the rail is fed elsewhere either.
+
+What counts as a source depends on the net, as it does in KiCad's ERC. A net carrying a power
+symbol (GND, +3V3) is a named supply, and only a power-output pin feeds it, so a logic output or a
+strap pin tied to ground does not. Any other net is a signal that happens to reach a supply-typed
+pin, such as a module connector's power-good input on an open-drain flag, and any driving pin
+(output, bidirectional, tri-state, open-collector or open-emitter) feeds it (agni issue 1082).
+
+### Why engineers want it
+
+This is KiCad's ERCE_POWERPIN_NOT_DRIVEN, and the reason power flags
+exist. A rail is often drawn as a named net (+3V3) with the regulator on another sheet; capture
+tools cannot see the source without either a power-output pin on the net or an explicit flag. A
+power-input with neither is almost always a real omission, where the rail was named but never connected.
+
+### Impact
+
+The part (or a whole supply domain) is unpowered. It is one of the highest-consequence
+capture errors and only shows up at first power-on.
+
+![A power-input pin with no power-output driver and no power flag is flagged; a net driven by a power-output pin or asserted by a power flag is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/power-input-not-driven.svg)
+
+### Scope note
+
+The rule needs the power-in / power-out split (a reader that collapses both to a generic power pin
+cannot distinguish source from sink, so the rule reports its nets not-considered). The reader
+records a power flag on the net, and the flag counts as driven. If a net continues onto another
+sheet and the read did not open that sheet, the rule does not judge the net, since its feed may be
+there.
+
+A lone exposed pad and a divider tap into a sense pin are not considered either. In both, a vendor
+symbol types a pin power_in, and neither draws a supply, as decoupling-present's page describes (agni
+issue 935).
+
+If the schematic marks a supply pin no-connect and the pin is alone on its net, the rule does not
+consider it either (agni issue 1244). Some datasheets allow a supply pin to be left open when its
+feature is unused, such as an FPGA's VPP pin when its one-time memory is never programmed. A flagged
+pin that is also wired to another part is still judged.
+
+Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
+grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
+(the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"
+would false-fire on every switched or derived rail. The power-INPUT side is stamped on EDIF
+(WS3-072), which is enough for the power-in-only rules (decoupling-present, input-protection). This
+rule is gated until the reader stamps power outputs on those formats.
+
+### Query structure
+
+select nets with a power-input, no driver, and no power flag.
+
+    select N in nets where any(power_in(P)) and not any(driver(P)) and not power_driven(N)
+
+Reads: net.attributes (power_driven, external), on_net, pin.electrical_type. Tier R.

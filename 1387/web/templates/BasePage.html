@@ -1,0 +1,778 @@
+{{ define "BasePage" }}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ or .Title "Agni" }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font: 13px system-ui, sans-serif; color: #1c1c1c; background: #fff; }
+    .app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
+    /* WS9-021 dock shell: dockview fills the page below the top bar; each panel hole fills its dockview panel */
+    .dock { flex: 1 1 auto; min-height: 0; position: relative; }
+    .dock-body { width: 100%; height: 100%; overflow: auto; padding: 8px; background: #fafafa; }
+    /* The two menus keep their size, so a crowded bar never wraps a caret under its label (agni issue 1132). */
+    .panels-menu { position: relative; flex: 0 0 auto; margin-left: auto; padding: 4px 6px; }
+    .panels-list { position: absolute; right: 6px; top: 100%; z-index: 1000; min-width: 140px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+    .panels-item { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; padding: 4px 10px; cursor: pointer; white-space: pre; }
+    .panels-item:hover { background: #eef; }
+    .panels-reset { border-top: 1px solid #ddd; margin-top: 2px; }
+    .highlight-menu { position: relative; flex: 0 0 auto; padding: 4px 6px; }
+    .highlight-panel { padding: 8px; min-width: 190px; }
+    .highlight-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+    .highlight-row input[type="range"] { width: 110px; }
+    .highlight-reset { margin-top: 6px; }
+    /* WS9-049 phase 3: the compare picker modal. Hidden until .on so the tree island inside stays
+       mounted and measurable rather than being created lazily (see dock.ts on why this app never
+       lazily mounts island holes). */
+    .compare-picker { position: fixed; inset: 0; z-index: 4000; display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); }
+    .compare-picker.on { display: flex; }
+    .compare-dialog { display: flex; flex-direction: column; width: 420px; max-width: 90vw; max-height: 70vh; background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3); overflow: hidden; }
+    .compare-dialog-head { flex: 0 0 auto; padding: 8px 12px; border-bottom: 1px solid #eee; font-weight: 600; color: #333; }
+    .compare-tree { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+    /* The open design (side A) is pushed as the tree's active file; in the picker that means
+       "already open", not "selected", so it reads as unavailable rather than highlighted. */
+    .compare-tree .node.active { background: none; color: #999; font-weight: 400; cursor: default; }
+    .summary { color: #333; font-size: 12px; white-space: pre-wrap; }
+    .sheet-nav-bar { flex: 0 0 auto; min-height: 0; border-bottom: 1px solid #ddd; background: #f4f4f4; display: flex; align-items: flex-end; gap: 8px; }
+    /* The viewer's breadcrumb, at the head of the same strip. Sized to its content so the tab
+       strip keeps the bar's free width, and bottom-padded to sit on the tabs' baseline. */
+    .vw-crumb { flex: 0 0 auto; padding: 0 0 5px 8px; color: #999; font-size: 12px; white-space: nowrap; }
+    .drop-open { flex: 0 0 auto; margin: 0 0 5px 8px; font-size: 12px; }
+    /* agni issue 1154: the per-tab switch that lets agents drive this tab, shown under --viewer-rooms. */
+    .agents-switch { flex: 0 0 auto; margin: 0 0 5px 8px; font-size: 12px; white-space: nowrap; }
+    .agents-switch[hidden] { display: none; }
+    .agents-ask { display: inline-flex; gap: 4px; margin-left: 8px; }
+    .agents-ask[hidden] { display: none; }
+    .agents-refused { margin-left: 8px; color: #7a4f04; }
+    .agents-refused[hidden] { display: none; }
+    .agents-ask input { width: 18em; font-size: 12px; }
+    .drop-dialog { max-width: 720px; width: 90vw; max-height: 85vh; overflow: auto; }
+    .drop-design { border-top: 1px solid #ddd; padding: 8px 0; }
+    .drop-design-note { color: #8a5a00; font-size: 12px; margin: 4px 0; }
+    .drop-design-yaml { width: 100%; font-family: monospace; font-size: 12px; box-sizing: border-box; }
+    .drop-unread { font-size: 12px; color: #666; }
+    .engine-note { flex: 0 1 auto; padding: 0 0 5px 8px; color: #8a5a00; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* WS9-049: the visited-sheet tab strip. It takes the bar's free width (so the Compare/Panels
+       chrome stays right-aligned) and scrolls horizontally rather than wrapping the bar taller. */
+    .sheet-tabs-host { flex: 1 1 auto; min-width: 0; }
+    .sheet-tabs { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; scrollbar-width: thin; padding: 4px 0 0 6px; }
+    .sheet-tab { display: inline-flex; align-items: center; flex: 0 0 auto; max-width: 200px; border: 1px solid #ccc; border-bottom: none; border-radius: 4px 4px 0 0; background: #e8e8e8; }
+    .sheet-tab.active { background: #fff; border-color: #bbb; }
+    .sheet-tab-label { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: none; font: inherit; font-size: 12px; padding: 4px 4px 4px 8px; cursor: pointer; }
+    .sheet-tab.active .sheet-tab-label { font-weight: 600; }
+    .sheet-tab-close { border: 0; background: none; color: #777; font: inherit; line-height: 1; padding: 2px 6px 2px 2px; border-radius: 3px; cursor: pointer; }
+    .sheet-tab-close:hover { background: #d8d8d8; color: #111; }
+    .controls { display: flex; align-items: flex-end; gap: 4px; }
+    .render-mode { display: flex; gap: 2px; padding: 4px 0 4px 6px; }
+    .mode-btn { border: 1px solid #ccc; background: #eee; padding: 3px 10px; border-radius: 4px; cursor: pointer; font: inherit; white-space: nowrap; }
+    .mode-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .layout-select { font: inherit; padding: 2px 6px; margin-left: 4px; }
+    .layout-select:disabled { opacity: 0.5; }
+    .mode-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .render-busy { position: fixed; inset: 0; z-index: 5000; display: none; align-items: center; justify-content: center; gap: 12px; background: rgba(15, 23, 42, 0.5); color: #fff; font-size: 18px; letter-spacing: 0.02em; cursor: progress; }
+    .render-busy.on { display: flex; }
+    .render-busy::before { content: ""; width: 26px; height: 26px; border: 3px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; border-radius: 50%; animation: render-spin 0.8s linear infinite; }
+    @keyframes render-spin { to { transform: rotate(360deg); } }
+    .svg-view { position: absolute; inset: 0; overflow: hidden; background: #fff; display: none; }
+    /* The rectangle a Shift-drag draws to select an area (agni issue 904). */
+    .area-band { position: absolute; border: 1px dashed #2563eb; background: rgba(37, 99, 235, 0.08); pointer-events: none; z-index: 5; }
+    .text-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .canvas-wrap { width: 100%; height: 100%; position: relative; }
+    #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+    #view:active { cursor: grabbing; }
+    #readout { position: absolute; left: 8px; top: 8px; padding: 4px 8px; background: rgba(255, 255, 255, 0.85); border: 1px solid #ccc; border-radius: 4px; pointer-events: none; }
+    .expect-caption { position: absolute; left: 8px; bottom: 8px; z-index: 10; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; pointer-events: none; display: none; }
+    .expect-caption.on { display: block; }
+    /* The canvas notes, which say what this open cannot be trusted for. They sit at the top of the
+       canvas rather than the bottom, and stack in one column, so a stale link on a hierarchical design
+       shows both notes rather than one painted over the other (agni issue 717).
+       top is 48px, not 8px, because the readout and the control bar already occupy the first ~43px of
+       the canvas and a full-width strip at 8px paints straight over both. Measured, not guessed: the
+       controls run to 43px below the canvas top and the readout to 34px. The browser suite asserts
+       the clearance, because jsdom has no layout and cannot see a strip covering anything. */
+    .canvas-notes { position: absolute; left: 8px; right: 8px; top: 48px; z-index: 10; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+    /* The incomplete-drawing notice (agni issue 354). Amber rather than red: the drawing is not wrong,
+       it is short, and the reader has to see that before they start clicking things that will not
+       respond. */
+    .undrawn-note { padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; display: none; }
+    .undrawn-note.on { display: block; }
+    /* The hierarchical-read notice (agni issues 707, 717), amber for the undrawn note's reason: the
+       design is not wrong, the read is short, and every count and check covers the top level alone. */
+    .hierarchy-note { padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; display: none; }
+    .hierarchy-note.on { display: block; }
+    .hierarchy-note .hierarchy-read-all { pointer-events: auto; margin-left: 6px; font: inherit; padding: 1px 8px; border-radius: 3px; border: 1px solid #e39a1b; background: #fff; color: #7a4f04; cursor: pointer; }
+    /* The stale-link note leads the column because it questions the whole page, not the drawing: an
+       unverified revision means the proof may be about a different net. `.warn` is the confirmed
+       mismatch; the base state is the weaker "could not check". */
+    .stale-link-note { padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; display: none; }
+    .stale-link-note.on { display: block; }
+    .stale-link-note.warn { background: rgba(198, 40, 40, 0.14); color: #8a1c1c; border-color: #c62828; }
+    .expect-caption.pass { background: rgba(34, 197, 94, 0.15); color: #166534; border: 1px solid #22c55e; }
+    .expect-caption.fail { background: rgba(239, 68, 68, 0.15); color: #991b1b; border: 1px solid #ef4444; }
+    .tree, .children { list-style: none; margin: 0; padding: 0; }
+    .node { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: inherit; padding: 3px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node:hover { background: #eef; }
+    .node.active { background: #dbeafe; font-weight: 600; }
+    .node.dir { color: #333; }
+    .twist { color: #999; display: inline-block; width: 1em; }
+    .fmt { color: #999; font-size: 11px; }
+    .error { color: #b00; padding: 3px 4px; }
+    /* The way back to the landing page, carried by each work page's sidebar heading. */
+    .ld-home { color: #2563eb; text-decoration: none; }
+    .ld-home:hover { text-decoration: underline; }
+    /* The tree's account of what it pruned. Quiet on purpose: it explains an absence, so it must
+       be findable when someone goes looking for a mount and invisible the rest of the time. */
+    .tree .note { color: #999; font-size: 11px; padding: 6px 4px; }
+    .findings-title { margin-top: 14px; }
+    .findings-empty { color: #999; font-size: 12px; }
+    .checks-error, .rules-error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px 8px; margin: 4px 0; font-size: 12px; }
+    .checks-error-message { margin-top: 2px; word-break: break-word; }
+    .checks-error-rules summary { cursor: pointer; margin-top: 2px; }
+    .checks-error-rules ul { margin: 2px 0 0; padding-left: 18px; }
+    /* Rules that could not run. Deliberately quiet rather than alarming: it is not a defect, it is
+       the panel declining to imply coverage it does not have. */
+    .checks-skipped { margin-bottom: 8px; padding: 6px 8px; border-left: 3px solid #c9a227; background: #fdf8e6; font-size: 12px; }
+    .checks-skipped-head { color: #6b5400; margin-bottom: 4px; }
+    .checks-skipped-list { list-style: none; margin: 0; padding: 0; }
+    .checks-skipped-list li { display: flex; gap: 8px; color: #555; }
+    .checks-skipped-rule { font-family: ui-monospace, monospace; color: #333; }
+    .checks-skipped-reason { color: #777; }
+    .findings-toolbar { margin-bottom: 6px; font-size: 12px; color: #555; }
+    .findings-toolbar select { font: inherit; font-size: 12px; padding: 2px 4px; }
+    .finding-groups { list-style: none; margin: 0; padding: 0; }
+    .finding-group { margin-bottom: 6px; }
+    .finding-group-head { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: #444; font-weight: 600; padding: 2px 2px; cursor: pointer; }
+    .finding-group-head:hover { background: #eef; border-radius: 4px; }
+    .finding-group-twist { color: #999; width: 1em; display: inline-block; }
+    .finding-group-name { text-transform: capitalize; }
+    .finding-group-badge { color: #999; font-size: 11px; font-weight: 400; }
+    .finding-list { list-style: none; margin: 0; padding: 0; }
+    .finding { display: grid; grid-template-columns: auto auto 1fr; align-items: baseline; gap: 4px 6px; width: 100%; text-align: left; border: 1px solid transparent; background: none; font: inherit; color: inherit; padding: 4px 5px; border-radius: 4px; cursor: pointer; }
+    .finding:hover { background: #eef; }
+    .finding.selected { background: #fde6f5; border-color: #ec1bb8; }
+    .finding-subject { font-weight: 600; }
+    .finding-rule { color: #888; font-size: 11px; }
+    .finding-msg { grid-column: 1 / -1; color: #555; font-size: 11px; }
+    /* inline-block, because an inline span ignores width and height: the dot measured 0x0 in the
+       checks table from the day WS9 moved it out of the old grid row into a <td> and nothing said so
+       (agni issue 350). It stays correct in the grid and flex rows, which blockify a child anyway. */
+    .sev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #999; align-self: center; }
+    .sev-dot.sev-error { background: #d21f3c; }
+    .sev-dot.sev-warning { background: #e39a1b; }
+    .sev-dot.sev-info { background: #2563eb; }
+    /* WS9-018 expectations panel: expected-vs-actual per rule */
+    .expectations-title { margin-top: 14px; }
+    .expectations-empty { color: #999; font-size: 12px; }
+    .exp-list { list-style: none; margin: 0; padding: 0; }
+    .exp-row { padding: 5px 6px; border-radius: 4px; border-left: 3px solid #ccc; margin-bottom: 5px; background: #fafafa; }
+    .exp-row.status-matched { border-left-color: #1a9e4b; }
+    .exp-row.status-missing { border-left-color: #d21f3c; }
+    .exp-row.status-partial { border-left-color: #e39a1b; }
+    .exp-row.status-unexpected { border-left-color: #e39a1b; }
+    .exp-row.status-pending { border-left-color: #999; border-left-style: dashed; }
+    .exp-head { display: flex; align-items: baseline; gap: 8px; }
+    .exp-rule { font-weight: 600; }
+    .exp-status { font-size: 11px; font-weight: 600; }
+    .status-matched > .exp-status, .exp-status.status-matched { color: #1a9e4b; }
+    .status-missing > .exp-status, .exp-status.status-missing { color: #d21f3c; }
+    .status-partial > .exp-status, .exp-status.status-partial { color: #b9770f; }
+    .status-unexpected > .exp-status, .exp-status.status-unexpected { color: #b9770f; }
+    .status-pending > .exp-status, .exp-status.status-pending { color: #888; }
+    .exp-subjects { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; margin-top: 3px; }
+    .exp-label { color: #999; font-size: 11px; margin-right: 2px; }
+    .exp-summary { color: #666; font-size: 11px; margin: 1px 0 1px 2px; }
+    .exp-why { color: #777; font-size: 11px; font-style: italic; margin: 2px 0 2px 2px; }
+    .exp-chip { border: 1px solid #ccd; background: #fff; font: inherit; font-size: 11px; padding: 1px 6px; border-radius: 10px; cursor: pointer; color: #334; }
+    /* WS9-024 sheet badges: where a finding's subject lives; click shows that sheet */
+    .sheet-badge { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 8px; background: #e8edf8; border: 1px solid #c4d2ef; color: #2b4a8b; font-size: 10px; font-weight: 400; cursor: pointer; }
+    .sheet-badge:hover { background: #d5e0f6; }
+    /* The "+N" chip that stands for the sheets not shown. Quieter than a real sheet, because it
+       names a count rather than a place to go. */
+    .sheet-badge-more { background: #f0f2f6; border-color: #d3d8e2; color: #5a6478; }
+    .sheet-badge-more:hover { background: #e4e8ef; }
+    /* The badge pointing at the sheet on screen. Filled rather than tinted, because it has to be
+       findable at a glance in a strip of otherwise identical chips. */
+    .sheet-badge.on { background: #2b4a8b; border-color: #2b4a8b; color: #fff; font-weight: 600; }
+    .sheet-badge.on:hover { background: #223c73; }
+    .exp-chip:hover { background: #eef; }
+    .exp-chip.selected { background: #fde6f5; border-color: #ec1bb8; }
+    /* WS9-022 report panel: severity pivot sections */
+    .report-run { color: #999; font-size: 12px; margin-bottom: 8px; }
+    .report-section { margin-bottom: 10px; }
+    .report-sec-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #444; margin-bottom: 4px; }
+    .report-sec-name { text-transform: capitalize; }
+    .report-rule { margin: 0 0 6px 14px; }
+    .report-rule-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .report-rule-name { font-weight: 600; font-size: 12px; }
+    .report-rule-summary { color: #777; font-size: 11px; }
+    /* WS9 merged checks panel: on-demand Run + a server-sourced, client-grouped/sorted table */
+    .checks-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; color: #555; flex-wrap: wrap; }
+    .checks-run { font: inherit; font-size: 12px; padding: 3px 12px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
+    .checks-run:hover:not(:disabled) { background: #e0e0e0; }
+    .checks-run:disabled { color: #aaa; cursor: not-allowed; }
+    .checks-groupby select { font: inherit; font-size: 12px; padding: 2px 4px; }
+    .checks-table { border-collapse: collapse; font-size: 12px; width: 100%; }
+    /* A cell wraps rather than growing its column. Findings carry values with no break opportunities
+       — a long net name, a hierarchical path, a citation — and under the default auto layout one of
+       those widens its column until the neighbours are squeezed and the text bleeds across them.
+       Wrapping keeps the row taller instead of the table wider, which is the trade a reader wants:
+       the columns stay where they were and nothing is hidden. Deliberately not `table-layout: fixed`
+       like the query table, because these columns are not peers — the message deserves the room the
+       severity dot does not. */
+    .checks-table th, .checks-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; overflow-wrap: anywhere; }
+    /* A header never wraps, so a column is at least as wide as its label; with the cells' overflow-wrap:
+       anywhere alone, a narrow rail shrank every column to one character a line (agni issue 759). */
+    .checks-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; white-space: nowrap; }
+    .checks-table th * { white-space: nowrap; }
+    .check-sort button { font: inherit; font-weight: 600; color: #444; border: 0; background: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+    .check-sort.active button { color: #2563eb; }
+    .check-sort-dir { font-size: 9px; }
+    .check-exp { width: 34px; padding-left: 2px; padding-right: 2px; }
+    .check-exp-btn { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: #888; font: inherit; font-size: 11px; padding: 0; cursor: pointer; }
+    .check-exp-btn:hover, .check-exp-btn.open { color: #2563eb; }
+    .check-exp-twist { color: #999; }
+    .check-count { font-size: 10px; color: #666; font-weight: 600; }
+    .check-group td { background: #f6f7f9; border-bottom: 1px solid #e3e5e8; padding: 2px 6px; }
+    .check-group-head { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; font: inherit; color: #444; font-weight: 600; padding: 0; cursor: pointer; text-transform: capitalize; }
+    .check-group-twist { color: #999; }
+    /* A rule's name is an identifier, so it keeps its spelling where a category or severity reads as a title. */
+    .check-group-head.rule { text-transform: none; }
+    .check-group-line { display: flex; align-items: center; }
+    .check-group-line > .check-group-head { flex: 0 1 auto; }
+    .check-group-doc, .rule-doc { margin-left: 8px; font-size: 10px; font-weight: normal; color: #2563eb; text-decoration: none; white-space: nowrap; }
+    .check-group-doc:hover, .rule-doc:hover { text-decoration: underline; }
+    .check-sev { width: 14px; }
+    .check-subject .check-locate { font: inherit; font-weight: 600; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; }
+    .check-subject .check-locate:hover { color: #1d4ed8; text-decoration: underline; }
+    .check-rule { color: #888; font-size: 11px; }
+    .check-msg { color: #555; font-size: 11px; }
+    /* Context entities (agni issue 349): the things a finding's message names but is not about.
+       Deliberately quieter than .check-locate, which is the subject. They are a way BACK to an entity
+       the sentence mentions, not a second answer to "what failed". */
+    .check-context { font: inherit; font-size: 10px; margin-left: 6px; padding: 0 5px; border: 1px solid #d7dbe0; border-radius: 9px; background: #f6f7f9; color: #2563eb; cursor: pointer; }
+    .check-context:hover { border-color: #2563eb; text-decoration: underline; }
+    .check-context-role { color: #8b93a0; margin-right: 4px; }
+    /* An inconclusive result is not a defect (agni issue 350). It takes a "?" in the severity column
+       rather than a dot, and the violet the query panel already spends on "unresolved", so the two
+       surfaces name the same thing the same way. Ahead of .check-row.selected, which must still win. */
+    .sev-unresolved { color: #6d28d9; font-weight: 700; font-size: 11px; align-self: center; }
+    .check-row.inconclusive td { background: #fbfaff; }
+    .check-row.inconclusive .check-msg { font-style: italic; }
+    .finding-group-unresolved { color: #6d28d9; font-size: 11px; font-weight: 600; }
+    .check-row.selected td { background: #fde6f5; }
+    .check-inst td { background: #fafbfc; }
+    .check-inst-label { color: #999; font-size: 10px; margin-right: 6px; }
+    .check-inst-id { margin-left: 6px; color: #aaa; font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .lex-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 6px; font-size: 12px; }
+    .lex-bar input { font: inherit; padding: 2px 4px; flex: 1 1 90px; min-width: 70px; }
+    .lex-bar button, .lex-add button { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
+    .lex-bar button:disabled { cursor: default; opacity: 0.55; }
+    .lex-note { color: #666; font-size: 12px; margin: 4px 0; }
+    .lex-group { border-top: 1px solid #eee; padding: 3px 0; font-size: 12px; }
+    .lex-group > summary { cursor: pointer; font-family: ui-monospace, Menlo, monospace; }
+    .lex-off { color: #b45309; }
+    .lex-off-switch { display: block; padding: 2px 0 2px 12px; color: #666; }
+    .lex-switch { display: block; }
+    .lex-filter { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 2px 4px; margin: 4px 0; }
+    .lex-row { display: flex; align-items: baseline; gap: 6px; padding: 1px 0 1px 12px; }
+    .lex-kind { color: #888; flex: 0 0 48px; }
+    .lex-value { font-family: ui-monospace, Menlo, monospace; flex: 1 1 auto; overflow-wrap: anywhere; }
+    .lex-source { color: #666; }
+    .lex-row-replaced .lex-value { text-decoration: line-through; color: #999; }
+    .lex-row-edited .lex-source { color: #b45309; font-weight: 600; }
+    .lex-remove { border: none; background: none; color: #b00; cursor: pointer; padding: 0 4px; }
+    .lex-add { display: flex; gap: 4px; padding: 3px 0 3px 12px; }
+    .lex-add input { font: inherit; font-family: ui-monospace, Menlo, monospace; flex: 1 1 auto; min-width: 60px; padding: 1px 4px; }
+    .lex-add select { font: inherit; font-size: 12px; }
+    .lex-result-title { font-weight: 600; font-size: 12px; margin: 8px 0 2px; }
+    .rules-title { margin-top: 14px; }
+    .rules-empty { color: #999; font-size: 12px; }
+    .rules-bundles { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #555; }
+    .rules-bundles select, .rules-bundle-name { font: inherit; font-size: 12px; padding: 2px 4px; }
+    .rules-bundle-name { flex: 1 1 80px; min-width: 70px; }
+    .rules-bundle-savebtn, .rules-bundles button { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
+    .rules-bundle-del { color: #b00; border-color: #e0b4b4; padding: 2px 6px; }
+    .rules-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 8px; font-size: 12px; }
+    .rules-toolbar select, .rules-search { font: inherit; font-size: 12px; padding: 2px 4px; }
+    .rules-search { flex: 1 1 90px; min-width: 80px; }
+    .rules-availonly { display: inline-flex; align-items: center; gap: 4px; color: #555; }
+    .rule-groups, .rule-list { list-style: none; margin: 0; padding: 0; }
+    .rule-group { margin-bottom: 8px; }
+    .rule-group-head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #444; }
+    .rule-group-name { text-transform: capitalize; }
+    .rule-group-badge { color: #999; font-size: 11px; font-weight: 400; }
+    .rule-list { margin: 2px 0 0 18px; }
+    .rule { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+    .rule:hover { background: #eef; }
+    .rule.unavailable { color: #aaa; cursor: not-allowed; }
+    .rule.unavailable:hover { background: none; }
+    .rule-name { font-size: 12px; }
+    /* WS9-020 rule prose: summary subtext per row, long-form detail behind the row toggle */
+    .rule-item { margin-bottom: 4px; }
+    .rule-row { display: flex; align-items: center; }
+    .rule-detail-toggle { flex: 0 0 auto; border: 0; background: none; color: #999; font: inherit; font-size: 11px; padding: 0 4px; cursor: pointer; }
+    .rule-detail-toggle:hover, .rule-detail-toggle.open { color: #2563eb; }
+    .rule-summary { color: #666; font-size: 11px; margin: 0 0 0 26px; }
+    .rule-detail { margin: 4px 0 6px 26px; padding: 6px 8px; background: #f6f7f9; border: 1px solid #e3e5e8; border-radius: 4px; font-size: 11px; color: #333; }
+    .rule-impact { margin: 0 0 4px 0; font-style: italic; color: #555; }
+    /* The remedy is an instruction rather than a consequence, so it reads upright and accented
+       where the impact above it is italic and grey. */
+    .rule-remedy { margin: 0 0 6px 0; padding-left: 6px; border-left: 2px solid #cbd5e1; color: #334155; }
+    .rule-detail-md h2 { font-size: 12px; margin: 0 0 4px 0; }
+    .rule-detail-md h3 { font-size: 11px; margin: 6px 0 2px 0; }
+    .rule-detail-md p, .rule-detail-md ul { margin: 4px 0; }
+    .rule-detail-md ul { padding-left: 16px; }
+    .rule-detail-md pre { background: #eef0f3; padding: 4px 6px; border-radius: 3px; overflow-x: auto; }
+    .rule-detail-md code { font-size: 10px; }
+    /* WS9-005 visual diff: chrome bar + two synced SVG panes */
+    .compare-host { display: flex; align-items: flex-end; padding: 4px 0; }
+    .diff-wrap { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #fafafa; }
+    .diff-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 5px 8px; border-bottom: 1px solid #ddd; background: #f4f4f4; font-size: 12px; }
+    .diff-files { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+    .diff-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; color: #333; }
+    .diff-pair-select { font: inherit; font-size: 12px; padding: 2px 4px; }
+    .diff-legend { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-left: auto; }
+    .diff-chip { display: inline-flex; align-items: center; gap: 4px; color: #444; }
+    .diff-nochange { color: #999; }
+    .diff-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .diff-close { border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; font: inherit; padding: 1px 7px; }
+    .diff-close:hover { background: #e0e0e0; }
+    .diff-error { color: #b00; }
+    .diff-empty { padding: 10px; color: #999; font-size: 12px; }
+    .diff-sides { flex: 1 1 auto; min-height: 0; display: flex; gap: 1px; background: #ddd; }
+    /* WS9-007 overlay mode: the union draws on the a pane, the b pane hides */
+    .diff-sides.overlay .diff-side + .diff-side { display: none; }
+    .diff-modes { display: flex; gap: 2px; }
+    .diff-side { flex: 1 1 50%; min-width: 0; position: relative; background: #fff; overflow: hidden; }
+    .diff-side-label { position: absolute; left: 8px; top: 8px; z-index: 5; background: rgba(255, 255, 255, 0.85); border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; pointer-events: none; font-size: 11px; color: #555; }
+    .diff-svg { position: absolute; inset: 0; overflow: hidden; }
+    /* agni issue 1326: a sheet view beside the canvas, its own bar, the sheets that also draw the
+       selection, and the drawing filling the rest */
+    .sheetview { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; }
+    .sheetview-bar { display: flex; gap: 6px; align-items: center; padding: 4px 6px; border-bottom: 1px solid #ddd; flex: 0 0 auto; }
+    .sheetview-bar select { font: inherit; font-size: 12px; }
+    .sheetview-bar .sheetview-sheet { max-width: 16em; }
+    .sheetview-also { flex: 0 0 auto; padding: 3px 6px; font-size: 12px; color: #555; }
+    .sheetview-also:empty { display: none; }
+    .sheetview-chip { font: inherit; font-size: 12px; margin-left: 4px; border: 1px solid #bbb; border-radius: 10px; background: #f6f6f6; padding: 0 8px; cursor: pointer; }
+    .sheetview-canvas { position: relative; flex: 1 1 auto; overflow: hidden; }
+    .sheet-tile-beside { border: none; background: none; cursor: pointer; color: #777; padding: 2px 6px; font: inherit; }
+    .sheet-tile-beside:hover { color: #1560bd; }
+    .diff-ph { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: #999; background: #fafafa; z-index: 4; }
+    .diff-ph.on { display: flex; }
+    /* WS7-034 render controls float inside the canvas panel (they configure only the render) */
+    .canvas-toolbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6; background: rgba(255, 255, 255, 0.92); border: 1px solid #ccc; border-radius: 6px; padding: 2px 8px; }
+    /* WS7-034 board layer visibility: the CSS side of BoardSVG's classed strata */
+    .board-front .copper-back, .board-front .zones-back, .board-front .picks-back { display: none; }
+    .board-back .copper-front, .board-back .zones-front, .board-back .picks-front { display: none; }
+    /* WS9-025 sheet overview: name tiles with violation-count badges */
+    .sheet-tiles { list-style: none; margin: 0; padding: 0; }
+    .sheet-tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: 1px solid transparent; background: none; font: inherit; color: inherit; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
+    .sheet-tile:hover { background: #eef; }
+    .sheet-tile-row { display: flex; align-items: center; }
+    .sheet-tile-row > .sheet-tile { flex: 1 1 auto; min-width: 0; }
+    .sheet-tile-twist { flex: 0 0 14px; width: 14px; padding: 0; border: 0; background: none; color: #999; font: inherit; font-size: 11px; cursor: pointer; }
+    .sheet-tiles-legend { margin: 8px 8px 4px; color: #777; font-size: 11px; line-height: 1.6; }
+    .sheet-tiles-legend .sheet-tile-count { display: inline-block; min-width: 0; padding: 0 5px; }
+    .sheet-tile.active { background: #dbeafe; font-weight: 600; }
+    .sheet-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sheet-tile-count { flex: 0 0 auto; min-width: 22px; text-align: center; border-radius: 10px; font-size: 11px; padding: 1px 6px; }
+    .sheet-tile-count.firing { background: #d21f3c; color: #fff; }
+    .sheet-tile-count.norules { color: #999; }
+    /* The tile's two counts: defects, then the inconclusive results beside them. `open` is the zero
+       that is not clean, on a sheet whose only findings are undecided. */
+    .sheet-tile-counts { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+    .sheet-tile-count.unresolved { background: #f3e8ff; color: #6d28d9; border: 1px solid #ddd0f2; }
+    /* WS9-006 changes panel: rows reuse the findings grid; the swatch replaces the severity dot */
+    .finding.chg { grid-template-columns: auto auto 1fr; }
+    .finding.chg .diff-swatch { align-self: center; }
+    .finding-group-head .diff-swatch { flex: 0 0 auto; }
+    /* WS9-036 datalog query panel: query box + provenance-linked results */
+    /* The panel fills its dock body and manages its own scroll: the query box is pinned, and the
+       results table is its own scroll region, so a wide/tall result never drags the query box with
+       it. The helper chrome (examples/relations) lives in a slide-in drawer, not in the flow. */
+    #query-panel { height: 100%; }
+    /* The left gutter is the drawer handle's lane. The handle is absolutely positioned and floats at
+       the panel's vertical middle, so whatever content happens to be at that height sits under it —
+       with the panel short (its dock default), that was the Run button and the first characters of
+       the query. Padding the panel clears the lane; an absolutely positioned child resolves against
+       the padding box, so the handle and the drawer itself stay flush against the edge. */
+    .query { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-left: 22px; }
+    .query-input { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
+    /* The query-mode tabs (agni issue 338). The inactive input is display:none rather than
+       unmounted so the textarea keeps its text and its scroll position across a trip through
+       search mode; the reader who searched and came back finds the query they were writing. */
+    .query-input.hidden { display: none; }
+    /* The query panel's own tab strip (agni issue 902), one tab per question. It scrolls sideways
+       rather than wrapping or clipping when many are open. */
+    .query-tabbar { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid #ddd; margin-bottom: 6px; }
+    .query-tabs { flex: 1 1 auto; min-width: 0; display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; scrollbar-width: thin; }
+    .query-tab { flex: 0 0 auto; display: inline-flex; align-items: center; max-width: 260px; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; background: #f4f4f5; margin-bottom: -1px; }
+    .query-tab.on { background: #fff; border-color: #ccc; }
+    .query-tab-go { font: inherit; font-size: 11px; padding: 3px 8px; border: none; background: none; color: #555; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .query-tab.on .query-tab-go { color: #222; font-weight: 600; }
+    .query-tab-busy { margin-left: 2px; color: #888; }
+    .query-tab-close { font: inherit; font-size: 12px; line-height: 1; padding: 0 6px 0 2px; border: none; background: none; color: #999; cursor: pointer; }
+    .query-tab-close:hover { color: #c00; }
+    .query-tab-new { flex: 0 0 auto; font: inherit; font-size: 13px; line-height: 1; padding: 2px 8px 3px; margin-bottom: 1px; border: 1px solid transparent; border-radius: 4px; background: none; color: #555; cursor: pointer; }
+    .query-tab-new:hover { background: #ececec; }
+    /* The Sets menu (agni issue 745): a project's query sets, and a set file from disk. */
+    .query-sets { position: relative; flex: 0 0 auto; margin-bottom: 2px; }
+    .query-sets-open { font: inherit; font-size: 11px; padding: 2px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f6f6f6; color: #444; cursor: pointer; }
+    .query-sets-open:hover { background: #ececec; }
+    .query-sets-menu { position: absolute; right: 0; top: calc(100% + 2px); z-index: 20; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+    .query-set-item, .query-set-file { font: inherit; font-size: 12px; text-align: left; padding: 4px 8px; border: none; background: none; color: #222; cursor: pointer; border-radius: 3px; }
+    .query-set-item:hover, .query-set-file:hover { background: #eef2ff; }
+    .query-set-file { color: #2563eb; border-top: 1px solid #eee; margin-top: 2px; }
+    .query-set-count { color: #999; }
+    .query-sets-none { font-size: 12px; color: #888; padding: 4px 8px; }
+    .query-modes { flex: 0 0 auto; display: flex; gap: 4px; margin-bottom: 4px; }
+    .query-mode { font: inherit; font-size: 11px; padding: 2px 10px; border: 1px solid #ccc; background: #f6f6f6; color: #666; border-radius: 4px 4px 0 0; border-bottom-color: transparent; cursor: pointer; }
+    .query-mode:hover:not(.on) { background: #ececec; }
+    .query-mode.on { background: #fff; color: #222; font-weight: 600; }
+    .query-term { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+    .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+    .query-actions { display: flex; align-items: center; gap: 8px; }
+    /* Bound values (agni issue 793): one chip per variable a search or a click bound, under the
+       query they belong to, each value editable and removable. */
+    .query-bindings { display: flex; flex-wrap: wrap; gap: 4px; }
+    .query-binding { display: inline-flex; align-items: center; gap: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 1px 2px 1px 6px; border: 1px solid #c9d3e0; background: #eef3fa; border-radius: 10px; }
+    .query-binding-name { color: #445; }
+    .query-binding-list { color: #223; overflow-wrap: anywhere; }
+    .query-binding-value { font: inherit; max-width: 40ch; padding: 1px 4px; border: 1px solid #d5dbe3; border-radius: 3px; background: #fff; }
+    .query-binding-remove { font: inherit; border: 0; background: none; color: #778; cursor: pointer; padding: 0 4px; }
+    .query-binding-remove:hover { color: #222; }
+    .query-run { font: inherit; font-size: 12px; padding: 3px 12px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
+    .query-run:hover:not(:disabled) { background: #e0e0e0; }
+    .query-run:disabled { color: #aaa; cursor: not-allowed; }
+    .query-hint { color: #999; font-size: 11px; }
+    .query-relhint { color: #666; font-size: 11px; margin: 6px 0; }
+    .query-relhint code { background: #eef0f3; padding: 0 3px; border-radius: 3px; }
+    /* WS9-037 relation picker: click-to-insert chips, grouped by kind */
+    .query-examples { margin: 6px 0 8px; }
+    .query-examples-hint { color: #666; font-size: 11px; margin-bottom: 4px; }
+    .query-examples-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .query-example { font: inherit; font-size: 11px; padding: 2px 9px; border: 1px solid #cdd8ea; background: #eef3fb; border-radius: 10px; cursor: pointer; color: #24457e; }
+    .query-example:hover { background: #e0e9f8; border-color: #b7c6e3; }
+    .query-relations { margin: 6px 0 4px; }
+    .query-relations-hint { color: #666; font-size: 11px; margin-bottom: 4px; }
+    .query-relcrumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px; margin-bottom: 4px; font-size: 11px; }
+    .query-relcrumb { border: 0; background: transparent; padding: 0 2px; cursor: pointer; color: #2b5ea8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .query-relcrumb:disabled { color: #334; cursor: default; font-weight: 600; }
+    .query-relcrumb-sep { color: #999; }
+    .query-relmembers { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    .query-relrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 1px 0; }
+    .query-reltier { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .query-relmember { margin: 4px 0; border: 1px solid #d0d4da; border-radius: 6px; background: #fbfcfe; padding: 6px 8px; font-size: 12px; }
+    .query-relsignature { font-weight: 600; color: #334; margin-right: 8px; }
+    .query-reldoc { margin: 4px 0; }
+    .query-relinferred { margin: 2px 0; color: #666; font-size: 11px; }
+    .query-relinsert { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 2px 8px; border: 1px solid #b9c0ca; background: #e7ebf1; border-radius: 4px; cursor: pointer; margin: 4px 0; }
+    .query-relinsert:hover { background: #d3dae4; }
+    .query-reldefinition { margin: 4px 0; padding: 4px 6px; background: #f2f4f7; border-radius: 4px; font-size: 11px; white-space: pre-wrap; }
+    .query-relerror { color: #a33; font-size: 11px; margin: 4px 0; }
+    .query-relchip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 1px 7px; border: 1px solid #d0d4da; background: #f2f4f7; border-radius: 10px; cursor: pointer; color: #334; }
+    .query-relchip:hover { background: #e2e8f0; border-color: #b9c0ca; }
+    .query-reldetail-body { padding: 6px 10px; font-size: 12px; overflow-x: auto; }
+    .query-reldetail-body img { max-width: 100%; height: auto; }
+    /* The selection bar sits under the query box: what was picked on the left, the next question as a
+       button on the right. It shares the example chip's palette because it is the same kind of thing,
+       a query written for the reader. */
+    .query-selection { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+    /* What is already checked about the selection (agni issue 259). Quiet by default: it is context
+       for the pick, not the headline, and the pips carry the alarm when there is one. */
+    .query-findings { display: inline-flex; align-items: baseline; gap: 6px; margin-left: 8px; font-size: 11px; color: #6b7280; }
+    .query-findings-open { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; }
+    .query-findings-open:hover { color: #1d4ed8; text-decoration: underline; }
+    .query-findings-pips { display: inline-flex; gap: 3px; }
+    .query-pip { display: inline-block; min-width: 14px; text-align: center; padding: 0 4px; border-radius: 7px; font-size: 10px; font-weight: 600; color: #fff; }
+    .query-pip.error { background: #b91c1c; }
+    .query-pip.warning { background: #b45309; }
+    .query-pip.info { background: #6b7280; }
+    /* The caveat rides beside every count rather than hiding in the hover, because over-reading a
+       zero is the failure this whole affordance risks. */
+    .query-findings-caveat { color: #9ca3af; font-size: 10px; font-style: italic; }
+    /* Rules that could not run at all. Warmer than the caveat because it is a fact about THIS run
+       rather than a standing limitation, and a reader who sees it may want to go fix it. */
+    .query-findings-gated { color: #b45309; font-style: normal; }
+    /* An unresolved result is neither a defect nor a pass, so it is worded rather than counted with
+       the severity pips, and coloured to match nothing in that scale. */
+    .query-findings-open-q { color: #6d28d9; font-weight: 600; }
+    .query-selection-what { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+    .query-selection-kind { color: #889; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .query-selection-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #334; overflow-wrap: anywhere; }
+    .query-ask { font: inherit; font-size: 11px; padding: 2px 9px; border: 1px solid #cdd8ea; background: #eef3fb; border-radius: 10px; cursor: pointer; color: #24457e; white-space: nowrap; }
+    .query-ask:hover:not(:disabled) { background: #e2ebfa; }
+    .query-ask:disabled { color: #aaa; cursor: not-allowed; }
+    .check-report { margin-left: 8px; font-size: 11px; color: #888; text-decoration: underline dotted; white-space: nowrap; }
+    .check-report:hover { color: #b00; }
+    .query-error { color: #b00; font-size: 12px; white-space: pre-wrap; background: #fdf0f0; border: 1px solid #e0b4b4; border-radius: 4px; padding: 6px 8px; }
+    .query-error-at { margin: 6px 0 0; font-size: 12px; white-space: pre; overflow-x: auto; color: #333; background: none; }
+    .query-error-caret { color: #b00; font-weight: 700; }
+    .query-locate-note, .checks-locate-note, .rv-locate-note { color: #7a5b00; font-size: 12px; background: #fdf7e3; border: 1px solid #e6d9a8; border-radius: 4px; padding: 6px 8px; }
+    .query-empty { color: #999; font-size: 12px; padding: 4px 0; }
+    /* The results are the panel's own scroll region — a wide table scrolls horizontally here without
+       moving the query box, and long results scroll vertically under a sticky header. */
+    .query-results { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    /* fixed layout is what makes the columns equal by default and a dragged width stick. Under the
+       old auto layout the browser sized each column to its widest cell, so one long provenance
+       string or net name ate the panel and the rest were slivers. */
+    .query-table { border-collapse: collapse; font-size: 12px; width: 100%; table-layout: fixed; }
+    .query-table th, .query-table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    .query-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fafafa; z-index: 1; }
+    .query-table th.query-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    .query-table th.query-sortable:hover { color: #1c1c1c; background: #f0f1f3; }
+    .query-sort-ind { color: #2563eb; }
+    /* A fixed layout clips rather than growing, so long unbroken values (a net id, a citation path)
+       wrap inside their column instead of overflowing it. */
+    /* Wrap first, scroll second, bleed never. overflow-wrap breaks a long unbroken value (a net id,
+       a citation path); overflow-x catches whatever still cannot fit, so a cell scrolls within its
+       own column instead of drawing across its neighbours. Measured in Chromium: a td honours
+       overflow-x directly, no inner wrapper needed. */
+    .query-table td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; overflow-x: auto; }
+    .query-table th { position: relative; }
+    .query-th-label { overflow-wrap: anywhere; }
+    /* The grip sits on the column's trailing edge, a few px wide, and only shows itself on hover so
+       the header stays a header. It must swallow the click, or resizing also re-sorts. */
+    .query-col-grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
+    .query-table th:hover .query-col-grip { background: linear-gradient(to right, transparent, #d3d6db); }
+    /* A locatable cell wraps like any other, so it has no rule of its own any more. It used to be
+       white-space: nowrap, which kept a subject and its one sheet badge on a line and, on a 21-sheet
+       design, turned the badge strip into a single unbreakable line that painted over the two
+       columns to its right. The table is fixed-layout, so the column never widened to fit it. */
+    .query-locate { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .query-locate:hover { color: #1d4ed8; }
+    /* The cell naming the entity on screen. A background band rather than a bolder link, so the
+       reader finds their place by scanning the column rather than by reading it. */
+    .query-locate.on { background: #dbe6fb; color: #14306e; font-weight: 600; border-radius: 3px; padding: 0 3px; margin: 0 -3px; text-decoration-thickness: 2px; }
+    .query-cite-col { width: 18px; padding-left: 2px; padding-right: 2px; }
+    .query-cite-toggle { border: 0; background: none; color: #999; font: inherit; font-size: 11px; padding: 0; cursor: pointer; }
+    .query-cite-toggle:hover, .query-cite-toggle.open { color: #2563eb; }
+    .query-cite-row td { background: #f6f7f9; border-bottom: 1px solid #e3e5e8; }
+    .query-cites { list-style: none; margin: 0; padding: 0; }
+    .query-cites li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #555; }
+    /* A row's witness tree (agni issue 794): one fact per line, its body facts a level in. */
+    .query-witnesses { list-style: none; margin: 0; padding: 0 0 0 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #333; }
+    .query-cite-row td > .query-witnesses { padding-left: 0; }
+    .query-witness { margin: 2px 0; }
+    .query-witness-rel { color: #555; }
+    .query-witness.negated > .query-witness-fact { color: #7a5b00; }
+    .query-witness-not { font-weight: 600; }
+    .query-witness-absent { margin-left: 6px; padding: 0 4px; border: 1px dashed #c9b26a; border-radius: 3px; background: #fdf7e3; color: #7a5b00; font-size: 10px; }
+    .query-witness-rule { display: block; color: #888; font-size: 10px; white-space: pre-wrap; }
+    .query-witness-cites { display: block; color: #888; font-size: 10px; }
+    .query-witness-note { color: #888; font-size: 11px; font-style: italic; }
+    .query-count { color: #999; font-size: 11px; margin-top: 6px; }
+    /* Slide-in helper drawer (examples + relations + reference). It overlays the panel from the left
+       and is translated off-screen when closed; a left-edge handle opens it, clicking the textarea or
+       ✕ closes it. It stays mounted while closed so chip clicks work without opening it. */
+    .query-drawer-handle { position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 5; border: 1px solid #cdd8ea; border-left: 0; background: #eef3fb; color: #24457e; cursor: pointer; padding: 8px 3px; border-radius: 0 6px 6px 0; box-shadow: 1px 0 3px rgba(0,0,0,0.08); }
+    .query-drawer-handle:hover { background: #e0e9f8; }
+    .query-drawer-handle.hidden { display: none; }
+    .query-drawer-handle-label { writing-mode: vertical-rl; text-orientation: mixed; font-size: 10px; letter-spacing: 0.02em; }
+    .query-drawer { position: absolute; left: 0; top: 0; bottom: 0; width: min(320px, 88%); z-index: 6; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #d0d4da; box-shadow: 2px 0 10px rgba(0,0,0,0.12); transform: translateX(-102%); transition: transform 0.18s ease; }
+    .query-drawer.open { transform: translateX(0); }
+    .query-drawer-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #e3e6eb; background: #f7f8fa; }
+    .query-drawer-title { font-size: 12px; font-weight: 600; color: #334; }
+    .query-drawer-close { border: 0; background: transparent; cursor: pointer; color: #889; font-size: 14px; padding: 0 2px; }
+    .query-drawer-close:hover { color: #334; }
+    .query-drawer-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+    /* agni issue 600 trace panel: two pin boxes, then the route as an alternating net/cross list */
+    .trace { padding: 6px; font-size: 12px; }
+    .trace-ask { display: flex; gap: 6px; padding: 2px 2px 8px; }
+    .trace-pin { flex: 1 1 0; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
+    .trace-run { font: inherit; padding: 3px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+    .trace-run:disabled { color: #999; cursor: default; }
+    .trace-picks { list-style: none; margin: -4px 2px 8px; padding: 2px 0; max-height: 220px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .trace-pick { display: flex; gap: 8px; align-items: baseline; padding: 2px 8px; cursor: pointer; }
+    .trace-pick[aria-selected="true"], .trace-pick:hover { background: #eef2ff; }
+    .trace-pick-value { font-weight: 600; white-space: nowrap; }
+    .trace-pick.component .trace-pick-value { color: #3730a3; }
+    .trace-pick-detail { color: #777; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trace-empty { color: #999; padding: 8px 4px; }
+    .trace-error { color: #dc2626; padding: 6px 4px; }
+    .trace-headline { font-weight: 600; padding: 4px 4px 6px; }
+    .trace-reason { padding: 0 4px 4px; }
+    /* The note explains what the walk does and does not cross, so a negative answer is checkable
+       rather than something to take on trust. Muted, because it is the same sentence every time. */
+    .trace-note { color: #666; font-size: 11px; padding: 0 4px 6px; }
+    .trace-route { list-style: none; margin: 0; padding: 0 4px; }
+    .trace-net { padding: 3px 0; }
+    .trace-net-name { font-weight: 600; }
+    .trace-net.bus-like .trace-net-name { color: #b45309; }
+    .trace-rail-note { color: #b45309; font-size: 11px; margin-left: 6px; }
+    .trace-cross { padding: 3px 0 3px 12px; color: #444; border-left: 2px solid #e11d48; margin-left: 4px; }
+    .trace-cross-pins { color: #666; }
+    .trace-stubs { list-style: none; margin: 2px 0 0; padding: 0 0 0 14px; color: #666; font-size: 11px; }
+    /* A probe point is the most actionable thing on a route net, so it is the one stub that is not
+       grey. */
+    .trace-stub.probe { color: #16a34a; font-weight: 600; }
+    .trace-stub.elided { font-style: italic; }
+    .trace-stub-class { color: #999; }
+    .trace-summary { color: #666; font-size: 11px; padding: 8px 4px 2px; border-top: 1px solid #eee; margin-top: 6px; }
+    /* WS9-041 interface-coverage panel: one block per detected interface, a chip per signal */
+    .coverage { padding: 4px; }
+    .coverage-empty { color: #999; font-size: 12px; padding: 8px 4px; }
+    .coverage-iface { margin-bottom: 10px; }
+    .coverage-head { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 6px; border-bottom: 1px solid #eee; }
+    .coverage-profile { font-weight: 600; font-size: 13px; }
+    .coverage-count { color: #666; font-size: 11px; }
+    .coverage-signals { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; list-style: none; margin: 0; }
+    .coverage-signal { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid #ccc; border-radius: 4px; padding: 4px 9px; font: inherit; font-size: 11px; background: #fff; cursor: pointer; }
+    .coverage-signal:hover:not(:disabled) { background: #f4f6f9; }
+    .coverage-signal.no-net { cursor: default; }
+    .coverage-signal-name { font-weight: 600; }
+    .coverage-signal-state { font-size: 10px; }
+    .cov-present { border-color: #16a34a; }
+    .cov-present .coverage-signal-state { color: #16a34a; }
+    .cov-missing { border-color: #dc2626; background: #fef2f2; }
+    .cov-missing .coverage-signal-state { color: #dc2626; }
+    .cov-dangling, .cov-pullup_missing { border-color: #d97706; background: #fffbeb; }
+    .cov-dangling .coverage-signal-state, .cov-pullup_missing .coverage-signal-state { color: #d97706; }
+
+    /* WS9-128 naming-vocabulary bar: which convention the answers on screen were computed under.
+       The overridden state is styled, not merely selected, because a request convention REPLACES the
+       server's, so rules can stop running and their absence looks like a clean design. */
+    .convbar { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 0 6px; }
+    .convbar-label { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
+    .convbar-pick { font: inherit; font-size: 11px; padding: 2px 4px; max-width: 170px; }
+    .convbar-active { color: #666; }
+    .convbar-overridden { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; }
+    .convbar-overridden .convbar-active { color: #b45309; font-weight: 600; }
+    /* The message is the server's own and can run long (a YAML error names a file, a line, and a
+       field), so it is bounded and ellipsised here rather than truncated in the code: the title
+       carries the full text, and clipping in CSS keeps every character available to a hover while
+       the top bar keeps its height. */
+    .convbar-error { color: #b91c1c; font-weight: 600; max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* agni issue 175 project bar: whose config produced the answers on screen. The overridden state
+       is styled for the same reason the vocabulary bar's is, one level up: with the built-in catalog
+       chosen, a project's rules are not running, and rules that do not run leave no trace to notice. */
+    .projbar { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 0 6px; }
+    .projbar-label { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
+    .projbar-name { color: #444; font-weight: 600; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .projbar-plain { display: flex; align-items: center; gap: 3px; color: #666; cursor: pointer; }
+    .projbar-plain-box { margin: 0; }
+    .projbar-overridden { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; }
+    .projbar-overridden .projbar-name { color: #b45309; }
+    /* The companion notice names another file and is the one line here a reader must not miss, so it
+       gets the same bounded-and-ellipsised treatment the convention error gets: full text on hover,
+       fixed top-bar height regardless of how long a design's entry name runs. */
+    .projbar-entry { color: #b45309; max-width: 44ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .projbar-error { color: #b91c1c; font-weight: 600; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* WS9-052 review panel: the project's checklist verdict over the stored runs (WS9-053). */
+    .review { padding: 4px; font-size: 12px; }
+    .rv-empty { color: #999; padding: 8px 4px; line-height: 1.5; }
+    .rv-empty code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; }
+    .rv-error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px 8px; margin: 4px 0; }
+    .rv-controls { display: flex; gap: 6px; align-items: center; padding: 4px 2px; }
+    .rv-checklist, .rv-history { flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 3px; }
+    .rv-history { margin: 4px 2px; width: calc(100% - 4px); }
+    .rv-run { font: inherit; font-size: 11px; padding: 3px 10px; cursor: pointer; }
+    .rv-run:disabled { cursor: default; opacity: 0.55; }
+    .rv-summary { font-weight: 600; padding: 6px 4px 2px; }
+    .rv-summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .rv-save { font: inherit; font-size: 11px; padding: 2px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f6f6f6; color: #333; cursor: pointer; flex: 0 0 auto; }
+    .rv-save:hover { background: #ececec; }
+    .rv-save-note { color: #b91c1c; font-size: 12px; padding: 2px 0; }
+    .rv-provenance { color: #777; font-size: 11px; padding: 0 4px 6px; }
+    .rv-area { margin-bottom: 10px; }
+    .rv-area-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 4px 6px; border-bottom: 1px solid #eee; }
+    .rv-area-name { font-weight: 600; font-size: 13px; }
+    .rv-area-tally { color: #666; font-size: 10px; text-align: right; }
+    .rv-items { list-style: none; margin: 0; padding: 0; }
+    .rv-item { padding: 5px 6px; border-bottom: 1px solid #f4f4f4; }
+    .rv-item-head { display: flex; gap: 6px; align-items: baseline; }
+    .rv-item-id { color: #999; font-size: 10px; min-width: 2.2em; }
+    .rv-item-title { flex: 1; }
+    .rv-item-note { color: #777; font-size: 11px; padding: 2px 0 0 calc(2.2em + 6px); }
+    .rv-findings-toggle { background: none; border: none; color: #2563eb; font: inherit; font-size: 11px; cursor: pointer; padding: 2px 0 0 calc(2.2em + 6px); }
+    .rv-findings { list-style: none; margin: 2px 0 0; padding: 0 0 0 calc(2.2em + 6px); }
+    .rv-finding { display: flex; gap: 6px; width: 100%; text-align: left; background: none; border: none; font: inherit; font-size: 11px; cursor: pointer; padding: 2px 0; }
+    .rv-finding:hover { background: #f4f6f9; }
+    .rv-finding-subject { font-weight: 600; }
+    .rv-finding-message { color: #666; }
+    .rv-finding-row { display: flex; align-items: baseline; gap: 2px; }
+    .rv-finding-how { background: none; border: none; color: #2563eb; font: inherit; font-size: 11px; cursor: pointer; padding: 2px 2px 0 0; }
+    .rv-finding-derivation { padding: 2px 0 4px 14px; }
+    .rv-finding-note { color: #888; font-size: 11px; font-style: italic; }
+    .rv-finding-row-cells { color: #666; font-size: 11px; padding-top: 2px; }
+
+    /* The outcome chip. ONLY pass reads as green; every other verdict reads as unfinished, because
+       the whole point of the vocabulary is that a question nobody answered must not score as one that
+       was. rv-unknown is an outcome this build does not recognise, styled with the unanswered group
+       rather than the passing one. */
+    .rv-outcome { font-size: 10px; padding: 1px 6px; border-radius: 8px; white-space: nowrap; border: 1px solid transparent; }
+    .rv-pass { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+    .rv-fail { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .rv-provisional { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .rv-needs-design-intent, .rv-needs-data { color: #a16207; background: #fefce8; border-color: #fef08a; }
+    .rv-inconclusive { color: #7c3aed; background: #faf5ff; border-color: #e9d5ff; }
+    .rv-not-applicable, .rv-computed-n-a { color: #6b7280; background: #f9fafb; border-color: #e5e7eb; }
+    .rv-not-automated, .rv-unknown { color: #4b5563; background: #f3f4f6; border-color: #d1d5db; border-style: dashed; }
+    /* agni issue 902: the Properties panel, a breadcrumb over the selection and what is known about it */
+    .properties { padding: 4px 6px; font-size: 12px; color: #333; }
+    .pr-crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px; padding: 2px 0 6px; border-bottom: 1px solid #eee; }
+    .pr-crumb { border: none; background: none; cursor: pointer; font: inherit; color: #2563eb; padding: 0 2px; }
+    .pr-crumb:hover { text-decoration: underline; }
+    .pr-crumb-current { color: #333; font-weight: 600; cursor: default; }
+    .pr-crumb-sep { color: #999; }
+    .pr-head { display: flex; align-items: baseline; gap: 6px; padding: 6px 0 4px; }
+    .pr-kind { color: #777; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pr-title { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+    .pr-note { color: #777; font-style: italic; padding: 2px 0 4px; }
+    .pr-rows { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; margin: 2px 0 6px; }
+    .pr-rows dt { color: #777; }
+    .pr-rows dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .pr-section { color: #777; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+    .pr-datasheet, .pr-report, .pr-ask { padding: 4px 0; }
+    .pr-ds-no-corpus, .pr-ds-no-mpn { color: #777; }
+    .pr-ds-no-spec { color: #a16207; }
+    .pr-group { border-top: 1px solid #f0f0f0; padding: 2px 0; }
+    .pr-group > summary { cursor: pointer; color: #444; padding: 2px 0; }
+    .pr-count { color: #999; }
+    .pr-refs { list-style: none; margin: 0; padding: 0 0 4px 14px; }
+    .pr-ref { display: flex; gap: 6px; align-items: baseline; padding: 1px 0; }
+    .pr-ref-go { border: none; background: none; cursor: pointer; font: inherit; color: #2563eb; padding: 0; }
+    .pr-ref-go:hover { text-decoration: underline; }
+    .pr-ref-detail { color: #666; overflow-wrap: anywhere; }
+    .pr-empty { color: #999; padding: 0 0 4px 14px; }
+    .pr-ask-go { font: inherit; padding: 2px 8px; border: 1px solid #c7d2fe; border-radius: 3px; background: #eef2ff; color: #3730a3; cursor: pointer; }
+    .pr-ask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+    .pr-trace { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; padding: 4px 0; }
+    .report-box { color: #a16207; }
+    .report-unresolved { color: #b91c1c; }
+    /* WS9-035 datasheet-params panel: one expandable row per datasheet-backed component */
+    .parts { padding: 4px; font-size: 12px; }
+    .parts-empty { color: #999; font-size: 12px; padding: 8px 4px; }
+    .parts-row { border-bottom: 1px solid #eee; }
+    .parts-head { display: flex; align-items: baseline; gap: 6px; padding: 4px 6px; }
+    .parts-toggle { border: none; background: none; cursor: pointer; font: inherit; color: #666; padding: 0 2px; }
+    .parts-ref { border: none; background: none; cursor: pointer; font: inherit; font-weight: 600; color: #2563eb; padding: 0; }
+    .parts-ref:hover { text-decoration: underline; }
+    .parts-mpn { color: #333; }
+    .parts-count { color: #999; font-size: 11px; margin-left: auto; }
+    .parts-params { list-style: none; margin: 0; padding: 2px 6px 6px 22px; }
+    .parts-param { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; padding: 2px 0; }
+    .parts-pname { font-weight: 600; }
+    .parts-pval { color: #111; }
+    .parts-limit { font-size: 10px; border-radius: 3px; padding: 0 4px; border: 1px solid #ccc; }
+    .parts-limit.lk-1 { border-color: #dc2626; color: #dc2626; }
+    .parts-limit.lk-2 { border-color: #16a34a; color: #16a34a; }
+    .parts-limit.lk-3 { border-color: #2563eb; color: #2563eb; }
+    .parts-pin { font-size: 10px; border-radius: 3px; padding: 0 4px; border: 1px solid #7c3aed; color: #7c3aed; }
+    .parts-pin.parts-pin-wide { border-color: #bbb; color: #888; }
+    .parts-cond { color: #666; font-size: 11px; }
+    .parts-cite { color: #999; font-size: 11px; margin-left: auto; }
+  </style>
+  {{ block "HeadExtra" . }}{{ end }}
+</head>
+<body>
+  {{ block "Body" . }}{{ end }}
+  {{ block "AppScript" . }}{{ end }}
+</body>
+</html>
+{{ end }}

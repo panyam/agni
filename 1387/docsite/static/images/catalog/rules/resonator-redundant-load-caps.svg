@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 300" width="700" height="300" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="resonator-redundant-load-caps rule: a ceramic resonator with an external load cap to ground is flagged; a resonator wired with no external caps is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="298" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="276" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: external load cap on an integrated-cap resonator</text>
+
+  <!-- driver terminal -->
+  <circle cx="44" cy="120" r="6" fill="#f8f9fb" stroke="#394049" stroke-width="2"/>
+  <text x="44" y="142" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.XIN</text>
+
+  <!-- XIN net to resonator, junction for the redundant cap -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="50" y1="120" x2="150" y2="120"/>
+  </g>
+  <circle cx="104" cy="120" r="4" fill="#d64545"/>
+
+  <!-- redundant external load cap to GND (red) -->
+  <g stroke="#d64545" stroke-width="2" fill="none">
+    <line x1="104" y1="120" x2="104" y2="154"/>
+    <line x1="92" y1="154" x2="116" y2="154"/>
+    <line x1="92" y1="162" x2="116" y2="162"/>
+    <line x1="104" y1="162" x2="104" y2="182"/>
+    <line x1="104" y1="182" x2="104" y2="190"/>
+    <line x1="90" y1="190" x2="118" y2="190"/>
+    <line x1="95" y1="196" x2="113" y2="196"/>
+    <line x1="99" y1="202" x2="109" y2="202"/>
+  </g>
+  <text x="126" y="160" font-size="13" font-weight="600" fill="#d64545">C1</text>
+  <text x="126" y="176" font-size="11" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">redundant</text>
+
+  <!-- ceramic resonator Y1 (3-terminal: 2 signal + center ground) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="150" y1="120" x2="162" y2="120"/>
+    <rect x="162" y="102" width="34" height="36" rx="3" fill="#ffffff"/>
+    <line x1="196" y1="120" x2="208" y2="120"/>
+    <!-- center ground pin -->
+    <line x1="179" y1="138" x2="179" y2="164"/>
+    <line x1="165" y1="164" x2="193" y2="164"/>
+    <line x1="170" y1="170" x2="188" y2="170"/>
+    <line x1="174" y1="176" x2="184" y2="176"/>
+  </g>
+  <text x="179" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">Y1</text>
+  <text x="179" y="190" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">GND (built-in caps)</text>
+
+  <!-- XOUT net to driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="208" y1="120" x2="300" y2="120"/>
+  </g>
+  <circle cx="300" cy="120" r="6" fill="#f8f9fb" stroke="#394049" stroke-width="2"/>
+  <text x="300" y="142" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.XOUT</text>
+
+  <text x="185" y="262" font-size="13" fill="#d64545" text-anchor="middle">integrated caps + external C1 = double load -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="368" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: resonator wired with no external caps</text>
+
+  <!-- driver terminal -->
+  <circle cx="384" cy="120" r="6" fill="#f8f9fb" stroke="#394049" stroke-width="2"/>
+  <text x="384" y="142" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.XIN</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="390" y1="120" x2="500" y2="120"/>
+  </g>
+
+  <!-- ceramic resonator Y1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="500" y1="120" x2="512" y2="120"/>
+    <rect x="512" y="102" width="34" height="36" rx="3" fill="#ffffff"/>
+    <line x1="546" y1="120" x2="558" y2="120"/>
+    <line x1="529" y1="138" x2="529" y2="164"/>
+    <line x1="515" y1="164" x2="543" y2="164"/>
+    <line x1="520" y1="170" x2="538" y2="170"/>
+    <line x1="524" y1="176" x2="534" y2="176"/>
+  </g>
+  <text x="529" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">Y1</text>
+  <text x="529" y="190" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">GND (built-in caps)</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="558" y1="120" x2="656" y2="120"/>
+  </g>
+  <circle cx="656" cy="120" r="6" fill="#f8f9fb" stroke="#394049" stroke-width="2"/>
+  <text x="656" y="142" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.XOUT</text>
+
+  <text x="525" y="262" font-size="13" fill="#2f9e57" text-anchor="middle">only the built-in caps present -&gt; fine</text>
+</svg>

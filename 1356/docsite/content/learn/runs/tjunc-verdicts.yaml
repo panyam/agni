@@ -1,0 +1,6 @@
+# Chapter 2: the same pair through the rule, so the reader sees the fail and the pass side by side.
+fixture: readers/kicad/testdata
+from_root: true
+steps:
+  - script: agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc.kicad_sch
+  - script: agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc_dotted.kicad_sch

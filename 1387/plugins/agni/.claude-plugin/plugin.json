@@ -1,0 +1,8 @@
+{
+  "name": "agni",
+  "description": "Skills that walk a person through checking their own board with the agni CLI",
+  "author": { "name": "panyam" },
+  "homepage": "https://panyam.github.io/agni/",
+  "repository": "https://github.com/panyam/agni",
+  "license": "Apache-2.0"
+}

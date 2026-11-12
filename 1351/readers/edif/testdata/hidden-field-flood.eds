@@ -1,0 +1,182 @@
+
+(edif HIDDENFIELDFLOOD
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (keywordMap (keywordLevel 0))
+  (status
+    (written
+      (timestamp 2026 7 28 0 0 0)
+      (author "Agni test fixtures")
+      (program "hand-authored")))
+  (comment "Redistributable repro for the EDIF placed-field visibility flood (WS1-037 follow-up).")
+  (comment "Contains NO organization-specific data: all text is lorem ipsum placeholder.")
+  (comment "A schematic EDIF export records a display origin for nearly every property but marks")
+  (comment "most (visible (false)); only a few (typically Value) are (visible (true)). A reader")
+  (comment "that ignores the flag stamps every hidden attribute onto the drawing, flooding it")
+  (comment "with tiny overlapping text.")
+  (comment "Render before/after: agni render --layout faithful --sheet 1 hidden-field-flood.eds")
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE)))
+      (figureGroup ATTRIBUTE
+        (color 100 100 0)
+        (textHeight 12000)))
+    (cell (rename &c1 "Res")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1"))
+          (port (rename &2 "2") (direction OUTPUT) (designator "2")))
+        (symbol
+          (boundingBox (rectangle (pt -40 -30) (pt 120 30)))
+          (figure BOX (rectangle (pt 0 -20) (pt 80 20)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 0 0))))
+            (figure PIN (path (pointList (pt -40 0) (pt 0 0)))))
+          (portImplementation
+            (name &2)
+            (connectLocation (figure GRAPHICS (dot (pt 80 0))))
+            (figure PIN (path (pointList (pt 80 0) (pt 120 0)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "CONTENTS")
+        (pageSize (rectangle (pt 0 0) (pt 1600 1000)))
+        (commentGraphics
+          (annotate (stringDisplay "Lorem Ipsum Dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 40000)) (justify CENTERLEFT) (origin (pt 120 900)))))
+          (annotate (stringDisplay "Lorem ipsum dolor sit amet"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 20000)) (justify CENTERLEFT) (origin (pt 120 820)))))
+          (annotate (stringDisplay "Consectetur adipiscing elit sed do eiusmod"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 20000)) (justify CENTERLEFT) (origin (pt 120 770)))))
+          (annotate (stringDisplay "Ut enim ad minim veniam%10%quis nostrud exercitation ullamco laboris."
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 16000)) (justify CENTERLEFT) (origin (pt 120 680)))))))
+      (page (rename P2 "COMPONENTS")
+        (pageSize (rectangle (pt 0 0) (pt 1600 1000)))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 200 760)))
+          (designator (stringDisplay "R1"))
+          (property Value (string (stringDisplay "Lorem"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 200 800))))))
+          (property Tolerance (string (stringDisplay "sit amet"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 790))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 780))))))
+          (property Part_Number (string (stringDisplay "sed-do-eiusmod-tempor-incididunt"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 770))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 760))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 750))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 740)))))))
+        (instance (rename &i2 "$i2")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 600 760)))
+          (designator (stringDisplay "R2"))
+          (property Value (string (stringDisplay "Ipsum"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 600 800))))))
+          (property Tolerance (string (stringDisplay "dolor sit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 790))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 780))))))
+          (property Part_Number (string (stringDisplay "tempor-incididunt-ut-labore"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 770))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 760))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 750))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 740)))))))
+        (instance (rename &i3 "$i3")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 1000 760)))
+          (designator (stringDisplay "R3"))
+          (property Value (string (stringDisplay "Dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 1000 800))))))
+          (property Tolerance (string (stringDisplay "amet elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 790))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 780))))))
+          (property Part_Number (string (stringDisplay "labore-et-dolore-magna-aliqua"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 770))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 760))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 750))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 740)))))))
+        (instance (rename &i4 "$i4")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 200 360)))
+          (designator (stringDisplay "R4"))
+          (property Value (string (stringDisplay "Amet"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 200 400))))))
+          (property Tolerance (string (stringDisplay "sit amet"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 390))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 380))))))
+          (property Part_Number (string (stringDisplay "magna-aliqua-ut-enim-ad-minim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 370))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 360))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 350))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 200 340)))))))
+        (instance (rename &i5 "$i5")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 600 360)))
+          (designator (stringDisplay "R5"))
+          (property Value (string (stringDisplay "Elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 600 400))))))
+          (property Tolerance (string (stringDisplay "dolor sit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 390))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 380))))))
+          (property Part_Number (string (stringDisplay "veniam-quis-nostrud-exercitation"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 370))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 360))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 350))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 600 340)))))))
+        (instance (rename &i6 "$i6")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 1000 360)))
+          (designator (stringDisplay "R6"))
+          (property Value (string (stringDisplay "Sed"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 1000 400))))))
+          (property Tolerance (string (stringDisplay "amet elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 390))))))
+          (property Manufacturer (string (stringDisplay "Consectetur adipiscing elit"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 380))))))
+          (property Part_Number (string (stringDisplay "nostrud-exercitation-ullamco"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 370))))))
+          (property Datasheet (string (stringDisplay "ut labore et dolore magna aliqua ut enim"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 360))))))
+          (property Description (string (stringDisplay "Excepteur sint occaecat cupidatat non proident"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 350))))))
+          (property Footprint (string (stringDisplay "Duis aute irure dolor"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 1000 340)))))))
+        (net N1
+          (joined (portRef &2 (instanceRef &i1)) (portRef &1 (instanceRef &i2)))
+          (net (rename &n1 "N1")
+            (figure NET (path (pointList (pt 320 760) (pt 560 760))))))
+        (net N2
+          (joined (portRef &2 (instanceRef &i2)) (portRef &1 (instanceRef &i3)))
+          (net (rename &n2 "N2")
+            (figure NET (path (pointList (pt 720 760) (pt 960 760))))))
+        (net N3
+          (joined (portRef &2 (instanceRef &i4)) (portRef &1 (instanceRef &i5)))
+          (net (rename &n3 "N3")
+            (figure NET (path (pointList (pt 320 360) (pt 560 360))))))
+        (net N4
+          (joined (portRef &2 (instanceRef &i5)) (portRef &1 (instanceRef &i6)))
+          (net (rename &n4 "N4")
+            (figure NET (path (pointList (pt 720 360) (pt 960 360))))))))))

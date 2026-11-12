@@ -1,0 +1,6 @@
+#agni-run 1fdb213e3262db43
+n      count(r)  count(distinct r)  list(distinct r)  provenance
+/+24V  4         2                  ["J1","U1"]       regulator.fires.kicad_sch
+/GND   1         1                  ["U1"]            regulator.fires.kicad_sch
+
+2 result(s)

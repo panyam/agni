@@ -1,0 +1,258 @@
+# KiCad's own ERC and DRC over the royalblue54l-feather seed (agni issue 967), from tools/samples/boards/royalblue54L-feather.
+# Do not hand-edit: hack/kicad_oracle.sh writes this file, and the point of it is that we did not
+# choose the answer. TestSeedTriageAgainstKiCad compares the seed's triage record with it.
+#
+# 10.0.6
+# kicad-cli sch erc --format json --severity-all RoyalBlue54L-Feather.kicad_sch
+# kicad-cli pcb drc --format json --severity-all RoyalBlue54L-Feather.kicad_pcb
+#
+# Library warnings are left out. A line is one violation: tool, type, severity, the subject in
+# agni's spelling (a net, two nets joined by | for a pair, or - for none), then KiCad's description
+# and its items, tab-separated. A pin is resolved to its net through KiCad's own netlist.
+drc	annular_width	error	net:+BATT	Annular width (board setup constraints min annular width 0.0500 mm; actual 0.0000 mm)	PTH pad 1 [+BATT] of J2
+drc	annular_width	error	net:+BATT	Annular width (board setup constraints min annular width 0.0500 mm; actual 0.0000 mm)	PTH pad 1 [+BATT] of J2
+drc	clearance	error	net:/Debugger/D+|net:/Debugger/D-	Clearance violation ( clearance 0.2032 mm; actual 0.1500 mm)	Pad 12 [/Debugger/D-] of U5 on F.Cu	Pad 13 [/Debugger/D+] of U5 on F.Cu
+drc	clearance	error	net:/Debugger/D+|net:/Debugger/D-	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Pad A6 [/Debugger/D+] of J3 on F.Cu	Pad A7 [/Debugger/D-] of J3 on F.Cu
+drc	clearance	error	net:/Debugger/D+|net:/Debugger/D-	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Pad A6 [/Debugger/D+] of J3 on F.Cu	Pad B7 [/Debugger/D-] of J3 on F.Cu
+drc	clearance	error	net:/Debugger/D+|net:/Debugger/D-	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Pad A7 [/Debugger/D-] of J3 on F.Cu	Pad B6 [/Debugger/D+] of J3 on F.Cu
+drc	clearance	error	net:/Debugger/D+|net:unconnected-(J3-SBU1-PadA8)	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Pad A8 [unconnected-(J3-SBU1-PadA8)] of J3 on F.Cu	Pad B6 [/Debugger/D+] of J3 on F.Cu
+drc	clearance	error	net:/Debugger/D+|net:unconnected-(U5-P0.15-Pad14)	Clearance violation ( clearance 0.2032 mm; actual 0.1500 mm)	Pad 13 [/Debugger/D+] of U5 on F.Cu	Pad 14 [unconnected-(U5-P0.15-Pad14)] of U5 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:/Debugger/USB.CC1	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Pad A5 [/Debugger/USB.CC1] of J3 on F.Cu	Pad B7 [/Debugger/D-] of J3 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:GND	Clearance violation ( clearance 0.2032 mm; actual 0.1500 mm)	Pad 2 [/Debugger/D-] of U3 on F.Cu	Pad 3 [GND] of U3 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:GND	Clearance violation ( clearance 0.2032 mm; actual 0.1914 mm)	Track [GND] on F.Cu, length 0.4425 mm	Pad 2 [/Debugger/D-] of U3 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:GND	Clearance violation ( clearance 0.2032 mm; actual 0.1975 mm)	Pad 2 [/Debugger/D-] of U3 on F.Cu	Blind via [GND] on F.Cu - B.Cu
+drc	clearance	error	net:/Debugger/D-|net:Net-(U5-DECUSB)	Clearance violation ( clearance 0.2032 mm; actual 0.1500 mm)	Pad 11 [Net-(U5-DECUSB)] of U5 on F.Cu	Pad 12 [/Debugger/D-] of U5 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:Net-(U5-DECUSB)	Clearance violation ( clearance 0.2032 mm; actual 0.2000 mm)	Track [Net-(U5-DECUSB)] on F.Cu, length 0.5325 mm	Pad 12 [/Debugger/D-] of U5 on F.Cu
+drc	clearance	error	net:/Debugger/D-|net:unconnected-(U3-IO1-Pad1)	Clearance violation ( clearance 0.2032 mm; actual 0.1500 mm)	Pad 1 [unconnected-(U3-IO1-Pad1)] of U3 on F.Cu	Pad 2 [/Debugger/D-] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:+BATT	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 1 [+BATT] of J2
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A0	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 5 [/Connectors/ANALOG.A0] of J1
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A1	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 6 [/Connectors/ANALOG.A1] of J1
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A2	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 7 [/Connectors/ANALOG.A2] of J1
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A3	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 8 [/Connectors/ANALOG.A3] of J1
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A4	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 9 [/Connectors/ANALOG.A4] of J1
+drc	copper_edge_clearance	error	net:/Connectors/ANALOG.A5	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 10 [/Connectors/ANALOG.A5] of J1
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D10	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 7 [/Connectors/DIG.D10] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D11	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 6 [/Connectors/DIG.D11] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D12	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 5 [/Connectors/DIG.D12] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D13	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 4 [/Connectors/DIG.D13] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D5	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 10 [/Connectors/DIG.D5] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D6	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 9 [/Connectors/DIG.D6] of J2
+drc	copper_edge_clearance	error	net:/Connectors/DIG.D9	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 8 [/Connectors/DIG.D9] of J2
+drc	copper_edge_clearance	error	net:/Connectors/ENABLE	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 2 [/Connectors/ENABLE] of J2
+drc	copper_edge_clearance	error	net:/Connectors/I2C.SCL	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 11 [/Connectors/I2C.SCL] of J2
+drc	copper_edge_clearance	error	net:/Connectors/I2C.SDA	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 12 [/Connectors/I2C.SDA] of J2
+drc	copper_edge_clearance	error	net:/Connectors/SHPHLD	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 16 [/Connectors/SHPHLD] of J1
+drc	copper_edge_clearance	error	net:/Connectors/SPI.MISO	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 13 [/Connectors/SPI.MISO] of J1
+drc	copper_edge_clearance	error	net:/Connectors/SPI.MOSI	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 12 [/Connectors/SPI.MOSI] of J1
+drc	copper_edge_clearance	error	net:/Connectors/SPI.SCK	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 11 [/Connectors/SPI.SCK] of J1
+drc	copper_edge_clearance	error	net:/Connectors/UART.RX	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 14 [/Connectors/UART.RX] of J1
+drc	copper_edge_clearance	error	net:/Connectors/UART.TX	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 15 [/Connectors/UART.TX] of J1
+drc	copper_edge_clearance	error	net:/Debugger/SWD_TRG.~{RESET}	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 1 [/Debugger/SWD_TRG.~{RESET}] of J1
+drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 4 [GND] of J1
+drc	copper_edge_clearance	error	net:VDD	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 2 [VDD] of J1
+drc	copper_edge_clearance	error	net:VSYS	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 3 [VSYS] of J2
+drc	copper_edge_clearance	error	net:unconnected-(J1-Pin_3-Pad3)	Board edge clearance violation (board setup constraints edge clearance 0.1270 mm; actual 0.0000 mm)	Segment on Edge.Cuts	PTH pad 3 [unconnected-(J1-Pin_3-Pad3)] of J1
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint H1	Footprint J5
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint H2	Footprint J2
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint J3	Footprint J5
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint J4	Footprint J2
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP12	Footprint TP10
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP12	Footprint TP11
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP6	Footprint TP7
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP8	Footprint TP5
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP8	Footprint TP7
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP9	Footprint TP10
+drc	courtyards_overlap	error	-	Courtyards overlap	Footprint TP9	Footprint TP11
+drc	drill_out_of_range	error	net:+BATT	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [+BATT] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:+BATT	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [+BATT] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A0	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A0] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A1	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A1] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A2	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A2] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A3	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A3] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A4	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A4] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A4	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A4] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ANALOG.A5	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ANALOG.A5] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D10	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D10] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D11	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D11] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D12	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D12] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D13	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D13] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D6	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D6] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/DIG.D9	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/DIG.D9] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/ENABLE	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/ENABLE] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/I2C.SCL	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/I2C.SCL] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/I2C.SCL	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/I2C.SCL] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/I2C.SDA	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/I2C.SDA] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/I2C.SDA	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/I2C.SDA] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SHPHLD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SHPHLD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SHPHLD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SHPHLD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SPI.MISO	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SPI.MISO] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SPI.MISO	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SPI.MISO] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SPI.MOSI	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SPI.MOSI] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SPI.MOSI	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SPI.MOSI] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/SPI.SCK	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/SPI.SCK] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/UART.RX	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/UART.RX] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/UART.RX	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/UART.RX] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/UART.TX	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/UART.TX] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Connectors/UART.TX	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Connectors/UART.TX] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/D+	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/D+] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/D-	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/D-] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.SWDCLK	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.SWDCLK] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.SWDIO	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.SWDIO] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.SWDIO	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.SWDIO] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.~{RESET}	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.~{RESET}] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.~{RESET}	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.~{RESET}] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/SWD_TRG.~{RESET}	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/SWD_TRG.~{RESET}] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_SWDCLK_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_SWDCLK_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_SWDCLK_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_SWDCLK_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_SWDIO_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_SWDIO_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_SWDIO_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_SWDIO_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_~{RESET}_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_~{RESET}_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/TRG_~{RESET}_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/TRG_~{RESET}_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/UART_RX_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/UART_RX_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/UART_RX_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/UART_RX_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/UART_TX_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/UART_TX_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/UART_TX_NRF52	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/UART_TX_NRF52] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.CC1	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.CC1] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.CC1	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.CC1] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.CC2	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.CC2] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.CC2	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.CC2] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.VBUS	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.VBUS] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/USB.VBUS	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/USB.VBUS] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/Debugger/nRF52_VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/Debugger/nRF52_VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.INT	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.INT] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.INT	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.INT] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.SCL	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.SCL] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.SCL	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.SCL] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.SDA	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.SDA] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nPM1300/NPM1300.SDA	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nPM1300/NPM1300.SDA] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nRF54L15/D2_FLASH	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nRF54L15/D2_FLASH] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nRF54L15/D2_FLASH	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nRF54L15/D2_FLASH] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nRF54L15/~{CS}_FLASH	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nRF54L15/~{CS}_FLASH] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:/nRF54L15/~{CS}_FLASH	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [/nRF54L15/~{CS}_FLASH] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:GND	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [GND] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(D1-A)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(D1-A)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(D1-A)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(D1-A)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J6-Pin_2)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J6-Pin_2)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J6-Pin_2)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J6-Pin_2)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J6-Pin_4)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J6-Pin_4)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J6-Pin_4)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J6-Pin_4)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-SWCLK)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-SWCLK)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-SWCLK)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-SWCLK)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-SWDIO)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-SWDIO)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-SWDIO)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-SWDIO)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-~{RESET})	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-~{RESET})] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-~{RESET})	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-~{RESET})] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(J8-~{RESET})	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(J8-~{RESET})] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(JP1-A)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(JP1-A)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U1-P1.00/XL1)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U1-P1.00/XL1)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U1-P1.00/XL1)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U1-P1.00/XL1)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U1-P1.01/XL2)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U1-P1.01/XL2)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U1-P1.01/XL2)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U1-P1.01/XL2)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U5-DEC4)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U5-DEC4)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:Net-(U5-DEC4)	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [Net-(U5-DEC4)] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VDD	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VDD] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VSYS	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VSYS] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VSYS	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VSYS] on F.Cu - B.Cu
+drc	drill_out_of_range	error	net:VSYS	Hole size out of range (board setup constraints min hole 0.2000 mm; actual 1.000e-05 mm)	Blind via [VSYS] on F.Cu - B.Cu
+drc	holes_co_located	warning	net:+BATT	Drilled holes co-located	PTH pad 1 [+BATT] of J2	PTH pad 1 [+BATT] of J2
+erc	endpoint_off_grid	warning	-	Symbol pin or wire end off connection grid	Horizontal Wire, length 0.0503 mm
+erc	endpoint_off_grid	warning	-	Symbol pin or wire end off connection grid	Horizontal Wire, length 0.0640 mm
+erc	endpoint_off_grid	warning	-	Symbol pin or wire end off connection grid	Vertical Wire, length 0.0508 mm
+erc	endpoint_off_grid	warning	net:/Debugger/D+	Symbol pin or wire end off connection grid	Symbol TP7 Pin 1 [1, Passive, Line]
+erc	power_pin_not_driven	error	net:+BATT	Input Power pin not driven by any Output Power pins	Symbol #PWR06 Pin 1 [Power input, Line]
+erc	power_pin_not_driven	error	net:/Debugger/USB.VBUS	Input Power pin not driven by any Output Power pins	Symbol U2 Pin 21 [VBUS, Power input, Line]
+erc	power_pin_not_driven	error	net:/Debugger/nRF52_VDD	Input Power pin not driven by any Output Power pins	Symbol J8 Pin 1 [VCC, Power input, Line]
+erc	power_pin_not_driven	error	net:GND	Input Power pin not driven by any Output Power pins	Symbol #PWR02 Pin 1 [Power input, Line]
+erc	power_pin_not_driven	error	net:VDD	Input Power pin not driven by any Output Power pins	Symbol #PWR01 Pin 1 [Power input, Line]

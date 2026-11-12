@@ -1,0 +1,3 @@
+# WS3-026 anti-false-positive gate: every rail and ground carries a test point; the rule
+# must stay silent with the channel open.
+fires: {}

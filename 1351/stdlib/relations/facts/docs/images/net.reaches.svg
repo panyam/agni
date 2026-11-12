@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="reaches predicate: the walk crosses two-pin series parts like a resistor or ferrite, and stops at a DC-blocking capacitor or a bus-like net">
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- LEFT: crosses series parts -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#2f8a4c">crosses: two-pin series part</text>
+  <g stroke="#2f8a4c" stroke-width="2.5" fill="none">
+    <line x1="40" y1="130" x2="90" y2="130"/>
+    <rect x="90" y="118" width="40" height="24" rx="3" fill="#ffffff"/>
+    <line x1="130" y1="130" x2="200" y2="130"/>
+    <rect x="200" y="122" width="34" height="16" rx="8" fill="#ffffff"/>
+    <line x1="234" y1="130" x2="300" y2="130"/>
+    <circle cx="40" cy="130" r="4" fill="#2f8a4c"/>
+    <circle cx="300" cy="130" r="4" fill="#2f8a4c"/>
+  </g>
+  <text x="110" y="110" font-size="11" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <text x="217" y="114" font-size="11" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">FB1</text>
+  <text x="40" y="118" font-size="11" fill="#6b7280" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">A</text>
+  <text x="300" y="118" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">C</text>
+  <text x="170" y="216" font-size="13" fill="#2f8a4c" text-anchor="middle">R, ferrite, fuse → reaches(A, C)</text>
+
+  <!-- RIGHT: stops -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#d64545">stops: DC block or bus-like</text>
+  <!-- cap as a DC block -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="380" y1="130" x2="452" y2="130"/>
+    <line x1="452" y1="114" x2="452" y2="146"/>
+    <line x1="466" y1="114" x2="466" y2="146"/>
+    <circle cx="380" cy="130" r="4" fill="#d64545"/>
+  </g>
+  <text x="459" y="106" font-size="11" fill="#394049" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">C1</text>
+  <!-- stop marker at the cap -->
+  <g stroke="#d64545" stroke-width="3" fill="none">
+    <line x1="486" y1="118" x2="510" y2="142"/>
+    <line x1="510" y1="118" x2="486" y2="142"/>
+  </g>
+  <!-- ground as bus-like stop -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="560" y1="112" x2="560" y2="150"/>
+    <line x1="546" y1="150" x2="574" y2="150"/>
+    <line x1="551" y1="157" x2="569" y2="157"/>
+    <line x1="556" y1="164" x2="564" y2="164"/>
+  </g>
+  <text x="560" y="106" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">GND</text>
+  <text x="490" y="216" font-size="13" fill="#d64545" text-anchor="middle">cap / rail / ground → walk stops</text>
+</svg>

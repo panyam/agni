@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="supply-exceeds-abs-max rule: a rail above the datasheet absolute-max supply is flagged; a rail under it is fine">
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ============ LEFT: flagged (rail over abs-max) ============ -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: over abs-max</text>
+  <!-- rail into U1 VIN -->
+  <line x1="60" y1="110" x2="150" y2="110" stroke="#d64545" stroke-width="2.5"/>
+  <text x="100" y="100" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+24 V</text>
+  <rect x="150" y="86" width="86" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="193" y="107" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="193" y="124" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VIN</text>
+  <text x="150" y="176" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">24 V  &gt;  20 V abs-max</text>
+  <text x="150" y="204" font-size="11" fill="#6b7280" text-anchor="middle">abs-max 20 V (datasheet)</text>
+
+  <!-- ============ RIGHT: fine (rail under abs-max) ============ -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: under abs-max</text>
+  <line x1="400" y1="110" x2="490" y2="110" stroke="#394049" stroke-width="2"/>
+  <text x="440" y="100" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+12 V</text>
+  <rect x="490" y="86" width="86" height="48" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="533" y="107" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="533" y="124" font-size="10" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VIN</text>
+  <text x="490" y="176" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">12 V  &#8804;  20 V abs-max</text>
+  <text x="490" y="204" font-size="11" fill="#6b7280" text-anchor="middle">abs-max 20 V (datasheet)</text>
+</svg>

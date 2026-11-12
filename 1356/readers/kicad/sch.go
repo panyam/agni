@@ -1,0 +1,451 @@
+package kicad
+
+import (
+	"fmt"
+	"io"
+	"sort"
+
+	"github.com/panyam/agni/core/num"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/refdes"
+)
+
+// partIdentityProps lists the KiCad properties that both readers copy into a component's
+// attributes. They are Value, the part-identity pair (MPN, Manufacturer, the WS10-003 join key when
+// no BomLine exists), and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet
+// join, WS1-037). Every other property goes on the SECTION alone (sectionProps). The lexicon's
+// attribute keys read it there, and classification, which tokenizes every component attribute, does
+// not (agni issue 1285).
+//
+// Both readers share this one list, because per-reader copies drift. When the board read copied
+// Value alone, component.mpn was empty, so the datasheet tier reported clean over a file that
+// stated an MPN on every footprint (agni issue 570).
+var partIdentityProps = []string{"Value", "MPN", "Manufacturer", "Footprint", "Datasheet"}
+
+// ReadSchematic parses a KiCad .kicad_sch schematic into an ir.Design.
+//
+// Fidelity: lossy-bounded (structural subset). We extract the part-type library
+// (lib_symbols), the placed components (grouped by reference designator, with each
+// multi-unit placement becoming a ComponentSection), the hierarchical sub-sheet references,
+// and the nets. KiCad stores schematic connectivity implicitly (wires + pins + labels are
+// geometry), so nets are computed from that geometry by schNets (see sch_nets.go), not read
+// from the file. sourceFile is recorded in provenance only; the caller owns file I/O
+// (CONSTRAINTS C1).
+func ReadSchematic(r io.Reader, sourceFile string) (*ir.Design, error) {
+	return ReadSchematicWithSymbols(r, sourceFile, nil)
+}
+
+// ReadSchematicWithSymbols is ReadSchematic plus external symbol-library resolution
+// (WS1-016). openSym fetches a library's .kicad_sym bytes by nickname for lib_id
+// references that the schematic does not embed. Embedded lib_symbols always win; a library
+// that resolves nowhere degrades to placeholder artwork and no typed pins. nil openSym
+// resolves nothing. The caller owns file I/O (C1); formats builds the opener from the
+// project's sym-lib-table and the --symbol-path dirs.
+func ReadSchematicWithSymbols(r io.Reader, sourceFile string, openSym func(lib string) ([]byte, error)) (*ir.Design, error) {
+	root, err := parse(r)
+	if err != nil {
+		return nil, err
+	}
+	if root.Head() != "kicad_sch" {
+		return nil, fmt.Errorf("kicad: not a .kicad_sch file (root is %q)", root.Head())
+	}
+	return extractSch(root, sourceFile, newSymLibCache(openSym)), nil
+}
+
+// extractSch walks the schematic tree: the part-type library, the placed symbols (grouped
+// into components + sections), and the sub-sheet references.
+func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
+	d := &ir.Design{
+		IrVersion:    "0",
+		SourceFormat: "kicad-sch",
+		Attributes:   map[string]string{},
+		Prov:         &ir.Provenance{SourceFile: src},
+	}
+	if tb := root.Child("title_block"); tb != nil {
+		d.Name = atomOf(tb.Child("title").Arg(1))
+	}
+
+	libs := newLibAccum()
+	libs.collect(root, src)
+
+	comps := newCompAccum()
+	comps.collect(root, src, "")
+	var collisions []*ir.RefDesCollision
+	d.Components, collisions = comps.components()
+	unresolvedSyms := libs.resolveExternal(d.Components, syms, src)
+	d.Libraries = libs.libraries()
+
+	// Nets are computed from the schematic geometry (wires + pins + labels); see sch_nets.go.
+	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
+	nets, dangles, noJunction, joinedTaps := schNets(root, src, syms)
+	d.Nets = nets
+	// Unlike the board readers, this one KEEPS a placeholder-designated symbol. Such a symbol is
+	// real circuitry that somebody has not named yet, and dropping it would make the design read
+	// short. So the diagnostic is this reader's job. The parts are drawn and connected, and
+	// nothing downstream can tell that their names are missing.
+	d.InputDiagnostics = &ir.InputDiagnostics{
+		DanglingEndpoints: dangles,
+		RefDesCollisions:  collisions,
+		// Declared even when the slice is empty, because this reader looked. Here an empty list
+		// means "no collisions". On a reader that cannot look it would mean "nobody asked" (agni
+		// issue 309).
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
+		NoJunctionEndpoints:   noJunction,
+		JoinedTaps:            joinedTaps,
+		UnmodeledBuses:        collectBuses(root, src, nil),
+		RangeLabels:           rangeLabels(root, src),
+		UnresolvedSymbols:     unresolvedSyms,
+		ResolvedSymbols:       libs.resolvedSymbols(),
+		UnannotatedComponents: refdes.Unannotated(d.Components),
+	}
+
+	// Hierarchical sub-sheet references. Recorded so the hierarchy is visible; the sub-sheet
+	// files themselves are not recursively loaded here (needs multi-file I/O).
+	for _, sh := range root.Children("sheet") {
+		d.Sheets = append(d.Sheets, &ir.Sheet{
+			Id:   uuidOf(sh),
+			Name: propValue(sh, "Sheetname"),
+			Prov: &ir.Provenance{SourceFile: src, NativeId: uuidOf(sh), NativeIdKind: kicadNativeIDKind},
+		})
+	}
+	return d
+}
+
+// libAccum accumulates part-type libraries across one or more sheet files, deduping parts
+// by their lib_id (a hierarchy's files each embed their own lib_symbols copy of shared
+// parts; the first definition wins).
+type libAccum struct {
+	byName   map[string]*ir.PartLibrary
+	order    []string
+	partSeen map[string]bool
+	// resolved lists every symbol definition that this accumulator took in, embedded or external,
+	// with its pins (agni issue 418). It is kept beside the failure list, because a rule holding only
+	// the failures can report only failures. A schematic whose symbols all loaded would then look
+	// exactly like one the reader never opened.
+	resolved []*ir.ResolvedSymbol
+}
+
+func newLibAccum() *libAccum {
+	return &libAccum{byName: map[string]*ir.PartLibrary{}, partSeen: map[string]bool{}}
+}
+
+// collect adds root's lib_symbols entries, grouped into libraries by lib_id prefix
+// (e.g. "Device:R" -> library "Device").
+func (a *libAccum) collect(root *node, src string) {
+	for _, sym := range root.Child("lib_symbols").Children("symbol") {
+		id := atomOf(sym.Arg(1))
+		if a.partSeen[id] {
+			continue
+		}
+		a.partSeen[id] = true
+		pt := &ir.PartType{
+			Name:             id,
+			DesignatorPrefix: propValue(sym, "Reference"),
+			Pins:             partPins(sym),
+			Prov:             &ir.Provenance{SourceFile: src},
+		}
+		// An embedded definition cannot fail to resolve, and it still belongs in the considered
+		// set. A schematic that carries all its own symbols is the ordinary case. Leaving it out
+		// would leave that run with nothing to say about the references it read fine.
+		a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: id, Kind: "kicad_sym_embedded", PinCount: num.Int32(len(pt.Pins))})
+		prefix := libPrefix(id)
+		lib := a.byName[prefix]
+		if lib == nil {
+			lib = &ir.PartLibrary{Name: prefix, Prov: &ir.Provenance{SourceFile: src}}
+			a.byName[prefix] = lib
+			a.order = append(a.order, prefix)
+		}
+		lib.Parts = append(lib.Parts, pt)
+	}
+}
+
+// resolveExternal adds part types for component sections whose PartRef is missing from
+// the embedded libraries, resolved through the external symbol cache (WS1-016). Embedded
+// parts always win.
+//
+// A ref that resolves nowhere is REPORTED (WS1-052) rather than left absent. The part keeps its
+// section but gains no pins. A component with no pins has no connections, so without the report
+// the design reads clean and emptier than it is. The result is grouped per lib_id with the
+// placements that lost pins, in first-appearance order. A nil cache (no opener supplied) reports
+// nothing, since that is the caller choosing to read without symbols rather than a resolution
+// failure.
+func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src string) []*ir.UnresolvedSymbol {
+	if syms == nil {
+		return nil
+	}
+	var missing []string
+	byRef := map[string][]string{}
+	for _, c := range comps {
+		for _, sec := range c.Sections {
+			if a.partSeen[sec.PartRef] {
+				continue
+			}
+			sym := syms.symbol(sec.PartRef)
+			if sym == nil {
+				if _, seen := byRef[sec.PartRef]; !seen {
+					missing = append(missing, sec.PartRef)
+				}
+				byRef[sec.PartRef] = append(byRef[sec.PartRef], c.RefDes)
+				continue
+			}
+			a.partSeen[sec.PartRef] = true
+			pt := &ir.PartType{
+				Name:             sec.PartRef,
+				DesignatorPrefix: propValue(sym, "Reference"),
+				Pins:             partPins(sym),
+				Prov:             &ir.Provenance{SourceFile: src},
+			}
+			a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: sec.PartRef, Kind: "kicad_sym_lib", PinCount: num.Int32(len(pt.Pins))})
+			prefix := libPrefix(sec.PartRef)
+			lib := a.byName[prefix]
+			if lib == nil {
+				lib = &ir.PartLibrary{Name: prefix, Prov: &ir.Provenance{SourceFile: src}}
+				a.byName[prefix] = lib
+				a.order = append(a.order, prefix)
+			}
+			lib.Parts = append(lib.Parts, pt)
+		}
+	}
+	var out []*ir.UnresolvedSymbol
+	for _, libID := range missing {
+		out = append(out, &ir.UnresolvedSymbol{
+			Symref: libID,
+			Kind:   "kicad_sym_lib",
+			RefDes: byRef[libID],
+			Prov:   &ir.Provenance{SourceFile: src},
+		})
+	}
+	return out
+}
+
+// resolvedSymbols returns every symbol definition that the accumulator took in, in first-seen order.
+//
+// The KIND separates the two ways a KiCad reference resolves. An embedded definition comes out of the
+// schematic's own lib_symbols block and is the ordinary case; an external one came from --symbol-path
+// and is the case that can go wrong on a different machine. A reader chasing a lost connection wants
+// to know which of the two answered.
+func (a *libAccum) resolvedSymbols() []*ir.ResolvedSymbol { return a.resolved }
+
+func (a *libAccum) libraries() []*ir.PartLibrary {
+	var libs []*ir.PartLibrary
+	for _, name := range a.order {
+		libs = append(libs, a.byName[name])
+	}
+	return libs
+}
+
+// compAccum accumulates placed components across one or more sheet instances, grouped by
+// resolved reference designator; each placement is a section (one per KiCad unit).
+// Virtual power/flag symbols (#PWR, #FLG) are connectivity anchors, not physical
+// components, and are skipped.
+type compAccum struct {
+	byRef    map[string]*ir.Component
+	refOrder []string
+}
+
+func newCompAccum() *compAccum { return &compAccum{byRef: map[string]*ir.Component{}} }
+
+// symbolKey returns the name under which lib_symbols files a placed symbol's definition. KiCad writes a
+// lib_name when the embedded copy differs from the library's, as with "GND_3" beside lib_id
+// "power:GND", and the definition is then keyed on it rather than on lib_id.
+func symbolKey(ps *node) string {
+	if n := atomOf(ps.Child("lib_name").Arg(1)); n != "" {
+		return n
+	}
+	return atomOf(ps.Child("lib_id").Arg(1))
+}
+
+// collect adds root's placed symbols, resolving each reference for the given instance
+// path (symbolRefAt; empty for a single-file read).
+func (a *compAccum) collect(root *node, src, instPath string) {
+	for _, ps := range root.Children("symbol") {
+		ref := symbolRefAt(ps, instPath)
+		if ref == "" || ref[0] == '#' {
+			continue
+		}
+		comp := a.byRef[ref]
+		if comp == nil {
+			comp = &ir.Component{RefDes: ref, Attributes: map[string]string{}, Prov: &ir.Provenance{SourceFile: src}}
+			a.byRef[ref] = comp
+			a.refOrder = append(a.refOrder, ref)
+		}
+		sec := &ir.ComponentSection{
+			Index:      num.Int32(unitOf(ps) - 1),
+			PartRef:    symbolKey(ps),
+			LibraryRef: libPrefix(symbolKey(ps)),
+			Attributes: map[string]string{},
+			Prov:       &ir.Provenance{SourceFile: src, NativeId: uuidOf(ps), NativeIdKind: kicadNativeIDKind},
+		}
+		for _, key := range partIdentityProps {
+			if v := propValue(ps, key); v != "" {
+				sec.Attributes[key] = v
+				if _, ok := comp.Attributes[key]; !ok {
+					comp.Attributes[key] = v
+				}
+			}
+		}
+		sectionProps(ps, sec.Attributes)
+		// dnp/in_bom/on_board are symbol-instance TOKENS ((dnp yes)), not properties. They are
+		// the populated-vs-not fabrication flags that a check or a diff needs (WS1-037). A DNP
+		// part counts as unpopulated; in_bom/on_board scope it out of BOM/assembly. Faithful to
+		// the source spelling ("yes"/"no"); the concept generalizes across formats so it
+		// goes in the open attributes map, not a new semantic field (C9).
+		for _, tok := range []string{"dnp", "in_bom", "on_board"} {
+			if v := atomOf(ps.Child(tok).Arg(1)); v != "" {
+				sec.Attributes[tok] = v
+				if _, ok := comp.Attributes[tok]; !ok {
+					comp.Attributes[tok] = v
+				}
+			}
+		}
+		comp.Sections = append(comp.Sections, sec)
+	}
+}
+
+// components returns the accumulated components (sections sorted by unit) and the ref-des
+// collision diagnostics (see refDesCollision).
+func (a *compAccum) components() ([]*ir.Component, []*ir.RefDesCollision) {
+	var comps []*ir.Component
+	var collisions []*ir.RefDesCollision
+	for _, ref := range a.refOrder {
+		comp := a.byRef[ref]
+		sort.SliceStable(comp.Sections, func(i, j int) bool { return comp.Sections[i].Index < comp.Sections[j].Index })
+		comps = append(comps, comp)
+		if c := refDesCollision(comp); c != nil {
+			collisions = append(collisions, c)
+		}
+	}
+	return comps, collisions
+}
+
+// symbolRef resolves a placed symbol's reference designator for a single-file read; see
+// symbolRefAt for the resolution rules.
+func symbolRef(ps *node) string { return symbolRefAt(ps, "") }
+
+// symbolRefAt resolves a placed symbol's reference designator for one sheet INSTANCE. The
+// instances block's per-project reference is post-annotation truth (KiCad writes it on
+// save and honors it on load), so it beats the Reference property. That property is the
+// symbol's authoring-time value, which files edited across projects may leave stale or as
+// an unannotated placeholder (WS1-020). instPath is the instance's KiCad path (the
+// "/<root uuid>/<sheet uuid>..." chain that the hierarchy walk tracks). A reused sheet file
+// has one instances entry PER placement, and the matching path's reference is this
+// instance's identity (RV201 in one amplifier, RV301 in the other). An empty instPath
+// (single-file read) or an unmatched path falls back to the first non-placeholder entry,
+// then to the Reference property.
+func symbolRefAt(ps *node, instPath string) string {
+	if inst := ps.Child("instances"); inst != nil {
+		first := ""
+		for _, proj := range inst.Children("project") {
+			for _, path := range proj.Children("path") {
+				rf := path.Child("reference")
+				if rf == nil {
+					continue
+				}
+				r := atomOf(rf.Arg(1))
+				if r == "" || refdes.IsPlaceholder(r) {
+					continue
+				}
+				if instPath != "" && atomOf(path.Arg(1)) == instPath {
+					return r
+				}
+				if first == "" {
+					first = r
+				}
+			}
+		}
+		if first != "" {
+			return first
+		}
+	}
+	return propValue(ps, "Reference")
+}
+
+// refDesCollision reports a duplicate ref-des, meaning two schematic symbols claiming the same
+// unit of one designator. A legitimate multi-unit part spreads across distinct unit indices, so it
+// does not trip; only a repeated unit does. The colliding placements' provenance (uuids) is
+// returned so a finding can point at each. Sections are already sorted by Index, so the instance
+// order is deterministic. Returns nil when the component is clean.
+func refDesCollision(c *ir.Component) *ir.RefDesCollision {
+	// A placeholder is not a claimed designator, so two unannotated resistors are two parts with
+	// no name rather than two parts fighting over one, and unannotated-components already
+	// reports them. Judging them a collision would state something false about a sheet that is
+	// merely unfinished. duplicate-ref-des is an error, and its remedy is to rename one of them.
+	// It would also report the same placements twice.
+	if refdes.IsPlaceholder(c.GetRefDes()) {
+		return nil
+	}
+	count := map[int32]int{}
+	for _, s := range c.Sections {
+		count[s.Index]++
+	}
+	var instances []*ir.Provenance
+	for _, s := range c.Sections {
+		if count[s.Index] > 1 {
+			instances = append(instances, s.Prov)
+		}
+	}
+	if len(instances) == 0 {
+		return nil
+	}
+	return &ir.RefDesCollision{RefDes: c.RefDes, Instances: instances}
+}
+
+// partPins pools the pins across a lib symbol's unit/body-style sub-symbols, deduped by
+// pin number, mapping each pin's electrical type onto ir.PinDirection.
+func partPins(sym *node) []*ir.Pin {
+	seen := map[string]bool{}
+	var pins []*ir.Pin
+	for _, sub := range sym.Children("symbol") {
+		for _, pn := range sub.Children("pin") {
+			num := atomOf(pn.Child("number").Arg(1))
+			if num == "" || seen[num] {
+				continue
+			}
+			seen[num] = true
+			p := &ir.Pin{
+				Designator: num,
+				Name:       atomOf(pn.Child("name").Arg(1)),
+				Attributes: map[string]string{},
+			}
+			raw := atomOf(pn.Arg(1))
+			p.Direction = mapSchDirection(raw)
+			if p.Direction == ir.PinDirection_PIN_DIRECTION_UNSPECIFIED && raw != "" {
+				p.Attributes["direction_raw"] = raw
+			}
+			pins = append(pins, p)
+		}
+	}
+	return pins
+}
+
+// mapSchDirection normalizes a KiCad pin electrical type onto ir.PinDirection. tri_state,
+// open_collector and open_emitter keep their own values (agni issue 1082), since reading them as
+// UNSPECIFIED reported a pin whose library declares a type as having none. KiCad's `unspecified`
+// and any spelling not listed fall through to UNSPECIFIED and keep their raw spelling in
+// attributes["direction_raw"].
+func mapSchDirection(raw string) ir.PinDirection {
+	switch raw {
+	case "input":
+		return ir.PinDirection_PIN_DIRECTION_INPUT
+	case "output":
+		return ir.PinDirection_PIN_DIRECTION_OUTPUT
+	case "bidirectional":
+		return ir.PinDirection_PIN_DIRECTION_INOUT
+	case "passive", "free":
+		return ir.PinDirection_PIN_DIRECTION_PASSIVE
+	case "power_in":
+		return ir.PinDirection_PIN_DIRECTION_POWER_IN
+	case "power_out":
+		return ir.PinDirection_PIN_DIRECTION_POWER_OUT
+	case "no_connect":
+		return ir.PinDirection_PIN_DIRECTION_NO_CONNECT
+	case "tri_state":
+		return ir.PinDirection_PIN_DIRECTION_TRISTATE
+	case "open_collector":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR
+	case "open_emitter":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER
+	default:
+		return ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
+	}
+}

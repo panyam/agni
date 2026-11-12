@@ -1,0 +1,13 @@
+$PACKAGES
+
+'CAP-100U' ! 'EEE-1EA101WP' ;  C1
+
+$A_PROPERTIES
+
+'Capacitance' '100µF' ;  C1
+
+$NETS
+
+'VBUS' ; C1.1
+
+$END

@@ -1,0 +1,4 @@
+name: demo-board
+title: A board with one dangling net
+extends: ../../project.yaml
+entry: demo-board.edn

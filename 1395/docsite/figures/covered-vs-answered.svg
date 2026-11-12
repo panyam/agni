@@ -1,0 +1,31 @@
+<svg viewBox="0 0 640 272" role="img" aria-labelledby="covered-vs-answered-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="covered-vs-answered-title">One bar of checklist items, split into three bands. The left band holds the outcomes the run decided: pass, fail, provisional and computed-n-slash-a. The middle band holds items a mechanism exists for but that went unanswered: not-applicable, needs-data, needs-design-intent and inconclusive. The right band holds not-automated, where no mechanism exists at all. A bracket labelled Answered spans the left band only. A wider bracket labelled Covered spans the left and middle bands together. The gap between the two brackets is where a rule exists, was selected, and still could not run.</title>
+  <path d="M30,72 L30,64 L520,64 L520,72" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="275" y="56" text-anchor="middle" fill="var(--accent-color)" font-size="12" font-weight="600">Covered() = Total - NotAutomated</text>
+  <path d="M30,102 L30,94 L330,94 L330,102" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.7"/>
+  <text x="180" y="86" text-anchor="middle" fill="currentColor" font-size="12" font-weight="600" opacity="0.8">Answered()</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4">
+    <rect x="30" y="110" width="300" height="44" rx="3"/>
+    <rect x="330" y="110" width="190" height="44" rx="3"/>
+    <rect x="520" y="110" width="90" height="44" rx="3"/>
+  </g>
+  <g text-anchor="middle" font-size="10.5" opacity="0.75" fill="currentColor">
+    <text x="180" y="137">the run decided</text>
+    <text x="425" y="137">the question went unasked</text>
+    <text x="565" y="131">no mechanism</text>
+    <text x="565" y="145">exists at all</text>
+  </g>
+  <g fill="currentColor" font-size="10" opacity="0.7">
+    <text x="40" y="176">pass</text>
+    <text x="40" y="190">fail</text>
+    <text x="40" y="204">provisional</text>
+    <text x="40" y="218">computed-n/a</text>
+    <text x="340" y="176">not-applicable</text>
+    <text x="340" y="190">needs-data</text>
+    <text x="340" y="204">needs-design-intent</text>
+    <text x="340" y="218">inconclusive</text>
+    <text x="528" y="176">not-automated</text>
+  </g>
+  <text x="320" y="252" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">the middle band is where a rule exists, was selected, and still could not run</text>
+  <text x="320" y="268" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">which is why agni review gates on the narrower number</text>
+</svg>

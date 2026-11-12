@@ -1,0 +1,156 @@
+package profiles
+
+import (
+	"fmt"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
+)
+
+// esdRule fires when one of the profile's signal nets leaves the board through a connector and
+// nothing clamps it. It is the idiomatic form of a per-interface ESD ask. It is scoped to the
+// profile's signals and gated by the profile's presence machinery, so a binding says `profile: CAN`
+// instead of filtering a design-wide rule's findings down to an interface. It supersedes that
+// WS3-058 stopgap.
+//
+// SCOPE COMES FROM THE DESIGN, NOT THE PROTOCOL. The requirement applies to whichever of the
+// profile's nets net.connector_signal selects, rather than to a per-signal `esd:` flag the way pull-up
+// works. On CAN, _TXD and _RXD run to the MCU and never leave the board, while _CANH and _CANL do,
+// so a blanket per-signal application would fail the two lines that were never exposed. Whether a
+// line is connector-facing is a property of the board in hand. A profile whose bus is entirely
+// on-board therefore selects nothing and reports nothing, so declaring the requirement is safe even
+// where it is usually quiet.
+//
+// PARITY WITH THE CORE RULE IS BY CONSTRUCTION. esd-protection uses the same projected predicate for
+// its scope. The three protection clauses are the same three exemptions, at the same radius. The
+// radius is check.ProtectionReachHops, interpolated rather than written as a literal so the two
+// cannot drift.
+func esdRule(p Profile, _ Requirement) *check.Rule {
+	var rules []query.Rule
+	// unprotected and esd_scope both include the inUse gate. An instance-keyed profile folds the gate
+	// into needs_esd instead, since a net counts only on a bus in use, so its inUse is empty.
+	inUse := []query.Literal{query.Pos(query.Rel("in_use", query.V("iu")))}
+	if p.Instance != "" {
+		rules = append(p.busRules(), query.Def(query.Rel("needs_esd", query.V("n")),
+			query.Pos(query.Rel("on_bus", query.V("s"), query.V("sig"), query.V("n"))),
+			query.Pos(query.Rel("in_use", query.V("s"))),
+			query.Pos(query.Rel("net.connector_signal", query.V("n")))))
+		inUse = nil
+	} else {
+		rules = p.presenceRules()
+		signals := 0
+		for _, s := range p.Signals {
+			body := append([]query.Literal{query.Pos(query.Rel("net.connector_signal", query.V("n")))},
+				netMatch(query.V("n"), s)...)
+			if len(body) == 1 {
+				continue // a signal with no matcher would select every exposed net
+			}
+			signals++
+			rules = append(rules, query.Def(query.Rel("needs_esd", query.V("n")), body...))
+		}
+		if signals == 0 {
+			return nil
+		}
+	}
+
+	// Three ways a net counts as protected, spelled as three rules sharing the esd_ok head. A discrete
+	// TVS is the real answer. An IC on the net carrying a datasheet ESD rating is the common posture
+	// (WS3-073). A Zener is NOT adequate ESD protection but is deliberately exempt here, because
+	// esd-clamp-not-tvs (WS3-078) characterizes that case separately and the two rules partition these
+	// nets between them. The catalog already reports on such a net, and crediting the Zener keeps this
+	// requirement from reporting it twice.
+	//
+	// Every clause carries needs_esd(?n), which binds the head variable for the walk. Without it the
+	// walk has nothing to start from and runs from every net on the board, which is quadratic and made
+	// `agni check` non-terminating on a real design (WS3-114). The guard restricts nothing, because
+	// unprotected already conjoins needs_esd. It is written first for the reader; query.Default plans
+	// the body, so the order no longer decides where the walk starts.
+	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
+		rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
+			query.Pos(query.Rel("needs_esd", query.V("n"))),
+			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
+			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
+			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class))),
+			query.Neg(query.Rel("component.dnp", query.V(c.v)))))
+	}
+	rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
+		query.Pos(query.Rel("needs_esd", query.V("n"))),
+		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
+		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
+		query.Pos(query.Rel("component.esd_rated", query.V("u"))),
+		query.Neg(query.Rel("component.dnp", query.V("u")))))
+
+	unprotected := append([]query.Literal{query.Pos(query.Rel("needs_esd", query.V("n")))}, inUse...)
+	rules = append(rules, query.Def(query.Rel("unprotected", query.V("n")),
+		append(unprotected, query.Neg(query.Rel("esd_ok", query.V("n"))))...))
+
+	// esd_scope is the considered set, every net this requirement APPLIED to, protected or not. It is
+	// `unprotected` without the negated clause. So it holds each net the profile selected as exposed,
+	// on a bus where the presence gate says the interface is in use. A net missing from esd_scope was
+	// never judged. A net in esd_scope and absent from the findings has a clamp in reach.
+	//
+	// Written out rather than derived from the goal above. It is derivable HERE, but signal-dangling
+	// ends in a comparison instead of a negation. Suppose a derivation handled four of the six
+	// requirement shapes. On the other two it would report the failures as the coverage.
+	rules = append(rules, query.Def(query.Rel("esd_scope", query.V("n")),
+		append([]query.Literal{query.Pos(query.Rel("needs_esd", query.V("n")))}, inUse...)...))
+
+	// esd_by names the clamp for a passing net. esd_ok binds the clamping part but projects only the
+	// net. This head projects the part too, because a reviewer wants it named on a pass (agni issue
+	// 662).
+	//
+	// A SECOND head rather than a widening of esd_ok, because unprotected negates that relation and a
+	// negated atom must be unary. Giving esd_ok an arity of two would change what `not esd_ok(?n)`
+	// means. The clauses below mirror the three above.
+	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
+		rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V(c.v)),
+			query.Pos(query.Rel("needs_esd", query.V("n"))),
+			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
+			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
+			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class))),
+			query.Neg(query.Rel("component.dnp", query.V(c.v)))))
+	}
+	rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V("u")),
+		query.Pos(query.Rel("needs_esd", query.V("n"))),
+		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
+		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
+		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
+		query.Pos(query.Rel("component.esd_rated", query.V("u"))),
+		query.Neg(query.Rel("component.dnp", query.V("u")))))
+
+	q := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("unprotected", query.V("n")))}, query.V("n"))
+	domain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("esd_scope", query.V("n")))}, query.V("n"))
+	evidence := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("esd_by", query.V("n"), query.V("clamp")))},
+		query.V("n"), query.V("clamp"))
+	return compileQuery(query.FindingQuery{
+		Rule: check.Rule{
+			Name:     p.lname() + "-esd-missing",
+			Severity: "warning",
+			Summary:  fmt.Sprintf("A %s signal leaves the board through a connector with no ESD clamp.", p.Name),
+			Impact:   "A signal that leaves the board through a connector is a direct ESD path into the transceiver behind it. Human contact discharges kilovolts, and an unclamped bus pin takes the hit. Failures are intermittent, latent, and show up in the field as a port that works until it does not.",
+			Remedy:   requirementRemedy("esd"),
+			Tags:     p.tags(),
+			Detail:   ruleDoc("esd"),
+		},
+		Query:      mustBeInjective(q),
+		Kind:       check.KindNet,
+		SubjectVar: "n",
+		Message:    fmt.Sprintf("%s signal net {n} is exposed on a connector with no ESD protection in reach", p.Name),
+		// ContextVars applies to the finding path and the evidence path alike, so a pass names the
+		// clamp as an entity a reader can click rather than only in prose. The finding goal binds no
+		// clamp, and a context var that does not bind contributes nothing.
+		ContextVars: []query.ContextVar{{Var: "clamp", Kind: check.KindComponent, Role: "clamp"}},
+		Domain: &query.Domain{
+			Query: mustBeInjective(domain),
+			Witness: fmt.Sprintf("%s signal net {n} is exposed on a connector and reaches ESD protection within %d hops",
+				p.Name, check.ProtectionReachHops),
+			Evidence: &evidence,
+		},
+	})
+}

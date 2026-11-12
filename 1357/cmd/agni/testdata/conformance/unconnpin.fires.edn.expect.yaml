@@ -1,0 +1,8 @@
+# unconnected-pin (WS3-013): U1 pin 2 is a typed INPUT on no net, in a design that has a
+# no-connect channel (the nc_-prefixed marker net), so it is a real miss, not library noise.
+# U1 pin 3 sits on the marker net (on_net, silent) and pin 1 is wired; the marker net itself
+# is skipped by single-pin-net's no-connect awareness.
+fires:
+  unconnected-pin:
+    subjects: [U1]
+    why: "pin 2 (typed INPUT) lands on no net while the design can express no-connects"

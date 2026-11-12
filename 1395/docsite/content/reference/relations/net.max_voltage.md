@@ -1,0 +1,53 @@
+---
+title: "net.max_voltage"
+description: "a net's declared rail voltage"
+---
+
+### What it is
+
+`net.max_voltage(net, volts)` yields one row per net that declares a rail voltage, pairing the
+net name with a number. It is emitted only where the design states a voltage. An explicit
+`max_voltage` attribute on the net wins, and otherwise the value is read from the net's name (a
+rail named `+5V`, `3V3`, or `12V0` names its own nominal). A net with neither channel produces no
+row, so the relation is a partial map over nets, not a value for every net.
+
+### For hardware engineers
+
+The netlist actually knows the working voltage of these supply rails. Most signal nets carry
+no voltage claim, so they are simply absent here. During a review you query it to see which rails
+the tool can reason about numerically, and to feed a comparison against a part's ratings, such as a
+join against a datasheet absolute maximum. Suppose a rail you expected does not appear. Then the
+extractor could not read its name as a voltage, or the name holds two disagreeing tokens like
+`12V_TO_5V`, and the extractor refuses to guess between them.
+
+### For software engineers
+
+It resolves a net to a declared constant, with a miss when nothing
+declares one. It is a projection over `Nets()` in which the extractor tries each net's explicit
+attribute first, then the name, and skips the net when both fail. Rows are 1:1 with the nets that
+have a declared voltage; an empty result means no net in the design states or names a voltage.
+The value is carried as a number, so a query can range or compare on it without re-parsing the
+`5V` text form.
+
+### Go projector
+
+`netMaxVoltageFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and, for each net, calls
+`check.RailMaxVoltage(n, n.Name)` (in `core/check/params.go`). That helper returns the explicit
+`max_voltage` attribute when present, else the name-derived nominal (`nominalVoltageFromName`),
+and reports `ok=false` when neither yields a number. The projector emits a row only when `ok` is
+true, filling both the rendered `5V`-style value and the numeric field. One row per net that
+declares a voltage; empty when no net declares or names one.
+
+### Datalog
+
+List every net with a declared voltage:
+
+```
+net.max_voltage(?n, ?v) => ?n, ?v
+```
+
+Find the rails above 3 V and the parts sitting on them:
+
+```
+net.max_voltage(?n, ?v), ?v > 3, component.net(?r, ?n) => ?r, ?n, ?v
+```

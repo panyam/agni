@@ -1,0 +1,77 @@
+---
+title: "i2c-redundant-pull-up"
+description: "An I2C net is pulled to one rail by more than one resistor."
+---
+
+### Remedy
+
+Remove one of the pull-ups, or depopulate it. Which one is a board decision: keep the pull-up sized for the bus capacitance and clock rate this design actually runs at, and take out the one that came along with a module.
+
+### What it means
+
+An I2C net reaches one rail through more than one resistor. The bus is pulled up twice.
+
+The check counts DISTINCT resistors that take the net to a rail, within three series crossings. Two
+routes through one resistor are one pull-up; two resistors are two, however they are drawn.
+
+### Why engineers want it
+
+Resistors in parallel are one smaller resistor. Two 2.2k pull-ups are an effective 1.1k, so the bus
+sinks roughly twice the current it was sized for. An open-drain device can only pull the line low by
+sinking that current. Every device has a maximum current it can sink while it still holds its
+output below VOL. So a bus pulled too hard works with some parts and not others, or its low level
+sits high enough that a receiver reads it as neither state.
+
+It arrives the same way almost every time. A module carries its own termination so it works
+standalone, the board it plugs into already pulls the same bus, and nothing on either schematic is
+wrong on its own.
+
+### Impact
+
+The bus is over-pulled by whatever factor the parallel combination gives. It usually still works, on
+the bench, with the parts that happen to be fitted, so it is a warning worth reading
+rather than a fault worth stopping for.
+
+### Fires versus fine
+
+```
+  fires                                 fine
+
+  +3V3      +3V3                        +3V3
+   |         |                           |
+  R1 2k2    R2 2k2                      R1 2k2
+   |         |                           |
+   +----+----+                           |
+        |                                |
+       SDA                              SDA
+```
+
+### Scope note
+
+- Only nets matching the I2C naming convention at a token boundary (SDA / SCL), the same predicate
+  `i2c-pull-up` uses. A bus named some other way is out of scope rather than passing.
+- A net with NO pull-up is not this rule's subject. `i2c-pull-up` reports it as an error,
+  and reporting the same absence in three places would treble one defect.
+- Pull-ups to DIFFERENT rails are `i2c-pull-up-split-rail`. The two rules fire on disjoint
+  conditions, so a bus is named once, by the rule whose remedy applies to it.
+- Ground is never crossed and a resistor to ground is not counted, because that is a pull-down.
+  Counting it would report a bus held by one pull-up and one pull-down as over-pulled.
+- Severity is `warning`, not `error`, because a jumper-selectable or DNP termination is legal by
+  design and the netlist cannot see the fit status.
+
+### Query structure
+
+Enumerate I2C nets; for each, walk out through resistors up to three crossings, collecting every
+distinct resistor whose far side is a rail; fire when there is more than one and they all end on the
+same rail.
+
+A reachability question cannot express this. `net.reaches` reports a rail as reached however many
+resistors reach it, so a doubled bus and a correct one are the same answer.
+
+### For software readers
+
+Picture a resource with two owners, where each believes it is the only one. Counting the handles
+finds the second owner, and asking whether the resource is held does not. A `defer close()` in both
+the caller and the callee is harmless in one sense, because the thing does get closed. It is wrong
+in another, because the accounting is off. A check that asks only whether it was closed cannot see
+it.

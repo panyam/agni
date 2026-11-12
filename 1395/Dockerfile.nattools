@@ -1,0 +1,45 @@
+# Linux + X11 tool host for the native EDA tools agni shells out to (kicad-cli, xschem, Lepton),
+# with the agni binary and an SSH server. The agni SERVER runs on the HOST (make serve /
+# enchilada); this image provides the tools. Usage is over SSH into the running container, with
+# the workspace bind-mounted at /hw:
+#   render (headless): ssh -p 2222 agni@localhost agni native render /hw/design.sch -o /hw/out.svg
+#   open   (GUI):      ssh -X -p 2222 agni@localhost agni native open   /hw/design.sch   # -> XQuartz
+# This repo's Makefile natup/natdown/natlogs wrap these; a workspace Makefile can add file-driven
+# natrender/natopen wrappers.
+# See docs/NATIVE_VERIFICATION.md.
+
+FROM golang:1.26-bookworm AS build
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o /out/agni ./cmd/agni
+
+FROM debian:bookworm-slim
+# EDA tools + an SSH server with X11 forwarding (ssh -X carries the GUI to the host's XQuartz);
+# x11-apps gives xeyes for a forwarding smoke test.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      xschem lepton-eda gerbv \
+      openssh-server xauth x11-apps ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /out/agni /usr/local/bin/agni
+
+# Lepton's guile front end calls setlocale and aborts if the (ssh-forwarded) locale is not
+# installed; the slim image has none. Pin the always-available C.UTF-8 via PAM's environment so
+# an ssh session gets a valid LC_ALL even when the client forwards an unavailable LANG.
+RUN echo 'LC_ALL=C.UTF-8' >> /etc/environment
+
+# An unprivileged `agni` user to ssh in as; the host's public key is bind-mounted onto its
+# authorized_keys at run time (see the Makefile natup). StrictModes off so a host-owned mounted
+# key file is accepted regardless of its uid/perms; key-only, no passwords, no root login.
+RUN useradd -m -s /bin/bash agni \
+ && mkdir -p /home/agni/.ssh /run/sshd \
+ && chown -R agni:agni /home/agni/.ssh \
+ && chmod 700 /home/agni/.ssh \
+ && ssh-keygen -A \
+ && printf 'X11Forwarding yes\nX11UseLocalhost yes\nPermitRootLogin no\nPasswordAuthentication no\nStrictModes no\n' \
+      > /etc/ssh/sshd_config.d/agni.conf
+
+EXPOSE 22
+WORKDIR /hw
+CMD ["/usr/sbin/sshd", "-D", "-e"]

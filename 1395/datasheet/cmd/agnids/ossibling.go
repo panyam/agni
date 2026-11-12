@@ -1,0 +1,20 @@
+package main
+
+import (
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/mounts"
+)
+
+// resolveSibling resolves a file DERIVED from another artifact's path (a datasheet's doc-IR beside
+// its PDF, an annotations directory) to an absolute host path.
+//
+// The derivation is a pure function of the mount-relative path (`docSibling`, `annotationsDir`).
+// The result is rebuilt through artifact.New rather than pasted onto a string. So a derivation that
+// escapes the mount is caught at the same boundary as a client-supplied URI.
+func resolveSibling(ms []mounts.Mount, uri artifact.URI, derive func(string) string) (string, error) {
+	sib, err := artifact.New(uri.Mount, derive(uri.Path))
+	if err != nil {
+		return "", err
+	}
+	return mounts.Resolve(ms, sib)
+}

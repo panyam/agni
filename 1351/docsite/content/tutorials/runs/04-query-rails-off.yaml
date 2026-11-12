@@ -1,0 +1,8 @@
+# Rung 4: how many rails the built-in vocabulary finds, with the project's conventions deleted from
+# the scratch copy.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  sed -i.orig '/^conventions:/,/^$/d' project.yaml
+  agni query designs/jetson 'net.rail(?n) => count(?n)'

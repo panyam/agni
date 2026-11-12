@@ -1,0 +1,305 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/readers/kicad"
+	"github.com/panyam/agni/service"
+	"github.com/spf13/cobra"
+)
+
+// readAsNamed is the --as-named flag's binding, set once at startup and never mutated per run, like
+// symbolPaths below it (the startup-DEFAULT shape C22 permits). Only newDesignResolver reads it, so
+// it reaches resolution as a resolver FIELD rather than as ambient state.
+var readAsNamed bool
+
+// readFlatten is the --flatten-hierarchy flag's binding, set once at startup like readAsNamed. It
+// goes with every snapshot the CLI ingests (ingest), and with every read that no service mediates
+// (designOverlay).
+var readFlatten bool
+
+// designResolver answers "which artifacts should this read open" for the CLI, as a client of
+// ProjectService.
+//
+// It goes through the service rather than parsing descriptors itself so the CLI and a server give
+// the same answer to which companion supplies the board, whether an unresolved ref is an error, and
+// what a malformed descriptor does (agni issue 170).
+type designResolver struct {
+	ws *cliWorkspace
+	// asNamed disables descriptor-driven redirection and reads exactly the artifact named, even a
+	// declared companion. `examples/tutorial-project`'s check-views target uses it to diff a
+	// schematic export against the netlist.
+	asNamed bool
+}
+
+// newDesignResolver reads the flag once and returns a configured resolver, the same shape as
+// newLoader beside it. The store is built per resolution rather than held here, because the CLI's
+// tree root depends on the path being resolved.
+func newDesignResolver(ws *cliWorkspace) *designResolver {
+	return &designResolver{ws: ws, asNamed: readAsNamed}
+}
+
+// designSource records which artifact each tier of a read opens, plus the line that says so (agni
+// issue 170). The fields are REFS, and the loader resolves them. This type does no path arithmetic
+// on them.
+type designSource struct {
+	service.DesignSources
+	// Note is a line for stderr. It is written whenever the read opened an artifact that the user
+	// did NOT name. It is empty when the named path was taken exactly as given.
+	Note string
+}
+
+// Resolve decides which artifacts a read should open, given the path a user named.
+//
+// The path becomes an artifact URI through the workspace's mount table and goes to
+// ProjectService.ResolveDesign over a store rooted at that mount. The outcomes:
+//
+//   - Resolves to nothing: read exactly what was named. A DIRECTORY that resolves to nothing is an
+//     error.
+//   - Names the design FOLDER or its ENTRY: read the entry, with the declared companions' tiers.
+//   - Names an undeclared sibling: read exactly that file.
+//   - Names a declared COMPANION: analysis reads the entry, while the named artifact keeps whatever
+//     tier it alone supplies.
+//
+// Why companions are declared file by file is in
+// docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views
+// (agni issues 170, 528).
+func (r *designResolver) Resolve(ctx context.Context, named string) (designSource, error) {
+	uri, err := r.ws.URI(named)
+	if err != nil {
+		return designSource{}, err
+	}
+	plain := designSource{DesignSources: service.DesignSources{NetlistURI: uri.String(), BoardURI: uri.String(), GeometryURI: uri.String()}}
+	root, ok := mountRoot(r.ws, uri)
+	if !ok {
+		return plain, nil
+	}
+	isDir := false
+	if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path))); statErr == nil {
+		isDir = fi.IsDir()
+	}
+	// The same ProjectService a server hosts, over a store rooted at this argument's mount.
+	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: uri.Mount, FS: os.DirFS(root)}))
+	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: uri.String()})
+	if err != nil {
+		return designSource{}, rpcFailed(err)
+	}
+	d := resp.GetDesign()
+	if d == nil {
+		if isDir {
+			// An ODB++ job is a directory, entered by its matrix file (agni issue 1250).
+			if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path), "matrix", "matrix")); statErr == nil && !fi.IsDir() {
+				entry := uri
+				entry.Path = path.Join(uri.Path, "matrix", "matrix")
+				return designSource{DesignSources: service.DesignSources{NetlistURI: entry.String(), BoardURI: entry.String(), GeometryURI: entry.String()}}, nil
+			}
+			// A reader handed a directory would report an unsupported extension, so name what is missing.
+			return designSource{}, fmt.Errorf("%s is a directory that declares no design: name a design file, or add a %s declaring which file is this design's entry", named, projects.DesignDescriptor)
+		}
+		plain.Note = edsSiblingNote(named)
+		return plain, nil
+	}
+	// The decision itself is service.ResolveSources, shared with the served path (C32). Only the I/O
+	// around it lives here.
+	res := service.ResolveSources(d, uri.String(), isDir, r.asNamed)
+	if !res.FromDeclaration {
+		// An undeclared sibling, or --as-named on a companion, reads exactly what was named. plain
+		// already holds the ref in all three tiers. A sibling that is one sheet of the design's
+		// hierarchy is still read as named, and says so (agni issue 1023).
+		plain.Note = subSheetNote(root, named, uri, d)
+		return plain, nil
+	}
+	// Compare REFS, not the path string the user typed. A ref never matches a typed path, and the
+	// note would then claim every tier was pulled in unasked.
+	note := resolutionNote(named, uri.String(), d, res.DesignSources, res.NamedIsTheDesign, res.NamedIsTheEntry)
+
+	return designSource{DesignSources: res.DesignSources, Note: note}, nil
+}
+
+// subSheetNote returns the stderr line for a user who names one sheet of a design's KiCad hierarchy
+// rather than the design. It is empty when the named file is not a sub-sheet of the design's entry.
+// Reading a sub-sheet alone checks that sheet as though it were the whole design. On Jetson, one
+// sheet of fifteen gave 383 findings and a review scoring rules that judged nothing (agni issue
+// 1023). This is a note rather than a redirect, because an undeclared sibling is read as named on
+// purpose.
+func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) string {
+	entry := uriPath(d.GetEntryUri())
+	if !strings.EqualFold(path.Ext(named.Path), ".kicad_sch") || !strings.EqualFold(path.Ext(entry), ".kicad_sch") || entry == named.Path {
+		return ""
+	}
+	dir := path.Dir(entry)
+	// Read through os.Root, so a Sheetfile reference cannot reach outside the design's mount.
+	mount, err := os.OpenRoot(root)
+	if err != nil {
+		return ""
+	}
+	defer mount.Close()
+	content, err := mount.ReadFile(filepath.FromSlash(entry))
+	if err != nil {
+		return ""
+	}
+	open := func(rel string) ([]byte, error) {
+		return mount.ReadFile(filepath.FromSlash(path.Join(dir, rel)))
+	}
+	for _, f := range kicad.SheetFiles(content, open) {
+		if path.Join(dir, f) == named.Path {
+			// This is the design's folder as the user would type it, taken from the path they typed.
+			// Its path within the mount is empty when the CLI mounted the folder itself.
+			rel, err := filepath.Rel(filepath.FromSlash(path.Dir(named.Path)), filepath.FromSlash(dir))
+			if err != nil {
+				rel = "."
+			}
+			design := filepath.Clean(filepath.Join(filepath.Dir(typed), rel))
+			return fmt.Sprintf("note: %s is a sub-sheet of %s, whose entry is %s, so this reads one sheet as a whole design. Name %s to read the design.\n",
+				path.Base(named.Path), design, path.Base(entry), design)
+		}
+	}
+	return ""
+}
+
+// resolutionNote is the stderr line naming every artifact that was read but not asked for.
+//
+// It lists the board and sheet tiers whenever they came from somewhere other than the entry AND
+// other than what the caller named. A design's declared board is its board whichever view you point
+// at, so pointing at the schematic still runs board-tier rules against that board.
+func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSources, namedIsTheDesign, namedIsTheEntry bool) string {
+	// Built from the DESIGN's own mount-relative path, since filepath.Join onto a typed URI mangles
+	// its scheme.
+	descriptor := path.Join(uriPath(d.GetUri()), projects.DesignDescriptor)
+	var extra []string
+	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
+		extra = append(extra, "sheets from "+path.Base(g))
+	}
+	if b := tiers.BoardURI; b != tiers.NetlistURI && b != ref {
+		extra = append(extra, "board geometry from "+path.Base(b))
+	}
+	// Naming the entry read exactly the file asked for, so only companion tiers get a line, and a
+	// run that picked up no companion prints nothing.
+	if namedIsTheEntry {
+		if len(extra) == 0 {
+			return ""
+		}
+		return fmt.Sprintf("note: reading %s with %s (declared by %s). Pass --as-named for the file alone.\n",
+			path.Base(uriPath(named)), strings.Join(extra, " and "), descriptor)
+	}
+	var note string
+	if namedIsTheDesign {
+		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(tiers.NetlistURI), descriptor)
+	} else {
+		// This is the netlist the tiers resolved to. For a revision's companion it is that revision's
+		// entry rather than the design's (agni issue 848).
+		whose := "the design's entry"
+		if tiers.NetlistURI != d.GetEntryUri() {
+			whose = "its revision's entry"
+		}
+		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (%s)",
+			path.Base(uriPath(named)), descriptor, path.Base(tiers.NetlistURI), whose)
+	}
+	if len(extra) > 0 {
+		note += ", with " + strings.Join(extra, " and ")
+	}
+	if !namedIsTheDesign {
+		note += ". Pass --as-named to read the file itself"
+	}
+	return note + ".\n"
+}
+
+// edsSiblingNote returns fallback advice for a folder that declares no design. It applies when the
+// read opens an EDIF SCHEMATIC-geometry (.eds) export and the sibling NETLIST (.edn) exists. The .eds
+// reflects what the schematic DRAWS, and the .edn is authoritative for component identity, so counts
+// differ. On one real board the .eds gave 565 test points against the .edn's 1385. The note is empty
+// when there is no .eds, no sibling .edn, or the input already is the .edn.
+//
+// A design that declares its entry gets Resolve's redirect instead (agni issue 170).
+func edsSiblingNote(path string) string {
+	if !strings.EqualFold(filepath.Ext(path), ".eds") {
+		return ""
+	}
+	stem := strings.TrimSuffix(path, filepath.Ext(path))
+	for _, ext := range []string{".edn", ".EDN"} {
+		if _, err := os.Stat(stem + ext); err == nil {
+			return fmt.Sprintf("warning: %s is an EDIF schematic-geometry (.eds) export; component counts may be lower than the netlist. The sibling %s (.edn netlist) is authoritative for component identity — declare it as this design's entry in a %s.\n",
+				filepath.Base(path), filepath.Base(stem+ext), projects.DesignDescriptor)
+		}
+	}
+	return ""
+}
+
+// mountRoot returns the host root a URI's mount resolves to. It reports false when the mount is
+// unknown. For the CLI that means the argument named a path that does not exist, since the workspace
+// mints a mount for anything real.
+func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
+	m, ok := mounts.Find(ws.Mounts(), uri.Mount)
+	if !ok {
+		return "", false
+	}
+	return m.Root, true
+}
+
+// uriPath is the mount-relative path of a URI, or the string slash-normalized when it is not one, so
+// a message names a file the same way whether the caller typed a path or a URI.
+func uriPath(s string) string {
+	if u, err := artifact.Parse(s); err == nil {
+		return u.Path
+	}
+	return filepath.ToSlash(s)
+}
+
+// noteNoBoard tells the operator when a check read no board, so a revision without copper does not
+// read as a revision with clean copper (agni issue 848). The response carries the same fact as
+// skipped rules, and a person running the command sees this line. It names the rules and the fix,
+// since a later revision usually has a board somewhere that its design.yaml does not yet declare.
+func noteNoBoard(w io.Writer, named string, skipped []*webapi.SkippedRule) {
+	var rules []string
+	for _, s := range skipped {
+		if s.GetReason() == check.NoBoardReason {
+			rules = append(rules, s.GetName())
+		}
+	}
+	if len(rules) == 0 {
+		return
+	}
+	sort.Strings(rules)
+	fmt.Fprintf(w, "note: no board was read for %s, so %d board-tier rule(s) did not run: %s. "+
+		"If this revision has a board, declare it under its entry's revision in design.yaml (or pass --board-path).\n",
+		path.Base(named), len(rules), strings.Join(rules, ", "))
+}
+
+// readOverlay passes a command's --conventions to its reads, for the commands that no service
+// mediates (stats, diff, render). Those commands compose config in three places, designOverlay,
+// renderLoader through it, and ingest. withConventions sets it for one command, and it is nil
+// otherwise, so a command that sends its own overlay on a request is unaffected.
+var readOverlay *webapi.OverlayConfig
+
+// withConventions reads a --conventions file for the running command and returns a function that
+// clears it. An empty path changes nothing. The convention travels as a value, as it does on check
+// (C22).
+func withConventions(path string) (func(), error) {
+	if path == "" {
+		return func() {}, nil
+	}
+	cfg, err := naming.Load(path)
+	if err != nil {
+		return nil, err
+	}
+	readOverlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: cfg}}
+	return func() { readOverlay = nil }, nil
+}
+
+// conventionsFlag declares --conventions on a command that reads a design through readDesign.
+func conventionsFlag(cmd *cobra.Command, path *string) {
+	cmd.Flags().StringVar(path, "conventions", "", "read the design under this naming-convention config (YAML) as check does, for a convention not yet in the project")
+}

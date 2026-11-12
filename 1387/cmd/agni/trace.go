@@ -1,0 +1,260 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/panyam/agni/core/num"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
+	rpt "github.com/panyam/agni/core/report"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
+)
+
+// traceCmd walks from one pin to another through series pass elements and prints what it crossed,
+// so a reviewer can check a connectivity answer against its route (agni issue 518).
+func traceCmd() *cobra.Command {
+	var from, to, format, renderOut, serverVal, traceOutPath string
+	var srvSpec serverSpec
+	var hops int
+	var remoteURL string
+	cmd := &cobra.Command{
+		Use:   "trace <file>",
+		Short: "Show the series path between two pins, and what sits on it",
+		Long: "trace walks from one pin to another through series pass elements (resistors, inductors,\n" +
+			"ferrites, fuses) and prints the route: the parts crossed, the nets passed through, and the\n" +
+			"test points and other parts sitting on each one.\n\n" +
+			"A capacitor is a DC block and is never crossed, and a rail or plane may be the END of a\n" +
+			"route but is never passed through.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Before redirectOut, so a --server this process cannot honour refuses the run before the
+			// output file exists (agni issue 637).
+			var err error
+			if srvSpec, err = resolveServer(serverVal); err != nil {
+				return err
+			}
+			closeOut, err := redirectOut(cmd, traceOutPath)
+			if err != nil {
+				return err
+			}
+			defer closeOut()
+			a, err := parseEndpoint(from, "--from")
+			if err != nil {
+				return err
+			}
+			b, err := parseEndpoint(to, "--to")
+			if err != nil {
+				return err
+			}
+			if format != "text" && format != "json" {
+				return fmt.Errorf("--format %s: want text or json", format)
+			}
+			// Thin client of the in-process DesignService, like `check` and `query` (WS9-048), so the
+			// terminal and the viewer get their answer from ONE implementation.
+			//
+			// The native renderer is nil because TraceDesign never reaches it.
+			ll := &localLoader{loader: newLoader()}
+			// --remote asks a running server the same question (agni issue 998). --render still draws
+			// here, from this machine's copy of the design.
+			var svc traceAPI = service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+			var snaps snapshotAPI = service.NewSnapshotService(ll, cliProjects(), nil, "")
+			addr := cliArgURI
+			if remoteURL != "" {
+				if err := refuseLocalOnly(cmd); err != nil {
+					return err
+				}
+				r, err := dialRemote(cmd.Context(), remoteURL)
+				if err != nil {
+					return err
+				}
+				svc, snaps, addr = r.trace(), r.snapshots(), r.uri
+			}
+			uri, err := addr(args[0])
+			if err != nil {
+				return err
+			}
+			snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: uri})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			defer drop()
+			resp, err := svc.TraceDesign(cmd.Context(), &webapi.TraceDesignRequest{
+				Snapshot: snap,
+				From:     &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
+				To:       &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
+				Hops:     num.Int32(hops),
+			})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			t := service.TraceFromProto(resp.GetTrace())
+
+			// viewerLinkMeta decides whether a link is safe to make, and `check` uses the same
+			// helper. The link is printed for every outcome, since "these two pins do not join" is
+			// worth sending someone too.
+			//
+			// The guard is only an EARLY-OUT that skips the design resolution and content hash for a
+			// run that asked for no links. viewerLinkMeta and TraceURL already yield nothing without
+			// a server, so the refusal lives there.
+			//
+			// IT GUARDS THE RESOLVED SPEC, not a flag variable. Reading a flag variable here meant
+			// `trace --server <url>` printed no link and no reason once #633 replaced --url-base with
+			// --server (agni issue 636).
+			if u := traceLink(cmd, srvSpec, args[0], a.String(), b.String(), hops); u != "" {
+				defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
+			}
+			// An endpoint that names nothing is a failed QUESTION and exits non-zero. A no-route is
+			// an answer and exits clean, so a script can tell "they are not joined" from "you named
+			// a pin that does not exist" (issue 518).
+			if t.Outcome == check.TraceUnresolved && format == "text" {
+				return fmt.Errorf("cannot trace: %s", t.Reason)
+			}
+			// --render draws every outcome, a no-route and an unresolved endpoint included.
+			// traceSpecs picks the subjects, and renderSubjects is the drawing path every command
+			// shares.
+			if renderOut != "" {
+				if err := renderSubjects(cmd.ErrOrStderr(), args[0], renderOut, traceSheet(resp.GetTrace()), traceSpecs(t)); err != nil {
+					return err
+				}
+			}
+			if format == "json" {
+				// protojson of the WIRE message (C31). EmitUnpopulated keeps empty lists and zero
+				// fields present, so a no-route has the same fields as a route.
+				b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
+					Marshal(resp.GetTrace())
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), string(b))
+				if t.Outcome == check.TraceUnresolved {
+					return fmt.Errorf("cannot trace: %s", t.Reason)
+				}
+				return nil
+			}
+			rpt.WriteTraceText(cmd.OutOrStdout(), t)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&from, "from", "", "start pin, as <ref-des>.<pin> (e.g. U7.3)")
+	cmd.Flags().StringVar(&to, "to", "", "end pin, as <ref-des>.<pin> (e.g. U12.4)")
+	cmd.Flags().IntVar(&hops, "hops", check.DefaultTraceHops,
+		"how many series crossings to search through. Unlike the protection radii this is a search "+
+			"budget rather than an electrical claim, and the answer states the value it rests on, so a "+
+			"no-route can be re-asked wider.")
+	cmd.Flags().StringVar(&format, "format", "text", "text|json")
+	outFileFlag(cmd, &traceOutPath)
+	serverFlag(cmd, &serverVal)
+	withSelfServer(cmd, &srvSpec)
+	remoteFlag(cmd, &remoteURL)
+	cmd.Flags().StringVar(&renderOut, "render", "",
+		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
+			"design's own schematic where it has one and on an auto-layout of its netlist where it "+
+			"does not. Works for a no-route too, marking the two nets that fail to join.")
+	cmd.MarkFlagRequired("from")
+	cmd.MarkFlagRequired("to")
+	return cmd
+}
+
+// The route and the parts crossed get different colours, so a reader can tell the wire from the part
+// the signal passes through. The endpoint colour marks what was ASKED rather than what was found.
+// That keeps a no-route drawing legible.
+const (
+	traceRouteColor    = "#2563eb"
+	traceCrossColor    = "#e11d48"
+	traceEndpointColor = "#0f766e"
+)
+
+// parseEndpoint reads "U7.3" into its two halves, splitting at the FIRST dot because a ref-des does
+// not contain one and a pin designator occasionally does.
+func parseEndpoint(s, flag string) (check.Endpoint, error) {
+	ref, pin, ok := strings.Cut(strings.TrimSpace(s), ".")
+	if !ok || ref == "" || pin == "" {
+		return check.Endpoint{}, fmt.Errorf("%s %q: name a pin as <ref-des>.<pin>, e.g. U7.3", flag, s)
+	}
+	return check.Endpoint{RefDes: ref, Pin: pin}, nil
+}
+
+// traceSpecs turns a trace into the entities for a drawing to point at. Those are the nets it passed
+// through, the parts it crossed, and the two endpoint pins.
+//
+// A route gets its nets and crossings, a no-route gets the two nets that fail to join, and an
+// unresolved endpoint gets whichever end DID resolve. It is defined beside the command rather than
+// in subjectrender.go, for the same reason findingSpecs is defined beside the review renderer.
+func traceSpecs(t check.Trace) []*geom.HighlightSpec {
+	var specs []*geom.HighlightSpec
+	netSpec := func(name, color string) *geom.HighlightSpec {
+		return &geom.HighlightSpec{
+			Nets: []string{name}, Color: color, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_PATH,
+		}
+	}
+	switch t.Outcome {
+	case check.TraceRouted:
+		for _, n := range t.Nets {
+			specs = append(specs, netSpec(n.Name, traceRouteColor))
+		}
+		for _, c := range t.Crossings {
+			specs = append(specs, &geom.HighlightSpec{
+				Components: []string{c.RefDes}, Color: traceCrossColor,
+				Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT,
+			})
+		}
+	default:
+		// An endpoint that did not resolve carries no net, so it contributes nothing.
+		for _, e := range []check.TraceEnd{t.From, t.To} {
+			if e.Net != "" {
+				specs = append(specs, netSpec(e.Net, traceEndpointColor))
+			}
+		}
+	}
+	for _, e := range []check.TraceEnd{t.From, t.To} {
+		if e.RefDes != "" && e.Pin != "" {
+			specs = append(specs, &geom.HighlightSpec{
+				Pins: []*geom.PinRef{{RefDes: e.RefDes, Pin: e.Pin}}, Color: traceEndpointColor,
+			})
+		}
+	}
+	return specs
+}
+
+// traceSheet picks the sheet for a rendered trace to open on. It picks the FROM endpoint's sheet,
+// else the first route net drawn anywhere, else "" for the caller's default. From wins because the
+// reader named that pin first.
+//
+// The server decides where each net lives and this only chooses among what it returned (C32, agni
+// issue 657). One SVG shows one sheet, while the viewer offers every sheet of every net as a badge.
+func traceSheet(p *webapi.Trace) string {
+	if ids := p.GetFrom().GetSheetIds(); len(ids) > 0 {
+		return ids[0]
+	}
+	for _, n := range p.GetNets() {
+		if ids := n.GetSheetIds(); len(ids) > 0 {
+			return ids[0]
+		}
+	}
+	return ""
+}
+
+// traceLink is the link that asks this trace again in the viewer, or "" when the run asked for none
+// or none is safe to make. It is built from this machine's mount table whichever engine answered, as
+// `check` does, and viewerLinkMeta decides whether a link is safe.
+//
+// It asks spec.active() rather than spec.url. Under --server self the url is empty, and this process
+// serves the base itself. Guarding on url printed no link for self at all (agni 634).
+func traceLink(cmd *cobra.Command, spec serverSpec, design, from, to string, hops int) string {
+	if !spec.active() {
+		return ""
+	}
+	localURI, err := cliArgURI(design)
+	if err != nil {
+		return ""
+	}
+	meta := viewerLinkMeta(cmd, cmd.Context(), &localLoader{loader: newLoader()}, localURI, spec)
+	return rpt.TraceURL(meta, from, to, hops)
+}

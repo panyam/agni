@@ -1,0 +1,51 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "ffff5555-0000-0000-0000-000000000000")
+	(paper "A4")
+	(title_block (title "Strapped ports, child"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1" (rectangle (start -1.016 2.54) (end 1.016 -2.54) (fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "power:GND"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "GND_0_1" (polyline (pts (xy 0 0) (xy 0 -1.27))))
+			(symbol "GND_1_1" (pin power_in line (at 0 0 270) (length 0) (name "GND") (number "1")))))
+	(symbol (lib_id "test:R") (at 20 50 0) (unit 1) (uuid "lac20")
+		(property "Reference" "R?" (at 17 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 23 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/55555555-5555-5555-5555-555555555555/eeee5555-0000-0000-0000-000000000001"
+					(reference "R101")
+					(unit 1))
+				(path "/55555555-5555-5555-5555-555555555555/eeee5555-0000-0000-0000-000000000002"
+					(reference "R201")
+					(unit 1)))))
+	(wire (pts (xy 20 46.19) (xy 25 46.19)))
+	(wire (pts (xy 20 53.81) (xy 25 53.81)))
+	(hierarchical_label "ADRA" (shape input) (at 25 46.19 0) (effects (font (size 1.27 1.27))))
+	(hierarchical_label "ADRB" (shape input) (at 25 53.81 0) (effects (font (size 1.27 1.27))))
+	(symbol (lib_id "test:R") (at 60 50 0) (unit 1) (uuid "lac60")
+		(property "Reference" "R?" (at 57 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 63 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/55555555-5555-5555-5555-555555555555/eeee5555-0000-0000-0000-000000000001"
+					(reference "R102")
+					(unit 1))
+				(path "/55555555-5555-5555-5555-555555555555/eeee5555-0000-0000-0000-000000000002"
+					(reference "R202")
+					(unit 1)))))
+	(wire (pts (xy 60 46.19) (xy 65 46.19)))
+	(wire (pts (xy 60 53.81) (xy 65 53.81)))
+	(label "P" (at 62 46.19 0) (effects (font (size 1.27 1.27))))
+	(label "Q" (at 65 46.19 0) (effects (font (size 1.27 1.27)))))

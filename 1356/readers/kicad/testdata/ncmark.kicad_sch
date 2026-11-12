@@ -1,0 +1,45 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "NC markers declare intent"))
+	(lib_symbols
+		(symbol "test:U2P"
+			(pin_names (offset 0))
+			(property "Reference" "U")
+			(symbol "U2P_0_1"
+				(rectangle (start -1.27 1.27) (end 1.27 -1.27)
+					(fill (type background))))
+			(symbol "U2P_1_1"
+				(pin passive line (at -2.54 0 0) (length 1.27) (name "IN") (number "1"))
+				(pin passive line (at 2.54 0 180) (length 1.27) (name "NC") (number "2"))))
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "test:U2P") (at 100 50 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1"
+			(at 100 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "buf"
+			(at 100 54 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 95 53.81 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 92 52 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 98 52 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 97.46 50) (xy 95 50)))
+	(label "SIG" (at 95 50 0)
+		(effects (font (size 1.27 1.27))))
+	(no_connect (at 102.54 50))
+	(no_connect (at 95 57.62)))

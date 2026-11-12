@@ -1,0 +1,7 @@
+# A pull-up reach declared for one bus. SDA_MAIN reaches its pull-up through a series network four
+# resistors deep, one past the default of 3, and the designer states that the network is sized for it.
+# SCL_MAIN declares nothing and keeps the default.
+name: pull-up reach demo
+intent:
+  nets:
+    SDA_MAIN: {pull_up_reach_hops: 4}

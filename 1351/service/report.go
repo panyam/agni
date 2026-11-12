@@ -1,0 +1,91 @@
+package service
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/results"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// SeverityRank orders severities for report sections and fail-on gating; higher is worse.
+// An unknown severity ranks above error so a provider's custom level is never silently
+// dropped below a CI gate or buried at the bottom of a report.
+//
+// The implementation lives in core/results, with the report pivot it orders, so a reloaded results
+// document and a live run cannot disagree on which severity is worse. Kept exported here because the
+// CLI's --fail-on gate calls it through the service surface.
+func SeverityRank(s string) int { return results.SeverityRank(s) }
+
+// CheckReportProto assembles the severity-organized CheckReport (WS3-022) from one run. Sections
+// run worst first (custom severities lead, then error, warning, info), and empty severities are
+// omitted. Findings are grouped by rule in run order. Each group is stamped with the rule's catalog
+// Summary from the rules that ran. Those come from the injected catalog, so an embedder's rules
+// resolve too. This is THE report pivot. The CLI's markdown/report formats, the web report panel,
+// and a report rebuilt from a written results document all render this proto from the one
+// results.Pivot, and none of them re-derives the grouping.
+func CheckReportProto(source string, fs []check.Finding, rules []*check.Rule) *checkspb.CheckReport {
+	summaries := make(map[string]string, len(rules))
+	for _, r := range rules {
+		summaries[r.Name] = r.Summary
+	}
+	return results.Pivot(source, FindingProtos(fs), summaries, len(rules))
+}
+
+// GetCheckReport runs the same selected rules CheckDesign runs and returns their severity
+// pivot. It is a separate RPC rather than a client-side regrouping of CheckDesign, so every
+// consumer renders the one canonical report shape. Findings carry the same sheet annotation as
+// CheckDesign's (WS9-024), so the report panel shares the sheet-navigation join.
+func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckReportRequest) (*webapi.GetCheckReportResponse, error) {
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
+	if err != nil {
+		return nil, err
+	}
+	u, ov, nu, bu, gu := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Geometry
+	m, _, err := BuildModelCached(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs)
+	if err != nil {
+		return nil, err
+	}
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return nil, err
+	}
+	if err := cat.CheckNames(req.GetRules()); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	rules := cat.Filter(check.Facets{Names: req.GetRules()})
+	// The report names the design by its URI, not by the mount-relative half. A report is a wire
+	// shape a client may store, and half an address is not an address. A renderer shortens it for
+	// reading, but what travels has to be able to name the design on another machine.
+	findings, err := check.Run(ctx, m, rules)
+	if err != nil {
+		return nil, err
+	}
+	rep := CheckReportProto(u.String(), findings, rules)
+	g, unreadable := locateGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
+	annotateReport(rep, g, m, unreadable, runBoardIndex(ctx, LoaderOr(snap, s.loader), snap.BoardRead(), m))
+	return &webapi.GetCheckReportResponse{Report: rep}, nil
+}
+
+// AnnotateReport fills the sheet membership of every finding nested in a CheckReport, the
+// report-shaped counterpart of AnnotateSheets (which takes a flat slice). It flattens the
+// report's severity sections and rule groups to one slice and annotates in place, so the CLI's
+// `check --format report` and the GetCheckReport RPC share one annotation path rather than two
+// copies of the walk. With both g and d nil it is a no-op and findings keep empty sheets, as with
+// AnnotateSheets. A net-only channel (design set, geometry nil) still annotates net subjects.
+func AnnotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource) {
+	annotateReport(rep, g, m, false, nil)
+}
+
+func annotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource, unreadable bool, board *boardIndex) {
+	var all []*checkspb.Finding
+	for _, sec := range rep.GetSections() {
+		for _, rg := range sec.GetRules() {
+			all = append(all, rg.GetFindings()...)
+		}
+	}
+	annotateSheets(all, g, m, unreadable, board)
+}

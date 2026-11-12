@@ -1,0 +1,13 @@
+# The netlist is the design; the schematic export is a view of it. Without these lines a tool opening
+# this folder sees two openable EDIF files and no way to know which is the source of truth, and the
+# .eds is the dangerous one to guess at. It carries nets joining portRefs in the same grammar, so
+# every reader parses it as a netlist without complaining, and what it answers with is DRAWN
+# instances and per-sheet segments rather than resolved nets. On a real board those diverge sharply
+# (one measured pair inflated by 183% on nets). This fixture is drawn to agree with its netlist
+# exactly, which is what makes a finding's highlight land on the right wire, and agreeing is a
+# property of this drawing rather than of the format.
+name: i2c-sensor
+title: I2C sensor
+entry: i2c-sensor.edn
+companions:
+  - i2c-sensor.eds

@@ -1,0 +1,15 @@
+#agni-run 254733c4d3a40149
+SENSOR_3V3
+  rail (convention): the name matches the rail pattern _[0-9]+V[0-9]$
+
+its name matches
+  net.rail  pattern  _[0-9]+V[0-9]$  design (sensor-house)
+#agni-step
+1 net(s) change roles
+  net         roles_before       roles_after
+  SENSOR_3V3  rail (convention)  -
+
+2 finding(s) change
+  change    rule         subject_kind  subject  message
+  appeared  i2c-pull-up  net           SCL      I2C net has no pull-up resistor to a rail
+  appeared  i2c-pull-up  net           SDA      I2C net has no pull-up resistor to a rail

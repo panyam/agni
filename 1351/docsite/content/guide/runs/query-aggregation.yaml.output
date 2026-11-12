@@ -1,0 +1,6 @@
+#agni-run 62a96af988f570f8
+n      count(r)  provenance
+/+24V  2         regulator.fires.kicad_sch
+/GND   1         regulator.fires.kicad_sch
+
+2 result(s)

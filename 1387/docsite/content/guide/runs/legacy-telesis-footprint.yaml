@@ -1,0 +1,5 @@
+# Two Telesis package lines sharing one footprint, each with its own part number. Each part takes its
+# own line's number (agni issue 835).
+fixture: cmd/agni/testdata/github-issues/1087-telesis-duplicate-footprint
+script: |
+  agni query duplicate_footprint_two_mpns.tel 'component.mpn(?r, ?m) => ?r, ?m'

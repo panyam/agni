@@ -1,0 +1,101 @@
+package check
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// designWithUnresolved builds a design carrying one unresolved-symbol diagnostic, with components
+// present and pins absent. A read is in that state when a symbol library is missing.
+func designWithUnresolved() *ir.Design {
+	return &ir.Design{
+		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "U1"}},
+		InputDiagnostics: &ir.InputDiagnostics{
+			UnresolvedSymbols: []*ir.UnresolvedSymbol{{
+				Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1"},
+				Prov: &ir.Provenance{SourceFile: "board.sch"},
+			}},
+		},
+	}
+}
+
+// alwaysFires is a stand-in for any rule that would report a defect. Whether the gate replaces its
+// output is the whole question, so it must produce something to be replaced.
+func alwaysFires(reads ...string) *Rule {
+	return &Rule{
+		Name: "test-rule", Severity: "error", Reads: reads,
+		Eval: FailuresOnly(func(context.Context, Model) []Finding {
+			return []Finding{{Subject: Entity{Kind: KindNet, Ref: "SIG"}, Message: "a defect"}}
+		}),
+	}
+}
+
+// TestUnresolvedGateMakesConnectivityRulesInconclusive is the point of WS1-052. A rule whose
+// conclusions depend on pins must not report over a netlist that is missing connections. Before the
+// gate it evaluated normally and its silence (or its finding) read as authoritative.
+func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
+	for _, reads := range [][]string{{"on_net"}, {"pin.electrical_type"}, {"pin.no_connect"}, {"net.names", "on_net"}} {
+		fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
+		if len(fs) != 1 {
+			t.Fatalf("reads %v: findings = %d, want 1 (the gate's own)", reads, len(fs))
+		}
+		if !fs[0].Inconclusive {
+			t.Errorf("reads %v: finding = %+v, want Inconclusive", reads, fs[0])
+		}
+		if fs[0].Message == "a defect" {
+			t.Errorf("reads %v: the rule evaluated anyway; its verdict is unsupported by this read", reads)
+		}
+		if !strings.Contains(fs[0].Message, "res.sym") {
+			t.Errorf("reads %v: message %q does not name the unresolved symbol", reads, fs[0].Message)
+		}
+		// The remedy is NOT repeated here. Every gated rule emits this message, so the fix is stated
+		// once, on symbol-unresolved, and each gate finding points at it.
+		if !strings.Contains(fs[0].Message, "symbol-unresolved") {
+			t.Errorf("reads %v: message %q does not point at the rule that explains the cause", reads, fs[0].Message)
+		}
+		if EntityRef(fs[0].Subject) != "res.sym" {
+			t.Errorf("reads %v: subject = %q, want the unresolved reference", reads, EntityRef(fs[0].Subject))
+		}
+	}
+}
+
+// TestUnresolvedGateLeavesOtherRulesAlone covers a rule that reads only names, classes or datasheet
+// params. It is unaffected by a lost symbol, so gating it would convert working checks into noise.
+// Where the gate helps nothing, it must cost nothing.
+func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
+	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"reader.ref_des_collision"}} {
+		fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})
+		if len(fs) != 1 || fs[0].Inconclusive {
+			t.Errorf("reads %v: findings = %+v, want the rule's own verdict, ungated", reads, fs)
+		}
+	}
+}
+
+// TestUnresolvedGateInactiveOnACleanRead checks that with every symbol resolved the gate vanishes
+// completely. A gate that fired on clean designs would be worse than the silence it replaces.
+func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
+	clean := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
+	fs := RunBackground(NewModel(clean), []*Rule{alwaysFires("on_net")})
+	if len(fs) != 1 || fs[0].Inconclusive {
+		t.Errorf("findings = %+v, want the rule's own verdict on a design whose symbols all resolved", fs)
+	}
+}
+
+// TestUnresolvedGateIsDesignWide pins the deliberate bluntness (and documents what per-subject
+// attribution would change). Only R1 lost pins, but a rule reporting on U1 is gated too. The reader
+// cannot support a claim that the unflagged parts are unaffected, so the gate does not make one.
+func TestUnresolvedGateIsDesignWide(t *testing.T) {
+	aboutU1 := &Rule{
+		Name: "about-u1", Severity: "error", Reads: []string{"on_net"},
+		Eval: FailuresOnly(func(context.Context, Model) []Finding {
+			return []Finding{{Subject: Entity{Kind: KindComponent, Ref: "U1"}, Message: "a defect on U1"}}
+		}),
+	}
+	fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{aboutU1})
+	if len(fs) != 1 || !fs[0].Inconclusive {
+		t.Errorf("findings = %+v, want inconclusive even though only R1 lost pins (design-wide gate)", fs)
+	}
+}

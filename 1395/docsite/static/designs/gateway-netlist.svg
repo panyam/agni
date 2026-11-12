@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="306.8" viewBox="0 0 1680.0 306.8" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif">
+<rect x="0.0" y="0.0" width="1680.0" height="306.8" fill="#fdfdfb"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="141.3,155.4 232.4,180.8" data-kind="net" data-net="PMIC_MAIN_12V0" data-net-id="993198343b0c"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="384.3,155.4 232.4,180.8" data-kind="net" data-net="PMIC_MAIN_12V0" data-net-id="993198343b0c"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="121.0,256.7 232.4,180.8" data-kind="net" data-net="PMIC_MAIN_12V0" data-net-id="993198343b0c"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="283.0,155.4 232.4,180.8" data-kind="net" data-net="PMIC_MAIN_12V0" data-net-id="993198343b0c"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="121.0,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="627.3,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="728.6,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="829.9,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="931.1,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1032.4,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="222.3,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="384.3,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="283.0,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1397.0,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1498.2,155.4 662.8,148.4" data-kind="net" data-net="GND" data-net-id="d196b07c94ce"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="384.3,155.4 336.7,188.9" data-kind="net" data-net="CAN1_CANH" data-net-id="7c5db71ec203"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="141.3,256.7 336.7,188.9" data-kind="net" data-net="CAN1_CANH" data-net-id="7c5db71ec203"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 336.7,188.9" data-kind="net" data-net="CAN1_CANH" data-net-id="7c5db71ec203"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="384.3,155.4 364.1,188.9" data-kind="net" data-net="CAN1_CANL" data-net-id="28bc0d7eb988"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="222.3,256.7 364.1,188.9" data-kind="net" data-net="CAN1_CANL" data-net-id="28bc0d7eb988"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 364.1,188.9" data-kind="net" data-net="CAN1_CANL" data-net-id="28bc0d7eb988"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="40.0,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="546.3,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1194.4,135.2 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="283.0,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1397.0,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1498.2,155.4 690.1,140.3" data-kind="net" data-net="PMIC_CORE_3V3" data-net-id="2a1d96bcbf45"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="40.0,256.7 161.5,206.1" data-kind="net" data-net="PMIC_EN" data-net-id="f8eb746d81f9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="283.0,155.4 161.5,206.1" data-kind="net" data-net="PMIC_EN" data-net-id="f8eb746d81f9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1133.7,155.4 708.4,155.4" data-kind="net" data-net="PMIC_PG" data-net-id="82e747e765ee"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="283.0,155.4 708.4,155.4" data-kind="net" data-net="PMIC_PG" data-net-id="82e747e765ee"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="647.6,155.4 833.9,131.1" data-kind="net" data-net="PMIC_IO_1V8" data-net-id="e5550a52835b"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="748.9,155.4 833.9,131.1" data-kind="net" data-net="PMIC_IO_1V8" data-net-id="e5550a52835b"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1295.7,135.2 833.9,131.1" data-kind="net" data-net="PMIC_IO_1V8" data-net-id="e5550a52835b"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1397.0,155.4 833.9,131.1" data-kind="net" data-net="PMIC_IO_1V8" data-net-id="e5550a52835b"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 833.9,131.1" data-kind="net" data-net="PMIC_IO_1V8" data-net-id="e5550a52835b"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="850.1,155.4 829.9,122.0" data-kind="net" data-net="XTAL_IN" data-net-id="b5190d581c43"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 829.9,122.0" data-kind="net" data-net="XTAL_IN" data-net-id="b5190d581c43"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1559.0,155.4 829.9,122.0" data-kind="net" data-net="XTAL_IN" data-net-id="b5190d581c43"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="951.4,155.4 890.6,122.0" data-kind="net" data-net="XTAL_OUT" data-net-id="65cf4d3e1630"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 890.6,122.0" data-kind="net" data-net="XTAL_OUT" data-net-id="65cf4d3e1630"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1640.0,155.4 890.6,122.0" data-kind="net" data-net="XTAL_OUT" data-net-id="65cf4d3e1630"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 283.0,104.8" data-kind="net" data-net="CAN1_TXD" data-net-id="4dbca71f6510"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 283.0,104.8" data-kind="net" data-net="CAN1_TXD" data-net-id="4dbca71f6510"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 283.0,104.8" data-kind="net" data-net="CAN1_RXD" data-net-id="58e7f2f77f37"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="485.6,155.4 283.0,104.8" data-kind="net" data-net="CAN1_RXD" data-net-id="58e7f2f77f37"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 789.4,104.8" data-kind="net" data-net="I2C_SCL" data-net-id="601209543ef5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1498.2,155.4 789.4,104.8" data-kind="net" data-net="I2C_SCL" data-net-id="601209543ef5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 789.4,104.8" data-kind="net" data-net="I2C_SDA" data-net-id="dbebb5ece24f"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1498.2,155.4 789.4,104.8" data-kind="net" data-net="I2C_SDA" data-net-id="dbebb5ece24f"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1052.7,155.4 566.6,104.8" data-kind="net" data-net="MCU_NRST" data-net-id="dd7516e231ba"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="80.5,54.2 566.6,104.8" data-kind="net" data-net="MCU_NRST" data-net-id="dd7516e231ba"/>
+<circle cx="232.4" cy="180.8" r="1.6" fill="#333333"/>
+<circle cx="141.3" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="384.3" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="121.0" cy="256.7" r="1.6" fill="#333333"/>
+<circle cx="283.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="662.8" cy="148.4" r="1.6" fill="#333333"/>
+<circle cx="121.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="627.3" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="728.6" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="829.9" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="931.1" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1032.4" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="222.3" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1397.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="80.5" cy="54.2" r="1.6" fill="#333333"/>
+<circle cx="485.6" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1498.2" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="336.7" cy="188.9" r="1.6" fill="#333333"/>
+<circle cx="141.3" cy="256.7" r="1.6" fill="#333333"/>
+<circle cx="364.1" cy="188.9" r="1.6" fill="#333333"/>
+<circle cx="222.3" cy="256.7" r="1.6" fill="#333333"/>
+<circle cx="690.1" cy="140.3" r="1.6" fill="#333333"/>
+<circle cx="40.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="546.3" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1194.4" cy="135.2" r="1.6" fill="#333333"/>
+<circle cx="40.0" cy="256.7" r="1.6" fill="#333333"/>
+<circle cx="1133.7" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="833.9" cy="131.1" r="1.6" fill="#333333"/>
+<circle cx="647.6" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="748.9" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1295.7" cy="135.2" r="1.6" fill="#333333"/>
+<circle cx="829.9" cy="122.0" r="1.6" fill="#333333"/>
+<circle cx="850.1" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1559.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="890.6" cy="122.0" r="1.6" fill="#333333"/>
+<circle cx="951.4" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1640.0" cy="155.4" r="1.6" fill="#333333"/>
+<circle cx="1052.7" cy="155.4" r="1.6" fill="#333333"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="40.0,155.4 74.4,155.4" data-kind="component" data-ref="C1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="74.4,170.6 74.4,140.3" data-kind="component" data-ref="C1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="86.6,170.6 86.6,140.3" data-kind="component" data-ref="C1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="86.6,155.4 121.0,155.4" data-kind="component" data-ref="C1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="546.3,155.4 580.8,155.4" data-kind="component" data-ref="C2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="580.8,170.6 580.8,140.3" data-kind="component" data-ref="C2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="592.9,170.6 592.9,140.3" data-kind="component" data-ref="C2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="592.9,155.4 627.3,155.4" data-kind="component" data-ref="C2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="647.6,155.4 682.0,155.4" data-kind="component" data-ref="C3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="682.0,170.6 682.0,140.3" data-kind="component" data-ref="C3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="694.2,170.6 694.2,140.3" data-kind="component" data-ref="C3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="694.2,155.4 728.6,155.4" data-kind="component" data-ref="C3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="748.9,155.4 783.3,155.4" data-kind="component" data-ref="C4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="783.3,170.6 783.3,140.3" data-kind="component" data-ref="C4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="795.4,170.6 795.4,140.3" data-kind="component" data-ref="C4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="795.4,155.4 829.9,155.4" data-kind="component" data-ref="C4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="850.1,155.4 884.6,155.4" data-kind="component" data-ref="C5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="884.6,170.6 884.6,140.3" data-kind="component" data-ref="C5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="896.7,170.6 896.7,140.3" data-kind="component" data-ref="C5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="896.7,155.4 931.1,155.4" data-kind="component" data-ref="C5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="951.4,155.4 985.8,155.4" data-kind="component" data-ref="C6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="985.8,170.6 985.8,140.3" data-kind="component" data-ref="C6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="998.0,170.6 998.0,140.3" data-kind="component" data-ref="C6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="998.0,155.4 1032.4,155.4" data-kind="component" data-ref="C6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="141.3,155.4 157.5,155.4" data-kind="component" data-ref="D1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="157.5,167.6 157.5,143.3 181.8,155.4 157.5,167.6" data-kind="component" data-ref="D1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="181.8,169.6 181.8,141.3" data-kind="component" data-ref="D1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="206.1,167.6 206.1,143.3 181.8,155.4 206.1,167.6" data-kind="component" data-ref="D1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="206.1,155.4 222.3,155.4" data-kind="component" data-ref="D1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="343.8,155.4 374.2,155.4" data-kind="component" data-ref="J1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="394.4,171.6 374.2,171.6 374.2,139.2 394.4,139.2" data-kind="component" data-ref="J1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="386.3,163.5 382.3,163.5" data-kind="component" data-ref="J1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="386.3,155.4 382.3,155.4" data-kind="component" data-ref="J1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="386.3,147.3 382.3,147.3" data-kind="component" data-ref="J1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="141.3,256.7 161.5,256.7 166.6,246.6 176.7,266.8 186.8,246.6 197.0,266.8 202.0,256.7 222.3,256.7" data-kind="component" data-ref="R1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="40.0,256.7 60.3,256.7 65.3,246.6 75.4,266.8 85.6,246.6 95.7,266.8 100.8,256.7 121.0,256.7" data-kind="component" data-ref="R2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1052.7,155.4 1072.9,155.4 1078.0,145.3 1088.1,165.6 1098.2,145.3 1108.4,165.6 1113.4,155.4 1133.7,155.4" data-kind="component" data-ref="R3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1194.4,135.2 1194.4,149.4" data-kind="component" data-ref="TP1"/>
+<circle fill="none" stroke="#222222" stroke-width="0.8" cx="1194.4" cy="155.4" r="6.1" data-kind="component" data-ref="TP1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1295.7,135.2 1295.7,149.4" data-kind="component" data-ref="TP2"/>
+<circle fill="none" stroke="#222222" stroke-width="0.8" cx="1295.7" cy="155.4" r="6.1" data-kind="component" data-ref="TP2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="266.8,169.6 299.2,169.6 299.2,141.3 266.8,141.3 266.8,169.6" data-kind="component" data-ref="U1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="279.0,169.6 279.0,165.6 287.1,165.6 287.1,169.6" data-kind="component" data-ref="U1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1380.8,169.6 1413.2,169.6 1413.2,141.3 1380.8,141.3 1380.8,169.6" data-kind="component" data-ref="U2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1392.9,169.6 1392.9,165.6 1401.0,165.6 1401.0,169.6" data-kind="component" data-ref="U2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="64.3,68.4 96.7,68.4 96.7,40.0 64.3,40.0 64.3,68.4" data-kind="component" data-ref="U3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="76.5,68.4 76.5,64.3 84.6,64.3 84.6,68.4" data-kind="component" data-ref="U3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="469.4,169.6 501.8,169.6 501.8,141.3 469.4,141.3 469.4,169.6" data-kind="component" data-ref="U4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="481.5,169.6 481.5,165.6 489.6,165.6 489.6,169.6" data-kind="component" data-ref="U4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1482.0,169.6 1514.4,169.6 1514.4,141.3 1482.0,141.3 1482.0,169.6" data-kind="component" data-ref="U5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1494.2,169.6 1494.2,165.6 1502.3,165.6 1502.3,169.6" data-kind="component" data-ref="U5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1559.0,155.4 1587.3,155.4" data-kind="component" data-ref="Y1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1587.3,169.6 1587.3,141.3" data-kind="component" data-ref="Y1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1593.4,167.6 1605.6,167.6 1605.6,143.3 1593.4,143.3 1593.4,167.6" data-kind="component" data-ref="Y1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1611.6,169.6 1611.6,141.3" data-kind="component" data-ref="Y1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1611.6,155.4 1640.0,155.4" data-kind="component" data-ref="Y1"/>
+<text x="232.4" y="180.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">PMIC_MAIN_12V0</text>
+<text x="662.8" y="148.4" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">GND</text>
+<text x="336.7" y="188.9" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">CAN1_CANH</text>
+<text x="364.1" y="188.9" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">CAN1_CANL</text>
+<text x="690.1" y="140.3" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="161.5" y="206.1" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">PMIC_EN</text>
+<text x="708.4" y="155.4" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">PMIC_PG</text>
+<text x="833.9" y="131.1" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="829.9" y="122.0" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">XTAL_IN</text>
+<text x="890.6" y="122.0" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">XTAL_OUT</text>
+<text x="283.0" y="104.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">CAN1_TXD</text>
+<text x="283.0" y="104.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">CAN1_RXD</text>
+<text x="789.4" y="104.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">I2C_SCL</text>
+<text x="789.4" y="104.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">I2C_SDA</text>
+<text x="566.6" y="104.8" font-size="12.2" text-anchor="middle" dominant-baseline="central" fill="#555555">MCU_NRST</text>
+</svg>

@@ -1,0 +1,53 @@
+# What makes this folder a DESIGN: a name, and a statement of which file is which.
+#
+# `entry` is the file analysis reads. It is the netlist the design team produces, because that is the
+# design's system of record; everything else here is a view of it. Declaring it is what lets you point
+# agni at the DESIGN (`agni stats designs/gateway`) rather than at a file, and what lets the tool stop
+# guessing when a folder holds several files that all look openable.
+#
+# `companions` are those other views: the same board drawn as a KiCad schematic, and its copper. They
+# are geometry to render and to locate findings on, never a second component source to reconcile
+# against the netlist. Asking for analysis of one reads the entry instead and says so; `--as-named`
+# overrides that when reading a view as a netlist is the point (see the Makefile's check-views).
+#
+# `gateway-rev-b.edn` and `gateway-rev-c.edn` are deliberately NOT listed. They are later revisions,
+# analysis sources in their own right: `make diff` compares rev B against the entry, and rev C renames
+# and rewires one net so `agni diff --rename-approx` has a near-rename to pair. That is why companions are declared file
+# by file instead of inferred from "everything beside the entry".
+name: gateway
+title: Sample Board
+# The project this design belongs to, named rather than found above it. Its conventions, checklists,
+# profiles and parameters apply here, and anything this file declares layers on top.
+extends: ../../project.yaml
+# The board's own KiCad symbol library.
+symbols: [symbols]
+entry: gateway.edn
+companions:
+  - gateway.kicad_sch
+  - gateway.kicad_pcb
+
+# The later revisions, each read with its own views (agni issue 848). Rev B adds the two I2C
+# pull-ups R4 and R5, so its board is not rev A's. Rev C is left undeclared on purpose: it reads
+# exactly as named, with no board, and a check of it says its board-tier rules did not run.
+revisions:
+  - entry: gateway-rev-b.edn
+    companions: [gateway-rev-b.kicad_pcb]
+
+# What the board is SUPPOSED to be, declared beside what it is. The engine has no built-in opinion
+# about a board's intended architecture, so an intent-bound review item reads needs-design-intent
+# until a section like this one exists. It is declared per DESIGN here, since each board has its own
+# intended architecture, though a project shared by a family of boards could declare it once.
+#
+# One declaration here is deliberately WRONG. The core domain is declared at 3.3 V but its rail is
+# PMIC_IO_1V8, an actual 1.8 V rail, so the intent check has a real deviation to report. That is the
+# point of declaring intent: it fails when the board stops matching what you said you were building.
+intent:
+  modules:
+    - {name: regulators, class: regulator, count: 2}
+    - {name: connectors, class: connector, count: 1}
+    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
+    PMIC_IO_1V8: {nominal: 3.3, domain: core}

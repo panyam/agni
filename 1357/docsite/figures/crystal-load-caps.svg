@@ -1,0 +1,34 @@
+<svg viewBox="0 0 640 302" role="img" aria-labelledby="crystal-load-caps-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="crystal-load-caps-title">The oscillator loop. An amplifier inside the chip drives XIN and XOUT, a crystal bridges the two, and each terminal carries a load capacitor to ground. The crystal produces nothing on its own; the amplifier is the oscillator and the crystal only decides which frequency survives the feedback. The two capacitors sit in series as far as the crystal is concerned, so a 22 pF pair presents about 11 pF, plus whatever the pins and the copper add.</title>
+  <line x1="60" y1="236" x2="500" y2="236" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <text x="60" y="254" fill="currentColor" font-size="11" opacity="0.65">ground</text>
+  <rect x="70" y="72" width="110" height="124" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+  <text x="125" y="126" text-anchor="middle" fill="currentColor" font-size="12.5" font-weight="600">the chip</text>
+  <text x="125" y="146" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.6">holds the amplifier</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.85">
+  <path d="M180 96 H460"/>
+  <path d="M180 176 H400"/>
+  <path d="M320 96 V124"/>
+  <path d="M320 148 V176"/>
+  <path d="M460 96 V150"/>
+  <path d="M460 160 V236"/>
+  <path d="M400 176 V192"/>
+  <path d="M400 202 V236"/>
+  <path d="M444 150 H476 M444 160 H476"/>
+  <path d="M384 192 H416 M384 202 H416"/></g>
+  <rect x="300" y="124" width="40" height="24" fill="none" stroke="var(--accent-color)" stroke-width="1.8"/>
+  <text x="350" y="140" fill="var(--accent-color)" font-size="11" font-weight="600">Y1, the crystal</text>
+  <g fill="currentColor" font-size="10" opacity="0.7">
+  <text x="188" y="90">XIN</text>
+  <text x="188" y="170">XOUT</text></g>
+  <g fill="var(--accent-color)" font-size="11" font-weight="600">
+  <text x="486" y="159">22 pF</text>
+  <text x="426" y="201">22 pF</text></g>
+  <g fill="currentColor">
+  <circle cx="320" cy="96" r="3.2"/>
+  <circle cx="320" cy="176" r="3.2"/>
+  <circle cx="400" cy="176" r="3.2"/>
+  <circle cx="460" cy="96" r="3.2"/></g>
+  <text x="320" y="274" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">the two capacitors sit in series as far as the crystal is concerned, so a 22 pF pair presents about 11 pF</text>
+  <text x="320" y="292" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">a resonator with its capacitors built in already presents that load, and fitting these as well doubles it</text>
+</svg>

@@ -1,0 +1,29 @@
+(edif BUSTEST
+  (edifVersion 2 0 0)
+  (design BUSTEST (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell DEV
+      (view V (viewType NETLIST)
+        (interface
+          (port P0 (direction INPUT))
+          (port P1 (direction INPUT))
+          (port P2 (direction INPUT))
+          (port P3 (direction INPUT))
+          (port P4 (direction INPUT))
+          (port P5 (direction INPUT))
+          (port P6 (direction INPUT))
+          (port P7 (direction INPUT)))))
+    (cell TOP
+      (view V (viewType NETLIST)
+        (interface
+          (port (array DATA 8) (direction INPUT)))
+        (contents
+          (instance U1 (viewRef V (cellRef DEV)) (designator "U1"))
+          (net (rename DATA_0 "DATA[0]") (joined (portRef (member DATA 0)) (portRef P0 (instanceRef U1))))
+          (net (rename DATA_1 "DATA[1]") (joined (portRef (member DATA 1)) (portRef P1 (instanceRef U1))))
+          (net (rename DATA_2 "DATA[2]") (joined (portRef (member DATA 2)) (portRef P2 (instanceRef U1))))
+          (net (rename DATA_3 "DATA[3]") (joined (portRef (member DATA 3)) (portRef P3 (instanceRef U1))))
+          (net (rename DATA_4 "DATA[4]") (joined (portRef (member DATA 4)) (portRef P4 (instanceRef U1))))
+          (net (rename DATA_5 "DATA[5]") (joined (portRef (member DATA 5)) (portRef P5 (instanceRef U1))))
+          (net (rename DATA_6 "DATA[6]") (joined (portRef (member DATA 6)) (portRef P6 (instanceRef U1))))
+          (net (rename DATA_7 "DATA[7]") (joined (portRef (member DATA 7)) (portRef P7 (instanceRef U1)))))))))

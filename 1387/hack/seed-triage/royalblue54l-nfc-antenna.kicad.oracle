@@ -1,0 +1,17 @@
+# KiCad's own ERC and DRC over the royalblue54l-nfc-antenna seed (agni issue 967), from tools/samples/boards/royalblue54L-feather/nfc_antenna/RoyalBlue54L-NFC-Antenna.
+# Do not hand-edit: hack/kicad_oracle.sh writes this file, and the point of it is that we did not
+# choose the answer. TestSeedTriageAgainstKiCad compares the seed's triage record with it.
+#
+# 10.0.6
+# kicad-cli sch erc --format json --severity-all RoyalBlue54L-NFC-Antenna.kicad_sch
+# kicad-cli pcb drc --format json --severity-all RoyalBlue54L-NFC-Antenna.kicad_pcb
+#
+# Library warnings are left out. A line is one violation: tool, type, severity, the subject in
+# agni's spelling (a net, two nets joined by | for a pair, or - for none), then KiCad's description
+# and its items, tab-separated. A pin is resolved to its net through KiCad's own netlist.
+drc	copper_edge_clearance	error	net:/ANT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Segment of J1 on Edge.Cuts	Pad 1 [/ANT] of J1 on F.Cu
+drc	copper_edge_clearance	error	net:/ANT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Segment of J1 on Edge.Cuts	Pad 2 [/ANT] of J1 on F.Cu
+drc	track_dangling	warning	net:/ANT	Track has unconnected end	Track (arc) [/ANT] on F.Cu, length 0.0057 mm
+drc	track_dangling	warning	net:/ANT	Track has unconnected end	Track (arc) [/ANT] on F.Cu, length 0.0057 mm
+drc	track_dangling	warning	net:/ANT	Track has unconnected end	Track (arc) [/ANT] on F.Cu, length 0.0057 mm
+drc	track_dangling	warning	net:/ANT	Track has unconnected end	Track (arc) [/ANT] on F.Cu, length 0.0088 mm

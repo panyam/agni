@@ -1,0 +1,61 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "aaaa4444-0000-0000-0000-000000000000")
+	(paper "A4")
+	(title_block (title "Same-sheet local and global labels, child"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1" (rectangle (start -1.016 2.54) (end 1.016 -2.54) (fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "power:VCC"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "VCC_0_1" (polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "VCC_1_1" (pin power_in line (at 0 0 90) (length 0) (name "VCC") (number "1")))))
+	(symbol (lib_id "test:R") (at 20 50 0) (unit 1) (uuid "slR20")
+		(property "Reference" "R?" (at 17 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 23 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/44444444-4444-4444-4444-444444444444/dddd4444-0000-0000-0000-000000000000"
+					(reference "R101")
+					(unit 1)))))
+	(wire (pts (xy 20 46.19) (xy 25 46.19)))
+	(global_label "Y" (shape input) (at 25 46.19 0) (effects (font (size 1.27 1.27))))
+	(symbol (lib_id "test:R") (at 40 50 0) (unit 1) (uuid "slR40")
+		(property "Reference" "R?" (at 37 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 43 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/44444444-4444-4444-4444-444444444444/dddd4444-0000-0000-0000-000000000000"
+					(reference "R102")
+					(unit 1)))))
+	(wire (pts (xy 40 46.19) (xy 45 46.19)))
+	(label "W" (at 45 46.19 0) (effects (font (size 1.27 1.27))))
+	(symbol (lib_id "test:R") (at 60 50 0) (unit 1) (uuid "slR60")
+		(property "Reference" "R?" (at 57 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 63 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/44444444-4444-4444-4444-444444444444/dddd4444-0000-0000-0000-000000000000"
+					(reference "R103")
+					(unit 1)))))
+	(wire (pts (xy 60 46.19) (xy 65 46.19)))
+	(global_label "W" (shape input) (at 65 46.19 0) (effects (font (size 1.27 1.27))))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "slR80")
+		(property "Reference" "R?" (at 77 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 83 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/44444444-4444-4444-4444-444444444444/dddd4444-0000-0000-0000-000000000000"
+					(reference "R104")
+					(unit 1)))))
+	(wire (pts (xy 80 46.19) (xy 85 46.19)))
+	(label "VCC" (at 85 46.19 0) (effects (font (size 1.27 1.27)))))

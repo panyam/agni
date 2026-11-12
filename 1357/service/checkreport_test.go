@@ -1,0 +1,156 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/results"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// reportRun runs the catalog over a design with one unpulled I2C net, so the run has a finding, a
+// failing verdict and passing ones, and returns the service that ran it.
+func reportRun(t *testing.T) (*CheckService, *webapi.CheckDesignResponse, string) {
+	t.Helper()
+	d := &ir.Design{Nets: []*ir.Net{{
+		Name:        "SDA",
+		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
+	}}}
+	svc := NewCheckService(fakeLoader{design: d, hash: "sha256:abc"}, check.DefaultCatalog(), nil, "", nil, nil).
+		WithEnv(ReviewEnv{ProducerVersion: "v9.9.9-test", Intent: true})
+	snap := snapOf(t, svc.Snapshots(), "mount://m/board.edn")
+	run, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"i2c-pull-up"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(run.GetFindings()) == 0 || len(run.GetVerdicts()) == 0 {
+		t.Fatalf("the run found %d findings and %d verdicts, so the report has nothing to carry", len(run.GetFindings()), len(run.GetVerdicts()))
+	}
+	return svc, run, snap
+}
+
+// TestRenderCheckReportWritesTheResultsDocument checks the JSON form against the document from `agni
+// check --results-out`. Both hold the producer, the design's hash, the selected catalog and the run's
+// findings.
+func TestRenderCheckReportWritesTheResultsDocument(t *testing.T) {
+	svc, run, snap := reportRun(t)
+	resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
+		Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run,
+		Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.GetContentType() != "application/json" || resp.GetFilename() != "board.agni-check.json" {
+		t.Errorf("content type %q and filename %q, want application/json and board.agni-check.json", resp.GetContentType(), resp.GetFilename())
+	}
+	doc, err := results.Parse(resp.GetContent())
+	if err != nil {
+		t.Fatalf("the document does not parse as a results document: %v", err)
+	}
+	m := doc.GetMeta()
+	if m.GetSchema() != results.Schema || m.GetProducer() != results.Producer || m.GetProducerVersion() != "v9.9.9-test" || m.GetCreatedAt() == "" {
+		t.Errorf("meta = %+v, want the results schema and producer, version v9.9.9-test and a timestamp", m)
+	}
+	if doc.GetDesign().GetSource() != "mount://m/board.edn" || doc.GetDesign().GetContentHash() != "sha256:abc" {
+		t.Errorf("design = %+v, want the request's uri and the loader's hash", doc.GetDesign())
+	}
+	if len(doc.GetCatalog()) != 1 || doc.GetCatalog()[0].GetName() != "i2c-pull-up" {
+		t.Errorf("catalog = %v, want the one selected rule", doc.GetCatalog())
+	}
+	if !doc.GetRun().GetIntent() {
+		t.Error("the env's intent flag did not reach the run's provenance")
+	}
+	if len(doc.GetFindings()) != len(run.GetFindings()) {
+		t.Errorf("the document carries %d findings, the run %d", len(doc.GetFindings()), len(run.GetFindings()))
+	}
+}
+
+// TestRenderCheckReportWritesTheVerdictPage checks that the HTML form lists the run's verdicts, and
+// that its links point where the caller asked.
+func TestRenderCheckReportWritesTheVerdictPage(t *testing.T) {
+	svc, run, snap := reportRun(t)
+	render := func(links *webapi.ReportLinks) string {
+		t.Helper()
+		resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
+			Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run, Links: links,
+			Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.HasPrefix(resp.GetContentType(), "text/html") || resp.GetFilename() != "board.agni-check.html" {
+			t.Errorf("content type %q and filename %q", resp.GetContentType(), resp.GetFilename())
+		}
+		return string(resp.GetContent())
+	}
+	page := render(nil)
+	if !strings.Contains(page, "i2c-pull-up") || !strings.Contains(page, "SDA") {
+		t.Error("the page does not name the rule and the subject the run failed")
+	}
+	if strings.Contains(page, "/designs/") {
+		t.Error("a page asked for no links carries one")
+	}
+	linked := render(&webapi.ReportLinks{UrlBase: "https://example.org/agni/demo/", DesignUri: "mount://gateway/designs/gateway"})
+	if !strings.Contains(linked, "https://example.org/agni/demo/designs/gateway/designs/gateway/view") {
+		t.Error("a page asked for links against a base carries no link into that viewer")
+	}
+	withheld := render(&webapi.ReportLinks{Withheld: "this design was opened from your machine"})
+	if !strings.Contains(withheld, "this design was opened from your machine") {
+		t.Error("a page whose links were withheld does not say why")
+	}
+}
+
+func TestRenderCheckReportRefusesAnIncompleteRequest(t *testing.T) {
+	svc, run, snap := reportRun(t)
+	for name, req := range map[string]*webapi.RenderCheckReportRequest{
+		"no run":    {Snapshot: snap, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML},
+		"no format": {Snapshot: snap, Run: run},
+	} {
+		if _, err := svc.RenderCheckReport(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
+			t.Errorf("%s: err = %v, want ErrInvalidArgument", name, err)
+		}
+	}
+}
+
+// The caller answers query sets and sends them with the request. The HTML page shows each set in its
+// own Queries section after the rules, so one file holds the checks and the queries (agni issue 1190).
+// A request sending no sets renders the page with no Queries section at all.
+func TestRenderCheckReportCarriesTheQuerySetsItIsSent(t *testing.T) {
+	svc, run, snap := reportRun(t)
+	render := func(sets ...*webapi.RunQueriesResponse) string {
+		t.Helper()
+		resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
+			Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run, QuerySets: sets,
+			Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(resp.GetContent())
+	}
+	set := &webapi.RunQueriesResponse{Title: "Audit demo", Results: []*webapi.NamedQueryResult{
+		{Name: "Pins", Result: &webapi.RunQueryResponse{
+			Query: "pin.net(?p, ?n, ?net) => ?p, ?net", Columns: []string{"p", "net"}, Total: 2,
+			Rows: []*webapi.QueryRow{{Cells: []string{"U1", "SDA"}}, {Cells: []string{"U2", "SDA"}}},
+		}},
+		{Name: "Broken", Error: "unknown relation"},
+	}}
+	page := render(set)
+	rules, queries := strings.Index(page, "i2c-pull-up"), strings.Index(page, `<section class="query-set">`)
+	if rules < 0 || queries < rules {
+		t.Fatalf("the page wants the rules and then a Queries section, rules at %d and queries at %d", rules, queries)
+	}
+	for _, want := range []string{"Queries: Audit demo", "<h2>Pins</h2>", "<td class=\"subject\">U2</td>", "Could not answer: unknown relation"} {
+		if !strings.Contains(page[queries:], want) {
+			t.Errorf("the Queries section lacks %q", want)
+		}
+	}
+	if bare := render(); strings.Contains(bare, "query-set") || strings.Contains(bare, "Queries:") {
+		t.Error("a request sending no query sets renders a Queries section")
+	}
+}

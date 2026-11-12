@@ -1,0 +1,252 @@
+package service
+
+import (
+	"context"
+	"sync"
+	"testing"
+
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/render"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/expect"
+)
+
+// recordingLoader answers every Loader method with a fixed fixture and records the ReadOptions each
+// call received, keyed by method. Recording is the only way to observe config reaching a read. The
+// options are consumed inside the adapter. A test that looked at the RESULT would assert on the
+// reader's symbol resolution, rather than on whether the service passed the config at all.
+type recordingLoader struct {
+	mu   sync.Mutex
+	seen map[string][]ReadOptions
+}
+
+func newRecordingLoader() *recordingLoader {
+	return &recordingLoader{seen: map[string][]ReadOptions{}}
+}
+
+func (l *recordingLoader) record(method string, opts []ReadOption) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.seen[method] = append(l.seen[method], ReadOpts(opts...))
+}
+
+// reset forgets every call recorded so far.
+func (l *recordingLoader) reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.seen = map[string][]ReadOptions{}
+}
+
+// symbolPathsFor returns the symbol paths every recorded call to method saw, one entry per call.
+func (l *recordingLoader) symbolPathsFor(method string) [][]string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var out [][]string
+	for _, o := range l.seen[method] {
+		out = append(out, o.SymbolPaths)
+	}
+	return out
+}
+
+func (l *recordingLoader) Design(_ context.Context, _ artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+	l.record("Design", opts)
+	return &ir.Design{Name: "D", Nets: []*ir.Net{{Name: "N1"}}}, nil
+}
+
+func (l *recordingLoader) Geometry(_ context.Context, _ artifact.URI, _ string, _ bool, opts ...ReadOption) (*geom.SchematicGeometry, error) {
+	l.record("Geometry", opts)
+	return twoSheetGeom(), nil
+}
+
+func (l *recordingLoader) Report(_ context.Context, _ artifact.URI, _ bool, opts ...ReadOption) (*graph.ConversionReport, error) {
+	l.record("Report", opts)
+	return &graph.ConversionReport{}, nil
+}
+
+func (l *recordingLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
+	return nil, nil
+}
+
+func (l *recordingLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
+	return nil, nil
+}
+
+func (l *recordingLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+	return "", nil
+}
+
+// stubProjectStore resolves every artifact to one project declaring one symbol library, standing in
+// for the descriptor tree the FS store walks.
+type stubProjectStore struct{ project *webapi.Project }
+
+func (s stubProjectStore) Project(context.Context, string) (*webapi.Project, error) {
+	return s.project, nil
+}
+func (s stubProjectStore) Projects(context.Context) ([]*webapi.Project, error) {
+	return []*webapi.Project{s.project}, nil
+}
+func (s stubProjectStore) Design(context.Context, string) (*webapi.Design, error) {
+	return &webapi.Design{}, nil
+}
+func (s stubProjectStore) Designs(context.Context, string) ([]*webapi.Design, error) {
+	return []*webapi.Design{{}}, nil
+}
+func (s stubProjectStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	return &webapi.Design{}, s.project, nil
+}
+
+// symbolProjectResolver puts every design in one project, and that project declares hostDir as its
+// symbol library.
+func symbolProjectResolver(hostDir string) *ProjectResolver {
+	return &ProjectResolver{
+		Store: stubProjectStore{project: &webapi.Project{
+			Name:   "projects/p",
+			Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/p/symbols"}},
+		}},
+		Config: symbolResolver{dirs: []string{hostDir}},
+	}
+}
+
+// TestSymbolPathsReachTheRenderRead is the twin of TestSymbolPathsReachTheRead, for the render tier.
+//
+// The reason is the same. An unresolved symbol changes what the design CONTAINS rather than
+// what is checked about it. On the render side the consequence is sharper, because it is invisible.
+// Imagine a placement whose symbol did not resolve. It contributes no shapes, so it is dropped from
+// the document, and so are the entity keys that make it pickable. The annotation pass still draws its
+// reference designator. The sheet then looks complete, and every component and pin on it is silently
+// unclickable (agni issue 347).
+//
+// This assertion could not be written before. Loader.Geometry took no options, so a call site had no
+// channel to pass config through, and a test had nothing to observe.
+func TestSymbolPathsReachTheRenderRead(t *testing.T) {
+	uri := "mount://m/p/board.kicad_sch"
+	cases := []struct {
+		name   string
+		method string
+		call   func(*testing.T, *DesignService) error
+	}{
+		{"GetDesign", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
+			return err
+		}},
+		{"GetSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
+			return err
+		}},
+		{"HighlightSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
+			return err
+		}},
+		{"GetLayoutReport", "Report", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
+			return err
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ld := newRecordingLoader()
+			svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
+			if err := tc.call(t, svc); err != nil {
+				t.Fatalf("%s: %v", tc.name, err)
+			}
+			got := ld.symbolPathsFor(tc.method)
+			if len(got) == 0 {
+				t.Fatalf("%s made no %s call to observe", tc.name, tc.method)
+			}
+			for i, paths := range got {
+				if len(paths) != 1 || paths[0] != "/host/p/symbols" {
+					t.Errorf("%s: %s call %d saw symbol paths %v, want [/host/p/symbols]", tc.name, tc.method, i, paths)
+				}
+			}
+		})
+	}
+}
+
+// TestSymbolPathsReachTheNetlistReadsBesideTheRender covers the reads NEXT to the render on the same
+// service. They were equally unconfigured. One is GetDesign's component/net counts. The other is the
+// netlist that HighlightSheet reads to resolve net ids to names for a name-join.
+//
+// They are here rather than in a separate test because they share the defect's cause. The service had
+// no resolver at all, so every read it made was unconfigured. Fixing only the reads behind the
+// drawing would leave the counts beside it describing a different read.
+func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
+	ld := newRecordingLoader()
+	svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
+	// A netlist extension, so GetDesign takes the auto-layout branch that reads the IR for its counts.
+	uri := "mount://m/p/board.edn"
+	snap := snapOf(t, svc.Snapshots(), uri)
+	ld.reset() // the ingest's own read is not GetDesign's
+	if _, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snap}); err != nil {
+		t.Fatal(err)
+	}
+	got := ld.symbolPathsFor("Design")
+	if len(got) == 0 {
+		t.Fatal("GetDesign made no netlist read to observe")
+	}
+	for i, paths := range got {
+		if len(paths) != 1 || paths[0] != "/host/p/symbols" {
+			t.Errorf("GetDesign netlist read %d saw symbol paths %v, want [/host/p/symbols]", i, paths)
+		}
+	}
+}
+
+// TestDiffReadsBothSidesConfigured is the folded-in half of agni issue 347.
+//
+// A diff depends entirely on its two netlist reads, and both were made with no options. Imagine a
+// project whose symbol library did not resolve. Its diff compared two reads that each lost every
+// connection through the affected parts. So a revision that CHANGED such a connection showed no
+// change at all.
+// `agni diff` on the CLI reads through readDesign and is configured, so the two surfaces answered the
+// same question differently. This was the service-side survivor of agni issue 228.
+func TestDiffReadsBothSidesConfigured(t *testing.T) {
+	ld := newRecordingLoader()
+	svc := NewDiffService(ld, symbolProjectResolver("/host/p/symbols"))
+	a, b := snapOf(t, svc.Snapshots(), "mount://m/p/a.edn"), snapOf(t, svc.Snapshots(), "mount://m/p/b.edn")
+	ld.reset() // each ingest reads its netlist, and the reads counted here are the diff's
+	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
+		ASnapshot: a,
+		BSnapshot: b,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reads := ld.symbolPathsFor("Design")
+	if len(reads) != 2 {
+		t.Fatalf("a diff reads exactly two netlists, observed %d", len(reads))
+	}
+	for i, paths := range reads {
+		if len(paths) != 1 || paths[0] != "/host/p/symbols" {
+			t.Errorf("diff side %d read with symbol paths %v, want [/host/p/symbols]", i, paths)
+		}
+	}
+	// Each side is annotated against a geometry, and that geometry has to come from the SAME config as
+	// its netlist. Otherwise a change would be badged onto a sheet drawn from a shorter read than the
+	// one that found it.
+	for i, paths := range ld.symbolPathsFor("Geometry") {
+		if len(paths) != 1 || paths[0] != "/host/p/symbols" {
+			t.Errorf("diff geometry read %d saw symbol paths %v, want [/host/p/symbols]", i, paths)
+		}
+	}
+}
+
+// TestNoProjectResolverReadsUnderDefaults is the positive control for the three tests above. A design
+// belonging to no project genuinely has no config. Its read must still be clean, with no error and
+// no library inherited from another project.
+//
+// Without this control the assertions above would also pass if the service had started passing some
+// FIXED set of paths. A "config arrived" test cannot otherwise tell that failure apart.
+func TestNoProjectResolverReadsUnderDefaults(t *testing.T) {
+	ld := newRecordingLoader()
+	svc := NewDesignService(ld, noNative{}, render.Style{}, nil)
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/loose.kicad_sch")}); err != nil {
+		t.Fatal(err)
+	}
+	for i, paths := range ld.symbolPathsFor("Geometry") {
+		if len(paths) != 0 {
+			t.Errorf("a design with no project must read under the defaults; call %d saw %v", i, paths)
+		}
+	}
+}

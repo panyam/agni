@@ -1,0 +1,182 @@
+package intent
+
+import "github.com/panyam/agni/core/check"
+
+// The intent rules emit under these rule names. They are the BARE names, since Rule.Name may not
+// contain the catalog's "/" namespace separator. Source("intent", ...) exposes them in the catalog as
+// "intent/module-missing" and "intent/voltage-domain-mismatch", and a review manifest binds to those
+// names (rule: intent/module-missing). The names do not change, so an item flips to pass/fail once a
+// declaration is loaded.
+const (
+	RuleModuleMissing = "module-missing"
+	RuleModuleCount   = "module-count"
+	RuleVoltageDomain = "voltage-domain-mismatch"
+	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095). They
+	// are one mechanism at two thresholds. It is split into two names so the ratings item and the
+	// margins item get separate verdicts.
+	RuleRailCurrentCapacity = "rail-current-capacity"
+	RuleRailCurrentMargin   = "rail-current-margin"
+	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085). It checks the
+	// switch's current limit against the rail's declared draw. It reads the same declared peaks as the
+	// two rules above. It judges a different part, the switch rather than the supply, so it is its
+	// own rule.
+	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
+	// These three IO-map rules check the netlist (agni issue 517). They have fixed names rather than
+	// one per declared row. A real map is hundreds of rows, and a reviewer signs off "the netlist
+	// matches the IO map", not each row
+	// (docsite/content/guide/design-intent.md#one-rule-per-declared-thing). There are three names
+	// because a reviewer acts on each answer differently. The last two are opposite defects, and they
+	// get confused when they share a verdict.
+	RuleIOMapPin       = "io-map-pin-mismatch"
+	RuleIOMapNetAbsent = "io-map-net-absent"
+	RuleIOMapFarEnd    = "io-map-far-end"
+	// RuleIOMapFunction checks a row's declared function against the pin's alternate functions, as the
+	// part's datasheet lists them (agni issue 667).
+	RuleIOMapFunction = "io-map-function"
+	// A per-row IO-map verdict has these context roles. Together with the subject's device, they form
+	// the map row's key (agni issue 1188). RoleOnThePin is the net that the resolved pin actually sits
+	// on. RoleDeclaredPin appears only when the map spells the pin differently from the design.
+	RoleDeclaredNet    = "declared net"
+	RoleDeclaredPin    = "declared pin"
+	RoleOnThePin       = "on the pin"
+	RoleDeclaredFarEnd = "declared far end"
+	// RuleIOMapCoverage reports the parts of the design the map never mentions. Its considered set is
+	// the NETLIST, not the declaration; see ioMapCoverageRule.
+	RuleIOMapCoverage = "io-map-coverage"
+	// RuleExposureDeclared confirms that each component with a declared exposure is a connector the
+	// design has (agni issue 831). Without it a misspelled ref-des would change nothing and read as a
+	// declaration that took effect.
+	RuleExposureDeclared = "exposure-declared"
+	// RulePullUpReachDeclared confirms that each net with a declared pull-up reach is a net the design
+	// has (agni issue 1165). The reach is keyed by the exact net name, so without it a misspelled name
+	// would change nothing and read as a declaration that took effect.
+	RulePullUpReachDeclared = "pull-up-reach-declared"
+	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
+	// bare rule name.
+	SourceName = "intent"
+)
+
+// Compile turns a Declaration into the set of check rules that verify a design against it. Like
+// profiles.Compile, the declaration is per-design config and the rules are code. Each sub-check is
+// emitted only when the declaration carries the data it needs, so a declaration with modules but no
+// voltage domains compiles to just the module rule (no empty rule that silently passes). The rules
+// close over the declaration and read the design through check.Model (C19), so they are
+// netlist-format-neutral.
+func Compile(d Declaration) []*check.Rule {
+	var rules []*check.Rule
+	if len(d.Modules) > 0 {
+		rules = append(rules, moduleMissingRule(d))
+	}
+	if anyModuleHasCount(d) {
+		rules = append(rules, moduleCountRule(d))
+	}
+	if len(d.VoltageDomains) > 0 {
+		rules = append(rules, voltageDomainRule(d))
+	}
+	if len(d.RailBudgets) > 0 {
+		rules = append(rules, railBudgetCapacityRule(d))
+		// The load-switch lower bound needs the budget and nothing else, so it compiles under the
+		// capacity condition rather than a second one. A design with no controller-based switch
+		// resolves none, and the rule reports nothing. No declaration field says "this rail is
+		// switched", and adding one would let an author's omission read as a defect.
+		rules = append(rules, loadSwitchTripBelowBudgetRule(d))
+		// Only when a factor is declared, because the factor IS the rule's threshold. See
+		// Declaration.MarginFactor for why there is no default.
+		if d.MarginFactor > 1 {
+			rules = append(rules, railBudgetMarginRule(d))
+		}
+	}
+	if len(d.IOMap) > 0 {
+		rules = append(rules, ioMapPinRule(d), ioMapNetAbsentRule(d))
+		// The far-end rule is compiled whenever a map is declared, not only when a row fills its far
+		// end, because its verdicts report the denominator. A map with empty far-end columns must read
+		// as unexamined rather than clean.
+		rules = append(rules, ioMapFarEndRule(d))
+		rules = append(rules, ioMapCoverageRule(d))
+		// Compiled only when a row declares a function, since on a map with no function column it
+		// could only report every row not-considered.
+		if anyRowDeclaresFunction(d) {
+			rules = append(rules, ioMapFunctionRule(d))
+		}
+	}
+	if len(d.Exposures) > 0 {
+		rules = append(rules, exposureDeclaredRule(d))
+	}
+	if len(d.PullUpReach) > 0 {
+		rules = append(rules, pullUpReachDeclaredRule(d))
+	}
+	for _, s := range d.Subsystems {
+		rules = append(rules, subsystemRule(s))
+	}
+	// One rule per declared strap group (WS3-120). The collision check is cross-group, so it gets ONE
+	// rule for the whole declaration, compiled only when at least two groups share a bus, since over
+	// fewer it could only pass.
+	for _, g := range d.StrapGroups {
+		rules = append(rules, strapGroupRule(g))
+	}
+	if collidableGroups(d.StrapGroups) {
+		rules = append(rules, strapCollisionRule(d.StrapGroups))
+	}
+	// One rule per declared sequence (WS3-092). A sequence with no adjacent good/enable pair compiles
+	// to NOTHING, since its rule would have no link to judge. Parse rejects that at load, so this guard
+	// only catches a Declaration built in Go; both call hasGatingPair so they agree on what is checkable.
+	for _, s := range d.Sequences {
+		if hasGatingPair(s) {
+			rules = append(rules, sequenceRule(s))
+		}
+	}
+	// One rule per protection KIND present (kinds appear in declaration order so rule order is stable).
+	seen := map[string]bool{}
+	for _, p := range d.Protections {
+		if seen[p.Kind] {
+			continue
+		}
+		seen[p.Kind] = true
+		rules = append(rules, protectionRule(p.Kind, d.Protections))
+	}
+	// One rule per property KIND present, same shape and same reason as protections above.
+	seenProp := map[string]bool{}
+	for _, np := range d.NetProperties {
+		if seenProp[np.Property] {
+			continue
+		}
+		seenProp[np.Property] = true
+		rules = append(rules, propertyRule(np.Property, d.NetProperties))
+	}
+	for _, r := range rules {
+		r.DocPage = docPage(r.Name)
+	}
+	return rules
+}
+
+// anyModuleHasCount reports whether the declaration sets an exact count on any module. The count rule
+// is emitted only then, so modules with no counts compile to just module-missing.
+func anyModuleHasCount(d Declaration) bool {
+	for _, mod := range d.Modules {
+		if mod.Count > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// anyRowDeclaresFunction reports whether any IO-map row selects a function. Only then does
+// io-map-function have something to compare.
+func anyRowDeclaresFunction(d Declaration) bool {
+	for _, a := range d.IOMap {
+		if a.Function != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// intentTags is the classification of every intent rule. Category integrity marks a design-intent
+// deviation as a "the design does not match what was declared" tripwire, and distribution open marks it
+// as derivable from the authored declaration (no proprietary source in the mechanism itself).
+func intentTags() map[string]string {
+	return map[string]string{
+		check.KeyCategory:     check.CategoryIntegrity,
+		check.KeyDistribution: check.DistOpen,
+	}
+}

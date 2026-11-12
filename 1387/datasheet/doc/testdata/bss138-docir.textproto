@@ -1,0 +1,109 @@
+# Hand-authored doc-IR of the BSS138 datasheet (Fairchild Rev C(W)), covering the
+# two tables and one figure the WS10-001 param fixture cites, so the cross-contract
+# resolution test runs against committed data. content_hash is the real sha256 of
+# the source PDF; table content hashes are computed by doc.TableHash (Validate
+# enforces the match). Grid subsets: only the rows the param fixture encodes, plus
+# headers; the RDS(on) merged cell demonstrates row spans.
+content_hash: "sha256:f7359512158956f42f3d90464ae87f7ec45abf2a9fa1630e046ab61076a1e8d0"
+source_format: "pdf"
+title: "BSS138 N-Channel Logic Level Enhancement Mode Field Effect Transistor"
+producer: "hand"
+page_count: 5
+
+pages {
+  number: 1
+  width: 612
+  height: 792
+  text_blocks {
+    id: "p1.x1"
+    text: "Absolute Maximum Ratings  TA=25C unless otherwise noted"
+    bbox { x: 72 y: 470 width: 300 height: 14 }
+    kind: "heading"
+  }
+  tables {
+    id: "p1.t1"
+    title: "Absolute Maximum Ratings"
+    bbox { x: 72 y: 488 width: 470 height: 130 }
+    rows: 5
+    cols: 4
+    cells { row: 0 col: 0 text: "Symbol" is_header: true }
+    cells { row: 0 col: 1 text: "Parameter" is_header: true }
+    cells { row: 0 col: 2 text: "Ratings" is_header: true }
+    cells { row: 0 col: 3 text: "Units" is_header: true }
+    cells { row: 1 col: 0 text: "VDSS" }
+    cells { row: 1 col: 1 text: "Drain-Source Voltage" }
+    cells { row: 1 col: 2 text: "50" }
+    cells { row: 1 col: 3 text: "V" }
+    cells { row: 2 col: 0 text: "VGSS" }
+    cells { row: 2 col: 1 text: "Gate-Source Voltage" }
+    cells { row: 2 col: 2 text: "+/-20" }
+    cells { row: 2 col: 3 text: "V" }
+    cells { row: 3 col: 0 text: "ID" }
+    cells { row: 3 col: 1 text: "Drain Current - Continuous" }
+    cells { row: 3 col: 2 text: "0.22" }
+    cells { row: 3 col: 3 text: "A" }
+    cells { row: 4 col: 0 text: "TJ, TSTG" }
+    cells { row: 4 col: 1 text: "Operating and Storage Junction Temperature Range" }
+    cells { row: 4 col: 2 text: "-55 to +150" }
+    cells { row: 4 col: 3 text: "C" }
+    footnotes: "TA = 25C unless otherwise noted"
+    confidence: 1
+    content_hash: "sha256:b5fc29750535187c17c8daece4ca926395c94bd35b2d362df86cbdad4c80143d"
+  }
+}
+
+pages {
+  number: 2
+  width: 612
+  height: 792
+  tables {
+    id: "p2.t1"
+    title: "Electrical Characteristics"
+    section: "On Characteristics"
+    bbox { x: 72 y: 120 width: 470 height: 160 }
+    rows: 5
+    cols: 7
+    cells { row: 0 col: 0 text: "Symbol" is_header: true }
+    cells { row: 0 col: 1 text: "Parameter" is_header: true }
+    cells { row: 0 col: 2 text: "Test Conditions" is_header: true }
+    cells { row: 0 col: 3 text: "Min" is_header: true }
+    cells { row: 0 col: 4 text: "Typ" is_header: true }
+    cells { row: 0 col: 5 text: "Max" is_header: true }
+    cells { row: 0 col: 6 text: "Units" is_header: true }
+    cells { row: 1 col: 0 text: "VGS(th)" }
+    cells { row: 1 col: 1 text: "Gate Threshold Voltage" }
+    cells { row: 1 col: 2 text: "VDS = VGS, ID = 1 mA" }
+    cells { row: 1 col: 3 text: "0.8" }
+    cells { row: 1 col: 4 text: "1.3" }
+    cells { row: 1 col: 5 text: "1.5" }
+    cells { row: 1 col: 6 text: "V" }
+    cells { row: 2 col: 0 row_span: 3 text: "RDS(on)" }
+    cells { row: 2 col: 1 row_span: 3 text: "Static Drain-Source On-Resistance" }
+    cells { row: 2 col: 2 text: "VGS = 10 V, ID = 0.22 A" }
+    cells { row: 2 col: 4 text: "0.7" }
+    cells { row: 2 col: 5 text: "3.5" }
+    cells { row: 2 col: 6 row_span: 3 text: "Ohm" }
+    cells { row: 3 col: 2 text: "VGS = 4.5 V, ID = 0.22 A" }
+    cells { row: 3 col: 4 text: "1.0" }
+    cells { row: 3 col: 5 text: "6.0" }
+    cells { row: 4 col: 2 text: "VGS = 10 V, ID = 0.22 A, TJ = 125C" }
+    cells { row: 4 col: 4 text: "1.1" }
+    cells { row: 4 col: 5 text: "5.8" }
+    footnotes: "TA = 25C unless otherwise noted"
+    footnotes: "Note 2: Pulse Test: Pulse Width <= 300 us, Duty Cycle <= 2.0%"
+    confidence: 1
+    content_hash: "sha256:2bbf15ea9eb89e5ca2416f786e9ef637171d7c70ecb4e54b05d8651a40d079f2"
+  }
+}
+
+pages {
+  number: 3
+  width: 612
+  height: 792
+  figures {
+    id: "p3.f1"
+    caption: "Figure 3. On-Resistance Variation with Temperature."
+    bbox { x: 90 y: 420 width: 230 height: 200 }
+    confidence: 1
+  }
+}

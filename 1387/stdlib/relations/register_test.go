@@ -1,0 +1,62 @@
+package relations_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/agni/core/query"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	_ "github.com/panyam/agni/stdlib/relations" // registers the built-in relations via init
+)
+
+// TestBuiltinRelationsRegisteredWithQuery is the registration-hook guard (issue 10): blank-importing
+// stdlib/relations must install the built-in EDB relations into the query engine through
+// facts.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
+// this package existed, the query engine held these relations directly. Suppose the init or the
+// RegisterBuiltinFacts payload regresses, through a dropped projector or an empty schema. This test
+// then fails on the wiring, where the byte-identical CLI checks might not pinpoint it.
+func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
+	// The catalog lists the built-in relations, with their kinds, once relations is imported.
+	want := map[string]string{
+		"component.mpn":     facts.KindNetlist,
+		"net.rail":          facts.KindNetlist,
+		"board.track_width": facts.KindBoard,
+		"param.max":         facts.KindDatasheet,
+	}
+	got := map[string]string{}
+	for _, r := range query.Catalog() {
+		got[r.Name] = r.Kind
+	}
+	for name, kind := range want {
+		if got[name] != kind {
+			t.Errorf("query.Catalog() missing built-in relation %q with kind %q (got kind %q)", name, kind, got[name])
+		}
+	}
+
+	// NewBase projects the built-in relations from a Model, so a component on a net yields a
+	// component.net fact. Without the built-ins registered, that relation is empty.
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets: []*ir.Net{{Name: "N1", Prov: &ir.Provenance{SourceFile: "t"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
+	}
+	rows, err := (query.Naive{}).Eval(context.Background(), query.MustParse(`component.net(?r,?n) => ?r, ?n`), query.NewBase(check.NewModel(d)))
+	if err != nil {
+		t.Fatalf("query over a built-in relation errored: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("component.net over U1/N1 = %d rows, want 1 (built-in relations not projected?)", len(rows))
+	}
+}
+
+// TestBuiltinRelationCollisionDetected proves that the schema half of the registration is wired.
+// Composing an overlay relation on a built-in name must fail. That works only if
+// RegisterBuiltinFacts installed the name into the vocabulary that this package registers.
+func TestBuiltinRelationCollisionDetected(t *testing.T) {
+	opt := facts.WithRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
+	if _, err := facts.NewRegistry(append(facts.Registered(), opt)...); err == nil {
+		t.Error("composing an overlay relation named component.mpn produced no error; the built-in schema was not registered")
+	}
+}

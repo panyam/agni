@@ -1,0 +1,243 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/checks/checks.proto";
+import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/config.proto";
+import "google/protobuf/empty.proto";
+
+// This file defines ReviewService, the transport-neutral analogue of `agni review` (WS9-047).
+// Review is the check family's aggregation layer. It runs a project's checklist, called a
+// manifest, against a design, and classifies each item's outcome. Both surfaces map the run
+// through review.Run. So a served review and the CLI cannot disagree on an outcome.
+
+// ReviewService manages review RUNS as resources (WS9-053). A run used to be a call. You sent a
+// checklist and a design, got outcomes back, and nothing remained. A review does not work that
+// way. A team acts on a checklist verdict over weeks. It compares verdicts between revisions, and
+// gates a release on one. Every one of those uses needs the run to still exist tomorrow.
+//
+// So a client creates, fetches, lists, and deletes runs. A run produces a self-contained
+// agni.v1.checks.CheckResults document, the same one `agni review --results-out` writes. The
+// document holds everything needed to render the run again, including the checklist snapshot. So
+// a review from last quarter renders against the checklist it actually scored, and not against
+// whatever that file says today.
+//
+// This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
+// CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
+// the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+// independent of its inputs, so it needs an identity of its own.
+//
+// The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
+// The service composes them once into the catalog it holds. So a create request sends the
+// checklist, names the design's snapshot, and sets the ratified-data floor.
+service ReviewService {
+  // CreateReview runs the checklist against the design, stores the result, and returns the stored
+  // Review. The run is all-or-nothing. An invalid or absent manifest is an error, and so is a
+  // snapshot whose design cannot be read. So a partial read never
+  // reports items clean without checking them. Nothing is stored when the run fails.
+  //
+  // It is synchronous. A review is a check sweep per item, and it finishes within the time a
+  // request can wait. So this returns the Review itself rather than an Operation. If that stops
+  // being true, the answer is AIP-151, not a client-side poll invented here.
+  //
+  // One review is about ONE design. A project rollup is several Reviews. A document holds a single
+  // DesignRef on purpose, because averaging several designs into one document would misrepresent
+  // every one of them.
+  rpc CreateReview(CreateReviewRequest) returns (Review);
+
+  // GetReview returns a stored run by name. The document is self-contained, so this needs neither the
+  // design nor the checklist to still exist.
+  rpc GetReview(GetReviewRequest) returns (Review);
+
+  // ListReviews returns stored runs, newest first. Results are paginated. `filter` narrows them to
+  // one design, so a client can ask the question it actually has ("how has THIS board been
+  // trending").
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+
+  // DeleteReview removes a stored run. Deleting a run that is already absent is an error, not a
+  // silent success. A client asking to delete something that is not there has a stale view, and
+  // should be told so.
+  rpc DeleteReview(DeleteReviewRequest) returns (google.protobuf.Empty);
+
+  // GetReviewManifest resolves a stored checklist into a value for CreateReview. It parses AND
+  // validates. So a client learns once, here, that its manifest is malformed, and not on every run.
+  // A caller that already holds a manifest skips this call. The CLI is one, since it reads the YAML
+  // the user named.
+  rpc GetReviewManifest(GetReviewManifestRequest) returns (GetReviewManifestResponse);
+
+  // ListChecklists returns the checklists a design's project declares, inherited ones included
+  // (agni issue 859). They come in the order the project writes them, so the first is the
+  // project's default. Every surface asks this rpc which checklists a design has. `agni review
+  // --checklist <name>`, `agni checklists` and the viewer's picker all read it. A design in no
+  // project answers an empty project and no checklists. A project declaring none answers its name
+  // and no checklists. The two answers differ because the fixes differ. The first sends a manifest,
+  // and the second adds a checklists section. A descriptor that exists and does not parse is an
+  // error. The checklists are values, so a client runs one by sending it to CreateReview.
+  rpc ListChecklists(ListChecklistsRequest) returns (ListChecklistsResponse);
+
+  // RenderReviewReport takes a review the caller already holds and writes it as a checklist page
+  // (agni issue 1030). `agni review --format html` writes the same page. The page lists the
+  // manifest's areas and items in the manifest's order, each with its outcome and every finding
+  // behind it. It runs nothing and reads no store. So a run that was never stored (validate_only)
+  // renders as a stored one does. The CLI's page and the viewer's saved page both come from this
+  // one renderer.
+  rpc RenderReviewReport(RenderReviewReportRequest) returns (RenderReviewReportResponse);
+}
+
+message RenderReviewReportRequest {
+  // review is the run to write, as CreateReview or GetReview returned it. Nothing is re-run.
+  Review review = 1;
+  // links makes each finding a link into a viewer serving the design, as on the check report.
+  ReportLinks links = 2;
+}
+
+message RenderReviewReportResponse {
+  bytes content = 1;
+  // content_type is "text/html; charset=utf-8".
+  string content_type = 2;
+  // filename is a name to save under, from the design, such as "gateway.agni-review.html".
+  string filename = 3;
+}
+
+// Review is one stored review run.
+//
+// The resource is little more than a name plus the document, on purpose. The document was already
+// self-contained. So making runs addressable needed an identity and a store, and no new payload.
+// `results` holds anything a consumer needs to render, diff, or archive this run.
+message Review {
+  // name is the resource name. If the run's design belongs to a project, the name is
+  // "projects/{project}/reviews/{review}". If it belongs to none, the name is "reviews/{review}".
+  // The server assigns the id, which is opaque and time-sortable. So a listing is chronological
+  // without opening every document.
+  //
+  // The two shapes are deliberate, and the second is not a degenerate case of the first. A project
+  // really OWNS the runs made under it. The checklist, the rule catalog, and the vocabulary a run
+  // scored against all belong to the project, so nesting states a real relationship. A design in a
+  // mounted folder ORDINARILY resolves to no project, and its runs have no such owner. A synthetic
+  // parent would assert ownership that does not exist. This message once refused the same claim
+  // about mounts. Nesting under a location would have broken the moment a design moved.
+  //
+  // Naming has two shapes, and listing has one. ListReviews takes an OPTIONAL parent, so a client
+  // that wants everything asks once. results.design records which design a run was about.
+  string name = 1;
+  // results is the self-contained document. It holds meta (producer, created_at), the design ref
+  // and its content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the
+  // per-area item outcomes.
+  agni.v1.checks.CheckResults results = 2;
+  // summary holds the counts a pipeline gates on (agni issue 734). The server computes it from
+  // results.areas each time it returns a review, and never stores it. So a document stored before
+  // the field existed still answers with one. It holds exactly the inputs of the two gates `agni
+  // review` exposes, --fail-on-outcome and --min-answered. So a consumer reads the same numbers the
+  // exit code came from, instead of computing them again and disagreeing.
+  ReviewSummary summary = 3;
+}
+
+// ReviewSummary counts a run's checklist items. covered counts every item that has a mechanism,
+// which is all but not-automated. answered is stricter. It counts the items the run produced an
+// answer for: pass, fail, provisional, and computed not-applicable. --min-answered gates on
+// answered. provisional counts each fail that depends on unratified datasheet data. It is broken
+// out because each team chooses whether to gate on it.
+message ReviewSummary {
+  int32 total = 1;
+  int32 covered = 2;
+  int32 answered = 3;
+  int32 pass = 4;
+  int32 fail = 5;
+  int32 provisional = 6;
+}
+
+message CreateReviewRequest {
+  // snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 10;
+  // parent is the project the run belongs to, "projects/{project}", empty when the design resolves
+  // to none. The CALLER supplies it, and the service does not derive it. The caller has already
+  // resolved the design to decide which config to send. Deriving it again in the service would be
+  // a second resolution, and the two could disagree.
+  string parent = 6;
+  // ratified_floor is a datasheet-confidence floor (WS10-014). A failing item's data below it is
+  // unratified. If all of a fail's findings are mock or below this floor, the fail is provisional.
+  // 0 uses the default.
+  double ratified_floor = 3;
+  // manifest is the checklist this run scores, and it is required. The server validates it on
+  // arrival. Some manifests never pass through the YAML loader, such as one a browser form built or
+  // one a test wrote inline. Those meet exactly the same rules as one read from a file. The
+  // manifest is also stored with the run, so the archived document scores against the checklist
+  // it actually saw.
+  agni.v1.checks.ReviewManifest manifest = 5;
+  // work_budget caps the work each query in this request may do (agni issue 792). Work counts
+  // candidate comparisons, each row a generator emits, and each connection a circuit walk
+  // examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+  // never raise it, and zero leaves that budget as it is. If a checklist item's query goes past
+  // its budget, the item reads inconclusive and names the budget. The other items still answer.
+  int64 work_budget = 8;
+  // validate_only scores the run and returns it without storing it (AIP-163). The Review then comes
+  // back with no name, and its document with no created_at. It needs no review store. The CLI uses
+  // it to ask a server for a review (`agni review --remote`) without leaving a run in that server's
+  // list.
+  bool validate_only = 9;
+  reserved 1, 2, 4, 7;
+  reserved "design_uri", "board_uri", "overlay", "as_named";
+}
+
+message GetReviewRequest {
+  string name = 1; // "projects/{project}/reviews/{review}", or "reviews/{review}"
+}
+
+message ListReviewsRequest {
+  // parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run
+  // the server holds, parented or not. So the two name shapes cost a client nothing. It asks once and
+  // gets everything, and narrows only when it has a project in mind.
+  string parent = 4;
+  // page_size is the maximum number of reviews to return. 0 uses the server default. The server may
+  // return fewer.
+  int32 page_size = 1;
+  // page_token continues a previous call. An empty token starts at the newest run.
+  string page_token = 2;
+  // filter narrows the listing (AIP-160). Only `design` is supported, and
+  // `design="proj/board.kicad_sch"` matches results.design.source exactly. An unsupported filter is
+  // an error, and is never silently ignored. Imagine a client that believes it filtered and did not.
+  // It would read another board's verdicts as its own.
+  string filter = 3;
+}
+
+message ListReviewsResponse {
+  // reviews are ordered newest first.
+  repeated Review reviews = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message DeleteReviewRequest {
+  string name = 1; // "projects/{project}/reviews/{review}", or "reviews/{review}"
+}
+
+message GetReviewManifestRequest {
+  // uri names the stored checklist, a key the Loader resolves, never a host path.
+  string uri = 1;
+}
+
+message GetReviewManifestResponse {
+  agni.v1.checks.ReviewManifest manifest = 1;
+}
+
+// ReviewItem, ReviewArea, and the ReviewManifest tree are NOT declared here. They are in
+// agni.v1.checks alongside Finding. A checklist and its per-item outcomes are the review layer's
+// core artifacts, not facts about this transport. The manifest moved there in WS9-053, when a
+// stored run had to embed the checklist it scored.
+
+message ListChecklistsRequest {
+  // snapshot names the design whose checklists to list, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 2;
+  reserved 1;
+  reserved "design_uri";
+}
+
+message ListChecklistsResponse {
+  // project is the resource name of the design's project, "projects/{project}", empty when the
+  // design belongs to none.
+  string project = 1;
+  repeated NamedChecklist checklists = 2;
+}

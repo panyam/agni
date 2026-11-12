@@ -1,0 +1,530 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
+	"io"
+	"os"
+	"strings"
+	"testing"
+)
+
+// TestQuerySpecLibCLI exercises the --speclib wiring end to end. With no <file>, the corpus from
+// --params is the fact base, and the datasheet relations range over every seeded part (WS10-010). The
+// command writes through cmd.OutOrStdout() and this test sets no writer, so capture os.Stdout via a
+// pipe.
+func TestQuerySpecLibCLI(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	cmd := queryCmd()
+	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", "param.max(?mpn, ?sym, ?max)"})
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = old
+	out, _ := io.ReadAll(r)
+
+	if err != nil {
+		t.Fatalf("query --speclib: %v", err)
+	}
+	// The seeded corpus parts appear with no design loaded, because the spec library IS the fact base.
+	for _, want := range []string{"DEMO-MCU33", "LM1117"} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("spec library query missing corpus part %q:\n%s", want, out)
+		}
+	}
+}
+
+// TestQueryDesignCLI exercises the design-query path now that it is a thin client of QueryService
+// (WS9-048). The CLI builds the service over a local loader, runs the query, and renders the proto
+// rows as the same table as before, with columns, a provenance column, and the result count.
+func TestQueryDesignCLI(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"testdata/conformance/showcase.passes.kicad_sch", `component.class(?r, "capacitor") => ?r`})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	s := out.String()
+	for _, want := range []string{"r", "provenance", "C1", "5 result(s)"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("query output missing %q:\n%s", want, s)
+		}
+	}
+}
+
+// TestQueryNetClassCLI (WS3-105) covers the whole net-class path, and no unit test can. The class
+// lives only in the .kicad_pro net_settings. So it reaches the IR through the PROJECT entry point
+// (the loader's AnnotateNetClasses call), and it is invisible when the same board is opened as a bare
+// .kicad_sch. Both halves are asserted, because a schematic read that shows no classes is silent.
+// The design.has_netclass marker exists to make that silence visible.
+func TestQueryNetClassCLI(t *testing.T) {
+	run := func(path, q string) string {
+		t.Helper()
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{path, q})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query %s: %v", path, err)
+		}
+		return out.String()
+	}
+
+	s := run("testdata/conformance/showcase.passes.kicad_pro", "net.netclass(?n, ?c) => ?n, ?c")
+	for _, want := range []string{"/USB_D+", "HighSpeed", "VBUS_PROT", "Power"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("project net.netclass query missing %q:\n%s", want, s)
+		}
+	}
+	// WS1-050. The projection is 1:many, so a net in several classes fans out to one row each.
+	// +3V3 has an array-form assignment (Power, Critical) and the USB pair matches two
+	// overlapping patterns; every membership must be its own row.
+	for _, want := range []string{"Critical", "Differential", "8 result(s)"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("project net.netclass query missing multi-class row %q:\n%s", want, s)
+		}
+	}
+	// SCL is in no class, so it must not appear. An unclassed net yields no row at all.
+	if strings.Contains(s, "SCL") {
+		t.Errorf("net.netclass listed the unclassed net SCL:\n%s", s)
+	}
+	if mk := run("testdata/conformance/showcase.passes.kicad_pro", "design.has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
+		t.Errorf("project design.has_netclass: want one row:\n%s", mk)
+	}
+
+	// The same board named by its schematic reads the project beside it, so it has the same classes
+	// and the marker (agni issue 933).
+	sch := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c")
+	for _, want := range []string{"/USB_D+", "HighSpeed", "VBUS_PROT", "Power", "Critical", "Differential", "8 result(s)"} {
+		if !strings.Contains(sch, want) {
+			t.Errorf("schematic read of a project missing %q:\n%s", want, sch)
+		}
+	}
+	if mk := run("testdata/conformance/showcase.passes.kicad_sch", "design.has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
+		t.Errorf("schematic read of a project: want the design.has_netclass marker:\n%s", mk)
+	}
+	// A schematic with no project beside it has no classes and no marker.
+	alone := isolatedDesign(t, "testdata/conformance/showcase.passes.kicad_sch")
+	if bare := run(alone, "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no net classes:\n%s", bare)
+	}
+	if bare := run(alone, "design.has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no design.has_netclass marker:\n%s", bare)
+	}
+}
+
+func TestQuerySpecLibRequiresParams(t *testing.T) {
+	cmd := queryCmd()
+	cmd.SetArgs([]string{"--speclib", "param.max(?m,?s,?x)"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("--speclib without --params must error")
+	}
+}
+
+// TestQueryNetClassDefsCLI (WS3-111) covers the declared-constraint path end to end, and no unit test
+// can, because the definitions live only in the .kicad_pro. They reach the IR whichever of the
+// project's files the read starts from, and not at all from a schematic with no project beside it.
+func TestQueryNetClassDefsCLI(t *testing.T) {
+	run := func(path, q string) string {
+		t.Helper()
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{path, q})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query %s: %v", path, err)
+		}
+		return out.String()
+	}
+	const pro = "testdata/conformance/showcase.passes.kicad_pro"
+
+	// The per-class rows are the raw declarations, and HighSpeed's states a clearance and no width.
+	raw := run(pro, `netclass.track_width(?c, ?mm) => ?c, ?mm`)
+	if strings.Contains(raw, "HighSpeed") {
+		t.Errorf("HighSpeed declares no track width and must yield no row:\n%s", raw)
+	}
+
+	// In the cascade, USB_D+ is in HighSpeed (priority 1, states no width) and Differential
+	// (priority 2, states 0.2). It must resolve to Differential's value, NOT to no value and NOT
+	// to Default's 0.25, because the fall-through is per FIELD.
+	d := run(pro, `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
+	for _, want := range []string{"/USB_D+", "0.2", "net_settings:Differential"} {
+		if !strings.Contains(d, want) {
+			t.Errorf("declared track width missing %q:\n%s", want, d)
+		}
+	}
+	// A net in no class still gets Default's value, because Default applies to every net.
+	if !strings.Contains(d, "net_settings:Default") {
+		t.Errorf("an unclassed net must still carry Default's declared width:\n%s", d)
+	}
+	if !strings.Contains(run(pro, "design.has_netclass_defs(?p) => ?p"), "1 result(s)") {
+		t.Error("project design.has_netclass_defs: want one row")
+	}
+
+	// Named by its schematic, the board reads the same definitions from the project beside it, and a
+	// schematic with no project has none (agni issue 933).
+	sch := run("testdata/conformance/showcase.passes.kicad_sch", `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
+	for _, want := range []string{"/USB_D+", "net_settings:Differential", "net_settings:Default"} {
+		if !strings.Contains(sch, want) {
+			t.Errorf("schematic read of a project missing declared width %q:\n%s", want, sch)
+		}
+	}
+	if bare := run(isolatedDesign(t, "testdata/conformance/showcase.passes.kicad_sch"), "design.has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("a schematic with no project must yield no netclass definitions:\n%s", bare)
+	}
+}
+
+// runQuery executes one `agni query` invocation and returns its stdout.
+func runQuery(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query %v: %v", args, err)
+	}
+	return out.String()
+}
+
+// TestQueryConventionsCLI is WS3-113's reproduction, end to end through the command.
+//
+// The convention does not add `net.rail(?n)`. It changes that relation's ANSWER, because the lexicon
+// is applied at the design read and net roles are resolved there. The built-in vocabulary is
+// start-anchored on VCC/VDD/+3V3. On this fixture it matches none of the project's function-first
+// rail names, so the engine reports one rail on a board with more. That is a correct answer to a
+// question the project did not ask, and until now there was no way to ask theirs.
+func TestQueryConventionsCLI(t *testing.T) {
+	design := "testdata/review/conv-demo.edn"
+	q := "net.rail(?n) => ?n"
+
+	builtin := runQuery(t, design, q)
+	if strings.Contains(builtin, "PMIC_VDD_LPM_1V8") {
+		t.Fatal("the built-in vocabulary already matches this fixture's rail names; it no longer demonstrates the gap")
+	}
+	if !strings.Contains(builtin, "1 result(s)") {
+		t.Errorf("without --conventions, want the one built-in-vocabulary rail:\n%s", builtin)
+	}
+
+	house := runQuery(t, design, q, "--conventions", "testdata/review/conventions.yaml")
+	if !strings.Contains(house, "PMIC_VDD_LPM_1V8") {
+		t.Errorf("--conventions did not reach the design read:\n%s", house)
+	}
+	if !strings.Contains(house, "2 result(s)") {
+		t.Errorf("want both rails under the project's own vocabulary:\n%s", house)
+	}
+}
+
+// TestQueryConventionsUnreadableCLI holds that a missing or malformed config is an error at the edge,
+// never a silent fall back to the built-in vocabulary. Falling back would answer a different question
+// than the one asked and say nothing about it. On this surface the user is asking what the engine
+// believes, and would be told what it believes under somebody else's words.
+func TestQueryConventionsUnreadableCLI(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := queryCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"testdata/review/conv-demo.edn", "net.rail(?n) => ?n", "--conventions", path})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--conventions %s must error, not answer under the built-in vocabulary", path)
+		}
+	}
+}
+
+// TestQueryBoardPathCLI covers the board.* relations. They range over a board tier that the netlist
+// does not have. Without an attached export they are empty, and a result table cannot tell that from
+// a board with nothing to report.
+func TestQueryBoardPathCLI(t *testing.T) {
+	design := "testdata/review/can-broken.edn"
+	q := "board.track_width(?n,?w) => ?n, ?w"
+
+	if got := runQuery(t, design, q); !strings.Contains(got, "no results") {
+		t.Errorf("a netlist with no attached board should yield no board facts:\n%s", got)
+	}
+	withBoard := runQuery(t, design, q, "--board-path", "testdata/conformance/drc.fires.kicad_pcb")
+	if strings.Contains(withBoard, "no results") {
+		t.Errorf("--board-path did not attach the board tier:\n%s", withBoard)
+	}
+	if !strings.Contains(withBoard, "result(s)") {
+		t.Errorf("want board facts with the export attached:\n%s", withBoard)
+	}
+}
+
+// TestQuerySpecLibUnitsCLI (agni issue 165) is the end-to-end proof that the query surface's numbers
+// are in SI base units, run over the real conformance corpus rather than a hand-built model.
+//
+// DEMO-HSS-CTRL seeds its overcurrent threshold in MILLIVOLTS, as a real controller sheet prints it.
+// Before this, `param.max(?mpn,"V(OCP)",?max)` yielded 50. Consider a rule written `?max < 0.1`, a
+// hundred-millivolt sanity bound. It would have compared 50 against 0.1 and read as wildly over. The
+// same query now yields 0.05, and the threshold means what it says.
+//
+// The companion assertion covers the other side of the split. param.unit still reports "mV", so
+// normalizing the number did not erase what the vendor printed.
+func TestQuerySpecLibUnitsCLI(t *testing.T) {
+	run := func(q string) string {
+		t.Helper()
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		cmd := queryCmd()
+		cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", q})
+		err := cmd.Execute()
+		w.Close()
+		os.Stdout = old
+		out, _ := io.ReadAll(r)
+		if err != nil {
+			t.Fatalf("query %q: %v", q, err)
+		}
+		return string(out)
+	}
+
+	// The threshold is seeded as 50 mV; the query surface must report it in volts.
+	got := run(`param.max(?mpn, "V(OCP)", ?max) => ?mpn, ?max`)
+	if !strings.Contains(got, "0.05") {
+		t.Errorf("V(OCP) must project as 0.05 V, not its printed 50 mV:\n%s", got)
+	}
+	if strings.Contains(got, "50") && !strings.Contains(got, "0.05") {
+		t.Errorf("V(OCP) still projecting the printed millivolt number:\n%s", got)
+	}
+
+	// A numeric comparison against a volt-denominated bound now behaves, and 0.05 < 0.1 holds.
+	if bounded := run(`param.max(?mpn, "V(OCP)", ?max), ?max < 0.1 => ?mpn`); !strings.Contains(bounded, "DEMO-HSS-CTRL") {
+		t.Errorf("a 50mV threshold must satisfy a 0.1V bound:\n%s", bounded)
+	}
+
+	// And the printed spelling is still queryable.
+	if units := run(`param.unit(?mpn, "V(OCP)", ?u) => ?mpn, ?u`); !strings.Contains(units, "mV") {
+		t.Errorf("param.unit must still report the printed mV:\n%s", units)
+	}
+}
+
+// TestQueryAbsentPredicateCLI is the end-to-end payoff of making absence representable. A query can
+// now select the rows that a datasheet did not state. Before, a doc could only apologise for the gap.
+//
+// The conformance controller states V(OCP) as min/typ/max, so it has a lower bound. The MCU's
+// absolute-maximum rows are one-sided, so they do not. Before this, both bound their missing side to
+// the empty string, and nothing could tell them apart. So `param.unit.md` shipped a note saying there
+// was no way to ask.
+func TestQueryAbsentPredicateCLI(t *testing.T) {
+	run := func(q string) string {
+		t.Helper()
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		cmd := queryCmd()
+		cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", q})
+		err := cmd.Execute()
+		w.Close()
+		os.Stdout = old
+		out, _ := io.ReadAll(r)
+		if err != nil {
+			t.Fatalf("query %q: %v", q, err)
+		}
+		return string(out)
+	}
+
+	// A one-sided row, since absolute maximums are stated as a ceiling with no floor.
+	oneSided := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), absent(?min) => ?m, ?s, ?max`)
+	if !strings.Contains(oneSided, "result(s)") || strings.Contains(oneSided, "no results") {
+		t.Errorf("absent(?min) must select the one-sided absolute-max rows:\n%s", oneSided)
+	}
+
+	// Its negation is the other half, and the two must partition the same relation.
+	twoSided := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), not absent(?min) => ?m, ?s, ?min, ?max`)
+	all := run(`param.range(?m, ?s, "absolute_max", ?min, ?max) => ?m, ?s`)
+	if countResults(t, oneSided)+countResults(t, twoSided) != countResults(t, all) {
+		t.Errorf("absent(?min) and not absent(?min) must partition the relation:\none-sided:\n%s\ntwo-sided:\n%s\nall:\n%s",
+			oneSided, twoSided, all)
+	}
+
+	// An absent bound must not satisfy a numeric guard. Before, it did, by string order.
+	guarded := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), ?min < 0.1 => ?m, ?s`)
+	if !strings.Contains(guarded, "no results") {
+		t.Errorf("an absent lower bound must not satisfy `?min < 0.1`:\n%s", guarded)
+	}
+}
+
+// countResults reads the "N result(s)" trailer the query renderer prints.
+func countResults(t *testing.T, out string) int {
+	t.Helper()
+	if strings.Contains(out, "no results") {
+		return 0
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasSuffix(strings.TrimSpace(line), "result(s)") {
+			var n int
+			if _, err := fmt.Sscanf(strings.TrimSpace(line), "%d result(s)", &n); err == nil {
+				return n
+			}
+		}
+	}
+	t.Fatalf("no result count in output:\n%s", out)
+	return 0
+}
+
+// TestQueryRejectsUnknownFormatBeforeReading is about WHERE the check happens, not that it happens.
+// A misspelled --format must fail before the design is parsed. This runs on nine-megabyte netlists,
+// and a typo that costs a full read looks like a slow tool. The path given deliberately does not
+// exist. If validation ever moves after the read, this stops reporting the format error and starts
+// reporting a missing file.
+func TestQueryRejectsUnknownFormatBeforeReading(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--format", "markdwon", "no/such/design.kicad_sch", "component.class(?r,?c) => ?r"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("a misspelled --format was accepted")
+	}
+	if !strings.Contains(err.Error(), "unknown --format") {
+		t.Errorf("error = %v, want the format complaint rather than a read failure", err)
+	}
+}
+
+// TestQueryFormatsReachTheRenderers is the end-to-end half. Each format is wired to its renderer and
+// runs over a real design read. The per-format behaviour is asserted in core/report, and this test
+// asserts the dispatch. The dispatch can silently fall through to text.
+func TestQueryFormatsReachTheRenderers(t *testing.T) {
+	for _, tc := range []struct{ format, want string }{
+		{"csv", "r,provenance"},
+		{"json", `"columns"`},
+		{"markdown", "| r | provenance |"},
+		{"html", "<!doctype html>"},
+	} {
+		t.Run(tc.format, func(t *testing.T) {
+			cmd := queryCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"--format", tc.format, "testdata/conformance/showcase.passes.kicad_sch", `component.class(?r, "capacitor") => ?r`})
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("query --format %s: %v", tc.format, err)
+			}
+			if !strings.Contains(out.String(), tc.want) {
+				t.Errorf("--format %s output missing %q:\n%s", tc.format, tc.want, out.String())
+			}
+		})
+	}
+}
+
+// TestQueryViewNamesTheMountNotTheHost is the leak guard, stated as the POSITIVE contract because
+// the negative form does not hold under test. A view is committed, mailed and pasted into tickets,
+// so its heading must name the design's mount URI. Asserting merely that no host path appears is
+// vacuous here. The test passes a RELATIVE path. The buggy version echoes the argument, so it leaks
+// nothing a substring check can see, and the guard reported green with the bug reinstated.
+// Requiring the mount URI fails on any source that is not one, including a bare argument.
+//
+// agni issue 501's rule applies to this new output format too. A new format inherits the rule but
+// not the fix.
+func TestQueryViewNamesTheMountNotTheHost(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, format := range []string{"markdown", "html", "json"} {
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{"--format", format, "testdata/conformance/showcase.passes.kicad_sch", `component.class(?r, "capacitor") => ?r`})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query --format %s: %v", format, err)
+		}
+		if !strings.Contains(out.String(), "mount://") {
+			t.Errorf("--format %s does not name the design by its mount URI:\n%s", format, out.String())
+		}
+		if strings.Contains(out.String(), wd) {
+			t.Errorf("--format %s published the host path %q", format, wd)
+		}
+	}
+}
+
+// Under C31 the CLI's json is protojson of the wire message. A script reading it and the panel
+// reading RunQuery parse one shape.
+//
+// The cites assertion comes from the deleted TestTableJSONKeepsCitesApart. That test protected the
+// same property of the shape this one replaces. Provenance is a per-row LIST, and it is not flattened
+// into a trailing cell the way text and csv need. Deleting the renderer should not delete the claim.
+func TestQueryJSONIsTheWireMessage(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"testdata/conformance/showcase.passes.kicad_sch",
+		`component.class(?r, "resistor") => ?r`, "--format", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query --format json: %v\n%s", err, out.String())
+	}
+	var resp webapi.RunQueryResponse
+	if err := protojson.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("not protojson of webapi.RunQueryResponse: %v\n%s", err, out.String())
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Fatal("no rows")
+	}
+	if len(service.RowCites(&resp, resp.GetRows()[0])) == 0 {
+		t.Error("provenance is not kept per row, so an answer cannot be traced back to its source")
+	}
+	// The hand-rolled shape dropped the column kinds. A column kind makes a cell locatable.
+	if len(resp.GetColumnKinds()) == 0 || resp.GetColumnKinds()[0] != "component" {
+		t.Errorf("columnKinds = %v, want the entity kind the panel navigates on", resp.GetColumnKinds())
+	}
+	// An answer says which question produced it and which design it was asked of.
+	if !strings.Contains(resp.GetQuery(), "component.class") || resp.GetSource() == "" {
+		t.Errorf("the answer does not name its own question: query=%q source=%q", resp.GetQuery(), resp.GetSource())
+	}
+}
+
+// The spec-library path renders from the same message, so a format cannot work on a design and not on
+// a corpus. renderTable exists to hold that invariant. json had quietly stopped honouring it while
+// the two paths built different things.
+func TestQueryJSONWorksOnTheSpecLibraryPathToo(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params",
+		"param.max(?mpn, ?sym, ?max)", "--format", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query --speclib --format json: %v\n%s", err, out.String())
+	}
+	var resp webapi.RunQueryResponse
+	if err := protojson.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("not protojson of webapi.RunQueryResponse: %v\n%s", err, out.String())
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Error("no rows from the spec library")
+	}
+}
+
+// TestQueryRelationsDrillsDown covers `agni query --relations` at its three depths and with a path
+// that names nothing (agni issue 751). The root lists every module, a module lists its members with
+// their signatures, and a member prints its definition.
+func TestQueryRelationsDrillsDown(t *testing.T) {
+	root := runQuery(t, "--relations")
+	for _, want := range []string{"[net]", "[component]", "[str]", "net.has_test_point(n: net)  derived", "str.contains(string: string, substring: string)  predicate"} {
+		if !strings.Contains(root, want) {
+			t.Errorf("--relations lacks %q", want)
+		}
+	}
+	net := runQuery(t, "--relations", "net")
+	if !strings.Contains(net, "net.has_test_point(n: net)  derived") || strings.Contains(net, "[component]") {
+		t.Errorf("--relations net should list the net module alone:\n%s", net)
+	}
+	member := runQuery(t, "--relations", "component.probed_both")
+	for _, want := range []string{"component.probed_both(r: component)", "derived, defined in module component", "defined as", "probed_both(?r: component) :- two_terminal(?r, ?a, ?b)"} {
+		if !strings.Contains(member, want) {
+			t.Errorf("--relations component.probed_both lacks %q:\n%s", want, member)
+		}
+	}
+	cmd := queryCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--relations", "net.has_testpoint"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), `did you mean "net.has_test_point"`) {
+		t.Errorf("an unknown path = %v, want an error suggesting net.has_test_point", err)
+	}
+}

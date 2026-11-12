@@ -1,0 +1,833 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"maps"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"connectrpc.com/connect"
+	skhttp "github.com/panyam/servicekit/http"
+	"github.com/spf13/cobra"
+
+	"github.com/panyam/agni"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/fshost"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/internal/mcpserver"
+	"github.com/panyam/agni/internal/native"
+	"github.com/panyam/agni/internal/paramclient"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/internal/version"
+	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/relations"
+	"github.com/panyam/agni/stdlib/rules/builtin"
+	"github.com/panyam/agni/stdlib/rules/intent"
+)
+
+// serveCmd hosts the web viewer over HTTP for local development. One listener serves the
+// server-rendered pages (goapplib/templar) at `/`, the esbuild bundle under `/static/`, and the
+// WS9 web API as Connect handlers under their proto service paths. The browser tooling is still
+// npm, and only the serving runs in the Go binary.
+//
+// Routing is server-owned (CONSTRAINTS C11) and the API is proto-defined over Connect (C2), so
+// one contract drives the Go server and the TS client.
+// defaultQueryBudgetWarn is ten times the costliest query agni ships as an example, measured on the
+// largest public sample board (1,123 parts): about one million work units for a three-relation
+// connector join. Nothing shipped comes near it, and a runaway query passes it early.
+const defaultQueryBudgetWarn = 10_000_000
+
+// paramsMaxAge is how long a --params-url corpus's generation is trusted before it is asked again, so
+// a spec published there reaches a request within this long and the service is not asked on every
+// request.
+const paramsMaxAge = 5 * time.Second
+
+func serveCmd() *cobra.Command {
+	var addr string
+	var mountRoot string
+	var nativeTools []string
+	var datasheetsURL string
+	var theme string
+	var paramsDir, paramsURL, profilePath, conventions string
+	var reviewStorePath string
+	var webDir string
+	var queryBudget, queryBudgetWarn int64
+	var slowRequest time.Duration
+	var engine string
+	var wasmMaxBytes int64
+	var embedOrigins []string
+	var designCache int
+	var uploadMaxBytes int64
+	var mcp bool
+	var viewerRooms bool
+	c := &cobra.Command{
+		Use:   "serve",
+		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
+		Long: "serve hosts the server-rendered viewer shell, the esbuild bundle under /static/,\n" +
+			"and the Connect web API on one listener. Build the bundle first (pnpm build in web/).\n" +
+			"Pass --mount name=path (repeatable) to expose design folders to the file browser.\n" +
+			"The viewer's own assets come from --web-dir, defaulting to ./web. With no web dir named\n" +
+			"anywhere and no ./web, it serves the API alone, which is what an installed binary has.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkEmbedOrigins(embedOrigins); err != nil {
+				return err
+			}
+			mcpMode := ""
+			if mcp {
+				mcpMode = mcpHTTP
+			}
+			if viewerRooms && !mcp {
+				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
+			}
+			return runViewer(cmd, viewerOpts{
+				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
+				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
+				profilePath: profilePath, conventions: conventions,
+				reviewStorePath: reviewStorePath,
+				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
+				slowRequest:     slowRequest,
+				engine:          engine,
+				wasmMaxBytes:    wasmMaxBytes,
+				embedOrigins:    embedOrigins,
+				designCache:     designCache,
+				uploadMaxBytes:  uploadMaxBytes,
+				mcp:             mcpMode,
+				viewerRooms:     viewerRooms,
+			})
+		},
+	}
+	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
+	c.Flags().BoolVar(&mcp, "mcp", false, "also serve the analysis over the Model Context Protocol at /mcp (streamable HTTP), for an LLM client such as Claude Code: queries, checks, traces, diffs and reviews as tools, each answer with its rows, citations and a viewer link. `agni mcp` serves the same tools over stdio")
+	c.Flags().BoolVar(&viewerRooms, "viewer-rooms", false, "with --mcp, let an agent drive the viewer tabs open on this server (agni issue 1154): each tab offers viewer_show_sheet, viewer_locate_verdict and the rest of ViewerPageService as tools, through a relay served at /relay/, and takes calls only once its reader turns on \"Let agents drive this tab\". Off by default")
+	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
+	c.Flags().Int64Var(&wasmMaxBytes, "wasm-max-bytes", defaultWasmMaxBytes, "on the wasm engine, the largest design (its ListDesignFiles total, in bytes) the page analyses in the browser; a bigger one goes to the server engine and the page says so")
+	c.Flags().StringArrayVar(&embedOrigins, "embed-origin", nil, "an origin (scheme://host[:port]) whose pages may drive an embedded viewer over postMessage (ViewerPageService, agni issue 1152); repeatable. The viewer's own origin always may")
+	c.Flags().StringVar(&webDir, "web-dir", "",
+		"directory holding the viewer's OWN assets (templates/ and the built static/*.js), not a folder "+
+			"of designs to browse: mount those with --mount name=path. Defaults to "+defaultWebDir+
+			", which is where a repo checkout keeps them, then to web_dir in the nearest agni.yaml, then to "+
+			envWebDir+". An installed binary run from a design directory has no relative answer, which is "+
+			"what the last two are for")
+	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
+	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons, generator rows and the connections a circuit walk examines), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
+	c.Flags().Int64Var(&uploadMaxBytes, "upload-max-bytes", 1<<30, "how much of the designs clients send as files (agni query --remote and the like) the server keeps, the least recently used dropped past it; a client sends a file again when it is asked for. 0 takes no files from clients")
+	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a parse, a derived design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about five. Each is checked against its files on every use and read again when one changed. 0 keeps none")
+	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
+	c.Flags().DurationVar(&slowRequest, "slow-request", 0, "log each request that takes longer than this (e.g. 2s), with the stage that took the most, which cache tier answered each read, its slowest rules, and its query plan when evaluating was the slowest stage; 0 logs nothing. A client can ask for any request's breakdown with an Agni-Timing header")
+	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
+	c.Flags().StringVar(&datasheetsURL, "datasheets-url", "", "where the datasheets workbench is served, e.g. http://host:8090 for a running `agnids serve`; the landing page links its Datasheets card and datasheet recents there, and hides both when this is empty")
+	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
+	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
+	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
+	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
+	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
+	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
+	return c
+}
+
+// viewerOpts is everything the viewer server is built from, so `serve` and `open` compose the same
+// process from different inputs.
+//
+// `serve` fills every field from its flags. `open` fills three and leaves the rest zero, since it
+// offers one design, no deployment config and no review store.
+type viewerOpts struct {
+	addr        string
+	webDir      string
+	mountRoot   string
+	nativeTools []string
+	theme       string
+	paramsDir   string
+	paramsURL   string
+	profilePath string
+	conventions string
+
+	reviewStorePath string
+	// budget is the work budget every query the server evaluates runs under, and the threshold above
+	// which a query's cost is logged (agni issue 792).
+	budget server.Budget
+	// slowRequest is --slow-request: requests over it are logged with where their time went.
+	slowRequest time.Duration
+	// listener, when non-nil, is a listener the caller already BOUND, and the server serves on it
+	// instead of binding addr itself. `--server self` holds the port from the moment the flag is
+	// parsed, so a taken port fails before the command does its work and nothing can take the port
+	// between the check and the serve.
+	listener net.Listener
+	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
+	// `open` uses it to serve the mount it minted for the design named on the command line.
+	extraMounts []mounts.Mount
+	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
+	// own URL instead, so the link opens the design rather than a browse tree.
+	banner func(urls []string, mountCount int)
+
+	// requireViewer refuses to start without the viewer's assets, for `open`, which exists to show a
+	// page. `serve` leaves it false and may run the API alone (resolveServeAssets).
+	requireViewer bool
+
+	// datasheetsURL is where the datasheets workbench is served, for the landing page's links.
+	datasheetsURL string
+
+	// engine is the viewer's default engine, engineServer or engineWasm (agni issue 853).
+	engine string
+
+	// wasmMaxBytes is the largest design the page analyses in the browser (agni issue 852).
+	wasmMaxBytes int64
+	// embedOrigins are the origins besides the viewer's own whose pages may drive it over
+	// postMessage (--embed-origin, agni issue 1152).
+	embedOrigins []string
+	// designCache is how many reads the server keeps between requests (agni issue 895). A read is a
+	// parse, a derived design, a drawing, a board or a built model. 0 keeps none.
+	designCache int
+	// uploadMaxBytes caps how many bytes of uploaded designs the server keeps. A client uploads a
+	// design by sending its files (agni issue 1061). 0 takes none.
+	uploadMaxBytes int64
+
+	// mcp serves the services over the Model Context Protocol as well (agni issue 910): mcpHTTP at
+	// /mcp beside the Connect API, or mcpStdio on stdin and stdout in place of the listener.
+	mcp string
+	// mcpLinks names a running `agni serve`, and an answer over stdio links to that viewer. Empty
+	// withholds links. Over HTTP the server links to itself.
+	mcpLinks string
+	// viewerRooms serves a relay at /relay/ and the room bridge's tools on /mcp, so an agent can drive
+	// the viewer tabs open on this server (--viewer-rooms, agni issue 1154). It needs mcpHTTP and the
+	// viewer.
+	viewerRooms bool
+}
+
+const (
+	mcpHTTP  = "http"
+	mcpStdio = "stdio"
+)
+
+// The two engines a viewer page can analyse its design on.
+const (
+	engineServer = "server"
+	engineWasm   = "wasm"
+)
+
+// defaultWasmMaxBytes is where the browser engine stops by default, measured in agni issue 852. A
+// 97 MB KiCad board (1834 components) checked in 8.8 s in a Chromium worker at a 451 MB peak, 4 to 5
+// times its native time, so 128 MB keeps a board of that class in the browser with some margin. The
+// bytes are a proxy for cost that was calibrated on KiCad alone, where a board file is most of the
+// size; an EDIF netlist of the same byte count may cost more.
+const defaultWasmMaxBytes = 128 << 20
+
+// defaultDesignCache keeps two or three large designs in memory, each with its drawing and model. A
+// person moving between a few boards in the viewer needs about that many (agni issue 895).
+const defaultDesignCache = 15
+
+// runViewer builds and runs the viewer server for both `serve` and `open`.
+func runViewer(cmd *cobra.Command, o viewerOpts) error {
+	if o.engine != "" && o.engine != engineServer && o.engine != engineWasm {
+		return fmt.Errorf("--engine %q: want %s or %s", o.engine, engineServer, engineWasm)
+	}
+	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
+	nativeTools, theme := o.nativeTools, o.theme
+	paramsDir, profilePath, conventions := o.paramsDir, o.profilePath, o.conventions
+	reviewStorePath := o.reviewStorePath
+	if theme == "" {
+		theme = "default"
+	}
+	style, ok := render.Themes[theme]
+	if !ok {
+		return fmt.Errorf("unknown --theme %q (have: %s)", theme, strings.Join(themeNames(), ", "))
+	}
+	// The viewer's assets come from --web-dir, never a positional argument, since a positional
+	// invited passing a DESIGN folder; checkWebAssets still guards that mistake (#468).
+	var assets webAssets
+	if o.requireViewer {
+		dir, source, err := resolveWebAssets(webDir, os.Getenv)
+		if err != nil {
+			return err
+		}
+		assets = webAssets{dir: dir, source: source, viewer: true}
+	} else {
+		var err error
+		if assets, err = resolveServeAssets(webDir, os.Getenv); err != nil {
+			return err
+		}
+	}
+	dir, source := assets.dir, assets.source
+	// Only a value from the ENVIRONMENT is narrated here. applyEnvConfig already names the agni.yaml
+	// it read, and the serving line prints the directory. Nothing else reports an AGNI_WEB_DIR that
+	// someone exported into a shell months ago.
+	if source == envWebDir {
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
+	}
+	explicit, err := mounts.Parse(cliMountSpecs)
+	if err != nil {
+		return err
+	}
+	// --mount-root is the container's zero-flag path. Every subdirectory under it becomes a mount
+	// named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit --mount
+	// values win on a name collision (see mounts.Merge). Empty disables discovery, as a local
+	// `make serve` wants.
+	var discovered []mounts.Mount
+	if mountRoot != "" {
+		if discovered, err = mounts.Discover(mountRoot); err != nil {
+			return err
+		}
+	}
+	// A caller-composed mount is layered in last, so `open`'s minted mount sits alongside anything a
+	// flag or an agni.yaml declared.
+	mounts := mounts.Merge(discovered, append(explicit, o.extraMounts...))
+	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
+	// Absent --params leaves it nil, so the params RPC returns no joined specs and never an
+	// error, like the CLI's --params (main.go readModelWithParams).
+	var specs param.ParamProvider
+	if paramsDir != "" && o.paramsURL != "" {
+		return fmt.Errorf("--params and --params-url both name the server-wide corpus; pass one")
+	}
+	if paramsDir != "" {
+		set, err := param.LoadSet(os.DirFS(paramsDir))
+		if err != nil {
+			return fmt.Errorf("--params %q: %w", paramsDir, err)
+		}
+		specs = set
+	}
+	if o.paramsURL != "" {
+		// Asked once before the listener opens, so a wrong URL fails at startup by name rather than as
+		// an unavailable error on the first check someone runs.
+		remote := paramclient.New(strings.TrimSuffix(o.paramsURL, "/"))
+		if _, err := remote.Generation(cmd.Context()); err != nil {
+			return fmt.Errorf("--params-url %q: %w", o.paramsURL, err)
+		}
+		specs = param.NewRemote(remote, paramsMaxAge)
+	}
+
+	mux := http.NewServeMux()
+	// Connect handlers register under their fully-qualified service path
+	// (/agni.v1.webapi.WorkspaceService/). Static assets live under /static/, and the goapplib
+	// page catches the rest at "/". The services are the transport-neutral service package
+	// implementations, which internal/server wraps for Connect (C13).
+	loader := service.NewCachingLoader(&osLoader{mounts: mounts, loader: newLoader()}, service.NewDesignCache(o.designCache))
+	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT. If an operator names renderers
+	// with it, those are the whole set, and agni.yaml cannot widen it.
+	if len(nativeTools) == 0 {
+		nativeTools = envConfigNativeTools
+	}
+	enabledNative := map[string]bool{}
+	for _, t := range nativeTools {
+		enabledNative[t] = true
+	}
+	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
+	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
+	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
+	// reaches another project's design.
+	//
+	// Each mount becomes one tree in the filesystem-backed store. Only this line of the serve wiring
+	// knows that projects live in directories, so swapping in another service.ProjectStore changes
+	// this line alone.
+	projectStore := projects.NewFSStore(projectTrees(mounts)...)
+	// One resolver for every rule-running surface. Per-design config reaches a run through this,
+	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
+	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
+	if o.uploadMaxBytes > 0 {
+		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
+	}
+	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
+	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
+	// inside serveRuleServices. A request that names its own conventions REPLACES both halves for
+	// that request, with that lexicon travelling with the read (WS3-106, WS3-124).
+	var conventionCfg *configpb.NamingConvention
+	if conventions != "" {
+		cfg, err := naming.Load(conventions)
+		if err != nil {
+			return err
+		}
+		if err := naming.ApplyLexicon(cfg); err != nil {
+			return err
+		}
+		conventionCfg = cfg
+	}
+	// --review-store names the writable volume that holds stored runs. It is separate from the
+	// read-only design mounts. Without it, the review resource methods report that they are not
+	// configured rather than discarding runs.
+	var reviewStore service.ReviewStore
+	if reviewStorePath != "" {
+		st, err := newOSReviewStore(reviewStorePath)
+		if err != nil {
+			return err
+		}
+		reviewStore = st
+	}
+	checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, conventionCfg, projectResolver, cmd.ErrOrStderr())
+	if err != nil {
+		return err
+	}
+	// Every service that evaluates queries runs under the deployment's budget and reports what its
+	// queries cost (agni issue 792). Without --query-budget nothing is enforced, and the log says so once.
+	budget := o.budget
+	budget.Log = func(format string, args ...any) { fmt.Fprintf(cmd.ErrOrStderr(), format+"\n", args...) }
+	if budget.Enforce <= 0 {
+		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
+	}
+	budgeted := connect.WithInterceptors(budget.Interceptor())
+	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
+	// one composed catalog. The wasm engine registers through the same server.API.
+	api := server.API{
+		Workspace: service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts)),
+		Project:   service.NewProjectService(projectStore),
+		Snapshot:  checkSvc.Snapshots(),
+		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
+		Check:     checkSvc,
+		Diff:      service.NewDiffService(loader, projectResolver),
+		Query:     service.NewQueryService(loader, specs, projectResolver),
+		Review:    reviewSvc,
+		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
+	}
+	apiPaths := api.Register(mux, budgeted)
+	if o.listener == nil && o.mcp != mcpStdio {
+		ln, err := bindFreePort(addr)
+		if err != nil {
+			return err
+		}
+		if ln != nil {
+			o.listener, addr = ln, ln.Addr().String()
+		}
+	}
+	urls := serveURLs(addr, lanIPs)
+	if o.mcp != "" {
+		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce}
+		switch {
+		case o.mcp == mcpStdio && o.mcpLinks != "":
+			mcpOpts.URLBase = o.mcpLinks
+		case o.mcp == mcpStdio:
+			mcpOpts.NoLinks = "agni mcp was started without --server naming a running agni serve to link to"
+		case assets.viewer:
+			mcpOpts.URLBase = strings.TrimSuffix(urls[0], "/")
+		default:
+			mcpOpts.NoLinks = "this server serves the API without the viewer"
+		}
+		mcpSrv, err := mcpserver.New(api, mcpOpts)
+		if err != nil {
+			return err
+		}
+		if o.mcp == mcpStdio {
+			// The command's own streams, so a test can pipe a client in.
+			return mcpSrv.RunIO(cmd.Context(), cmd.InOrStdin(), cmd.OutOrStdout())
+		}
+		if o.viewerRooms {
+			if !assets.viewer {
+				return fmt.Errorf("--viewer-rooms needs the viewer, and this server serves the API without it")
+			}
+			vr, err := serveViewerRooms(mux, mcpSrv, projectResolver, urls, connect.WithInterceptors(api.Timing.Interceptor()))
+			if err != nil {
+				return err
+			}
+			defer vr.Close()
+		}
+		mux.Handle("/mcp", mcpserver.HTTPHandler(mcpSrv, "/mcp"))
+	}
+	if assets.viewer {
+		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
+	}
+	// The rule-doc explainer diagrams (WS3-025) are served read-only, images only and from the embed
+	// FS only, so the rules/expectations panels resolve their relative image refs (WS9-030). The
+	// built-in and intent docs live in separate embed FSes (WS3-093) behind one route, so the two
+	// handlers are composed by firstImageHandler.
+	mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
+		firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
+	// The per-relation fact-doc cards (WS14-005), read-only and image-only like the rule docs, so
+	// the query panel resolves a relation Detail's image refs.
+	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
+	mux.Handle("GET /healthz", healthHandler())
+	// A design's files, read-only, for a page analysing it in the browser (agni issue 853). The
+	// API already serves everything in a mount through its answers, so this exposes no file a client
+	// could not reach before; ListDesignFiles says which ones a design needs.
+	mux.Handle("GET /raw/", rawFileHandler(mounts))
+	switch {
+	case !assets.viewer:
+		mux.Handle("/", apiOnlyHandler(apiPaths))
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer. %s.\n", defaultWebDir, envWebDir, assets.why)
+	default:
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
+	}
+
+	// A client that never finishes its headers holds a connection open, so headers get a deadline.
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	if o.banner != nil {
+		o.banner(urls, len(mounts))
+	} else {
+		what := dir
+		if !assets.viewer {
+			what = "the API"
+		}
+		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(mounts))
+		for _, u := range urls[1:] {
+			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+		}
+		if o.mcp == mcpHTTP {
+			fmt.Fprintf(os.Stderr, "  MCP: %smcp (streamable HTTP; localhost origins only)\n", urls[0])
+		}
+		if o.viewerRooms {
+			fmt.Fprintf(os.Stderr, "  viewer rooms: %srelay/ (an agent drives a tab once its reader turns on \"Let agents drive this tab\")\n", urls[0])
+		}
+	}
+	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
+	if o.listener != nil {
+		return skhttp.ListenAndServeGraceful(srv, skhttp.WithListener(o.listener))
+	}
+	return skhttp.ListenAndServeGraceful(srv)
+}
+
+// projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
+// all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
+// structural, since an fs.FS has no parent to climb into.
+func projectTrees(ms []mounts.Mount) []projects.Tree {
+	out := make([]projects.Tree, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, projects.Tree{Mount: m.Name, FS: os.DirFS(m.Root)})
+	}
+	return out
+}
+
+// serveLoader is the intersection of what the two rule-running services need. The engine facade
+// names it once, because an embedder building the same pair needs it too.
+type serveLoader = agni.RuleLoader
+
+// serveRuleServices builds the two services that RUN rules from one composed catalog: the
+// CheckService behind the check panel and ListRules, and the ReviewService behind the review resources.
+//
+// Both come from one catalog because every overlay knob is config for the whole server. If a rule
+// were missing from the check panel's catalog, it would look like a rule that ran and found nothing
+// (WS3-109). The function returns the services rather than the catalog. A caller never holds the
+// catalog, so it cannot hand the two surfaces different ones.
+//
+// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here.
+// Installing a lexicon is process-global and happens once at startup. Tests call this function, so
+// installing it here would leak one test's vocabulary into the next.
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+	overlay, err := loadOverlayProfiles(profilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	var extra []check.RuleSource
+	if len(conventions.GetRules()) > 0 {
+		src, err := naming.Source(conventions)
+		if err != nil {
+			return nil, nil, err
+		}
+		extra = append(extra, src)
+	}
+	e, err := newEngine(overlay, extra, agni.WithProjectResolver(projects))
+	if err != nil {
+		return nil, nil, err
+	}
+	if notes != nil {
+		noteSupersededRules(notes, e.Catalog())
+		for _, w := range e.Warnings() {
+			fmt.Fprintln(notes, "note:", w)
+		}
+	}
+	checkSvc, reviewSvc := e.RuleServices(agni.RuleServiceDeps{
+		Loader:         loader,
+		ReviewStore:    store,
+		Specs:          specs,
+		BaseConvention: conventions.GetName(),
+	})
+	return checkSvc, reviewSvc, nil
+}
+
+// serveURLs turns a listen address into URLs a human can click. The default ":8080" alone would
+// print as "http://:8080/", which no browser opens.
+//
+// An empty, "0.0.0.0", or "::" host is the WILDCARD, reachable on every interface. The first entry
+// returned is the address to click on this machine, and any others are LAN addresses. Those are
+// printed because this server has no authentication, so a wildcard bind exposes the mounted design
+// folders to anything that can route here. Bind 127.0.0.1 to remove that.
+//
+// Only IPv4 is enumerated, because a link-local IPv6 address needs a zone suffix to be usable.
+//
+// ips is a parameter so tests do not depend on the host's interfaces; production passes lanIPs.
+func serveURLs(addr string, ips func() []string) []string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		// Not host:port. Nothing to shape, so echo it rather than guess at it.
+		return []string{"http://" + addr + "/"}
+	}
+	if host != "" && host != "0.0.0.0" && host != "::" {
+		return []string{hostURL(host, port)}
+	}
+	out := []string{hostURL("localhost", port)}
+	for _, ip := range ips() {
+		out = append(out, hostURL(ip, port))
+	}
+	return out
+}
+
+// hostURL joins a host and port into a URL. JoinHostPort already brackets an IPv6 literal, so do
+// not bracket it here too.
+func hostURL(host, port string) string {
+	return "http://" + net.JoinHostPort(host, port) + "/"
+}
+
+// lanIPs reports this host's non-loopback IPv4 addresses, for the wildcard case in serveURLs. An
+// interface that is down or has no usable address contributes nothing, and an enumeration error
+// yields no addresses rather than an error, since this only decorates a startup line.
+//
+// Inside a container it reports nothing. A container interface address (172.17.0.2 and the like)
+// is reachable only from the container network, and the published HOST port lives in the runtime
+// where the process cannot see it. The operator set that port with `docker run -p` and knows it.
+func lanIPs() []string {
+	if inContainer() {
+		return nil
+	}
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, a := range addrs {
+		n, ok := a.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		ip := n.IP.To4()
+		// IsGlobalUnicast excludes loopback and multicast; IsLinkLocalUnicast drops the 169.254/16
+		// self-assigned range, which routes nowhere useful.
+		if ip == nil || !ip.IsGlobalUnicast() || ip.IsLinkLocalUnicast() {
+			continue
+		}
+		out = append(out, ip.String())
+	}
+	sort.Strings(out)
+	return out
+}
+
+// inContainer reports whether this process is running inside a container, which lanIPs uses to
+// decide that its own interface addresses are not worth printing. Docker writes /.dockerenv and
+// Podman writes /run/.containerenv.
+//
+// A wrong answer costs one startup line either way, so this does not go further (parsing
+// /proc/1/cgroup, checking pid 1) to catch runtimes that leave no marker.
+func inContainer() bool {
+	for _, marker := range []string{"/.dockerenv", "/run/.containerenv"} {
+		if _, err := os.Stat(marker); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// healthHandler answers the container orchestrator's liveness/readiness probe. It is registered on
+// the exact path "GET /healthz" so it does not shadow the page space, and it reports only that this
+// process is up and serving HTTP.
+//
+// It does NOT re-probe the mounts, the rule catalog, or the params set. A bad --mount,
+// --profile-path or --params fails before the listener exists, so a 200 says
+// nothing about configuration and should not be read as if it did.
+func healthHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, "ok\n")
+	})
+}
+
+// webAssets describes what a resolved --web-dir can serve. That is the viewer's pages or nothing at
+// all. The datasheets workbench is not here, because the datasheet module's agnids serves it (agni
+// issue 744).
+type webAssets struct {
+	dir    string
+	source string // where dir came from, as resolveWebDir reports it
+	// viewer is false only for API-only serving, when nothing named a web dir and the default is absent.
+	viewer bool
+	// why says, for API-only serving, why no bundle stood in for the absent default.
+	why string
+}
+
+// resolveWebAssets resolves --web-dir through its fallback chain and requires the VIEWER to be
+// servable from what it found. It returns the directory and where the value came from, so a caller
+// can narrate the provenance.
+//
+// `--server self` calls it BEFORE the command it wraps does its work, so a run that cannot serve
+// fails while its artifact is still unwritten, as a taken port does (agni issue 637).
+func resolveWebAssets(flag string, getenv func(string) string) (dir, source string, err error) {
+	dir, source = resolveWebDir(flag, getenv)
+	fi, serr := os.Stat(dir)
+	if flag == "" && source == "" && errors.Is(serr, fs.ErrNotExist) {
+		bdir, how, berr := viewerBundle()
+		if berr == nil {
+			return bdir, how, nil
+		}
+		return dir, source, fmt.Errorf("--web-dir %q is not a directory. Set it with --web-dir, or web_dir in an agni.yaml, or %s. A checkout has one at ./%s. %s", dir, envWebDir, defaultWebDir, noViewerHint(berr))
+	}
+	if serr != nil || !fi.IsDir() {
+		return dir, source, fmt.Errorf("--web-dir %q is not a directory. Set it with --web-dir, or web_dir in an agni.yaml, or %s. A checkout has one at ./%s", dir, envWebDir, defaultWebDir)
+	}
+	if err := checkWebAssets(dir); err != nil {
+		return dir, source, err
+	}
+	return dir, source, nil
+}
+
+// resolveServeAssets is `serve`'s version of resolveWebAssets, and it also admits no viewer at all.
+// Suppose NOTHING named a web dir, through a flag, agni.yaml or the environment, and the default
+// ./web does not exist. Then serve takes the viewer that an installed binary carries or downloads.
+// If there is none, serve runs the API alone. Every other failure still fails. A wrong named
+// directory is a typo, and a ./web without its bundle is a checkout that forgot `make ui` (agni
+// issue 735).
+//
+// `open` and `--server self` call resolveWebAssets instead, since for them no viewer is an error.
+func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
+	dir, source := resolveWebDir(flag, getenv)
+	if flag == "" && source == "" {
+		if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+			bdir, how, err := viewerBundle()
+			if err != nil {
+				return webAssets{dir: dir, why: noViewerHint(err)}, nil
+			}
+			return webAssets{dir: bdir, source: how, viewer: true}, nil
+		}
+	}
+	dir, source, err := resolveWebAssets(flag, getenv)
+	if err != nil {
+		return webAssets{}, err
+	}
+	return webAssets{dir: dir, source: source, viewer: true}, nil
+}
+
+// checkWebAssets verifies dir holds the viewer (its templates plus the built esbuild bundle) before
+// the server starts, so a misdirected `serve --web-dir <design-folder>` fails upfront with guidance
+// instead of a cryptic template-not-found on the first request. Design folders are exposed with
+// --mount, not this flag.
+func checkWebAssets(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, "templates", "ViewerPage.html")); err != nil {
+		return fmt.Errorf("%q has no templates/ViewerPage.html: --web-dir is the viewer's own assets dir (defaults to %q), not a folder to browse; mount design folders with --mount name=path", dir, defaultWebDir)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "static", "app.js")); err != nil {
+		return fmt.Errorf("%q has no static/app.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
+	}
+	// The design browser (WS9-049) is the second server-rendered page with its own bundle. "/" also
+	// serves it, so a missing browse asset breaks the landing page, not a side route.
+	if _, err := os.Stat(filepath.Join(dir, "templates", "BrowsePage.html")); err != nil {
+		return fmt.Errorf("%q has no templates/BrowsePage.html (the design browse page)", dir)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "static", "browse.js")); err != nil {
+		return fmt.Errorf("%q has no static/browse.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
+	}
+	return nil
+}
+
+// apiOnlyHandler answers every page URL when serve runs without a viewer. "/" gets a 200, so a probe
+// or a person checking the server sees it is up. Any other page path is a 404. Whoever reads either
+// body expected a page, so both bodies say what the server does serve and how to get the viewer.
+func apiOnlyHandler(services []string) http.Handler {
+	var b strings.Builder
+	b.WriteString("agni serve is running WITHOUT the viewer: no web dir was named and there is no ./web here.\n\n")
+	b.WriteString("The Connect API answers POST /<service>/<method> with Content-Type: application/json. Services:\n")
+	for _, s := range services {
+		fmt.Fprintf(&b, "  %s\n", strings.TrimSuffix(s, "/"))
+	}
+	fmt.Fprintf(&b, "\nTo serve the viewer, point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory\n"+
+		"(from a checkout: make ui), or run the container image, which carries one.\n", envWebDir)
+	body := b.String()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if r.URL.Path == "/" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+		io.WriteString(w, body)
+	})
+}
+
+// firstImageHandler composes several rule-source image handlers into one, serving the response of the
+// first that does not 404 (WS3-093). The web resolves every rule's card under the single /rule-docs/
+// route, so a request is tried against each source in turn. Card basenames are unique across
+// sources, so order does not matter. Each handler is image-only and 404s cleanly on a miss, so the
+// buffered probe has no side effect to undo.
+func firstImageHandler(handlers ...http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, h := range handlers {
+			rec := &bufferedResponse{header: http.Header{}}
+			h.ServeHTTP(rec, r)
+			if rec.status == http.StatusNotFound {
+				continue
+			}
+			maps.Copy(w.Header(), rec.header)
+			if rec.status == 0 {
+				rec.status = http.StatusOK
+			}
+			w.WriteHeader(rec.status)
+			w.Write(rec.body.Bytes())
+			return
+		}
+		http.NotFound(w, r)
+	})
+}
+
+// bufferedResponse captures a handler's status, headers, and body in memory so firstImageHandler can
+// discard a 404 and try the next source without having written anything to the client.
+type bufferedResponse struct {
+	header http.Header
+	status int
+	body   bytes.Buffer
+}
+
+func (b *bufferedResponse) Header() http.Header { return b.header }
+func (b *bufferedResponse) WriteHeader(status int) {
+	if b.status == 0 {
+		b.status = status
+	}
+}
+func (b *bufferedResponse) Write(p []byte) (int, error) {
+	if b.status == 0 {
+		b.status = http.StatusOK
+	}
+	return b.body.Write(p)
+}
+
+// themeNames returns the available --theme values in sorted order, for flag help and the
+// unknown-theme error.
+func themeNames() []string {
+	names := make([]string, 0, len(render.Themes))
+	for n := range render.Themes {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// osWorkspace is the OS-backed listing over a mount table. It is a function rather than a call at the
+// use site because runViewer's local mount table shadows the mounts package there.
+func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspace(ms) }
+
+// osFiles reads files inside the mounts, for ListDesignFiles.
+func osFiles(ms []mounts.Mount) service.FileReader { return mounts.NewWorkspace(ms) }
+
+// uploadedHost reads a design that a client sent as files (agni issue 1061). It serves the files as
+// the one mount they name, with the projects they declare. The browser engine reads its own files
+// through the same in-memory host.
+func uploadedHost(mount string, files map[string][]byte) (service.CacheableLoader, *service.ProjectResolver) {
+	fsys := fshost.MemFS(files)
+	ms := []fshost.Mount{{Name: mount, FS: fsys}}
+	return fshost.New(ms...), &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: mount, FS: fsys}), Config: &fshost.ConfigResolver{Mounts: ms}}
+}
+
+// bindFreePort binds addr when it asks for port 0, so the kernel picks a free port. The banner, the
+// links and the MCP server then name the port it got rather than 0. A script that starts a server
+// for itself reads that port off the first line (agni issue 1121). For any other addr it returns nil
+// and leaves the bind to the serve.
+func bindFreePort(addr string) (net.Listener, error) {
+	if _, port, err := net.SplitHostPort(addr); err != nil || port != "0" {
+		return nil, nil
+	}
+	return net.Listen("tcp", addr)
+}

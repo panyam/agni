@@ -1,0 +1,5 @@
+#agni-run 9d9c492156b70cc9
+**8 pass, 3 fail, 3 n/a, 1 not-automated (of 15)**
+| I3 | exposed signals have ESD protection | pass |  |
+| I4 | every I2C bus has pull-ups | pass |  |
+| A2 | every connector declared internal exists | fail | intent/exposure-declared: J10 (J10 is declared internal, and the design has no component J10); intent/exposure-declared: J11 (J11 is declared internal, and the design has no component J11); intent/exposure-declared: J13 (J13 is declared internal, and the design has no component J13); (+6 more) |

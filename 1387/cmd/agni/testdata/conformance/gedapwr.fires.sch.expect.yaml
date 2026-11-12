@@ -1,0 +1,13 @@
+# WS1-021: gEDA pin-direction enrichment makes power rules reachable. ic.sym pin 1 is
+# pintype=pwr -> POWER_IN; U1 and U2 share it on the VCC net with NO power symbol, so the
+# rail has a power-input pin and no source: power-input-not-driven fires (impossible on
+# main, where gEDA pins had no direction), and decoupling-present fires on the same
+# undriven rail. The far IN pins are bare stubs. See gedapwr.passes for the tapped rail.
+fires:
+  power-input-not-driven:
+    subjects: [VCC]
+    why: "a power_in pin (gEDA pintype=pwr) on an undriven, non-external rail — the rule made reachable by pin-direction enrichment"
+  decoupling-present:
+    subjects: [VCC]
+  single-pin-net:
+    subjects: [N$1, N$2]

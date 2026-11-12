@@ -1,0 +1,4 @@
+# KiCad's own net names for dup_refdes.kicad_sch, from `kicad-cli sch export netlist` (10.0.6).
+# Regenerate with hack/kicad_net_names.sh; do not hand-edit. Each line is a net name, a tab,
+# then the ref.pin pairs on it, so the test can pair our nets with KiCad's by their pins.
+Net-(R7-Pad1)	R7.1 U1.1

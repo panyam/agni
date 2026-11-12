@@ -1,0 +1,44 @@
+
+(edif TEST
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE)))
+      (figureGroup ATTRIBUTE
+        (color 100 100 0)
+        (textHeight 254000)))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -100) (pt 200 0)))
+          (figure BOX (rectangle (pt 0 -100) (pt 200 0)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 200 -50))))
+            (figure PIN (path (pointList (pt 150 -50) (pt 200 -50)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 300 400)))
+          (designator (stringDisplay "R1"))
+          (property Value (string (stringDisplay "10k"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 320 420))))))
+          (property Rating (string (stringDisplay "50V"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 100000)) (justify CENTERLEFT) (origin (pt 320 380))))))
+          (property Part_Number (string (stringDisplay "SECRET-DESC"
+            (display (figureGroupOverride ATTRIBUTE (visible (false))) (justify CENTERLEFT) (origin (pt 320 360)))))))
+        (net GND
+          (joined (portRef &1 (instanceRef &i1)))
+          (net (rename &n1 "N1")
+            (joined (portRef &1 (instanceRef &i1)))
+            (figure NET (path (pointList (pt 300 400) (pt 300 350))))))))))

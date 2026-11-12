@@ -1,0 +1,243 @@
+package fshost
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/panyam/agni/core/check"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/service"
+	_ "github.com/panyam/agni/stdlib/rules/builtin"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+)
+
+const countedRule = "test/counted"
+
+// checkFixture holds the tutorial project, copied into a temp folder so a test can edit its files.
+// It also holds a check service over that copy. The service's catalog has one rule, and the rule
+// counts its evaluations.
+type checkFixture struct {
+	dir    string
+	evals  *atomic.Int64
+	svc    *service.CheckService
+	design string
+	// snaps maps each overlay's text to the snapshot ingested for it. A check under one overlay
+	// then asks the same snapshot every time, as a client does.
+	snaps map[string]string
+}
+
+// newCheckFixture builds the fixture. outcome is the counted rule's answer. cached false gives the
+// same service with no DesignCache. A check owes the same answer whether or not anything is kept,
+// so that service gives the reference answer.
+func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func(service.ConfigResolver) service.ConfigResolver) *checkFixture {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.CopyFS(dir, os.DirFS(filepath.Join("..", "examples", "tutorial-project"))); err != nil {
+		t.Fatal(err)
+	}
+	evals := &atomic.Int64{}
+	counted := &check.Rule{
+		Name:     "counted",
+		Severity: "info",
+		Summary:  "counts its evaluations",
+		// So its verdicts reach the response. An inconclusive verdict shows only there.
+		StatesConsideredSet: true,
+		Eval: func(context.Context, check.Model) []check.Verdict {
+			evals.Add(1)
+			return []check.Verdict{{Outcome: outcome, Subjects: []check.Entity{{Kind: check.KindNet, Ref: "GND"}}, Reason: "counted"}}
+		},
+	}
+	cat, err := check.DefaultCatalog().With(check.NewSource("test", []*check.Rule{counted}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := []Mount{{Name: "m", FS: os.DirFS(dir)}}
+	var resolver service.ConfigResolver = &ConfigResolver{Mounts: ms}
+	if wrap != nil {
+		resolver = wrap(resolver)
+	}
+	res := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: "m", FS: ms[0].FS}), Config: resolver}
+	var c *service.DesignCache
+	if cached {
+		// Room for three overlays' designs and models over one parse, so nothing here is evicted.
+		c = service.NewDesignCache(10)
+	}
+	loader := service.NewCachingLoader(New(ms...), c)
+	svc := service.NewCheckService(loader, cat, nil, "", nil, res)
+	return &checkFixture{dir: dir, evals: evals, svc: svc, design: "mount://m/designs/gateway", snaps: map[string]string{}}
+}
+
+func (f *checkFixture) check(t *testing.T, req *webapi.CheckDesignRequest) *webapi.CheckDesignResponse {
+	t.Helper()
+	return f.checkUnder(t, nil, req)
+}
+
+// checkUnder checks the design's snapshot under ov, ingesting it the first time ov is asked.
+func (f *checkFixture) checkUnder(t *testing.T, ov *webapi.OverlayConfig, req *webapi.CheckDesignRequest) *webapi.CheckDesignResponse {
+	t.Helper()
+	key := prototext.Format(ov)
+	if f.snaps[key] == "" {
+		f.snaps[key] = ingestWith(t, f.svc.Snapshots(), &webapi.Snapshot{Uri: f.design, Overlay: ov})
+	}
+	req.Snapshot = f.snaps[key]
+	resp, err := f.svc.CheckDesign(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp
+}
+
+func (f *checkFixture) counted(t *testing.T, req *webapi.CheckDesignRequest) {
+	t.Helper()
+	f.countedUnder(t, nil, req)
+}
+
+func (f *checkFixture) countedUnder(t *testing.T, ov *webapi.OverlayConfig, req *webapi.CheckDesignRequest) {
+	t.Helper()
+	req.Rules = []string{countedRule}
+	f.checkUnder(t, ov, req)
+}
+
+// touch rewrites a file in the fixture with one byte more and a later time, so its stamp moves
+// however coarse the filesystem's clock.
+func (f *checkFixture) touch(t *testing.T, rel string) {
+	t.Helper()
+	p := filepath.Join(f.dir, rel)
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, append(b, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(p, later, later)
+	// A snapshot whose files changed is stale, so each is ingested again. A client does the same
+	// when told its snapshot is stale.
+	for _, name := range f.snaps {
+		if _, err := f.svc.Snapshots().UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
+			Snapshot: &webapi.Snapshot{Name: name, Uri: f.design}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"uri"}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func (f *checkFixture) wantEvals(t *testing.T, want int64, why string) {
+	t.Helper()
+	if got := f.evals.Load(); got != want {
+		t.Fatalf("the rule was evaluated %d times, want %d: %s", got, want, why)
+	}
+}
+
+// TestASecondCheckDoesNotEvaluateTheRuleAgain is agni issue 390's first acceptance. The same check
+// asked twice evaluates its rule once.
+func TestASecondCheckDoesNotEvaluateTheRuleAgain(t *testing.T) {
+	f := newCheckFixture(t, check.Fail, true, nil)
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 1, "the first check")
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 1, "an identical second check ran the rule again")
+}
+
+// TestEditingAnyTierEvaluatesTheRuleAgain edits the netlist, then the board. The issue's first key
+// was the entry's hash alone, and it would have missed the board edit.
+func TestEditingAnyTierEvaluatesTheRuleAgain(t *testing.T) {
+	f := newCheckFixture(t, check.Fail, true, nil)
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.touch(t, "designs/gateway/gateway.edn")
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 2, "an edited netlist was answered from the run before the edit")
+	f.touch(t, "designs/gateway/gateway.kicad_pcb")
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 3, "an edited board was answered from the run before the edit")
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 3, "the check after the edits ran the rule again, so the edits are not what moved the count")
+}
+
+// TestADifferentConventionEvaluatesTheRuleAgain covers a change of convention. A convention changes
+// the lexicon that every rule reads, so a run under one must never answer for a run under another.
+func TestADifferentConventionEvaluatesTheRuleAgain(t *testing.T) {
+	f := newCheckFixture(t, check.Fail, true, nil)
+	f.counted(t, &webapi.CheckDesignRequest{})
+	conv := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{Name: "other"}}}
+	f.countedUnder(t, conv, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 2, "a check under another convention was answered from the project's")
+	f.countedUnder(t, &webapi.OverlayConfig{IgnoreProject: true}, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 3, "a check ignoring the project was answered from the project's")
+	f.countedUnder(t, conv, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 3, "the second check under the other convention ran the rule again")
+}
+
+// noDigest is a config resolver that does not say what it read. An overlay built on it cannot
+// identify itself.
+type noDigest struct{ service.ConfigResolver }
+
+func (r noDigest) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, ns string) (service.ResolvedConfig, error) {
+	rc, err := r.ConfigResolver.ResolveConfig(ctx, cfg, ns)
+	rc.Digest = ""
+	return rc, err
+}
+
+// TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun covers an overlay with no identity.
+// Nothing then tells one configuration from another, so every check evaluates.
+func TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun(t *testing.T) {
+	f := newCheckFixture(t, check.Fail, true, func(r service.ConfigResolver) service.ConfigResolver { return noDigest{r} })
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 2, "a check whose overlay has no identity was answered from a kept run")
+}
+
+// TestABudgetedInconclusiveRuleIsNotKept covers a work budget. Under a budget, the budget may have
+// caused an inconclusive answer, and a later request is owed the real one. Without a budget, the
+// inconclusive answer is the answer.
+func TestABudgetedInconclusiveRuleIsNotKept(t *testing.T) {
+	f := newCheckFixture(t, check.Inconclusive, true, nil)
+	f.counted(t, &webapi.CheckDesignRequest{WorkBudget: 1_000_000})
+	f.counted(t, &webapi.CheckDesignRequest{WorkBudget: 1_000_000})
+	f.wantEvals(t, 2, "an inconclusive answer under a budget was kept")
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.counted(t, &webapi.CheckDesignRequest{})
+	f.wantEvals(t, 3, "an inconclusive answer with no budget was not kept")
+}
+
+// TestAKeptRunAnswersAsAFreshOneDoes runs part of the catalog and then all of it. The second answer
+// joins kept rules to rules run now. The test compares it with the whole catalog run on a service
+// that keeps nothing. Every finding and verdict must match, in order.
+func TestAKeptRunAnswersAsAFreshOneDoes(t *testing.T) {
+	kept := newCheckFixture(t, check.Fail, true, nil)
+	fresh := newCheckFixture(t, check.Fail, false, nil)
+	whole := fresh.check(t, &webapi.CheckDesignRequest{})
+	if len(whole.GetFindings()) < 5 || len(whole.GetVerdicts()) < 20 {
+		t.Fatalf("the fixture answered %d findings and %d verdicts, too few for an order to be worth comparing", len(whole.GetFindings()), len(whole.GetVerdicts()))
+	}
+	// Every other rule that fired, so the kept and the new rules interleave by name.
+	seen := map[string]bool{}
+	var half []string
+	for _, fd := range whole.GetFindings() {
+		if !seen[fd.GetRule()] {
+			seen[fd.GetRule()] = true
+			if len(seen)%2 == 1 {
+				half = append(half, fd.GetRule())
+			}
+		}
+	}
+	kept.check(t, &webapi.CheckDesignRequest{Rules: half})
+	got := kept.check(t, &webapi.CheckDesignRequest{})
+	if !proto.Equal(got, whole) {
+		t.Fatalf("a check joining %d kept rules to the rest answered differently from a fresh one:\n%d findings, %d verdicts, %d skipped\nwant %d, %d, %d",
+			len(half), len(got.GetFindings()), len(got.GetVerdicts()), len(got.GetSkipped()),
+			len(whole.GetFindings()), len(whole.GetVerdicts()), len(whole.GetSkipped()))
+	}
+	if kept.evals.Load() != 1 {
+		t.Fatalf("the counted rule ran %d times on the kept service, want 1", kept.evals.Load())
+	}
+}

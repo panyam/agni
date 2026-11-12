@@ -1,0 +1,41 @@
+## unconnected-component
+
+### What it means
+
+A component has no pin on any net at all. It is placed but wired to
+nothing.
+
+### Why engineers want it
+
+Parts get dropped onto a sheet and left unwired during a work in
+progress, or a block gets deleted and one part survives. The part then ships in the BOM and
+gets placed on the board while doing nothing.
+
+### Impact
+
+Either a real missing connection (the part was supposed to be in the circuit) or
+wasted cost and board area. Both are worth surfacing.
+
+![Flagged: R9 with no pin on any net; fine: U1 with pins wired to nets](images/unconnected-component.svg)
+
+### Parts with no pins
+
+A mounting hole, a logo or a module's assembly symbol declares no pins, so "none of its pins is on a
+net" is true of it and says nothing. Such a part is not considered (agni issue 937). Sometimes a
+part's read carries no pin list at all, as a hand-built or pin-less netlist gives. That part still
+fails when nothing connects to it, because its pins are unknown rather than absent.
+
+### Section-aware
+
+Connections key on ref_des, and the IR groups all of a physical part's
+sections under one ref_des (WS1-001), so a part counts as connected if any section's pin is
+on a net. A multi-gate IC with one gate wired is connected.
+
+### Query structure
+
+select the components not present in the connected-ref set.
+
+    select C in components where ref_des(C) != "" and not on_net(C)
+
+Reads: on_net (the connected-ref projection). Tier R (a traverse of every net's members builds
+the set, and the select tests against it).

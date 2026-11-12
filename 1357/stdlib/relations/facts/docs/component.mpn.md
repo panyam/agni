@@ -1,0 +1,57 @@
+## component.mpn
+
+### What it is
+
+`component.mpn(ref_des, mpn)` yields one row per component that resolves to a manufacturer
+part number, the design-side part identity. The `mpn` value is the exact orderable part
+("BSS138", "LM1117MPX-3.3"), not a class or a generic value. A component with no resolved
+part number produces no row.
+
+### For hardware engineers
+
+This is the BOM answer for a reference designator. It names the physical part that R7 or U3 will
+be built as. Two schematics can be electrically identical and place different parts. Only the part
+number distinguishes them, and the datasheet checks join against it. You query it to list what a
+design actually orders. You can also query it to find which components a datasheet-backed rule can
+reach, since a component with no part number has no datasheet to check against.
+
+### For software engineers
+
+The part number is the lockfile entry (see [the analogy
+guide](../../../../docsite/content/reference/analogy.md)). `component.net` and `component.pin`
+describe the graph structure, and `component.mpn` binds a node to a concrete pinned artifact
+(`lodash@4.17.21`). Rows are 1:1 with components that carry a resolved part number, so it is a
+partial projection over `Components()`. Unresolved components are simply absent. It is the
+design half of the datasheet join key; the datasheet half is `param.max(mpn, symbol, max)`, keyed by
+the same string.
+
+### Go projector
+
+`componentMPNFacts` in `stdlib/relations/facts.go` walks `Model.Components()` and emits a row for each
+component where `Model.ComponentMPN(ref)` is non-empty. `ComponentMPN` returns the `BomLine`
+part number when a BOM covers the ref-des, else the component's `mpn` field, else "".
+It never parses the free-text Value field, so the identity is only ever what the design
+declared. The shared ingestion pass `classify.StampMPN` fills that field. It reads the
+component's part-number attributes first, then its part type, so this one relation reads uniformly
+across formats. The part-number attributes are the lexicon's `attribute.mpn` keys, and the
+built-ins cover OrCAD/Allegro's `Manufacturer_PN` and KiCad's `Part Number`.
+
+One row per component with a resolved part number. It needs no `--params`: every model joins the part
+numbers the design carries (agni issue 748). An empty result means the design names no part numbers.
+It can also mean the design names them under an attribute missing from the `attribute.mpn` keys, and
+a project's conventions can add that attribute.
+
+### Datalog
+
+Every component and its part number:
+
+```
+component.mpn(?r, ?m) => ?r
+```
+
+Join to the datasheet parameters seeded for that part (the components a datasheet rule can
+reach):
+
+```
+component.mpn(?r, ?m), param.max(?m, ?sym, ?max) => ?r
+```

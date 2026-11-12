@@ -1,0 +1,5 @@
+{
+  "_comment": "The placeholder the page puts where it holds a file back from a worker, read by wasmengine's TestThePageAndTheEngineSpellAPlaceholderAlike and web/src/wasm/client.test.ts, so the engine recognises exactly what the page writes (agni issue 992).",
+  "sha256": "sha256:4b7c0e2d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e",
+  "placeholder": "\u0000agni withheld\nsha256:4b7c0e2d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e\n"
+}

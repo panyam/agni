@@ -1,0 +1,66 @@
+## board.track_width
+
+### What it is
+
+`board.track_width(net, mm)` yields one row per net that has routed copper, giving the net's
+MINIMUM track width, held in metres and shown in mm. `net` is the net name (the join key to
+`ir.Net.name`); `mm` is a number, so a query compares it with a unit (`?w < 0.2mm`). A net routed
+with several widths reports only its thinnest segment, not every segment.
+
+### For hardware engineers
+
+The narrowest copper on a net sets its worst-case current-carrying capacity, so a review cares
+about that number. A power or ground net that necks down to a thin trace somewhere is a
+current-density risk even if most of its copper is wide. Query this to find nets routed below a
+width floor, or to sanity-check that a high-current rail never drops under its intended minimum.
+The value is the physical track width, so you compare it against a real length, written with its
+unit.
+
+### For software engineers
+
+The routed net is a set of track segments, each with a width. `board.track_width` is an aggregate
+projection over that set, reducing it to the minimum width keyed by net. The minimum is the
+safety-relevant extreme. Reporting it instead of one row per raw segment gives a compact per-net
+answer rather than a full segment dump. Rows are 1:1 with nets that have at least one track; a net
+with pads or vias but no routed track contributes no row. The stored unit is nanometres. The
+projector converts to metres, since the engine folds a query literal to that SI base, and a
+cell is shown in millimetres.
+
+### Go projector
+
+`boardFacts` in `stdlib/relations/facts.go` walks `Model.BoardNets()` and calls the helper
+`minSegmentWidthNm(bn.Segments)` for each net. The helper returns the smallest `Width` across the
+net's track segments. It returns a false ok when the net has no segments, and then no row is
+emitted. The
+nanometre minimum is converted with `nmToMM`, shown as millimetres, and emitted as
+`board.track_width(net, mm)` with the numeric value populated in metres for comparison.
+
+The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
+design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
+sidecar). A query sees no error in that case. `board.track_width` yields zero rows on any design
+without board geometry, as the datasheet tier does without `--params`. So a query returning nothing
+does not mean every track is wide. It can mean the design carries no board at all.
+
+### Datalog
+
+Every net and its minimum track width:
+
+```
+board.track_width(?n, ?w) => ?n, ?w
+```
+
+Nets whose thinnest track drops below 0.2 mm:
+
+```
+board.track_width(?n, ?w), ?w < 0.2mm => ?n, ?w
+```
+
+Write the threshold with its unit. A width is held in metres and shown in millimetres, so a bare
+`0.2` would mean 0.2 m and every net would answer.
+
+Both need a board-bearing design (a `.kicad_pcb` or an IPC-2581 file); on a netlist-only load they
+return nothing.
+
+### Schematic
+
+![A net whose minimum track is wide versus one that necks down to a thin trace](images/board.track_width.svg)

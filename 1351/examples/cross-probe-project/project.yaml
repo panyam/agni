@@ -1,0 +1,4 @@
+# The cross-probe mission's walk (agni issue 1323) runs on this project. It holds one design, a cut
+# of Antmicro's Jetson AGX Thor baseboard small enough to commit, so the gate can walk it.
+name: cross-probe
+title: Cross-probe walk project

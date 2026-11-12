@@ -1,0 +1,15 @@
+(edif CRYSTALRTC
+  (edifVersion 2 0 0)
+  (design CRYSTALRTC (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef RTC)) (designator "U1")
+            (property MPN (string "DEMO-RTC")))
+          (instance Y1 (viewRef V (cellRef XTAL)) (designator "Y1"))
+          ; Y1 sits straight across the RTC's oscillator pins with no capacitor on either, and the
+          ; RTC's seeded datasheet binds an integrated load capacitance to both pins, so
+          ; crystal-load-caps passes both terminals.
+          (net OSCI (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef Y1))))
+          (net OSCO (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef Y1)))))))))

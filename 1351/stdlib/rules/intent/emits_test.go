@@ -1,0 +1,90 @@
+package intent
+
+import "testing"
+
+// TestEmits covers the vocabulary Emits recognizes and, more importantly, the names it must REJECT,
+// a not-yet-shipped intent rule name (the WS3-098 pre-bind case) and a non-intent name.
+func TestEmits(t *testing.T) {
+	known := []string{
+		"module-missing", "module-count", "voltage-domain-mismatch",
+		"intent/module-missing", // composed catalog name accepted too
+		"subsystem-power-tree", "intent/subsystem-clock",
+		"protection-ovp", "protection-discharge", "intent/protection-discharge",
+		"rail-current-capacity", "rail-current-margin", "intent/rail-current-margin",
+		"load-switch-trip-below-budget", "intent/load-switch-trip-below-budget",
+		// WS3-092. A manifest that pre-bound these names read not-automated until the rule kind
+		// shipped; missing this line is the one wiring step that fails nothing at build time and
+		// leaves every bound item quiet forever.
+		"sequence-soc-power-tree", "intent/sequence-modem-rails",
+	}
+	for _, n := range known {
+		if !Emits(n) {
+			t.Errorf("Emits(%q) = false, want true", n)
+		}
+	}
+	unknown := []string{
+		"thermal-budget", "intent/thermal-budget", // a future intent rule kind, not yet shipped
+		"reset-polarity", "intent/reset-polarity",
+		"single-pin-net", "", "intent/",
+	}
+	for _, n := range unknown {
+		if Emits(n) {
+			t.Errorf("Emits(%q) = true, want false", n)
+		}
+	}
+}
+
+// TestEmitsCoversCompiler holds Emits to Compile's actual output. Every rule the compiler produces
+// from the declaration below must satisfy Emits. A new rule KIND added to Compile without updating
+// Emits fails here only once this declaration includes a form that produces it.
+func TestEmitsCoversCompiler(t *testing.T) {
+	decl := Declaration{
+		Name:           "t",
+		Modules:        []Module{{Name: "soc", Class: "soc", Count: 2}},
+		VoltageDomains: []VoltageDomain{{Name: "io", Nominal: 3.3, Rails: []string{"3V3"}}},
+		Subsystems:     []Subsystem{{Name: "power tree", Nets: []string{"VBAT"}}},
+		Protections:    []Protection{{Rail: "VBAT", Kind: ProtectionOVP}, {Rail: "3V3", Kind: ProtectionDischarge}},
+		NetProperties: []NetProperty{
+			{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"},
+			{Net: "PCIE_TX0_P", Property: PropACCoupled},
+			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
+		},
+		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
+		MarginFactor: 1.2,
+		Sequences: []Sequence{{
+			Name:     "SoC power tree",
+			Relation: SequenceEnableGated,
+			Order:    []SequenceStage{{Rail: "VDD_CORE", Good: "PG_CORE"}, {Rail: "VDD_IO", Enable: "EN_IO"}},
+		}},
+		// Two groups on one bus, so the collision rule compiles beside each group's own rule.
+		StrapGroups: []StrapGroup{
+			{Name: "pmic addr", Device: "U1", Nets: []string{"ADDR0", "ADDR1"}, Bus: "I2C0"},
+			{Name: "sensor addr", Device: "U2", Nets: []string{"SA0"}, Bus: "I2C0"},
+		},
+		// A row with a function, so io-map-function compiles beside the four map rules.
+		IOMap:       []IOAssignment{{Net: "UART0_TX", Device: "U1", Pin: "12", Function: "UART0_TXD"}},
+		Exposures:   []Exposure{{Ref: "J1", Exposure: ExposureInternal}},
+		PullUpReach: []PullUpReach{{Net: "SDA", Hops: 4}},
+	}
+	rules := Compile(decl)
+	if len(rules) == 0 {
+		t.Fatal("Compile produced no rules for a full declaration")
+	}
+	// Positive control: every compiler form above must have produced its rule, or a kind missing
+	// from Emits would go untested.
+	got := map[string]bool{}
+	for _, r := range rules {
+		got[r.Name] = true
+	}
+	for _, want := range []string{RuleIOMapFunction, RuleStrapAddressCollision, "strap-group-pmic-addr",
+		RuleExposureDeclared, RulePullUpReachDeclared, RuleLoadSwitchTripBelowBudget, RuleRailCurrentMargin} {
+		if !got[want] {
+			t.Errorf("the declaration should compile %q, so Emits is tested on it; got %v", want, got)
+		}
+	}
+	for _, r := range rules {
+		if !Emits(r.Name) {
+			t.Errorf("Compile emitted %q but Emits(%q) = false — Emits must cover every compiler kind", r.Name, r.Name)
+		}
+	}
+}

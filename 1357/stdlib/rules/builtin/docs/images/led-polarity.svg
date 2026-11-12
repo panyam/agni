@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="700" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="led-polarity rule: an LED with its anode on ground and cathode on a power rail is flagged; a forward-wired LED is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged (reversed) ================= -->
+  <text x="30" y="44" font-size="15" font-weight="600" fill="#d64545">Flagged: LED reversed</text>
+
+  <!-- +3V3 rail (top) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="150" y1="72" x2="200" y2="72"/>
+  </g>
+  <text x="175" y="63" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+
+  <!-- flagged net: rail down to cathode (red) -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="175" y1="72" x2="175" y2="104"/>
+  </g>
+
+  <!-- LED D1 (triangle points UP: anode bottom, cathode top) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="157" y1="104" x2="193" y2="104"/>
+    <path d="M 157 132 L 193 132 L 175 108 Z" fill="#ffffff"/>
+    <!-- emission arrows -->
+    <line x1="183" y1="120" x2="194" y2="109"/>
+    <line x1="194" y1="109" x2="188" y2="109"/>
+    <line x1="194" y1="109" x2="194" y2="115"/>
+    <line x1="190" y1="126" x2="201" y2="115"/>
+    <line x1="201" y1="115" x2="195" y2="115"/>
+    <line x1="201" y1="115" x2="201" y2="121"/>
+  </g>
+  <text x="130" y="98" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">D1</text>
+  <text x="150" y="102" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">K</text>
+  <text x="150" y="138" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">A</text>
+
+  <!-- flagged net: anode down to GND (red) -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="175" y1="132" x2="175" y2="158"/>
+  </g>
+
+  <!-- ground symbol -->
+  <g stroke="#394049" stroke-width="2">
+    <line x1="159" y1="158" x2="191" y2="158"/>
+    <line x1="164" y1="164" x2="186" y2="164"/>
+    <line x1="169" y1="170" x2="181" y2="170"/>
+  </g>
+
+  <text x="175" y="224" font-size="13" fill="#d64545" text-anchor="middle">anode on GND, cathode on rail &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine (forward) ================= -->
+  <text x="370" y="44" font-size="15" font-weight="600" fill="#2f9e57">Fine: forward</text>
+
+  <!-- +3V3 rail (top) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="500" y1="60" x2="550" y2="60"/>
+  </g>
+  <text x="525" y="51" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+
+  <!-- series resistor R1 (IEC box, vertical) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="525" y1="60" x2="525" y2="78"/>
+    <rect x="513" y="78" width="24" height="30" rx="2" fill="#ffffff"/>
+    <line x1="525" y1="108" x2="525" y2="126"/>
+  </g>
+  <text x="551" y="97" font-size="13" font-weight="600" fill="#394049" text-anchor="start">R1</text>
+
+  <!-- LED D1 (triangle points DOWN: anode top, cathode bottom) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="507" y1="126" x2="543" y2="126"/>
+    <path d="M 507 126 L 543 126 L 525 150 Z" fill="#ffffff"/>
+    <line x1="507" y1="152" x2="543" y2="152"/>
+    <!-- emission arrows -->
+    <line x1="544" y1="134" x2="555" y2="123"/>
+    <line x1="555" y1="123" x2="549" y2="123"/>
+    <line x1="555" y1="123" x2="555" y2="129"/>
+    <line x1="551" y1="140" x2="562" y2="129"/>
+    <line x1="562" y1="129" x2="556" y2="129"/>
+    <line x1="562" y1="129" x2="562" y2="135"/>
+  </g>
+  <text x="480" y="120" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">D1</text>
+  <text x="500" y="124" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">A</text>
+  <text x="500" y="156" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">K</text>
+
+  <!-- cathode down to GND -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="525" y1="152" x2="525" y2="166"/>
+  </g>
+
+  <!-- ground symbol -->
+  <g stroke="#394049" stroke-width="2">
+    <line x1="509" y1="166" x2="541" y2="166"/>
+    <line x1="514" y1="172" x2="536" y2="172"/>
+    <line x1="519" y1="178" x2="531" y2="178"/>
+  </g>
+
+  <text x="525" y="224" font-size="13" fill="#2f9e57" text-anchor="middle">anode on rail, cathode on GND &#8594; fine</text>
+</svg>

@@ -1,0 +1,25 @@
+# The same three rules on the variant of the board with the pull-ups fitted.
+#
+# The page used to print this half as OUTPUT ALONE, with the command left to the prose. Generating
+# it puts the command back, which is worth more here than anywhere else on the page: the contrast
+# is the whole point and it rests on the two runs differing in exactly one argument.
+#
+# Same heredoc, same caveat as profile-i2c.yaml. Keep the two declarations identical, or the pair
+# stops being a contrast.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  mkdir -p profiles
+  cat > profiles/i2c.yaml <<'YAML'
+  name: I2C
+  signals:
+    - {name: SCL, suffix: SCL, pullup: true, anchor: true}
+    - {name: SDA, suffix: SDA, pullup: true}
+  requirements:
+    - {type: signal-missing}
+    - {type: missing-pullup}
+    - {type: signal-dangling}
+  YAML
+  agni check cmd/agni/testdata/conformance/showcase.passes.kicad_pro --profile-path ./profiles/ --tag profile=I2C
+show: |
+  agni check cmd/agni/testdata/conformance/showcase.passes.kicad_pro --profile-path ./profiles/ --tag profile=I2C

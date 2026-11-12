@@ -1,0 +1,46 @@
+<svg viewBox="0 0 640 316" role="img" aria-labelledby="reader-boundary-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="reader-boundary-title">The boundary a format reader sits behind. The formats registry owns everything to do with files: opening the named file, resolving a multi-file design such as a KiCad hierarchy or an external symbol library, and sniffing an ambiguous extension. Your reader receives bytes and an opener callback and owns only the mapping from that format's constructs onto the IR. After it returns, the loader stamps provenance, resolves net roles and attaches the project's config.</title>
+  <defs>
+    <marker id="reader-boundary-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5"/>
+    </marker>
+  </defs>
+  <g fill="currentColor" font-size="11" font-weight="600" opacity="0.6">
+  <text x="16" y="28">readers/formats owns the files</text>
+  <text x="238" y="28">your reader owns the mapping</text>
+  <text x="470" y="28">the Loader finishes</text></g>
+  <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.4">
+  <rect x="16" y="40" width="192" height="180" rx="3"/>
+  <rect x="452" y="40" width="172" height="180" rx="3"/></g>
+  <rect x="238" y="40" width="176" height="180" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.5"/>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+  <text x="30" y="70">opens the named file</text>
+  <text x="30" y="96">resolves a multi-file design:</text>
+  <text x="30" y="112">a KiCad hierarchy, an external</text>
+  <text x="30" y="128">symbol library</text>
+  <text x="30" y="154">sniffs an ambiguous extension</text>
+  <text x="30" y="180">picks the reader by extension</text></g>
+  <g fill="var(--accent-color)" font-size="11" font-weight="600">
+  <text x="252" y="74">constructs to IR</text></g>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+  <text x="252" y="98">parts, pins, components,</text>
+  <text x="252" y="114">nets, connections, sheets</text>
+  <text x="252" y="140">input diagnostics, and</text>
+  <text x="252" y="156">what it DECLARES it looked for</text></g>
+  <text x="252" y="192" fill="currentColor" font-size="9.5" opacity="0.55">and nothing about paths</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+  <text x="466" y="70">stamps provenance</text>
+  <text x="466" y="96">resolves net roles once</text>
+  <text x="466" y="122">attaches the project's</text>
+  <text x="466" y="138">declared config</text>
+  <text x="466" y="164">hands back one Design</text></g>
+  <g stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#reader-boundary-arrow)">
+  <line x1="212" y1="112" x2="234" y2="112"/>
+  <line x1="418" y1="112" x2="448" y2="112"/></g>
+  <g fill="var(--accent-color)" font-size="9.5" font-weight="600" text-anchor="middle">
+  <text x="223" y="104">io.Reader</text>
+  <text x="223" y="132">+ opener</text></g>
+  <text x="320" y="252" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">a reader takes bytes and an opener callback, never a path, which is what lets the same code</text>
+  <text x="320" y="268" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">run in a test, in the CLI, and behind the server with no file system of its own</text>
+  <text x="320" y="296" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.5">put multi-file resolution in the reader and every caller needs a file system to use it</text>
+</svg>

@@ -1,0 +1,8 @@
+# The candidate step 3 of mission #1264's exercise tries on the MNT Reform motherboard 3.0: the rail
+# vocabulary with one pattern added, for the USB hub's 3.3V supply, which the built-ins do not read
+# as a rail.
+name: exercise-naming
+lexicon:
+  net:
+    rail:
+      patterns: ["^USBH_3V3$"]

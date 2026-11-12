@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="270" font-family="system-ui,sans-serif" font-size="12">
+  <text x="330" y="16" text-anchor="middle" fill="#808080">staleness is DERIVED on every read, never stored</text>
+
+  <rect x="20" y="46" width="180" height="66" rx="6" fill="none" stroke="#808080"/>
+  <text x="110" y="68" text-anchor="middle" fill="#808080" font-size="11">SourceDoc.content_hash</text>
+  <text x="110" y="86" text-anchor="middle" fill="#808080" font-size="9">the revision the corpus</text>
+  <text x="110" y="99" text-anchor="middle" fill="#808080" font-size="9">holds NOW (a re-seed rewrites it)</text>
+
+  <rect x="20" y="132" width="180" height="66" rx="6" fill="none" stroke="#808080"/>
+  <text x="110" y="154" text-anchor="middle" fill="#808080" font-size="11">Verification.doc_content_hash</text>
+  <text x="110" y="172" text-anchor="middle" fill="#808080" font-size="9">the revision a person</text>
+  <text x="110" y="185" text-anchor="middle" fill="#808080" font-size="9">actually checked (frozen)</text>
+
+  <line x1="200" y1="79" x2="248" y2="112" stroke="#808080" marker-end="url(#v)"/>
+  <line x1="200" y1="165" x2="248" y2="132" stroke="#808080" marker-end="url(#v)"/>
+
+  <rect x="248" y="98" width="120" height="48" rx="6" fill="none" stroke="#4a90d9"/>
+  <text x="308" y="120" text-anchor="middle" fill="#4a90d9" font-size="11">compare</text>
+  <text x="308" y="136" text-anchor="middle" fill="#808080" font-size="9">VerificationOfIn</text>
+
+  <line x1="368" y1="122" x2="410" y2="72" stroke="#808080" marker-end="url(#v)"/>
+  <line x1="368" y1="122" x2="410" y2="112" stroke="#808080" marker-end="url(#v)"/>
+  <line x1="368" y1="122" x2="410" y2="152" stroke="#808080" marker-end="url(#v)"/>
+  <line x1="368" y1="122" x2="410" y2="192" stroke="#808080" marker-end="url(#v)"/>
+
+  <text x="418" y="66" fill="#5aa06a" font-size="11">verified</text>
+  <text x="418" y="80" fill="#808080" font-size="9">hashes match. Trust it.</text>
+
+  <text x="418" y="106" fill="#808080" font-size="11">unverified</text>
+  <text x="418" y="120" fill="#808080" font-size="9">no one checked. Honest about it.</text>
+
+  <text x="418" y="146" fill="#d98a4a" font-size="11">stale</text>
+  <text x="418" y="160" fill="#808080" font-size="9">checked a DIFFERENT revision.</text>
+
+  <text x="418" y="186" fill="#d98a4a" font-size="11">unknown</text>
+  <text x="418" y="200" fill="#808080" font-size="9">no current revision recorded.</text>
+
+  <text x="330" y="238" text-anchor="middle" fill="#808080" font-size="10">stale and unknown are NOT folded into verified: a caller that cannot check</text>
+  <text x="330" y="254" text-anchor="middle" fill="#808080" font-size="10">must not be told the answer is fine</text>
+
+  <defs><marker id="v" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8" fill="none" stroke="#808080"/></marker></defs>
+</svg>

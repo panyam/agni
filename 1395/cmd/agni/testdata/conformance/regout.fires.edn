@@ -1,0 +1,18 @@
+(edif CONFORMANCE
+  (edifVersion 2 0 0)
+  (design CONFORMANCE (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell REG
+      (view V (viewType NETLIST)
+        (interface (port VOUT (direction OUTPUT)))))
+    (cell LOAD
+      (view V (viewType NETLIST)
+        (interface (port VDD (direction INPUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef REG)) (designator "U1")
+            (property MPN (string "ACME-REG")))
+          (instance U2 (viewRef V (cellRef LOAD)) (designator "U2")
+            (property MPN (string "ACME-33")))
+          (net VRAIL (joined (portRef VOUT (instanceRef U1)) (portRef VDD (instanceRef U2)))))))))

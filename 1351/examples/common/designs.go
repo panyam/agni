@@ -1,0 +1,65 @@
+// Package common is the shared plumbing for Agni's runnable examples. It holds design loading,
+// the bundled synthetic fixtures, narration pretty-printers, and the demokit renderer wiring, so
+// each example is only a thin walkthrough over its own sidecar markdown.
+//
+// It lives at the I/O edge, since C1 keeps file paths out of the engine core. Reads go through
+// formats.Loader, the same entry point cmd/agni uses. The format-neutral INGESTION PASSES run in
+// the Loader, and a direct reader call skips them silently.
+package common
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/readers/formats"
+)
+
+// Load reads a design from arg, which is either a filesystem path (absolute, or relative to the
+// working directory) or the bare name of a bundled fixture. It tries the path on disk first, then
+// falls back to the embedded fixture with that base name, so the examples run from any directory.
+// A file that exists but fails to parse is reported, not masked by the fallback.
+func Load(arg string) (*ir.Design, error) {
+	d, err := ReadDesign(arg)
+	if err == nil {
+		return d, nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err // exists but failed to parse, or another real error
+	}
+	if d, ferr := ReadFixture(filepath.Base(arg)); ferr == nil {
+		return d, nil
+	}
+	return nil, fmt.Errorf("no design at path %q, and no bundled fixture named %q", arg, filepath.Base(arg))
+}
+
+// ReadDesign reads a design file from disk into the IR through formats.Loader, as cmd/agni does.
+// The Loader holds reader dispatch by extension, the .kicad_pro project merge, and the
+// format-neutral ingestion passes.
+//
+// Keep this one Loader call rather than a dispatch of its own (agni issue 618). The passes fill
+// ir.Component.mpn (classify.StampMPN) and rewrite provenance paths, and a read that skips them
+// parses and counts correctly while answering every datasheet-tier question with nothing.
+func ReadDesign(path string) (*ir.Design, error) {
+	return (&formats.Loader{}).ReadDesign(entryOf(path))
+}
+
+// ReadBoard reads the copper, pads, outline and layers a board file or an ODB++ job carries, through
+// formats.Loader.
+func ReadBoard(path string) (*geom.BoardGeometry, error) {
+	return (&formats.Loader{}).BoardGeometry(entryOf(path))
+}
+
+// entryOf is the file that enters a design named by path. An ODB++ job is a directory entered by
+// its matrix file, so a directory holding matrix/matrix is read through that, as the CLI reads it.
+func entryOf(path string) string {
+	m := filepath.Join(path, "matrix", "matrix")
+	if fi, err := os.Stat(m); err == nil && !fi.IsDir() {
+		return m
+	}
+	return path
+}

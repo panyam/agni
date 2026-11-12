@@ -1,0 +1,11 @@
+# Rung 13: the findings that carry a tier's namespace, and the run's total. The total is the number
+# the CLI and the browser panel must agree on, and they do since agni issue 646, checked through the
+# CheckDesign rpc the panel calls (agni issue 724).
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check designs/jetson
+script: |
+  agni check designs/jetson
+match: '\] (jetson|jetson-profiles|intent)/|finding\(s\) total'

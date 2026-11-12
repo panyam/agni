@@ -1,0 +1,12 @@
+# The patch layer's worked example: the raw doc-IR mis-encodes VDSS as 500 (a
+# parser-dropped decimal in real life); the page says 50. Keyed by the document's
+# content hash and the PRE-patch table content hash, so a new revision or a
+# re-detected table stops matching instead of silently applying.
+name: "bss138-vdss-500-to-50"
+doc_content_hash: "sha256:f7359512158956f42f3d90464ae87f7ec45abf2a9fa1630e046ab61076a1e8d0"
+table_content_hash: "sha256:a5f41e6cf26ec10436a043c4c43368b0f7ba7834f6d9a5528190298841454dfb"
+row: 1
+col: 2
+text: "50"
+note: "page 1 Absolute Maximum Ratings prints 50; the raw encoding carries 500"
+author: "conformance"

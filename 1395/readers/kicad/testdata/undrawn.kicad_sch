@@ -1,0 +1,40 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Undrawn Test"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "test:R") (at 50.8 40.64 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 48.26 39.37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 53.34 39.37 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "missinglib:MCU") (at 88.9 40.64 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1"
+			(at 86.36 39.37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "ACME-MCU"
+			(at 91.44 39.37 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "missinglib:EEPROM") (at 127 40.64 0) (unit 1) (uuid "u2")
+		(property "Reference" "U2"
+			(at 124.46 39.37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "ACME-EE"
+			(at 129.54 39.37 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 50.8 44.45) (xy 88.9 44.45)))
+)

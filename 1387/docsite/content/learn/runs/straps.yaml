@@ -1,0 +1,7 @@
+# Chapter 9: two devices strapped to one address on a shared bus, and the same board declared so they
+# differ. Both runs use the same .edn; only the declaration changes, mirroring the sequencing pair.
+fixture: cmd/agni/testdata/intent
+from_root: true
+steps:
+  - script: agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-collision.yaml
+  - script: agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-clear.yaml

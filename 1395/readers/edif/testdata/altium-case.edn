@@ -1,0 +1,107 @@
+(edif Divider_PrjPcb (edifVersion 2 0 0) (edifLevel 0) (keywordMap (keywordLevel 0) )
+  (status
+    (written
+      (timeStamp 2026 10 6 9 0 0)
+      (program "Altium Designer - EDIF For PCB"
+        (version "1.0.0")
+      )
+      (author "EDIF For PCB")
+    )
+  )
+  (library COMPONENT_LIB
+    (edifLevel 0)
+    (technology
+      (numberDefinition
+        (scale  1  1  (unit  distance))
+      )
+    )
+    (cell Res1
+      (cellType GENERIC)
+      (view netListView
+        (viewType NETLIST)
+        (interface
+          (port (rename &1 "1") (direction INOUT))
+          (port (rename &2 "2") (direction INOUT))
+        )
+      )
+    )
+    (cell Cap
+      (cellType GENERIC)
+      (view netListView
+        (viewType NETLIST)
+        (interface
+          (port (rename &1 "1") (direction INOUT))
+          (port (rename &2 "2") (direction INOUT))
+        )
+      )
+    )
+  )
+  (library SHEET_LIB
+    (edifLevel 0)
+    (technology
+      (numberDefinition
+        (scale  1  1  (unit  distance))
+      )
+    )
+    (cell Divider_SchDoc
+      (cellType generic)
+      (view netListView
+        (viewType netlist)
+        (interface
+        )
+        (contents
+          (Instance R1
+            (viewRef NetlistView
+              (cellRef Res1
+                (LibraryRef COMPONENT_LIB)
+              )
+            )
+            (Property Comment (String "10k" ))
+            (Property Footprint (String "0603" ))
+          )
+          (Instance R2
+            (viewRef NetlistView
+              (cellRef Res1
+                (LibraryRef COMPONENT_LIB)
+              )
+            )
+            (Property Comment (String "4k7" ))
+            (Property Footprint (String "0603" ))
+          )
+          (Instance C1
+            (viewRef NetlistView
+              (cellRef Cap
+                (LibraryRef COMPONENT_LIB)
+              )
+            )
+            (Property Comment (String "100n" ))
+            (Property Footprint (String "0402" ))
+          )
+          (Net VIN
+            (Joined
+                (PortRef &1 (InstanceRef R1))
+                (PortRef &1 (InstanceRef C1))
+            )
+          )
+          (Net VOUT
+            (Joined
+                (PortRef &2 (InstanceRef R1))
+                (PortRef &1 (InstanceRef R2))
+            )
+          )
+          (Net GND
+            (Joined
+                (PortRef &2 (InstanceRef R2))
+                (PortRef &2 (InstanceRef C1))
+            )
+          )
+        )
+      )
+    )
+  )
+  (design Divider_PrjPcb
+    (cellRef Divider_SchDoc
+      (libraryRef SHEET_LIB)
+    )
+  )
+)

@@ -1,0 +1,122 @@
+name: docs
+
+# Build the s3gen documentation site from docsite/, with the static demo (agni issue 856) at
+# /agni/demo/, and publish both to GitHub Pages. `make docs-deploy` dispatches this on main.
+# Requires Pages to be enabled for the repo with the source set to "GitHub Actions"
+# (Settings -> Pages -> Build and deployment -> Source: GitHub Actions).
+
+on:
+  # Every merge to main, with no path filter, because the demo carries the engine as wasm and the
+  # viewer, so nearly any change to the repo changes what Pages serves.
+  push:
+    branches: [main]
+  # The BUILD half runs on a pull request too, because until it did, a docsite change could only be
+  # validated by merging it: this workflow had no pull_request trigger and Pages serves its artifact,
+  # so the first execution of any change to it was against the live site. Deploying stays on main.
+  # A pull request touching only the engine is not listed, since ci.yml's browser-test runs the same
+  # site spec on it.
+  pull_request:
+    paths:
+      - docsite/**
+      - .github/workflows/docs.yml
+      - Makefile
+      - hack/samples.pin
+      - cmd/agni/site*.go
+      - web/templates/SitePage.html
+      - web/browser/site.spec.ts
+      - web/vitest.site.config.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docsite
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v6
+        with:
+          # The version is the project's, not this workflow's: it comes from `packageManager` in
+          # docsite/package.json, so a developer's pnpm and CI's cannot drift apart silently. The path is
+          # relative to the repository root, which is what this input requires.
+          package_json_file: docsite/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            docsite/pnpm-lock.yaml
+            pnpm-lock.yaml
+
+      # Two installs, because the docsite is its own pnpm project and the demo's viewer is the root
+      # workspace's (web/, web-shared/, datasheet/web/).
+      - name: Install docsite dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      # Chromium for the demo's browser spec, as ci.yml installs it for the gate's.
+      - name: Cache the Chromium build
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        run: pnpm exec playwright-core install --with-deps chromium
+        working-directory: web
+
+      # The demo's seeds beyond the tutorial come from the samples corpus, cached on its pin as ci.yml
+      # caches it.
+      - uses: actions/cache@v6
+        with:
+          path: tools/samples
+          key: samples-${{ hashFiles('hack/samples.pin') }}
+
+      # `make build`, not the steps by hand. This workflow used to re-implement the build and had
+      # already drifted twice: it never ran the esbuild components step (so a page with
+      # `playground:` front-matter shipped with its bundle include missing, silently, because
+      # includeFile returns "" for a file that is not there), and when search landed it did not
+      # build the index either, so the deployed site had a search box over a 404. One definition
+      # of what a build is, in the Makefile, the way ci.yml does it for testall.
+      #
+      # `make docs-site` from the root does that build, writes the demo into dist/demo/ (served at
+      # /agni/demo/), and runs the demo's browser spec against those files, so what is checked is
+      # what is uploaded.
+      - name: Build the site and the demo
+        run: make docs-site
+        working-directory: .
+
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docsite/dist
+
+  deploy:
+    needs: build
+    # A pull request builds to prove the build works and publishes nothing.
+    if: github.event_name != 'pull_request'
+    # One publish at a time, which is what the workflow-level group used to give. It belongs here
+    # rather than over the whole workflow, so a PR build never queues behind a deploy.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

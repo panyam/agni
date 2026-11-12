@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="220" font-family="system-ui,sans-serif" font-size="12">
+  <!-- library card: the class -->
+  <rect x="20" y="30" width="200" height="150" rx="8" fill="none" stroke="#808080" stroke-dasharray="5 3"/>
+  <text x="120" y="20" text-anchor="middle" fill="#808080">PartLibrary "Device"  (module)</text>
+  <rect x="45" y="55" width="150" height="100" rx="4" fill="none" stroke="#4a90d9"/>
+  <text x="120" y="75" text-anchor="middle" fill="#4a90d9">PartType "R"</text>
+  <text x="120" y="93" text-anchor="middle" fill="#808080" font-size="10">(class: 2 pins, passive)</text>
+  <!-- resistor glyph -->
+  <line x1="70" y1="125" x2="90" y2="125" stroke="#808080"/>
+  <rect x="90" y="117" width="60" height="16" fill="none" stroke="#808080"/>
+  <line x1="150" y1="125" x2="170" y2="125" stroke="#808080"/>
+  <text x="66" y="142" fill="#808080" font-size="10">pin 1</text>
+  <text x="150" y="142" fill="#808080" font-size="10">pin 2</text>
+
+  <!-- instantiates arrows -->
+  <line x1="220" y1="85" x2="330" y2="65" stroke="#808080" marker-end="url(#a)"/>
+  <line x1="220" y1="135" x2="330" y2="155" stroke="#808080" marker-end="url(#a)"/>
+  <text x="275" y="105" text-anchor="middle" fill="#808080" font-size="10">instantiates</text>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8" fill="none" stroke="#808080"/></marker></defs>
+
+  <!-- the sheet: two instances -->
+  <rect x="340" y="25" width="260" height="170" rx="8" fill="none" stroke="#808080"/>
+  <text x="470" y="18" text-anchor="middle" fill="#808080">the design (program)</text>
+  <line x1="360" y1="60" x2="380" y2="60" stroke="#5aa06a"/>
+  <rect x="380" y="52" width="50" height="16" fill="none" stroke="#5aa06a"/>
+  <line x1="430" y1="60" x2="450" y2="60" stroke="#5aa06a"/>
+  <text x="470" y="57" fill="#5aa06a">R1</text>
+  <text x="470" y="71" fill="#808080" font-size="10">Value: 10k</text>
+  <line x1="360" y1="150" x2="380" y2="150" stroke="#5aa06a"/>
+  <rect x="380" y="142" width="50" height="16" fill="none" stroke="#5aa06a"/>
+  <line x1="430" y1="150" x2="450" y2="150" stroke="#5aa06a"/>
+  <text x="470" y="147" fill="#5aa06a">R2</text>
+  <text x="470" y="161" fill="#808080" font-size="10">Value: 4k7</text>
+  <text x="470" y="185" text-anchor="middle" fill="#808080" font-size="10">Component = instance; ref des = variable name</text>
+</svg>

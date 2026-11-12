@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "Twinned severity fixture (agni issue 1045). Read by BOTH core/results' TestSeverityTwinFixture",
+    "(over Pivot, which the check report and `check --format markdown` print) and the web tier's",
+    "findings.test.ts (over severitySections, which ranks the way the Checks panel does), so the",
+    "report and the viewer order and count findings by one set of answers rather than two.",
+    "",
+    "A section is [name, count]. Sections run worst first: an unrecognized severity ahead of error",
+    "(ties by name), then error, warning, info, then `unresolved`, which holds every inconclusive",
+    "finding whatever severity it carries."
+  ],
+  "cases": [
+    {"name": "worst first", "findings": [{"severity": "info"}, {"severity": "error"}, {"severity": "warning"}, {"severity": "info"}],
+     "want": [["error", 1], ["warning", 1], ["info", 2]]},
+    {"name": "an unrecognized severity leads", "findings": [{"severity": "error"}, {"severity": "critical"}],
+     "want": [["critical", 1], ["error", 1]]},
+    {"name": "two unrecognized severities by name", "findings": [{"severity": "critical"}, {"severity": "blocker"}, {"severity": "info"}],
+     "want": [["blocker", 1], ["critical", 1], ["info", 1]]},
+    {"name": "an inconclusive finding leaves its severity", "findings": [{"severity": "error"}, {"severity": "error", "inconclusive": true}, {"severity": "info"}],
+     "want": [["error", 1], ["info", 1], ["unresolved", 1]]},
+    {"name": "only inconclusive", "findings": [{"severity": "warning", "inconclusive": true}, {"severity": "critical", "inconclusive": true}],
+     "want": [["unresolved", 2]]},
+    {"name": "nothing", "findings": [], "want": []}
+  ]
+}

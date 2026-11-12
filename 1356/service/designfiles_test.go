@@ -1,0 +1,163 @@
+package service_test
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/fshost"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/service"
+)
+
+// designFilesSvc serves the tutorial project as mount "tut" through the fs.FS backend, with the
+// project store a server composes, so the descriptor and the config directories it names are real.
+func designFilesSvc(t *testing.T) *service.WorkspaceService {
+	t.Helper()
+	root, err := filepath.Abs(filepath.Join("..", "examples", "tutorial-project"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := fshost.Mount{Name: "tut", FS: os.DirFS(root)}
+	host := fshost.New(m)
+	resolver := &service.ProjectResolver{
+		Store:  projects.NewFSStore(projects.Tree{Mount: m.Name, FS: m.FS}),
+		Config: &fshost.ConfigResolver{Mounts: []fshost.Mount{m}},
+	}
+	return service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace())
+}
+
+func listDesignFiles(t *testing.T, svc *service.WorkspaceService, uri string) *webapi.ListDesignFilesResponse {
+	t.Helper()
+	resp, err := svc.ListDesignFiles(context.Background(), &webapi.ListDesignFilesRequest{Uri: uri})
+	if err != nil {
+		t.Fatalf("ListDesignFiles(%s): %v", uri, err)
+	}
+	return resp
+}
+
+func filePaths(resp *webapi.ListDesignFilesResponse) []string {
+	var out []string
+	for _, f := range resp.GetFiles() {
+		out = append(out, f.GetPath())
+	}
+	return out
+}
+
+// TestListDesignFilesIsWhatTheAnalysisReads holds the set to the tiers the engine reads. If a file
+// is missing here, the browser's engine analyses without that tier, and the run reads clean rather
+// than failing. So each tier is named rather than counted.
+func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
+	svc := designFilesSvc(t)
+	resp := listDesignFiles(t, svc, "mount://tut/designs/gateway")
+	got := map[string]bool{}
+	var total int64
+	for _, f := range resp.GetFiles() {
+		got[f.GetPath()] = true
+		total += f.GetSize()
+		if !strings.HasPrefix(f.GetSha256(), "sha256:") || f.GetSize() == 0 {
+			t.Errorf("%s: size %d, hash %q", f.GetPath(), f.GetSize(), f.GetSha256())
+		}
+	}
+	for _, want := range []string{
+		"designs/gateway/gateway.edn",               // the entry
+		"designs/gateway/gateway.kicad_sch",         // the schematic companion
+		"designs/gateway/gateway.kicad_pcb",         // the board companion
+		"designs/gateway/gateway-rev-b.edn",         // a revision, for a diff
+		"designs/gateway/design.yaml",               // the design's descriptor
+		"designs/gateway/symbols/gateway.kicad_sym", // the design's own symbol library
+		"project.yaml",                              // the project's descriptor
+		"profiles/can.yaml",                         // a project profile
+		"params/acme-buck-3v3.textproto",            // a project datasheet spec
+		"lib/house.dl",                              // a project library module
+	} {
+		if !got[want] {
+			t.Errorf("missing %s; got %v", want, filePaths(resp))
+		}
+	}
+	for _, unwanted := range []string{"README.md", "Makefile", "tools/gen_kicad_views.py", ".gitignore"} {
+		if got[unwanted] {
+			t.Errorf("%s is not read by the analysis and should not be listed", unwanted)
+		}
+	}
+	if resp.GetMount() != "tut" || resp.GetTotalSize() != total {
+		t.Errorf("mount %q total %d, want tut and %d", resp.GetMount(), resp.GetTotalSize(), total)
+	}
+
+	// Naming the entry or a companion names the same design (C32), so it lists the same files.
+	for _, other := range []string{"mount://tut/designs/gateway/gateway.edn", "mount://tut/designs/gateway/gateway.kicad_sch"} {
+		if a, b := strings.Join(filePaths(resp), ","), strings.Join(filePaths(listDesignFiles(t, svc, other)), ","); a != b {
+			t.Errorf("%s lists a different set from the design folder:\n%s\n%s", other, b, a)
+		}
+	}
+}
+
+func TestListDesignFilesRefusesWhatItCannotList(t *testing.T) {
+	svc := designFilesSvc(t)
+	for _, uri := range []string{"mount://nope/x.edn", "mount://tut/designs/gateway/missing.edn"} {
+		if _, err := svc.ListDesignFiles(context.Background(), &webapi.ListDesignFilesRequest{Uri: uri}); !errors.Is(err, service.ErrNotFound) {
+			t.Errorf("%s: err %v, want not found", uri, err)
+		}
+	}
+	bare := service.NewWorkspaceService(fshost.New().Workspace())
+	if _, err := bare.ListDesignFiles(context.Background(), &webapi.ListDesignFilesRequest{Uri: "mount://tut/x"}); !errors.Is(err, service.ErrInvalidArgument) {
+		t.Errorf("a host without WithDesignFiles: err %v, want invalid argument", err)
+	}
+}
+
+// TestListDesignFilesMarksTheBoard holds the board flag to the board tier that Ingest resolves. The
+// browser engine holds that file back from a worker until a question there reads the board (agni
+// issue 992).
+// Only the current revision's declared board is marked, under every spelling of the design, and a
+// design read exactly as named has no board of its own to mark.
+func TestListDesignFilesMarksTheBoard(t *testing.T) {
+	svc := designFilesSvc(t)
+	boards := func(uri string) []string {
+		var out []string
+		for _, f := range listDesignFiles(t, svc, uri).GetFiles() {
+			if f.GetBoard() {
+				out = append(out, f.GetPath())
+			}
+		}
+		return out
+	}
+	for _, uri := range []string{"mount://tut/designs/gateway", "mount://tut/designs/gateway/gateway.edn", "mount://tut/designs/gateway/gateway.kicad_sch"} {
+		if got := strings.Join(boards(uri), ","); got != "designs/gateway/gateway.kicad_pcb" {
+			t.Errorf("%s marks %q as the board, want designs/gateway/gateway.kicad_pcb", uri, got)
+		}
+	}
+	if got := boards("mount://tut/designs/gateway/gateway-rev-c.edn"); len(got) != 0 {
+		t.Errorf("rev C declares no board, and %v were marked", got)
+	}
+}
+
+// A design's files are the files its whole extends chain names (agni issue 1136). That means each
+// project's descriptor and the files and folders it names, plus what the design names itself, a
+// single file included. A file in a folder no descriptor names is not read, so it is not listed,
+// since the browser's engine fetches exactly this list.
+func TestListDesignFilesFollowsTheExtendsChain(t *testing.T) {
+	m := fshost.Mount{Name: "m", FS: fshost.MemFS(map[string][]byte{
+		"house/project.yaml":      []byte("name: house\nprofiles: [profiles/can.yaml]\n"),
+		"house/profiles/can.yaml": []byte("x"),
+		"house/profiles/lin.yaml": []byte("x"),
+		"team/project.yaml":       []byte("name: team\nextends: ../house/project.yaml\nlib: [lib]\n"),
+		"team/lib/house.dl":       []byte("x"),
+		"team/params/a.textproto": []byte("x"),
+		"team/b/design.yaml":      []byte("name: b\nextends: ../project.yaml\nentry: b.edn\nqueries: [../../shared/q/power.yaml]\n"),
+		"team/b/b.edn":            []byte("x"),
+		"shared/q/power.yaml":     []byte("x"),
+		"shared/q/other.yaml":     []byte("x"),
+	})}
+	host := fshost.New(m)
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: m.Name, FS: m.FS})}
+	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace())
+	got := strings.Join(filePaths(listDesignFiles(t, svc, "mount://m/team/b")), ",")
+	want := "house/profiles/can.yaml,house/project.yaml,shared/q/power.yaml,team/b/b.edn,team/b/design.yaml,team/lib/house.dl,team/project.yaml"
+	if got != want {
+		t.Errorf("files = %s\nwant    %s", got, want)
+	}
+}

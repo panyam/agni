@@ -1,0 +1,87 @@
+---
+title: "input-protection"
+description: "A connector feeds a power-input pin directly with no fuse or TVS in the path."
+---
+
+### Remedy
+
+Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.
+
+### What it means
+
+A connector net that reaches a power-input pin, directly or through up to three series parts, must
+have a protection device on the way, a fuse crossed or a TVS on the path.
+
+### Why engineers want it
+
+Every external fault arrives on one net, the power entry.
+Review checklists ask for a fuse (overcurrent) and a clamp (transient) between the jack and
+the first regulator; forgetting them is invisible until the wrong charger shows up.
+
+### Impact
+
+Shorted loads burn traces or supplies instead of opening a fuse; hot-plug and
+ESD transients reach the regulator input unclamped.
+
+![connector-to-power-input path: a fuse or TVS makes it fine, a bare ferrite bead leaves it flagged]({{.Site.PathPrefix}}/static/images/catalog/rules/input-protection.svg)
+
+### Scope note
+
+Since WS3-011 the rule walks from each connector net, following series pass elements
+(R/L/ferrite/fuse, the reach primitive, 3 hops) to find a power-input pin, and the path is protected
+if a FUSE was crossed to get there or a fuse or TVS hangs on any walked net up to it. Before the
+walk, a series element split the net and the rule saw nothing, so a fuse-protected board passed by
+accident, and an unprotected connector-bead-regulator path passed too. This upgrade closes that
+false negative. Fuse OR TVS satisfies the rule; a per-design "which protections are required"
+policy is rule configuration (WS3-006). Ground-named nets are skipped, and an unresolved external
+net reports not-considered. If the board drives a net itself, that net also reports
+not-considered. Its connector is then an outlet, powered by the board, rather than a power entry
+(agni issue 1016). reverse-blocking-absent asks
+the same question through `check.BoardSource`, and its page lists the shapes that count.
+
+A current-limiting power switch also counts when it is the entry's only load. An eFuse or a USB
+power switch wired between the connector and the board is one. Its current limit gives the
+overcurrent protection a fuse would give (agni issue 1248). Glasgow feeds its 5 V through a TPD3S014
+that way. Only the part's datasheet can say so, through a `device_class` that names a
+current-limiting switch, because a regulator limits its current too and is no protection against its
+own failure. The pass names the switch and cites the current limit printed in its datasheet. A
+switch beside a regulator on the same net excuses nothing, since the regulator is still fed straight
+from the connector. Without the datasheet the entry still fails, and the verdict names the IC it
+could not read.
+
+### Query structure
+
+select connector nets whose reach finds an unprotected power input.
+
+    select N in nets where exists C in N.connections where class(C) == connector
+      and exists M in reach(N, 3) where exists P in M.connections, pin_dir(P) == power_in
+      and not (fuse crossed on path(N..M) or exists T on path nets, class(T) in {fuse, tvs})
+
+Reads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,
+pin.electrical_type, reach. Tier R.
+
+### For software readers
+
+A schematic is a graph whose components are nodes with named pins and whose nets are hyperedges
+joining pins that are wired together. The rule uses these concepts:
+
+- A **series ("pass") element** is a two-terminal part wired INLINE, like middleware in a
+  request pipeline. Because a net is "everything directly touching", an inline part SPLITS
+  one logical connection into two nets, leaving a per-net rule like a function
+  that can only see its own local scope.
+- A **fuse** is a sacrificial circuit breaker, wired inline. "Is there a fuse between the wall
+  plug and the machine" is a PATH question, like "does any middleware in the chain do auth".
+- A **TVS diode** is a surge protector hanging OFF the path to ground like a pressure-relief
+  valve; it is protection on a path net, not a crossing.
+- A **ferrite bead** is an inline noise filter, electrically transparent here, and the classic
+  innocent reason a power path is split into two nets.
+- A **rail** (VCC, GND) is a shared supply net like a global singleton; the walk never crosses
+  into one.
+
+The two conformance fixtures, drawn:
+
+![reach cases]({{.Site.PathPrefix}}/static/images/catalog/rules/reach-cases.png)
+
+The walk's crossing and stopping rules at a glance:
+
+![walk semantics]({{.Site.PathPrefix}}/static/images/catalog/rules/reach-semantics.png)

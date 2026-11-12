@@ -1,0 +1,10 @@
+(edif BUSTEST
+  (edifVersion 2 0 0)
+  (design BUSTEST (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST)
+        (interface
+          (port (array DATA 8) (direction INPUT)))
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1")))))))

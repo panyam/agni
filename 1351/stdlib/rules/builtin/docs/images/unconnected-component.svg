@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="unconnected-component rule: a part with no pin on any net is flagged; a part with its pins wired is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: no pin on any net</text>
+
+  <!-- resistor R9 with both leads dangling into open nodes -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="130" y="108" width="52" height="24" rx="2" fill="#ffffff"/>
+  </g>
+  <text x="156" y="98" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">R9</text>
+
+  <!-- flagged leads in red, ending at open (unconnected) nodes -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="130" y1="120" x2="86" y2="120"/>
+    <circle cx="80" cy="120" r="6" fill="#f8f9fb"/>
+    <line x1="182" y1="120" x2="226" y2="120"/>
+    <circle cx="232" cy="120" r="6" fill="#f8f9fb"/>
+  </g>
+  <text x="108" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">R9.1</text>
+  <text x="204" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">R9.2</text>
+
+  <text x="156" y="216" font-size="13" fill="#d64545" text-anchor="middle">no pin on any net -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: pins wired</text>
+
+  <!-- IC U1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="452" y="92" width="76" height="64" rx="4" fill="#ffffff"/>
+    <!-- left pin stubs -->
+    <line x1="428" y1="108" x2="452" y2="108"/>
+    <line x1="428" y1="140" x2="452" y2="140"/>
+    <!-- right pin stub -->
+    <line x1="528" y1="124" x2="552" y2="124"/>
+  </g>
+  <text x="490" y="128" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- nets landing on the pins (junction dots) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="392" y1="108" x2="428" y2="108"/>
+    <line x1="392" y1="140" x2="428" y2="140"/>
+    <line x1="552" y1="124" x2="588" y2="124"/>
+  </g>
+  <circle cx="428" cy="108" r="4" fill="#394049"/>
+  <circle cx="428" cy="140" r="4" fill="#394049"/>
+  <circle cx="552" cy="124" r="4" fill="#394049"/>
+
+  <text x="384" y="104" font-size="12" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">VCC</text>
+  <text x="384" y="144" font-size="12" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">GND</text>
+  <text x="592" y="128" font-size="12" fill="#6b7280" text-anchor="start" font-family="ui-monospace, Menlo, Consolas, monospace">OUT</text>
+
+  <text x="490" y="216" font-size="13" fill="#2f9e57" text-anchor="middle">any pin on a net -&gt; fine</text>
+</svg>

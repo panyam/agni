@@ -1,0 +1,12 @@
+#agni-run e14b0f8698731d6f
+diff letter_pin_rev_a.edn -> letter_pin_rev_b.edn
+
+Components: +0  -0  ~0
+Nets:       new 0  deleted 0  renamed 0  hard 0  soft 0
+#agni-step
+r         p  n                 provenance
+D_K_ONLY  A  NET_ANODE_SIDE    letter_pin_rev_a.edn
+D_K_ONLY  K  NET_CATHODE_SIDE  letter_pin_rev_a.edn
+R1        1  NET_CATHODE_SIDE  letter_pin_rev_a.edn
+
+3 result(s)

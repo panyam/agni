@@ -1,0 +1,73 @@
+// The reader-facing side of "this link was computed against different bytes" (agni issue 392).
+//
+// `agni check --verdicts --url-base` mints a URL carrying both the verdict id and the content hash of
+// the design the run read. An id is derived from a rule name and a subject ref, so a design edited
+// since the run resolves the SAME id against a different net, and the proof draws on the wrong pins.
+//
+// THREE STATES, NOT TWO. A link whose hash cannot be checked is not a link whose hash matched. The
+// server reports an empty hash when it could not hash the file, and that case gets its own note.
+
+// LinkTrust is what the viewer could establish about the link it was opened with.
+export type LinkTrust =
+  // The link named a revision and this server could not hash the file to compare against it.
+  | "unverifiable"
+  // The link named a revision and this server read different bytes.
+  | "mismatch";
+
+// StaleLinkNote is what the strip renders. It is null when there is nothing to say. That covers a
+// link that named no revision, since nothing was claimed, and a link that matched, since the claim
+// held.
+export interface StaleLinkNote {
+  trust: LinkTrust;
+  // claimed and served are the SHORT forms, for a reader comparing two digests by eye. The full
+  // values are in the URL and in the report the link came from.
+  claimed: string;
+  served: string;
+}
+
+// shortHash trims "sha256:" and keeps enough hex to distinguish revisions by eye without filling the
+// strip. Twelve characters, the same as the datasheet revision note (bank.ts docRevisionNote).
+export function shortHash(h: string): string {
+  const hex = h.startsWith("sha256:") ? h.slice(7) : h;
+  return hex.slice(0, 12);
+}
+
+// staleLinkNote compares the revision a link claimed against the one this server read.
+//
+// claimed is the URL's ?hash=, and "" when the link named none. The CLI names none for a design it
+// could not hash. served is GetDesignResponse.content_hash ("" when the server could not hash).
+export function staleLinkNote(claimed: string, served: string): StaleLinkNote | null {
+  if (!claimed) return null; // the link made no claim, so there is none to check
+  if (!served) return { trust: "unverifiable", claimed: shortHash(claimed), served: "" };
+  if (claimed === served) return null; // the claim held
+  return { trust: "mismatch", claimed: shortHash(claimed), served: shortHash(served) };
+}
+
+// staleLinkStrip wraps the notice element, mirroring undrawnStrip. It renders the note and hides the
+// element entirely when there is none, so an ordinary open carries no chrome. A null element is a
+// no-op.
+//
+// A mismatch gets the warn class, since what is on screen may be about a different net and the
+// reader should re-run the check. An unverifiable link is probably fine and cannot be proven so.
+export function staleLinkStrip(el: HTMLElement | null): (note: StaleLinkNote | null) => void {
+  return (note) => {
+    if (!el) return;
+    el.classList.remove("on", "warn");
+    if (!note) {
+      el.textContent = "";
+      return;
+    }
+    if (note.trust === "mismatch") {
+      el.textContent =
+        `This link was computed against a different revision of the design: it names ${note.claimed}, ` +
+        `and this server read ${note.served}. Anything highlighted may be about a different net. ` +
+        `Re-run the checks to see this revision's answer.`;
+      el.classList.add("on", "warn");
+      return;
+    }
+    el.textContent =
+      `This link names revision ${note.claimed} and this server could not hash the file to compare. ` +
+      `The proof below is drawn against whatever is on disk now, unverified.`;
+    el.classList.add("on");
+  };
+}

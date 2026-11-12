@@ -1,0 +1,134 @@
+package query
+
+import (
+	"context"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// TestRouteBindsTheRouteItWalked checks the route artifact from agni issue 518, over the straight
+// chain N0 -R1- N1 -R2- N2 -R3- N3. The answer names the parts it crossed and the nets between
+// them. So a reviewer reading a hundred rows can check any one of them without re-asking the
+// question.
+//
+// The reflexive row is asserted alongside the others rather than skipped. A net reaches itself at
+// distance zero, and its route is its own name. The two points are one electrical node. That is the
+// strongest form of connected, not a degenerate case to filter out.
+func TestRouteBindsTheRouteItWalked(t *testing.T) {
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route("N0", ?n, ?p) => ?n, ?p`)
+	got := map[string]string{}
+	for _, r := range rows {
+		got[r.Bind["n"].S] = r.Bind["p"].S
+	}
+	want := map[string]string{
+		"N0": "N0",
+		"N1": "N0 -> [R1] -> N1",
+		"N2": "N0 -> [R1] -> N1 -> [R2] -> N2",
+		"N3": "N0 -> [R1] -> N1 -> [R2] -> N2 -> [R3] -> N3",
+	}
+	if len(got) != len(want) {
+		t.Errorf("route bound %d destinations, want %d: %v", len(got), len(want), got)
+	}
+	for n, w := range want {
+		if got[n] != w {
+			t.Errorf("net.route(N0, %s, ?p) bound %q, want %q", n, got[n], w)
+		}
+	}
+}
+
+// TestRouteNeverBindsAnEmptyPath holds a requirement from issue 518, the one thing that must not
+// happen. A path question that finds nothing must never render as an empty line. In a query the
+// correct form of "no route" is NO ROW. So this test guards the other shape, a row with an empty
+// string in its path column. A table renders that as a blank cell beside two net names, and a
+// reader takes it for a route with nothing on it.
+func TestRouteNeverBindsAnEmptyPath(t *testing.T) {
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route(?a, ?b, ?p) => ?a, ?b, ?p`)
+	if len(rows) == 0 {
+		t.Fatal("no rows: the fixture should route, so this test would pass vacuously")
+	}
+	for _, r := range rows {
+		if r.Bind["p"].S == "" {
+			t.Errorf("net.route(%s, %s) bound an empty path", r.Bind["a"].S, r.Bind["b"].S)
+		}
+	}
+}
+
+// TestRouteAgreesWithReachesOnWhatIsConnected is the sibling guard. route and reaches run the same
+// walk. If one yields a pair and the other does not, the engine is inconsistent, and nobody asked
+// for that difference.
+//
+// The fixture has a GROUND net so the assertion has teeth. A bus-like net is excluded from the walk
+// outright rather than admitted as a terminus. Imagine a route implementation that reached for
+// ReachToTerminus. It would bind pairs that reaches denies. `agni trace` does use ReachToTerminus,
+// correctly, for a pin-to-pin question. Without the rail, both sides agree whatever the walk does.
+func TestRouteAgreesWithReachesOnWhatIsConnected(t *testing.T) {
+	m := check.NewModel(railChainDesign())
+	pairs := func(text, a, b string) []string {
+		var out []string
+		for _, r := range runQuery(t, m, text) {
+			out = append(out, r.Bind[Var(a)].S+"->"+r.Bind[Var(b)].S)
+		}
+		sort.Strings(out)
+		return out
+	}
+	reached := pairs(`net.reaches(?a, ?b) => ?a, ?b`, "a", "b")
+	routed := pairs(`net.route(?a, ?b, ?p) => ?a, ?b`, "a", "b")
+	if strings.Join(reached, ",") != strings.Join(routed, ",") {
+		t.Errorf("route and reaches disagree about what is connected:\n  reaches: %v\n  route:   %v", reached, routed)
+	}
+	// Two positive controls, because the assertion above passes on an empty result and on a fixture
+	// where nothing is bus-like.
+	//
+	// First, the rail must not be a DESTINATION of any other net. A terminus-admitting walk would
+	// add exactly such a pair. GND does reach itself reflexively, since a walk never treats its own
+	// start net as a stop. So the reflexive pair is not the one to look for.
+	for _, p := range routed {
+		if a, b, _ := strings.Cut(p, "->"); b == "GND" && a != "GND" {
+			t.Errorf("route reached the ground net from %s: a rail is a stop, not a destination", a)
+		}
+	}
+	// Second, the chain has to route at all, so the two agree about something.
+	if len(routed) < 4 {
+		t.Fatalf("fixture routed %d pairs, too few to prove agreement: %v", len(routed), routed)
+	}
+}
+
+// railChainDesign is reachChainDesign with a ground net hung off the far end through R4. GND is
+// bus-like by name, so the series walk refuses it. This net separates a walk that stops at a rail
+// from one that ends on it.
+func railChainDesign() *ir.Design {
+	d := reachChainDesign()
+	d.Components = append(d.Components, &ir.Component{
+		RefDes: "R4", Sections: []*ir.ComponentSection{{PartRef: "R"}},
+		Prov: &ir.Provenance{SourceFile: "c"},
+	})
+	for _, n := range d.Nets {
+		if n.Name == "N3" {
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: "R4", PinRef: "1"})
+		}
+	}
+	d.Nets = append(d.Nets, &ir.Net{
+		Name: "GND", Connections: []*ir.Connection{{ComponentRef: "R4", PinRef: "2"}},
+		Prov: &ir.Provenance{SourceFile: "c"},
+	})
+	return d
+}
+
+// TestRouteArityIsFixed pins that route takes exactly three arguments. reaches next door accepts
+// two or three. route does not. It is a separate predicate, so no spelling binds a path unless the
+// caller asks for one.
+func TestRouteArityIsFixed(t *testing.T) {
+	for _, text := range []string{`net.route(?a, ?b) => ?a`, `net.route(?a, ?b, ?p, ?q) => ?a`} {
+		q, err := Parse(text)
+		if err != nil {
+			continue // a parse error is a fine way to reject it too
+		}
+		if _, err := (Naive{}).Eval(context.Background(), q, NewBase(check.NewModel(reachChainDesign()))); err == nil {
+			t.Errorf("%s: want an error naming the accepted arity", text)
+		}
+	}
+}

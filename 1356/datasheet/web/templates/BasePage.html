@@ -1,0 +1,37 @@
+{{ define "BasePage" }}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ or .Title "Agni datasheets" }}</title>
+  <!-- The workbench's own base page (agni issue 744). The viewer's base page in web/templates
+       carries about 50KB of the viewer's styles; these are the only rules from it the workbench
+       uses (the defaults, the file tree and the home crumb), so this directory deploys on its own.
+       The page's own styles are in DatasheetsPage.html. -->
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font: 13px system-ui, sans-serif; color: #1c1c1c; background: #fff; }
+    .tree, .children { list-style: none; margin: 0; padding: 0; }
+    .node { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: inherit; padding: 3px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node:hover { background: #eef; }
+    .node.active { background: #dbeafe; font-weight: 600; }
+    .node.dir { color: #333; }
+    .twist { color: #999; display: inline-block; width: 1em; }
+    .fmt { color: #999; font-size: 11px; }
+    .error { color: #b00; padding: 3px 4px; }
+    /* The way back to the viewer's landing page, when agnids is told where the viewer is. */
+    .ld-home { color: #2563eb; text-decoration: none; }
+    .ld-home:hover { text-decoration: underline; }
+    /* The tree's account of what it pruned. Quiet on purpose: it explains an absence, so it must
+       be findable when someone goes looking for a mount and invisible the rest of the time. */
+    .tree .note { color: #999; font-size: 11px; padding: 6px 4px; }
+  </style>
+  {{ block "HeadExtra" . }}{{ end }}
+</head>
+<body>
+  {{ block "Body" . }}{{ end }}
+  {{ block "AppScript" . }}{{ end }}
+</body>
+</html>
+{{ end }}

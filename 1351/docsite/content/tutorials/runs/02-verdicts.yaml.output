@@ -1,0 +1,14 @@
+#agni-run 774e959208af82b0
+decoupling-present  10 pass
+    pass  +20V                           capacitor C263 sits on the rail
+    pass  +3V3                           capacitor C10 sits on the rail
+    pass  +3V3_AON                       capacitor C197 sits on the rail
+    pass  +5V                            capacitor C104 sits on the rail
+    pass  +5V_AON                        capacitor C223 sits on the rail
+    pass  /Expansion connector/+3V3_AUX  capacitor C5 sits on the rail
+    pass  /USB Debug, PD/FTDI_3V3        capacitor C133 sits on the rail
+    pass  FLASH_PWR                      capacitor C111 sits on the rail
+    pass  VCC                            capacitor C241 sits on the rail
+    pass  VCC_IN                         capacitor C269 sits on the rail
+
+10 verdicts across 1 rule(s), 10 pass

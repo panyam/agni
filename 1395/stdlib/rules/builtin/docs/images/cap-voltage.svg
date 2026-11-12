@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" width="680" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="cap-voltage rule: a cap whose derated rail voltage exceeds its datasheet rating is flagged; adequate margin is fine">
+  <rect x="1" y="1" width="678" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ============ LEFT: flagged (rail derate exceeds rating) ============ -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: over rating</text>
+  <!-- rail stub -->
+  <line x1="110" y1="80" x2="190" y2="80" stroke="#d64545" stroke-width="2.5"/>
+  <text x="150" y="70" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+16 V rail</text>
+  <!-- cap symbol -->
+  <g stroke="#394049" stroke-width="2">
+    <line x1="150" y1="80" x2="150" y2="104"/>
+    <line x1="132" y1="104" x2="168" y2="104"/>
+    <line x1="132" y1="116" x2="168" y2="116"/>
+    <line x1="150" y1="116" x2="150" y2="140"/>
+    <line x1="150" y1="140" x2="150" y2="148"/>
+    <line x1="134" y1="148" x2="166" y2="148"/>
+    <line x1="139" y1="154" x2="161" y2="154"/>
+    <line x1="144" y1="160" x2="156" y2="160"/>
+  </g>
+  <text x="182" y="104" font-size="13" font-weight="600" fill="#394049">C1</text>
+  <text x="182" y="119" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">16 V rated</text>
+  <text x="150" y="212" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">16 x 1.25 = 20 V  &gt;  16 V</text>
+  <text x="150" y="240" font-size="13" fill="#d64545" text-anchor="middle">derated rail above the rating &#8594; flagged</text>
+
+  <!-- ============ RIGHT: fine (margin) ============ -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: with margin</text>
+  <line x1="460" y1="80" x2="540" y2="80" stroke="#394049" stroke-width="2"/>
+  <text x="500" y="70" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">+5 V rail</text>
+  <g stroke="#394049" stroke-width="2">
+    <line x1="500" y1="80" x2="500" y2="104"/>
+    <line x1="482" y1="104" x2="518" y2="104"/>
+    <line x1="482" y1="116" x2="518" y2="116"/>
+    <line x1="500" y1="116" x2="500" y2="140"/>
+    <line x1="500" y1="140" x2="500" y2="148"/>
+    <line x1="484" y1="148" x2="516" y2="148"/>
+    <line x1="489" y1="154" x2="511" y2="154"/>
+    <line x1="494" y1="160" x2="506" y2="160"/>
+  </g>
+  <text x="532" y="104" font-size="13" font-weight="600" fill="#394049">C2</text>
+  <text x="532" y="119" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">16 V rated</text>
+  <text x="500" y="212" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">5 x 1.25 = 6.25 V  &#8804;  16 V</text>
+  <text x="500" y="240" font-size="13" fill="#2f9e57" text-anchor="middle">rating covers the derated rail &#8594; fine</text>
+</svg>

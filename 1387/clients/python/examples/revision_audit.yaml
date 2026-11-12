@@ -1,0 +1,29 @@
+# The audit questions revision_audit.py asks of the newer revision, as a query set. Every judgement in
+# the workbook lives here or in the engine, so changing what an audit asks is an edit to this file and
+# never to the script. It is the shape `agni query <design> --set revision_audit.yaml` reads, so the
+# same questions run from the CLI too.
+#
+# Column names are distinct across tables (part, pin, net, mpn, tps, probed, unprobed), so one
+# order_by in the script sorts every table by the columns it has, and a net or part column orders as
+# a name (R2 before R10).
+title: Revision audit
+queries:
+  - name: Pin to net
+    description: Every pin of every part and the net it lands on.
+    query: pin.net(?part, ?pin, ?net) => ?part, ?pin, ?net
+  - name: Part numbers
+    query: component.mpn(?part, ?mpn) => ?part, ?mpn
+  - name: Test points per net
+    description: Every net with its test-point count, 0 for a net nothing can probe.
+    query: net.test_point_count(?net, ?tps) => ?net, ?tps
+  - name: One test point away
+    description: Two-terminal parts probed on one net, and the net a test point would add, by part number.
+    query: component.probed_one(?part, ?probed, ?unprobed), component.mpn(?part, ?mpn) => ?mpn, ?part, ?probed, ?unprobed
+  - name: Part numbers never probed
+    description: Part numbers where no placed two-terminal part has a test point on both of its nets.
+    query: |
+      mpn_probed(?m) :- component.mpn(?r, ?m), component.probed_both(?r);
+      component.two_terminal(?part, ?a, ?b), component.mpn(?part, ?mpn), not mpn_probed(?mpn) => ?mpn, list(distinct ?part)
+  - name: PMIC rails
+    description: The rails the project's own library calls PMIC rails, with their test-point counts.
+    query: house.pmic_rail(?net), net.test_point_count(?net, ?tps) => ?net, ?tps

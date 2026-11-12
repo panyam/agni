@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="unspecified-pin-with-driver rule: a driver joined to an untyped pin is flagged; the same driver joined to a declared passive pin is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: untyped pin on a driven net</text>
+
+  <!-- FLAG driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="40" y="104" width="50" height="34" rx="4" fill="#ffffff"/>
+    <line x1="90" y1="121" x2="116" y2="121"/>
+  </g>
+  <text x="65" y="126" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">FLAG</text>
+  <text x="102" y="112" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">.out</text>
+
+  <!-- driven net (red) from driver to J1.1 -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="116" y1="121" x2="212" y2="121"/>
+  </g>
+  <circle cx="164" cy="121" r="4" fill="#d64545"/>
+  <text x="164" y="146" font-size="11" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">driven</text>
+
+  <!-- J1 connector with an untyped pin -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="212" y="102" width="40" height="38" rx="3" fill="#ffffff"/>
+  </g>
+  <text x="232" y="96" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+  <!-- untyped-pin marker: red ring + ? -->
+  <circle cx="212" cy="121" r="7" fill="#f8f9fb" stroke="#d64545" stroke-width="2"/>
+  <text x="212" y="125" font-size="11" font-weight="700" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">?</text>
+  <text x="232" y="168" font-size="11" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">J1.1 (unspecified)</text>
+
+  <text x="170" y="214" font-size="13" fill="#d64545" text-anchor="middle">untyped pin, matrix cannot rule -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: declared passive pin</text>
+
+  <!-- FLAG driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="372" y="104" width="50" height="34" rx="4" fill="#ffffff"/>
+    <line x1="422" y1="121" x2="448" y2="121"/>
+  </g>
+  <text x="397" y="126" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">FLAG</text>
+  <text x="434" y="112" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">.out</text>
+
+  <!-- driven net (normal) to R1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="448" y1="121" x2="512" y2="121"/>
+  </g>
+  <circle cx="480" cy="121" r="4" fill="#394049"/>
+
+  <!-- R1 resistor (IEC box) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="512" y1="121" x2="524" y2="121"/>
+    <rect x="524" y="109" width="52" height="24" rx="2" fill="#ffffff"/>
+    <line x1="576" y1="121" x2="600" y2="121"/>
+  </g>
+  <text x="550" y="99" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">R1</text>
+  <!-- passive pin marker: green ok node -->
+  <circle cx="512" cy="121" r="4" fill="#2f9e57"/>
+  <text x="512" y="168" font-size="11" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1.1 (passive)</text>
+
+  <text x="510" y="214" font-size="13" fill="#2f9e57" text-anchor="middle">declared, pairs with anything -&gt; fine</text>
+</svg>

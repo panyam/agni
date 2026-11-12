@@ -1,0 +1,24 @@
+# Seeded spec for the capcheck conformance fixtures: a fictional 6.3V-rated ceramic
+# cap (synthetic part and datasheet, C16). The rated-voltage row is machine-comparable
+# on purpose (structured TA condition) so the cap-voltage rule may compare it.
+mpn: "DEMO-CAP-6V3"
+manufacturer: "Agni Conformance Works"
+device_class: "capacitor"
+
+docs {
+  id: "democap"
+  title: "DEMO-CAP-6V3 Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Rated Voltage"
+  symbol: "VDC"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 6.3 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "democap" page: 2 table_or_figure: "Ratings" method: "hand" confidence: 1 }
+}

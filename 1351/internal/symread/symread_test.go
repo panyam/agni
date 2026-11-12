@@ -1,0 +1,89 @@
+package symread
+
+import (
+	"slices"
+	"testing"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/netgraph"
+)
+
+// TestResolvePinsReportsUnresolved (WS1-013, extended by WS1-052) checks that ResolvePins reports
+// the placements whose symbol failed to resolve. The readers gate dangling emission on that signal
+// and also report it as a diagnostic. A resolved symbol contributes its pins; an unresolved one
+// contributes none and is recorded once, with every placement it cost pins.
+func TestResolvePinsReportsUnresolved(t *testing.T) {
+	place := func(px, py float64) (float64, float64) { return px, py }
+	pls := []Placement{
+		{Symref: "good.sym", Ref: "R1", Part: &ir.PartType{}, Place: place},
+		{Symref: "missing.sym", Ref: "R2", Part: &ir.PartType{}, Place: place},
+		{Symref: "good.sym", Ref: "R3", Part: &ir.PartType{}, Place: place},    // cached hit, still resolved
+		{Symref: "missing.sym", Ref: "R4", Part: &ir.PartType{}, Place: place}, // second victim of ONE cause
+	}
+	load := func(symref string) ([]Pin, bool) {
+		if symref == "good.sym" {
+			return []Pin{{X: 0, Y: 0, Number: "1"}, {X: 0, Y: 10, Number: "2"}}, true
+		}
+		return nil, false
+	}
+	quant := func(x, y float64) netgraph.Point { return netgraph.Point{X: int64(x), Y: int64(y)} }
+
+	pins, resolved, unresolved := ResolvePins(pls, load, quant)
+	if len(unresolved) != 1 {
+		t.Fatalf("unresolved = %v, want exactly one entry (only missing.sym)", unresolved)
+	}
+	if got := unresolved[0].Symref; got != "missing.sym" {
+		t.Errorf("unresolved symref = %q, want missing.sym", got)
+	}
+	// One missing file and two affected placements, grouped per REFERENCE, so the single cause is
+	// reported once rather than duplicated per part.
+	if got := unresolved[0].RefDes; !slices.Equal(got, []string{"R2", "R4"}) {
+		t.Errorf("unresolved refdes = %v, want [R2 R4] in placement order", got)
+	}
+	if len(pins) != 4 { // R1 and R3 contribute 2 each; R2 and R4 none
+		t.Errorf("pins = %d, want 4", len(pins))
+	}
+	// The other half of the same answer (agni issue 418). The successes are grouped per reference
+	// like the failures, so the cached second hit on good.sym does not report it twice. Each one
+	// records its pin count. A reference that resolved to an empty stub costs the netlist as much as
+	// a missing file does, and without the count the two read identically.
+	if len(resolved) != 1 {
+		t.Fatalf("resolved = %v, want exactly one entry (only good.sym, deduped across R1 and R3)", resolved)
+	}
+	if got := resolved[0]; got.Symref != "good.sym" || got.PinCount != 2 {
+		t.Errorf("resolved[0] = %+v, want {good.sym 2}", got)
+	}
+}
+
+// TestResolvePinsSlotRemap (WS1-032) checks that a Placement with SlotPins maps each drawn pin's
+// number to its slot's physical package pin, indexed by the pin's Seq. Two slots of one symbol
+// share the drawn geometry (numbers 1,2) but resolve to distinct package pins; a swapped slot row
+// (slotdef=K:9,8) proves the remap follows Seq order, not draw order. A pin whose Seq falls outside
+// the table keeps its drawn number.
+func TestResolvePinsSlotRemap(t *testing.T) {
+	place := func(px, py float64) (float64, float64) { return px, py }
+	load := func(string) ([]Pin, bool) {
+		return []Pin{{Number: "1", Seq: 1}, {Number: "2", Seq: 2}}, true
+	}
+	quant := func(x, y float64) netgraph.Point { return netgraph.Point{X: int64(x), Y: int64(y)} }
+	pls := []Placement{
+		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"1", "2"}},
+		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"3", "4"}},
+		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"9", "8"}}, // swapped order
+		{Symref: "g.sym", Ref: "U2", Part: &ir.PartType{}, Place: place},                               // no slotting -> drawn numbers
+	}
+	pins, _, _ := ResolvePins(pls, load, quant)
+	var got []string
+	for _, p := range pins {
+		got = append(got, p.Pin)
+	}
+	want := []string{"1", "2", "3", "4", "9", "8", "1", "2"}
+	if len(got) != len(want) {
+		t.Fatalf("pin numbers = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("pin[%d] = %q, want %q (full: %v)", i, got[i], want[i], got)
+		}
+	}
+}

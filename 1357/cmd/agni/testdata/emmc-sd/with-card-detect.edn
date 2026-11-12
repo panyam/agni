@@ -1,0 +1,17 @@
+(edif EMMCSD
+  (edifVersion 2 0 0)
+  (design EMMCSD (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef SOC)) (designator "U1"))
+          (instance U8 (viewRef V (cellRef LEVELSHIFT)) (designator "U8"))
+          ; A 4-bit SD card slot with its card detect line, so the eMMC profile leaves the bus alone.
+          (net SD2_CMD (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U8))))
+          (net SD2_CLK (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef U8))))
+          (net SD2_DATA0 (joined (portRef 3 (instanceRef U1)) (portRef 3 (instanceRef U8))))
+          (net SD2_DATA1 (joined (portRef 4 (instanceRef U1)) (portRef 4 (instanceRef U8))))
+          (net SD2_DATA2 (joined (portRef 5 (instanceRef U1)) (portRef 5 (instanceRef U8))))
+          (net SD2_DATA3 (joined (portRef 6 (instanceRef U1)) (portRef 6 (instanceRef U8))))
+          (net SD2_CD (joined (portRef 7 (instanceRef U1)) (portRef 7 (instanceRef U8)))))))))

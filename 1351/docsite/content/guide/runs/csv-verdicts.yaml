@@ -1,0 +1,9 @@
+# The verdicts CSV, for the verdict_id column a reader pastes into the viewer as ?verdict=<id>.
+#
+# Filtered to the header and the rule the section above already walked through, so the pass and the
+# fail sit next to each other and the context and terms columns are readable. The full table is 140
+# rows, which shows the format and hides the point.
+fixture: demo
+match: '^(verdict_id|i2c-pull-up)'
+script: |
+  agni check showcase.fires.kicad_sch --verdicts --format csv

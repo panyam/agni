@@ -1,0 +1,44 @@
+<svg viewBox="0 0 640 312" role="img" aria-labelledby="parallel-capacitors-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="parallel-capacitors-title">A rail across the top and ground across the bottom, with two capacitors between them in parallel, a 10 microfarad part and a 100 nanofarad part. One test point hangs off the rail and one off ground, and an in-circuit tester probes those two pads. It measures the two capacitors as a single 10.1 microfarad capacitance. With the small capacitor missing it reads 10.0 microfarads, and since the large part's own tolerance allows anything from 9 to 11, both readings pass.</title>
+  <line x1="200" y1="60" x2="600" y2="60" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <text x="600" y="50" text-anchor="end" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">3V3</text>
+  <line x1="200" y1="230" x2="600" y2="230" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <text x="600" y="248" text-anchor="end" fill="currentColor" font-size="11.5" opacity="0.7">GND</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.8" opacity="0.85">
+  <line x1="380" y1="60" x2="380" y2="128"/>
+  <line x1="380" y1="140" x2="380" y2="230"/>
+  <line x1="360" y1="128" x2="400" y2="128"/>
+  <line x1="360" y1="140" x2="400" y2="140"/>
+  <line x1="520" y1="60" x2="520" y2="128"/>
+  <line x1="520" y1="140" x2="520" y2="230"/>
+  <line x1="260" y1="60" x2="260" y2="90"/>
+  <line x1="260" y1="230" x2="260" y2="200"/></g>
+  <g fill="none" stroke="var(--accent-color)" stroke-width="2.2">
+  <line x1="500" y1="128" x2="540" y2="128"/>
+  <line x1="500" y1="140" x2="540" y2="140"/></g>
+  <g fill="currentColor">
+  <circle cx="260" cy="60" r="3.4"/>
+  <circle cx="380" cy="60" r="3.4"/>
+  <circle cx="520" cy="60" r="3.4"/>
+  <circle cx="260" cy="230" r="3.4"/>
+  <circle cx="380" cy="230" r="3.4"/>
+  <circle cx="520" cy="230" r="3.4"/></g>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.85">
+  <circle cx="260" cy="96" r="6"/>
+  <circle cx="260" cy="194" r="6"/></g>
+  <g fill="currentColor" font-size="10.5" opacity="0.7">
+  <text x="274" y="100">TP1</text>
+  <text x="274" y="198">TP2</text></g>
+  <text x="410" y="132" fill="currentColor" font-size="11.5" font-weight="600">10 µF</text>
+  <text x="410" y="146" fill="currentColor" font-size="10" opacity="0.6">±10%</text>
+  <text x="550" y="132" fill="var(--accent-color)" font-size="11.5" font-weight="600">100 nF</text>
+  <text x="550" y="146" fill="currentColor" font-size="10" opacity="0.6">fitted or not?</text>
+  <rect x="40" y="112" width="140" height="64" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+  <text x="110" y="140" text-anchor="middle" fill="currentColor" font-size="12" font-weight="600">in-circuit tester</text>
+  <text x="110" y="158" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.6">reads one capacitance</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.6">
+  <line x1="180" y1="126" x2="253" y2="99"/>
+  <line x1="180" y1="162" x2="253" y2="191"/></g>
+  <text x="320" y="276" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">with both fitted the tester reads 10.1 µF, and with the 100 nF missing it reads 10.0 µF</text>
+  <text x="320" y="294" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">a 10 µF part at ±10% may read anywhere from 9 to 11 µF, so both readings pass</text>
+</svg>

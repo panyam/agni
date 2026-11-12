@@ -1,0 +1,77 @@
+---
+title: "i2c-pull-up-split-rail"
+description: "An I2C net is pulled up to two different rails."
+---
+
+### Remedy
+
+Pull the bus to one rail. Where the bus genuinely crosses supply domains, that is a level translator's job rather than two pull-ups, and the translator's own pull-ups belong one per side of it.
+
+### What it means
+
+An I2C net reaches TWO different rails through its pull-up resistors. One part pulls the bus to one
+supply and another pulls it to a second.
+
+### Why engineers want it
+
+Two pull-ups to two rails tie those rails together through the bus. Whenever one supply is up and
+the other is not, current flows from the live rail through its pull-up, along the bus, and back
+through the other pull-up into a rail that is meant to be off. The bus then partially feeds that
+rail. That is a sequencing fault, and it can hold a supply above its off threshold, back-feed a
+regulator, or bring a device up in a state that its reset never sees.
+
+It also leaves the bus idling at whichever rail wins, which may exceed the input rating of a device
+sitting on the lower supply.
+
+On the bench every supply comes up at once and nothing is observed; the fault appears as a board
+that fails on one particular power-up order, or after a brown-out.
+
+### Impact
+
+A supply is fed through a signal bus during sequencing, and the bus idles at a level one side may not
+tolerate. Neither shows up in a functional test that powers everything simultaneously.
+
+### Fires versus fine
+
+```
+  fires                                 fine
+
+  +3V3      +1V8                        +1V8
+   |         |                           |
+  R1        R2                          R1
+   |         |                           |
+   +----+----+                           |
+        |                                |
+       SDA                              SDA
+                                        (a bus that crosses domains
+                                         gets a level translator, and
+                                         one pull-up per side of it)
+```
+
+### Scope note
+
+- Only nets matching the I2C naming convention at a token boundary (SDA / SCL).
+- When a net's pull-ups all go to ONE rail, `i2c-redundant-pull-up` reports it, not this rule. The
+  two conditions are disjoint, so a bus is reported once.
+- Rail identity is the rail NET, so two rails that happen to carry the same voltage are still two
+  rails. That is deliberate, because the sequencing question is about which supply and not which
+  voltage.
+- The naming lexicon decides what counts as a rail. If the built-in vocabulary does not recognise
+  a project's supplies, the project reports nothing here. Declare them in the `conventions:` section
+  of `project.yaml`. The `rail-not-classified` rule is a tripwire, and it reports when this is
+  happening.
+- Severity is `warning`, because a bus deliberately pulled to one domain with a translator elsewhere
+  on the net can look like this to a netlist.
+
+### Query structure
+
+Enumerate I2C nets; walk out through resistors up to three crossings, collecting every distinct
+resistor whose far side is a rail, with the rail each reaches; fire when the set of rails has more
+than one member.
+
+### For software readers
+
+Two connection pools onto one socket, each configured against a different endpoint. Nothing is wrong
+with either pool's own configuration, and the bug only appears when one endpoint is down and traffic
+takes the path through the other one. Reachability tells you the socket is connected; only counting
+the pools and comparing their endpoints tells you it is connected to two things.

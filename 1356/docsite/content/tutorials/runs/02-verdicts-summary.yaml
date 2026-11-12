@@ -1,0 +1,5 @@
+# Rung 2: the verdict tally across the whole catalog, without its rows.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni check --verdicts .
+match: '^[0-9]+ verdicts'

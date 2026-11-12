@@ -1,0 +1,24 @@
+(edif ANNOT
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c "TitleBlock")
+      (cellType GENERIC)
+      (view (rename &v "sym")
+        (viewType GRAPHIC)
+        (interface)
+        (contents
+          (boundingBox (rectangle (pt 0 0) (pt 400 200)))
+          (figure BOX (rectangle (pt 0 0) (pt 400 200)))
+          (commentGraphics
+            (annotate (stringDisplay "SHEET" (display (justify CENTERLEFT) (origin (pt 20 150)))))
+            (annotate (stringDisplay "REV" (display (justify CENTERLEFT) (origin (pt 20 50))))))))))
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "S")
+        (instance (rename &i "$i")
+          (viewRef v (cellRef (name &c) (libraryRef L)))
+          (transform (origin (pt 100 100)))
+          (designator (stringDisplay "TB1")))))))

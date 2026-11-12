@@ -1,0 +1,247 @@
+package wasmengine
+
+import (
+	"context"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"connectrpc.com/connect"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/goapplib/wasmhost"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+// timedCheck runs CheckDesign on the gateway's snapshot snap and asks for its timing (agni issue
+// 914). It returns the breakdown from the response's two timing headers.
+func timedCheck(t *testing.T, eng *Engine, snap string, ask bool) (*webapi.RequestTiming, string) {
+	t.Helper()
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	req := connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap})
+	if ask {
+		req.Header().Set("Agni-Timing", "1")
+	}
+	resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).CheckDesign(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := resp.Header().Get("Agni-Timing")
+	if raw == "" {
+		return nil, resp.Header().Get("Server-Timing")
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(raw), &rt); err != nil {
+		t.Fatalf("the Agni-Timing header is not a RequestTiming: %v\n%s", err, raw)
+	}
+	return &rt, resp.Header().Get("Server-Timing")
+}
+
+// timedIngest ingests the gateway on eng and asks for its timing. It returns the snapshot's name and
+// the engine's breakdown.
+func timedIngest(t *testing.T, eng *Engine) (string, *webapi.RequestTiming) {
+	t.Helper()
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	req := connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m"}})
+	req.Header().Set("Agni-Timing", "1")
+	resp, err := webapiconnect.NewSnapshotServiceClient(srv.Client(), srv.URL).Ingest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+		t.Fatalf("the Agni-Timing header is not a RequestTiming: %v", err)
+	}
+	return resp.Msg.GetName(), &rt
+}
+
+func lookup(rt *webapi.RequestTiming, layer string) string {
+	for _, l := range rt.GetLookups() {
+		if l.GetLayer() == layer {
+			return l.GetSource()
+		}
+	}
+	return ""
+}
+
+// TestARequestThatAsksIsToldWhereItsTimeWent holds the browser engine to the same breakdown as agni
+// serve. The breakdown names the stages, each rule, and which tier answered each read. A design read
+// in the page can then be diagnosed as one read by a server can.
+func TestARequestThatAsksIsToldWhereItsTimeWent(t *testing.T) {
+	store := &wasmhost.MemCache{}
+	eng := gatewayEngine(t, store, "v1", nil)
+	// Resolving the overlay and the tiers moved to Ingest in agni issue 1061, so its breakdown names them.
+	snap, ingest := timedIngest(t, eng)
+	ingested := map[string]bool{}
+	for _, s := range ingest.GetStages() {
+		ingested[s.GetName()] = true
+	}
+	for _, want := range []string{"resolve.overlay", "resolve.tiers"} {
+		if !ingested[want] {
+			t.Errorf("the ingest's breakdown has no %q stage: %v", want, ingested)
+		}
+	}
+
+	first, st := timedCheck(t, eng, snap, true)
+	if first == nil {
+		t.Fatal("a request that asked got no Agni-Timing header")
+	}
+	stages := map[string]bool{}
+	for _, s := range first.GetStages() {
+		stages[s.GetName()] = true
+	}
+	for _, want := range []string{"build.model", "read.netlist", "model", "rules", "locate"} {
+		if !stages[want] {
+			t.Errorf("the breakdown has no %q stage: %v", want, stages)
+		}
+	}
+	if first.GetRulesEvaluated() == 0 || len(first.GetRules()) == 0 || first.GetTotalMicros() <= 0 {
+		t.Errorf("rules evaluated %d, listed %d, total %dus; want each set", first.GetRulesEvaluated(), len(first.GetRules()), first.GetTotalMicros())
+	}
+	if !strings.Contains(st, "total;dur=") || !strings.Contains(st, "rules;dur=") {
+		t.Errorf("Server-Timing = %q, want the total and the rules", st)
+	}
+	// The model was built for this request, and the next one is answered from memory.
+	if got := lookup(first, "model"); got != "built" {
+		t.Errorf("the first request's model came from %q, want built", got)
+	}
+	if rt, st := timedCheck(t, eng, snap, false); rt != nil || st != "" {
+		t.Fatal("a request that did not ask was sent its timing")
+	}
+	second, _ := timedCheck(t, eng, snap, true)
+	if got := lookup(second, "model"); got != "memory" {
+		t.Errorf("the second request's model came from %q, want memory", got)
+	}
+	// A second worker sharing the store, as after a reload, restores the read rather than reading.
+	next := gatewayEngine(t, store, "v1", nil)
+	nextSnap, _ := timedIngest(t, next)
+	reloaded, _ := timedCheck(t, next, nextSnap, true)
+	if got := lookup(reloaded, "design"); got != "store" {
+		t.Errorf("a second worker's design came from %q, want the store", got)
+	}
+}
+
+// coverageTiming asks GetInterfaceCoverage of the gateway's snapshot snap for its breakdown.
+func coverageTiming(t *testing.T, srv *httptest.Server, snap string) *webapi.RequestTiming {
+	t.Helper()
+	req := connect.NewRequest(&webapi.GetInterfaceCoverageRequest{Snapshot: snap})
+	req.Header().Set("Agni-Timing", "1")
+	resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetInterfaceCoverage(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+		t.Fatal(err)
+	}
+	return &rt
+}
+
+func stageCount(rt *webapi.RequestTiming, name string) int {
+	n := 0
+	for _, s := range rt.GetStages() {
+		if s.GetName() == name {
+			n++
+		}
+	}
+	return n
+}
+
+// TestCoverageReadsTheModelsFactBase checks that interface coverage reads the model's fact base. The
+// model builds that fact base once for every profile and keeps it for the next request. Building one
+// per profile took a third of Jetson's Run checks (agni issue 985).
+func TestCoverageReadsTheModelsFactBase(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	snap := snapAt(t, srv)
+	if n := stageCount(coverageTiming(t, srv, snap), "factbase"); n != 1 {
+		t.Errorf("the first coverage request built the model's fact base %d times, want once", n)
+	}
+	if n := stageCount(coverageTiming(t, srv, snap), "factbase"); n != 0 {
+		t.Errorf("the second coverage request built the fact base %d times, want it kept from the first", n)
+	}
+}
+
+// TestCoverageAfterAChecksRunBuildsNoSecondModel covers a board-less coverage request after a check
+// run. The check run kept a model with the board, and that model answers coverage as well. So a
+// server that has run checks builds no second model for the coverage panel (agni issue 987).
+func TestCoverageAfterAChecksRunBuildsNoSecondModel(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	snap := ingestEngine(t, eng, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m"}}).GetName()
+	if rt, _ := timedCheck(t, eng, snap, true); lookup(rt, "model") != "built" {
+		t.Fatalf("the check run's model came from %q, want built", lookup(rt, "model"))
+	}
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	rt := coverageTiming(t, srv, snap)
+	if got := lookup(rt, "model"); got != "memory" {
+		t.Errorf("coverage after a check run took its model from %q, want the check run's, from memory", got)
+	}
+	if n := stageCount(rt, "build.model"); n != 0 {
+		t.Errorf("coverage after a check run built %d models of its own", n)
+	}
+}
+
+// TestCoverageIsToldWhereItsTimeWent checks that GetInterfaceCoverage's breakdown names its time per
+// interface profile. On a large board coverage takes a third of Run checks, and its stages used to
+// say nothing (agni issue 968).
+func TestCoverageIsToldWhereItsTimeWent(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	req := connect.NewRequest(&webapi.GetInterfaceCoverageRequest{Snapshot: snapAt(t, srv)})
+	req.Header().Set("Agni-Timing", "1")
+	resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetInterfaceCoverage(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rt webapi.RequestTiming
+	if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+		t.Fatal(err)
+	}
+	stage := false
+	for _, s := range rt.GetStages() {
+		stage = stage || s.GetName() == "coverage"
+	}
+	profiles := 0
+	for _, r := range rt.GetRules() {
+		if strings.HasPrefix(r.GetRule(), "coverage/") {
+			profiles++
+		}
+	}
+	if !stage || profiles == 0 {
+		t.Errorf("coverage stage %v, %d profiles timed; want the stage and every profile walked", stage, profiles)
+	}
+}
+
+// TestARequestAskingForMemoryIsToldEachStagesMemory covers the header's "memory" value (agni issue
+// 994). Each stage reports the memory as it ended, and a request asking only for timing gets none.
+func TestARequestAskingForMemoryIsToldEachStagesMemory(t *testing.T) {
+	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
+	srv := httptest.NewServer(eng.Handler)
+	defer srv.Close()
+	snap := snapAt(t, srv)
+	for _, ask := range []string{"memory", "1"} {
+		req := connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap})
+		req.Header().Set("Agni-Timing", ask)
+		resp, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).CheckDesign(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rt webapi.RequestTiming
+		if err := protojson.Unmarshal([]byte(resp.Header().Get("Agni-Timing")), &rt); err != nil {
+			t.Fatal(err)
+		}
+		if len(rt.GetStages()) == 0 {
+			t.Fatalf("%s: no stages, so the memory figures prove nothing", ask)
+		}
+		for _, st := range rt.GetStages() {
+			if got := st.GetSysBytes() > 0; got != (ask == "memory") {
+				t.Errorf("Agni-Timing %q: stage %s reports %d bytes", ask, st.GetName(), st.GetSysBytes())
+			}
+		}
+	}
+}

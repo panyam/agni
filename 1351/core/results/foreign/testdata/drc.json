@@ -1,0 +1,118 @@
+{
+  "$schema": "https://schemas.kicad.org/drc.v1.json",
+  "coordinate_units": "mm",
+  "kicad_version": "10.0.4",
+  "source": "demo-board.kicad_pcb",
+  "violations": [
+    {
+      "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)",
+      "items": [
+        {
+          "description": "Rectangle on Edge.Cuts",
+          "pos": {
+            "x": 5.0,
+            "y": 5.0
+          },
+          "uuid": "23637817-f7aa-4563-af27-1c58fcc03e35"
+        },
+        {
+          "description": "Track [VCC] on F.Cu, length 10.8000 mm",
+          "pos": {
+            "x": 9.2,
+            "y": 10.0
+          },
+          "uuid": "9c601a51-1290-434b-97a1-67542f02cc89"
+        }
+      ],
+      "severity": "error",
+      "type": "copper_edge_clearance"
+    },
+    {
+      "description": "Front solder mask aperture bridges items with different nets",
+      "items": [
+        {
+          "description": "Track [VCC] on F.Cu, length 9.2000 mm",
+          "pos": {
+            "x": 20.0,
+            "y": 10.0
+          },
+          "uuid": "074c0c77-a935-4881-8700-f3a1c4c0ce18"
+        },
+        {
+          "description": "Pad 2 [<no net>] of C1 on B.Cu",
+          "pos": {
+            "x": 20.0,
+            "y": 19.2
+          },
+          "uuid": "97ec0d5c-e70c-4f50-8344-9e365176c5bd"
+        }
+      ],
+      "severity": "error",
+      "type": "solder_mask_bridge"
+    },
+    {
+      "description": "Track has unconnected end",
+      "items": [
+        {
+          "description": "Track [VCC] on F.Cu, length 10.8000 mm",
+          "pos": {
+            "x": 9.2,
+            "y": 10.0
+          },
+          "uuid": "9c601a51-1290-434b-97a1-67542f02cc89"
+        }
+      ],
+      "severity": "warning",
+      "type": "track_dangling"
+    },
+    {
+      "description": "Silkscreen clipped by board edge",
+      "items": [
+        {
+          "description": "Rectangle on Edge.Cuts",
+          "pos": {
+            "x": 5.0,
+            "y": 5.0
+          },
+          "uuid": "23637817-f7aa-4563-af27-1c58fcc03e35"
+        },
+        {
+          "description": "Reference field of R1",
+          "pos": {
+            "x": 10.0,
+            "y": 10.0
+          },
+          "uuid": "a7e88240-c38f-40df-976c-88076bcd449f"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_edge_clearance"
+    }
+  ],
+  "unconnected_items": [
+    {
+      "description": "Missing connection between items",
+      "items": [
+        {
+          "description": "Track [VCC] on F.Cu, length 10.8000 mm",
+          "pos": {
+            "x": 9.2,
+            "y": 10.0
+          },
+          "uuid": "9c601a51-1290-434b-97a1-67542f02cc89"
+        },
+        {
+          "description": "Pad 1 [VCC] of R1 on B.Cu",
+          "pos": {
+            "x": 9.2,
+            "y": 10.0
+          },
+          "uuid": "25ce93f2-c44a-4946-9b76-0db83860bb14"
+        }
+      ],
+      "severity": "error",
+      "type": "unconnected_items"
+    }
+  ],
+  "schematic_parity": []
+}

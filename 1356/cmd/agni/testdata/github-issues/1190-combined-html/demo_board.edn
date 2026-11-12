@@ -1,0 +1,10 @@
+(edif ISSUE1190
+  (edifVersion 2 0 0)
+  (design ISSUE1190 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net N1 (joined (portRef 1 (instanceRef R1))))
+          (net N2 (joined (portRef 2 (instanceRef R1)))))))))

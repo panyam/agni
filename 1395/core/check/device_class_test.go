@@ -1,0 +1,79 @@
+package check
+
+import (
+	"testing"
+
+	"github.com/panyam/agni/core/param"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// efuseSpec is a seeded spec whose datasheet declares device_class "efuse". No ref-des prefix or
+// description keyword on a real export can establish that class (WS10-013). It has a source doc so
+// the projected fact cites it. It has no parameters, since the class is a PartSpec-level field.
+func efuseSpec(mpn string) *parampb.PartSpec {
+	return &parampb.PartSpec{
+		Mpn:          mpn,
+		Manufacturer: "TI",
+		DeviceClass:  "efuse",
+		Docs:         []*parampb.SourceDoc{{Id: "ds", Title: mpn + " datasheet", Vendor: "TI"}},
+	}
+}
+
+// The component.device_class PROJECTION test moved to stdlib/relations with the Facts projector
+// (issue 10). It checks that a seeded class projects a fact. The tests below exercise the check.Model
+// side of WS10-013, class-set enrichment and the Available gate, and that side is still in check.
+
+// TestDeviceClassEnrichesClassSet (WS10-013 Phase 2) checks that a seeded device_class is merged
+// into the component's device_classes SET, so HasClass answers from the datasheet. That happens
+// only when a params tier is attached, and the keyword-derived most-specific class is left
+// unchanged (additive, not promoted).
+func TestDeviceClassEnrichesClassSet(t *testing.T) {
+	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
+	m := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(set))
+
+	// U1 keyword-classifies as ic (U prefix); the datasheet adds efuse as a membership tag.
+	if !m.HasClass("U1", "efuse") {
+		t.Error("HasClass(U1, efuse) should be true once the datasheet class is merged")
+	}
+	if !m.HasClass("U1", ClassIC) {
+		t.Error("HasClass(U1, ic) should still be true (enrichment is additive)")
+	}
+	if got := m.ComponentClass("U1"); got != ClassIC {
+		t.Errorf("ComponentClass(U1) = %s, want ic (a datasheet class is not promoted to most-specific)", got)
+	}
+
+	// Without a params tier the keyword class stands alone (degrade-safe, C9).
+	bare := NewModel(supplyDesign("+5V", false, "TPS2HB16"))
+	if bare.HasClass("U1", "efuse") {
+		t.Error("HasClass(U1, efuse) should be false without --params (no datasheet to enrich from)")
+	}
+}
+
+// TestDeviceClassRelationAvailability checks that a rule reading component.device_class is
+// not-applicable without a seeded params set, so a review item bound to it reads not-automated rather
+// than a hollow pass. The rule is applicable once a params tier is attached, the same gate that the
+// param.max(...) reads get.
+func TestDeviceClassRelationAvailability(t *testing.T) {
+	r := &Rule{Reads: []string{"component.device_class"}}
+	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
+		t.Errorf("component.device_class rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+	seeded := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(param.ParamSet{}))
+	if ok, _ := Available(r, seeded); !ok {
+		t.Error("component.device_class rule with a params tier attached: want available")
+	}
+}
+
+// TestEsdRatedRelationAvailability (WS3-087) covers component.esd_rated, a datasheet-tier relation
+// whose name is not param-prefixed. It must gate to not-applicable without --params the same way
+// component.device_class does, or a datalog rule reading it silently passes on an unseeded design.
+func TestEsdRatedRelationAvailability(t *testing.T) {
+	r := &Rule{Reads: []string{"component.esd_rated"}}
+	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
+		t.Errorf("component.esd_rated rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+	seeded := NewModel(supplyDesign("+5V", false, "TPS2HB16"), WithParamProvider(param.ParamSet{}))
+	if ok, _ := Available(r, seeded); !ok {
+		t.Error("component.esd_rated rule with a params tier attached: want available")
+	}
+}

@@ -1,0 +1,4 @@
+fires:
+  crystal-load-caps:
+    subjects: [Y1]
+    why: "Y1 is a passive crystal (no power pin). Its XTAL_IN terminal has a load cap (C1) but XTAL_OUT has none, so one terminal is missing its load capacitor. The passes variant adds a cap on XTAL_OUT."

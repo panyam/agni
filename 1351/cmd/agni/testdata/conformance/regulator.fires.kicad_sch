@@ -1,0 +1,32 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "LM1117 Abs-Max Test (fires)"))
+	(lib_symbols
+		(symbol "test:SRC"
+			(property "Reference" "J")
+			(symbol "SRC_1_1"
+				(rectangle (start -12.7 -5.08) (end -2.54 5.08))
+				(polyline (pts (xy -2.54 0) (xy 0 0)))
+				(pin power_out line (at 0 0 0) (length 0) (name "24V") (number "1"))))
+		(symbol "test:LDO"
+			(property "Reference" "U")
+			(symbol "LDO_1_1"
+				(rectangle (start 2.54 -5.08) (end 12.7 5.08))
+				(polyline (pts (xy 0 0) (xy 2.54 0)))
+				(polyline (pts (xy 7.62 -5.08) (xy 7.62 -7.62)))
+				(pin power_in line (at 0 0 0) (length 0) (name "VIN") (number "1"))
+				(pin power_in line (at 7.62 -7.62 0) (length 0) (name "GND") (number "2")))))
+	(symbol (lib_id "test:SRC") (at 50.8 50.8 0) (unit 1) (uuid "src1")
+		(property "Reference" "J1") (property "Value" "24V-IN"))
+	(symbol (lib_id "test:LDO") (at 71.12 50.8 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "LM1117-3.3")
+		(property "MPN" "LM1117") (property "Manufacturer" "Texas Instruments"))
+	(wire (pts (xy 50.8 50.8) (xy 71.12 50.8)) (uuid "w1"))
+	(label "+24V" (at 50.8 50.8 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 78.74 58.42 0)
+		(effects (font (size 1.27 1.27))))
+)

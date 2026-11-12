@@ -1,0 +1,7 @@
+# Chapter 9's sharpest point. The SAME design file, declared the other way round. The wiring did not
+# move; the rule now reports the chain running backwards. Correctness at this level is a property of
+# the declaration and the board together, which is chapter 8's thesis with a second example.
+fixture: cmd/agni/testdata/intent
+from_root: true
+script: |
+  agni check --verdicts --rule intent/sequence-soc-power-tree cmd/agni/testdata/intent/sequence.edn --intent-path cmd/agni/testdata/intent/sequences-reversed.yaml

@@ -1,0 +1,66 @@
+---
+title: "floating-input"
+description: "An input pin sits on a net with no driver and no pull, so its level is undefined."
+---
+
+### Remedy
+
+Tie the input to its inactive level through a pull-up or pull-down, or drive it from the logic that was meant to. A CMOS input is never safe to leave floating, including on a pin the firmware does not use.
+
+### What it means
+
+The rule flags a net that carries one or more input pins and nothing else that
+could set its level: no driver, no pull resistor, no rail. The input is left floating.
+
+### Why engineers want it
+
+Unused gate inputs, unconnected enable/mode pins, and forgotten pulls are
+a standard bring-up surprise. A floating CMOS input is not a benign "0"; it drifts to the switching
+threshold, draws shoot-through current, and couples noise, so the part misbehaves in ways that move
+with temperature and a fingertip.
+
+### Impact
+
+Non-deterministic logic and excess current. It is a real defect, but the check must be
+conservative so it does not fire on legitimate nets.
+
+![Input-only net is flagged as floating; the same input pulled to a rail is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/floating-input.svg)
+
+### Scope note (conservative on purpose)
+
+Fires only when every pin on the net is an input (or an
+explicit no-connect), so the moment a driver, a passive (a pull), or a power pin is present the net
+is considered set and the rule does not fire. A net with any un-typed (UNSPECIFIED) pin counts as not
+input-only and passes, although the reader could not classify that pin. This trades recall for
+near-zero false positives.
+
+### A passive member exempts the net
+
+A resistor on the net is the classic pull, so the net
+is set. A cap or ferrite means a path that this netlist-local rule cannot follow. Claiming
+"floating" past a passive is guesswork, so ANY passive-class member (resistor, capacitor,
+inductor, ferrite, fuse, test point) silences the rule for that net. The exemption also absorbs
+libraries that type passive pins INPUT. The Mentor EDIF corpus does that for capacitors, so once
+pin keys joined correctly, its cap-plus-input nets read as all-input (WS1-025).
+
+### A diode terminal is not a logic input
+
+Some libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they type
+passive pins. But the diode network (a clamp, a steering pair, a diode-OR) sets a diode-only node's
+level, so the node is not an undriven logic input. A diode-family pin is therefore excluded from
+the "is there a logic input" count. The exclusion is PER-PIN, not per-net, so a real IC input that
+merely carries a clamp diode still fires (the input is genuinely floating). The rule skips only a net
+whose input pins are all diode terminals. Without this exclusion, a pair of steering-diode cathodes
+tied together read as an all-input net and false-fired. On one real industrial netlist that was 36
+findings, and every one was a diode network.
+
+### Query structure
+
+select all-input nets that carry no passive member and at least one non-diode logic input.
+
+    select N in nets where not exists P in N.connections where class(P) in passives
+      and any(input(P) and class(P) not in {diode, led, tvs})
+      and all(input(P) or no_connect(P))
+
+Reads: component.class (the passive exemption and the diode-terminal exclusion),
+net.attributes (the external skip), net.pin_count, on_net, pin.electrical_type. Tier R.

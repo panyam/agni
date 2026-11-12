@@ -1,0 +1,7 @@
+# Chapter 13's coverage section. The number is one count over another, and the denominator is every
+# two-terminal part, the connector included.
+fixture: examples/common/designs
+from_root: true
+steps:
+  - script: agni query examples/common/designs/probe-coverage.edn 'component.probed_both(?r) => count(?r)'
+  - script: agni query examples/common/designs/probe-coverage.edn 'component.two_terminal(?r, ?a, ?b) => count(?r)'

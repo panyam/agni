@@ -1,0 +1,25 @@
+(edif DEMO_NETLIST
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (cell (rename &c_res "Resistor") (cellType GENERIC)
+      (view (rename &v_net "net") (viewType NETLIST)
+        (interface
+          (port (rename &1 "1") (direction INPUT))
+          (port (rename &2 "2") (direction INPUT)))))
+    (cell (rename &c_mcu "MCU") (cellType GENERIC)
+      (view (rename &v_net "net") (viewType NETLIST)
+        (interface
+          (port (rename &1 "SCL") (direction INPUT))))))
+  (design TopDesign (cellRef Top (libraryRef Lib1))
+    (contents
+      (instance (rename &i_pull "$i_pull")
+        (viewRef v_net (cellRef Resistor (libraryRef Lib1)))
+        (designator "R1001"))
+      (instance (rename &i_mcu "$i_mcu")
+        (viewRef v_net (cellRef MCU (libraryRef Lib1)))
+        (designator "U101"))
+      (net (rename &n_scl "I2C_SCL")
+        (joined
+          (portRef &1 (instanceRef &i_pull))
+          (portRef &1 (instanceRef &i_mcu)))))))

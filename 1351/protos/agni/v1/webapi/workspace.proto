@@ -1,0 +1,261 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/project.proto";
+
+// The application tier is a set of services, with one proto file per concern (workspace, design,
+// checks, diff, validate). The web layer only translates them to Connect, and later to
+// grpc-gateway. As with the IR and the geometry sidecar, proto defines the contract, and Go and TS
+// use it through generated code (CONSTRAINTS C2, C13). There are no hand-written JSON DTOs.
+//
+// This file defines WorkspaceService, for the mounted folders and their contents (the "Files"
+// resource).
+
+// WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
+// The server is started with the mounts. Mounts are the security boundary. A client names an
+// artifact by a `mount://<mount>/<path>` URI. The URI's authority is a mount, never an absolute
+// host path.
+service WorkspaceService {
+  // ListMounts returns the mounts the server is serving, in the order they were configured. It
+  // never fails for a running server. Set opens to leave out each mount that holds nothing the
+  // caller can open.
+  rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
+
+  // ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
+  // file is labeled with the reader that would open it. The client addresses a location by an
+  // artifact URI. The URI's authority is a mount, never an absolute host path, and the server
+  // resolves it inside that mount. It is lazy, one level per call, so large trees remain
+  // responsive. Set opens to leave out each subdirectory that holds nothing the caller can open,
+  // at any depth.
+  rpc ListDir(ListDirRequest) returns (ListDirResponse);
+
+  // ListDesignFiles lists every file a design's analysis reads (agni issue 853). A client may
+  // analyse the design somewhere else, and the in-browser engine is the first such client. It can
+  // then fetch exactly those files and nothing more. The list covers the design's folder, its
+  // project's descriptor, and every config directory the project names. The client fetches each
+  // file by its path under the server's read-only `/raw/<mount>/<path>` route. A set larger than
+  // the server's bound (256 MB) is refused with its size. A board that big belongs on the server's
+  // own engine.
+  rpc ListDesignFiles(ListDesignFilesRequest) returns (ListDesignFilesResponse);
+
+  // ProposeDesigns takes a folder that declares no design, and groups its files into the designs
+  // they make (agni issue 854). Imagine a page handed a drop of files. It must show what it will
+  // read before it reads it. A folder already holding a `design.yaml` is reported as declared, and
+  // the server does not guess again. Each proposal includes the `design.yaml` that would declare
+  // it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
+  rpc ProposeDesigns(ProposeDesignsRequest) returns (ProposeDesignsResponse);
+
+  // DeclareCompanion answers the design.yaml that declares a file as one of a design's companions,
+  // such as a board a page attached with Snapshot.board_uri (agni issue 1367). It writes nothing.
+  // A host whose mount a page can write, such as the browser's drop mount, saves the text, and on
+  // any other the reader commits it. An existing descriptor keeps its comments and other keys, and
+  // a new one names the design's entry and extends a project.yaml above it.
+  rpc DeclareCompanion(DeclareCompanionRequest) returns (DeclareCompanionResponse);
+}
+
+// Mount is one configured root folder. Clients reference it by name in later calls. root is a
+// human-readable display path and is not a capability.
+message Mount {
+  // name is the stable handle the client passes back to address this mount.
+  string name = 1;
+  // root is the absolute host path the mount serves, for display in the UI.
+  string root = 2;
+  // uri names the mount itself, "mount://<name>". The server sends it, so the client does not
+  // build it. A client that concatenates a scheme by hand can get the scheme wrong. Every other
+  // artifact reference the client makes is a child of this one.
+  string uri = 3;
+}
+
+message ListMountsRequest {
+  // opens declares what this client can open, on the same terms as ListDirRequest.opens. When it is
+  // set, the response drops each mount with none of those kinds anywhere beneath it. ListDir
+  // applies the same rule, and this field applies it to the roots. Leave it empty to prune nothing.
+  //
+  // Hiding a configured mount is a deliberate trade. Imagine an operator mounts a folder and cannot
+  // find it in the sidebar. They cannot tell "this mount holds nothing I open" from "this mount
+  // failed to resolve". So a client that prunes should say when it shows fewer roots than the server
+  // was given. It should not render a silently shorter list. It reports the count from
+  // pruned_mounts.
+  repeated FileKind opens = 2;
+
+  reserved 1; // prune_empty_mounts, replaced by opens
+}
+
+message ListMountsResponse {
+  repeated Mount mounts = 1;
+  // pruned_mounts counts the mounts that opens left out. A client can then tell the user that its
+  // sidebar is shorter than the server's configuration, so the user need not wonder where a mount
+  // went. Zero when pruning is off.
+  int32 pruned_mounts = 2;
+}
+
+// FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
+// the READER. A browser cares which of its pages a file belongs to. It does not care whether the
+// netlist behind the file is EDIF or KiCad.
+//
+// The set is closed and server-defined. A reader from another module may register through
+// readers/formats. It adds an extension to FILE_KIND_DESIGN, and it does not add a kind. A kind is
+// a page in this application, not a capability of the engine.
+enum FileKind {
+  // FILE_KIND_UNSPECIFIED is a file no page opens, such as a library file, a lock file, or a
+  // sidecar. An unset field also decodes to it. So a client that ignores kinds sees them all as one.
+  FILE_KIND_UNSPECIFIED = 0;
+  // FILE_KIND_DESIGN is a file some reader in the registry understands. The viewer opens these.
+  FILE_KIND_DESIGN = 1;
+  // FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
+  // reader opens one. So pruning by design format used to hide the workbench's folders.
+  FILE_KIND_DATASHEET = 2;
+}
+
+// DirEntry is one item in a directory listing: a subdirectory or a supported design file.
+message DirEntry {
+  // name is the base name (no path).
+  string name = 1;
+  // is_dir is true for a subdirectory.
+  bool is_dir = 2;
+  // format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
+  // "edif-schematic"). It is empty for a directory, and for an unrecognized file that no agni
+  // reader opens. The listing keeps such files rather than dropping them, so a client decides for
+  // itself what to show. The design tree hides them, and the datasheets tree keeps the PDFs among
+  // them. It is a hint for the UI. Ambiguous extensions are resolved for real at load time.
+  string format = 3;
+  // uri addresses this entry. A client passes a directory's uri back to ListDir, and a file's uri
+  // to a design or sheet load.
+  string uri = 4;
+  // kind is which client opens this file. It is FILE_KIND_UNSPECIFIED for a directory and for a
+  // file no page opens. The server sends it, so "what is a datasheet" has one definition. The
+  // browser used to decide by extension. That put a second copy of the rule in TypeScript, and
+  // nothing could notice when it disagreed with the server.
+  FileKind kind = 5;
+  // board_uri is what to attach as a design's board (Snapshot.board_uri) when this entry is one, and
+  // empty otherwise. It is set only when ListDirRequest.mark_boards asks. A file a board reader opens
+  // is its own uri. A directory holding an ODB++ job answers its matrix/matrix entry, the file a
+  // reader enters the job by, since a loader reads exactly the artifact it is handed. The server
+  // decides both, as it decides kind, so no client keeps a list of board formats or knows a job's
+  // layout.
+  string board_uri = 6;
+}
+
+message ListDirRequest {
+  // uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
+  // mount root.
+  string uri = 1;
+  // opens declares what this client can open. When it is set, the response drops each
+  // subdirectory whose subtree holds none of those kinds at any depth. This client could only
+  // ever show those folders empty.
+  //
+  // It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
+  // because "empty" depends on the client. This field states that fact directly. The bool kept the
+  // definition on the server and the exception in a comment. Leave it empty to prune nothing.
+  //
+  // Answering it costs a bounded walk of each subtree. The walk may fail to settle a directory,
+  // because it reached its bound or the adapter failed. That directory is kept. A folder shown
+  // wrongly costs a click, and a folder hidden wrongly costs a file.
+  repeated FileKind opens = 3;
+  // mark_boards sets DirEntry.board_uri on each entry the viewer can attach as a design's board, for a
+  // picker that asks for one (agni issue 1367). Marking a directory costs one listing of it, so it is
+  // off unless asked.
+  bool mark_boards = 4;
+
+  reserved 2; // prune_empty_dirs, replaced by opens
+}
+
+message ListDirResponse {
+  // entries are the directory's subdirectories and supported files. Directories come first, and
+  // each group is sorted by name.
+  repeated DirEntry entries = 1;
+}
+
+message ListDesignFilesRequest {
+  // uri names the design: its folder, its entry, a declared companion, or a loose file in a mount.
+  string uri = 1;
+}
+
+message ListDesignFilesResponse {
+  // mount is the mount, and every path below is relative to it. A client mounts the files under
+  // this name. So the design keeps its URI, whichever engine reads it.
+  string mount = 1;
+  // files are the design's files, sorted by path, each listed once.
+  repeated DesignFile files = 2;
+  // total_size is the sum of the files' sizes in bytes.
+  int64 total_size = 3;
+}
+
+// DesignFile is one file a design's analysis reads.
+message DesignFile {
+  // path is relative to the mount, slash-separated.
+  string path = 1;
+  int64 size = 2;
+  // sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
+  string sha256 = 3;
+  // board is set on the design's board-tier file when that file is separate from the netlist and
+  // the drawing (agni issue 992). A host answering a question that reads no board then need not
+  // hold it.
+  bool board = 4;
+}
+
+message DeclareCompanionRequest {
+  // design_uri is the design's entry file, "mount://<mount>/<path>", as the page opened it.
+  string design_uri = 1;
+  // companion_uri is the file to declare, in the same mount and inside the design's folder, since a
+  // descriptor's companions stay inside it. An ODB++ job is named by its matrix/matrix entry.
+  string companion_uri = 2;
+}
+
+message DeclareCompanionResponse {
+  // descriptor_uri is the design.yaml to write, beside the design's entry.
+  string descriptor_uri = 1;
+  // design_yaml is the descriptor's whole text with the companion declared, already checked as a
+  // design descriptor. It equals the file as it is when the companion is declared already.
+  string design_yaml = 2;
+  // existed says a descriptor was there before, so the text is an edit of it rather than a new file.
+  bool existed = 3;
+  // changed says the text differs from the descriptor as it is, false when it declared the
+  // companion already.
+  bool changed = 4;
+}
+
+message ProposeDesignsRequest {
+  // uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only
+  // on a mount that expands archives, such as the browser's.
+  string uri = 1;
+}
+
+message ProposeDesignsResponse {
+  // designs are the proposed (or declared) designs, in path order.
+  repeated ProposedDesign designs = 1;
+  // unread are the files no design reads, each with why.
+  repeated UnreadFile unread = 2;
+  // support lists files that a design or its project reads and that are not design files. Examples
+  // are a project's descriptor and config directories, or a KiCad symbol library.
+  repeated string support = 3;
+}
+
+// ProposedDesign is one design a folder's files make.
+message ProposedDesign {
+  // folder is the design's folder, mount-relative, where its `design.yaml` would go.
+  string folder = 1;
+  // design is the design as a descriptor would declare it. entry_uri, companion_uris and revisions
+  // are `mount://` URIs, and name is the entry's stem.
+  Design design = 2;
+  // design_yaml is the `design.yaml` text that declares this design, for a person to read and edit.
+  string design_yaml = 3;
+  // files lists every file the design reads, mount-relative. That covers its entry, companions and
+  // revisions, and a KiCad root's child sheets and libraries.
+  repeated string files = 4;
+  // note says anything a reader should know before trusting the read. Two examples are a schematic
+  // export standing in for a netlist, and a second design in a folder that can declare only one.
+  string note = 5;
+  // declared is true when the folder already held a `design.yaml`. The proposal reports that file
+  // and does not replace it.
+  bool declared = 6;
+}
+
+// UnreadFile is a file no proposed design reads.
+message UnreadFile {
+  string path = 1;
+  string reason = 2;
+}

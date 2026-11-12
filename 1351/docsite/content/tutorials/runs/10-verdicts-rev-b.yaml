@@ -1,0 +1,7 @@
+# Rung 10: the two I2C lines the fitted pull-ups fixed, with the resistor each now reaches its rail by.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  python3 tools/make_rev_b.py designs/jetson designs/jetson-rev-b
+  agni check --verdicts --rule i2c-pull-up designs/jetson-rev-b 2>/dev/null | grep -E '^i2c-pull-up|I2C0_SCL_1V8 |I2C3_SDA_1V8 '

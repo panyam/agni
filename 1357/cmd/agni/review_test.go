@@ -1,0 +1,847 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+// TestReviewCmd runs a review manifest over a broken-CAN design and checks the per-item outcomes end
+// to end. The built-in CAN profile fails the termination + signal items. An unbound item reads
+// not-automated. A shipped datasheet rule with no --params seeded reads not-applicable, and so does a
+// board rule on a netlist. An inline house-rule query passes.
+func TestReviewCmd(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	s := out.String()
+	for _, want := range []string{
+		"1 pass, 2 fail, 2 n/a, 1 not-automated (of 6)",
+		"| 202 | termination strategy | fail |",
+		"| 198 | bus signals present | fail |",
+		"| 196 | transceiver selection | not-automated | manual review — needs the design-intent contract |",
+		"| 197 | voltage compatibility | not-applicable | needs a seeded datasheet parameter set",
+		"| b1 | track widths | not-applicable | design carries no board geometry",
+		"| h1 | no forbidden MPN | pass |",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("report missing %q\n---\n%s", want, s)
+		}
+	}
+}
+
+// TestReviewCmdBoardPath checks that --board-path attaches a SEPARATE board-geometry file to the
+// netlist review. Without that file the board-tier DRC item reads not-applicable, since
+// check.Available gates the WS3-008 rules. With it the item flips to a genuine pass/fail (WS3-089).
+// The fires board routes a sub-floor trace, so track-width fails. The passes board is clean, so the
+// same item passes.
+func TestReviewCmdBoardPath(t *testing.T) {
+	run := func(board string) string {
+		cmd := reviewCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml",
+			"--board-path", board, "testdata/review/can-broken.edn"})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("review --board-path %s: %v", board, err)
+		}
+		return out.String()
+	}
+	if s := run("testdata/conformance/drc.fires.kicad_pcb"); !strings.Contains(s, "| b1 | track widths | fail |") {
+		t.Errorf("fires board: item b1 not a fail\n---\n%s", s)
+	}
+	if s := run("testdata/conformance/drc.passes.kicad_pcb"); !strings.Contains(s, "| b1 | track widths | pass |") {
+		t.Errorf("passes board: item b1 not a pass\n---\n%s", s)
+	}
+}
+
+// TestReviewCmdBoardPathNonBoard checks that --board-path pointing at a netlist is a loud error,
+// never a silent no-op, since a netlist's format has no board geometry. Otherwise an explicit board
+// request could read nothing and still report the board items as clean without ever checking them.
+func TestReviewCmdBoardPathNonBoard(t *testing.T) {
+	cmd := reviewCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml",
+		"--board-path", "testdata/review/can-broken.edn", "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("--board-path at a netlist file did not error")
+	}
+}
+
+// TestReviewCmdMultiDesign checks that several designs produce a project rollup. The rollup has a
+// manifest-level automation header, stated ONCE and not summed across designs. It has a per-design
+// outcome summary and a per-item x design traceability matrix. The same item reads its own outcome
+// per design (202 fails on the broken design and passes on the other). A not-automated item is
+// not-automated in every column.
+func TestReviewCmdMultiDesign(t *testing.T) {
+	freshWorkspace(t)
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml",
+		"testdata/review/can-broken.edn", "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review multi: %v", err)
+	}
+	s := out.String()
+	for _, want := range []string{
+		"# Review rollup: Mini board review",
+		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
+		"## Per-design outcomes",
+		// The leading cell is answered/total. It differs per design even though coverage does not.
+		// can-broken answers 3 of 6 (1 pass + 2 fail), and overlay-bus answers 2 (2 pass, 3
+		// not-applicable).
+		"| `can-broken.edn` | 3/6 | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
+		"| `overlay-bus.edn` | 2/6 | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
+		"## Traceability matrix",
+		"### CAN Interface",
+		"| 202 | termination strategy | fail | pass |",                    // per-design outcome, same item
+		"| 196 | transceiver selection | not-automated | not-automated |", // not-automated in every column
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("rollup missing %q\n---\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "12 items automated") || strings.Contains(s, "10 of 12") {
+		t.Error("automation must be manifest-level (stated once), never summed across designs")
+	}
+}
+
+// Multi-design --coverage is the summary rollup only (per-design outcomes), no per-item matrix.
+func TestReviewCmdMultiCoverage(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--coverage", "--checklist", "testdata/review/mini.yaml",
+		"testdata/review/can-broken.edn", "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review multi --coverage: %v", err)
+	}
+	s := out.String()
+	if !strings.Contains(s, "## Per-design outcomes") {
+		t.Errorf("coverage rollup missing the per-design summary\n%s", s)
+	}
+	if strings.Contains(s, "## Traceability matrix") {
+		t.Error("--coverage is the summary only; it must not emit the per-item matrix")
+	}
+}
+
+// Multi-design --format json is a ListReviewsResponse, one Review per design with its summary (agni
+// issue 734). The old rollup had the automation counts and each item's outcome by design, and the test
+// reads both from the response. The summaries agree on the manifest, and each design's items hold
+// their outcomes.
+func TestReviewCmdMultiJSON(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "json", "--checklist", "testdata/review/mini.yaml",
+		"testdata/review/can-broken.edn", "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review multi --format json: %v", err)
+	}
+	var got webapi.ListReviewsResponse
+	if err := protojson.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("output is not a ListReviewsResponse: %v\n%s", err, out.String())
+	}
+	if len(got.GetReviews()) != 2 {
+		t.Fatalf("reviews = %d designs, want 2", len(got.GetReviews()))
+	}
+	for _, rv := range got.GetReviews() {
+		if s := rv.GetSummary(); s.GetTotal() != 6 || s.GetCovered() != 5 || s.GetTotal()-s.GetCovered() != 1 {
+			t.Errorf("%s automation = {total:%d covered:%d}, want {6 5}, one not automated", rv.GetResults().GetDesign().GetSource(), s.GetTotal(), s.GetCovered())
+		}
+	}
+	// item 202's outcome differs by design
+	var found bool
+	for _, rv := range got.GetReviews() {
+		if !strings.HasSuffix(rv.GetResults().GetDesign().GetSource(), "can-broken.edn") {
+			continue
+		}
+		for _, a := range rv.GetResults().GetAreas() {
+			for _, it := range a.GetItems() {
+				if it.GetId() == "202" {
+					found = true
+					if it.GetOutcome() != "fail" {
+						t.Errorf("item 202 on can-broken = %q, want fail", it.GetOutcome())
+					}
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("item 202 missing from can-broken's review")
+	}
+}
+
+// --coverage emits the per-area rollup instead of the per-item report.
+func TestReviewCmdCoverage(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--coverage", "--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review --coverage: %v", err)
+	}
+	s := out.String()
+	for _, want := range []string{
+		"# Review coverage: Mini board review",
+		"**5 of 6 covered**",
+		"| CAN Interface | 3/4 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |",
+		"| **Total** | 5/6 | 1 | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 1 |",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("coverage report missing %q\n%s", want, s)
+		}
+	}
+}
+
+// A profile item whose interface is absent from the design reads not-applicable, not a silent pass
+// (WS3-051). The overlay-bus fixture has no CAN, so the CAN items go n/a.
+func TestReviewCmdNotApplicable(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml", "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	if s := out.String(); !strings.Contains(s, "| 198 | bus signals present | not-applicable | interface not present on this design |") {
+		t.Errorf("CAN item on a no-CAN design should be not-applicable\n%s", s)
+	}
+}
+
+// --format json emits the Review the rpc returns (agni issue 734), with the findings that failed
+// each item. It is the tooling surface (the markdown Detail cell caps findings; JSON does not).
+func TestReviewCmdFormatJSON(t *testing.T) {
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "json", "--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review --format json: %v", err)
+	}
+	var rv webapi.Review
+	if err := protojson.Unmarshal(out.Bytes(), &rv); err != nil {
+		t.Fatalf("output is not a Review: %v\n%s", err, out.String())
+	}
+	var fails int
+	for _, a := range rv.GetResults().GetAreas() {
+		for _, it := range a.GetItems() {
+			if it.GetOutcome() == "fail" {
+				fails++
+				if len(it.GetFindings()) == 0 {
+					t.Errorf("failing item %q has no findings in JSON", it.GetId())
+				}
+			}
+		}
+	}
+	if fails != 2 {
+		t.Errorf("want 2 failing items in JSON, got %d\n%s", fails, out.String())
+	}
+	if rv.GetSummary().GetFail() != 2 {
+		t.Errorf("summary.fail = %d, want the 2 failing items", rv.GetSummary().GetFail())
+	}
+	if rv.GetName() != "" {
+		t.Errorf("a CLI run is named %q, want unnamed, since nothing stores it", rv.GetName())
+	}
+}
+
+// runReview runs the review command and returns its stdout, failing the test on error.
+func runReview(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review %v: %v", args, err)
+	}
+	return out.String()
+}
+
+// TestReviewIntentContract is the end-to-end proof of the design-intent contract. An intent-bound
+// item reads needs-design-intent with no --intent-path, since with no declaration there is nothing to
+// check against. It flips to fail when the loaded design DEVIATES from a declaration, such as a
+// missing module, an absent rail, an incomplete subsystem or an unprotected rail. It passes when the
+// design matches. The test guards that the external declaration drives the outcome, and that the
+// outcome is not derived from the netlist.
+func TestReviewIntentContract(t *testing.T) {
+	checklist := "testdata/intent/checklist.yaml"
+	design := "testdata/intent/sample.edn"
+
+	// With no --intent-path the intent rules are not in the catalog. The items still BIND an intent/
+	// rule, so they read needs-design-intent (covered, blocked on a declaration) rather than the
+	// misleading not-automated (WS10-014). Supplying --intent-path flips them to pass/fail (below).
+	base := runReview(t, "--checklist", checklist, design)
+	for _, want := range []string{
+		"| 4 | component counts match architecture | needs-design-intent |",
+		"| 5 | all required modules present | needs-design-intent |",
+		"| 7 | voltage domains identified | needs-design-intent |",
+		"| 8 | power tree consistency | needs-design-intent |",
+		"| 30 | rail discharge | needs-design-intent |",
+	} {
+		if !strings.Contains(base, want) {
+			t.Errorf("without --intent-path, report missing %q\n%s", want, base)
+		}
+	}
+
+	// A deviating declaration. The design has two ics where intent expects one, no soc, and no 1V8
+	// rail, so the count, module, domain, and subsystem items all fail.
+	dev := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/deviating.yaml", design)
+	for _, want := range []string{
+		"| 4 | component counts match architecture | fail |",
+		"| 5 | all required modules present | fail |",
+		"| 7 | voltage domains identified | fail |",
+		"| 8 | power tree consistency | fail |",
+		"| 30 | rail discharge | fail |",
+	} {
+		if !strings.Contains(dev, want) {
+			t.Errorf("deviating intent should fail, report missing %q\n%s", want, dev)
+		}
+	}
+
+	// A matching declaration. Exactly two ics are present and 3V3 is at 3.3V, so the items pass.
+	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/matching.yaml", design)
+	for _, want := range []string{
+		"| 4 | component counts match architecture | pass |",
+		"| 5 | all required modules present | pass |",
+		"| 7 | voltage domains identified | pass |",
+		"| 8 | power tree consistency | pass |",
+		"| 30 | rail discharge | pass |",
+	} {
+		if !strings.Contains(ok, want) {
+			t.Errorf("matching intent should pass, report missing %q\n%s", want, ok)
+		}
+	}
+}
+
+// TestReviewRailBudgets is the end-to-end proof for the rail-sizing pair (WS3-095). It holds four
+// behaviours, each one CLI invocation apart.
+//
+//   - The two items report INDEPENDENTLY. On the over-subscribed declaration item 18 fails on 3V3 (a
+//     0.5A supply under a 0.8A budget) while item 19 fails on 1V8 (a 0.9A supply that clears the 0.8A
+//     peak but not the 0.96A the 1.2 factor asks for). Neither rail appears under both items. So this
+//     ships as two rules rather than one at two thresholds (WS3-058).
+//   - Budgets the design meets pass both.
+//   - With budgets but NO margin_factor, item 18 still resolves and item 19 reads needs-design-intent.
+//     The margin rule has no default policy, so it is not compiled and cannot pass against a number
+//     nobody declared.
+//   - With --params attached but no output current seeded, both read needs-data. An unseeded regulator
+//     must never read as big enough. The ticket asks for that guard.
+func TestReviewRailBudgets(t *testing.T) {
+	checklist := "testdata/intent/rails-checklist.yaml"
+	design := "testdata/intent/rails.edn"
+	params := "testdata/intent/params"
+
+	over := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-over.yaml", "--params", params, design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | fail |",
+		"| 19 | current capability margins | fail |",
+	} {
+		if !strings.Contains(over, want) {
+			t.Errorf("over-subscribed budgets, report missing %q\n%s", want, over)
+		}
+	}
+	// Each item names its OWN rail. A merged verdict would put both rails under both items.
+	for _, bad := range []string{"rail-current-capacity: 1V8", "rail-current-margin: 3V3"} {
+		if strings.Contains(over, bad) {
+			t.Errorf("the two items must not report each other's rail, found %q\n%s", bad, over)
+		}
+	}
+	if !strings.Contains(over, "ACME-REG-500 Datasheet Rev A") {
+		t.Errorf("a sizing finding must cite the supplying part's datasheet\n%s", over)
+	}
+
+	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", "--params", params, design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | pass |",
+		"| 19 | current capability margins | pass |",
+	} {
+		if !strings.Contains(ok, want) {
+			t.Errorf("budgets the design meets should pass, report missing %q\n%s", want, ok)
+		}
+	}
+
+	// No margin_factor. The capacity item still resolves, and the margin item names the missing input.
+	noFactor := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-no-factor.yaml", "--params", params, design)
+	if !strings.Contains(noFactor, "| 18 | regulator output ratings | pass |") {
+		t.Errorf("budgets without a factor should still resolve item 18\n%s", noFactor)
+	}
+	if !strings.Contains(noFactor, "| 19 | current capability margins | needs-design-intent |") {
+		t.Errorf("no margin_factor must leave item 19 needs-design-intent, never pass\n%s", noFactor)
+	}
+
+	// The guard case, where a params tier is attached but no part states an output current.
+	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml",
+		"--params", "testdata/intent/params-no-current", design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | needs-data |",
+		"| 19 | current capability margins | needs-data |",
+	} {
+		if !strings.Contains(unseeded, want) {
+			t.Errorf("an unseeded regulator must not read as big enough, report missing %q\n%s", want, unseeded)
+		}
+	}
+}
+
+// TestReviewPowerSequences is the end-to-end proof for power-up sequencing as design intent
+// (WS3-092). It holds four behaviours across four CLI invocations over one design.
+//
+//   - The two items report INDEPENDENTLY. The SoC tree's chain is wired, with a power-good reaching
+//     the next regulator's enable through a resistor, so item 20 passes. The modem rails' handles
+//     both connect to the MCU. That is firmware evidence rather than netlist evidence, so item 163
+//     fails. One shared rule name would have given both items one verdict (WS3-058).
+//   - The failing item names both ends of the missing link, so a reviewer knows where to look.
+//   - With NO sequences declared, both items read needs-design-intent. They are covered and blocked
+//     on a declaration; a design with no gating chain must never read as sequencing correct.
+//   - An order declared the wrong way round is reported as a REVERSED chain, not a missing one.
+func TestReviewPowerSequences(t *testing.T) {
+	checklist := "testdata/intent/sequences-checklist.yaml"
+	design := "testdata/intent/sequence.edn"
+
+	declared := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/sequences.yaml", design)
+	for _, want := range []string{
+		"| 20 | SoC power sequence requirements | pass |",
+		"| 163 | modem power sequencing | fail |",
+	} {
+		if !strings.Contains(declared, want) {
+			t.Errorf("declared sequences, report missing %q\n%s", want, declared)
+		}
+	}
+	// The failing item has to name the two nets that should have been connected.
+	for _, want := range []string{"MODEM_PG", "MODEM_EN", "free to come up first"} {
+		if !strings.Contains(declared, want) {
+			t.Errorf("the finding should name the missing link (%q)\n%s", want, declared)
+		}
+	}
+	// The passing item must not list the other sequence's rail, since a merged verdict would put
+	// both domains under both items.
+	if strings.Contains(declared, "sequence-soc-power-tree: MODEM_EN") {
+		t.Errorf("each item must report only its own sequence\n%s", declared)
+	}
+
+	// With no sequences declared the item is covered, blocked on the declaration, and never a pass.
+	// That reading is correct for a board whose rail order lives in a PMIC or in firmware, since
+	// such a board cannot declare a sequence at all.
+	none := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", design)
+	for _, want := range []string{
+		"| 20 | SoC power sequence requirements | needs-design-intent |",
+		"| 163 | modem power sequencing | needs-design-intent |",
+	} {
+		if !strings.Contains(none, want) {
+			t.Errorf("an undeclared sequence must read needs-design-intent, report missing %q\n%s", want, none)
+		}
+	}
+	if strings.Contains(none, "| 20 | SoC power sequence requirements | pass |") {
+		t.Errorf("an undeclared sequence must never pass\n%s", none)
+	}
+
+	// The order declared backwards against the same design.
+	reversed := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/sequences-reversed.yaml", design)
+	if !strings.Contains(reversed, "| 20 | SoC power sequence requirements | fail |") {
+		t.Errorf("a backwards order must fail\n%s", reversed)
+	}
+	if !strings.Contains(reversed, "the other way round") {
+		t.Errorf("a backwards order needs the reversed-chain diagnosis\n%s", reversed)
+	}
+}
+
+func TestReviewCmdRequiresChecklist(t *testing.T) {
+	cmd := reviewCmd()
+	cmd.SetArgs([]string{"testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("review without --checklist must error")
+	}
+}
+
+// TestReviewCmdChecklistUnreadable is the --checklist twin of TestReviewCmdConventionsUnreadable, and
+// it guards the edge where the manifest read moved (WS9-050). The CLI now reads the YAML itself and
+// sends the value, so a missing or malformed checklist has to fail HERE. It prevents a specific
+// failure. An unreported read error would send a zero manifest. A review with no items reports
+// nothing wrong, and that reads the same as a design that passed.
+func TestReviewCmdChecklistUnreadable(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := reviewCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"--checklist", path, "testdata/review/conv-demo.edn"})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--checklist %s must error, not run an empty checklist that reports nothing wrong", path)
+		}
+	}
+}
+
+// runConvReview runs the conventions checklist, with or without the config, and returns the report.
+func runConvReview(t *testing.T, conventions string) string {
+	t.Helper()
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	args := []string{"--checklist", "testdata/review/conv.yaml"}
+	if conventions != "" {
+		args = append(args, "--conventions", conventions)
+	}
+	cmd.SetArgs(append(args, "testdata/review/conv-demo.edn"))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review (--conventions %q): %v", conventions, err)
+	}
+	return out.String()
+}
+
+// TestReviewCmdConventionsRules covers the half that is merely invisible, a checklist item bound to a
+// convention rule. With no config, the binding resolves to zero catalog rules. The review reports
+// that as not-automated. It uses the same word for a rule nobody has written, and no error tells the
+// two apart. Loading the config compiles the rule, and the item reaches a real verdict.
+func TestReviewCmdConventionsRules(t *testing.T) {
+	if want := "| 16 | nets named consistently | not-automated |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the item must read not-automated, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	for _, want := range []string{
+		"| 16 | nets named consistently | fail |",
+		"house/signal-net-naming: lowercase_net",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("with --conventions the item must fail on the real violation, missing %q\n---\n%s", want, got)
+		}
+	}
+}
+
+// TestReviewCmdConventionsLexicon covers the damaging half, the vocabulary that changes what OTHER
+// rules can see. This project names rails function-first (PMIC_VDD_LPM_1V8). The start-anchored
+// built-in vocabulary matches none of those names. So without the config the item passes while
+// checking nothing.
+func TestReviewCmdConventionsLexicon(t *testing.T) {
+	if want := "| 63 | rails recognized | pass |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the rail is unrecognized and the item passes hollowly, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	if want := "PMIC_VDD_LPM_1V8 is a recognized supply rail"; !strings.Contains(got, want) {
+		t.Errorf("the project rail vocabulary must reach the run; missing %q\n---\n%s", want, got)
+	}
+}
+
+// TestReviewCmdConventionsReachesTheRead isolates the half that ONLY the design read can do. A net
+// role has a name-match fallback on the model, so a rail item answers even if the lexicon arrives
+// after ingestion; a pin's ELECTRICAL TYPE has no such fallback. EDIF's port grammar carries only
+// INPUT/OUTPUT/INOUT, so a supply pin arrives under-typed and nothing but the ingestion stamp can
+// promote it to power_in. If the lexicon ever stops reaching the read, this test fails.
+func TestReviewCmdConventionsReachesTheRead(t *testing.T) {
+	if want := "| 64 | supply pins typed | pass |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the supply pin stays under-typed, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	if want := "U1 has a typed supply pin"; !strings.Contains(got, want) {
+		t.Errorf("the lexicon must reach INGESTION for the pin to be promoted; missing %q\n---\n%s", want, got)
+	}
+}
+
+// TestReviewCmdConventionsUnreadable checks that an unreadable named config fails the run. Falling
+// back to the built-in vocabulary would report the design clean against conventions never applied.
+func TestReviewCmdConventionsUnreadable(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := reviewCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"--checklist", "testdata/review/conv.yaml", "--conventions", path, "testdata/review/conv-demo.edn"})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--conventions %s must error, not silently run with the defaults", path)
+		}
+	}
+}
+
+// runFullOverlayReview runs the conventions checklist with every overlay tier attached, optionally
+// omitting the convention, and returns the report.
+func runFullOverlayReview(t *testing.T, conventions string) string {
+	t.Helper()
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	args := []string{
+		"--checklist", "testdata/review/conv.yaml",
+		"--intent-path", "testdata/review/intent.yaml",
+		"--profile-path", "testdata/review/profiles",
+	}
+	if conventions != "" {
+		args = append(args, "--conventions", conventions)
+	}
+	cmd.SetArgs(append(args, "testdata/review/conv-demo.edn"))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review (--conventions %q): %v", conventions, err)
+	}
+	return out.String()
+}
+
+// TestReviewOverlayTiersCoexist pins that a convention with RULES adds to the catalog rather than
+// replacing it (WS3-107).
+//
+// Composing the per-request overlay used to rebuild the catalog from the standard sources. The
+// rebuild kept the built-ins and every RegisterSource'd suite, so the bug was invisible. It dropped
+// the catalog it was handed, though. For a review, that catalog holds the --profile-path and
+// --intent-path tiers. So adding one naming rule to a working config silently disabled interface
+// profiles and design intent for the whole run. On one real design, 19 items went from pass to
+// needs-design-intent and 16 from pass to not-automated, with no error anywhere to explain it.
+//
+// The test asserts that the intent-bound and profile-bound items reach a REAL verdict with the
+// convention loaded. Both fixtures are authored to FAIL rather than pass, because a vanished tier
+// could also produce a pass on a design with nothing wrong.
+func TestReviewOverlayTiersCoexist(t *testing.T) {
+	got := runFullOverlayReview(t, "testdata/review/conventions.yaml")
+	for _, want := range []string{
+		"| 16 | nets named consistently | fail |",                  // the convention's own rule
+		"| 70 | rail voltage matches the declared domain | fail |", // --intent-path survived
+		"| 71 | SIGBUS signals present | fail |",                   // --profile-path survived
+		"intent/voltage-domain-mismatch",
+		"profile-overlay/sigbus-signal-missing",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a convention with rules dropped an overlay tier; missing %q\n---\n%s", want, got)
+		}
+	}
+	// Matched as a table CELL, not as a bare substring, because the per-area tally lines name every
+	// outcome ("0 pass, 1 fail, 0 n/a, 0 not-automated"), so a substring test here would always
+	// fire.
+	for _, never := range []string{"| needs-design-intent |", "| not-automated |"} {
+		if strings.Contains(got, never) {
+			t.Errorf("an overlay tier went missing (%q in the report)\n---\n%s", never, got)
+		}
+	}
+}
+
+// TestReviewProfileRequirementSelector (WS3-115) drives the requirement selector end to end. An
+// overlay profile is authored in YAML, compiled by stdlib/profiles, and resolved by core/review
+// through the CLI. This test PINS the two packages together. core/review selects on the tag as a
+// bare string because core never imports stdlib, so nothing but a real run would catch the two
+// drifting.
+//
+// The fixture is the oracle. TESTBUS declares two requirements over the same two signals, and on this
+// design they disagree. Both signal nets exist, so completeness is clean, while BUS_TBB has one
+// connection, so dangling fires. So an item selecting completeness must PASS on a design where the
+// profile as a whole fails. Union semantics cannot express that.
+func TestReviewProfileRequirementSelector(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	profiles := filepath.Join(dir, "profiles")
+	if err := os.Mkdir(profiles, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(profiles, "testbus.yaml"), []byte(`
+name: TESTBUS
+signals:
+  - {name: A, suffix: _TBA, anchor: true}
+  - {name: B, suffix: _TBB}
+requirements:
+  - {type: signal-missing}
+  - {type: signal-dangling}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A second KNOWN interface, absent from this design. A requirement-selected item bound to it must
+	// still take the presence branch rather than resolving its rule.
+	if err := os.WriteFile(filepath.Join(profiles, "otherbus.yaml"), []byte(`
+name: OTHERBUS
+signals:
+  - {name: A, suffix: _OBA, anchor: true}
+  - {name: B, suffix: _OBB}
+requirements:
+  - {type: signal-missing}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	checklist := write("checklist.yaml", `
+name: Requirement selector
+areas:
+  - name: Bus
+    items:
+      - {id: "u", title: whole bus, profile: TESTBUS}
+      - {id: "m", title: both signals present, profile: TESTBUS, requirement: signal-missing}
+      - {id: "d", title: signals wired through, profile: TESTBUS, requirement: signal-dangling}
+      - {id: "x", title: bus terminated, profile: TESTBUS, requirement: termination}
+      - {id: "g", title: absent bus, profile: OTHERBUS, requirement: signal-missing}
+`)
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", checklist, "--profile-path", profiles, "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	got := out.String()
+	for _, want := range []string{
+		// Unselected, the item gets the union of both requirements, so the dangling finding fails it.
+		"| u | whole bus | fail |",
+		// Selected, each item is answered by its own requirement, and they disagree.
+		"| m | both signals present | pass |",
+		"| d | signals wired through | fail |",
+		// A requirement the profile does not declare is not covered by anything, so it is never a
+		// pass.
+		"| x | bus terminated | not-automated |",
+		// The presence gate still runs ahead of resolution for a selected item.
+		"| g | absent bus | not-applicable |",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("report missing %q\n---\n%s", want, got)
+		}
+	}
+}
+
+// TestReviewOverlayTiersCoexistWithoutAConvention is the control. The bug only triggered when the
+// convention had RULES. A lexicon-only config composes no sources, and it took an early return that
+// was always correct. So without a convention at all, the same two items must already resolve. If
+// this ever fails, the fixtures stopped exercising the tiers and the test above proves nothing.
+func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
+	got := runFullOverlayReview(t, "")
+	for _, want := range []string{
+		"| 70 | rail voltage matches the declared domain | fail |",
+		"| 71 | SIGBUS signals present | fail |",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the overlay tiers must resolve with no convention loaded; missing %q\n---\n%s", want, got)
+		}
+	}
+}
+
+// TestReviewLoadSwitchSizing is the end-to-end proof for the load-switch sizing lower bound (WS3-085).
+// It holds four outcomes over ONE design, so nothing about the netlist explains the difference
+// between them. The design is the conformance corpus's PASSING load-switch fixture. It is clean by
+// load-switch-trip-above-fet-rating, because its 1A limit is well under the pass FET's 3A rating.
+//
+//   - With no --intent-path it reads needs-design-intent. Nothing declares what the rail draws, so
+//     there is no question to ask. The runner names the MISSING INPUT rather than falling back to
+//     not-automated, and that tells an author what to supply. Either way it must never be a pass.
+//   - A 2A budget fails. The switch limits at 1A (a 50mV threshold across the design's 0R05 shunt),
+//     so it opens under the load the architecture was drawn for.
+//   - A 0.5A budget passes. Same design, same parts, different declaration.
+//   - With a params tier attached and no part stating an overcurrent threshold, it reads needs-data.
+//     The ticket asks for this guard. The guard fails silently if Rule.ParamSymbols is not declared.
+//     Without ParamSymbols the rule joins nothing and reports nothing, and the item scores a pass on
+//     a check that never ran. The report cannot tell that apart from a genuinely sized switch.
+func TestReviewLoadSwitchSizing(t *testing.T) {
+	checklist := "testdata/intent/loadswitch-checklist.yaml"
+	design := "testdata/conformance/loadswitch.passes.kicad_sch"
+	params := "testdata/conformance/params"
+
+	base := runReview(t, "--checklist", checklist, "--params", params, design)
+	if !strings.Contains(base, "| 26 | load switch current limit sizing | needs-design-intent |") {
+		t.Errorf("with no declaration the item must name the missing input, never pass\n%s", base)
+	}
+
+	over := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-over.yaml",
+		"--params", params, design)
+	if !strings.Contains(over, "| 26 | load switch current limit sizing | fail |") {
+		t.Errorf("a 2A budget against a 1A limit must fail\n%s", over)
+	}
+	// The finding has to name which switch, which shunt, and the document the threshold came from,
+	// since a reviewer acts on that evidence. A bare verdict cannot be triaged.
+	for _, want := range []string{"U1", "R1", "DEMO-HSS-CTRL Rev A"} {
+		if !strings.Contains(over, want) {
+			t.Errorf("the report must name %q so the finding can be triaged\n%s", want, over)
+		}
+	}
+
+	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-ok.yaml",
+		"--params", params, design)
+	if !strings.Contains(ok, "| 26 | load switch current limit sizing | pass |") {
+		t.Errorf("a 0.5A budget against a 1A limit must pass\n%s", ok)
+	}
+
+	// The guard case. The FET is seeded and the controller's threshold is not, so no switch
+	// resolves.
+	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-ok.yaml",
+		"--params", "testdata/intent/params-no-ocp", design)
+	if !strings.Contains(unseeded, "| 26 | load switch current limit sizing | needs-data |") {
+		t.Errorf("no seeded overcurrent threshold must read needs-data, never pass\n%s", unseeded)
+	}
+}
+
+// --coverage and --format are different axes, and the render switch tests coverage first, so an
+// explicit --format used to be discarded without a word. `--coverage --format html -o page.html`
+// wrote a markdown table into a file named .html and a browser showed it as text. Only an explicit
+// --format is refused, since the flag defaults to markdown and the rollup is markdown.
+func TestReviewCoverageRefusesAFormatItCannotRender(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"html is refused", []string{"--coverage", "--format", "html"}, true},
+		{"json is refused", []string{"--coverage", "--format", "json"}, true},
+		{"markdown is what the rollup already is", []string{"--coverage", "--format", "markdown"}, false},
+		{"coverage alone is unaffected", []string{"--coverage"}, false},
+		{"a format without coverage is unaffected", []string{"--format", "json"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := reviewCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetArgs(append(append([]string{"--checklist", "testdata/review/mini.yaml"}, tc.args...),
+				"testdata/review/can-broken.edn"))
+			err := cmd.Execute()
+			if tc.wantErr && err == nil {
+				t.Fatalf("wanted a refusal, got none")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("wanted no refusal, got %v", err)
+			}
+			if tc.wantErr && !strings.Contains(err.Error(), "would be discarded") {
+				t.Errorf("the refusal should say the format was going to be thrown away: %v", err)
+			}
+		})
+	}
+}
+
+// The refusal has to happen before -o creates the file. Otherwise a rejected run leaves an empty
+// artifact and announces it. agni issue 637 fixed that shape for --server.
+func TestReviewCoverageRefusalLeavesNoOutputFile(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "page.html")
+	cmd := reviewCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml", "--coverage", "--format", "html",
+		"-o", p, "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("wanted a refusal")
+	}
+	if _, err := os.Stat(p); err == nil {
+		t.Errorf("a refused run created %s", p)
+	}
+}
+
+// `review --format html` writes the page that RenderReviewReport renders from the same run. The
+// viewer's Save report saves that same page, so the two cannot drift (agni issue 1030). Only the
+// generated line differs between two renders.
+func TestReviewHTMLIsTheRenderedReviewReport(t *testing.T) {
+	freshWorkspace(t)
+	args := []string{"--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"}
+	page := runReview(t, append([]string{"--format", "html"}, args...)...)
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(runReview(t, append([]string{"--format", "json"}, args...)...)), &rv); err != nil {
+		t.Fatal(err)
+	}
+	svc := service.NewReviewService(nil, nil, nil, nil, nil, service.ReviewEnv{}, "", nil)
+	resp, err := svc.RenderReviewReport(context.Background(), &webapi.RenderReviewReportRequest{Review: &rv, Links: &webapi.ReportLinks{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rv.GetResults().GetAreas()) == 0 {
+		t.Fatal("the run scored no areas, so two empty pages would compare equal")
+	}
+	if got, want := writtenAt.ReplaceAllString(page, "T"), writtenAt.ReplaceAllString(string(resp.GetContent()), "T"); got != want {
+		t.Errorf("review --format html differs from RenderReviewReport's page for the same run:\n--- cli\n%s\n--- rpc\n%s", got, want)
+	}
+}

@@ -1,0 +1,12 @@
+{
+  "name": "agni",
+  "owner": { "name": "panyam" },
+  "metadata": { "description": "Agent skills for checking a board with agni" },
+  "plugins": [
+    {
+      "name": "agni",
+      "source": "plugins/agni",
+      "description": "Skills that walk a person through checking their own board with the agni CLI"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Rung 12: KiCad's own DRC report, committed in reports/, imported against the design.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni import-results reports/kicad-drc.json --design designs/jetson -o kicad.results.json

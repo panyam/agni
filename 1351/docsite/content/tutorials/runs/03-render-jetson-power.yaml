@@ -1,0 +1,6 @@
+# Rung 3: the board's own drawing of one sheet, named by its sheet name. Faithful is the default, so
+# nothing is computed.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni render . --sheet Power -o power.svg
+capture: stderr

@@ -1,0 +1,22 @@
+(kicad_sch
+	(version 20250114)
+	(generator "test")
+	(paper "A4")
+	(title_block
+		(title "Power"))
+	(lib_symbols
+		(symbol "test:R"
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 -2.54) (end 1.016 2.54))
+				(pin passive line (at 0 0 0) (length 2) (name "~") (number "1")))))
+	(symbol (lib_id "test:R") (at 60 50 0) (unit 1) (uuid "r2")
+		(property "Reference" "R2"
+			(at 58 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "1k"))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r3")
+		(property "Reference" "R3"
+			(at 78 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "1k")))

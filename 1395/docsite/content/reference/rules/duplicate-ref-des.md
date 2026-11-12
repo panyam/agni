@@ -1,0 +1,57 @@
+---
+title: "duplicate-ref-des"
+description: "A reference designator is claimed by more than one distinct physical part."
+---
+
+### Remedy
+
+Re-annotate the schematic so each physical part holds its own designator, then re-check the BOM, since whichever part was silently merged is the one to look at first.
+
+### What it means
+
+One reference designator (U1, R5) assigned to two genuinely distinct physical
+parts, as opposed to the legitimate case of one multi-unit part whose gates share a ref-des.
+
+### Why engineers want it
+
+A duplicated ref-des is a common annotation slip. The two parts merge
+into one BOM line (one gets built, the other silently omitted) and their connections collide on the
+same net-join key, so the netlist is quietly wrong. KiCad's ERC flags it, as do most.
+
+### Why this is a reader diagnostic, not an IR check
+
+The IR keys components by ref-des and folds a multi-unit part into one component with sections
+(WS1-001), so by the time the netlist exists the collision is gone and a duplicate is
+indistinguishable from a multi-unit part. Only the reader, at ingestion, can tell them apart using
+its format's own rule (in KiCad, the same unit claimed twice). It records the verdict in
+InputDiagnostics.RefDesCollisions; this rule only reports it (architecture/rules-and-checks.md,
+"Where a rule runs").
+
+### What it means when this rule does not run
+
+This rule only reports a reader's verdict. When the reader never reached one, the rule has nothing
+to say, and a clean design also gives it nothing to say. So a reader states whether it computed the
+diagnostic (InputDiagnostics.supplied). Where the reader did not, this rule is gated to
+**not-applicable**, rather than reporting a pass that nobody earned (agni issue 309).
+
+| Format | Detects | Rule reads |
+|---|---|---|
+| KiCad | the same unit claimed twice | a real result |
+| gEDA | the same slot claimed twice, or two unslotted placements sharing a designator | a real result |
+| xschem | a repeated instance name, which the format declares unique | a real result |
+| IPC-2581 | a repeated refDes, with no gate construct to group placements | a real result |
+| EDIF | nothing: a multi-gate part is instances sharing a designator with no unit to tell them apart | not applicable, with that reason |
+
+On an EDIF design the gap is the format's, not the reader's, because detecting
+a collision there would mean reporting every multi-gate part as a duplicate. Not-applicable is the
+accurate answer there, because the reader never looked, and a report now shows it.
+
+![One ref-des on two distinct parts is flagged; units of one multi-unit part sharing a ref-des is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/duplicate-ref-des.svg)
+
+### Query structure
+
+report each collision the reader recorded.
+
+    select C in ref_des_collisions
+
+Reads: reader.ref_des_collision. Tier P. Site: diagnostic (reader-detected).

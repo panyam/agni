@@ -1,0 +1,101 @@
+# Builds both container images on a change that could break them, and smoke-tests each, without
+# pushing anything.
+#
+# Before this, an image was first built by `release`, after a tag was already public, so a broken
+# Dockerfile surfaced as a failed release. It runs only when a file the images are made from
+# changes, because the agnids image installs torch and docling and takes minutes, which an
+# ordinary PR should not pay. agni builds linux/amd64 alone, since its arm64 half is the same build
+# cross-compiled. agnids builds both, each on a runner of its own architecture, because its arm64
+# half installs different torch wheels and release now builds it natively the same way.
+name: images
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - Dockerfile.agnids
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - datasheet/tools/pdf2doc/**
+      - hack/image_smoke.sh
+      - hack/compose_smoke.sh
+      # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
+      - protos/agni/v1/webapi/**
+      - deploy/**
+      - .github/workflows/images.yml
+      - .github/workflows/release.yml
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - Dockerfile.agnids
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - datasheet/tools/pdf2doc/**
+      - hack/image_smoke.sh
+      - hack/compose_smoke.sh
+      # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
+      - protos/agni/v1/webapi/**
+      - deploy/**
+      - .github/workflows/images.yml
+      - .github/workflows/release.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: agni
+            file: Dockerfile
+            runner: ubuntu-latest
+            platform: linux/amd64
+            scope: agni
+          - kind: agnids
+            file: Dockerfile.agnids
+            runner: ubuntu-latest
+            platform: linux/amd64
+            scope: agnids
+          - kind: agnids
+            file: Dockerfile.agnids
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            scope: agnids-arm64
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # load: true puts the image in the runner's daemon so the smoke test can run it. The cache is
+      # scoped per image, so the two builds do not evict each other's layers.
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platform }}
+          load: true
+          push: false
+          build-args: |
+            VERSION=v0.0.0-ci
+          tags: agni-ci/${{ matrix.kind }}:ci
+          cache-from: type=gha,scope=${{ matrix.scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
+
+      - name: Smoke test
+        env:
+          KIND: ${{ matrix.kind }}
+        run: |
+          hack/image_smoke.sh "$KIND" "agni-ci/$KIND:ci" v0.0.0-ci
+          docker image ls "agni-ci/$KIND:ci" --format '{{.Repository}}:{{.Tag}} {{.Size}}'
+
+      # The compose bundle a customer runs (agni issue 1057), brought up over the tutorial project.
+      - name: Compose smoke test
+        if: matrix.kind == 'agni'
+        run: hack/compose_smoke.sh agni-ci/agni ci

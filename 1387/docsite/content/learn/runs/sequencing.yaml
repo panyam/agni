@@ -1,0 +1,7 @@
+# Chapter 9: a declared sequence checked against the wiring. The SoC tree passes and the witness
+# spells out the mechanism; the modem rails fail because both handles land on the MCU, which is
+# sequencing done in firmware and invisible to a netlist. Two items, two honest answers.
+fixture: cmd/agni/testdata/intent
+from_root: true
+script: |
+  agni check --verdicts --rule intent/sequence-soc-power-tree --rule intent/sequence-modem-rails cmd/agni/testdata/intent/sequence.edn --intent-path cmd/agni/testdata/intent/sequences.yaml

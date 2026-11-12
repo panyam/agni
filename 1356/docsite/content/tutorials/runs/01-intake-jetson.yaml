@@ -1,0 +1,8 @@
+# Rung 1: the shareable summary. The parts table runs to ~120 rows on this board, so the block
+# shows the sections above it.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+show: |
+  agni intake .
+script: |
+  agni intake . 2>/dev/null | sed -n '1,/^## Parts/p'
+  echo "..."

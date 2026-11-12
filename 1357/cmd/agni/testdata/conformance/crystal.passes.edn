@@ -1,0 +1,16 @@
+(edif CRYSTAL
+  (edifVersion 2 0 0)
+  (design CRYSTAL (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance Y1 (viewRef V (cellRef XTAL)) (designator "Y1"))
+          (instance C1 (viewRef V (cellRef CAP)) (designator "C1"))
+          (instance C2 (viewRef V (cellRef CAP)) (designator "C2"))
+          ; Both crystal terminals carry a load cap (C1 on XTAL_IN, C2 on XTAL_OUT),
+          ; so crystal-load-caps must stay silent (the control for crystal.fires).
+          (net XTAL_IN (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef Y1)) (portRef 1 (instanceRef C1))))
+          (net XTAL_OUT (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef Y1)) (portRef 1 (instanceRef C2))))
+          (net GND (joined (portRef 2 (instanceRef C1)) (portRef 2 (instanceRef C2)) (portRef 3 (instanceRef U1)))))))))

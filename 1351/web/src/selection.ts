@@ -1,0 +1,210 @@
+// What the reader clicked, and what to ask about it.
+//
+// A Selection has the same shape as a finding's subject (kind + ref/pin/net), so clicking the
+// drawing, a search result or a finding all produce one value for the highlighter and the query
+// generator to take.
+//
+// Resolution is view-local (CONSTRAINTS C11, the view turns a cursor position into a semantic
+// intent). This module holds the parts that are NOT view-local (reading a keyed element, ranking
+// overlapping candidates, writing the query), so the SVG and WebGL views can find candidates their
+// own way and still agree on what one means. The cross-renderer contract is on
+// docsite/content/architecture/web-picking.md#picking-from-the-drawing.
+
+export type SelectionKind = "pin" | "component" | "bus" | "net" | "area";
+
+// Selection names one entity. ref is set for a component or pin, net/netId for a net, busId for a
+// bus; pin is the designator within ref. The optional fields mirror the finding subject exactly.
+//
+// An area (agni issue 904) is a set of them selected together on one sheet, with refs its whole
+// parts, pins its loose pins as "REF.PIN", wires the nets with a wire inside it, and nets every net
+// it touches (area.ts). A click never yields one; a drag or a Shift-click does.
+export interface Selection {
+  kind: SelectionKind;
+  ref?: string;
+  pin?: string;
+  net?: string;
+  netId?: string;
+  busId?: string;
+  refs?: string[];
+  pins?: string[];
+  wires?: string[];
+  nets?: string[];
+}
+
+// PRIORITY ranks overlapping candidates, most specific first. A click inside a symbol that hits a
+// pin means the pin, the entity with the least area. Topmost-wins would give the symbol body every
+// time, since it is drawn over its own pins.
+const PRIORITY: SelectionKind[] = ["pin", "component", "bus", "net"];
+
+// selectionFromElement reads one keyed element, or null for an unkeyed one (the page rect, a label,
+// a highlight overlay). The renderer writes these attributes; see core/render/svg.go's entityKeys.
+// The key may sit on an ancestor, since the board keys each net's tracks on one group
+// (core/render/board.go), so the nearest keyed element inside the drawing answers. The walk stops
+// at the drawing's <svg>, because the panels key HTML buttons with data-kind too.
+export function selectionFromElement(hit: Element | null): Selection | null {
+  const el = keyedFrom(hit);
+  const kind = el?.getAttribute("data-kind");
+  if (!el || !kind) return null;
+  switch (kind) {
+    case "pin": {
+      const ref = el.getAttribute("data-ref") ?? "";
+      const pin = el.getAttribute("data-pin") ?? "";
+      return ref && pin ? { kind: "pin", ref, pin } : null;
+    }
+    case "component": {
+      const ref = el.getAttribute("data-ref") ?? "";
+      return ref ? { kind: "component", ref } : null;
+    }
+    case "bus": {
+      const busId = el.getAttribute("data-bus") ?? "";
+      return busId ? { kind: "bus", busId } : null;
+    }
+    case "net": {
+      const net = el.getAttribute("data-net") ?? "";
+      const netId = el.getAttribute("data-net-id") ?? "";
+      return net || netId ? { kind: "net", net, netId } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function keyedFrom(hit: Element | null): Element | null {
+  for (let e = hit; e; e = e.parentElement) {
+    if (e.hasAttribute("data-kind")) return e;
+    if (e.tagName.toLowerCase() === "svg") return null;
+  }
+  return null;
+}
+
+// bestOf picks the most specific selection among overlapping candidates, in probe order so a tie
+// between two of one kind goes to the nearer probe.
+export function bestOf(candidates: (Selection | null)[]): Selection | null {
+  for (const kind of PRIORITY) {
+    const hit = candidates.find((c) => c?.kind === kind);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+// PROBES are the offsets sampled around a click in CSS pixels, the exact point first and then a
+// ring that gives small targets some tolerance. The ring does not rescue a bare wire, since every
+// probe faces the same sub-pixel stroke; the served render's invisible wide wire companion does
+// (core/render/svg.go, WithPickTargets). The ring is small, 5px at cursor scale, so a click
+// BETWEEN two close wires still misses rather than guessing.
+const PROBE_R = 5;
+const PROBES: [number, number][] = [
+  [0, 0],
+  [PROBE_R, 0],
+  [-PROBE_R, 0],
+  [0, PROBE_R],
+  [0, -PROBE_R],
+  [PROBE_R, PROBE_R],
+  [-PROBE_R, PROBE_R],
+  [PROBE_R, -PROBE_R],
+  [-PROBE_R, -PROBE_R],
+];
+
+// pickAt resolves a viewport point to an entity by asking the document what is under it, at the
+// point and around it. It takes client coordinates, because elementFromPoint takes them and a
+// pointer event carries them, so no camera maths is needed here.
+export function pickAt(doc: Document, clientX: number, clientY: number): Selection | null {
+  const seen: (Selection | null)[] = [];
+  for (const [dx, dy] of PROBES) {
+    seen.push(selectionFromElement(doc.elementFromPoint(clientX + dx, clientY + dy)));
+  }
+  return bestOf(seen);
+}
+
+// The SERVER writes the presets (query.EntityQueries), and entityBindings gives one the values of
+// what was clicked. The preset names the variables to bind (binds). Each variable also names the
+// selection field that fills it. The query text is kept as written (agni issue 793).
+//
+// The templates name relations defined in Go, so they live beside them, where each preset gets a
+// parse check and an evaluate-against-a-real-design check. Nothing would check a client copy.
+// Renaming a relation would turn the server's tests red, while every click in the viewer produced a
+// query that errors. This file only turns what was clicked into values.
+//
+// A value is bound as itself, so a designator carrying a quote is asked about exactly. Splicing it
+// into a string literal, which has no escape sequence, could only strip it.
+//
+// An area binds each variable to the whole set, ref to its parts and net to its nets, so a question is
+// asked once over all of them (agni issue 904).
+export function entityBindings(binds: readonly string[], sel: Selection): Record<string, string | string[]> {
+  const field: Record<string, string | string[] | undefined> =
+    sel.kind === "area" ? { ref: sel.refs ?? [], net: sel.nets ?? [] } : { ref: sel.ref, pin: sel.pin, net: sel.net, bus: sel.busId };
+  const out: Record<string, string | string[]> = {};
+  for (const v of binds) out[v] = field[v] ?? "";
+  return out;
+}
+
+// labelFor is the one-line human name for a selection, for a status line or a panel heading.
+export function labelFor(sel: Selection): string {
+  switch (sel.kind) {
+    case "pin":
+      return `${sel.ref}.${sel.pin}`;
+    case "component":
+      return sel.ref ?? "";
+    case "net":
+      return sel.net ?? sel.netId ?? "";
+    case "bus":
+      return sel.busId ?? "";
+    case "area":
+      return `Area (${(sel.refs?.length ?? 0) + (sel.pins?.length ?? 0) + (sel.wires?.length ?? 0)})`;
+  }
+}
+
+// selectionFromCell reads a query result cell, the second way a reader names an entity. The panel
+// knows a cell's kind because the server typed the column (webapi RunQueryResponse.column_kinds,
+// derived from the relation catalog's arg labels), and those kind strings are check.KindComponent /
+// check.KindNet, the same vocabulary as a picked element's.
+//
+// A scalar cell, or an entity kind with no selection shape yet, yields null. The cell still locates
+// but names nothing to ask about.
+//
+// `ref` is the other half of a pin's identity, from the row's cell_refs. A pin cell holds "5", which
+// names nothing until you know it means U7's pin 5. Ignored for every other kind, where the cell
+// names the entity by itself.
+//
+// A search can return a bus (agni issue 338), since entity() enumerates buses and a bus with no
+// drawn wire is the sort of thing a reviewer looks for by name. Its subject IS its label. A drawn
+// bus element has the same key in data-bus, so both entry points converge on one value.
+export function selectionFromCell(kind: string, subject: string, ref = ""): Selection | null {
+  if (!subject) return null;
+  switch (kind) {
+    case "component":
+      return { kind: "component", ref: subject };
+    case "net":
+      return { kind: "net", net: subject };
+    case "bus":
+      return { kind: "bus", busId: subject };
+    case "pin":
+      // Both halves or nothing, since a pin number with no component names no pin.
+      return ref ? { kind: "pin", ref, pin: subject } : null;
+    default:
+      return null;
+  }
+}
+
+// sameSelection reports whether two picks name the same thing. A surface uses it to mark the pick
+// it is showing now. It tests identity rather than deep equality, because the canvas pushes a net
+// with both its name and its id while a result cell carries only the name, and those are the same
+// net. Ids are compared only when BOTH carry one, since two nets can share a display name across
+// sheets.
+export function sameSelection(a: Selection | null, b: Selection | null): boolean {
+  if (!a || !b || a.kind !== b.kind) return false;
+  switch (a.kind) {
+    case "pin":
+      return a.ref === b.ref && a.pin === b.pin;
+    case "component":
+      return a.ref === b.ref;
+    case "net":
+      return a.netId && b.netId ? a.netId === b.netId : a.net === b.net;
+    case "bus":
+      return a.busId === b.busId;
+    case "area": {
+      const same = (x: string[] = [], y: string[] = []) => x.length === y.length && x.every((v, i) => v === y[i]);
+      return same(a.refs, b.refs) && same(a.pins, b.pins) && same(a.wires, b.wires);
+    }
+  }
+}

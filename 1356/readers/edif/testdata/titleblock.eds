@@ -1,0 +1,59 @@
+
+(edif TBLOCK
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -100) (pt 200 0)))
+          (figure BOX (rectangle (pt 0 -100) (pt 200 0)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 200 -50))))
+            (figure PIN (path (pointList (pt 150 -50) (pt 200 -50)))))))))
+  (library Borders
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &cb "TitleBlock_D")
+      (cellType GENERIC)
+      (view (rename &vb "border")
+        (viewType GRAPHIC)
+        (interface)
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 4000 3000)))
+          (figure BOX (rectangle (pt 0 0) (pt 4000 3000)))
+          (commentGraphics
+            (annotate (stringDisplay "TITLE" (display (justify CENTERLEFT) (origin (pt 200 100)))))
+            (annotate (stringDisplay "REV" (display (justify CENTERLEFT) (origin (pt 200 50))))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 4000 3000)))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 300 400)))
+          (designator (stringDisplay "R1")))
+        (instance (rename &ib "$ib")
+          (viewRef vb (cellRef TitleBlock_D (libraryRef Borders)))
+          (transform (origin (pt 0 0)))
+          (property Title (string (stringDisplay "My Board")))
+          (property REV_1 (string (stringDisplay "")))
+          (property REV_2 (string (stringDisplay "C3")))
+          (property DATE (string (stringDisplay "---")))
+          (property DATE_1 (string (stringDisplay "2026-07-09")))
+          (property Company (string (stringDisplay "Acme")))
+          (property Drawing (string (stringDisplay "DEMO-100-SCH")))
+          (property DESIGNER (string (stringDisplay "A ENGINEER")))
+          (property PROTOTYPE (string (stringDisplay "PROTO1")))
+          (property DV_1 (string (stringDisplay "")))
+          (property DV_2 (string (stringDisplay "J DOE"))))))))

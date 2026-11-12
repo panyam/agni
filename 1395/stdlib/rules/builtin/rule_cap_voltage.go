@@ -1,0 +1,107 @@
+package builtin
+
+import (
+	"fmt"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// capVoltageDerate is the margin multiplier the rated voltage must clear, so
+// Vrated >= rail_V x derate. 1.25 is the common 20%-derating convention for ceramics.
+// Per-run parameterization is WS3-006; a computed worst-case rail voltage is WS4.
+const capVoltageDerate = 1.25
+
+// capVoltage is the cap-voltage rule (WS10-005). A capacitor joined to its seeded
+// datasheet spec must have a rated voltage clearing the worst rail it touches times the
+// derate factor. The join and compare live behind the cap_voltage_detail SpecFunc, whose
+// declared Reads flow into the rule's derived metadata (the WS3-004 fact capture). The
+// FFI is registered inside this initializer; see rule_led_polarity.go for why.
+var capVoltage = func() *check.Rule {
+	check.RegisterSpecFunc("cap_voltage_detail", &check.SpecFunc{
+		Reads:      []string{"param.cap_rated_voltage", "net.max_voltage", "component.mpn", "on_net"},
+		Primitives: []string{"param-join", "traverse"},
+		Fn: func(m check.Model, ents map[string]any, _ []any) any {
+			return capVoltageDetail(m, ents["component"].(*ir.Component))
+		},
+	})
+	r := (&check.Spec{
+		Over: "components",
+		Let:  map[string]check.Term{"detail": check.Call{Fn: "cap_voltage_detail"}},
+		// Scope is the capacitors, since the rule is about no other part.
+		Scope:   check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}},
+		Where:   check.Cmp{L: check.Var{Name: "detail"}, Op: "!=", R: check.Lit{V: ""}},
+		Message: "{detail}",
+	}).Rule(check.Rule{
+		Name:     "cap-voltage",
+		Severity: "error",
+		Summary:  "A capacitor's datasheet rated voltage does not clear the worst rail it touches times the derate factor.",
+		Impact:   "A cap run at or above its rated voltage ages fast and fails early (ceramics also lose most of their capacitance near rating). Unlike a heuristic, the limit here is the vendor's own rated voltage, cited to its page.",
+		Remedy:   "Fit a capacitor rated above the worst rail it touches, with the derating the design's own rules call for. On ceramics, allow for the capacitance lost under applied DC bias as well.",
+		Tags: map[string]string{
+			check.KeyCategory:     check.CategoryDatasheet,
+			check.KeyTier:         "R",
+			check.KeyDistribution: check.DistOpen,
+			"evidence":            "datasheet",
+		},
+		Detail: ruleDoc("cap-voltage"),
+	})
+	// THE ONE SPEC RULE THAT MUST NOT CLAIM A CONSIDERED SET. capVoltageDetail returns "" for a pass
+	// AND for every skip, including a capacitor with no seeded datasheet at all. Scope narrows the
+	// subjects to capacitors correctly, but inside that scope a false Where still means either "rated
+	// voltage clears the rail" or "there was nothing to compare".
+	//
+	// Reporting the second as a Pass would assert the part is within its rating when nothing was ever
+	// checked, which is worse than silence. Lifting this needs a SpecFunc to return "no data"
+	// distinctly from "no violation", the NoLimit outcome the datasheet rules produce by hand. Until
+	// the spec language can express that, this rule reports violations only.
+	r.StatesConsideredSet = false
+	return r
+}()
+
+// capVoltageDetail is the cap_voltage_detail SpecFunc body. It does the join, the
+// worst-rail scan and the derated compare. It returns the full violation message, with
+// the datasheet Citation, or "" for pass and for every skip case. So the Spec's Where
+// clause and Message share one memoized Let binding.
+func capVoltageDetail(m check.Model, c *ir.Component) string {
+	spec := m.PartSpec(c.RefDes)
+	if spec == nil {
+		return ""
+	}
+	limits := check.CapRatedVoltageLimits(spec)
+	if len(limits) == 0 {
+		return ""
+	}
+	binding := limits[0]
+	for _, p := range limits[1:] {
+		if p.Value.GetMax() < binding.Value.GetMax() {
+			binding = p
+		}
+	}
+	worstNet, worstV, found := "", 0.0, false
+	for _, n := range m.Nets() {
+		onNet := false
+		for _, conn := range n.Connections {
+			if conn.ComponentRef == c.RefDes {
+				onNet = true
+				break
+			}
+		}
+		if !onNet {
+			continue
+		}
+		if v, ok := m.RailMaxVoltage(n); ok && (!found || v > worstV) {
+			worstNet, worstV, found = n.Name, v, true
+		}
+	}
+	if !found {
+		return ""
+	}
+	required := worstV * capVoltageDerate
+	if binding.Value.GetMax() >= required {
+		return ""
+	}
+	return fmt.Sprintf("capacitor %s (MPN %s): rated voltage %s %gV is below %gV required (rail %q %gV x derate %g) — %s",
+		c.RefDes, m.ComponentMPN(c.RefDes), binding.Symbol, binding.Value.GetMax(),
+		required, worstNet, worstV, capVoltageDerate, check.Citation(spec, binding))
+}

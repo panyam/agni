@@ -1,0 +1,79 @@
+package census
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// fixtureGlobs maps a format name to the committed fixtures for the CI census to walk. They are the
+// hand-authored testdata files plus the conformance boards and schematics. CI can see no other
+// design files. The real corpus is a separate private repo, swept by `agni census` or `make
+// census`.
+var fixtureGlobs = map[string][]string{
+	"kicad-pcb": {"../readers/kicad/testdata/*.kicad_pcb", "../cmd/agni/testdata/conformance/*.kicad_pcb"},
+	"kicad-sch": {"../readers/kicad/testdata/*.kicad_sch", "../cmd/agni/testdata/conformance/*.kicad_sch"},
+	"edif":      {"../readers/edif/testdata/*.edn", "../readers/edif/testdata/*.eds"},
+	"ipc2581":   {"../readers/ipc2581/testdata/*.xml"},
+	"xschem":    {"../readers/xschem/testdata/*.sch", "../readers/xschem/testdata/*.sym"},
+	"geda":      {"../readers/geda/testdata/*.sch", "../readers/geda/testdata/*.sym"},
+}
+
+// TestFixtureCensus is the coverage guard. Every construct in the committed fixtures must be
+// classified in its format's manifest. Suppose a new fixture introduces a source element that the
+// reader has never decided about. That unclassified construct fails here (WS6-011). A human must
+// then mark it consumed or a known drop, and it is never dropped silently.
+func TestFixtureCensus(t *testing.T) {
+	for _, m := range Manifests() {
+		t.Run(m.Format, func(t *testing.T) {
+			globs, ok := fixtureGlobs[m.Format]
+			if !ok {
+				t.Fatalf("no fixture globs registered for format %q", m.Format)
+			}
+			files := map[string][]byte{}
+			for _, g := range globs {
+				matches, err := filepath.Glob(g)
+				if err != nil {
+					t.Fatalf("glob %q: %v", g, err)
+				}
+				for _, f := range matches {
+					b, err := os.ReadFile(f)
+					if err != nil {
+						t.Fatalf("read %q: %v", f, err)
+					}
+					files[f] = b
+				}
+			}
+			if len(files) == 0 {
+				t.Fatalf("no fixtures matched %v — the census would pass vacuously", globs)
+			}
+			for _, u := range m.Audit(files) {
+				t.Errorf("unclassified %s construct %q (in %s): add it to the %s census manifest as consumed or a known drop",
+					m.Format, u.Token, filepath.Base(u.File), m.Format)
+			}
+		})
+	}
+}
+
+// TestManifestsWellFormed guards the manifests themselves. Every entry has a non-empty reason, and
+// every dropped entry that names a gap (cosmetic/analysis/latent) either cites a ticket or is a
+// deliberate no-ticket backlog note, never an empty Status.
+func TestManifestsWellFormed(t *testing.T) {
+	seen := map[string]bool{}
+	for _, m := range Manifests() {
+		if seen[m.Format] {
+			t.Errorf("duplicate manifest for format %q", m.Format)
+		}
+		seen[m.Format] = true
+		for tok, e := range m.Entries {
+			if e.Why == "" {
+				t.Errorf("%s: construct %q has no reason", m.Format, tok)
+			}
+			switch e.Status {
+			case Consumed, DroppedCosmetic, DroppedAnalysis, DroppedLatent, DroppedByDesign:
+			default:
+				t.Errorf("%s: construct %q has invalid status %q", m.Format, tok, e.Status)
+			}
+		}
+	}
+}

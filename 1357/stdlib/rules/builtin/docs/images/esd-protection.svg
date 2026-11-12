@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="700" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="esd-protection rule: an external connector net with no TVS clamp is flagged; the same net with a TVS to ground is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged (no clamp) ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: no ESD clamp</text>
+
+  <!-- connector J1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="42" y="112" width="30" height="36" rx="2" fill="#ffffff"/>
+    <line x1="72" y1="130" x2="92" y2="130"/>
+  </g>
+  <text x="57" y="102" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- flagged external net USB_D+ in red -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="92" y1="130" x2="238" y2="130"/>
+  </g>
+  <text x="165" y="118" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">USB_D+</text>
+
+  <!-- IC U2 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="238" y1="130" x2="252" y2="130"/>
+    <rect x="252" y="108" width="56" height="44" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="280" y="134" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+
+  <text x="185" y="252" font-size="13" fill="#d64545" text-anchor="middle">no TVS on the net &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine (TVS clamp) ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: TVS on the net</text>
+
+  <!-- connector J1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="380" y="112" width="30" height="36" rx="2" fill="#ffffff"/>
+    <line x1="410" y1="130" x2="430" y2="130"/>
+  </g>
+  <text x="395" y="102" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- external net USB_D+ (fine, dark) with TVS tap -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="430" y1="130" x2="596" y2="130"/>
+  </g>
+  <circle cx="500" cy="130" r="4" fill="#394049"/>
+  <text x="463" y="118" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">USB_D+</text>
+
+  <!-- TVS clamp D3: diode triangle + zener cathode bar, dropping to GND -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="500" y1="130" x2="500" y2="150"/>
+    <path d="M486 150 L514 150 L500 170 Z" fill="#ffffff"/>
+    <path d="M490 170 L486 170 L486 174 M514 170 L510 170 M486 170 L514 170"/>
+    <line x1="500" y1="170" x2="500" y2="180"/>
+    <!-- ground -->
+    <line x1="484" y1="180" x2="516" y2="180"/>
+    <line x1="489" y1="186" x2="511" y2="186"/>
+    <line x1="494" y1="192" x2="506" y2="192"/>
+  </g>
+  <text x="528" y="164" font-size="13" font-weight="600" fill="#2f9e57" text-anchor="start">D3</text>
+
+  <!-- IC U2 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="596" y1="130" x2="610" y2="130"/>
+    <rect x="610" y="108" width="48" height="44" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="634" y="134" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+
+  <text x="512" y="252" font-size="13" fill="#2f9e57" text-anchor="middle">TVS clamps the net &#8594; fine</text>
+</svg>

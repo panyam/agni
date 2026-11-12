@@ -1,0 +1,53 @@
+// The interface-coverage panel's view-side types (WS9-041). The presenter fetches
+// GetInterfaceCoverage on design load and pushes a CoverageState. The panel renders the
+// per-interface signal matrix. A click on a signal emits an onLocate(net) intent, which goes down
+// the same locate path as a click on a query cell or a finding.
+import type { GetInterfaceCoverageResponse } from "./gen/agni/v1/webapi/checks_pb.js";
+
+// SignalCoverageItem is one required signal's coverage, mirroring the server's SignalCoverage.state values
+// (WS9-041): "present" | "missing" | "dangling" | "pullup_missing".
+export interface SignalCoverageItem {
+  name: string;
+  net: string; // matched net name; "" when missing (nothing to locate)
+  state: string;
+}
+
+// InterfaceCoverageItem is one detected interface's matrix: the profile name, its anchor net, and
+// each required signal in profile order.
+export interface InterfaceCoverageItem {
+  profile: string;
+  anchor: string;
+  signals: SignalCoverageItem[];
+}
+
+export interface CoverageState {
+  interfaces: InterfaceCoverageItem[];
+  // asked is true once the design's coverage was fetched, which a check run does. Before that, an
+  // empty list means nobody asked rather than nothing matched (agni issue 1132).
+  asked?: boolean;
+}
+
+export interface CoverageView {
+  setState: (s: CoverageState) => void;
+}
+
+export function emptyCoverage(): CoverageState {
+  return { interfaces: [] };
+}
+
+// coverageFromResponse maps the GetInterfaceCoverage wire response into the panel's view state.
+export function coverageFromResponse(resp: GetInterfaceCoverageResponse): CoverageState {
+  return {
+    interfaces: resp.interfaces.map((ic) => ({
+      profile: ic.profile,
+      anchor: ic.anchorNet,
+      signals: ic.signals.map((s) => ({ name: s.name, net: s.net, state: s.state })),
+    })),
+    asked: true,
+  };
+}
+
+// presentCount returns how many of an interface's signals are fully present, for a "4/6" summary.
+export function presentCount(item: InterfaceCoverageItem): number {
+  return item.signals.filter((s) => s.state === "present").length;
+}

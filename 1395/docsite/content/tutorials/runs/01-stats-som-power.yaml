@@ -1,0 +1,6 @@
+# Rung 1: the bad read. A sub-sheet named on its own reads as a whole design, because nothing in
+# the file says it is one sheet of fifteen. No --as-named is needed, since design.yaml declares
+# only the root and the board, so the sheet is read exactly as named.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni stats som_power.kicad_sch

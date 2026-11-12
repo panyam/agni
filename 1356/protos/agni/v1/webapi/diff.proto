@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/ir/ir.proto";
+
+// This file defines DiffService, the semantic diff between two designs.
+
+// DiffService computes the semantic diff between two designs' netlist IR (diff.Designs,
+// docsite/content/architecture/semantic-diff.md). It matches components by ref_des and nets by
+// name, and it recovers renames by connection signature. The diff core has no presentation code.
+// This service owns the wire form, and `agni diff --format json` emits the same form, so the CLI
+// and the viewer parse one message (WS9-004).
+service DiffService {
+  // DiffDesigns loads both snapshots' netlist IR. It returns the classified report and the
+  // highlight maps, and the viewer joins those maps to geometry. If either side fails to load
+  // (unknown mount, escaping path, no netlist reader), the call fails. There is no partial diff.
+  rpc DiffDesigns(DiffDesignsRequest) returns (DiffDesignsResponse);
+}
+
+// DiffDesignsRequest names the two designs. a is the old revision and b the new, each as a
+// snapshot.
+message DiffDesignsRequest {
+  // a_snapshot names the earlier revision, "snapshots/{snapshot}" (agni issue 1061).
+  string a_snapshot = 5;
+  // b_snapshot names the later revision, "snapshots/{snapshot}" (agni issue 1061).
+  string b_snapshot = 6;
+  // near_renames, when set, also pairs a net that was renamed AND changed slightly with its old
+  // self. The pair is reported as renamed-approx, with the evidence behind it (agni issue 817).
+  // Unset is off, as `agni diff` is without --rename-approx. The pass ASSIGNS a best match among
+  // candidates rather than recovering a fact, so a consumer opts in. An empty message runs the pass
+  // with the calibrated thresholds. A field that is set overrides that one threshold.
+  NearRenameOptions near_renames = 3;
+  // include_equal also reports every net that did not change, as kind "equal" after the changes,
+  // with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
+  // changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
+  // which the viewer tints by. A net's connections are in the design itself (GetDesign's
+  // read_mask).
+  bool include_equal = 4;
+  reserved 1, 2;
+  reserved "a_uri", "b_uri";
+}
+
+// NearRenameOptions tunes the near-rename pass. The pass matches nets by CONNECTIVITY, never by
+// name. An old net and a new one pair when enough of their endpoints ("refdes.pin") coincide. The
+// best pairs are taken first, one-to-one. An endpoint is "significant" when its component is not of
+// an insignificant class, so adding or removing probes cannot make or break a match. The evidence on
+// each renamed-approx entry uses the same units, so a pairing shows its scores against these
+// thresholds. Unset fields keep diff.DefaultRenameOptions, which were calibrated against real
+// revision pairs.
+message NearRenameOptions {
+  // min_old_coverage is the fraction of the old net's endpoints that must survive into the new one.
+  optional double min_old_coverage = 1;
+  // min_old_coverage_significant is the same fraction over significant endpoints only.
+  optional double min_old_coverage_significant = 2;
+  // min_new_coverage is the fraction of the new net made up of old endpoints. It stops a large net
+  // from counting as the rename of a small net that it merely contains.
+  optional double min_new_coverage = 3;
+  // min_new_coverage_significant is that guard over significant endpoints.
+  optional double min_new_coverage_significant = 4;
+  // max_added_significant_floor is how many significant endpoints a net may gain and still pair. It
+  // applies when half the net's old significant count is smaller than this floor.
+  optional int32 max_added_significant_floor = 5;
+  // min_significant_endpoints is the size below which no pairing is attempted.
+  optional int32 min_significant_endpoints = 6;
+  // insignificant_classes are the device classes left out of the overlap arithmetic. Empty keeps
+  // the default, test points.
+  repeated string insignificant_classes = 7;
+}
+
+// DiffReport is the wire form of diff.Report. It holds the classified component and net changes
+// between the old (a) and new (b) design. Equal components are never reported, and equal nets
+// only when the request set include_equal. Lists arrive in the diff's canonical order. Components
+// are sorted by ref_des, and nets are grouped new/deleted/renamed/hard/soft in classification
+// order.
+message DiffReport {
+  repeated string components_added = 1;   // ref_des present only in b, sorted
+  repeated string components_removed = 2; // ref_des present only in a, sorted
+  // One entry per changed field on a component present in both designs (a ref_des with
+  // several changed fields appears once per field).
+  repeated ComponentChange components_changed = 3;
+  repeated NetChange nets = 4;
+
+  message ComponentChange {
+    string ref_des = 1;
+    string field = 2; // "parts" (the library/part set over all sections) | "Value"
+    string old = 3;
+    string new = 4;
+  }
+
+  // NetChange is one classified net change. Its kinds are exactly diff.NetChangeKind.
+  //   "new"
+  //   "deleted"
+  //   "renamed"         same connection signature, different name
+  //   "renamed-approx"  a near match the engine ASSIGNED rather than recovered (see approx below)
+  //   "hard"            pin membership changed
+  //   "soft"            attribute-only
+  //   "equal"           unchanged, only when the request set include_equal
+  // name is the net's name where it exists, and the new name for a rename. old_name is set on both
+  // rename kinds. added and removed are "refdes.pin" connection deltas, set on hard changes and on
+  // renamed-approx. old_prov and new_prov locate the net in each revision's source. Each is unset on
+  // the side where the net does not exist.
+  message NetChange {
+    string kind = 1;
+    string name = 2;
+    string old_name = 3;
+    repeated string added = 4;
+    repeated string removed = 5;
+    agni.v1.ir.Provenance old_prov = 6;
+    agni.v1.ir.Provenance new_prov = 7;
+    // approx is why the near-match pass paired these two nets, set only on "renamed-approx".
+    //
+    // It is sent with the change rather than recomputed, because a consumer cannot rebuild it.
+    // The fractions are taken against the endpoint sets as they were BEFORE the assignment
+    // consumed them. Significance depends on the device classes of components in both
+    // revisions. Without this field, a viewer that wanted to show its work would need both
+    // designs in hand.
+    RenameEvidence approx = 8;
+  }
+
+  // RenameEvidence is the arithmetic behind one "renamed-approx" pairing.
+  //
+  // It exists so a reader can DISAGREE with the engine. An approximate rename is a judgement
+  // among candidates rather than a fact about the two revisions. A consumer that showed only the
+  // conclusion would be asking to be trusted. The *_significant figures leave out endpoint
+  // classes that the run treats as churn, test points by default. So on a heavily probed board
+  // they can differ sharply from their all-endpoint counterparts.
+  message RenameEvidence {
+    double old_coverage = 1;             // fraction of the old net's endpoints that survived
+    double old_coverage_significant = 2; // the same, ignoring insignificant endpoint classes
+    double new_coverage_significant = 3; // fraction of the new net's significant endpoints that are old
+    int32 overlap = 4;                   // endpoints in both
+    int32 overlap_significant = 5;       // significant endpoints in both
+    int32 old_endpoints = 6;             // size of the old net
+    int32 new_endpoints = 7;             // size of the new net
+    int32 old_significant = 8;           // significant endpoints on the old net
+    int32 new_significant = 9;           // significant endpoints on the new net
+  }
+}
+
+// DiffDesignsResponse holds the full report and two compact highlight maps (WS9-004). A viewer
+// joins the maps to geometry keys without re-deriving the diff.
+//   component_status  ref_des -> "added" | "removed" | "changed"
+//   net_status        net name -> "new" | "deleted" | "renamed" | "renamed-approx" | "hard" | "soft"
+// A renamed net of either kind appears under BOTH its old and its new name, each with that net's
+// own kind. So each side of a visual diff joins by the name in its own geometry. The by-name match
+// in diff.Designs guarantees that one name never has two different statuses. A consumer filters
+// by side. The old design draws removed/deleted/renamed/renamed-approx/hard/soft, and the new one
+// draws added/new/renamed/renamed-approx/hard/soft.
+message DiffDesignsResponse {
+  DiffReport report = 1;
+  map<string, string> component_status = 2;
+  map<string, string> net_status = 3;
+
+  // These maps give sheet membership for the CHANGED entities only, keyed BY the entity. In
+  // component_sheets_a/b the key is a changed ref_des. The value lists the ids of the SHEETS
+  // where that component appears in that revision. So component_sheets_a["R3"] = ["root",
+  // "power"] reads "changed component R3 is placed on sheets root and power in revision a".
+  // net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
+  // values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+  // Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
+  // A changed component may sit on different sheets in a and b. A renamed net keys under its
+  // OLD name in a's map and its NEW name in b's. The maps are derived from each side's
+  // default-layout geometry, the same way finding sheets are (WS9-024). A side with no
+  // geometry has no entry for the affected keys, and neither does a format whose wires name
+  // no nets (KiCad until WS1-022). A viewer treats a missing entry as "no navigation target".
+  message SheetIds {
+    repeated string ids = 1;
+  }
+  map<string, SheetIds> component_sheets_a = 4;
+  map<string, SheetIds> component_sheets_b = 5;
+  map<string, SheetIds> net_sheets_a = 6;
+  map<string, SheetIds> net_sheets_b = 7;
+
+  // These maps hold a deterministic sample of placements for components present in BOTH
+  // designs, one entry per side. The sample is in sorted ref_des order and capped (see the
+  // service). It serves the overlay-mode alignment check (WS9-007). The viewer compares shared
+  // positions per sheet pair to decide whether superimposing the two revisions on one canvas
+  // would be truthful. Positions are the placement origin in that side's sheet frame. The
+  // sample deliberately includes UNCHANGED components, because they are the alignment
+  // evidence. Changed ones move for real reasons. A map is empty when its side has no
+  // geometry, and the viewer then falls back to frame-size evidence alone.
+  message Placement {
+    string sheet = 1;
+    double x = 2;
+    double y = 3;
+  }
+  map<string, Placement> shared_placements_a = 8;
+  map<string, Placement> shared_placements_b = 9;
+}

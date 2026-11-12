@@ -1,0 +1,99 @@
+# The repo gate: `make testall`, run as four parallel jobs. `make testall-test` builds and tests the
+# engine, the examples, the web bundle and the Python client. `make testall-scan` runs the static
+# scanners. `make testall-docs` regenerates the docsite's captures and images. `make browser-test` is
+# the browser layout suite. Together they are exactly `make testall`. Keep this in lockstep with the
+# Makefile; a step added to one of those targets runs here for free. The split is only about wall
+# time, since the gate takes as long as its slowest job (agni issue 1147).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A PR pushed again cancels the run for the push before it, which no one reads once a newer one is
+# queued. Runs on main are never cancelled, so every merge keeps its own record.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  testall:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # buf drives `make proto-check`, the generated-code freshness gate inside testall-test. Only buf
+      # itself is installed here: both protoc plugins are pinned as `tool` directives in go.mod and
+      # run via `go tool`, so they come from the module graph rather than a separate install whose
+      # version could drift from the one that produced the committed output.
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+          version: 1.61.0
+          github_token: ${{ github.token }}
+
+      # `make python-test` builds its own small venv (protobuf, openpyxl, pytest) from
+      # clients/python/pyproject.toml. Pinned here so the runner's default python cannot move under it.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: make testall-test
+        run: make testall-test
+
+  # The scanners read source alone, so this job needs Go and nothing the other jobs build.
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: make testall-scan
+        run: make testall-scan
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: make testall-docs
+        run: make testall-docs
+
+  browser-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # Chromium for `make browser-test`. The suite drives playwright-core directly rather than
+      # @vitest/browser, and playwright-core ships no browser of its own, so without this step every
+      # layout spec fails with "install one with ..." rather than an assertion. --with-deps pulls the
+      # shared libraries a headless Chromium needs on a bare runner.
+      #
+      # Cached on the lockfile, which holds the playwright-core version: a browser build is ~150MB and
+      # does not change between PRs. A cache miss still installs and still fails loudly.
+      - name: Cache the Chromium build
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # --with-deps runs apt-get update over every source the runner image configures, and the image's
+      # packages.microsoft.com source answered 403 for a while one evening, failing the install over a
+      # repository nothing here uses. Dropping it first leaves the Ubuntu archive, which has
+      # everything Chromium needs.
+      - name: Install Chromium
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+          pnpm exec playwright-core install --with-deps chromium
+        working-directory: web
+
+      - name: make browser-test
+        run: make browser-test

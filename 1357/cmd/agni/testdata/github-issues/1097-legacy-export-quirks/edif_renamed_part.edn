@@ -1,0 +1,13 @@
+(edif LEGACY_QUIRK_RENAME
+  (edifVersion 2 0 0)
+  (design LEGACY_QUIRK_RENAME (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell (rename PART_07 "PART-07")
+      (view V (viewType NETLIST)
+        (interface (port 1 (direction INPUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef PART_07 (libraryRef LIB))) (designator "U1")
+            (property MPN (string "PART-07")))
+          (net SIG (joined (portRef 1 (instanceRef U1)))))))))

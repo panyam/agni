@@ -1,0 +1,179 @@
+package query
+
+import (
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
+)
+
+// TestCatalogMatchesSchema is the drift guard. Every EDB relation and predicate has a catalog entry
+// with the right arity, and no catalog entry names a construct that does not exist. Adding a
+// relation to the fact schema, or a predicate to builtins, without a catalog row fails here. So a
+// new relation cannot ship undiscoverable. Both halves are registered with core/facts.
+// stdlib/relations registers the relations and the circuit walks, and the test binary imports it
+// through relations_register_test.go. The vocabulary itself registers the string tests. Catalog
+// spans both halves, so this test does too.
+func TestCatalogMatchesSchema(t *testing.T) {
+	byName := map[string]RelationInfo{}
+	for _, r := range Catalog() {
+		if _, dup := byName[r.Name]; dup {
+			t.Fatalf("duplicate catalog entry %q", r.Name)
+		}
+		byName[r.Name] = r
+	}
+	// Every EDB relation is catalogued with matching arity.
+	for rel, fields := range facts.DefaultRegistry().Schema() {
+		info, ok := byName[rel]
+		if !ok {
+			t.Errorf("edb relation %q has no catalog entry", rel)
+			continue
+		}
+		if len(info.Args) != len(fields) {
+			t.Errorf("catalog %q has %d args, the fact schema has %d fields", rel, len(info.Args), len(fields))
+		}
+	}
+	// Every built-in predicate is catalogued.
+	for _, p := range facts.DefaultRegistry().Predicates() {
+		if _, ok := byName[p.Name]; !ok {
+			t.Errorf("predicate %q has no catalog entry", p.Name)
+		}
+	}
+	// No catalog row names a nonexistent built-in construct.
+	for name, info := range byName {
+		isEDB := facts.DefaultRegistry().IsRelation(name)
+		_, isPred := facts.DefaultRegistry().Vocabulary().Predicate(name)
+		if !isEDB && !isPred {
+			t.Errorf("catalog entry %q (kind %s) is neither an EDB relation nor a predicate", name, info.Kind)
+		}
+	}
+}
+
+func TestCatalogSortedByKindThenName(t *testing.T) {
+	cat := Catalog()
+	rank := map[string]int{}
+	for i, k := range KindOrder {
+		rank[k] = i
+	}
+	for i := 1; i < len(cat); i++ {
+		prev, cur := cat[i-1], cat[i]
+		if rank[prev.Kind] > rank[cur.Kind] {
+			t.Errorf("kind order violated at %d: %s before %s", i, prev.Kind, cur.Kind)
+		}
+		if prev.Kind == cur.Kind && prev.Name > cur.Name {
+			t.Errorf("name order violated within %s: %q before %q", cur.Kind, prev.Name, cur.Name)
+		}
+	}
+}
+
+func TestCatalogIncludesOverlayRelation(t *testing.T) {
+	// Register a throwaway overlay relation and confirm it surfaces with synthesized arg labels.
+	const name = "test.catalog_overlay"
+	reg := facts.RegistryWith(facts.WithRelation(name, []facts.Field{facts.FieldSubject, facts.FieldNum},
+		func(check.Model) []facts.Row { return nil }))
+	found := false
+	for _, r := range CatalogFrom(reg) {
+		if r.Name == name {
+			found = true
+			if r.Kind != KindExtension {
+				t.Errorf("overlay relation kind = %s, want %s", r.Kind, KindExtension)
+			}
+			if len(r.Args) != 2 || r.Args[0] != "subject" || r.Args[1] != "n" {
+				t.Errorf("overlay args = %v, want [subject n]", r.Args)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("overlay relation %q not in catalog", name)
+	}
+}
+
+// entitySuggestingLabels are arg labels that READ like they name something on the canvas. They mean
+// nothing any more, since a column's kind comes from ArgKinds, so they need a guard. Imagine a
+// relation added with one of these labels and no declaration. That used to work by accident, and
+// now it silently types as a scalar (agni issue 548).
+var entitySuggestingLabels = map[string]bool{
+	"ref_des": true, "net": true, "from": true, "pin": true, "name": true, "label": true,
+}
+
+// deliberateScalars lists (relation, arg) pairs whose label suggests an entity, though each is
+// genuinely NOT one. Each needed a hand-written guard in the old inference. Here each is a line
+// somebody wrote on purpose.
+var deliberateScalars = map[string]string{
+	// graph.paths builds a path VALUE over whatever relation it walked, and jaala's path.step reads
+	// one step of it. So the step's ends are values of that relation rather than entities of one
+	// kind (jaala v0.1.79).
+	"path.step/from": "an end of a step in a path value, of whatever kind the walked relation joins",
+	"path.step/to":   "an end of a step in a path value, of whatever kind the walked relation joins",
+	// A datasheet pin belongs to a part TYPE, not to a placement, so there is nothing on the canvas
+	// to locate. The old code needed its pin/ref_des pairing guard for this pair.
+	"param.pin/pin":       "a pin of a part type, not a placement",
+	"param.pin_range/pin": "a pin of a part type, not a placement",
+	"param.pin/name":      "the pin name a datasheet prints, not an entity name",
+	// The same reasoning applies one tier down. pin.name's locatable column is the PIN, which is
+	// declared and owned by ref_des. The functional name is a label the part type prints on the
+	// pin. The design's entity vocabulary has no "PTC11" to navigate to.
+	"pin.name/name": "the functional name a part type prints on a pin, not an entity name",
+	// A bus label IS in the entity vocabulary. Here alone, the declaration could say more than the
+	// old inference did. It is left as a scalar so this change alters no answers. Declaring it is a
+	// behaviour change with its own review.
+	"bus/label": "preserves the pre-declaration answer; making it locatable is a separate change",
+}
+
+// TestEveryEntitySuggestingLabelIsDecided fails when a relation has an argument whose label reads
+// like an entity, and the relation neither declares a kind for it nor records why it is a scalar.
+// The old failure was silent, so this test refuses silence.
+func TestEveryEntitySuggestingLabelIsDecided(t *testing.T) {
+	for _, ri := range Catalog() {
+		for _, label := range ri.Args {
+			if !entitySuggestingLabels[label] {
+				continue
+			}
+			if _, declared := ri.ArgKinds[label]; declared {
+				continue
+			}
+			if _, known := deliberateScalars[ri.Name+"/"+label]; known {
+				continue
+			}
+			t.Errorf("%s declares no kind for its %q argument. Add one to ArgKinds, or add "+
+				"%q to deliberateScalars with the reason it is not an entity",
+				ri.Name, label, ri.Name+"/"+label)
+		}
+	}
+}
+
+// TestDeclaredArgKindsAreCoherent checks that a declaration names arguments the relation actually
+// has, and picks exactly one of the three forms. A typo here would type a column as a scalar in
+// silence.
+func TestDeclaredArgKindsAreCoherent(t *testing.T) {
+	for _, ri := range Catalog() {
+		args := map[string]bool{}
+		for _, a := range ri.Args {
+			args[a] = true
+		}
+		for label, k := range ri.ArgKinds {
+			if !args[label] {
+				t.Errorf("%s declares a kind for %q, which is not one of its arguments %v", ri.Name, label, ri.Args)
+			}
+			switch {
+			case k.KindArg != "" && k.Entity != "":
+				t.Errorf("%s/%s declares both a fixed Entity and a KindArg; a column takes its kind from one or the other", ri.Name, label)
+			case k.KindArg != "" && !args[k.KindArg]:
+				t.Errorf("%s/%s takes its kind from %q, which is not one of its arguments %v", ri.Name, label, k.KindArg, ri.Args)
+			case k.OwnerArg != "" && !args[k.OwnerArg]:
+				t.Errorf("%s/%s names owner %q, which is not one of its arguments %v", ri.Name, label, k.OwnerArg, ri.Args)
+			case k.KindArg == "" && k.Entity == "" && len(k.ValidOptions) == 0 && k.Unit == "":
+				// Domain (agni 696) and Unit (agni 972) joined Entity and KindArg as things an
+				// ArgKind can say. The invariant is unchanged. An ArgKind that says NOTHING should
+				// be omitted.
+				t.Errorf("%s/%s declares no Entity, KindArg, Domain or Unit, so it says nothing; omit it instead", ri.Name, label)
+			case k.Unit != "" && (k.Entity != "" || k.KindArg != ""):
+				t.Errorf("%s/%s declares a Unit on an entity column; a unit belongs on a number", ri.Name, label)
+			case len(k.ValidOptions) > 0 && k.Entity != "":
+				// An entity column's values are names the design chose, so they cannot also be a closed
+				// set the engine defines. Declaring both would reject every real net or part.
+				t.Errorf("%s/%s declares both an Entity and a Domain; an entity's names are the design's, not a vocabulary", ri.Name, label)
+			}
+		}
+	}
+}

@@ -1,0 +1,24 @@
+(edif CELLMPN
+  (edifVersion 2 0 0)
+  (design TOP (cellRef TOP (libraryRef WORK)))
+  (library PARTS
+    (cell (rename &c1 "MPN-ON-CELL")
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string "CELL-MPN-1"))
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1")))))
+    (cell PLAIN
+      (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))))))
+  (library WORK
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance I1 (viewRef V (cellRef &c1 (libraryRef PARTS))) (designator "U1"))
+          (instance I2 (viewRef V (cellRef &c1 (libraryRef PARTS))) (designator "U2")
+            (property (rename Manufacturer_PN "Manufacturer PN") (string "INLINE-MPN-2")))
+          (instance I3 (viewRef V (cellRef PLAIN (libraryRef PARTS))) (designator "R1"))
+          (net N1 (joined (portRef 1 (instanceRef I1)))))))))

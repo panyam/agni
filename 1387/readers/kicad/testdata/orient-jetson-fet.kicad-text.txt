@@ -1,0 +1,26 @@
+# kicad-cli 10.0.6 sch export svg of orient-jetson-fet.kicad_sch: every text run of U61, Q5 and TP76
+# as content, x mm, y mm (page, y down), text-anchor, rotation. Written once and committed.
+1	256.5400	93.6244	middle	0
+1	257.4544	78.7400	middle	-90
+1	275.5900	81.6356	middle	0
+2	256.5400	98.7044	middle	0
+3	256.5400	96.1644	middle	0
+4	271.7800	98.7044	middle	0
+4	275.9456	85.0900	middle	-90
+5	267.9700	81.6356	middle	0
+5	271.7800	96.1644	middle	0
+6	271.7800	93.6244	middle	0
+CTL	258.3180	97.1550	start	0
+D	267.9700	79.6544	middle	0
+G	273.9644	85.0900	middle	-90
+GATE	270.0020	97.1550	end	0
+GND	258.3180	99.6950	start	0
+IN	258.3180	94.6150	start	0
+LTC4412IS6#TRMPBF	264.1600	89.5350	middle	0
+Q5	271.7800	74.2950	middle	0
+S	275.5900	79.6544	middle	0
+SENSE	270.0020	94.6150	end	0
+SISS05DN-T1-GE3	271.7800	76.8350	middle	0
+STAT	270.0020	99.6950	end	0
+TP76	257.9635	75.3109	middle	0
+U61	264.1600	86.9950	middle	0

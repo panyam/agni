@@ -1,0 +1,10 @@
+# A candidate for agni lexicon --try on the tutorial gateway. It keeps the project's rail pattern,
+# switches the built-in control vocabulary off, and drops the house naming rule, since a candidate
+# replaces the whole convention.
+name: gateway
+lexicon:
+  net:
+    rail:
+      patterns: ["_[0-9]+V[0-9]$"]
+    control:
+      replace: true

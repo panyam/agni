@@ -1,0 +1,208 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// TestCheckStrapBandCLI (WS3-119) is the end-to-end proof that a declared strap band reaches the
+// rule through the YAML loader, into the compiled intent catalog, and against a real EDIF read whose
+// resistor values came from the ingestion value pass rather than a hand-built IR.
+//
+// BOOT_MODE0 and BOOT_MODE1 are both strapped HIGH, so the direction half is satisfied on both and
+// cannot fire. Only the VALUE separates them. So this tests the new half rather than the old one.
+func TestCheckStrapBandCLI(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strap.edn", "--intent-path", "testdata/intent/strap-band.yaml"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "BOOT_MODE0") {
+		t.Errorf("the 100R strap is below the declared 1k minimum and must be reported:\n%s", out)
+	}
+	// The finding has to be actionable. It names the resistor, its value as WRITTEN, and the bound
+	// it broke.
+	for _, want := range []string{"R1", "100R", "1k"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("finding is missing %q, which a reviewer needs to act on it:\n%s", want, out)
+		}
+	}
+	// The 10k strap is inside the same band and must not be reported.
+	if strings.Contains(out, "BOOT_MODE1") {
+		t.Errorf("the 10k strap is inside the declared band and must be silent:\n%s", out)
+	}
+}
+
+// TestCheckStrapUnreadableValueIsInconclusive reads the value through the real ingestion path, where
+// the unit test stamps a Quantity by hand. A declared band over "10kk" must say it went unchecked.
+func TestCheckStrapUnreadableValueIsInconclusive(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strap-unreadable.edn", "--intent-path", "testdata/intent/strap-band.yaml", "--verdicts"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"inconclusive", "BOOT_MODE0", "R1", `"10kk"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output is missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// TestCheckStrapImpossibleBandRejected checks that a band nothing can satisfy fails the LOAD rather
+// than producing a rule that runs and can never pass. Before this, the field was unknown to the
+// loader and silently dropped, so a declaration that looked enforced was not.
+func TestCheckStrapImpossibleBandRejected(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.yaml")
+	if err := os.WriteFile(path, []byte("name: bad\nintent:\n  nets:\n    B0: {strap: high, min_ohms: 100000, max_ohms: 1000}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := checkCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"testdata/intent/strap.edn", "--intent-path", path})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("an impossible band must fail the load, not run:\n%s", out.String())
+	}
+	if !strings.Contains(err.Error(), "a band nothing can satisfy") {
+		t.Errorf("error should say what is wrong with the declaration: %v", err)
+	}
+}
+
+// TestCheckStrapGroupCollisionCLI (WS3-120) is the end-to-end proof of the check that most needs to be
+// a rule rather than a reviewer. Both PHYs strap to address 1. Each group encodes exactly the value
+// its declaration states, so BOTH per-group rules pass. The only finding is that the two devices
+// collide on the shared bus, and no single schematic page shows that.
+func TestCheckStrapGroupCollisionCLI(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strapgroup.edn", "--intent-path", "testdata/intent/strapgroup-collision.yaml"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "strap-address-collision") {
+		t.Fatalf("two devices at address 1 on one bus must collide:\n%s", out)
+	}
+	for _, want := range []string{"U12", "U13", "address 1", "MDIO"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("finding missing %q, which a reviewer needs to act on it:\n%s", want, out)
+		}
+	}
+	// Each group encodes its own declared value, so neither per-group rule may fire. If one does, the
+	// collision above would be reporting a consequence of a mis-decode rather than a real clash.
+	if strings.Contains(out, "encodes") {
+		t.Errorf("both groups encode their declared value; no per-group finding expected:\n%s", out)
+	}
+}
+
+// TestCheckStrapGroupClearanceCLI is the end-to-end proof of the case that used to produce no output
+// at all (agni issue 391). It reads the same board, declared for a part whose address pins are
+// numbered the other way round. So both groups encode their declared value AND the two devices
+// answer to different addresses. Every rule passes. Until the collision rule stated a considered
+// set, that run was indistinguishable from a run where nobody declared a bus.
+//
+// It pairs with TestCheckStrapGroupCollisionCLI over the SAME design file, so the difference between
+// the two runs is the declaration and nothing else.
+func TestCheckStrapGroupClearanceCLI(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strapgroup.edn", "--intent-path", "testdata/intent/strapgroup-clear.yaml", "--verdicts"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	// The rule's own tally line, not a bare substring search. "U12", "MDIO" and "pass" all appear
+	// in other rules' rows on this design, so a looser assertion holds even when this rule emits
+	// nothing. This test exists to catch that failure.
+	if !strings.Contains(out, "intent/strap-address-collision  1 pass") {
+		t.Fatalf("the clean pair must be reported as a pass by this rule, and it is the case that used "+
+			"to produce no output at all:\n%s", out)
+	}
+	// Both decoded addresses, so a reviewer can check them against the datasheets without opening the
+	// schematic. Without them the pass asserts a clearance it does not evidence.
+	if !strings.Contains(out, "straps to 1 and U13 to 4") {
+		t.Errorf("the pass must carry both decoded addresses:\n%s", out)
+	}
+}
+
+// TestCheckStrapGroupUndecidableCLI widens the LSB resistor's declaration to a net that carries no
+// bias, so the group cannot be read. It must report inconclusive and drop OUT of collision
+// detection, rather than decoding the missing bit as 0 and accusing two parts that may be fine.
+func TestCheckStrapGroupUndecidableCLI(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "undecidable.yaml")
+	// PHY2AD0 is replaced by UNWIRED, which exists nowhere, so U13's group has an unreadable bit.
+	body := "name: undecidable\nintent:\n  strap_groups:\n" +
+		"    - {name: PHYAD U12, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 1, bus: MDIO}\n" +
+		"    - {name: PHYAD U13, device: U13, nets: [PHY2AD2, PHY2AD1, PHY2AD1], value: 1, bus: MDIO}\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strapgroup.edn", "--intent-path", path})
+	err := cmd.Execute()
+	// A net listed twice is an authoring error caught at load, before any design is read.
+	if err == nil {
+		t.Fatalf("one net used as two bits must fail the load:\n%s", buf.String())
+	}
+	if !strings.Contains(err.Error(), "twice") {
+		t.Errorf("error should say what is wrong with the declaration: %v", err)
+	}
+}
+
+// --intent-path travels on the request as a value. On a design that declares its own intent, it
+// replaces that declaration rather than compiling a second intent source. The model reads it too, so
+// a connector declared internal leaves the exposure rules (agni issue 831). The gateway's J1 carries
+// the CAN bus. esd-protection reports J1 until the declaration says J1 joins another board.
+func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
+	const gateway = "../../examples/tutorial-project/designs/gateway"
+	run := func(extra ...string) string {
+		t.Helper()
+		cmd := checkCmd()
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+		cmd.SetErr(&bytes.Buffer{})
+		cmd.SetArgs(append([]string{gateway, "--rule", "esd-protection"}, extra...))
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		return buf.String()
+	}
+	if out := run(); !strings.Contains(out, "CAN1_CANH") {
+		t.Fatalf("with no declaration J1 is exposed, so esd-protection should report CAN1_CANH:\n%s", out)
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "intent.yaml")
+	if err := os.WriteFile(path, []byte("name: carrier\nintent:\n  components:\n    J1: {exposure: internal}\n    J7: {exposure: internal}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// intent/exposure-declared exists only once a declaration names an exposure, so only this run asks
+	// for it; naming a rule the catalog lacks is refused (agni issue 1121).
+	out := run("--intent-path", path, "--rule", "intent/exposure-declared")
+	if strings.Contains(out, "CAN1_CANH") {
+		t.Errorf("J1 is declared internal, so esd-protection must not report the CAN bus:\n%s", out)
+	}
+	if !strings.Contains(out, "J7") {
+		t.Errorf("J7 is not on the board, so exposure-declared should report it:\n%s", out)
+	}
+}

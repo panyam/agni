@@ -1,0 +1,14 @@
+# Derived component members. Each file in stdlib/lib is one module, registered at the path its name
+# gives.
+
+# A part on exactly two nets, with the nets in name order (?a < ?b) so each part answers once. The
+# parts an in-circuit test measures across two nodes: resistors, capacitors, inductors, diodes.
+two_terminal(?r: component, ?a: net, ?b: net) :- component.net_count(?r, 2), component.net(?r, ?a), component.net(?r, ?b), ?a < ?b;
+
+# A two-terminal part with a test point on both of its nets, so it can be measured in circuit.
+probed_both(?r: component) :- two_terminal(?r, ?a, ?b), net.has_test_point(?a), net.has_test_point(?b);
+
+# A two-terminal part with a test point on exactly one of its nets, naming the probed net and then
+# the other, which is where a missing test point would go.
+probed_one(?r: component, ?probed: net, ?unprobed: net) :- two_terminal(?r, ?probed, ?unprobed), net.has_test_point(?probed), not net.has_test_point(?unprobed);
+probed_one(?r, ?probed, ?unprobed) :- two_terminal(?r, ?unprobed, ?probed), net.has_test_point(?probed), not net.has_test_point(?unprobed);

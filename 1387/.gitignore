@@ -1,0 +1,77 @@
+tmpfiles
+.DS_Store
+bin/
+.playwright-mcp/
+
+# Agent worktrees. They are real checkouts of this repo INSIDE this repo, so a tree-walking target
+# scans them: `make ir-model-check` from the main checkout reported every producer twice, once per
+# live worktree, and failed. Nothing under .claude/ is tracked today, so only the worktrees are
+# ignored rather than the whole directory, which leaves settings free to be committed later.
+.claude/worktrees/
+
+# Built example binaries (rebuilt by `make testall`; never commit them)
+examples/render-board/render-board
+examples/validate/validate
+
+# Built docsite binary (rebuilt by `make`/`go run`; never commit it)
+docsite/docsite
+
+# The datasheet-tooling python env `make setup` builds (docling and its dependency set, gigabytes
+# of it). VENV_DIR can point several checkouts at one shared env outside any of them.
+/.venv/
+
+# The default DATASHEET_DIR. Vendor datasheet PDFs are licensed material that must never land in a
+# public repo, and the pdf2doc targets write their doc-IR and PartSpec output beside the source PDF,
+# so the whole tree is ignored rather than just the PDFs.
+/datasheets/
+
+# `go build ./cmd/agni` from the repo root drops the CLI here. `make agni` writes to bin/ (ignored
+# above), but the bare go command is the one people type, so ignore its output too rather than
+# leaving a 25 MB binary one `git add .` away from a public repo.
+/agni
+
+# KiCad per-user project-local state, written as a side effect of the kicad reader tests
+# (`make testall` leaves them behind). Scoped to the reader's testdata rather than a blanket
+# *.kicad_prl, because two under cmd/agni/testdata/conformance/ ARE tracked deliberately: the
+# conformance fixtures carry them so a project read has the full sibling set.
+readers/kicad/testdata/*.kicad_prl
+
+# Same side effect, in the example fixture tree: kicad-cli writes a .kicad_prl beside any board
+# it opens, and the bundled demo boards get opened by example runs. Scoped to this tree for the
+# same reason as above, so the deliberately-tracked conformance ones stay visible.
+examples/common/designs/**/*.kicad_prl
+
+# Session handoff notes. Working documents for whoever picks the thread up next, deliberately
+# untracked: they carry ordering judgement and where-you-will-be-misled warnings, which go stale
+# fast and whose durable half belongs in DECISIONS.md, CLAUDE.md or an issue instead. Ignored rather
+# than merely untracked because this repo is PUBLIC and a root-level stray rides in on a directory
+# add, and a handoff is exactly the kind of note that reaches for a private path.
+HANDOFF.md
+HANDOFF_*.md
+
+# Board corpora fetched from https://github.com/panyam/agni-samples by hack/fetch_samples.sh, pinned
+# by hack/samples.pin. Not committed because these designs are not ours: each carries its own licence
+# (Apache-2.0, CERN-OHL-P), and this repo stays uniformly Apache-2.0. `make samples` puts them here.
+tools/samples/
+
+# Generated reports and views. `check`, `review`, `query` and `trace` write these, and on a real board
+# they carry net names, ref-des and the design's title, which is customer data this repo must never
+# hold (see CLAUDE.md, "What does not belong in this repo"). Ignored by SHAPE rather than by remembering
+# to clean up: one of these sat untracked in the root for a session before anyone noticed.
+/report.html
+/*.report.html
+/view.html
+/verdicts.csv
+
+
+# The Python client's own venv (`make python-venv`), its build output, and bytecode.
+/clients/python/.venv/
+/clients/python/build/
+/clients/python/src/*.egg-info/
+# What a release builds to attach or upload: the compose bundle (`make compose-release`) and the
+# Python client's sdist and wheel (`make python-dist`).
+/dist/
+__pycache__/
+
+# The pnpm workspace root's install (agni issue 744); each member keeps its own node_modules too.
+/node_modules/

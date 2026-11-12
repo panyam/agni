@@ -1,0 +1,13 @@
+#agni-run a29a07e13c2f91e1
+crystal-load-caps  1 fail, 1 pass
+    fail  Y1.2  no capacitor sits on terminal net XTAL_OUT, and U1's datasheet was not read, so
+                whether it integrates the load capacitance is unverified
+    pass  Y1.1  capacitor C1 sits on terminal net XTAL_IN
+
+2 verdicts across 1 rule(s), 1 pass, 1 fail
+#agni-step
+crystal-load-caps  2 pass
+    pass  Y1.1  capacitor C1 sits on terminal net XTAL_IN
+    pass  Y1.2  capacitor C2 sits on terminal net XTAL_OUT
+
+2 verdicts across 1 rule(s), 2 pass

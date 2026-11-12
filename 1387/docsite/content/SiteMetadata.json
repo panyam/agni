@@ -1,0 +1,26 @@
+{
+  "siteName": "Agni",
+  "siteDescription": "Check KiCad and EDIF schematics and boards for design mistakes, in the CLI or in your browser. One engine reads several EDA formats into one representation, then checks, diffs, queries, and renders them.",
+  "siteURL": "https://panyam.github.io",
+  "socialImage": "/static/images/social-preview.png",
+  "version": "0.1.0",
+  "author": "Sriram Panyam",
+  "repository": "https://github.com/panyam/agni",
+  "license": "Apache-2.0",
+  "theme": {
+    "primaryColor": "#991b1b",
+    "secondaryColor": "#57534e",
+    "accentColor": "#ea580c"
+  },
+  "features": {
+    "search": true,
+    "toc": true,
+    "syntaxHighlighting": true,
+    "darkMode": true
+  },
+  "contact": {
+    "github": "https://github.com/panyam/agni",
+    "issues": "https://github.com/panyam/agni/issues"
+  },
+  "issues": "https://github.com/panyam/agni/issues"
+}

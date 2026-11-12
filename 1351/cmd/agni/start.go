@@ -1,0 +1,398 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/readers/formats"
+)
+
+// startCmd scaffolds a project around an existing design file.
+//
+// It is a CLI-side scaffolder and NOT a service rpc, because ProjectService is read-only (C23's
+// declared-identity case, docsite/content/architecture/projects-and-designs.md#read-only-on-purpose).
+// The operator names the folder on the command line, so writing descriptors into it raises no
+// ownership, concurrency or provenance questions. A server mutating a mount would raise all three.
+func startCmd() *cobra.Command {
+	var name, title string
+	c := &cobra.Command{
+		Use:   "start <design-file> [dir]",
+		Short: "Scaffold a review project around an existing design file",
+		Long: "Create a project from one design file, so every other command can stop taking flags. It " +
+			"writes a project.yaml carrying a conventions stub and a review checklist seeded from the " +
+			"shipped rule catalog, and a design.yaml naming the design and any companion views of it, " +
+			"then copies the design and its companions in. After it, `agni check <dir>` and `agni review <dir>` " +
+			"resolve the project's config with no flags at all.\n\n" +
+			"[dir] defaults to the current directory. Pointing it at a folder that already holds a " +
+			"project.yaml ADDS the design to that project instead of creating a second one. Nothing is " +
+			"overwritten: an existing file stops the command and is named.",
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			design := args[0]
+			dir := "."
+			if len(args) == 2 {
+				dir = args[1]
+			}
+			return runStart(cmd.OutOrStdout(), design, dir, name, title)
+		},
+	}
+	c.Flags().StringVar(&name, "name", "", "the project's declared id; defaults to the target directory's name (lowercased, with anything outside [a-z0-9._-] replaced by -)")
+	c.Flags().StringVar(&title, "title", "", "the project's human-readable label; defaults to the id")
+	return c
+}
+
+// idUnsafe matches every run of characters an AIP resource id may not carry. The id becomes a path
+// segment in "projects/{p}/designs/{d}"; see projects.WriteProject.
+var idUnsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
+
+// deriveID turns a folder or file name into a legal resource id, or "" when nothing usable survives.
+//
+// It sanitizes rather than rejecting. The common case is a folder named "Sample Board", and failing
+// on it would send an operator to --name to type almost the same string back. The result is printed,
+// so the rename is visible.
+func deriveID(s string) string {
+	id := idUnsafe.ReplaceAllString(strings.ToLower(s), "-")
+	id = strings.Trim(id, "-._")
+	if id == "" || !('a' <= id[0] && id[0] <= 'z' || '0' <= id[0] && id[0] <= '9') {
+		return ""
+	}
+	return id
+}
+
+// companionsOf returns the sibling files that are VIEWS of the named design: same stem, different
+// extension, and carrying geometry or a board.
+//
+// Same stem keeps a later revision out. `gateway-rev-b.edn` beside `gateway.edn` is an analysis
+// source of its own, and declaring it a companion would turn a diff of two revisions into a diff of
+// one against itself (docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views).
+//
+// Requiring geometry or a board keeps a second ENCODING out, since a `.edf` beside a `.edn` is another
+// netlist and not a view. The test asks the format registry rather than a list of extensions, so a
+// reader added later is classified by what it can do.
+func companionsOf(designPath string) ([]string, error) {
+	dir := filepath.Dir(designPath)
+	base := filepath.Base(designPath)
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, e := range ents {
+		if e.IsDir() || e.Name() == base {
+			continue
+		}
+		n := e.Name()
+		if strings.TrimSuffix(n, filepath.Ext(n)) != stem {
+			continue
+		}
+		if formats.HasFaithful(n) || formats.HasBoard(n) {
+			out = append(out, n)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// runStart does the work, taking every input explicitly so it is testable without a cobra command.
+func runStart(w io.Writer, designPath, dir, name, title string) error {
+	if !formats.HasNetlist(designPath) {
+		return fmt.Errorf("%s carries no netlist, so it cannot be a design's entry (netlist formats: %s)",
+			designPath, strings.Join(formats.NetlistExts(), ", "))
+	}
+	if _, err := os.Stat(designPath); err != nil {
+		return err
+	}
+	root, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	companions, err := companionsOf(designPath)
+	if err != nil {
+		return err
+	}
+
+	base := filepath.Base(designPath)
+	designID := deriveID(strings.TrimSuffix(base, filepath.Ext(base)))
+	if designID == "" {
+		return fmt.Errorf("cannot derive a design id from %q; rename the file to start with a letter or digit", base)
+	}
+
+	// An existing project.yaml means ADD a design rather than create a second project. Scaffolding a
+	// nested project would give one tree two config scopes, and the design would resolve to whichever
+	// the store walked into first.
+	existing, adopted := existingProjectID(root)
+	projectID := name
+	if projectID == "" {
+		projectID = existing
+	}
+	if projectID == "" {
+		projectID = deriveID(filepath.Base(root))
+	}
+	if projectID == "" {
+		return fmt.Errorf("cannot derive a project id from %q; pass --name", root)
+	}
+	if adopted && name != "" && name != existing {
+		return fmt.Errorf("%s already declares the project %q; --name %q would rename it, which this command will not do",
+			filepath.Join(root, projects.ProjectDescriptor), existing, name)
+	}
+	if title == "" {
+		title = projectID
+	}
+
+	designDir := filepath.Join(root, "designs", designID)
+	// Every write is checked BEFORE any write happens, so a refusal leaves nothing half-created.
+	planned := []string{filepath.Join(designDir, projects.DesignDescriptor), filepath.Join(designDir, base)}
+	for _, c := range companions {
+		planned = append(planned, filepath.Join(designDir, c))
+	}
+	if !adopted {
+		planned = append(planned, filepath.Join(root, projects.ProjectDescriptor))
+	}
+	for _, p := range planned {
+		if _, err := os.Stat(p); err == nil {
+			rel, _ := filepath.Rel(root, p)
+			return fmt.Errorf("%s already exists; agni start will not overwrite it", rel)
+		}
+	}
+
+	if err := os.MkdirAll(designDir, 0o755); err != nil { // #nosec G301 -- a project the user creates, in their own tree
+		return err
+	}
+	if !adopted {
+		body, err := projectDescriptor(projectID, title)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(root, projects.ProjectDescriptor), body, 0o644); err != nil { // #nosec G306 -- a project the user creates, in their own tree
+			return err
+		}
+	}
+
+	// Copy before writing the descriptor, so a descriptor never names a file that is not there yet.
+	origin, _ := filepath.Abs(designPath)
+	if err := copyFile(designPath, filepath.Join(designDir, base)); err != nil {
+		return err
+	}
+	srcDir := filepath.Dir(designPath)
+	for _, c := range companions {
+		if err := copyFile(filepath.Join(srcDir, c), filepath.Join(designDir, c)); err != nil {
+			return err
+		}
+	}
+	if err := writeDescriptorFile(filepath.Join(designDir, projects.DesignDescriptor), func(f io.Writer) error {
+		// The design names its project, since a design is never found under one by where it sits.
+		parent := "../../" + projects.ProjectDescriptor
+		return projects.WriteDesign(f, designHeader(origin), designID, designID, base, companions, projects.Sources{Extends: parent})
+	}); err != nil {
+		return err
+	}
+
+	report(w, root, projectID, designID, base, companions, adopted)
+	return nil
+}
+
+// existingProjectID returns the id declared by a project.yaml at root, and whether there was one.
+func existingProjectID(root string) (string, bool) {
+	f, err := os.Open(filepath.Join(root, projects.ProjectDescriptor)) // #nosec G304 -- reads or writes inside the project the user is creating
+	if err != nil {
+		return "", false
+	}
+	defer f.Close()
+	id, _, _, err := projects.ParseProject(f)
+	if err != nil {
+		return "", false
+	}
+	return id, true
+}
+
+func writeDescriptorFile(path string, emit func(io.Writer) error) error {
+	f, err := os.Create(path) // #nosec G304 -- reads or writes inside the project the user is creating
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return emit(f)
+}
+
+// projectDescriptor renders the scaffolded project.yaml. It starts with the descriptor that
+// WriteProject writes, then adds the conventions stub and the seeded checklist as its two sections.
+// It parses the result before returning it. A scaffold that would not load then fails here rather
+// than on the first command run against the new project.
+func projectDescriptor(projectID, title string) ([]byte, error) {
+	var b bytes.Buffer
+	if err := projects.WriteProject(&b, projectHeader, projectID, title, projects.Sources{}); err != nil {
+		return nil, err
+	}
+	b.WriteString("\n" + indentYAML(conventionsStub(projectID), "conventions:", "  "))
+	b.WriteString("\n# Checklists are named, and the first is the one `agni review` runs when none is named.\n")
+	b.WriteString("checklists:\n" + indentYAML(seededChecklist(title), "  review:", "    "))
+	if _, _, _, err := projects.ParseProject(bytes.NewReader(b.Bytes())); err != nil {
+		return nil, fmt.Errorf("scaffolded %s does not parse: %w", projects.ProjectDescriptor, err)
+	}
+	return b.Bytes(), nil
+}
+
+// indentYAML places a YAML document under key, indenting its body by pad. The document's leading
+// comment block goes above the key at the key's own indent, so it reads as the section's heading.
+func indentYAML(doc, key, pad string) string {
+	lines := strings.Split(strings.TrimRight(doc, "\n"), "\n")
+	keyIndent := key[:len(key)-len(strings.TrimLeft(key, " "))]
+	var b strings.Builder
+	i := 0
+	for ; i < len(lines) && strings.HasPrefix(lines[i], "#"); i++ {
+		b.WriteString(keyIndent + lines[i] + "\n")
+	}
+	b.WriteString(key + "\n")
+	for _, l := range lines[i:] {
+		if strings.TrimSpace(l) == "" {
+			b.WriteString("\n")
+			continue
+		}
+		b.WriteString(pad + l + "\n")
+	}
+	return b.String()
+}
+
+func copyFile(src, dst string) error {
+	b, err := os.ReadFile(src) // #nosec G304 -- reads or writes inside the project the user is creating
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, b, 0o644) // #nosec G306 G703 -- a project the user creates, in their own tree
+}
+
+// report tells the operator what was created and what was COPIED from where. The copy can surprise
+// someone later. From here on the project owns its copy, so editing the original leaves the project
+// checking a stale file, and nothing says so.
+func report(w io.Writer, root, projectID, designID, entry string, companions []string, adopted bool) {
+	rel := func(p ...string) string {
+		return filepath.Join(append([]string{filepath.Base(root)}, p...)...)
+	}
+	if adopted {
+		fmt.Fprintf(w, "Added design %q to the existing project %q.\n\n", designID, projectID)
+	} else {
+		fmt.Fprintf(w, "Created project %q.\n\n", projectID)
+		fmt.Fprintf(w, "  %s   (your team's naming vocabulary, and a review checklist seeded from the shipped catalog; edit both)\n", rel(projects.ProjectDescriptor))
+	}
+	fmt.Fprintf(w, "  %s\n", rel("designs", designID, projects.DesignDescriptor))
+	fmt.Fprintf(w, "  %s   (copied)\n", rel("designs", designID, entry))
+	for _, c := range companions {
+		fmt.Fprintf(w, "  %s   (copied, declared as a companion view)\n", rel("designs", designID, c))
+	}
+	fmt.Fprintf(w, "\nThe project owns these copies. Edits to the original files do not reach it.\n")
+	fmt.Fprintf(w, "\nNext:\n  agni check %s\n  agni review %s\n",
+		filepath.Join(filepath.Base(root), "designs", designID),
+		filepath.Join(filepath.Base(root), "designs", designID))
+}
+
+const projectHeader = `Generated by ` + "`agni start`" + `. Edit freely.
+
+What makes this folder a project is this file: a declared name, and the fact that the config in it
+and beside it belongs to every design under designs/ rather than to any one of them.
+
+The conventions and checklists are sections below. The directories beside this file are found by
+their conventional names (profiles/, params/, symbols/, lib/), so none of them is declared here.
+Declare one only to depart from that, or as "" to opt out. Config shared with another project lives
+in a project of its own, which this one names with extends.`
+
+// designHeader records where the copied files came from. It is a COMMENT because Design has no
+// provenance field, and adding one for a scaffolder's note would be a schema change.
+func designHeader(origin string) string {
+	return `Generated by ` + "`agni start`" + ` from ` + origin + `.
+
+entry names the file ANALYSIS reads. companions are views of that same design — a schematic to
+draw it, a board to locate findings on — never a second source of components to reconcile
+against the entry.
+
+Companions are listed file by file on purpose. A later revision of the entry sits in the same
+folder and is a legitimate analysis source of its own, so anything inferred from "everything
+beside the entry" would turn a diff of two revisions into a diff of one against itself.`
+}
+
+// conventionsStub returns a VALID naming config rather than an empty file. A config tier that fails
+// to load is an error (osProjectConfig), so a stub that did not parse would fail every command on the
+// scaffolded project.
+func conventionsStub(projectID string) string {
+	return `# Your team's naming vocabulary, composed into every run on this project. It carries two halves,
+# wired differently.
+#
+#   lexicon: teaches the engine which net names are this project's rails, grounds and supply pins.
+#            It reaches the design READ, so every rule sees the roles it implies.
+#   rules:   adds catalog rules, namespaced ` + projectID + `/<rule name>.
+#
+# Both are optional. As written this declares a name and nothing else, which changes nothing.
+name: ` + projectID + `
+#
+# lexicon:
+#   net:
+#     rail:
+#       patterns: ["_[0-9]V[0-9]$"]
+#   pin:
+#     supply:
+#       patterns: ["^PWRIN"]
+#
+# rules:
+#   - name: signal-net-naming
+#     severity: warning
+#     why: "signal nets are UPPER_SNAKE"
+#     allow: ["^[A-Z][A-Z0-9_]*$"]
+`
+}
+
+// checklistAreas gives the seeded checklist one area per rule CATEGORY in the shipped catalog, so a
+// first run answers something real rather than reporting an empty checklist.
+//
+// Items bind by tag rather than by rule, so they still work as the catalog grows. A rule added to a
+// category later joins the item that already covers it. An item naming one rule would silently
+// remain as narrow as the day it was written.
+var checklistAreas = []struct {
+	category, area, title string
+}{
+	{"power", "Power", "the power tree holds up under the shipped power rules"},
+	{"connectivity", "Connectivity", "nothing is left unconnected or wrongly driven"},
+	{"integrity", "Signal integrity", "signals are terminated and referenced"},
+	{"datasheet", "Part limits", "no part is operated outside its datasheet limits"},
+	{"board", "Board", "the layout meets the fabrication floor"},
+	{"naming", "House style", "names follow this project's conventions"},
+}
+
+// seededChecklist renders the starter manifest, keeping only the categories the running catalog
+// actually has. Emitting an item for a category with no rules would score not-automated forever and
+// teach a new reader that the outcome means something is broken.
+func seededChecklist(title string) string {
+	have := map[string]bool{}
+	for _, r := range check.DefaultCatalog().Rules() {
+		have[r.Tags["category"]] = true
+	}
+	var b strings.Builder
+	b.WriteString("# Generated by `agni start`, seeded from the shipped rule catalog. Edit freely.\n")
+	b.WriteString("#\n")
+	b.WriteString("# This is your team's review checklist: the questions you ask of every board, bound to\n")
+	b.WriteString("# the rules that can answer them. Items nothing can answer still belong here — give them\n")
+	b.WriteString("# a `note:` and they stay visible as work for a human instead of falling off the list.\n")
+	fmt.Fprintf(&b, "name: %s review\nareas:\n", title)
+	n := 0
+	for _, a := range checklistAreas {
+		if !have[a.category] {
+			continue
+		}
+		n++
+		fmt.Fprintf(&b, "  - name: %s\n    items:\n", a.area)
+		fmt.Fprintf(&b, "      - {id: %q, title: %s, tag: \"category=%s\"}\n", fmt.Sprintf("%s%d", strings.ToUpper(a.category[:1]), n), a.title, a.category)
+	}
+	b.WriteString("  - name: Manual\n    items:\n")
+	b.WriteString("      - {id: \"M1\", title: the assembly drawing lists a torque spec for every fastener,\n")
+	b.WriteString("         note: manual review against the mechanical drawing package}\n")
+	return b.String()
+}

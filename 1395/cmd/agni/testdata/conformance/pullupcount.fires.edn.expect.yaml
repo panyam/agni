@@ -1,0 +1,13 @@
+# agni issue 516: the two count rules, one bus each.
+#
+# SDA is pulled to VCC by both R1 and R2, which is the doubled case. SCL is pulled to VCC by R3 and
+# to VDDIO by R4, which is the split-rail case. Neither bus is missing a pull-up, so i2c-pull-up is
+# silent here and the two conditions do not overlap: each net is named once, by the rule whose remedy
+# applies to it.
+fires:
+  i2c-redundant-pull-up:
+    subjects: ["SDA"]
+    why: "two resistors to one rail; the parallel pair is an effective half of either"
+  i2c-pull-up-split-rail:
+    subjects: ["SCL"]
+    why: "R3 to VCC and R4 to VDDIO tie the two supplies together through the bus"

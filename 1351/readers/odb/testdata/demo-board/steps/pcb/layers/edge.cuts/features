@@ -1,0 +1,22 @@
+UNITS=MM
+#
+#Num Features
+#
+F 1
+
+#
+#Feature symbol names
+#
+$0 rect25000.0x20000.0
+
+#
+#Feature attribute names
+#
+
+#
+#Feature attribute text strings
+#
+#
+#Layer features
+#
+P 17.50 -15.0 0 P 0 8 0.0 

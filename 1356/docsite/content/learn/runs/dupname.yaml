@@ -1,0 +1,5 @@
+# Chapter 2: the mirror of the above. One name stated by two nets that are not connected.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check --rule duplicate-net-name cmd/agni/testdata/conformance/dupname.fires.edn

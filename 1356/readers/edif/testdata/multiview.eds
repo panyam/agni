@@ -1,0 +1,34 @@
+
+(edif MV
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Conns
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &conn "Conn")
+      (cellType GENERIC)
+      (view (rename &va "Bank A")
+        (viewType SCHEMATIC)
+        (interface (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 100 100)))
+          (figure BOX (rectangle (pt 0 0) (pt 100 100)))))
+      (view (rename &vb "Bank B")
+        (viewType SCHEMATIC)
+        (interface (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 200 50)))
+          (figure BOX (rectangle (pt 0 0) (pt 200 50)))
+          (figure ARC (openShape (curve (arc (pt 0 0) (pt 5 5) (pt 10 0)))))))))
+  (design D
+    (cellRef Top (libraryRef Conns))
+    (contents
+      (page (rename P1 "S1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 1000)))
+        (instance (rename &ia "$ia")
+          (viewRef &va (cellRef (name &conn) (libraryRef Conns)))
+          (transform (origin (pt 10 10)))
+          (designator (stringDisplay "PA")))
+        (instance (rename &ib "$ib")
+          (viewRef &vb (cellRef (name &conn) (libraryRef Conns)))
+          (transform (origin (pt 500 10)))
+          (designator (stringDisplay "PB")))))))

@@ -1,0 +1,110 @@
+package query
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// patternDesign has net names whose ROLE suffix (_H) is shared across buses, and whose identity is
+// the prefix. Affix matching cannot discriminate this naming (WS3-057).
+func patternDesign() check.Model {
+	return check.NewModel(&ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "d"}}},
+		Nets: []*ir.Net{
+			{Name: "ETH_SW1_P1_A_H", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "d"}},
+			{Name: "ETH_SW2_P4_A_H", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}}, Prov: &ir.Provenance{SourceFile: "d"}},
+			{Name: "CAN_00_H", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}}, Prov: &ir.Provenance{SourceFile: "d"}},
+			{Name: "/amp1/DATA0", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "4"}}, Prov: &ir.Provenance{SourceFile: "d"}},
+		},
+	})
+}
+
+func matched(t *testing.T, m check.Model, text string) []string {
+	t.Helper()
+	var out []string
+	for _, r := range runQuery(t, m, text) {
+		out = append(out, r.Bind["n"].S)
+	}
+	return out
+}
+
+// TestGlobPredicate pins that glob matches the WHOLE name, with * as any run and ? as one
+// character. Whole-name matching tells an ETH_ bus from a CAN_ bus that shares the bare _H suffix.
+func TestGlobPredicate(t *testing.T) {
+	m := patternDesign()
+	cases := map[string][]string{
+		`net.pin_count(?n,?c), str.glob(?n,"ETH_SW*_H") => ?n`:      {"ETH_SW1_P1_A_H", "ETH_SW2_P4_A_H"},
+		`net.pin_count(?n,?c), str.glob(?n,"CAN_*_H") => ?n`:        {"CAN_00_H"},
+		`net.pin_count(?n,?c), str.glob(?n,"ETH_SW?_P1_A_H") => ?n`: {"ETH_SW1_P1_A_H"},
+		// Whole-string, so a bare role fragment matches nothing without wildcards on both sides.
+		`net.pin_count(?n,?c), str.glob(?n,"_H") => ?n`: nil,
+	}
+	for text, want := range cases {
+		got := matched(t, m, text)
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("%s => %v, want %v", text, got, want)
+		}
+	}
+}
+
+// TestGlobStarCrossesSlash pins why glob is translated to a regexp rather than deferring to
+// path.Match. path.Match's * stops at "/". A hierarchical net name, such as a sub-sheet local,
+// contains one. So path.Match would silently miss exactly the names of a multi-instance bus.
+func TestGlobStarCrossesSlash(t *testing.T) {
+	if got := matched(t, patternDesign(), `net.pin_count(?n,?c), str.glob(?n,"*DATA0") => ?n`); len(got) != 1 || got[0] != "/amp1/DATA0" {
+		t.Errorf(`str.glob("*DATA0") => %v, want the hierarchical net /amp1/DATA0`, got)
+	}
+}
+
+// TestMatchPredicate pins that match is an UNANCHORED RE2 search, so a caller who means the whole
+// name anchors it. Both readings are exercised so the semantics are pinned, not incidental. Datalog
+// string literals are verbatim (the parser processes no escapes), so a regex backslash is written
+// singly.
+func TestMatchPredicate(t *testing.T) {
+	m := patternDesign()
+	if got := matched(t, m, `net.pin_count(?n,?c), str.match(?n,"^ETH_SW\d+_P\d+_._H$") => ?n`); len(got) != 2 {
+		t.Errorf("anchored regex => %v, want both ETH ports", got)
+	}
+	if got := matched(t, m, `net.pin_count(?n,?c), str.match(?n,"_H$") => ?n`); len(got) != 3 {
+		t.Errorf("unanchored regex => %v, want every _H net including CAN's", got)
+	}
+	if got := matched(t, m, `net.pin_count(?n,?c), not str.match(?n,"^ETH_") => ?n`); len(got) != 2 {
+		t.Errorf("negated regex => %v, want the two non-ETH nets", got)
+	}
+}
+
+// TestPatternPredicateErrors pins that a malformed regex is an EVAL ERROR, not a silent non-match.
+// On a completeness check, a bad pattern that quietly matched nothing would read as "the design is
+// clean". Unbound and wrong-arity forms fail like every other filter.
+func TestPatternPredicateErrors(t *testing.T) {
+	m := patternDesign()
+	for _, text := range []string{
+		`net.pin_count(?n,?c), str.match(?n,"^ETH_(SW") => ?n`, // will not compile
+		`str.match(?x,"^ETH_") => ?x`,                          // unbound, and a filter cannot enumerate
+		`net.pin_count(?n,?c), str.glob(?n) => ?n`,             // wrong arity
+	} {
+		if _, err := (Naive{}).Eval(context.Background(), mustParse(t, text), NewBase(m)); err == nil {
+			t.Errorf("%s: want an error, got nil", text)
+		}
+	}
+}
+
+// TestCompileGlobTranslation pins the glob grammar itself, where * and ? are the only
+// metacharacters and every other character is literal, so a regex metacharacter in a net name
+// cannot leak through as one.
+func TestCompileGlobTranslation(t *testing.T) {
+	re, err := CompileGlob("A+B*C?D")
+	if err != nil {
+		t.Fatalf("CompileGlob: %v", err)
+	}
+	if !re.MatchString("A+BxyzCqD") {
+		t.Error(`"A+B*C?D" should match "A+BxyzCqD" (+ literal, * any run, ? one char)`)
+	}
+	if re.MatchString("AABxyzCqD") {
+		t.Error("the + must be a literal, not a regex quantifier")
+	}
+}

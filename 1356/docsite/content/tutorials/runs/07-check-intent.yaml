@@ -1,0 +1,9 @@
+# Rung 7: the same with the intent section, as the project ships.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check designs/jetson
+script: |
+  agni check designs/jetson 2>/dev/null | sed -n '/^findings by rule/,/^$/p'
+  agni check designs/jetson 2>/dev/null | tail -2

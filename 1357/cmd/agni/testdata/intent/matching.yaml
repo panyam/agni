@@ -1,0 +1,12 @@
+# A declaration sample.edn satisfies: two ics are present (count: 2 matches exactly) and 3V3 sits at its
+# declared 3.3V nominal.
+name: Sample intent (matching scaffold)
+intent:
+  modules:
+  - {name: MCU, class: ic, count: 2}
+  - name: power tree
+    nets: [3V3, 5V0]
+  nets:
+    3V3: {nominal: 3.3, domain: io_3v3}
+    5V0:
+      protect: [discharge]

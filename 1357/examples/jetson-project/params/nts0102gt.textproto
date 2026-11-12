@@ -1,0 +1,76 @@
+# The NTS0102 two-bit level translator, transcribed by hand from NXP's datasheet. Four of them sit
+# between the module's 1.8 V I/O and the board's 3.3 V and 5 V peripherals, and one has its B side on
+# +5V, which is what makes its limits worth seeding.
+#
+# The part has two supplies, VCC(A) and VCC(B), with one absolute maximum and DIFFERENT recommended
+# ranges, so each row is bound to its supply pin and the per-pin rules judge each pin against its own
+# range (agni issue 1160). The pins are declared under the names the datasheet's tables print; a
+# symbol library writing VCC_{A} matches them, since a pin name is compared with its subscript folded.
+# No package pinout is transcribed, so the pins carry names and no numbers, which the name channel
+# resolves on its own.
+mpn: "NTS0102GT"
+manufacturer: "NXP Semiconductors"
+
+pins {
+  id: "vcca"
+  name: "VCC(A)"
+  function: PIN_FUNCTION_POWER_INPUT
+  prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "vccb"
+  name: "VCC(B)"
+  function: PIN_FUNCTION_POWER_INPUT
+  prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+docs {
+  id: "nts0102-rev-4"
+  title: "NTS0102 Dual supply translating transceiver; open drain; auto direction sensing, Rev. 4, 23 January 2013"
+  vendor: "NXP Semiconductors"
+}
+
+parameters {
+  name: "Supply voltage A, VCC(A)"
+  symbol: "VCC(A)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 6.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vcca"
+  prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage B, VCC(B)"
+  symbol: "VCC(B)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 6.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vccb"
+  prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage A, VCC(A)"
+  symbol: "VCC(A)"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 1.65 max: 3.6 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vcca"
+  prov { doc_ref: "nts0102-rev-4" page: 6 table_or_figure: "Table 6. Recommended operating conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage B, VCC(B)"
+  symbol: "VCC(B)"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 2.3 max: 5.5 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vccb"
+  prov { doc_ref: "nts0102-rev-4" page: 6 table_or_figure: "Table 6. Recommended operating conditions" method: "hand" confidence: 1 }
+}

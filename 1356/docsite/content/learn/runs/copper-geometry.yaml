@@ -1,0 +1,7 @@
+# Chapter 12: three geometry rules on one purpose-built board. Each names a FABRICATION floor rather
+# than a physical law or a datasheet, and copper-clearance carries a coordinate, because "too close"
+# is not actionable without knowing where.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check --verdicts --rule copper-clearance --rule annular-width --rule track-width cmd/agni/testdata/conformance/drc.fires.kicad_pcb

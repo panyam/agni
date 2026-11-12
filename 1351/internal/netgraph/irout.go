@@ -1,0 +1,211 @@
+package netgraph
+
+import (
+	"strconv"
+	"strings"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// Net fact attributes are ir.Net.attributes keys that this file emits and resolves. The check layer
+// reads them as FACTS. They live in the open attributes map rather than in typed Net fields,
+// because C9 admits a typed field only once a second format populates it (WS3-004 designs the typed
+// fact base). The constants keep producers and consumers typo-safe without closing the schema.
+const (
+	// AttrPowerDriven marks a net asserted as fed (a PWR_FLAG or equivalent directive).
+	AttrPowerDriven = "power_driven"
+	// AttrNoConnect marks a net where a pin carries a no-connect flag. The flag is the designer's
+	// own statement that the open pin is deliberate (see Net.NoConnect).
+	AttrNoConnect = "no_connect"
+	// AttrExternal marks a net that continues into something the read did NOT cover, a by-name
+	// connection (global label, power symbol) whose other ends may live in unread files. It is
+	// about READ SCOPE, not sheet membership, so a net spanning ten sheets of a completely-read
+	// design carries no marking.
+	AttrExternal = "external"
+	// AttrGlobal marks a named rail on a completely-read design (AttrExternal, resolved).
+	AttrGlobal = "global"
+	// AttrAliases carries every distinct label a net arrived with, when there is more than one,
+	// as "rank:name" entries joined by the US separator (names contain commas and slashes, and
+	// \x1f does not occur in EDA names). Rank is the label's Anchor.Rank, which for KiCad is 0
+	// for design-wide (global label, power rail) and 1 for sheet-scoped. The naming pass
+	// collapses aliases to one Net.Name, and the conflict rules read this to see what was
+	// collapsed, such as duplicate labels and rival rail taps. Parse with ParseAliases.
+	AttrAliases = "aliases"
+	// AttrSheets lists the sheet instance ids a net touches, in sheet order, joined by the US
+	// separator (a KiCad Sheetname may contain a comma). The solver stamps no other membership
+	// fact (WS9-028). It stamps this one because a wireless single-pin net on a sub-sheet has no
+	// wire geometry to join, so the finding-panel sheet badge has no other source. Only a
+	// multi-sheet read populates it, from the hierarchy walk's sheet bands. Parse with
+	// ParseSheets.
+	AttrSheets = "sheets"
+	// AttrSheetGroups splits a net's aliases by where they met (Net.SheetGroups). The RS byte joins
+	// the groups. Each group is its sheet followed by its names, joined by the US byte. It is
+	// stamped only on a net whose names fall into two groups or more. Its absence means every alias
+	// met in one place, and a reader solving one sheet always produces that. Parse with
+	// ParseSheetGroups.
+	AttrSheetGroups = "sheet_groups"
+)
+
+// aliasSep separates AttrAliases entries; aliasRankSep splits rank from name (first cut
+// only: names may contain colons). sheetSep separates AttrSheets entries (same US byte).
+const (
+	aliasSep     = "\x1f"
+	aliasRankSep = ":"
+	sheetSep     = "\x1f"
+)
+
+// ParseSheets decodes an AttrSheets value into its ordered sheet ids. Empty or absent decodes
+// to nil, as for any single-sheet or non-hierarchical read.
+func ParseSheets(v string) []string {
+	if v == "" {
+		return nil
+	}
+	return strings.Split(v, sheetSep)
+}
+
+// EncodeSheets joins sheet ids into an AttrSheets value, empty for none (the caller then stamps
+// nothing). The hierarchy reader uses it so it writes the encoding ParseSheets reads.
+func EncodeSheets(ids []string) string {
+	return strings.Join(ids, sheetSep)
+}
+
+// groupSep separates AttrSheetGroups groups; the names inside one group use aliasSep.
+const groupSep = "\x1e"
+
+// ParseSheetGroups decodes an AttrSheetGroups value into its groups. Empty or absent decodes to
+// nil, meaning the net's aliases all met in one place.
+func ParseSheetGroups(v string) []SheetGroup {
+	if v == "" {
+		return nil
+	}
+	var out []SheetGroup
+	for _, g := range strings.Split(v, groupSep) {
+		parts := strings.Split(g, aliasSep)
+		out = append(out, SheetGroup{Sheet: parts[0], Names: parts[1:]})
+	}
+	return out
+}
+
+func encodeSheetGroups(gs []SheetGroup) string {
+	parts := make([]string, len(gs))
+	for i, g := range gs {
+		parts[i] = strings.Join(append([]string{g.Sheet}, g.Names...), aliasSep)
+	}
+	return strings.Join(parts, groupSep)
+}
+
+// ParseAliases decodes an AttrAliases value back into the solver's alias list. Empty or
+// absent values decode to nil (single-named nets carry no attribute).
+func ParseAliases(v string) []Alias {
+	if v == "" {
+		return nil
+	}
+	var out []Alias
+	for _, e := range strings.Split(v, aliasSep) {
+		rank, name, ok := strings.Cut(e, aliasRankSep)
+		if !ok {
+			continue
+		}
+		r, err := strconv.Atoi(rank)
+		if err != nil {
+			continue
+		}
+		out = append(out, Alias{Name: name, Rank: r})
+	}
+	return out
+}
+
+func encodeAliases(as []Alias) string {
+	parts := make([]string, len(as))
+	for i, a := range as {
+		parts[i] = strconv.Itoa(a.Rank) + aliasRankSep + a.Name
+	}
+	return strings.Join(parts, aliasSep)
+}
+
+// StampNetIDs fills ir.Net.id (WS9) for every net that lacks one, hashing its connection set the
+// same way the solver does (hashPairs). A reader that builds ir.Net directly, as EDIF does, gets
+// the same per-instance identity a netgraph-based reader gets from IRNets. It is idempotent and
+// leaves a set id alone. A pinless net keeps its empty id.
+func StampNetIDs(d *ir.Design) {
+	for _, n := range d.GetNets() {
+		if n.GetId() != "" {
+			continue
+		}
+		pairs := make([][2]string, 0, len(n.GetConnections()))
+		for _, c := range n.GetConnections() {
+			pairs = append(pairs, [2]string{c.GetComponentRef(), c.GetPinRef()})
+		}
+		n.Id = hashPairs(pairs)
+	}
+}
+
+// IRNets maps assembled nets onto the IR wire form, the one place a solver Net becomes an ir.Net.
+// Driven, External and multiple Aliases surface as the power_driven, external and aliases
+// attributes the check rules read, and a net with none of them carries no attributes. Nets with no
+// connections are kept, since a labeled wire whose pins did not resolve still names a net. A reader
+// whose source tool omits pinless nets filters before calling.
+func IRNets(nets []Net, src string) []*ir.Net {
+	var out []*ir.Net
+	for _, n := range nets {
+		net := &ir.Net{Name: n.Name, Id: n.ID, Prov: &ir.Provenance{SourceFile: src}}
+		if n.Driven || n.External || n.NoConnect || len(n.Aliases) > 1 || len(n.SheetGroups) > 1 {
+			net.Attributes = map[string]string{}
+			if n.Driven {
+				net.Attributes[AttrPowerDriven] = "true"
+			}
+			if n.NoConnect {
+				net.Attributes[AttrNoConnect] = "true"
+			}
+			if n.External {
+				net.Attributes[AttrExternal] = "true"
+			}
+			if len(n.Aliases) > 1 {
+				net.Attributes[AttrAliases] = encodeAliases(n.Aliases)
+			}
+			if len(n.SheetGroups) > 1 {
+				net.Attributes[AttrSheetGroups] = encodeSheetGroups(n.SheetGroups)
+			}
+		}
+		for _, c := range n.Conns {
+			conn := &ir.Connection{ComponentRef: c.Comp, PinRef: c.Pin}
+			if c.Dir != "" {
+				conn.Attributes = map[string]string{"direction": c.Dir}
+			}
+			net.Connections = append(net.Connections, conn)
+		}
+		out = append(out, net)
+	}
+	return out
+}
+
+// ResolveExternal downgrades external to global on every net of a completely-read design
+// (WS1-017). Imagine a read that covered the whole design, such as a KiCad .kicad_pro whose root
+// has no unread sub-sheets. The external marking is then stale, and it would keep rules such as
+// decoupling-present off the rails they exist for. Global keeps "is a named rail" queryable
+// instead. Each reader still makes the completeness judgment itself, since only the reader knows
+// what its source references and what it opened. See
+// docsite/content/architecture/net-solving.md#the-hierarchy-walk.
+func ResolveExternal(d *ir.Design) {
+	for _, n := range d.Nets {
+		if n.Attributes[AttrExternal] == "true" {
+			delete(n.Attributes, AttrExternal)
+			n.Attributes[AttrGlobal] = "true"
+		}
+	}
+}
+
+// IRDangles maps the solver's dangling endpoints onto the IR diagnostic. idKind names the
+// wire id's format (e.g. "kicad-uuid"); it and the id are omitted for formats with no
+// per-wire id.
+func IRDangles(ds []Dangle, src, idKind string) []*ir.DanglingEndpoint {
+	var out []*ir.DanglingEndpoint
+	for _, d := range ds {
+		prov := &ir.Provenance{SourceFile: src}
+		if d.WireId != "" {
+			prov.NativeId, prov.NativeIdKind = d.WireId, idKind
+		}
+		out = append(out, &ir.DanglingEndpoint{X: d.At.X, Y: d.At.Y, Prov: prov})
+	}
+	return out
+}

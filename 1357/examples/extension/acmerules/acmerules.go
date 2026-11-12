@@ -1,0 +1,58 @@
+// Package acmerules is a demonstration out-of-module rule suite for the open-core extension
+// skeleton (WS12-001). It registers a private "house-style" rule with the engine's public rule
+// registry (WS12-004). A blank import of it puts the rule in ListRules and CheckDesign on the
+// engine's own CLI and serve. The import is import _ ".../acmerules". The rule is namespaced
+// "acme/..." so it can never shadow a built-in.
+//
+// A real extension's rules encode a company's private design policy. This one shows only the
+// wiring, so the rule is simple.
+package acmerules
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
+)
+
+// init registers the suite as a named RuleSource by import side effect, so a consumer wires it in
+// with one blank import. The alternative is an explicit RegisterSource call from the composing
+// binary's main (see WS12-004).
+//
+// The suite holds one rule of each authoring style, a Go rule with an Eval closure (below) and a
+// datalog rule declared as a query (acmedatalog.go). They register identically.
+func init() {
+	check.RegisterSource(check.NewSource("acme", []*check.Rule{
+		noExperimentalRefDes,
+		query.MustRuleFromQuery(experimentalOnPowerNet),
+	}))
+}
+
+// noExperimentalRefDes is a house rule. An X-prefixed ref-des marks an experimental/breadboard
+// part that must not reach a production design. It reads only component ref-des, so it runs on
+// any format the engine ingests, including the extension's own .acme reader.
+var noExperimentalRefDes = &check.Rule{
+	Name:     "no-experimental-refdes",
+	Severity: "warning",
+	Summary:  "ACME house rule: an X-prefixed ref-des is an experimental part, not for production",
+	Impact:   "an experimental part reaches a production build; give it a real ref-des before release",
+	Remedy:   "give the part a production ref-des, or take it out of the design before release",
+	Reads:    []string{"component.ref_des"},
+	Tags:     map[string]string{check.KeyCategory: "house-style"},
+	// Every component gets a verdict, so a reviewer can see which parts were cleared rather than
+	// only which ones failed.
+	StatesConsideredSet: true,
+	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
+		var out []check.Verdict
+		for _, c := range m.Components() {
+			if strings.HasPrefix(c.RefDes, "X") {
+				out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Fail, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: "experimental (X-prefixed) part in a production design"}})
+				continue
+			}
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Pass, Witness: &check.Witness{Statement: fmt.Sprintf("ref-des %q does not carry the experimental X prefix", c.RefDes)}})
+		}
+		return out
+	},
+}

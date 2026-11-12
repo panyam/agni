@@ -1,0 +1,10 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+	(paper "A4")
+	(title_block (title "Bus fixture"))
+	(bus (pts (xy 50 50) (xy 100 50)) (uuid "bus-1"))
+	(bus_entry (at 100 50) (size 2.54 2.54) (uuid "be-1"))
+	(bus_alias "DATA" (members "DATA0" "DATA1"))
+)

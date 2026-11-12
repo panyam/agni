@@ -1,0 +1,132 @@
+package render
+
+import (
+	"math"
+	"strings"
+
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+)
+
+// freeTextFit returns the font-size shrink factor (0 < f <= 1) for the multi-line free-text
+// columns of a documentation page. An OrCAD table-of-contents sheet is one such page, with several
+// fixed-origin columns of stacked text inside a sized worksheet. One factor covers the whole page.
+// It is the minimum any column needs, so that its widest line fits the gap to the next column (or
+// the frame margin) and its stack clears the title block. The columns then keep one size, as the
+// source draws them. Shrinking the font also shortens the stack, so the fit holds in rsvg PNG
+// exports too, which ignore textLength condensing (WS7-038).
+//
+// The fit applies ONLY to a documentation page, one with no component placements. A schematic
+// sheet's multi-line annotation notes are not document columns, and squeezing them shrinks legible
+// text to a blob (WS7-041). On an 82-sheet design the fit engaged on 18 schematic notes, some down
+// to 0.3x, and only the TOC benefits.
+//
+// The result maps each multi-line free-text label to the shared factor. It is nil when every column
+// fits, for single-line text, on a schematic sheet, on a sheet whose source draws its own frame
+// (SuppressWorksheet), or on a sheet with no page. The SVG renderer and
+// the WebGL overlay key on the same sheet.Labels pointers, so both apply the identical factor.
+func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom.Label]float64 {
+	if len(sheet.GetPlacements()) > 0 {
+		return nil // a schematic sheet, whose multi-line text is annotation notes
+	}
+	if sheet.GetSuppressWorksheet() {
+		return nil // a source with its own frame/title block (xschem/gEDA); no synthesized layout
+	}
+	fl, ok := worksheetLayout(g, sheet)
+	if !ok {
+		return nil // no page, so no frame edge or title block to fit against
+	}
+
+	// One column's world-space extent. Text is left-anchored at (x, top) and each further line
+	// sits one step lower (smaller Y, geom is Y-up); bot is the last line's baseline.
+	type col struct {
+		l        *geom.Label
+		x        int64   // origin X (left edge for the common left-anchored free text)
+		top, bot int64   // vertical span in world Y (top >= bot)
+		width    float64 // widest line's natural width in world units
+		lines    int
+		effH     int64 // effective world text height (falls back to the sheet default)
+	}
+	def := defaultTextHeight(g, sheet)
+	var cols []col
+	for _, l := range sheet.Labels {
+		if l.Origin == nil {
+			continue
+		}
+		effH := l.Height
+		if effH <= 0 {
+			effH = def
+		}
+		text := l.Text
+		lines := strings.Count(text, "\n") + 1
+		step := int64(float64(effH) * lineHeight)
+		widest := 0
+		for _, line := range strings.Split(text, "\n") {
+			if n := len([]rune(line)); n > widest {
+				widest = n
+			}
+		}
+		cols = append(cols, col{
+			l:     l,
+			x:     l.Origin.X,
+			top:   l.Origin.Y,
+			bot:   l.Origin.Y - int64(lines-1)*step,
+			width: glyphAdvanceEm * float64(effH) * float64(widest),
+			lines: lines,
+			effH:  effH,
+		})
+	}
+
+	// Title-block left and top edges in world coordinates. A column whose text reaches into the
+	// title-block x-range and drops below its top edge must shrink.
+	tbx, tby, _, tbh := titleBlockBox(fl, titleBlockGrid(g, sheet))
+	tbTop := tby + tbh
+
+	// One uniform factor for all multi-line free text, the minimum any column needs.
+	global := 1.0
+	var multiline []*geom.Label
+	for i, a := range cols {
+		if a.lines <= 1 || a.width <= 0 {
+			continue // single-line free text (net-stub labels) is left alone
+		}
+		multiline = append(multiline, a.l)
+
+		// The horizontal budget runs to the nearest column origin on the right whose vertical span
+		// overlaps this one, or else to the inner frame's right edge. Leave one glyph of gutter so
+		// the text does not butt against the neighbor.
+		budget := float64(fl.r - a.x)
+		for j, b := range cols {
+			if j == i || b.x <= a.x {
+				continue
+			}
+			if a.bot > b.top || b.bot > a.top { // no vertical overlap
+				continue
+			}
+			if gap := float64(b.x - a.x); gap < budget {
+				budget = gap
+			}
+		}
+		gutter := glyphAdvanceEm * float64(a.effH)
+		if avail := budget - gutter; avail > 0 && a.width > avail {
+			global = math.Min(global, avail/a.width)
+		}
+
+		// If the column sits over the title block and its stack drops below the title-block top,
+		// shrink it so it clears. availV is the room from the origin down to that top.
+		reachesTB := float64(a.x)+a.width > float64(tbx)
+		if reachesTB && a.bot < tbTop {
+			availV := float64(a.top - tbTop)
+			fullV := float64(a.top - a.bot)
+			if availV > 0 && fullV > availV {
+				global = math.Min(global, availV/fullV)
+			}
+		}
+	}
+	if global >= 1 {
+		return nil
+	}
+	out := map[*geom.Label]float64{}
+	for _, l := range multiline {
+		out[l] = global
+	}
+	return out
+}

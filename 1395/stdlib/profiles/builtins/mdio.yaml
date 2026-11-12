@@ -1,0 +1,36 @@
+# MDIO: the management bus every Ethernet PHY hangs off, and the second open-drain bus on most
+# boards that carry one.
+#
+# HOST-LESS on purpose. missing-pullup and signal-dangling gate on `in_use` (two distinct signals
+# matching by name) rather than on a host anchor, so this profile evaluates on any board whose nets
+# are named conventionally, with no attribute tagging asked of the design. That matters because the
+# boards this is for are third-party exports nobody is going to re-annotate.
+#
+# MDIO carries pullup, MDC DOES NOT, and that asymmetry is the whole design of this file.
+#
+#   MDIO is bidirectional and open-drain: the STA drives it during the address and write phases, the
+#   PHY drives it during a read, and NOBODY drives it between frames or during the turnaround cycle.
+#   A resistor to the rail is what holds it high in those windows. IEEE 802.3 clause 22 calls for one.
+#   Absent, the line floats through every turnaround and the frame is decided by leakage.
+#
+#   MDC is a CLOCK, sourced by the STA, push-pull. It has a driver whenever it matters and it is not
+#   a shared line, so a pull-up on it is a design choice rather than a requirement. Requiring one
+#   would manufacture a failing verdict on every correctly-designed board that omits it, which is the
+#   false-fail this catalog exists to avoid. It is declared here anyway, without pullup, because it
+#   is what makes the bus recognisable: two matching signals is what in_use means, and MDC absent
+#   next to MDIO present is a real signal-missing finding.
+#
+# Bounded at a token boundary the way the built-in I2C rule bounds SDA/SCL, so MDCLK (a clock whose
+# name merely opens with MDC) does not read as this bus. RE2 has no lookaround; the boundary is
+# explicit classes, and (?i) folds them so the negated class excludes letters of either case.
+#
+# NOT covered: the pull-up VALUE (a datasheet/topology question, and the reason the i2c rule does not
+# check it either), clause-45 addressing, and whether a board's several PHYs share one bus.
+name: MDIO
+signals:
+  - {name: MDIO, regex: '(?i)(^|[^A-Z])MDIO([^A-Z]|$)', pullup: true, anchor: true}
+  - {name: MDC,  regex: '(?i)(^|[^A-Z])MDC([^A-Z]|$)'}
+requirements:
+  - {type: signal-missing}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

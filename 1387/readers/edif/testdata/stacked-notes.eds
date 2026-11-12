@@ -1,0 +1,60 @@
+(edif STACKEDNOTES
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (technology
+      (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE)))
+      (figureGroup TEXT (textHeight 20))
+    )
+    (cell (rename &c "Part")
+      (cellType GENERIC)
+      (view (rename &v "sym")
+        (viewType SCHEMATIC)
+        (interface)
+        (symbol (boundingBox (rectangle (pt 0 0) (pt 10 10))))
+      )
+    )
+  )
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "S1")
+        (pageSize (rectangle (pt 0 0) (pt 600 400)))
+        (commentGraphics
+          (annotate
+            (stringDisplay "NOTE ONE LINE A%10%NOTE ONE LINE B%10%NOTE ONE LINE C"
+              (display
+                (figureGroupOverride TEXT (visible (true)))
+                (justify LOWERLEFT)
+                (orientation R0)
+                (origin (pt 60 200))
+              )
+            )
+          )
+          (annotate
+            (stringDisplay "ANCHOR"
+              (display
+                (figureGroupOverride TEXT (visible (true)))
+                (justify LOWERLEFT)
+                (orientation R0)
+                (origin (pt 400 200))
+              )
+            )
+
+          )
+
+          (annotate
+            (stringDisplay "NOTE TWO"
+              (display
+                (figureGroupOverride TEXT (visible (true)))
+                (justify LOWERLEFT)
+                (orientation R0)
+                (origin (pt 60 160))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

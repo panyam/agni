@@ -1,0 +1,9 @@
+# Rung 1: the checks on that one sheet, against the whole design's count below it.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+show: |
+  agni check som_power.kicad_sch
+script: |
+  agni check som_power.kicad_sch 2>/dev/null | head -7
+  agni check som_power.kicad_sch 2>/dev/null | grep -m3 "exposure-declared:"
+  echo "..."
+  agni check som_power.kicad_sch 2>/dev/null | grep "finding(s) total"

@@ -1,0 +1,5 @@
+# An EDIF cell named by a stand-in identifier (PART_07), with its real name in rename and its part
+# number in a property. agni reads both from the strings (agni issue 1097).
+fixture: cmd/agni/testdata/github-issues/1097-legacy-export-quirks
+script: |
+  agni query edif_renamed_part.edn 'component.mpn(?r, ?m) => ?r, ?m'

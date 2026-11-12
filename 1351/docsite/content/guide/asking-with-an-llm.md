@@ -1,0 +1,216 @@
+---
+title: "Asking through an LLM"
+description: "Point Claude Code, or any MCP client, at agni, so a model asks a design questions and every answer comes back as rows you can check."
+---
+
+agni serves its analysis over the [Model Context Protocol](https://modelcontextprotocol.io), so a
+coding agent such as Claude Code can ask a design questions in your place. The model never states a
+fact about the board on its own authority. It writes a question in agni's
+[query language](../querying/), or calls a check, a trace or a diff, and agni answers from the design
+with rows, the file and place each row was read from, and a link that opens the answer in the
+viewer. A wrong question then shows up as a visibly wrong table rather than a confident wrong
+sentence. That is pretty much the point.
+
+## Connecting a client
+
+There are two ways in, and both serve the same tools.
+
+`agni serve --mcp` serves MCP over streamable HTTP at `/mcp`, beside the viewer and the Connect API,
+on the same mounts:
+
+```sh
+agni serve --mcp --mount tut=examples/tutorial-project
+```
+
+and Claude Code connects to it with
+
+```sh
+claude mcp add --transport http agni http://localhost:8080/mcp
+```
+
+`agni mcp` serves the same tools on stdin and stdout, for a client that starts the server itself. It
+reads the mounts the way `serve` does, from `--mount` or the nearest `agni.yaml`:
+
+```sh
+claude mcp add agni -- agni mcp --mount tut=/path/to/examples/tutorial-project
+```
+
+The HTTP endpoint accepts requests from a localhost origin only, so a page on another site can't
+drive a server running on your machine. `--query-budget` caps the work of each question from a
+client, as it does for the viewer's questions.
+
+The HTTP endpoint speaks both MCP wires on one URL, and a client uses whichever it prefers: the
+stateless 2026-07-28 wire, where every request stands alone, or the older session wire that starts
+with `initialize`. Every tool answers the same rows and links on both. The server keeps nothing per
+session, since it keeps a design's snapshot per server and per design. agni sets this
+itself rather than taking its MCP library's default, and `MCPKIT_STATELESS_MODE=legacy` or
+`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks both too.
+
+## What the model can call
+
+The query language's tools come from [jaala](https://panyam.github.io/jaala/guide/mcp-server/), the
+Datalog engine underneath agni, and each takes a `design` beside its own arguments:
+
+- `schema` lists every relation a question can call, with its signature and what it holds, and with a
+  design it includes that design's project library too. `look` describes one relation, and `values`
+  shows what one of its arguments holds. A model uses `values` to find that a net is spelled
+  `I2C_SDA` rather than `SDA`.
+- `query` runs a question and answers its rows. A value from the user goes in `bind`, by its
+  variable's name, rather than being pasted into the question, so a net named with a quote in it
+  can't change what is asked. A list there asks about each value at once, so "which of these three
+  nets has no pull-up" is one call. Under its table the text says how each row holds, the
+  [witness tree](../querying/#see-how-a-row-was-derived-witnesses) cut at eight lines a row, and the
+  structured content carries every tree whole.
+- `explain` says where a question's work went and, when it answers nothing, which part matched
+  nothing.
+
+agni adds the rest:
+
+- `designs` lists the designs a server answers about, by the name the other tools take
+  (`tut/designs/gateway`), with each one's declared revisions.
+- `check` runs the [rule catalog](../checks-and-reports/), or the rules you name, and answers the
+  findings, a count per rule and outcome, and a link per failing verdict. A rule name that doesn't
+  exist is refused with the closest ones it does have, rather than answered as an empty, clean run.
+- `trace` follows a signal from one pin to another through the series parts between them, and says
+  where each net on the way can be probed.
+- `diff` compares two revisions, as [comparing revisions](../comparing-revisions/) describes. Its
+  link opens the earlier revision with the viewer's Compare started against the later one.
+- `design` reads the IR itself, narrowed to the nets or parts asked about.
+- `checklists` and `review` list a design's review checklists and score one. Nothing is saved.
+- `query_set` runs one of the project's saved query sets.
+
+The relation catalog, the shipped library, the rule catalog and the designs are also resources
+(`agni://relations`, `agni://library`, `agni://rules`, `agni://designs`), for a client that reads
+those rather than calling a tool.
+
+## What an answer carries
+
+Every answer opens with the design and the question that produced it, so you can see what was
+actually asked before reading what came back. The rows follow as a table, with a provenance column
+naming the file each row was read from. `--format csv` writes the same table for that question. A
+link that opens the answer in the viewer comes last. The structured content carries the same
+tables and the full wire message, so a client can render them itself.
+
+A server started with the viewer links to itself. `agni mcp` has no viewer of its own, so it links to
+one only when `--server` names a running `agni serve` that mounts the same names, and otherwise each
+answer says why it carries no link.
+
+The links differ in what they promise, and the reply's label says which one it is. A `check` link
+names a verdict, so it runs that rule on arrival and opens on the finding. A `query` link carries the
+question rather than an answer, so it runs again in the Query panel. A one-row answer is drawn, and a
+longer one draws nothing until you click a cell, because the link cannot say which row it meant. That
+reply labels its link `re-run in the Query panel` so a model doesn't promise you a drawing.
+[Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) has the detail.
+
+Beside each link, the structured content carries `page` (agni issue 1155). A host may already have a
+viewer open, and `page` is a call that does the same thing to that viewer. When a host frames the
+viewer, as an MCP app host does, it sends `page` over postMessage instead of opening a new tab. A
+failing verdict in a `check` answer looks like this.
+
+```json
+{
+  "verdict": "demo-rule:(net:NET_A)",
+  "rule": "demo-rule",
+  "subjects": ["net:NET_A"],
+  "link": "http://127.0.0.1:8080/designs/demo/demo-board.kicad_sch/view?verdict=demo-rule%3A%28net%3ANET_A%29&rule=demo-rule&subject=net%3ANET_A",
+  "page": { "method": "LocateVerdict", "body": { "id": "demo-rule:(net:NET_A)", "rule": "demo-rule", "subjects": ["net:NET_A"] } }
+}
+```
+
+A trace, query or diff link comes with `ApplyLocation`, which carries the link itself. How a host
+sends either is in [Driving an embedded viewer](../../build/embedding-the-viewer/).
+
+A question agni can't answer says so as a tool error, with what went wrong and often how to fix it:
+a relation that doesn't exist, a pin the design lacks, a question past the budget. Asking about a
+pin that isn't there is a different answer from two real pins with no route between them, and agni
+keeps the two apart here as `agni trace` does.
+
+## Moving a viewer tab you have open
+
+Every answer links to the viewer, and following a link opens a new tab. Started as
+`agni serve --mcp --viewer-rooms`, the server also lets the model move a tab you already have open.
+Each viewer tab shows a "Let agents drive this tab" switch beside the sheet tabs. Turn it on in the
+tabs you want driven, and the model can call `viewer_show_sheet`, `viewer_locate_verdict`,
+`viewer_select_finding`, `viewer_locate_entity`, `viewer_apply_location` and `viewer_get_location`
+on them.
+
+Each call names the design, as every other tool does, so with tabs open on several designs the model
+moves the one you are asking about. With two tabs on one design it moves the one you looked at last,
+or one it names from `list_pages`. A tab with the switch off is never moved, and the switch is off in
+every new tab. [Questions, links and the live page](../../architecture/viewer-control/#an-agent-moving-an-open-tab)
+has how it works.
+
+The other direction works too. With the switch on, a tab shows an Ask box beside it, and what you
+type there goes to the model along with the sheet you are on and what you have selected. The model
+hears it by calling `next_request` with the design, which waits up to two minutes for the next
+question or selection from a tab that let it in. So "wait for my question in the viewer" is a
+reasonable thing to tell it. A tab with its switch off sends nothing, whatever you type.
+
+In Claude Code a question can arrive as a turn of its own, so the model needn't sit waiting.
+mcpkit's `rooms-channel` is a channel server that Claude Code starts beside the session, and it
+pushes each question from a tab into the conversation as a message. Install it and register it
+next to agni in `.mcp.json`:
+
+```bash
+go install github.com/panyam/mcpkit/experimental/integrations/roomsevents/cmd/rooms-channel@latest
+```
+
+```json
+{
+  "mcpServers": {
+    "rooms": { "command": "rooms-channel", "args": ["-bridge", "http://localhost:8080/mcp"] }
+  }
+}
+```
+
+Channels are still a Claude Code research preview, at least for now, so start the session with
+`claude --dangerously-load-development-channels server:rooms`, interactively. Then ask the model to
+attach to the design you have open. From then on, when you type a question in a tab that let agents
+in, it shows up in the session, fenced as text from the page, and the model answers through the
+tab's tools.
+
+## Skills for your coding agent
+
+agni also ships agent skills. A skill holds written instructions, and a coding agent follows them to
+walk you through a task with the `agni` CLI. `verify-lexicon` is the first, and it checks that agni
+reads your board's names the way you meant them (see [naming conventions](../naming-conventions/)).
+A skill needs `agni` on your PATH and nothing else, so you install it without a checkout of this
+repository.
+
+In Claude Code, add this repository as a plugin marketplace and install the `agni` plugin. That
+brings every skill agni ships, and later ones arrive when the plugin updates.
+
+```
+claude plugin marketplace add panyam/agni
+claude plugin install agni@agni
+```
+
+For Cursor, GitHub Copilot or any other agent, the GitHub CLI (2.90 or later) installs one skill
+from the latest release into the folder that agent reads. Name `github-copilot` or `claude-code`
+in place of `cursor` for those agents, and leave out the user scope to install into the current
+project instead.
+
+```
+gh skill install panyam/agni verify-lexicon --agent cursor --scope user
+```
+
+A Cursor team can also import this repository as a team marketplace, from **Customize**, **From
+GitHub Repository**, which installs the same `agni` plugin.
+
+## What it doesn't do
+
+agni hosts no model, so the client brings its own, and nothing about a design leaves the machine
+except through the client you pointed at it. And a model that never calls the tools can still make
+things up, so make a habit of looking for the question above each answer and the link below it.
+
+## Checking that it works
+
+`make exercise-mcp-ask` asks five questions through an MCP client, as the calls a model would make.
+A reviewer usually starts with these five: missing pull-ups, what a bus line connects to and whether
+it is protected, rails with no test point, what changed between two revisions, and a trace from a pin
+to a connector. Each reply has to state its question and carry links that open in the viewer. It has
+to hold the same rows as the CLI's answer to the same request, and contain the rows known to be in
+the design. The questions
+live in `examples/ask-over-mcp/exercise/`, one file per board, and `WALK_DESIGN=gateway` runs the
+tutorial board instead of the Jetson baseboard. It asks everything twice, once on the stateless
+wire and once on the session wire, and writes a report for each.

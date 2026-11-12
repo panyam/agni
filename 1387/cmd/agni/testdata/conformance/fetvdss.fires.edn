@@ -1,0 +1,14 @@
+(edif CONFORMANCE
+  (edifVersion 2 0 0)
+  (design CONFORMANCE (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell FET
+      (view V (viewType NETLIST)
+        (interface (port D (direction INOUT)) (port S (direction INOUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance Q1 (viewRef V (cellRef FET)) (designator "Q1")
+            (property MPN (string "BSS138")))
+          (net (rename RAIL60 "+60V") (joined (portRef D (instanceRef Q1))))
+          (net GND (joined (portRef S (instanceRef Q1)))))))))

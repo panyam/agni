@@ -1,0 +1,5 @@
+# Chapter 13's ground-and-rails section. The rule fails GND and passes the two rails that carry one.
+fixture: examples/common/designs
+from_root: true
+script: |
+  agni check --verdicts --rule test-point-coverage examples/common/designs/probe-coverage.edn

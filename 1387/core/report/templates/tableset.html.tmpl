@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agni query set — {{.Title}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>{{.Title}}</h1>
+<div class="sub">
+  {{if .Source}}{{.Source}} · {{end}}{{len .Sections}} queries
+</div>
+
+{{if .Preamble}}<p class="note">Shared rules:</p>
+<pre class="q">{{.Preamble}}</pre>{{end}}
+
+{{template "querysections" .Sections}}
+
+</div>
+</body>
+</html>

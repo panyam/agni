@@ -1,0 +1,63 @@
+package builtin
+
+import (
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// TestPowerInStampFlipsConnectivityRule (WS3-072 PR2) is the red-before-green for the EDIF flip. An
+// EDIF-style VDD pin (typed INPUT) on an undriven net is invisible to power-input-not-driven today,
+// because the rule keys on POWER_IN. The ingestion stamp promotes the pin, so the rule then fires.
+// The corpus delta measures this behavior at scale.
+func TestPowerInStampFlipsConnectivityRule(t *testing.T) {
+	mk := func() *ir.Design {
+		return &ir.Design{
+			Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
+				Name: "IC", Pins: []*ir.Pin{{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_INPUT}},
+			}}}},
+			Components: []*ir.Component{{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+			Nets:       []*ir.Net{{Name: "VDD_UNDRIVEN", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		}
+	}
+
+	// Before the stamp, the VDD pin reads INPUT, so the rule is silent (the EDIF gap PR2 closes).
+	if fs := check.RunBackground(check.NewModel(mk()), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
+		t.Fatalf("pre-stamp (INPUT pin): want silent, got %v", fs)
+	}
+
+	// After the stamp, the VDD pin is POWER_IN with no driver on its net. xschem has no power-input
+	// type, so the stamp fills it, and the rule does not gate xschem off, so it fires. A KiCad INPUT
+	// is the author's choice and is never stamped (agni issue 1241).
+	d := mk()
+	d.SourceFormat = "xschem"
+	classify.StampPowerInPins(d)
+	if fs := check.RunBackground(check.NewModel(d), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
+		t.Fatalf("post-stamp (POWER_IN pin): want 1 finding, got %v", fs)
+	}
+}
+
+// TestPowerInputNotDrivenGatedByFormat (WS3-072 PR2) checks that the rule is gated OFF on a format
+// that does not type power OUTPUTS (EDIF/IPC), because "no driver" there means the source is
+// under-typed, not that the rail is unpowered (the switched/derived-rail false positive). On an
+// output-typing format the same undriven power_in fires.
+func TestPowerInputNotDrivenGatedByFormat(t *testing.T) {
+	mk := func(format string) *ir.Design {
+		return &ir.Design{
+			SourceFormat: format,
+			Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
+				Name: "IC", Pins: []*ir.Pin{{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}},
+			}}}},
+			Components: []*ir.Component{{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+			Nets:       []*ir.Net{{Name: "VDD", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		}
+	}
+	if fs := check.RunBackground(check.NewModel(mk("edif-2.0.0")), []*check.Rule{powerInputNotDriven}); len(fs) != 0 {
+		t.Errorf("edif (no power-out typing): rule must be gated off, got %v", fs)
+	}
+	if fs := check.RunBackground(check.NewModel(mk("kicad-sch")), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
+		t.Errorf("kicad (types power-out): undriven power_in must fire, got %v", fs)
+	}
+}

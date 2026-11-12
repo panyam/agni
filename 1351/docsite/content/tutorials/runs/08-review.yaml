@@ -1,0 +1,6 @@
+# Rung 8: the project's default checklist over the design, as the project ships.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni review designs/jetson

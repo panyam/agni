@@ -1,0 +1,11 @@
+# Rung 12: agni's run of the design compared with the imported report. The ours: line names the
+# build that ran, which differs on every commit, so the capture masks it as <version>.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+steps:
+  - script: agni check designs/jetson --results-out agni.results.json > /dev/null
+  - script: |
+      agni import-results reports/kicad-drc.json --design designs/jetson -o kicad.results.json > /dev/null
+      agni results agni.results.json --compare kicad.results.json | sed -E 's/agni [0-9a-f]+(\+dirty)? /agni <version> /'
+    show: agni results agni.results.json --compare kicad.results.json

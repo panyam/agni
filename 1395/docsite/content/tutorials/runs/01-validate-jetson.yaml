@@ -1,0 +1,5 @@
+# Rung 1: validate over the folder, which reads every file in it on its own, including sub-sheets
+# and a stray usb.kicad_sch the design's root never includes.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni validate .

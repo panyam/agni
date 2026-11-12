@@ -1,0 +1,47 @@
+(kicad_sch
+	(version 20250114)
+	(generator "agni_fixture")
+	(paper "A4")
+	(title_block
+		(title "SPI-NOR interface demo (WS9-041)")
+		(comment 1 "A SPI-NOR bus: IO2 absent (missing), IO3 single-pin (dangling), CS unpulled (no pull-up)."))
+	(lib_symbols
+		(symbol "spi:HOST"
+			(property "Reference" "U")
+			(property "Value" "MCU")
+			(symbol "HOST_1_1"
+				(rectangle (start -15.24 3.81) (end 0 -16.51) (stroke (width 0.254) (type default)) (fill (type none)))
+				(pin output line (at 0 0 0) (length 0) (name "CS" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+				(pin output line (at 0 -2.54 0) (length 0) (name "SCLK" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -5.08 0) (length 0) (name "IO0" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -7.62 0) (length 0) (name "IO1" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -10.16 0) (length 0) (name "IO2" (effects (font (size 1.27 1.27)))) (number "5" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -12.7 0) (length 0) (name "IO3" (effects (font (size 1.27 1.27)))) (number "6" (effects (font (size 1.27 1.27)))))))
+		(symbol "spi:FLASH"
+			(property "Reference" "U")
+			(property "Value" "W25Q")
+			(symbol "FLASH_1_1"
+				(rectangle (start 0 3.81) (end 15.24 -16.51) (stroke (width 0.254) (type default)) (fill (type none)))
+				(pin input line (at 0 0 0) (length 0) (name "CS" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+				(pin input line (at 0 -2.54 0) (length 0) (name "SCLK" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -5.08 0) (length 0) (name "IO0" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -7.62 0) (length 0) (name "IO1" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -10.16 0) (length 0) (name "IO2" (effects (font (size 1.27 1.27)))) (number "5" (effects (font (size 1.27 1.27)))))
+				(pin bidirectional line (at 0 -12.7 0) (length 0) (name "IO3" (effects (font (size 1.27 1.27)))) (number "6" (effects (font (size 1.27 1.27))))))))
+	(symbol (lib_id "spi:HOST") (at 50 50 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "MCU"))
+	(symbol (lib_id "spi:FLASH") (at 100 50 0) (unit 1) (uuid "u2")
+		(property "Reference" "U2") (property "Value" "W25Q128"))
+	(wire (pts (xy 50 50) (xy 100 50)) (uuid "w-cs"))
+	(label "SPI_CS" (at 72 50 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50 52.54) (xy 100 52.54)) (uuid "w-sclk"))
+	(label "SPI_SCLK" (at 72 52.54 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50 55.08) (xy 100 55.08)) (uuid "w-io0"))
+	(label "SPI_IO0" (at 72 55.08 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50 57.62) (xy 100 57.62)) (uuid "w-io1"))
+	(label "SPI_IO1" (at 72 57.62 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50 62.7) (xy 70 62.7)) (uuid "w-io3"))
+	(label "SPI_IO3" (at 58 62.7 0) (effects (font (size 1.27 1.27))))
+	(sheet_instances
+		(path "/" (page "1")))
+)

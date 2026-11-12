@@ -1,0 +1,9 @@
+# KiCad's own net names for hier_root.kicad_sch, from `kicad-cli sch export netlist` (10.0.6).
+# Regenerate with hack/kicad_net_names.sh; do not hand-edit. Each line is a net name, a tab,
+# then the ref.pin pairs on it, so the test can pair our nets with KiCad's by their pins.
+/SIG	R1.2
+/amp1/CTRL	R1.1 R101.1
+/amp1/SIG	R101.2 R102.2
+/amp2/CTRL	R201.1
+/amp2/SIG	R201.2 R202.2
+VCC	R102.1 R202.1

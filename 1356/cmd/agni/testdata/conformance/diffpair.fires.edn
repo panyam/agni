@@ -1,0 +1,15 @@
+(edif DIFFPAIR
+  (edifVersion 2 0 0)
+  (design DIFFPAIR (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef PHY)) (designator "U1"))
+          (instance J1 (viewRef V (cellRef CONN)) (designator "J1"))
+          ; complete pair: must NOT fire
+          (net CLK_P (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef J1))))
+          (net CLK_N (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef J1))))
+          ; orphaned positive halves: _P suffix and trailing +, both missing their negative
+          (net HDMI_TX0_P (joined (portRef 3 (instanceRef U1)) (portRef 3 (instanceRef J1))))
+          (net (rename USB_DP "USB_D+") (joined (portRef 4 (instanceRef U1)) (portRef 4 (instanceRef J1)))))))))

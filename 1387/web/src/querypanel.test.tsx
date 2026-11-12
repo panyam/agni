@@ -1,0 +1,1445 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { queryPanelIsland } from "./querypanel.jsx";
+import { type ExampleItem, type QueryResult, type RelationEntryItem, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
+import { probedOneAnswer, resultFromWire } from "./testwire.js";
+import { create } from "@bufbuild/protobuf";
+import { QuerySetSchema } from "./gen/agni/v1/webapi/query_pb.js";
+
+// chips reads the binding chips under the box as [name label, value] pairs.
+function chips(el: HTMLElement): [string, string][] {
+  return [...el.querySelectorAll(".query-binding")].map((c) => [
+    c.querySelector(".query-binding-name")!.textContent ?? "",
+    c.querySelector<HTMLInputElement>(".query-binding-value")!.value,
+  ]);
+}
+
+function mountPanel() {
+  const onRun = vi.fn();
+  const onLocate = vi.fn();
+  const el = document.createElement("div");
+  document.body.appendChild(el);
+  const describe = vi.fn(async (path: string) => {
+    const e = NAMESPACE[path];
+    if (!e) throw new Error(`no relation or module at ${path}`);
+    return e;
+  });
+  const panel = queryPanelIsland(el, null, { onRun, onLocate, describe });
+  panel.island.activate();
+  const push = (s: QueryResult) => panel.view.setState(s);
+  const pushRelations = (rels: RelationItem[]) => panel.view.setRelations(rels);
+  const pushExamples = (ex: ExampleItem[]) => panel.view.setExamples(ex);
+  return { el, panel, onRun, onLocate, describe, push, pushRelations, pushExamples };
+}
+
+// entry is one place in a fake relation namespace, members one level deep as ListRelations sends them.
+function entry(e: Partial<RelationEntryItem> & { path: string; kind: string }): RelationEntryItem {
+  return { signature: "", doc: "", detail: "", module: "", definition: [], inferred: [], args: [], members: [], ...e };
+}
+
+const HAS_TP = entry({
+  path: "net.has_test_point",
+  kind: "derived",
+  module: "net",
+  signature: "net.has_test_point(n: net)",
+  doc: "A net a test point sits on.",
+  detail: "## net.has_test_point\n\nA probe lands here.\n",
+  definition: ['net.has_test_point(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point")'],
+  inferred: ["n"],
+  args: ["n"],
+});
+const NET_RAIL = entry({ path: "net.rail", kind: "base", signature: "net.rail(net: net)", doc: "A rail.", args: ["net"] });
+
+// NAMESPACE is what the fake describe answers: the root holding entity and the net module, and net
+// holding a base, a derived and a predicate member.
+const NAMESPACE: Record<string, RelationEntryItem> = {
+  ".": entry({ path: "", kind: "module", members: [entry({ path: "entity", kind: "base" }), entry({ path: "net", kind: "module" })] }),
+  net: entry({ path: "net", kind: "module", members: [NET_RAIL, HAS_TP, entry({ path: "net.reaches", kind: "predicate" })] }),
+  "net.has_test_point": HAS_TP,
+  "net.rail": NET_RAIL,
+};
+
+// flush lets the picker's describe promises settle and the panel re-render.
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+const relRows = (el: HTMLElement) =>
+  [...el.querySelectorAll(".query-relrow")].map((r) => [r.querySelector(".query-relchip")!.textContent, r.querySelector(".query-reltier")?.textContent ?? ""]);
+
+function clickRel(el: HTMLElement, label: string): void {
+  const b = [...el.querySelectorAll<HTMLButtonElement>(".query-relchip")].find((c) => c.textContent === label);
+  if (!b) throw new Error(`no relation chip ${label}`);
+  b.click();
+}
+
+// a two-row result over a component, a net, and a scalar column, with sheet badges on the entity
+// cells, the shape the locate tests drive.
+function pushLocatable(push: (s: QueryResult) => void) {
+  push(
+    resultFromWire(
+      {
+        columns: ["r", "n", "v"],
+        columnKinds: ["component", "net", ""],
+        rows: [
+          {
+            cells: ["R1", "SDA", "3.3"],
+            cites: [],
+            cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s1"] }, { sheetIds: [] }],
+          },
+        ],
+      } as never,
+      (ids) => ids.map((id) => ({ id, name: id })),
+    ),
+  );
+}
+
+const rel = (over: Partial<RelationItem>): RelationItem => ({ name: "r", args: ["a", "b"], summary: "s", kind: "netlist", detail: "", ...over });
+
+function typeQuery(el: HTMLElement, text: string) {
+  const ta = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  ta.value = text;
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+beforeEach(() => document.body.replaceChildren());
+
+describe("querypanel", () => {
+  it("emits onRun with the trimmed query text when Run is clicked", () => {
+    const { el, onRun } = mountPanel();
+    typeQuery(el, "  component.net(?r,?n) => ?r  ");
+    el.querySelector<HTMLButtonElement>("button.query-run")!.click();
+    expect(onRun).toHaveBeenCalledOnce();
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r", {}, 0, "q1");
+  });
+
+  it("disables Run for an empty query and while a run is loading", () => {
+    const { el, push } = mountPanel();
+    const btn = () => el.querySelector<HTMLButtonElement>("button.query-run")!;
+    expect(btn().disabled).toBe(true); // empty box
+    typeQuery(el, "component.net(?r,?n) => ?r");
+    expect(btn().disabled).toBe(false);
+    push(emptyResult(true)); // loading
+    expect(btn().disabled).toBe(true);
+    expect(btn().textContent).toContain("Running");
+  });
+
+  it("renders columns and rows, and reveals a row's provenance on expand", () => {
+    const { el, push } = mountPanel();
+    push(
+      resultFromWire({
+        columns: ["r", "n"],
+        rows: [{ cells: ["R1", "SDA"], cites: ["x.edn:SDA"] }],
+      } as never),
+    );
+    const heads = [...el.querySelectorAll("thead th")].map((h) => h.textContent);
+    expect(heads).toEqual(["", "r", "n"]); // leading provenance-toggle column
+    const cells = [...el.querySelectorAll("tbody .query-row td")].map((c) => c.textContent);
+    expect(cells).toEqual(["▸", "R1", "SDA"]); // provenance toggle, then the answer cells
+    expect(el.querySelector(".query-count")!.textContent).toContain("1 result");
+    // Provenance is hidden until the row toggle is clicked.
+    expect(el.querySelector(".query-cites")).toBeNull();
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["x.edn:SDA"]);
+  });
+
+  it("shows 'No results.' when a run matched nothing", () => {
+    const { el, push } = mountPanel();
+    push(resultFromWire({ columns: ["r"], rows: [] } as never));
+    expect(el.querySelector(".query-empty")!.textContent).toContain("No results");
+    expect(el.querySelector(".query-table")).toBeNull();
+  });
+
+  it("shows the error message inline and no results table", () => {
+    const { el, push } = mountPanel();
+    push(errorResult("[invalid_argument] parse error at col 3"));
+    expect(el.querySelector(".query-error")!.textContent).toContain("parse error at col 3");
+    expect(el.querySelector(".query-table")).toBeNull();
+  });
+
+  it("shows the line a query stopped on with a caret under the place, and none for other errors", () => {
+    const { el, push } = mountPanel();
+    push(errorResult("query: variable ?r ?n", "component.net(?r ?n)\n              ^"));
+    expect(el.querySelector(".query-error-at")!.textContent).toBe("component.net(?r ?n)\n              ^");
+    push(errorResult("unknown relation"));
+    expect(el.querySelector(".query-error-at")).toBeNull();
+  });
+
+  it("opens on the namespace's root, its modules marked and each relation labelled with its tier", async () => {
+    const { el, pushRelations, describe } = mountPanel();
+    // Before the catalog arrives, the panel shows the syntax hint, no chips, and asks nothing.
+    expect(el.querySelector(".query-relchip")).toBeNull();
+    expect(describe).not.toHaveBeenCalled();
+    pushRelations([rel({ name: "entity", kind: "netlist" }), rel({ name: "net.rail", kind: "netlist" }), rel({ name: "net.reaches", kind: "predicate" })]);
+    await flush();
+    expect(describe).toHaveBeenCalledWith(".");
+    expect(relRows(el)).toEqual([
+      ["entity", "Netlist"],
+      ["net ›", ""],
+    ]);
+    expect([...el.querySelectorAll(".query-relcrumb")].map((c) => c.textContent)).toEqual(["Relations"]);
+  });
+
+  it("drills into a module, then a derived member, showing its definition and reference, and walks back without asking again", async () => {
+    const { el, pushRelations, describe } = mountPanel();
+    pushRelations([rel({ name: "net.rail", kind: "netlist" }), rel({ name: "net.has_test_point", kind: "derived" }), rel({ name: "net.reaches", kind: "predicate" })]);
+    await flush();
+    clickRel(el, "net ›");
+    await flush();
+    expect(relRows(el)).toEqual([
+      ["net.rail", "Netlist"],
+      ["net.has_test_point", "Library"],
+      ["net.reaches", "Predicates"],
+    ]);
+    clickRel(el, "net.has_test_point");
+    await flush();
+    const member = el.querySelector(".query-relmember")!;
+    expect(member.querySelector(".query-relsignature")!.textContent).toBe("net.has_test_point(n: net)");
+    expect(member.querySelector(".query-reldefinition")!.textContent).toBe(HAS_TP.definition[0]);
+    expect(member.querySelector(".query-relinferred")!.textContent).toContain("n");
+    expect(member.querySelector(".query-reldetail-body")!.innerHTML).toContain("A probe lands here.");
+    expect([...el.querySelectorAll(".query-relcrumb")].map((c) => c.textContent)).toEqual(["Relations", "net", "has_test_point"]);
+    // A base member has no definition to show.
+    const crumbs = () => [...el.querySelectorAll<HTMLButtonElement>(".query-relcrumb")];
+    crumbs()[1].click();
+    await flush();
+    clickRel(el, "net.rail");
+    await flush();
+    expect(el.querySelector(".query-reldefinition")).toBeNull();
+    // Walking back to the root re-asks nothing the picker already holds.
+    const asked = describe.mock.calls.length;
+    crumbs()[0].click();
+    await flush();
+    expect(relRows(el).map((r) => r[0])).toEqual(["entity", "net ›"]);
+    expect(describe.mock.calls.length).toBe(asked);
+  });
+
+  it("renders component/net cells as locate buttons and scalars as plain text", () => {
+    const { el, push } = mountPanel();
+    pushLocatable(push);
+    const buttons = [...el.querySelectorAll(".query-row .query-locate")].map((b) => b.textContent);
+    expect(buttons).toEqual(["R1", "SDA"]); // the component and net cells, not the scalar
+    // the scalar cell is plain text in its own cell, with no locate button
+    const cells = [...el.querySelectorAll(".query-row td")].map((c) => c.textContent);
+    expect(cells).toContain("3.3");
+  });
+
+  it("emits onLocate with (kind, subject) when a cell is clicked", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushLocatable(push);
+    el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // the R1 component cell
+    expect(onLocate).toHaveBeenCalledWith("component", "R1", undefined, LocateReason.UNSPECIFIED);
+  });
+
+  it("emits onLocate with the sheet id when a cell's badge is clicked", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushLocatable(push);
+    // the net cell (SDA) carries an s1 badge; clicking it navigates to that sheet.
+    const netCell = [...el.querySelectorAll(".query-cell-locate")].find((td) => td.textContent?.includes("SDA"))!;
+    netCell.querySelector<HTMLElement>(".sheet-badge")!.click();
+    expect(onLocate).toHaveBeenCalledWith("net", "SDA", "s1", LocateReason.UNSPECIFIED);
+  });
+
+  // The bug this strip was extracted for. The query table is fixed-layout, so a cell that will not
+  // wrap paints over the columns beside it. A net on 21 sheets carried 21 chips on one nowrap line.
+  it("caps a cell's sheet badges and counts the rest, still locating from a revealed one", () => {
+    const { el, push, onLocate } = mountPanel();
+    push(
+      resultFromWire(
+        {
+          columns: ["n"],
+          columnKinds: ["net"],
+          rows: [{ cells: ["DGND"], cites: [], cellSheets: [{ sheetIds: Array.from({ length: 21 }, (_, i) => `s${i}`) }] }],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+    const labels = () => [...el.querySelectorAll(".query-row .sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["S0", "S1", "S2", "+18"]);
+
+    el.querySelector<HTMLElement>(".query-row .sheet-badge-more")!.click();
+    expect(labels()).toHaveLength(22);
+    [...el.querySelectorAll<HTMLElement>(".query-row .sheet-badge")].find((b) => b.textContent === "S20")!.click();
+    expect(onLocate).toHaveBeenCalledWith("net", "DGND", "s20", LocateReason.UNSPECIFIED);
+  });
+
+  it("shows the locate note pushed by the presenter, and clears it", () => {
+    const { el, push, panel } = mountPanel();
+    pushLocatable(push);
+    expect(el.querySelector(".query-locate-note")).toBeNull();
+    panel.view.setLocateNote("GND is a power rail with no drawn wire.");
+    expect(el.querySelector(".query-locate-note")!.textContent).toContain("power rail");
+    panel.view.setLocateNote("");
+    expect(el.querySelector(".query-locate-note")).toBeNull();
+  });
+
+  it("renders example chips and fills+runs the query when one is clicked (WS14-002)", () => {
+    const { el, onRun, pushExamples } = mountPanel();
+    expect(el.querySelector(".query-example")).toBeNull(); // none until the catalog arrives
+    pushExamples([
+      { label: "Every part on every net", query: "component.net(?r,?n) => ?r, ?n", teaches: "projection" },
+      { label: "Rails above 3V", query: "net.max_voltage(?n,?v), ?v > 3 => ?n, ?v", teaches: "filter" },
+    ]);
+    const chips = [...el.querySelectorAll(".query-example")].map((c) => c.textContent);
+    expect(chips).toEqual(["Every part on every net", "Rails above 3V"]);
+    el.querySelector<HTMLButtonElement>(".query-example")!.click();
+    // Clicking fills the textarea AND runs the query.
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("component.net(?r,?n) => ?r, ?n");
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n", {}, 0, "q1");
+  });
+
+  it("keeps the helper chrome in a drawer: closed by default, opened by the handle, closed on textarea click", () => {
+    const { el, pushExamples } = mountPanel();
+    pushExamples([{ label: "e", query: "component.net(?r,?n) => ?r", teaches: "t" }]);
+    const drawer = () => el.querySelector(".query-drawer")!;
+    // Examples live inside the drawer, and the drawer starts closed.
+    expect(el.querySelector(".query-drawer .query-example")).not.toBeNull();
+    expect(drawer().classList.contains("open")).toBe(false);
+    // The left-edge handle opens it.
+    el.querySelector<HTMLButtonElement>(".query-drawer-handle")!.click();
+    expect(drawer().classList.contains("open")).toBe(true);
+    // Clicking (pointerdown on) the textarea closes it again.
+    el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(drawer().classList.contains("open")).toBe(false);
+  });
+
+  it("running an example closes the drawer so the results are unobscured", () => {
+    const { el, pushExamples } = mountPanel();
+    pushExamples([{ label: "e", query: "component.net(?r,?n) => ?r", teaches: "t" }]);
+    el.querySelector<HTMLButtonElement>(".query-drawer-handle")!.click();
+    expect(el.querySelector(".query-drawer")!.classList.contains("open")).toBe(true);
+    el.querySelector<HTMLButtonElement>(".query-example")!.click();
+    expect(el.querySelector(".query-drawer")!.classList.contains("open")).toBe(false);
+  });
+
+  it("sorts result rows by a clicked column (numeric-aware), cycling asc → desc → natural", () => {
+    const { el, push } = mountPanel();
+    push(
+      resultFromWire({
+        columns: ["n", "v"],
+        rows: [
+          { cells: ["A", "10"], cites: [] },
+          { cells: ["B", "9"], cites: [] },
+          { cells: ["C", "100"], cites: [] },
+        ],
+      } as never),
+    );
+    const vColumn = () =>
+      [...el.querySelectorAll("tbody tr.query-row")].map((r) => r.querySelectorAll("td")[2].textContent);
+    expect(vColumn()).toEqual(["10", "9", "100"]); // natural (server) order
+    // The v header is the second sortable column header.
+    const vHead = () => [...el.querySelectorAll("thead th.query-sortable")][1] as HTMLElement;
+    vHead().click(); // ascending, 9 before 10 before 100, not lexicographic
+    expect(vColumn()).toEqual(["9", "10", "100"]);
+    expect(vHead().textContent).toContain("▲");
+    vHead().click(); // descending
+    expect(vColumn()).toEqual(["100", "10", "9"]);
+    expect(vHead().textContent).toContain("▼");
+    vHead().click(); // back to natural order
+    expect(vColumn()).toEqual(["10", "9", "100"]);
+    expect(vHead().textContent).not.toContain("▲");
+  });
+
+  // agni issue 1045: a column the answer types as parts sorts as Tabulate and every csv sort it.
+  it("sorts an entity column in the engine's name order, R2 before R10", () => {
+    const { el, push } = mountPanel();
+    push(
+      resultFromWire({
+        columns: ["r"],
+        columnKinds: ["component"],
+        rows: [{ cells: ["R10"], cites: [] }, { cells: ["r2"], cites: [] }, { cells: ["R1"], cites: [] }],
+      } as never),
+    );
+    const col = () => [...el.querySelectorAll("tbody tr.query-row")].map((r) => r.querySelectorAll("td")[1].textContent);
+    ([...el.querySelectorAll("thead th.query-sortable")][0] as HTMLElement).click();
+    expect(col()).toEqual(["R1", "r2", "R10"]);
+  });
+
+  it("keeps a row's provenance expansion attached to that row after a re-sort", () => {
+    const { el, push } = mountPanel();
+    push(
+      resultFromWire({
+        columns: ["n", "v"],
+        rows: [
+          { cells: ["A", "10"], cites: ["cite-A"] },
+          { cells: ["B", "9"], cites: ["cite-B"] },
+        ],
+      } as never),
+    );
+    // Expand the second natural row (B) provenance.
+    [...el.querySelectorAll(".query-cite-toggle")][1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["cite-B"]);
+    // Sort ascending, so B moves to the top; its cite must still be the one shown.
+    ([...el.querySelectorAll("thead th.query-sortable")][1] as HTMLElement).click();
+    expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["cite-B"]);
+  });
+
+  it("inserts a member's template, with its argument names, at the caret", async () => {
+    const { el, pushRelations } = mountPanel();
+    pushRelations([rel({ name: "net.has_test_point", kind: "derived" })]);
+    await flush();
+    clickRel(el, "net ›");
+    await flush();
+    clickRel(el, "net.has_test_point");
+    await flush();
+    const ta = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+    // Seed some text and place the caret between the two tokens.
+    ta.value = "a,  => ?r";
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    ta.setSelectionRange(3, 3); // after "a, "
+    const insert = el.querySelector<HTMLButtonElement>(".query-relinsert")!;
+    expect(insert.textContent).toBe("Insert net.has_test_point(?n)");
+    insert.click();
+    expect(ta.value).toBe("a, net.has_test_point(?n) => ?r");
+  });
+
+  it("says why when a place cannot be described", async () => {
+    const { el, pushRelations } = mountPanel();
+    pushRelations([rel({ name: "net.rail", kind: "netlist" })]);
+    await flush();
+    clickRel(el, "entity");
+    await flush();
+    expect(el.querySelector(".query-relerror")!.textContent).toBe("no relation or module at entity");
+  });
+});
+
+// The results table used to be an auto layout with no per-column widths, so the browser sized each
+// column to its widest cell. One long provenance path or net id took most of the panel and the rest
+// were unreadable slivers. Columns are equal by default now, and draggable.
+describe("resizable result columns", () => {
+  const grips = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>(".query-col-grip")];
+  const cols = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>("colgroup col")];
+
+  function drag(grip: HTMLElement, from: number, to: number): void {
+    grip.setPointerCapture = () => {};
+    grip.releasePointerCapture = () => {};
+    grip.dispatchEvent(new PointerEvent("pointerdown", { clientX: from, bubbles: true, cancelable: true }));
+    grip.dispatchEvent(new PointerEvent("pointermove", { clientX: to, bubbles: true }));
+    grip.dispatchEvent(new PointerEvent("pointerup", { clientX: to, bubbles: true }));
+    // A real browser fires click after a pointerdown/up on the same element, and that click bubbles
+    // to the sort handler on the header. jsdom does not synthesize it, so without this line the
+    // "does not sort while resizing" case passes whether the grip swallows the click or not.
+    grip.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  it("gives every data column a grip and no width until one is dragged", () => {
+    const h = mountPanel();
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+
+    expect(grips(h.el)).toHaveLength(2);
+    // A colgroup entry per column plus the citation gutter; unset widths mean equal shares.
+    expect(cols(h.el)).toHaveLength(3);
+    expect(cols(h.el)[1].style.width).toBe("");
+  });
+
+  it("applies a dragged width to that column alone", () => {
+    const h = mountPanel();
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+
+    drag(grips(h.el)[0], 100, 260);
+    expect(cols(h.el)[1].style.width).not.toBe("");
+    expect(cols(h.el)[2].style.width).toBe(""); // its neighbour is untouched
+  });
+
+  // Dragging an edge must not also re-sort, because the grip sits inside the header button's click
+  // target.
+  it("does not sort while resizing", () => {
+    const h = mountPanel();
+    h.push(resultFromWire({ columns: ["?r", "?n"], rows: [{ cells: ["B", "x"], cites: [] }, { cells: ["A", "y"], cites: [] }] } as never));
+    const before = h.el.querySelector(".query-sort-ind");
+
+    drag(grips(h.el)[0], 100, 200);
+    expect(h.el.querySelector(".query-sort-ind")).toBe(before);
+  });
+});
+
+// In the walk an answer becomes the next question. A click on the drawing already writes a query about
+// what was clicked, but the answers it produced were inert, and the reader could highlight a part from
+// a result row and nothing more. Selecting a cell names it and offers the served preset for its
+// kind, so pin → net → parts → other nets is a loop the reader can go round without typing.
+describe("walking from a result row", () => {
+  const PRESETS = [
+    { kind: "component", label: "What nets does it touch?", query: "component.net(?ref, ?net) => ?net", teaches: "projection", binds: ["ref"] },
+    { kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] },
+  ];
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const netCell = (el: HTMLElement) =>
+    [...el.querySelectorAll(".query-cell-locate")].find((td) => td.textContent?.includes("SDA"))!
+      .querySelector<HTMLButtonElement>(".query-locate")!;
+
+  it("names the picked cell and offers the question about it", () => {
+    const { el, push, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    expect(el.querySelector(".query-selection")).toBeNull(); // nothing picked yet
+
+    el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // the R1 component cell
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("R1");
+    expect(el.querySelector(".query-ask")!.textContent).toContain("What nets does it touch?");
+  });
+
+  it("takes the hop: the question fills the box with the preset, binds the pick, and runs it", () => {
+    const { el, push, panel, onRun } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    netCell(el).click();
+
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    const asked = "component.net(?ref, ?net) => ?ref";
+    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" }, STARTING_POINT_LIMIT, "q2");
+    // The query stays in the box, editable, because the hop is meant to teach the sentence that
+    // made it, and the value it was asked about shows beside it (agni issue 793).
+    expect(box(el).value).toBe(asked);
+    expect(chips(el)).toEqual([["?net =", "SDA"]]);
+  });
+
+  // A cell click still locates. The walk is added to that behaviour, not swapped for it, so the
+  // reader can scan a result set highlighting each row without every click replacing the table.
+  it("still locates the cell it selects", () => {
+    const { el, push, panel, onLocate } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    netCell(el).click();
+    expect(onLocate).toHaveBeenCalledWith("net", "SDA", undefined, LocateReason.UNSPECIFIED);
+  });
+
+  // The canvas is the other picker; it pushes its selection through the view, and the bar names it
+  // the same way. A pin has no preset here, so the bar names the pick and asks nothing rather than
+  // offering a button that would run a guess.
+  it("names a selection pushed by the canvas, and offers no question without a preset", () => {
+    const { el, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    panel.view.setSelection({ kind: "pin", ref: "U7", pin: "12" });
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("U7.12");
+    expect(el.querySelector(".query-ask")).toBeNull();
+  });
+});
+
+// agni issue 338: a search result is polymorphic, so the panel cannot type a cell from its column.
+// These drive the two halves of that, the table reading a per-row kind, and the mode that produces
+// such a result in the first place.
+describe("querypanel search", () => {
+  const SEARCH = {
+    query: "entity(?name, ?kind), str.match(?name, ?pattern) => ?name, ?kind",
+    teaches: "entity(?name, ?kind) enumerates what a design names",
+    bind: "pattern",
+    pattern: "(?i){term}",
+  };
+  // one row per kind, each typed by the row rather than by the column, which is what a search over
+  // entity(?name, ?kind) comes back as.
+  const pushSearchResult = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromWire(
+        {
+          columns: ["name", "kind"],
+          columnKinds: ["", ""],
+          rows: [
+            { cells: ["U1", "component"], cites: [], cellKinds: ["component", ""], cellSheets: [{ sheetIds: ["s1"] }, {}] },
+            { cells: ["CAN_H", "net"], cites: [], cellKinds: ["net", ""], cellSheets: [{ sheetIds: ["s2"] }, {}] },
+            { cells: ["DATA[1:0]", "bus"], cites: [], cellKinds: ["bus", ""], cellSheets: [{}, {}] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id })),
+      ),
+    );
+  const search = (el: HTMLElement) => el.querySelector<HTMLInputElement>("input.query-term");
+  const modes = (el: HTMLElement) => [...el.querySelectorAll(".query-mode")].map((b) => b.textContent);
+  const typeTerm = (el: HTMLElement, t: string) => {
+    const input = search(el)!;
+    input.value = t;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  it("offers no search mode until the server has sent a template to fill", () => {
+    const { el, panel } = mountPanel();
+    expect(modes(el)).toEqual([]);
+    panel.view.setSearch(SEARCH);
+    expect(modes(el)).toEqual(["Query", "Find by name"]);
+  });
+
+  it("fills the box with the datalog that answers the name, runs it, and hands back the query", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setSearch(SEARCH);
+    el.querySelectorAll<HTMLButtonElement>(".query-mode")[1].click();
+    typeTerm(el, "  CAN  ");
+    el.querySelector<HTMLButtonElement>(".query-run")!.click();
+
+    expect(onRun).toHaveBeenCalledWith(SEARCH.query, { pattern: "(?i)CAN" }, 0, "q1");
+    // Back in query mode with the sentence that answered visible and editable, which is the whole
+    // reason search is a mode on this panel rather than a widget of its own. The query is the served
+    // text, and the term reaches it as a bound value shown beside it (agni issue 793).
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe(SEARCH.query);
+    expect(chips(el)).toEqual([["?pattern =", "(?i)CAN"]]);
+    expect(search(el)).toBeNull();
+  });
+
+  it("refuses an empty term rather than enumerating the whole design into the table", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setSearch(SEARCH);
+    el.querySelectorAll<HTMLButtonElement>(".query-mode")[1].click();
+    typeTerm(el, "   ");
+    expect(el.querySelector<HTMLButtonElement>(".query-run")!.disabled).toBe(true);
+    search(el)!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(onRun).not.toHaveBeenCalled();
+  });
+
+  it("types each result cell by ITS OWN row, so every hit is clickable whatever kind it is", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushSearchResult(push);
+    const hits = [...el.querySelectorAll<HTMLElement>(".query-cell-locate .query-locate")].map((b) => b.textContent);
+    expect(hits).toEqual(["U1", "CAN_H", "DATA[1:0]"]);
+
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "DATA[1:0]")!.click();
+    expect(onLocate).toHaveBeenCalledWith("bus", "DATA[1:0]", undefined, LocateReason.UNSPECIFIED);
+  });
+
+  // The kind column is a plain string in every row. Rendering it as a link would invite a click
+  // that locates a thing called "net".
+  it("leaves the kind column as plain text", () => {
+    const { el, push } = mountPanel();
+    pushSearchResult(push);
+    const linked = [...el.querySelectorAll<HTMLElement>(".query-locate")].map((b) => b.textContent);
+    expect(linked).not.toContain("component");
+    expect(linked).not.toContain("bus");
+  });
+
+  // A hit joins the walk, since selecting it is what puts the next question in front of the
+  // reader.
+  it("selects the hit it locates, so the answer becomes the next question's subject", () => {
+    const { el, push } = mountPanel();
+    pushSearchResult(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "CAN_H")!.click();
+    expect(el.querySelector(".query-selection-kind")!.textContent).toBe("net");
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("CAN_H");
+  });
+});
+
+// Forty rows in, a click sends the canvas somewhere and the table used to say nothing about which
+// answer it came from. The mark is DERIVED from what is on screen rather than remembered from the
+// click, which is what these pin.
+describe("querypanel you-are-here", () => {
+  const pushMultiSheet = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromWire(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{ sheetIds: ["s1"] }, { sheetIds: ["s1", "s2"] }] },
+            { cells: ["U1", "SCL"], cites: [], cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s2"] }] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+  const marked = (el: HTMLElement) => [...el.querySelectorAll(".query-locate.on")].map((b) => b.textContent);
+  const markedBadges = (el: HTMLElement) => [...el.querySelectorAll(".sheet-badge.on")].map((b) => b.textContent);
+
+  it("marks nothing until something is selected", () => {
+    const { el, push } = mountPanel();
+    pushMultiSheet(push);
+    expect(marked(el)).toEqual([]);
+    expect(markedBadges(el)).toEqual([]);
+  });
+
+  it("marks the cell whose entity is on screen when a cell is clicked", () => {
+    const { el, push } = mountPanel();
+    pushMultiSheet(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "SDA")!.click();
+    expect(marked(el)).toEqual(["SDA"]);
+  });
+
+  // The mark follows the VIEWER, not this table. A pick on the drawing has to move it, or a reader
+  // who clicked the canvas would read a stale mark as where they are.
+  it("marks a cell the canvas selected, which no click here ever touched", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "component", ref: "U1" });
+    expect(marked(el)).toEqual(["U1"]);
+  });
+
+  it("marks the badge for the sheet on screen, and only on the selected cell", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    panel.view.setCurrentSheet("s2");
+    // SDA is on s1 and s2; the reader is on s2. SCL is also on s2 but is not what is selected.
+    expect(markedBadges(el)).toEqual(["S2"]);
+  });
+
+  it("moves the badge mark when the reader navigates by any other route", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    panel.view.setCurrentSheet("s1");
+    expect(markedBadges(el)).toEqual(["S1"]);
+    panel.view.setCurrentSheet("s2"); // e.g. the sheet tabs, not this panel
+    expect(markedBadges(el)).toEqual(["S2"]);
+  });
+
+  // The strip caps at three chips, and a marked chip past the cap would be marked and invisible.
+  // The reader would see an unmarked strip and conclude they were somewhere else, which is worse
+  // than no mark at all, so the cut grows to include it.
+  it("reveals the current sheet's badge even when the cap would have hidden it", () => {
+    const { el, push, panel } = mountPanel();
+    push(
+      resultFromWire(
+        {
+          columns: ["n"],
+          columnKinds: ["net"],
+          rows: [{ cells: ["DGND"], cites: [], cellSheets: [{ sheetIds: Array.from({ length: 21 }, (_, i) => `s${i}`) }] }],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+    const labels = () => [...el.querySelectorAll(".query-row .sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["S0", "S1", "S2", "+18"]);
+
+    panel.view.setSelection({ kind: "net", net: "DGND" });
+    panel.view.setCurrentSheet("s9");
+    expect(markedBadges(el)).toEqual(["S9"]);
+    expect(labels()).toEqual(["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "+11"]);
+  });
+
+  // Truthful rather than convenient. An entity answering in several rows is being shown in all of
+  // them, and marking only one would be a guess about which row the reader meant.
+  it("marks every row that names the entity on screen", () => {
+    const { el, push, panel } = mountPanel();
+    push(
+      resultFromWire(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{}, {}] },
+            { cells: ["U1", "SDA"], cites: [], cellSheets: [{}, {}] },
+          ],
+        } as never,
+      ),
+    );
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(marked(el)).toEqual(["SDA", "SDA"]);
+  });
+});
+
+// What is already CHECKED about the selection, and about the whole answer set (agni issue 259).
+// Both are the same projection over one evaluation, which is why these drive them through the same
+// pushed state rather than through two fixtures.
+describe("querypanel findings beside the selection", () => {
+  const finding = (over: Record<string, unknown>) => ({
+    rule: "r", category: "connectivity", profile: "", severity: "warning", kind: "net",
+    subject: "SDA", pin: "", netId: "", busId: "", message: "m", sheets: [], locateReason: 0, ...over,
+  });
+  const pushChecks = (panel: ReturnType<typeof mountPanel>["panel"], over: Record<string, unknown> = {}) =>
+    panel.view.setFindings({
+      findings: [
+        finding({ rule: "a", severity: "error", kind: "net", subject: "SDA" }),
+        finding({ rule: "b", severity: "warning", kind: "net", subject: "SDA" }),
+        finding({ rule: "c", severity: "info", kind: "component", subject: "R1" }),
+      ],
+      selected: "", ruleCount: 3, pending: 0, running: false, skipped: [], ruleSummaries: {},
+      ...over,
+    } as never);
+  const bar = (el: HTMLElement) => el.querySelector(".query-selection .query-findings")!;
+  const footer = (el: HTMLElement) => el.querySelector(".query-count .query-findings");
+  const pips = (root: Element) => [...root.querySelectorAll(".query-pip")].map((p) => `${p.className.split(" ")[1]}:${p.textContent}`);
+  const label = (root: Element) => root.querySelector(".query-findings-label")!.textContent;
+
+  const pushResults = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromWire(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{}, {}] },
+            { cells: ["R1", "SCL"], cites: [], cellSheets: [{}, {}] },
+          ],
+        } as never,
+      ),
+    );
+
+  it("counts what is known about the selected entity, by severity", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("2 findings");
+    expect(pips(bar(el))).toEqual(["error:1", "warning:1"]);
+  });
+
+  // A zero needs a state beside it. Nobody has pressed Run, and "no findings" here
+  // would be a claim about the design rather than about the session.
+  it("says the checks have not run rather than reporting a clean entity", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { findings: [], pending: 3 });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("not checked yet");
+    expect(bar(el).textContent).not.toContain("no findings");
+  });
+
+  // Before the catalog arrives nothing is selected, and "no rules selected" would blame the user
+  // for a selection the viewer has not made yet (agni 868).
+  it("says the rules are loading while the catalog has not arrived", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { findings: [], ruleCount: 0, catalogLoading: true });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("loading rules…");
+  });
+
+  it("marks a half-run ruleset as a floor, not a total", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { pending: 1 });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("2 findings so far");
+  });
+
+  it("reports a genuinely clean entity once the ruleset has run", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "component", ref: "U9" });
+    expect(label(bar(el))).toBe("no findings");
+  });
+
+  // Required by the issue. The panel has to say what it is NOT, since an entity view enumerates
+  // attention while a review pass enumerates the design.
+  it("carries the caveat as visible text, not only as a hover", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(el.querySelector(".query-findings-caveat")!.textContent).toBe("selected rules, this subject only");
+    expect(bar(el).getAttribute("title")).toContain("Not a coverage statement");
+  });
+
+  it("opens the check results for the entity, without re-running anything", () => {
+    const onInspect = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onLocate: vi.fn(), onInspect });
+    panel.island.activate();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    el.querySelector<HTMLButtonElement>(".query-findings-open")!.click();
+    expect(onInspect).toHaveBeenCalledWith({ kind: "net", net: "SDA" });
+  });
+
+  it("offers nothing to open when there is nothing to see", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "component", ref: "U9" });
+    expect(el.querySelector(".query-findings-open")).toBeNull();
+  });
+
+  // The set case, which is the primitive the single click falls out of. R1 answers on two rows and
+  // must be counted once.
+  it("counts findings across every entity the query returned, deduped", () => {
+    const { el, push, panel } = mountPanel();
+    pushResults(push);
+    pushChecks(panel);
+    expect(label(footer(el)!)).toBe("3 findings across these 3 entities");
+    expect(pips(footer(el)!)).toEqual(["error:1", "warning:1", "info:1"]);
+  });
+
+  it("shows no set count for a result with nothing locatable in it", () => {
+    const { el, push, panel } = mountPanel();
+    push(resultFromWire({ columns: ["v"], columnKinds: [""], rows: [{ cells: ["3.3"], cites: [] }] } as never));
+    pushChecks(panel);
+    expect(footer(el)).toBeNull();
+  });
+});
+
+// A pin is two fields, so a result cell cannot name one alone, so the row carries the component. This
+// is the last of the three ways a reader names an entity to learn about pins.
+describe("querypanel pin cells", () => {
+  const pushPins = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromWire(
+        {
+          columns: ["ref", "pin", "net"],
+          columnKinds: ["component", "pin", "net"],
+          rows: [
+            { cells: ["U1", "5", "SDA"], cites: [], cellRefs: ["", "U1", ""], cellSheets: [{ sheetIds: ["s1"] }, { sheetIds: ["s1"] }, {}] },
+            // A pin whose component did not resolve. The server blanks nothing here, and the panel
+            // has to refuse it anyway.
+            { cells: ["", "9", "SCL"], cites: [], cellRefs: ["", ""], cellSheets: [{}, {}, {}] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id })),
+      ),
+    );
+  const links = (el: HTMLElement) => [...el.querySelectorAll(".query-locate")].map((b) => b.textContent);
+
+  it("locates a pin as its component plus the designator", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushPins(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "5")!.click();
+    // The entity is the component and the cell is the designator on it, which inverts what the
+    // arguments mean compared with every other kind.
+    expect(onLocate).toHaveBeenCalledWith("pin", "U1", undefined, LocateReason.UNSPECIFIED, "5");
+  });
+
+  it("selects the pin, so the walk continues from it", () => {
+    const { el, push } = mountPanel();
+    pushPins(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "5")!.click();
+    expect(el.querySelector(".query-selection-kind")!.textContent).toBe("pin");
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("U1.5");
+  });
+
+  it("navigates from a pin's sheet badge with both halves intact", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushPins(push);
+    const pinCell = [...el.querySelectorAll(".query-cell-locate")].find((td) => td.textContent?.startsWith("5"))!;
+    pinCell.querySelector<HTMLElement>(".sheet-badge")!.click();
+    expect(onLocate).toHaveBeenCalledWith("pin", "U1", "s1", LocateReason.UNSPECIFIED, "5");
+  });
+
+  it("leaves a pin with no component as plain text rather than a link to nowhere", () => {
+    const { el, push } = mountPanel();
+    pushPins(push);
+    expect(links(el)).toContain("5");
+    expect(links(el)).not.toContain("9");
+  });
+});
+
+// A rule that examined this subject and could not decide is not a defect and not a pass (agni issue
+// 74), and a rule gated before it evaluated reports nothing anywhere. Both make a count beside an
+// entity mean less than it looks, and both were invisible before.
+describe("querypanel unresolved and gated", () => {
+  const finding = (over: Record<string, unknown>) => ({
+    rule: "r", category: "c", profile: "", severity: "warning", kind: "net",
+    subject: "SDA", pin: "", netId: "", busId: "", message: "m", inconclusive: false,
+    sheets: [], locateReason: 0, ...over,
+  });
+  const push = (panel: ReturnType<typeof mountPanel>["panel"], over: Record<string, unknown> = {}) =>
+    panel.view.setFindings({
+      findings: [
+        finding({ rule: "a", severity: "error" }),
+        finding({ rule: "b", severity: "error", inconclusive: true }),
+      ],
+      selected: "", ruleCount: 3, pending: 0, running: false, skipped: [], ruleSummaries: {},
+      ...over,
+    } as never);
+  const bar = (el: HTMLElement) => el.querySelector(".query-selection .query-findings")!;
+
+  it("counts an unresolved result apart from the defects", () => {
+    const { el, panel } = mountPanel();
+    push(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-label")!.textContent).toBe("1 finding");
+    expect(bar(el).querySelector(".query-findings-open-q")!.textContent).toBe("1 unresolved");
+    // An inconclusive ERROR must not raise the error pip, since its severity is not what makes it
+    // unresolved, and the pip is what a reviewer reads first.
+    expect([...bar(el).querySelectorAll(".query-pip")].map((p) => p.textContent)).toEqual(["1"]);
+  });
+
+  it("says nothing about unresolved results when there are none", () => {
+    const { el, panel } = mountPanel();
+    push(panel, { findings: [finding({ rule: "a", severity: "error" })] });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-open-q")).toBeNull();
+  });
+
+  // The largest thing a per-entity count leaves out. A gated rule fires nowhere, so a clean entity
+  // under a half-gated ruleset is a much weaker statement than a clean entity under a full one.
+  it("says how many selected rules could not run at all", () => {
+    const { el, panel } = mountPanel();
+    push(panel, { skipped: [{ rule: "board-clearance", reason: "no board attached" }, { rule: "cap-voltage", reason: "no datasheet corpus" }] });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-gated")!.textContent).toContain("2 rule(s) could not run");
+    // The engine's own words for WHY, passed through rather than reworded.
+    const title = bar(el).getAttribute("title")!;
+    expect(title).toContain("board-clearance: no board attached");
+    expect(title).toContain("cap-voltage: no datasheet corpus");
+  });
+
+  it("stays quiet when every selected rule ran", () => {
+    const { el, panel } = mountPanel();
+    push(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-gated")).toBeNull();
+  });
+});
+
+// agni issue 793: a search or a click binds its values rather than splicing them into the text, and
+// the chips are how the reader sees and changes them.
+describe("bound values", () => {
+  const PRESET = { kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] };
+  const ask = (panel: ReturnType<typeof mountPanel>["panel"]) => {
+    panel.view.setEntityQueries([PRESET]);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+  };
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const runBtn = (el: HTMLElement) => el.querySelector<HTMLButtonElement>(".query-run")!;
+
+  it("sends an edited value on the next run", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    const input = el.querySelector<HTMLInputElement>(".query-binding-value")!;
+    input.value = "SCL";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "SCL" }, 0, "q2");
+  });
+
+  it("unbinds a removed chip, leaving its variable free", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    el.querySelector<HTMLButtonElement>(".query-binding-remove")!.click();
+    expect(chips(el)).toEqual([]);
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {}, 0, "q2");
+  });
+
+  it("drops a binding whose variable the reader edited out of the query", () => {
+    const { el, panel, onRun } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    box(el).value = "component.net(?ref, ?n) => ?ref";
+    box(el).dispatchEvent(new Event("input", { bubbles: true }));
+    expect(chips(el)).toEqual([]);
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?n) => ?ref", {}, 0, "q2");
+  });
+
+  it("clears the bindings when an example replaces the query", () => {
+    const { el, panel, onRun, pushExamples } = mountPanel();
+    ask(panel);
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    pushExamples([{ label: "nets", query: "component.net(?ref, ?net) => ?net", teaches: "t" }]);
+    el.querySelector<HTMLButtonElement>(".query-example")!.click();
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?net) => ?net", {}, 0, "q2");
+    expect(chips(el)).toEqual([]);
+  });
+
+  it("fills the box and the chips from a click on the drawing", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: "GND" });
+    expect(box(el).value).toBe(PRESET.query);
+    expect(chips(el)).toEqual([["?net =", "GND"]]);
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, STARTING_POINT_LIMIT, "q2");
+  });
+
+  // agni issue 1121: a list arrives from a link or a set, shows as the query spells it, and can be
+  // removed but not edited as text.
+  it("shows a list binding as the query spells it, runs it, and unbinds it on remove", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, { whole: true });
+    const chip = el.querySelector(".query-binding")!;
+    expect(chip.querySelector(".query-binding-list")!.textContent).toBe('?net in ["I2C_SDA", "I2C_SCL"]');
+    expect(chip.querySelector(".query-binding-value")).toBeNull();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, 0, "q2");
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, 0, "q2");
+    el.querySelector<HTMLButtonElement>(".query-binding-remove")!.click();
+    expect(el.querySelector(".query-binding")).toBeNull();
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {}, 0, "q2");
+  });
+
+  it("spells a set's list chip with its numbers bare", () => {
+    const { el, panel } = mountPanel();
+    panel.view.openSet(
+      create(QuerySetSchema, {
+        queries: [
+          {
+            name: "Rails",
+            query: "net.voltage(?n, ?v) => ?n",
+            bindings: { v: { kind: { case: "list", value: { values: [{ kind: { case: "number", value: 1.8 } }, { kind: { case: "text", value: "3" } }] } } } },
+          },
+        ],
+      }),
+    );
+    expect(el.querySelector(".query-binding-list")!.textContent).toBe('?v in [1.8, "3"]');
+  });
+});
+
+// agni issue 896: a question about one picked entity asks for the first rows, says how many the
+// limit left out, and "show all" asks the same question again without it.
+describe("a limited answer", () => {
+  const PRESET = { kind: "net", label: "What pins are on it?", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] };
+  const limited = (total: number): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref", "pin"],
+    columnKinds: ["", ""],
+    rows: [
+      { cells: ["U1", "1"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""], witnesses: [] },
+      { cells: ["U2", "4"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""], witnesses: [] },
+    ],
+    total,
+  });
+  const count = (el: HTMLElement) => el.querySelector(".query-count")!.textContent ?? "";
+  const showAll = (el: HTMLElement) => el.querySelector<HTMLButtonElement>(".query-show-all");
+
+  it("says how many rows the limit left out, and show all asks again without the limit", () => {
+    const { el, panel, onRun, push } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: "GND" });
+    push(limited(1229));
+    expect(count(el)).toContain("2 of 1229 result(s)");
+    // The reader editing the box does not change which question show all asks.
+    const box = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+    box.value = "component.net(?ref, ?net) => ?ref";
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    showAll(el)!.click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, 0, "q2");
+  });
+
+  it("offers nothing more when the answer is whole", () => {
+    const { el, push } = mountPanel();
+    push(limited(0));
+    expect(count(el)).toContain("2 result(s)");
+    expect(count(el)).not.toContain(" of ");
+    expect(showAll(el)).toBeNull();
+  });
+});
+
+// agni issue 956: the answer on screen saves as csv when the host offers it.
+describe("saving an answer as csv", () => {
+  const answered = (): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref"],
+    columnKinds: [""],
+    rows: [{ cells: ["U1"], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""], witnesses: [] }],
+  });
+
+  it("offers Save CSV beside the count and asks the host to save", () => {
+    const onSaveCSV = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onSaveCSV });
+    panel.island.activate();
+    panel.view.setState(answered());
+    el.querySelector<HTMLButtonElement>(".query-count .query-save-csv")!.click();
+    expect(onSaveCSV).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no save when the host has none", () => {
+    const { el, push } = mountPanel();
+    push(answered());
+    expect(el.querySelector(".query-save-csv")).toBeNull();
+  });
+});
+
+// agni issue 902: the panel hosts any number of query tabs, each with its own question and answer.
+describe("query tabs", () => {
+  const PRESETS = [
+    { kind: "net", label: "What pins are on it?", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] },
+    { kind: "net", label: "Which test points are on it?", query: "tp(?tp, ?net) => ?tp", teaches: "t", binds: ["net"] },
+  ];
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll(".query-tab-go")].map((t) => t.textContent);
+  const front = (el: HTMLElement) => el.querySelector(".query-tab.on .query-tab-go")!.textContent;
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const tab = (el: HTMLElement, title: string) => [...el.querySelectorAll<HTMLButtonElement>(".query-tab-go")].find((t) => t.textContent === title)!;
+  const answered = (cell: string): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref"],
+    columnKinds: [""],
+    rows: [{ cells: [cell], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""], witnesses: [] }],
+  });
+
+  it("opens an asked question in a tab named for it, and leaves the typed query in its own tab", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    typeQuery(el, "net.rail(?n) => ?n");
+    panel.view.askAbout({ kind: "net", net: "SDA" }, PRESETS[1]);
+    expect(tabs(el)).toEqual(["Query 1", "SDA: Which test points are on it?"]);
+    expect(front(el)).toBe("SDA: Which test points are on it?");
+    expect(box(el).value).toBe(PRESETS[1].query);
+    expect(onRun).toHaveBeenLastCalledWith(PRESETS[1].query, { net: "SDA" }, STARTING_POINT_LIMIT, "q2");
+    tab(el, "Query 1").click();
+    expect(box(el).value).toBe("net.rail(?n) => ?n");
+  });
+
+  // agni issue 904: an area's question binds every member at once, so it is asked once.
+  it("binds an area's question to the whole set, in a tab named for the area", () => {
+    const { el, panel, onRun } = mountPanel();
+    const q = { kind: "area", label: "What does this block connect to?", query: "pin.net(?ref, ?pin, ?net) => ?net", teaches: "t", binds: ["ref"] };
+    panel.view.setEntityQueries([...PRESETS, q]);
+    panel.view.askAbout({ kind: "area", refs: ["C1", "U1"], pins: ["R9.2"], wires: [], nets: ["GND", "VIN"] }, q);
+    expect(front(el)).toBe("Area (3): What does this block connect to?");
+    expect(onRun).toHaveBeenLastCalledWith(q.query, { ref: ["C1", "U1"] }, STARTING_POINT_LIMIT, "q2");
+  });
+
+  it("asks the kind's first question when none is named", () => {
+    const { el, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    panel.view.askAbout({ kind: "net", net: "SDA" });
+    expect(front(el)).toBe("SDA: What pins are on it?");
+  });
+
+  it("keeps each tab's answer, including one that arrives after the reader moved on", () => {
+    const { el, panel, push } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    push(answered("from tab 1"));
+    panel.view.askAbout({ kind: "net", net: "SDA" });
+    panel.view.setState(answered("late for tab 1"), "q1");
+    panel.view.setState(answered("for tab 2"), "q2");
+    expect(el.querySelector(".query-row")!.textContent).toContain("for tab 2");
+    tab(el, "Query 1").click();
+    expect(el.querySelector(".query-row")!.textContent).toContain("late for tab 1");
+  });
+
+  it("opens an empty tab with +, and closes any tab but the last", () => {
+    const { el } = mountPanel();
+    expect(el.querySelector(".query-tab-close")).toBeNull();
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    expect(tabs(el)).toEqual(["Query 1", "Query 2"]);
+    expect(front(el)).toBe("Query 2");
+    expect(box(el).value).toBe("");
+    el.querySelector<HTMLButtonElement>(".query-tab.on .query-tab-close")!.click();
+    expect(tabs(el)).toEqual(["Query 1"]);
+    expect(el.querySelector(".query-tab-close")).toBeNull();
+  });
+
+  it("tells the host what a tab coming forward had located, so the drawing matches it", () => {
+    const onActivate = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onLocate: vi.fn(), onActivate });
+    panel.island.activate();
+    pushLocatable((s) => panel.view.setState(s));
+    el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // R1, in tab 1
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    const r1 = { kind: "component", subject: "R1", sheet: undefined, reason: LocateReason.UNSPECIFIED };
+    expect(onActivate).toHaveBeenLastCalledWith("q2", undefined, r1);
+    tab(el, "Query 1").click();
+    expect(onActivate).toHaveBeenLastCalledWith("q1", r1, undefined);
+  });
+
+  it("tells the host when a tab closes, so it can drop the answer it kept", () => {
+    const onClose = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onClose });
+    panel.island.activate();
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    el.querySelector<HTMLButtonElement>(".query-tab.on .query-tab-close")!.click();
+    expect(onClose).toHaveBeenCalledWith("q2");
+  });
+
+  it("serves a kind's questions in the server's order", () => {
+    const { panel } = mountPanel();
+    panel.view.setEntityQueries([...PRESETS, { kind: "component", label: "c", query: "c", teaches: "", binds: ["ref"] }]);
+    expect(panel.view.questionsFor("net").map((q) => q.label)).toEqual(["What pins are on it?", "Which test points are on it?"]);
+    expect(panel.view.questionsFor("bus")).toEqual([]);
+  });
+});
+
+// agni issue 634: a question arriving by link opens a tab under the link's title and asks for the
+// whole answer, where a question written for the reader shows a starting page.
+describe("a question handed over with a title", () => {
+  it("names the tab and asks for every row", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery("component.net(?r, ?n) => ?r", { n: "GND" }, { title: "On ground", whole: true });
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?r, ?n) => ?r", { n: "GND" }, 0, expect.any(String));
+    expect([...el.querySelectorAll(".query-tab-go")].map((t) => t.getAttribute("title"))).toContain("On ground");
+  });
+
+  // agni issue 1236. A link lands on the design's first sheet with nothing drawn, so its answer
+  // locates a lone row the way a click does, on the sheet the entity is drawn on, or says it is here.
+  const answerFor = (rows: string[][]) =>
+    resultFromWire({ columns: ["n"], columnKinds: ["net"], rows: rows.map((cells) => ({ cells, cites: [], cellSheets: [{ sheetIds: ["s2"] }] })) } as never, (ids) =>
+      ids.map((id) => ({ id, name: id })),
+    );
+  it("locates a link's one-row answer on its sheet, and says where a longer answer is", () => {
+    const { el, panel, onRun, onLocate } = mountPanel();
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const tab = onRun.mock.lastCall![3] as string;
+    panel.view.setState(emptyResult(true), tab);
+    expect(onLocate).not.toHaveBeenCalled();
+    panel.view.setState(answerFor([["VBUS"]]), tab);
+    expect(onLocate).toHaveBeenCalledWith("net", "VBUS", "s2", LocateReason.UNSPECIFIED);
+
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const second = onRun.mock.lastCall![3] as string;
+    panel.view.setState(answerFor([["VBUS"], ["GND"]]), second);
+    expect(onLocate).toHaveBeenCalledTimes(1);
+    expect(el.querySelector(".query-locate-note")?.textContent).toContain("the 2 rows below");
+  });
+
+  it("locates nothing for a question that did not arrive by link, or for a later run of the link's tab", () => {
+    const { panel, onRun, onLocate } = mountPanel();
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true });
+    panel.view.setState(answerFor([["VBUS"]]), onRun.mock.lastCall![3] as string);
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const tab = onRun.mock.lastCall![3] as string;
+    panel.view.setState(answerFor([["VBUS"]]), tab);
+    panel.view.setState(answerFor([["GND"]]), tab);
+    expect(onLocate).toHaveBeenCalledTimes(1);
+  });
+
+  it("still numbers the tab and asks for a starting page without them", () => {
+    const { panel, onRun } = mountPanel();
+    panel.view.setQuery("component.net(?r, ?n) => ?r");
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?r, ?n) => ?r", {}, STARTING_POINT_LIMIT, expect.any(String));
+  });
+});
+
+// agni issue 745: a query set opens as one tab per query, from the project's sets or a file.
+describe("opening a query set", () => {
+  const SET = create(QuerySetSchema, {
+    title: "Power review",
+    queries: [
+      { name: "Rails", query: "net.rail(?n) => ?n" },
+      { name: "Untested rails", query: "net.rail(?n), not net.has_test_point(?n) => ?n" },
+    ],
+  });
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll(".query-tab-go")].map((t) => t.getAttribute("title"));
+  const mountSets = (over: { onSetFile?: (name: string, text: string) => void } = {}) => {
+    const onRunSet = vi.fn();
+    const onActivate = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onRunSet, onActivate, ...over });
+    panel.island.activate();
+    return { el, panel, onRunSet, onActivate };
+  };
+
+  it("opens one tab per query in the set's order, in front of the rest, and asks for all of them at once", () => {
+    const { el, panel, onRunSet } = mountSets();
+    panel.view.openSet(SET);
+    expect(tabs(el)).toEqual(["Query 1", "Rails", "Untested rails"]);
+    expect(el.querySelector(".query-tab.on .query-tab-go")!.getAttribute("title")).toBe("Rails");
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("net.rail(?n) => ?n");
+    expect(onRunSet).toHaveBeenCalledWith(SET, ["q2", "q3"]);
+  });
+
+  // agni issue 1045: a set's tab asked again unchanged is the set's member, compiled by the engine
+  // with its typed bindings; edited, it is the reader's own query.
+  it("runs a set tab again through the set until the reader edits it", () => {
+    const onRun = vi.fn();
+    const onRunSet = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun, onRunSet, onActivate: vi.fn() });
+    panel.island.activate();
+    panel.view.openSet(SET);
+    panel.view.setState(emptyResult(false), "q2");
+    el.querySelector<HTMLButtonElement>("button.query-run")!.click();
+    expect(onRunSet).toHaveBeenLastCalledWith({ ...SET, queries: [SET.queries[0]] }, ["q2"]);
+    expect(onRun).not.toHaveBeenCalled();
+    typeQuery(el, "net.rail(?n), ?n != \"GND\" => ?n");
+    el.querySelector<HTMLButtonElement>("button.query-run")!.click();
+    expect(onRun).toHaveBeenCalledWith("net.rail(?n), ?n != \"GND\" => ?n", {}, 0, "q2");
+  });
+
+  it("shows each query's own answer or error in its own tab", () => {
+    const { el, panel } = mountSets();
+    panel.view.openSet(SET);
+    panel.view.setState(errorResult("unknown relation net.has_test_poin"), "q3");
+    expect(el.querySelector(".query-error")).toBeNull();
+    [...el.querySelectorAll<HTMLButtonElement>(".query-tab-go")].find((t) => t.getAttribute("title") === "Untested rails")!.click();
+    expect(el.querySelector(".query-error")!.textContent).toContain("unknown relation");
+  });
+
+  it("lists the project's sets in the Sets menu, and opening one opens its tabs", () => {
+    const { el, panel, onRunSet } = mountSets();
+    expect(el.querySelector(".query-sets-open")).toBeNull(); // nothing to offer: no sets and no file handler
+    panel.view.setQuerySets([{ name: "power-review", source: "mount://m/queries/power-review.yaml", set: SET }]);
+    el.querySelector<HTMLButtonElement>(".query-sets-open")!.click();
+    const item = el.querySelector<HTMLButtonElement>(".query-set-item")!;
+    expect(item.textContent).toBe("Power review (2)");
+    item.click();
+    expect(onRunSet).toHaveBeenCalledWith(SET, ["q2", "q3"]);
+    expect(el.querySelector(".query-sets-menu")).toBeNull();
+  });
+
+  it("hands a picked set file to the host to parse", async () => {
+    const onSetFile = vi.fn();
+    const { el } = mountSets({ onSetFile });
+    el.querySelector<HTMLButtonElement>(".query-sets-open")!.click();
+    expect(el.querySelector(".query-sets-none")!.textContent).toContain("keeps no query sets");
+    const input = el.querySelector<HTMLInputElement>(".query-set-input")!;
+    const file = new File(["queries: []\n"], "audit.yaml");
+    Object.defineProperty(input, "files", { value: [file] });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(onSetFile).toHaveBeenCalledWith("audit.yaml", "queries: []\n"));
+  });
+});
+
+// agni issue 794: a row opens onto how it holds.
+describe("querypanel witnesses", () => {
+  function mountWithExplain() {
+    const onRun = vi.fn();
+    const onLocate = vi.fn();
+    const onExplain = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun, onLocate, onExplain });
+    panel.island.activate();
+    return { el, panel, onLocate, onExplain };
+  }
+
+  it("asks for witnesses once, when a row of an answer asked without them is first opened", () => {
+    const { el, panel, onExplain } = mountWithExplain();
+    panel.view.setState(resultFromWire({ columns: ["r"], rows: [{ cells: ["R1"], cites: ["x.edn"] }, { cells: ["R2"], cites: ["x.edn"] }] } as never));
+    const toggles = () => [...el.querySelectorAll<HTMLButtonElement>(".query-cite-toggle")];
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+    expect(onExplain).toHaveBeenCalledWith("q1");
+    // The citations show while the witnessed answer is on its way.
+    expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["x.edn"]);
+    expect(el.querySelector(".query-witness-note")!.textContent).toContain("Working out");
+    // Closing a row asks nothing.
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+    // A witnessed answer asks nothing more.
+    panel.view.setState(resultFromResponse(probedOneAnswer(), undefined, true));
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws the tree under an opened row, the rule under a derived fact and a negated leaf as an absence", () => {
+    const { el, panel } = mountWithExplain();
+    panel.view.setState(resultFromWire({ columns: ["r", "u"], rows: [{ cells: ["R1", "SENSE"], cites: ["x.edn"] }] } as never));
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    // The witnessed answer arrives for the same rows, and the row the reader opened stays open on it.
+    panel.view.setState(resultFromResponse(probedOneAnswer(), undefined, true));
+    const facts = [...el.querySelectorAll(".query-witness-fact")].map((f) => f.textContent!.replace(/\s+/g, ""));
+    expect(facts).toEqual([
+      "component.probed_one(R1,VBUS,SENSE)",
+      "component.two_terminal(R1,SENSE,VBUS)",
+      "net.has_test_point(VBUS)",
+      "component.net(TP1,VBUS)",
+      "pin.net(U1,3,SENSE)",
+      "notnet.has_test_point(SENSE)absent",
+    ]);
+    const top = el.querySelector(".query-witness")!;
+    expect(top.querySelector(":scope > .query-witness-rule")!.textContent).toContain(":- component.two_terminal");
+    // Body facts sit one level under the fact they prove.
+    expect(top.querySelectorAll(":scope > .query-witnesses > .query-witness")).toHaveLength(3);
+    const negated = el.querySelector(".query-witness.negated")!;
+    expect(negated.querySelector(".query-witness-cites")).toBeNull();
+    expect(negated.querySelector(".query-locate")!.textContent).toBe("SENSE");
+    expect([...el.querySelectorAll(".query-witness-cites")].map((c) => c.textContent)).toEqual(["x.edn", "x.edn:VBUS", "x.edn:VBUS"]);
+    // The tree replaces the flat citation list.
+    expect(el.querySelector(".query-cites")).toBeNull();
+  });
+
+  it("locates a witness value as it locates a cell naming it, a pin through its component", () => {
+    const { el, panel, onLocate } = mountWithExplain();
+    panel.view.setState(resultFromResponse(probedOneAnswer(), (ids) => ids.map((id) => ({ id, name: id })), true));
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    const value = (text: string) =>
+      [...el.querySelectorAll<HTMLButtonElement>(".query-witnesses .query-locate")].find((b) => b.textContent === text)!;
+    value("TP1").click();
+    expect(onLocate).toHaveBeenLastCalledWith("component", "TP1", undefined, LocateReason.UNSPECIFIED);
+    value("3").click();
+    expect(onLocate).toHaveBeenLastCalledWith("pin", "U1", undefined, LocateReason.UNSPECIFIED, "3");
+    // A value's sheet badge locates on that sheet, as a cell's does.
+    const vbus = value("VBUS").parentElement!;
+    [...vbus.querySelectorAll<HTMLElement>(".sheet-badge")].find((b) => b.textContent === "s2")!.click();
+    expect(onLocate).toHaveBeenLastCalledWith("net", "VBUS", "s2", LocateReason.UNSPECIFIED);
+  });
+
+  it("says an aggregate row has no single derivation once the answer is witnessed", () => {
+    const { el, panel } = mountWithExplain();
+    panel.view.setState({ ...resultFromWire({ columns: ["n"], rows: [{ cells: ["3"], cites: ["x.edn"] }] } as never), witnessed: true });
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    expect(el.querySelector(".query-witness-note")!.textContent).toContain("aggregate row");
+  });
+});

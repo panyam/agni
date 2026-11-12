@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package agni.v1.config;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/config";
+
+// This file defines an operator's naming policy. The engine and the wire both use this ONE schema.
+//
+// It is in agni.v1.config rather than agni.v1.webapi, so the ENGINE can import it. A naming
+// convention is engine config, not a request shape. core/check/naming compiles it into the lexicon
+// for reading a design. The only definition used to be a webapi message. The engine could not
+// depend on it without pulling the web request tier into every consumer (C17). So the engine kept a
+// hand-written Go twin, and internal/service converted between the two.
+//
+// This package exists to remove that twin. The two schemas drifted. The Go side grew gate, source
+// and drain terminal vocabularies (WS3-117), and the wire form had no field for them. Imagine a
+// project declaring them. Every path through the converter dropped them silently, and every path
+// except serve's startup install went through it. BuildRoleVocab then fell back to the built-in
+// names, and the run reported against a vocabulary the operator did not ask for. One schema removes
+// the whole class of bug, not just that one instance.
+message NamingConvention {
+  string name = 1; // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
+  NamingLexicon lexicon = 2;
+  repeated NamingRule rules = 3;
+}
+
+// NamingLexicon overrides the engine's built-in role vocabularies.
+//
+// The vocabularies are GROUPED BY NAME SPACE. The name space decides whether a pattern is correct.
+// A supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V. So a pattern that belongs
+// in one is wrong in the other. A flat list of siblings stated that in prose and enforced nothing.
+// Three vocabularies went missing, and all three were among the four pin ones. With grouping, a new
+// pin vocabulary is a field on PinNameVocab. Nobody has to remember to thread a seventh sibling
+// through by hand.
+message NamingLexicon {
+  NetNameVocab net = 1;
+  PinNameVocab pin = 2;
+  // Component-class name (e.g. "tvs") -> what marks a part as that class. This is its own name
+  // space again, since it matches a PART, not a net or a pin. The key must name a class the engine
+  // ships. An unknown key is a load error. The resolver would have no place for that class, so it
+  // would classify nothing.
+  map<string, ClassVocab> class = 3;
+  // Component-class name -> the unit of a BARE number on that class. The unit may be a base unit
+  // ("F", "ohm"), or a prefixed one ("pF", "uH") that scales the bare number. So "capacitor": "pF"
+  // reads a bare 100 as 100 pF. Only resistor ships a default (ohm). A bare capacitor value meant
+  // farads, microfarads or picofarads, depending on the era and the tool. A class named here
+  // replaces its default. The key must name a class the engine ships, and the value must name a
+  // unit the engine reads, or the load fails.
+  map<string, string> value_unit = 4;
+  // attribute names which component attributes hold a part number, a value and a do-not-populate
+  // flag. So a house property such as "Part Number" or "DNF" reaches the rules.
+  AttributeVocab attribute = 5;
+}
+
+// AttributeVocab lists the attribute KEYS that hold each fact. Keys match without regard to case and
+// are tried in order. The first key that a component has with a non-empty value answers. dnp_values
+// lists the values of a dnp key that mean the part is not fitted, compared the same way. Each list is
+// ADDED to the built-ins, after them, unless replace is set.
+//
+// A part number may sit on an EDIF cell rather than on its placed instance. The reader reads that
+// one with the built-in keys alone, since the reader reads no configuration.
+message AttributeVocab {
+  AttributeKeys mpn = 1;
+  AttributeKeys value = 2;
+  AttributeKeys dnp = 3;
+  AttributeKeys dnp_values = 4;
+}
+
+// AttributeKeys is one list of AttributeVocab, literal strings rather than patterns.
+message AttributeKeys {
+  repeated string keys = 1;
+  bool replace = 2;
+}
+
+// NetNameVocab is the vocabulary for NET names. Ingestion resolves the roles once, and later reads
+// see them as a normalized net.role fact (C20).
+message NetNameVocab {
+  VocabPatterns rail = 1;
+  VocabPatterns ground = 2;
+  VocabPatterns feedback = 3;
+  // feedback, switching, control and gate_drive are four ways a net can be NAMED after a rail
+  // without being one. A regulator's pins are conventionally named for the supply they serve.
+  // Model.IsRailNet subtracts all four. They are four vocabularies, not one, because the nets differ.
+  // Feedback and switching nets are the regulator's power plumbing, and must never be probed. A
+  // control input is an ordinary signal, and a test point on it is welcome. A gate drive is a real
+  // supply, at a voltage its name does not state.
+  VocabPatterns switching = 4;
+  VocabPatterns control = 5;
+  VocabPatterns gate_drive = 6;
+  // i2c names an I2C bus line (SDA or SCL). The I2C pull-up rules judge these nets. It is a
+  // vocabulary rather than a rule's own pattern (agni issues 1255, 1265). So config can fix a house
+  // that spells its bus differently, or a part whose I2S data pin is named SDA.
+  VocabPatterns i2c = 7;
+  // infer_rail_from_supply_pins makes a net a rail under two conditions. A LATER token of its name
+  // is a supply-pin word (LPC_VCC, FAN_VDD). And the net feeds a fitted part's power_in pin, not a
+  // connector's own. A name alone is still a signal, since EN_VCC feeds no supply pin. The inferred
+  // role records the pin that justified it. Absent means on. A project or a request sets false to
+  // turn it off (agni issue 1243).
+  optional bool infer_rail_from_supply_pins = 8;
+  // no_connect names a net that its designer marked as deliberately unconnected. One match also
+  // tells the run that the design marks no-connects at all. So an open pin elsewhere reads as an
+  // omission.
+  VocabPatterns no_connect = 9;
+  // diff_pair spells a differential pair's two members.
+  DiffPairVocab diff_pair = 10;
+  // voltage reads a nominal voltage off a net's name, one TOKEN at a time. Tokens come from
+  // splitting the name on anything but letters, digits, "." and "+". So P3V3_EN reads its 3V3 token.
+  // Each pattern needs a capture group. The first group holds the whole volts. The first later group
+  // that matches holds the fraction. So ^(\d+)V(\d+)$ reads 3V3 as 3.3. If a name's tokens state
+  // two different voltages, the name reads as no voltage.
+  VocabPatterns voltage = 11;
+}
+
+// DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns. A
+// rule needs the complement of a name, and a pattern can only say whether a name matches. A
+// convention's pairs are ADDED to the built-ins unless replace is set, as on VocabPatterns.
+message DiffPairVocab {
+  repeated DiffSuffix pairs = 1;
+  bool replace = 2;
+}
+
+// DiffSuffix is one suffix pair, matched at the end of the whole net name without regard to case. The
+// longest positive suffix that matches wins, and the complement keeps the name's casing.
+message DiffSuffix {
+  string positive = 1;
+  string negative = 2;
+}
+
+// PinNameVocab is the vocabulary for a component's PIN names.
+//
+// The engine applies the three transistor terminals only to parts that the class lexicon reads as a
+// transistor. So a house spelling here cannot leak onto an MCU's pins. The names are short on
+// purpose, and on an arbitrary part they would collide badly. An unanchored "S" matches SDA, SCLK
+// and SENSE.
+message PinNameVocab {
+  VocabPatterns supply = 1; // a component's power-supply INPUT pin names (WS3-072)
+  VocabPatterns gate = 2;   // transistor TERMINAL pin names (WS3-117)
+  VocabPatterns source = 3;
+  VocabPatterns drain = 4;
+  // exposed_pad names a package's exposed thermal pad (agni issue 935). Datasheets often let it
+  // float. So a lone power_in pad on its own net does not read as an undriven rail.
+  VocabPatterns exposed_pad = 5;
+  // anode and cathode apply only to the diode family. They match the WHOLE pin name rather than its
+  // leaf. So a pin named A/K is left unread, instead of reading as a cathode.
+  VocabPatterns anode = 6;
+  VocabPatterns cathode = 7;
+  // feedback and switching name a regulator's own pins. Through them, a connector on a converter's
+  // output reads as an outlet when no net is named for the converter. They are separate from the
+  // net vocabularies of the same names. A pin name has no rail prefix to end in _FB.
+  VocabPatterns feedback = 8;
+  VocabPatterns switching = 9;
+}
+
+// VocabPatterns is one vocabulary override. Its patterns are RE2, case-insensitive, and matched on
+// the hierarchy leaf. They are MERGED onto the built-in set. If replace is set, they become the whole
+// set instead. A project normally teaches the engine more names, and keeps what it already knows.
+message VocabPatterns {
+  repeated string patterns = 1;
+  bool replace = 2;
+  // exclude takes a name OUT of the vocabulary even when a pattern matches it. RE2 has no lookaround
+  // to say "SDA, but not I2S0_RX_SDA" in one pattern. It is merged and replaced as patterns are.
+  // Field 3 is skipped, because ClassVocab's prefixes uses it and the two messages share numbers.
+  repeated string exclude = 4;
+}
+
+// ClassVocab is one component class's override. patterns and replace mean what they mean on
+// VocabPatterns, and match against a part's text TOKENS. The two messages share field numbers. So a
+// block written before prefixes existed reads the same.
+//
+// prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class. They match the
+// leading run of letters of a ref-des, or of a part's declared designator prefix, case-insensitively.
+// They are ADDED to the built-in prefix table and win over it. So a house that writes F for a
+// ferrite re-points F. replace does not touch them. Two kinds of prefix are load errors. A prefix
+// holding anything but letters could never match. A prefix listed under two classes has no
+// defensible answer.
+message ClassVocab {
+  repeated string patterns = 1;
+  bool replace = 2;
+  repeated string prefixes = 3;
+  // families are part-number families, as RE2 matched at the start of a part's text token. A family
+  // decides this class even on a part whose ref-des reads as an IC, such as a suppressor array
+  // labelled U. ADDED to the built-in families unless replace is set. Only the tvs class ships any
+  // (agni 1257).
+  repeated string families = 5;
+  // exclude_prefixes takes a BUILT-IN prefix of this class out of the table. So a house whose D is a
+  // display rather than a diode can say so. Naming a prefix that the built-ins give another class is
+  // a load error. To move a prefix, use prefixes.
+  repeated string exclude_prefixes = 6;
+}
+
+// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`. Names matching
+// any `exempt` are skipped. Patterns are RE2 and UNANCHORED, so write ^...$ for a whole-name match.
+// They match the LEAF of a hierarchy-qualified name unless match_full is set. The qualification
+// comes from the reader's scoping, not from the author's spelling.
+message NamingRule {
+  string name = 1;
+  string severity = 2; // error | warning | info; empty means warning
+  string why = 3;      // one line of intent, shown in the rule prose
+  repeated string allow = 4;
+  repeated string exempt = 5;
+  bool match_full = 6;
+}

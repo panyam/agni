@@ -1,0 +1,57 @@
+---
+title: "component.esd_rated"
+description: "the part carries a datasheet ESD rating at or above the credit floor (needs datasheet parameters)"
+---
+
+### What it is
+
+`component.esd_rated(ref_des)` yields one row per component whose joined datasheet spec declares
+an ESD tolerance at or above the credit floor. It is a datasheet-tier fact. A row means the part's
+stub carries a machine-comparable ESD rating high enough to count as protection. No row means it
+does not, or that no datasheet is joined. It carries no value, only the
+ref-des, because it answers a yes-or-no question, whether this part has a creditable ESD rating.
+
+### For hardware engineers
+
+ESD protection on a connector-facing signal can come from a dedicated clamp or from a part that
+is itself rated to survive the strike (a transceiver rated to IEC contact levels). This relation
+marks the parts that carry that rating on their datasheet, so a protection review can credit a
+signal whose only ESD survivability is the endpoint part's own spec. The floor is deliberately
+conservative (2 kV), so a row means a genuinely rated part, not a marginal one.
+
+### For software engineers
+
+This is a boolean predicate over the datasheet join (see [the analogy
+guide](../../../../docsite/content/reference/analogy.md)). It resolves the component to its
+part-number stub, reads the ESD rating rows, and admits the ref-des only if a comparable row clears
+the floor. It is keyed by ref-des so a rule joins it against structural relations
+(`component.net`, `component.class`, `pin.net`) to ask "an ESD-rated part sitting on this
+signal". Rows are 1:1 with qualifying components; absence is the normal case, not an error.
+
+### Go projector
+
+`esdRatedFacts` in `stdlib/relations/facts.go` walks `Model.Components()`, looks up each part's spec via
+`Model.PartSpec(ref)`, and emits a row when `check.EsdRatingLimits(spec)` returns at least one
+qualifying rating. The `esd-protection` Go rule uses `check.EsdRatingLimits` too. The extractor
+keeps only absolute-max ESD rows that are machine-comparable and at or above `icEsdFloorVolts`
+(2 kV). The row cites every qualifying datasheet ESD rating (air and contact discharge are printed
+separately), not the component's schematic site.
+
+This is a datasheet-tier relation, so it is silent by construction without seeded parameters. A
+model built without a params set has a nil `PartSpec` for every ref, and the relation is empty. Run
+`agni` with `--params <dir>` to seed the datasheet corpus. Empty is skip, never a false pass, since
+no row means "no evidence of a rated part", not "the part is unprotected".
+
+### Datalog
+
+Every component carrying a creditable datasheet ESD rating:
+
+```
+component.esd_rated(?r) => ?r
+```
+
+The ESD-rated parts that are also TVS clamps (join the datasheet fact to a class family tag):
+
+```
+component.esd_rated(?r), component.class(?r, "tvs") => ?r
+```

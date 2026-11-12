@@ -1,0 +1,129 @@
+---
+title: "Stack and platform"
+description: "The Go engine, the protobuf IR, the browser engine built from it in WebAssembly, the thin TypeScript view, and the boundaries between them."
+---
+
+The platform is a Go engine with a protobuf intermediate representation, a thin TypeScript view,
+and the same Go engine compiled to WebAssembly so it can run in a visitor's browser. This page records why
+each piece is where it is and where the boundaries fall.
+
+## The engine is Go
+
+Parsing, the IR, diff, rules, and later simulation are backend-heavy work that Go handles
+directly. The engine reuses shared Go libraries for utilities and, later, for concurrency when
+work fans out. All of it runs headless: in Go tests, in the CLI, and in the backend.
+
+The engine packages are pure. A reader takes an `io.Reader` or bytes, not a file path, and diff
+and checks operate on the IR. The packages take no file paths, use no database and make no
+browser-only calls, so the same code runs in every one of those places.
+
+<details>
+<summary>Why there is no parser-generator in the ingestion path</summary>
+
+Not every part of a schematic file needs a hand-rolled parser, and none of them needs a generated
+one. EDIF is S-expressions, which are trivial to parse directly in Go with no parser-generator
+involved. An in-house parser-generator toolkit that targets the browser is reserved for a future
+rules-DSL editor, where syntax highlighting, live parsing, and inline error markers are the job.
+Ingestion has none of those requirements.
+
+</details>
+
+## Package layout
+
+The top-level tree separates the engine from the content it evaluates, so the engine ships
+as a library and the rule content is one of several sources that register into it. That split is
+the open-core boundary.
+
+{{ includeFile "figures/engine-layers.svg" }}
+
+- `core/` is the pure engine. It owns no rules, only the evaluation machinery, which is the IR
+  model, the net solver, `check` (the rule runtime and the spec interpreter), `query` (the adapter
+  over the jaala Datalog engine), `diff`, `render`, and `svg`.
+- `stdlib/` is the standard content that registers into the engine through public registration points. Each rule
+  and relation keeps its reference markdown beside its code, embedded and served as the runtime
+  `Detail`.
+- `readers/` holds the format readers plus `readers/formats`, the registry and loader that own all
+  file I/O so the core never opens a file.
+- `datasheet/` is the parameter and document stack: `core/param`, `datasheet/doc`, and
+  `datasheet/derive`.
+- `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
+  holds engine-private helpers, and `docsite/` is this documentation site, a separate module.
+- An embedder composes against `service/` and `artifact/`. `service/` holds the transport-neutral
+  services, and their ports speak the `mount://` URI that `artifact/` defines. `intake/`, `web/` and
+  `clients/python` hold the sanitized design summary, the browser viewer, and the typed Python
+  client.
+
+No `core` package depends on `stdlib` in its
+production build, so the engine has no built-in rules baked in. A program imports the sources it
+wants and composes its catalog from them. An extension adds its own rules the same way the standard
+library does.
+
+## The IR is protobuf
+
+One `.proto` schema is the source of truth. Code generation produces Go structs, TypeScript
+types, and the Python client's messages from it, so every language consumes the same schema and
+none can drift. Protobuf also retains unknown fields, which gives lossless round-tripping and
+forward compatibility with no extra work. That matters when a reader meets a construct that a
+later schema will name and the current one does not. The [ingestion and IR](../ingestion-and-ir/)
+page covers how readers populate it.
+
+## The view is thin
+
+The UI follows a Model-View-Presenter split, with the view a pure function of a view-model. The
+view captures input, forwards semantic intents, executes canvas and WebGL draw calls, owns the
+GPU buffers and the DOM, and measures text. It holds no domain logic. Data flows one way, as in
+an Elm or Redux app. The [web app and presenter](../web-app/) page covers the contract
+in full.
+
+Text metrics have to travel the other way, because only the browser has them. No other
+measurement does. A presenter laying out labels needs them back, so the contract includes a small
+measurement callback.
+
+## The engine also runs in the browser
+
+The same engine compiles to WebAssembly and runs in a visitor's browser. `cmd/agni-wasm` is the
+binary, and `internal/wasmengine` composes the same services as `agni serve`, over in-memory
+mounts rather than host paths. The viewer does not change between the two. It sends the same Connect
+calls, and either `agni serve` or the browser engine answers them, reading the design, running the
+checks and answering the queries, while the viewer only draws.
+
+The public demo runs this way because the project hosts no server for it. `agni site` writes the
+viewer, the engine and a few seed designs as static files, and the docs host serves them under
+`/agni/demo/`. A visitor installs nothing, and a design dropped on the page never leaves the
+browser.
+
+The server path still needs no WebAssembly. `agni serve` runs the engine natively, and a page asks
+for the browser engine only through `agni serve --engine wasm` or its own `?engine=`. A design larger
+than `--wasm-max-bytes` goes to the server even then.
+[Web service contract](../web-services/#the-same-contract-in-the-browser) covers how the two hosts
+are held to identical answers.
+
+Both hosts keep the presenter in TypeScript. WebAssembly here runs the analysis, not the drawing, so
+nothing crosses the boundary per frame. A high-frequency surface such as an editor would still use a
+TypeScript presenter, to avoid a per-event boundary crossing.
+
+<details>
+<summary>How the boundary would be kept cheap, if a presenter ever runs in WebAssembly</summary>
+
+Go compiled to WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so
+if the presenter runs in the browser the boundary is designed to carry meaning, not pixels.
+
+- The render model is layered. Static geometry is uploaded to the GPU once and is kept resident.
+  Only a small dynamic overlay for highlight, selection, and cursor crosses the boundary per
+  frame.
+- Input is batched to the animation frame. One intent batch per frame, not one per raw event.
+- The camera is view-local. Pan and zoom are an affine transform applied in TypeScript and the
+  GPU, and the presenter is told the new viewport only when culling or hit-testing needs it, so
+  dragging is smooth even if a presenter frame lags.
+- Bulk data crosses as typed arrays over linear memory, so there are only a handful of crossings
+  per frame.
+
+At 60 frames per second, roughly 16 ms per frame, this keeps interop well under a millisecond.
+The boundary is not the real performance ceiling. Geometry volume and rendering are, and canvas or
+WebGL, viewport culling, and a spatial index solve them.
+
+A Go WebAssembly binary is also large, because it carries the runtime and garbage collector. The
+size affects load time. Compression or a smaller Go toolchain can address it, but only if it
+becomes a problem.
+
+</details>

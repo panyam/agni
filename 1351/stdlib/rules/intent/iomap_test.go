@@ -1,0 +1,445 @@
+package intent
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// ioMapDesign is one MCU whose part type names its pins, a PMIC, and a series resistor between them,
+// so the fixture can answer a pin question, a net question and a far-end question at once.
+//
+//	U101.41 (PTC11) --- ADC_BATT_SENSE
+//	U101.42 (PTE7)  --- PMIC_PG --[R3]-- PMIC_PG_MCU --- U7000.9 (PG)
+//	U101.43 (GND)   --- GND     (U101.44 is also named GND, so the name is ambiguous)
+func ioMapDesign() *ir.Design {
+	lib := &ir.PartLibrary{Name: "lib", Parts: []*ir.PartType{
+		{Name: "MCU", Pins: []*ir.Pin{
+			{Designator: "41", Name: "PTC11"},
+			{Designator: "42", Name: "PTE7"},
+			{Designator: "43", Name: "GND"},
+			{Designator: "44", Name: "GND"},
+		}},
+		{Name: "PMIC", Pins: []*ir.Pin{{Designator: "9", Name: "PG"}}},
+	}}
+	comp := func(ref, part string) *ir.Component {
+		c := &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
+		if part != "" {
+			c.Sections = []*ir.ComponentSection{{PartRef: part, LibraryRef: "lib"}}
+		}
+		return c
+	}
+	net := func(name string, conns ...string) *ir.Net {
+		n := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "t"}}
+		for _, c := range conns {
+			ref, pin, _ := strings.Cut(c, ".")
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: ref, PinRef: pin})
+		}
+		return n
+	}
+	return &ir.Design{
+		SourceFormat: "kicad-sch",
+		Libraries:    []*ir.PartLibrary{lib},
+		Components: []*ir.Component{
+			comp("U101", "MCU"), comp("U7000", "PMIC"),
+			{RefDes: "R3", Sections: []*ir.ComponentSection{{PartRef: "R"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			net("ADC_BATT_SENSE", "U101.41"),
+			net("PMIC_PG", "U101.42", "R3.1"),
+			net("PMIC_PG_MCU", "R3.2", "U7000.9"),
+			net("GND", "U101.43", "U101.44"),
+		},
+	}
+}
+
+func ioMapDecl(t *testing.T, rows string) Declaration {
+	t.Helper()
+	return declOf(t, ioMapDoc(rows))
+}
+
+func onlyVerdict(t *testing.T, decl Declaration, rule string) check.Verdict {
+	t.Helper()
+	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), rule)
+	if len(vs) != 1 {
+		t.Fatalf("%s produced %d verdicts, want 1", rule, len(vs))
+	}
+	return vs[0]
+}
+
+func TestIOMapPinPassesWhenTheNetIsWhereTheMapSays(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}"), RuleIOMapPin)
+	if v.Outcome != check.Pass {
+		t.Fatalf("outcome = %s, reason %q", v.Outcome, v.Reason)
+	}
+	if v.Witness == nil || !strings.Contains(v.Witness.Statement, "ADC_BATT_SENSE") {
+		t.Errorf("a pass with no witness naming the net is the silence this rule removes: %+v", v.Witness)
+	}
+}
+
+// The rule exists for a pin assignment that moved without the schematic being redrawn. The
+// design is electrically fine, so nothing else would report it.
+func TestIOMapPinFailsWhenTheNetMoved(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '42'}"), RuleIOMapPin)
+	if v.Outcome != check.Fail {
+		t.Fatalf("outcome = %s, want fail", v.Outcome)
+	}
+	if v.Finding == nil || !strings.Contains(v.Finding.Message, "PMIC_PG") {
+		t.Errorf("the finding should name the net the pin actually carries: %+v", v.Finding)
+	}
+}
+
+// A map is authored in the datasheet's vocabulary and the netlist answers in package designators.
+// Both spellings must resolve, or an author has to know which one the checker wants.
+func TestIOMapPinResolvesTheFunctionalName(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: PTC11}"), RuleIOMapPin)
+	if v.Outcome != check.Pass {
+		t.Fatalf("a pin named the way a datasheet names it did not resolve: %s %q", v.Outcome, v.Reason)
+	}
+}
+
+// The spelling differences that produced every false warning in the run we measured. Each must pass,
+// and each must SAY what was assumed, because the fix targets matches a reader cannot check.
+func TestIOMapPinToleratesSpellingAndSaysSo(t *testing.T) {
+	for _, spelling := range []string{"pte7", "PTE07", "PTE7\u200b"} {
+		t.Run(spelling, func(t *testing.T) {
+			v := onlyVerdict(t, ioMapDecl(t, "  - {net: PMIC_PG, device: U101, pin: \""+spelling+"\"}"), RuleIOMapPin)
+			if v.Outcome != check.Pass {
+				t.Fatalf("outcome = %s, reason %q", v.Outcome, v.Reason)
+			}
+			if v.Witness == nil || !strings.Contains(v.Witness.Statement, "pin-name match") {
+				t.Errorf("a match that needed normalizing did not announce itself: %+v", v.Witness)
+			}
+		})
+	}
+	// An exact agreement must NOT announce anything, or the note stops meaning something.
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: PMIC_PG, device: U101, pin: PTE7}"), RuleIOMapPin)
+	if v.Witness == nil || strings.Contains(v.Witness.Statement, "pin-name match") {
+		t.Errorf("an exact match announced an inference: %+v", v.Witness)
+	}
+}
+
+// A name matching several pins is inconclusive rather than a fail, and emphatically not a pass. A
+// part type may name several pins the same (four GND pins is ordinary), so the row may well be
+// correct and the comparison simply cannot decide.
+func TestIOMapPinIsInconclusiveOnAnAmbiguousName(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: GND, device: U101, pin: GND}"), RuleIOMapPin)
+	if v.Outcome != check.Inconclusive {
+		t.Fatalf("outcome = %s, want inconclusive", v.Outcome)
+	}
+	if v.Finding == nil || !v.Finding.Inconclusive {
+		t.Fatalf("the finding must carry Inconclusive, or a consumer counts it as a defect: %+v", v.Finding)
+	}
+	for _, want := range []string{"43", "44"} {
+		if !strings.Contains(v.Finding.Message, want) {
+			t.Errorf("the finding should name the candidate pins, missing %q: %s", want, v.Finding.Message)
+		}
+	}
+}
+
+func TestIOMapPinFailsOnAPinTheDeviceDoesNotHave(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: PTZ99}"), RuleIOMapPin)
+	if v.Outcome != check.Fail {
+		t.Fatalf("outcome = %s, want fail", v.Outcome)
+	}
+	if v.Finding == nil || v.Finding.Inconclusive {
+		t.Error("a pin the part does not declare is decidable, so it is a fail rather than inconclusive")
+	}
+}
+
+// A failed lookup is decided, so the contract wants it as a witness and keeps the reason for subjects
+// a rule could not judge.
+func TestAFailedPinLookupIsStatedAsTheWitness(t *testing.T) {
+	for _, rule := range []string{RuleIOMapPin, RuleIOMapFarEnd} {
+		row := "  - {net: ADC_BATT_SENSE, device: U101, pin: PTZ99, to: {device: U7000, pin: '9'}}"
+		v := onlyVerdict(t, ioMapDecl(t, row), rule)
+		if v.Outcome != check.Fail {
+			t.Fatalf("%s: outcome = %s, want fail", rule, v.Outcome)
+		}
+		if v.Witness == nil || !strings.Contains(v.Witness.Statement, "PTZ99") || v.Reason != "" {
+			t.Errorf("%s: a failed lookup belongs in the witness with no reason, got witness %+v reason %q", rule, v.Witness, v.Reason)
+		}
+	}
+}
+
+// Every per-row verdict names the map row it answers, so a table laid out one row per declared pin
+// can join each rule's verdict back to its row without the model (agni issue 1188).
+func TestEveryPerRowVerdictNamesItsMapRow(t *testing.T) {
+	decl := ioMapDecl(t, `  - {net: ADC_BATT_SENSE, device: U101, pin: PTC11}
+  - {net: NOPE, device: U101, pin: '42'}
+  - {net: PMIC_PG, device: U101, pin: PTE7, to: {device: U7000, pin: PG}}`)
+	m := check.NewModel(ioMapDesign())
+	type want struct{ subject, declaredNet, declaredPin, onThePin string }
+	wants := []want{
+		{"U101.41", "ADC_BATT_SENSE", "U101.PTC11", "ADC_BATT_SENSE"},
+		{"U101.42", "NOPE", "", "PMIC_PG"},
+		{"U101.42", "PMIC_PG", "U101.PTE7", "PMIC_PG"},
+	}
+	for _, rule := range []string{RuleIOMapPin, RuleIOMapFarEnd} {
+		vs := verdictsFor(t, decl, m, rule)
+		if len(vs) != len(wants) {
+			t.Fatalf("%s gave %d verdicts, want one per row (%d)", rule, len(vs), len(wants))
+		}
+		for i, w := range wants {
+			v := vs[i]
+			roles := map[string]string{}
+			for _, c := range v.Context {
+				roles[c.Role] = check.EntityRef(c.Entity)
+			}
+			if got := check.EntityRef(v.Subjects[0]); got != w.subject {
+				t.Errorf("%s row %d: subject %s, want %s", rule, i, got, w.subject)
+			}
+			if roles[RoleDeclaredNet] != w.declaredNet || roles[RoleDeclaredPin] != w.declaredPin {
+				t.Errorf("%s row %d: context %v, want declared net %q and declared pin %q", rule, i, roles, w.declaredNet, w.declaredPin)
+			}
+			if rule == RuleIOMapPin && roles[RoleOnThePin] != w.onThePin {
+				t.Errorf("row %d: on the pin %q, want %q", i, roles[RoleOnThePin], w.onThePin)
+			}
+		}
+	}
+}
+
+// The missing-net case is answered next door. Reporting it here as well would put one defect under
+// two review items, and reading this silence as "the pin is fine" would be wrong.
+func TestIOMapPinDeclinesTheMissingNetCase(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: NOPE, device: U101, pin: '41'}"), RuleIOMapPin)
+	if v.Outcome != check.NotConsidered {
+		t.Fatalf("outcome = %s, want not-considered", v.Outcome)
+	}
+	if !strings.Contains(v.Reason, RuleIOMapNetAbsent) {
+		t.Errorf("the reason should name the rule that DOES report it: %q", v.Reason)
+	}
+}
+
+func TestIOMapNetAbsentFailsOnAMissingNet(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: NEVER_DRAWN, device: U101, pin: '41'}"), RuleIOMapNetAbsent)
+	if v.Outcome != check.Fail {
+		t.Fatalf("outcome = %s, want fail", v.Outcome)
+	}
+}
+
+// A misspelling and a disconnection are opposite defects. The expensive mistake is to send a reviewer
+// looking for a missing net when the net is present under a name one invisible character away.
+func TestIOMapNetAbsentIsInconclusiveOnAMisspelling(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t, "  - {net: \"ADC_BATT_SENSE\u200b\", device: U101, pin: '41'}"), RuleIOMapNetAbsent)
+	if v.Outcome != check.Inconclusive {
+		t.Fatalf("outcome = %s, want inconclusive: a net differing only by spelling is not a disconnection", v.Outcome)
+	}
+	if v.Finding == nil || !v.Finding.Inconclusive || !strings.Contains(v.Finding.Message, "ADC_BATT_SENSE") {
+		t.Errorf("the finding should name the net it found: %+v", v.Finding)
+	}
+}
+
+// A map naming one net on several rows is ordinary, and repeating the absence per row would inflate
+// the number a reader uses to judge how bad the disagreement is.
+func TestIOMapNetAbsentReportsOneVerdictPerNet(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: GND, device: U101, pin: '43'}\n  - {net: GND, device: U101, pin: '44'}")
+	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapNetAbsent)
+	if len(vs) != 1 {
+		t.Errorf("two rows naming one net produced %d verdicts, want 1", len(vs))
+	}
+}
+
+func TestIOMapFarEndPassesAndReportsTheRoute(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t,
+		"  - {net: PMIC_PG, device: U101, pin: PTE7, to: {device: U7000, pin: PG}}"), RuleIOMapFarEnd)
+	if v.Outcome != check.Pass {
+		t.Fatalf("outcome = %s, reason %q", v.Outcome, v.Reason)
+	}
+	// The route is the evidence. A verdict a reviewer cannot check is worth much less than one they
+	// can, and they want to see the series resistor.
+	if v.Witness == nil || !strings.Contains(v.Witness.Statement, "[R3]") {
+		t.Errorf("the witness should carry the route it walked: %+v", v.Witness)
+	}
+}
+
+func TestIOMapFarEndFailsWhenItArrivesElsewhere(t *testing.T) {
+	v := onlyVerdict(t, ioMapDecl(t,
+		"  - {net: ADC_BATT_SENSE, device: U101, pin: '41', to: {device: U7000, pin: PG}}"), RuleIOMapFarEnd)
+	if v.Outcome != check.Fail {
+		t.Fatalf("outcome = %s, want fail", v.Outcome)
+	}
+}
+
+// Coverage. A map whose far-end columns are empty must read as UNEXAMINED rather than as clean, or a
+// green result means only that the columns were blank. In the map we measured those columns were
+// filled on roughly a third of rows.
+func TestIOMapFarEndReportsRowsWithNoFarEnd(t *testing.T) {
+	decl := ioMapDecl(t,
+		"  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}\n"+
+			"  - {net: PMIC_PG, device: U101, pin: PTE7, to: {device: U7000, pin: PG}}")
+	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapFarEnd)
+	if len(vs) != 2 {
+		t.Fatalf("got %d verdicts, want one per row so the denominator is visible", len(vs))
+	}
+	var declaredNone int
+	for _, v := range vs {
+		if v.Outcome == check.NotConsidered && strings.Contains(v.Reason, "no far end") {
+			declaredNone++
+		}
+	}
+	if declaredNone != 1 {
+		t.Errorf("a row declaring no far end must say so, got %d such verdicts", declaredNone)
+	}
+}
+
+func TestIOMapLoadRejectsIncompleteRows(t *testing.T) {
+	for _, c := range []struct{ name, rows, want string }{
+		{"no net", "  - {device: U101, pin: '41'}", `"net"`},
+		{"no device", "  - {net: N, pin: '41'}", `"device"`},
+		{"no pin", "  - {net: N, device: U101}", `"pin"`},
+		{"a far end with no pin", "  - {net: N, device: U101, pin: '41', to: {device: U7000}}", "no pin"},
+		{"a far end with no device", "  - {net: N, device: U101, pin: '41', to: {pin: PG}}", "no device"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Parse([]byte(ioMapDoc(c.rows)))
+			if err == nil {
+				t.Fatal("want an error naming the missing field")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("error = %v, want it to mention %s", err, c.want)
+			}
+		})
+	}
+}
+
+// A declaration carrying only an io_map is a complete declaration; it must not be rejected as empty.
+func TestIOMapAloneIsAValidDeclaration(t *testing.T) {
+	d := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
+	if len(d.IOMap) != 1 {
+		t.Fatalf("IOMap = %+v", d.IOMap)
+	}
+	var names []string
+	for _, r := range Compile(d) {
+		names = append(names, r.Name)
+	}
+	for _, want := range []string{RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd} {
+		if !contains(names, want) {
+			t.Errorf("Compile emitted %v, missing %s", names, want)
+		}
+	}
+}
+
+func contains(all []string, want string) bool {
+	for _, s := range all {
+		if s == want {
+			return true
+		}
+	}
+	return false
+}
+
+// Coverage is the one io-map rule whose considered set is the NETLIST rather than the declaration,
+// so it reports which parts of the design the map never spoke about. The fixture has four nets and
+// the map names one, so a run that reported only what it checked would look entirely clean.
+func TestIOMapCoverageCountsEveryNet(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
+	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage)
+	if len(vs) != 4 {
+		t.Fatalf("got %d verdicts, want one per net in the design so the denominator is visible", len(vs))
+	}
+	var pass, unexamined int
+	for _, v := range vs {
+		switch v.Outcome {
+		case check.Pass:
+			pass++
+		case check.NotConsidered:
+			unexamined++
+		default:
+			t.Errorf("unexpected outcome %s: an undeclared net is a question nobody asked, not a defect", v.Outcome)
+		}
+	}
+	if pass != 1 || unexamined != 3 {
+		t.Errorf("got %d covered and %d unexamined, want 1 and 3", pass, unexamined)
+	}
+}
+
+// An undeclared net is never a fail. It is not a defect in the design, and reporting it as one would
+// make every incomplete map look like a broken board.
+func TestIOMapCoverageNeverFails(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: NOTHING_LIKE_IT, device: U101, pin: '41'}")
+	for _, v := range verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage) {
+		if v.Outcome == check.Fail {
+			t.Errorf("%v reported as a fail", check.SubjectRefs(v))
+		}
+	}
+}
+
+// Rails and grounds are kept IN the denominator, and each says which it is. Excusing them would be
+// the tool deciding which absences are acceptable. If the arithmetic quietly dropped a third of the
+// board, a map that forgot a whole peripheral bank would read as well-covered.
+func TestIOMapCoverageCountsRailsAndSaysSo(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
+	var gnd *check.Verdict
+	for _, v := range verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage) {
+		if strings.Contains(check.SubjectRefs(v), "GND") {
+			cp := v
+			gnd = &cp
+		}
+	}
+	if gnd == nil {
+		t.Fatal("the ground net is absent from the considered set, so it was excused rather than counted")
+	}
+	if gnd.Outcome != check.NotConsidered {
+		t.Errorf("outcome = %s, want not-considered", gnd.Outcome)
+	}
+	if !strings.Contains(gnd.Reason, "rail or ground") {
+		t.Errorf("the reason should say the net is a rail, so a reader can tell it apart: %q", gnd.Reason)
+	}
+}
+
+// The map's spelling and the design's need not agree, and the coverage answer has to survive that or
+// it would report a covered net as unexamined for a reason nobody can see.
+//
+// BOTH sides are exercised, and that is not belt-and-braces. A first version of this test declared a
+// lowercase net against a fixture whose net names are already canonical, so canonicalizing the
+// DECLARATION alone was enough to pass it. A build that looked the design's raw name up in a
+// canonical index matched anyway and the test still passed. Each case below fails if the
+// canonicalization on its own side is dropped.
+func TestIOMapCoverageMatchesAcrossSpelling(t *testing.T) {
+	covered := func(t *testing.T, designNet, declaredNet string) int {
+		t.Helper()
+		d := ioMapDesign()
+		for _, n := range d.Nets {
+			if n.Name == "ADC_BATT_SENSE" {
+				n.Name = designNet
+			}
+		}
+		decl := ioMapDecl(t, "  - {net: \""+declaredNet+"\", device: U101, pin: '41'}")
+		var n int
+		for _, v := range verdictsFor(t, decl, check.NewModel(d), RuleIOMapCoverage) {
+			if v.Outcome == check.Pass {
+				n++
+				if !strings.Contains(v.Witness.Statement, "spelled") {
+					t.Errorf("a net matched under a different spelling should say so: %q", v.Witness.Statement)
+				}
+			}
+		}
+		return n
+	}
+	t.Run("the DESIGN's name needs canonicalizing", func(t *testing.T) {
+		if got := covered(t, "adc_batt_sense", "ADC_BATT_SENSE"); got != 1 {
+			t.Errorf("got %d covered, want 1", got)
+		}
+	})
+	t.Run("the DECLARATION's name needs canonicalizing", func(t *testing.T) {
+		if got := covered(t, "ADC_BATT_SENSE", "adc_batt_sense"); got != 1 {
+			t.Errorf("got %d covered, want 1", got)
+		}
+	})
+}
+
+// ioMapDoc wraps io_map rows, written at the indent of a top-level list, into a design's intent
+// section.
+func ioMapDoc(rows string) string {
+	var b strings.Builder
+	b.WriteString("name: I\nintent:\n  io_map:\n")
+	for _, line := range strings.Split(rows, "\n") {
+		if line != "" {
+			b.WriteString("  " + line + "\n")
+		}
+	}
+	return b.String()
+}

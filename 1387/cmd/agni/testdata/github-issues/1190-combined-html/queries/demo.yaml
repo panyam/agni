@@ -1,0 +1,4 @@
+title: Demo tables
+queries:
+  - name: Nets
+    query: entity(?n, "net") => ?n

@@ -1,0 +1,18 @@
+# KiCad's own answer for hier_busvec_root.kicad_sch, and the reference this fixture exists to meet.
+#
+# Regenerate with:
+#   kicad-cli sch export netlist --format kicadsexpr -o out.net hier_busvec_root.kicad_sch
+# then read the (name ...) and (ref/pin ...) pairs out of each (net ...) block.  Produced by
+# Eeschema 10.0.4.  Do not hand-edit: the point of the file is that we did not choose the answer.
+#
+# DATA[0..1] is a bus VECTOR crossing a sheet boundary through a bus sheet pin, so its members cross
+# with it: R1 on the root and R101 on the sub-sheet are one net.  The sibling fixture hier_bus_root
+# spells the same bus DATA[1:0], which is not KiCad vector syntax and therefore not a bus at all, and
+# KiCad keeps those halves apart.  The two fixtures are a matched pair (agni issue 561).
+#
+# <net name>  <ref>.<pin> ...
+/DATA0  R1.1 R101.1
+/DATA1  R2.1 R102.1
+unconnected-(R1-Pad2)    R1.2
+unconnected-(R2-Pad2)    R2.2
+unconnected-(R101-Pad2)  R101.2

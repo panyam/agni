@@ -1,0 +1,147 @@
+---
+title: "Getting started"
+description: "From nothing to a first checked design in a few minutes."
+---
+
+This page gets you from nothing to a first checked design in a few minutes. It assumes the
+vocabulary from [Concepts](../concepts/) (what a *finding*, a *tier*, and *provenance* mean).
+If a word here is unfamiliar, that page is the glossary.
+
+## Install
+
+To try it with nothing installed, open [the demo](../../demo/), which runs the engine in your
+browser over a few example boards or a folder of your own.
+
+If you have a Go toolchain, install the CLI straight onto your `PATH`:
+
+```
+go install github.com/panyam/agni/cmd/agni@latest
+```
+
+Pin a released version rather than `@latest` for anything whose output you keep. A check report
+is only reproducible if you can say which build produced it, and `@latest` moves under you
+between runs. Releases are plain git tags, so
+[the tag list](https://github.com/panyam/agni/tags) is the version list.
+
+A build installed this way carries no browser viewer, since the viewer's built JavaScript is not part
+of the Go module. The first time `agni open` or `agni serve` needs it, agni downloads the bundle
+attached to its own release, checks it against that release's `checksums.txt`, and keeps it in your
+user cache directory, so later runs work offline.
+
+Without Go, download the tarball for your platform from
+[the latest release](https://github.com/panyam/agni/releases/latest). There is one for macOS and
+Linux on arm64 and amd64. Each holds an `agni` binary that carries the viewer, and `checksums.txt`
+beside them verifies the download. Or run the container image, which needs nothing but Docker:
+
+```
+docker run --rm -v "$PWD":/work -w /work ghcr.io/panyam/agni check <board>.kicad_sch
+```
+
+Or build from a clone, which also gives you the sample designs used below:
+
+```
+git clone https://github.com/panyam/agni
+cd agni
+make install      # installs `agni` into your GOBIN
+# or: make agni  # builds ./bin/agni without installing
+```
+
+Confirm it runs:
+
+```
+agni --help
+```
+
+## Your first check
+
+`agni check` runs the rule catalog over one design and prints what it found. Point it at
+your own schematic or board, or at a sample from the clone. Here is a sample that
+deliberately trips several rules:
+
+{{ agniRun "content/guide/runs/first-check.yaml" }}
+
+Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
+**rule** that fired (`i2c-pull-up`), and the **subject** it fired on, with a plain-language reason
+in parentheses. Here the subject is the net `/SCL`, a label on the root sheet, and KiCad names a
+root-sheet label with a leading `/`. Each finding also carries its provenance. `--format json`
+(below) shows exactly which net or pin each finding came from, and for datasheet rules which page
+and table.
+
+Severity is a policy signal, not a measure of certainty. An `error` is something you almost
+certainly must fix (an I2C bus with no {{ explainable "pull-up" }} will not communicate). A `warning`
+sits between `error` and `info`. A rail with no {{ explainable "decoupling-capacitor" }} gets one,
+since it often works on the bench and fails intermittently in the field. `info` is a note worth a
+look.
+
+## A clean run, and why "no findings" has a number in it
+
+Run the passing twin of that board:
+
+{{ agniRun "content/guide/runs/clean-run.yaml" }}
+
+Read the `81 rule(s) run` first. It tells you the check actually *exercised* 81
+rules and none fired, rather than staying quiet because it had nothing to work with.
+[Concepts](../concepts/) calls this idea "silence is not a pass". A real all-clear names how many
+rules ran. If you load only a schematic and no board file, the copper rules simply do
+not appear in that count, because their tier is empty.
+
+The second line is the narrower claim underneath it. 81 rules ran, and 22 of them reached a
+subject to say something about, over 189 subjects between them. A rule that ran and found
+nothing to look at is not evidence about this board.
+
+## Sanity-check the read first
+
+Before trusting any finding, confirm the tool read your design the way you expect. `agni
+stats` summarizes what it ingested:
+
+{{ agniRun "content/guide/runs/stats.yaml" }}
+
+If the component or net counts look wrong, the findings downstream will too. Fix the read
+(often a missing symbol library, see the `--symbol-path` note in the CLI reference) before
+chasing a surprising finding.
+
+## Other output formats
+
+The default text form is a summary. Two others are useful early:
+
+- `agni check <file> --format markdown` renders a severity-organized report, worst first,
+  for pasting into a review.
+- `agni check <file> --format json` emits one object per finding with its full subject and
+  provenance, for tooling.
+
+## Gate a build on it
+
+`--fail-on` makes `check` exit non-zero when anything at or above a severity is present, so
+it can sit in CI:
+
+```
+agni check <file> --fail-on error   # fails the build only on errors
+```
+
+## Stop passing flags
+
+Everything above addresses a single file, and the flags pile up as you turn things on: your naming
+conventions, your interface profiles, your parameter corpus, your checklist. A **project** holds
+them instead, declared once beside the design.
+
+`agni start` builds one from a design you already have, here the same board this page has been
+checking:
+
+{{ agniRun "content/guide/runs/start-project.yaml" }}
+
+From then on the commands take a design and nothing else, as the two lines under `Next:` show,
+because the project answers the rest.
+
+The design is **copied** into the project with any companion view it declares, and the project owns
+the copy, so edits to the original do not reach it. `agni start` also writes a `review` checklist
+into `project.yaml`. That checklist is a starting point seeded from the shipped catalog rather than a
+finished one, and [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning
+it into your team's.
+
+## Where to go next
+
+- [Checks and reports](../checks-and-reports/) shows how to narrow to one rule or category,
+  read the full report, and follow a finding's provenance.
+- [Datasheets](../datasheets/) adds a parameter set so checks can compare your design
+  against a part's real limits.
+- [CLI reference](../cli-reference/) lists every command and flag.

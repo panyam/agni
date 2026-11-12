@@ -1,0 +1,15 @@
+version: v2
+clean: true
+# Go for the datasheet producer's protos (agni issue 744), generated into the datasheet module's own
+# gen/ so the engine's gen/ carries no producer message (C34). Run from the REPO ROOT with the module
+# as the input (`buf generate datasheet/protos --template datasheet/buf.gen.yaml`): the plugins run
+# through `go tool`, which reads the go.mod of the directory buf is invoked from, and the root go.mod
+# is where both plugin versions are pinned. Invoked from datasheet/, they would resolve against the
+# datasheet module, which pins neither.
+plugins:
+  - local: ["go", "tool", "protoc-gen-go"]
+    out: datasheet/gen/go
+    opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-connect-go"]
+    out: datasheet/gen/go
+    opt: paths=source_relative

@@ -1,0 +1,37 @@
+<svg viewBox="0 0 640 372" role="img" aria-labelledby="presenter-tiers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="presenter-tiers-title">Three stacked tiers. The view is TypeScript always, rendering and capturing raw input, and owning picking, hit-testing and the camera locally. Below it the presenter owns interaction logic, and its runtime is a per-surface choice between TypeScript in-process and a WebAssembly build of the Go presenter. Below that the core is Go always, holding the IR, diff, rules and simulation. Between the view and the presenter, intents travel up and commands travel down over a duplex, typed contract.</title>
+  <defs>
+    <marker id="presenter-tiers-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.55"/>
+    </marker>
+  </defs>
+  <rect x="60" y="24" width="520" height="72" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="76" y="48" fill="var(--accent-color)" font-size="12.5" font-weight="600">the view, TypeScript always</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+    <text x="76" y="68">renders, captures raw input, owns the GPU buffers and the DOM</text>
+    <text x="76" y="84">picking, hit-testing and the camera are view-local, and it holds no domain logic</text>
+  </g>
+  <g stroke="currentColor" stroke-width="1.3" opacity="0.55" marker-end="url(#presenter-tiers-arrow)">
+    <line x1="150" y1="162" x2="150" y2="102"/>
+    <line x1="490" y1="102" x2="490" y2="162"/>
+  </g>
+  <text x="162" y="124" fill="var(--accent-color)" font-size="11.5" font-weight="600">intents travel up</text>
+  <text x="162" y="140" fill="currentColor" font-size="9.5" opacity="0.6">a net was hovered</text>
+  <text x="478" y="124" text-anchor="end" fill="var(--accent-color)" font-size="11.5" font-weight="600">commands travel down</text>
+  <text x="478" y="140" text-anchor="end" fill="currentColor" font-size="9.5" opacity="0.6">highlight this net</text>
+  <rect x="60" y="168" width="520" height="72" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="76" y="192" fill="var(--accent-color)" font-size="12.5" font-weight="600">the presenter, whose runtime is a per-surface choice</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+    <text x="76" y="212">TypeScript in-process for a high-frequency surface, such as continuous dragging</text>
+    <text x="76" y="228">a WebAssembly build of the Go presenter for a read-mostly one</text>
+  </g>
+  <line x1="320" y1="244" x2="320" y2="264" stroke="currentColor" stroke-width="1.3" opacity="0.55" marker-end="url(#presenter-tiers-arrow)"/>
+  <text x="332" y="260" fill="currentColor" font-size="9.5" opacity="0.6">every presenter calls them</text>
+  <rect x="60" y="270" width="520" height="72" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="76" y="294" fill="var(--accent-color)" font-size="12.5" font-weight="600">the core, Go always</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+    <text x="76" y="314">IR, diff, rules and simulation: runtime-agnostic and authoritative</text>
+    <text x="76" y="330">the same packages the CLI and the Go tests run headless</text>
+  </g>
+  <text x="320" y="364" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">the contract is typed interfaces in both directions, not an event bus and not a shared store</text>
+</svg>

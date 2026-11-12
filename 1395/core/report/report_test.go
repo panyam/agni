@@ -1,0 +1,329 @@
+package report
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+)
+
+func verdict(rule, subject string, o check.Outcome) check.Verdict {
+	v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: subject}}, Rule: rule, Outcome: o}
+	switch o {
+	case check.Pass:
+		v.Witness = &check.Witness{Statement: subject + " is fine"}
+	case check.Fail:
+		v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: subject}, Rule: rule, Message: subject + " is wrong"}
+	}
+	return v
+}
+
+func rules() []*check.Rule {
+	return []*check.Rule{
+		{Name: "converted", Severity: "error", Summary: "s", StatesConsideredSet: true},
+		{Name: "legacy", Severity: "warning", Summary: "s"},
+	}
+}
+
+// THE ORDERING JUDGMENT. A reader opening a report on a board with three problems and two thousand
+// passes must meet the three problems, so a rule with something to act on sorts first and, inside a
+// rule, so does the row.
+func TestFailuresLead(t *testing.T) {
+	r := Build(
+		[]check.Verdict{
+			verdict("converted", "A_PASSES", check.Pass),
+			verdict("converted", "Z_FAILS", check.Fail),
+		},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "Z_FAILS"}, Rule: "converted", Message: "x"}},
+		rules(), Report{},
+	)
+	if got := check.EntityRef(r.Rules[0].Rows[0].Subjects[0]); got != "Z_FAILS" {
+		t.Errorf("the failing row must lead its rule, got %q first", got)
+	}
+	// Alphabetically A_PASSES would win; outcome beats name.
+	if check.EntityRef(r.Rules[0].Rows[1].Subjects[0]) != "A_PASSES" {
+		t.Errorf("rows = %+v", r.Rules[0].Rows)
+	}
+}
+
+// A rule that states a considered set already carried its failures as verdicts. Counting the matching
+// findings again would double them. So the merge is keyed on the RULE and not the finding.
+func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
+	r := Build(
+		[]check.Verdict{verdict("converted", "N", check.Fail)},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Rule: "converted", Message: "x"}},
+		rules(), Report{},
+	)
+	if n := len(r.Rules[0].Rows); n != 1 {
+		t.Errorf("want one row for one failure, got %d: %+v", n, r.Rules[0].Rows)
+	}
+	if r.Totals.Fail != 1 {
+		t.Errorf("Fail total = %d, want 1", r.Totals.Fail)
+	}
+}
+
+// THE COVERAGE PROPERTY, carried into the report. A rule that reports violations without stating what
+// it examined must be visibly that, or the report presents a failure list as coverage.
+// StatesConsideredSet makes the same claim on the rule definition. A failure list posing as coverage
+// would be most convincing, and most wrong, in a report.
+func TestFindingsOnlyRuleIsLabelledAndNotCountedAsCoverage(t *testing.T) {
+	r := Build(
+		nil,
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Rule: "legacy", Message: "x"}},
+		rules(), Report{},
+	)
+	if r.Totals.Considered != 0 {
+		t.Errorf("a findings-only rule considered nothing we can claim, got %d", r.Totals.Considered)
+	}
+	if r.Totals.RulesFindingsOnly != 1 || r.Totals.RulesReporting != 0 {
+		t.Errorf("totals misclassify the rule: %+v", r.Totals)
+	}
+
+	var buf bytes.Buffer
+	if err := HTML(&buf, r); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(buf.String(), "Absence here is not evidence of correctness") {
+		t.Error("the rendered report must say that silence from this rule proves nothing")
+	}
+}
+
+// Subjects and messages come out of design files the engine did not author, so they are untrusted
+// text. A net named with a tag must not become one.
+func TestSubjectsAreEscapedNotInjected(t *testing.T) {
+	r := Build(
+		[]check.Verdict{verdict("converted", `<script>alert(1)</script>`, check.Pass)},
+		nil, rules(), Report{},
+	)
+	var buf bytes.Buffer
+	if err := HTML(&buf, r); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf.String(), "<script>alert(1)</script>") {
+		t.Error("a net name was rendered as live markup")
+	}
+	if !strings.Contains(buf.String(), "&lt;script&gt;") {
+		t.Error("the net name should still be readable, escaped")
+	}
+}
+
+// A LINK IS A PROMISE. With no base and no mount there is nothing to promise, so the report says
+// nothing rather than assembling a URL that resolves on nobody's server (issue 392).
+func TestNoLinksWithoutABase(t *testing.T) {
+	vs := []check.Verdict{verdict("converted", "N", check.Pass)}
+	bare := Build(vs, nil, rules(), Report{})
+	if got := bare.Rules[0].Rows[0].URL; got != "" {
+		t.Errorf("want no URL without a base, got %q", got)
+	}
+
+	linked := Build(vs, nil, rules(), Report{URLBase: "http://h:1", MountPath: "m/d", ContentHash: "abc"})
+	url := linked.Rules[0].Rows[0].URL
+	for _, want := range []string{"http://h:1/designs/m/d/view", "verdict=", "hash=abc"} {
+		if !strings.Contains(url, want) {
+			t.Errorf("url %q missing %q", url, want)
+		}
+	}
+}
+
+// An OPERATOR writes rules in conventions.yaml, profiles/ or a design's intent. Such a rule is
+// namespaced and absent from the catalog handed to the report, so the catalog lookup cannot vouch for
+// it. Its verdicts can, because emitting one IS stating a considered set. Before this, the report
+// captioned every rule a team wrote itself "absence here is not evidence of correctness", over rows
+// that were exactly that evidence. This layer exists to remove that false-confidence failure, and it
+// hit the rules a team cares most about.
+func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
+	r := Build(
+		[]check.Verdict{
+			{Rule: "house/naming", Outcome: check.Pass, Subjects: []check.Entity{{Kind: check.KindNet, Ref: "OK"}},
+				Witness: &check.Witness{Statement: "name matches house style"}},
+			{Rule: "house/naming", Outcome: check.Fail, Subjects: []check.Entity{{Kind: check.KindNet, Ref: "BAD"}}},
+		},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "BAD"}, Rule: "house/naming", Message: "off-convention"}},
+		rules(), // deliberately does NOT contain house/naming
+		Report{},
+	)
+	if r.Totals.RulesFindingsOnly != 0 || r.Totals.RulesReporting != 1 {
+		t.Errorf("a rule with verdicts states a considered set whatever the catalog knows: %+v", r.Totals)
+	}
+	if r.Totals.Considered != 2 {
+		t.Errorf("both verdicts count as coverage, got %d", r.Totals.Considered)
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf.String(), "Absence here is not evidence of correctness") {
+		t.Error("a rule that stated what it examined must not be captioned as if it had not")
+	}
+	// The failure must not be double-counted, since it arrived as a verdict AND as a finding.
+	if got := strings.Count(buf.String(), "BAD"); got != 1 {
+		t.Errorf("the failing subject should appear once, got %d", got)
+	}
+}
+
+func TestTraceURL(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := TraceURL(meta, "U1.3", "J1.1", 3)
+	want := "http://h:8080/designs/m/b.edn/view?trace=U1.3%2CJ1.1&hops=3"
+	if got != want {
+		t.Errorf("TraceURL = %q, want %q", got, want)
+	}
+	if got := TraceURL(meta, "U1.3", "J1.1", 0); strings.Contains(got, "hops=") {
+		t.Errorf("a caller stating no radius must not freeze one into the link: %q", got)
+	}
+}
+
+// A URL is a promise the reader can follow. Every condition that cannot promise one yields no link
+// at all rather than one assembled from a guess. VerdictURL states this rule and TraceURL shares it.
+func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
+	full := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	cases := []struct {
+		name     string
+		meta     Report
+		from, to string
+	}{
+		{"no server named", Report{MountPath: "m/b.edn"}, "U1.3", "J1.1"},
+		{"no mount the server would recognise", Report{URLBase: "http://h:8080"}, "U1.3", "J1.1"},
+		{"no start pin", full, "", "J1.1"},
+		{"no end pin", full, "U1.3", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := TraceURL(c.meta, c.from, c.to, 0); got != "" {
+				t.Errorf("got %q, want no link", got)
+			}
+		})
+	}
+}
+
+// A diff link opens the earlier revision and names the later one as what to compare against, in the
+// mount/path shape the Compare picker reports (agni issue 1126).
+func TestDiffURL(t *testing.T) {
+	a := Report{URLBase: "http://h:8080", MountPath: "m/d/b.edn"}
+	b := Report{URLBase: "http://h:8080", MountPath: "m/d/b-rev-c.edn"}
+	want := "http://h:8080/designs/m/d/b.edn/view?against=m%2Fd%2Fb-rev-c.edn"
+	if got := DiffURL(a, b, false); got != want {
+		t.Errorf("DiffURL = %q, want %q", got, want)
+	}
+	// A diff that paired near-renames says so, so the viewer's tables pair them too.
+	if got := DiffURL(a, b, true); got != want+"&rename_approx=1" {
+		t.Errorf("DiffURL with near-renames = %q, want %q", got, want+"&rename_approx=1")
+	}
+}
+
+// Either side withheld means no link, because the viewer reads the second design from the server
+// serving the first, and half a comparison is not the question the run answered.
+func TestDiffURLRefusesWhatItCannotPromise(t *testing.T) {
+	full := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	cases := []struct {
+		name string
+		a, b Report
+	}{
+		{"no server named", Report{MountPath: "m/b.edn"}, Report{MountPath: "m/c.edn"}},
+		{"the earlier revision withheld", Report{URLBase: "http://h:8080"}, full},
+		{"the later revision withheld", full, Report{URLBase: "http://h:8080"}},
+		{"two servers", full, Report{URLBase: "http://other:8080", MountPath: "m/c.edn"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := DiffURL(c.a, c.b, true); got != "" {
+				t.Errorf("got %q, want no link", got)
+			}
+		})
+	}
+}
+
+// The link carries the verdict's rule, so the viewer can resolve one link by running one rule instead
+// of the whole catalog. It is a hint on top of the identity, not part of it, so a link that carries no
+// rule still addresses the same verdict and every link already written into a saved report keeps
+// working.
+func TestVerdictURLCarriesTheRule(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "i2c-pull-up", nil)
+	want := "http://h:8080/designs/m/b.edn/view?verdict=i2c-pull-up%3A%28net%3ASDA%29&rule=i2c-pull-up"
+	if got != want {
+		t.Errorf("VerdictURL = %q, want %q", got, want)
+	}
+	if got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "", nil); strings.Contains(got, "rule=") {
+		t.Errorf("an unnamed rule must not appear in the link: %q", got)
+	}
+	withHash := Report{URLBase: "http://h:8080", MountPath: "m/b.edn", ContentHash: "sha256:abc"}
+	if got := VerdictURL(withHash, "r:(net:N)", "r", nil); !strings.Contains(got, "hash=sha256%3Aabc") || !strings.Contains(got, "rule=r") {
+		t.Errorf("the rule must not displace the revision hash: %q", got)
+	}
+}
+
+// The link carries the subjects beside the rule, so the viewer asks that one rule about the verdict's
+// own nets and parts (agni issue 897). It names every element of a relation's tuple, in the rule's
+// order.
+func TestVerdictURLCarriesTheSubjects(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := VerdictURL(meta, "copper-clearance:(net:A,net:B)", "copper-clearance", []string{"net:A", "pin:U7.3"})
+	want := "http://h:8080/designs/m/b.edn/view?verdict=copper-clearance%3A%28net%3AA%2Cnet%3AB%29&rule=copper-clearance&subject=net%3AA&subject=pin%3AU7.3"
+	if got != want {
+		t.Errorf("VerdictURL = %q, want %q", got, want)
+	}
+	if got := VerdictURL(Report{}, "r:(net:N)", "r", []string{"net:N"}); got != "" {
+		t.Errorf("a run with no server named minted %q", got)
+	}
+}
+
+// The report's own verdict rows go through the same function with the verdict's subjects, so every
+// link in a saved page carries them.
+func TestReportVerdictRowsLinkTheirSubjects(t *testing.T) {
+	meta := Report{URLBase: "http://h", MountPath: "m/b.edn"}
+	r := rowOf(check.Verdict{Rule: "r", Outcome: check.Fail, Subjects: []check.Entity{check.NetNameEntity("SDA"), check.BusEntity("D[7:0]")}}, meta)
+	if !strings.HasSuffix(r.URL, "&rule=r&subject=net%3ASDA") {
+		t.Errorf("row URL = %q, want the net and not the bus", r.URL)
+	}
+}
+
+// Imagine someone opens a report a week later and wonders why its subjects are plain text. Until
+// issue 626 the only answer was on a terminal that had long since closed. Both surfaces carry the
+// reason now, because a link means the same thing on both and so does its absence.
+func TestWithheldLinkReasonReachesBothReports(t *testing.T) {
+	// The fixture reason carries no quotes on purpose, because html/template escapes them,
+	// correctly, and a test asserting the raw sentence would fail against a page that carries it
+	// perfectly well.
+	const why = `the mount was minted for this run rather than declared`
+
+	t.Run("check report", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := HTML(&buf, Report{Design: "d", LinksWithheld: why}); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(buf.String(), why) {
+			t.Errorf("the reason links were withheld never reached the report")
+		}
+		if !strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("the report carries the reason without saying what it is the reason for")
+		}
+	})
+
+	t.Run("review checklist", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := ChecklistHTML(&buf, Checklist{Design: "d", Name: "n", LinksWithheld: why}); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(buf.String(), why) {
+			t.Errorf("the reason findings were unlinked never reached the checklist")
+		}
+		if !strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("the checklist carries the reason without saying what it is the reason for")
+		}
+	})
+
+	// A run that emitted links, or was never asked for any, must say nothing. The note is an
+	// explanation for a missing thing, and a page that explains an absence it does not have is
+	// worse than one that stays quiet.
+	t.Run("silent when nothing was withheld", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := HTML(&buf, Report{Design: "d"}); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(buf.String(), "not linked to the viewer") {
+			t.Errorf("a report that withheld nothing must not explain a withholding")
+		}
+	})
+}

@@ -1,0 +1,23 @@
+# A FIRST PASS at the NTS0102, kept to show what a parameter nobody has checked looks like. It is not
+# in params/, so nothing reads it unless you copy it there, which rung 6 of the tutorial does on a
+# scratch copy. The person typing it took the 3.6 V at the top of the recommended range for VCC(A)
+# and entered it as the part's absolute maximum, and marked it mock because nobody went back to the
+# document. params/nts0102gt.textproto is the transcribed version.
+mpn: "NTS0102GT"
+manufacturer: "NXP Semiconductors"
+
+docs {
+  id: "nts0102-first-pass"
+  title: "NTS0102 (first pass, not checked against the datasheet)"
+  vendor: "NXP Semiconductors"
+}
+
+parameters {
+  name: "Supply voltage"
+  symbol: "VCC"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 3.6 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "nts0102-first-pass" method: "mock" confidence: 0.3 }
+}

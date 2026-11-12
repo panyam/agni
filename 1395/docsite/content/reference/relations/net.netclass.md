@@ -1,0 +1,119 @@
+---
+title: "net.netclass"
+description: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)"
+---
+
+### What it is
+
+`net.netclass(net, class)` yields one row per net that the design tool put in a named class, with the
+class string recorded verbatim: `Default`, `Power`, `HighSpeed`, whatever the project declares. A net
+left in the tool's implicit default carries no class and produces no row, so `not net.netclass(?n, ?_)`
+reads as "unclassed".
+
+The name is deliberate. `net.netclass` is the **tool-assigned** label. It is not `net.class`, since
+that name would belong to the **derived semantic role** space. `net.ground` and the `ir.Net.roles`
+stamp (WS3-072) occupy that space. The two answer different questions. An engineer put a net in the
+`Power` class by hand, while a net satisfies `net.ground` because the naming lexicon read it as
+ground. A rule that conflated them would join against nothing and report clean.
+
+### For hardware engineers
+
+A net class is how you tell the layout tool that a group of nets shares rules: these are the high-speed
+pairs, these are the high-voltage nets, these carry more current than the default track width allows.
+Vendor rule decks usually scope a rule by net class. You already maintain the label in the
+project, and the engine does not guess it from a name.
+
+Query it to confirm the engine sees the classes you assigned, and to scope a review question the way
+you would scope a design rule: "which parts sit on an HV net", "is any high-speed pair missing its
+termination". The class records an assignment rather than a measurement. A net in `HighSpeed` means
+someone declared it high-speed, and the engine has not verified that it is routed that way.
+
+A net can be in several classes at once, and the engine reports all of them. If you assigned `VBUS`
+to both `Power` and `HighCurrent`, it shows up under both, and a query scoped to either one finds it.
+When you check coverage and a net is missing from a scope you expected it in, that is a real
+finding. The engine used to be able to lose the membership rather than report it.
+
+### For software engineers
+
+A filtered projection over `Nets()`, one row per class membership and none for an unclassed net. It
+joins to everything else keyed by net name (`component.net`, `pin.net`, `net.max_voltage`), so it
+composes as a scope filter on any existing question.
+
+**`?net` is NOT unique in this projection.** Membership is a set, so a net in two classes emits two
+rows and a join on `?net` fans out, the same 1:many shape `component.class` has. Count rows and you
+are counting memberships, not nets; `net.netclass(?n, ?c) => ?n` on a design where half the nets carry
+two classes returns more results than the design has classed nets.
+
+WS1-050 settled this against the formats rather than against our first reader. KiCad stores
+`map<netname, set<netclass>>` and resolves a net's membership by unioning its explicit assignment with
+EVERY matching pattern, then cascades the per-class VALUES by priority to build one effective class.
+Altium likewise lets a net join several classes, though its clearance matrix treats that as an
+ambiguity to flag rather than a feature. The two tools share the data model and read it in
+opposite ways. So the engine records the set as fact, and a rule decides whether a second class is a
+*problem*.
+
+Order is sorted, and that is a determinism guarantee only. It is NOT the tool's precedence order.
+KiCad's precedence is a per-class `priority`. It lives with the class DEFINITIONS (clearance, track
+width, via), and only the cascade behind `net.declared_track_width` and `net.declared_via_drill`
+reads it (WS3-111). Precedence decides whose track width wins, never who is a member, so it cannot
+change the answer to a membership question.
+
+The value is a foreign label from the project file rather than a closed enum, so string comparisons
+are exact and case-sensitive, and two projects can use different vocabularies for the same intent. Do
+not treat an unrecognized class as an error, and do not derive meaning from the string beyond what the
+project declares.
+
+### Go projector
+
+`netNetClassFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row per entry of
+each net's `NetClasses`. The field is populated in the I/O layer rather than by any analysis.
+`readers/formats/registry.go` reads `net_settings.netclass_{assignments,patterns}` out of the sibling
+`.kicad_pro` and calls `kicad.AnnotateNetClasses` (WS1-037). It emits one row per (net, class) pair. A
+design with no classes yields zero rows. That is the common case, and the companion marker below
+exists for it.
+
+Do not populate `ir.Net.net_classes` from IPC-2581. Its `LogicalNet/@netClass` is spelled the same but
+is a singular CLOSED enum (`CLK`/`FIXED`/`GROUND`/`SIGNAL`/`POWER`/`UNUSED`)
+describing what a net IS. `net.ground` and `ir.Net.roles` occupy that derived-role space, and
+user-named constraint groups do not. Mixing the two would put `GROUND` and `HighSpeed` in one
+relation, and a class-scoped query would then silently select the wrong nets.
+
+### Absence is not a pass
+
+**Only a KiCad project read populates net class.** An EDIF netlist, an IPC-2581 board, a bare
+`.kicad_sch` opened without its project, and a KiCad project that simply declares no classes all leave
+this relation empty. A rule SCOPED by net class then selects nothing, finds nothing, and reports
+clean, and a review cannot tell that from a genuine pass. This case belongs to the false-pass family
+(WS3-090 / 096 / 097 / 098 / 099). The other members reach a false pass through an empty datasheet
+join or a requirement that compiles to nothing. This one reaches it through a **scoping** relation,
+which is empty because the source carries no such data.
+
+This relation guards against it with the capability gate. A netclass-scoped rule declares
+`check.CapNetClass`, and `check.Available` reports it not-applicable, with the reason "design carries
+no net-class assignments (only a KiCad project file supplies them)", wherever the design assigns no
+classes. The gate is content-derived, not format-derived, because for a scoped rule "this project
+declares no classes" and "this format has no classes" are the same answer, with nothing in scope
+either way. `design.has_netclass` is the queryable twin of that capability. An ad-hoc query can
+ask it whether a class-scoped question is even answerable on this design before trusting its result.
+
+### Datalog
+
+Every classed net and its class:
+
+```
+net.netclass(?net, ?class) => ?net, ?class
+```
+
+Scope an existing question by the project's own class, the way a vendor rule deck does, over the
+parts sitting on a high-speed net:
+
+```
+net.netclass(?net, "HighSpeed"), component.net(?ref, ?net) => ?ref, ?net
+```
+
+Guard it with `design.has_netclass`, so the query states that it only means something on a design that
+assigns classes:
+
+```
+design.has_netclass(?_), net.netclass(?net, "HighSpeed"), component.net(?ref, ?net) => ?ref, ?net
+```

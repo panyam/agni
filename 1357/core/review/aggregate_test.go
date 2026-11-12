@@ -1,0 +1,59 @@
+package review
+
+import (
+	"strings"
+	"testing"
+)
+
+// twoDesignAgg builds an Aggregate of the same one-area manifest run on two designs. Item "1" is
+// automated, and it passes on d1 and fails on d2. Item "2" is not-automated on both designs.
+func twoDesignAgg() Aggregate {
+	rep := func(design string, o1 Outcome) Report {
+		return Report{Manifest: "M", Design: design, Areas: []AreaResult{{
+			Area: Area{Name: "Area A"},
+			Items: []ItemResult{
+				{Item: Item{ID: "1", Title: "first"}, Outcome: o1},
+				{Item: Item{ID: "2", Title: "second"}, Outcome: NotAutomated},
+			},
+		}}}
+	}
+	return Aggregate{Manifest: "M", Reports: []Report{rep("d1", Pass), rep("d2", Fail)}}
+}
+
+// TestAggregateAutomationIsManifestLevel pins the central invariant. Automation (automated /
+// not-automated) is stated ONCE for the manifest, never summed across designs, or "1 automated"
+// would read as "2". Pass/fail is per design.
+func TestAggregateAutomationIsManifestLevel(t *testing.T) {
+	s := RenderAggregateMarkdown(twoDesignAgg())
+	if !strings.Contains(s, "**1 of 2 items covered** (manifest-level), 1 not-automated") {
+		t.Errorf("want manifest-level automation (1 of 2), got:\n%s", s)
+	}
+	if strings.Contains(s, "2 of 4") {
+		t.Error("automation must not be summed across designs")
+	}
+	// per-design rows and the per-item matrix with per-design cells
+	for _, want := range []string{
+		// Answered is per design and leads the row. d1 answered item 1 with a pass, d2 with a fail, and
+		// item 2 is not-automated on both, so each design answers 1 of 2.
+		"| `d1` | 1/2 | 1 | 0 | 0 |",
+		"| `d2` | 1/2 | 0 | 1 | 0 |",
+		"### Area A",
+		"| 1 | first | pass | fail |",
+		"| 2 | second | not-automated | not-automated |",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("markdown missing %q\n---\n%s", want, s)
+		}
+	}
+}
+
+// TestAggregateCoverageHasNoMatrix checks that the coverage renderer emits the summary only.
+func TestAggregateCoverageHasNoMatrix(t *testing.T) {
+	s := RenderAggregateCoverageMarkdown(twoDesignAgg())
+	if !strings.Contains(s, "## Per-design outcomes") {
+		t.Errorf("coverage missing the per-design summary\n%s", s)
+	}
+	if strings.Contains(s, "Traceability matrix") {
+		t.Error("coverage must not include the per-item matrix")
+	}
+}

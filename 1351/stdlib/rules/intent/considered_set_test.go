@@ -1,0 +1,114 @@
+package intent
+
+import (
+	"context"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// verdictsFor runs the compiled declaration and returns the verdicts of one rule.
+func verdictsFor(t *testing.T, decl Declaration, m check.Model, rule string) []check.Verdict {
+	t.Helper()
+	var out []check.Verdict
+	for _, r := range Compile(decl) {
+		if r.Name == rule {
+			out = append(out, r.Eval(context.Background(), m)...)
+		}
+	}
+	return out
+}
+
+// An intent rule's considered set is the DECLARATION, so these conversions are worth having. The
+// rule already knows what it was asked to look for. So it can say "both declared modules are here",
+// where before it said nothing. A declaration nobody wrote also says nothing.
+func TestIntentRuleStatesWhatItWasAskedToLookFor(t *testing.T) {
+	decl := declOf(t, `
+name: I
+intent:
+  modules:
+  - {name: SoC, class: soc}
+  - {name: CAN transceiver, class: can_transceiver}
+`)
+	present := check.NewModel(&ir.Design{Components: []*ir.Component{
+		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can_transceiver")},
+	}})
+	vs := verdictsFor(t, decl, present, RuleModuleMissing)
+	if len(vs) != 2 {
+		t.Fatalf("both declared modules are subjects, want 2 verdicts, got %d", len(vs))
+	}
+	for _, v := range vs {
+		if v.Outcome != check.Pass {
+			t.Errorf("%s: want pass on a design carrying it, got %s", check.SubjectRefs(v), v.Outcome)
+		}
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Errorf("%s: a pass with no witness is the silence this conversion removes", check.SubjectRefs(v))
+		}
+	}
+	// And the findings do not move. `check` has always reported the failing half.
+	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}})
+	if fs := check.RunBackground(absent, Compile(decl)); len(fs) != 1 {
+		t.Errorf("want the one absent-module finding, got %d: %+v", len(fs), fs)
+	}
+}
+
+// A module declaring no COUNT is not a subject of the count rule. Reporting it as a pass would claim
+// the design has the right number of something nobody stated a number for. fet-vdss shipped that
+// scope mistake, and PR 405 fixed it.
+func TestIntentCountRuleClaimsOnlyModulesThatDeclareOne(t *testing.T) {
+	decl := declOf(t, `
+name: I
+intent:
+  modules:
+  - {name: SoC, class: soc}
+  - {name: CAN transceiver, class: can_transceiver, count: 2}
+`)
+	m := check.NewModel(&ir.Design{Components: []*ir.Component{
+		{RefDes: "U1", DeviceClasses: classify.Tags("soc")},
+		{RefDes: "U2", DeviceClasses: classify.Tags("can_transceiver")},
+		{RefDes: "U3", DeviceClasses: classify.Tags("can_transceiver")},
+	}})
+	vs := verdictsFor(t, decl, m, RuleModuleCount)
+	if len(vs) != 1 {
+		t.Fatalf("only the module declaring a count is a subject, want 1 verdict, got %d: %v", len(vs), vs)
+	}
+	if check.SubjectRefs(vs[0]) != "CAN transceiver" || vs[0].Outcome != check.Pass {
+		t.Errorf("verdict = %s/%s, want a pass on the counted module", check.SubjectRefs(vs[0]), vs[0].Outcome)
+	}
+}
+
+// A rail whose NAME states no voltage is neither a match nor a mismatch. The rule compares a
+// name-derived nominal against the declared one, so a rail called VBUS supplies nothing to compare.
+// Such a rail took the same silent path as a correctly-named rail. So a domain declared over rails
+// with no voltage in their names reported total agreement.
+func TestVoltageDomainSeparatesAgreementFromNothingToCompare(t *testing.T) {
+	decl := declOf(t, `
+name: I
+intent:
+  nets:
+    PMIC_CORE_3V3: {nominal: 3.3, domain: core}
+    VBUS: {nominal: 3.3, domain: core}
+    MISSING_RAIL: {nominal: 3.3, domain: core}
+`)
+	m := check.NewModel(&ir.Design{Nets: []*ir.Net{
+		{Name: "PMIC_CORE_3V3", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "VBUS", Prov: &ir.Provenance{SourceFile: "t"}},
+	}})
+	got := map[string]check.Outcome{}
+	for _, v := range verdictsFor(t, decl, m, RuleVoltageDomain) {
+		got[check.SubjectRefs(v)] = v.Outcome
+	}
+	want := map[string]check.Outcome{
+		"PMIC_CORE_3V3": check.Pass,
+		"VBUS":          check.NotConsidered,
+		"MISSING_RAIL":  check.Fail,
+	}
+	for rail, w := range want {
+		if got[rail] != w {
+			t.Errorf("rail %s: want %s, got %s", rail, w, got[rail])
+		}
+	}
+}

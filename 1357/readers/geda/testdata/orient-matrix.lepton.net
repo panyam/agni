@@ -1,0 +1,58 @@
+START header
+
+gEDA's netlist format
+(Initially created for testing of gnetlist)
+
+END header
+
+No graphical symbols found
+
+START components
+
+U1 device=TRI
+U2 device=TRI
+U3 device=TRI
+U4 device=TRI
+U5 device=TRI
+U6 device=TRI
+U7 device=TRI
+U8 device=TRI
+
+END components
+
+No "no-connect" nets found
+
+START renamed-nets
+
+
+END renamed-nets
+
+START nets
+
+U1_0_0 : U1 1
+U1_0_400 : U1 3
+U1_600_0 : U1 2
+U2_0_0 : U2 1
+U2_0_600 : U2 2
+U2_m400_0 : U2 3
+U3_0_0 : U3 1
+U3_0_m400 : U3 3
+U3_m600_0 : U3 2
+U4_0_0 : U4 1
+U4_0_m600 : U4 2
+U4_400_0 : U4 3
+U5_0_0 : U5 1
+U5_0_400 : U5 3
+U5_m600_0 : U5 2
+U6_0_0 : U6 1
+U6_0_m600 : U6 2
+U6_m400_0 : U6 3
+U7_0_0 : U7 1
+U7_0_m400 : U7 3
+U7_600_0 : U7 2
+U8_0_0 : U8 1
+U8_0_600 : U8 2
+U8_400_0 : U8 3
+
+END nets
+

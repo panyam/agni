@@ -1,0 +1,13 @@
+(edif CONFORMANCE
+  (edifVersion 2 0 0)
+  (design CONFORMANCE (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef IC)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef IC)) (designator "U2"))
+          (instance R5 (viewRef V (cellRef RES)) (designator "R5"))
+          (instance X1 (viewRef V (cellRef IC)) (designator "X1"))
+          (net SDA (joined (portRef 5 (instanceRef U1)) (portRef 5 (instanceRef U2))))
+          (net STUB (joined (portRef 1 (instanceRef R5)))))))))

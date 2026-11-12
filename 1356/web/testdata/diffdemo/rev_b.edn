@@ -1,0 +1,36 @@
+(edif DIFFDEMO
+  (edifVersion 2 0 0) (edifLevel 0)
+  (library L
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c "CONN")
+      (cellType GENERIC)
+      (view (rename &v "sym")
+        (viewType SCHEMATIC)
+        (interface (port L (direction INPUT) (designator "L")) (port R (direction INPUT) (designator "R")))
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 400 200)))
+          (figure BOX (rectangle (pt 0 0) (pt 400 200)))
+          (portImplementation (name L) (connectLocation (figure GRAPHICS (dot (pt 0 100)))) (figure PIN (path (pointList (pt -100 100) (pt 0 100)))))
+          (portImplementation (name R) (connectLocation (figure GRAPHICS (dot (pt 400 100)))) (figure PIN (path (pointList (pt 400 100) (pt 500 100)))))))))
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "Demo")
+        (pageSize (rectangle (pt 0 0) (pt 4000 400)))
+        (instance (rename &i1 "$1") (viewRef v (cellRef (name &c) (libraryRef L))) (transform (origin (pt 0 100))) (designator "J1"))
+        (instance (rename &i2 "$2") (viewRef v (cellRef (name &c) (libraryRef L))) (transform (origin (pt 800 100))) (designator "J2"))
+        (instance (rename &i3 "$3") (viewRef v (cellRef (name &c) (libraryRef L))) (transform (origin (pt 1600 100))) (designator "J3"))
+        (instance (rename &i6 "$6") (viewRef v (cellRef (name &c) (libraryRef L))) (transform (origin (pt 2400 100))) (designator "J6"))
+        (instance (rename &i5 "$5") (viewRef v (cellRef (name &c) (libraryRef L))) (transform (origin (pt 3200 100))) (designator "J5"))
+        (net KEEP
+          (joined (portRef R (instanceRef &i1)) (portRef L (instanceRef &i2)))
+          (figure NET (path (pointList (pt 500 200) (pt 700 200)))))
+        (net SIG_CLK
+          (joined (portRef R (instanceRef &i2)) (portRef L (instanceRef &i3)))
+          (figure NET (path (pointList (pt 1300 200) (pt 1500 200)))))
+        (net NEWNET
+          (joined (portRef R (instanceRef &i6)))
+          (figure NET (path (pointList (pt 2900 200) (pt 2950 200)))))
+        (net HARD
+          (joined (portRef L (instanceRef &i5)) (portRef L (instanceRef &i6)))
+          (figure NET (path (pointList (pt 2300 200) (pt 3100 200)))))))))

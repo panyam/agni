@@ -1,0 +1,59 @@
+---
+title: "wire-no-junction"
+description: "A wire endpoint lands mid-span on another wire with no junction dot."
+---
+
+### Remedy
+
+Place a junction dot where the wires meet if the connection is intended, or move one wire clear of the other if it is not. Do not leave the crossing to be read by eye.
+
+### What it means
+
+A wire's endpoint lies strictly inside another wire segment's body, and no
+junction dot (or label) sits at the touch point. KiCad connects wires only where a dot is
+placed, so the two wires are electrically separate despite touching on screen.
+
+### Why engineers want it
+
+This is the sibling of dangling-endpoint, with the opposite
+disguise. A dangling end is visibly incomplete if you look closely, while an undotted T-tap looks
+EXACTLY like a connected one. The mistake survives visual review by construction and
+surfaces at bring-up as a missing connection between two otherwise-healthy nets.
+
+### Impact
+
+Net A and net B behave normally in isolation, and every net-level rule sees two
+well-formed nets, so nothing else can catch it. Only the drawing shows it, and the
+drawing shows the wires joined.
+
+![undotted T-tap flagged as two nets vs a dotted T that is one net]({{.Site.PathPrefix}}/static/images/catalog/rules/wire-no-junction.svg)
+
+### Scope
+
+Endpoint-on-body only. If two wires merely CROSS, with no endpoint at the meet,
+they never flag, because KiCad does not connect crossings and the drawing shows them unjoined. A
+label at the touch point joins the wires by name (both attach to it) and the reader has
+already split the segment there, so labeled taps do not flag either. Only the KiCad
+reader supplies the diagnostic, so on every other format the rule reports not-applicable rather
+than a clean pass.
+
+### Query structure
+
+the reader computes endpoint-on-body from wire geometry after
+splitting at junctions and labels; the rule reports them.
+
+    select E in no_junction_endpoints
+
+Reads: wire.endpoint, wire.junction. Tier P.
+
+### For software readers
+
+KiCad stores no connection list; connectivity is GEOMETRIC, so things connect where their
+coordinates coincide, the way whitespace-significant syntax gives meaning to layout. Two
+touching wires join only at endpoints or where the author placed a junction dot (the
+explicit "yes, these join" marker). Picture a wire ENDING on the MIDDLE of another wire, with no
+dot. It is like a file that LOOKS imported because it sits in the right directory but was never
+added to the build. Every human reads it as connected while the toolchain disagrees. Both halves
+are individually healthy, so nothing else can reveal the gap.
+
+![t-tap cases]({{.Site.PathPrefix}}/static/images/catalog/rules/tjunc-cases.png)

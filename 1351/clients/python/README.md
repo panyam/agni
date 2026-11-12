@@ -1,0 +1,48 @@
+# agni (Python client)
+
+A typed Python client for agni. It calls the `agni` CLI or a running `agni serve` and returns the
+wire contract's own message classes, generated from `protos/agni/v1`.
+
+```sh
+pip install 'agni-eda[xlsx]'           # a release, from PyPI
+pip install -e 'clients/python[xlsx]'  # a checkout
+```
+
+The distribution is `agni-eda` because PyPI's `agni` is an unrelated project, and the import is
+`agni`. Match its version to the `agni` binary or server it talks to.
+
+```python
+from agni import Client, CliTransport, ConnectTransport
+
+c = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
+# or: c = Client(ConnectTransport("http://127.0.0.1:8080"))
+snap = c.ingest("mount://tut/designs/gateway")
+resp = c.run_query(snapshot=snap, query='component.class(?c, "resistor") => ?c')
+c.delete_snapshot(snap)
+```
+
+Every question names a snapshot, a design loaded once under one config (agni issue 1061). `ingest`
+returns its name. It takes `board_uri`, `as_named` and `overlay`, which a request used to carry, and
+`flatten_hierarchy`, which reads a hierarchical EDIF netlist whole as `--flatten-hierarchy` does.
+A server holds a snapshot until it is deleted or evicted, and refuses one whose files changed. The
+client keeps the definition of each snapshot it ingested. If the server lost a snapshot, the client
+ingests it again under the same name and asks the question again. If the snapshot's files changed,
+the client updates it and asks again. The viewer does the same (agni issue 1067). If this client did
+not ingest a snapshot, or deleted it, a question naming it still raises `AgniError` with code
+`not_found`, and `AgniError.snapshot_unavailable` says which snapshot. The CLI transport has no
+server, so it keeps each definition itself under a name it mints (`snapshots/cli-1`) and turns it
+back into flags for every command it runs.
+
+The guide, `docsite/content/build/other-languages.md`, covers choosing a transport, which rpcs the
+CLI covers, where the two differ today, and writing tables to xlsx.
+
+- `examples/audit_workbook.py` writes a five-sheet audit workbook of the tutorial board, asking its
+  four tables as one query set (`run_queries`) so the design is read once.
+- `examples/revision_audit.py` compares two revisions of the gateway and audits the newer one, writing
+  a workbook and a markdown summary that lists each tab still to be built. `make
+  exercise-revision-audit` runs it with the checkout's binary (agni issue 843).
+- `make proto-py` regenerates `src/agni/v1`. Never edit it by hand; `make proto-check` fails on drift.
+- `make python-test` runs the suite against a built binary and a real server.
+- `make python-dist V=vX.Y.Z` builds the sdist and wheel that a release publishes. It writes them
+  into `dist/python` and installs the wheel into a fresh venv to check it. The release workflow runs
+  it, and the gate runs `python-dist-check`.

@@ -1,0 +1,62 @@
+## rail-not-classified
+
+### What it means
+
+A net's **name declares a voltage** and the net **feeds at least one supply pin**, yet it does not
+carry the rail role. Two independent channels say "rail" and the engine's classification says
+otherwise, so every rail-quantified rule skips it.
+
+This is a read-health tripwire, not a design defect. Nothing here says the board is wrong.
+
+### Why engineers want it
+
+The rail rules, and the `net.nominal_voltage` fact, all quantify over nets carrying the rail role.
+That role is stamped at ingestion from a naming lexicon, and the built-in vocabulary is
+start-anchored: `VCC`, `VDD`, `+3V3`. A great many house conventions are not. A board that names
+rails function-first, as `PMIC_CORE_3V3` or `SENSOR_5V0`, matches none of the built-in patterns.
+
+The failure that follows is a quiet one. Fewer nets are rails, so fewer rail rules have anything
+to quantify over. The report then comes back clean because the rules could not see the rails, not
+because the board is right.
+
+Measured on a real 1700-net board, supplying the project's rail patterns moved the rail count from
+13 to 91. Roughly seven eighths of that board's rails were invisible to every rail rule, with no
+error and no warning.
+
+The fix is to declare the project's rail patterns in a conventions lexicon, the `conventions:`
+section of `project.yaml` or a `--conventions` file. The shipped tutorial project does this, and the
+comment above its `conventions:` section explains why.
+
+### Why it needs more than the name
+
+A net named `..._3V3` is genuinely ambiguous. It may be a 3.3 V rail, or a signal that *swings* at
+3.3 V, and no naming grammar separates the two, because both are legitimately named that way.
+`net.signal_level` exists to represent the same ambiguity, seen from the other side.
+
+So firing on every voltage-named net that is not a rail would be noise. This rule requires a
+**second, independent channel**, meaning the net must also feed at least one pin that the design
+types as a power input. When the two channels agree, that is real evidence, and either alone is
+not.
+
+On the two real boards available, that discriminates cleanly: 45 nets on the board with an
+undeclared lexicon, 5 on the board where the built-in vocabulary already matches the rails.
+
+### What it skips rather than guesses
+
+- A net carrying the rail role passes. Once the lexicon is declared, the nets that this rule was
+  reporting pass, and that is the intended end state.
+- **Ground is excluded.** A ground net carries a role of its own and is never what this is about.
+- A net whose name carries no parseable voltage token is not reported, however rail-like it looks.
+  The rule reports a classification gap it can evidence, not every rail it suspects.
+- A net with no power-input pin never fails, even if its name declares a voltage. It is reported
+  not-considered with the missing channel named. On a format that cannot type power pins, every
+  candidate net reads this way.
+
+### Query structure
+
+    select N in nets where not rail_role(N) and not ground(N)
+      volts = nominal_from_name(name(N))            -- skip if the name declares none
+      supplies = count(P in connections(N) where type(P) == power_in)
+      supplies > 0 -> finding
+
+Reads: net.name, net.role, pin.type, on_net. Tier P.

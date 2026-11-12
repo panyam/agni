@@ -1,0 +1,24 @@
+# The same regulator seeded WITHOUT an output-current row: a params tier is attached, but nothing on
+# the design states the number the sizing rules join on. It exists to prove the honest guard — an
+# unseeded regulator must read needs-data, never a pass that says the supply is big enough.
+mpn: "ACME-REG-500"
+manufacturer: "Agni Conformance Works"
+device_class: "regulator"
+
+docs {
+  id: "reg500"
+  title: "ACME-REG-500 Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Output voltage"
+  symbol: "VOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 3.3 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "reg500" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

@@ -1,0 +1,1179 @@
+package edif
+
+import (
+	"fmt"
+	"io"
+	"math"
+	"strconv"
+	"strings"
+
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+)
+
+// ReadSchematic parses an EDIF 2.0.0 SCHEMATIC export (.eds) into the tier-1 geometry
+// sidecar. It shares the S-expression parser with the netlist reader (reader.go) and
+// produces render geometry keyed to the core IR, never the IR itself.
+//
+// Fidelity is lossy-bounded (render subset, CONSTRAINTS C6). It extracts symbol graphics,
+// pin coordinates, placements with their visible fields, wire polylines, labels, and
+// sheets, and it relabels a top-level placement by the designator back-annotation gives it
+// (agni 1228). It drops the connectivity graph (the core IR gets that from the .edn), hidden
+// and data-only properties, and the style palette. See
+// docsite/content/reference/edif-schematic-primer.md and
+// docsite/content/architecture/geometry-and-rendering.md. sourceFile is provenance only (C1).
+func ReadSchematic(r io.Reader, sourceFile string) (*geom.SchematicGeometry, error) {
+	root, err := parse(r)
+	if err != nil {
+		return nil, err
+	}
+	ver := edifVersion(root)
+	if len(ver) > 0 && ver[0] != "2" {
+		return nil, fmt.Errorf("edif: unsupported version %s (schematic reader supports 2.0.0)", strings.Join(ver, "."))
+	}
+	return extractGeom(root, sourceFile), nil
+}
+
+// extractGeom walks the parsed schematic tree and builds the geometry sidecar, holding the
+// symbol library (drawn once per part type) and the sheets (placements, wires, labels).
+func extractGeom(root *node, src string) *geom.SchematicGeometry {
+	g := &geom.SchematicGeometry{
+		Prov:   &geom.Provenance{SourceFile: src},
+		UnitNm: distanceUnitNm(root),
+	}
+	if dn := findFirst(root, "design"); dn != nil {
+		if _, disp := nameParts(dn.Arg(1)); disp != "" {
+			g.DesignRef = disp
+		}
+	}
+	if g.DesignRef == "" {
+		g.DesignRef = atom(root.Arg(1))
+	}
+
+	// Read before the symbol walk, because pin labels inherit figureGroup heights too.
+	fgh := figureGroupHeights(root)
+
+	// Symbols: library -> cell -> view -> symbol. The three maps normalize an internal &id
+	// to its display name, since instances may reference a cell, library or view by either
+	// form and the sidecar joins on the display name (edif-schematic-primer.md section 8).
+	// A library such as (rename Ferrite_Bead "Ferrite Bead") is keyed by display name but
+	// referenced by id. A multi-section cell has one view per bank, selected by view id.
+	cellByID := map[string]string{}
+	libByID := map[string]string{}
+	viewByID := map[string]string{}
+	var libs []*node
+	collect(root, "library", &libs)
+	for _, lib := range libs {
+		libID, libName := nameParts(lib.Arg(1))
+		if libName == "" {
+			libName = libID
+		}
+		if libID != "" {
+			libByID[libID] = libName
+		}
+		libByID[libName] = libName
+		for _, cell := range lib.Children("cell") {
+			id, disp := nameParts(cell.Arg(1))
+			name := disp
+			if name == "" {
+				name = id
+			}
+			if id != "" {
+				cellByID[id] = name
+			}
+			cellByID[name] = name
+			// One symbol per view, since each bank of a multi-section cell is its own
+			// graphic. Prefer a (symbol ...) node; fall back to a GRAPHIC view's
+			// (contents ...), where builtin cells keep their figures directly.
+			for _, view := range cell.Children("view") {
+				vID, vDisp := nameParts(view.Arg(1))
+				vName := vDisp
+				if vName == "" {
+					vName = vID
+				}
+				if vID != "" {
+					viewByID[vID] = vName
+				}
+				viewByID[vName] = vName
+				gnode := findFirst(view, "symbol")
+				if gnode == nil {
+					gnode = graphicContents(view)
+				}
+				if gnode == nil {
+					continue
+				}
+				g.Symbols = append(g.Symbols, symbolOf(gnode, cell, view, libName, vName, src, fgh))
+			}
+		}
+	}
+
+	// Sheets: each (page ...) holds placements, nets (wires), and annotations.
+	var pages []*node
+	collect(root, "page", &pages)
+	owners := pageOwners(root)
+	backRef := backAnnotatedRefDes(root)
+	for _, p := range pages {
+		g.Sheets = append(g.Sheets, sheetOf(p, src, cellByID, libByID, viewByID, backRef, fgh))
+	}
+	qualifyRepeatedSheets(g.Sheets, pages, owners)
+	g.BackAnnotated = backAnnotatedPlacements(pages, g.Sheets, backRef)
+	return g
+}
+
+// backAnnotatedPlacements lists each placement where back-annotation replaced the page's designator,
+// so a reader can audit what the drawing relabelled (agni issue 1230). pages and sheets are
+// parallel, one sheet per page. The sheet ids are final, so an entry names the sheet a viewer opens.
+func backAnnotatedPlacements(pages []*node, sheets []*geom.SheetGeometry, backRef map[string]string) []*geom.BackAnnotatedPlacement {
+	if len(backRef) == 0 {
+		return nil
+	}
+	var out []*geom.BackAnnotatedPlacement
+	for i, p := range pages {
+		var insts []*node
+		collect(p, "instance", &insts)
+		for _, in := range insts {
+			id, _ := nameParts(in.Arg(1))
+			des, ok := backRef[id]
+			if drawn := refDesOf(in); ok && des != drawn {
+				out = append(out, &geom.BackAnnotatedPlacement{RefDes: des, DrawnRefDes: drawn, SheetId: sheets[i].GetId()})
+			}
+		}
+	}
+	return out
+}
+
+// pageOwner names the cell view or design that holds a page, as an id path and a display name.
+type pageOwner struct{ id, name string }
+
+// pageOwners maps each page to the cell view or design that holds it. A cell view holds a page as
+// library -> cell -> view -> contents, and a design holds one as design -> contents. A page found
+// anywhere else has no owner.
+func pageOwners(root *node) map[*node]pageOwner {
+	out := map[*node]pageOwner{}
+	display := func(n *node) (string, string) {
+		id, disp := nameParts(n.Arg(1))
+		if disp == "" {
+			disp = id
+		}
+		if id == "" {
+			id = disp
+		}
+		return id, disp
+	}
+	var libs []*node
+	collect(root, "library", &libs)
+	for _, lib := range libs {
+		for _, cell := range lib.Children("cell") {
+			cID, cName := display(cell)
+			for _, view := range cell.Children("view") {
+				vID, _ := display(view)
+				if c := view.Child("contents"); c != nil {
+					for _, p := range c.Children("page") {
+						out[p] = pageOwner{id: cID + "/" + vID, name: cName}
+					}
+				}
+			}
+		}
+	}
+	var designs []*node
+	collect(root, "design", &designs)
+	for _, d := range designs {
+		dID, dName := display(d)
+		if c := d.Child("contents"); c != nil {
+			for _, p := range c.Children("page") {
+				out[p] = pageOwner{id: dID, name: dName}
+			}
+		}
+	}
+	return out
+}
+
+// qualifyRepeatedSheets gives every sheet a unique id and tells apart sheets whose names repeat
+// (agni issue 1140). A schematic export holding many block cells often names each block's pages
+// alike, (page (rename &1 "1")) in every block. A repeated sheet id breaks everything keyed on it,
+// such as showing a sheet, a finding's sheet badges and the per-sheet counts. A repeated id or name
+// is prefixed with the owning cell view or design. A page whose id and name are already unique is
+// left exactly as the file spells it, so a single design's pages read as before. sheets[i] was read
+// from pages[i].
+func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners map[*node]pageOwner) {
+	ids := map[string]int{}
+	names := map[string]int{}
+	for _, sh := range sheets {
+		ids[sh.Id]++
+		names[sh.Name]++
+	}
+	for i, sh := range sheets {
+		o, ok := owners[pages[i]]
+		if !ok {
+			continue
+		}
+		if ids[sh.Id] > 1 {
+			sh.Id = o.id + "/" + sh.Id
+		}
+		if names[sh.Name] > 1 && o.name != "" {
+			sh.Name = o.name + " / " + sh.Name
+		}
+	}
+	// Two pages can still collide when one owner gives both the same rename, or when no owner
+	// claims them. Number the later ones in file order, so an id names one sheet whatever the file
+	// did.
+	seen := map[string]int{}
+	for _, sh := range sheets {
+		seen[sh.Id]++
+		if n := seen[sh.Id]; n > 1 {
+			sh.Id = fmt.Sprintf("%s~%d", sh.Id, n)
+		}
+	}
+}
+
+// textLineRatio converts an EDIF textHeight into a GLYPH height for geom.Field/Label.
+//
+// EDIF's textHeight is a LINE PITCH, not an em size. The authoring tool stacks a component's
+// field rows exactly textHeight apart. Over 2377 instances of one export, 3161 of the
+// same-column row gaps were exactly 1.000x that row's textHeight, far ahead of any other value.
+// Setting font-size = textHeight therefore leaves ZERO leading and consecutive rows touch.
+//
+// The ratio is the tool's line height, recovered from a PDF the same toolchain printed. Every
+// one of nine distinct font sizes in that PDF divided its source textHeight to within 0.1%, so
+// it is calibrated against nine points rather than fitted to one. It also falls in the 1.2 to
+// 1.35 range of ordinary typesetting, so it is a real line height and not a fudge factor.
+//
+// The READER applies it, not the renderer, because geom's height means glyph height and the
+// renderer maps it straight to font-size. KiCad states a glyph height directly and is left
+// alone. See docsite/content/architecture/geometry-and-rendering.md#a-source-text-height-may-not-be-an-em-size.
+const textLineRatio = 1.3148
+
+// glyphHeight converts one EDIF textHeight (a line pitch) to the glyph height geom stores.
+// A zero or negative height passes through unchanged, so "unspecified" remains unspecified and
+// the renderer's own fallback still applies.
+func glyphHeight(textHeight int64) int64 {
+	if textHeight <= 0 {
+		return textHeight
+	}
+	return int64(float64(textHeight)/textLineRatio + 0.5)
+}
+
+// figureGroupHeights reads the technology's default textHeight per figureGroup, in source units.
+// EDIF records a display's height once on the figureGroup (e.g. (figureGroup ATTRIBUTE (textHeight
+// 254000))). A per-instance (figureGroupOverride GROUP) may change only color/visibility. Such an
+// override omits the height and inherits the group default. Without this map such a field would
+// not scale with the sheet. If two libraries declare one group name with different heights, the
+// first definition wins.
+func figureGroupHeights(root *node) map[string]int64 {
+	m := map[string]int64{}
+	var fgs []*node
+	collect(root, "figureGroup", &fgs)
+	for _, fg := range fgs {
+		name := atom(fg.Arg(1))
+		if name == "" {
+			continue
+		}
+		if _, seen := m[name]; seen {
+			continue // first definition wins
+		}
+		if th := fg.Child("textHeight"); th != nil {
+			if h := glyphHeight(parseInt(atom(th.Arg(1)))); h > 0 {
+				m[name] = h
+			}
+		}
+	}
+	return m
+}
+
+// displayGroup returns the figureGroup a (display ...) overrides via (figureGroupOverride GROUP),
+// or "" when it overrides none. Used to inherit the group's default text height.
+func displayGroup(d *node) string {
+	if fg := d.Child("figureGroupOverride"); fg != nil {
+		return atom(fg.Arg(1))
+	}
+	return ""
+}
+
+// graphicContents returns a view's (contents ...) node when it holds drawable figures
+// directly (no (symbol ...) child), as builtin GRAPHIC cells (GND, no-connect, off-page
+// connectors) do. Returns nil for a symbol-bearing or figureless view.
+func graphicContents(view *node) *node {
+	c := view.Child("contents")
+	if c == nil || c.Child("symbol") != nil {
+		return nil
+	}
+	if len(c.Children("figure")) > 0 {
+		return c
+	}
+	return nil
+}
+
+// symbolOf builds a SymbolDef from a cell's geometry node. That node is a (symbol ...) view,
+// or a GRAPHIC view's (contents ...) for builtin cells. The SymbolDef holds the bounding box,
+// the drawn shapes, and the pin connect-locations in symbol-local coordinates.
+func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[string]int64) *geom.SymbolDef {
+	id, disp := nameParts(cell.Arg(1))
+	name := disp
+	if name == "" {
+		name = id
+	}
+	sd := &geom.SymbolDef{
+		CellRef:    name,
+		LibraryRef: libName,
+		ViewRef:    viewName,
+		Bbox:       bboxOf(sym.Child("boundingBox")),
+		Prov:       &geom.Provenance{SourceFile: src, SourceId: id},
+	}
+	// Shapes: figures that are direct children of the symbol.
+	for _, f := range sym.Children("figure") {
+		sd.Shapes = append(sd.Shapes, shapesOfFigure(f)...)
+	}
+	// Pins and their stub figures come from each portImplementation.
+	des := portDesignators(view)
+	for _, pi := range sym.Children("portImplementation") {
+		if pin := pinOf(pi, fgh, des); pin != nil {
+			sd.Pins = append(sd.Pins, pin)
+		}
+		for _, f := range pi.Children("figure") {
+			sd.Shapes = append(sd.Shapes, shapesOfFigure(f)...)
+		}
+	}
+	// Static free-text annotations on the view (title-block field labels and other baked
+	// text). These are symbol-local and drawn transformed by each placement.
+	var anns []*node
+	collect(view, "annotate", &anns)
+	for _, an := range anns {
+		if l := labelOf(an); l != nil {
+			sd.Annotations = append(sd.Annotations, l)
+		}
+	}
+	return sd
+}
+
+// portDesignators maps a view's interface ports to their physical pin designators, keyed by both
+// the port's internal id and its display name because a portImplementation may name either.
+// A bus port declared as (port (array NAME N)) has no designator and is skipped.
+func portDesignators(view *node) map[string]string {
+	m := map[string]string{}
+	for _, p := range view.Child("interface").Children("port") {
+		des := stringDisplayText(p.Child("designator"))
+		if des == "" {
+			continue
+		}
+		n := parseName(p.Arg(1))
+		if n.ID != "" {
+			m[strings.TrimPrefix(n.ID, "&")] = des
+		}
+		if b := n.best(); b != "" {
+			m[strings.TrimPrefix(b, "&")] = des
+		}
+	}
+	return m
+}
+
+// pinOf extracts a pin's connect location (where a wire attaches) from a
+// portImplementation node, or nil when it has none.
+func pinOf(pi *node, fgh map[string]int64, des map[string]string) *geom.PinPoint {
+	nm := pi.Child("name")
+	portRef := ""
+	if nm != nil {
+		portRef = strings.TrimPrefix(atom(nm.Arg(1)), "&")
+	}
+	cl := pi.Child("connectLocation")
+	if cl == nil {
+		return nil
+	}
+	var loc *geom.Point
+	if f := cl.Child("figure"); f != nil {
+		if d := f.Child("dot"); d != nil {
+			loc = ptOf(d.Arg(1))
+		}
+	}
+	if loc == nil {
+		return nil
+	}
+	// PortRef is a JOIN KEY. It holds the physical pin number (ir.Port.designator). EDIF keeps that
+	// number on the cell interface rather than on the portImplementation (#303). See
+	// docsite/content/architecture/geometry-and-rendering.md#a-pins-number-is-a-join-key-not-a-caption.
+	// 6% of ports declare no designator. They keep the port name, which is their only identity.
+	pp := &geom.PinPoint{PortRef: portRef, Loc: loc, SourceId: portRef}
+	if num := des[portRef]; num != "" {
+		pp.PortRef = num
+		// Keep the name only when it differs from the number. A part whose port is literally
+		// called "1" would otherwise draw "1" twice.
+		if portRef != num {
+			pp.Name = portRef
+		}
+	}
+	// The pin label is the port name at (name X (display (origin ...))), in symbol-local
+	// coordinates. It is skipped when the source marks it hidden. Its text height comes from the
+	// display, or from the figureGroup the display overrides (typically LABEL). Without that
+	// height, pin text drew at a renderer constant, more than twice the size the authoring tool
+	// prints (#301).
+	if nm != nil {
+		if d := nm.Child("display"); d != nil && labelVisible(d) {
+			if o := d.Child("origin"); o != nil {
+				pp.LabelOrigin = ptOf(o.Arg(1))
+			}
+			if j := d.Child("justify"); j != nil {
+				pp.Justify = canonicalJustify(atom(j.Arg(1)))
+			}
+			pp.Height = displayHeight(d, fgh)
+		}
+	}
+	// The NUMBER has its own display when the source places it apart from the name.
+	if kd := keywordDisplay(pi, "designator"); kd != nil && labelVisible(kd) {
+		if o := kd.Child("origin"); o != nil {
+			pp.NumberOrigin = ptOf(o.Arg(1))
+		}
+		if j := kd.Child("justify"); j != nil {
+			pp.NumberJustify = canonicalJustify(atom(j.Arg(1)))
+		}
+	}
+	return pp
+}
+
+// keywordDisplay returns the (display ...) of a node's (keywordDisplay KEYWORD (display ...)) child
+// for the given keyword, or nil. EDIF uses it to place the text of a named attribute, such as a
+// pin's "designator", apart from the thing it describes.
+func keywordDisplay(n *node, keyword string) *node {
+	for _, kd := range n.Children("keywordDisplay") {
+		if atom(kd.Arg(1)) == keyword {
+			return kd.Child("display")
+		}
+	}
+	return nil
+}
+
+// canonicalJustify maps an EDIF justify code ({UPPER,CENTER,LOWER}{LEFT,CENTER,RIGHT}) onto
+// the canonical geom convention "<h> <v>" (h in {left,right}, v in {top,bottom}, each omitted
+// when centered). E.g. LOWERLEFT -> "left bottom", CENTERLEFT -> "left", CENTERCENTER -> "".
+func canonicalJustify(code string) string {
+	code = strings.ToUpper(code)
+	h, v := "", ""
+	switch {
+	case strings.Contains(code, "LEFT"):
+		h = "left"
+	case strings.Contains(code, "RIGHT"):
+		h = "right"
+	}
+	switch {
+	case strings.HasPrefix(code, "UPPER"):
+		v = "top"
+	case strings.HasPrefix(code, "LOWER"):
+		v = "bottom"
+	}
+	return strings.TrimSpace(h + " " + v)
+}
+
+// labelVisible reports whether a (display ...) is shown. A nested (visible (false)) from
+// a figureGroupOverride hides it. Absent visibility means visible.
+func labelVisible(display *node) bool {
+	if v := findFirst(display, "visible"); v != nil && v.Arg(1) != nil && v.Arg(1).Head() == "false" {
+		return false
+	}
+	return true
+}
+
+// shapesOfFigure converts an EDIF (figure GROUP shape...) node into geometry shapes.
+// The GROUP (BOX/PIN/NET/...) becomes a style hint. connectLocation dots are skipped
+// here, since pins capture them.
+func shapesOfFigure(f *node) []*geom.Shape {
+	group := ""
+	// The figure's first child may be a bare group atom, e.g. (figure BOX ...).
+	if a := f.Arg(1); a != nil && !a.IsList {
+		group = a.Atom
+	}
+	var out []*geom.Shape
+	for _, k := range f.Kids {
+		if !k.IsList {
+			continue
+		}
+		switch k.Head() {
+		case "rectangle":
+			out = append(out, &geom.Shape{Kind: geom.Shape_KIND_RECT, Points: ptsOf(k), FigureGroup: group})
+		case "path":
+			if pl := k.Child("pointList"); pl != nil {
+				out = append(out, &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: ptsOf(pl), FigureGroup: group})
+			}
+		case "circle":
+			out = append(out, circleShape(k, group))
+		case "dot":
+			out = append(out, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: ptsOf(k), FigureGroup: group})
+		case "openShape":
+			if c := k.Child("curve"); c != nil {
+				for _, a := range c.Children("arc") {
+					out = append(out, &geom.Shape{Kind: geom.Shape_KIND_ARC, Points: ptsOf(a), FigureGroup: group})
+				}
+			}
+		}
+	}
+	return out
+}
+
+// circleShape converts an EDIF (circle pt1 pt2) (two diameter-endpoint points) into a
+// center+radius CIRCLE shape. Sub-unit rounding is negligible at the 10nm grid.
+func circleShape(k *node, group string) *geom.Shape {
+	pts := ptsOf(k)
+	if len(pts) < 2 {
+		return &geom.Shape{Kind: geom.Shape_KIND_CIRCLE, Points: pts, FigureGroup: group}
+	}
+	cx := (pts[0].X + pts[1].X) / 2
+	cy := (pts[0].Y + pts[1].Y) / 2
+	r := iabs(pts[1].X-pts[0].X)/2 + iabs(pts[1].Y-pts[0].Y)/2 // one axis is 0 for an axis-aligned diameter
+	return &geom.Shape{Kind: geom.Shape_KIND_CIRCLE, Points: []*geom.Point{{X: cx, Y: cy}}, Radius: r, FigureGroup: group}
+}
+
+// sheetOf builds a SheetGeometry from a (page ...) node. cellByID/libByID/viewByID
+// normalize each placement's cell, library, and view references to display names (see
+// placementOf).
+func sheetOf(p *node, src string, cellByID, libByID, viewByID, backRef map[string]string, fgh map[string]int64) *geom.SheetGeometry {
+	id, disp := nameParts(p.Arg(1))
+	sh := &geom.SheetGeometry{
+		Id:   id,
+		Name: disp,
+		Prov: &geom.Provenance{SourceFile: src, SourceId: id},
+	}
+	if ps := p.Child("pageSize"); ps != nil {
+		sh.Size = bboxOf(ps)
+	}
+	// Instances may be direct children of the page or nested inside nets (power/ground
+	// and off-page connector symbols are placed within their net), so collect the whole
+	// page subtree. Instances never nest, so this does not double-count.
+	var insts []*node
+	collect(p, "instance", &insts)
+	for _, in := range insts {
+		// Promote the title-block border into the sheet's TitleBlock and drop its instance. The
+		// worksheet frame is synthesized from the page size, and drawing the raw border cell would
+		// double the frame and its captions (WS7-019).
+		if tb := titleBlockFromInstance(in, cellByID, libByID); tb != nil {
+			if sh.TitleBlock == nil {
+				sh.TitleBlock = tb
+			}
+			continue
+		}
+		pl := placementOf(in, src, cellByID, libByID, viewByID, backRef)
+		// Suppose only back-annotation gives the ref-des. It keys the placement and draws nothing.
+		// The page gives it no position, and the tool that wrote the page printed no label there.
+		if in.Child("designator") != nil {
+			if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
+				pl.Fields = append(pl.Fields, f)
+			}
+		}
+		if f := cellNameField(in, pl.CellRef, fgh); f != nil {
+			pl.Fields = append(pl.Fields, f)
+		}
+		pl.Fields = append(pl.Fields, placedFields(in, fgh)...)
+		sh.Placements = append(sh.Placements, pl)
+	}
+	for _, nn := range p.Children("net") {
+		if w := wireOf(nn, src); w != nil {
+			sh.Wires = append(sh.Wires, w)
+		}
+	}
+	stampNetAnchors(sh)
+	// Labels and free graphics in the page's commentGraphics. Figures here are stand-alone
+	// sheet drawings (not owned by a placed symbol), so they go in the sheet's shape list.
+	for _, cg := range p.Children("commentGraphics") {
+		for _, an := range cg.Children("annotate") {
+			if l := labelOf(an); l != nil {
+				sh.Labels = append(sh.Labels, l)
+			}
+		}
+		for _, f := range cg.Children("figure") {
+			sh.Shapes = append(sh.Shapes, shapesOfFigure(f)...)
+		}
+	}
+	// Net-stub labels. Symbol pins live in cells, so a page-level portImplementation is an
+	// off-page connector, and its (name X (display ...)) places the signal name.
+	var pis []*node
+	collect(p, "portImplementation", &pis)
+	for _, pi := range pis {
+		if l := labelFromNameDisplay(pi.Child("name")); l != nil {
+			sh.Labels = append(sh.Labels, l)
+		}
+	}
+	return sh
+}
+
+// placementOf builds a SymbolPlacement from an (instance ...) node on a sheet. Its
+// cell, library and view references are normalized to display names, so a placement resolves to
+// its SymbolDef whichever form the source used (see the maps in extractGeom). When backRef names
+// the instance, its ref-des is the back-annotated one, as in the netlist read (backannotate.go).
+func placementOf(in *node, src string, cellByID, libByID, viewByID, backRef map[string]string) *geom.SymbolPlacement {
+	id, _ := nameParts(in.Arg(1))
+	pl := &geom.SymbolPlacement{
+		RefDes: refDesOf(in),
+		Prov:   &geom.Provenance{SourceFile: src, SourceId: id},
+	}
+	if des, ok := backRef[id]; ok {
+		pl.RefDes = des
+	}
+	if v := in.Child("viewRef"); v != nil {
+		// The viewRef names the view (bank) this instance uses.
+		viewRef := atom(v.Arg(1))
+		if name, ok := viewByID[viewRef]; ok {
+			viewRef = name
+		}
+		pl.ViewRef = viewRef
+		if cr := v.Child("cellRef"); cr != nil {
+			ref := cellRefName(cr)
+			if name, ok := cellByID[ref]; ok {
+				ref = name
+			}
+			pl.CellRef = ref
+			if lr := cr.Child("libraryRef"); lr != nil {
+				libRef := atom(lr.Arg(1))
+				if name, ok := libByID[libRef]; ok {
+					libRef = name
+				}
+				pl.LibraryRef = libRef
+			}
+		}
+	}
+	pl.Transform = transformOf(in.Child("transform"))
+	return pl
+}
+
+// placedFields reads an instance's DRAWN (property ...) overrides (value, tolerance, rating)
+// into geom.Field entries (WS1-037). Only a property with a stringDisplay and a display origin
+// becomes a Field, since the .edn attributes already hold a data-only property. A
+// Reference/RefDes property is skipped because the caller synthesizes the ref-des field.
+//
+// The authoring tool records a display origin for nearly every property. It marks most of them
+// (visible (false)) and draws only a few, typically Value. So hidden properties are skipped.
+// A missing textHeight inherits the overridden figureGroup's default (fgh).
+func placedFields(in *node, fgh map[string]int64) []*geom.Field {
+	var out []*geom.Field
+	for _, p := range in.Children("property") {
+		id, disp := nameParts(p.Arg(1))
+		name := disp
+		if name == "" {
+			name = id
+		}
+		name = strings.TrimPrefix(name, "&")
+		if base := baseFieldKey(name); base == "REFERENCE" || base == "REFDES" {
+			continue
+		}
+		sd := p.Child("string").Child("stringDisplay")
+		d := sd.Child("display")
+		o := d.Child("origin")
+		if o == nil {
+			continue
+		}
+		if !labelVisible(d) {
+			continue
+		}
+		if f := fieldFromDisplay(name, atom(sd.Arg(1)), d, fgh); f != nil {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// fieldFromDisplay builds one placed Field from a (display ...) node. The Field takes the display's
+// origin, justify, orientation, and text height. When the display states no height, the Field
+// inherits the overridden figureGroup's default. It returns nil when the display has no origin (an
+// unplaced value) or the source marks it hidden. placedFields, refDesField and cellNameField share
+// it, since each reads the same display grammar off a different parent.
+func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.Field {
+	o := d.Child("origin")
+	if o == nil || !labelVisible(d) {
+		return nil
+	}
+	f := &geom.Field{Name: name, Value: value, Origin: ptOf(o.Arg(1)), Visible: true}
+	if j := d.Child("justify"); j != nil {
+		f.Justify = canonicalJustify(atom(j.Arg(1)))
+	}
+	if or := d.Child("orientation"); or != nil {
+		f.RotationDeg = orientationDeg(atom(or.Arg(1)))
+	}
+	f.Height = displayHeight(d, fgh)
+	return f
+}
+
+// displayHeight returns the GLYPH height of a (display ...). It takes the display's own textHeight
+// when it states one, and otherwise the default of the figureGroup the display overrides. It
+// returns zero when neither is known, and the renderer then picks a default. fieldFromDisplay and
+// pinOf share it, so one rule sizes fields and pin labels.
+func displayHeight(d *node, fgh map[string]int64) int64 {
+	if th := findFirst(d, "textHeight"); th != nil {
+		if h := glyphHeight(parseInt(atom(th.Arg(1)))); h > 0 {
+			return h
+		}
+	}
+	return fgh[displayGroup(d)]
+}
+
+// refDesField builds the ref-des Reference field for an instance. The designator's own display
+// places the field, with its origin, justify and text height. That usually puts the field in a
+// column of fields beside the symbol rather than at the placement origin (#299).
+//
+// A display is authoritative when present, including its visibility flag, so a hidden designator
+// is still hidden and does not fall back. The fallback origin is only for a bare
+// (designator REF) with no display at all.
+func refDesField(in *node, refDes string, fallback *geom.Point, fgh map[string]int64) *geom.Field {
+	if refDes == "" {
+		return nil
+	}
+	if d := in.Child("designator").Child("stringDisplay").Child("display"); d != nil {
+		return fieldFromDisplay("Reference", refDes, d, fgh)
+	}
+	if fallback == nil {
+		return nil
+	}
+	return &geom.Field{Name: "Reference", Value: refDes, Origin: fallback, Visible: true}
+}
+
+// cellNameField builds the drawn part-name field. The field captions the cell that an instance
+// references, at the position the tool chose. The display is on the cellRef's name, as in this form.
+//
+//	(viewRef V (cellRef (name PARTNUM (display (justify LOWERLEFT) (origin (pt ...)))) ...))
+//
+// Most instances mark it hidden. Honoring the visibility flag limits the field to the few parts
+// that a schematic captions by MPN. It returns nil for the common (cellRef NAME) form, which has no
+// display.
+func cellNameField(in *node, cellRef string, fgh map[string]int64) *geom.Field {
+	cr := in.Child("viewRef").Child("cellRef")
+	if cr == nil {
+		return nil
+	}
+	nm := cr.Arg(1)
+	if nm == nil || !nm.IsList || nm.Head() != "name" {
+		return nil
+	}
+	d := nm.Child("display")
+	if d == nil {
+		return nil
+	}
+	if cellRef == "" {
+		return nil
+	}
+	// The VALUE is the placement's resolved cell name, since the raw target may be an internal
+	// &id. Only the POSITION comes off this node.
+	return fieldFromDisplay("Cell", cellRef, d, fgh)
+}
+
+// placementOrigin is a placement's transform origin, or nil when it has none.
+func placementOrigin(pl *geom.SymbolPlacement) *geom.Point {
+	if pl == nil || pl.Transform == nil {
+		return nil
+	}
+	return pl.Transform.Origin
+}
+
+// titleBlockFromInstance recognizes the drawing-sheet border/title-block instance and pulls
+// its field values into a TitleBlock, or returns nil when the instance is an ordinary symbol.
+// EDIF has no title-block tags, so the fields are inferred by name from the border instance's
+// (property KEY (string (stringDisplay VALUE))) overrides (WS7-019, lossy-bounded per C6).
+// A recognized border cell returns a non-nil TitleBlock even when every field is empty, so the
+// caller still drops the raw border symbol.
+func titleBlockFromInstance(in *node, cellByID, libByID map[string]string) *geom.TitleBlock {
+	cell, lib := instanceCellLib(in, cellByID, libByID)
+	if !isTitleBlockCell(cell, lib) {
+		return nil
+	}
+	tb := &geom.TitleBlock{}
+	seenExtra := map[string]bool{}
+	for _, p := range in.Children("property") {
+		id, disp := nameParts(p.Arg(1))
+		key := disp
+		if key == "" {
+			key = id
+		}
+		val := strings.TrimSpace(propText(p))
+		if val == "" || isTitleBlockPlaceholder(val) {
+			continue
+		}
+		base := baseFieldKey(key)
+		switch base {
+		case "TITLE":
+			if tb.Title == "" {
+				tb.Title = val
+			}
+		case "REV":
+			if tb.Rev == "" {
+				tb.Rev = val
+			}
+		case "DATE":
+			if tb.Date == "" {
+				tb.Date = val
+			}
+		case "COMPANY":
+			if tb.Company == "" {
+				tb.Company = val
+			}
+		default:
+			// Any other property is a title-block field with no typed slot (Drawing, Designer,
+			// signatures). Keep them in source order, keyed by base name so DV_1/DV_2 collapse.
+			// The first non-empty value wins.
+			if !seenExtra[base] {
+				seenExtra[base] = true
+				tb.ExtraFields = append(tb.ExtraFields, &geom.KeyValue{Key: base, Value: val})
+			}
+		}
+	}
+	return tb
+}
+
+// instanceCellLib resolves an instance's referenced cell and library to their display names
+// (normalized through cellByID/libByID like placementOf), or "" when absent.
+func instanceCellLib(in *node, cellByID, libByID map[string]string) (cell, lib string) {
+	v := in.Child("viewRef")
+	if v == nil {
+		return "", ""
+	}
+	cr := v.Child("cellRef")
+	if cr == nil {
+		return "", ""
+	}
+	cell = cellRefName(cr)
+	if name, ok := cellByID[cell]; ok {
+		cell = name
+	}
+	if lr := cr.Child("libraryRef"); lr != nil {
+		lib = atom(lr.Arg(1))
+		if name, ok := libByID[lib]; ok {
+			lib = name
+		}
+	}
+	return cell, lib
+}
+
+// isTitleBlockCell reports whether a cell/library reference names a drawing-sheet border or
+// title-block symbol. Cadence/Allegro exports place these from a "Borders" library and name the
+// cell after the block (e.g. ACME_TitleBlock_D). The match is a heuristic, since EDIF has no
+// viewType or tag that marks the drawing frame.
+func isTitleBlockCell(cell, lib string) bool {
+	c := strings.ToLower(cell)
+	return strings.EqualFold(lib, "borders") ||
+		strings.Contains(c, "titleblock") || strings.Contains(c, "title_block")
+}
+
+// propText extracts a property's scalar value through propValue, which also unwraps the
+// schematic (string (stringDisplay "V" ...)) form (WS1-046).
+func propText(p *node) string {
+	return propValue(p)
+}
+
+// baseFieldKey uppercases a property key and strips a trailing sequence suffix (an optional
+// "_" then digits), so REV_1..REV_5 and DATE_1 collapse to REV and DATE. It maps only the base
+// name, so a distinct key like CHANGE_DATE_1 becomes CHANGE_DATE and is not read as the date.
+func baseFieldKey(k string) string {
+	u := strings.ToUpper(strings.TrimSpace(k))
+	i := len(u)
+	for i > 0 && u[i-1] >= '0' && u[i-1] <= '9' {
+		i--
+	}
+	return strings.TrimSuffix(u[:i], "_")
+}
+
+// isTitleBlockPlaceholder reports whether a value is an all-dashes placeholder (e.g. "---"),
+// which title-block exports use for an unset field.
+func isTitleBlockPlaceholder(v string) bool {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return false
+	}
+	return strings.Trim(v, "-") == ""
+}
+
+// stampNetAnchors anchors each of the sheet's designator-less symbols to the net it names. These
+// are ground and rail glyphs and off-page connectors, measured at 3329 of 6102 placements on one
+// export. A symbol is anchored to its CELL name or one of its field values only when that name is a
+// net on this same sheet. So nothing here knows what a ground symbol is called. A no-connect or a
+// sheet port names no net, so it remains anonymous. A placement WITH a designator is never
+// anchored. docsite/content/architecture/geometry-and-rendering.md#symbols-that-name-a-net records
+// the spellings and counts that ruled out a table of cell names.
+func stampNetAnchors(sh *geom.SheetGeometry) {
+	nets := map[string]bool{}
+	for _, w := range sh.Wires {
+		if n := w.GetNet(); n != "" {
+			nets[n] = true
+		}
+	}
+	if len(nets) == 0 {
+		return
+	}
+	for _, pl := range sh.Placements {
+		if pl.GetRefDes() != "" || pl.GetNetAnchor() != "" {
+			continue
+		}
+		if nets[pl.GetCellRef()] {
+			pl.NetAnchor = pl.GetCellRef()
+			continue
+		}
+		for _, f := range pl.GetFields() {
+			if nets[f.GetValue()] {
+				pl.NetAnchor = f.GetValue()
+				break
+			}
+		}
+	}
+}
+
+// wireOf collects the routed wire polylines for one net on a sheet. Nets nest. An outer
+// logical net holds inner physical net-segment groups, and those groups hold the wires.
+// The wires are gathered from the whole subtree and keyed by the outer net name.
+func wireOf(n *node, src string) *geom.WireGeometry {
+	// Use the display name, else the id. The netlist read resolves names the same way (nm.best),
+	// so wire.Net EQUALS the ir.Net name in a finding. The .eds joins the .edn BY NET NAME, so a
+	// bare (name ID) net must keep its id. Otherwise its findings cannot be located (WS1-047).
+	id, disp := nameParts(n.Arg(1))
+	name := disp
+	if name == "" {
+		name = id
+	}
+	w := &geom.WireGeometry{Net: name, Prov: &geom.Provenance{SourceFile: src}}
+	var figs []*node
+	collect(n, "figure", &figs)
+	for _, f := range figs {
+		if pl := f.Child("path"); pl != nil {
+			if pts := pl.Child("pointList"); pts != nil {
+				w.Polylines = append(w.Polylines, &geom.Polyline{Points: ptsOf(pts)})
+			}
+		}
+	}
+	if len(w.Polylines) == 0 {
+		return nil
+	}
+	return w
+}
+
+// labelOf builds a Label from an (annotate (stringDisplay TEXT (display ...))) node.
+func labelOf(an *node) *geom.Label {
+	sd := an.Child("stringDisplay")
+	if sd == nil {
+		return nil
+	}
+	l := &geom.Label{Text: atom(sd.Arg(1))}
+	if d := sd.Child("display"); d != nil {
+		if o := d.Child("origin"); o != nil {
+			l.Origin = ptOf(o.Arg(1))
+		}
+		if j := d.Child("justify"); j != nil {
+			l.Justify = canonicalJustify(atom(j.Arg(1)))
+		}
+		if or := d.Child("orientation"); or != nil {
+			l.RotationDeg = orientationDeg(atom(or.Arg(1)))
+		}
+		if th := findFirst(d, "textHeight"); th != nil {
+			l.Height = glyphHeight(parseInt(atom(th.Arg(1))))
+		}
+	}
+	return l
+}
+
+// labelFromNameDisplay builds a Label from a (name X (display ...)) node. An off-page
+// connector uses this form to place its signal name. The text is the name, and
+// position/justify come from the display. Returns nil when there is no display with an
+// origin (an unplaced name).
+func labelFromNameDisplay(nm *node) *geom.Label {
+	if nm == nil {
+		return nil
+	}
+	id, disp := nameParts(nm.Arg(1))
+	text := disp
+	if text == "" {
+		text = id
+	}
+	text = strings.TrimPrefix(text, "&")
+	d := nm.Child("display")
+	if text == "" || d == nil {
+		return nil
+	}
+	l := &geom.Label{Text: text}
+	if o := d.Child("origin"); o != nil {
+		l.Origin = ptOf(o.Arg(1))
+	}
+	if j := d.Child("justify"); j != nil {
+		l.Justify = canonicalJustify(atom(j.Arg(1)))
+	}
+	if or := d.Child("orientation"); or != nil {
+		l.RotationDeg = orientationDeg(atom(or.Arg(1)))
+	}
+	if th := findFirst(d, "textHeight"); th != nil {
+		l.Height = glyphHeight(parseInt(atom(th.Arg(1))))
+	}
+	if l.Origin == nil {
+		return nil
+	}
+	return l
+}
+
+// transformOf builds a format-neutral Transform from an EDIF (transform ...) node,
+// mapping the orientation code to rotation/mirror, origin to a point, and the rare
+// (scaleX num den)/(scaleY num den) to scale factors.
+func transformOf(tn *node) *geom.Transform {
+	t := &geom.Transform{}
+	if tn == nil {
+		return t
+	}
+	if o := tn.Child("orientation"); o != nil {
+		applyOrientation(atom(o.Arg(1)), t)
+	}
+	if o := tn.Child("origin"); o != nil {
+		t.Origin = ptOf(o.Arg(1))
+	}
+	if sx := tn.Child("scaleX"); sx != nil {
+		t.ScaleX = ratioValue(sx)
+	}
+	if sy := tn.Child("scaleY"); sy != nil {
+		t.ScaleY = ratioValue(sy)
+	}
+	return t
+}
+
+// applyOrientation maps an EDIF orientation code onto rotation/mirror. Mirror is
+// applied before rotation (matching the EDIF MxR90 composition).
+func applyOrientation(code string, t *geom.Transform) {
+	switch strings.ToUpper(code) {
+	case "R90":
+		t.RotationDeg = 90
+	case "R180":
+		t.RotationDeg = 180
+	case "R270":
+		t.RotationDeg = 270
+	case "MX":
+		t.MirrorX = true
+	case "MY":
+		t.MirrorY = true
+	case "MXR90":
+		t.MirrorX = true
+		t.RotationDeg = 90
+	case "MYR90":
+		t.MirrorY = true
+		t.RotationDeg = 90
+	}
+}
+
+// ratioValue reads an EDIF (scaleX num den) style node as num/den (den defaulting to 1).
+func ratioValue(n *node) float64 {
+	num := numberValue(n.Arg(1))
+	den := numberValue(n.Arg(2))
+	if den == 0 {
+		return num
+	}
+	return num / den
+}
+
+// refDesOf reads the reference designator from an instance's (designator ...) node, which on a
+// schematic wraps a stringDisplay. Shares stringDisplayText with the netlist view so both unwrap
+// identically (a nil designator yields "").
+func refDesOf(in *node) string {
+	return stringDisplayText(in.Child("designator"))
+}
+
+// cellRefName resolves a cellRef target, which is either a bare atom or a
+// (name X (display ...)) form.
+func cellRefName(cr *node) string {
+	a := cr.Arg(1)
+	if a == nil {
+		return ""
+	}
+	if !a.IsList {
+		return a.Atom
+	}
+	if a.Head() == "name" {
+		return atom(a.Arg(1))
+	}
+	return ""
+}
+
+// bboxOf reads a bounding box from a node containing a (rectangle (pt) (pt)) child.
+func bboxOf(n *node) *geom.BBox {
+	if n == nil {
+		return nil
+	}
+	r := n
+	if rc := n.Child("rectangle"); rc != nil {
+		r = rc
+	}
+	pts := ptsOf(r)
+	if len(pts) < 2 {
+		return nil
+	}
+	return &geom.BBox{Min: pts[0], Max: pts[1]}
+}
+
+// ptsOf returns every (pt X Y) child of a node, in order.
+func ptsOf(n *node) []*geom.Point {
+	var out []*geom.Point
+	for _, k := range n.Kids {
+		if k.IsList && k.Head() == "pt" {
+			out = append(out, ptOf(k))
+		}
+	}
+	return out
+}
+
+// ptOf parses a single (pt X Y) node.
+func ptOf(n *node) *geom.Point {
+	if n == nil || !n.IsList || n.Head() != "pt" {
+		return nil
+	}
+	return &geom.Point{X: parseInt(atom(n.Arg(1))), Y: parseInt(atom(n.Arg(2)))}
+}
+
+// orientationDeg maps an EDIF orientation code to a rotation in degrees CCW, ignoring
+// mirror (used for labels, which do not mirror).
+func orientationDeg(code string) int32 {
+	switch strings.ToUpper(code) {
+	case "R90", "MXR90", "MYR90":
+		return 90
+	case "R180":
+		return 180
+	case "R270":
+		return 270
+	}
+	return 0
+}
+
+func parseInt(s string) int64 {
+	v, _ := strconv.ParseInt(s, 10, 64)
+	return v
+}
+
+func iabs(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// distanceUnitNm reads the DISTANCE scale from the technology and returns nanometers per
+// source unit (10 for this EDIF's (scale 1 (e 1 -8) (unit DISTANCE))). Returns 0 if
+// absent.
+func distanceUnitNm(root *node) int64 {
+	var scales []*node
+	collect(root, "scale", &scales)
+	for _, s := range scales {
+		u := s.Child("unit")
+		if u == nil || !strings.EqualFold(atom(u.Arg(1)), "DISTANCE") {
+			continue
+		}
+		// (scale <numUnits> <meters> (unit DISTANCE)); meters may be an (e m exp) form.
+		num := float64(parseInt(atom(s.Arg(1))))
+		if num == 0 {
+			num = 1
+		}
+		meters := numberValue(s.Arg(2))
+		if meters == 0 {
+			continue
+		}
+		return int64((meters / num) * 1e9)
+	}
+	return 0
+}
+
+// numberValue reads an EDIF number that is either a bare integer or an (e mantissa
+// exponent) form (mantissa * 10^exponent).
+func numberValue(n *node) float64 {
+	if n == nil {
+		return 0
+	}
+	if !n.IsList {
+		v, _ := strconv.ParseFloat(n.Atom, 64)
+		return v
+	}
+	if n.Head() == "e" {
+		m, _ := strconv.ParseFloat(atom(n.Arg(1)), 64)
+		exp, _ := strconv.ParseFloat(atom(n.Arg(2)), 64)
+		return m * math.Pow(10, exp)
+	}
+	return 0
+}

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="720" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="net.pin_count relation: a 1-pin net is a stub, a 2-pin net is point-to-point, a high-count net is distribution">
+  <rect x="1" y="1" width="718" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="240" y1="24" x2="240" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <line x1="480" y1="24" x2="480" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- LEFT: 1 pin, stub -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">count = 1: stub</text>
+  <rect x="40" y="104" width="48" height="56" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="64" y="137" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">R1</text>
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="88" y1="132" x2="176" y2="132"/>
+    <circle cx="88" cy="132" r="4" fill="#d64545" stroke="none"/>
+    <circle cx="182" cy="132" r="6" fill="#f8f9fb"/>
+  </g>
+  <text x="120" y="212" font-size="13" fill="#d64545" text-anchor="middle">one connection:</text>
+  <text x="120" y="230" font-size="13" fill="#d64545" text-anchor="middle">likely dangling</text>
+
+  <!-- MIDDLE: 2 pins, point-to-point -->
+  <text x="270" y="42" font-size="15" font-weight="600" fill="#2f8a4c">count = 2: point-to-point</text>
+  <rect x="272" y="104" width="44" height="56" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="294" y="137" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">R1</text>
+  <rect x="404" y="104" width="44" height="56" rx="4" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="426" y="137" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">C1</text>
+  <g stroke="#2f8a4c" stroke-width="2.5" fill="none">
+    <line x1="316" y1="132" x2="404" y2="132"/>
+    <circle cx="316" cy="132" r="4" fill="#2f8a4c" stroke="none"/>
+    <circle cx="404" cy="132" r="4" fill="#2f8a4c" stroke="none"/>
+  </g>
+  <text x="360" y="212" font-size="13" fill="#2f8a4c" text-anchor="middle">two connections:</text>
+  <text x="360" y="230" font-size="13" fill="#2f8a4c" text-anchor="middle">a signal between two parts</text>
+
+  <!-- RIGHT: many pins, distribution -->
+  <text x="510" y="42" font-size="15" font-weight="600" fill="#3a6ea5">count &gt; 16: distribution</text>
+  <g stroke="#3a6ea5" stroke-width="2.5" fill="none">
+    <line x1="512" y1="132" x2="700" y2="132"/>
+    <line x1="536" y1="132" x2="536" y2="108"/>
+    <line x1="572" y1="132" x2="572" y2="108"/>
+    <line x1="608" y1="132" x2="608" y2="108"/>
+    <line x1="644" y1="132" x2="644" y2="108"/>
+    <line x1="680" y1="132" x2="680" y2="108"/>
+    <line x1="554" y1="132" x2="554" y2="156"/>
+    <line x1="590" y1="132" x2="590" y2="156"/>
+    <line x1="626" y1="132" x2="626" y2="156"/>
+    <line x1="662" y1="132" x2="662" y2="156"/>
+  </g>
+  <g fill="#3a6ea5">
+    <circle cx="536" cy="108" r="3"/>
+    <circle cx="572" cy="108" r="3"/>
+    <circle cx="608" cy="108" r="3"/>
+    <circle cx="644" cy="108" r="3"/>
+    <circle cx="680" cy="108" r="3"/>
+    <circle cx="554" cy="156" r="3"/>
+    <circle cx="590" cy="156" r="3"/>
+    <circle cx="626" cy="156" r="3"/>
+    <circle cx="662" cy="156" r="3"/>
+  </g>
+  <text x="606" y="212" font-size="13" fill="#3a6ea5" text-anchor="middle">many connections:</text>
+  <text x="606" y="230" font-size="13" fill="#3a6ea5" text-anchor="middle">a rail or shared node</text>
+</svg>

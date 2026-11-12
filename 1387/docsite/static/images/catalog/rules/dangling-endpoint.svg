@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="dangling-endpoint rule: a wire ending in empty space is flagged; a wire ending on a pin is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: wire ends in empty space</text>
+
+  <!-- pin stub on U1 (left) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="40" y="100" width="40" height="40" rx="4" fill="#ffffff"/>
+    <line x1="80" y1="120" x2="104" y2="120"/>
+  </g>
+  <text x="60" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <circle cx="104" cy="120" r="4" fill="#394049"/>
+  <text x="104" y="150" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.1</text>
+
+  <!-- wire drawn from the pin, stopping short of any target -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="104" y1="120" x2="228" y2="120"/>
+    <circle cx="234" cy="120" r="6" fill="#f8f9fb"/>
+  </g>
+  <text x="170" y="108" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">wire</text>
+
+  <!-- the intended target pin, a grid step away, never reached -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="270" y1="120" x2="294" y2="120"/>
+    <rect x="294" y="100" width="40" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="314" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+  <circle cx="270" cy="120" r="4" fill="#394049"/>
+
+  <text x="170" y="206" font-size="13" fill="#d64545" text-anchor="middle">end lands on nothing &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: wire ends on a pin</text>
+
+  <!-- pin stub on U1 (right) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="386" y="100" width="40" height="40" rx="4" fill="#ffffff"/>
+    <line x1="426" y1="120" x2="450" y2="120"/>
+  </g>
+  <text x="406" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <circle cx="450" cy="120" r="4" fill="#394049"/>
+  <text x="450" y="150" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U1.1</text>
+
+  <!-- wire lands exactly on U2's pin -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="450" y1="120" x2="580" y2="120"/>
+  </g>
+  <text x="515" y="108" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">NET1</text>
+
+  <!-- U2 with its pin at the wire end -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="580" y1="120" x2="604" y2="120"/>
+    <rect x="604" y="100" width="40" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="624" y="94" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+  <circle cx="580" cy="120" r="4" fill="#394049"/>
+  <text x="580" y="150" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">U2.1</text>
+
+  <text x="510" y="206" font-size="13" fill="#2f9e57" text-anchor="middle">end coincides with a pin &#8594; fine</text>
+</svg>

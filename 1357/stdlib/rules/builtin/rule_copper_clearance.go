@@ -1,0 +1,323 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"slices"
+	"sort"
+
+	"github.com/panyam/agni/core/check"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"strconv"
+)
+
+// clearanceEpsilonNm is how far under the floor a measured gap may sit and still meet it. It is
+// KiCad's own DRC epsilon (its DRCEpsilon advanced setting, 0.0005mm by default). A gap between
+// diagonal tracks is irrational in nanometres, so copper routed exactly at the minimum measures a
+// nanometre or two under it. KiCad passes that gap, and a strict comparison failed it (16 pairs on
+// the Jetson baseboard, agni 933).
+const clearanceEpsilonNm = 500
+
+// copperClearance flags cross-net track segments on the same layer whose copper edges sit closer
+// than the fabrication clearance floor. It is the one rule of the WS3-008 batch written as a Go
+// Eval. The check is a pairwise join across entities, every segment of net A against every segment
+// of net B, and the Spec AST cannot express that join. A cross-entity or spatial vocabulary needs
+// more rules behind it than this one before it gets AST nodes (the WS3-003 earn-it guard;
+// docsite/content/architecture/rules-and-checks.md). The WS3-004 spatial-index question was about
+// this rule and its O(S²) walk. The rule sweeps each layer's segments in x order rather than
+// comparing every pair (agni issue 963), and BenchmarkCopperClearance tracks the cost.
+var copperClearance = &check.Rule{
+	Name:       "copper-clearance",
+	Severity:   "error",
+	Summary:    "Copper of two different nets sits closer than the minimum the board declares, or the 0.127mm fabrication floor when it declares none.",
+	Impact:     "Sub-clearance copper either fails DFM at order time or ships as a latent short: etch variance and solder bridging turn a too-tight gap into a connection the netlist never had. It is the defect DRC exists for.",
+	Remedy:     "Pull the two nets apart to the fab's minimum clearance. A gap below it is a short waiting on etch variance or a solder bridge.",
+	Primitives: []string{"select", "geometry-distance"},
+	Reads:      []string{"board.copper", "board.rules"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryBoard,
+		check.KeyTier:         "P",
+		check.KeyDistribution: check.DistOpen,
+	},
+	Detail: ruleDoc("copper-clearance"),
+	// The two nets, ordered by name. This relation is SYMMETRIC, so the rule canonicalises the pair
+	// itself rather than leaving it to a consumer, and (GND, VBUS) and (VBUS, GND) are one violation
+	// with one id. Ordering belongs to the rule because a framework that sorted every tuple would
+	// break the directional rules.
+	SubjectShape:        []string{check.KindNet, check.KindNet},
+	Eval:                copperClearanceVerdicts,
+	StatesConsideredSet: true,
+	// Asked about some nets, it measures only the segments of those nets against their neighbours
+	// (agni issue 1070). Those are the same pairs a full sweep filtered to the nets would hold.
+	Scoping: check.ScopeSubjects,
+}
+
+// copperClearanceVerdicts decides every PAIR of nets whose copper shares a layer and comes close
+// enough to be worth measuring, one verdict per pair.
+//
+// THE PAIR IS THE SUBJECT because a distance belongs to neither net (#404). A net running between
+// two others is party to two findings, and under a single-entity id those would share one name and
+// one report link.
+//
+// THE CONSIDERED SET IS THE PAIRS THE WALK MEASURED, not every pair of nets on the board. The
+// bounding-box reject keeps this O(S²) walk affordable. A pair it rejects has no computed distance
+// at all, so a pass over every possible pair would claim a measurement the walk never made. The
+// rule reports which pairs came near enough to measure and how they came out. A reviewer cares
+// about the same set.
+//
+// A net with no track segments therefore appears in no pair. This rule compares SEGMENTS, so a net
+// present only as vias and pads was never measured.
+func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	floor, floorDesc := floorFor(m, "clearance")
+	// idx is a segment's place in the board's own order, which decides ties below.
+	type flatSeg struct {
+		net                    string
+		s                      check.BoardSeg
+		idx                    int
+		minX, maxX, minY, maxY int64
+	}
+	var segs []flatSeg
+	for _, bn := range m.BoardNets() {
+		for _, s := range bn.Segments {
+			segs = append(segs, flatSeg{
+				net: bn.Net, s: s, idx: len(segs),
+				minX: min64(s.A.X, s.B.X), maxX: max64(s.A.X, s.B.X),
+				minY: min64(s.A.Y, s.B.Y), maxY: max64(s.A.Y, s.B.Y),
+			})
+		}
+	}
+	type pairKey struct{ a, b string }
+	type worst struct {
+		gap   int64
+		at    *geom.Point
+		ai    int // the segment pair the worst gap was measured at, in board order
+		bi    int
+		count int
+		near  int // pairs that came within the bounding-box reject but cleared the floor
+	}
+	pairs := map[pairKey]*worst{}
+	var order []pairKey
+	// measure is one segment pair, a before b in board order.
+	measure := func(a, b *flatSeg) {
+		if a.net == b.net || !bboxNear(a.s, b.s, floor) {
+			return // too far apart to be worth measuring, so this pair is not a subject
+		}
+		k := pairKey{a.net, b.net}
+		if k.a > k.b {
+			k.a, k.b = k.b, k.a // the pair is symmetric, so its name is canonical
+		}
+		w := pairs[k]
+		if w == nil {
+			w = &worst{gap: floor}
+			pairs[k] = w
+			order = append(order, k)
+		}
+		gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
+		if gap >= floor-clearanceEpsilonNm {
+			w.near++
+			return
+		}
+		w.count++
+		// The worst gap, and among equal gaps the pair that comes first in board order, so the place a
+		// finding names does not depend on the order the sweep met the pairs in.
+		if w.at == nil || gap < w.gap || (gap == w.gap && (a.idx < w.ai || (a.idx == w.ai && b.idx < w.bi))) {
+			w.gap, w.at, w.ai, w.bi = gap, a.s.A, a.idx, b.idx
+		}
+	}
+	// A sweep per layer (agni issue 963). Comparing every segment with every other was O(S^2),
+	// about 197 million pairs and a second natively on the Jetson baseboard's 19,835 segments,
+	// nearly all rejected by the bounding box. With segments sorted by left edge, a segment only
+	// meets the ones that start before its right edge plus the farthest reach bboxNear allows. So
+	// the sweep measures the same set of pairs as the full walk.
+	byLayer := map[string][]*flatSeg{}
+	widest := map[string]int64{}
+	longest := map[string]int64{} // the widest x extent of a segment on the layer, for the scoped window
+	for i := range segs {
+		sg := &segs[i]
+		byLayer[sg.s.Layer] = append(byLayer[sg.s.Layer], sg)
+		widest[sg.s.Layer] = max64(widest[sg.s.Layer], sg.s.Width)
+		longest[sg.s.Layer] = max64(longest[sg.s.Layer], sg.maxX-sg.minX)
+	}
+	// Asked about some nets (agni issue 1070), only the pairs with a segment of one of them are
+	// measured. Each such segment looks up the segments whose left edge lies within bboxNear's
+	// reach of it. A pair of two scoped segments is measured once, from the one earlier in board
+	// order, so every count and tie-break matches the full sweep's.
+	if scope := check.SubjectScope(ctx); scope != nil {
+		inScope := map[string]bool{}
+		for i := range segs {
+			if n := segs[i].net; !inScope[n] && scope.Covers(check.NetNameEntity(n)) {
+				inScope[n] = true
+			}
+		}
+		for layer, ls := range byLayer {
+			// A layer holding none of the scoped nets' copper has no pair to measure, and sorting it is
+			// most of the cost left.
+			if !slices.ContainsFunc(ls, func(sg *flatSeg) bool { return inScope[sg.net] }) {
+				continue
+			}
+			sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
+			for _, f := range ls {
+				if !inScope[f.net] {
+					continue
+				}
+				reach := floor + (f.s.Width+widest[layer])/2 + 1
+				from := sort.Search(len(ls), func(i int) bool { return ls[i].minX >= f.minX-reach-longest[layer] })
+				for _, b := range ls[from:] {
+					if b.minX > f.maxX+reach {
+						break
+					}
+					if b == f || (inScope[b.net] && b.idx < f.idx) {
+						continue
+					}
+					if f.idx < b.idx {
+						measure(f, b)
+					} else {
+						measure(b, f)
+					}
+				}
+			}
+		}
+	} else {
+		for layer, ls := range byLayer {
+			sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
+			for p, a := range ls {
+				// bboxNear pads by floor + (a.Width+b.Width)/2, which never exceeds this; the extra
+				// nanometre covers the integer halving.
+				reach := a.maxX + floor + (a.s.Width+widest[layer])/2 + 1
+				for _, b := range ls[p+1:] {
+					if b.minX > reach {
+						break
+					}
+					if a.idx < b.idx {
+						measure(a, b)
+					} else {
+						measure(b, a)
+					}
+				}
+			}
+		}
+	}
+	sort.Slice(order, func(i, j int) bool { // map order is random; verdicts are not
+		if order[i].a != order[j].a {
+			return order[i].a < order[j].a
+		}
+		return order[i].b < order[j].b
+	})
+
+	out := make([]check.Verdict, 0, len(order))
+	for _, k := range order {
+		w := pairs[k]
+		// NAME-ONLY entities. Board copper joins the netlist by name (CONSTRAINTS C21), so this rule
+		// holds its nets by name and has no per-instance id to carry. Resolving one by name lookup would
+		// pick arbitrarily between two same-named nets and state an instance the walk never distinguished.
+		subjects := []check.Entity{check.NetNameEntity(k.a), check.NetNameEntity(k.b)}
+		v := check.Verdict{Subjects: subjects}
+		if w.count == 0 {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("copper of %q and %q comes close enough to measure in %d place(s) on a shared layer and never within the %s",
+					k.a, k.b, w.near, floorDesc),
+				Terms: []check.WitnessTerm{{Label: "places measured", Value: strconv.Itoa(w.near)}},
+			}
+			out = append(out, v)
+			continue
+		}
+		msg := fmt.Sprintf("copper of %q and %q closer than the %s at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
+			k.a, k.b, floorDesc, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6)
+		v.Outcome = check.Fail
+		v.Witness = &check.Witness{
+			Statement: msg,
+			Terms: []check.WitnessTerm{
+				{Label: "places under the floor", Value: strconv.Itoa(w.count)},
+				{Label: "worst gap", Value: fmt.Sprintf("%.3fmm", float64(w.gap)/1e6)},
+			},
+		}
+		v.Finding = &check.Finding{
+			Subject: subjects[0],
+			Message: msg,
+			// The other net in the pair. The FINDING's subject is one of the two, since a reader is
+			// told one place to go and look, and this context gives the other end its way back into
+			// the drawing (agni issue 349). The verdict names both.
+			Context: []check.ContextSubject{check.Ctx(subjects[1], "neighbour")},
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// bboxNear is the cheap reject. It reports whether two segments' bounding boxes, inflated
+// by the clearance plus both half-widths, overlap. Everything that could violate passes this.
+func bboxNear(a, b check.BoardSeg, clearance int64) bool {
+	pad := clearance + (a.Width+b.Width)/2
+	return min64(a.A.X, a.B.X)-pad <= max64(b.A.X, b.B.X) &&
+		min64(b.A.X, b.B.X)-pad <= max64(a.A.X, a.B.X) &&
+		min64(a.A.Y, a.B.Y)-pad <= max64(b.A.Y, b.B.Y) &&
+		min64(b.A.Y, b.B.Y)-pad <= max64(a.A.Y, a.B.Y)
+}
+
+func min64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// segDistNm is the minimum centerline distance between two 2D segments. It is zero when they
+// intersect, otherwise the smallest of the four endpoint-to-segment distances.
+func segDistNm(a1, a2, b1, b2 *geom.Point) int64 {
+	if segsIntersect(a1, a2, b1, b2) {
+		return 0
+	}
+	d := math.Min(
+		math.Min(pointSegDist(a1, b1, b2), pointSegDist(a2, b1, b2)),
+		math.Min(pointSegDist(b1, a1, a2), pointSegDist(b2, a1, a2)),
+	)
+	return int64(math.Round(d))
+}
+
+// pointSegDist is the distance from p to the segment ab.
+func pointSegDist(p, a, b *geom.Point) float64 {
+	px, py := float64(p.X), float64(p.Y)
+	ax, ay := float64(a.X), float64(a.Y)
+	bx, by := float64(b.X), float64(b.Y)
+	dx, dy := bx-ax, by-ay
+	l2 := dx*dx + dy*dy
+	t := 0.0
+	if l2 > 0 {
+		t = math.Max(0, math.Min(1, ((px-ax)*dx+(py-ay)*dy)/l2))
+	}
+	return math.Hypot(px-(ax+t*dx), py-(ay+t*dy))
+}
+
+// segsIntersect reports whether segments a1a2 and b1b2 cross (including touching).
+func segsIntersect(a1, a2, b1, b2 *geom.Point) bool {
+	o := func(p, q, r *geom.Point) int {
+		v := (float64(q.X)-float64(p.X))*(float64(r.Y)-float64(p.Y)) -
+			(float64(q.Y)-float64(p.Y))*(float64(r.X)-float64(p.X))
+		switch {
+		case v > 0:
+			return 1
+		case v < 0:
+			return -1
+		}
+		return 0
+	}
+	on := func(p, q, r *geom.Point) bool { // for r collinear with pq, whether r sits on pq
+		return min64(p.X, q.X) <= r.X && r.X <= max64(p.X, q.X) &&
+			min64(p.Y, q.Y) <= r.Y && r.Y <= max64(p.Y, q.Y)
+	}
+	o1, o2, o3, o4 := o(a1, a2, b1), o(a1, a2, b2), o(b1, b2, a1), o(b1, b2, a2)
+	if o1 != o2 && o3 != o4 {
+		return true
+	}
+	return (o1 == 0 && on(a1, a2, b1)) || (o2 == 0 && on(a1, a2, b2)) ||
+		(o3 == 0 && on(b1, b2, a1)) || (o4 == 0 && on(b1, b2, a2))
+}

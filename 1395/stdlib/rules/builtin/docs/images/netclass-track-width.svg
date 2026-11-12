@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="netclass-track-width rule: the declared width is resolved by cascading a net's classes by priority, then the routed copper is compared against it; narrower is flagged, meeting it is fine">
+  <rect x="1" y="1" width="678" height="298" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+
+  <!-- ============ TOP: resolving the declared width ============ -->
+  <text x="30" y="34" font-size="14" font-weight="600" fill="#394049">VBUS is in two classes; each constraint comes from the first class that states it</text>
+
+  <rect x="30" y="46" width="150" height="42" rx="5" fill="#ffffff" stroke="#394049" stroke-width="1.2"/>
+  <text x="105" y="63" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">HighSpeed</text>
+  <text x="105" y="79" font-size="11" fill="#8a9099" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">priority 1</text>
+
+  <rect x="200" y="46" width="150" height="42" rx="5" fill="#ffffff" stroke="#394049" stroke-width="1.2"/>
+  <text x="275" y="63" font-size="12" font-weight="600" fill="#394049" text-anchor="middle">Power</text>
+  <text x="275" y="79" font-size="11" fill="#8a9099" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">priority 5</text>
+
+  <rect x="370" y="46" width="150" height="42" rx="5" fill="#ffffff" stroke="#c6cbd2" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="445" y="63" font-size="12" font-weight="600" fill="#8a9099" text-anchor="middle">Default</text>
+  <text x="445" y="79" font-size="11" fill="#8a9099" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">fills the rest</text>
+
+  <text x="105" y="106" font-size="11" fill="#8a9099" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">states no width</text>
+  <text x="275" y="106" font-size="11" fill="#2f9e57" text-anchor="middle" font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">width 0.5 mm</text>
+
+  <path d="M 180 67 L 196 67" stroke="#394049" stroke-width="1.5" fill="none"/>
+  <path d="M 192 63 L 198 67 L 192 71 Z" fill="#394049"/>
+
+  <text x="275" y="128" font-size="13" fill="#394049" text-anchor="middle">declared width resolves to <tspan font-weight="600" font-family="ui-monospace, Menlo, Consolas, monospace">0.5 mm</tspan>, from Power</text>
+
+  <line x1="30" y1="146" x2="650" y2="146" stroke="#e3e6eb"/>
+  <line x1="340" y1="158" x2="340" y2="284" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ============ LEFT: flagged ============ -->
+  <text x="30" y="178" font-size="15" font-weight="600" fill="#d64545">Flagged: routed below it</text>
+  <rect x="60" y="214" width="200" height="8" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <g stroke="#d64545" stroke-width="2">
+    <line x1="276" y1="214" x2="276" y2="222"/>
+    <line x1="272" y1="214" x2="280" y2="214"/>
+    <line x1="272" y1="222" x2="280" y2="222"/>
+  </g>
+  <text x="288" y="222" font-size="12" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">0.3 mm</text>
+  <text x="160" y="262" font-size="13" fill="#d64545" text-anchor="middle">below what Power declares &#8594; flagged</text>
+
+  <!-- ============ RIGHT: fine ============ -->
+  <text x="370" y="178" font-size="15" font-weight="600" fill="#2f9e57">Fine: meets it</text>
+  <rect x="400" y="205" width="200" height="22" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <g stroke="#2f9e57" stroke-width="2">
+    <line x1="616" y1="205" x2="616" y2="227"/>
+    <line x1="612" y1="205" x2="620" y2="205"/>
+    <line x1="612" y1="227" x2="620" y2="227"/>
+  </g>
+  <text x="628" y="222" font-size="12" fill="#2f9e57" font-family="ui-monospace, Menlo, Consolas, monospace">0.5</text>
+  <text x="500" y="262" font-size="13" fill="#2f9e57" text-anchor="middle">&#8805; 0.5 mm &#8594; fine</text>
+  <text x="500" y="280" font-size="11" fill="#8a9099" text-anchor="middle">buildable either way; this checks intent, not the fab floor</text>
+</svg>

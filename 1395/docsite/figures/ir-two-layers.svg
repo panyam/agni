@@ -1,0 +1,44 @@
+<svg viewBox="0 0 640 300" role="img" aria-labelledby="ir-two-layers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="ir-two-layers-title">A source file on the left feeds two layers on the right. The upper layer is the semantic one, holding the normalized messages that diff, rules and analysis read. The lower layer is the fidelity one, holding the raw source a lossless reader kept verbatim. A dashed link between the two is provenance, which is what keeps the abstracted detail recoverable.</title>
+  <defs>
+    <marker id="ir-two-layers-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5"/>
+    </marker>
+    <marker id="ir-two-layers-dot" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5">
+      <circle cx="4" cy="4" r="2.4" fill="var(--accent-color)"/>
+    </marker>
+  </defs>
+  <rect x="16" y="70" width="180" height="140" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="30" y="94" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.85">the source file</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.65">
+    <text x="30" y="120">ordering</text>
+    <text x="30" y="138">trivia</text>
+    <text x="30" y="156">the vendor's spelling</text>
+    <text x="30" y="174">fields nothing models</text>
+  </g>
+  <rect x="280" y="40" width="250" height="94" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="296" y="64" fill="var(--accent-color)" font-size="11.5" font-weight="600">semantic layer</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+    <text x="296" y="88">Design, PartType, Component,</text>
+    <text x="296" y="104">Net, Connection, Sheet</text>
+  </g>
+  <text x="296" y="124" fill="currentColor" font-size="9.5" opacity="0.55">what diff, rules and analysis read</text>
+  <rect x="280" y="174" width="250" height="94" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="296" y="198" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.85">fidelity layer</text>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+    <text x="296" y="222">a FidelityFragment list, kept</text>
+    <text x="296" y="238">verbatim and keyed to a node</text>
+  </g>
+  <text x="296" y="258" fill="currentColor" font-size="9.5" opacity="0.55">empty when a reader is only lossy-bounded</text>
+  <g stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#ir-two-layers-arrow)">
+    <line x1="200" y1="112" x2="274" y2="90"/>
+    <line x1="200" y1="168" x2="274" y2="212"/>
+  </g>
+  <g fill="currentColor" font-size="10" opacity="0.6">
+    <text x="206" y="88">normalize</text>
+    <text x="206" y="200">keep, verbatim</text>
+  </g>
+  <line x1="405" y1="134" x2="405" y2="174" stroke="var(--accent-color)" stroke-width="1.4" stroke-dasharray="4 3" marker-start="url(#ir-two-layers-dot)" marker-end="url(#ir-two-layers-dot)"/>
+  <text x="416" y="158" fill="var(--accent-color)" font-size="10.5" font-weight="600">provenance links them</text>
+  <text x="320" y="292" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">the semantic layer abstracts the detail away, and the fidelity layer is how it is not lost</text>
+</svg>

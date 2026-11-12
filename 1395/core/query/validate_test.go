@@ -1,0 +1,199 @@
+package query
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
+)
+
+// A rule built from a broken query used to compile without complaint and then report a clean pass.
+// RuleFromQuery returned no error, and its Eval swallowed the failure into nil findings (agni issue
+// 540). These tests pin the construction half. Every one of these queries is wrong on its own
+// terms, before any design is read.
+func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
+	for _, tc := range []struct {
+		name, query, wants string
+	}{
+		{
+			name:  "unknown relation",
+			query: `component.nett(?r, ?n) => ?r`,
+			wants: "unknown relation",
+		},
+		{
+			// The wrong atom is NOT the driver. An empty fact base stops solving after the first
+			// atom yields nothing. So a validator built by evaluating against one would never look
+			// here.
+			name:  "wrong arity on a later atom",
+			query: `component.net(?r, ?n), net.rail(?n, ?extra) => ?r`,
+			wants: "takes 1 args",
+		},
+		{
+			name:  "negation with nothing to range over",
+			query: `component.net(?r, ?n), not net.rail(?other) => ?r`,
+			wants: "shares no variable",
+		},
+		{
+			name:  "projecting a variable no positive relation binds",
+			query: `component.net(?r, ?n) => ?r, ?nothing`,
+			wants: "not bound by a positive relation",
+		},
+		{
+			name:  "rule head redefining a fact relation",
+			query: `entity(?n, ?k) :- component.net(?n, ?k); entity(?n, ?k) => ?n`,
+			wants: "redefines a fact relation",
+		},
+		{
+			// A query defines only its own bare relations; a shared one belongs to a module (agni 751).
+			name:  "rule head naming a qualified path",
+			query: `net.rail(?n) :- component.net(?r, ?n); net.rail(?n) => ?n`,
+			wants: "qualified path",
+		},
+		{
+			name:  "unknown aggregate",
+			query: `component.net(?r, ?n) => median(?r)`,
+			wants: "unknown aggregate",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			q, err := Parse(tc.query)
+			if err != nil {
+				// A parse failure would make this test prove nothing about RuleFromQuery, so it is a
+				// fatal setup error rather than a pass.
+				t.Fatalf("this query must PARSE and fail later: %v", err)
+			}
+			_, err = RuleFromQuery(FindingQuery{
+				Rule:       check.Rule{Name: "t", Severity: "error"},
+				Query:      q,
+				Kind:       check.KindComponent,
+				SubjectVar: "r",
+				Message:    "{r}",
+			})
+			if err == nil {
+				t.Fatalf("built a rule from a broken query; it would have reported a clean pass")
+			}
+			if !strings.Contains(err.Error(), tc.wants) {
+				t.Errorf("error %q does not say %q, so an author cannot tell what is wrong", err, tc.wants)
+			}
+		})
+	}
+}
+
+// TestRuleFromQueryAcceptsAValidQuery is the positive control. A validator that rejected everything
+// would pass every case above while making the engine useless.
+func TestRuleFromQueryAcceptsAValidQuery(t *testing.T) {
+	q := MustParse(`component.net(?r, ?n), net.rail(?n) => ?r`)
+	rule, err := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "t", Severity: "error"},
+		Query:      q,
+		Kind:       check.KindComponent,
+		SubjectVar: "r",
+		Message:    "{r}",
+	})
+	if err != nil {
+		t.Fatalf("a valid query was rejected: %v", err)
+	}
+	if rule == nil {
+		t.Fatal("no rule and no error")
+	}
+}
+
+// TestValidateNeedsNoDesign checks that validation reads the query and the relation vocabulary,
+// never a design. So a rule can be checked where it is BUILT rather than where it first runs.
+func TestValidateNeedsNoDesign(t *testing.T) {
+	if err := Validate(MustParse(`component.net(?r, ?n), net.rail(?n) => ?r`), facts.DefaultRegistry()); err != nil {
+		t.Errorf("valid query rejected with no design: %v", err)
+	}
+	if err := Validate(MustParse(`nosuchrelation(?x) => ?x`), facts.DefaultRegistry()); err == nil {
+		t.Error("unknown relation accepted with no design")
+	}
+}
+
+// looseFilterQuery tests a variable no relation binds. Validation refuses it since jaala v0.1.53
+// (panyam/jaala#215). Before that, it reached the evaluator and failed there.
+const looseFilterQuery = `component.net(?r, ?n), str.contains(?loose, "x") => ?r`
+
+func TestLooseFilterIsRefusedAtValidation(t *testing.T) {
+	q, err := Parse(looseFilterQuery)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := Validate(q, facts.DefaultRegistry()); err == nil || !strings.Contains(err.Error(), "str.contains needs all arguments bound") {
+		t.Fatalf("an unbound filter must be refused before anything runs, naming the filter; got %v", err)
+	}
+}
+
+// TestEvalFailureIsInconclusiveNotClean checks a rule whose query cannot be evaluated. The rule
+// reports that it could not decide. It used to return no findings, which every consumer reads as a
+// design with no defects. The query is valid, and the evaluation fails by running out of its work
+// budget. No validation can foresee that failure (agni issue 540).
+func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
+	q, err := Parse(`component.net(?r, ?n) => ?r`)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := Validate(q, facts.DefaultRegistry()); err != nil {
+		t.Fatalf("this query must PASS validation and fail at eval, else it tests the wrong half: %v", err)
+	}
+	rule, err := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "loose-filter", Severity: "error"},
+		Query:      q,
+		Kind:       check.KindComponent,
+		SubjectVar: "r",
+		Message:    "{r}",
+	})
+	if err != nil {
+		t.Fatalf("construction rejected it, so the eval path is untested: %v", err)
+	}
+
+	fs := rule.Findings(WithBudget(context.Background(), 1), check.NewModel(chainDesign()))
+	if len(fs) != 1 {
+		t.Fatalf("findings = %d, want one inconclusive; a rule that could not run must not report a clean pass", len(fs))
+	}
+	if !fs[0].Inconclusive {
+		t.Errorf("finding is a DEFECT, not an inconclusive: %+v", fs[0])
+	}
+	if !strings.Contains(fs[0].Message, "could not run") || !strings.Contains(fs[0].Message, "loose-filter") {
+		t.Errorf("message %q names neither the rule nor what happened", fs[0].Message)
+	}
+}
+
+// TestValueDomainRejectsAConstantOutsideIt covers agni 696. A misspelled value used to return no
+// rows. Empty rows read as a fact about the design rather than a typo. This is the unsafe-negation
+// shape of agni 522, one layer in.
+func TestValueDomainRejectsAConstantOutsideIt(t *testing.T) {
+	q, err := Parse(`net.role(?n, "swiching") => ?n`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	err = Validate(q, facts.DefaultRegistry())
+	if err == nil {
+		t.Fatal("a value outside the column's domain must be refused, not answered with no rows")
+	}
+	for _, want := range []string{"swiching", "switching", "role"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should name %q, got: %v", want, err)
+		}
+	}
+}
+
+// TestValueDomainAcceptsWhatTheColumnHolds is the positive control. A check that refused everything
+// would satisfy the test above on its own, and would break every query in the docs.
+func TestValueDomainAcceptsWhatTheColumnHolds(t *testing.T) {
+	for _, goal := range []string{
+		`net.role(?n, "switching") => ?n`,
+		`net.role(?n, "gate_drive") => ?n`,
+		`net.role(?n, ?r) => ?n, ?r`,          // a VARIABLE is never domain-checked
+		`net.attr(?n, "anything", "x") => ?n`, // an OPEN column declares no domain
+	} {
+		q, err := Parse(goal)
+		if err != nil {
+			t.Fatalf("Parse(%s): %v", goal, err)
+		}
+		if err := Validate(q, facts.DefaultRegistry()); err != nil {
+			t.Errorf("Validate(%s) = %v, want nil", goal, err)
+		}
+	}
+}

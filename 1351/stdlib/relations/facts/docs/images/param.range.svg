@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="param.range relation: one symbol VDD carries two rows, a recommended-operating window and a higher absolute-maximum; a rail above the recommended window is flagged even while under the absolute maximum">
+  <rect x="1" y="1" width="678" height="298" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="276" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">+5V rail: over the recommended window</text>
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f8a4c">+3V3 rail: inside the window</text>
+
+  <!-- LEFT panel: voltage axis 0..6V, x=120 -->
+  <line x1="120" y1="250" x2="120" y2="60" stroke="#394049" stroke-width="1.5"/>
+  <text x="112" y="254" font-size="9" fill="#6b7280" text-anchor="end">0V</text>
+  <text x="112" y="64" font-size="9" fill="#6b7280" text-anchor="end">6V</text>
+
+  <!-- recommended_operating window 3.0..3.6 (green band) -->
+  <rect x="104" y="130" width="32" height="20" fill="#d6efdd" stroke="#2f8a4c"/>
+  <text x="150" y="145" font-size="11" fill="#2f8a4c" font-family="ui-monospace, Menlo, Consolas, monospace">recommended_operating 3.0..3.6V</text>
+
+  <!-- absolute_max ceiling 4.6 (red dashed line, a DIFFERENT kind on the SAME symbol) -->
+  <line x1="100" y1="97" x2="270" y2="97" stroke="#d64545" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="150" y="92" font-size="11" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">absolute_max 4.6V (kind)</text>
+
+  <!-- +5V rail marker: above the recommended max, under abs-max -->
+  <circle cx="120" cy="83" r="5" fill="#d64545" stroke="none"/>
+  <line x1="120" y1="83" x2="90" y2="83" stroke="#d64545" stroke-width="2"/>
+  <text x="86" y="87" font-size="12" fill="#d64545" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">+5V</text>
+  <text x="150" y="205" font-size="12" fill="#d64545">nominal 5V &gt; recommended max 3.6V</text>
+  <text x="150" y="222" font-size="11" fill="#6b7280">(still under the 4.6V absolute maximum)</text>
+
+  <!-- RIGHT panel: same window, x=460 -->
+  <line x1="460" y1="250" x2="460" y2="60" stroke="#394049" stroke-width="1.5"/>
+  <text x="452" y="254" font-size="9" fill="#6b7280" text-anchor="end">0V</text>
+  <text x="452" y="64" font-size="9" fill="#6b7280" text-anchor="end">6V</text>
+
+  <rect x="444" y="130" width="32" height="20" fill="#d6efdd" stroke="#2f8a4c"/>
+  <text x="490" y="145" font-size="11" fill="#2f8a4c" font-family="ui-monospace, Menlo, Consolas, monospace">recommended 3.0..3.6V</text>
+
+  <!-- +3V3 rail marker: inside the window -->
+  <circle cx="460" cy="140" r="5" fill="#2f8a4c" stroke="none"/>
+  <line x1="460" y1="140" x2="430" y2="140" stroke="#2f8a4c" stroke-width="2"/>
+  <text x="426" y="144" font-size="12" fill="#2f8a4c" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">+3V3</text>
+  <text x="490" y="205" font-size="12" fill="#2f8a4c">nominal 3.3V within 3.0..3.6V</text>
+
+  <text x="340" y="290" font-size="12" fill="#6b7280" text-anchor="middle">param.range separates the two rows by kind and keeps both bounds; param(mpn, symbol, max) could tell neither apart.</text>
+</svg>

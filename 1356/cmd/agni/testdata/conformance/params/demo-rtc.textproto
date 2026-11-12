@@ -1,0 +1,44 @@
+# Seeded spec for the crystal-rtc conformance fixture: a fictional real-time clock whose oscillator
+# pins carry integrated load capacitance, as many RTCs and low-power MCUs do (synthetic part, synthetic
+# datasheet, conformance fixtures are our own files, C10). The row is bound to both oscillator pins,
+# which is what crystal-load-caps asks for, since a part-wide row would credit pins it does not cover.
+mpn: "DEMO-RTC"
+manufacturer: "Agni Conformance Works"
+device_class: "rtc"
+
+docs {
+  id: "demortc"
+  title: "DEMO-RTC Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+packages {
+  id: "so8"
+  name: "SO-8"
+}
+
+pins {
+  id: "osci"
+  name: "OSCI"
+  numbers { package_ref: "so8" number: "1" }
+  prov { doc_ref: "demortc" page: 3 table_or_figure: "Pin description" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "osco"
+  name: "OSCO"
+  numbers { package_ref: "so8" number: "2" }
+  prov { doc_ref: "demortc" page: 3 table_or_figure: "Pin description" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Integrated load capacitance"
+  symbol: "CL(itg)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { min: 4.2 typ: 7 max: 9.8 }
+  unit: "pF"
+  pin_refs: "osci"
+  pin_refs: "osco"
+  prov { doc_ref: "demortc" page: 4 table_or_figure: "Static characteristics" method: "hand" confidence: 1 }
+}

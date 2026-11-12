@@ -1,0 +1,99 @@
+package main
+
+import (
+	"fmt"
+	"io"
+
+	"github.com/panyam/agni/core/results"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+// failsAtProto reports whether any finding sits at or above the --fail-on threshold. Ranking is
+// service.SeverityRank, so a custom severity (rank above error) always trips an "error" gate.
+func failsAtProto(fs []*checkspb.Finding, threshold string) bool {
+	t := service.SeverityRank(threshold)
+	for _, f := range fs {
+		if service.SeverityRank(f.GetSeverity()) >= t {
+			return true
+		}
+	}
+	return false
+}
+
+// reportFindings flattens a CheckReport's severity sections, so --fail-on gates on the same run the
+// report renders rather than a second check pass.
+func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
+	var out []*checkspb.Finding
+	for _, s := range rep.GetSections() {
+		for _, g := range s.GetRules() {
+			out = append(out, g.GetFindings()...)
+		}
+	}
+	return out
+}
+
+// writeCheckMarkdown renders the CheckReport proto as the markdown report (WS3-022). It writes a
+// severity summary table, then a section per severity in the proto's order (worst first), with
+// findings grouped under a rule heading carrying the catalog Summary. It renders from the proto
+// rather than raw findings so it matches the web report panel.
+func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
+	rep = forDisplay(rep)
+	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
+	// An inconclusive finding is counted apart, as the viewer counts it, since it is not a defect
+	// (agni issue 1045).
+	total, unresolved := 0, 0
+	for _, s := range rep.GetSections() {
+		if s.GetSeverity() == results.UnresolvedSection {
+			unresolved += int(s.GetCount())
+			continue
+		}
+		total += int(s.GetCount())
+	}
+	if total+unresolved == 0 {
+		fmt.Fprintf(w, "No findings (%d rule(s) run).\n", rep.GetRulesRun())
+		return nil
+	}
+	fmt.Fprintln(w, "| severity | findings |")
+	fmt.Fprintln(w, "|---|---|")
+	for _, s := range rep.GetSections() {
+		fmt.Fprintf(w, "| %s | %d |\n", s.GetSeverity(), s.GetCount())
+	}
+	if unresolved > 0 {
+		fmt.Fprintf(w, "\n%d finding(s) and %d unresolved, %d rule(s) run.\n", total, unresolved, rep.GetRulesRun())
+	} else {
+		fmt.Fprintf(w, "\n%d finding(s), %d rule(s) run.\n", total, rep.GetRulesRun())
+	}
+
+	for _, s := range rep.GetSections() {
+		fmt.Fprintf(w, "\n## %s\n", s.GetSeverity())
+		for _, g := range s.GetRules() {
+			heading := g.GetRule()
+			if g.GetSummary() != "" {
+				heading += " — " + g.GetSummary()
+			}
+			fmt.Fprintf(w, "\n### %s\n", heading)
+			for _, f := range g.GetFindings() {
+				src := ""
+				if f.GetProvenance().GetSourceFile() != "" {
+					src = " (" + f.GetProvenance().GetSourceFile() + ")"
+				}
+				fmt.Fprintf(w, "- `%s` — %s%s\n", f.GetSubject().GetRef(), f.GetMessage(), src)
+			}
+		}
+	}
+	return nil
+}
+
+// writeCheckReportJSON emits the report as protojson of GetCheckReportResponse. The RPC returns the
+// same shape (C31), and writeCheckDesignJSON does the same for the findings.
+func writeCheckReportJSON(w io.Writer, rep *checkspb.CheckReport) error {
+	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(&webapi.GetCheckReportResponse{Report: rep})
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(w, string(b))
+	return err
+}

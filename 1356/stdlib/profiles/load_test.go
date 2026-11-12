@@ -1,0 +1,433 @@
+package profiles
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// A naming map re-binds a core profile's signals to a project's own suffixes. It inherits the core
+// structure/requirements and fires on a design named that way. The core default looks for the
+// standard suffixes and is silent there. The test covers the structure-vs-naming split (WS3-054).
+func TestNamingMapRemapsSuffixes(t *testing.T) {
+	p, err := Load(strings.NewReader(
+		"override: SPI_NOR\nsuffixes: {CS: _XCS, SCLK: _XSCLK, IO0: _XIO0, IO1: _XIO1, IO2: _XIO2, IO3: _XIO3}\n"))
+	if err != nil {
+		t.Fatalf("Load naming map: %v", err)
+	}
+	if p.Name != "SPI_NOR" || p.anchorSuffix() != "_XCS" || len(p.Requirements) != 4 {
+		t.Fatalf("remap wrong: name=%q anchor=%q reqs=%d", p.Name, p.anchorSuffix(), len(p.Requirements))
+	}
+	// A design in the project's naming (IO2 absent). Core SPI_NOR (wants _CS/_IO2) is silent; the
+	// remapped profile fires signal-missing on the anchor.
+	d := &ir.Design{
+		Components: comps("U1", "U2"),
+		Nets: []*ir.Net{
+			net("BUS_XCS", "U1.1", "U2.1"), net("BUS_XSCLK", "U1.2", "U2.2"),
+			net("BUS_XIO0", "U1.3", "U2.3"), net("BUS_XIO1", "U1.4", "U2.4"),
+			net("BUS_XIO3", "U1.6", "U2.6"),
+		},
+	}
+	if fs := check.RunBackground(check.NewModel(d), Compile(SPINOR)); len(fs) != 0 {
+		t.Fatalf("core SPI_NOR should be silent on the project naming, got %d: %+v", len(fs), fs)
+	}
+	fired := false
+	for _, f := range check.RunBackground(check.NewModel(d), Compile(p)) {
+		if f.Rule == "spi_nor-signal-missing" && strings.Contains(f.Message, "IO2") {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("remapped profile should fire signal-missing (IO2) on the project-named design")
+	}
+}
+
+func TestNamingMapErrors(t *testing.T) {
+	cases := map[string]string{
+		"unknown profile": "override: NOPE\nsuffixes: {CS: _X}",
+		"unknown role":    "override: SPI_NOR\nsuffixes: {NOTAROLE: _X}",
+	}
+	for name, y := range cases {
+		if _, err := Load(strings.NewReader(y)); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}
+
+// Every built-in profile is well-formed and compiles to the rule set its declaration implies. This
+// replaces TestBuiltinsMatchYAML (WS3-049), which held each built-in's Go literal identical to its
+// embedded YAML while both forms were kept side by side. With the YAML authoritative there is only
+// one form, so equality with itself proves nothing. A gate is still needed to show that the
+// authoritative declaration parses, validates, and yields the expected rules. The per-profile
+// behavioral suites (TestSPINORFires, TestCANFires, ...) remain the check on what those rules DO.
+//
+// The flip had to preserve the rule counts. They were captured from the Go-literal build and must not
+// move.
+func TestBuiltinsCompileToExpectedRules(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		p     Profile
+		rules int
+	}{
+		// The five connector-facing buses each carry the esd requirement (WS3-061); the two
+		// on-board interfaces do not, because no eMMC or SPI-NOR line ever leaves the board.
+		{"SPI_NOR", SPINOR, 4},
+		{"eMMC", EMMC, 4},
+		{"SD", SD, 4},
+		{"CAN", CAN, 5},
+		{"LIN", LIN, 5},
+		{"A2B", A2B, 4},
+		{"PCIe", PCIE, 4},
+		{"SGMII", SGMII, 4},
+	} {
+		if c.p.Name == "" {
+			t.Errorf("%s: built-in did not initialize from its YAML", c.name)
+			continue
+		}
+		if err := Validate(c.p); err != nil {
+			t.Errorf("%s: %v", c.name, err)
+			continue
+		}
+		if got := len(Compile(c.p)); got != c.rules {
+			t.Errorf("%s: want %d compiled rules, got %d", c.name, c.rules, got)
+		}
+	}
+}
+
+// The embedded built-in YAML round-trips to the expected declaration: Parse(spinorYAML) yields the
+// six SPI-NOR signals with CS as the pulled-up anchor and the four requirements. The old Go literal
+// held the same value, and the behavioral suite (TestSPINORFires/Silent/...) confirms it compiles
+// identically.
+func TestParseBuiltinShape(t *testing.T) {
+	p, err := Parse(spinorYAML)
+	if err != nil {
+		t.Fatalf("Parse(spinorYAML): %v", err)
+	}
+	if p.Name != "SPI_NOR" || len(p.Signals) != 6 || len(p.Requirements) != 4 {
+		t.Fatalf("got name=%q signals=%d reqs=%d", p.Name, len(p.Signals), len(p.Requirements))
+	}
+	if p.anchorSuffix() != "_CS" {
+		t.Errorf("anchor suffix: want _CS, got %q", p.anchorSuffix())
+	}
+	if !p.Signals[0].PullUp || !p.Signals[0].Anchor {
+		t.Errorf("CS should be pullup+anchor, got %+v", p.Signals[0])
+	}
+}
+
+func TestLoadValid(t *testing.T) {
+	y := `
+name: MYBUS
+host: {attr: interface, value: MYBUS}
+signals:
+  - {name: CLK, suffix: _CLK, anchor: true}
+  - {name: DAT, suffix: _DAT}
+requirements:
+  - {type: signal-missing}
+  - {type: signal-dangling}
+`
+	p, err := Load(strings.NewReader(y))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := len(Compile(p)); got != 2 {
+		t.Fatalf("Compile(loaded): want 2 rules, got %d", got)
+	}
+}
+
+// An overlay can author a glob- or regex-matched signal in YAML (WS3-057). Imagine a project whose bus
+// identity is the PREFIX, with a suffix shared with a foreign bus. Without these forms it could not
+// declare the interface at all. The compiled rules keep the pattern, so the profile matches no CAN net.
+func TestLoadPatternSignals(t *testing.T) {
+	y := `
+name: ETHX
+signals:
+  - {name: H, glob: "ETH_SW*_H", anchor: true}
+  - {name: L, regex: '^ETH_SW\d+_P\d+_._L$'}
+requirements:
+  - {type: signal-dangling}
+`
+	p, err := Load(strings.NewReader(y))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if p.Signals[0].Glob != "ETH_SW*_H" || p.Signals[1].Regex == "" {
+		t.Fatalf("matchers did not survive the load: %+v", p.Signals)
+	}
+	if got := len(Compile(p)); got != 1 {
+		t.Fatalf("Compile(loaded): want 1 rule, got %d", got)
+	}
+	d := &ir.Design{Components: comps("U1", "U2"), Nets: []*ir.Net{
+		net("ETH_SW1_P1_A_H", "U1.1", "U2.1"),
+		net("ETH_SW1_P1_A_L", "U1.2"), // in use, and this one is dangling
+		net("CAN_00_L", "U3.1"),       // foreign, also single-pin: must NOT be reported
+	}}
+	fs := check.RunBackground(check.NewModel(d), Compile(p))
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "ETH_SW1_P1_A_L" {
+		t.Fatalf("want only the ETH _L net reported dangling, got %+v", fs)
+	}
+}
+
+// A naming map REPLACES a signal's matcher rather than adding a second form to it. Remapping the
+// suffix of a glob-matched signal must not leave both declared, which is not a matcher at all.
+func TestNamingMapReplacesPatternMatcher(t *testing.T) {
+	core := Profile{Name: "GlobBus", Signals: []Signal{{Name: "H", Glob: "ETH_SW*_H", Anchor: true}}}
+	got := applyNamingMap(core, map[string]string{"H": "_HOUSE_H"})
+	if err := validateSignalMatcher(got.Signals[0]); err != nil {
+		t.Fatalf("remapped signal should be a sound matcher: %v", err)
+	}
+	if got.Signals[0].Glob != "" || got.Signals[0].Suffix != "_HOUSE_H" {
+		t.Errorf("remap should clear the glob and set the suffix, got %+v", got.Signals[0])
+	}
+}
+
+// Load reports an unknown requirement type with the list of known types (teaching error). A customer
+// authoring an overlay profile sees this error on a typo.
+func TestLoadUnknownRequirementTeaches(t *testing.T) {
+	y := `
+name: MYBUS
+signals: [{name: CLK, suffix: _CLK, anchor: true}]
+requirements: [{type: signl-missing}]
+`
+	_, err := Load(strings.NewReader(y))
+	if err == nil {
+		t.Fatal("want error for unknown requirement type")
+	}
+	if !strings.Contains(err.Error(), "signl-missing") || !strings.Contains(err.Error(), "signal-missing") {
+		t.Errorf("error should name the bad type and list known types, got: %v", err)
+	}
+}
+
+func TestParseValidationErrors(t *testing.T) {
+	cases := map[string]string{
+		"missing name":  "signals: [{name: CLK, suffix: _CLK}]",
+		"no signals":    "name: X",
+		"signal fields": "name: X\nsignals: [{name: CLK}]",
+		"two anchors":   "name: X\nsignals: [{name: A, suffix: _A, anchor: true}, {name: B, suffix: _B, anchor: true}]",
+		// Per WS3-057 matcher validation, a signal declares exactly one sound form.
+		"two matcher forms": "name: X\nsignals: [{name: A, suffix: _A, glob: 'A*'}]",
+		"bad regex":         "name: X\nsignals: [{name: A, regex: '^ETH_(SW'}]",
+		"universal glob":    "name: X\nsignals: [{name: A, glob: '*'}]",
+		"universal regex":   "name: X\nsignals: [{name: A, regex: '.*'}]",
+	}
+	for name, y := range cases {
+		if _, err := Parse([]byte(y)); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}
+
+// LoadDir loads every *.yaml in a directory (the --profile-path path); Source compiles them into a
+// catalog-splicable RuleSource.
+func TestLoadDirAndSource(t *testing.T) {
+	dir := t.TempDir()
+	write := func(fn, body string) {
+		if err := os.WriteFile(filepath.Join(dir, fn), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("a.yaml", "name: BUSA\nsignals: [{name: CLK, suffix: _ACLK, anchor: true}, {name: D, suffix: _AD}]\nrequirements: [{type: signal-dangling}]\n")
+	write("b.yml", "name: BUSB\nsignals: [{name: CLK, suffix: _BCLK, anchor: true}, {name: D, suffix: _BD}]\nrequirements: [{type: signal-dangling}]\n")
+	write("notes.txt", "ignored")
+	ps, err := LoadDir(dir)
+	if err != nil {
+		t.Fatalf("LoadDir: %v", err)
+	}
+	if len(ps) != 2 {
+		t.Fatalf("want 2 profiles, got %d", len(ps))
+	}
+	if src := Source("test", ps); len(src.Rules()) != 2 {
+		t.Fatalf("Source: want 2 rules (one dangling per profile), got %d", len(src.Rules()))
+	}
+	// sanity: the compiled source is usable by the checker.
+	_ = check.NewSource
+}
+
+// TestSignalMissingRequiresAnchor (WS3-099): a profile declaring the convention completeness
+// requirement without a usable anchor compiles it to NOTHING, silently. Paired with any requirement
+// that does compile (signal-dangling), the item then runs clean and scores a pass. The author asked
+// for a check, and that check never existed. That is the same false-pass shape, arriving through author
+// error rather than design state. Both entry points reject it: Parse with a teaching error, Compile
+// with a panic.
+func TestSignalMissingRequiresAnchor(t *testing.T) {
+	const noAnchor = `
+name: NOANCHOR
+signals:
+  - {name: A, suffix: _A}
+  - {name: B, suffix: _B}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(noAnchor)); err == nil {
+		t.Error("Parse must reject signal-missing with no anchor signal")
+	} else if !strings.Contains(err.Error(), "anchor") {
+		t.Errorf("want an error naming the anchor, got %v", err)
+	}
+	// An anchor with no OTHER signal is the same silent drop, since there is nothing left to report
+	// missing.
+	const anchorOnly = `
+name: ANCHORONLY
+signals:
+  - {name: A, suffix: _A, anchor: true}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(anchorOnly)); err == nil {
+		t.Error("Parse must reject signal-missing with no non-anchor signal to check")
+	}
+	// A well-formed profile still parses, so the guard does not reject the normal shape.
+	const ok = `
+name: FINE
+signals:
+  - {name: A, suffix: _A, anchor: true}
+  - {name: B, suffix: _B}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(ok)); err != nil {
+		t.Errorf("a profile with an anchor and a second signal must parse: %v", err)
+	}
+	// A profile declaring NO completeness requirement needs no anchor.
+	const danglingOnly = `
+name: DANGONLY
+signals:
+  - {name: A, suffix: _A}
+requirements:
+  - {type: signal-dangling}
+`
+	if _, err := Parse([]byte(danglingOnly)); err != nil {
+		t.Errorf("a profile without signal-missing needs no anchor: %v", err)
+	}
+	// The Go-literal path panics, the same posture Compile takes for an unsound matcher.
+	defer func() {
+		if recover() == nil {
+			t.Error("Compile must panic on signal-missing with no anchor")
+		}
+	}()
+	Compile(Profile{Name: "GOLIT", Signals: []Signal{{Name: "A", Suffix: "_A"}, {Name: "B", Suffix: "_B"}},
+		Requirements: []Requirement{{Type: "signal-missing"}}})
+}
+
+// A requirement whose params are missing is a customer-authoring error, so it must fail at LOAD with
+// a teaching error rather than panicking deep inside Compile (WS3-047). termination is the built-in
+// with params. It bridges two named net suffixes, and without them its generated datalog would match
+// on the empty suffix, i.e. every net.
+func TestLoadTerminationMissingParamTeaches(t *testing.T) {
+	base := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}, {name: L, suffix: _L}]\n"
+	for name, req := range map[string]string{
+		"no params":  "requirements: [{type: termination}]\n",
+		"no low":     "requirements: [{type: termination, params: {high: _H}}]\n",
+		"no high":    "requirements: [{type: termination, params: {low: _L}}]\n",
+		"empty low":  "requirements: [{type: termination, params: {high: _H, low: ''}}]\n",
+		"typo'd key": "requirements: [{type: termination, params: {high: _H, lo: _L}}]\n",
+	} {
+		_, err := Load(strings.NewReader(base + req))
+		if err == nil {
+			t.Errorf("%s: want a load error, got nil", name)
+			continue
+		}
+		// The error has to name the requirement type and the params it wanted, or it teaches nothing.
+		for _, want := range []string{"termination", "high", "low"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("%s: error should mention %q, got: %v", name, want, err)
+			}
+		}
+	}
+}
+
+// The same rejection reaches the actual --profile-path surface, not just the io.Reader one.
+func TestLoadDirRejectsBadRequirementParams(t *testing.T) {
+	dir := t.TempDir()
+	body := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}, {name: L, suffix: _L}]\nrequirements: [{type: termination, params: {high: _H}}]\n"
+	if err := os.WriteFile(filepath.Join(dir, "mybus.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadDir(dir)
+	if err == nil {
+		t.Fatal("LoadDir should reject a profile whose requirement params are incomplete")
+	}
+	if !strings.Contains(err.Error(), "mybus.yaml") || !strings.Contains(err.Error(), "termination") {
+		t.Errorf("error should name the file and the requirement, got: %v", err)
+	}
+}
+
+// A Go-literal profile bypasses Load, so Compile keeps its own gate. The file already takes the same
+// twin posture for an unsound matcher and a missing anchor. Removing it in favour of Load alone would
+// leave every built-in unguarded.
+func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("Compile must panic on a termination requirement with no params")
+		}
+		if !strings.Contains(fmt.Sprint(r), "termination") {
+			t.Errorf("panic should teach what is wrong, got %v", r)
+		}
+	}()
+	Compile(Profile{
+		Name:         "MYBUS",
+		Signals:      []Signal{{Name: "H", Suffix: "_H", Anchor: true}, {Name: "L", Suffix: "_L"}},
+		Requirements: []Requirement{{Type: "termination"}},
+	})
+}
+
+// An overlay registering its own requirement type can ship a validator with it, so its params get the
+// same load-time teaching error the built-in gets. A customer extends the engine through this hook.
+func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
+	RegisterRequirementWithValidator("house-rule",
+		func(p Profile, _ Requirement) *check.Rule { return nil },
+		func(params map[string]string) error {
+			if params["mode"] == "" {
+				return fmt.Errorf("needs a \"mode\" param (one of: strict, lax)")
+			}
+			return nil
+		})
+	defer delete(requirementRegistry, "house-rule")
+
+	base := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}]\n"
+	_, err := Load(strings.NewReader(base + "requirements: [{type: house-rule}]\n"))
+	if err == nil {
+		t.Fatal("want a load error for the overlay requirement's missing param")
+	}
+	if !strings.Contains(err.Error(), "house-rule") || !strings.Contains(err.Error(), "mode") {
+		t.Errorf("error should name the requirement and its param, got: %v", err)
+	}
+	if _, err := Load(strings.NewReader(base + "requirements: [{type: house-rule, params: {mode: strict}}]\n")); err != nil {
+		t.Errorf("a satisfied validator should load cleanly, got: %v", err)
+	}
+}
+
+// Every built-in still loads and validates. CAN declares termination, so this test gates against the
+// new check rejecting the profiles that ship.
+func TestBuiltinsPassRequirementValidation(t *testing.T) {
+	for _, p := range Profiles {
+		if err := ValidateRequirements(p); err != nil {
+			t.Errorf("built-in %q must satisfy its own requirement validators: %v", p.Name, err)
+		}
+	}
+}
+
+// A profile file binds to checkspb.ProfileDef through yamlpb, so a key the schema lacks fails naming
+// its line instead of configuring nothing. A misspelled pullup used to decode into a Go struct that
+// dropped it, so the signal silently lost its pull-up requirement (agni issue 827).
+func TestProfileFileIsBoundToItsSchema(t *testing.T) {
+	_, err := Load(strings.NewReader("name: X\nsignals:\n  - {name: SDA, suffix: _SDA, anchor: true}\n  - {name: SCL, suffix: _SCL, pull_up: true}\n"))
+	if err == nil || !strings.Contains(err.Error(), "line 4") || !strings.Contains(err.Error(), `"pull_up"`) {
+		t.Errorf("a misspelled signal key should fail naming its line, got %v", err)
+	}
+	_, err = Load(strings.NewReader("override: CAN\nsufixes: {TXD: _TX}\n"))
+	if err == nil || !strings.Contains(err.Error(), "line 2") {
+		t.Errorf("a misspelled naming-map key should fail naming its line, got %v", err)
+	}
+	p, err := Load(strings.NewReader("name: X\nhost: {attr: interface, value: X, class: crystal}\nsignals:\n  - {name: A, suffix: _A, anchor: true, pullup: true}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.HostAttrKey != "interface" || p.HostAttrVal != "X" || p.HostClass != "crystal" || !p.Signals[0].PullUp {
+		t.Errorf("the host and pullup did not reach the profile: %+v", p)
+	}
+}

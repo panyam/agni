@@ -1,0 +1,6 @@
+# The passing twin of the same board, for the "no findings has a number in it" section. The two
+# trailing counts are the lesson, so nothing filters them.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check cmd/agni/testdata/conformance/showcase.passes.kicad_pro

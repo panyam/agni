@@ -1,0 +1,115 @@
+[
+  {
+    "name": "Home",
+    "url": "",
+    "icon": "home"
+  },
+  {
+    "name": "Overview",
+    "url": "overview/",
+    "icon": "rocket"
+  },
+  {
+    "name": "Tutorials",
+    "url": "tutorials/",
+    "icon": "graduation-cap",
+    "children": [
+      { "name": "1. Read a design", "url": "tutorials/01-read-a-design/" },
+      { "name": "2. Run the catalog", "url": "tutorials/02-run-the-catalog/" },
+      { "name": "3. See it", "url": "tutorials/03-see-it/" },
+      { "name": "4. Your names", "url": "tutorials/04-your-names/" },
+      { "name": "5. Your interfaces", "url": "tutorials/05-your-interfaces/" },
+      { "name": "6. Part limits", "url": "tutorials/06-part-limits/" },
+      { "name": "7. Your architecture", "url": "tutorials/07-your-architecture/" },
+      { "name": "8. Write your checklist", "url": "tutorials/08-write-your-checklist/" },
+      { "name": "9. Read the verdicts", "url": "tutorials/09-read-the-verdicts/" },
+      { "name": "10. Compare revisions", "url": "tutorials/10-compare-revisions/" },
+      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" },
+      { "name": "12. Reconcile existing tools", "url": "tutorials/12-reconcile-existing-tools/" },
+      { "name": "13. Drive it in the browser", "url": "tutorials/13-drive-it-in-the-browser/" }
+    ]
+  },
+  {
+    "name": "Guides",
+    "url": "guide/",
+    "icon": "book",
+    "columns": 2,
+    "children": [
+      { "name": "User guide", "url": "guide/", "group": true },
+      { "name": "Getting started", "url": "guide/getting-started/" },
+      { "name": "Concepts", "url": "guide/concepts/" },
+      { "name": "Projects and designs", "url": "guide/projects/" },
+      { "name": "Trying agni on your own boards", "url": "guide/trying-agni/" },
+      { "name": "Checks and reports", "url": "guide/checks-and-reports/" },
+      { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
+      { "name": "Beside an older comparison tool", "url": "guide/older-comparison-tools/" },
+      { "name": "Querying", "url": "guide/querying/" },
+      { "name": "Asking through an LLM", "url": "guide/asking-with-an-llm/" },
+      { "name": "Naming conventions", "url": "guide/naming-conventions/" },
+      { "name": "Interface profiles", "url": "guide/interface-profiles/" },
+      { "name": "Design intent", "url": "guide/design-intent/" },
+      { "name": "Datasheets", "url": "guide/datasheets/" },
+      { "name": "Running the server", "url": "guide/running-the-server/" },
+      { "name": "CLI reference", "url": "guide/cli-reference/" },
+      { "name": "Developer guide", "url": "build/", "group": true },
+      { "name": "Adding a format reader", "url": "build/format-reader/" },
+      { "name": "Authoring a check rule", "url": "build/check-rule/" },
+      { "name": "Adding a library member", "url": "build/library-member/" },
+      { "name": "Extending and embedding the engine", "url": "build/extending/" },
+      { "name": "Calling agni from another language", "url": "build/other-languages/" },
+      { "name": "Driving an embedded viewer", "url": "build/embedding-the-viewer/" },
+      { "name": "Native verification", "url": "build/native-verification/" },
+      { "name": "Running the gate", "url": "build/the-gate/" },
+      { "name": "Evidence", "url": "build/evidence/" }
+    ]
+  },
+  {
+    "name": "Understand it",
+    "url": "architecture/",
+    "icon": "book-open",
+    "children": [
+      { "name": "Projects and designs", "url": "architecture/projects-and-designs/" },
+      { "name": "Ingestion and IR", "url": "architecture/ingestion-and-ir/" },
+      { "name": "Net solving and hierarchy", "url": "architecture/net-solving/" },
+      { "name": "Geometry and rendering", "url": "architecture/geometry-and-rendering/" },
+      { "name": "Semantic diff", "url": "architecture/semantic-diff/" },
+      { "name": "Rules and checks", "url": "architecture/rules-and-checks/" },
+      { "name": "Checks contract", "url": "architecture/checks-contract/" },
+      { "name": "Datasheet layer", "url": "architecture/datasheet-layer/" },
+      { "name": "Web app and presenter", "url": "architecture/web-app/" },
+      { "name": "Web service contract", "url": "architecture/web-services/" },
+      { "name": "Questions, links and the live page", "url": "architecture/viewer-control/" },
+      { "name": "Picking and querying", "url": "architecture/web-picking/" },
+      { "name": "Working in the web client", "url": "architecture/web-client/" },
+      { "name": "Stack and platform", "url": "architecture/stack/" }
+    ]
+  },
+  {
+    "name": "Demos",
+    "url": "demos/",
+    "icon": "play",
+    "children": [
+      { "name": "Open a board in your browser", "url": "demo/" },
+      { "name": "About the demo", "url": "demos/" }
+    ]
+  },
+  {
+    "name": "Reference",
+    "url": "reference/",
+    "icon": "book-open",
+    "columns": 2,
+    "children": [
+      { "name": "Learn the domain", "url": "learn/", "group": true },
+      { "name": "Start the course", "url": "learn/" },
+      { "name": "The seven levels", "url": "learn/levels/" },
+      { "name": "Reference", "url": "reference/", "group": true },
+      { "name": "Rules catalog", "url": "reference/rules/" },
+      { "name": "Relations catalog", "url": "reference/relations/" },
+      { "name": "Glossary", "url": "reference/terms/" },
+      { "name": "The software analogy", "url": "reference/analogy/" },
+      { "name": "Pins and packages", "url": "reference/pins-and-packages/" },
+      { "name": "EDIF netlist primer", "url": "reference/edif-primer/" },
+      { "name": "EDIF schematic primer", "url": "reference/edif-schematic-primer/" }
+    ]
+  }
+]

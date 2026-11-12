@@ -1,0 +1,7 @@
+# Rung 8: the schematic read on its own, with no board, so the copper item has nothing to evaluate.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni review --as-named designs/jetson/jetson-agx-thor-baseboard.kicad_sch --checklist review
+match: '^\| B1 '

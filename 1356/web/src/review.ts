@@ -1,0 +1,305 @@
+// The review panel's view-side types (WS9-052). A review RUN is a resource (WS9-053), so the presenter
+// lists the runs stored for the open design, creates new ones, and pushes a ReviewState the panel
+// renders. Clicking a finding emits onLocate, which reuses the locate path of a query cell or a
+// finding.
+import type { CheckResults, ReviewManifest } from "./gen/agni/v1/checks/checks_pb.js";
+import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
+import { contextFromWire, type FindingItem } from "./findings.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import type { WitnessItem } from "./query.js";
+
+// OUTCOMES is the review vocabulary, in the order a report reads: the two decided verdicts, then the
+// ways a question went unanswered, then the ones awaiting data.
+//
+// It is a string union rather than an enum because the wire field is a string, so a new verdict is a
+// review-layer change rather than a schema migration. The panel therefore copes with an outcome it has
+// never heard of, rendering it under its own name with the neutral "unknown" style and never as a pass.
+export const OUTCOME_PASS = "pass";
+export const OUTCOME_FAIL = "fail";
+export const OUTCOME_NOT_APPLICABLE = "not-applicable";
+export const OUTCOME_NOT_AUTOMATED = "not-automated";
+export const OUTCOME_PROVISIONAL = "provisional";
+export const OUTCOME_NEEDS_DESIGN_INTENT = "needs-design-intent";
+export const OUTCOME_COMPUTED_NA = "computed-n/a";
+export const OUTCOME_NEEDS_DATA = "needs-data";
+export const OUTCOME_INCONCLUSIVE = "inconclusive";
+
+// Tally counts item outcomes, mirroring core/review's Tally field for field. Both surfaces DERIVE it
+// from the item outcomes rather than reading it off the wire. The shared fixture
+// core/review/testdata/tally_twin.json keeps them from drifting.
+export interface Tally {
+  pass: number;
+  fail: number;
+  notApplicable: number;
+  notAutomated: number;
+  provisional: number;
+  needsDesignIntent: number;
+  computedNA: number;
+  needsData: number;
+  inconclusive: number;
+  total: number;
+}
+
+export function emptyTally(): Tally {
+  return {
+    pass: 0, fail: 0, notApplicable: 0, notAutomated: 0,
+    provisional: 0, needsDesignIntent: 0, computedNA: 0,
+    needsData: 0, inconclusive: 0, total: 0,
+  };
+}
+
+// tally counts a list of outcome strings. An outcome this build does not know still counts toward
+// `total`, as on the Go side, so the count of things asked does not shrink when the client is older
+// than the engine that answered them.
+export function tally(outcomes: string[]): Tally {
+  const t = emptyTally();
+  for (const o of outcomes) {
+    t.total++;
+    switch (o) {
+      case OUTCOME_PASS: t.pass++; break;
+      case OUTCOME_FAIL: t.fail++; break;
+      case OUTCOME_NOT_APPLICABLE: t.notApplicable++; break;
+      case OUTCOME_NOT_AUTOMATED: t.notAutomated++; break;
+      case OUTCOME_PROVISIONAL: t.provisional++; break;
+      case OUTCOME_NEEDS_DESIGN_INTENT: t.needsDesignIntent++; break;
+      case OUTCOME_COMPUTED_NA: t.computedNA++; break;
+      case OUTCOME_NEEDS_DATA: t.needsData++; break;
+      case OUTCOME_INCONCLUSIVE: t.inconclusive++; break;
+    }
+  }
+  return t;
+}
+
+// covered is the coverage axis. It counts each item that has a mechanism, so every item except
+// not-automated. A team reads it as "how much of our checklist is mechanised", so an item
+// awaiting a datasheet value or a design-intent declaration counts as COVERED, because a mechanism
+// ran and reported on it.
+export function covered(t: Tally): number {
+  return t.total - t.notAutomated;
+}
+
+// ReviewItemView is one checklist item's outcome plus the findings that produced it.
+export interface ReviewItemView {
+  id: string;
+  title: string;
+  outcome: string;
+  note: string;
+  findings: FindingItem[];
+  // query is the inline query the item was scored with, read off the run's own checklist snapshot,
+  // so a finding can be asked again with witnesses (agni issue 1166). Absent for an item bound to a
+  // rule, a tag, a profile or a presence check.
+  query?: ItemQuery;
+}
+
+// ItemQuery is a manifest item's inline query: its text and the variable naming each finding's
+// subject.
+export interface ItemQuery {
+  match: string;
+  subject: string;
+}
+
+// FindingExplain is how one review finding holds, asked when the reader opens it (agni issue 1166).
+// rows holds one entry per answer row for the finding's subject, usually one, each with its cells
+// and its witness tree. note says why there is nothing to show.
+export interface FindingExplain {
+  loading: boolean;
+  rows: { cells: string[]; witnesses: WitnessItem[] }[];
+  note: string;
+}
+
+// findingKey names one finding of one item of one run. ReviewState.explained is keyed on it.
+export function findingKey(run: string, item: string, index: number): string {
+  return `${run}\u0000${item}\u0000${index}`;
+}
+
+export interface ReviewAreaView {
+  name: string;
+  items: ReviewItemView[];
+}
+
+// ReviewRunView is one stored run as the panel renders it. createdAt and producerVersion come from
+// the document's meta rather than being reconstructed, so an archived run says which build produced
+// it. design names what the run was about. designHash is the revision identity, and it tells a reader
+// whether two runs describe the same bytes.
+export interface ReviewRunView {
+  name: string;
+  design: string;
+  designHash: string;
+  createdAt: string;
+  manifest: string;
+  producerVersion: string;
+  areas: ReviewAreaView[];
+}
+
+// ChecklistOption is one manifest a user can run. A project's checklist carries its manifest as a
+// value, since the project declares it inline (agni issue 828), so running it needs no read. A design
+// in no project can have a checklist file beside it. That option holds only the file's ref, and
+// GetReviewManifest resolves the ref when it runs.
+export interface ChecklistOption {
+  ref: string;
+  label: string;
+  manifest?: ReviewManifest;
+}
+
+// projectChecklistOptions are the checklists a project declares, in the order it declares them, so
+// the picker's first entry is the project's default.
+export function projectChecklistOptions(lists: { name: string; manifest?: ReviewManifest }[]): ChecklistOption[] {
+  return lists.map((c) => ({ ref: c.name, label: c.name, manifest: c.manifest }));
+}
+
+export interface ReviewState {
+  // runs are the stored runs for the open design, newest first. Only identity and headline numbers
+  // are needed to render the picker, but a run carries its whole document, so the selected one needs
+  // no second fetch.
+  runs: ReviewRunView[];
+  // selected is the run being shown, "" when none. A fresh design load selects the newest run if one
+  // exists, so opening a reviewed board shows its latest verdict rather than an empty panel.
+  selected: string;
+  // checklists are the manifests found beside the design, and checklist is the chosen one.
+  checklists: ChecklistOption[];
+  checklist: string;
+  // running is true while a create is in flight, so the panel disables its button.
+  running: boolean;
+  // storeConfigured is false when the engine keeps no review store: a server started without
+  // --review-store, or the browser engine. A checklist still runs there, held by the page until the
+  // reader leaves it (agni issue 931), and the panel says so. It is distinct from "no runs yet",
+  // because one is a deployment that cannot keep runs and the other is a design nobody has reviewed.
+  storeConfigured: boolean;
+  // error is a message to show instead of results, "" when fine.
+  error: string;
+  // cancelled is true when the reader stopped the last checklist run (agni issue 918). Absent means
+  // not cancelled.
+  cancelled?: boolean;
+  // saveNote says why the last Save report failed, "" when it did not (agni issue 1030).
+  saveNote: string;
+  // locateNote says why the last finding clicked highlights nothing, "" when it was drawn (agni
+  // issue 1132). Optional, so a state built before it read as no note.
+  locateNote?: string;
+  // explained holds each opened finding's derivation by findingKey (agni issue 1166). Absent means
+  // none was opened.
+  explained?: Record<string, FindingExplain>;
+}
+
+export interface ReviewView {
+  setState: (s: ReviewState) => void;
+}
+
+export function emptyReview(): ReviewState {
+  return {
+    runs: [], selected: "", checklists: [], checklist: "",
+    running: false, storeConfigured: true, error: "", saveNote: "",
+  };
+}
+
+// runTally counts every item across a run's areas.
+export function runTally(run: ReviewRunView): Tally {
+  return tally(run.areas.flatMap((a) => a.items.map((i) => i.outcome)));
+}
+
+// areaTally counts one area's items, for the per-area subtotal.
+export function areaTally(area: ReviewAreaView): Tally {
+  return tally(area.items.map((i) => i.outcome));
+}
+
+// reviewFromWire maps a stored Review resource into the panel's view state.
+//
+// It reads the DOCUMENT rather than a bespoke response shape, so an archived run and a just-created
+// one render through one path. GetReview and CreateReview both return a Review, and a run fetched
+// months later carries everything this needs.
+export function reviewFromWire(rv: Review): ReviewRunView {
+  const doc: CheckResults | undefined = rv.results;
+  const queries = itemQueries(doc?.manifestSnapshot);
+  return {
+    name: rv.name,
+    design: doc?.design?.source ?? "",
+    designHash: doc?.design?.contentHash ?? "",
+    createdAt: doc?.meta?.createdAt ?? "",
+    manifest: doc?.manifest ?? "",
+    producerVersion: doc?.meta?.producerVersion ?? "",
+    areas: (doc?.areas ?? []).map((a) => ({
+      name: a.name,
+      items: (a.items ?? []).map((i) => ({
+        id: i.id,
+        title: i.title,
+        outcome: i.outcome,
+        note: i.note,
+        query: queries.get(i.id),
+        findings: (i.findings ?? []).map((f) => ({
+          rule: f.rule,
+          category: "",
+          profile: "",
+          severity: f.severity,
+          kind: f.subject?.kind ?? "",
+          subject: f.subject?.ref ?? "",
+          pin: f.subject?.pin ?? "",
+          netId: f.subject?.netId ?? "",
+          busId: f.subject?.busId ?? "",
+          message: f.message,
+          inconclusive: f.inconclusive ?? false,
+          context: contextFromWire(f.context),
+          // Badged by id alone. The panel needs a sheet to open, and the viewer looks up the label.
+          sheets: (f.sheets ?? []).map((id) => ({ id, name: id })),
+          locateReason: f.locateReason ?? LocateReason.UNSPECIFIED,
+        })),
+      })),
+    })),
+  };
+}
+
+// itemQueries indexes a checklist's inline queries by item id. It reads the snapshot that the run
+// scored, since the checklist file may have changed.
+function itemQueries(m: ReviewManifest | undefined): Map<string, ItemQuery> {
+  const out = new Map<string, ItemQuery>();
+  for (const a of m?.areas ?? []) {
+    for (const it of a.items ?? []) {
+      const q = it.binding?.query;
+      if (q?.match && q.subject) out.set(it.id, { match: q.match, subject: q.subject });
+    }
+  }
+  return out;
+}
+
+// checklistOptions picks the manifests out of a directory listing by extension only. Deciding
+// whether a YAML file is a review manifest means parsing it, which GetReviewManifest does on the
+// server. Offering a file that turns out not to be a checklist costs one clear error, and hiding a
+// real one costs a user their own file.
+export function checklistOptions(entries: { name: string; path: string; isDir: boolean }[]): ChecklistOption[] {
+  return entries
+    .filter((e) => !e.isDir && (e.name.endsWith(".yaml") || e.name.endsWith(".yml")))
+    .map((e) => ({ ref: e.path, label: e.name }));
+}
+
+// selectedRun returns the run the state points at, or undefined.
+export function selectedRun(s: ReviewState): ReviewRunView | undefined {
+  return s.runs.find((r) => r.name === s.selected);
+}
+
+// OUTCOME_LABEL is the short text an outcome chip shows. An outcome absent from this map renders
+// under its own wire name, so a build older than the engine shows an unrecognised verdict rather
+// than a wrong one.
+export const OUTCOME_LABEL: Record<string, string> = {
+  [OUTCOME_PASS]: "pass",
+  [OUTCOME_FAIL]: "fail",
+  [OUTCOME_NOT_APPLICABLE]: "n/a",
+  [OUTCOME_NOT_AUTOMATED]: "not automated",
+  [OUTCOME_PROVISIONAL]: "provisional",
+  [OUTCOME_NEEDS_DESIGN_INTENT]: "needs intent",
+  [OUTCOME_COMPUTED_NA]: "computed n/a",
+  [OUTCOME_NEEDS_DATA]: "needs data",
+  [OUTCOME_INCONCLUSIVE]: "inconclusive",
+};
+
+// KNOWN_OUTCOMES is the set the panel styles explicitly. outcomeClass keys off it so an unknown
+// verdict gets the neutral style rather than falling through to whatever CSS matched last.
+const KNOWN_OUTCOMES = new Set(Object.keys(OUTCOME_LABEL));
+
+// outcomeClass is the chip's CSS class for an outcome.
+//
+// The mapping is an accessibility decision rather than styling. Only `pass` may look like a pass,
+// and everything else has to read as unfinished, because a question nobody answered must not score
+// as answered. An unknown outcome gets `rv-unknown`, styled like the unanswered group. This build
+// does not understand that verdict, and an optimistic guess about it can mislead.
+export function outcomeClass(outcome: string): string {
+  if (!KNOWN_OUTCOMES.has(outcome)) return "rv-unknown";
+  return "rv-" + outcome.replace(/[^a-z0-9]+/g, "-");
+}

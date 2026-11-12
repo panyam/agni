@@ -1,0 +1,5 @@
+fires:
+  diff-pair-naming: [HDMI_TX0_P, USB_D+]
+  esd-protection:
+    subjects: [CLK_N, CLK_P, HDMI_TX0_P, USB_D+]
+    why: "This fixture's connector signal nets carry no TVS; legitimately flagged once esd-protection landed (WS3-021), though the fixture exists for diff-pair-naming."

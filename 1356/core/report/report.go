@@ -1,0 +1,426 @@
+// Package report aggregates a check run for a person to read. A report says what was checked, what
+// evidence each outcome cites, and what to do about the parts that failed.
+//
+// It lives in core/ rather than cmd/ so a second consumer can import it (agni issue 380), and it does
+// no I/O of its own (CONSTRAINTS C1).
+//
+// The aggregation here decides what a reader sees first; html.go only renders it, so the layout can
+// change without re-deciding that. The page itself is described in
+// docsite/content/guide/checks-and-reports.md#the-html-report.
+package report
+
+import (
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/panyam/agni/core/check"
+)
+
+// Report is one check run, aggregated.
+//
+// Generated and Design are supplied by the caller because this package does no I/O and does not read
+// the clock, so a report built twice from the same run is identical and a committed one diffs cleanly
+// across board revisions.
+type Report struct {
+	Design      string // the design this run read, as the caller names it
+	Generated   string // caller-supplied timestamp; empty is fine
+	ContentHash string // the bytes this run saw, so a stale link can be detected (issue 392)
+	URLBase     string // e.g. "http://localhost:8080"; empty means emit no links at all
+	MountPath   string // e.g. "demo/board.kicad_sch"; empty means emit no links at all
+	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
+	// Empty when links were emitted, and empty when none were asked for. The CLI also says it on
+	// stderr, but a reader opens the report long after that stderr is gone, so the report holds it
+	// too (issue 626).
+	LinksWithheld string
+	// HierarchyNote says the read left out hierarchical blocks (HierarchyNote's sentence), so every
+	// count on the page covers the top level alone. Empty for a flat design (agni issue 717).
+	HierarchyNote string
+	Totals        Totals
+	// PinMaps are the design intent's IO map, one section per device, each row a declared pin beside
+	// what the netlist has there (agni issues 1188, 1189). Empty when the run checked no map.
+	PinMaps []PinMap
+	// QuerySets are the answers to the design project's query sets, when the caller ran them, one
+	// Queries section each after the rules (agni issue 1190). Empty leaves the page as it was.
+	QuerySets []TableSet
+	Rules     []RuleReport
+}
+
+// PinMap is one device's declared pins, in the map's order.
+type PinMap struct {
+	Device string
+	Rows   []PinMapRow
+}
+
+// PinMapRow is one declared pin: what the map says, what the netlist has, and each IO-map rule's
+// outcome on it. An empty check outcome means the run did not include that rule.
+type PinMapRow struct {
+	Pin, Function, Net, WiredNet, FarEnd, Route    string
+	PinCheck, NetCheck, FarEndCheck, FunctionCheck check.Outcome
+	Outcome                                        check.Outcome
+}
+
+// Totals are the run's headline numbers.
+//
+// Considered and Findings are counted separately and neither is derivable from the other. A rule
+// that states a considered set contributes to both; a rule that reports only failures contributes to
+// Findings alone.
+type Totals struct {
+	RulesReporting    int // rules that stated a considered set
+	RulesFindingsOnly int // rules that reported violations without stating what they looked at
+	Considered        int // verdicts from rules that state a considered set
+	Pass              int
+	Fail              int
+	NotConsidered     int
+	NoLimit           int
+	Inconclusive      int
+	Findings          int // every violation, including from rules that state no considered set
+}
+
+// RuleReport is one rule's section.
+type RuleReport struct {
+	Name     string
+	Severity string
+	Summary  string
+	Impact   string
+	Remedy   string
+	// StatesConsideredSet lets a reader tell "this rule examined 41 rails and cleared 39" from "this
+	// rule reported two problems and said nothing about what else it looked at". Collapsing the two
+	// would claim coverage the rule never checked.
+	StatesConsideredSet bool
+	Counts              map[check.Outcome]int
+	Rows                []Row
+}
+
+// Failed reports whether this rule has anything a reader must act on.
+func (r RuleReport) Failed() bool {
+	return r.Counts[check.Fail] > 0 || r.Counts[check.Inconclusive] > 0
+}
+
+// Row is one subject's outcome under one rule.
+type Row struct {
+	ID      string
+	Outcome check.Outcome
+	// Subjects is what the row is about, in the rule's order: one entity for most rules, the whole
+	// tuple for a rule whose question is a relation, such as both nets of a copper-clearance row.
+	Subjects []check.Entity
+	Message  string // the violation sentence, set on a failure
+	Witness  string // the proof behind the outcome
+	Reason   string // why an undecidable subject could not be judged
+	Terms    []Term
+	Context  []string // other entities the proof names
+	URL      string   // empty when the caller supplied no base
+}
+
+// HasLinks says whether any row links into the viewer. A report carries viewerlink.js, the script
+// that moves an open viewer, only when this is true. A report with no viewer to link to has no script
+// at all (agni issue 1156).
+func (r Report) HasLinks() bool {
+	for _, rule := range r.Rules {
+		for _, row := range rule.Rows {
+			if row.URL != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// SubjectLabel is a row's subject tuple as one string, joined the way both renderers spell it, so a
+// relation-shaped rule names every entity. It lives on Row so the HTML template and the CLI share one
+// spelling (agni issue 380).
+func (r Row) SubjectLabel() string {
+	parts := make([]string, 0, len(r.Subjects))
+	for _, e := range r.Subjects {
+		parts = append(parts, check.EntityRef(e))
+	}
+	return strings.Join(parts, " + ")
+}
+
+// Detail is the sentence a row leads with. It is the violation where there is one, else the proof,
+// else the reason it could not be judged. A failing verdict carries both a Message and a Witness, and the
+// Message wins.
+func (r Row) Detail() string {
+	switch {
+	case r.Message != "":
+		return r.Message
+	case r.Witness != "":
+		return r.Witness
+	}
+	return r.Reason
+}
+
+// Term is one labelled fact behind a row's witness.
+type Term struct{ Label, Value string }
+
+// Build aggregates a run into a Report.
+//
+// verdicts come from check.RunVerdicts (rules that state a considered set) and findings from
+// check.Run (every rule). A rule appears in the report if it produced either, so a findings-only rule
+// is present and visibly labelled rather than silently absent.
+//
+// ORDERING IS THE MAIN JUDGMENT HERE. Rules with something to act on come first, then the rest
+// alphabetically; within a rule, failures and undecidables come before passes.
+func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Rule, meta Report) Report {
+	byName := map[string]*check.Rule{}
+	for _, r := range rules {
+		byName[r.Name] = r
+	}
+
+	sections := map[string]*RuleReport{}
+	section := func(name string) *RuleReport {
+		s, ok := sections[name]
+		if ok {
+			return s
+		}
+		s = &RuleReport{Name: name, Counts: map[check.Outcome]int{}}
+		if r := byName[name]; r != nil {
+			s.Severity, s.Summary, s.Impact, s.Remedy = r.Severity, r.Summary, r.Impact, r.Remedy
+			s.StatesConsideredSet = r.StatesConsideredSet
+		}
+		sections[name] = s
+		return s
+	}
+
+	out := meta
+	// Rules that emitted at least one verdict, which is the evidence that they stated a considered
+	// set. Used below in preference to the catalog flag, which cannot see an overlay's rules.
+	fromVerdict := map[string]bool{}
+	for _, v := range verdicts {
+		fromVerdict[v.Rule] = true
+		s := section(v.Rule)
+		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict settles this and the catalog
+		// flag is only a fallback. An overlay adds rules from a project's conventions, its profiles/
+		// and a design's intent. Their names are namespaced, so the catalog lookup misses them and
+		// would caption their rows as findings-only.
+		// This cannot over-claim, since a rule with no considered set emits no verdict.
+		s.StatesConsideredSet = true
+		s.Counts[v.Outcome]++
+		s.Rows = append(s.Rows, rowOf(v, out))
+		out.Totals.Considered++
+		switch v.Outcome {
+		case check.Pass:
+			out.Totals.Pass++
+		case check.Fail:
+			out.Totals.Fail++
+		case check.NotConsidered:
+			out.Totals.NotConsidered++
+		case check.NoLimit:
+			out.Totals.NoLimit++
+		case check.Inconclusive:
+			out.Totals.Inconclusive++
+		}
+	}
+
+	// Findings from rules that state no considered set have no verdict to carry them, so they are
+	// added here. A rule that DOES state one already contributed its failures above, so this is keyed
+	// on the rule to avoid double-counting. A rule has already contributed when it EMITTED a verdict.
+	// The catalog flag alone cannot tell, because it misses an overlay rule's namespaced name.
+	for _, f := range findings {
+		out.Totals.Findings++
+		if fromVerdict[f.Rule] {
+			continue
+		}
+		if r := byName[f.Rule]; r != nil && r.StatesConsideredSet {
+			continue
+		}
+		s := section(f.Rule)
+		s.Counts[check.Fail]++
+		s.Rows = append(s.Rows, Row{
+			Outcome:  check.Fail,
+			Subjects: []check.Entity{f.Subject},
+			Message:  f.Message,
+		})
+	}
+
+	for _, s := range sections {
+		sortRows(s.Rows)
+		if s.StatesConsideredSet {
+			out.Totals.RulesReporting++
+		} else {
+			out.Totals.RulesFindingsOnly++
+		}
+		out.Rules = append(out.Rules, *s)
+	}
+	sort.SliceStable(out.Rules, func(i, j int) bool {
+		if a, b := out.Rules[i].Failed(), out.Rules[j].Failed(); a != b {
+			return a // anything to act on comes first
+		}
+		return out.Rules[i].Name < out.Rules[j].Name
+	})
+	return out
+}
+
+// outcomeRank orders the rows inside a rule: what a reader must act on, then what could not be
+// decided, then the evidence that everything else is fine.
+func outcomeRank(o check.Outcome) int {
+	switch o {
+	case check.Fail:
+		return 0
+	case check.Inconclusive:
+		return 1
+	case check.NoLimit:
+		return 2
+	case check.NotConsidered:
+		return 3
+	}
+	return 4 // Pass
+}
+
+func sortRows(rows []Row) {
+	sort.SliceStable(rows, func(i, j int) bool {
+		ri, rj := outcomeRank(rows[i].Outcome), outcomeRank(rows[j].Outcome)
+		if ri != rj {
+			return ri < rj
+		}
+		return rowRef(rows[i]) < rowRef(rows[j])
+	})
+}
+
+// rowRef is a row's subject tuple as one string, for ordering only. Rows sort by the tuple in the
+// rule's own order rather than by a canonicalised one, so two rows of the same rule sort the way the
+// rule reads them.
+func rowRef(r Row) string {
+	parts := make([]string, 0, len(r.Subjects))
+	for _, e := range r.Subjects {
+		parts = append(parts, check.EntityRef(e))
+	}
+	return strings.Join(parts, ",")
+}
+
+func rowOf(v check.Verdict, meta Report) Row {
+	r := Row{
+		ID:       check.VerdictID(v),
+		Outcome:  v.Outcome,
+		Subjects: v.Subjects,
+		Reason:   v.Reason,
+	}
+	if v.Witness != nil {
+		r.Witness = v.Witness.Statement
+		for _, t := range v.Witness.Terms {
+			r.Terms = append(r.Terms, Term{Label: t.Label, Value: t.Value})
+		}
+	}
+	if v.Finding != nil {
+		r.Message = v.Finding.Message
+	}
+	for _, c := range v.Context {
+		r.Context = append(r.Context, check.EntityRef(c.Entity))
+	}
+	r.URL = VerdictURL(meta, r.ID, v.Rule, check.SubjectParams(v.Subjects))
+	return r
+}
+
+// DiffURL is the viewer link that compares two revisions, "" when this run cannot promise one (agni
+// issue 1126). It opens meta's design and starts the viewer's Compare against bmeta's, as picking
+// that design in the Compare picker does.
+//
+// Like TraceURL it carries the QUESTION, so it takes no content hash, and the viewer compares the two
+// designs as they are now. The viewer reads the second design through the mount table that serves
+// the first, so both sides must be linkable on ONE server. A withheld link on either side, or two
+// different bases, yields no link.
+//
+// renameApprox says the diff was asked to pair near-renames (--rename-approx, the MCP tool's
+// rename_approx). The link passes it on, so the viewer's comparison tables pair them too and the
+// reader does not have to tick the option.
+func DiffURL(meta, bmeta Report, renameApprox bool) string {
+	if meta.URLBase == "" || meta.MountPath == "" || bmeta.MountPath == "" || bmeta.URLBase != meta.URLBase {
+		return ""
+	}
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
+	if renameApprox {
+		u += "&rename_approx=1"
+	}
+	return u
+}
+
+// TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise
+// one, under the same two conditions as VerdictURL.
+//
+// It carries the QUESTION rather than an answer, so it takes no content hash and the viewer draws no
+// stale-link banner for one; the pins are re-asked against whatever the design is now.
+//
+// hops is written whenever the caller STATES one (> 0). The CLI always states the radius it searched
+// at; the viewer states one only when the reader pinned it, since 0 there means the server default.
+// Never drop a pinned radius, or the link re-asks a narrower question wider and can show a route the
+// run said did not exist.
+func TraceURL(meta Report, from, to string, hops int) string {
+	if meta.URLBase == "" || meta.MountPath == "" || from == "" || to == "" {
+		return ""
+	}
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?trace=" + url.QueryEscape(from+","+to)
+	if hops > 0 {
+		u += "&hops=" + url.QueryEscape(strconv.Itoa(hops))
+	}
+	return u
+}
+
+// QueryURL builds the link that asks a query again in a running viewer's query panel, or "" when the
+// caller gave no base (agni issue 634). Like TraceURL it carries the QUESTION, so it takes no content
+// hash. Following it re-asks the query of the design as it is now. binds hold the values the query
+// was asked with, as `name=value` pairs spelled as `--bind` takes them, so the link asks the same
+// question rather than a wider one. title is the view's heading, "" for none.
+func QueryURL(meta Report, query, title string, binds []string) string {
+	if meta.URLBase == "" || meta.MountPath == "" || strings.TrimSpace(query) == "" {
+		return ""
+	}
+	v := url.Values{}
+	v.Set("query", query)
+	if title != "" {
+		v.Set("title", title)
+	}
+	for _, b := range binds {
+		v.Add("bind", b)
+	}
+	return meta.URLBase + "/designs/" + meta.MountPath + "/view?" + v.Encode()
+}
+
+// QuerySetURL builds the link that opens one query of a project's query set in a running viewer, by
+// the set's and the query's names, or "" when the caller gave no base. The viewer finds a project's
+// set by its name (QueryService.ListQuerySets), so the link is short however long the query is, and
+// it follows the set's current text.
+func QuerySetURL(meta Report, set, query string) string {
+	if meta.URLBase == "" || meta.MountPath == "" || set == "" || query == "" {
+		return ""
+	}
+	v := url.Values{}
+	v.Set("set", set)
+	v.Set("q", query)
+	return meta.URLBase + "/designs/" + meta.MountPath + "/view?" + v.Encode()
+}
+
+// VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
+// caller gave no base.
+//
+// Exported because three renderers use it. The html page and the terminal read Row.URL, and the csv
+// writer composes the link per row because it emits in the run's order rather than the report's.
+//
+// A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392),
+// because a URL built from an invented mount resolves on nobody's server. The link carries the content
+// hash, so the viewer can flag a link computed against different bytes.
+func VerdictURL(meta Report, id, rule string, subjects []string) string {
+	if meta.URLBase == "" || meta.MountPath == "" {
+		return ""
+	}
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?verdict=" + url.QueryEscape(id)
+	if meta.ContentHash != "" {
+		u += "&hash=" + url.QueryEscape(meta.ContentHash)
+	}
+	// The link names the rule, so the viewer can resolve this verdict by running ONE rule rather than
+	// the whole catalog. It is passed in rather than recovered from the id because VerdictID is generated
+	// and never parsed (core/check/verdict.go).
+	//
+	// It is a HINT, not part of the address. A link without it still resolves by the slower route,
+	// which keeps saved reports working.
+	if rule != "" {
+		u += "&rule=" + url.QueryEscape(rule)
+	}
+	// The link names the subjects too, in check.SubjectParam's spelling, so the viewer asks that rule
+	// about this verdict's own nets and parts rather than the whole design (agni issue 897). They are
+	// a HINT like the rule, and a link without them resolves by running the whole rule.
+	for _, s := range subjects {
+		u += "&subject=" + url.QueryEscape(s)
+	}
+	return u
+}

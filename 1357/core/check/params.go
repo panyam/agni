@@ -1,0 +1,696 @@
+package check
+
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// The params tier of the Model (WS10-003) joins design components to seeded datasheet PartSpecs
+// (agni.v1.param). Rules read the joined spec through the Model, never the raw set. A model built
+// without a provider yields nil for every component, so datasheet-backed rules skip rather than
+// false-pass. Catalog-level gating is Available's "param" read-prefix rule.
+//
+// The join key is part identity, the ir.BomLine MPN (matched by ref_des) when the design carries a
+// BOM, else the component's mpn field. MPN matching is case-insensitive and nothing fuzzier
+// (param.ParamSet.Lookup).
+
+// WithParamProvider attaches the params tier. specs is any param.ParamProvider, so a directory-loaded
+// ParamSet, an in-memory mock or a datasheet service all plug in without touching the model or any
+// rule; the model only ever calls Lookup on it. A nil provider is the same as omitting the option.
+//
+// The PROVIDER is optional, and the join key is not. Every model builds the MPN map, because a part
+// number is a fact about the design (agni issue 748). The map used to exist only on the params
+// constructor, so a model built the other way answered component.mpn with nothing on a design where
+// every component carried one (agni issue 757).
+func WithParamProvider(specs param.ParamProvider) ModelOption {
+	return func(m *irModel) { m.specs = specs }
+}
+
+// buildMPN fills the design-side join key. It takes the BOM line's MPN where a BOM covers the
+// ref_des, else the component's own mpn.
+func (m *irModel) buildMPN() {
+	m.mpn = map[string]string{}
+	for _, line := range m.d.Bom {
+		if line.Mpn == "" {
+			continue
+		}
+		for _, ref := range line.RefDes {
+			m.mpn[ref] = line.Mpn
+		}
+	}
+	for _, c := range m.d.Components {
+		if _, ok := m.mpn[c.RefDes]; ok {
+			continue
+		}
+		if v := c.GetMpn(); v != "" {
+			m.mpn[c.RefDes] = v
+		}
+	}
+}
+
+// attachParams runs the two passes that need a provider, the datasheet class tier and the datasheet
+// net roles. Both are additive, so a model with no provider classifies exactly as before.
+func (m *irModel) attachParams() {
+	if m.specs == nil {
+		return
+	}
+	m.stampClassesFromParams()
+	m.enrichRolesFromParams()
+}
+
+// enrichRolesFromParams adds net roles that the DATASHEET establishes, the second evidence tier of
+// C9's evidence-tier variant (agni issue 280). Like stampClassesFromParams it runs at model build,
+// because the mpn map and seeded specs exist only once a params tier is attached. The built-in name
+// vocabulary is start-anchored (VCC, VDD, +3V3). A pin that the vendor types as a power input is
+// fed by a supply, whatever the net is called. Measured on one real 1700-net board, that was 13
+// rails against 91.
+//
+// ADDITIVE ONLY. A datasheet fact never removes or downgrades a role that the name or the format
+// established, so a design read WITHOUT --params classifies as before. It is idempotent, since the
+// merge upgrades a role in place rather than appending.
+func (m *irModel) enrichRolesFromParams() {
+	fn := m.datasheetPinFunctions()
+	if len(fn) == 0 {
+		return
+	}
+	for _, n := range m.d.GetNets() {
+		for _, c := range n.GetConnections() {
+			role := roleForPinFunction(fn[c.GetComponentRef()+"\x00"+c.GetPinRef()])
+			if role == ir.Role_ROLE_UNSPECIFIED {
+				continue
+			}
+			classify.AddNetRoleWhy(n, role, ir.RoleSource_ROLE_SOURCE_DATASHEET,
+				fmt.Sprintf("the datasheet lists %s pin %s as a power pin", c.GetComponentRef(), c.GetPinRef()))
+		}
+	}
+}
+
+// roleForPinFunction maps a vendor pin function onto the net role it evidences. A power INPUT and a
+// power OUTPUT both mean a rail, one fed by a supply and the other driven as one. Any other function
+// says nothing about the net and maps to ROLE_UNSPECIFIED rather than a guess.
+func roleForPinFunction(f parampb.PinFunction) ir.Role {
+	switch f {
+	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT, parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
+		return ir.Role_ROLE_RAIL
+	case parampb.PinFunction_PIN_FUNCTION_GROUND:
+		return ir.Role_ROLE_GROUND
+	default:
+		return ir.Role_ROLE_UNSPECIFIED
+	}
+}
+
+// datasheetPinFunctions resolves every seeded component's design pins onto its spec pins once, keyed by
+// "refDes\x00designator", so the per-net walk does not rerun param.ResolvePin per connection (thousands
+// of times on a large board).
+//
+// A pin that does not resolve to exactly one spec pin contributes nothing. param.ResolvePin refuses an
+// ambiguous name or a name/number disagreement, and a guessed pin would stamp a role off the wrong
+// pin's function.
+func (m *irModel) datasheetPinFunctions() map[string]parampb.PinFunction {
+	out := map[string]parampb.PinFunction{}
+	for _, c := range m.d.GetComponents() {
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil || len(spec.GetPins()) == 0 {
+			continue
+		}
+		pkg := ""
+		if p := param.PackageForMPN(spec, m.ComponentMPN(c.RefDes)); p != nil {
+			pkg = p.GetId()
+		}
+		for _, pin := range m.Pins() {
+			if pin.Component.RefDes != c.RefDes {
+				continue
+			}
+			specPin, err := param.ResolvePin(spec, m.PinName(c.RefDes, pin.Designator), pin.Designator, pkg)
+			if err != nil {
+				continue
+			}
+			if f := specPin.GetFunction(); f != parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
+				out[c.RefDes+"\x00"+pin.Designator] = f
+			}
+		}
+	}
+	return out
+}
+
+// stampClassesFromParams adds classes that a DATASHEET establishes, the second evidence tier of
+// C9's evidence-tier variant. The datasheet is the authoritative class evidence (a smart high-side
+// switch is an eFuse because its spec says so). It runs at model build, after the ingestion
+// classify pass.
+//
+// The Loader runs the same pass when a read carries a corpus. This call writes the IR too, so a query
+// and a drawing of one design see one class set (agni issue 710). The second call is safe because the
+// pass is additive and idempotent. It covers a model given a corpus that the READ did not have (a
+// --params flag against a design read outside the project).
+//
+// ADDITIVE ONLY. A datasheet fact never removes or downgrades a class that the name or the format
+// established, so a design read WITHOUT params classifies as before. When both tiers establish a
+// class, the class records the datasheet as its source and its membership does not change.
+func (m *irModel) stampClassesFromParams() {
+	if m.specs == nil {
+		return
+	}
+	// A hand-authored IR reaches the model unstamped, and the datasheet tier must never be the only
+	// tier in the set, because an EMPTY set tells a consumer to re-derive. So the convention pass
+	// runs first, against this model's own lexicon. A design read through the Loader is already
+	// stamped.
+	if !classify.HasClassTags(m.d) {
+		m.lexicon().Stamp(m.d)
+	}
+	classify.StampClassesFromSpecs(m.d, func(mpn string) string {
+		return m.specs.Lookup(mpn).GetDeviceClass()
+	})
+	// classSet was built in newModel, before this tier existed, so rebuild it from the IR rather than
+	// append. The model and the design's tags then give the same answer.
+	index := classify.PartIndex(m.d)
+	for _, c := range m.d.GetComponents() {
+		m.classSet[c.RefDes] = m.componentClassesOf(c, classify.FirstPart(index, c))
+	}
+}
+
+// ComponentMPN returns the design-side part identity for a component, which is the BomLine MPN when a
+// BOM covers the ref_des, else the component's mpn field, else "". It never guesses (no Value-field
+// parsing).
+func (m *irModel) ComponentMPN(refDes string) string { return m.mpn[refDes] }
+
+// PartSpec returns the seeded datasheet spec joined to a component, or nil when the component has no
+// MPN, the MPN is unseeded, or the model was built without a provider. Rules treat nil as skip, never
+// as pass. The nil-provider guard matters because specs is an interface, and a model built without
+// WithParamProvider leaves it a nil interface that panics on a method call.
+func (m *irModel) PartSpec(refDes string) *parampb.PartSpec {
+	if m.specs == nil {
+		return nil
+	}
+	return m.specs.Lookup(m.mpn[refDes])
+}
+
+// SpecCorpus names the corpus that a spec came from, for a spec this model was given. It needs the
+// provider to say (param.Layered can), and returns "" otherwise. Run and RunVerdicts stamp it onto
+// every datasheet citation.
+func (m *irModel) SpecCorpus(spec *parampb.PartSpec) string {
+	if n, ok := m.specs.(param.CorpusNamer); ok {
+		return n.CorpusOf(spec)
+	}
+	return ""
+}
+
+// Datasheet limit extractors. Each alias set below holds the vendor symbols that one limit is
+// printed under, so vendor spelling lives in the model layer and never in rule text. Each *Limits
+// extractor keeps a row only when its symbol is in the set, its unit reduces to the extractor's
+// base unit through param.InBaseUnit, it states a max (RecommendedOperatingLimits takes a min
+// instead), and it passes param.UnderSpecified and param.MachineComparable. A row failing any gate
+// is skipped, never coerced. docsite/content/architecture/datasheet-layer.md#comparison-semantics
+// says which extractors constrain the limit KIND, and why.
+
+// supplySymbols is the alias set for a supply voltage, matched after upper-casing and stripping
+// spaces, since producers split subscripts.
+var supplySymbols = map[string]bool{
+	"VIN": true, "VDD": true, "VCC": true, "VDDA": true,
+	"VBAT": true, "VSUP": true, "V+": true,
+}
+
+// fetBreakdownSymbols is the alias set for a MOSFET's drain-source breakdown voltage. VGSS is excluded
+// because it is the gate-source rating, a different limit on different terminals and usually much
+// lower, so comparing a rail against it would misreport which rating a design violates.
+var fetBreakdownSymbols = map[string]bool{
+	"VDSS": true, "VDS": true, "BVDSS": true, "V(BR)DSS": true,
+}
+
+// FetBreakdownLimits selects a spec's drain-source breakdown rows, kind ABSOLUTE_MAX, in volts.
+// Breakdown is an absolute maximum on a real datasheet (the voltage past which the part stops being a
+// switch), so unlike OutputVoltageLimits the kind is constrained.
+//
+// It is the third connection-aware extractor. SupplyAbsMaxLimits reads what a part can WITHSTAND on
+// its supply, OutputVoltageLimits what a part DELIVERS, and this what a switch can BLOCK.
+func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !fetBreakdownSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// ocpThresholdSymbols is the alias set for a switch controller's OVERCURRENT-PROTECTION sense
+// threshold, the voltage across the external sense resistor at which the controller trips.
+//
+// Every symbol here must mean only that. The number is divided by a resistance and reported as an
+// ampere rating, so a symbol that could also mean a clamp level or a comparator reference would
+// produce a confident wrong current.
+var ocpThresholdSymbols = map[string]bool{
+	"VOCP": true, "V(OCP)": true, "VOCTH": true, "V(OC)": true,
+	"VILIM": true, "V(ILIM)": true, "VCL": true, "V(CL)": true,
+}
+
+// ocpThresholdSymbolNames lists the alias set above as its DISTINCT symbols, one canonical spelling
+// each, for a rule to declare in Rule.ParamSymbols (WS3-085 sizing).
+//
+// The two consumers normalize differently. OcpThresholdLimits upper-cases and strips spaces, so V(OCP)
+// and VOCP are two keys there, while SeedsAnySymbol uses alnumUpper, which also strips parentheses, so
+// they are one key there. Listing both would print the symbol twice in a review's needs-data note.
+// TestOcpThresholdSymbolsCoverTheAliasSet holds the two forms to each other. It is a slice for
+// outputCurrentSymbols' reason.
+var ocpThresholdSymbolNames = []string{"V(OCP)", "V(OC)", "VOCTH", "V(ILIM)", "V(CL)"}
+
+// OcpThresholdSymbols returns the overcurrent-threshold alias set for Rule.ParamSymbols, so a review
+// runner can tell "this switch trips high enough" from "nothing on this design states a trip
+// threshold". Without it, a design that seeds no controller resolves no load switch, the rule reports
+// nothing, and the bound item scores a pass on a check that never ran.
+func OcpThresholdSymbols() []string {
+	return slices.Clone(ocpThresholdSymbolNames)
+}
+
+// OcpThresholdLimits selects a controller spec's overcurrent-threshold rows, in volts. Real controller
+// sheets print this row in MILLIVOLTS and param.InBaseUnit converts it (agni issue 148). The limit kind
+// is not constrained, since a trip threshold is a characteristic or recommended-operating row rather
+// than an absolute maximum.
+func OcpThresholdLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !ocpThresholdSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// drainCurrentSymbols is the alias set for a MOSFET's CONTINUOUS drain-current rating. Pulsed drain
+// current (IDM, ID(pulse)) is excluded. It is a much larger number under a duty-cycle condition, and
+// crediting it against a steady trip current would turn a real over-current into a pass.
+var drainCurrentSymbols = map[string]bool{
+	"ID": true, "IDMAX": true, "ID(MAX)": true, "IDCONT": true, "ID(CONT)": true, "IDC": true,
+}
+
+// DrainCurrentLimits selects a spec's continuous drain-current rows, kind ABSOLUTE_MAX, in amps.
+//
+// The vendor states the rating at a case or ambient temperature, which the conditions record. A
+// real design derates well below it. This returns the vendor's number as printed, so a rule
+// comparing against it can report only a current limit set above the part's own rating. It says
+// nothing about whether a limit below the rating is derated enough.
+func DrainCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !drainCurrentSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "A" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// onResistanceSymbols is the alias set for a MOSFET's static drain-source ON-resistance.
+var onResistanceSymbols = map[string]bool{
+	"RDS(ON)": true, "RDSON": true, "RON": true,
+}
+
+// OnResistanceLimits selects a spec's RDS(on) rows, in ohms, any limit kind since RDS(on) is a
+// characteristic row. A sheet ordinarily prints a modern FET's RDS(on) in milliohms, and
+// param.InBaseUnit converts it (agni issue 148).
+//
+// A real sheet states RDS(on) several times under different gate drives and junction temperatures (the
+// seeded BSS138 carries three), so a caller gets several rows and must pick the one it means. There is
+// no single on-resistance to return.
+func OnResistanceLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !onResistanceSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != param.UnitOhm || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// outputSymbols is the alias set for a regulator's OUTPUT voltage. Only symbols for what a downstream
+// part is fed BY belong here. A symbol that could mean an input would make a connection-aware rule
+// compare the wrong end of the part against its neighbour.
+var outputSymbols = map[string]bool{
+	"VOUT": true, "VO": true, "VOUT1": true, "VOUT2": true, "VOUTA": true, "VOUTB": true,
+}
+
+// OutputVoltageLimits selects a spec's OUTPUT-voltage rows, in volts, any limit kind (a regulator
+// states its output as a recommended-operating or characteristic row). A downstream part is exposed
+// to the max, and a compatibility check needs that number.
+//
+// SupplyAbsMaxLimits reads what a part can WITHSTAND, and this counterpart reads what it DELIVERS. A
+// connection-aware rule joins one of each across the net between two parts (WS3-028).
+func OutputVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !outputSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// outputCurrentSymbols is the alias set for a regulator's OUTPUT CURRENT rating, matched after
+// alnumUpper so I_OUT, I OUT and IOUT(MAX) all reduce to a key here.
+//
+// Like outputSymbols it holds only ratings for what the part DELIVERS. An input current (IIN, IQ,
+// ISD) would compare a rail's demand against the wrong number. ILIM is excluded too, because a part
+// folds back at its current LIMIT. The limit is not what the part is rated to deliver continuously,
+// and crediting it as capacity would over-rate every part that states both.
+//
+// It is a slice rather than a map because OutputCurrentSymbols reads it back out into a review's
+// needs-data message, where the ordinary spelling should come first. Sorting would lead with ICONT.
+var outputCurrentSymbols = []string{"IOUT", "IO", "IOUTMAX", "IOMAX", "ICONT", "ICONTMAX", "ILOAD", "IOUTDC"}
+
+// OutputCurrentSymbols returns the output-current alias set, for a rule to declare in
+// Rule.ParamSymbols so the review runner can tell "the design is within budget" from "nothing on
+// this design states an output current" (WS3-095). OutputCurrentLimits matches on the same list, so
+// the seeding gate and the extractor cannot drift apart.
+func OutputCurrentSymbols() []string {
+	return slices.Clone(outputCurrentSymbols)
+}
+
+// OutputCurrentLimits selects a spec's OUTPUT-CURRENT rows, in amps, any limit kind for
+// OutputVoltageLimits' reason. Milliamps are the ordinary spelling for a sub-amp regulator and
+// param.InBaseUnit converts them (agni issue 148).
+func OutputCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		if !slices.Contains(outputCurrentSymbols, alnumUpper(p.Symbol)) {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "A" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// SeedsAnySymbol reports whether ANY component on the design carries a seeded datasheet parameter for
+// one of syms, compared after alnumUpper so a spec written I_OUT answers for a declared IOUT. It is the
+// review runner's WS3-097 gate for a rule that declares Rule.ParamSymbols. False means the rule had
+// nothing to join against, so zero findings is a data gap and not a clean design.
+//
+// Callers pass the symbols they want and never the rules for matching them, since symbol spelling is a
+// model-layer concern.
+func SeedsAnySymbol(m Model, syms []string) bool {
+	if len(syms) == 0 {
+		return false
+	}
+	want := make(map[string]bool, len(syms))
+	for _, s := range syms {
+		want[alnumUpper(s)] = true
+	}
+	for _, c := range m.Components() {
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil {
+			continue
+		}
+		for _, p := range spec.GetParameters() {
+			if want[alnumUpper(p.GetSymbol())] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// UnmetDependency names one datasheet fact that a check reached for and did not find. It records
+// the part, the symbol, and whether the part has any seeded spec at all. The unit is the PART, not
+// the placement. A PartSpec is per-MPN, so ten instances of one component are one thing to seed,
+// and deduplicating by MPN keeps this a work list rather than a copy of the bill of materials.
+type UnmetDependency struct {
+	MPN          string
+	Manufacturer string // as the seeded spec states it; empty when SpecAbsent
+	Symbol       string
+	// SpecAbsent separates "no spec for this part" from "a spec that states no such symbol", because the
+	// next step differs (extract a document, versus find one fact in one already read).
+	SpecAbsent bool
+}
+
+// UnseededSymbols reports the (part, symbol) pairs that SeedsAnySymbol found nothing for. It makes
+// the same walk and keeps what SeedsAnySymbol discards. "Does ANY part seed this" decides the
+// verdict, but it gives nothing to act on.
+//
+// classes gates the walk to an item's applies_to_class when it declares one, as the computed-n/a path
+// does. Without it a symbol needed by three parts would name every part on the design that lacks it.
+// The result is deduplicated by (mpn, symbol) and sorted, so a run written and re-read reproduces byte
+// for byte. A component with no resolvable MPN yields nothing.
+func UnseededSymbols(m Model, syms []string, classes []string) []UnmetDependency {
+	if len(syms) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []UnmetDependency
+	for _, c := range m.Components() {
+		if len(classes) > 0 && !hasAnyClass(m, c.RefDes, classes) {
+			continue
+		}
+		mpn := m.ComponentMPN(c.RefDes)
+		if mpn == "" {
+			continue
+		}
+		spec := m.PartSpec(c.RefDes)
+		have := map[string]bool{}
+		for _, prm := range spec.GetParameters() {
+			have[alnumUpper(prm.GetSymbol())] = true
+		}
+		for _, s := range syms {
+			if s == "" || have[alnumUpper(s)] {
+				continue
+			}
+			key := strings.ToUpper(mpn) + "\x00" + alnumUpper(s)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, UnmetDependency{
+				MPN: mpn, Manufacturer: spec.GetManufacturer(), Symbol: s, SpecAbsent: spec == nil,
+			})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].MPN != out[j].MPN {
+			return out[i].MPN < out[j].MPN
+		}
+		return out[i].Symbol < out[j].Symbol
+	})
+	return out
+}
+
+func hasAnyClass(m Model, refDes string, classes []string) bool {
+	for _, cl := range classes {
+		if m.HasClass(refDes, ComponentClass(cl)) {
+			return true
+		}
+	}
+	return false
+}
+
+// esdSymbols is the alias set for a part's ESD-tolerance rating, under both the ESD-gun and the
+// handling models.
+var esdSymbols = map[string]bool{
+	"VESD": true, "V(ESD)": true, "ESD": true,
+	"VESDHBM": true, "ESDHBM": true, "VESDCDM": true, "ESDCDM": true,
+	"VESDIEC": true, "ESDIEC": true, "VESDCONTACT": true, "VESDAIR": true,
+}
+
+// icEsdFloorVolts is the minimum declared ESD tolerance that credits a connector-facing signal as
+// IC-protected (WS3-073). It is conservative, since bus transceivers rate far higher (IEC ±8kV). The
+// rating is matched to the PART, not to the connector-facing PIN, and matching the pin is a deliberate
+// follow-up.
+const icEsdFloorVolts = 2000
+
+// EsdRatingLimits selects a spec's ESD-rating rows, kind ABSOLUTE_MAX (an ESD rating is a max
+// survivable stress), in volts, at or above icEsdFloorVolts, and system-level only. An ESD rating is
+// printed in KILOVOLTS as often as in volts, and param.InBaseUnit converts it (agni issue 148).
+func EsdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := alnumUpper(p.Symbol)
+		if !esdSymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		if q.Value.GetMax() < icEsdFloorVolts {
+			continue
+		}
+		// Only a SYSTEM-level rating (IEC 61000-4-2) protects a connector-exposed signal. A handling model
+		// (HBM/CDM) rates the part for assembly, not a field strike (WS3-077 test-model gate).
+		if !esdIsSystemLevel(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// esdSystemLevelModels are the ESD test-model tokens for a SYSTEM-level strike, the IEC 61000-4-2
+// family. A connector exposes a part to these strikes. A handling model (HBM/CDM/MM) rates the part
+// for assembly ONLY, so it must not credit a harness-exposed signal.
+var esdSystemLevelModels = map[string]bool{"IEC": true, "CONTACT": true, "AIR": true, "SYSTEM": true}
+
+// esdIsSystemLevel reports whether an ESD-rating row is a system-level (IEC) rating. The test model is
+// a DECLARED attribute (esd_test_model = iec | hbm | cdm | ...), never parsed from the Name text, and
+// an unstated or handling-model rating does not credit (WS3-077).
+func esdIsSystemLevel(p *parampb.Parameter) bool {
+	return esdSystemLevelModels[alnumUpper(p.Attributes["esd_test_model"])]
+}
+
+// alnumUpper reduces a symbol to its uppercase alphanumeric characters. A datasheet prints one symbol
+// in several spellings (V_ESD, V(ESD), VESD), and all of them collapse to one key.
+func alnumUpper(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToUpper(s) {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// SupplyInputPin reports whether a pin consumes a supply rail, format-neutrally. Both datasheet rail
+// rules quantify over this entity (supply-exceeds-abs-max, rail-nominal-out-of-recommended).
+// PinDir == POWER_IN suffices because classify.StampPowerInPins fills POWER_IN at ingestion on a
+// supply-named input pin that a reader (EDIF) left under-typed (WS3-072).
+func SupplyInputPin(m Model, refDes, designator string) bool {
+	return m.PinDir(refDes, designator) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+}
+
+// SupplyAbsMaxLimits selects a spec's supply-pin rows, kind ABSOLUTE_MAX, in volts. It is the datasheet
+// lookup behind supply-exceeds-abs-max.
+func SupplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !supplySymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// RecommendedOperatingLimits selects a spec's supply-voltage rows, kind RECOMMENDED_OPERATING, in
+// volts, with at least one of min/max present. The range is two-sided where SupplyAbsMaxLimits is a
+// one-sided ceiling. So its consumer, rail-nominal-out-of-recommended, acts only on a part
+// declaring a single such row. See singleRecommendedRow in
+// stdlib/rules/builtin/rule_rail_nominal.go.
+func RecommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !supplySymbols[sym] {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING ||
+			q.Unit != "V" || q.Value == nil || (q.Value.Min == nil && q.Value.Max == nil) ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// capRatedVoltageSymbols is the alias set for a capacitor's rated voltage.
+var capRatedVoltageSymbols = map[string]bool{
+	"VDC": true, "WV": true, "VR": true, "VRATED": true,
+}
+
+// CapRatedVoltageLimits selects a cap spec's rated-voltage rows, in volts. A row matches on the alias
+// set or on a printed name containing "rated voltage", since vendors print one limit as "VDC", "WV" or
+// "Rated Voltage". The kind may be recommended-operating or absolute-max, because a rated voltage is the
+// operating envelope and some sheets state it as a maximum.
+func CapRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		named := strings.Contains(strings.ToLower(p.Name), "rated voltage")
+		if !capRatedVoltageSymbols[sym] && !named {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		if !ok ||
+			(q.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING &&
+				q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX) ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
+// RailMaxVoltage is the "net.max_voltage" fact, the rail voltage that a net declares. A max_voltage
+// attribute wins when present. Otherwise NominalVoltage reads a voltage off the net's name under this
+// model's lexicon, the only evidence a netlist carries. ok is false when neither yields a number, and
+// consumers skip rather than guess.
+func (m *irModel) RailMaxVoltage(n *ir.Net) (volts float64, ok bool) {
+	if v := n.Attributes["max_voltage"]; v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f, true
+		}
+	}
+	return m.NominalVoltage(n.GetName())
+}
+
+// NominalVoltage reads a rail's nominal voltage off a net name under this model's voltage vocabulary
+// (classify.RoleVocab.NominalVoltage has the contract).
+func (m *irModel) NominalVoltage(name string) (volts float64, ok bool) {
+	return m.lexicon().RoleVocab().NominalVoltage(name)
+}

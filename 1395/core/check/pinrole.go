@@ -1,0 +1,136 @@
+package check
+
+import (
+	"strings"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// The Go-eval'd connectivity rules (floating-input, power-input-not-driven, and the
+// protection batch) classify a net's pins by electrical role, so the predicates live here
+// in one place. Role comes from ir.PinDirection via Model.PinDir. A reader that does not type
+// its pins yields UNSPECIFIED, so these predicates are false and the rules do not fire
+// (absent-tolerant, like the rest of check).
+
+// IsDriver reports whether a pin can source a signal onto its net: a plain output, a power source
+// (a regulator output or a PWR_FLAG, mapped to POWER_OUT), a bidirectional or tri-state pin (it
+// drives when enabled), or an open-collector or open-emitter output (it drives one way). All but
+// OUTPUT and POWER_OUT answer "is this net driven?" without being hard drivers for the two-drivers
+// conflict, where a shared bus and a wire-OR are both legal (agni issue 1082).
+func IsDriver(d ir.PinDirection) bool {
+	switch d {
+	case ir.PinDirection_PIN_DIRECTION_OUTPUT,
+		ir.PinDirection_PIN_DIRECTION_POWER_OUT,
+		ir.PinDirection_PIN_DIRECTION_INOUT,
+		ir.PinDirection_PIN_DIRECTION_TRISTATE,
+		ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR,
+		ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER:
+		return true
+	}
+	return false
+}
+
+// NetDirs resolves the electrical direction of every connection on a net, in connection order.
+func NetDirs(m Model, n *ir.Net) []ir.PinDirection {
+	out := make([]ir.PinDirection, 0, len(n.Connections))
+	for _, c := range n.Connections {
+		out = append(out, ConnDir(m, c))
+	}
+	return out
+}
+
+// ConnDir resolves one connection's electrical direction. The connection-level
+// "direction" attribute wins, for a virtual power-symbol pin whose component is not in
+// Components and so has no part-type pin (WS1-014). Otherwise the part-type pin decides, via PinDir.
+func ConnDir(m Model, c *ir.Connection) ir.PinDirection {
+	switch c.GetAttributes()["direction"] {
+	case "power_in":
+		return ir.PinDirection_PIN_DIRECTION_POWER_IN
+	case "power_out":
+		return ir.PinDirection_PIN_DIRECTION_POWER_OUT
+	}
+	return m.PinDir(c.ComponentRef, c.PinRef)
+}
+
+// IsVirtualRef reports whether a connection's component is a virtual connectivity symbol
+// (a KiCad #PWR/#FLG), which contributes power evidence but is not a physical part.
+// Consumer-intent guards must not count it, such as a decoupling rule asking "does a real
+// part draw from this rail". Driver/ERC semantics must count it (power-input-not-driven,
+// the driver conflict).
+func IsVirtualRef(ref string) bool {
+	return strings.HasPrefix(ref, "#")
+}
+
+// CountDir returns how many of dirs satisfy pred.
+func CountDir(dirs []ir.PinDirection, pred func(ir.PinDirection) bool) int {
+	n := 0
+	for _, d := range dirs {
+		if pred(d) {
+			n++
+		}
+	}
+	return n
+}
+
+// IsPassiveClass reports whether a component class is a two-terminal passive (plus test
+// points): parts whose pins conduct rather than listen or drive, so direction-based rules
+// treat them as transparent. Some libraries type a passive's pins INPUT (the Mentor EDIF
+// corpus does for capacitors), and counting those as logic inputs is a false positive.
+func IsPassiveClass(c ComponentClass) bool {
+	switch c {
+	case ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassFuse, ClassTestPoint:
+		return true
+	}
+	return false
+}
+
+// formatTypesPowerOut reports whether a source format's reader classifies power-OUTPUT pins. EDIF
+// carries only INPUT/OUTPUT/INOUT (no power_out) and IPC-2581 is a board format with no pin electrical
+// types; every other reader (KiCad, gEDA, xschem) types power outputs. power-input-not-driven gates
+// on it. That rule infers "unpowered" from the absence of a typed driver. On a format that types no
+// power outputs, a rail's driver reads as a plain input, so the absence is meaningless.
+// Prefix-matched because SourceFormat includes a version ("edif-2.0.0"). WS3-072 PR2 stamps the
+// power_IN side; the symmetric power_out stamp (PR3) lifts this gate.
+func formatTypesPowerOut(sourceFormat string) bool {
+	return !strings.HasPrefix(sourceFormat, "edif") && !strings.HasPrefix(sourceFormat, "ipc")
+}
+
+// classifyPinRole derives a pin's role from its declared name, gated by device class for
+// the polarity roles, with each vocabulary read from the naming lexicon so a house declares its own
+// spelling in --conventions. The built-ins are whole-name anchored, because pin names are short
+// vocabulary words and "CLKA" must not read as an anode.
+func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
+	u := strings.ToUpper(strings.TrimSpace(name))
+	if u == "" || u == "~" {
+		return RoleUnknown
+	}
+	switch class {
+	case ClassDiode, ClassLED, ClassTVS, ClassZener:
+		switch {
+		case m.lexicon().RoleVocab().IsAnode(u):
+			return RoleAnode
+		case m.lexicon().RoleVocab().IsCathode(u):
+			return RoleCathode
+		}
+	case ClassTransistor:
+		// Terminal roles are gated to transistors for the same reason polarity is gated to the
+		// diode family, since these are the shortest pin names on a board. Ungated, a bare "S" or
+		// "D" would mis-role a pin on nearly every part, and a WRONG role is worse than a missing
+		// one, because a topology rule would walk a path that does not exist and report on it (WS3-117).
+		switch {
+		case m.lexicon().RoleVocab().IsGate(u):
+			return RoleGate
+		case m.lexicon().RoleVocab().IsSource(u):
+			return RoleSource
+		case m.lexicon().RoleVocab().IsDrain(u):
+			return RoleDrain
+		}
+	}
+	if m.IsGroundName(u) {
+		return RoleGround
+	}
+	if m.IsPowerRailName(u) {
+		return RolePower
+	}
+	return RoleUnknown
+}

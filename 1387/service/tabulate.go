@@ -1,0 +1,649 @@
+package service
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/ident"
+	"github.com/panyam/agni/core/num"
+	rpt "github.com/panyam/agni/core/report"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+)
+
+// This file holds the one projection of each answer into rows (agni issue 862). `check --format
+// csv`, `query --format csv` and the TableService all emit these tables, so a csv and a workbook of
+// one answer cannot disagree about its columns. Cells are raw; escaping belongs to the encoder.
+
+// FindingColumns is the findings table's header. `check --format csv` published it before this
+// projection existed, and a script binding to it still works. Datasheet citations are left out,
+// because each is a document, page and section and does not fit one cell. json has them.
+var FindingColumns = []webapi.TableColumn{
+	{Name: "severity"},
+	{Name: "inconclusive"},
+	{Name: "rule"},
+	{Name: "kind"},
+	{Name: "subject", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "net_id", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "message"},
+	{Name: "source_file"},
+	{Name: "native_id"},
+	{Name: "context"},
+}
+
+// VerdictColumns is the verdicts table's header, the one `check --verdicts --format csv` published.
+// Only a caller that can link to a viewer fills url, such as the CLI with --server. The TableService
+// has no viewer to link to and leaves it empty. subjects spells a relation's whole tuple as kind:ref
+// pairs, since a relation commonly joins different kinds and two bare refs do not say which is which.
+var VerdictColumns = []webapi.TableColumn{
+	{Name: "verdict_id"},
+	{Name: "url"},
+	{Name: "rule"},
+	{Name: "outcome"},
+	{Name: "subjects", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "statement"},
+	{Name: "context"},
+	{Name: "terms"},
+	{Name: "reason"},
+}
+
+func columns(cs []webapi.TableColumn) []*webapi.TableColumn {
+	out := make([]*webapi.TableColumn, len(cs))
+	for i := range cs {
+		out[i] = &webapi.TableColumn{Name: cs[i].Name, Type: cs[i].Type, Kind: cs[i].Kind}
+	}
+	return out
+}
+
+// FindingsTable is one row per finding, in the order the run produced them.
+func FindingsTable(findings []*checkspb.Finding) *webapi.Table {
+	t := &webapi.Table{Name: "findings", Columns: columns(FindingColumns)}
+	for _, f := range findings {
+		s, prov := f.GetSubject(), f.GetProvenance()
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: []string{
+			f.GetSeverity(),
+			strconv.FormatBool(f.GetInconclusive()),
+			f.GetRule(),
+			s.GetKind(),
+			s.GetRef(),
+			s.GetPin(),
+			s.GetNetId(),
+			f.GetMessage(),
+			prov.GetSourceFile(),
+			prov.GetNativeId(),
+			contextCell(f.GetContext()),
+		}, CellKinds: subjectKinds(len(FindingColumns), 4, s.GetKind())})
+	}
+	return t
+}
+
+// subjectKinds returns a row's cell_kinds when the cell at i names a net or a part, and nil
+// otherwise. A viewer can locate those two kinds by a cell alone. A pin needs its part as well, and a
+// bus has no single place, so their rows get no cell_kinds.
+func subjectKinds(n, i int, kind string) []string {
+	if kind != check.KindNet && kind != check.KindComponent {
+		return nil
+	}
+	out := make([]string, n)
+	out[i] = kind
+	return out
+}
+
+// VerdictsTable is one row per verdict, passes included, in run order. link gives a verdict's viewer
+// URL, and nil leaves the url column empty.
+func VerdictsTable(verdicts []*checkspb.Verdict, link func(*checkspb.Verdict) string) *webapi.Table {
+	t := &webapi.Table{Name: "verdicts", Columns: columns(VerdictColumns)}
+	for _, v := range verdicts {
+		var url string
+		if link != nil {
+			url = link(v)
+		}
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: []string{
+			v.GetId(),
+			url,
+			v.GetRule(),
+			OutcomeWord(v.GetOutcome()),
+			subjectsCell(v.GetSubjects()),
+			v.GetWitness().GetStatement(),
+			contextCell(v.GetContext()),
+			termsCell(v.GetWitness().GetTerms()),
+			v.GetReason(),
+		}})
+	}
+	return t
+}
+
+// DiffColumns is the diff table's header, the one `diff --format csv` published. A diff is four
+// collections of different shapes, and one table with change_class naming each row's kind lets a
+// reader filter back to any one of them and sort across all of them at once. A row leaves the
+// columns its class does not use empty. The match_ columns are filled on a near rename only, since a
+// near match is a judgement, and a reviewer triages it by the numbers that decided it.
+var DiffColumns = []webapi.TableColumn{
+	{Name: "change_class"},
+	{Name: "subject", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "old_name", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "field"},
+	{Name: "old_value"},
+	{Name: "new_value"},
+	{Name: "added", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "removed", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "old_source_file"},
+	{Name: "new_source_file"},
+	{Name: "match_old_coverage", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "match_old_coverage_significant", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+	{Name: "match_new_coverage_significant", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER},
+}
+
+// DiffTable is one row per change, components first and then nets, in the order the diff reported
+// them. That order is by ref des, by ref des then field, and nets by kind then name. The unchanged
+// nets come last when the diff included them. A net row's class is its kind under a net- prefix, so
+// the table names kinds exactly as the diff does.
+func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
+	t := &webapi.Table{Name: "diff", Columns: columns(DiffColumns)}
+	row := func(class, subject string) []string {
+		r := make([]string, len(DiffColumns))
+		r[0], r[1] = class, subject
+		return r
+	}
+	// The subject is a part on a component row and a net on a net row, so each row says which.
+	part := func() []string { return subjectKinds(len(DiffColumns), 1, check.KindComponent) }
+	rep := resp.GetReport()
+	for _, ref := range rep.GetComponentsAdded() {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-added", ref), CellKinds: part()})
+	}
+	for _, ref := range rep.GetComponentsRemoved() {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: row("component-removed", ref), CellKinds: part()})
+	}
+	for _, cc := range rep.GetComponentsChanged() {
+		r := row("component-changed", cc.GetRefDes())
+		r[3], r[4], r[5] = cc.GetField(), cc.GetOld(), cc.GetNew()
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r, CellKinds: part()})
+	}
+	for _, nc := range rep.GetNets() {
+		r := row("net-"+nc.GetKind(), nc.GetName())
+		r[2] = nc.GetOldName()
+		r[6], r[7] = strings.Join(nc.GetAdded(), rpt.MultiValueSep), strings.Join(nc.GetRemoved(), rpt.MultiValueSep)
+		r[8], r[9] = nc.GetOldProv().GetSourceFile(), nc.GetNewProv().GetSourceFile()
+		if e := nc.GetApprox(); e != nil {
+			r[10] = strconv.FormatFloat(e.GetOldCoverage(), 'f', 3, 64)
+			r[11] = strconv.FormatFloat(e.GetOldCoverageSignificant(), 'f', 3, 64)
+			r[12] = strconv.FormatFloat(e.GetNewCoverageSignificant(), 'f', 3, 64)
+		}
+		kinds := subjectKinds(len(DiffColumns), 1, check.KindNet)
+		if r[2] != "" {
+			kinds[2] = check.KindNet
+		}
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: r, CellKinds: kinds})
+	}
+	return t
+}
+
+// ReviewColumns is the review table's header. findings names each firing behind an item as
+// rule=kind:ref, and unmet each part whose datasheet the item needed, so a failed or undecided row
+// says what to look at.
+var ReviewColumns = []webapi.TableColumn{
+	{Name: "area"},
+	{Name: "id", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
+	{Name: "title"},
+	{Name: "outcome"},
+	{Name: "note"},
+	{Name: "findings"},
+	{Name: "unmet"},
+}
+
+// ReviewTables returns a review's items and its one-row summary. Each item gets one row, in the
+// checklist's own order, since a reviewer reads a checklist in the order it was written.
+func ReviewTables(rv *webapi.Review) []*webapi.Table {
+	items := &webapi.Table{Name: "review", Columns: columns(ReviewColumns)}
+	for _, area := range rv.GetResults().GetAreas() {
+		for _, it := range area.GetItems() {
+			findings := make([]string, 0, len(it.GetFindings()))
+			for _, f := range it.GetFindings() {
+				findings = append(findings, f.GetRule()+"="+subjectsCell([]*checkspb.Subject{f.GetSubject()}))
+			}
+			unmet := make([]string, 0, len(it.GetUnmet()))
+			for _, u := range it.GetUnmet() {
+				part := strings.TrimSpace(u.GetManufacturer() + " " + u.GetMpn())
+				if u.GetSpecAbsent() {
+					part += " (no spec)"
+				}
+				unmet = append(unmet, part)
+			}
+			items.Rows = append(items.Rows, &webapi.TableRow{Cells: []string{
+				area.GetName(), it.GetId(), it.GetTitle(), it.GetOutcome(), it.GetNote(),
+				strings.Join(findings, rpt.MultiValueSep), strings.Join(unmet, rpt.MultiValueSep),
+			}})
+		}
+	}
+	s := rv.GetSummary()
+	summary := &webapi.Table{Name: "review_summary"}
+	var cells []string
+	for _, kv := range []struct {
+		name string
+		n    int32
+	}{{"total", s.GetTotal()}, {"covered", s.GetCovered()}, {"answered", s.GetAnswered()}, {"pass", s.GetPass()}, {"fail", s.GetFail()}, {"provisional", s.GetProvisional()}} {
+		summary.Columns = append(summary.Columns, &webapi.TableColumn{Name: kv.name, Type: webapi.ColumnType_COLUMN_TYPE_NUMBER})
+		cells = append(cells, strconv.Itoa(int(kv.n)))
+	}
+	summary.Rows = []*webapi.TableRow{{Cells: cells}}
+	return []*webapi.Table{items, summary}
+}
+
+// SkippedTable lists the selected rules that could not run on this design, and why, so a workbook of a
+// run says which rules it is silent on. A revision read with no board lists its board-tier rules here
+// (agni issue 848). The reason is check.Available's own words.
+func SkippedTable(skipped []*webapi.SkippedRule) *webapi.Table {
+	t := &webapi.Table{Name: "skipped", Columns: []*webapi.TableColumn{{Name: "rule"}, {Name: "reason"}}}
+	for _, s := range skipped {
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: []string{s.GetName(), s.GetReason()}})
+	}
+	return t
+}
+
+// verdictOutcomes are the outcome columns of the per-rule count, in the order a reader triages them.
+var verdictOutcomes = []checkspb.Outcome{
+	checkspb.Outcome_OUTCOME_PASS, checkspb.Outcome_OUTCOME_FAIL, checkspb.Outcome_OUTCOME_INCONCLUSIVE,
+	checkspb.Outcome_OUTCOME_NO_LIMIT, checkspb.Outcome_OUTCOME_NOT_CONSIDERED,
+}
+
+// VerdictCountsTable is one row per rule, in the order rules first appear among the verdicts, counting
+// each outcome and the total, so a reader sees which rules decided most and which declined.
+func VerdictCountsTable(verdicts []*checkspb.Verdict) *webapi.Table {
+	t := &webapi.Table{Name: "verdicts_by_rule", Columns: []*webapi.TableColumn{{Name: "rule"}}}
+	for _, o := range verdictOutcomes {
+		t.Columns = append(t.Columns, &webapi.TableColumn{Name: OutcomeWord(o), Type: webapi.ColumnType_COLUMN_TYPE_NUMBER})
+	}
+	t.Columns = append(t.Columns, &webapi.TableColumn{Name: "total", Type: webapi.ColumnType_COLUMN_TYPE_NUMBER})
+	var order []string
+	counts := map[string]map[checkspb.Outcome]int{}
+	for _, v := range verdicts {
+		if counts[v.GetRule()] == nil {
+			counts[v.GetRule()] = map[checkspb.Outcome]int{}
+			order = append(order, v.GetRule())
+		}
+		counts[v.GetRule()][v.GetOutcome()]++
+	}
+	for _, rule := range order {
+		cells, total := []string{rule}, 0
+		for _, o := range verdictOutcomes {
+			cells = append(cells, strconv.Itoa(counts[rule][o]))
+			total += counts[rule][o]
+		}
+		// total counts every verdict, an unspecified outcome included, so the row adds up to the rule's
+		// verdicts even when a column does not.
+		for o, n := range counts[rule] {
+			if o == checkspb.Outcome_OUTCOME_UNSPECIFIED {
+				total += n
+			}
+		}
+		t.Rows = append(t.Rows, &webapi.TableRow{Cells: append(cells, strconv.Itoa(total))})
+	}
+	return t
+}
+
+// QueryTable lays out a query answer's columns, with its provenance as the last column, as `query
+// --format csv` prints it. A column the answer types as an entity kind orders as a name, and a row's
+// cell_why holds the reason an aggregate cell is absent.
+func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
+	t := &webapi.Table{Name: name}
+	kinds := resp.GetColumnKinds()
+	for i, c := range resp.GetColumns() {
+		col := &webapi.TableColumn{Name: c}
+		if i < len(kinds) && kinds[i] != "" {
+			col.Type, col.Kind = webapi.ColumnType_COLUMN_TYPE_NAME, kinds[i]
+		}
+		t.Columns = append(t.Columns, col)
+	}
+	t.Columns = append(t.Columns, &webapi.TableColumn{Name: rpt.ProvenanceColumn})
+	for _, r := range resp.GetRows() {
+		cells := append(append(make([]string, 0, len(r.GetCells())+1), r.GetCells()...), strings.Join(RowCites(resp, r), " ; "))
+		row := &webapi.TableRow{Cells: cells}
+		if why := r.GetCellWhy(); len(why) > 0 {
+			row.CellWhy = append(append(make([]string, 0, len(cells)), why...), "")
+		}
+		// A polymorphic column types each row's cell itself (agni issue 338), and the table keeps it.
+		if ks := r.GetCellKinds(); len(ks) > 0 {
+			row.CellKinds = append(append(make([]string, 0, len(cells)), ks...), "")
+		}
+		t.Rows = append(t.Rows, row)
+	}
+	return t
+}
+
+// RowCites is a row's citations, read through the response's sources table (agni issue 916).
+func RowCites(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []string {
+	src := resp.GetSources()
+	out := make([]string, 0, len(r.GetCiteIndex()))
+	for _, i := range r.GetCiteIndex() {
+		if int(i) < len(src) {
+			out = append(out, src[i])
+		}
+	}
+	return out
+}
+
+// RowWitnesses are a row's witnesses as a document renders them (agni issue 794), with each
+// citation read through the response's sources as RowCites reads a row's. Nil when the request asked
+// for none.
+func RowWitnesses(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []rpt.Witness {
+	return witnessesOf(resp.GetSources(), r.GetWitnesses())
+}
+
+func witnessesOf(src []string, ws []*webapi.QueryWitness) []rpt.Witness {
+	if len(ws) == 0 {
+		return nil
+	}
+	out := make([]rpt.Witness, 0, len(ws))
+	for _, w := range ws {
+		n := rpt.Witness{Relation: w.GetRelation(), Values: w.GetValues(), Rule: w.GetRule(), Negated: w.GetNegated(), Children: witnessesOf(src, w.GetChildren())}
+		for _, i := range w.GetCiteIndex() {
+			if int(i) < len(src) {
+				n.Cites = append(n.Cites, src[i])
+			}
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
+// CellLocation returns where an answer cell's entity is drawn and why it cannot be located. It reads
+// them through the response's entity table (agni issue 916). A scalar cell has neither.
+func CellLocation(resp *webapi.RunQueryResponse, r *webapi.QueryRow, i int) ([]string, checkspb.LocateReason) {
+	ce := r.GetCellEntity()
+	if i >= len(ce) || ce[i] <= 0 || int(ce[i]) > len(resp.GetEntities()) {
+		return nil, checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+	}
+	e := resp.GetEntities()[ce[i]-1]
+	return e.GetSheetIds(), e.GetReason()
+}
+
+// SourceTable keeps a response's citations once and points each row at them (agni issue 916).
+type SourceTable struct {
+	resp *webapi.RunQueryResponse
+	at   map[string]int32
+}
+
+// NewSourceTable starts the sources table of resp.
+func NewSourceTable(resp *webapi.RunQueryResponse) *SourceTable {
+	return &SourceTable{resp: resp, at: map[string]int32{}}
+}
+
+// Cite records row's citations, adding each new one to the response's sources.
+func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
+	row.CiteIndex = append(row.CiteIndex, t.Indexes(cites)...)
+}
+
+// Indexes returns cites as indices into the response's sources, adding each new one. A row and a
+// witness both cite, and both use it (agni issue 794). It returns nil for no citations.
+func (t *SourceTable) Indexes(cites []string) []int32 {
+	if len(cites) == 0 {
+		return nil
+	}
+	out := make([]int32, 0, len(cites))
+	for _, c := range cites {
+		n, ok := t.at[c]
+		if !ok {
+			t.resp.Sources = append(t.resp.Sources, c)
+			n = num.Int32(len(t.resp.Sources) - 1)
+			t.at[c] = n
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
+// OutcomeWord is a verdict outcome as the lower-case word every surface prints. An unrecognised value
+// is "unspecified" and never blank, since a blank would read as nothing to report.
+func OutcomeWord(o checkspb.Outcome) string {
+	switch o {
+	case checkspb.Outcome_OUTCOME_PASS:
+		return "pass"
+	case checkspb.Outcome_OUTCOME_FAIL:
+		return "fail"
+	case checkspb.Outcome_OUTCOME_NO_LIMIT:
+		return "no-limit"
+	case checkspb.Outcome_OUTCOME_NOT_CONSIDERED:
+		return "not-considered"
+	case checkspb.Outcome_OUTCOME_INCONCLUSIVE:
+		return "inconclusive"
+	default:
+		return "unspecified"
+	}
+}
+
+// contextCell is a finding's or verdict's context entities as role=ref pairs in author order, since a
+// role may repeat and the order is the author's (issue 349).
+func contextCell(ctx []*checkspb.ContextSubject) string {
+	parts := make([]string, 0, len(ctx))
+	for _, cs := range ctx {
+		parts = append(parts, cs.GetRole()+"="+subjectRef(cs.GetSubject()))
+	}
+	return strings.Join(parts, rpt.MultiValueSep)
+}
+
+// termsCell is a witness's values as label=value pairs, the shape contextCell uses for entities.
+func termsCell(ts []*checkspb.WitnessTerm) string {
+	parts := make([]string, 0, len(ts))
+	for _, t := range ts {
+		parts = append(parts, t.GetLabel()+"="+t.GetValue())
+	}
+	return strings.Join(parts, "|")
+}
+
+func subjectsCell(ss []*checkspb.Subject) string {
+	parts := make([]string, 0, len(ss))
+	for _, s := range ss {
+		parts = append(parts, s.GetKind()+":"+subjectRef(s))
+	}
+	return strings.Join(parts, "|")
+}
+
+// subjectRef spells a subject's name as a cell does. A pin is its ref-des and pin joined with a
+// dot, as check.EntityRef does, and anything else is its ref. The context column dropped the pin
+// until agni issue 1193, so `declared pin=U1` named the part where the verdict named U1.PTB3.
+func subjectRef(s *checkspb.Subject) string {
+	if s.GetPin() != "" {
+		return s.GetRef() + "." + s.GetPin()
+	}
+	return s.GetRef()
+}
+
+// TableService answers Tabulate. It holds nothing, so the zero value serves.
+type TableService struct{}
+
+// Tabulate projects the answer the request carries and orders each table as asked. An empty answer,
+// a failed query in a set, or an order_by naming a column no table has is ErrInvalidArgument.
+func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*webapi.TabulateResponse, error) {
+	var tables []*webapi.Table
+	switch a := req.GetAnswer().(type) {
+	case *webapi.TabulateRequest_Check:
+		tables = append(tables, FindingsTable(a.Check.GetFindings()))
+		if vs := a.Check.GetVerdicts(); len(vs) > 0 {
+			tables = append(tables, VerdictsTable(vs, nil), VerdictCountsTable(vs))
+			// The pin map reads the verdicts, so a run without them gives no table rather than one
+			// whose every row reads as unjudged.
+			if pm := PinMapTable(a.Check.GetIoMap(), vs); pm != nil {
+				tables = append(tables, pm)
+			}
+		}
+		tables = append(tables, SkippedTable(a.Check.GetSkipped()))
+	case *webapi.TabulateRequest_Diff:
+		tables = append(tables, DiffTable(a.Diff))
+	case *webapi.TabulateRequest_Review:
+		tables = append(tables, ReviewTables(a.Review)...)
+	case *webapi.TabulateRequest_Query:
+		tables = append(tables, QueryTable("query", a.Query))
+	case *webapi.TabulateRequest_QuerySet:
+		var failed []string
+		for _, r := range a.QuerySet.GetResults() {
+			if r.GetError() != "" {
+				failed = append(failed, r.GetName()+": "+r.GetError())
+				continue
+			}
+			tables = append(tables, QueryTable(r.GetName(), r.GetResult()))
+		}
+		if len(failed) > 0 {
+			return nil, fmt.Errorf("%w: the set has unanswered queries, so their tables would be missing: %s", ErrInvalidArgument, strings.Join(failed, "; "))
+		}
+	default:
+		return nil, fmt.Errorf("%w: Tabulate needs an answer to project", ErrInvalidArgument)
+	}
+	if err := OrderTables(tables, req.GetOrderBy(), req.GetColumnTypes()); err != nil {
+		return nil, err
+	}
+	return &webapi.TabulateResponse{Tables: tables}, nil
+}
+
+// Encode writes each table as a file in the requested encoding (agni issue 956). An unspecified
+// encoding is ErrInvalidArgument, and so is a table with no name, since its file would have none.
+func (TableService) Encode(_ context.Context, req *webapi.EncodeTablesRequest) (*webapi.EncodeTablesResponse, error) {
+	if req.GetEncoding() != webapi.TableEncoding_TABLE_ENCODING_CSV {
+		return nil, fmt.Errorf("%w: Encode needs an encoding, and writes csv", ErrInvalidArgument)
+	}
+	out := &webapi.EncodeTablesResponse{}
+	for _, t := range req.GetTables() {
+		if t.GetName() == "" {
+			return nil, fmt.Errorf("%w: a table to encode needs a name, which names its file", ErrInvalidArgument)
+		}
+		var b bytes.Buffer
+		if err := WriteTableCSV(&b, t); err != nil {
+			return nil, err
+		}
+		filename := t.GetName() + ".csv"
+		if stem := req.GetStem(); stem != "" {
+			filename = stem + "." + filename
+		}
+		out.Files = append(out.Files, &webapi.EncodedTable{Name: t.GetName(), Filename: filename, ContentType: "text/csv; charset=utf-8", Content: b.Bytes()})
+	}
+	return out, nil
+}
+
+// WriteTableCSV writes one table as csv, its column names as the header row and every cell guarded
+// against spreadsheet formulas (rpt.SanitizeCell). It is the one csv encoding of a Table.
+// `--format csv` on every command and the Encode rpc both write it, so a file saved from the viewer
+// and one written by the CLI are the same bytes. It writes the rows in the order they are in.
+func WriteTableCSV(w io.Writer, t *webapi.Table) error {
+	c := rpt.NewCSVWriter(w)
+	header := make([]string, 0, len(t.GetColumns()))
+	for _, col := range t.GetColumns() {
+		header = append(header, col.GetName())
+	}
+	c.Header(header)
+	for _, r := range t.GetRows() {
+		c.Row(r.GetCells())
+	}
+	return c.Finish()
+}
+
+// OrderTables sorts each table by orderBy, as TabulateRequest.order_by describes, with types
+// overriding a column's own type by name. It sorts in place and is stable.
+func OrderTables(tables []*webapi.Table, orderBy []string, types map[string]webapi.ColumnType) error {
+	if len(orderBy) == 0 {
+		return nil
+	}
+	type key struct {
+		name string
+		desc bool
+	}
+	keys := make([]key, 0, len(orderBy))
+	for _, o := range orderBy {
+		k := key{name: strings.TrimPrefix(o, "-"), desc: strings.HasPrefix(o, "-")}
+		if k.name == "" {
+			return fmt.Errorf("%w: order_by entry %q names no column", ErrInvalidArgument, o)
+		}
+		keys = append(keys, k)
+	}
+	found := map[string]bool{}
+	for _, t := range tables {
+		type col struct {
+			i    int
+			desc bool
+			typ  webapi.ColumnType
+		}
+		var cols []col
+		for _, k := range keys {
+			for i, c := range t.GetColumns() {
+				if c.GetName() != k.name {
+					continue
+				}
+				typ := c.GetType()
+				if over, ok := types[k.name]; ok {
+					typ = over
+				}
+				cols = append(cols, col{i, k.desc, typ})
+				found[k.name] = true
+				break
+			}
+		}
+		if len(cols) == 0 {
+			continue
+		}
+		sort.SliceStable(t.Rows, func(a, b int) bool {
+			ra, rb := t.Rows[a].GetCells(), t.Rows[b].GetCells()
+			for _, c := range cols {
+				x, y := cellAt(ra, c.i), cellAt(rb, c.i)
+				// Empty cells sort last whichever way the column runs.
+				if (x == "") != (y == "") {
+					return y == ""
+				}
+				cmp := compareCells(x, y, c.typ)
+				if c.desc {
+					cmp = -cmp
+				}
+				if cmp != 0 {
+					return cmp < 0
+				}
+			}
+			return false
+		})
+	}
+	var missing []string
+	for _, k := range keys {
+		if !found[k.name] {
+			missing = append(missing, k.name)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("%w: order_by names %s, which no table has", ErrInvalidArgument, strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+func cellAt(cells []string, i int) string {
+	if i < len(cells) {
+		return cells[i]
+	}
+	return ""
+}
+
+func compareCells(x, y string, typ webapi.ColumnType) int {
+	switch typ {
+	case webapi.ColumnType_COLUMN_TYPE_NAME:
+		return ident.CompareNatural(x, y)
+	case webapi.ColumnType_COLUMN_TYPE_NUMBER:
+		a, errA := strconv.ParseFloat(x, 64)
+		b, errB := strconv.ParseFloat(y, 64)
+		switch {
+		case errA == nil && errB == nil:
+			switch {
+			case a < b:
+				return -1
+			case a > b:
+				return 1
+			}
+			return 0
+		case errA == nil:
+			return -1
+		case errB == nil:
+			return 1
+		}
+	}
+	return strings.Compare(x, y)
+}

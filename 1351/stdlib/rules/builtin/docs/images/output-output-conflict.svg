@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="700" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="output-output-conflict rule: a net driven by two component outputs is flagged; a net with one output driving one input is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged (two drivers) ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: two drivers</text>
+
+  <!-- U1 driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="48" y="74" width="64" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="80" y="99" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- U3 driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="48" y="158" width="64" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="80" y="183" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U3</text>
+
+  <!-- flagged net: two outputs join one node -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="112" y1="94" x2="240" y2="94"/>
+    <line x1="112" y1="178" x2="240" y2="178"/>
+    <line x1="240" y1="94" x2="240" y2="178"/>
+  </g>
+  <circle cx="240" cy="94" r="4" fill="#d64545"/>
+  <circle cx="240" cy="178" r="4" fill="#d64545"/>
+
+  <text x="175" y="86" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">RAIL</text>
+  <text x="128" y="112" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">U1.out</text>
+  <text x="128" y="196" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">U3.out</text>
+
+  <text x="188" y="240" font-size="13" fill="#d64545" text-anchor="middle">2 outputs on one net -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine (one driver, one input) ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: one driver</text>
+
+  <!-- U1 driver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="380" y="112" width="64" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="412" y="137" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- U2 receiver -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="600" y="112" width="64" height="40" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="632" y="137" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+
+  <!-- net: one output drives one input -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="444" y1="132" x2="600" y2="132"/>
+  </g>
+  <!-- drive-direction arrow -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="516" y1="126" x2="524" y2="132"/>
+    <line x1="516" y1="138" x2="524" y2="132"/>
+  </g>
+
+  <text x="470" y="126" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">U1.out</text>
+  <text x="574" y="126" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">U2.in</text>
+
+  <text x="522" y="240" font-size="13" fill="#2f9e57" text-anchor="middle">1 output, 1 input -&gt; fine</text>
+</svg>

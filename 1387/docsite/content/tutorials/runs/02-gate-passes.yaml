@@ -1,0 +1,6 @@
+# Rung 2: the same gate over one rule with no error findings passes.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni check . --fail-on error --rule test-point-coverage
+capture: none
+exit: true

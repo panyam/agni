@@ -1,0 +1,182 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/panyam/agni/core/review"
+)
+
+// This file is `agni review`'s CI gate, the predicate that turns a run's outcomes into an exit code
+// (agni issue 199).
+//
+// It is a SECOND gate beside `check --fail-on` because the axis differs. --fail-on pivots on finding
+// SEVERITY; this pivots on item OUTCOME, whether the question was answered at all. A checklist can go
+// from answering 14 of its items to 13 with its failure count still zero, and no severity predicate
+// sees that. Sharing one flag name would make `--fail-on error` and `--fail-on fail` differ by a word.
+//
+// The gate lives at the CLI edge, not in the service. A browser has no exit code, and the numbers it
+// reads are already on review.Tally.
+
+// gateExitCode is the process exit status for a tripped gate, distinct from 1 (the run itself failed),
+// so a pipeline can tell a red board from a broken tool. `check --fail-on` and `review`'s two gates
+// share it, so one script can treat every gate in this CLI alike (agni issue 216).
+const gateExitCode = 2
+
+// gateError is a gate trip. It carries an exit code so main can distinguish it from an ordinary
+// failure without matching on message text.
+type gateError struct{ msg string }
+
+func (e *gateError) Error() string { return e.msg }
+
+// exitCode maps a command error to a process exit status: 0 for success, gateExitCode for a tripped
+// gate, 1 for everything else.
+//
+// It is a function rather than inline in main so a test can assert the decision without spawning a
+// subprocess.
+func exitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var ge *gateError
+	if errors.As(err, &ge) {
+		return gateExitCode
+	}
+	return 1
+}
+
+// reviewGate is the configured gate for one `agni review` invocation. An invocation that passed
+// neither flag gets the zero value, and the zero value gates nothing.
+//
+// Both gates are OPT-IN, matching `check --fail-on`'s empty default. `agni review` has always exited
+// 0, so gating by default would turn every existing pipeline (including the tutorial rungs and
+// examples/tutorial-project/Makefile) red on a tool upgrade.
+type reviewGate struct {
+	// outcomes are the item outcomes that trip the gate, empty when --fail-on-outcome was not passed.
+	outcomes map[review.Outcome]bool
+	// minAnswered is the floor over Tally.Answered(), 0 when --min-answered was not passed. A floor of
+	// 0 means "no floor", since every run answers at least 0 items.
+	minAnswered int
+}
+
+// gatableOutcomes are the outcomes --fail-on-outcome accepts. An unknown value is reported against
+// this set.
+//
+// It holds the WHOLE vocabulary, not only the two or three outcomes a team is likely to gate on. Each
+// outcome exists because a check that did not evaluate had been scoring as a pass, so a team may
+// reasonably decide `needs-data` blocks their release. The team's policy decides which outcomes
+// block, not this file.
+var gatableOutcomes = []review.Outcome{
+	review.Fail,
+	review.Provisional,
+	review.Inconclusive,
+	review.NotApplicable,
+	review.NotAutomated,
+	review.NeedsData,
+	review.NeedsDesignIntent,
+	review.ComputedNA,
+}
+
+// parseReviewGate builds the gate from the two flag values. An unknown outcome is an ERROR naming the
+// valid set, never silently ignored, because a typo in a CI config would otherwise disable the gate
+// and report a clean pipeline.
+func parseReviewGate(failOnOutcome string, minAnswered int) (reviewGate, error) {
+	g := reviewGate{minAnswered: minAnswered}
+	if minAnswered < 0 {
+		return reviewGate{}, fmt.Errorf("--min-answered must not be negative, got %d", minAnswered)
+	}
+	if strings.TrimSpace(failOnOutcome) == "" {
+		return g, nil
+	}
+	valid := map[review.Outcome]bool{}
+	for _, o := range gatableOutcomes {
+		valid[o] = true
+	}
+	g.outcomes = map[review.Outcome]bool{}
+	for _, part := range strings.Split(failOnOutcome, ",") {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+		o := review.Outcome(name)
+		if !valid[o] {
+			return reviewGate{}, fmt.Errorf("unknown --fail-on-outcome %q (want any of: %s)", name, strings.Join(outcomeNames(), ", "))
+		}
+		g.outcomes[o] = true
+	}
+	return g, nil
+}
+
+// outcomeNames is gatableOutcomes as sorted strings, for the error message above.
+func outcomeNames() []string {
+	names := make([]string, len(gatableOutcomes))
+	for i, o := range gatableOutcomes {
+		names[i] = string(o)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// trip returns a gateError when any report violates the gate, nil otherwise.
+//
+// It takes every report rather than one, so a rollup across a family of boards gates on the same terms
+// as a single-design run.
+//
+// A design trips independently of the others and only the FIRST violation is reported, since the full
+// per-item detail was already rendered to stdout by the time this runs.
+func (g reviewGate) trip(reports []review.Report) error {
+	if len(g.outcomes) == 0 && g.minAnswered == 0 {
+		return nil
+	}
+	for _, r := range reports {
+		t := r.Tally()
+		// The answered floor is checked FIRST, because a run that stopped answering its checklist
+		// explains a low failure count. "Answered 4 of 15" is more useful than "3 fails".
+		if g.minAnswered > 0 && t.Answered() < g.minAnswered {
+			return &gateError{msg: fmt.Sprintf(
+				"%s answered %d of %d checklist items, below --min-answered %d (%d covered; an item whose rule is present but whose inputs are absent reads not-applicable, which counts as covered and not as answered)",
+				designLabel(r), t.Answered(), t.Total, g.minAnswered, t.Covered())}
+		}
+		if n, o := g.countGated(r); n > 0 {
+			return &gateError{msg: fmt.Sprintf("%s has %d checklist %s at --fail-on-outcome %s",
+				designLabel(r), n, pluralItems(n), o)}
+		}
+	}
+	return nil
+}
+
+// countGated returns how many of a report's items have a gated outcome. It also returns the first
+// such item's outcome, for the message.
+func (g reviewGate) countGated(r review.Report) (int, review.Outcome) {
+	var n int
+	var first review.Outcome
+	for _, a := range r.Areas {
+		for _, it := range a.Items {
+			if g.outcomes[it.Outcome] {
+				if n == 0 {
+					first = it.Outcome
+				}
+				n++
+			}
+		}
+	}
+	return n, first
+}
+
+// designLabel names the design a gate message is about. It falls back to the manifest when a report
+// names no design, as a hand-built Report in a test may not.
+func designLabel(r review.Report) string {
+	if r.Design != "" {
+		return r.Design
+	}
+	return r.Manifest
+}
+
+func pluralItems(n int) string {
+	if n == 1 {
+		return "item"
+	}
+	return "items"
+}

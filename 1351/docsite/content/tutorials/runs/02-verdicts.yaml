@@ -1,0 +1,4 @@
+# Rung 2: one rule's verdicts, passes included, each naming the capacitor that proves it.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni check --verdicts --rule decoupling-present .

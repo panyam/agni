@@ -1,0 +1,581 @@
+// Package check runs rule checks over a netlist IR Design. Pure IR operations, no I/O
+// (CONSTRAINTS C1).
+//
+// A rule is a Rule value whose Eval is written against the query primitives in query.go
+// (Select/Exists/Count over a shared Model) rather than raw loops over the IR. The built-in rules
+// and their Spec twins (spec.go) live in stdlib/rules/builtin and install through RegisterBuiltins.
+// See docsite/content/architecture/rules-and-checks.md#the-evaluation-model.
+package check
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/panyam/agni/core/timing"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+)
+
+// Finding is one rule violation. Prov locates it in the source, nil when the source carries no
+// provenance for the subject. The subject is an Entity, built through NetFinding/CompFinding or an
+// Entity constructor, so a consumer can group and highlight by kind without parsing a string.
+type Finding struct {
+	Severity string // "error" | "warning" | "info"
+	// Inconclusive marks a subject the rule examined and could not decide, rather than a defect
+	// (agni issue 74). It is a per-subject result and not one of the review's design-wide needs-*
+	// preconditions, because some cases have nothing to supply. A netlist states reset polarity
+	// nowhere, while an unclassified controller resolves once its spec is seeded, and both are
+	// inconclusive. The remedy goes in Message, as for a defect.
+	//
+	// Set it only where the rule can NAME the thing it could not resolve. See
+	// docsite/content/build/check-rule.md#five-outcomes-and-the-three-that-are-not-a-pass.
+	Inconclusive bool
+	Rule         string
+	// Subject is the ONE entity a reader has to change to fix this. A Verdict's subject tuple names
+	// everything the rule quantified over; a Finding picks the one to edit and puts the rest in
+	// Context. Its Ref must be one of the verdict's subject refs, and that is checked. See
+	// docsite/content/build/check-rule.md#a-tuple-in-the-verdict-one-entity-in-the-finding.
+	Subject Entity
+	Message string
+	Prov    *ir.Provenance
+	// Context lists entities that the finding's message NAMES but is not ABOUT (agni issue 349). A
+	// crystal-load-caps finding names the terminal net XOUT1 while its subject is the crystal.
+	// Without Context the drawing could not say which terminal was at fault.
+	//
+	// Only real design entities go here. Values, thresholds and units go in Message. Usually empty.
+	// See ContextSubject for Role and ordering.
+	Context []ContextSubject
+	// DatasheetProv is the datasheet side of a finding's provenance. It holds one citation for each
+	// value the conclusion depends on, so a consumer can show document, page and section without
+	// parsing Message. It is empty when no seeded datasheet value backs the finding. It is a slice
+	// because a connection-aware rule reads more than one part's datasheet (WS3-028).
+	//
+	// The review ratifies a finding only when EVERY citation clears the confidence floor
+	// (review.isUnratified), since one weak input weakens the whole conclusion. Across findings the
+	// quantifier flips, and one trustworthy finding makes the item a Fail.
+	DatasheetProv []*DatasheetCitation
+	// VerdictIDs names each verdict this finding was projected from, spelled as VerdictID computes
+	// it. A consumer holding only the finding can then link to the proof (agni issue 485). A Finding
+	// alone cannot recover a verdict id, since the verdict may be keyed on a tuple, on a context
+	// entity, or on an element such as a signal that a finding cannot name. The run holds both and
+	// stamps the ids. A rule that states no considered set leaves this empty. Its verdicts are never
+	// published, so a viewer could not resolve the id.
+	VerdictIDs []string
+}
+
+// ContextSubject is one entity named in a finding's message but not its subject, with the part it
+// plays.
+//
+// Role is a short lower-case noun from the rule author's vocabulary ("terminal", "rail", "source"),
+// not a closed enum. A Role can repeat within a finding (i2c-address-collision's "A and B both strap
+// to address N"), so treat Context as a list rather than a map. Order matches the order the message
+// names them.
+type ContextSubject struct {
+	Entity
+	Role string
+}
+
+// Ctx pairs an entity with its role. Build the entity with one of the constructors below so a net's
+// NetID or a pin's designator is not dropped at the call site.
+func Ctx(e Entity, role string) ContextSubject { return ContextSubject{Entity: e, Role: role} }
+
+// Entity names ONE design entity. Subjects and context lists share this type, so a consumer that only
+// wants to point at something treats them alike. It carries identity only, never severity, message
+// or provenance.
+type Entity struct {
+	Kind string // KindNet | KindComponent | KindPin | KindEndpoint | KindBus | KindSymbol
+	Ref  string // net name (KindNet), ref_des (KindComponent | KindPin), or the kind's own spelling
+	Pin  string // pin designator, set only when Kind == KindPin
+	// NetID is the per-instance net identity (ir.Net.id) for a net entity, so two nets sharing a
+	// name are distinguishable and each locates to ITS wires. Empty for every other kind, and for a
+	// net reached by name only; a consumer then joins by Ref.
+	NetID string
+}
+
+// The entity constructors. Build an Entity through one of these rather than a struct literal,
+// because each kind needs different fields. A net wants its NetID, a pin wants both halves of its
+// key, and a component leaves both empty.
+
+// NetEntity names a net, carrying the per-instance id so a duplicate name is still distinguishable.
+func NetEntity(n *ir.Net) Entity {
+	return Entity{Kind: KindNet, Ref: n.GetName(), NetID: n.GetId()}
+}
+
+// NetNameEntity names a net by NAME alone, with no per-instance id. Use it for a rule that resolved
+// a rail through a name lookup and never had the net itself. A consumer joins it by name and may
+// match either of two same-named nets.
+func NetNameEntity(name string) Entity { return Entity{Kind: KindNet, Ref: name} }
+
+// ComponentEntity names a placed part by its reference designator.
+func ComponentEntity(refDes string) Entity { return Entity{Kind: KindComponent, Ref: refDes} }
+
+// PinEntity names one terminal of one part. Both halves are required.
+func PinEntity(refDes, pin string) Entity {
+	return Entity{Kind: KindPin, Ref: refDes, Pin: pin}
+}
+
+// BusEntity names a source bus construct by its display label, which is also its geometry join key.
+func BusEntity(label string) Entity { return Entity{Kind: KindBus, Ref: label} }
+
+// SymbolEntity names a symbol REFERENCE as the source spelled it, which names a file rather than
+// anything placed in the design.
+func SymbolEntity(ref string) Entity { return Entity{Kind: KindSymbol, Ref: ref} }
+
+// EndpointEntity names a geometric location in the sheet frame, for the wire-end diagnostics that
+// have no captured entity to point at.
+func EndpointEntity(x, y int64) Entity {
+	return Entity{Kind: KindEndpoint, Ref: fmt.Sprintf("%d,%d", x, y)}
+}
+
+// DatasheetCitation records which document, page and section a datasheet-backed value came from, and
+// how it was extracted. The built-in datasheet rules put a Citation string in a message, and this is
+// its typed twin. A renderer can show it in columns and surface a low Confidence as "verify before
+// trusting". The design side of the provenance is in Finding.Prov.
+type DatasheetCitation struct {
+	Doc        string  // the SourceDoc title (vendor doc number + revision), resolved from DocRef; "" if unresolved
+	DocRef     string  // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
+	Page       int32   // 1-based page in the document
+	Section    string  // the table or figure the value was read from
+	Method     string  // how the value was extracted ("hand", "derive/v0", "mock", ...)
+	Confidence float64 // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+	// Verification says whether a person has checked this value and whether that still holds for the
+	// revision the corpus now has (param.Unverified/Verified/Stale/Unknown). "" for a citation with no
+	// parameter behind it (a pin declaration, a relation bound).
+	//
+	// Separate from Confidence, which is fixed at extraction. A verification goes stale when the
+	// document moves, and a stale one still looks fully trustworthy by every other signal.
+	Verification string
+	// VerifiedRevision is the document identity as printed when the value was verified, "" if it
+	// never was. Doc is resolved from the CURRENT SourceDoc, so after a re-seed only this field
+	// still holds the checked revision. A stale citation reads it to say "verified against
+	// SCES650K, corpus now holds SCES650L". Display only, never compared.
+	VerifiedRevision string
+	// Corpus names the corpus whose transcription supplied the value. It is param.CorpusProject for
+	// the design's own project params/, param.CorpusShared for a corpus the project does not own
+	// (--params, --params-url), and "" when the provider cannot say. A project's corpus is layered
+	// over a shared one per MPN, so one run can cite both. A reader needs a value from outside the
+	// project flagged (agni issue 749). Run and RunVerdicts stamp it, not the rules.
+	Corpus string
+
+	// spec is the PartSpec the citation was built from. Run reads the corpus off it, so no rule has
+	// to pass one along.
+	spec *parampb.PartSpec
+}
+
+// Finding subject kinds, the values of Entity.Kind.
+const (
+	KindNet       = "net"
+	KindComponent = "component"
+	KindPin       = "pin"
+	// KindEndpoint is a geometric location rather than a captured entity. Its Ref is a dangling wire
+	// endpoint's "x,y" in the sheet geometry frame.
+	KindEndpoint = "endpoint"
+	// KindBus is a source bus construct, not a net. Its Ref is the display label and its geometry
+	// join key is the construct's uuid (Finding.Prov.NativeId), sent to the client as
+	// Subject.bus_id so a bus-not-modeled finding highlights its own drawn bus (WS7-042b).
+	KindBus = "bus"
+	// KindSymbol is a symbol REFERENCE that failed to resolve (WS1-052), naming an absent file rather
+	// than anything placed. Its Ref is the reference as the source spelled it (`res.sym`,
+	// `Library:Symbol`). Not KindComponent, because one missing file is one finding however many parts
+	// it cost pins; the affected ref-des live in Message and the reader.unresolved_symbol relation.
+	KindSymbol = "symbol"
+	// KindSignal is a REQUIREMENT SLOT, the role a profile asks for ("STB", "CANL"), with Ref the
+	// signal name as the profile spells it. Only this kind may name something the design lacks. An
+	// interface rule's verdict subject is (host, role), so a host missing four signals gets
+	// four distinct verdict ids rather than one id on four rows. It never highlights, since the
+	// finding's own subject is the component.
+	KindSignal = "signal"
+)
+
+// Rule is a named, self-describing check over the IR. Summary, Impact, Remedy and Detail are its
+// documentation, so a rule is authored in one file and listed without a separate catalog.
+//
+// The engine acts on Name, Severity, Reads and Eval, and only those fields are typed. Reads gates
+// availability by fact tier (TierOf matches on the name), so spell each fact as the fact vocabulary
+// does. Everything classificatory lives in Tags, an open key -> value bag the catalog groups and
+// filters on (TreeBy, Filter), so an operator's or embedder's rule can add its own axes. See
+// docsite/content/architecture/rules-and-checks.md#a-rules-library-in-go.
+//
+// Run stamps Rule and Severity from the rule's metadata, so a rule body never sets them.
+type Rule struct {
+	Name     string // stable identifier, e.g. "single-pin-net"
+	Severity string // "error" | "warning" | "info"
+	Summary  string // one-line description for listings
+	Impact   string // what goes wrong when violated
+	// Remedy is what to DO about a violation, in the imperative, as one hardware engineer would say
+	// it to another. It is the fix for the RULE rather than the subject, so it names the class of
+	// change ("add a bulk capacitor at the rail's entry") and never a designator or a computed
+	// value. Sometimes the fix needs a number, such as an I2C pull-up's resistance, and the engine
+	// cannot derive it. Then say what to size it from and stop, since an invented value would read
+	// as the engine's authority.
+	Remedy string
+	Detail string // long-form markdown: meaning, rationale, diagram, query structure
+	// DocPage is the stem of the docsite page that explains this rule, under reference/rules/, and
+	// empty when no page does. The source that compiles the rule sets it, because a rule's name and its
+	// page differ wherever one page covers a family. Every intent/subsystem-<slug> rule is explained on
+	// intent-subsystem, and every profile's signal-missing rule on profile-signal-missing.
+	// tools/catalogdocs names the pages from it and the rules service links to them.
+	DocPage    string
+	Primitives []string // query primitives Eval composes
+	Reads      []string // facts the rule reads, in the fact vocabulary (net.pin_count, on_net, param.max(...))
+	// OptionalReads lists the facts in Reads that a rule consults only to EXEMPT findings, so their
+	// absence does not make it inapplicable. Available's tier gate skips them. esd-protection, for
+	// example, credits an IC's ESD rating when a datasheet is attached and still runs without
+	// --params, unlike supply-exceeds-abs-max, whose finding REQUIRES the datasheet. Still listed
+	// in Reads for twin parity and docs.
+	OptionalReads []string
+	// RequiresCapability lists the source-format capabilities a rule needs to evaluate SOUNDLY
+	// (WS3-096). When a format cannot express a construct that the rule reads, the rule finds nothing
+	// and looks like a clean pass, so Available reports not-applicable instead. Unlike Reads, a
+	// capability is a property of the source format, always answerable from the Model. Every entry
+	// is required; a capability that only NARROWS a rule is handled in its own Eval (as
+	// power-input-not-driven and unconnected-pin do).
+	RequiresCapability []Capability
+	// ParamSymbols lists the datasheet SYMBOLS that a rule joins on (the vendor spellings, e.g. the
+	// output-current alias set). It is the rule-bound twin of an inline query's param_symbol
+	// (WS3-097). If no component has a symbol seeded, the rule yields zero findings, and that looks
+	// like a design within its limits. A review runner reads this field to render needs-data instead.
+	// Reads/Available do not cover it, since they gate only on the params tier being attached.
+	//
+	// Declare it only where a finding REQUIRES the symbol. A rule that consults a value only to
+	// exempt findings leaves it out, as with OptionalReads.
+	ParamSymbols []string
+	Tags         map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
+	// Eval MAPS every subject the rule was applied to onto a verdict. A pass carries its proof, an
+	// undecidable subject says so, and a violation carries its Finding. Findings are the projection
+	// of this (VerdictsToFindings, taken by Run), so a rule's findings cannot disagree with its
+	// verdicts.
+	//
+	// The context is the caller's. A rule that walks a whole board, or evaluates a query, should stop
+	// when it is done (agni issue 795); the runners check it between rules regardless, so a rule that
+	// ignores it delays a cancellation by one rule at most.
+	Eval func(context.Context, Model) []Verdict
+	// onFittedParts records that OnFittedParts has wrapped Eval, so marking a rule twice wraps it once.
+	onFittedParts bool
+	// SubjectShape declares the KINDS of a verdict's subject tuple, in the rule's order, for a rule
+	// whose subject is a relation between entities. Empty means one subject of whatever kind the rule
+	// enumerates. It tells a reader how to spell a verdict id without running the check, e.g.
+	// `regulator-output-exceeds-abs-max:(component:U1,net:+5V,component:U5)`, where nothing else says
+	// the source comes before the rail (see verdict.go for the id form).
+	//
+	// The arity is FIXED. TestSubjectShapeHolds fails a rule that emits different tuple sizes.
+	SubjectShape []string
+	// StatesConsideredSet reports whether Eval's verdicts are the rule's full CONSIDERED SET or only
+	// its failures. The signature cannot say which. A pre-verdicts rule wrapped in FailuresOnly
+	// returns only Fail verdicts, indistinguishable from a rule that examined exactly those subjects
+	// and found them all wanting. RunVerdicts filters on it, so an unconverted rule contributes
+	// nothing. Forgetting it under-reports a converted rule and can never over-report one.
+	//
+	// MIGRATION-ONLY. Once every rule converts (agni issue 391) the filter in RunVerdicts is a
+	// tautology and the field can go.
+	StatesConsideredSet bool
+	// Scoping says how the rule answers a run asked about some nets or parts (agni issue 897). The
+	// zero value runs the rule whole and keeps what the scope covers; see Scoping.
+	Scoping Scoping
+}
+
+// Findings projects the rule's verdicts onto the findings contract and keeps only the violations.
+// `check` and every consumer of its output read these. It is a projection rather than a second body,
+// so the two cannot disagree.
+func (r *Rule) Findings(ctx context.Context, m Model) []Finding {
+	return VerdictsToFindings(r.Eval(ctx, m))
+}
+
+// FailuresOnly adapts a pre-verdicts rule body to the Eval signature, turning each Finding into a
+// Fail (or Inconclusive) verdict and claiming nothing about the subjects that did not fail. A built-in
+// rule using it has not been converted (agni issue 391). Converting means deleting the wrapper,
+// writing the map, and setting StatesConsideredSet. core/query's RuleFromQuery also uses it.
+//
+// It invents no Witness. The Finding is the evidence, and a Witness restating the message would make
+// an unconverted rule look converted.
+func FailuresOnly(eval func(context.Context, Model) []Finding) func(context.Context, Model) []Verdict {
+	return func(ctx context.Context, m Model) []Verdict {
+		fs := eval(ctx, m)
+		out := make([]Verdict, 0, len(fs))
+		for _, f := range fs {
+			outcome := Fail
+			if f.Inconclusive {
+				outcome = Inconclusive
+			}
+			out = append(out, Verdict{
+				Outcome:  outcome,
+				Subjects: []Entity{f.Subject},
+				Context:  f.Context,
+				Finding:  &f,
+			})
+		}
+		return out
+	}
+}
+
+// Capability names a source-format ability a rule needs to evaluate soundly (WS3-096). A rule that
+// infers a defect from the ABSENCE of a construct the format cannot express would false-fire there,
+// so it declares the capability and Available reports not-applicable instead of a silent pass. The
+// value is a stable contract string, and it matches the design-level fact that the same gate reads.
+// docsite/content/architecture/rules-and-checks.md#source-format-capabilities tables which formats
+// lack each one.
+type Capability string
+
+const (
+	// CapTypesPowerOut means the source format classifies power-OUTPUT pins. Without it a rail's
+	// driver reads as a plain input and power-input-not-driven cannot conclude "unpowered". The
+	// queryable twin is design.types_power_out / the design.types_power_out fact.
+	CapTypesPowerOut Capability = "design.types_power_out"
+	// CapNoConnectChannel means the design can express an intentional no-connect (a
+	// NO_CONNECT-typed pin, a no-connect flag, or a designer's NC_ / no_connect net name; see
+	// NoConnectMarked). Without it unconnected-pin cannot tell a deliberate open pin from a
+	// forgotten one. The queryable twin is design.has_nc_channel / design.nc_channel.
+	CapNoConnectChannel Capability = "nc_channel"
+	// CapNetClass means the design carries tool-assigned net-class membership (WS3-105). A rule scoped
+	// by net class selects nothing without it and reports clean. It depends on the design's CONTENT,
+	// not its format grammar. The queryable twin is design.has_netclass / the design.has_netclass fact.
+	CapNetClass Capability = "netclass"
+
+	// CapRefDesCollisions means the READER checked this design for ref-des collisions. It is declared
+	// per read (ir.InputDiagnostics.supplied) because only the reader knows whether it looked, and
+	// duplicate-ref-des read as passing on formats where nothing looked (agni issue 309). The
+	// queryable twin is supplies_ref_des_collisions.
+	CapRefDesCollisions Capability = "ref_des_collisions"
+
+	// CapNetClassDefs means the design declares net-class DEFINITIONS, the clearance, track width and
+	// via sizes for routing a class's nets (WS3-111). Separate from CapNetClass because a project
+	// can assign nets to a class it never defines, and a declared-vs-actual rule gated on membership
+	// would then run over zero comparisons and pass. The queryable twin is design.has_netclass_defs.
+	CapNetClassDefs Capability = "netclass_defs"
+
+	// CapJunctionTaps means the READER examined wire-end-on-wire-body taps and recorded both the joined
+	// and the silent ones, declared per read like CapRefDesCollisions. Only the KiCad reader looks at
+	// wire geometry, so elsewhere wire-no-junction would find nothing and read as a pass. It gates on
+	// the JOINED half, since a reader recording only the silent taps (the KiCad reader until agni issue
+	// 420) has not examined the considered set.
+	CapJunctionTaps Capability = "junction_taps"
+
+	// CapRangeLabels means the READER recorded every label spelled with an index range and whether
+	// its format reads that spelling as a bus. Only the KiCad reader does, because KiCad's bus
+	// spelling differs from the other formats'. Elsewhere bus-spelling-not-a-bus would find nothing
+	// and read as a pass.
+	CapRangeLabels Capability = "range_labels"
+)
+
+// Run evaluates rules over a Model and returns findings sorted by rule, then subject. The caller
+// picks the rules (the full set, a subset, diff gates); RunDesign is the shortcut for the standard
+// checks over a design. On a design with an unresolved symbol, a connectivity rule emits one
+// Inconclusive finding instead of evaluating (see unresolvedSymbolGate).
+//
+// It checks ctx before each rule and returns its error when the caller has gone (agni issue 795),
+// rather than the findings so far, which would read as a run that found nothing more.
+func Run(ctx context.Context, m Model, rules []*Rule) ([]Finding, error) {
+	fs, _, err := run(ctx, m, rules, true, false)
+	return fs, err
+}
+
+// RunAll is Run and RunVerdicts together, evaluating each rule ONCE (agni issue 810). A check
+// response wants both contracts. Its caller used to call the two, and so ran the whole catalog twice,
+// since a finding is a projection of a verdict. RunAll returns exactly the findings and verdicts that
+// Run and RunVerdicts return over the same rules, gate included.
+func RunAll(ctx context.Context, m Model, rules []*Rule) ([]Finding, []Verdict, error) {
+	return run(ctx, m, rules, true, true)
+}
+
+// run is the one loop behind Run, RunVerdicts and RunAll. Findings take the unresolved-symbol gate,
+// as Run always has; verdicts never did, so a gated rule that states a considered set is still
+// evaluated for its verdicts, and only then. Each rule's Eval runs at most once.
+func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts bool) ([]Finding, []Verdict, error) {
+	defer timing.Begin(ctx, "rules")()
+	var fs []Finding
+	var vs []Verdict
+	gate := func(*Rule) (Finding, bool) { return Finding{}, false }
+	if wantFindings {
+		gate = unresolvedSymbolGate(m)
+	}
+	scope := SubjectScope(ctx)
+	for _, r := range rules {
+		if err := ctx.Err(); err != nil {
+			return nil, nil, err
+		}
+		if scope != nil && r.Scoping == ScopeDesignWide {
+			continue // nothing it concludes is about the scope's subjects; SplitDesignWide names it
+		}
+		gated := false
+		if wantFindings {
+			if f, ok := gate(r); ok {
+				f.Rule, f.Severity = r.Name, r.Severity
+				fs = append(fs, f)
+				gated = true
+			}
+		}
+		needVerdicts := wantVerdicts && r.StatesConsideredSet
+		if gated && !needVerdicts {
+			continue
+		}
+		if !wantFindings && !needVerdicts {
+			continue
+		}
+		ruled := timing.BeginRule(ctx)
+		evaluated := r.Eval(ctx, m)
+		ruled(r.Name)
+		if scope != nil {
+			// Narrowed before findings are projected, so a finding is kept exactly when its verdict
+			// is, whether or not the rule read the scope itself.
+			evaluated = scope.verdicts(evaluated)
+		}
+		if wantFindings && !gated {
+			for _, f := range findingsOf(r, evaluated) {
+				f.Rule, f.Severity = r.Name, r.Severity
+				stampCorpus(m, f.DatasheetProv)
+				fs = append(fs, f)
+			}
+		}
+		if needVerdicts {
+			for _, v := range evaluated {
+				v.Rule = r.Name
+				if v.Witness != nil {
+					stampCorpus(m, v.Witness.Datasheet)
+				}
+				vs = append(vs, v)
+			}
+		}
+	}
+	// Stable, so a rule's findings keep its own order whichever other rules ran beside it, and a
+	// caller holding one rule's results can join them to another's (agni issue 390).
+	sort.SliceStable(fs, func(i, j int) bool {
+		if fs[i].Rule != fs[j].Rule {
+			return fs[i].Rule < fs[j].Rule
+		}
+		return EntityRef(fs[i].Subject) < EntityRef(fs[j].Subject)
+	})
+	sort.SliceStable(vs, func(i, j int) bool {
+		if vs[i].Rule != vs[j].Rule {
+			return vs[i].Rule < vs[j].Rule
+		}
+		return SubjectRefs(vs[i]) < SubjectRefs(vs[j])
+	})
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err // the last rule ran past a cancellation, so its results are not to be trusted as complete
+	}
+	return fs, vs, nil
+}
+
+// stampCorpus names the corpus each citation's spec came from, when the model's provider can say.
+func stampCorpus(m Model, cs []*DatasheetCitation) {
+	sc, ok := m.(interface {
+		SpecCorpus(*parampb.PartSpec) string
+	})
+	if !ok {
+		return
+	}
+	for _, c := range cs {
+		if c != nil && c.spec != nil {
+			c.Corpus = sc.SpecCorpus(c.spec)
+		}
+	}
+}
+
+// unresolvedSymbolGate returns a per-rule gate reporting whether a rule cannot be DECIDED because the
+// read lost pins (WS1-052), with the Inconclusive finding to emit instead.
+//
+// The gate is DESIGN-WIDE, so one unresolved symbol gates every connectivity rule, as WS1-013 does
+// for dangling endpoints in the readers. A per-subject gate needs a finding-to-refdes mapping that
+// does not exist yet, and without one it would claim the unflagged parts are unaffected.
+//
+// Inconclusive rather than not-applicable, because a --symbol-path fixes an unresolved symbol while a
+// missing capability is permanent for the format.
+func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
+	var unresolved []*ir.UnresolvedSymbol
+	if m != nil {
+		unresolved = m.UnresolvedSymbols()
+	}
+	if len(unresolved) == 0 {
+		return func(*Rule) (Finding, bool) { return Finding{}, false }
+	}
+	refs := make([]string, 0, len(unresolved))
+	for _, u := range unresolved {
+		refs = append(refs, u.GetSymref())
+	}
+	// Short because every gated rule repeats it. symbol-unresolved carries the affected placements
+	// and the fix.
+	subject := strings.Join(refs, ", ")
+	msg := "cannot decide: pins are unknown while " + subject + " is unresolved (see symbol-unresolved)"
+	if len(refs) > 1 {
+		msg = "cannot decide: pins are unknown while " + subject + " are unresolved (see symbol-unresolved)"
+	}
+	return func(r *Rule) (Finding, bool) {
+		if !readsConnectivity(r) {
+			return Finding{}, false
+		}
+		return Finding{Subject: SymbolEntity(subject), Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
+	}
+}
+
+// readsConnectivity reports whether a rule's conclusions depend on pins existing. A rule that reads
+// only net names, component classes or datasheet params keeps evaluating when a symbol is lost.
+func readsConnectivity(r *Rule) bool {
+	for _, fact := range r.Reads {
+		if TierOf(fact) == TierConnectivity {
+			return true
+		}
+	}
+	return false
+}
+
+// RunDesign runs the installed built-in rules over NewModel(d). The built-ins install by importing
+// stdlib/rules/builtin; without that import the set is empty and RunDesign returns no findings.
+//
+// It runs without a caller's context, so it cannot be cancelled; a caller that has one uses Run.
+func RunDesign(d *ir.Design) []Finding { return RunBackground(NewModel(d), builtinRules) }
+
+// RunVerdicts collects verdicts from every rule that sets StatesConsideredSet, stamping Rule from the
+// rule's name, and orders them as Run does (rule, then subject).
+//
+// A rule that does not state a considered set contributes nothing, and a caller cannot tell that
+// apart from a rule that considered no subjects. So this returns a verdict list rather than a
+// coverage report. Over a part-converted catalog a coverage report would overstate the run. See
+// StatesConsideredSet for why the filter is a declaration.
+//
+// Like Run, it checks ctx before each rule and returns its error rather than a partial list.
+func RunVerdicts(ctx context.Context, m Model, rules []*Rule) ([]Verdict, error) {
+	_, vs, err := run(ctx, m, rules, false, true)
+	return vs, err
+}
+
+// Report maps a selection to findings (the report step every rule ends with). Subject and
+// Prov come from the selected entity via mk.
+func Report[T any](xs []T, mk func(T) Finding) []Finding {
+	out := make([]Finding, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, mk(x))
+	}
+	return out
+}
+
+// NetFinding is the Report constructor for a net subject. It builds the subject with NetEntity, so
+// the net's per-instance id travels with the finding.
+func NetFinding(msg string) func(*ir.Net) Finding {
+	return func(n *ir.Net) Finding {
+		return Finding{Subject: NetEntity(n), Message: msg, Prov: n.Prov}
+	}
+}
+
+// CompFinding is the component-subject counterpart of NetFinding.
+func CompFinding(msg string) func(*ir.Component) Finding {
+	return func(c *ir.Component) Finding {
+		return Finding{Subject: ComponentEntity(c.RefDes), Message: msg, Prov: c.Prov}
+	}
+}
+
+// RunBackground is Run for a caller with no context to pass, such as a test or an example. It cannot
+// be cancelled, so it cannot fail, and it returns the findings alone. A caller serving a request, or
+// with a command's context, uses Run so the work stops when nobody is waiting for it.
+func RunBackground(m Model, rules []*Rule) []Finding {
+	fs, _ := Run(context.Background(), m, rules) // a background context is never done
+	return fs
+}
+
+// RunVerdictsBackground is RunVerdicts for a caller with no context to pass, on the same terms as
+// RunBackground.
+func RunVerdictsBackground(m Model, rules []*Rule) []Verdict {
+	vs, _ := RunVerdicts(context.Background(), m, rules)
+	return vs
+}

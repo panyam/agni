@@ -1,0 +1,11 @@
+(edif LEGACY_QUIRK_LETTER_A
+  (edifVersion 2 0 0)
+  (design LEGACY_QUIRK_LETTER_A (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance D_K_ONLY (viewRef V (cellRef DIODE)) (designator "D_K_ONLY"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net NET_CATHODE_SIDE (joined (portRef K (instanceRef D_K_ONLY)) (portRef 1 (instanceRef R1))))
+          (net NET_ANODE_SIDE (joined (portRef A (instanceRef D_K_ONLY)))))))))

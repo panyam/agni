@@ -1,0 +1,81 @@
+---
+title: "net.nominal_voltage"
+description: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level, and a regulator internal (_FB, _SW, _BOOT) is on neither because the number in its name is another net's voltage"
+---
+
+### What it is
+
+`net.nominal_voltage(net, volts)` yields the nominal voltage declared by a rail's NAME, so `+3V3`
+→ 3.3, `5V` → 5, `1V8` → 1.8. It reads only the net name, with the same token grammar that
+`net.max_voltage` falls back to. A name may carry no parseable voltage token, or tokens that
+disagree (`12V_TO_5V`). Such a net yields no row, because the relation refuses to guess. Every row
+cites the net's IR source.
+
+The relation reads rails only, so a net must carry the rail role (ground counts) before its name is
+read. If a non-rail net's name declares a level, that net is on `net.signal_level` instead.
+
+**A regulator internal is on neither relation.** A buck's feedback tap, switch node and bootstrap
+node are named after the rail they serve, so `12V_FB` and `12V_SW` match the rail vocabulary on the
+prefix, and neither is at 12V, because the tap sits at the regulator's internal reference and the
+switch node swings to the input rail at the switching frequency. The number in the name belongs to a
+different net. So it is neither a rail nominal nor a signalling level, and the projector emits
+nothing rather than restating it under whichever relation is left. The two relations are therefore
+disjoint but NOT exhaustive (agni 679).
+
+That gate was missing until agni issue 194, and the relation still *worked* without it. The
+projector emitted a row for any net whose name parsed. So when a team encoded a signalling level
+into a signal net's name, the team got that level back from a relation meaning "rail nominal". A net
+named `U3_12_U7_4_3V3` yielded 3.3 while classifying as neither rail nor ground. The number was
+right and the relation carrying it was not.
+
+![A net named +3V3 yields the nominal 3.3V; a net named VBAT carries no voltage token and yields no row]({{.Site.PathPrefix}}/static/images/catalog/relations/net.nominal_voltage.svg)
+
+### For hardware engineers
+
+This is the design's own statement of what a rail is supposed to be, taken from how the schematic
+names it. It is the label rather than a measured or computed worst-case voltage. That is enough to
+compare a rail against a datasheet's recommended operating window. If a part wants 3.0–3.6 V on `VDD`
+and the net feeding it is named `+5V`, the nominal alone tells you the rail is out of range. A rail
+named without a voltage token (`VBAT`, `VBOOST`) simply has no nominal here.
+
+### For software engineers
+
+A datasheet range check joins against `net.nominal_voltage`, the design-side scalar. It is split
+from `net.max_voltage` on purpose, because `net.max_voltage` prefers an explicit `max_voltage`
+attribute and only falls back to the name, so it can carry an engineer-annotated worst case;
+`net.nominal_voltage` is name-only, the plain nominal, never the annotated max. Keeping them
+separate means a rule states which evidence it wants. The projector calls
+`check.NominalVoltageFromName`. `check.RailMaxVoltage` and the rail rules already use that same
+parser.
+
+**The rail gate is on the relation, not on that function.** `check.NominalVoltageFromName` takes a
+bare name and has no net to ask about a role, so it cannot gate and does not try. When a Go rule
+holds a net and means rails, it has to gate for itself with `Model.IsRailNet`. The pin-tracking
+rules are the worked example. So the fact and the Go rules agree on the number but not automatically
+on the SET, and a rule authored against this relation has to account for that.
+
+### Go projector
+
+`netNominalVoltageFacts` in `stdlib/relations/facts.go` iterates `Model.Nets()`. It skips any net
+that is not a rail (`Model.IsRailNet`) or is a regulator internal (`Model.IsRegulatorInternalNet`).
+It parses each remaining name via `check.NominalVoltageFromName`, and for each name that parses it
+emits one row with `Num` set to the voltage and a citation to the net's IR provenance. Nets with no
+parseable name-nominal are skipped. This relation is netlist-tier, so it needs no `--params` and is
+populated on any read design.
+
+### Datalog
+
+List every rail with a name-derived nominal:
+
+```
+net.nominal_voltage(?net, ?v) => ?net, ?v
+```
+
+Join to a datasheet recommended window (needs `--params`) to compare a rail against the part it
+feeds. See `param.range`:
+
+```
+component.net(?ref, ?net), net.nominal_voltage(?net, ?v),
+component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max),
+?v > ?max => ?ref, ?net, ?v
+```

@@ -1,0 +1,18 @@
+(edif LEXICONDEMO
+  (edifVersion 2 0 0)
+  (design LEXICONDEMO (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef SENSOR)) (designator "U2"))
+          (instance U3 (viewRef V (cellRef LDO)) (designator "U3"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+          (net VCC (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U3))))
+          (net GND (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef U2)) (portRef 2 (instanceRef U3))))
+          (net SENSOR_3V3 (joined (portRef 3 (instanceRef U3)) (portRef 1 (instanceRef U2)) (portRef 2 (instanceRef R1)) (portRef 2 (instanceRef R2))))
+          (net SENSOR_EN (joined (portRef 5 (instanceRef U1)) (portRef 4 (instanceRef U3))))
+          (net SDA (joined (portRef 3 (instanceRef U1)) (portRef 3 (instanceRef U2)) (portRef 1 (instanceRef R1))))
+          (net SCL (joined (portRef 4 (instanceRef U1)) (portRef 4 (instanceRef U2)) (portRef 1 (instanceRef R2)))))))))

@@ -1,0 +1,36 @@
+# Synthetic external pass MOSFET for the conformance corpus (WS3-085). This is the part a
+# controller-based load switch actually switches through, so its continuous drain rating is the
+# current the switch must not be allowed to exceed, and its RDS(on) IS the switch's effective
+# on-resistance. Neither number is on the controller's sheet.
+mpn: "DEMO-NFET-40"
+manufacturer: "Agni Conformance Works"
+device_class: "nfet"
+
+docs {
+  id: "demo-nfet-40-rev-c"
+  title: "DEMO-NFET-40 Rev C"
+  vendor: "Agni Conformance Works"
+}
+
+parameters {
+  name: "Drain Current - Continuous"
+  symbol: "ID"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 3 }
+  unit: "A"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "demo-nfet-40-rev-c" page: 1 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Static Drain-Source On-Resistance"
+  symbol: "RDS(on)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 0.014 max: 0.02 }
+  unit: "Ohm"
+  conditions { symbol: "VGS" eq: 10 unit: "V" raw: "VGS = 10 V" }
+  conditions { symbol: "ID" eq: 3 unit: "A" raw: "ID = 3 A" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "demo-nfet-40-rev-c" page: 2 table_or_figure: "Electrical Characteristics" method: "hand" confidence: 1 }
+}

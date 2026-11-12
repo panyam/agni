@@ -1,0 +1,8 @@
+# Rung 7: the plan edited so the logic domain is declared at 3.3 V while the board still runs it at
+# 1.8 V, which is what drift between a plan and a board looks like to this tier.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  sed -i.orig 's/+1V8:     {nominal: 1.8, domain: logic}/+1V8:     {nominal: 3.3, domain: logic}/' designs/jetson/design.yaml
+  agni check designs/jetson --rule intent/voltage-domain-mismatch

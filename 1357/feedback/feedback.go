@@ -1,0 +1,319 @@
+// Package feedback builds the report a trial of agni sends back. The trial runs on a machine that
+// holds designs we never see (agni issue 1057). The report's confidentiality guarantee is
+// STRUCTURAL, as intake's is. The Report type has no field that can hold a net name, a reference
+// designator, a part number, a design or project name, a path, or an error message. So a report
+// cannot carry any of them however it is filled. It is stricter than intake.Skeleton. Skeleton keeps
+// ref-des and MPNs because it never leaves the boundary, and this report crosses it, into a public
+// issue.
+//
+// Every field is a count, a duration, a value from a fixed vocabulary this package declares (Step,
+// Status, ErrorKind, the design's format), or the name of a rule agni ships.
+// A rule a project wrote is counted in aggregate and never named, because its namespace is the
+// project's own name.
+//
+// Its JSON is hand-rolled rather than a proto, for the same reason as intake.Skeleton. A proto twin
+// would have to carry this guarantee into a file people edit for other reasons.
+package feedback
+
+import (
+	"fmt"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
+)
+
+// Step is one thing a trial does, from a fixed list, so a step's name can never be text a design
+// supplied.
+type Step string
+
+// The steps a trial walks, in order.
+const (
+	StepRead       Step = "read the design"
+	StepCheck      Step = "run every rule"
+	StepReview     Step = "score the project's checklists"
+	StepQuerySets  Step = "answer the project's query sets"
+	StepTrace      Step = "trace a signal through a series part"
+	StepSaveReport Step = "save the check report"
+)
+
+// Status is how a step ended.
+type Status string
+
+// The outcomes a step can have. Skipped means the design gave the step nothing to do, and that is
+// not a failure. A design in no project has no checklist, for example.
+const (
+	StatusOK      Status = "ok"
+	StatusFailed  Status = "failed"
+	StatusSkipped Status = "skipped"
+)
+
+// ErrorKind classifies why a step failed without carrying the error's text, which names files and
+// entities. ClassifyError maps an error onto one.
+type ErrorKind string
+
+// The kinds a failure is reported as.
+const (
+	ErrorNone            ErrorKind = ""
+	ErrorNotFound        ErrorKind = "not-found"
+	ErrorInvalidArgument ErrorKind = "invalid-argument"
+	ErrorUnavailable     ErrorKind = "unavailable"
+	ErrorTimeout         ErrorKind = "timeout"
+	ErrorInternal        ErrorKind = "internal"
+)
+
+// Report is one trial's sanitized result. Nothing in it is text a design or a project supplied.
+type Report struct {
+	Version  string       `json:"version"`  // the engine's build version
+	Platform string       `json:"platform"` // GOOS/GOARCH, and whether it ran in a container
+	Shape    Shape        `json:"shape"`
+	Steps    []StepResult `json:"steps"`
+	// Rules are the shipped rules that reported anything, by name. ProjectRules counts the rest.
+	Rules        []RuleTally  `json:"rules"`
+	ProjectRules ProjectRules `json:"project_rules"`
+	Review       ReviewTally  `json:"review"`
+	Queries      QueryTally   `json:"queries"`
+	// PinMap counts how the design intent's IO map fared against the netlist and the datasheet. It
+	// is nil when the design declares no map (agni issue 1196).
+	PinMap *PinMapTally `json:"pin_map,omitempty"`
+}
+
+// Shape is the design as counts. The format is the reader's name for it (kicad, edif), from the
+// registry rather than the file.
+type Shape struct {
+	Format           string `json:"format"`
+	Components       int    `json:"components"`
+	Nets             int    `json:"nets"`
+	Sheets           int    `json:"sheets"`
+	HasBoard         bool   `json:"has_board"`
+	UnexpandedBlocks int    `json:"unexpanded_blocks"` // hierarchical blocks the read left out, counted
+	Flattened        bool   `json:"flattened"`         // the read ran with --flatten-hierarchy
+}
+
+// StepResult is one step's outcome and how long it took.
+type StepResult struct {
+	Step     Step          `json:"step"`
+	Status   Status        `json:"status"`
+	Duration time.Duration `json:"duration_ns"`
+	Error    ErrorKind     `json:"error,omitempty"`
+}
+
+// RuleTally is one shipped rule's counts. Rule is a ShippedRule, which only Shipped can make, so a
+// project's rule name cannot get here.
+type RuleTally struct {
+	Rule         ShippedRule `json:"rule"`
+	Severity     string      `json:"severity"`
+	Findings     int         `json:"findings"`
+	Inconclusive int         `json:"inconclusive"`
+	Pass         int         `json:"pass"`
+	Fail         int         `json:"fail"`
+}
+
+// ProjectRules counts in aggregate what the project's own rules reported.
+type ProjectRules struct {
+	Rules    int `json:"rules"`
+	Findings int `json:"findings"`
+}
+
+// ReviewTally counts what scoring the project's checklists produced, across all of them. A
+// checklist's name and its items' titles are the project's words, so neither is kept.
+type ReviewTally struct {
+	Checklists int `json:"checklists"`
+	Items      int `json:"items"`
+	Answered   int `json:"answered"`
+	Pass       int `json:"pass"`
+	Fail       int `json:"fail"`
+}
+
+// QueryTally counts what answering the project's query sets produced, across all of them.
+type QueryTally struct {
+	Sets     int `json:"sets"`
+	Queries  int `json:"queries"`
+	Answered int `json:"answered"`
+	Failed   int `json:"failed"`
+}
+
+// PinMapTally counts a declared pin map's rows and what each check concluded about them. A row names
+// a net, a part and a pin, and a function names a peripheral, so none of them is kept. A team
+// running agni on a board we never see sends this back to say how its map fared.
+type PinMapTally struct {
+	Rows         int `json:"rows"`
+	WithFunction int `json:"with_function"`
+	WithFarEnd   int `json:"with_far_end"`
+	// One per check the pin map lays out, in the order its columns run.
+	Pin      OutcomeCounts `json:"pin"`
+	Net      OutcomeCounts `json:"net"`
+	FarEnd   OutcomeCounts `json:"far_end"`
+	Function OutcomeCounts `json:"function"`
+	// FunctionUnchecked counts the function checks that compared nothing, by why. The reason itself
+	// names parts, so only its kind is kept.
+	FunctionUnchecked map[FunctionReason]int `json:"function_unchecked,omitempty"`
+	// Inferred counts the pin and function matches that needed normalizing or dropping tokens, which
+	// a verdict notes and a reviewer should look at.
+	Inferred int `json:"inferred_matches"`
+}
+
+// OutcomeCounts is one check's outcomes over the map's rows. NotRun counts the rows with no verdict
+// in the run. When the check's rule did not run, every row counts as NotRun. The function check's
+// rule, for one, needs a datasheet corpus.
+type OutcomeCounts struct {
+	Pass          int `json:"pass"`
+	Fail          int `json:"fail"`
+	Inconclusive  int `json:"inconclusive"`
+	NotConsidered int `json:"not_considered"`
+	NotRun        int `json:"not_run"`
+}
+
+// FunctionReason is why a function check compared nothing, from a fixed list.
+type FunctionReason string
+
+// The reasons a function check reports a row not considered.
+const (
+	FunctionNotDeclared     FunctionReason = "no function declared"
+	FunctionPinUnresolved   FunctionReason = "the design pin did not resolve"
+	FunctionNoPartNumber    FunctionReason = "no part number"
+	FunctionNoDatasheet     FunctionReason = "no datasheet entry"
+	FunctionNoDatasheetPins FunctionReason = "datasheet entry has no pins"
+	FunctionSpecPinUnknown  FunctionReason = "pin not in the datasheet entry"
+	FunctionNoPinMux        FunctionReason = "no pin-mux table for the pin"
+	FunctionOther           FunctionReason = "other"
+)
+
+// ShippedRule is the name of a rule agni ships. It has an unexported field so that only Shipped can
+// make one, and only from a name in the caller's list of shipped rules.
+type ShippedRule struct{ name string }
+
+// String is the rule's name.
+func (r ShippedRule) String() string { return r.name }
+
+// MarshalText writes the rule's name, so a report's JSON names the rule.
+func (r ShippedRule) MarshalText() ([]byte, error) { return []byte(r.name), nil }
+
+// Shipped returns name as a ShippedRule when shipped holds it, and false for any other name, which a
+// caller counts under ProjectRules instead.
+func Shipped(name string, shipped map[string]bool) (ShippedRule, bool) {
+	if !shipped[name] {
+		return ShippedRule{}, false
+	}
+	return ShippedRule{name: name}, true
+}
+
+// ClassifyError reduces an error to its kind, dropping its text. The checks read the text only for
+// the sentinel wording the service tier wraps every error in, never to keep any of it.
+func ClassifyError(err error) ErrorKind {
+	if err == nil {
+		return ErrorNone
+	}
+	s := err.Error()
+	switch {
+	case strings.Contains(s, "not found"), strings.Contains(s, "no such file"):
+		return ErrorNotFound
+	case strings.Contains(s, "invalid argument"):
+		return ErrorInvalidArgument
+	case strings.Contains(s, "unavailable"):
+		return ErrorUnavailable
+	case strings.Contains(s, "deadline exceeded"), strings.Contains(s, "context canceled"):
+		return ErrorTimeout
+	}
+	return ErrorInternal
+}
+
+// readFailed reports whether the report's read step ran and failed.
+func (r Report) readFailed() bool {
+	for _, st := range r.Steps {
+		if st.Step == StepRead {
+			return st.Status == StatusFailed
+		}
+	}
+	return false
+}
+
+// Markdown renders the report for a person to read before they send it.
+func (r Report) Markdown() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "**agni %s** on %s\n\n", r.Version, r.Platform)
+	s := r.Shape
+	// A design that failed to read has no shape, and zero counts would read as an empty design.
+	if r.readFailed() {
+		b.WriteString("Design: not read, so there is nothing to count")
+	} else {
+		fmt.Fprintf(&b, "Design: %s, %d components, %d nets, %d sheets, board %s", s.Format, s.Components, s.Nets, s.Sheets, yesNo(s.HasBoard))
+	}
+	if s.UnexpandedBlocks > 0 {
+		fmt.Fprintf(&b, ", %d hierarchical blocks not read (--flatten-hierarchy reads them)", s.UnexpandedBlocks)
+	}
+	if s.Flattened {
+		b.WriteString(", hierarchy flattened")
+	}
+	b.WriteString(".\n\n| step | status | time |\n|---|---|---|\n")
+	for _, st := range r.Steps {
+		status := string(st.Status)
+		if st.Error != ErrorNone {
+			status += " (" + string(st.Error) + ")"
+		}
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", st.Step, status, st.Duration.Round(time.Millisecond))
+	}
+	if len(r.Rules) > 0 {
+		b.WriteString("\n| shipped rule | severity | findings | inconclusive | pass | fail |\n|---|---|---|---|---|---|\n")
+		rules := append([]RuleTally(nil), r.Rules...)
+		sort.Slice(rules, func(i, j int) bool { return rules[i].Rule.name < rules[j].Rule.name })
+		for _, t := range rules {
+			fmt.Fprintf(&b, "| %s | %s | %d | %d | %d | %d |\n", t.Rule, t.Severity, t.Findings, t.Inconclusive, t.Pass, t.Fail)
+		}
+	}
+	fmt.Fprintf(&b, "\nProject rules: %d reported %d findings.\n", r.ProjectRules.Rules, r.ProjectRules.Findings)
+	fmt.Fprintf(&b, "Checklists: %d, %d of %d items answered, %d pass, %d fail.\n", r.Review.Checklists, r.Review.Answered, r.Review.Items, r.Review.Pass, r.Review.Fail)
+	fmt.Fprintf(&b, "Query sets: %d, %d of %d queries answered, %d failed.\n", r.Queries.Sets, r.Queries.Answered, r.Queries.Queries, r.Queries.Failed)
+	if pm := r.PinMap; pm != nil {
+		fmt.Fprintf(&b, "\nPin map: %d rows, %d declaring a function, %d a far end.\n\n", pm.Rows, pm.WithFunction, pm.WithFarEnd)
+		b.WriteString("| check | pass | fail | inconclusive | not considered | not run |\n|---|---|---|---|---|---|\n")
+		for _, c := range []struct {
+			name string
+			n    OutcomeCounts
+		}{{"pin", pm.Pin}, {"net", pm.Net}, {"far end", pm.FarEnd}, {"function", pm.Function}} {
+			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %d |\n", c.name, c.n.Pass, c.n.Fail, c.n.Inconclusive, c.n.NotConsidered, c.n.NotRun)
+		}
+		if pm.Function.NotRun == pm.Rows && pm.Rows > 0 {
+			b.WriteString("\nNo function was checked, because the run had no datasheet corpus.\n")
+		}
+		if len(pm.FunctionUnchecked) > 0 {
+			reasons := make([]string, 0, len(pm.FunctionUnchecked))
+			for k := range pm.FunctionUnchecked {
+				reasons = append(reasons, string(k))
+			}
+			sort.Strings(reasons)
+			parts := make([]string, 0, len(reasons))
+			for _, k := range reasons {
+				parts = append(parts, fmt.Sprintf("%s %d", k, pm.FunctionUnchecked[FunctionReason(k)]))
+			}
+			fmt.Fprintf(&b, "\nFunctions not compared: %s.\n", strings.Join(parts, ", "))
+		}
+		fmt.Fprintf(&b, "Matches that were inferred: %d.\n", pm.Inferred)
+	}
+	return b.String()
+}
+
+// issueBodyLimit keeps a prefilled issue link under the length browsers and GitHub accept.
+const issueBodyLimit = 6000
+
+// IssueURL is a link that opens a new issue on repo ("panyam/agni") prefilled with the report, for
+// the person to read and submit. A body past the limit is cut at a line, and the body says so.
+func (r Report) IssueURL(repo string) string {
+	body := "<!-- Read this before submitting: it holds counts, timings and agni's own rule names, and nothing from your design. Add what you saw below it. -->\n\n" + r.Markdown() + "\n**What I saw:**\n\n"
+	if len(body) > issueBodyLimit {
+		cut := strings.LastIndex(body[:issueBodyLimit], "\n")
+		body = body[:cut] + "\n\n(cut to fit a link; the full report is in the file `agni trial` wrote)\n"
+	}
+	v := url.Values{}
+	v.Set("title", fmt.Sprintf("Trial report: agni %s", r.Version))
+	v.Set("body", body)
+	v.Set("labels", "trial-feedback")
+	return "https://github.com/" + repo + "/issues/new?" + v.Encode()
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}

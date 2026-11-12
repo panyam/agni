@@ -1,0 +1,35 @@
+---
+title: One board, three formats, one IR
+description: Read the same board from EDIF, KiCad, and IPC-2581 and watch the IR converge
+actors:
+  - id: You
+    label: You
+  - id: Agni
+    label: Agni engine
+---
+
+## Many readers, one IR
+
+The platform bets that many source formats normalize into one neutral IR. Then everything downstream is written once and works regardless of where the design came from, including diff, checks and analysis.
+
+This walkthrough proves it on one small board (R1, R2, U1; nets VCC, GND, SIG) authored three ways: an EDIF netlist, a KiCad PCB, and an IPC-2581 export. The bundled fixtures are the same board, hand-authored per format.
+
+## Read the same board three ways {#read}
+
+> Each reader normalizes its format into an ir.Design. The stats split into a netlist group and a format-detail group. The netlist block holds components, nets and sections, and it is identical across all three. Every component carries one section per placement, whether that section names a logical part (EDIF) or a footprint (KiCad/IPC). The format-detail block shows only what each format carries. EDIF has libraries, and KiCad and IPC-2581 have footprints, layers, stackup and BOM. That is the C9 promotion rule at work.
+
+```mermaid
+sequenceDiagram
+You ->> Agni: ReadFixture(mixer.edn / .kicad_pcb / .ipc2581.xml)
+Agni -->> You: three ir.Design values
+```
+
+## Prove the netlists converge {#converge}
+
+> Rather than eyeballing it, use the diff engine as the oracle, so diff.Designs(EDIF-read, KiCad-read) and diff.Designs(EDIF-read, IPC-read) should report zero net changes and the same component set. Same connectivity, keyed on (ref_des, pin), no matter which format it came from.
+
+## What differs, and why
+
+The netlists are identical, but the diff still reports component attribute changes (a Value, a part reference). That is expected, because each format spells component metadata differently, and the physical tier only exists where the format carries it. The semantic netlist layer converges, and the format-specific detail remains in attributes and the physical tier (CONSTRAINTS C9).
+
+Diff and checks are written against the IR once, and they work on EDIF, KiCad, and IPC-2581 alike.

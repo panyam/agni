@@ -1,0 +1,10 @@
+#agni-run 09f3dadad6a94713
+count(r)  provenance
+1         probe-coverage.edn ; probe-coverage.edn:FB ; probe-coverage.edn:VOUT
+
+1 result(s)
+#agni-step
+count(r)  provenance
+7         probe-coverage.edn ; probe-coverage.edn:FB ; probe-coverage.edn:GND ; probe-coverage.edn:SENSE ; probe-coverage.edn:STRAP ; probe-coverage.edn:VIN ; probe-coverage.edn:VOUT
+
+1 result(s)

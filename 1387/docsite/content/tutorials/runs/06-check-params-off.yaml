@@ -1,0 +1,7 @@
+# Rung 6: the abs-max rule with the project's params line deleted, so it has nothing to compare.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  sed -i.orig '/^params:/d' project.yaml
+  agni check designs/jetson --rule supply-exceeds-abs-max --rule pin-exceeds-abs-max

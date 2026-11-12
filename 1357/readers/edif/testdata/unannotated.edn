@@ -1,0 +1,15 @@
+(edif UNANN
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (cell RES (cellType GENERIC) (view V (viewType NETLIST)
+      (interface (port 1 (direction INPUT)) (port 2 (direction INPUT)))))
+    (cell CAP (cellType GENERIC) (view V (viewType NETLIST)
+      (interface (port 1 (direction INPUT)) (port 2 (direction INPUT))))))
+  (design D (cellRef Top (libraryRef L))
+    (contents
+      (instance (rename &i1 "$i1") (viewRef V (cellRef RES (libraryRef L))) (designator "R?"))
+      (instance (rename &i2 "$i2") (viewRef V (cellRef RES (libraryRef L))) (designator "R?"))
+      (instance (rename &i3 "$i3") (viewRef V (cellRef CAP (libraryRef L))) (designator "C?"))
+      (instance (rename &i4 "$i4") (viewRef V (cellRef RES (libraryRef L))) (designator "R7"))
+      (net GND (joined (portRef 2 (instanceRef &i1)) (portRef 2 (instanceRef &i4)))))))

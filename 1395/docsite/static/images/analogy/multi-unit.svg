@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="190" font-family="system-ui,sans-serif" font-size="12">
+  <text x="310" y="18" text-anchor="middle" fill="#808080">one Component "U1" (TL072) — two ComponentSections, drawn apart</text>
+  <!-- section A -->
+  <path d="M120,60 L120,120 L180,90 Z" fill="none" stroke="#4a90d9"/>
+  <text x="138" y="95" fill="#4a90d9" font-size="11">U1A</text>
+  <line x1="95" y1="75" x2="120" y2="75" stroke="#808080"/>
+  <line x1="95" y1="105" x2="120" y2="105" stroke="#808080"/>
+  <line x1="180" y1="90" x2="205" y2="90" stroke="#808080"/>
+  <text x="150" y="140" text-anchor="middle" fill="#808080" font-size="10">section index 0 (unit 1)</text>
+  <!-- section B -->
+  <path d="M420,60 L420,120 L480,90 Z" fill="none" stroke="#4a90d9"/>
+  <text x="438" y="95" fill="#4a90d9" font-size="11">U1B</text>
+  <line x1="395" y1="75" x2="420" y2="75" stroke="#808080"/>
+  <line x1="395" y1="105" x2="420" y2="105" stroke="#808080"/>
+  <line x1="480" y1="90" x2="505" y2="90" stroke="#808080"/>
+  <text x="450" y="140" text-anchor="middle" fill="#808080" font-size="10">section index 1 (unit 2)</text>
+  <!-- brace -->
+  <path d="M150,152 C150,166 450,166 450,152" fill="none" stroke="#5aa06a"/>
+  <text x="300" y="182" text-anchor="middle" fill="#5aa06a" font-size="11">ir.Component{RefDes: "U1", Sections: [A, B]} — one identity, partial views</text>
+</svg>

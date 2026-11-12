@@ -1,0 +1,6 @@
+# Synthetic EDIF netlist + schematic companion: logical ref-des vs page-local labels.
+# See EXPECTED.md (locate / instanceBackAnnotate).
+name: backannotate-locate-demo
+entry: demo_netlist.edn
+companions:
+  - demo_schematic.eds

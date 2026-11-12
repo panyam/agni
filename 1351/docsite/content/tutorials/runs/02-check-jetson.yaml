@@ -1,0 +1,4 @@
+# Rung 2: the shipped catalog over the whole design.
+fixture: tools/samples/boards/jetson-agx-thor-baseboard
+script: |
+  agni check .

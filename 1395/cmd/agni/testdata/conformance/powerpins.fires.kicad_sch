@@ -1,0 +1,51 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Power pin conflict"))
+	(lib_symbols
+		(symbol "power:PWR_FLAG"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#FLG")
+			(symbol "PWR_FLAG_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "PWR_FLAG_1_1"
+				(pin power_out line (at 0 0 90) (length 0) (name "pwr") (number "1"))))
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "power:PWR_FLAG") (at 95 50 0) (unit 1) (uuid "flg1")
+		(property "Reference" "#FLG01"
+			(at 95 47 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "PWR_FLAG"
+			(at 95 53 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "power:PWR_FLAG") (at 105 50 0) (unit 1) (uuid "flg2")
+		(property "Reference" "#FLG02"
+			(at 105 47 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "PWR_FLAG"
+			(at 105 53 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 100 53.81 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 97 52 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 103 52 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 95 50) (xy 100 50)))
+	(wire (pts (xy 100 50) (xy 105 50)))
+	(label "VCC_RAW" (at 100 50 0)
+		(effects (font (size 1.27 1.27))))
+	(no_connect (at 100 57.62)))

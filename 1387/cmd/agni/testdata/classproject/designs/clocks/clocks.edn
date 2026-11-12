@@ -1,0 +1,62 @@
+(edif CLOCKS
+  (edifVersion 2 0 0)
+  (design TOP (cellRef TOP (libraryRef WORK)))
+  (library PARTS
+    (cell XTALCELL
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string "ACME-XTAL-25M"))
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction INPUT) (designator "2")))))
+    (cell RESOCELL
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string "ACME-RESO-16M"))
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction INPUT) (designator "2")))))
+    (cell ORINGCELL
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string "ACME-ORING-1"))
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction OUTPUT) (designator "2")))))
+    (cell PROTCELL
+      (cellType GENERIC)
+      (property (rename Manufacturer_PN "Manufacturer PN") (string "ACME-PROT-5V"))
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction INPUT) (designator "2")))))
+    (cell RESCELL
+      (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction INPUT) (designator "2"))))))
+  (library WORK
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance I1 (viewRef V (cellRef XTALCELL (libraryRef PARTS))) (designator "Y1"))
+          (instance I2 (viewRef V (cellRef RESOCELL (libraryRef PARTS))) (designator "Y2"))
+          (instance I3 (viewRef V (cellRef ORINGCELL (libraryRef PARTS))) (designator "U1"))
+          (instance I4 (viewRef V (cellRef RESCELL (libraryRef PARTS))) (designator "R1"))
+          (instance I5 (viewRef V (cellRef PROTCELL (libraryRef PARTS))) (designator "D1"))
+          (net XTAL1 (joined
+            (portRef 1 (instanceRef I1))
+            (portRef 1 (instanceRef I4))))
+          (net XTAL2 (joined
+            (portRef 2 (instanceRef I1))
+            (portRef 1 (instanceRef I2))))
+          (net VIN (joined
+            (portRef 1 (instanceRef I3))
+            (portRef 2 (instanceRef I2))))
+          (net VOUT (joined
+            (portRef 2 (instanceRef I3))
+            (portRef 2 (instanceRef I4))
+            (portRef 1 (instanceRef I5))))
+          (net GND (joined
+            (portRef 2 (instanceRef I5)))))))))

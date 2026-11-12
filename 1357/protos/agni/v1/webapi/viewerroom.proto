@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "google/protobuf/timestamp.proto";
+
+// This file defines ViewerRoomService. An open viewer page uses it to join its design's room, so an
+// agent can drive the page (agni issue 1154).
+//
+// `agni serve --mcp --viewer-rooms` embeds a relay at /relay/ and mcpkit's room bridge beside /mcp.
+// A viewer page joins the room of the design it shows. There it offers ViewerPageService's methods
+// as tools (viewer_show_sheet, viewer_locate_verdict, ...). The bridge serves them to agents, and
+// each call names its design. Before joining, the page needs two things from the server. One is
+// the room's name, resolved as every other surface resolves the design (C32). The other is a token
+// for the relay to admit the page. This service returns both. Without --viewer-rooms the service is
+// not served.
+service ViewerRoomService {
+  // JoinViewerRoom names the room for a design and mints a relay token scoped to it. It stores
+  // nothing; each call mints a fresh token.
+  rpc JoinViewerRoom(JoinViewerRoomRequest) returns (JoinViewerRoomResponse);
+}
+
+message JoinViewerRoomRequest {
+  // design is the design the page shows, as mount/path: its folder, entry file or a declared
+  // companion. All three name one room.
+  string design = 1;
+}
+
+message JoinViewerRoomResponse {
+  // room is "design:<mount>/<entry>". It names the design's declared entry whatever the request
+  // named. So tabs opened on the folder and on the entry share one room, and an agent naming either
+  // reaches them.
+  string room = 1;
+  // relay_url is where the relay is served, relative to the server ("/relay/").
+  string relay_url = 2;
+  // token is the relay token the page joins with, admitting it to `room` alone.
+  string token = 3;
+  // expire_time is when the token stops admitting a new join. A page already in the room is not
+  // removed.
+  google.protobuf.Timestamp expire_time = 4;
+  // bridge_subjects are the relay subjects that the server's room bridges join as. The page answers
+  // only peers that the relay admitted under one of them. So a page holding a token for the room
+  // cannot call the other tabs in it directly and skip the bridge's agreement check (agni issue
+  // 1173).
+  repeated string bridge_subjects = 5;
+}

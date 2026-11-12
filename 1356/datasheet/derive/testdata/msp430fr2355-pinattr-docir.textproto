@@ -1,0 +1,548 @@
+# Raw-shaped doc-IR of the TI MSP430FR2355's Table 4-1 "Pin Attributes", from SLASEC4D (May 2018,
+# revised December 2019), pages 18 and 20. The tables are the docling output for those pages,
+# unedited; the pages' other content and page 19 are left out.
+#
+# It is a FIXTURE, not a corpus entry. The PDF and the full doc-IR stay outside this repo.
+#
+# One row per signal, several rows to a pin, numbered in four packages (PT, RHA, DBT, RSM). The
+# reset-state column is filled on each pin's first row. The awkward cases it carries, all real:
+#
+#   - A DESIGNATOR ON A MIDDLE ROW. Page 18 puts pin 1's DBT number (5) on its fourth row with no
+#     span, and page 20 puts P1.7's numbers on its fifth row (TDO), the vertical middle of the
+#     merged cells.
+#   - A SPAN RUNNING OVER THE NEXT PIN. Page 20's RHA 24 spans eleven rows, P2.0's three and
+#     P1.7's eight.
+#   - "N/A" AS A RESET STATE, on the supply pins DVCC and DVSS, which starts a pin like "OFF".
+#   - TWO DASHES MERGED INTO ONE CELL ("- -") on P1.6's TCLK row, which does not start a pin.
+#   - A RESET CELL ON THE WRONG ROW. Page 18 prints "OFF" against XOUT and leaves P2.5's empty,
+#     so P2.5 is read as part of a pin named XOUT. A patch is the fix for this one.
+#   - TWO PINS' SIGNALS IN ONE CELL ("P5.4 (RD) P5.3 (RD)") at the foot of page 20, gapped as a
+#     possible boundary.
+content_hash: "sha256:fixture-msp430fr2355-pinattr"
+source_format: "pdf"
+title: "MSP430FR2355"
+producer: "docling/2.142.1"
+page_count: 20
+pages: {
+  number: 18
+  width: 612
+  height: 792
+  tables: {
+    id: "p18.t1"
+    title: "Table 4-1. Pin Attributes"
+    bbox { x: 53.4 y: 130.71 width: 504.53 height: 502.01 }
+    rows: 39
+    cols: 9
+    cells { col_span: 4 text: "PIN NUMBER" is_header: true }
+    cells { col: 4 row_span: 2 text: "SIGNAL NAME (1) (2)" is_header: true }
+    cells { col: 5 row_span: 2 text: "SIGNAL TYPE (3)" is_header: true }
+    cells { col: 6 row_span: 2 text: "BUFFER TYPE (4)" is_header: true }
+    cells { col: 7 row_span: 2 text: "POWER SOURCE" is_header: true }
+    cells { col: 8 row_span: 2 text: "RESET STATE AFTER BOR (5)" is_header: true }
+    cells { row: 1 text: "PT" is_header: true }
+    cells { row: 1 col: 1 text: "RHA" is_header: true }
+    cells { row: 1 col: 2 text: "DBT" is_header: true }
+    cells { row: 1 col: 3 text: "RSM" is_header: true }
+    cells { row: 2 row_span: 7 text: "1" }
+    cells { row: 2 col: 1 row_span: 7 text: "40" }
+    cells { row: 5 col: 2 text: "5" }
+    cells { row: 2 col: 3 row_span: 7 text: "32" }
+    cells { row: 2 col: 4 text: "P1.2 (RD)" }
+    cells { row: 2 col: 5 text: "I/O" }
+    cells { row: 2 col: 6 text: "LVCMOS" }
+    cells { row: 2 col: 7 text: "DVCC" }
+    cells { row: 2 col: 8 text: "OFF" }
+    cells { row: 3 col: 4 text: "UCB0SIMO" }
+    cells { row: 3 col: 5 text: "I/O" }
+    cells { row: 3 col: 6 text: "LVCMOS" }
+    cells { row: 3 col: 7 text: "DVCC" }
+    cells { row: 3 col: 8 text: "-" }
+    cells { row: 4 col: 4 text: "UCB0SDA" }
+    cells { row: 4 col: 5 text: "I/O" }
+    cells { row: 4 col: 6 text: "LVCMOS" }
+    cells { row: 4 col: 7 text: "DVCC" }
+    cells { row: 4 col: 8 text: "-" }
+    cells { row: 5 col: 4 text: "TB0TRG" }
+    cells { row: 5 col: 5 text: "I" }
+    cells { row: 5 col: 6 text: "LVCMOS" }
+    cells { row: 5 col: 7 text: "DVCC" }
+    cells { row: 5 col: 8 text: "-" }
+    cells { row: 6 col: 4 text: "OA0- (6)" }
+    cells { row: 6 col: 5 text: "I" }
+    cells { row: 6 col: 6 text: "Analog" }
+    cells { row: 6 col: 7 text: "DVCC" }
+    cells { row: 6 col: 8 text: "-" }
+    cells { row: 7 col: 4 text: "A2" }
+    cells { row: 7 col: 5 text: "I" }
+    cells { row: 7 col: 6 text: "Analog" }
+    cells { row: 7 col: 7 text: "DVCC" }
+    cells { row: 7 col: 8 text: "-" }
+    cells { row: 8 col: 4 text: "Veref-" }
+    cells { row: 8 col: 5 text: "I" }
+    cells { row: 8 col: 6 text: "Analog" }
+    cells { row: 8 col: 7 text: "DVCC" }
+    cells { row: 8 col: 8 text: "-" }
+    cells { row: 9 row_span: 6 text: "2" }
+    cells { row: 9 col: 1 row_span: 6 text: "1" }
+    cells { row: 9 col: 2 row_span: 6 text: "6" }
+    cells { row: 9 col: 3 row_span: 6 text: "1" }
+    cells { row: 9 col: 4 text: "P1.1 (RD)" }
+    cells { row: 9 col: 5 text: "I/O" }
+    cells { row: 9 col: 6 text: "LVCMOS" }
+    cells { row: 9 col: 7 text: "DVCC" }
+    cells { row: 9 col: 8 text: "OFF" }
+    cells { row: 10 col: 4 text: "UCB0CLK" }
+    cells { row: 10 col: 5 text: "I/O" }
+    cells { row: 10 col: 6 text: "LVCMOS" }
+    cells { row: 10 col: 7 text: "DVCC" }
+    cells { row: 10 col: 8 text: "-" }
+    cells { row: 11 col: 4 text: "ACLK" }
+    cells { row: 11 col: 5 text: "O" }
+    cells { row: 11 col: 6 text: "LVCMOS" }
+    cells { row: 11 col: 7 text: "DVCC" }
+    cells { row: 11 col: 8 text: "-" }
+    cells { row: 12 col: 4 text: "OA0O (6)" }
+    cells { row: 12 col: 5 text: "O" }
+    cells { row: 12 col: 6 text: "Analog" }
+    cells { row: 12 col: 7 text: "DVCC" }
+    cells { row: 12 col: 8 text: "-" }
+    cells { row: 13 col: 4 text: "COMP0_1" }
+    cells { row: 13 col: 5 text: "I" }
+    cells { row: 13 col: 6 text: "Analog" }
+    cells { row: 13 col: 7 text: "DVCC" }
+    cells { row: 13 col: 8 text: "-" }
+    cells { row: 14 col: 4 text: "A1" }
+    cells { row: 14 col: 5 text: "I" }
+    cells { row: 14 col: 6 text: "Analog" }
+    cells { row: 14 col: 7 text: "DVCC" }
+    cells { row: 14 col: 8 text: "-" }
+    cells { row: 15 row_span: 6 text: "3" }
+    cells { row: 15 col: 1 row_span: 6 text: "2" }
+    cells { row: 15 col: 2 row_span: 6 text: "7" }
+    cells { row: 15 col: 3 row_span: 6 text: "2" }
+    cells { row: 15 col: 4 text: "P1.0 (RD)" }
+    cells { row: 15 col: 5 text: "I/O" }
+    cells { row: 15 col: 6 text: "LVCMOS" }
+    cells { row: 15 col: 7 text: "DVCC" }
+    cells { row: 15 col: 8 text: "OFF" }
+    cells { row: 16 col: 4 text: "UCB0STE" }
+    cells { row: 16 col: 5 text: "I/O" }
+    cells { row: 16 col: 6 text: "LVCMOS" }
+    cells { row: 16 col: 7 text: "DVCC" }
+    cells { row: 16 col: 8 text: "-" }
+    cells { row: 17 col: 4 text: "SMCLK" }
+    cells { row: 17 col: 5 text: "O" }
+    cells { row: 17 col: 6 text: "LVCMOS" }
+    cells { row: 17 col: 7 text: "DVCC" }
+    cells { row: 17 col: 8 text: "-" }
+    cells { row: 18 col: 4 text: "COMP0_0" }
+    cells { row: 18 col: 5 text: "I" }
+    cells { row: 18 col: 6 text: "Analog" }
+    cells { row: 18 col: 7 text: "DVCC" }
+    cells { row: 18 col: 8 text: "-" }
+    cells { row: 19 col: 4 text: "A0" }
+    cells { row: 19 col: 5 text: "I" }
+    cells { row: 19 col: 6 text: "Analog" }
+    cells { row: 19 col: 7 text: "DVCC" }
+    cells { row: 19 col: 8 text: "-" }
+    cells { row: 20 col: 4 text: "Veref+" }
+    cells { row: 20 col: 5 text: "I" }
+    cells { row: 20 col: 6 text: "Analog" }
+    cells { row: 20 col: 7 text: "DVCC" }
+    cells { row: 20 col: 8 text: "-" }
+    cells { row: 21 row_span: 2 text: "4" }
+    cells { row: 21 col: 1 row_span: 2 text: "3" }
+    cells { row: 21 col: 2 row_span: 2 text: "8" }
+    cells { row: 21 col: 3 row_span: 2 text: "3" }
+    cells { row: 21 col: 4 text: "TEST (RD)" }
+    cells { row: 21 col: 5 text: "I" }
+    cells { row: 21 col: 6 text: "LVCMOS" }
+    cells { row: 21 col: 7 text: "DVCC" }
+    cells { row: 21 col: 8 text: "OFF" }
+    cells { row: 22 col: 4 text: "SBWTCK" }
+    cells { row: 22 col: 5 text: "I" }
+    cells { row: 22 col: 6 text: "LVCMOS" }
+    cells { row: 22 col: 7 text: "DVCC" }
+    cells { row: 22 col: 8 text: "-" }
+    cells { row: 23 row_span: 3 text: "5" }
+    cells { row: 23 col: 1 row_span: 3 text: "4" }
+    cells { row: 23 col: 2 row_span: 3 text: "9" }
+    cells { row: 23 col: 3 row_span: 3 text: "4" }
+    cells { row: 23 col: 4 text: "RST (RD)" }
+    cells { row: 23 col: 5 text: "I/O" }
+    cells { row: 23 col: 6 text: "LVCMOS" }
+    cells { row: 23 col: 7 text: "DVCC" }
+    cells { row: 23 col: 8 text: "OFF" }
+    cells { row: 24 col: 4 text: "NMI" }
+    cells { row: 24 col: 5 text: "I" }
+    cells { row: 24 col: 6 text: "LVCMOS" }
+    cells { row: 24 col: 7 text: "DVCC" }
+    cells { row: 24 col: 8 text: "-" }
+    cells { row: 25 col: 4 text: "SBWTDIO" }
+    cells { row: 25 col: 5 text: "I/O" }
+    cells { row: 25 col: 6 text: "LVCMOS" }
+    cells { row: 25 col: 7 text: "DVCC" }
+    cells { row: 25 col: 8 text: "-" }
+    cells { row: 26 text: "6" }
+    cells { row: 26 col: 1 text: "5" }
+    cells { row: 26 col: 2 text: "10" }
+    cells { row: 26 col: 3 text: "5" }
+    cells { row: 26 col: 4 text: "DVCC" }
+    cells { row: 26 col: 5 text: "P" }
+    cells { row: 26 col: 6 text: "Power" }
+    cells { row: 26 col: 7 text: "DVCC" }
+    cells { row: 26 col: 8 text: "N/A" }
+    cells { row: 27 text: "7" }
+    cells { row: 27 col: 1 text: "6" }
+    cells { row: 27 col: 2 text: "11" }
+    cells { row: 27 col: 3 text: "6" }
+    cells { row: 27 col: 4 text: "DVSS" }
+    cells { row: 27 col: 5 text: "P" }
+    cells { row: 27 col: 6 text: "Power" }
+    cells { row: 27 col: 7 text: "DVCC" }
+    cells { row: 27 col: 8 text: "N/A" }
+    cells { row: 29 text: "8" }
+    cells { row: 28 col: 1 row_span: 2 text: "7" }
+    cells { row: 28 col: 2 row_span: 2 text: "12" }
+    cells { row: 28 col: 3 row_span: 2 text: "7" }
+    cells { row: 28 col: 4 text: "P2.7 (RD)" }
+    cells { row: 28 col: 5 text: "I/O" }
+    cells { row: 28 col: 6 text: "LVCMOS" }
+    cells { row: 28 col: 7 text: "DVCC" }
+    cells { row: 28 col: 8 text: "OFF" }
+    cells { row: 29 col: 4 text: "TB0CLK" }
+    cells { row: 29 col: 5 text: "I" }
+    cells { row: 29 col: 6 text: "LVCMOS" }
+    cells { row: 29 col: 7 text: "DVCC" }
+    cells { row: 29 col: 8 text: "-" }
+    cells { row: 31 col: 4 text: "XIN" }
+    cells { row: 31 col: 5 text: "I" }
+    cells { row: 31 col: 6 text: "LVCMOS" }
+    cells { row: 31 col: 7 text: "DVCC" }
+    cells { row: 31 col: 8 text: "-" }
+    cells { row: 30 row_span: 5 text: "9" }
+    cells { row: 30 col: 1 row_span: 5 text: "8" }
+    cells { row: 30 col: 2 row_span: 5 text: "13" }
+    cells { row: 30 col: 3 row_span: 5 text: "8" }
+    cells { row: 30 col: 4 text: "P2.6 (RD)" }
+    cells { row: 30 col: 5 text: "I/O" }
+    cells { row: 30 col: 6 text: "LVCMOS" }
+    cells { row: 30 col: 7 text: "DVCC" }
+    cells { row: 30 col: 8 text: "OFF" }
+    cells { row: 32 col: 4 text: "MCLK" }
+    cells { row: 32 col: 5 text: "O" }
+    cells { row: 32 col: 6 text: "LVCMOS" }
+    cells { row: 32 col: 7 text: "DVCC" }
+    cells { row: 32 col: 8 text: "-" }
+    cells { row: 34 col: 4 text: "XOUT" }
+    cells { row: 33 col: 5 text: "O" }
+    cells { row: 33 col: 6 text: "LVCMOS" }
+    cells { row: 33 col: 7 text: "DVCC" }
+    cells { row: 33 col: 8 text: "-" }
+    cells { row: 35 row_span: 2 text: "10" }
+    cells { row: 35 col: 1 row_span: 2 text: "9" }
+    cells { row: 35 col: 2 row_span: 2 text: "14" }
+    cells { row: 35 col: 3 row_span: 2 text: "9" }
+    cells { row: 35 col: 4 text: "P2.5 (RD)" }
+    cells { row: 35 col: 5 text: "I/O" }
+    cells { row: 34 col: 6 text: "LVCMOS" }
+    cells { row: 34 col: 7 text: "DVCC" }
+    cells { row: 34 col: 8 text: "OFF" }
+    cells { row: 36 col: 4 text: "COMP1.0" }
+    cells { row: 36 col: 5 text: "I" }
+    cells { row: 36 col: 6 text: "Analog" }
+    cells { row: 36 col: 7 text: "DVCC" }
+    cells { row: 36 col: 8 text: "-" }
+    cells { row: 37 row_span: 2 text: "11" }
+    cells { row: 37 col: 1 row_span: 2 text: "10" }
+    cells { row: 37 col: 2 row_span: 2 text: "15" }
+    cells { row: 37 col: 3 row_span: 2 text: "10" }
+    cells { row: 37 col: 4 text: "P2.4 (RD)" }
+    cells { row: 37 col: 5 text: "I/O" }
+    cells { row: 37 col: 6 text: "LVCMOS" }
+    cells { row: 37 col: 7 text: "DVCC" }
+    cells { row: 37 col: 8 text: "OFF" }
+    cells { row: 38 col: 4 text: "COMP1.1" }
+    cells { row: 38 col: 5 text: "I" }
+    cells { row: 38 col: 6 text: "Analog" }
+    cells { row: 38 col: 7 text: "DVCC" }
+    cells { row: 38 col: 8 text: "-" }
+    confidence: 1
+    content_hash: "sha256:561127e5341a385637bfef090742c7e2ecbef466f4784ee819b7c32e135c8726"
+  }
+}
+pages: {
+  number: 20
+  width: 612
+  height: 792
+  tables: {
+    id: "p20.t1"
+    title: "Table 4-1. Pin Attributes (continued)"
+    bbox { x: 53.7 y: 87.96 width: 504.35 height: 594.38 }
+    rows: 45
+    cols: 9
+    cells { col_span: 4 text: "PIN NUMBER" is_header: true }
+    cells { col: 4 text: "SIGNAL NAME (1) (2)" is_header: true }
+    cells { col: 5 text: "SIGNAL TYPE (3)" is_header: true }
+    cells { col: 6 text: "BUFFER TYPE (4)" is_header: true }
+    cells { col: 7 text: "POWER" is_header: true }
+    cells { row: 1 col: 7 text: "SOURCE" is_header: true }
+    cells { col: 8 text: "RESET STATE AFTER BOR (5)" is_header: true }
+    cells { row: 1 text: "PT" is_header: true }
+    cells { row: 1 col: 1 text: "RHA" is_header: true }
+    cells { row: 1 col: 2 text: "DBT" is_header: true }
+    cells { row: 1 col: 3 text: "RSM" is_header: true }
+    cells { row: 2 text: "30" }
+    cells { row: 2 col: 1 row_span: 11 text: "24" }
+    cells { row: 2 col: 2 row_span: 11 text: "27" }
+    cells { row: 2 col: 3 row_span: 11 text: "18" }
+    cells { row: 2 col: 4 text: "P2.0 (RD)" }
+    cells { row: 2 col: 5 text: "I/O" }
+    cells { row: 2 col: 6 text: "LVCMOS" }
+    cells { row: 2 col: 7 text: "DVCC" }
+    cells { row: 2 col: 8 text: "OFF" }
+    cells { row: 3 col: 4 text: "TB1.1" }
+    cells { row: 3 col: 5 text: "I/O" }
+    cells { row: 3 col: 6 text: "LVCMOS" }
+    cells { row: 3 col: 7 text: "DVCC" }
+    cells { row: 3 col: 8 text: "-" }
+    cells { row: 4 col: 4 text: "COMP0.O" }
+    cells { row: 4 col: 5 text: "O" }
+    cells { row: 4 col: 6 text: "LVCMOS" }
+    cells { row: 4 col: 7 text: "DVCC" }
+    cells { row: 4 col: 8 text: "-" }
+    cells { row: 9 text: "31" }
+    cells { row: 9 col: 1 text: "25" }
+    cells { row: 9 col: 2 text: "28" }
+    cells { row: 9 col: 3 text: "19" }
+    cells { row: 5 col: 4 text: "P1.7 (RD)" }
+    cells { row: 5 col: 5 text: "I/O" }
+    cells { row: 5 col: 6 text: "LVCMOS" }
+    cells { row: 5 col: 7 text: "DVCC" }
+    cells { row: 5 col: 8 text: "OFF" }
+    cells { row: 6 col: 4 text: "UCA0TXD" }
+    cells { row: 6 col: 5 text: "O" }
+    cells { row: 6 col: 6 text: "LVCMOS" }
+    cells { row: 6 col: 7 text: "DVCC" }
+    cells { row: 6 col: 8 text: "-" }
+    cells { row: 7 col: 4 text: "UCA0SIMO" }
+    cells { row: 7 col: 5 text: "I/O" }
+    cells { row: 7 col: 6 text: "LVCMOS" }
+    cells { row: 7 col: 7 text: "DVCC" }
+    cells { row: 7 col: 8 text: "-" }
+    cells { row: 8 col: 4 text: "TB0.2" }
+    cells { row: 8 col: 5 text: "I/O" }
+    cells { row: 8 col: 6 text: "LVCMOS" }
+    cells { row: 8 col: 7 text: "DVCC" }
+    cells { row: 8 col: 8 text: "-" }
+    cells { row: 9 col: 4 text: "TDO" }
+    cells { row: 9 col: 5 text: "O" }
+    cells { row: 9 col: 6 text: "LVCMOS" }
+    cells { row: 9 col: 7 text: "DVCC" }
+    cells { row: 9 col: 8 text: "-" }
+    cells { row: 10 col: 4 text: "OA1+ (6)" }
+    cells { row: 10 col: 5 text: "I" }
+    cells { row: 10 col: 6 text: "Analog" }
+    cells { row: 10 col: 7 text: "DVCC" }
+    cells { row: 10 col: 8 text: "-" }
+    cells { row: 11 col: 4 text: "A7" }
+    cells { row: 11 col: 5 text: "I" }
+    cells { row: 11 col: 6 text: "Analog" }
+    cells { row: 11 col: 7 text: "DVCC" }
+    cells { row: 11 col: 8 text: "-" }
+    cells { row: 12 col: 4 text: "VREF+" }
+    cells { row: 12 col: 5 text: "O" }
+    cells { row: 12 col: 6 text: "Analog" }
+    cells { row: 12 col: 7 text: "DVCC" }
+    cells { row: 12 col: 8 text: "-" }
+    cells { row: 17 text: "32" }
+    cells { row: 13 col: 1 row_span: 8 text: "26" is_header: true }
+    cells { row: 13 col: 2 row_span: 8 text: "29" }
+    cells { row: 13 col: 3 row_span: 8 text: "20" }
+    cells { row: 13 col: 4 text: "P1.6 (RD)" }
+    cells { row: 13 col: 5 text: "I/O" }
+    cells { row: 13 col: 6 text: "LVCMOS" }
+    cells { row: 13 col: 7 text: "DVCC" }
+    cells { row: 13 col: 8 text: "OFF" }
+    cells { row: 14 col: 4 text: "UCA0RXD" }
+    cells { row: 14 col: 5 text: "I" }
+    cells { row: 14 col: 6 text: "LVCMOS" }
+    cells { row: 14 col: 7 text: "DVCC" }
+    cells { row: 14 col: 8 text: "-" }
+    cells { row: 15 col: 4 text: "UCA0SOMI" }
+    cells { row: 15 col: 5 text: "I/O" }
+    cells { row: 15 col: 6 text: "LVCMOS" }
+    cells { row: 15 col: 7 text: "DVCC" }
+    cells { row: 15 col: 8 text: "-" }
+    cells { row: 16 col: 4 text: "TB0.1" }
+    cells { row: 16 col: 5 text: "I/O" }
+    cells { row: 16 col: 6 text: "LVCMOS" }
+    cells { row: 16 col: 7 text: "DVCC" }
+    cells { row: 16 col: 8 text: "-" }
+    cells { row: 17 col: 4 text: "TDI" }
+    cells { row: 17 col: 5 text: "I" }
+    cells { row: 17 col: 6 text: "LVCMOS" }
+    cells { row: 17 col: 7 text: "DVCC" }
+    cells { row: 17 col: 8 text: "-" }
+    cells { row: 18 col: 4 text: "TCLK (6)" }
+    cells { row: 18 col: 5 text: "I I" }
+    cells { row: 18 col: 6 text: "LVCMOS Analog" }
+    cells { row: 18 col: 7 text: "DVCC DVCC" }
+    cells { row: 18 col: 8 text: "- -" }
+    cells { row: 19 col: 4 text: "OA1-" }
+    cells { row: 20 col: 4 text: "A6" }
+    cells { row: 20 col: 5 text: "I" }
+    cells { row: 20 col: 6 text: "Analog" }
+    cells { row: 20 col: 7 text: "DVCC" }
+    cells { row: 20 col: 8 text: "-" }
+    cells { row: 23 text: "33" }
+    cells { row: 21 col: 1 row_span: 5 text: "27" is_header: true }
+    cells { row: 21 col: 2 row_span: 5 text: "30" }
+    cells { row: 21 col: 3 row_span: 5 text: "21" }
+    cells { row: 21 col: 4 text: "P1.5 (RD)" }
+    cells { row: 21 col: 5 text: "I/O" }
+    cells { row: 21 col: 6 text: "LVCMOS" }
+    cells { row: 21 col: 7 text: "DVCC" }
+    cells { row: 21 col: 8 text: "OFF" }
+    cells { row: 22 col: 4 text: "UCA0CLK" }
+    cells { row: 22 col: 5 text: "I/O" }
+    cells { row: 22 col: 6 text: "LVCMOS" }
+    cells { row: 22 col: 7 text: "DVCC" }
+    cells { row: 22 col: 8 text: "-" }
+    cells { row: 23 col: 4 text: "TMS" }
+    cells { row: 23 col: 5 text: "I" }
+    cells { row: 23 col: 6 text: "LVCMOS" }
+    cells { row: 23 col: 7 text: "DVCC" }
+    cells { row: 23 col: 8 text: "-" }
+    cells { row: 24 col: 4 text: "OA1O (6)" }
+    cells { row: 24 col: 5 text: "O" }
+    cells { row: 24 col: 6 text: "Analog" }
+    cells { row: 24 col: 7 text: "DVCC" }
+    cells { row: 24 col: 8 text: "-" }
+    cells { row: 25 col: 4 text: "A5" }
+    cells { row: 25 col: 5 text: "I" }
+    cells { row: 25 col: 6 text: "Analog" }
+    cells { row: 25 col: 7 text: "DVCC" }
+    cells { row: 25 col: 8 text: "-" }
+    cells { row: 28 text: "34" }
+    cells { row: 26 col: 1 row_span: 4 text: "28" is_header: true }
+    cells { row: 26 col: 2 row_span: 4 text: "31" }
+    cells { row: 26 col: 3 row_span: 4 text: "22" }
+    cells { row: 26 col: 4 text: "P1.4 (RD)" }
+    cells { row: 26 col: 5 text: "I/O" }
+    cells { row: 26 col: 6 text: "LVCMOS" }
+    cells { row: 26 col: 7 text: "DVCC" }
+    cells { row: 26 col: 8 text: "OFF" }
+    cells { row: 27 col: 4 text: "UCA0STE" }
+    cells { row: 27 col: 5 text: "I/O" }
+    cells { row: 27 col: 6 text: "LVCMOS" }
+    cells { row: 27 col: 7 text: "DVCC" }
+    cells { row: 27 col: 8 text: "-" }
+    cells { row: 28 col: 4 text: "TCK" }
+    cells { row: 28 col: 5 text: "I" }
+    cells { row: 28 col: 6 text: "LVCMOS" }
+    cells { row: 28 col: 7 text: "DVCC" }
+    cells { row: 28 col: 8 text: "-" }
+    cells { row: 29 col: 4 text: "A4" }
+    cells { row: 29 col: 5 text: "I" }
+    cells { row: 29 col: 6 text: "Analog" }
+    cells { row: 29 col: 7 text: "DVCC" }
+    cells { row: 29 col: 8 text: "-" }
+    cells { row: 31 text: "35" }
+    cells { row: 30 col: 1 text: "29" is_header: true }
+    cells { row: 30 col: 2 row_span: 2 text: "32" }
+    cells { row: 30 col: 3 row_span: 2 text: "23" }
+    cells { row: 30 col: 4 text: "P3.7 (RD)" }
+    cells { row: 30 col: 5 text: "I/O" }
+    cells { row: 30 col: 6 text: "LVCMOS" }
+    cells { row: 30 col: 7 text: "DVCC" }
+    cells { row: 30 col: 8 text: "OFF" }
+    cells { row: 31 col: 4 text: "OA3+ (6)" }
+    cells { row: 31 col: 5 text: "I" }
+    cells { row: 31 col: 6 text: "Analog" }
+    cells { row: 31 col: 7 text: "DVCC" }
+    cells { row: 31 col: 8 text: "-" }
+    cells { row: 32 text: "36" }
+    cells { row: 32 col: 1 text: "30" is_header: true }
+    cells { row: 32 col: 2 row_span: 2 text: "33" }
+    cells { row: 32 col: 3 row_span: 2 text: "24" }
+    cells { row: 32 col: 4 text: "P3.6 (RD)" }
+    cells { row: 32 col: 5 text: "I/O" }
+    cells { row: 32 col: 6 text: "LVCMOS" }
+    cells { row: 32 col: 7 text: "DVCC" }
+    cells { row: 32 col: 8 text: "OFF" }
+    cells { row: 33 col: 4 text: "OA3- (6)" }
+    cells { row: 33 col: 5 text: "I" }
+    cells { row: 33 col: 6 text: "Analog" }
+    cells { row: 33 col: 7 text: "DVCC" }
+    cells { row: 33 col: 8 text: "-" }
+    cells { row: 34 row_span: 3 text: "37" is_header: true }
+    cells { row: 34 col: 1 text: "31" is_header: true }
+    cells { row: 34 col: 2 row_span: 2 text: "34" }
+    cells { row: 34 col: 3 row_span: 2 text: "25" }
+    cells { row: 34 col: 4 text: "P3.5 (RD)" }
+    cells { row: 34 col: 5 text: "I/O" }
+    cells { row: 34 col: 6 text: "LVCMOS" }
+    cells { row: 34 col: 7 text: "DVCC" }
+    cells { row: 34 col: 8 text: "OFF" }
+    cells { row: 35 col: 4 text: "OA3O (6)" }
+    cells { row: 35 col: 5 text: "O" }
+    cells { row: 35 col: 6 text: "Analog" }
+    cells { row: 35 col: 7 text: "DVCC" }
+    cells { row: 35 col: 8 text: "-" }
+    cells { row: 37 text: "38" is_header: true }
+    cells { row: 36 col: 1 text: "32" is_header: true }
+    cells { row: 36 col: 2 text: "35" }
+    cells { row: 36 col: 3 text: "26" }
+    cells { row: 36 col: 4 text: "P3.4 (RD)" }
+    cells { row: 36 col: 5 text: "I/O" }
+    cells { row: 36 col: 6 text: "LVCMOS" }
+    cells { row: 36 col: 7 text: "DVCC" }
+    cells { row: 36 col: 8 text: "OFF" }
+    cells { row: 37 col: 4 text: "SMCLK" }
+    cells { row: 37 col: 5 text: "O" }
+    cells { row: 37 col: 6 text: "LVCMOS" }
+    cells { row: 37 col: 7 text: "DVCC" }
+    cells { row: 37 col: 8 text: "-" }
+    cells { row: 38 text: "39" is_header: true }
+    cells { row: 37 col: 1 text: "-" is_header: true }
+    cells { row: 38 col: 2 text: "-" }
+    cells { row: 38 col: 3 text: "-" }
+    cells { row: 38 col: 4 text: "P5.4 (RD) P5.3 (RD)" }
+    cells { row: 38 col: 5 text: "I/O I/O" }
+    cells { row: 38 col: 6 text: "LVCMOS LVCMOS" }
+    cells { row: 38 col: 7 text: "DVCC DVCC" }
+    cells { row: 38 col: 8 text: "OFF OFF" }
+    cells { row: 39 row_span: 2 text: "40" is_header: true }
+    cells { row: 39 col: 1 row_span: 2 text: "-" is_header: true }
+    cells { row: 39 col: 2 row_span: 2 text: "-" }
+    cells { row: 39 col: 3 row_span: 2 text: "-" }
+    cells { row: 40 col: 4 text: "TB2TRG" }
+    cells { row: 40 col: 5 text: "I" }
+    cells { row: 40 col: 6 text: "LVCMOS" }
+    cells { row: 40 col: 7 text: "DVCC" }
+    cells { row: 40 col: 8 text: "-" }
+    cells { row: 41 col: 4 text: "A11 P5.2 (RD)" }
+    cells { row: 41 col: 5 text: "I" }
+    cells { row: 41 col: 6 text: "Analog LVCMOS" }
+    cells { row: 41 col: 7 text: "DVCC DVCC" }
+    cells { row: 41 col: 8 text: "- OFF" }
+    cells { row: 43 text: "41" is_header: true }
+    cells { row: 42 col: 1 row_span: 2 text: "-" is_header: true }
+    cells { row: 42 col: 2 row_span: 2 text: "-" }
+    cells { row: 42 col: 3 row_span: 2 text: "-" }
+    cells { row: 42 col: 5 text: "I/O" }
+    cells { row: 43 col: 4 text: "TB2CLK" }
+    cells { row: 43 col: 5 text: "I" }
+    cells { row: 43 col: 6 text: "LVCMOS" }
+    cells { row: 43 col: 7 text: "DVCC" }
+    cells { row: 43 col: 8 text: "-" }
+    cells { row: 44 col: 4 text: "A10" }
+    cells { row: 44 col: 5 text: "I" }
+    cells { row: 44 col: 6 text: "Analog" }
+    cells { row: 44 col: 7 text: "DVCC" }
+    cells { row: 44 col: 8 text: "-" }
+    confidence: 1
+    content_hash: "sha256:ffb64f9e9fcd972f4f320e014e8e078a963931cebb6a4f61b57d703dfd4f4d45"
+  }
+}

@@ -1,0 +1,18 @@
+(edif ISSUE1093
+  (edifVersion 2 0 0)
+  (design ISSUE1093 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef MCU)) (designator "U2"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+          (net I2C_ON_PORT0_SDA (joined (portRef 3 (instanceRef U1)) (portRef 1 (instanceRef R1))))
+          (net I2C_ON_PORT0_SCL (joined (portRef 4 (instanceRef U1))))
+          (net SPI_ON_PORT1_MOSI (joined (portRef 5 (instanceRef U2))))
+          (net SPI_ON_PORT1_MISO (joined (portRef 6 (instanceRef U2))))
+          (net SPI_ON_PORT1_SCK (joined (portRef 7 (instanceRef U2))))
+          (net RAIL_3V3 (joined (portRef 2 (instanceRef R1)) (portRef 2 (instanceRef R2))))
+          (net GND (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef U2)))))))))

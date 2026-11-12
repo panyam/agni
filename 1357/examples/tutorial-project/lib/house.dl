@@ -1,0 +1,10 @@
+# This project's own derived relations (agni issue 773). Each file in lib/ is one module, registered
+# at the path its name gives, so the rules below define house.pmic_rail and house.pmic_probe_point.
+# They read the shipped relations and library like any query does.
+
+# A rail this team's PMIC drives. The team names every PMIC output PMIC_<rail>, which the shipped
+# naming vocabulary cannot know.
+pmic_rail(?n: net) :- net.rail(?n), str.prefix(?n, "PMIC_");
+
+# A PMIC rail a probe can reach, which is where bring-up checks each rail first.
+pmic_probe_point(?n: net) :- pmic_rail(?n), net.has_test_point(?n);

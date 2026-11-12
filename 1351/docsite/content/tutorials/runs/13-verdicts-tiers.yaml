@@ -1,0 +1,8 @@
+# Rung 13: every rule a tier added, with its tally, whether or not it found anything.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+show: |
+  agni check --verdicts designs/jetson
+script: |
+  agni check --verdicts designs/jetson 2>/dev/null | grep -E '^(jetson|jetson-profiles|intent)/'

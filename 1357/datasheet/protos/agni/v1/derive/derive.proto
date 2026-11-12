@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package agni.v1.derive;
+
+option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive";
+
+// This file holds the derivation layer's three data artifacts
+// (architecture/datasheet-layer.md). A derivation computes
+// PartSpec = f(document, toolchain, recipes, patches), and these are the pieces of it that
+// are DATA rather than code. Recipes and patches are textproto files in git, so they are
+// reviewable, diffable and accumulate over time. A manifest is emitted per run and stored
+// beside the derived PartSpec. All three are keyed by content hashes from the doc-IR
+// (agni.v1.doc). So a document revision or a re-detected table changes the key, rather than
+// silently reusing stale data.
+//
+// PROVISIONAL, like param and doc. One deterministic extractor exercises this today. The
+// ensemble/VLM fields are declared where the model needs them (RunManifest), and they are
+// zero until that path exists.
+
+// Recipe is one doc-family's extraction rules. It says how to classify this family's
+// tables into limit kinds. It matches by document title, which is the vendor doc-number
+// line the producer read. It never matches by content hash, because a recipe covers a
+// family of documents and revisions, while a Patch pins exactly one.
+message Recipe {
+  // Recipe identity, recorded in RunManifest.recipes, e.g. "fairchild-mosfet-sheets".
+  string name = 1;
+  // RE2 pattern over Document.title. It selects the documents that this recipe
+  // understands. An empty pattern matches nothing, since a recipe must opt in.
+  string doc_title_pattern = 2;
+  repeated TableRule tables = 3;
+  // Pin FUNCTION tables, which yield agni.v1.param.Pin and Package rather than
+  // Parameter. They get a separate list from `tables` rather than an axis on TableRule.
+  // TableRule.limit_kind is required and validated non-zero. Making it optional for
+  // pins would weaken a live invariant, and "every TableRule yields parameters" is
+  // worth keeping true.
+  repeated PinTableRule pin_tables = 4;
+  // Pin-mux (alternate-function) tables, which add PinAlternates to the spec's pins
+  // (agni issue 667). They get a third list because the table is a third shape. It
+  // answers which peripheral a pin can be, and a pin table answers what kind of pin it
+  // is.
+  repeated MuxTableRule mux_tables = 5;
+  map<string, string> attributes = 14;
+}
+
+// TableRule classifies a table into a parameter limit kind when the table's attached
+// title matches the pattern. A table that matches no rule is not extracted. It goes in
+// the manifest's gap list, so coverage is visible.
+message TableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  // The agni.v1.param.LimitKind enum NAME for this table's rows, e.g.
+  // "LIMIT_KIND_ABSOLUTE_MAX". It is a string rather than an imported enum, so
+  // derive.proto does not import param.proto for one constant. The derive stage
+  // validates the name.
+  string limit_kind = 2;
+}
+
+// PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
+// mean. The recipe declares it rather than leaving it to inference. This field exists
+// only to hold that declaration.
+//
+// A banded pin table looks identical whether its sub-columns are package codes
+// ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115").
+// The two are semantically opposite. Package codes number the pins of one die per
+// package. Part variants are three different parts sharing a pinout description.
+// Inferring from the header text was tried and rejected. Measured over a 63-document
+// corpus, the banded shape appears 44 times. Six are variant columns, one is package
+// columns, and the rest have no sub-columns at all. So a rule keyed on "looks like a
+// short all-caps token" would be fitted to a single example. It would silently mint
+// packages named after part numbers on six others.
+//
+// UNSPECIFIED is the safe default and is NOT an error. The pins are still extracted,
+// but they have no PinNumber, and the run records a gap naming the columns it declined
+// to interpret. Silence never reads as coverage.
+enum PinColumnAxis {
+  PIN_COLUMN_AXIS_UNSPECIFIED = 0;
+  // Each sub-column is one package, or several when the header cell names several
+  // ("D, PW" is two packages sharing one column of numbers).
+  PIN_COLUMN_AXIS_PACKAGE = 1;
+  // Each sub-column is a part variant. The parameter contract has no per-variant
+  // pin numbering, so pins are emitted without numbers and the run records the
+  // columns as a gap.
+  PIN_COLUMN_AXIS_VARIANT = 2;
+}
+
+// PinTableRule classifies a pin function table. Unlike TableRule it has no limit kind,
+// because a pin table's rows are terminals, not values.
+message PinTableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  PinColumnAxis column_axis = 2;
+}
+
+// MuxLayout is how a pin-mux table lays out one pin's functions. Each member is the
+// layout of a real vendor table, named in its comment. The recipe declares the layout,
+// because the two cannot be told apart from cell text alone.
+enum MuxLayout {
+  MUX_LAYOUT_UNSPECIFIED = 0;
+  // One row per pin, its functions listed inside one cell, each after a label that the
+  // column's label_pattern matches. NXP's "Package pinout" table: "ALT0 - ADC0_B13
+  // ALT1 - PTB3 ALT2 - LPSPI1_SOUT".
+  MUX_LAYOUT_CELL_LIST = 1;
+  // One row per function, several rows to a pin. TI's "Pin Attributes" table is one. Its
+  // pin 1 is the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin's first
+  // row names it, and that row is the GPIO. The rule's pin_start_column says where each
+  // pin begins.
+  MUX_LAYOUT_ROW_PER_FUNCTION = 2;
+}
+
+// MuxTableRule classifies a pin-mux table and says where its pins, numbers and
+// functions are. These tables share no header vocabulary to infer from, so the rule
+// names every column by its header text. The comparison ignores case, collapses
+// whitespace and removes trailing footnote markers ("(1) (2)").
+message MuxTableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  MuxLayout layout = 2;
+  // The column naming each pin. CELL_LIST requires it. ROW_PER_FUNCTION names a pin by
+  // its first function and leaves this empty.
+  string name_column = 3;
+  repeated MuxNumberColumn number_columns = 4;
+  repeated MuxFunctionColumn function_columns = 5;
+  // ROW_PER_FUNCTION only, and required there. It names a column that is filled once per
+  // pin, on the pin's first row, and is "-" or empty on the rest. TI's reset-state column
+  // is one.
+  //
+  // Neither the designator spans nor the designator cells mark a pin's rows reliably. A
+  // producer places an unspanned designator at the vertical middle of its merged cell, so
+  // a pin's numbers can sit on its fifth row. A producer can also stretch a span over the
+  // next pin. On the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7. A designator
+  // belongs to the pin whose rows it STARTS in.
+  string pin_start_column = 6;
+}
+
+// MuxNumberColumn is one column of designators, with the package that they number. The
+// package is declared rather than read off the header, since a header like "KW47 48QFN"
+// names the part as well as the body.
+message MuxNumberColumn {
+  string header = 1;
+  // Package id for the column's designators. Empty takes the header, lowercased.
+  string package = 2;
+}
+
+// MuxFunctionColumn is one column of functions.
+message MuxFunctionColumn {
+  string header = 1;
+  // RE2 pattern matching the label printed before each function in a CELL_LIST cell
+  // ("ALT\\d+"). The cell splits at each match. One function runs from after the label's
+  // " - " up to the next label. Empty means the whole cell is one function, and
+  // ROW_PER_FUNCTION reads a cell that way.
+  string label_pattern = 2;
+}
+
+// Patch is one pinned human correction to one cell of one table of one exact
+// document. A derivation applies patches LAST, so a re-run can never regress a
+// verified fix. Keys are content hashes. So a new document revision or a structurally
+// different re-detection invalidates the patch by construction. The patch simply
+// stops matching, and the manifest reports it unapplied.
+message Patch {
+  // Patch identity, recorded in RunManifest.patches_applied.
+  string name = 1;
+  // Document.content_hash this patch pins.
+  string doc_content_hash = 2;
+  // Table.content_hash BEFORE patching, so it names the detected table that this
+  // correction targets.
+  string table_content_hash = 3;
+  // 0-based grid position of the corrected cell. A position with no detected cell
+  // is inserted. A producer that mis-placed a value leaves the right position empty,
+  // so a pair of patches corrects a cell-placement error, a clear and an insert.
+  int32 row = 4;
+  int32 col = 5;
+  // The corrected cell text, as the human read it on the page. Empty text clears
+  // the cell.
+  string text = 6;
+  // Why the patch exists, saying what was wrong ("parser read 13, page says 1.3").
+  // LoadPatches requires it, because an unexplained correction cannot be reviewed.
+  string note = 7;
+  string author = 8;
+}
+
+// RunManifest is the lockfile of one derivation run. Its pinned inputs are enough to
+// reproduce the PartSpec. Its gap list shows what the run did NOT extract, because
+// silence must never read as absence (coverage accounting, architecture/datasheet-layer.md).
+message RunManifest {
+  // Document.content_hash the run derived from.
+  string doc_content_hash = 1;
+  // The doc-IR's producer (e.g. "docling/2.113.0") and this derive stage's version
+  // (e.g. "derive/v0"). Together they pin the toolchain.
+  string doc_producer = 2;
+  string derive_version = 3;
+  // Part identity the operator supplied for the emitted PartSpec.
+  string mpn = 4;
+  string manufacturer = 5;
+  // Recipe names that matched the document, in application order.
+  repeated string recipes = 6;
+  // Patch names that actually applied. Imagine a patch that loaded but no longer
+  // matched, because the revision changed or the table was re-detected. That patch
+  // appears in gaps with kind "patch-unapplied".
+  repeated string patches_applied = 7;
+  // Parameters emitted into the PartSpec (post-Validate).
+  int32 parameters_emitted = 8;
+  // Pins and packages emitted into the PartSpec (post-Validate). They are counted
+  // apart from parameters. A run over a document with only a pin table emits zero
+  // parameters, and a single count reading zero would look like a failed run.
+  int32 pins_emitted = 12;
+  int32 packages_emitted = 13;
+  // Ensemble agreement stats. They are zero until a second extraction path exists (the VLM/ensemble
+  // gate in architecture/datasheet-layer.md). They are declared now so the manifest shape does not
+  // change later.
+  int32 ensemble_agreed = 9;
+  int32 ensemble_disagreed = 10;
+  repeated Gap gaps = 11;
+}
+
+// Gap is one thing the run saw and did not extract, with enough locator to act on
+// it. Kinds are open strings. The v0 extractor emits these.
+//   "unclassified-table"  no recipe rule matched
+//   "unparsed-row"        a classified table's row yielded no parameter
+//   "raw-condition"       a condition kept as text only
+//   "validate-reject"     an extracted parameter failed param.Validate
+//   "patch-unapplied"
+message Gap {
+  string kind = 1;
+  // Doc-IR region id when the gap has one (page-scoped table id), else empty.
+  string region = 2;
+  string detail = 3;
+}

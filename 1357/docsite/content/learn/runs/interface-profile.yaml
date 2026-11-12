@@ -1,0 +1,7 @@
+# Chapter 10: what a declared interface requires, checked against a board that carries it. U4 says
+# it is a CAN host and is missing a signal the house profile requires; the pair leaves the board with
+# no clamp on it.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni check --verdicts --rule gateway-profiles/can-host-incomplete --rule gateway-profiles/can-esd-missing examples/tutorial-project/designs/gateway/gateway.edn

@@ -1,0 +1,206 @@
+// Package wasmengine composes the services the browser engine serves (agni issue 178). It is
+// separate from cmd/agni-wasm, which only bridges it to JavaScript, so the composition builds and is
+// tested natively, against the server's, without a browser.
+package wasmengine
+
+import (
+	"io/fs"
+	"net/http"
+	"runtime"
+	"strings"
+
+	"github.com/panyam/agni"
+	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/fshost"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/internal/version"
+	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/service"
+
+	_ "github.com/panyam/agni/stdlib/lib"           // registers the shipped derived relations (net.has_test_point, ...)
+	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB query relations (netlist/board/datasheet)
+	_ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a review manifest's inline query bindings as datalog
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rule catalog (anonymous source)
+	_ "github.com/panyam/agni/stdlib/rules/datalog" // registers the "dl" datalog-authored rule source
+)
+
+// Namespace is the global the wasm build's exports live under, globalThis.agni.
+const Namespace = "agni"
+
+// BrowserMount is the mount a page puts dropped files in (agni issue 854). Its files exist only in
+// the visitor's browser, and a `.zip` in it reads as the folder it was made from.
+const BrowserMount = "local"
+
+// Build composes the engine over root and keeps nothing past the worker. Each top-level directory
+// of root is a mount, as goapplib's wasmhost holds them.
+func Build(root fs.FS) (http.Handler, error) { return BuildWith(Options{})(root) }
+
+// BuildWith is Build with options, the rebuild function cmd/agni-wasm hands the host.
+func BuildWith(o Options) func(fs.FS) (http.Handler, error) {
+	return func(root fs.FS) (http.Handler, error) {
+		ms, err := mountsOf(root)
+		if err != nil {
+			return nil, err
+		}
+		eng, err := NewWith(o, ms...)
+		if err != nil {
+			return nil, err
+		}
+		return eng.Handler, nil
+	}
+}
+
+func mountsOf(root fs.FS) ([]fshost.Mount, error) {
+	entries, err := fs.ReadDir(root, ".")
+	if err != nil {
+		return nil, err
+	}
+	var ms []fshost.Mount
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		sub, err := fs.Sub(root, e.Name())
+		if err != nil {
+			return nil, err
+		}
+		if e.Name() == BrowserMount {
+			sub = fshost.ExpandZips(sub)
+		}
+		ms = append(ms, fshost.Mount{Name: e.Name(), FS: sub})
+	}
+	return ms, nil
+}
+
+// Options configures an engine beyond its mount table.
+type Options struct {
+	// Store keeps every parsed design, drawing and board past the worker, so another worker over the
+	// same files (a reload, a second lane, a lane's replacement) restores them rather than reading
+	// them again (agni issue 911). In the browser it is wasmhost.BrowserCache. Nil keeps nothing.
+	Store service.BlobStore
+	// Version names the engine that wrote what Store holds. Empty means StoreVersion().
+	Version string
+	// CollectBetweenRequests is set by a caller that has turned off the Go collector's automatic
+	// cycles with debug.SetGCPercent(-1), as cmd/agni-wasm does. The engine then collects after a
+	// request when the heap has doubled since its last collection. It does the same as each file
+	// opens, and after each layer it loads, so it never collects in the middle of evaluating (agni
+	// issue 1010). A native caller leaves it off, since its collector runs concurrently on other
+	// cores and is cheap there.
+	CollectBetweenRequests bool
+}
+
+// buildID is stamped by `make wasm` from the uncommitted changes in the tree, so a developer's dirty
+// build does not restore what a different dirty build of the same commit parsed.
+var buildID string
+
+// StoreVersion names this build for the persistent tier: the commit, the uncommitted changes when
+// there are any, and the layout of what is stored. A build that cannot say what it was built from
+// gets an empty name, and an empty name persists nothing. Two such builds could read a file
+// differently and still share a name.
+func StoreVersion() string {
+	v := version.Version()
+	switch {
+	case v == "unknown" || v == "(devel)":
+		return ""
+	case strings.HasSuffix(v, "+dirty"):
+		if buildID == "" {
+			return ""
+		}
+		v += "." + buildID
+	}
+	return "design-store-1 " + v
+}
+
+// Engine is one composition over one mount table. The browser rebuilds it when a mount changes,
+// which is cheaper to reason about than services caching a project tree that moved under them.
+type Engine struct {
+	// Handler serves the Connect API, as `agni serve` does at the same paths.
+	Handler http.Handler
+	// Paths are the service paths Handler answers.
+	Paths []string
+	// Warnings are the legitimate absences agni.New reports, such as no datasheet corpus.
+	Warnings []string
+	// Cache is the design cache every service reads through, for its counters.
+	Cache *service.DesignCache
+}
+
+// designCache is how many reads the browser engine keeps. It keeps fewer than a server, since a
+// tab's memory is the visitor's. One open design with its board checked holds about seven: the parse,
+// the derived design, a drawing, the board, and a model with and without the board.
+const designCache = 10
+
+// New composes the engine over ms through agni.New. agni.New refuses a build missing the rule
+// catalog or the fact relations. The refusal matters most here, because a browser bundle that
+// silently shipped without the built-in rules would report every design clean.
+//
+// The browser engine leaves four things out on purpose. It has no native renderer, since xschem and
+// Lepton are processes. It has no review store, since nothing a visitor drops is kept. It has no
+// datasheet corpus yet, and #852 decides whether one ships. And it has no query budget, since only
+// the person who asked a query is waiting on it.
+func New(ms ...fshost.Mount) (*Engine, error) { return NewWith(Options{}, ms...) }
+
+// NewWith is New with options.
+func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
+	// Every read goes through one cache, so a second request on a design costs its answer rather than
+	// a re-parse (agni issue 895). The engine is rebuilt on every mount change, which drops the
+	// in-memory entries and keeps what Store holds.
+	var gc *collector
+	if o.CollectBetweenRequests {
+		gc = processCollector
+		wrapped := make([]fshost.Mount, len(ms))
+		for i, m := range ms {
+			wrapped[i] = fshost.Mount{Name: m.Name, FS: gc.files(m.FS)}
+		}
+		ms = wrapped
+	}
+	// A file the page held back reads as a placeholder (agni issue 992). This wrapper goes outermost,
+	// so a Stat through the collector's Open still sees the file.
+	held := &withholding{}
+	withheld := make([]fshost.Mount, len(ms))
+	for i, m := range ms {
+		withheld[i] = fshost.Mount{Name: m.Name, FS: held.files(m.FS)}
+	}
+	ms = withheld
+	files := fshost.New(ms...)
+	if o.Version == "" {
+		o.Version = StoreVersion()
+	}
+	root := files.Root()
+	collect := runtime.GC
+	if gc != nil {
+		collect = gc.collect
+	}
+	cache := service.NewDesignCache(designCache).Persist(o.Store, func(fp []byte) (*formats.Touched, bool) {
+		return formats.CheckFingerprint(root, fp)
+	}, o.Version).AfterLoad(collect)
+	host := service.NewCachingLoader(files, cache)
+	trees := make([]projects.Tree, 0, len(ms))
+	for _, m := range ms {
+		trees = append(trees, projects.Tree{Mount: m.Name, FS: m.FS})
+	}
+	store := projects.NewFSStore(trees...)
+	resolver := &service.ProjectResolver{Store: store, Config: &fshost.ConfigResolver{Mounts: ms}}
+	e, err := agni.New(agni.WithProjectResolver(resolver), agni.WithProducerVersion(version.Version()))
+	if err != nil {
+		return nil, err
+	}
+	check, review := e.RuleServices(agni.RuleServiceDeps{Loader: host})
+	mux := http.NewServeMux()
+	paths := server.API{
+		Workspace: service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
+		Project:   service.NewProjectService(store),
+		Snapshot:  check.Snapshots(),
+		Design:    service.NewDesignService(host, nil, render.DefaultStyle, resolver),
+		Check:     check,
+		Diff:      service.NewDiffService(host, resolver),
+		Query:     service.NewQueryService(host, nil, resolver),
+		Review:    review,
+	}.Register(mux)
+	var h http.Handler = mux
+	if gc != nil {
+		h = gc.after(mux)
+	}
+	h = held.guard(h)
+	return &Engine{Handler: h, Paths: paths, Warnings: e.Warnings(), Cache: cache}, nil
+}

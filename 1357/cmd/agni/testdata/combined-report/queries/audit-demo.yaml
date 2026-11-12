@@ -1,0 +1,5 @@
+title: Audit demo
+queries:
+  - name: Pins and their nets
+    description: Every connected pin, with the net it sits on.
+    query: pin.net(?part, ?pin, ?net) => ?part, ?pin, ?net

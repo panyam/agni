@@ -1,0 +1,7 @@
+# Chapter 11: the same crystal on two boards, one terminal short of a load cap and then complete.
+# The subject is a TERMINAL rather than the part, because each side needs its own capacitor.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+steps:
+  - script: agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.fires.edn
+  - script: agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.passes.edn

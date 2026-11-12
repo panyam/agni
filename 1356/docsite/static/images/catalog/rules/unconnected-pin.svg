@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 270" width="680" height="270" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="unconnected-pin rule: a declared pin left on no net is flagged; the same pin marked NO_CONNECT is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="268" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="246" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: pin 3 bare</text>
+
+  <!-- IC U1 -->
+  <rect x="80" y="100" width="64" height="76" rx="6" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="112" y="145" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- pins 1 and 2 wired -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="144" y1="116" x2="200" y2="116"/>
+    <line x1="144" y1="138" x2="200" y2="138"/>
+  </g>
+  <circle cx="200" cy="116" r="4" fill="#394049"/>
+  <circle cx="200" cy="138" r="4" fill="#394049"/>
+
+  <!-- pin 3 bare, red, ending in an open unconnected node -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="144" y1="160" x2="182" y2="160"/>
+    <circle cx="188" cy="160" r="6" fill="#f8f9fb"/>
+  </g>
+
+  <text x="138" y="120" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="138" y="142" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">2</text>
+  <text x="138" y="164" font-size="11" fill="#d64545" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">3</text>
+
+  <text x="180" y="226" font-size="13" fill="#d64545" text-anchor="middle">pin 3 on no net -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: pin 3 marked NC</text>
+
+  <!-- IC U1 -->
+  <rect x="400" y="100" width="64" height="76" rx="6" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="432" y="145" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- pins 1 and 2 wired -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="464" y1="116" x2="520" y2="116"/>
+    <line x1="464" y1="138" x2="520" y2="138"/>
+  </g>
+  <circle cx="520" cy="116" r="4" fill="#394049"/>
+  <circle cx="520" cy="138" r="4" fill="#394049"/>
+
+  <!-- pin 3 stub with a NO_CONNECT marker (X) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="464" y1="160" x2="490" y2="160"/>
+  </g>
+  <g stroke="#2f9e57" stroke-width="2.5" fill="none">
+    <line x1="491" y1="155" x2="501" y2="165"/>
+    <line x1="501" y1="155" x2="491" y2="165"/>
+  </g>
+
+  <text x="458" y="120" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">1</text>
+  <text x="458" y="142" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">2</text>
+  <text x="458" y="164" font-size="11" fill="#6b7280" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace">3</text>
+  <text x="518" y="164" font-size="12" fill="#2f9e57" font-family="ui-monospace, Menlo, Consolas, monospace">NC</text>
+
+  <text x="500" y="226" font-size="13" fill="#2f9e57" text-anchor="middle">NO_CONNECT declared -&gt; fine</text>
+</svg>

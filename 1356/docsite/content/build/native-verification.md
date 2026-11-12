@@ -1,0 +1,135 @@
+---
+title: "Native verification"
+description: "Check a reader and its renderers against the format's own EDA tool, used as an independent oracle."
+---
+
+Agni's SVG and WebGL renderers are checked against each format's own tool, used as an independent
+oracle. This page lists the native tool per format, how to install it on macOS, and the two CLI
+commands that drive it.
+
+## The commands
+
+- `agni native render <file> [-o out.svg] [--page N]` renders a design to SVG with its native
+  tool and writes it to `-o` (default stdout). Put it next to `agni render <file>` to compare
+  Agni's output against the authoritative one.
+- `agni native open <file> [--print]` opens a design in its native GUI. `--print` shows the launch
+  command instead of running it.
+
+Both dispatch by file extension. The `.sch` extension is sniffed for xschem versus Lepton, the
+same rule the readers use. A format with no native tool reports that plainly rather than failing
+obscurely.
+
+The CLI does not require `--enable-native`, unlike the `serve` viewer's native mode. That
+allowlist guards a shared server that would otherwise shell out on a request. Running the CLI is
+itself your consent. The tool still has to be registered for the format and installed on `PATH`.
+
+## Tools by format
+
+<div style="overflow-x:auto">
+
+| Format (extension) | Native tool | macOS install | native render | native open |
+|---|---|---|---|---|
+| KiCad schematic (`.kicad_sch`, `.kicad_pro`) | `kicad-cli` (+ KiCad.app) | `brew install --cask kicad` | yes (per page) | yes (`open -a KiCad`) |
+| KiCad board (`.kicad_pcb`) | `kicad-cli` | (same) | yes (F.Cu/B.Cu/Edge.Cuts overview) | yes |
+| xschem (`.sch`) | `xschem` | Linux/X11, on macOS via Docker + XQuartz | yes | yes (X11) |
+| gEDA / Lepton (`.sch`) | `lepton-cli` (render), `lepton-schematic` (GUI) | Linux, on macOS via Docker | yes | yes (X11) |
+| EDIF (`.edn`, `.edf`, `.edif`, `.eds`) | none open | | no | no |
+| IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
+| ODB++ (directory / `.tgz` / `.zip`) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
+| Cadence Allegro board (`.brd`) | Allegro (licensed, Windows); its films render in `gerbv` | `gerbv` via the `natup` image | films only | no |
+| Altium Designer board (`.PcbDoc`) | Altium (licensed, Windows) | none | no | no |
+
+</div>
+
+`kicad-cli` is the only native renderer that runs first-class on macOS. The X11 schematic tools
+(xschem, Lepton) install cleanly on Linux. On macOS run them under Docker with XQuartz, or on a
+Linux box. The board interchange formats (IPC-2581, ODB++) and EDIF have no free macOS-native
+renderer.
+
+## What the tools are run as
+
+Agni runs these exact invocations into a temp dir under a timeout.
+
+- KiCad schematic: `kicad-cli sch export svg --pages N --output DIR file`
+- KiCad board: `kicad-cli pcb export svg --mode-single --layers F.Cu,B.Cu,Edge.Cuts --output OUT.svg file`
+- xschem: `xschem --no_x --quit --svg file` (writes `plot.svg` in the working directory)
+- Lepton: `lepton-cli export -o OUT.svg file`
+
+## The X11 tools over Docker and SSH
+
+{{ includeFile "figures/native-tool-container.svg" }}
+
+xschem and Lepton are Linux/X11 tools with no macOS package. `Dockerfile.nattools` builds a
+Debian tool host with kicad-cli, xschem, Lepton, and `agni`, reached over SSH. The Agni server
+still runs on the host. This container only supplies the tools. `agni native render` runs inside
+it and writes the SVG back to the bind-mounted workspace, and `ssh -X` carries an
+`agni native open` GUI to the host's XQuartz.
+
+The engine repo's Makefile runs the container lifecycle (`natup`, `natdown`, `natlogs`) and
+drives the tools through it with `natrender` and `natopen`. `natup` bind-mounts the folders named
+in `NATIVE_DOCKER_MOUNTS`, and the other two take paths inside the container, so a design must sit
+under one of those mounts. The raw `ssh` forms below do the same and work anywhere.
+
+```
+make natup NATIVE_DOCKER_MOUNTS="-v $HOME/boards:/boards"   # sshd container up
+make natrender FILE=/boards/amp/amp.sch OUT=/boards/amp.svg  # paths inside the container
+make natopen  FILE=/boards/amp/amp.sch                       # GUI via XQuartz
+make natdown
+```
+
+Under the hood these are `ssh -p 2222 agni@localhost agni native render /boards/... -o /boards/...`
+and `ssh -X ... agni native open /boards/...`.
+
+- `natopen` needs XQuartz running (`brew install --cask xquartz`, then launch it) and a `DISPLAY`
+  set in the shell. Smoke test the forwarding with
+  `ssh -X -p 2222 -o SetEnv=LC_ALL=C.UTF-8 agni@localhost xeyes`. A pair of eyes should appear.
+- `agni native open` blocks until the window closes. The `ssh -X` tunnel has to remain open.
+- `LC_ALL=C.UTF-8` is forced over ssh. Lepton's guile front end aborts on an unavailable forwarded
+  locale, and the slim image has none.
+
+Both `xschem` (2.8.x) and `lepton-eda` (`lepton-cli`, `lepton-schematic`) come from Debian
+bookworm apt, so no source build is needed. Building the image was the first real exercise of the
+xschem render path. Version 2.8.x has no `--plotfile` and writes `plot.svg` into the working
+directory, which agni sets to a temp dir.
+
+## Verifying formats with no native renderer
+
+EDIF, IPC-2581, and ODB++ have no free macOS-native tool, so board and netlist correctness is
+established without one.
+
+1. IPC-2581 authors component placements and copper pad lands on independent channels. A correct
+   placement puts every pin on its copper. So the distance from each pin to its pad is a ground
+   truth inside the file itself. A third-party render re-derives from the same placement data, so
+   this check is stronger than one. The placement geometry was pinned this way.
+2. Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a numeric
+   oracle. The board DRC counts were cross-checked this way.
+3. ODB++ has an oracle of its own in KiCad 9 and later, which writes a job from any board
+   (`kicad-cli pcb export odb`). Read the same board from its `.kicad_pcb` and from the job, and
+   the two reads have to agree. `TestODBReadsAsItsKiCadSource` holds every fixture to this, and
+   `make odb-fixtures` regenerates the fixtures. `make odb-oracle` holds every samples board to it,
+   against a baseline of what the exporter itself changes. `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir`
+   adds a board of your own. The cross-check found three KiCad board reader faults (agni issues
+   1260 and 1261). It cannot show how another producer's dialect differs. Only a job from that
+   producer can show that, so the gate also reads foxBMS's Altium-written jobs and holds each to
+   itself.
+4. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
+   Visualizer, or the BoardUI parser run locally) renders the same file.
+5. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
+   Linux or Windows.
+6. An Allegro board is held to two things Allegro wrote from the same `.brd`. An ASCII extract
+   (`cds2f_<board>.txt`) carries every placement, pin, via and track width, and
+   `e2e_allegro_test.go` compares them. The photoplot films carry each copper layer as Cadence's
+   plotter draws it, and `TestAllegroCopperMatchesItsFilms` draws both sides into a 1-mil bitmap
+   (`internal/copperraster`) and scores their overlap. The Go rasteriser was checked once against
+   `gerbv` from the `natup` image, and the two agreed to within a pixel on every film. Two `gerbv`
+   limits shape that check. Its export window is capped, so it ran at 500 dpi. It refuses a negative
+   `--origin`, so each film was shifted with its own `%OF` statement and drawn from `0;0`.
+7. An Altium board is held to the ODB++ job Altium exported from the same board. The foxBMS
+   packages ship both side by side, and `TestAltiumPcbDocMatchesItsODBExport` compares parts, the
+   pin-to-net partition, placements, every pad's board position, vias and track widths on all five.
+   The export changes three things on the way out, and the test allows for each. It drops mechanical
+   and graphical parts, it writes the drilled pad of a dropped part as a via, and it merges pads of
+   one part that share a name. A via on no net has no `eda/data` subnet in Altium's export, so
+   agni's ODB++ reader also reads a drill hit whose `.drill` attribute says via when no subnet claims
+   it. A unit test holds every pad of a part at any angle and side to its stored board position,
+   since the five boards only place bottom parts at 180 degrees.

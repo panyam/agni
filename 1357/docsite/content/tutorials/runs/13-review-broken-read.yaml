@@ -1,0 +1,7 @@
+# Rung 13: rung 1's bad read, one sub-sheet named on its own, scored by the review layer.
+fixture: examples/jetson-project
+fetched: tools/samples/boards/jetson-agx-thor-baseboard
+fetched_into: designs/jetson
+script: |
+  agni review designs/jetson/som_power.kicad_sch
+match: '^\*\*[0-9]|^\| (I3|I4|A2) \|'

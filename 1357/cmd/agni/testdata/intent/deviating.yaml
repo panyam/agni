@@ -1,0 +1,16 @@
+# A scaffold declaration whose expectations DEVIATE from sample.edn, so the items fail: the design has
+# two ics (U1/U2) but the intent expects one and declares no soc, and it carries 3V3 but not the
+# declared 1V8 rail. The count:1 on MCU makes module-count fail (expects 1, found 2).
+name: Sample intent (deviating scaffold)
+intent:
+  modules:
+  - {name: MCU, class: ic, count: 1}
+  - {name: SoC, class: soc}
+  - name: power tree
+    nets: [3V3, 1V8]
+  nets:
+    3V3:
+      nominal: 3.3
+      domain: io_3v3
+      protect: [discharge]
+    1V8: {nominal: 1.8, domain: core}

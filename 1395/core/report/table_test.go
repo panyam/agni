@@ -1,0 +1,291 @@
+package report
+
+import (
+	"bytes"
+	"encoding/csv"
+	"io"
+	"strings"
+	"testing"
+)
+
+func sampleTable() Table {
+	return Table{
+		Title:   "Test point coverage",
+		Query:   `component.class(?r,"test_point") => ?r`,
+		Source:  "mount://local/board.tel",
+		Columns: []string{"net", "ref"},
+		Rows: []TableRow{
+			{Cells: []string{"+3V3", "TP1"}, Cites: []string{"board.tel:+3V3"}},
+			{Cells: []string{"GND", "TP2"}, Cites: []string{"board.tel:GND", "board.tel:TP2"}},
+		},
+	}
+}
+
+// TestTableTextIsUnchanged pins the terminal format. It existed before the other four, and anyone
+// already piping `agni query` parses it. Adding formats was not allowed to move it.
+func TestTableTextIsUnchanged(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableText(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	got := b.String()
+	for _, want := range []string{"net", "ref", "provenance", "+3V3", "TP1", "board.tel:GND ; board.tel:TP2", "2 result(s)"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("text output missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "Test point coverage") {
+		t.Error("the terminal table gained a title; the text format is the one that must not change")
+	}
+}
+
+// TestTableCSVKeepsHeaderWhenEmpty is the difference between a table that matched nothing and a run
+// that produced no file. A downstream sheet binds to the header row, so dropping it on an empty
+// result breaks the consumer exactly when the answer is "none", which is a common and valid answer.
+func TestTableCSVKeepsHeaderWhenEmpty(t *testing.T) {
+	tbl := sampleTable()
+	tbl.Rows = nil
+	var b bytes.Buffer
+	if err := TableCSV(&b, tbl); err != nil {
+		t.Fatal(err)
+	}
+	recs, err := csv.NewReader(&b).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("empty result wrote %d record(s), want just the header", len(recs))
+	}
+	if got, want := strings.Join(recs[0], ","), "net,ref,provenance"; got != want {
+		t.Errorf("header = %q, want %q", got, want)
+	}
+}
+
+// TestTableCSVCarriesNoPreamble guards the one asymmetry between csv and the document formats. In csv
+// the first row has to be the header. Markdown and html carry the title and the query, and csv must
+// not.
+func TestTableCSVCarriesNoPreamble(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableCSV(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	first, _, _ := strings.Cut(b.String(), "\n")
+	if !strings.HasPrefix(first, "net,ref,provenance") {
+		t.Errorf("csv does not open with the header row: %q", first)
+	}
+	if strings.Contains(b.String(), "Test point coverage") {
+		t.Error("csv carries the title; a preamble breaks a reader binding to row 1")
+	}
+}
+
+// TestTableCSVEscapesFormulaCells is the end-to-end half of SanitizeCell for this format. A net named
+// +3V3 is real (the shipped demo board has one) and a spreadsheet executes it on open.
+func TestTableCSVEscapesFormulaCells(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableCSV(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	recs, err := csv.NewReader(&b).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recs[1][0] != "'+3V3" {
+		t.Errorf("cell = %q, want the formula-escaped %q", recs[1][0], "'+3V3")
+	}
+}
+
+// TestTableMarkdownSeparatorMatchesHeader catches a malformed table that still LOOKS fine in a diff.
+// A separator row with the wrong number of cells makes the whole table render as paragraph text on
+// GitHub, silently. This shipped broken once during authoring, with a trailing empty column.
+func TestTableMarkdownSeparatorMatchesHeader(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableMarkdown(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	lines := tableLines(b.String())
+	if len(lines) < 2 {
+		t.Fatalf("expected a header and a separator, got %d table line(s)", len(lines))
+	}
+	hdr, sep := cellCount(lines[0]), cellCount(lines[1])
+	if hdr != sep {
+		t.Errorf("header has %d cells, separator has %d: the table will not render", hdr, sep)
+	}
+	if hdr != 3 {
+		t.Errorf("header has %d cells, want 3 (two columns plus provenance)", hdr)
+	}
+}
+
+// TestTableMarkdownEscapesCellBreakers covers the two characters that silently corrupt a markdown
+// table. A pipe ends the cell early; a newline ends the ROW, shifting every later cell one column
+// left. Both occur in real data, since provenance joins several citations and a net name is
+// whatever the design called it.
+func TestTableMarkdownEscapesCellBreakers(t *testing.T) {
+	tbl := sampleTable()
+	tbl.Rows = []TableRow{{Cells: []string{"A|B", "line1\nline2"}, Cites: []string{"c"}}}
+	var b bytes.Buffer
+	if err := TableMarkdown(&b, tbl); err != nil {
+		t.Fatal(err)
+	}
+	lines := tableLines(b.String())
+	row := lines[len(lines)-1]
+	if n := cellCount(row); n != 3 {
+		t.Errorf("row rendered %d cells, want 3: %q", n, row)
+	}
+	if !strings.Contains(row, `A\|B`) {
+		t.Errorf("pipe not escaped: %q", row)
+	}
+}
+
+// TestTableMarkdownEmptySaysSo. An empty markdown table reads as an omission or a broken generator,
+// so a view that matched nothing states it in words. Same discipline as a check that did not run
+// never rendering as a pass.
+func TestTableMarkdownEmptySaysSo(t *testing.T) {
+	tbl := sampleTable()
+	tbl.Rows = nil
+	var b bytes.Buffer
+	if err := TableMarkdown(&b, tbl); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), "No rows matched") {
+		t.Errorf("empty view does not say it matched nothing:\n%s", b.String())
+	}
+	if strings.Contains(b.String(), "| --- |") {
+		t.Error("empty view rendered a headerless table instead of a sentence")
+	}
+}
+
+// TestTableMarkdownCarriesItsQuestion pins that the question is in
+// the artifact, so a reader can re-run it, check it, or argue with it.
+func TestTableMarkdownCarriesItsQuestion(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableMarkdown(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"## Test point coverage", `component.class(?r,"test_point")`, "mount://local/board.tel"} {
+		if !strings.Contains(b.String(), want) {
+			t.Errorf("view is missing %q:\n%s", want, b.String())
+		}
+	}
+}
+
+func TestTableHTMLEscapesDesignData(t *testing.T) {
+	tbl := sampleTable()
+	tbl.Rows = []TableRow{{Cells: []string{"<script>x</script>", "TP1"}, Cites: []string{"c"}}}
+	var b bytes.Buffer
+	if err := TableHTML(&b, tbl); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "<script>x</script>") {
+		t.Error("a cell reached the page as live markup")
+	}
+	if !strings.Contains(b.String(), "&lt;script&gt;") {
+		t.Errorf("cell was not escaped into the document:\n%s", b.String())
+	}
+}
+
+// TestTableHTMLIsSelfContained. The page has to survive being emailed and opened from a file:// path.
+// The check report and the checklist make the same promise.
+func TestTableHTMLIsSelfContained(t *testing.T) {
+	var b bytes.Buffer
+	if err := TableHTML(&b, sampleTable()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), "border-collapse") {
+		t.Error("the shared stylesheet was not inlined")
+	}
+	for _, bad := range []string{"<link", "<script src", "http://", "https://"} {
+		if strings.Contains(b.String(), bad) {
+			t.Errorf("page reaches outside itself via %q", bad)
+		}
+	}
+}
+
+// tableLines returns just the pipe-table rows of a markdown document.
+func tableLines(doc string) []string {
+	var out []string
+	for _, l := range strings.Split(doc, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), "|") {
+			out = append(out, strings.TrimSpace(l))
+		}
+	}
+	return out
+}
+
+// cellCount counts the cells in one markdown table row, which is the delimiters minus the two that
+// bound it. An escaped pipe is not a delimiter.
+func cellCount(row string) int {
+	return strings.Count(strings.ReplaceAll(row, `\|`, ""), "|") - 1
+}
+
+// A parameterized view prints its bindings under the query in both documents, so it still states
+// the whole question it answers (agni issue 793).
+func TestAViewStatesItsBindings(t *testing.T) {
+	tb := Table{Query: `component.net(?r, ?n) => ?n`, Bindings: []string{`?r = "U1"`}, Columns: []string{"n"},
+		Rows: []TableRow{{Cells: []string{"GND"}}}}
+	var md, html, set strings.Builder
+	if err := TableMarkdown(&md, tb); err != nil {
+		t.Fatal(err)
+	}
+	if err := TableHTML(&html, tb); err != nil {
+		t.Fatal(err)
+	}
+	if err := TableSetMarkdown(&set, TableSet{Sections: []TableSection{{Name: "a", Error: "boom", Table: tb}}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(md.String(), "Bound: `?r = \"U1\"`") {
+		t.Errorf("markdown does not state the binding:\n%s", md.String())
+	}
+	if !strings.Contains(html.String(), "<code>?r = &#34;U1&#34;</code>") {
+		t.Errorf("html does not state the binding:\n%s", html.String())
+	}
+	if !strings.Contains(set.String(), "Bound: `?r = \"U1\"`") {
+		t.Errorf("a set section that could not answer does not state its binding:\n%s", set.String())
+	}
+}
+
+func TestAnAbsentCellPrintsWhyAndCSVStaysRaw(t *testing.T) {
+	tab := Table{Columns: []string{"m", "sum(v)"}, Rows: []TableRow{{Cells: []string{"U1", ""}, Why: []string{"", "mixed units: A, V"}}}}
+	var text, csv strings.Builder
+	if err := TableText(&text, tab); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text.String(), "absent: mixed units: A, V") {
+		t.Errorf("text table does not state the reason:\n%s", text.String())
+	}
+	if err := TableCSV(&csv, tab); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(csv.String(), "absent") {
+		t.Errorf("csv cell carries the reason, want it raw:\n%s", csv.String())
+	}
+}
+
+// TestALimitedTableSaysHowManyRowsItLeftOut covers agni issue 896. A page of an answer is never
+// printed as though it were the whole answer, and csv is still the bare table.
+func TestALimitedTableSaysHowManyRowsItLeftOut(t *testing.T) {
+	tab := Table{Query: "q", Columns: []string{"ref"}, Rows: []TableRow{{Cells: []string{"U1"}}, {Cells: []string{"U2"}}}, Total: 1229}
+	for name, render := range map[string]func(io.Writer, Table) error{"text": TableText, "markdown": TableMarkdown, "html": TableHTML} {
+		var b strings.Builder
+		if err := render(&b, tab); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(b.String(), "2 of 1229 result(s), 1227 left out by the limit") {
+			t.Errorf("%s does not say how many rows the limit left out:\n%s", name, b.String())
+		}
+	}
+	var b strings.Builder
+	if err := TableCSV(&b, tab); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "1229") {
+		t.Errorf("csv carries the count, want the bare table:\n%s", b.String())
+	}
+	tab.Total = 0
+	b.Reset()
+	if err := TableText(&b, tab); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), "\n2 result(s)\n") {
+		t.Errorf("a whole answer's count changed:\n%s", b.String())
+	}
+}

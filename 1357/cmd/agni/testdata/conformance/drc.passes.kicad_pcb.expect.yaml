@@ -1,0 +1,10 @@
+# The geometric DRC passes board (WS3-008): clean copper — 0.25/0.5mm traces, a
+# 0.8/0.4mm via, generous spacing — so no geometric rule may fire; the harness's
+# exhaustiveness makes this the anti-false-positive gate for the board-rule class.
+# Incidentals: GND reaches one pad only (single-pin stub), and SIG hangs off connector
+# J1 with no TVS (esd, info).
+fires:
+  single-pin-net:
+    subjects: [GND]
+  esd-protection:
+    subjects: [SIG]

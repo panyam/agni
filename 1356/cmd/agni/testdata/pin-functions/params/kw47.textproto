@@ -1,0 +1,61 @@
+# Three pins of the NXP KW47 and the functions its pin-mux table lists for each, transcribed by hand
+# from the KW47 Product Family data sheet, Rev. 4 (18 December 2025), Table 58 "KW47 Package
+# pinout", pages 58 and 59. Facts only; the document stays outside this repo.
+#
+# Keyed on the family name rather than an ordering code, because the fixture design names the part
+# that way. A real corpus keys a spec on the ordering code a BOM carries.
+mpn: "KW47"
+manufacturer: "NXP"
+device_class: "mcu"
+
+docs {
+  id: "kw47-rev4"
+  title: "KW47 Product Family data sheet Rev. 4"
+  vendor: "NXP"
+  locator: "not in this repo"
+}
+
+packages { id: "48qfn" name: "48QFN" }
+
+pins {
+  id: "ptb3"
+  name: "PTB3"
+  numbers { package_ref: "48qfn" number: "1" }
+  alternates { name: "ADC0_B13" }
+  alternates { name: "PTB3" }
+  alternates { name: "LPSPI1_SOUT" }
+  alternates { name: "LPUART1_RX" }
+  alternates { name: "TPM1_CH3" }
+  alternates { name: "FLEXIO0_D29" }
+  alternates { name: "WUU0_P14" }
+  prov { doc_ref: "kw47-rev4" page: 58 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "ptb4"
+  name: "PTB4"
+  numbers { package_ref: "48qfn" number: "2" }
+  alternates { name: "PTB4" }
+  alternates { name: "LPSPI1_PCS3" }
+  alternates { name: "LPUART1_CTS_b" }
+  alternates { name: "LPI2C1_SDA" }
+  alternates { name: "I3C0_SDA" }
+  alternates { name: "TRGMUX0_IN0" }
+  alternates { name: "FLEXIO0_D30" }
+  alternates { name: "WUU0_P15" }
+  prov { doc_ref: "kw47-rev4" page: 59 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "ptb5"
+  name: "PTB5"
+  numbers { package_ref: "48qfn" number: "3" }
+  alternates { name: "PTB5" }
+  alternates { name: "LPSPI1_PCS2" }
+  alternates { name: "LPUART1_RTS_b" }
+  alternates { name: "LPI2C1_SCL" }
+  alternates { name: "I3C0_SCL" }
+  alternates { name: "TRGMUX0_OUT0" }
+  alternates { name: "FLEXIO0_D31" }
+  prov { doc_ref: "kw47-rev4" page: 59 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}

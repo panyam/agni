@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 280" width="780" height="280" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="reverse-blocking-absent rule, three outcomes: a connector-to-power-input path through a series diode is fine; a path with nothing directional on it is flagged; a path crossing an unidentified transistor is inconclusive, because a netlist cannot tell an ideal-diode controller from an ordinary switch">
+  <!-- card -->
+  <rect x="1" y="1" width="778" height="278" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="260" y1="24" x2="260" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <line x1="520" y1="24" x2="520" y2="256" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: fine (series diode) ================= -->
+  <text x="22" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: series diode</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="26" y="120" width="28" height="28" rx="2" fill="#ffffff"/>
+    <line x1="38" y1="128" x2="46" y2="128"/>
+    <line x1="38" y1="140" x2="46" y2="140"/>
+  </g>
+  <text x="40" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- D1: triangle points toward the load, cathode bar on the load side -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <path d="M106 123 L106 145 L128 134 Z" fill="#ffffff"/>
+    <line x1="128" y1="121" x2="128" y2="147"/>
+  </g>
+  <text x="117" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">D1</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="180" y="112" width="58" height="46" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="209" y="139" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="168" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="end">vin</text>
+
+  <g stroke="#2f9e57" stroke-width="2.5" fill="none">
+    <line x1="54" y1="134" x2="106" y2="134"/>
+    <line x1="128" y1="134" x2="180" y2="134"/>
+  </g>
+  <text x="80" y="126" font-size="12" fill="#2f9e57" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VBAT</text>
+
+  <text x="130" y="196" font-size="13" fill="#2f9e57" text-anchor="middle">anode toward the source &#8594; fine</text>
+  <text x="130" y="216" font-size="12" fill="#6b7280" text-anchor="middle">conducts one way, blocks the other</text>
+
+  <!-- ================= MIDDLE: flagged (nothing directional) ================= -->
+  <text x="282" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: nothing directional</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="286" y="120" width="28" height="28" rx="2" fill="#ffffff"/>
+    <line x1="298" y1="128" x2="306" y2="128"/>
+    <line x1="298" y1="140" x2="306" y2="140"/>
+  </g>
+  <text x="300" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="440" y="112" width="58" height="46" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="469" y="139" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="428" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="end">vin</text>
+
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="314" y1="134" x2="440" y2="134"/>
+  </g>
+  <text x="377" y="126" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VBAT</text>
+
+  <text x="390" y="196" font-size="13" fill="#d64545" text-anchor="middle">reverse current reaches U1 &#8594; flagged</text>
+  <text x="390" y="216" font-size="12" fill="#6b7280" text-anchor="middle">a fuse here would not help: it opens on</text>
+  <text x="390" y="232" font-size="12" fill="#6b7280" text-anchor="middle">magnitude, not direction</text>
+
+  <!-- ================= RIGHT: inconclusive (unidentified transistor) ================= -->
+  <text x="542" y="42" font-size="15" font-weight="600" fill="#d9822b">Inconclusive: transistor</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="546" y="120" width="28" height="28" rx="2" fill="#ffffff"/>
+    <line x1="558" y1="128" x2="566" y2="128"/>
+    <line x1="558" y1="140" x2="566" y2="140"/>
+  </g>
+  <text x="560" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- Q3: a three-terminal part, drawn with a gate stub so it does not read as a two-terminal box -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="622" y="123" width="44" height="22" rx="2" fill="#ffffff"/>
+    <line x1="644" y1="123" x2="644" y2="107"/>
+    <line x1="636" y1="107" x2="652" y2="107"/>
+  </g>
+  <text x="644" y="99" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">Q3</text>
+
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="700" y="112" width="58" height="46" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="729" y="139" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="688" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="end">vin</text>
+
+  <g stroke="#d9822b" stroke-width="2.5" fill="none">
+    <line x1="574" y1="134" x2="622" y2="134"/>
+    <line x1="666" y1="134" x2="700" y2="134"/>
+  </g>
+  <text x="598" y="126" font-size="12" fill="#d9822b" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VBAT</text>
+
+  <text x="650" y="196" font-size="13" fill="#d9822b" text-anchor="middle">ideal diode, or ordinary switch?</text>
+  <text x="650" y="216" font-size="12" fill="#6b7280" text-anchor="middle">a netlist cannot tell them apart; seed</text>
+  <text x="650" y="232" font-size="12" fill="#6b7280" text-anchor="middle">device_class to turn this into a pass</text>
+</svg>

@@ -1,0 +1,398 @@
+"""The same request through the CLI and through a server gives the same message.
+
+This is C31 checked from outside Go: a command's json is its rpc's message, so a client that switches
+transport must see no difference. Where the two genuinely differ today the difference is DECLARED
+below, field by field, with the issue that will remove it, and the test asserts the difference is
+exactly that. A declaration that stops being true fails, so none outlives its bug.
+"""
+
+from __future__ import annotations
+
+from typing import Callable, Dict, List, NamedTuple, Optional
+
+import pytest
+from google.protobuf.message import Message
+
+from agni import CLI_COMMANDS, Client, bindings
+from agni.errors import AgniError, CliUnsupported
+from agni.v1.checks import checks_pb2
+from agni.v1.webapi import query_pb2
+from agni.v1.webapi import design_pb2
+
+from conftest import DESIGN, snap
+
+
+def _endpoint(ref: str) -> design_pb2.TraceEndpoint:
+    ref_des, pin = ref.split(".")
+    return design_pb2.TraceEndpoint(ref_des=ref_des, pin=pin)
+
+
+def _trace(frm: str, to: str) -> Callable[[Client], Message]:
+    def ask(c: Client) -> Message:
+        req = design_pb2.TraceDesignRequest(snapshot=snap(c), to=_endpoint(to))
+        getattr(req, "from").CopyFrom(_endpoint(frm))
+        return c.trace_design(req)
+
+    return ask
+
+
+class Case(NamedTuple):
+    rpc: str
+    ask: Callable[[Client], Message]
+    # Top-level response fields the CLI leaves EMPTY where the server fills them, and why.
+    cli_leaves_empty: Dict[str, str] = {}
+    # Clears, on both responses, what two runs of one request legitimately differ in, such as when
+    # each was made.
+    normalize: Optional[Callable[[Message], None]] = None
+    # A query's work is what this request spent, which on a server that keeps a design's fact base
+    # depends on what earlier requests already derived (agni issue 895, panyam/jaala#140), while the
+    # CLI starts cold every time. So it is compared only where a case says the two must agree.
+    compare_work: bool = False
+
+
+UNSTORED = "the CLI stores nothing, so its review has no resource name (agni issue 734)"
+
+
+def _clear_work(msg: Message) -> None:
+    if msg.DESCRIPTOR.name == "RunQueryResponse":
+        msg.work = 0
+    elif msg.DESCRIPTOR.name == "RunQueriesResponse":
+        for r in msg.results:
+            r.result.work = 0
+
+
+def _run_time(rv: Message) -> None:
+    rv.results.meta.created_at = ""
+
+
+# A checklist exercising each binding the CLI has to carry: a catalog rule, an inline query, an item
+# no mechanism answers, and a query calling a library sent with the request (as --lib).
+_MANIFEST = checks_pb2.ReviewManifest(
+    name="cross-transport",
+    areas=[
+        checks_pb2.ManifestArea(
+            name="A",
+            items=[
+                checks_pb2.ManifestItem(id="r", title="i2c pull-ups", binding=checks_pb2.ItemBinding(rule="i2c-pull-up")),
+                checks_pb2.ManifestItem(
+                    id="q",
+                    title="resistors",
+                    binding=checks_pb2.ItemBinding(
+                        query=checks_pb2.ManifestQuery(match='component.class(?r, "resistor") => ?r', subject="r", message="{r} is a resistor")
+                    ),
+                ),
+                checks_pb2.ManifestItem(id="m", title="checked by hand", note="no mechanism"),
+                checks_pb2.ManifestItem(
+                    id="l",
+                    title="nets with a resistor",
+                    binding=checks_pb2.ItemBinding(
+                        query=checks_pb2.ManifestQuery(match="probe.resistor_net(?n) => ?n", subject="n", kind="net", message="{n} has a resistor")
+                    ),
+                ),
+            ],
+        )
+    ],
+)
+
+# A set whose preamble every query reads, and the same set with one query the design cannot answer:
+# over the CLI that exits 1 with the full answer printed, and the two transports must still agree.
+_SET = query_pb2.QuerySet(
+    title="audit",
+    preamble='res(?r) :- component.class(?r, "resistor");',
+    queries=[
+        query_pb2.NamedQuery(name="resistors", query="res(?r) => ?r"),
+        query_pb2.NamedQuery(name="nets", query="pin.net(?c, ?p, ?n) => count(distinct ?n)"),
+    ],
+)
+_SET_WITH_TYPO = query_pb2.QuerySet(
+    title="audit",
+    queries=list(_SET.queries) + [query_pb2.NamedQuery(name="typo", query="compnent.class(?c, ?k)")],
+    preamble=_SET.preamble,
+)
+
+# A library sent with the request (agni issue 788): a plain member and one taking a parameter. Over the
+# CLI it travels as files under --lib, over Connect as the field itself, and both must answer alike.
+_LIB = {
+    "config": {
+        "library_modules": [
+            {
+                "path": "probe",
+                "text": (
+                    "# A net a resistor sits on.\n"
+                    "resistor_net(?n: net) :- component.net(?r, ?n), component.class(?r, \"resistor\");\n"
+                    "# A net a part of the given class sits on.\n"
+                    "class_net(?n: net, ?k: string) :- component.net(?r, ?n), component.class(?r, ?k);\n"
+                ),
+            }
+        ]
+    }
+}
+
+CASES: List[Case] = [
+    Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c))),
+    # A declared revision reads its own board on both surfaces (agni issue 848).
+    Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"))),
+    Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c), rules=["i2c-pull-up", "decoupling-present"])),
+    Case("CheckService/GetCheckReport", lambda c: c.get_check_report(snapshot=snap(c))),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query='component.class(?c, "resistor") => ?c')),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="pin.net(?c, ?p, ?n) => ?n, count(distinct ?c)")),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query='pin.net(?c, ?p, "NO_SUCH_NET") => ?c')),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(snapshot=snap(c), set=_SET)),
+    # A budget the query fits in answers alike, work included (agni issue 792). It reads base
+    # relations only, so a kept fact base gives it nothing to reuse.
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query='component.class(?c, "resistor") => ?c', work_budget=10_000_000), compare_work=True),
+    # An answer without its locations answers alike: no sheets or reasons on either transport.
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="pin.net(?r, ?p, ?n) => ?n, ?r, ?p", omit_locations=True)),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(snapshot=snap(c), set=_SET, omit_locations=True)),
+    # A request's limit cuts the answer and both transports report the same total (agni issue 896).
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="pin.net(?r, ?p, ?n) => ?n, ?r, ?p order by ?n, ?r, ?p", limit=5)),
+    # Bound variables answer alike, text and number, quoting included (agni issue 793).
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="component.net(?r, ?n) => ?r, ?n", bindings=bindings({"r": ["U1", "U2"]}))),
+    # The TEXT "3", in a position the schema types as a number, is read as 3 on both transports
+    # (panyam/jaala#65), so this answers as the case above.
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": "3"}))),
+    Case(
+        "QueryService/RunQueries",
+        lambda c: c.run_queries(
+            snapshot=snap(c),
+            set=query_pb2.QuerySet(
+                title="bound",
+                queries=[
+                    query_pb2.NamedQuery(name="u1", query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"})),
+                    query_pb2.NamedQuery(name="many", query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3})),
+                    query_pb2.NamedQuery(name="both", query="component.net(?r, ?n) => ?r, ?n", bindings=bindings({"r": ["U1", "U2"]})),
+                ],
+            ),
+        ),
+    ),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c, overlay=_LIB), query="probe.resistor_net(?n) => ?n")),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c, overlay=_LIB), query='probe.class_net(?n, "capacitor") => ?n')),
+    Case(
+        "QueryService/RunQueries",
+        lambda c: c.run_queries(
+            snapshot=snap(c, overlay=_LIB),
+            set=query_pb2.QuerySet(title="lib", queries=[query_pb2.NamedQuery(name="r", query="probe.resistor_net(?n) => ?n")]),
+        ),
+    ),
+    Case("QueryService/RunQueries", lambda c: c.run_queries(snapshot=snap(c), set=_SET_WITH_TYPO)),
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"))),
+    # Unchanged nets, asked for (agni issue 818).
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), include_equal=True)),
+    # A near-rename, asked for (agni issue 817): rev C renames PMIC_EN and adds a pull-up to it.
+    Case(
+        "DiffService/DiffDesigns",
+        lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-c.edn"), near_renames={}),
+    ),
+    Case(
+        "ReviewService/CreateReview",
+        lambda c: c.create_review(snapshot=snap(c, overlay=_LIB), manifest=_MANIFEST),
+        {"name": UNSTORED},
+        _run_time,
+    ),
+    # Which checklists the design's project declares (agni issue 859).
+    Case("ReviewService/ListChecklists", lambda c: c.list_checklists(snapshot=snap(c))),
+    # The engine's tables for an answer (agni issue 862). Each side tabulates the answer IT got, so
+    # this also holds the two answers to one projection.
+    Case("TableService/Tabulate", lambda c: c.tabulate(check=c.check_design(snapshot=snap(c)), order_by=["rule", "-subject"])),
+    Case("TableService/Tabulate", lambda c: c.tabulate(query_set=c.run_queries(snapshot=snap(c), set=_SET), order_by=["-provenance"])),
+    Case(
+        "TableService/Tabulate",
+        lambda c: c.tabulate(diff=c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), include_equal=True)),
+    ),
+    Case("TableService/Tabulate", lambda c: c.tabulate(review=c.create_review(snapshot=snap(c, overlay=_LIB), manifest=_MANIFEST))),
+    # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
+    Case("DesignService/GetDesign", lambda c: c.get_design(snapshot=snap(c))),
+    Case("DesignService/GetDesign", lambda c: c.get_design(snapshot=snap(c), read_mask={"paths": ["design"]})),
+    Case(
+        "DesignService/GetDesign",
+        lambda c: c.get_design(snapshot=snap(c), read_mask={"paths": ["design.nets", "design.components.mpn"]}, nets=["PMIC_EN"], ref_des=["U1"]),
+    ),
+    Case("DesignService/TraceDesign", _trace("J1.3", "J1.4")),
+    Case("DesignService/TraceDesign", _trace("J1.3", "ZZ9.1")),
+    Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c, DESIGN + "/gateway.edn", as_named=True))),
+    # The folder reads the declared schematic companion on both transports (agni issue 736).
+    Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c))),
+]
+
+
+def _nonempty(msg: Message) -> set:
+    return {f.name for f, _ in msg.ListFields()}
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.rpc)
+def test_same_request_same_message(case: Case, cli: Client, connect: Client):
+    got_cli, got_srv = case.ask(cli), case.ask(connect)
+    assert type(got_cli) is type(got_srv)
+    declared = set(case.cli_leaves_empty)
+    if declared:
+        leaked = declared & _nonempty(got_cli)
+        assert not leaked, f"the CLI now fills {sorted(leaked)}; remove the declaration ({case.cli_leaves_empty})"
+        missing = declared - _nonempty(got_srv)
+        assert not missing, f"the server no longer fills {sorted(missing)}; the declaration is stale"
+        for name in declared:
+            got_srv.ClearField(name)
+    if case.normalize:
+        case.normalize(got_cli)
+        case.normalize(got_srv)
+    if not case.compare_work:
+        _clear_work(got_cli)
+        _clear_work(got_srv)
+    assert got_cli == got_srv
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c.rpc)
+def test_binary_and_json_answer_alike(case: Case, connect: Client, connect_json: Client):
+    """ConnectTransport speaks binary protobuf by default and protojson on request; one server must
+    give one message either way."""
+    got_bin, got_json = case.ask(connect), case.ask(connect_json)
+    # A field the CLI leaves empty differs between two server calls too (a stored review's name).
+    for name in case.cli_leaves_empty:
+        got_bin.ClearField(name)
+        got_json.ClearField(name)
+    if case.normalize:
+        case.normalize(got_bin)
+        case.normalize(got_json)
+    _clear_work(got_bin)
+    _clear_work(got_json)
+    assert got_bin == got_json
+
+
+def test_omitting_locations_drops_only_the_locations(connect: Client):
+    """omit_locations leaves out where each entity is drawn (its sheet_ids and reason) and nothing
+    else: the cells, the citations, the entities themselves and the kinds and refs that type the
+    answer are the full answer's (agni issues 916, 917)."""
+    q = "pin.net(?r, ?p, ?n) => ?n, ?r, ?p"
+    full = connect.run_query(snapshot=snap(connect), query=q)
+    bare = connect.run_query(snapshot=snap(connect), query=q, omit_locations=True)
+    assert len(full.rows) > 0 and any(e.sheet_ids for e in full.entities), "the full answer locates nothing, so this proves nothing"
+    assert bare.entities and all(not e.sheet_ids and not e.reason for e in bare.entities)
+    for e in full.entities:
+        e.ClearField("sheet_ids")
+        e.ClearField("reason")
+    full.work = bare.work = 0
+    assert full == bare
+    assert len(bare.SerializeToString()) < len(connect.run_query(snapshot=snap(connect), query=q).SerializeToString())
+
+
+def test_every_cli_command_is_compared():
+    """A CLI mapping nobody compares against the server is a promise nobody checks."""
+    compared = {c.rpc for c in CASES}
+    assert compared == set(CLI_COMMANDS)
+
+
+def test_a_trace_to_nothing_still_answers_over_the_cli(cli: Client):
+    """`agni trace` prints a complete answer and exits non-zero for an endpoint naming nothing."""
+    got = _trace("J1.3", "ZZ9.1")(cli)
+    assert got.trace.outcome == design_pb2.TRACE_OUTCOME_UNRESOLVED
+
+
+def test_a_query_past_its_budget_fails_on_both_transports(cli: Client, connect: Client):
+    """agni issue 792. Over Connect the code is resource_exhausted; over the CLI the binary exits
+    non-zero. Both name the budget, so a client can tell an expensive question from a wrong one."""
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(snapshot=snap(c), query="component.net(?r, ?n), component.net(?r2, ?n) => ?r, ?r2", work_budget=5)
+        assert "budget of 5" in (str(e.value) + getattr(e.value, "detail", "")), e.value
+
+
+def test_a_binding_the_query_does_not_use_fails_on_both_transports(cli: Client, connect: Client):
+    """agni issue 793. A misspelled binding is refused rather than leaving the variable free."""
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(snapshot=snap(c), query="component.net(?r, ?n) => ?n", bindings=bindings({"zz": "U1"}))
+        assert "?zz" in (str(e.value) + getattr(e.value, "detail", "")), e.value
+
+
+def test_bindings_types_each_value():
+    b = bindings({"t": "3", "n": 3, "f": 3.3})
+    assert b["t"].WhichOneof("kind") == "text" and b["t"].text == "3"
+    assert b["n"].WhichOneof("kind") == "number" and b["n"].number == 3.0
+    assert b["f"].number == 3.3
+    with pytest.raises(TypeError):
+        bindings({"x": True})
+
+
+def test_bindings_takes_a_list():
+    """agni issue 1121. A list binds the variable to each value, each typed as a scalar is."""
+    b = bindings({"r": ["U1", 2]})
+    assert b["r"].WhichOneof("kind") == "list"
+    vals = b["r"].list.values
+    assert [v.WhichOneof("kind") for v in vals] == ["text", "number"] and vals[0].text == "U1" and vals[1].number == 2.0
+    with pytest.raises(TypeError):
+        bindings({"r": [["U1"]]})
+
+
+def test_the_cli_refuses_a_near_rename_threshold_it_cannot_pass(cli: Client, connect: Client):
+    """agni issue 817. Over the CLI only the default thresholds run, so an override is refused rather
+    than silently dropped; over Connect it applies."""
+    def ask(c: Client) -> dict:
+        return dict(
+            a_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"),
+            b_snapshot=snap(c, DESIGN + "/gateway-rev-c.edn"),
+            near_renames={"min_new_coverage_significant": 0.9},
+        )
+
+    with pytest.raises(CliUnsupported, match="min_new_coverage_significant"):
+        cli.diff_designs(**ask(cli))
+    kinds = {n.name: n.kind for n in connect.diff_designs(**ask(connect)).report.nets}
+    assert kinds.get("PMIC_ENABLE") == "new", kinds
+
+
+def test_a_question_naming_no_held_snapshot_is_not_found_on_both_transports(cli: Client, connect: Client):
+    """agni issue 1061. A snapshot the host does not hold answers NOT_FOUND on both transports, so a
+    client re-ingests on one code whichever it speaks; a snapshot it deleted is one it no longer holds."""
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(snapshot="snapshots/never-ingested", query="component.net(?r, ?n) => ?n")
+        assert e.value.code == "not_found", e.value
+        assert "snapshots/never-ingested" in str(e.value), e.value
+        gone = c.ingest(DESIGN)
+        c.delete_snapshot(gone)
+        with pytest.raises(AgniError) as e:
+            c.check_design(snapshot=gone)
+        assert e.value.code == "not_found", e.value
+        with pytest.raises(AgniError) as e:
+            c.get_snapshot(gone)
+        assert e.value.code == "not_found", e.value
+
+
+def test_a_question_naming_no_snapshot_is_refused_on_both_transports(cli: Client, connect: Client):
+    for c in (cli, connect):
+        with pytest.raises(AgniError) as e:
+            c.run_query(query="component.net(?r, ?n) => ?n")
+        assert e.value.code == "invalid_argument", e.value
+        assert "ingest" in str(e.value), e.value
+
+
+def test_an_ingest_returns_its_definition_on_both_transports(cli: Client, connect: Client):
+    """Each host mints its own name, so the names are only checked for their shape."""
+    got = {}
+    for label, c in (("cli", cli), ("connect", connect)):
+        s = c.ingest_snapshot(snapshot={"uri": DESIGN, "as_named": False})
+        assert s.name.startswith("snapshots/") and len(s.name) > len("snapshots/"), s.name
+        assert c.get_snapshot(s.name).uri == DESIGN
+        listed = c.list_snapshots(filter=f'uri="{DESIGN}"').snapshots
+        assert s.name in [x.name for x in listed]
+        c.delete_snapshot(s.name)
+        got[label] = (s.uri, s.board_uri, s.as_named)
+    assert got["cli"] == got["connect"] == (DESIGN, "", False)
+
+
+def test_a_flattened_read_counts_every_block_on_both_transports(cli: Client, connect: Client):
+    """hier_blocks.edn places LED_DRV once and RC twice under its top cell (agni issues 718, 1104)."""
+    uri = "mount://hier/hier_blocks.edn"
+    got = {}
+    for label, c in (("cli", cli), ("connect", connect)):
+        counts = []
+        for flatten in (False, True):
+            name = c.ingest(uri, flatten_hierarchy=flatten)
+            d = c.get_design(snapshot=name)
+            c.delete_snapshot(name)
+            counts.append((d.component_count, d.net_count, len(d.unexpanded_hierarchy)))
+        got[label] = counts
+    assert got["cli"] == got["connect"], got
+    top, whole = got["cli"]
+    assert top[2] > 0, "the fixture should read top-cell only without the flag"
+    assert whole == (11, 9, 0), whole

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="label-alias-conflict rule: one wire carrying two distinct label names is flagged; the same name on both halves is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: two names, one net</text>
+
+  <!-- one net (wire) with a junction dot joining the two labelled halves, in red -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="34" y1="120" x2="164" y2="120"/>
+    <line x1="164" y1="120" x2="306" y2="120"/>
+  </g>
+  <circle cx="164" cy="120" r="4" fill="#d64545"/>
+
+  <!-- label SIG_A on the left half -->
+  <rect x="60" y="104" width="66" height="20" rx="3" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <text x="93" y="118" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">SIG_A</text>
+
+  <!-- label SIG_B on the right half -->
+  <rect x="204" y="104" width="66" height="20" rx="3" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <text x="237" y="118" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">SIG_B</text>
+
+  <text x="150" y="164" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">aliases: SIG_A, SIG_B</text>
+  <text x="150" y="206" font-size="13" fill="#d64545" text-anchor="middle">2 names in one scope -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: one name</text>
+
+  <!-- one net (wire) with a junction dot, both halves carry the same name -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="374" y1="120" x2="504" y2="120"/>
+    <line x1="504" y1="120" x2="646" y2="120"/>
+  </g>
+  <circle cx="504" cy="120" r="4" fill="#394049"/>
+
+  <!-- label SIG_A on the left half -->
+  <rect x="400" y="104" width="66" height="20" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="433" y="118" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">SIG_A</text>
+
+  <!-- label SIG_A on the right half -->
+  <rect x="544" y="104" width="66" height="20" rx="3" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <text x="577" y="118" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">SIG_A</text>
+
+  <text x="510" y="164" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">aliases: SIG_A</text>
+  <text x="510" y="206" font-size="13" fill="#2f9e57" text-anchor="middle">1 name in the scope -&gt; fine</text>
+</svg>

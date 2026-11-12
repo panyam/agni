@@ -1,0 +1,126 @@
+---
+title: "reverse-blocking-absent"
+description: "A connector feeds a power input with no directional element blocking reverse flow."
+---
+
+### Remedy
+
+Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.
+
+### What it checks
+
+A connector feeds a power-input pin, and nothing on the path between them blocks current flowing the
+**wrong way**.
+
+### For hardware engineers
+
+Two failures share one mechanism.
+
+In **reverse polarity**, a connector is wired backwards, or a technician plugs in a supply the wrong
+way round. Current flows into the board through what should be its return path. On a vehicle this is a
+qualification requirement. ISO 16750-2 makes reverse voltage a test the module has to
+survive.
+
+**Reverse current (backfeed)** happens when two sources share a rail, or a rail is switched off
+while something downstream still holds charge. Current flows back up a path that was only ever
+designed to carry it forward, powering a domain that is supposed to be dead. An industrial board
+carries an ORing FET or an ideal-diode controller to stop it.
+
+Both need a **directional** element, something that conducts one way and not the other, such as a
+series diode, an ORing FET or an ideal-diode controller.
+
+![A connector-to-power-input path through a series diode is fine; a path with nothing directional on it is flagged; a path crossing an unidentified transistor is inconclusive]({{.Site.PathPrefix}}/static/images/catalog/rules/reverse-blocking-absent.svg)
+
+The three panels are the rule's three answers. The middle one is the defect. The right-hand one
+needs explaining, and the next two sections say why the rule reports it as neither of the other two.
+
+### Why a fuse or a TVS does not count
+
+The rule exists separately from `input-protection` because neither a fuse nor a TVS blocks reverse
+flow.
+
+A **fuse** opens on current *magnitude*. It does not care about sign, so it will not stop reverse
+current until the reverse current is large enough to blow it, by which point the damage is upstream
+of the fuse.
+
+A **TVS** shunts transients to ground. It clamps a voltage spike; it does not block a path.
+
+So "a fuse or a TVS is present" says nothing about whether reverse flow is blocked. On a real
+design, two review items were bound to `input-protection` for this reason. They read pass, and
+nothing tested what they actually asked.
+
+### What it will not claim, and why that is deliberate
+
+**A path crossing an unidentified transistor is reported INCONCLUSIVE, not as a defect.**
+
+A P-FET ideal diode is a transistor plus a bias network. Nothing in a netlist labels that arrangement,
+and it is structurally indistinguishable from any other FET sitting in a power path. It is also the
+correct modern answer to reverse protection. A rule that fired on every path with no series diode
+would false-fail every well-designed ORing-FET board.
+
+A false fail here is worse than the gap it would close. A reviewer who sees this rule fire on a
+properly protected design learns to ignore it, and then it is worth nothing on the design that really
+is missing protection.
+
+**It used to report nothing instead, and that was wrong for a reason the rule layer cannot
+see.** A review item bound to this rule read silence as a PASS, so the report asserted protection on
+a path nothing had verified. The rule now says out loud that it could not decide, and a bound item
+reads `inconclusive`, which is neither a defect nor a clean bill of health.
+
+**A controller the datasheet identifies resolves it.** Seed the part with a `device_class` of
+`ideal_diode_controller`, and the rule credits it as a directional element and passes the path. The
+alias set also accepts the ORing, power-mux and power-path spellings. Seeding the part turns an
+inconclusive into a real pass, so the message names the exact class to seed.
+
+### Orientation matters
+
+A diode only counts when it is fitted the right way round: **anode toward the source**, cathode toward
+the load. Fitted the other way it blocks the supply rather than the fault, and the rule reports the
+path as unblocked.
+
+Only a plain diode counts. A TVS, a Zener and an LED all carry the diode family tag, and none is a
+series blocking element, since the first two shunt to ground and an LED in a power path is an
+indicator. A diode whose part type declares no anode pin has unknown orientation, and the rule
+reports its path as unblocked rather than guessing which way the part faces.
+
+### When it passes or does not apply
+
+- No connector on the net, since the rule is about what enters the board.
+- No power input reachable from it. A connector's own pins are not loads. A receptacle's symbol
+  types VBUS power_in and the rule still skips it, so a source port driven by a load switch reaches
+  none (agni issue 935).
+  A clamp array's own supply pin is not a load either, since the part guards the rail it is biased
+  from (agni issue 1257).
+- A transistor touching the path only through its gate, such as a FET sensing VBUS for presence
+  detection, is not in the path and makes nothing inconclusive.
+- A transistor on the path, when a seeded datasheet identifies it as an ideal-diode / ORing
+  controller (above). An UNIDENTIFIED transistor gives an inconclusive finding instead.
+- A current-limiting power switch as the entry's only load, when its datasheet names it one and
+  specifies a reverse current. A switch states a reverse current only when it blocks one (agni issue
+  1248).
+  The pass cites that row and says the switch stops backfeed but not a reversed supply, since such a
+  switch is rated to a few hundred millivolts below ground at its input. On a USB-C port, where VBUS
+  cannot be plugged in backwards, backfeed is the half that matters. Without the datasheet the entry
+  still fails, and the verdict names the IC it could not read.
+- Ground and read-gap (external) nets, excluded up front.
+- A net the board drives itself is not-considered, since its connector is an outlet rather than a
+  way power arrives (agni issue 1016). A converter's output counts, and the rule reads one as a
+  switch node behind an inductor plus a feedback net within the walk. A power-output pin on a part
+  other than a connector counts too. A fixed-output buck names neither net, so one part's switch pin
+  behind the inductor and its feedback pin on the walk count as well. The walk crosses a fitted net
+  tie, since a net tie is a short (agni issue 1253). A power-output pin does not count when the walk
+  also finds the input of another part with a power output. That shape is a dual-role USB-C port. A
+  load switch sources VBUS and a PD controller's power path sinks it, so power can still arrive and
+  the rule still judges the net. The pin counts again when the driver's own input is wired to a net
+  those parts do not feed, because that shape is a cascade of regulators. A dual-role port whose
+  sink reaches the driver only through a further converter reads as that cascade, and a design with
+  that shape loses this rule on the net. A boost converter's input reaches its switch node through
+  the inductor too. The rule still judges that input, because its feedback divider sits on the
+  output side.
+
+### Fixing a finding
+
+Add the directional element, or record why the path does not need one. A path is a legitimate
+exception when its source physically cannot be reversed, such as a fixed internal rail rather than a
+user-facing connector. Write the exception down anyway, because the next reviewer will ask the same
+question.

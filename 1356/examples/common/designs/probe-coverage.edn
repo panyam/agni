@@ -1,0 +1,57 @@
+(edif PROBECOVERAGE
+  (edifVersion 2 0 0)
+  (design PROBECOVERAGE (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell RES (cellType GENERIC) (designator "R") (view V (viewType NETLIST)
+      (interface (port 1 (direction INOUT)) (port 2 (direction INOUT)))))
+    (cell CAP (cellType GENERIC) (designator "C") (view V (viewType NETLIST)
+      (interface (port 1 (direction INOUT)) (port 2 (direction INOUT)))))
+    (cell TESTPOINT (cellType GENERIC) (designator "TP") (view V (viewType NETLIST)
+      (interface (port 1 (direction INOUT)))))
+    (cell REG (cellType GENERIC) (designator "U") (view V (viewType NETLIST)
+      (interface (port 1 (direction INPUT)) (port 2 (direction OUTPUT)) (port 3 (direction INPUT)))))
+    (cell CONN (cellType GENERIC) (designator "J") (view V (viewType NETLIST)
+      (interface (port 1 (direction INOUT)) (port 2 (direction INOUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance IU1 (viewRef V (cellRef REG)) (designator "U1")
+            (property MPN (string "DEMO-LDO-3V3")))
+          (instance IJ1 (viewRef V (cellRef CONN)) (designator "J1")
+            (property MPN (string "DEMO-CONN-2")))
+
+          ; Both ends probed: measurable in circuit.
+          (instance IR1 (viewRef V (cellRef RES)) (designator "R1")
+            (property MPN (string "DEMO-RES-10K")))
+          (instance IC1 (viewRef V (cellRef CAP)) (designator "C1")
+            (property MPN (string "DEMO-CAP-100N")))
+
+          ; One end probed: present on the board, not measurable.
+          (instance IR2 (viewRef V (cellRef RES)) (designator "R2")
+            (property MPN (string "DEMO-RES-10K")))
+          (instance IC2 (viewRef V (cellRef CAP)) (designator "C2")
+            (property MPN (string "DEMO-CAP-100N")))
+
+          ; Neither end probed: invisible to test. Both are the same MPN, which is the
+          ; grouping that turns two findings into one placement habit.
+          (instance IR3 (viewRef V (cellRef RES)) (designator "R3")
+            (property MPN (string "DEMO-RES-4K7")))
+          (instance IR4 (viewRef V (cellRef RES)) (designator "R4")
+            (property MPN (string "DEMO-RES-4K7")))
+
+          (instance ITP1 (viewRef V (cellRef TESTPOINT)) (designator "TP1"))
+          (instance ITP2 (viewRef V (cellRef TESTPOINT)) (designator "TP2"))
+          (instance ITP3 (viewRef V (cellRef TESTPOINT)) (designator "TP3"))
+
+          ; VIN and VOUT carry a test point. GND does not, which is the rail the DFT
+          ; checklist asks for first.
+          (net VIN (joined (portRef 1 (instanceRef IU1)) (portRef 1 (instanceRef IJ1))
+                           (portRef 1 (instanceRef IC1)) (portRef 1 (instanceRef ITP1))))
+          (net VOUT (joined (portRef 2 (instanceRef IU1)) (portRef 1 (instanceRef IR1))
+                            (portRef 1 (instanceRef IR2)) (portRef 1 (instanceRef ITP2))))
+          (net GND (joined (portRef 2 (instanceRef IC1)) (portRef 2 (instanceRef IC2))
+                           (portRef 2 (instanceRef IJ1)) (portRef 2 (instanceRef IR4))))
+          (net FB (joined (portRef 3 (instanceRef IU1)) (portRef 2 (instanceRef IR1))
+                          (portRef 1 (instanceRef IC2)) (portRef 1 (instanceRef ITP3))))
+          (net SENSE (joined (portRef 2 (instanceRef IR2)) (portRef 1 (instanceRef IR3))))
+          (net STRAP (joined (portRef 2 (instanceRef IR3)) (portRef 1 (instanceRef IR4)))))))))

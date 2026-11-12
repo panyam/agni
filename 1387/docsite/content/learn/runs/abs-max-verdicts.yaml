@@ -1,0 +1,6 @@
+# Chapter 7: the comparison the rows above make possible, one pin over its rating and one under.
+# Two verdicts on a nineteen-part board, which is the coverage point the chapter closes on.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni check --verdicts --rule supply-exceeds-abs-max examples/tutorial-project/designs/gateway/gateway.edn

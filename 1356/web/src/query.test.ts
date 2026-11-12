@@ -1,0 +1,413 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it, expect } from "vitest";
+import { create } from "@bufbuild/protobuf";
+import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason, linkTarget, linkNote, type QueryResult, type QueryRowItem } from "./query.js";
+import { probedOneAnswer, resultFromWire } from "./testwire.js";
+
+describe("resultFromResponse", () => {
+  // agni issue 896: total survives only when the limit actually left rows out.
+  it("keeps the answer's total when a limit cut it, and none when the answer is whole", () => {
+    const resp = (total: number) => ({ columns: ["r"], columnKinds: [""], rows: [{ cells: ["R1"] }], total }) as never;
+    expect(resultFromResponse(resp(1229)).total).toBe(1229);
+    expect(resultFromResponse(resp(1)).total).toBe(0);
+    expect(resultFromResponse(resp(0)).total).toBe(0);
+  });
+
+  it("carries column kinds and resolves each navigable cell's sheet badges via the resolver", () => {
+    const resp = {
+      columns: ["r", "n", "v"],
+      columnKinds: ["component", "net", ""],
+      rows: [
+        {
+          cells: ["R1", "SDA", "3.3"],
+          cites: [],
+          cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s1", "s2"] }, { sheetIds: [] }],
+        },
+      ],
+    } as never;
+    const result = resultFromWire(resp, (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })));
+    expect(result.columnKinds).toEqual(["component", "net", ""]);
+    const row = result.rows[0];
+    expect(row.cells).toEqual(["R1", "SDA", "3.3"]);
+    expect(row.cellSheets[0]).toEqual([{ id: "s2", name: "S2" }]);
+    expect(row.cellSheets[1]).toEqual([
+      { id: "s1", name: "S1" },
+      { id: "s2", name: "S2" },
+    ]);
+    expect(row.cellSheets[2]).toEqual([]); // a scalar cell resolves to no badges
+  });
+
+  it("reads locations and citations from the response's tables (agni 916)", () => {
+    const resolve = (ids: string[]) => ids.map((id) => ({ id, name: id.toUpperCase() }));
+    const perRow = {
+      columns: ["r", "n"],
+      columnKinds: ["component", "net"],
+      rows: [
+        { cells: ["R1", "SDA"], cites: ["a.edn"], cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s1", "s2"] }], cellReasons: [0, 0] },
+        { cells: ["R2", "SDA"], cites: ["a.edn"], cellSheets: [{ sheetIds: [] }, { sheetIds: ["s1", "s2"] }], cellReasons: [LocateReason.NO_GEOMETRY, 0] },
+      ],
+    } as never;
+    const tables = {
+      columns: ["r", "n"],
+      columnKinds: ["component", "net"],
+      entities: [
+        { kind: "component", ref: "R1", pin: "", sheetIds: ["s2"], reason: 0 },
+        { kind: "net", ref: "SDA", pin: "", sheetIds: ["s1", "s2"], reason: 0 },
+        { kind: "component", ref: "R2", pin: "", sheetIds: [], reason: LocateReason.NO_GEOMETRY },
+      ],
+      sources: ["a.edn"],
+      rows: [
+        { cells: ["R1", "SDA"], cites: [], citeIndex: [0], cellEntity: [1, 2] },
+        { cells: ["R2", "SDA"], cites: [], citeIndex: [0], cellEntity: [3, 2] },
+      ],
+    } as never;
+    expect(resultFromResponse(tables, resolve).rows).toEqual(resultFromWire(perRow, resolve).rows);
+  });
+
+  it("defaults to empty kinds and no badges when the response omits them", () => {
+    const result = resultFromWire({ columns: ["r"], rows: [{ cells: ["R1"], cites: [] }] } as never);
+    expect(result.columnKinds).toEqual([]);
+    expect(result.rows[0].cellSheets).toEqual([[]]);
+  });
+});
+
+describe("reasonMessage (WS7-042c bus)", () => {
+  it("explains a bus that is not drawn", () => {
+    const msg = reasonMessage(LocateReason.BUS_NOT_DRAWN, "bus", "DATA[7:0]");
+    expect(msg).toContain("DATA[7:0]");
+    expect(msg).toContain("no drawn wire");
+  });
+});
+
+// A schematic that failed to read is a broken input, so the panel says that rather than calling the
+// part drawn nowhere (agni issue 1230).
+describe("reasonMessage (unreadable schematic)", () => {
+  it("says the schematic could not be read", () => {
+    const msg = reasonMessage(LocateReason.SCHEMATIC_UNREADABLE, "component", "R1001");
+    expect(msg).toContain("R1001");
+    expect(msg).toContain("could not be read");
+  });
+});
+
+// Every answer set has rows of one shape, except a search result. So a search result's cells carry
+// their own kinds (agni issue 338). resultFromResponse must keep the kinds aligned with cells,
+// including for rows where the server sent no kind.
+describe("resultFromResponse cell kinds", () => {
+  it("carries a per-row cell kind alongside the cells", () => {
+    const resp = {
+      columns: ["name", "kind"],
+      columnKinds: ["", ""],
+      rows: [
+        { cells: ["U1", "component"], cites: [], cellKinds: ["component", ""] },
+        { cells: ["DATA[1:0]", "bus"], cites: [], cellKinds: ["bus", ""] },
+      ],
+    } as never;
+    const result = resultFromWire(resp);
+    expect(result.rows[0].cellKinds).toEqual(["component", ""]);
+    expect(result.rows[1].cellKinds).toEqual(["bus", ""]);
+  });
+
+  it("pads to one entry per cell when the response omits them, so an ordinary query costs nothing", () => {
+    const result = resultFromWire({
+      columns: ["r", "n"],
+      columnKinds: ["component", "net"],
+      rows: [{ cells: ["R1", "SDA"], cites: [] }],
+    } as never);
+    expect(result.rows[0].cellKinds).toEqual(["", ""]);
+  });
+});
+
+describe("cellKind", () => {
+  const result = (columnKinds: string[], cellKinds: string[]) =>
+    resultFromWire({
+      columns: columnKinds.map((_, i) => `c${i}`),
+      columnKinds,
+      rows: [{ cells: cellKinds.map((_, i) => `v${i}`), cites: [], cellKinds }],
+    } as never);
+
+  it("prefers the row's own kind, which is the whole point of having one", () => {
+    const r = result(["", ""], ["net", ""]);
+    expect(cellKind(r, r.rows[0], 0)).toBe("net");
+  });
+
+  it("falls back to the column kind, so every existing query keeps working unchanged", () => {
+    const r = result(["component", "net"], ["", ""]);
+    expect(cellKind(r, r.rows[0], 0)).toBe("component");
+    expect(cellKind(r, r.rows[0], 1)).toBe("net");
+  });
+
+  it("is empty for a scalar cell under either source", () => {
+    const r = result(["", ""], ["", ""]);
+    expect(cellKind(r, r.rows[0], 1)).toBe("");
+  });
+});
+
+// A design is full of names that the regex engine would otherwise read as syntax. A reader typing
+// one of them means the characters, and a search that silently matched something else would be
+// worse than one that found nothing.
+describe("searchPattern", () => {
+  it("leaves an ordinary name alone, so the query stays readable in the box", () => {
+    expect(searchPattern("CAN")).toBe("CAN");
+    expect(searchPattern("USB_D-")).toBe("USB_D-");
+  });
+
+  it("escapes the metacharacters real net and part names actually contain", () => {
+    expect(searchPattern("VDD+")).toBe("VDD\\+");
+    expect(searchPattern("DATA[7:0]")).toBe("DATA\\[7:0\\]");
+    expect(searchPattern("VREF(A)")).toBe("VREF\\(A\\)");
+    expect(searchPattern("3.3V")).toBe("3\\.3V");
+  });
+
+  // The pattern is bound as a value (agni issue 793), so a quote no longer ends a string literal and
+  // a name carrying one can be searched for.
+  it("keeps a double quote, since the pattern is bound rather than spliced into the query", () => {
+    expect(searchPattern('A"B')).toBe('A"B');
+  });
+});
+
+describe("searchBindings", () => {
+  const search = { query: "entity(?name, ?kind), str.match(?name, ?pattern) => ?name, ?kind", teaches: "", bind: "pattern", pattern: "(?i){term}" };
+
+  it("binds the served pattern with the escaped term in place of {term}", () => {
+    expect(searchBindings(search, "CAN")).toEqual({ pattern: "(?i)CAN" });
+  });
+
+  it("escapes before filling, so a typed metacharacter cannot reach the regex as syntax", () => {
+    expect(searchBindings(search, "VDD+")).toEqual({ pattern: "(?i)VDD\\+" });
+  });
+
+  // A string replacement reads $& as "the match", which would put {term} itself into the pattern.
+  it("fills a term containing $& literally", () => {
+    expect(searchBindings(search, "A$&B")).toEqual({ pattern: "(?i)A\\$&B" });
+  });
+});
+
+describe("bindingsInUse", () => {
+  it("keeps only the bindings whose variable the query still names", () => {
+    const b = { ref: "U1", net: "GND" };
+    expect(bindingsInUse("component.net(?ref, ?n) => ?n", b)).toEqual({ ref: "U1" });
+    expect(bindingsInUse("component.net(?r, ?n) => ?n", b)).toEqual({});
+  });
+
+  it("matches the whole variable name, not a prefix of a longer one", () => {
+    expect(bindingsInUse("component.net(?refdes, ?n)", { ref: "U1" })).toEqual({});
+  });
+});
+
+describe("formatBinding", () => {
+  it("spells the value as the query would write the constant", () => {
+    expect(formatBinding("ref", "R1")).toBe('?ref = "R1"');
+  });
+  it("keeps a pattern's backslash as written, since a query string takes no escapes", () => {
+    expect(formatBinding("p", "^U1\\.")).toBe('?p = "^U1\\."');
+  });
+  // agni issue 1045: one fixture with core/query's FormatBindings.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "query", "testdata", "binding_twin.json"), "utf8")) as {
+    cases: { name: string; text?: string; number?: number; list?: { text?: string; number?: number }[]; want: string }[];
+  };
+  it("has binding cases to check", () => expect(twin.cases.length).toBeGreaterThanOrEqual(4));
+  // agni issue 1121: a list case left unread would let the loop below pass over none of them.
+  it("has list cases to check, an empty list among them", () => {
+    const lists = twin.cases.filter((c) => c.list !== undefined);
+    expect(lists.length).toBeGreaterThanOrEqual(2);
+    expect(lists.some((c) => c.list!.length === 0)).toBe(true);
+  });
+  for (const c of twin.cases) {
+    it(`spells as FormatBindings does: ${c.want}`, () => {
+      if (c.list !== undefined) {
+        const values = c.list.map((e) => (e.number !== undefined ? String(e.number) : e.text!));
+        expect(formatBinding(c.name, values, c.list.map((e) => e.number !== undefined))).toBe(c.want);
+        return;
+      }
+      const isNum = c.number !== undefined;
+      expect(formatBinding(c.name, isNum ? String(c.number) : c.text!, isNum)).toBe(c.want);
+    });
+  }
+  it("spells every value of a list the same way when given one flag", () => {
+    expect(formatBinding("n", ["A", "B"])).toBe('?n in ["A", "B"]');
+    expect(formatBinding("v", ["1", "2"], true)).toBe("?v in [1, 2]");
+  });
+});
+
+// agni issue 1121: a list travels as a list of text values, and a single value as before.
+describe("wireBinding", () => {
+  it("sends a list as a list of text values in order, and a value as text", () => {
+    expect(wireBinding(["I2C_SDA", "I2C_SCL"])).toEqual({
+      kind: { case: "list", value: { values: [{ kind: { case: "text", value: "I2C_SDA" } }, { kind: { case: "text", value: "I2C_SCL" } }] } },
+    });
+    expect(wireBinding([])).toEqual({ kind: { case: "list", value: { values: [] } } });
+    expect(wireBinding("GND")).toEqual({ kind: { case: "text", value: "GND" } });
+  });
+});
+
+describe("the relation picker's labels", () => {
+  it("labels a shipped library member Library and a predicate Predicates, and a module nothing", () => {
+    const item = (name: string, kind: string) => ({ name, kind, args: [], summary: "", detail: "" });
+    const catalog = [item("str.contains", "predicate"), item("net.has_test_point", "derived"), item("component.net", "netlist")];
+    expect(tierLabel("net.has_test_point", catalog)).toBe("Library");
+    expect(tierLabel("str.contains", catalog)).toBe("Predicates");
+    expect(tierLabel("component.net", catalog)).toBe("Netlist");
+    expect(tierLabel("net", catalog)).toBe("");
+  });
+
+  it("breadcrumbs a path from the root down", () => {
+    expect(relationCrumbs(".")).toEqual([{ label: "Relations", path: "." }]);
+    expect(relationCrumbs("net.has_test_point")).toEqual([
+      { label: "Relations", path: "." },
+      { label: "net", path: "net" },
+      { label: "has_test_point", path: "net.has_test_point" },
+    ]);
+  });
+});
+
+// Properties asks find-by-name about a selected part's or net's whole name, and reads where it is
+// drawn off that answer (agni issue 902).
+describe("tabsFromSet", () => {
+  it("names each tab for its query, joins the preamble to it, and keeps the set's order and bindings", () => {
+    const set = create(QuerySetSchema, {
+      title: "Audit",
+      preamble: "res(?r) :- component.class(?r, \"resistor\");",
+      queries: [
+        { name: "Resistors", query: "res(?r) => ?r" },
+        { name: "Busy nets", query: "net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings: { min: { kind: { case: "number", value: 3 } }, n: { kind: { case: "text", value: "GND" } } } },
+      ],
+    });
+    expect(tabsFromSet(set)).toEqual([
+      { title: "Resistors", text: 'res(?r) :- component.class(?r, "resistor");\nres(?r) => ?r', bindings: {}, numbers: [] },
+      { title: "Busy nets", text: 'res(?r) :- component.class(?r, "resistor");\nnet.pin_count(?n, ?c), ?c >= ?min => ?n', bindings: { min: "3", n: "GND" }, numbers: ["min"] },
+    ]);
+  });
+
+  // agni issue 1121: a set can bind a variable to a list, which opens as a list chip, and a number
+  // inside it is named by its position so the chip spells it bare.
+  it("keeps a set's list binding in order, naming its numbers by position", () => {
+    const set = create(QuerySetSchema, {
+      queries: [
+        {
+          name: "Rails",
+          query: "net.voltage(?n, ?v) => ?n",
+          bindings: { v: { kind: { case: "list", value: { values: [{ kind: { case: "number", value: 1.8 } }, { kind: { case: "text", value: "3" } }] } } } },
+        },
+      ],
+    });
+    const [tab] = tabsFromSet(set);
+    expect(tab.bindings).toEqual({ v: ["1.8", "3"] });
+    expect(tab.numbers).toEqual([numberKey("v", 0)]);
+  });
+
+  it("holds the query alone when the set has no preamble", () => {
+    const set = create(QuerySetSchema, { queries: [{ name: "Rails", query: " net.rail(?n) => ?n\n" }] });
+    expect(tabsFromSet(set)[0].text).toBe("net.rail(?n) => ?n");
+  });
+});
+
+// agni issue 1045: the picker's groups are the catalog's kinds, held to the fixture core/facts reads.
+describe("RELATION_KINDS, twinned with facts.KindOrder via kind_order.json", () => {
+  it("names every kind the catalog serves, in its order", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "facts", "testdata", "kind_order.json"), "utf8")) as { kinds: string[] };
+    expect(twin.kinds.length).toBeGreaterThan(4);
+    expect(RELATION_KINDS.map((k) => k.key)).toEqual(twin.kinds);
+  });
+});
+
+describe("compareNatural, twinned with core/ident via natural_twin.json", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "ident", "testdata", "natural_twin.json"), "utf8")) as { lists: string[][] };
+  it("has lists to check", () => expect(twin.lists.length).toBeGreaterThanOrEqual(5));
+  for (const want of twin.lists) {
+    it(`orders ${want.join(" < ")}`, () => {
+      expect([...want].reverse().sort(compareNatural)).toEqual(want);
+    });
+  }
+});
+
+// agni issue 794: a witnessed answer's trees read their values through the response's entities and
+// their citations through its sources, as cells and rows do.
+describe("resultFromResponse witnesses", () => {
+  it("reads each witness's values, citations, rule, negation and children", () => {
+    const r = resultFromResponse(probedOneAnswer(), (ids) => ids.map((id) => ({ id, name: `sheet ${id}` })), true);
+    expect(r.witnessed).toBe(true);
+    const top = r.rows[0].witnesses;
+    expect(top).toHaveLength(1);
+    expect(top[0].relation).toBe("component.probed_one");
+    expect(top[0].rule).toContain("not net.has_test_point(?unprobed)");
+    expect(top[0].values.map((v) => [v.text, v.kind, v.sheets.map((b) => b.name).join()])).toEqual([
+      ["R1", "component", "sheet s1"],
+      ["VBUS", "net", "sheet s2"],
+      ["SENSE", "net", "sheet s1"],
+    ]);
+    expect(top[0].children.map((c) => `${c.negated ? "not " : ""}${c.relation}`)).toEqual([
+      "component.two_terminal",
+      "net.has_test_point",
+      "not net.has_test_point",
+    ]);
+    const tp = top[0].children[1].children;
+    expect(tp[0].cites).toEqual(["x.edn:VBUS"]);
+    expect(tp[0].values.map((v) => v.kind)).toEqual(["component", "net"]);
+    // A pin value carries its component, which a cell carries in cellRefs.
+    expect(tp[1].values[1]).toMatchObject({ text: "3", kind: "pin", ref: "U1" });
+    expect(top[0].children[2].cites).toEqual([]);
+  });
+
+  it("leaves rows with no witnesses, and the answer unwitnessed, when none were asked for", () => {
+    const r = resultFromResponse(create(RunQueryResponseSchema, { columns: ["r"], rows: [{ cells: ["R1"] }] }));
+    expect(r.witnessed).toBe(false);
+    expect(r.rows[0].witnesses).toEqual([]);
+  });
+});
+
+// agni issue 1236: a query link's answer locates its one row on arrival, and otherwise says where
+// the answer is.
+describe("what a query link's answer does on arrival", () => {
+  const row = (cells: string[], over: Partial<QueryRowItem> = {}): QueryRowItem => ({
+    cells,
+    cites: [],
+    cellSheets: cells.map(() => []),
+    cellReasons: cells.map(() => LocateReason.UNSPECIFIED),
+    cellKinds: cells.map(() => ""),
+    cellRefs: cells.map(() => ""),
+    witnesses: [],
+    ...over,
+  });
+  const answer = (columnKinds: string[], rows: QueryRowItem[], over: Partial<QueryResult> = {}): QueryResult => ({
+    columns: columnKinds.map((_, i) => `c${i}`),
+    columnKinds,
+    rows,
+    error: "",
+    loading: false,
+    ran: true,
+    total: 0,
+    ...over,
+  });
+
+  it("locates the first entity cell of a one-row answer, on the first sheet it is drawn on", () => {
+    const r = answer(["", "net"], [row(["3.3", "VBUS"], { cellSheets: [[], [{ id: "s3", name: "Power" }, { id: "s1", name: "Top" }]] })]);
+    expect(linkTarget(r)).toEqual({ kind: "net", subject: "VBUS", ref: "", sheet: "s3", reason: LocateReason.UNSPECIFIED });
+  });
+
+  it("locates a pin through its component, and skips a pin cell whose component did not resolve", () => {
+    const pin = answer(["pin"], [row(["5"], { cellRefs: ["U7"] })]);
+    expect(linkTarget(pin)).toMatchObject({ kind: "pin", subject: "5", ref: "U7", sheet: undefined });
+    const loose = answer(["pin", "component"], [row(["5", "U7"])]);
+    expect(linkTarget(loose)).toMatchObject({ kind: "component", subject: "U7" });
+  });
+
+  it("locates nothing for several rows, no rows, an error or an answer of scalars", () => {
+    expect(linkTarget(answer(["net"], [row(["A"]), row(["B"])]))).toBeNull();
+    expect(linkTarget(answer(["net"], []))).toBeNull();
+    expect(linkTarget(answer(["net"], [row(["A"])], { error: "boom" }))).toBeNull();
+    expect(linkTarget(answer([""], [row(["3.3"])]))).toBeNull();
+  });
+
+  it("says how many rows the answer holds, counting what a limit left out", () => {
+    expect(linkNote(answer(["net"], [row(["A"]), row(["B"])]))).toContain("the 2 rows below");
+    expect(linkNote(answer(["net"], [row(["A"])], { total: 40 }))).toContain("the 40 rows below");
+    expect(linkNote(answer(["net"], []))).toContain("matched nothing");
+    expect(linkNote(answer(["net"], [], { error: "boom" }))).toBe("");
+  });
+});

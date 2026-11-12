@@ -1,0 +1,6 @@
+# Recipe for TI voltage-translator sheets. The pin function table is declared with an
+# explicit column axis: its sub-columns ARE packages here, which the document does not
+# say and no header text reliably indicates (a variant-column table looks identical).
+name: "ti-translator"
+doc_title_pattern: "(?i)txb0104|voltage.level translator"
+pin_tables { title_pattern: "(?i)pin functions" column_axis: PIN_COLUMN_AXIS_PACKAGE }

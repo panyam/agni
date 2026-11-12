@@ -1,0 +1,77 @@
+(kicad_pcb
+	(version 20240108)
+	(generator "pcbnew")
+	(title_block
+		(title "Board Geom Fixture"))
+	(layers
+		(0 "F.Cu" signal)
+		(2 "B.Cu" signal)
+		(44 "Edge.Cuts" user)
+	)
+	(net 0 "")
+	(net 1 "GND")
+	(net 2 "SIG")
+	(gr_rect (start 0 0) (end 30 20)
+		(layer "Edge.Cuts")
+		(uuid "edge1"))
+	(gr_arc (start 30 10) (mid 32 12) (end 30 14)
+		(layer "Edge.Cuts")
+		(uuid "edge2"))
+	(footprint "Resistor_SMD:R_0805"
+		(layer "F.Cu")
+		(uuid "fp-r1")
+		(at 10 10 90)
+		(property "Reference" "R1"
+			(at 0 -2 0))
+		(property "Value" "10k"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1 0)
+			(size 1.2 1.4)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "SIG")
+			(uuid "p-r1-1"))
+		(pad "2" smd roundrect
+			(at 1 0 90)
+			(size 1.2 1.4)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 1 "GND")
+			(uuid "p-r1-2")))
+	(footprint "Connector_PinHeader:J_1x02"
+		(layer "B.Cu")
+		(uuid "fp-j1")
+		(at 20 15)
+		(property "Reference" "J1"
+			(at 0 -2 0))
+		(property "Value" "CONN"
+			(at 0 2 0))
+		(pad "1" thru_hole circle
+			(at 0 0)
+			(size 1.7 1.7)
+			(drill 1)
+			(layers "*.Cu" "*.Mask")
+			(net 2 "SIG")
+			(uuid "p-j1-1"))
+		(pad "2" thru_hole circle
+			(at 0 2.54)
+			(size 1.7 1.7)
+			(drill 1)
+			(layers "*.Cu" "*.Mask")
+			(uuid "p-j1-2")))
+	(footprint "Graphic:Logo"
+		(layer "F.Cu")
+		(uuid "fp-logo")
+		(at 5 5))
+	(segment (start 9 10) (end 15 12) (width 0.25) (layer "F.Cu") (net 2) (uuid "s1"))
+	(segment (start 15 12) (end 20 15) (width 0.25) (layer "B.Cu") (net 2) (uuid "s2"))
+	(segment (start 11 10) (end 12 10) (width 0.5) (layer "F.Cu") (net 1) (uuid "s3"))
+	(via (at 15 12) (size 0.8) (drill 0.4) (layers "F.Cu" "B.Cu") (net 2) (uuid "v1"))
+	(segment (start 1 1) (end 2 2) (width 0.25) (layer "F.Cu") (net 0) (uuid "s0"))
+	(zone
+		(net 1)
+		(net_name "GND")
+		(layer "F.Cu")
+		(uuid "z1")
+		(polygon
+			(pts
+				(xy 1 1) (xy 29 1) (xy 29 19) (xy 1 19)))))

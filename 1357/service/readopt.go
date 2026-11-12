@@ -1,0 +1,103 @@
+package service
+
+import (
+	"github.com/panyam/agni/core/classify"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+)
+
+// ReadOptions is the per-read configuration a service passes down to its loader, for inputs that
+// belong to the READ rather than to the rule catalog. A naming lexicon resolves net roles once at
+// ingestion (WS3-072), so it has to arrive before the design is parsed.
+//
+// The options are variadic on the Design method, so the type system forces every loader to accept
+// them. An optional capability found by type assertion would let a loader silently ignore a
+// project's conventions, which reads like a design that had none.
+type ReadOptions struct {
+	// Lexicon is the naming vocabulary to stamp the design with; nil means the engine defaults.
+	Lexicon *classify.Lexicon
+	// SymbolPaths are directories to search for the schematic's external symbol libraries, ADDED to
+	// whatever the loader was built with. They belong to the read because an unresolved symbol changes
+	// what the design CONTAINS, not what is checked about it.
+	SymbolPaths []string
+	// DeviceClassFor answers a datasheet's device_class for an MPN, nil when this run has no corpus.
+	// Like the lexicon, the class is stamped into the IR at ingestion. A model built later re-runs the
+	// same additive, idempotent pass, so a corpus arriving after the read still gets the class, but
+	// only a class stamped here reaches the DRAWING (agni issue 710).
+	DeviceClassFor func(mpn string) string
+	// Intent is the design's declared intent. It is for the MODEL built from this read rather than for
+	// the read itself. BuildModel hands it to check.WithIntent, so the exposure rules know which
+	// connectors the design declares internal (agni issue 831). It travels in the read options because
+	// every surface that builds a model already passes Overlay.ReadOptions, so none can miss it.
+	Intent *configpb.DesignIntent
+	// Identity names everything the options above were composed from, so a cache can key a read on
+	// it (agni issue 895). Set by WithIdentity, which Overlay.ReadOptions appends when its overlay
+	// can identify itself. Empty means the options cannot be told apart from any others, and a read
+	// under them is never cached.
+	Identity string
+	// FlattenHierarchy reads a hierarchical netlist as its whole schematic (formats.Loader's field of
+	// the same name). It belongs to the PARSE, so CachingLoader keys the parse on it as well.
+	FlattenHierarchy bool
+
+	// parseOnly asks the host for the read before the passes that read configuration (see
+	// formats.Loader.ParseOnly). Only CachingLoader sets it, for the parse level it keeps.
+	parseOnly bool
+
+	// fields counts the options above that were applied. identityCovers counts how many of them the
+	// identity was computed over. If a caller adds an option the identity does not know about, the
+	// two counts differ, and the identity no longer describes the read.
+	fields, identityCovers int
+}
+
+// ReadOption configures one read.
+type ReadOption func(*ReadOptions)
+
+// WithIdentity names the options before it. covers is how many options the identity describes. It
+// must cover every option the read applies, or the identity is not used (see ReadOptions.Identity).
+func WithIdentity(id string, covers int) ReadOption {
+	return func(o *ReadOptions) { o.Identity, o.identityCovers = id, covers }
+}
+
+// WithLexicon stamps the design being read with a project's naming vocabulary (WS3-106) instead of
+// the built-in one, so which nets count as rails and grounds follows the request's conventions.
+func WithLexicon(lex *classify.Lexicon) ReadOption {
+	return func(o *ReadOptions) { o.Lexicon = lex; o.fields++ }
+}
+
+// WithSymbolPaths adds a config's symbol search directories to one read, so a design whose project
+// declares its libraries resolves them without the caller passing a flag.
+func WithSymbolPaths(dirs []string) ReadOption {
+	return func(o *ReadOptions) { o.SymbolPaths = append(o.SymbolPaths, dirs...); o.fields++ }
+}
+
+// WithDeviceClasses supplies the datasheet device-class lookup for one read, so a design read inside
+// a project that declares a params tier carries the classes only its corpus can establish.
+func WithDeviceClasses(f func(mpn string) string) ReadOption {
+	return func(o *ReadOptions) { o.DeviceClassFor = f; o.fields++ }
+}
+
+// WithDesignIntent passes a design's declared intent to the model that BuildModel builds (see
+// ReadOptions.Intent).
+func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
+	return func(o *ReadOptions) { o.Intent = di; o.fields++ }
+}
+
+// WithFlattenHierarchy reads a hierarchical netlist as its whole schematic (agni issue 718).
+func WithFlattenHierarchy() ReadOption {
+	return func(o *ReadOptions) { o.FlattenHierarchy = true; o.fields++ }
+}
+
+// withParseOnly asks for the configuration-free parse (see ReadOptions.parseOnly). It is not one of
+// the fields an identity covers, because the parse level is keyed without one.
+func withParseOnly() ReadOption {
+	return func(o *ReadOptions) { o.parseOnly = true }
+}
+
+// ReadOpts resolves options to a value, for a loader implementation to read. Exported because the
+// loaders live in cmd/agni (C1/C13).
+func ReadOpts(opts ...ReadOption) ReadOptions {
+	var o ReadOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o
+}

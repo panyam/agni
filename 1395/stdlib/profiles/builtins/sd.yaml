@@ -1,0 +1,22 @@
+name: SD
+host: {attr: interface, value: SD}
+# Each net ending _CMD is its own bus, so an SD slot is judged on its own lines and never on an eMMC's
+# beside it (agni issues 1246, 1294).
+instance: anchor_stem
+signals:
+  - {name: CMD,  suffix: _CMD, pullup: true, anchor: true}
+  - {name: CLK,  suffix: _CLK}
+  - {name: DAT0, regex: '_DATA?0$', pullup: true}
+  - {name: DAT1, regex: '_DATA?1$', pullup: true}
+  - {name: DAT2, regex: '_DATA?2$', pullup: true}
+  - {name: DAT3, regex: '_DATA?3$', pullup: true}
+  - {name: CD,   regex: '_(CD|CD_B|CD_N|CDn|nCD|DET)$'}
+# An eighth data line or a reset says the bus is an eMMC, which shares SD's CMD, CLK and DAT names.
+excludes:
+  - {name: DAT4, regex: '_DATA?[4-7]$'}
+  - {name: RST,  suffix: _RST}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

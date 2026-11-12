@@ -1,0 +1,6 @@
+# A house calling a regulator's feedback pin FDBK.
+name: house-feedback-pin
+lexicon:
+  pin:
+    feedback:
+      patterns: ["^FDBK[0-9]*$"]

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="test-point-coverage rule: a power rail with no test point is flagged; a rail with a test-point probe pad is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: rail, no test point</text>
+
+  <!-- regulator U1 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="24" y1="120" x2="44" y2="120"/>
+    <rect x="44" y="96" width="54" height="48" rx="6" fill="#ffffff"/>
+    <line x1="98" y1="120" x2="118" y2="120"/>
+  </g>
+  <text x="71" y="125" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+
+  <!-- 3V3 rail net in red, ending at an open (unprobed) node -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="118" y1="120" x2="278" y2="120"/>
+    <circle cx="284" cy="120" r="6" fill="#f8f9fb"/>
+  </g>
+  <text x="196" y="108" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">3V3</text>
+  <text x="220" y="152" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">(no TP)</text>
+
+  <text x="170" y="206" font-size="13" fill="#d64545" text-anchor="middle">rail without probe access &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="364" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: rail with test point</text>
+
+  <!-- regulator U2 -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="364" y1="120" x2="384" y2="120"/>
+    <rect x="384" y="96" width="54" height="48" rx="6" fill="#ffffff"/>
+    <line x1="438" y1="120" x2="458" y2="120"/>
+  </g>
+  <text x="411" y="125" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+
+  <!-- VCC rail net with a junction dropping to a test-point pad -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="458" y1="120" x2="600" y2="120"/>
+    <line x1="540" y1="120" x2="540" y2="156"/>
+  </g>
+  <circle cx="540" cy="120" r="4" fill="#394049"/>
+  <text x="500" y="108" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VCC</text>
+
+  <!-- test-point probe pad -->
+  <circle cx="540" cy="163" r="7" fill="#ffffff" stroke="#394049" stroke-width="2"/>
+  <circle cx="540" cy="163" r="1.6" fill="#394049"/>
+  <text x="540" y="188" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">TP1</text>
+
+  <text x="500" y="222" font-size="13" fill="#2f9e57" text-anchor="middle">probe pad on the rail &#8594; fine</text>
+</svg>

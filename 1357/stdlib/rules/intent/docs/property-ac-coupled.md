@@ -1,0 +1,55 @@
+## property-ac-coupled
+
+### What it checks
+
+When the design intent declares a net AC-coupled, a **series capacitor** must actually carry the net.
+If no series capacitor is on it, the net is DC-connected and the declaration is unmet.
+
+### For hardware engineers
+
+AC coupling puts a capacitor in the signal path so the alternating signal passes while any steady DC
+level does not. It is standard on high-speed serial links (PCIe, SGMII, USB SuperSpeed) because the
+two ends often sit at different common-mode voltages by design. The transmitter idles at one level,
+the receiver expects another, and the capacitor lets each keep its own without fighting.
+
+Leave it out and the two ends are tied together at DC. The receiver's input sits wherever the
+transmitter's output holds it rather than at its own bias point. That shows up as a link that either
+does not train or trains and then errors under load. It is also a part-count-of-one omission, easy to
+lose in a respin.
+
+### How the check tells a coupling cap from a decoupling cap
+
+Both are "a capacitor on the net", and they differ in what the far side connects to.
+
+- A **decoupling** cap's far side is ground (or a rail). It shunts noise, and the signal does not pass
+  through it.
+- A **coupling** cap's far side is another signal net, and the signal passes through it.
+
+So the rule looks for a capacitor on the declared net whose *other* net is neither ground nor a power
+rail.
+
+### What a pass means here
+
+This property is **decidable** from the netlist, since a series capacitor is either present or it is
+not. So a pass means the declaration is met, not merely "no contradiction found".
+
+Its sibling `property-reset-polarity` is different, so read that card
+before assuming the two behave alike.
+
+### Declaring it
+
+```yaml
+intent:
+  nets:
+    PCIE_TX0_P: {ac_coupled: true}
+```
+
+No level to state, since the fact is the whole assertion. The rule does not check a net you do not
+declare. It iterates the declaration, never the design, so it has no opinion where your intent is
+silent.
+
+### Fixing a finding
+
+Either the coupling capacitor is missing from the schematic, or the declaration names the wrong net.
+Check which before adding a part, since on a differential pair it is easy to declare `_P` and wire
+`_N`.

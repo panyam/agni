@@ -1,0 +1,32 @@
+---
+title: "Test point"
+label: "test point"
+summary: "A pad placed on a net for the sole purpose of letting a probe touch it, so a rail can be measured during bring-up and factory test."
+level: EE3
+---
+
+A pad whose only job is to be touchable. Nothing connects to it and nothing is built from it. It exists
+so that someone holding a probe, or a bed-of-nails fixture on a production line, can reach a net that is
+otherwise buried under a component or inside the board.
+
+```mermaid
+flowchart TB
+    RG["regulator"] --> RAIL["3V3 rail"]
+    RAIL --> LOAD["the parts it feeds"]
+    RAIL --> TP["test point<br/>a pad, connected to nothing else"]
+    TP -.->|"a probe, or a<br/>bed-of-nails pin"| M["is this rail<br/>actually at 3.3V?"]
+```
+
+When a board does not work, the first question anybody asks is which rails came up. A test point
+answers it. Without a reachable point, you have to find a component leg to balance a probe on. That
+is slow on a bench and impossible on a production fixture.
+
+So [`test-point-coverage`](../../rules/test-point-coverage/) asks whether every rail carries
+one. The rule only fires on a board that places test points **somewhere**, since a design with no
+test-point convention is not wrong, it just has a different one.
+
+For a software reader, a test point is a metrics endpoint, and the rule reads as "critical paths must
+emit telemetry".
+
+[Chapter 13](../../../learn/13-design-for-test/) of the course teaches it in full, along with the
+other ways a probe reaches a net and why in-circuit test needs a test point on both ends of a part.

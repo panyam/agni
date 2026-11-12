@@ -1,0 +1,9 @@
+# The first check on the getting-started page, against the conformance board that trips several
+# rules on purpose.
+#
+# from_root, so the command reads exactly as a reader standing in a fresh clone would type it. The
+# guide has no established working directory the way the tutorials do.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check cmd/agni/testdata/conformance/showcase.fires.kicad_pro

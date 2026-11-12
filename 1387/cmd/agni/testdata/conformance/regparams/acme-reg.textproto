@@ -1,0 +1,13 @@
+mpn: "ACME-REG"
+manufacturer: "Acme"
+docs { id: "ds" title: "ACME-REG Rev A" vendor: "Acme" }
+device_class: "ldo"
+parameters {
+  name: "Output voltage" symbol: "VOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 5.0 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "ds" page: 6 table_or_figure: "Electrical Characteristics" method: "hand" confidence: 1.0 }
+}

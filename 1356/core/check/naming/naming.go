@@ -1,0 +1,239 @@
+// Package naming compiles an operator-supplied net-naming convention into a
+// check.RuleSource (WS3-015). It is a CONFIG-CARRYING source built on the check package's exported
+// surface alone (the Spec AST and NewSource), so an out-of-tree rule suite needs no second registry
+// (WS3-006).
+//
+// A convention is data, not code, because the pattern set belongs to a project and must not be baked
+// into the shareable engine. The config holds names, severities and allow/exempt regex lists. Anything
+// needing more than patterns over net names is a real rule and belongs in Go or a Spec
+// (docsite/content/architecture/rules-and-checks.md).
+//
+// The config TYPE is the generated agni.v1.config.NamingConvention, and it is the only schema. A
+// hand-written yaml twin drifted from the wire form and silently dropped fields (#384). The message
+// lives in agni.v1.config rather than webapi so the engine can import it without depending on the web
+// request tier (C17). YAML is only the authoring syntax, see Parse.
+package naming
+
+import (
+	"fmt"
+	"os"
+	"regexp"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/internal/yamlpb"
+)
+
+// Load reads and parses a convention YAML file.
+func Load(path string) (*configpb.NamingConvention, error) {
+	b, err := os.ReadFile(path) // #nosec G304 -- reads a file the user named
+	if err != nil {
+		return nil, err
+	}
+	return Parse(b)
+}
+
+// Parse decodes a convention config.
+//
+// The generated message is the one schema and YAML is how an operator writes it (C26). internal/yamlpb
+// binds it field by field, so an unknown key fails with its line instead of silently configuring
+// nothing, and a scalar takes its field's type, so `name: 2024` is the convention named "2024". A
+// project's `conventions:` section goes through the same binding, so a standalone --conventions file
+// and that section accept exactly the same documents (agni issue 827).
+func Parse(b []byte) (*configpb.NamingConvention, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return nil, fmt.Errorf("naming config: %w", err)
+	}
+	var cfg configpb.NamingConvention
+	if err := yamlpb.Decode(&doc, &cfg); err != nil {
+		return nil, fmt.Errorf("naming config: %w", err)
+	}
+	return &cfg, nil
+}
+
+const alwaysExempt = check.ToolNetNamePattern
+
+// BuildLexicon compiles the config's naming-lexicon block into a lexicon VALUE (WS3-106). A nil
+// Lexicon block yields nil, meaning "this config states no vocabulary", which the caller reads as the
+// engine defaults. Each regex is validated here; a bad pattern is a returned error, not a panic,
+// because config is operator input.
+//
+// A per-request caller wants this form, since the value travels with the read it configures and two
+// designs can be read with different project conventions in one process. ApplyLexicon is the same
+// build followed by a process-wide install, for startup config.
+func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
+	lx := cfg.GetLexicon()
+	if lx == nil {
+		return nil, nil
+	}
+	v, err := check.BuildRoleVocab(lx)
+	if err != nil {
+		return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.GetName(), err)
+	}
+	lex := &check.Lexicon{Role: v}
+	if cls := lx.GetClass(); len(cls) > 0 {
+		overrides := map[check.ComponentClass]*configpb.ClassVocab{}
+		for name, v := range cls {
+			cl, ok := check.ParseComponentClass(name)
+			if !ok && name == "internal_connector" {
+				return nil, fmt.Errorf("naming config %q lexicon: the internal_connector class was removed; declare the connector under intent: components: {REF: {exposure: internal}} in its design.yaml (agni issue 831)", cfg.GetName())
+			}
+			if !ok {
+				return nil, fmt.Errorf("naming config %q lexicon: unknown component class %q", cfg.GetName(), name)
+			}
+			overrides[cl] = v
+		}
+		cv, err := check.BuildClassVocab(overrides)
+		if err != nil {
+			return nil, fmt.Errorf("naming config %q lexicon class: %w", cfg.GetName(), err)
+		}
+		lex.Class = cv
+	}
+	if units := lx.GetValueUnit(); len(units) > 0 {
+		vv, err := classify.BuildValueVocab(units)
+		if err != nil {
+			return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.GetName(), err)
+		}
+		lex.Value = vv
+	}
+	return lex, nil
+}
+
+// ApplyLexicon installs the config's naming-lexicon overrides as the PROCESS-level vocabulary
+// (WS3-069). A nil Lexicon is a no-op (the defaults remain). Call it once at startup, before any
+// design is read. It is idempotent for a given config.
+//
+// Prefer BuildLexicon where the vocabulary can travel with the read, because a process-wide install
+// cannot be scoped to one request.
+func ApplyLexicon(cfg *configpb.NamingConvention) error {
+	lex, err := BuildLexicon(cfg)
+	if err != nil || lex == nil {
+		return err
+	}
+	check.SetActiveRoleVocab(lex.Role)
+	if lex.Class != nil {
+		check.SetActiveClassVocab(lex.Class)
+	}
+	activeConvention = cfg
+	return nil
+}
+
+// activeConvention is the convention ApplyLexicon installed, nil while the built-ins are in effect.
+var activeConvention *configpb.NamingConvention
+
+// ActiveConvention returns the convention ApplyLexicon installed as the process-level vocabulary, nil
+// when none was, so a reader of a run's lexicon can attribute its patterns to the server's default.
+func ActiveConvention() *configpb.NamingConvention { return activeConvention }
+
+// Source compiles the config into a named RuleSource. Every regex is validated here, and a
+// bad one is an error rather than a panic, because config is operator input. Spec.Rule
+// keeps its bind-time panic for programmer mistakes.
+func Source(cfg *configpb.NamingConvention) (check.RuleSource, error) {
+	if cfg.GetName() == "" {
+		return nil, fmt.Errorf("naming config: name is required (it is the catalog namespace)")
+	}
+	if len(cfg.GetRules()) == 0 {
+		return nil, fmt.Errorf("naming config %q: no rules", cfg.GetName())
+	}
+	var rules []*check.Rule
+	for _, rc := range cfg.GetRules() {
+		r, err := compile(rc)
+		if err != nil {
+			return nil, fmt.Errorf("naming config %q, rule %q: %w", cfg.GetName(), rc.GetName(), err)
+		}
+		rules = append(rules, r)
+	}
+	return check.NewSource(cfg.GetName(), rules), nil
+}
+
+func compile(rc *configpb.NamingRule) (*check.Rule, error) {
+	if rc.GetName() == "" {
+		return nil, fmt.Errorf("rule name is required")
+	}
+	severity := rc.GetSeverity()
+	if severity == "" {
+		severity = "warning"
+	}
+	switch severity {
+	case "error", "warning", "info":
+	default:
+		return nil, fmt.Errorf("severity %q (want error, warning, or info)", severity)
+	}
+	if len(rc.GetAllow()) == 0 {
+		return nil, fmt.Errorf("at least one allow pattern is required")
+	}
+	for _, p := range append(append([]string{}, rc.GetAllow()...), rc.GetExempt()...) {
+		if _, err := regexp.Compile(p); err != nil {
+			return nil, fmt.Errorf("pattern %q: %w", p, err)
+		}
+	}
+
+	fact := "net.name_leaf"
+	if rc.GetMatchFull() {
+		fact = "net.names"
+	}
+	matchAny := func(patterns []string) check.Expr {
+		xs := make([]check.Expr, len(patterns))
+		for i, p := range patterns {
+			xs[i] = check.Match{T: check.Fact{Name: fact}, Pattern: p}
+		}
+		return check.Or{Xs: xs}
+	}
+	exempt := []check.Expr{
+		check.Cmp{L: check.Fact{Name: "net.names"}, Op: "==", R: check.Lit{V: ""}},
+		check.Match{T: check.Fact{Name: "net.names"}, Pattern: alwaysExempt},
+	}
+	if len(rc.GetExempt()) > 0 {
+		exempt = append(exempt, matchAny(rc.GetExempt()))
+	}
+	spec := &check.Spec{
+		Over: "nets",
+		Where: check.And{Xs: []check.Expr{
+			check.Not{X: check.Or{Xs: exempt}},
+			check.Not{X: matchAny(rc.GetAllow())},
+		}},
+		Message: "net name matches no allowed naming pattern",
+	}
+	why := rc.GetWhy()
+	if why == "" {
+		why = "operator-supplied naming convention"
+	}
+	return spec.Rule(check.Rule{
+		Name:     rc.GetName(),
+		Severity: severity,
+		Summary:  "Net name violates the project naming convention.",
+		Impact:   why,
+		Remedy:   "Rename the net to match one of the convention's allowed patterns, or amend the convention if the name is right and the pattern list has not kept up.",
+		Tags: map[string]string{
+			"category":     "naming",
+			"tier":         "R",
+			"distribution": "config",
+		},
+		Detail: detail(rc, why),
+	}), nil
+}
+
+func detail(rc *configpb.NamingRule, why string) string {
+	s := "## " + rc.GetName() + "\n\n**What it means.** " + why + "\n\n**Allowed patterns** (a conforming name matches at least one):\n"
+	for _, p := range rc.GetAllow() {
+		s += "\n    " + p
+	}
+	if len(rc.GetExempt()) > 0 {
+		s += "\n\n**Exempt patterns** (never checked):\n"
+		for _, p := range rc.GetExempt() {
+			s += "\n    " + p
+		}
+	}
+	s += "\n\nTool-synthesized stub names (N$..., unconnected-(...), Net-(...), $-prefixed EDIF auto-names) and empty names are always exempt. Patterns are unanchored RE2 and match the "
+	if rc.GetMatchFull() {
+		s += "FULL net name."
+	} else {
+		s += "LEAF of a hierarchy-qualified name (\"/amp1/SIG\" checks \"SIG\")."
+	}
+	s += "\n\nThis rule is compiled from an operator convention config (check/naming), not built in.\n\nReads: net.names. Tier R."
+	return s
+}

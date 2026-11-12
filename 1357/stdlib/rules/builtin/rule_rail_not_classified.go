@@ -1,0 +1,159 @@
+package builtin
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+
+	"github.com/panyam/agni/core/check"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// railNotClassified is the tripwire for a project that has not declared its rail naming vocabulary.
+// The rail-quantified rules and `net.nominal_voltage` all answer over nets with the RAIL ROLE.
+// Ingestion stamps that role from the naming lexicon, and the built-in lexicon is start-anchored
+// (VCC, VDD, +3V3). A project naming rails function-first (PMIC_CORE_3V3, SENSOR_5V0) matches none
+// of it and must supply its own through `--conventions`. Measured on a real 1700-net board, declaring
+// the lexicon moved the rail count from 13 to 91.
+//
+// It needs a STRUCTURAL signal as well as the name, because `..._3V3` may be a 3.3V rail or a signal
+// that SWINGS at 3.3V (agni issue 194 is the same ambiguity from the other side). So the net must
+// also feed at least one pin that the design types as a power INPUT.
+//
+// It is CategoryIntegrity, because a firing means fix the CONFIG, not the design.
+// docs/rail-not-classified.md has the full rationale.
+
+// railCandidate is a net whose NAME declares a voltage. The name is the first of the rule's two
+// channels, and railCandidate also holds the second channel's evidence.
+type railCandidate struct {
+	net       *ir.Net
+	volts     float64
+	supplyPin string // one ref_des:pin feeding evidence, for the message
+	// The same pin as a pair rather than a formatted string, so it can travel as a context entity
+	// (agni issue 349). supplyPin is kept because the message reads better with the words in it.
+	supplyRef   string
+	supplyPinNo string
+	supplies    int
+	railRole    bool // the role stamp already calls this net a rail
+}
+
+// eachRailCandidate walks the nets whose NAME declares a voltage and yields one per net, with the
+// second channel's count attached rather than applied as a filter. Ground is excluded, since a ground
+// net has a role of its own and is not a subject of a rail-classification question.
+//
+// THE COUNT TRAVELS INSTEAD OF GATING. A net naming a voltage that types NO power-input pin is missing
+// its second channel, and the caller reports that rather than dropping it. On a source format that
+// cannot type power pins at all the second channel is absent everywhere, so gating would make the
+// rule a silent no-op there. The two-channel section of docsite/content/build/check-rule.md covers
+// this case.
+func eachRailCandidate(ctx context.Context, m check.Model, yield func(railCandidate)) {
+	for _, n := range check.ScopedNets(ctx, m) {
+		if m.IsGroundNet(n) {
+			continue
+		}
+		volts, ok := m.NominalVoltage(n.GetName())
+		if !ok {
+			continue // the first channel is absent, since the name says nothing about a voltage
+		}
+		c := railCandidate{net: n, volts: volts, railRole: m.IsRailNet(n)}
+		for _, conn := range n.GetConnections() {
+			if !check.SupplyInputPin(m, conn.GetComponentRef(), conn.GetPinRef()) {
+				continue
+			}
+			if c.supplies == 0 {
+				c.supplyPin = conn.GetComponentRef() + " pin " + conn.GetPinRef()
+				c.supplyRef, c.supplyPinNo = conn.GetComponentRef(), conn.GetPinRef()
+			}
+			c.supplies++
+		}
+		yield(c)
+	}
+}
+
+var railNotClassified = &check.Rule{
+	Name:     "rail-not-classified",
+	Severity: "warning",
+	Summary:  "A net named for a voltage feeds a supply pin but is not classified as a rail, so the rail rules cannot see it.",
+	Impact: "Every rail-quantified rule and the net.nominal_voltage fact answer over nets carrying the rail role, " +
+		"which is stamped from the naming lexicon. A house convention the built-in vocabulary does not match leaves " +
+		"those rails invisible, and the run reports clean because the rules had nothing to quantify over rather than " +
+		"because the board is right. Declaring the project's rail patterns in its conventions lexicon restores them. " +
+		"This says nothing about the design being wrong: it reports that the analysis is running with less than it should.",
+	Remedy:     "Declare the project's rail naming patterns in its conventions lexicon so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.",
+	Primitives: []string{"select", "traverse", "pin-role"},
+	Reads:      []string{"net.name", "net.role", "pin.type", "on_net"},
+	Tags: map[string]string{
+		check.KeyCategory:     check.CategoryIntegrity,
+		check.KeyTier:         "P",
+		check.KeyDistribution: check.DistOpen,
+		check.KeySite:         check.SiteDiagnostic,
+	},
+	Detail:              ruleDoc("rail-not-classified"),
+	Eval:                railNotClassifiedVerdicts,
+	Scoping:             check.ScopeSubjects,
+	StatesConsideredSet: true,
+}
+
+// railNotClassifiedVerdicts decides every net whose name declares a voltage.
+//
+// A net the role stamp already calls a rail PASSES. This rule reports that the analysis is running
+// with less than it should. So a reader wants a count of the nets that the rail rules can see.
+// Without the pass, a project with a correct lexicon would get the same silence as one whose rails
+// are invisible.
+//
+// A net that names a voltage but types NO power-input pin is NotConsidered. The rule needs two
+// channels to agree, a voltage in the name AND a pin the part declares a power input, because
+// `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail.
+// eachRailCandidate says why the missing channel is reported rather than dropped.
+func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdict {
+	var out []check.Verdict
+	eachRailCandidate(ctx, m, func(rc railCandidate) {
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: rc.net.GetName(), NetID: rc.net.GetId()}}}
+		switch {
+		case rc.supplies == 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the name declares %gV but the design types no power-input pin on the net, "+
+				"so the second channel this rule needs is absent and the name alone could equally be a signal that swings at %gV",
+				rc.volts, rc.volts)
+		case rc.railRole:
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the net carries the rail role, so the rail rules and net.nominal_voltage answer over it (%gV, %d supply pin(s))",
+					rc.volts, rc.supplies),
+				Terms: []check.WitnessTerm{
+					{Label: "nominal", Value: fmt.Sprintf("%gV", rc.volts)},
+					{Label: "supply pins", Value: strconv.Itoa(rc.supplies)},
+				},
+			}
+			v.Context = []check.ContextSubject{
+				{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},
+			}
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("both channels agree the net is a %gV rail (%d supply pin(s)) and the role stamp does not call it one",
+					rc.volts, rc.supplies),
+				Terms: []check.WitnessTerm{
+					{Label: "nominal", Value: fmt.Sprintf("%gV", rc.volts)},
+					{Label: "supply pins", Value: strconv.Itoa(rc.supplies)},
+				},
+			}
+			v.Finding = &check.Finding{
+				Subject: check.NetEntity(rc.net),
+				Prov:    rc.net.GetProv(),
+				Message: fmt.Sprintf(
+					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon",
+					rc.net.GetName(), rc.volts, rc.supplies, rc.supplyPin),
+				// The supply pin the message offers as evidence. The subject is the net, and this pin
+				// makes the net look like a rail. Without this entity the message names the pin in
+				// prose and nothing links to it (agni issue 349).
+				Context: []check.ContextSubject{
+					{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},
+				},
+			}
+			v.Context = v.Finding.Context
+		}
+		out = append(out, v)
+	})
+	return out
+}

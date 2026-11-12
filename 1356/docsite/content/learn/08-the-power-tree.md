@@ -1,0 +1,95 @@
+---
+title: "8. The power tree"
+description: "A board is fed by a cascade, not a supply. The first level where correctness comes from a declaration rather than from physics."
+---
+
+Every chapter so far asked about one thing: this capacitor, this net, this pin, this part's rating. This one asks about the board.
+
+Read [chapter 3](../03-why-every-chip-needs-capacitors/) first for rails, and [chapter 7](../07-reading-a-datasheet/) for ratings.
+
+This page teaches at [EE6](../levels/#systems-ee6), and the [levels page](../levels/) says what each level means.
+
+## A board is fed by a cascade (EE6)
+
+Power arrives at a connector as one voltage and has to become several, because the parts on a board do not agree about what they want. A processor core might run at 1.8 V, its I/O at 3.3 V, and a motor driver straight off a 12 V input. (The tutorial board happens to name its rails the other way round, `PMIC_CORE_3V3` and `PMIC_IO_1V8`.)
+
+So a board carries a chain of regulators. Drawn out, that chain is the **power tree**. (Ask an engineer to sketch a board they own and this is usually the first thing they draw.) Read the tutorial board's off its regulators:
+
+{{ agniRun "content/learn/runs/power-tree.yaml" }}
+
+`U1` touches `PMIC_MAIN_12V0` and `PMIC_CORE_3V3`. `U2` touches `PMIC_CORE_3V3` and `PMIC_IO_1V8`. So 12 V feeds U1, and U1 makes 3.3 V. That 3.3 V feeds U2, and U2 makes 1.8 V. A cascade, each stage taking the previous one's output as its input.
+
+The board cascades its regulators rather than running three of them from the input, and that is a deliberate trade. A switching regulator is efficient over a big step, and taking 12 V down needs that. It is also electrically noisy. A linear regulator wastes the voltage it drops as heat. Over a small step that waste is fine, and a linear regulator is quiet. So the usual shape is a switcher doing the heavy lifting and a linear part cleaning up a rail that feeds something sensitive.
+
+[Chapter 1](../01-what-a-board-is-made-of/) already met two other nets in that output, and they are worth naming. `PMIC_EN` is the enable that R2 pulls high, and `PMIC_PG` is the power-good output that R3 feeds to the processor's reset. Neither carries power. `PMIC_EN` turns the tree on, and `PMIC_PG` tells the rest of the board that the tree came up. [Chapter 9](../09-sequencing-and-straps/) covers both.
+
+```mermaid
+flowchart TB
+  IN(["12 V at the connector"]) --> M["PMIC_MAIN_12V0"]
+  M --> U1["U1, the switching stage"]
+  U1 --> C["PMIC_CORE_3V3"]
+  C --> U2["U2, the linear stage"]
+  U2 --> IO["PMIC_IO_1V8"]
+  EN["PMIC_EN, pulled high by R2"] -. "turns the tree on" .-> U1
+  U1 -. "says it came up" .-> PG["PMIC_PG, through R3 to the processor reset"]
+```
+
+## Nothing here is a fact about the world (EE6)
+
+Everything checkable so far was checkable against something outside the design. Whether a wire connects is a fact about the netlist. Whether a capacitor's rating clears its rail is a fact in a datasheet. The tool did not need to be told what "correct" meant, because physics and the vendor had already said.
+
+A power tree has no such external referent. **Nothing anywhere states that `PMIC_CORE_3V3` was supposed to be 3.3 V.** The name says so, and a name is a convention somebody followed, not a measurement. A board where that rail is actually 5 V is perfectly self-consistent; it is just not the board anyone meant to build.
+
+So at this level the tool has to be *told* what was intended, in a declaration that sits beside the design:
+
+```yaml
+intent:
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3:  {nominal: 3.3,  domain: io}
+    PMIC_IO_1V8:    {nominal: 3.3,  domain: core}
+```
+
+and then it can check the board against it:
+
+{{ agniRun "content/learn/runs/voltage-domains.yaml" }}
+
+The third declaration is wrong on purpose. It puts `PMIC_IO_1V8`, whose name declares 1.8 V, in a domain declared at 3.3 V. The rule reports the disagreement without deciding which side is mistaken, because it cannot tell whether somebody declared the domain wrongly, the rail is named wrongly, or the rail really is at the wrong voltage. All three are worth knowing about and they are the same finding until a human looks.
+
+An intent file has a benefit and a cost. It gives you checks that no amount of cleverness could derive from the netlist. It costs you writing down what you meant and keeping that true as the design moves. Nobody enjoys that work, so the layer is optional.
+
+## Enough current to go round (EE6)
+
+The other system-level question. A rail has to supply everything hanging off it, and once again the netlist is silent, because nothing in a connectivity graph says how much a part draws.
+
+That is two separate questions, and the catalog keeps them as two rules. This run uses a smaller fixture whose rails are `3V3` and `1V8`:
+
+{{ agniRun "content/learn/runs/rail-budgets.yaml" }}
+
+**Capacity** asks whether the supply meets the declared peak at all. `3V3` is fed by a part rated 0.5 A against a declared 0.8 A, so it fails outright.
+
+**Margin** asks whether it meets the peak with headroom. `1V8`'s supply is rated 0.9 A. That clears the 0.8 A peak. A 1.2× margin factor asks for 0.96 A, and 0.9 A misses it. A rail designed to exactly its worst-case draw leaves nothing for tolerance, temperature, or the load somebody adds next revision.
+
+The margin rule reports `3V3` as **not-considered**, with the reason *"the supply is rated below the 0.8A peak itself, which rail-current-capacity reports rather than this rule"*.
+
+Here one defect is reported once. A rail that cannot meet its peak also cannot meet its peak with margin, so a naive pair of rules would report the same underlying problem twice, at two severities, and a reviewer would spend time working out whether they were looking at one problem or two. The margin rule declines instead, and says which rule owns the answer.
+
+## What you can now answer
+
+- Why a board has a chain of regulators rather than one supply, and why the chain usually starts with a switcher. *(EE6)*
+- Why nothing in a netlist can tell you a rail is at the wrong voltage. *(EE6)*
+- What a voltage-domain finding does *not* tell you, and why it cannot. *(EE6)*
+- Why capacity and margin are two questions, and what a not-considered verdict is doing between them. *(EE6)*
+
+## The rules this page explains
+
+| Rule | Severity | What it checks against |
+|---|---|---|
+| [`intent/voltage-domain-mismatch`](../../reference/rules/intent-voltage-domain-mismatch/) | warning | a declared domain's nominal voltage against its rails |
+| [`intent/rail-current-capacity`](../../reference/rules/intent-rail-current-capacity/) | error | a rail's supply against the declared peak draw |
+| [`intent/rail-current-margin`](../../reference/rules/intent-rail-current-margin/) | warning | the same, with a declared margin factor |
+| [`rail-not-classified`](../../reference/rules/rail-not-classified/) | info | a rail the naming vocabulary could not classify at all |
+
+The three `intent/` rules need something declared. Needing a declaration defines this level. So a run against a design with no intent file reports them as needing design intent rather than as passing. `rail-not-classified` is the exception, a read-health check on the naming conventions rather than on intent.
+
+The next chapter, [sequencing and straps](../09-sequencing-and-straps/), takes the other half of the system question. It covers the order in which the rails come up, and what the parts read at the moment each rail comes up.

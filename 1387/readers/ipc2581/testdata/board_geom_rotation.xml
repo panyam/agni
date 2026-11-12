@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WS1-029 rotation/mirror fixture: an asymmetric 3-pin "LSHAPE" placed once on each side,
+     both rotated 90 deg, so the placement rotation sign (top) and the bottom-side X-mirror are
+     both observable in the composed pad positions. Pin offsets (1,0),(0,2),(0,0) are distinct
+     under rotation and mirror; pin 3 sits at the component origin as an anchor. Units MM. -->
+<IPC-2581 revision="C" xmlns="http://webstds.ipc.org/2581">
+  <Content>
+    <DictionaryStandard units="MILLIMETER">
+      <EntryStandard id="CIRCLE_1">
+        <Circle diameter="0.500000"/>
+      </EntryStandard>
+    </DictionaryStandard>
+  </Content>
+  <Ecad name="ecad">
+    <CadData>
+      <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE"/>
+      <Layer name="BOTTOM" layerFunction="CONDUCTOR" side="BOTTOM" polarity="POSITIVE"/>
+      <Step name="step">
+        <Profile>
+          <Polygon>
+            <PolyBegin x="0.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="0.000000"/>
+          </Polygon>
+        </Profile>
+        <Package name="LSHAPE" type="OTHER">
+          <Pin number="1" type="SURFACE">
+            <Location x="1.000000" y="0.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+          <Pin number="2" type="SURFACE">
+            <Location x="0.000000" y="2.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+          <Pin number="3" type="SURFACE">
+            <Location x="0.000000" y="0.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+        </Package>
+        <Component refDes="AT" packageRef="LSHAPE" layerRef="TOP" part="ASYM" mountType="SMT">
+          <Xform rotation="90.000"/>
+          <Location x="5.000000" y="4.000000"/>
+        </Component>
+        <Component refDes="AB" packageRef="LSHAPE" layerRef="BOTTOM" part="ASYM" mountType="SMT">
+          <Xform rotation="90.000"/>
+          <Location x="2.000000" y="2.000000"/>
+        </Component>
+      </Step>
+    </CadData>
+  </Ecad>
+</IPC-2581>

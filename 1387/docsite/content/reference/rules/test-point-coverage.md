@@ -1,0 +1,72 @@
+---
+title: "test-point-coverage"
+description: "A power rail or ground net has no test point, on a board that uses them."
+---
+
+### Remedy
+
+Add a test point to the rail. It costs a pad, and it is the difference between measuring a supply at bring-up and trying to hold a probe on a component lead.
+
+### What it means
+
+A power rail or ground net carries no test-point component, on a design
+that places test points elsewhere.
+
+### Why engineers want it
+
+A test point is a dedicated probe pad whose only job is to
+expose a net so a scope probe (bring-up debugging) or a bed-of-nails / flying-probe
+machine (factory test) can measure it on the assembled board. DFT review checklists ask
+for the important nets to be probe-able, rails and ground first; an unreachable rail
+is debugged by touching component pads the size of sand grains, and factory test simply
+cannot verify it.
+
+### Impact
+
+This rule covers the nets you most need to observe when a board misbehaves. Is the 3V3
+rail actually at 3.3V, is ground clean, is the supply sagging under load? Missing coverage
+is cheap to fix at design time and expensive at bring-up.
+
+![rail with a test point is fine; a rail with no test point is flagged]({{.Site.PathPrefix}}/static/images/catalog/rules/test-point-coverage.svg)
+
+### Scope note
+
+The rule is gated on the DESIGN using test points at all (the design.nc_channel pattern). A board
+with zero TPs has no probe convention to violate, so small demo boards report nothing. A board with
+some TPs has declared the convention, so an uncovered rail there is an omission. "Rail" is the union
+of the rail FACTS (global, power_driven) and the rail / ground NAME heuristics, because name is the
+only rail evidence a directionless EDIF netlist carries. Cross-sheet (external) nets are skipped.
+Connector pins can also provide probe access in real DFT flows; counting them is a possible widening
+if the corpus shows the TP-only reading too strict. A regulator FEEDBACK / sense node reads as a
+rail by name (VCC..._FB). It is a high-impedance sense point and must not be probed, since a test
+point would load the divider and shift the regulated output. So it is EXCLUDED (WS3-067). The
+feedback patterns are naming-lexicon config, and a project extends them (WS3-069). A switch node is
+excluded for the same reason, since a probe there loads the highest dV/dt node in the design, and
+control and gate-drive nets such as a mode strap or an enable are excluded because they are not
+rails (agni 680). Some divider taps feed a sense pin and are named for the rail they sense
+(VBUS_MON_UP). Such a tap is excluded too, because a sense input is not a rail (agni 935). Severity is info because DFT
+posture is a per-project policy. The reviewer decides, and the rule surfaces the rails.
+
+### Query structure
+
+gate on the channel, select uncovered rails, excluding feedback sense nodes, switch nodes, and
+control and gate-drive nets.
+
+    select N in nets where has_test_points(design)
+      and (rail_fact(N) or rail_name(N.name) or ground_name(N.name))
+      and not feedback_name(N.name) and not switching_name(N.name)
+      and not control_name(N.name) and not gate_drive_name(N.name)
+      and not exists T in N.connections where class(T) == test_point
+
+Reads: component.class, net.attributes, net.names, on_net. Tier R.
+
+### For software readers
+
+A test point is a metrics endpoint, a tiny component whose only purpose is observability.
+This rule is "every critical path must emit telemetry", where a power rail without a test
+point is a service with no health check.
+The channel gate means the rule only fires on boards that
+instrument SOMETHING, the way a lint rule for missing metrics only makes sense in a
+codebase that has a metrics library wired up at all.
+
+![test-point coverage cases]({{.Site.PathPrefix}}/static/images/catalog/rules/tpcov-cases.png)

@@ -1,0 +1,684 @@
+"""Two ways to reach agni, one way to read its answer.
+
+``ConnectTransport`` POSTs to a running ``agni serve``, in binary protobuf by default or protojson
+when asked. ``CliTransport`` runs the ``agni`` binary with ``--format json``. Both read the same
+message, because C31 makes a command's json the protojson of its rpc's message, so there is one shape
+to read whichever way it arrived.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import subprocess
+import tempfile
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Type, TypeVar
+
+from google.protobuf import json_format, unknown_fields
+from google.protobuf.descriptor import FieldDescriptor
+from google.protobuf.message import Message
+
+from agni.errors import AgniError, CliUnsupported
+from agni.services import Rpc
+from agni.v1.checks import checks_pb2 as _checks  # noqa: F401  (registers PartSpec's imports)
+from agni.v1.param import param_pb2
+from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, validate_pb2
+
+M = TypeVar("M", bound=Message)
+
+
+def parse(text: str, message_type: Type[M], *, strict: bool = False) -> M:
+    """Parse protojson ``text`` into a new ``message_type``.
+
+    With ``strict`` off (the default) a field this client does not know is skipped, so a client
+    generated before a server gained a field keeps working. With it on, an unknown field is an error,
+    which is what a test wants: a hand-rolled shape then fails instead of parsing into an empty
+    message.
+    """
+    msg = message_type()
+    try:
+        json_format.Parse(text, msg, ignore_unknown_fields=not strict)
+    except json_format.ParseError as e:
+        raise AgniError(
+            f"response is not a valid {message_type.DESCRIPTOR.full_name}: {e}",
+            code="bad_response",
+            detail=text[:2000],
+        ) from e
+    return msg
+
+
+class ConnectTransport:
+    """Calls a running ``agni serve`` over the Connect protocol's unary form.
+
+    The server reads a design once, when it is ingested, and answers many questions about the
+    snapshot that names it, which is the reason to prefer this transport when asking more than one.
+    ``base_url`` is the server's root, such as ``http://127.0.0.1:8080``. Designs are named by the
+    ``mount://`` URIs that server was started with.
+
+    ``binary`` (the default) speaks binary protobuf, which for a large answer is about half the bytes
+    of protojson and decodes about a hundred times faster: a 9,323-row query answer is 8.3 MB and 4 ms
+    against 15.5 MB and 0.43 s. ``binary=False`` speaks protojson, which is easier to read on the
+    wire. The answer is the same message either way.
+
+    ``strict`` fails on a response field this client does not know, in either encoding, which is how a
+    test catches a client generated before the server's protos changed.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout: float = 300.0,
+        headers: Optional[Mapping[str, str]] = None,
+        strict: bool = False,
+        binary: bool = True,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.headers = dict(headers or {})
+        self.strict = strict
+        self.binary = binary
+
+    def call(self, rpc: Rpc, request: Message) -> Message:
+        if self.binary:
+            body, content_type = request.SerializeToString(), "application/proto"
+        else:
+            body, content_type = json_format.MessageToJson(request).encode("utf-8"), "application/json"
+        req = urllib.request.Request(
+            self.base_url + rpc.path,
+            data=body,
+            method="POST",
+            headers={"Content-Type": content_type, **self.headers},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                raw = resp.read()
+        except urllib.error.HTTPError as e:
+            raise _connect_error(rpc, e) from None
+        except urllib.error.URLError as e:
+            raise AgniError(f"{rpc.path}: cannot reach {self.base_url}: {e.reason}", code="unavailable") from e
+        if not self.binary:
+            return parse(raw.decode("utf-8"), rpc.response, strict=self.strict)
+        msg = rpc.response()
+        try:
+            msg.ParseFromString(raw)
+        except Exception as e:  # a DecodeError, under whichever protobuf runtime is installed
+            raise AgniError(
+                f"response is not a valid {rpc.response.DESCRIPTOR.full_name}: {e}", code="bad_response"
+            ) from e
+        if self.strict:
+            unknown = _unknown_field_paths(msg)
+            if unknown:
+                raise AgniError(
+                    f"response {rpc.response.DESCRIPTOR.full_name} carries fields this client does not know, at "
+                    + ", ".join(unknown[:5]),
+                    code="bad_response",
+                )
+        return msg
+
+
+def _unknown_field_paths(msg: Message, path: str = "") -> List[str]:
+    """Where in msg the binary decoder kept fields this client's generated code does not declare."""
+    here = path or msg.DESCRIPTOR.name
+    out = [f"{here} (field {f.field_number})" for f in unknown_fields.UnknownFieldSet(msg)]
+    for field, value in msg.ListFields():
+        if field.type != FieldDescriptor.TYPE_MESSAGE:
+            continue
+        name = f"{here}.{field.name}"
+        if field.message_type.GetOptions().map_entry:
+            vf = field.message_type.fields_by_name["value"]
+            if vf.type == FieldDescriptor.TYPE_MESSAGE:
+                for k, v in value.items():
+                    out += _unknown_field_paths(v, f"{name}[{k!r}]")
+        elif field.is_repeated:
+            for i, v in enumerate(value):
+                out += _unknown_field_paths(v, f"{name}[{i}]")
+        else:
+            out += _unknown_field_paths(value, name)
+    return out
+
+
+def _connect_error(rpc: Rpc, e: urllib.error.HTTPError) -> AgniError:
+    raw = e.read().decode("utf-8", errors="replace")
+    code, message, unavailable = f"http_{e.code}", raw, None
+    try:
+        doc = json.loads(raw)
+        code, message = doc.get("code", code), doc.get("message", raw)
+        unavailable = _snapshot_unavailable(doc.get("details") or [])
+    except ValueError:
+        pass
+    return AgniError(f"{rpc.service}/{rpc.method}: {message}", code=code, detail=raw, snapshot_unavailable=unavailable)
+
+
+_SNAPSHOT_UNAVAILABLE = snapshot_pb2.SnapshotUnavailable.DESCRIPTOR.full_name
+
+
+def _snapshot_unavailable(details: List[Any]) -> Optional[snapshot_pb2.SnapshotUnavailable]:
+    """The SnapshotUnavailable among a Connect error's details, or None. Connect sends each detail
+    as its type name and its binary encoding in unpadded base64."""
+    for d in details:
+        if not isinstance(d, dict) or d.get("type") != _SNAPSHOT_UNAVAILABLE:
+            continue
+        value = str(d.get("value", ""))
+        try:
+            return snapshot_pb2.SnapshotUnavailable.FromString(base64.b64decode(value + "=" * (-len(value) % 4)))
+        except Exception:  # a malformed detail is the same as none: the error still raises
+            return None
+    return None
+
+
+# --- the CLI ---------------------------------------------------------------------------------------
+
+
+# A request names its design by snapshot, and the CLI transport keeps each snapshot's definition
+# itself, so a command's argv is built from the request and a lookup of the definitions it names.
+Lookup = Callable[[str], snapshot_pb2.Snapshot]
+
+
+@dataclass(frozen=True)
+class CliCommand:
+    """How one rpc is asked of the CLI.
+
+    ``argv`` turns the request, and the snapshot definitions it names (read through the lookup it is
+    given), into arguments after ``agni``, and refuses a field it cannot express. ``emits`` is the
+    message the command prints, and ``wrap`` lifts it into the rpc's response where the command prints
+    an inner message rather than the response itself. ``answers_on_failure`` marks a command that
+    prints a complete answer and then exits non-zero, which ``trace`` does for an endpoint naming
+    nothing in the design. ``stdin``, when set, supplies text the command reads from standard input,
+    for a request too structured for flags.
+    """
+
+    argv: Callable[[Message, Lookup], List[str]]
+    emits: Type[Message]
+    wrap: Optional[Callable[[Message], Message]] = None
+    answers_on_failure: bool = False
+    stdin: Optional[Callable[[Message], str]] = None
+
+
+def _only(req: Message, allowed: Sequence[str], what: str = "") -> None:
+    extra = [f.name for f, _ in req.ListFields() if f.name not in allowed]
+    if extra:
+        raise CliUnsupported(
+            f"{what or req.DESCRIPTOR.name}: the CLI has no flag for {', '.join(sorted(extra))}; "
+            "use ConnectTransport, or leave the field unset"
+        )
+
+
+def _definition(req: Message, snap: Lookup, accepts: Sequence[str], field: str = "snapshot") -> snapshot_pb2.Snapshot:
+    """The definition of the snapshot ``req.<field>`` names, refusing a definition field this command
+    has no flag for. ``accepts`` names the fields beyond ``uri`` it does have one for."""
+    d = snap(getattr(req, field))
+    _only(d, ("name", "uri") + tuple(accepts), f"{req.DESCRIPTOR.name} over {d.name}")
+    if "overlay" in accepts:
+        _library_only(d, f"{req.DESCRIPTOR.name} over {d.name}")
+    return d
+
+
+def _bind_flags(req: Message) -> List[str]:
+    # A text value is quoted so one that looks like a number still binds text, as it does over Connect,
+    # and a list is the name bound once per value, which is how --bind takes one.
+    out: List[str] = []
+    for name in sorted(req.bindings):
+        v = req.bindings[name]
+        for e in v.list.values if v.WhichOneof("kind") == "list" else [v]:
+            val = repr(e.number) if e.WhichOneof("kind") == "number" else '"' + e.text + '"'
+            out += ["--bind", f"{name}={val}"]
+    return out
+
+
+def _set_bindings(set_dict: dict) -> dict:
+    # A set file spells a query's bindings as a `bind:` map of plain values or lists of them, where the
+    # wire carries {"text": ...}, {"number": ...} or {"list": {"values": [...]}} under `bindings`.
+    def plain(v: dict) -> object:
+        return v.get("number", v.get("text", ""))
+
+    for q in set_dict.get("queries", []):
+        wire = q.pop("bindings", None)
+        if wire:
+            q["bind"] = {k: [plain(e) for e in v["list"].get("values", [])] if "list" in v else plain(v) for k, v in wire.items()}
+    return set_dict
+
+
+def _read_flags(req: Message, d: snapshot_pb2.Snapshot) -> List[str]:
+    """The flags a read takes: the request's budget, and the board, naming and hierarchy its snapshot
+    defines."""
+    out: List[str] = []
+    budget = getattr(req, "work_budget", 0)
+    if budget:
+        out += ["--budget", str(budget)]
+    if d.board_uri:
+        out += ["--board-path", d.board_uri]
+    if d.as_named:
+        out.append("--as-named")
+    if d.flatten_hierarchy:
+        out.append("--flatten-hierarchy")
+    return out
+
+
+def _check_argv(fmt: str, verdicts: bool = False) -> Callable[[Message, Lookup], List[str]]:
+    # --verdicts selects what `check` prints, not what it runs, and with json it prints the whole
+    # CheckDesign response, verdicts included, as a server returns it (agni issue 822).
+    def argv(req: Message, snap: Lookup) -> List[str]:
+        _only(req, ("snapshot", "rules"))
+        d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy"))
+        out = ["check", d.uri, "--format", fmt] + (["--verdicts"] if verdicts else [])
+        for r in req.rules:
+            out += ["--rule", r]
+        return out + _read_flags(req, d)
+
+    return argv
+
+
+def _library_only(holder: Message, what: str = "") -> None:
+    """Refuse an overlay carrying anything but library modules and pages, the part of it the CLI can
+    send (as ``--lib``, written by ``CliTransport.call``)."""
+    if not holder.HasField("overlay"):
+        return
+    ov = holder.overlay
+    extra = [f.name for f, _ in ov.ListFields() if f.name != "config"]
+    extra += [f.name for f, _ in ov.config.ListFields() if f.name not in ("library_modules", "library_docs")]
+    if not (ov.config.library_modules or ov.config.library_docs):
+        extra.append("overlay")  # nothing in it the CLI sends, so it would be silently dropped
+    if extra:
+        raise CliUnsupported(
+            f"{what or holder.DESCRIPTOR.name}: the CLI sends only library modules from an overlay, not "
+            f"{', '.join(sorted(extra))}; use ConnectTransport, or leave the field unset"
+        )
+
+
+def _lib_name(name: str) -> str:
+    """A module or member path as a file name. A path is dotted, so a separator or a leading dot can
+    only be an attempt to write outside the library directory."""
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        raise CliUnsupported(f"{name!r} is not a module or member path")
+    return name
+
+
+def _write_library(d: Optional[snapshot_pb2.Snapshot], root: str) -> List[str]:
+    """Write a snapshot's inline library to ``root`` laid out as a ``lib/`` directory, one
+    ``<module.path>.dl`` per module and ``docs/<member.path>.md`` per page, and return the ``--lib``
+    flag naming it. Empty when the snapshot carries none."""
+    cfg = d.overlay.config if d is not None and d.HasField("overlay") else None
+    if cfg is None or not (cfg.library_modules or cfg.library_docs):
+        return []
+    for m in cfg.library_modules:
+        if m.language not in ("", "datalog"):
+            raise CliUnsupported(f"the CLI reads datalog modules only, not {m.language!r} ({m.path})")
+        with open(os.path.join(root, f"{_lib_name(m.path)}.dl"), "w", encoding="utf-8") as f:
+            f.write(m.text)
+    if cfg.library_docs:
+        os.makedirs(os.path.join(root, "docs"), exist_ok=True)
+        for path, page in cfg.library_docs.items():
+            with open(os.path.join(root, "docs", f"{_lib_name(path)}.md"), "w", encoding="utf-8") as f:
+                f.write(page)
+    return ["--lib", root]
+
+
+def _query_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot", "query", "work_budget", "bindings", "omit_locations", "limit"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
+    limit = ["--limit", str(req.limit)] if req.limit else []
+    return ["query", d.uri, req.query, "--format", "json"] + _read_flags(req, d) + _bind_flags(req) + _locate_flags(req) + limit
+
+
+def _query_set_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot", "set", "work_budget", "omit_locations"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
+    return ["query", d.uri, "--set", "-", "--format", "json"] + _read_flags(req, d) + _locate_flags(req)
+
+
+def _locate_flags(req: Message) -> List[str]:
+    return ["--omit-locations"] if getattr(req, "omit_locations", False) else []
+
+
+def _query_set_stdin(req: Message) -> str:
+    # JSON is YAML, so the set goes to `--set -` as JSON and needs no YAML library here.
+    return json.dumps(_set_bindings(json_format.MessageToDict(req.set, preserving_proto_field_name=True)))
+
+
+def _review_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot", "manifest", "ratified_floor"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
+    out = ["review", d.uri, "--checklist", "-", "--format", "json"] + _read_flags(req, d)
+    if req.ratified_floor:
+        out += ["--ratified-floor", repr(req.ratified_floor)]
+    return out
+
+
+def _checklists_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot",))
+    d = _definition(req, snap, ())
+    return ["checklists", d.uri, "--format", "json"]
+
+
+def _review_stdin(req: Message) -> str:
+    # A manifest file puts an item's binding (rule, query, present...) on the item itself, where the
+    # wire nests it under `binding`, so it is lifted back out. JSON is YAML, so `--checklist -` reads it.
+    man = json_format.MessageToDict(req.manifest, preserving_proto_field_name=True)
+    for area in man.get("areas", []):
+        for item in area.get("items", []):
+            item.update(item.pop("binding", {}))
+    return json.dumps(man)
+
+
+def _design_argv(req: Message, snap: Lookup) -> List[str]:
+    # GetDesign is `stats --format json`, which builds the same message through the same service
+    # (agni issue 836). The read_mask, nets and ref_des select what it carries, as on the wire.
+    _only(req, ("snapshot", "read_mask", "nets", "ref_des"))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
+    out = ["stats", d.uri, "--format", "json"]
+    if req.HasField("read_mask") and req.read_mask.paths:
+        out += ["--mask", ",".join(req.read_mask.paths)]
+    for n in req.nets:
+        out += ["--net", n]
+    for r in req.ref_des:
+        out += ["--ref", r]
+    return out + _read_flags(req, d)
+
+
+def _diff_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("a_snapshot", "b_snapshot", "near_renames", "include_equal"))
+    a = _definition(req, snap, (), "a_snapshot")
+    b = _definition(req, snap, (), "b_snapshot")
+    out = ["diff", a.uri, b.uri, "--format", "json"]
+    if req.include_equal:
+        out.append("--include-equal")
+    if req.HasField("near_renames"):
+        # --rename-approx runs the pass with the calibrated thresholds; the CLI has no flag for an
+        # override, so one is refused rather than dropped.
+        overrides = sorted(f.name for f, _ in req.near_renames.ListFields())
+        if overrides:
+            raise CliUnsupported(
+                f"DiffDesignsRequest.near_renames: the CLI runs the default thresholds only, not "
+                f"{', '.join(overrides)}; use ConnectTransport"
+            )
+        out.append("--rename-approx")
+    return out
+
+
+def _trace_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot", "from", "to", "hops"))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
+    src, dst = getattr(req, "from"), req.to
+    out = ["trace", d.uri, "--from", f"{src.ref_des}.{src.pin}", "--to", f"{dst.ref_des}.{dst.pin}", "--format", "json"]
+    if req.hops:
+        out += ["--hops", str(req.hops)]
+    return out + _read_flags(req, d)
+
+
+def _layout_argv(req: Message, snap: Lookup) -> List[str]:
+    _only(req, ("snapshot",))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
+    return ["render", d.uri, "--report", "--report-format", "json"] + _read_flags(req, d)
+
+
+# The command each rpc maps to. An rpc absent here raises CliUnsupported on the CLI transport, except
+# SnapshotService's, which CliTransport answers itself (see _CliSnapshots).
+#
+# Deliberately absent: `intake`, C31's declared exception, whose output has no wire message on purpose.
+# CreateReview maps to `review`, whose json is the Review the rpc returns since agni issue 734. The
+# CLI stores nothing, so its review is unnamed; Get, List and Delete need a store and stay Connect only.
+CLI_COMMANDS: Dict[str, CliCommand] = {
+    "CheckService/CheckDesign": CliCommand(_check_argv("json", verdicts=True), checks_pb2.CheckDesignResponse),
+    "CheckService/GetCheckReport": CliCommand(_check_argv("report"), checks_pb2.GetCheckReportResponse),
+    "QueryService/RunQuery": CliCommand(_query_argv, query_pb2.RunQueryResponse),
+    # A set with an unanswerable query prints every answer and exits 1, so the answer is still read.
+    "QueryService/RunQueries": CliCommand(
+        _query_set_argv, query_pb2.RunQueriesResponse, stdin=_query_set_stdin, answers_on_failure=True
+    ),
+    "ReviewService/CreateReview": CliCommand(_review_argv, review_pb2.Review, stdin=_review_stdin),
+    "ReviewService/ListChecklists": CliCommand(_checklists_argv, review_pb2.ListChecklistsResponse),
+    "DiffService/DiffDesigns": CliCommand(_diff_argv, diff_pb2.DiffDesignsResponse),
+    # Tabulate reads no design, so the request goes on stdin whole (agni issue 862).
+    "TableService/Tabulate": CliCommand(
+        lambda req, snap: ["tabulate", "-", "--format", "json"], tables_pb2.TabulateResponse, stdin=lambda req: json_format.MessageToJson(req)
+    ),
+    "DesignService/GetDesign": CliCommand(_design_argv, design_pb2.GetDesignResponse),
+    "DesignService/TraceDesign": CliCommand(
+        _trace_argv,
+        design_pb2.Trace,
+        wrap=lambda t: design_pb2.TraceDesignResponse(trace=t),
+        answers_on_failure=True,
+    ),
+    "DesignService/GetLayoutReport": CliCommand(
+        _layout_argv,
+        design_pb2.ConversionReport,
+        wrap=lambda r: design_pb2.GetLayoutReportResponse(report=r),
+    ),
+}
+
+
+class _CliSnapshots:
+    """SnapshotService for a transport with no server.
+
+    Each command reads its design again, so a snapshot here is only its definition, kept under a name
+    this transport mints (``snapshots/cli-<n>``) and turned into flags when a question names it. No
+    tiers are resolved, so a returned snapshot carries its name and definition and nothing else, and
+    a design that cannot be read fails at its first question rather than at ingest. The errors are
+    the ones a server returns, with the same codes.
+    """
+
+    def __init__(self) -> None:
+        self.held: Dict[str, snapshot_pb2.Snapshot] = {}
+        self.minted = 0
+
+    def lookup(self, rpc: Rpc) -> Lookup:
+        def get(name: str) -> snapshot_pb2.Snapshot:
+            if not name:
+                raise AgniError(f"{rpc.service}/{rpc.method}: no snapshot named; ingest the design first", code="invalid_argument")
+            d = self.held.get(name)
+            if d is None:
+                raise AgniError(f"{rpc.service}/{rpc.method}: snapshot {name} not found", code="not_found")
+            return d
+
+        return get
+
+    def call(self, rpc: Rpc, req: Message) -> Message:
+        handler = getattr(self, "_" + rpc.method, None)
+        if handler is None:
+            raise CliUnsupported(f"{rpc.service}/{rpc.method} has no CLI command; use ConnectTransport")
+        return handler(rpc, req)
+
+    def _Ingest(self, rpc: Rpc, req: Message) -> Message:
+        d = _definition_of(req.snapshot)
+        if req.snapshot_id:
+            if "/" in req.snapshot_id or " " in req.snapshot_id:
+                raise AgniError(
+                    f"{rpc.service}/{rpc.method}: snapshot id {req.snapshot_id!r} may not contain a slash or a space",
+                    code="invalid_argument",
+                )
+            name = "snapshots/" + req.snapshot_id
+            if name in self.held:
+                if _definition_of(self.held[name]) != d:
+                    raise AgniError(
+                        f"{rpc.service}/{rpc.method}: {name} holds a different definition; update it instead", code="already_exists"
+                    )
+                return _copy(self.held[name])
+        else:
+            name = self._mint()
+        return self._hold(name, d)
+
+    def _GetSnapshot(self, rpc: Rpc, req: Message) -> Message:
+        return _copy(self.lookup(rpc)(req.name))
+
+    def _ListSnapshots(self, rpc: Rpc, req: Message) -> Message:
+        uri = _snapshot_filter(rpc, req.filter)
+        held = [s for _, s in sorted(self.held.items()) if not uri or s.uri == uri]
+        if req.page_token:
+            held = [s for s in held if s.name > req.page_token]
+        size = req.page_size if 0 < req.page_size <= 100 else 100
+        resp = snapshot_pb2.ListSnapshotsResponse(snapshots=[_copy(s) for s in held[:size]])
+        if len(held) > size:
+            resp.next_page_token = held[size - 1].name
+        return resp
+
+    def _UpdateSnapshot(self, rpc: Rpc, req: Message) -> Message:
+        name = req.snapshot.name
+        d = _definition_of(self.lookup(rpc)(name))
+        nxt = _definition_of(req.snapshot)
+        if not req.update_mask.paths:
+            d = nxt
+        for p in req.update_mask.paths:
+            if p not in _DEFINITION:
+                raise AgniError(
+                    f"{rpc.service}/{rpc.method}: {p!r} is not a field UpdateSnapshot can change; it can change "
+                    + ", ".join(_DEFINITION),
+                    code="invalid_argument",
+                )
+            if p != "overlay":
+                setattr(d, p, getattr(nxt, p))
+            elif nxt.HasField("overlay"):
+                d.overlay.CopyFrom(nxt.overlay)
+            else:
+                d.ClearField("overlay")
+        return self._hold(name, d)
+
+    def _DeleteSnapshot(self, rpc: Rpc, req: Message) -> Message:
+        self.lookup(rpc)(req.name)
+        del self.held[req.name]
+        return rpc.response()
+
+    def _mint(self) -> str:
+        while True:
+            self.minted += 1
+            name = f"snapshots/cli-{self.minted}"
+            if name not in self.held:
+                return name
+
+    def _hold(self, name: str, d: snapshot_pb2.Snapshot) -> snapshot_pb2.Snapshot:
+        # An overlay no command can send is refused here, at its definition, rather than at every
+        # question; which commands take a library, board or naming is still each command's to refuse.
+        _only(d, _CLI_DEFINITION, f"Snapshot {name}")
+        _library_only(d, f"Snapshot {name}")
+        d.name = name
+        self.held[name] = d
+        return _copy(d)
+
+
+# The fields of a snapshot's definition, the ones UpdateSnapshot can change, and those a CLI command
+# can be given. No command has a flag for geometry_uri, so a definition setting it is refused.
+_DEFINITION = ("uri", "board_uri", "geometry_uri", "as_named", "flatten_hierarchy", "overlay")
+_CLI_DEFINITION = ("uri", "board_uri", "as_named", "flatten_hierarchy", "overlay")
+
+
+def _definition_of(s: snapshot_pb2.Snapshot) -> snapshot_pb2.Snapshot:
+    d = snapshot_pb2.Snapshot(
+        uri=s.uri, board_uri=s.board_uri, geometry_uri=s.geometry_uri, as_named=s.as_named, flatten_hierarchy=s.flatten_hierarchy
+    )
+    if s.HasField("overlay"):
+        d.overlay.CopyFrom(s.overlay)
+    return d
+
+
+def _copy(s: snapshot_pb2.Snapshot) -> snapshot_pb2.Snapshot:
+    out = snapshot_pb2.Snapshot()
+    out.CopyFrom(s)
+    return out
+
+
+def _snapshot_filter(rpc: Rpc, f: str) -> str:
+    # The one filter a server supports, uri="...", read as it reads it.
+    f = f.strip()
+    if not f:
+        return ""
+    if not (f.startswith('uri="') and f.endswith('"') and len(f) >= len('uri=""')):
+        raise AgniError(
+            f'{rpc.service}/{rpc.method}: filter {f!r} is not supported; the only supported filter is uri="<uri>"',
+            code="invalid_argument",
+        )
+    return f[len('uri="') : -1]
+
+
+# Commands with a wire form and no rpc behind them. Reached through CliTransport.run.
+CLI_ONLY: Dict[str, Type[Message]] = {
+    "validate": validate_pb2.ValidateReport,
+    "params": param_pb2.PartSpec,
+}
+
+
+class CliTransport:
+    """Runs the ``agni`` binary and parses its ``--format json``.
+
+    Needs no server and ships as one binary, at the price of reading the design again on every call.
+    A question names a snapshot here as over Connect, and this transport answers SnapshotService
+    itself: an ingest keeps the definition under a name it mints, and each question turns that
+    definition back into the command's arguments. Designs are named by ``mount://`` URI like the
+    Connect transport, so one definition works on both; ``mounts`` maps each mount name to the folder
+    it exposes and becomes ``--mount`` flags. A plain file path in a definition also works here, and
+    only here.
+
+    ``agni`` is the binary to run. ``env`` replaces the child's environment when given, which is how a
+    test keeps a personal ``~/.config/agni/agni.yaml`` out of the run.
+    """
+
+    def __init__(
+        self,
+        agni: str = "agni",
+        *,
+        mounts: Optional[Mapping[str, str]] = None,
+        cwd: Optional[str] = None,
+        env: Optional[Mapping[str, str]] = None,
+        timeout: Optional[float] = None,
+        strict: bool = False,
+    ) -> None:
+        self.agni = agni
+        self.mounts = dict(mounts or {})
+        self.cwd = cwd
+        self.env = dict(env) if env is not None else None
+        self.timeout = timeout
+        self.strict = strict
+        self.snapshots = _CliSnapshots()
+
+    def call(self, rpc: Rpc, request: Message) -> Message:
+        if rpc.service == "SnapshotService":
+            return self.snapshots.call(rpc, request)
+        cmd = CLI_COMMANDS.get(f"{rpc.service}/{rpc.method}")
+        if cmd is None:
+            raise CliUnsupported(f"{rpc.service}/{rpc.method} has no CLI command; use ConnectTransport")
+        lookup = self.snapshots.lookup(rpc)
+        stdin = cmd.stdin(request) if cmd.stdin else None
+        argv = cmd.argv(request, lookup)
+        # A library the snapshot was defined with travels as files the binary reads with --lib, so the
+        # question means the same here as over Connect (agni issue 788). The directory lives for this call.
+        held = lookup(request.snapshot) if "snapshot" in request.DESCRIPTOR.fields_by_name else None
+        with tempfile.TemporaryDirectory(prefix="agni-lib-") as lib_dir:
+            argv += _write_library(held, lib_dir)
+            out = self._run_text(argv, allow_failure=cmd.answers_on_failure, stdin=stdin)
+        msg = parse(out, cmd.emits, strict=self.strict)
+        return cmd.wrap(msg) if cmd.wrap else msg
+
+    def run(self, args: Sequence[str], message_type: Type[M]) -> M:
+        """Run ``agni <args>`` and parse stdout as ``message_type``.
+
+        For a command with a wire form and no rpc, such as ``validate`` or ``params`` (see
+        ``CLI_ONLY``). The caller supplies ``--format json`` along with the rest of the arguments.
+        """
+        return parse(self._run_text(list(args)), message_type, strict=self.strict)
+
+    def _run_text(self, args: List[str], allow_failure: bool = False, stdin: Optional[str] = None) -> str:
+        argv = [self.agni] + args
+        for name, path in sorted(self.mounts.items()):
+            argv += ["--mount", f"{name}={os.fspath(path)}"]
+        try:
+            proc = subprocess.run(
+                argv,
+                cwd=self.cwd,
+                env=self.env,
+                capture_output=True,
+                text=True,
+                input=stdin,
+                timeout=self.timeout,
+            )
+        except FileNotFoundError as e:
+            raise AgniError(f"cannot run {self.agni!r}: {e}", code="unavailable") from e
+        if proc.returncode != 0 and not (allow_failure and proc.stdout.strip()):
+            raise AgniError(
+                f"agni {args[0]} exited {proc.returncode}",
+                code=f"exit_{proc.returncode}",
+                detail=proc.stderr.strip(),
+            )
+        return proc.stdout

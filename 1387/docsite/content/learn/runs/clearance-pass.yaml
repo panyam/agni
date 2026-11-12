@@ -1,0 +1,6 @@
+# Chapter 12: what a geometry PASS looks like. It measured the closest approach and states that it
+# never came within the floor, which is the considered-set discipline arriving at the board tier.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check --verdicts --rule copper-clearance cmd/agni/testdata/conformance/drc.passes.kicad_pcb

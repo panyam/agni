@@ -1,0 +1,129 @@
+// Package query is the design query surface (WS3-029). It runs Datalog over the design's fact base,
+// so an engineer runs ad-hoc queries ("search your whole design as relations, including
+// datasheets"). Every answer carries the provenance of the facts that produced it. Rules and search
+// share one vocabulary. A rule asserts a property over these relations, and a search is an
+// arbitrary query over the same ones.
+//
+// The engine itself lives in github.com/panyam/jaala/datalog (agni issue 731), and it knows nothing
+// about circuits. This package is agni's adapter over it, and it holds two things.
+//
+//   - a Source projecting a check.Model through a facts.Registry, so every relation the fact layer
+//     registers is queryable (source.go);
+//   - agni's own uses of queries: RuleFromQuery, the wire form, the catalog, and the teaching
+//     examples.
+//
+// Every name a query calls is registered in the fact layer's vocabulary
+// (facts.Registry.Vocabulary), whether it is a relation, a predicate or a module. So this package
+// adds no names of its own. The circuit walks net.reaches and net.route live with the relations, in
+// stdlib/relations.
+//
+// The types are aliases for the engine's, so a Query built here is the engine's Query and nothing
+// converts at the boundary.
+//
+// The package is WASM-clean. The engine imports only the standard library, and this adapter imports
+// only check, facts and the generated IR. So the whole chain read → Model → facts → query runs
+// client-side in the browser.
+package query
+
+import (
+	"github.com/panyam/jaala/datalog"
+	"github.com/panyam/jaala/ns"
+	"github.com/panyam/jaala/stdlib"
+)
+
+// The query IR. See the engine's documentation for each; they are aliases, not copies.
+type (
+	Query     = datalog.Query
+	Rule      = datalog.Rule
+	Body      = datalog.Body
+	Literal   = datalog.Literal
+	Atom      = datalog.Atom
+	Compare   = datalog.Compare
+	Term      = datalog.Term
+	Var       = datalog.Var
+	Value     = ns.Value
+	Aggregate = datalog.Aggregate
+	// BodyAggregate is an aggregate bound inside a clause: `?c = count(?n) : { pin(?r, ?n, _) }`.
+	BodyAggregate = datalog.BodyAggregate
+	// Order is one `order by` item.
+	Order = datalog.Order
+	// Expr is arithmetic or a function call, legal as a comparison's operand: `?w = ?v * ?i`.
+	Expr = datalog.Expr
+	// Table is an answer as columns and rows of values (Evaluator.EvalTable).
+	Table = datalog.Table
+	Row   = datalog.Row
+	// Base is a design's queryable fact base. Build one with NewBase.
+	Base = datalog.Base
+	// Evaluator answers a Query over a Base.
+	Evaluator = datalog.Evaluator
+	// Naive is the engine's reference evaluator: rule bodies run in written order and derived
+	// relations are computed in full. Tests compare against it; agni answers with Default.
+	Naive = datalog.Naive
+	// SemiNaive is the evaluator agni answers with (see Default).
+	SemiNaive = datalog.SemiNaive
+)
+
+// Default is the engine's semi-naive fixpoint, and every agni surface answers with it. It plans
+// each rule body, inlines single-rule relations, and derives a relation called with a bound
+// argument only for the values the query demands. It answers as Naive does, and the engine tests
+// the two against each other. They differ in cost. A body's written order also no longer decides
+// that cost, so a rule opening with an unbound walk is reordered rather than walking from every net
+// (WS3-114).
+//
+// On a recursive relation reachable two ways, citations can differ from Naive's, since the rounds
+// run in a different order. Rows never differ.
+var Default Evaluator = SemiNaive{}
+
+// V builds a variable term (?name in the text syntax).
+func V(name string) Term { return datalog.V(name) }
+
+// Str builds a string-constant term.
+func Str(s string) Term { return datalog.Str(s) }
+
+// Num builds a numeric-constant term.
+func Num(f float64) Term { return datalog.Num(f) }
+
+// Rel builds an atom Relation(args...).
+func Rel(name string, args ...Term) Atom { return datalog.Rel(name, args...) }
+
+// Pos wraps an atom as a positive body literal.
+func Pos(a Atom) Literal { return datalog.Pos(a) }
+
+// Neg wraps an atom as a negated body literal.
+func Neg(a Atom) Literal { return datalog.Neg(a) }
+
+// Cmp builds a comparison literal, Op in {<, <=, =, !=, >, >=}.
+func Cmp(l Term, op string, r Term) Literal { return datalog.Cmp(l, op, r) }
+
+// Def builds a rule Head :- body. Disjunction is several Defs sharing a Head relation.
+func Def(head Atom, body ...Literal) Rule { return datalog.Def(head, body...) }
+
+// Build assembles a Query from its rules, the goal literals to solve, and the projected answer terms.
+func Build(rules []Rule, goal []Literal, sel ...Term) Query {
+	return datalog.Build(rules, goal, sel...)
+}
+
+// Parse parses the query text syntax. A query that does not parse fails with a *SyntaxError, which
+// says where in s the parser stopped (ErrorPosition).
+func Parse(s string) (Query, error) {
+	q, err := datalog.Parse(s)
+	if err != nil {
+		return q, syntaxError(err, s)
+	}
+	return q, nil
+}
+
+// MustParse parses a query string and panics on error, for hand-authored rules constructed at package
+// init, where a malformed built-in query is a programming error surfaced at startup.
+func MustParse(s string) Query { return datalog.MustParse(s) }
+
+// NonInjectiveRules reports rules whose body lets two variables in the same position of the same
+// relation bind the same value with nothing separating them. See the engine's documentation.
+func NonInjectiveRules(q Query) []string { return datalog.NonInjectiveRules(q) }
+
+// CompileGlob compiles a shell-style glob the way the str.glob predicate does, for a Go caller that
+// must match the same pattern the same way.
+var CompileGlob = stdlib.CompileGlob
+
+// CompilePattern compiles a regular expression the way the str.match predicate does.
+var CompilePattern = stdlib.CompilePattern

@@ -1,0 +1,98 @@
+package relations
+
+import (
+	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+func rolesDesign() *ir.Design {
+	return &ir.Design{Nets: []*ir.Net{
+		{Name: "12V_OUT", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "12V_FB", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "12V_SW", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "12V_MODE1", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "12V_VDRV", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SDA", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SCL", Attributes: map[string]string{"external": "true"}, Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+}
+
+// TestNetRoleProjectsEveryStampedRole covers the point of the relation. A role the engine acts on
+// must be nameable in a query, and before agni 691 control and gate_drive were stamped and
+// projected nowhere.
+func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
+
+	got := map[string]map[string]bool{}
+	for _, f := range byRel[RelNetRole] {
+		if got[f.Subject] == nil {
+			got[f.Subject] = map[string]bool{}
+		}
+		got[f.Subject][f.Value] = true
+	}
+
+	for _, c := range []struct {
+		net  string
+		role ir.Role
+	}{
+		{"12V_OUT", ir.Role_ROLE_RAIL},
+		{"12V_FB", ir.Role_ROLE_FEEDBACK},
+		{"12V_SW", ir.Role_ROLE_SWITCHING},
+		{"12V_MODE1", ir.Role_ROLE_CONTROL},
+		{"12V_VDRV", ir.Role_ROLE_GATE_DRIVE},
+		{"GND", ir.Role_ROLE_GROUND},
+	} {
+		if !got[c.net][classify.RoleToken(c.role)] {
+			t.Errorf("net.role(%s, %s) missing; got %v", c.net, c.role, got[c.net])
+		}
+	}
+	// A net can have several, and 12V_SW is rail by prefix and switching by suffix.
+	if !got["12V_SW"][classify.RoleToken(ir.Role_ROLE_RAIL)] {
+		t.Errorf("net.role must emit EVERY role, not the first: 12V_SW = %v", got["12V_SW"])
+	}
+	// The negative half. A plain signal has none.
+	if len(got["SDA"]) != 0 {
+		t.Errorf("net.role(SDA) = %v, want no rows", got["SDA"])
+	}
+}
+
+// TestEveryRoleInTheVocabularyIsProjectable is the ratchet. The projector iterates
+// classify.AllNetRoles. A role added to the token list and forgotten here is invisible to every
+// query. control and gate_drive went a release unqueryable that way.
+func TestEveryRoleInTheVocabularyIsProjectable(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
+	seen := map[string]bool{}
+	for _, f := range byRel[RelNetRole] {
+		seen[f.Value] = true
+	}
+	for _, role := range classify.AllNetRoles() {
+		if !seen[classify.RoleToken(role)] {
+			t.Errorf("role %q is in AllNetRoles but no fixture net projects it; either the fixture or the projector is short", role)
+		}
+	}
+}
+
+// TestNetAttrProjectsDeclaredAttributes covers the twin of component.attr, and the half nets never had.
+func TestNetAttrProjectsDeclaredAttributes(t *testing.T) {
+	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
+
+	var found bool
+	for _, f := range byRel[RelNetAttr] {
+		if f.Subject == "SCL" && f.Object == "external" && f.Value == "true" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("net.attr(SCL, external, true) missing: %+v", byRel[RelNetAttr])
+	}
+	// Declared, not derived. A role must not leak into the attribute relation.
+	for _, f := range byRel[RelNetAttr] {
+		if f.Object == "role" {
+			t.Errorf("net.attr carries a role (%+v); roles are net.role, attributes are what the file declared", f)
+		}
+	}
+}

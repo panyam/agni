@@ -1,0 +1,599 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"gopkg.in/yaml.v3"
+)
+
+const spec = "content/tutorials/runs/coverage-rollup.yaml"
+
+// TestAgniRunCapturesAndCaches is the prototype's acceptance test. It runs, it commits the capture,
+// and a second call reuses it rather than re-running the engine.
+func TestAgniRunCapturesAndCaches(t *testing.T) {
+	keepCapture(t, spec+outputSuffix)
+	_ = os.Remove(spec + outputSuffix)
+	first := AgniRun(spec)
+	if !strings.Contains(first, "14 of 15 covered") {
+		t.Fatalf("expected the real rollup, got:\n%s", first)
+	}
+	out, stamp, err := readOutput(spec + outputSuffix)
+	if err != nil {
+		t.Fatalf("the capture should have been written: %v", err)
+	}
+	if stamp == "" || len(out) != 1 || !strings.Contains(out[0], "14 of 15 covered") {
+		t.Errorf("capture should carry a stamp and the body, got stamp=%q", stamp)
+	}
+
+	// A second call must be a CACHE HIT. The test proves it by corrupting the body. If the run
+	// happened again, it would overwrite the corruption. The reuse keeps a docs build hermetic.
+	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+stamp+"\nSENTINEL\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); !strings.Contains(got, "SENTINEL") {
+		t.Errorf("a fresh capture must be reused, not regenerated:\n%s", got)
+	}
+
+	// An edited fixture or spec produces a stamp mismatch, and a mismatch regenerates.
+	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+"stale\nSENTINEL\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); strings.Contains(got, "SENTINEL") {
+		t.Error("a stale stamp must regenerate rather than serve the old capture")
+	}
+}
+
+// keepCapture puts a tracked capture back as it was when the test ends, passing or failing. The
+// tests below delete and corrupt it to prove the cache. A run that failed part way used to leave it
+// deleted, for example when the oracle samples were not fetched. Nobody made that change on
+// purpose, and the next `git add` of the directory staged it (agni issue 1167).
+func keepCapture(t *testing.T, path string) {
+	t.Helper()
+	orig, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the capture %s should be checked in: %v", path, err)
+	}
+	t.Cleanup(func() {
+		if err := os.WriteFile(path, orig, 0o644); err != nil {
+			t.Errorf("could not restore %s: %v", path, err)
+		}
+	})
+}
+
+// TestAgniRunIsolatesTheFixture guards a hazard that bit by hand. Rung 11 walks a reader through
+// `mv params params-old`, and a run against the real fixture renamed the checked-in directory.
+func TestAgniRunIsolatesTheFixture(t *testing.T) {
+	tmp := t.TempDir() + "/destructive.yaml"
+	if err := os.WriteFile(tmp, []byte("fixture: examples/tutorial-project\nscript: |\n  rm -rf params\n  ls params 2>/dev/null || echo GONE\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Driven through the internals, since safeJoin confines AgniRun to the docsite tree.
+	raw, _ := os.ReadFile(tmp)
+	var s runSpec
+	if err := yaml.Unmarshal(raw, &s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := execute(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || !strings.Contains(got[0], "GONE") {
+		t.Errorf("the script should have run, got %q", got)
+	}
+	if _, err := os.Stat("../examples/tutorial-project/params"); err != nil {
+		t.Fatalf("the CHECKED-IN fixture was mutated by a run: %v", err)
+	}
+}
+
+// TestCaptureRulesAreDeclarative covers the three fields that replaced shell plumbing. The fields
+// exist to move the fragile mechanics into Go, where they CAN be tested, instead of re-deriving
+// them in every spec. So they are worth testing directly.
+func TestCaptureRulesAreDeclarative(t *testing.T) {
+	base := runSpec{Script: "echo out; echo err 1>&2; exit 3"}
+	for name, tc := range map[string]struct {
+		spec runSpec
+		want string
+	}{
+		"stdout is the default": {runSpec{Script: base.Script}, "out\n"},
+		"stderr only":           {runSpec{Script: base.Script, Capture: "stderr"}, "err\n"},
+		"both":                  {runSpec{Script: base.Script, Capture: "both"}, "out\nerr\n"},
+		"none, for a lesson that is only the exit code": {
+			runSpec{Script: base.Script, Capture: "none", Exit: true}, "exit 3\n"},
+		"exit is appended to the captured stream": {
+			runSpec{Script: base.Script, Exit: true}, "out\nexit 3\n"},
+		"match keeps lines by shape": {
+			runSpec{Script: "echo alpha; echo beta; echo alpaca", Match: "^alp"}, "alpha\nalpaca\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := execute(tc.spec)
+			if err != nil {
+				t.Fatalf("execute: %v", err)
+			}
+			if len(got) != 1 || got[0] != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestMatchingNothingIsAnError makes a shape-based filter safe to rely on. A filter that stops
+// matching has to say so. Otherwise the page renders an empty block and teaches from a blank space.
+func TestMatchingNothingIsAnError(t *testing.T) {
+	_, err := execute(runSpec{Script: "echo hello", Match: "^goodbye"})
+	if err == nil {
+		t.Fatal("a filter selecting no lines must be an error, not an empty block")
+	}
+	if !strings.Contains(err.Error(), "changed shape") {
+		t.Errorf("the error should say what happened, got %v", err)
+	}
+}
+
+// A command that fails and prints nothing to the captured stream rendered as an empty block, and the
+// gate stayed green because regenerating it reproduced the emptiness exactly (agni issue 825). Rung 7
+// shipped two such blocks. Exit status is still a legitimate lesson, so the spec has to say so.
+func TestAFailureThatPrintsNothingIsAnError(t *testing.T) {
+	for name, spec := range map[string]runSpec{
+		"stdout empty, error on stderr": {Script: "echo 'duplicate rule source' 1>&2; exit 1"},
+		"capture none hides a failure":  {Script: "echo report; exit 2", Capture: "none"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := execute(spec)
+			if err == nil {
+				t.Fatal("a failing step that captured nothing must be an error, not an empty block")
+			}
+			if !strings.Contains(err.Error(), "exited") || !strings.Contains(err.Error(), "exit: true") {
+				t.Errorf("the error should give the exit status and the way to declare it, got %v", err)
+			}
+		})
+	}
+	if _, err := execute(runSpec{Script: "echo 'duplicate rule source' 1>&2; exit 1"}); err == nil || !strings.Contains(err.Error(), "duplicate rule source") {
+		t.Errorf("the error should quote what the command said on stderr, got %v", err)
+	}
+}
+
+// An empty or failing step is legal in three cases. The spec declares the exit status as the
+// lesson, the step succeeded and printed nothing by design, or it failed while printing a report.
+func TestADeclaredOrExplainedExitStaysLegal(t *testing.T) {
+	for name, tc := range map[string]struct {
+		spec runSpec
+		want string
+	}{
+		"exit declared, nothing captured": {runSpec{Script: "exit 1", Exit: true}, "exit 1\n"},
+		"capture none with exit declared": {runSpec{Script: "echo r; exit 2", Capture: "none", Exit: true}, "exit 2\n"},
+		"succeeded and printed nothing":   {runSpec{Script: "echo r >/dev/null"}, ""},
+		"failed while printing a report":  {runSpec{Script: "echo finding; exit 1"}, "finding\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := execute(tc.spec)
+			if err != nil {
+				t.Fatalf("execute: %v", err)
+			}
+			if len(got) != 1 || got[0] != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestUnknownCaptureIsRejected holds that a typo must not silently fall back to stdout.
+func TestUnknownCaptureIsRejected(t *testing.T) {
+	if _, err := execute(runSpec{Script: "echo x", Capture: "stdrr"}); err == nil {
+		t.Error("an unknown capture must be rejected")
+	}
+}
+
+// The stamp has to be a function of COMMITTED content, or no committed value can be right for
+// everyone (agni issue 357).
+//
+// inputHash walked the fixture on disk and hashed whatever it found. The tutorial's own Makefile has
+// a `report` target that writes examples/tutorial-project/reports/, which its .gitignore covers, so
+// anyone who had followed the tutorial hashed two extra files. Their every gate run rewrote the
+// committed output with a different stamp, and a `git checkout --` on a file nobody edited became a
+// step in the routine. Regenerating and committing would only have moved the staleness to whoever
+// had NOT run the tutorial.
+func TestInputHashIgnoresUntrackedFiles(t *testing.T) {
+	const fixture = "examples/tutorial-project"
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("inputHash: %v", err)
+	}
+
+	// A generated file of exactly the shape the tutorial's own `make report` leaves behind.
+	stray := filepath.Join("..", fixture, "reports", "gateway", "stray.json")
+	if err := os.MkdirAll(filepath.Dir(stray), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stray, []byte(`{"generated":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(stray) })
+
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("inputHash after the stray file: %v", err)
+	}
+	if after != before {
+		t.Errorf("an untracked file changed the stamp (%s -> %s); a committed output can then never be "+
+			"current for a checkout that lacks it", before, after)
+	}
+}
+
+// The positive control for the test above. A hash that ignored the fixture entirely, or returned a
+// constant, would satisfy "untracked files do not move it" perfectly while measuring nothing.
+func TestInputHashChangesWithTrackedContent(t *testing.T) {
+	const fixture = "examples/tutorial-project"
+	tracked := filepath.Join("..", fixture, "project.yaml")
+	original, err := os.ReadFile(tracked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.WriteFile(tracked, original, 0o644) })
+
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tracked, append(original, []byte("\n# edited\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after == before {
+		t.Error("editing a TRACKED fixture file must move the stamp, or the output would never regenerate")
+	}
+}
+
+// A fixture git cannot list is an error rather than a silent fall back to walking the directory.
+// A fall back would invisibly restore the bug this file guards against. The stamp would start
+// depending on the working tree again, with nothing to say so.
+func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
+	if _, err := inputHash([]byte("spec"), "no/such/fixture"); err == nil {
+		t.Error("a fixture that does not exist must be an error")
+	}
+
+	// This case distinguishes the two implementations, a fixture that EXISTS on disk and
+	// is tracked by nothing. Walking it produces a confident hash over files that no other checkout
+	// has. Listing it produces nothing. A hash of no content would be a stamp that looks stable and
+	// means nothing. A fixture nobody committed is a mistake, so say so.
+	dir := filepath.Join("..", "docsite", "testdata-untracked-fixture")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	if err := os.WriteFile(filepath.Join(dir, "design.edn"), []byte("(edif X)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inputHash([]byte("spec"), "docsite/testdata-untracked-fixture"); err == nil {
+		t.Error("a fixture with no tracked files must be an error, not a hash of whatever is on disk")
+	}
+}
+
+// A fetched fixture has nothing tracked, so its stamp has to cover something else. Otherwise a spec
+// naming a board as the fixture stamps identically to one naming none (agni issue 682). It covers
+// the samples pin, and needs no corpus on disk to do so, since the fixture below does not exist.
+func TestInputHashCoversAFetchedFixtureByItsPin(t *testing.T) {
+	pin := filepath.Join(t.TempDir(), "samples.pin")
+	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	orig := samplesPin
+	samplesPin = pin
+	t.Cleanup(func() { samplesPin = orig })
+
+	const fixture = "tools/samples/boards/not-fetched-here"
+	none, err := inputHash([]byte("spec"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("a fetched fixture must stamp without the corpus present: %v", err)
+	}
+	if before == none {
+		t.Error("a fetched fixture stamped identically to no fixture at all")
+	}
+	if other, _ := inputHash([]byte("spec"), "tools/samples/boards/another"); other == before {
+		t.Error("two fetched boards under one pin stamped identically")
+	}
+	if err := os.WriteFile(pin, []byte("VERSION v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after == before {
+		t.Error("bumping the samples pin must move a fetched fixture's stamp, or its capture never regenerates")
+	}
+}
+
+// A continued command has ONE prompt. Prefixing the continuation line too rendered a second `$`
+// where there is no second command, and a reader copying the block got a command broken in half.
+func TestAContinuedCommandCarriesOnePrompt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{"continued", "agni diff a.edn b.edn \\\n  --symbol-path syms", []string{"$ agni diff a.edn b.edn \\", "  --symbol-path syms"}},
+		{"two commands", "agni stats a.edn\nagni stats b.edn", []string{"$ agni stats a.edn", "$ agni stats b.edn"}},
+		{"escaped backslash ends it", "agni query 'x\\\\'\nagni stats b.edn", []string{"$ agni query 'x\\\\'", "$ agni stats b.edn"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			continued := false
+			for _, l := range strings.Split(tc.in, "\n") {
+				if continued {
+					got = append(got, l)
+				} else {
+					got = append(got, "$ "+l)
+				}
+				continued = isContinued(l)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %d lines, want %d: %q", len(got), len(tc.want), got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("line %d: got %q, want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// TestStepsCaptureSeparately is the acceptance for per-step pairing. A multi-command lesson used to
+// render every command and then every output concatenated, so a reader matched halves by eye.
+func TestStepsCaptureSeparately(t *testing.T) {
+	got, err := execute(runSpec{Steps: []runStep{
+		{Script: "echo first"},
+		{Script: "echo second"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	want := []string{"first\n", "second\n"}
+	if len(got) != len(want) {
+		t.Fatalf("got %d captures, want %d: %q", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("step %d: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// Steps share the scratch directory but not a shell, so each step can be its own process. Rung 11
+// writes a results document in one step and re-renders it in the next.
+func TestAStepReadsWhatAnEarlierStepWrote(t *testing.T) {
+	got, err := execute(runSpec{Steps: []runStep{
+		{Script: "echo stored > artifact.txt"},
+		{Script: "cat artifact.txt"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(got) != 2 || got[1] != "stored\n" {
+		t.Errorf("the second step should have read the first step's file, got %q", got)
+	}
+}
+
+// A step that captures nothing is not a filter that stopped matching. Rung 11's first step redirects
+// its report away because the lesson is the results file it also wrote, and running the spec's
+// pattern over that empty capture failed the build.
+func TestAnEmptyCaptureIsNotAMatchFailure(t *testing.T) {
+	got, err := execute(runSpec{
+		Match: "^kept",
+		Steps: []runStep{
+			{Script: "echo noise > /dev/null"},
+			{Script: "echo kept; echo dropped"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("an empty capture must not fail the match guard: %v", err)
+	}
+	if len(got) != 2 || got[0] != "" || got[1] != "kept\n" {
+		t.Errorf("got %q, want [\"\" \"kept\\n\"]", got)
+	}
+	// As the positive control, the guard must still fire on a step that printed something and had
+	// all of it rejected by the filter. The guard exists to catch that regression.
+	if _, err := execute(runSpec{Match: "^kept", Steps: []runStep{{Script: "echo nothing-matches"}}}); err == nil {
+		t.Error("a filter selecting nothing from a NON-empty capture must still be an error")
+	}
+}
+
+// Exit belongs to the run rather than to a command, so it appears once, on the last block.
+func TestExitLandsOnTheLastStep(t *testing.T) {
+	got, err := execute(runSpec{Exit: true, Steps: []runStep{
+		{Script: "echo one"},
+		{Script: "echo two; exit 3"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(got) != 2 || got[0] != "one\n" || got[1] != "two\nexit 3\n" {
+		t.Errorf("got %q, want [\"one\\n\" \"two\\nexit 3\\n\"]", got)
+	}
+}
+
+// The capture file round-trips through the delimiter, and a ONE-step spec writes no delimiter at all.
+// Because of that second half, adding steps left all 80 single-command captures byte-identical.
+func TestCaptureFileRoundTrips(t *testing.T) {
+	for name, bodies := range map[string][]string{
+		"one step":      {"only\n"},
+		"two steps":     {"first\n", "second\n"},
+		"an empty step": {"", "second\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := t.TempDir() + "/c.output"
+			raw := stampPrefix + "abc\n" + strings.Join(bodies, stepDelim)
+			if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if len(bodies) == 1 && strings.Contains(raw, strings.TrimSpace(stepDelim)) {
+				t.Error("a one-step capture must carry no delimiter, or every existing capture would move")
+			}
+			got, stamp, err := readOutput(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stamp != "abc" {
+				t.Errorf("stamp: got %q", stamp)
+			}
+			if len(got) != len(bodies) {
+				t.Fatalf("got %d sections, want %d: %q", len(got), len(bodies), got)
+			}
+			for i := range bodies {
+				if got[i] != bodies[i] {
+					t.Errorf("section %d: got %q, want %q", i, got[i], bodies[i])
+				}
+			}
+		})
+	}
+}
+
+// A spec that sets both fields is contradictory, and picking one silently would render a lesson
+// nobody wrote.
+func TestScriptAndStepsAreMutuallyExclusive(t *testing.T) {
+	both := runSpec{Script: "echo x", Steps: []runStep{{Script: "echo y"}}}
+	if err := both.validate("spec.yaml"); err == nil {
+		t.Error("declaring both script and steps must be an error")
+	}
+	if err := (runSpec{}).validate("spec.yaml"); err == nil {
+		t.Error("declaring neither must be an error")
+	}
+	if err := (runSpec{Steps: []runStep{{Show: "agni check x"}}}).validate("spec.yaml"); err == nil {
+		t.Error("a step with a show but no script must be an error")
+	}
+}
+
+// TestInputHashRejectsUntrackedFixtureFiles is the other side of TestInputHashIgnoresUntrackedFiles,
+// and the two only make sense together. A gitignored file is generated output nobody commits, so it
+// must not move the stamp. A file git neither tracks nor ignores is a fixture somebody has not
+// committed yet, and it moves the stamp the moment they do, so the gate passes locally and fails in CI
+// on a tree whose content never changed (agni issue 588).
+func TestInputHashRejectsUntrackedFixtureFiles(t *testing.T) {
+	const fixture = "readers/kicad/testdata"
+	if _, err := inputHash([]byte("spec"), fixture); err != nil {
+		t.Fatalf("clean fixture should hash: %v", err)
+	}
+
+	stray := filepath.Join("..", fixture, "zz_untracked_fixture.kicad_sch")
+	if err := os.WriteFile(stray, []byte("(kicad_sch)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(stray) })
+
+	_, err := inputHash([]byte("spec"), fixture)
+	if err == nil {
+		t.Fatal("an untracked, unignored fixture file must be rejected; it changes the stamp on commit")
+	}
+	for _, want := range []string{"zz_untracked_fixture.kicad_sch", "Commit them"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error does not say %q: %v", want, err)
+		}
+	}
+}
+
+// A tracked project over a fetched board (the Jetson tutorial project) stamps on BOTH, so committing
+// a project edit and bumping the samples pin each regenerate its captures.
+func TestSpecStampCoversItsFetchedBoard(t *testing.T) {
+	pin := filepath.Join(t.TempDir(), "samples.pin")
+	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	orig := samplesPin
+	samplesPin = pin
+	t.Cleanup(func() { samplesPin = orig })
+
+	plain := runSpec{Fixture: "examples/tutorial-project"}
+	withBoard := runSpec{Fixture: "examples/tutorial-project", Fetched: "tools/samples/boards/not-fetched-here", FetchedInto: "designs/x"}
+	a, err := specStamp([]byte("spec"), plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := specStamp([]byte("spec"), withBoard)
+	if err != nil {
+		t.Fatalf("a fetched board must stamp without the corpus present: %v", err)
+	}
+	if a == b {
+		t.Error("naming a fetched board stamped identically to naming none")
+	}
+	if err := os.WriteFile(pin, []byte("VERSION v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := specStamp([]byte("spec"), withBoard); after == b {
+		t.Error("bumping the samples pin must move the stamp of a spec that copies a fetched board")
+	}
+	if after, _ := specStamp([]byte("spec"), plain); after != a {
+		t.Error("the samples pin moved the stamp of a spec that reads no fetched board")
+	}
+}
+
+// The board is copied INTO the project copy without replacing anything the project tracks, because
+// the tutorial teaches the project's own design.yaml, and the fetched one is its seed.
+func TestCopyFetchedKeepsTheProjectsOwnFiles(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	for name, body := range map[string]string{"board.kicad_sch": "fetched sch", "design.yaml": "fetched descriptor"} {
+		if err := os.WriteFile(filepath.Join(src, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	into := filepath.Join(dst, "designs", "x")
+	if err := os.MkdirAll(into, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(into, "design.yaml"), []byte("project descriptor"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyFetched(src, into); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(into, "board.kicad_sch")); string(b) != "fetched sch" {
+		t.Errorf("board file = %q, want the fetched copy", b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(into, "design.yaml")); string(b) != "project descriptor" {
+		t.Errorf("design.yaml = %q, want the project's own, not the fetched one", b)
+	}
+}
+
+// agni issue 1149: with AGNI_DOCS_RUNS=stored a capture is served as written, whatever its stamp, and
+// nothing is run or written, so a server rendering every page leaves the working tree alone.
+func TestStoredRunsAreServedAsWrittenAndNeverWritten(t *testing.T) {
+	path := spec + outputSuffix
+	orig, err := os.ReadFile(path)
+	t.Cleanup(func() {
+		if err == nil {
+			_ = os.WriteFile(path, orig, 0o644)
+		} else {
+			_ = os.Remove(path)
+		}
+	})
+	t.Setenv(runsModeEnv, "stored")
+
+	stale := []byte(stampPrefix + "stale\nSENTINEL\n")
+	if err := os.WriteFile(path, stale, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); !strings.Contains(got, "SENTINEL") {
+		t.Errorf("a stale capture should be served as written:\n%s", got)
+	}
+	if after, _ := os.ReadFile(path); string(after) != string(stale) {
+		t.Errorf("the capture was rewritten:\n%s", after)
+	}
+
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); !strings.Contains(got, "make tutorial-runs") {
+		t.Errorf("a missing capture should say how to generate it:\n%s", got)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("a missing capture was generated: %v", err)
+	}
+}

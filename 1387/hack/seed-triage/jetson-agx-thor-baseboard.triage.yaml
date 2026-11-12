@@ -1,0 +1,151 @@
+# Every failing or inconclusive verdict the full catalog makes on this seeded design, each with
+# a judgement (agni issue 857). TestSeedTriage fails on any difference from what the engine finds,
+# and `make seed-triage` drafts new findings as untriaged. Classes: defect, design-choice,
+# needs-intent (a fact about the board is undeclared) and false-positive (with its ticket).
+design: tools/samples/boards/jetson-agx-thor-baseboard
+findings:
+  bulk-cap:
+    - class: design-choice
+      why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
+      subjects:
+        - net:Net-(D1-C)
+  floating-input:
+    - class: design-choice
+      why: Each is an equalization strap of U33, a TUSB1046 redriver, with a 1 kOhm pull-up and a 1 kOhm pull-down both marked do-not-populate, so on the assembled board the pin is left open. Its EQ and SSEQ pins are four-level strap inputs, where open selects one of the levels, so leaving both straps off is a setting. Not checked against the TUSB1046 datasheet.
+      subjects:
+        - net:/USB DP Alt mode/USBC1_DPEQ0
+        - net:/USB DP Alt mode/USBC1_EQ0
+        - net:/USB DP Alt mode/USBC1_SSEQ0
+  esd-protection:
+    - class: design-choice
+      why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.
+      subjects:
+        - net:/SFP/SFI_CONN_RX_N
+        - net:/SFP/SFI_CONN_RX_P
+        - net:/SFP/SFI_CONN_TX_N
+        - net:/SFP/SFI_CONN_TX_P
+        - net:/SFP/SH
+        - net:Net-(J12-TX_{FAULT})
+        - net:Net-(J12-RS0)
+        - net:Net-(J12-TX_{DISABLE})
+        - net:Net-(J12-RX_{LOS})
+        - net:Net-(J12-RS1)
+  i2c-pull-up:
+    - class: needs-intent
+      why: These lines pass through an NTS0102 level translator, which carries its own 10 kOhm pull-ups on both sides; that is a datasheet fact this run has no parameter set for.
+      subjects:
+        - net:/USB Debug, PD/FTDI_CBUS0{slash}SDA
+        - net:/USB Debug, PD/FTDI_CBUS3{slash}SCL
+    - class: design-choice
+      why: The TPS65988's third I2C port is unused and brought to a test point only.
+      subjects:
+        - net:/USB Debug, PD/PDC_I2C3_SCL
+        - net:/USB Debug, PD/PDC_I2C3_SDA
+    - class: design-choice
+      why: The mux's downstream camera channels are pulled up on the camera modules at the far end of the FFCs.
+      subjects:
+        - net:/CSI/MUX_I2C_4_SCL
+        - net:/CSI/MUX_I2C_4_SDA
+        - net:/CSI/MUX_I2C_5_SCL
+        - net:/CSI/MUX_I2C_5_SDA
+        - net:/CSI/MUX_I2C_6_SCL
+        - net:/CSI/MUX_I2C_6_SDA
+        - net:/CSI/MUX_I2C_7_SCL
+        - net:/CSI/MUX_I2C_7_SDA
+    - class: design-choice
+      why: These buses come straight from the module connector (the camera bus through the 0 Ohm R163 into the mux), and the carrier relies on pull-ups inside the module. Not checked against the module's pinout, so this rests on the carrier having no footprint for them.
+      subjects:
+        - net:/CSI/I2C_MUX_SCL
+        - net:/CSI/I2C_MUX_SDA
+        - net:/SoM_IO/I2C1_SCL_1V8
+        - net:/SoM_IO/I2C1_SDA_1V8
+        - net:/Expansion connector/I2C7.SCL
+        - net:/Expansion connector/I2C7.SDA
+        - net:/Expansion connector/I2C8.SCL
+        - net:/Expansion connector/I2C8.SDA
+        - net:/CSI/I2C_{CAM}.SCL
+        - net:/CSI/I2C_{CAM}.SDA
+    - class: needs-intent
+      why: Each of these SoM I2C lines at 1.8 V has a 2.2 kOhm pull-up footprint marked do-not-populate (R357, R358 and their neighbours) and runs through an NTS0104 level translator, which carries its own 10 kOhm pull-ups; that is a datasheet fact this run has no parameter set for. Surfaced once DNP parts stopped counting as pull-ups (agni issue 938).
+      subjects:
+        - net:/SoM_IO/I2C0_SCL_1V8
+        - net:/SoM_IO/I2C0_SDA_1V8
+        - net:/SoM_IO/I2C2_SCL_1V8
+        - net:/SoM_IO/I2C2_SDA_1V8
+        - net:/SoM_IO/I2C3_SCL_1V8
+        - net:/SoM_IO/I2C3_SDA_1V8
+        - net:/SoM_IO/I2C5_SCL_1V8
+        - net:/SoM_IO/I2C5_SDA_1V8
+  i2c-redundant-pull-up:
+    - class: design-choice
+      why: Three sheets each bring their own pull-up onto the shared system I2C bus (4.7 k, 2.2 k and 200 k), about 1.5 kOhm together, which keeps the sink current near 2.2 mA at 3.3 V, inside the bus's 3 mA limit.
+      subjects:
+        - net:/USB Debug, PD/DEBUG_SCL
+        - net:/USB Debug, PD/DEBUG_SDA
+        - net:/I2C_{SYS}.SCL
+        - net:/I2C_{SYS}.SDA
+  rail-not-classified:
+    - class: needs-intent
+      why: FTDI_3V3 is the FT230X's 3.3 V regulator output, a real rail whose name the built-in vocabulary does not match; a project would declare it in its conventions lexicon.
+      subjects:
+        - net:/USB Debug, PD/FTDI_3V3
+  reverse-blocking-absent:
+    - class: design-choice
+      why: VCC_IN from the keyed Mini-Fit J2 reaches VCC through the LTC4412 ideal-diode controller U6 driving Q2 and Q39, which blocks backfeed from VCC's other sources. The 20 V buck U65 and U6's own IN pin sit on the connector side by design, and polarity rests on the keyed connector.
+      subjects:
+        - net:VCC_IN
+  single-pin-net:
+    - class: defect
+      why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's ERC reports both pins not connected. Harmless electrically.
+      kicad: agrees
+      subjects:
+        - net:unconnected-(J18-PadB24)
+        - net:unconnected-(J18-PadB25)
+  test-point-coverage:
+    - class: design-choice
+      why: The board puts test points on its main rails, not on each converter's internal supply and output nodes, the FMC rails or the debug bridge's 3.3 V.
+      subjects:
+        - net:/DCDC/12V_OUT
+        - net:/DCDC/12V_VDD
+        - net:/DCDC/16V_OUT
+        - net:/DCDC/16V_VDD
+        - net:/DCDC/1V15_OUT
+        - net:/DCDC/1V8_OUT
+        - net:/DCDC/20V_OUT
+        - net:/DCDC/20V_VDD
+        - net:/DCDC/3V3_OUT
+        - net:/DCDC/3V3_VDD
+        - net:/DCDC/5V_OUT
+        - net:/DCDC/5V_VDD
+        - net:/DCDC/5V_{AON}_OUT
+        - net:/DCDC/5V_{AON}_VDD
+        - net:/Expansion connector/+12V_FMC
+        - net:/Expansion connector/+3V3_AUX
+        - net:/Expansion connector/+3V3_FMC
+        - net:/Expansion connector/+5V_FMC
+        - net:/Expansion connector/+VCC_FMC
+        - net:/Expansion connector/+V_{ADJ}
+        - net:/M.2/3V3_M2
+        - net:/Power/3V3_LDO
+        - net:/DCDC/VIN_PWR_ON
+        - net:/SoM_IO2/TC_VCC
+        - net:/USB Debug, PD/FTDI_3V3
+    - class: design-choice
+      why: VCC_IN is probed at TP4 on VCC just past the ideal diode Q2 and Q39, or at J2's pins. FLASH_PWR is the diode-OR (D15 from +3V3, D17 from the PD controller's LDO) that powers the SPI flashes U29 and U52, and pin 1 of the Tag-Connect J4 that programs them reaches it.
+      subjects:
+        - net:FLASH_PWR
+        - net:VCC_IN
+kicad_only:
+  clearance:
+    - class: missed
+      why: Every one is the board's own rule hs_zone_clearance in jetson-agx-thor-baseboard.kicad_dru, 1 mm between a diff-pair track and a zone on its layer. agni reads no .kicad_dru, so copper-clearance checks the board's minimums alone.
+      ticket: 142
+      subjects:
+        - "*"
+  pin_to_pin:
+    - class: declined
+      why: Each net wire-ORs two open-drain flags, the camera load switches' FLG and the converters' P_GOOD, which their symbols type as outputs, and each carries a pull-up. output-output-conflict reads the pull-up as the open-drain idiom and passes, where KiCad's pin matrix sees two outputs.
+      subjects:
+        - net:/CSI/CAM_CTRL.CSIA_FLG
+        - net:/CSI/CAM_CTRL.CSIB_FLG
+        - net:/DCDC/~{VDDIN_PWR_BAD}

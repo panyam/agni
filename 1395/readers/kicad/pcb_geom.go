@@ -1,0 +1,721 @@
+package kicad
+
+import (
+	"fmt"
+	"io"
+	"math"
+	"sort"
+	"strconv"
+
+	"github.com/panyam/agni/core/num"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
+	"github.com/panyam/agni/internal/refdes"
+)
+
+// ReadBoardGeometry parses a KiCad .kicad_pcb board into the board-geometry sidecar
+// (geom.BoardGeometry). The sidecar holds the physical layout that the netlist reader (Read)
+// drops. That layout is the layer table, the Edge.Cuts outline, per-footprint placement and
+// pads, routed copper grouped by net, and zone outlines. It is joined to the netlist IR by ref_des
+// (placements) and net name (copper); pad numbers match ir.Connection.pin_ref.
+//
+// Fidelity: lossy-bounded (render/DRC subset, CONSTRAINTS C6). Silkscreen/legend text and
+// silk/fab body graphics (the footprint ref-des and value, free gr_text, and the fp_*/gr_*
+// outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not; outline,
+// silk and arc-track arcs are approximated as polylines, so a chorded track's path is slightly
+// shorter than the arc, which a future length rule has to allow for. Coordinates are emitted in
+// nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations are kept
+// verbatim (see the proto contract). The caller owns file I/O (C1).
+func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
+	root, err := parseBoard(r)
+	if err != nil {
+		return nil, err
+	}
+	if root.Head() != "kicad_pcb" {
+		return nil, fmt.Errorf("kicad: not a .kicad_pcb file (root is %q)", root.Head())
+	}
+	return extractBoardGeometry(root, sourceFile), nil
+}
+
+func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
+	g := &geom.BoardGeometry{UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}}
+	if tb := root.Child("title_block"); tb != nil {
+		g.DesignRef = atomOf(tb.Child("title").Arg(1))
+	}
+
+	// The layer table also serves as the number->name map that copper items resolve through.
+	layerName := map[string]string{}
+	if lt := root.Child("layers"); lt != nil {
+		for _, l := range lt.Kids[1:] { // Kids[0] is the "layers" head atom
+			name := atomOf(l.Arg(1))
+			g.Layers = append(g.Layers, &geom.BoardLayer{
+				Number: num.Int32(atoi(l.Head())),
+				Name:   name,
+				Kind:   atomOf(l.Arg(2)),
+			})
+			layerName[l.Head()] = name
+		}
+	}
+
+	// Nets referenced by copper items carry a number; the top-level net table maps it to
+	// the name that the IR keys on. (The netlist reader skips this table because pads carry
+	// their names, but segments and vias reference by number only.)
+	netName := map[string]string{}
+	for _, n := range root.Children("net") {
+		netName[atomOf(n.Arg(1))] = atomOf(n.Arg(2))
+	}
+
+	g.Outline = boardOutline(root)
+	for _, fp := range root.Children("footprint") {
+		if p := boardPlacement(fp, src); p != nil {
+			g.Placements = append(g.Placements, p)
+		}
+	}
+	g.Nets = netCopper(root, netName)
+	for _, z := range root.Children("zone") {
+		if zone := zoneOutline(z, netName); zone != nil {
+			g.Zones = append(g.Zones, zone)
+		}
+	}
+	g.Texts = boardTexts(root)
+	g.Graphics = boardGraphics(root)
+	return g
+}
+
+// graphicHeads are the KiCad graphic element base names, shared by the footprint (fp_*) and
+// free (gr_*) forms.
+var graphicHeads = []string{"line", "arc", "circle", "poly", "rect"}
+
+// boardGraphics collects the board's non-copper artwork: each footprint's silkscreen and fab
+// body graphics (fp_line/arc/circle/poly/rect, composed footprint-local -> board coordinates
+// so they sit on the part) and free gr_* graphics that are NOT the board edge. The board
+// edge (Edge.Cuts) is boardOutline's job and is excluded here; copper and zone fills are
+// their own artifacts. Layer is kept verbatim so the renderer classifies silk vs fab.
+func boardGraphics(root *node) []*geom.BoardGraphic {
+	var out []*geom.BoardGraphic
+	for _, fp := range root.Children("footprint") {
+		ref := propValue(fp, "Reference")
+		if ref == "" || refdes.IsPlaceholder(ref) {
+			continue
+		}
+		origin := pcbPoint(fp.Child("at"))
+		back := atomOf(fp.Child("layer").Arg(1)) == "B.Cu"
+		rot := placementAngle(fp.Child("at"), back)
+		place := func(p *geom.Point) *geom.Point {
+			return geomath.ComposePlacement(origin, rot, back, footprintLocal(p, back))
+		}
+		for _, base := range graphicHeads {
+			for _, n := range fp.Children("fp_" + base) {
+				if !footprintLayerDrawn(atomOf(n.Child("layer").Arg(1))) {
+					continue
+				}
+				if gr := boardGraphicOf(n, base, place, ref); gr != nil {
+					out = append(out, gr)
+				}
+			}
+		}
+	}
+	identity := func(p *geom.Point) *geom.Point { return p }
+	for _, base := range graphicHeads {
+		for _, n := range root.Children("gr_" + base) {
+			if atomOf(n.Child("layer").Arg(1)) == "Edge.Cuts" {
+				continue // the board edge is BoardOutline, not a graphic
+			}
+			if gr := boardGraphicOf(n, base, identity, ""); gr != nil {
+				out = append(out, gr)
+			}
+		}
+	}
+	return out
+}
+
+// footprintLayerDrawn reports whether a footprint's graphic on layer belongs in the board drawing.
+// The drawing keeps the silkscreen, fab and courtyard outlines that place a part. It leaves out a
+// footprint library's own artwork on the user layers (User.1 to User.9, Dwgs.User, Cmts.User,
+// Eco1/Eco2.User). One vendor library draws hundreds of lines per passive there. They are 322,600
+// of the Jetson seed's 326,626 footprint lines and about 56 of its board file's 85 MB (agni issue
+// 946).
+func footprintLayerDrawn(layer string) bool {
+	switch layer {
+	case "F.SilkS", "B.SilkS", "F.Fab", "B.Fab", "F.CrtYd", "B.CrtYd":
+		return true
+	}
+	return false
+}
+
+// boardGraphicOf builds one BoardGraphic from a KiCad graphic node. place maps a Y-flipped
+// source point into board coordinates. It composes the footprint transform for fp_* graphics,
+// and is the identity for free gr_* graphics (already absolute). Returns nil if the node lacks
+// the geometry its kind needs.
+func boardGraphicOf(n *node, base string, place func(*geom.Point) *geom.Point, ref string) *geom.BoardGraphic {
+	shape := graphicShape(n, base, place)
+	if shape == nil {
+		return nil
+	}
+	return &geom.BoardGraphic{
+		Shape:  shape,
+		Layer:  atomOf(n.Child("layer").Arg(1)),
+		RefDes: ref,
+		Width:  graphicWidth(n),
+	}
+}
+
+// graphicShape converts a KiCad graphic node into a geom.Shape, mapping each source point
+// through place. Arcs are approximated as polylines by the shared arcPolyline (the same C6
+// bound that the board outline uses), and circles keep center+radius (radius is rotation- and
+// mirror-invariant, so it is measured in the source frame). Returns nil for a malformed node.
+func graphicShape(n *node, base string, place func(*geom.Point) *geom.Point) *geom.Shape {
+	switch base {
+	case "line":
+		s, e := n.Child("start"), n.Child("end")
+		if s == nil || e == nil {
+			return nil
+		}
+		return &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{place(pcbPoint(s)), place(pcbPoint(e))}}
+	case "rect":
+		s, e := n.Child("start"), n.Child("end")
+		if s == nil || e == nil {
+			return nil
+		}
+		return &geom.Shape{Kind: geom.Shape_KIND_RECT, Points: []*geom.Point{place(pcbPoint(s)), place(pcbPoint(e))}, Fill: graphicFill(n)}
+	case "circle":
+		c, e := n.Child("center"), n.Child("end")
+		if c == nil || e == nil {
+			return nil
+		}
+		cp, ep := pcbPoint(c), pcbPoint(e)
+		r := int64(math.Round(math.Hypot(float64(ep.X-cp.X), float64(ep.Y-cp.Y))))
+		return &geom.Shape{Kind: geom.Shape_KIND_CIRCLE, Points: []*geom.Point{place(cp)}, Radius: r, Fill: graphicFill(n)}
+	case "arc":
+		s, m, e := n.Child("start"), n.Child("mid"), n.Child("end")
+		if s == nil || m == nil || e == nil {
+			return nil
+		}
+		pl := arcPolyline(pcbPoint(s), pcbPoint(m), pcbPoint(e))
+		pts := make([]*geom.Point, len(pl.Points))
+		for i, p := range pl.Points {
+			pts[i] = place(p)
+		}
+		return &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts}
+	case "poly":
+		pts := n.Child("pts")
+		if pts == nil {
+			return nil
+		}
+		var pp []*geom.Point
+		for _, xy := range pts.Children("xy") {
+			pp = append(pp, place(pcbPoint(xy)))
+		}
+		if len(pp) == 0 {
+			return nil
+		}
+		return &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pp, Fill: graphicFill(n)}
+	}
+	return nil
+}
+
+// graphicFill maps a KiCad (fill ...) node to the shape fill. A filled body fills with the
+// silk/outline color (FILL_OUTLINE, since silk is a single color), otherwise outline only.
+func graphicFill(n *node) geom.Shape_Fill {
+	f := n.Child("fill")
+	if f == nil {
+		return geom.Shape_FILL_UNSPECIFIED
+	}
+	switch atomOf(f.Arg(1)) {
+	case "yes", "solid":
+		return geom.Shape_FILL_OUTLINE
+	}
+	return geom.Shape_FILL_UNSPECIFIED
+}
+
+// graphicWidth reads a graphic's stroke width (source units), across the (stroke (width W))
+// form (v7+) and the older bare (width W) child; 0 when absent.
+func graphicWidth(n *node) int64 {
+	if s := n.Child("stroke"); s != nil {
+		if w := s.Child("width"); w != nil {
+			return mmToNm(atomOf(w.Arg(1)))
+		}
+	}
+	if w := n.Child("width"); w != nil {
+		return mmToNm(atomOf(w.Arg(1)))
+	}
+	return 0
+}
+
+// boardTexts collects the board's placed text: each footprint's silkscreen ref-des and
+// value (composed from footprint-local to board coordinates so they pin to the pads), and
+// free graphic text (gr_text, including the title block, authored absolute). Hidden source
+// text is dropped, mirroring the no-ref placement skip. Footprint user text (fp_text) is
+// out of scope for this tier (C6 bound; see the proto contract), and silk/fab graphics are
+// boardGraphics' job.
+func boardTexts(root *node) []*geom.BoardText {
+	var out []*geom.BoardText
+	for _, fp := range root.Children("footprint") {
+		ref := propValue(fp, "Reference")
+		if ref == "" || refdes.IsPlaceholder(ref) {
+			continue
+		}
+		fpAt := fp.Child("at")
+		back := atomOf(fp.Child("layer").Arg(1)) == "B.Cu"
+		for _, p := range fp.Children("property") {
+			var kind string
+			switch atomOf(p.Arg(1)) {
+			case "Reference":
+				kind = "reference"
+			case "Value":
+				kind = "value"
+			default:
+				continue
+			}
+			if t := footprintText(p, atomOf(p.Arg(2)), kind, ref, fpAt, back); t != nil {
+				out = append(out, t)
+			}
+		}
+	}
+	for _, g := range root.Children("gr_text") {
+		if t := freeText(g); t != nil {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// footprintText composes one footprint-owned text (a Reference or Value property) into a
+// board-frame BoardText. Its position is the footprint-local offset rotated by the footprint
+// orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer that
+// padWorld uses, so text ends up on its part. Glyph rotation is the angle in the text's (at).
+// KiCad saves that angle as drawn rather than relative to its footprint, so the footprint's own
+// angle does not enter it (agni issue 1272). Returns nil for empty or hidden text, or a text with
+// no local (at).
+func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom.BoardText {
+	local := n.Child("at")
+	if text == "" || local == nil || isHidden(n) {
+		return nil
+	}
+	height, justify, mirror := effectsOf(n)
+	if height == 0 {
+		height = fieldDefaultHeight
+	}
+	angle := rotOf(local)
+	if !isUnlocked(n, local) {
+		angle = keepUpright(angle)
+	}
+	return &geom.BoardText{
+		Text:        text,
+		At:          geomath.ComposePlacement(pcbPoint(fpAt), placementAngle(fpAt, back), back, footprintLocal(pcbPoint(local), back)),
+		RotationDeg: angle,
+		Height:      height,
+		Layer:       fieldLayer(atomOf(n.Child("layer").Arg(1)), kind),
+		Mirror:      mirror,
+		Justify:     justify,
+		RefDes:      ref,
+		Kind:        kind,
+	}
+}
+
+// freeText converts a top-level gr_text (authored in absolute board coordinates) into a
+// BoardText. KiCad's angle is counter-clockwise as drawn, and flipping Y keeps the picture, so the
+// reader keeps the angle unchanged, as placementAngle does for a footprint. Returns nil for empty
+// or hidden text.
+func freeText(n *node) *geom.BoardText {
+	text := atomOf(n.Arg(1))
+	if text == "" || isHidden(n) {
+		return nil
+	}
+	at := n.Child("at")
+	height, justify, mirror := effectsOf(n)
+	return &geom.BoardText{
+		Text:        text,
+		At:          pcbPoint(at),
+		RotationDeg: rotOf(at),
+		Height:      height,
+		Layer:       atomOf(n.Child("layer").Arg(1)),
+		Mirror:      mirror,
+		Justify:     justify,
+		Kind:        "gr",
+	}
+}
+
+// effectsOf reads a text node's (effects (font (size w h)) (justify ...)) into glyph height
+// (nanometers, from the font's y size), horizontal justify ("left"/"right"/"" center), and
+// whether the justify marks the text mirrored (back-side legend).
+func effectsOf(n *node) (height int64, justify string, mirror bool) {
+	eff := n.Child("effects")
+	if eff == nil {
+		return 0, "", false
+	}
+	if f := eff.Child("font"); f != nil {
+		if sz := f.Child("size"); sz != nil {
+			height = mmToNm(atomOf(sz.Arg(2)))
+		}
+	}
+	if j := eff.Child("justify"); j != nil {
+		for i := 1; j.Arg(i) != nil; i++ {
+			switch a := atomOf(j.Arg(i)); a {
+			case "mirror":
+				mirror = true
+			case "left", "right":
+				justify = a
+			}
+		}
+	}
+	return height, justify, mirror
+}
+
+// fieldDefaultHeight is the glyph height KiCad draws a footprint field at when its effects give no
+// size, 1.27 mm. kicad-cli 10.0.6 draws the fixture's default fields that tall (agni issue 1366).
+const fieldDefaultHeight = 1_270_000
+
+// fieldLayer is the layer KiCad draws a footprint field on when the field names none. A Reference
+// goes on the front silkscreen and a Value on the front fab layer, even on a back footprint, as
+// kicad-cli draws the fixture's J1 (agni issue 1366). A field that names its layer keeps it.
+func fieldLayer(layer, kind string) string {
+	if layer != "" {
+		return layer
+	}
+	switch kind {
+	case "reference":
+		return "F.SilkS"
+	case "value":
+		return "F.Fab"
+	}
+	return ""
+}
+
+// keepUpright folds a footprint text's glyph angle into (-90, 90] by half turns, so text on
+// a rotated (e.g. 180°) footprint never renders upside down, matching KiCad's default
+// keep_upright behavior for silkscreen fields. Unlocked text and free gr_text are exempt and keep
+// their authored angle, since a mirrored back-side title is intentional.
+func keepUpright(deg float64) float64 {
+	for deg > 90 {
+		deg -= 180
+	}
+	for deg <= -90 {
+		deg += 180
+	}
+	return deg
+}
+
+// isHidden reports whether a text node is marked hidden, by KiCad's (hide yes) child (v7+)
+// or the bare (hide) form, so dropped text never renders.
+func isHidden(n *node) bool {
+	h := n.Child("hide")
+	if h == nil {
+		return false
+	}
+	return h.Arg(1) == nil || atomOf(h.Arg(1)) == "yes"
+}
+
+// isUnlocked reports whether a footprint text opts out of keepUpright, by the (unlocked yes) child
+// of KiCad 8 and later or the older bare word in its (at x y angle unlocked).
+func isUnlocked(n, at *node) bool {
+	if u := n.Child("unlocked"); u != nil {
+		return u.Arg(1) == nil || atomOf(u.Arg(1)) == "yes"
+	}
+	return atomOf(at.Arg(4)) == "unlocked"
+}
+
+// pcbPoint reads an (xy ...) / (at ...) / (start ...) style node's x,y into the Y-up
+// nanometer frame.
+func pcbPoint(n *node) *geom.Point {
+	return &geom.Point{X: mmToNm(atomOf(n.Arg(1))), Y: -mmToNm(atomOf(n.Arg(2)))}
+}
+
+// drillOf reads a pad's (drill d) or slotted (drill oval w h) hole as one diameter, because the
+// contract has room for one. For a slot that is the narrow width, the size of the bit that cuts it.
+// The reader once read the slotted form's "oval" keyword as the size, so every slot came through
+// undrilled.
+func drillOf(dr *node) int64 {
+	if atomOf(dr.Arg(1)) != "oval" {
+		return mmToNm(atomOf(dr.Arg(1)))
+	}
+	w, h := mmToNm(atomOf(dr.Arg(2))), mmToNm(atomOf(dr.Arg(3)))
+	if h > 0 && h < w {
+		return h
+	}
+	return w
+}
+
+// placementAngle is a footprint's angle in the contract's frame. KiCad's angle is counter-clockwise
+// as the board is drawn, and flipping Y to reach the canonical Y-up frame keeps the picture, so a
+// front footprint's angle is unchanged. A back footprint is the contract's mirror after
+// rotation, and mirroring turns an angle round, so its angle is negated. Until agni issue 1261 every
+// angle was negated, which put pad 1 of a front part at 90 or 270 degrees where pad 2 is; KiCad's own
+// position and ODB++ exports are the evidence (TestODBReadsAsItsKiCadSource).
+func placementAngle(at *node, back bool) float64 {
+	if back {
+		return -rotOf(at)
+	}
+	return rotOf(at)
+}
+
+// footprintLocal turns a point that KiCad stores inside a footprint into the contract's footprint-local
+// offset. KiCad stores a flipped footprint's items already mirrored, where the contract wants the
+// footprint's own unflipped frame and mirrors it once, at composition, so a back footprint's x is
+// negated here. A pad then reads the same offset whichever side its part is on.
+func footprintLocal(p *geom.Point, back bool) *geom.Point {
+	if back && p != nil {
+		return &geom.Point{X: -p.X, Y: p.Y}
+	}
+	return p
+}
+
+// rotOf reads the optional third argument of an (at x y rot) node, verbatim degrees.
+func rotOf(n *node) float64 {
+	if n == nil || n.Arg(3) == nil {
+		return 0
+	}
+	f, _ := strconv.ParseFloat(atomOf(n.Arg(3)), 64)
+	return f
+}
+
+func atoi(s string) int {
+	v, _ := strconv.Atoi(s)
+	return v
+}
+
+// boardOutline collects the Edge.Cuts graphics: gr_line as a two-point path, gr_rect as
+// its four edges (one closed path), gr_arc approximated by arcPolyline. Paths are kept as
+// authored; stitching them into a closed polygon is the consumer's job.
+func boardOutline(root *node) *geom.BoardOutline {
+	out := &geom.BoardOutline{}
+	onEdge := func(n *node) bool { return atomOf(n.Child("layer").Arg(1)) == "Edge.Cuts" }
+	for _, l := range root.Children("gr_line") {
+		if onEdge(l) {
+			out.Paths = append(out.Paths, &geom.Polyline{Points: []*geom.Point{
+				pcbPoint(l.Child("start")), pcbPoint(l.Child("end")),
+			}})
+		}
+	}
+	for _, r := range root.Children("gr_rect") {
+		if onEdge(r) {
+			a, b := pcbPoint(r.Child("start")), pcbPoint(r.Child("end"))
+			out.Paths = append(out.Paths, &geom.Polyline{Points: []*geom.Point{
+				a, {X: b.X, Y: a.Y}, b, {X: a.X, Y: b.Y}, a,
+			}})
+		}
+	}
+	for _, a := range root.Children("gr_arc") {
+		if onEdge(a) {
+			out.Paths = append(out.Paths, arcPolyline(
+				pcbPoint(a.Child("start")), pcbPoint(a.Child("mid")), pcbPoint(a.Child("end"))))
+		}
+	}
+	if len(out.Paths) == 0 {
+		return nil
+	}
+	return out
+}
+
+// arcPolyline approximates the circular arc through three points with a fixed-step
+// polyline (16 segments). A degenerate (collinear) triple falls back to the chord.
+func arcPolyline(s, m, e *geom.Point) *geom.Polyline {
+	cx, cy, ok := circumcenter(float64(s.X), float64(s.Y), float64(m.X), float64(m.Y), float64(e.X), float64(e.Y))
+	if !ok {
+		return &geom.Polyline{Points: []*geom.Point{s, m, e}}
+	}
+	a0 := math.Atan2(float64(s.Y)-cy, float64(s.X)-cx)
+	a1 := math.Atan2(float64(m.Y)-cy, float64(m.X)-cx)
+	a2 := math.Atan2(float64(e.Y)-cy, float64(e.X)-cx)
+	// To sweep from a0 to a2 through a1, normalize both deltas into the same direction,
+	// and go CW if the midpoint is not inside the CCW sweep.
+	ccw := func(from, to float64) float64 {
+		d := to - from
+		for d < 0 {
+			d += 2 * math.Pi
+		}
+		return d
+	}
+	sweep := ccw(a0, a2)
+	if ccw(a0, a1) > sweep {
+		sweep -= 2 * math.Pi // midpoint outside the CCW span, so sweep clockwise instead
+	}
+	r := math.Hypot(float64(s.X)-cx, float64(s.Y)-cy)
+	const steps = 16
+	pl := &geom.Polyline{}
+	for i := 0; i <= steps; i++ {
+		a := a0 + sweep*float64(i)/steps
+		pl.Points = append(pl.Points, &geom.Point{
+			X: int64(math.Round(cx + r*math.Cos(a))),
+			Y: int64(math.Round(cy + r*math.Sin(a))),
+		})
+	}
+	return pl
+}
+
+// circumcenter returns the center of the circle through three points, ok=false when
+// they are (near-)collinear.
+func circumcenter(ax, ay, bx, by, cx, cy float64) (x, y float64, ok bool) {
+	d := 2 * (ax*(by-cy) + bx*(cy-ay) + cx*(ay-by))
+	if math.Abs(d) < 1e-9 {
+		return 0, 0, false
+	}
+	a2, b2, c2 := ax*ax+ay*ay, bx*bx+by*by, cx*cx+cy*cy
+	x = (a2*(by-cy) + b2*(cy-ay) + c2*(ay-by)) / d
+	y = (a2*(cx-bx) + b2*(ax-cx) + c2*(bx-ax)) / d
+	return x, y, true
+}
+
+// boardPlacement extracts one footprint's placement and pads; a footprint with no Reference
+// (a graphic) yields nil, mirroring the netlist reader's skip so the two artifacts agree
+// on which components exist.
+func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
+	ref := propValue(fp, "Reference")
+	if ref == "" || refdes.IsPlaceholder(ref) {
+		return nil
+	}
+	at := fp.Child("at")
+	layer := atomOf(fp.Child("layer").Arg(1))
+	// See placementAngle and footprintLocal for how KiCad's frame maps onto the contract's.
+	back := layer == "B.Cu"
+	p := &geom.ComponentPlacement{
+		RefDes:      ref,
+		At:          pcbPoint(at),
+		RotationDeg: placementAngle(at, back),
+		Layer:       layer,
+		Mirror:      back,
+		Prov:        &geom.Provenance{SourceFile: src, SourceId: uuidOf(fp)},
+	}
+	for _, pad := range fp.Children("pad") {
+		pat := pad.Child("at")
+		g := &geom.Pad{
+			Number:      atomOf(pad.Arg(1)),
+			At:          footprintLocal(pcbPoint(pat), back),
+			RotationDeg: rotOf(pat),
+			Shape:       atomOf(pad.Arg(3)),
+		}
+		if sz := pad.Child("size"); sz != nil {
+			g.Size = &geom.Point{X: mmToNm(atomOf(sz.Arg(1))), Y: mmToNm(atomOf(sz.Arg(2)))}
+		}
+		if dr := pad.Child("drill"); dr != nil {
+			g.Drill = drillOf(dr)
+		}
+		if ls := pad.Child("layers"); ls != nil {
+			for i := 1; ls.Arg(i) != nil; i++ {
+				g.Layers = append(g.Layers, atomOf(ls.Arg(i)))
+			}
+		}
+		if nr := pad.Child("net"); nr != nil {
+			g.Net = atomOf(nr.Arg(len(nr.Kids) - 1)) // name is the last argument in both forms
+		}
+		p.Pads = append(p.Pads, g)
+	}
+	return p
+}
+
+// netCopper groups the board's segments and vias by resolved net name, sorted by name
+// for a deterministic artifact. Items on net 0 / an unknown number ("no net") are
+// dropped. The IR has no key for that copper, so it cannot join.
+func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
+	byNet := map[string]*geom.NetCopper{}
+	get := func(n *node) *geom.NetCopper {
+		name := copperNet(n.Child("net"), netName)
+		if name == "" {
+			return nil
+		}
+		nc := byNet[name]
+		if nc == nil {
+			nc = &geom.NetCopper{Net: name}
+			byNet[name] = nc
+		}
+		return nc
+	}
+	for _, s := range root.Children("segment") {
+		nc := get(s)
+		if nc == nil {
+			continue
+		}
+		nc.Segments = append(nc.Segments, &geom.TrackSegment{
+			A:     pcbPoint(s.Child("start")),
+			B:     pcbPoint(s.Child("end")),
+			Width: mmToNm(atomOf(s.Child("width").Arg(1))),
+			Layer: atomOf(s.Child("layer").Arg(1)),
+		})
+	}
+	// An arc track is a curved run of copper, written as start, mid and end. The contract holds
+	// straight runs only (C6), so the arc becomes a polyline, as an outline arc does. Until agni
+	// issue 1260 arcs were skipped, and the copper rules never saw a curved trace.
+	for _, a := range root.Children("arc") {
+		nc := get(a)
+		if nc == nil {
+			continue
+		}
+		width := mmToNm(atomOf(a.Child("width").Arg(1)))
+		layer := atomOf(a.Child("layer").Arg(1))
+		pts := arcPolyline(pcbPoint(a.Child("start")), pcbPoint(a.Child("mid")), pcbPoint(a.Child("end"))).GetPoints()
+		for i := 1; i < len(pts); i++ {
+			nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i-1], B: pts[i], Width: width, Layer: layer})
+		}
+	}
+	for _, v := range root.Children("via") {
+		nc := get(v)
+		if nc == nil {
+			continue
+		}
+		via := &geom.Via{
+			At:    pcbPoint(v.Child("at")),
+			Size:  mmToNm(atomOf(v.Child("size").Arg(1))),
+			Drill: mmToNm(atomOf(v.Child("drill").Arg(1))),
+		}
+		if ls := v.Child("layers"); ls != nil {
+			via.LayerFrom, via.LayerTo = atomOf(ls.Arg(1)), atomOf(ls.Arg(2))
+		}
+		nc.Vias = append(nc.Vias, via)
+	}
+	out := make([]*geom.NetCopper, 0, len(byNet))
+	for _, nc := range byNet {
+		out = append(out, nc)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Net < out[j].Net })
+	return out
+}
+
+// copperNet resolves a copper item's (net ...) reference to the net name that the IR keys on,
+// across the three source forms: (net N "name") carries the name directly; (net N) is the
+// pre-KiCad-10 numbered form resolved through the board's net table; (net "name") is the
+// KiCad 10 name-only form, recognizable because KiCad 10 also drops the table (and a name
+// is not all digits). "" means no net or unresolvable, and the caller drops the copper.
+func copperNet(ref *node, netName map[string]string) string {
+	if ref == nil || ref.Arg(1) == nil {
+		return ""
+	}
+	if len(ref.Kids) > 2 { // (net N "name") carries the name as its last argument
+		return atomOf(ref.Arg(len(ref.Kids) - 1))
+	}
+	key := atomOf(ref.Arg(1))
+	if name, ok := netName[key]; ok {
+		return name
+	}
+	if _, err := strconv.Atoi(key); err != nil || len(netName) == 0 {
+		return key // name-only form (KiCad 10)
+	}
+	return "" // a number the table does not know means no net
+}
+
+// zoneOutline extracts one zone's authored polygon. A zone on no net (a keepout) keeps
+// net="", since it is real copper geometry even though it joins to nothing.
+func zoneOutline(z *node, netName map[string]string) *geom.Zone {
+	poly := z.Child("polygon")
+	if poly == nil {
+		return nil
+	}
+	pts := poly.Child("pts")
+	if pts == nil {
+		return nil
+	}
+	zone := &geom.Zone{Outline: &geom.Polyline{}}
+	if nn := z.Child("net_name"); nn != nil {
+		zone.Net = atomOf(nn.Arg(1))
+	} else {
+		zone.Net = copperNet(z.Child("net"), netName)
+	}
+	if l := z.Child("layer"); l != nil {
+		zone.Layer = atomOf(l.Arg(1))
+	} else if ls := z.Child("layers"); ls != nil {
+		zone.Layer = atomOf(ls.Arg(1))
+	}
+	for _, xy := range pts.Children("xy") {
+		zone.Outline.Points = append(zone.Outline.Points, pcbPoint(xy))
+	}
+	return zone
+}
