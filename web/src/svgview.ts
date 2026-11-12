@@ -7,6 +7,7 @@ import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { CLICK_SLOP_PX, pickAt, type Selection } from "./selection.js";
 import { rectOf, type ClientRect } from "./area.js";
 import { AreaBand } from "./areaband.js";
+import { Glide, lerpSvgView } from "./glide.js";
 import { UPRIGHT, orientBox, orientCss, orientPoint, orientedSize, unorientPoint, type Orientation, type Point } from "./orient.js";
 
 // SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
@@ -18,6 +19,9 @@ export interface SvgViewState {
 }
 
 export class SvgView {
+  // glide moves the view to a revealed subject over GLIDE_MS (agni issue 1546). A test swaps in a
+  // Glide with a manual clock.
+  glide = new Glide();
   private readonly layer: HTMLDivElement;
   // orient turns the drawing within the layer (agni issue 1327), so pan and zoom stay a translate and
   // a scale over the oriented drawing.
@@ -291,7 +295,8 @@ export class SvgView {
     const { w, h } = this.docSize();
     const ob = orientBox(this.orientation, w, h, { x: box.x, y: box.y, w: box.w, h: box.h });
     const v = computeReveal(ob, hw, hh);
-    this.setView(v);
+    // The view travels to the subject rather than jumping (agni issue 1546).
+    this.glide.run(this.getView(), v, (a, b, t) => lerpSvgView(a, b, hw, hh, t), (x) => this.applyView(x));
     // A revealed view holds still as a navigated one does. Otherwise the next resize, such as a
     // panel opening beside it, refits the sheet and throws the reveal away (agni issue 1326).
     this.touched = true;
@@ -325,6 +330,11 @@ export class SvgView {
   }
 
   setView(v: SvgViewState): void {
+    this.glide.stop();
+    this.applyView(v);
+  }
+
+  private applyView(v: SvgViewState): void {
     this.tx = v.tx;
     this.ty = v.ty;
     this.scale = v.scale;
@@ -389,6 +399,8 @@ export class SvgView {
 
   // fit scales the oriented SVG to contain within the host and centers it.
   private fit(): void {
+    // A refit wins over a glide in flight, so a reveal can't overwrite the sheet that replaced it.
+    this.glide.stop();
     const svg = this.doc();
     const hw = this.host.clientWidth || 1;
     const hh = this.host.clientHeight || 1;
@@ -484,6 +496,8 @@ export class SvgView {
   // commitUserView applies a view from a USER gesture, so it notifies onViewChange. setView does
   // not, because a host mirroring one canvas onto another must not feed back.
   private commitUserView(v: SvgViewState): void {
+    // A reader who takes the wheel or drags mid-glide takes the view from there.
+    this.glide.stop();
     this.tx = v.tx;
     this.ty = v.ty;
     this.scale = v.scale;

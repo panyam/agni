@@ -3,6 +3,7 @@ import { KIND_LINE_LOOP, KIND_POINTS, KIND_TRIANGLES, pickOnly, toRenderable, ty
 import { Camera, boundsOfVertices, revealView, type Bounds, type CameraView } from "./camera.js";
 import { wheelZoomFactor } from "@agni/web-shared/panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
+import { Glide, lerpCamera } from "./glide.js";
 import { TextOverlay } from "./textoverlay.js";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
@@ -105,6 +106,8 @@ export class CanvasComponent extends BaseComponent {
   onToggle: ((sel: Selection) => void) | null = null;
   // onViewChange fires when the reader pans or zooms, so a locked view can follow.
   onViewChange: (() => void) | null = null;
+  // glide moves the camera to a revealed subject over GLIDE_MS (agni issue 1546).
+  glide = new Glide();
   // profile hears what each drawn sheet holds and what each drawn frame cost, for a page opened with
   // ?timing (drawprofile.ts). It is null otherwise, and then nothing is timed.
   profile: CanvasProfile | null = null;
@@ -170,6 +173,7 @@ export class CanvasComponent extends BaseComponent {
   }
 
   setView(v: CameraView): void {
+    this.glide.stop();
     this.camera?.setView(v);
     this.touched = true;
   }
@@ -241,9 +245,15 @@ export class CanvasComponent extends BaseComponent {
     if (pin) box = this.unitOf(box, pin.ref);
     const canvas = this.rootElement as HTMLCanvasElement;
     const quarter = this.orientation.rot === 90 || this.orientation.rot === 270;
-    this.camera.setView(revealView(box, boundsOfVertices(this.sheet.vertices), canvas.width, canvas.height, quarter));
+    const camera = this.camera;
+    const to = revealView(box, boundsOfVertices(this.sheet.vertices), canvas.width, canvas.height, quarter);
     this.touched = true;
-    this.onViewChange?.();
+    // The view travels to the subject rather than jumping (agni issue 1546). The frame loop draws
+    // each step, since it draws whenever the camera's matrix changes.
+    this.glide.run(camera.getView(), to, lerpCamera, (v) => {
+      camera.setView(v);
+      this.onViewChange?.();
+    });
     return true;
   }
 
@@ -273,6 +283,7 @@ export class CanvasComponent extends BaseComponent {
   }
 
   private fit(): void {
+    this.glide.stop();
     const canvas = this.rootElement as HTMLCanvasElement;
     this.camera?.fit(canvas.width, canvas.height);
   }
@@ -293,6 +304,8 @@ export class CanvasComponent extends BaseComponent {
     this.renderer = new Renderer(gl, sheet);
     lap("rendererMs");
     this.renderer.setHiddenGroups(this.hidden);
+    // A new sheet's camera replaces the old one, and a glide toward the old sheet stops with it.
+    this.glide.stop();
     this.camera = new Camera(boundsOfVertices(sheet.vertices));
     this.camera.setOrientation(this.orientation);
     this.touched = false;
@@ -510,6 +523,7 @@ export class CanvasComponent extends BaseComponent {
         if (moved) band.draw(rectOf(downX, downY, e.clientX, e.clientY));
         return;
       }
+      this.glide.stop();
       this.camera.panPixels((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
       this.touched = true;
       this.onViewChange?.();
@@ -522,6 +536,7 @@ export class CanvasComponent extends BaseComponent {
         e.preventDefault();
         if (!this.camera) return;
         const rect = canvas.getBoundingClientRect();
+        this.glide.stop();
         this.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), wheelZoomFactor(e.deltaY));
         this.touched = true;
         this.onViewChange?.();

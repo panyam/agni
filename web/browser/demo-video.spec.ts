@@ -145,7 +145,8 @@ describe.runIf(out !== "")("a demo recording", () => {
     mkdirSync(out, { recursive: true });
     const size = { width: 1920, height: 1080 };
     const began = Date.now();
-    const context = await browser.newContext({ viewport: size, recordVideo: { dir: out, size } });
+    // A recording shows the view glide to each subject, as a reader without reduced motion sees it.
+    const context = await browser.newContext({ viewport: size, recordVideo: { dir: out, size }, reducedMotion: "no-preference" });
     await context.addInitScript(OVERLAY);
     const page = await context.newPage();
     const errors: string[] = [];
