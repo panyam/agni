@@ -24,6 +24,13 @@ board takes the schematic to that point's page. `make demo-video JOURNEY=find-a-
 
 https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf
 
+A 92-second walkthrough of what changed between two revisions of the same board, Antmicro's rev
+1.1.0 and rev 1.1.3. It steps through one change of each kind, an added, a removed and a changed
+part, a new, a deleted and a renamed net, and a net whose connections changed, and each step says
+what that kind means. `make demo-video JOURNEY=compare-revisions` records it.
+
+https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8
+
 ## What does it do
 
 - **Runs ERC/DRC-like structural checks.** They catch missing I2C pull-ups, unprotected
