@@ -151,13 +151,14 @@ func TestBoardFramesAPartWithNoPads(t *testing.T) {
 	}
 }
 
-// A spec that lists a part and a net keeps the net's rings on that part's pads.
-func TestBoardFrameKeepsAListedNetsRings(t *testing.T) {
+// A spec that lists a part and a net keeps the net's copper on that part's pads, now filled over the
+// land rather than ringed (agni issue 1543).
+func TestBoardFrameKeepsAListedNetsPads(t *testing.T) {
 	b := twoPadBoard()
 	b.Placements[0].Pads[0].Net = "GND"
 	svg := HighlightBoardSVG(b, []*geom.HighlightSpec{{Components: []string{"C1"}, Nets: []string{"GND"}, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT}})
-	if strings.Count(svg, "<rect") != 1 || strings.Count(svg, "<circle") != 1 {
-		t.Errorf("want C1's frame and one ring on its GND pad: %s", svg)
+	if strings.Count(svg, "<rect") != 1 || strings.Count(svg, `<path d="M`) != 1 || strings.Contains(svg, "<circle") {
+		t.Errorf("want C1's frame and one filled land on its GND pad: %s", svg)
 	}
 }
 

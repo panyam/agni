@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_HIGHLIGHT_COLOR, frameFloor, frameStroke, frameStrokeAlpha, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
+import { DEFAULT_HIGHLIGHT_COLOR, boardNetAlpha, frameFloor, frameStroke, frameStrokeAlpha, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
 import { KIND_LINE_STRIP, type Primitive, type PrimitiveKey } from "./packed.js";
 
 // The fixture mirrors core/render/highlight_test.go, with R1 (rect prim 2, pins 3/4), U1 (rect 5,
@@ -394,6 +394,11 @@ describe("a frame's stroke ring", () => {
     expect(frameStroke(minSpan, 2)).toBe(522000);
     expect(frameStrokeAlpha(0.1)).toBe(0.33333333333333337);
     expect(frameStrokeAlpha(0.3)).toBe(1);
+    // A net on the board repaints its copper at this opacity (agni issue 1543). The viewer's default
+    // path alpha of 0.4 gives opaque copper. core/render's TestFrameTwin asserts the same numbers.
+    expect(boardNetAlpha(0.4)).toBe(1);
+    expect(boardNetAlpha(0.2)).toBe(0.5);
+    expect(boardNetAlpha(0.8)).toBe(1);
     const f = entityFrame(0, 0, 1_600_000, 600_000, frameFloor(minSpan));
     expect([f.minX, f.minY, f.maxX, f.maxY, f.cx, f.cy, f.r]).toEqual([-1305000, -1305000, 2905000, 1905000, 800000, 300000, 2159400.3745317534]);
   });

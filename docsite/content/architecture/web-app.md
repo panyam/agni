@@ -170,6 +170,14 @@ its frame does not cover the pins beside it. The Highlight menu's width control 
 as it scales a net's path. Go and TypeScript size a frame with twinned functions, `frameFloor`,
 `frameStroke` and `frameStrokeAlpha`, and both test them against one fixture.
 
+On the board, a net repaints its own copper rather than drawing a translucent path over it, since a
+path about as wide as a track disappears into the track (agni issue 1543). Its tracks keep their
+width, and its pads and vias are filled over their lands. A pour keeps its group's wash and takes the
+highlight colour, so a lit ground tints the plane. WebGL recolours the net's primitives
+(`boardNetDraws`), and SVG draws the same from the board geometry. The opacity is
+`boardNetAlpha`, `min(1, alpha / 0.4)`, twinned in Go and TypeScript, so the default reads opaque and
+a fainter alpha fades it. A net on a schematic keeps its path marker.
+
 After a check run the drawing shows nothing until a finding is focused (agni issue 356). A reader
 can opt in to every finding at once, the run-wide field, through Highlight › Show every finding,
 which is kept in `localStorage`. When the field is on, a focus stacks over it as muted context. The

@@ -127,7 +127,7 @@ func copperStrokeWidths(svg string) []float64 {
 }
 
 // TestHighlightBoardSVG covers the board face of the highlight contract. A net spec re-strokes
-// its copper and rings its connected pads and vias; a component spec rings all of its pads;
+// its copper and fills its connected pads and vias; a component spec rings all of its pads;
 // a pin spec rings exactly the (ref_des, pad number) land. The overlay is transparent (no
 // background rect) and framed like BoardSVG.
 func TestHighlightBoardSVG(t *testing.T) {
@@ -142,9 +142,16 @@ func TestHighlightBoardSVG(t *testing.T) {
 	if !strings.Contains(sig, "#00ff00") {
 		t.Error("spec color must be used")
 	}
-	// SIG: one via + its connected pads ringed as circles with stroke (not filled).
-	if n := strings.Count(sig, "<circle"); n < 2 {
-		t.Errorf("SIG via + pads should ring at least 2 circles, got %d", n)
+	// SIG repaints its copper (agni issue 1543): its one via filled, and its two pads filled over
+	// their lands, with nothing ringed.
+	if n := strings.Count(sig, "<circle"); n != 1 {
+		t.Errorf("SIG's via should fill 1 circle, got %d", n)
+	}
+	if n := strings.Count(sig, `<path d="M`); n != 2 {
+		t.Errorf("SIG's 2 pads should fill 2 lands, got %d", n)
+	}
+	if strings.Contains(sig, `fill="none"`) {
+		t.Error("SIG's copper is ringed rather than filled")
 	}
 
 	comp := HighlightBoardSVG(b, []*geom.HighlightSpec{{Components: []string{"R1"}}})
