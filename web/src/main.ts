@@ -567,7 +567,7 @@ class AppRoot extends BaseComponent {
       },
       onAsk: (sel, question) => {
         query.view.askAbout(sel, question);
-        viewerDock?.dock.show("query");
+        viewerDock?.reveal("query");
       },
       // A verdict in the selection's checks shows its proof, as a verdict row in the checks panel does.
       onVerdict: (id) => void presenter.locateVerdict(id),
@@ -979,7 +979,7 @@ class AppRoot extends BaseComponent {
           syncUrl(loc);
         },
         compare: compareWith,
-        showPanel: (panel) => void viewerDock?.dock.show(panel),
+        showPanel: (panel) => void viewerDock?.reveal(panel),
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,

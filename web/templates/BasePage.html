@@ -8,7 +8,8 @@
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; font: 13px system-ui, sans-serif; color: #1c1c1c; background: #fff; }
-    .app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
+    /* clip, not hidden, so a focus or scrollIntoView inside a panel cannot scroll the whole page out of view. */
+    .app { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: clip; }
     /* WS9-021 dock shell: dockview fills the page below the top bar; each panel hole fills its dockview panel */
     .dock { flex: 1 1 auto; min-height: 0; position: relative; }
     .dock-body { width: 100%; height: 100%; overflow: auto; padding: 8px; background: #fafafa; }

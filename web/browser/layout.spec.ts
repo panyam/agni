@@ -765,8 +765,8 @@ describe("a query link", () => {
       expect(await page.locator(".query-locate.on").count()).toBe(0);
       // dockview paints a panel it brought forward on its next frame, so this waits for that frame.
       await expect
-        .poll(async () => (await paintedAt(page, ".query-locate-note")).ownedByProbe, { message: "the note is on screen, not behind another panel", timeout: 5_000 })
-        .toBe(true);
+        .poll(async () => (await paintedAt(page, ".query-locate-note")).painted, { message: "the note is on screen, not behind another panel", timeout: 5_000 })
+        .toMatch(/^div\.query-locate-note$/);
     });
   }, 90_000);
 });
