@@ -15,6 +15,7 @@ This file covers the `agni` CLI, its `agni.yaml` config, its output flags and th
 ## Commands
 
 - **The commands include `agni stats|check|diff|render|query|trace|review|serve|open <file>` and `agni params <mpn>`.** `open` serves ONE design, mints its mount and prints its URL. `serve` takes `--mount` per folder and `--web-dir`.
+- **On macOS, `serve` raises each request's thread to user-initiated QoS** (`qos_darwin.go`, through purego since releases build without cgo), or half its cold parses run on an efficiency core (agni 1534).
 - **The reader is chosen by extension, case-insensitively.** `.xml` and `.sch` are sniffed by root element or header.
 - **`--symbol-path <dir>` searches each dir's SUBTREE** for external symbol files, so a dir can be a library root.
 - **A command reads a design through `readDesign` or a service, never a bare `newLoader().ReadDesign`.** The design's PROJECT config enters the read in `readDesign`. Six commands have no service between them and the read: stats, diff, emit, render, intake and profilediag. Net roles resolve once at ingestion, so a read that skips `readDesign` uses the built-in naming vocabulary and none of the project's symbol libraries (agni 228).
