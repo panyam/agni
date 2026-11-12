@@ -44,7 +44,10 @@ From a green `main`:
 
 4. **Tag.**  `make tag V=vX.Y.Z` creates the tag locally so you can inspect it.  `make tag-push
    V=vX.Y.Z` creates it and pushes it.  A pushed tag is immediately resolvable by the Go module proxy
-   and is not safely retractable, so inspect first when in doubt.
+   and is not safely retractable, so inspect first when in doubt.  Tag only once the notes commit is
+   main's tip: `git fetch && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"`.  A push of
+   the notes that is rejected, say because main moved, leaves HEAD off main, and `make tag-push` tags it
+   anyway.  v0.6.13 was tagged that way and needed a merge to bring the tag into main's history.
 
 5. **Watch the release workflow.**  Pushing a `v[0-9]+.[0-9]+.[0-9]+` tag fires
    `.github/workflows/release.yml`.  It builds the image for amd64 and arm64 and pushes it to GHCR as
@@ -125,7 +128,7 @@ release.
 - [ ] `make testall` green
 - [ ] `make oracle` green (`browser-test` runs in `testall`)
 - [ ] `RELEASES/vX.Y.Z.md` written; `CHANGELOG.md` entry added and linked
-- [ ] Notes committed and pushed to `main`
+- [ ] Notes committed and pushed to `main`, and HEAD is `origin/main`'s tip
 - [ ] `make tag-push V=vX.Y.Z`
 - [ ] `release.yml` green, image pullable and reporting the tag
 - [ ] Both images pull ANONYMOUSLY, from a logged-out client: `docker logout ghcr.io`, then

@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-11, at `b0ef532e`.
+Last pruned 2026-11-12, at `495f316c`.
 
 ## At a glance
 
@@ -18,17 +18,16 @@ mission's queue, and the order lives in GitHub labels and blocked-by links rathe
 exercise run on the mission issue.
 
 - **#1499 `mission_board_open`** (open Jetson's board in the browser in under 1.5 s, and reopen it in
-  under 0.5 s), 8 of 12 closed. `make exercise-board-open RUNS=5` at `fc4b6481`: server reload 302 ms,
-  server new browser 573 ms and wasm reload 491 ms pass, and server cold (1.7 s) and wasm cold (1.9 s)
-  fail. The latest log comment on #1499 has the timelines.
-- Next ready: #1531 (P1, why a fresh server's first board parse takes 1.36 s about half the time) and
-  #1503 (P1, keys and labels after the first draw, the margin for the wasm reload). #1484 and #1504
-  are P2. A cold wasm open still compiles `agni.wasm` and starts two workers on both the Load page and
-  the viewer, and no ticket covers that yet.
+  under 0.5 s), 11 of 14 closed. The last exercise, at `a8cda0fe`, has both reloads passing (server
+  306 ms, wasm 377 ms) and both cold opens failing (server 2.3 s, wasm 2.2 s). The latest log comment
+  on #1499 has the timelines. PRs 1544 to 1568 merged since, for the demo work, so rerun
+  `make exercise-board-open RUNS=5` before trusting those numbers.
+- Next ready: #1534 (P1, a server's request work lands on an efficiency core on Apple Silicon about
+  half the time). #1484 and #1504 are P2.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
-  serve for more than one person. **#1442 `mission_demo_journeys`** has no tickets yet.
-- This run: v0.6.9 released, carrying #1499's work so far. NEXTSTEPS caught up with the mission, and a
-  stale `agnids` note and #523 (closed) dropped.
+  serve for more than one person. **#1442 `mission_demo_journeys`** is done and closed.
+- This run: v0.6.10 to v0.6.14 released, with the demo mission, the dock's drawers, Jetson revs 1.1.2
+  and 1.1.3 to compare, and KiCad 10 reading. #1531, #1503 and #1442 dropped as closed.
 
 ## Open, ranked
 
