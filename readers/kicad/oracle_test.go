@@ -184,6 +184,26 @@ func TestGroupBusCrossesSheetBoundary(t *testing.T) {
 	}
 }
 
+// TestGroupBusAliasFromProjectFile is TestGroupBusCrossesSheetBoundary for KiCad 10, which keeps bus
+// aliases in the project file (`schematic.bus_aliases` in the .kicad_pro) rather than in the
+// schematic (agni issue 1560). The fixture is hier_busgroup with its two `bus_alias` declarations
+// moved there, and kicad-cli's partition of the original still holds. Jetson rev 1.1.3 is the first
+// board saved this way. Before the reader read the project file, every member of its `I2C_{SYS}{I2C}`
+// kept its sheet's scope, and a diff from rev 1.1.2 listed 267 new nets.
+func TestGroupBusAliasFromProjectFile(t *testing.T) {
+	d, complete, err := ReadSchematicHierarchyNets("hier_busgroup10_root.kicad_sch",
+		readFixture(t, "hier_busgroup10_root.kicad_sch"), hierOpen(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !complete {
+		t.Fatal("hierarchy walk did not complete; the sub-sheet did not open")
+	}
+	if bad := disagreements(pinNets(d), readOracle(t, "hier_busgroup.oracle")); len(bad) > 0 {
+		t.Errorf("net partition disagrees with kicad-cli:\n  %s", strings.Join(bad, "\n  "))
+	}
+}
+
 // TestGroupBusRecognition is the false-positive control for what counts as a group bus.
 //
 // KiCad renders `_{...}` as a subscript, `^{...}` as a superscript and `~{...}` as an overbar, so

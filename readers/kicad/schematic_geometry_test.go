@@ -379,7 +379,7 @@ func TestWireNetNames(t *testing.T) {
 // sub-sheet local names ("/amp1/SIG"), matching the netlist read exactly, so a
 // sub-sheet's labeled wires carry the qualified name that a net-subject finding would use.
 func TestWireNetNamesHierarchy(t *testing.T) {
-	open := func(rel string) ([]byte, error) { return readFixture(t, rel), nil }
+	open := hierOpen(t)
 	g, err := ReadSchematicHierarchy("hier_root.kicad_sch", readFixture(t, "hier_root.kicad_sch"), open)
 	if err != nil {
 		t.Fatal(err)
@@ -488,7 +488,7 @@ func TestColonLabelNamesNoBusWire(t *testing.T) {
 // the sheet could address it. Its Value is the net name (sch_nets.go turns the same fact into a
 // rank-0 anchor), so the geometry now records that name as net_anchor instead.
 func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
-	open := func(rel string) ([]byte, error) { return readFixture(t, rel), nil }
+	open := hierOpen(t)
 	g, err := ReadSchematicHierarchy("hier_root.kicad_sch", readFixture(t, "hier_root.kicad_sch"), open)
 	if err != nil {
 		t.Fatal(err)

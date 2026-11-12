@@ -2,6 +2,7 @@ package kicad
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"path"
 	"regexp"
@@ -52,7 +53,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		open = func(string) ([]byte, error) { return nil, fmt.Errorf("no sub-sheet opener") }
 	}
 	w := &hierNetWalker{
-		aliases:  projectBusAliases(rootContent, open),
+		aliases:  projectBusAliases(rootName, rootContent, open),
 		d:        d,
 		libs:     newLibAccum(),
 		comps:    newCompAccum(),
@@ -432,9 +433,12 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 // that USE a group bus declare no alias. kicad-cli crosses the boundary unchanged with the alias only
 // in the CHILD. Resolving per file recognized 12 of that board's 251 split members.
 //
-// The first declaration of a name wins, in traversal order. A missing or unreadable sub-sheet is
-// skipped here and reported by the walk.
-func projectBusAliases(rootContent []byte, open func(string) ([]byte, error)) map[string][]string {
+// KiCad 10 keeps the aliases in the project file instead, under `schematic.bus_aliases` in the
+// .kicad_pro beside the root sheet (agni issue 1560), so that table is read too. Without it no group
+// bus on a KiCad 10 board crosses a sheet boundary. A sheet's declaration wins over the project
+// file's, and the first declaration of a name wins among sheets, in traversal order. A missing or
+// unreadable sub-sheet is skipped here and reported by the walk. A missing project file adds nothing.
+func projectBusAliases(rootName string, rootContent []byte, open func(string) ([]byte, error)) map[string][]string {
 	out := map[string][]string{}
 	seen := map[string]bool{}
 	var visit func(content []byte, depth int)
@@ -465,10 +469,32 @@ func projectBusAliases(rootContent []byte, open func(string) ([]byte, error)) ma
 		}
 	}
 	visit(rootContent, 0)
+	if pro, err := open(strings.TrimSuffix(path.Base(rootName), ".kicad_sch") + ".kicad_pro"); err == nil {
+		for name, members := range projectFileBusAliases(pro) {
+			if _, ok := out[name]; !ok {
+				out[name] = members
+			}
+		}
+	}
 	if len(out) == 0 {
 		return nil
 	}
 	return out
+}
+
+// projectFileBusAliases reads `schematic.bus_aliases` from a .kicad_pro, where KiCad 10 keeps each
+// alias as a name mapped to its member list. A project file from KiCad 9 or earlier has no such key,
+// and one that isn't JSON yields nothing, since the sheets' own declarations then carry the aliases.
+func projectFileBusAliases(pro []byte) map[string][]string {
+	var p struct {
+		Schematic struct {
+			BusAliases map[string][]string `json:"bus_aliases"`
+		} `json:"schematic"`
+	}
+	if json.Unmarshal(pro, &p) != nil {
+		return nil
+	}
+	return p.Schematic.BusAliases
 }
 
 // hierNetWalker holds the hierarchical netlist walk's accumulator state. One walk call runs per
@@ -584,7 +610,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 // only solver inputs. A nil open reads the root sheet alone.
 func hierWireNets(rootName string, rootContent []byte, open, openSym func(string) ([]byte, error)) map[string]netgraph.NetRef {
 	syms := newSymLibCache(openSym)
-	aliases := projectBusAliases(rootContent, open)
+	aliases := projectBusAliases(rootName, rootContent, open)
 	var in netInputs
 	var k int64
 
