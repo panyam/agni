@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-11-11
+
+Both board-open reload targets pass (issue 1499). On Jetson a server reload draws in 306 ms and a
+browser-engine reload in 377 ms. A packed sheet sends its keys and labels as columns (PR 1538), and
+the canvas paints copper before it lays out text (PR 1533). A selected part frames with an opaque
+outline, and a board view opens in WebGL on a hardware GPU (PR 1537). `tools/coldparse` times a
+fresh server's first parse (PR 1535). The generated `geom.PackedSheet` no longer has `Keys` or
+`Labels`, and Go code reads them with `render.PackedKeys` and `render.PackedLabels`. The full
+write-up is [RELEASES/v0.6.10.md](RELEASES/v0.6.10.md).
+
 ## [0.6.9] - 2026-11-11
 
 A board opens faster in the browser (issue 1499). On Jetson a server reload draws in 302 ms, a
