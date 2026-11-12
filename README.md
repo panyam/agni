@@ -22,7 +22,7 @@ A 33-second walkthrough on Antmicro's open-source Jetson AGX Thor baseboard. It 
 name, and the schematic and the board beside it both go to it. Then a click on a test point on the
 board takes the schematic to that point's page. `make demo-video JOURNEY=find-a-part` records it.
 
-[![Find a part on the board: R361 framed on its schematic page, with its footprint centred on the board beside it](docsite/static/images/demo-find-a-part.jpg)](https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4)
+https://github.com/user-attachments/assets/f38300ad-33ca-49bb-885d-2b927573ba32
 
 ## What does it do
 
