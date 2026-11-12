@@ -27,7 +27,11 @@ export async function launch(): Promise<Browser> {
   try {
     // A headed window is left to fit the screen. Asking for 1400x1000 on a shorter laptop screen left
     // the view jumping between two offsets as the walk acted.
-    return await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--start-maximized"] : [] });
+    // The suite asks for reduced motion, so a revealed view jumps rather than glides (agni issue 1546)
+    // and a walk never measures or clicks a view still moving. demo-video.spec.ts and glide.spec.ts
+    // turn motion back on for their own pages.
+    const args = ["--force-prefers-reduced-motion", ...(headed ? ["--start-maximized"] : [])];
+    return await chromium.launch({ headless: !headed, slowMo, args });
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     throw new Error(

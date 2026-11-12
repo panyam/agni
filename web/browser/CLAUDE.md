@@ -20,6 +20,7 @@ This file covers the browser specs, the walks they drive, and the `make exercise
 - The walk's own clicks lift that shield through `act()`. `Input.setIgnoreInputEvents` drops Playwright's dispatched input as well as the reader's.
 - A query tab opens in the page (`openTab`). A real click on one times out in a scrolled strip.
 - Headless CI uses 1400x1000 and never pauses.
+- **The suite runs with reduced motion** (`--force-prefers-reduced-motion` in `launch()`, agni 1546), so a revealed view jumps rather than glides and a walk never clicks a moving view. A spec that tests the glide, or records a demo, opens a context with `reducedMotion: "no-preference"`.
 - **A Playwright click scrolls its target into view first.** It can pass a tour step that a person cannot take. Each tour step scrolls its control into view (`reveals` in `web/src/reviewtour.ts`), and the walk fails a released step with no hole. Look at a `page.screenshot` of each step after its release before trusting a tour change.
 - A `:has()` locator over a large answer is re-resolved on every action and costs seconds on Jetson. Find a row by index.
 

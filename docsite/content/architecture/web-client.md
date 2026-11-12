@@ -184,6 +184,11 @@ route ends on a rail that runs across the whole sheet. The address bar
 keeps the goal as `walk_goal=`, `walk_at=` and `walk_to=`. The two-pin trace below the walk stays
 for two ends that no walk has reached.
 
+**A revealed subject glides into view** (agni issue 1546). A reveal moves the canvas or a sheet view
+to its target over 300 ms, eased in and out, with the zoom on a log scale and the centre on a
+straight line (`web/src/glide.ts`). A wheel, a drag, a refit or a host's `setView` stops it where it
+is, and a new reveal replaces it. A reader whose system asks for reduced motion gets the jump.
+
 **The two-pin trace offers only the end pins a trace can reach** (agni issue 1541). Once the start
 field names a pin of the design, the panel asks `ReachablePins` with the radius in the dropdown beside
 the end field, 6 crossings unless the reader picks fewer. The end field then lists only the parts with

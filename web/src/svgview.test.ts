@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { SvgView, computeReveal, drawnOnSheet, unitAround } from "./svgview.js";
+import { GLIDE_MS, Glide } from "./glide.js";
+import { manualClock } from "./testclock.js";
 
 describe("computeReveal (WS9-006)", () => {
   it("centers the target box in the host", () => {
@@ -109,6 +111,46 @@ describe("revealOverlay for a pin (agni issue 1419)", () => {
   it("frames the dot alone for a pin the drawing does not key", () => {
     const v = harness().revealOverlay({ ref: "U9", pin: "1" })!;
     expect(centre(v).x).toBeCloseTo(0);
+  });
+
+  // The view travels to a revealed subject over GLIDE_MS rather than jumping (agni issue 1546).
+  describe("with motion", () => {
+    function gliding() {
+      const view = harness();
+      const host = document.body.lastElementChild as HTMLElement;
+      const clock = manualClock();
+      view.glide = new Glide(clock, () => true);
+      return { view, host, clock, start: view.getView() };
+    }
+
+    it("glides to the revealed view, passing through the views between", () => {
+      const { view, clock, start } = gliding();
+      const target = view.revealOverlay({ ref: "TP3", pin: "1" })!;
+      expect(view.getView()).toEqual(start);
+      clock.step(GLIDE_MS / 2);
+      const mid = view.getView();
+      expect(mid.scale).toBeGreaterThan(Math.min(start.scale, target.scale));
+      expect(mid.scale).toBeLessThan(Math.max(start.scale, target.scale));
+      clock.step(GLIDE_MS);
+      expect(view.getView()).toEqual(target);
+    });
+
+    it("stops where the reader takes the wheel, and where a host sets the view", () => {
+      const { view, host, clock } = gliding();
+      view.revealOverlay({ ref: "TP3", pin: "1" });
+      clock.step(GLIDE_MS / 3);
+      host.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, clientX: 400, clientY: 300, cancelable: true }));
+      const wheeled = view.getView();
+      clock.step(GLIDE_MS);
+      expect(view.getView()).toEqual(wheeled);
+
+      view.revealOverlay({ ref: "TP3", pin: "1" });
+      clock.step(GLIDE_MS / 3);
+      const kept = { tx: 1, ty: 2, scale: 3 };
+      view.setView(kept);
+      clock.step(GLIDE_MS);
+      expect(view.getView()).toEqual(kept);
+    });
   });
 });
 
