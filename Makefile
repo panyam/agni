@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -215,6 +215,12 @@ samples:
 # through a cache in ~/.cache/agni/samples, so each file is downloaded once per machine (agni 1446).
 samples-oracle:
 	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
+
+# The later revisions of the corpus's boards, such as Jetson rev 1.1.2 (agni issue 1559). Not in the
+# gate: each revision is about the size of its board's entry in the oracle corpus, and only the demo
+# and examples/jetson-project's `revision` target read one.
+samples-revisions:
+	./hack/fetch_samples.sh revisions
 
 # Lists the cached remote boards unused for 30 days and deletes them only when you answer y. Without a
 # terminal it deletes nothing.
@@ -472,8 +478,8 @@ demo-video:
 		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
 		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
 	fi
-	$(MAKE) ui wasm agni samples-oracle
-	$(MAKE) -C examples/jetson-project board
+	$(MAKE) ui wasm agni samples-oracle samples-revisions
+	$(MAKE) -C examples/jetson-project board revision
 	mkdir -p $(DEMO_OUT)
 	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) pnpm exec vitest run -c vitest.browser.config.ts browser/demo-video.spec.ts -t "records"
 	@rm -f $(DEMO_OUT)/page@*.webm

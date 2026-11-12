@@ -8,6 +8,7 @@
 #              | altium (the foxBMS boards as Altium saved them)
 #              | cadence-exports (Allegro's ODB++ jobs, an Allegro IPC-2581 and its ODB++X twin, an OrCAD EDIF)
 #              | remote-boards (remote/remote.pin alone; the boards it names come from their publishers)
+#              | revisions (later revisions of the boards, both views, for comparing two; agni issue 1559)
 #
 # remote-boards carries no boards, because this corpus may not redistribute them. After it lands,
 # hack/fetch_remote.sh fetches each board its pin names from the publisher's own repo, through a
