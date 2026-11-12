@@ -49,7 +49,9 @@ describe("the Trace panel's end pin list", () => {
       await hops(page, 6);
       await to.fill("D21.");
       await page.waitForFunction(() => [...document.querySelectorAll(".trace-pick-value")].some((n) => n.textContent === "D21.2"), null, { timeout: 30_000 });
-      expect(await page.locator(".trace-pick-detail").first().innerText()).toContain("2 crossings");
+      // D21.2 is listed twice over, first from the design's pins with each pin's net as its detail,
+      // then from the reachability answer with its distance. The check waits for the answer.
+      await expect.poll(() => page.locator(".trace-pick-detail").first().innerText(), { timeout: 30_000 }).toContain("2 crossings");
       await to.fill("D21.2");
       await page.click("button.trace-run");
       await page.waitForFunction(() => (document.querySelector(".trace")?.textContent ?? "").includes("R120"), null, { timeout: 30_000 });
