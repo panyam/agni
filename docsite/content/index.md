@@ -6,7 +6,7 @@ hideTitle: true
 
 <div class="home-hero">
 <h1>Agni</h1>
-<p class="hero-subtitle">Agni checks schematics and boards for design mistakes and locates every finding on the schematic. A mistake might be a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs into one representation, then checks, diffs, queries, and renders them.</p>
+<p class="hero-subtitle">Agni checks schematics and boards for design mistakes and locates every finding on the schematic. A mistake might be a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection. It reads KiCad, OrCAD Capture, EDIF, xschem and gEDA schematics, and KiCad, Allegro, Altium, ODB++ and IPC-2581 boards, into one representation, then checks, diffs, queries, and renders them.</p>
 <div class="hero-actions">
 <a href="{{.Site.PathPrefix}}/demo/" class="btn btn-primary">Try it in your browser</a>
 <a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-secondary">Get started</a>
@@ -15,7 +15,7 @@ hideTitle: true
 </div>
 </div>
 
-<div class="home-video">
+<div class="home-video" id="demo">
 <video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">
 <a href="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">Download the walkthrough video</a>
 </video>
