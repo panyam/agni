@@ -181,11 +181,11 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/tsappkit':
-        specifier: ^0.7.11
-        version: 0.7.11
+        specifier: ^0.7.12
+        version: 0.7.12
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.11
-        version: 0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)
+        specifier: ^0.7.12
+        version: 0.7.12(@panyam/tsappkit@0.7.12)(solid-js@1.9.18)
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -236,14 +236,14 @@ importers:
         specifier: 0.8.21
         version: 0.8.21
       '@panyam/tsappkit':
-        specifier: ^0.7.11
-        version: 0.7.11
+        specifier: ^0.7.12
+        version: 0.7.12
       '@panyam/tsappkit-dock':
-        specifier: ^0.7.11
-        version: 0.7.11(dockview-core@7.0.4)
+        specifier: ^0.7.12
+        version: 0.7.12(dockview-core@7.0.4)
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.11
-        version: 0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)
+        specifier: ^0.7.12
+        version: 0.7.12(@panyam/tsappkit@0.7.12)(solid-js@1.9.18)
       dockview-core:
         specifier: ^7.0.4
         version: 7.0.4
@@ -783,19 +783,19 @@ packages:
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
     engines: {node: '>=16.0.0'}
 
-  '@panyam/tsappkit-dock@0.7.11':
-    resolution: {integrity: sha512-wJ/9PSaQoRTBArhP9DCqDp83Hgmp6ruXp4XLXZ8llHT+TKETjvlPVjYXpooCC0/OJQepWSH0a0i7rTQ2EDp5iA==}
+  '@panyam/tsappkit-dock@0.7.12':
+    resolution: {integrity: sha512-V3uGabkJwTX4/qyKHKghCeC9se8ok3OhLZ9rZpovqaQqWD2pUcpSmaFU3D31K3IPsDl1kLzf3ISFr6D/Ma4Okg==}
     peerDependencies:
       dockview-core: '>=4.13.0 <9.0.0'
 
-  '@panyam/tsappkit-solid@0.7.11':
-    resolution: {integrity: sha512-Zta3jzClUm+oKBR7mkChZ0dj6X3kBQkUmvomzCCg85ZKSJ0uwdwWY3hByubBV4pGmphlCUfEt4aIOpwuoDwwzg==}
+  '@panyam/tsappkit-solid@0.7.12':
+    resolution: {integrity: sha512-xXkIzvFfYJ7ebO56/MQn57neMunc7H5cYCv3O9+UC9IX4x1e89SHI3aGbZIX4EX0U3KbLliP9FChlP627lO2dg==}
     peerDependencies:
       '@panyam/tsappkit': '>=0.0.5 <1.0.0'
       solid-js: ^1.9.0
 
-  '@panyam/tsappkit@0.7.11':
-    resolution: {integrity: sha512-VDIc47FejXZfmsPxHWgrH0z6DiPxUorhUN1Z2EzyYy5H4ltZHpXxdMTiCfxsQxwRodZ0VxhT70gQq0+8z+LCuA==}
+  '@panyam/tsappkit@0.7.12':
+    resolution: {integrity: sha512-gi97zfrtZpKdF10bvQZBxWlc/2v5eA2Ho0Axgfg0gv7rG7WccMHm8vFTIQSwWYYV2Y3NSPI+V3Xq4+1Fzl+4lA==}
     peerDependencies:
       ace-builds: ^1.0.0
     peerDependenciesMeta:
@@ -1904,16 +1904,16 @@ snapshots:
 
   '@panyam/servicekit-client@0.2.0': {}
 
-  '@panyam/tsappkit-dock@0.7.11(dockview-core@7.0.4)':
+  '@panyam/tsappkit-dock@0.7.12(dockview-core@7.0.4)':
     dependencies:
       dockview-core: 7.0.4
 
-  '@panyam/tsappkit-solid@0.7.11(@panyam/tsappkit@0.7.11)(solid-js@1.9.18)':
+  '@panyam/tsappkit-solid@0.7.12(@panyam/tsappkit@0.7.12)(solid-js@1.9.18)':
     dependencies:
-      '@panyam/tsappkit': 0.7.11
+      '@panyam/tsappkit': 0.7.12
       solid-js: 1.9.18
 
-  '@panyam/tsappkit@0.7.11': {}
+  '@panyam/tsappkit@0.7.12': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     optional: true
