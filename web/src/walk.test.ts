@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { HighlightShape } from "./highlights.js";
-import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_ENDED_COLOR, WALK_GOAL_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
+import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_GOAL_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
 import { emptyLocation, locationToUrl, parseUrl } from "./router.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };
@@ -26,12 +26,15 @@ describe("walk state", () => {
     expect(s.hops[1].nets[1].alsoThrough).toEqual(["C2"]);
   });
 
-  it("lights each hop in its shade, ended nets faint, crossed parts red and the start on top", () => {
+  // agni issue 1562. A ground or a rail on a board is many overlapping segments, and lighting it, however
+  // faint, stacked to solid grey over the copper. The Trace tab says where the walk stopped instead.
+  it("lights each hop in its shade and no net the walk stopped on, crossed parts red and the start on top", () => {
     const specs = walkSpecs(walkFromResponse(req, answer()));
     const byColor = (c: string) => specs.filter((x) => x.color === c);
     expect(byColor(HOP_COLORS[0]).flatMap((x) => x.nets ?? [])).toEqual(["SDA"]);
     expect(byColor(HOP_COLORS[1]).flatMap((x) => x.nets ?? [])).toEqual(["SDA_3V3"]);
-    expect(byColor(WALK_ENDED_COLOR).flatMap((x) => x.nets ?? [])).toEqual(["+3V3", "GND"]);
+    expect(specs.flatMap((x) => x.nets ?? [])).not.toContain("+3V3");
+    expect(specs.flatMap((x) => x.nets ?? [])).not.toContain("GND");
     expect(byColor(WALK_CROSSED_COLOR).flatMap((x) => x.components ?? []).sort()).toEqual(["C1", "C2", "U5"]);
     expect(specs[specs.length - 1]).toEqual(expect.objectContaining({ components: ["R1"], shape: HighlightShape.BOUNDING_RECT }));
     expect(specs.some((x) => (x.components ?? []).includes("U3"))).toBe(true);

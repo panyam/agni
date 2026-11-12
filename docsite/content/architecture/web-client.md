@@ -196,8 +196,9 @@ A reader selects a part or a pin, and Properties offers a walk per kind that `Li
 (agni issue 1341). Choosing one calls `WalkDesign` at one hop and shows the walk in the Trace tab,
 above the two-pin trace. The presenter lights the start alone, and the host zooms to it with
 `SvgView.revealOverlay`. Then the presenter lights the whole walk, each hop in its own shade
-(`walk.ts`, `HOP_COLORS`). A net where the walk stopped is drawn faint, since a rail runs across the
-sheet. The parts crossed are red, and the parts left uncrossed are outlined. The tab groups the nets
+(`walk.ts`, `HOP_COLORS`). A net where the walk stopped, a ground or a rail, is not lit. It runs
+across the sheet, and on a board its overlapping segments stacked to solid grey however faint the
+shade (agni issue 1562). The tab says the walk stopped there. The parts crossed are red, and the parts left uncrossed are outlined. The tab groups the nets
 by hop, and each hop folds. Each net and part locates on its sheet, and `locateInWalk` keeps the
 walk lit under the focus. Wider and Narrower walk again a hop further or nearer. A part left
 uncrossed has a Cross button, which walks again with it in `through`. The address bar keeps the
