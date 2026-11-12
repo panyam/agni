@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.14] - 2026-11-12
+
+A walk lights no net it stopped on, so a ground or a rail no longer fills a board in grey, and the
+Trace tab still says where the walk stopped (PR 1567, issue 1562). The docsite's front page plays the
+compare-revisions walkthrough first (PR 1565). It is a patch with no API changes. The full write-up
+is [RELEASES/v0.6.14.md](RELEASES/v0.6.14.md).
+
 ## [0.6.13] - 2026-11-12
 
 agni compares two real revisions of Antmicro's Jetson baseboard, revs 1.1.2 and 1.1.3 against
