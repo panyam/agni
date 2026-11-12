@@ -8,7 +8,9 @@ jobs, and together they are exactly `testall`. `testall-test` runs as three jobs
 `testall-web` and `testall-dist`. `browser-test` runs as four shards on four runners, each with `make
 browser-test SHARD=i/4`. The split is only about wall time. The scanners and the tutorial
 captures took about two and a half minutes each, in one job with the tests, so a PR waited for all of
-them in a row. Green means ship-ready. It also lies
+them in a row. A pull request or a push to main that changes only the README, the changelog,
+NEXTSTEPS.md, the release notes or the conduct and security pages skips the gate, since no test reads
+them (`paths-ignore` in `.github/workflows/ci.yml`). Green means ship-ready. It also lies
 to you in three specific ways, and most of this page is about them.
 
 ```mermaid

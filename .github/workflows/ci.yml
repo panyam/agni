@@ -7,10 +7,29 @@
 # takes as long as its slowest job (agni issue 1147).
 name: ci
 
+# A change to the files under paths-ignore alone skips the gate. No test reads them, and a README or
+# release-notes commit took a full gate run. GitHub compares a pull request's whole diff with main, so
+# a pull request that touches anything else still runs everything. CLAUDE.md, CONSTRAINTS.md,
+# CONTRIBUTING.md and RELEASING.md are not listed, since tests or scripts read them, and neither is
+# docsite/**, since its tests read every page.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - NEXTSTEPS.md
+      - CODE_OF_CONDUCT.md
+      - SECURITY.md
+      - RELEASES/**
   pull_request:
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - NEXTSTEPS.md
+      - CODE_OF_CONDUCT.md
+      - SECURITY.md
+      - RELEASES/**
 
 # A PR pushed again cancels the run for the push before it, which no one reads once a newer one is
 # queued. Runs on main are never cancelled, so every merge keeps its own record.
