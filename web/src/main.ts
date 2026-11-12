@@ -337,9 +337,17 @@ class AppRoot extends BaseComponent {
       onSelect: (i) => tablesPresenter.select(i),
       onSort: (col) => void tablesPresenter.sortBy(col),
       onSave: () => void tablesPresenter.saveActive(),
-      onLocate: (kind, subject) => {
-        void presenter.locateEntity(kind, subject);
+      // A table cell finds its subject as a sheet view's pick does: on a sheet that draws it, selected so
+      // board views follow, and framed (agni issue 1539). A verdicts row finds its verdict.
+      onLocate: (kind, subject, pin) => {
         if (dockApi) dockApi.getPanel("canvas")?.api.setActive();
+        if (kind === "verdict") {
+          void locateVerdictOnCanvas(subject);
+          return;
+        }
+        const sel = kind === "pin" ? (pin ? { kind: "pin" as const, ref: subject, pin } : null) : selectionFromCell(kind, subject);
+        if (!sel) return;
+        void followOnCanvas(sel).then(() => propertiesPresenter.selectEntity(sel));
       },
     });
     const sideLabel = (r: { path: string }) => r.path.split("/").filter(Boolean).pop() ?? r.path;
@@ -414,17 +422,23 @@ class AppRoot extends BaseComponent {
       // A finding names its subject, so clicking one selects it too and Properties follows.
       onSelect: (subject, sheet, netId) =>
         void presenter.selectFinding(subject, sheet, netId).then((sel) => {
-          if (sel) propertiesPresenter.selectEntity(sel);
+          if (!sel) return;
+          propertiesPresenter.selectEntity(sel);
+          revealOnCanvas(sel);
         }),
       // A context entity is not a finding, so it locates through locateEntity, as a query result
       // cell does. selectFinding looks up by finding subject and would find nothing (agni issue
       // 349).
-      onLocateContext: (kind, subject, pin) => void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin),
+      onLocateContext: (kind, subject, pin) => {
+        const sel = kind === "pin" ? (pin ? { kind: "pin" as const, ref: subject, pin } : null) : selectionFromCell(kind, subject);
+        if (sel) void followOnCanvas(sel);
+        else void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin);
+      },
       onRun: () => void presenter.runChecks(),
       onCancel: () => presenter.cancelChecks(),
       // A verdict is addressed by its derived id, not by subject, because a passing verdict has no
       // finding for selectFinding to look up and two rules can hold verdicts about one subject.
-      onSelectVerdict: (id) => void presenter.locateVerdict(id),
+      onSelectVerdict: (id) => void locateVerdictOnCanvas(id),
       onSave: (format) =>
         void (format === "csv" ? presenter.saveChecksCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)) : presenter.saveReport(format)),
     });
@@ -507,10 +521,13 @@ class AppRoot extends BaseComponent {
           })
           .catch((e: unknown) => query.view.setLocateNote(`${name}: ${e instanceof Error ? e.message : String(e)}`)),
       onLocate: (kind, subject, sheet, reason, pin) => {
-        void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "").then(() => emit("cell.located", { kind, subject }));
         // A located cell is also selected, so Properties follows the walk through an answer. A pin
         // arrives as its component and designator, the other cells name themselves.
         const sel = kind === "pin" ? (pin ? { kind: "pin" as const, ref: subject, pin } : null) : selectionFromCell(kind, subject);
+        void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "").then(() => {
+          revealOnCanvas(sel);
+          emit("cell.located", { kind, subject });
+        });
         if (sel) propertiesPresenter.selectEntity(sel);
       },
       // onInspect opens the check results for the selected entity through the EXISTING finding focus
@@ -637,7 +654,29 @@ class AppRoot extends BaseComponent {
       if (open) await presenter.showSheet(open);
       if (sel.kind === "area") await presenter.locateArea(sel);
       else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      surface.reveal(pinOf(sel));
+      frameLocated(sel);
+    };
+    // frameLocated zooms the canvas to what the last locate lit and nothing under it, so a field of
+    // findings does not widen the frame. A pin frames the part that draws it.
+    const frameLocated = (sel: Selection) => {
+      const focus = presenter.locatedFocus();
+      surface.reveal(pinOf(sel), focus.length > 0 ? focus : undefined);
+    };
+    // revealOnCanvas brings the canvas forward and frames a subject a panel located (agni issue 1539).
+    // The panel already opened its sheet and lit it.
+    const revealOnCanvas = (sel: Selection | null) => {
+      if (!sel) return;
+      if (dockApi) dockApi.getPanel("canvas")?.api.setActive();
+      frameLocated(sel);
+    };
+    // locateVerdictOnCanvas lights a verdict's proof, selects its first subject so board views follow,
+    // and frames the proof (agni issue 1539).
+    const locateVerdictOnCanvas = async (id: string): Promise<void> => {
+      if (!(await presenter.locateVerdict(id))) return;
+      const sel = presenter.verdictSelection(id);
+      if (!sel) return;
+      propertiesPresenter.selectEntity(sel);
+      revealOnCanvas(sel);
     };
     // One probe of the GPU serves the canvas's first renderer and a board view's (agni 1329, 1536).
     const gpuMode = defaultRenderMode();

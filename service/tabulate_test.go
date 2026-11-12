@@ -196,7 +196,12 @@ func TestATableSaysEachCellsKindWhereItsColumnCannot(t *testing.T) {
 	if k := findings.GetRows()[0].GetCellKinds(); len(k) != len(FindingColumns) || k[4] != "net" {
 		t.Errorf("a net finding's cell_kinds = %v, want net at the subject", k)
 	}
-	if k := findings.GetRows()[1].GetCellKinds(); k != nil {
-		t.Errorf("a pin finding's cell_kinds = %v, want none, since a pin needs its part to be found", k)
+	// A pin finding marks its ref cell "pin", and a viewer reads the pin from the row's pin cell
+	// (agni issue 1539).
+	if k := findings.GetRows()[1].GetCellKinds(); len(k) != len(FindingColumns) || k[4] != "pin" || k[5] != "" {
+		t.Errorf("a pin finding's cell_kinds = %v, want pin at the ref and nothing at the pin", k)
+	}
+	if bus := FindingsTable([]*checkspb.Finding{{Rule: "r", Subject: &checkspb.Subject{Kind: "bus", Ref: "DATA[0..7]"}}}); bus.GetRows()[0].GetCellKinds() != nil {
+		t.Errorf("a bus finding's cell_kinds = %v, want none, since its ref is a label and not its id", bus.GetRows()[0].GetCellKinds())
 	}
 }

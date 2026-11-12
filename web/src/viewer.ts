@@ -31,7 +31,7 @@ import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { hierarchyNote, type HierarchyNote } from "./hierarchy.js";
 import { drawingNote } from "./drawingnote.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
-import type { Selection } from "./selection.js";
+import { type Selection, selectionFromCell } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
@@ -287,6 +287,10 @@ export class ViewerPresenter {
   // reopens on the same proof. Anything that replaces the highlight clears it, since a stale id in
   // the address bar would promise a drawing the canvas is no longer showing.
   private focusedVerdict = "";
+  // lastFocus is the focus layer the last locate lit, over whatever field lay under it. A panel that
+  // zooms to what it located frames this alone, so a field of findings under it does not widen the
+  // frame (agni issue 1539).
+  private lastFocus: HighlightSpec[] = [];
   // linkHash is the design revision the viewer's URL claimed, "" when it claimed none.
   // designContentHash is the revision this server actually read, off GetDesign. The stale-link note
   // is computed from the pair. The two are kept apart rather than reduced to a boolean, so the note
@@ -385,6 +389,20 @@ export class ViewerPresenter {
 
   currentSheetId(): string {
     return this.currentSheet;
+  }
+
+  // locatedFocus is the focus layer the last locate lit, for a reveal to frame (agni issue 1539).
+  locatedFocus(): HighlightSpec[] {
+    return this.lastFocus;
+  }
+
+  // verdictSelection is what a verdict is about, its first subject, so a host can select it and a
+  // board view follows a verdict click as it follows a finding's (agni issue 1539). Null for an
+  // unknown id or a verdict with no subject.
+  verdictSelection(id: string): Selection | null {
+    const sub = this.doc.findVerdict(id)?.subjects[0];
+    if (!sub) return null;
+    return sub.kind === "pin" ? selectionFromCell("pin", sub.pin, sub.subject) : selectionFromCell(sub.kind, sub.subject);
   }
 
   // focusSpecs is the highlight a located entity gets on the canvas, so a sheet view paints a
@@ -563,6 +581,7 @@ export class ViewerPresenter {
     // highlight by (ref, pin) and an empty pin would silently widen the focus to the whole part.
     // Net and component callers pass nothing.
     const focus = withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
+    this.lastFocus = focus;
     await this.setHighlights(focusStack(this.field(), [{ kind, subject, pin: "" }], focus));
     // Explain an entity the faithful view doesn't draw (WS9-039). The server sets a reason only for
     // an entity absent from the geometry, so a drawn rail (e.g. VBUS) reports none; the note shows
@@ -584,6 +603,7 @@ export class ViewerPresenter {
     if (subjects.length === 0) return;
     if (this.mode === "native") await this.setMode("svg");
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
+    this.lastFocus = focus;
     await this.setHighlights(focusStack(this.field(), subjects, focus));
   }
 
@@ -663,6 +683,7 @@ export class ViewerPresenter {
     // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
     // half of a distance. Proof stack replaces the finding tint when both exist.
     const focus = withFocusShape(subjectsToSpecs(v.subjects), this.highlightStyle);
+    this.lastFocus = focus;
     await this.setHighlights(verdictProofStack(v, focus));
     this.focusedVerdict = v.id;
     this.pushFindings();
@@ -1859,6 +1880,7 @@ export class ViewerPresenter {
     const target = traceSheet(state);
     if (target && target !== this.currentSheet) await this.showSheet(target);
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
+    this.lastFocus = focus;
     await this.setHighlights(focusStack(this.field(), subjects, focus));
   }
 
@@ -2151,6 +2173,7 @@ export class ViewerPresenter {
   private async reapplyFocus(subject: string, netId = ""): Promise<void> {
     const focused = this.findFinding(subject, netId);
     const focusLayers = focused ? withFocusShape(findingSpec(focused), this.highlightStyle) : [];
+    this.lastFocus = focusLayers;
     await this.setHighlights(focusStack(this.field(), focused ? [{ kind: focused.kind, subject: focused.subject, pin: focused.pin ?? "", netId: focused.netId ?? "" }] : [], focusLayers));
   }
 

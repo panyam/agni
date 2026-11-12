@@ -228,7 +228,8 @@ describe("querypanel", () => {
     const { el, push, onLocate } = mountPanel();
     pushLocatable(push);
     el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // the R1 component cell
-    expect(onLocate).toHaveBeenCalledWith("component", "R1", undefined, LocateReason.UNSPECIFIED);
+    // R1 is drawn on s2 alone, and nothing is on screen yet, so the click opens s2 (agni issue 1539).
+    expect(onLocate).toHaveBeenCalledWith("component", "R1", "s2", LocateReason.UNSPECIFIED);
   });
 
   it("emits onLocate with the sheet id when a cell's badge is clicked", () => {
@@ -500,7 +501,7 @@ describe("walking from a result row", () => {
     panel.view.setEntityQueries(PRESETS);
     pushLocatable(push);
     netCell(el).click();
-    expect(onLocate).toHaveBeenCalledWith("net", "SDA", undefined, LocateReason.UNSPECIFIED);
+    expect(onLocate).toHaveBeenCalledWith("net", "SDA", "s1", LocateReason.UNSPECIFIED);
   });
 
   // The canvas is the other picker; it pushes its selection through the view, and the bar names it
@@ -888,7 +889,7 @@ describe("querypanel pin cells", () => {
     [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "5")!.click();
     // The entity is the component and the cell is the designator on it, which inverts what the
     // arguments mean compared with every other kind.
-    expect(onLocate).toHaveBeenCalledWith("pin", "U1", undefined, LocateReason.UNSPECIFIED, "5");
+    expect(onLocate).toHaveBeenCalledWith("pin", "U1", "s1", LocateReason.UNSPECIFIED, "5");
   });
 
   it("selects the pin, so the walk continues from it", () => {
@@ -1218,7 +1219,7 @@ describe("query tabs", () => {
     pushLocatable((s) => panel.view.setState(s));
     el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // R1, in tab 1
     el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
-    const r1 = { kind: "component", subject: "R1", sheet: undefined, reason: LocateReason.UNSPECIFIED };
+    const r1 = { kind: "component", subject: "R1", sheet: "s2", reason: LocateReason.UNSPECIFIED };
     expect(onActivate).toHaveBeenLastCalledWith("q2", undefined, r1);
     tab(el, "Query 1").click();
     expect(onActivate).toHaveBeenLastCalledWith("q1", r1, undefined);
@@ -1455,5 +1456,63 @@ describe("querypanel witnesses", () => {
     panel.view.setState({ ...resultFromWire({ columns: ["n"], rows: [{ cells: ["3"], cites: ["x.edn"] }] } as never), witnessed: true });
     el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
     expect(el.querySelector(".query-witness-note")!.textContent).toContain("aggregate row");
+  });
+});
+
+// A row's name goes to where the entity is drawn, the way its sheet badge does (agni issue 1539).
+// Before, the row passed no sheet, so the canvas lit the part on whatever sheet it showed.
+describe("querypanel locate by row", () => {
+  const pushTwoSheets = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromWire(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [{ cells: ["R1", "SDA"], cites: [], cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s1", "s2"] }] }],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+  const cell = (el: HTMLElement, text: string) => [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === text)!;
+
+  it("opens the sheet a part is drawn on when the canvas shows another", () => {
+    const { el, push, panel, onLocate } = mountPanel();
+    pushTwoSheets(push);
+    panel.view.setCurrentSheet("s1");
+    cell(el, "R1").click();
+    expect(onLocate).toHaveBeenLastCalledWith("component", "R1", "s2", LocateReason.UNSPECIFIED);
+  });
+
+  it("stays on the sheet on screen when the entity is drawn there", () => {
+    const { el, push, panel, onLocate } = mountPanel();
+    pushTwoSheets(push);
+    panel.view.setCurrentSheet("s2");
+    cell(el, "SDA").click();
+    expect(onLocate).toHaveBeenLastCalledWith("net", "SDA", undefined, LocateReason.UNSPECIFIED);
+    panel.view.setCurrentSheet("s3");
+    cell(el, "SDA").click();
+    expect(onLocate).toHaveBeenLastCalledWith("net", "SDA", "s1", LocateReason.UNSPECIFIED);
+  });
+});
+
+// Typing in a bound value's box keeps the box, so the reader types a whole name in one go (agni
+// issue 1540). Before, each keystroke rebuilt the chips and the box lost focus after one character.
+describe("querypanel binding box", () => {
+  it("keeps the same focused box while the reader types", () => {
+    const { el, panel } = mountPanel();
+    panel.view.setEntityQueries([{ kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] }]);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    const first = el.querySelector<HTMLInputElement>(".query-binding-value")!;
+    first.focus();
+    for (const v of ["S", "SC", "SCL"]) {
+      const input = el.querySelector<HTMLInputElement>(".query-binding-value")!;
+      input.value = v;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    const now = el.querySelector<HTMLInputElement>(".query-binding-value")!;
+    expect(now).toBe(first);
+    expect(document.activeElement).toBe(first);
+    expect(now.value).toBe("SCL");
   });
 });

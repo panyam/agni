@@ -84,11 +84,12 @@ func FindingsTable(findings []*checkspb.Finding) *webapi.Table {
 	return t
 }
 
-// subjectKinds returns a row's cell_kinds when the cell at i names a net or a part, and nil
-// otherwise. A viewer can locate those two kinds by a cell alone. A pin needs its part as well, and a
-// bus has no single place, so their rows get no cell_kinds.
+// subjectKinds returns a row's cell_kinds when the cell at i names a net, a part or a pin's part, and
+// nil otherwise. A viewer locates a net or a part by the cell alone. A pin's cell holds its part, and
+// a viewer reads the pin from the row's pin cell (agni issue 1539). A bus's ref is its label and not
+// its id, so a bus row gets no cell_kinds.
 func subjectKinds(n, i int, kind string) []string {
-	if kind != check.KindNet && kind != check.KindComponent {
+	if kind != check.KindNet && kind != check.KindComponent && kind != check.KindPin {
 		return nil
 	}
 	out := make([]string, n)

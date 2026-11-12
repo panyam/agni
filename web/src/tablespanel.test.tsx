@@ -94,6 +94,34 @@ describe("tablesPanel", () => {
     expect(onLocate).toHaveBeenCalledWith("net", "I2C_SCL");
   });
 
+  // A pin finding names its part in the ref cell and its pin in the pin cell, and a verdict names
+  // several subjects in one cell, so neither located from a cell alone (agni issue 1539).
+  it("locates a pin finding by its part and pin", () => {
+    const findings = create(TableSchema, {
+      name: "findings",
+      columns: [{ name: "rule" }, { name: "subject_kind" }, { name: "ref" }, { name: "pin" }],
+      rows: [{ cells: ["floating", "pin", "U7", "3"], cellKinds: ["", "", "pin", ""] }],
+    });
+    const { el, onLocate } = mount({ source: "checks", tables: [findings] });
+    const buttons = [...el.querySelectorAll<HTMLButtonElement>(".tables-locate")];
+    expect(buttons.map((b) => [b.dataset.kind, b.textContent])).toEqual([["pin", "U7"]]);
+    buttons[0].click();
+    expect(onLocate).toHaveBeenCalledWith("pin", "U7", "3");
+  });
+
+  it("locates a verdict row by its id, from its subjects", () => {
+    const verdicts = create(TableSchema, {
+      name: "verdicts",
+      columns: [{ name: "verdict_id" }, { name: "rule" }, { name: "subjects" }],
+      rows: [{ cells: ["v-12ab", "pull-up", "net:SDA|component:R361"] }, { cells: ["v-34cd", "pull-up", ""] }],
+    });
+    const { el, onLocate } = mount({ source: "checks", tables: [verdicts] });
+    const buttons = [...el.querySelectorAll<HTMLButtonElement>(".tables-locate")];
+    expect(buttons.map((b) => [b.dataset.kind, b.textContent])).toEqual([["verdict", "net:SDA|component:R361"]]);
+    buttons[0].click();
+    expect(onLocate).toHaveBeenCalledWith("verdict", "v-12ab");
+  });
+
   it("says why there is nothing to show", () => {
     const { el } = mount({ source: "checks", error: "Run the checks first." });
     expect(el.querySelector(".tables-error")?.textContent).toBe("Run the checks first.");

@@ -443,7 +443,10 @@
        the query. Padding the panel clears the lane; an absolutely positioned child resolves against
        the padding box, so the handle and the drawer itself stay flush against the edge. */
     .query { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-left: 22px; }
-    .query-input { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
+    /* The query box gives up height before the answer does, down to one line, and its resize handle
+       still grows it (agni issue 1540). */
+    .query-input { flex: 0 1 auto; min-height: 62px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .query-under { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
     /* The query-mode tabs (agni issue 338). The inactive input is display:none rather than
        unmounted so the textarea keeps its text and its scroll position across a trip through
        search mode; the reader who searched and came back finds the query they were writing. */
@@ -476,7 +479,7 @@
     .query-mode:hover:not(.on) { background: #ececec; }
     .query-mode.on { background: #fff; color: #222; font-weight: 600; }
     .query-term { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-    .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+    .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; flex: 0 1 auto; min-height: 28px; }
     .query-actions { display: flex; align-items: center; gap: 8px; }
     /* Bound values (agni issue 793): one chip per variable a search or a click bound, under the
        query they belong to, each value editable and removable. */
@@ -556,9 +559,11 @@
     .query-error-caret { color: #b00; font-weight: 700; }
     .query-locate-note, .checks-locate-note, .rv-locate-note { color: #7a5b00; font-size: 12px; background: #fdf7e3; border: 1px solid #e6d9a8; border-radius: 4px; padding: 6px 8px; }
     .query-empty { color: #999; font-size: 12px; padding: 4px 0; }
-    /* The results are the panel's own scroll region — a wide table scrolls horizontally here without
-       moving the query box, and long results scroll vertically under a sticky header. */
-    .query-results { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    /* The results are the panel's own scroll region. A wide table scrolls horizontally here without
+       moving the query box, and long results scroll vertically under a sticky header. The answer
+       keeps at least six rows (agni issue 1540). Before, the query box kept its height and left the
+       answer a strip of about four rows on a laptop. */
+    .query-results { flex: 1 1 0; min-height: 150px; overflow: auto; }
     /* fixed layout is what makes the columns equal by default and a dragged width stick. Under the
        old auto layout the browser sized each column to its widest cell, so one long provenance
        string or net name ate the panel and the rest were slivers. */
