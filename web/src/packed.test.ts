@@ -24,7 +24,7 @@ import {
   GROUP_BUS,
 } from "./packed.js";
 import { fromBinary } from "@bufbuild/protobuf";
-import { keyColumns } from "./testpacked.js";
+import { keyColumns, labelColumns } from "./testpacked.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -219,6 +219,14 @@ describe("the packed columns twin", () => {
         runs: ((l.runs ?? []) as { text?: string; kind?: string }[]).map((r) => ({ text: r.text ?? "", kind: kinds[r.kind ?? "KIND_PLAIN"] })),
       })),
     );
+  });
+
+  it("writes labels as the Go packer does (testpacked.labelColumns)", () => {
+    const msg = fromBinary(PackedSheetSchema, new Uint8Array(readFileSync(join(dir, "packed_columns_twin.binpb"))));
+    const mine = labelColumns(sheet.labels);
+    expect(mine.strings).toEqual(msg.labelColumns?.strings);
+    expect(Array.from(mine.records)).toEqual(Array.from(msg.labelColumns?.records ?? []));
+    expect(mine.runs.map((r) => [r.label, r.runs.map((x) => [x.text, x.kind])])).toEqual(msg.labelColumns?.runs.map((r) => [r.label, r.runs.map((x) => [x.text, x.kind])]));
   });
 
   it("writes keys as the Go packer does (testpacked.keyColumns)", () => {
