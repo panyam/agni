@@ -612,7 +612,7 @@ async function lightFindings(page: Page, mode: Mode): Promise<{ findings: number
       throw new Unwalkable("Run checks did not finish within 10 minutes");
     });
   const findings = await page.locator(".check-locate").count();
-  // The dock saves an open drawer, so the walk's next page would open with Checks over the board.
+  // Checks would otherwise cover the board for the rest of this page.
   await hideDrawers(page);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(1000);

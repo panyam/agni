@@ -8,7 +8,7 @@
 // what a person asked for (Checks, Review and their reference panels) from a drawer on the right, so
 // the drawing and the board beside it keep the width (agni issue 1542). A reader can dock any of
 // them back into the grid from its ⋯ menu, and Reset layout puts them back in their drawers.
-import { createDock, loadLayout, saveLayout, type Dock, type PanelDef } from "@panyam/tsappkit-dock";
+import { createDock, type Dock, type PanelDef } from "@panyam/tsappkit-dock";
 import type { DockviewApi } from "dockview-core";
 import "dockview-core/dist/styles/dockview.css";
 
@@ -108,20 +108,10 @@ export function defaultLayout(api: DockviewApi, whenReady: (apply: () => void) =
 
 // whenLaidOut runs apply once dockview has laid its grid out over the container. Before its first
 // layout dockview reports a 100 by 100 grid, which passes a plain size check and then drops every
-// group size set against it. A container that already has its size gets laid out before the
-// current task ends, so the sizes go into the first saved layout. A page that redirects as it opens
-// (agni issue 1549) would otherwise save the grid unsized and restore it that way. A container with
-// no size yet waits.
+// group size set against it. tsappkit-dock lays the grid out before it builds the default layout
+// when the container has a size, so the sizes apply at once and go into the dock's first save. A
+// container with no size yet waits for one.
 function whenLaidOut(container: HTMLElement, api: DockviewApi, apply: () => void, framesLeft = 60): void {
-  if (framesLeft === 60 && container.clientWidth > 0 && container.clientHeight > 0) {
-    // A microtask, since createViewerDock adds its buttons to the header after the dock exists and
-    // the header's height settles with them.
-    queueMicrotask(() => {
-      api.layout(container.clientWidth, container.clientHeight);
-      apply();
-    });
-    return;
-  }
   const w = container.clientWidth;
   if ((w > 0 && Math.abs(api.width - w) <= 1 && api.height > 0) || framesLeft <= 0) {
     apply();
@@ -213,17 +203,20 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
     if (at?.kind === "drawer" && inFront(id)) dock.toggleDrawer(at.edge, false);
     else dock.show(id);
   };
-  // The dock saves as it restores, before dockview has laid the grid out, and a save then writes
-  // dockview's 100 by 100 grid over the reader's. A group's setSize makes no save either. So the
-  // dock's saves wait until the grid is laid out, and the grid is saved once then.
-  let laidOut = false;
-  const guarded = storage && {
-    getItem: (k: string) => storage.getItem(k),
-    setItem: (k: string, v: string) => {
-      if (laidOut) storage.setItem(k, v);
-    },
-    removeItem: (k: string) => storage.removeItem(k),
-  };
+  // The buttons go in before the dock exists, so the header has its height when dockview lays the
+  // grid out. A button added after shrank the grid, and the query strip with it.
+  for (const id of DRAWER_PANELS) {
+    const def = VIEWER_PANELS.find((p) => p.id === id)!;
+    const b = doc.createElement("button");
+    b.type = "button";
+    b.className = "mode-btn dock-drawer-btn";
+    b.dataset.panel = id;
+    b.textContent = def.title;
+    b.title = id === "overview" ? `Show or hide ${def.title} (⌘/Ctrl+G)` : `Show or hide ${def.title}`;
+    b.addEventListener("click", () => toggleShown(id));
+    buttons.push(b);
+    menuHost.appendChild(b);
+  }
   const dock: Dock = createDock({
     container,
     panels: VIEWER_PANELS,
@@ -249,29 +242,13 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
       else fronts.delete(edge);
       markButtons();
     },
-    storage: guarded,
+    storage,
     key: LAYOUT_KEY,
     // The viewer's page is light-only.
     theme: () => "light",
     drawers: { left: { size: 280 }, right: { size: 0.34 } },
   });
-  for (const id of DRAWER_PANELS) {
-    const def = VIEWER_PANELS.find((p) => p.id === id)!;
-    const b = doc.createElement("button");
-    b.type = "button";
-    b.className = "mode-btn dock-drawer-btn";
-    b.dataset.panel = id;
-    b.textContent = def.title;
-    b.title = id === "overview" ? `Show or hide ${def.title} (⌘/Ctrl+G)` : `Show or hide ${def.title}`;
-    b.addEventListener("click", () => toggleShown(id));
-    buttons.push(b);
-    menuHost.appendChild(b);
-  }
   dock.panelsMenu(menuHost);
-  whenLaidOut(container, dock.api, () => {
-    laidOut = true;
-    if (storage) saveLayout(storage, LAYOUT_KEY, VIEWER_PANELS, dock.api.toJSON(), loadLayout(storage, LAYOUT_KEY)?.drawers);
-  });
   return {
     dock,
     toggleShown,
