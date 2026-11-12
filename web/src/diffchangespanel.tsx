@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { CLASS_LABELS, DIFF_COLORS, ITEM_CLASS_ORDER, itemId, itemPairs, type ChangedItem } from "./diff.js";
@@ -20,11 +20,14 @@ function ChangesPanel(props: { state: () => DiffState; onSelect: (id: string, pa
       return next;
     });
 
-  const groups = () => {
+  // The groups follow the items alone. The presenter pushes the same items with each new selection,
+  // and regrouping then rebuilt every row, so a long list jumped back to its top (agni issue 1559).
+  const items = createMemo(() => props.state().items);
+  const groups = createMemo(() => {
     const by = new Map<string, ChangedItem[]>();
-    for (const it of props.state().items) (by.get(it.cls) ?? by.set(it.cls, []).get(it.cls)!).push(it);
+    for (const it of items()) (by.get(it.cls) ?? by.set(it.cls, []).get(it.cls)!).push(it);
     return ITEM_CLASS_ORDER.filter((cls) => by.has(cls)).map((cls) => [cls, by.get(cls)!] as const);
-  };
+  });
   const badges = (it: ChangedItem) =>
     props.state().pairs.length > 1 ? itemPairs(it, props.state().pairs).map((i) => ({ i, name: props.state().pairs[i].name })) : [];
 

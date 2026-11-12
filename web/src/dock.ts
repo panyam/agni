@@ -288,24 +288,30 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
   };
 }
 
-// openDiffPanel focuses the diff view and its changed-item list, opening either first if the reader
-// closed it.
+// openDiffPanel shows a comparison: the diff view, with its changed-item list in a rail to its right,
+// opening either first if the reader closed it. The default layout tabs Changes with Diff, where a
+// reader sees the drawings or the list but never both, so a Changes in Diff's group moves out to the
+// rail (agni issue 1559). A Changes the reader put somewhere else stays there.
 export function openDiffPanel(dock: Dock): void {
-  if (!dock.where("changes")) {
-    dock.show("changes");
-    // A reopened Changes goes to a rail right of the diff, rather than half the centre (agni issue 759).
-    const diff = dock.api.getPanel("diff")?.group;
-    const changes = dock.api.getPanel("changes");
-    if (diff && changes) {
-      changes.api.moveTo({ group: diff, position: "right" });
-      whenSized(dock.api, () => changes.api.group?.api.setSize({ width: RAIL_MIN_PX }));
-    }
-  }
+  if (!dock.where("changes")) dock.show("changes");
   dock.show("diff");
+  const diff = dock.api.getPanel("diff")?.group;
+  const changes = dock.api.getPanel("changes");
+  if (diff && changes && changes.group === diff) {
+    changes.api.moveTo({ group: diff, position: "right" });
+    whenSized(dock.api, () => changes.api.group?.api.setSize({ width: RAIL_MIN_PX }));
+    dock.show("diff");
+  }
 }
 
-// closeDiffPanel ends a comparison by returning attention to the drawing. It leaves the diff and
-// changes tabs in place, since both render "No comparison open" on their own.
+// closeDiffPanel ends a comparison by returning attention to the drawing. Changes goes back to a
+// tab beside Diff when it sits alone in the rail openDiffPanel made, so a closed comparison leaves
+// no empty rail. Both panels stay open, since each says "No comparison open" on its own.
 export function closeDiffPanel(dock: Dock): void {
+  const diff = dock.api.getPanel("diff")?.group;
+  const changes = dock.api.getPanel("changes");
+  if (diff && changes && changes.group !== diff && changes.group.panels.length === 1 && dock.where("changes")?.kind === "grid") {
+    changes.api.moveTo({ group: diff, position: "center" });
+  }
   dock.show("canvas");
 }

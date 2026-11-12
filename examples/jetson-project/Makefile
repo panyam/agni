@@ -6,8 +6,10 @@ DIR = designs/jetson
 # The board is Antmicro's, under Apache-2.0, and lives in the pinned samples corpus rather than in
 # this repo. `board` copies it in beside our own design.yaml, which it never overwrites.
 SAMPLES = ../../tools/samples/boards/jetson-agx-thor-baseboard
+# Rev 1.1.2, the revision after it, ships in the corpus's `revisions` tarball (agni issue 1559).
+REVISION = ../../tools/samples/revisions/jetson-agx-thor-baseboard-1.1.2
 
-.PHONY: help board rev-b stats check diff
+.PHONY: help board revision rev-b stats check diff diff-revision
 
 help: ## List targets
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/'
@@ -16,6 +18,11 @@ board: ## Copy the fetched board into designs/jetson (run `make samples-oracle` 
 	@test -d $(SAMPLES) || { echo "no board at $(SAMPLES): run 'make samples-oracle' at the repo root"; exit 1; }
 	@for f in $(SAMPLES)/*; do [ "$$(basename $$f)" = design.yaml ] || cp -R $$f $(DIR)/; done
 	@echo "copied the Jetson baseboard into $(DIR)"
+
+revision: ## Copy rev 1.1.2 into designs/jetson-1.1.2 (run `make samples-revisions` at the repo root first)
+	@test -d $(REVISION) || { echo "no revision at $(REVISION): run 'make samples-revisions' at the repo root"; exit 1; }
+	@for f in $(REVISION)/*; do [ "$$(basename $$f)" = design.yaml ] || cp -R $$f designs/jetson-1.1.2/; done
+	@echo "copied Jetson rev 1.1.2 into designs/jetson-1.1.2"
 
 rev-b: ## Build rev B from the board copy, by the documented edit in tools/make_rev_b.py
 	@python3 tools/make_rev_b.py $(DIR) designs/jetson-rev-b
@@ -29,3 +36,6 @@ check: ## Run the rule catalog with every tier this project supplies
 
 diff: ## Compare rev A with rev B
 	@$(AGNI) diff $(DIR) designs/jetson-rev-b
+
+diff-revision: ## Compare rev 1.1.0 with Antmicro's rev 1.1.2
+	@$(AGNI) diff $(DIR) designs/jetson-1.1.2

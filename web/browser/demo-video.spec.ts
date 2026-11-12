@@ -1,6 +1,6 @@
 // The demo journeys (agni issue 1545, mission #1442). In the gate, every journey in journeys.ts plays
-// on the cut of Jetson at test pace and checks each step, so a journey that breaks fails here and
-// names the step it broke at. `make demo-video JOURNEY=<name>` sets DEMO_OUT and plays one journey on
+// at test pace and checks each step, on the cut of Jetson unless the journey names another design, so
+// a journey that breaks fails here and names the step it broke at. `make demo-video JOURNEY=<name>` sets DEMO_OUT and plays one journey on
 // Jetson's whole board, paced for a viewer, and records it as <name>.mp4 at 1080p.
 //
 // The recording shows a title card, then a caption before each step and a cursor that moves to what
@@ -68,7 +68,7 @@ async function play(page: Page, j: Journey, d: Design, pace: Pace, caption: (tex
   }
 }
 
-describe("the demo journeys, at test pace on the cut", () => {
+describe("the demo journeys, at test pace on the gate's designs", () => {
   // The mission asks that a broken journey fail with the step it broke at, so a video never goes
   // stale without anyone noticing.
   it("names the step a broken journey stopped at", async () => {
@@ -94,7 +94,9 @@ describe("the demo journeys, at test pace on the cut", () => {
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       try {
-        await play(page, j, designs.cut, testPace, async () => {});
+        const d = designs[j.gate ?? "cut"];
+        if (!d) throw new Error(`${j.name} names no design ${j.gate}`);
+        await play(page, j, d, testPace, async () => {});
       } finally {
         await page.close();
       }
