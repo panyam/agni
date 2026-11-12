@@ -115,8 +115,9 @@ centres the new revision on it. A net that runs between sheets shows on the top 
 its sheet pins, so from the top sheet the click goes to the first sheet below it that draws the net
 (agni issue 1560). Closing the comparison tabs Changes back beside Diff (agni issue 1559).
 
-Jetson's baseboard comes in two real revisions to try this on. Antmicro's rev 1.1.2 adds a fan
-regulator on the DCDC sheet, a recovery and reset header (J21) and test points on the power rails:
+Jetson's baseboard comes in real revisions to try this on. Antmicro's rev 1.1.2 adds a fan
+regulator on the DCDC sheet, a recovery and reset header (J21) and test points on the power rails.
+Rev 1.1.3, its current revision, adds more on top, and was saved by KiCad 10:
 
 ```
 make samples-oracle samples-revisions
@@ -124,8 +125,13 @@ make -C examples/jetson-project board revision
 make -C examples/jetson-project diff-revision
 ```
 
-Then open `designs/jetson` in the viewer and pick `designs/jetson-1.1.2` from Compare.
-`make demo-video JOURNEY=compare-revisions` records that walk as a video.
+Then open `designs/jetson` in the viewer and pick `designs/jetson-1.1.3` from Compare.
+`make demo-video JOURNEY=compare-revisions` records a walk through one change of each kind as a
+video, which plays here:
+
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-compare-revisions.jpg" src="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8" style="max-width:100%">
+<a href="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">Download the comparison video</a>
+</video>
 
 While a comparison is open, the **Tables** panel offers it as a table, a row per change in the
 taxonomy above. `agni diff --format csv` writes the same rows. The engine lays them out (the

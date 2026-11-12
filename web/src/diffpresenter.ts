@@ -248,10 +248,11 @@ export class DiffPresenter {
   // selectItem focuses one changed item for the changes panel. The overlays emphasize only it
   // and the view reveals its location. When the current pair does not show the item, it first
   // switches to the first pair that does. A net that crosses sheets shows on the top sheet only
-  // through its sheet pins, so on the top pair (index 0) such a net goes to the first other pair
-  // that shows it (agni issue 1560). An item with no sheet entries (no geometry) keeps the
-  // current pair. Clicking the focused item again clears the focus. An explicit
-  // pair (a sheet-badge click) never toggles off, matching the findings panel's badges.
+  // through its sheet pins, so such a net goes to the first pair below the top (index 0) that shows
+  // it, from the top pair or from a pair that doesn't show it (agni issue 1560). An item with no
+  // sheet entries (no geometry) keeps the current pair. Clicking the focused item again clears the
+  // focus. An explicit pair (a sheet-badge click) never toggles off, matching the findings panel's
+  // badges.
   async selectItem(id: string, pair?: number): Promise<void> {
     const item = this.items.find((i) => itemId(i) === id);
     const toggleOff = !item || (this.focusItem !== null && itemId(this.focusItem) === id && pair === undefined);
@@ -259,10 +260,14 @@ export class DiffPresenter {
     let target = pair ?? this.activePair;
     if (!toggleOff && pair === undefined) {
       const shown = (p: SheetPair) => this.pairShowsItem(p, item!);
-      const onTop = item!.kind === "net" && this.activePair === 0 && this.pairs.some((p, i) => i > 0 && shown(p));
-      if (onTop) target = this.pairs.findIndex((p, i) => i > 0 && shown(p));
+      // A net goes to a sheet on the side the view reveals it on, since a rename's old and new names
+      // can sit on different sheets.
+      const old = item!.cls === "removed" || item!.cls === "deleted";
+      const revealedOn = (p: SheetPair) => (old ? p.aId !== "" && item!.aSheets.includes(p.aId) : p.bId !== "" && item!.bSheets.includes(p.bId));
+      const below = item!.kind === "net" ? this.pairs.findIndex((p, i) => i > 0 && revealedOn(p)) : -1;
+      if (this.activePair === 0 && below > 0) target = below;
       else if (!shown(this.pairs[this.activePair])) {
-        const i = this.pairs.findIndex(shown);
+        const i = below > 0 ? below : this.pairs.findIndex(shown);
         if (i >= 0) target = i;
       }
     }

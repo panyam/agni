@@ -349,6 +349,48 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
     expect(h.b.reveal).toHaveBeenCalledTimes(1);
   });
 
+  it("takes a net from a sub-sheet that doesn't show it to a sub-sheet that does, past the top", async () => {
+    const h = crossingNet();
+    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+      layout: `layout-${snapPath(req.snapshot)}`,
+      sheets: [
+        { id: "s1", name: "Top" },
+        { id: "s4", name: "SoM_IO" },
+        { id: "s2", name: "DCDC" },
+        { id: "s3", name: "Peripherals" },
+      ],
+    }));
+    await h.presenter.open(h.A, h.B);
+    await h.presenter.selectPair(1);
+    await h.presenter.selectItem("net:/DCDC/FAN_PWM");
+    expect(last(h.states).activePair).toBe(2);
+  });
+
+  it("takes a renamed net to a sheet that draws its new name, which the view reveals", async () => {
+    const h = harness({
+      diffDesigns: vi.fn(async () => ({
+        report: { componentsAdded: [], componentsRemoved: [], componentsChanged: [], nets: [{ kind: "renamed", name: "/SoM_Power/VIN", oldName: "/DCDC/VIN", added: [], removed: [] }] },
+        componentStatus: {},
+        netStatus: { "/DCDC/VIN": "renamed", "/SoM_Power/VIN": "renamed" },
+        componentSheetsA: {},
+        componentSheetsB: {},
+        netSheetsA: { "/DCDC/VIN": { ids: ["s1", "s2", "s3"] } },
+        netSheetsB: { "/SoM_Power/VIN": { ids: ["s1", "s3"] } },
+      })),
+    });
+    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+      layout: `layout-${snapPath(req.snapshot)}`,
+      sheets: [
+        { id: "s1", name: "Top" },
+        { id: "s2", name: "Power" },
+        { id: "s3", name: "SoM_Power" },
+      ],
+    }));
+    await h.presenter.open(h.A, h.B);
+    await h.presenter.selectItem("net:/SoM_Power/VIN");
+    expect(last(h.states).activePair).toBe(2);
+  });
+
   it("leaves a reader on a sub-sheet that draws the net where they are", async () => {
     const h = crossingNet();
     await h.presenter.open(h.A, h.B);

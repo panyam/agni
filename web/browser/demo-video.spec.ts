@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch } from "./browser.js";
-import { type Design, type Journey, type Pace, type Reader, designs, journeyNames, journeys, testPace, viewerPace } from "./journeys.js";
+import { type Design, type Journey, type Pace, type Reader, captionOf, designs, journeyNames, journeys, readingTime, testPace, viewerPace } from "./journeys.js";
 
 const base = (): string => inject("baseUrl");
 const out = process.env.DEMO_OUT ?? "";
@@ -55,15 +55,18 @@ function reader(page: Page, pace: Pace): Reader {
 async function play(page: Page, j: Journey, d: Design, pace: Pace, caption: (text: string) => Promise<void>): Promise<void> {
   const r = reader(page, pace);
   for (const [i, s] of j.steps.entries()) {
-    await caption(s.caption);
-    if (pace.caption > 0) await page.waitForTimeout(pace.caption);
+    if (s.skip?.(d)) continue;
+    const text = captionOf(s, d);
+    await caption(text);
+    const read = readingTime(pace, text);
+    if (read > 0) await page.waitForTimeout(read);
     try {
       await s.run(r, d);
     } catch (e) {
-      throw new Error(`${j.name} broke at step ${i + 1}, "${s.caption}": ${(e instanceof Error ? e.message : String(e)).split("\n")[0]}`);
+      throw new Error(`${j.name} broke at step ${i + 1}, "${text}": ${(e instanceof Error ? e.message : String(e)).split("\n")[0]}`);
     }
     // A step that loaded a page lost the caption with the old document, so it is shown again.
-    await caption(s.caption);
+    await caption(text);
     if (pace.settle > 0) await page.waitForTimeout(pace.settle);
   }
 }
@@ -155,6 +158,11 @@ describe.runIf(out !== "")("a demo recording", () => {
     page.on("pageerror", (e) => errors.push(String(e)));
     let cut = 0;
     try {
+      // A first visit reads the design on the Load page before the viewer opens. The video is cut to
+      // start at the title card, so that read happens here, out of the picture, and the journey
+      // opens the viewer as a returning reader does.
+      await page.goto(`${base()}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
+      await page.waitForSelector("#svg-view svg", { timeout: 180_000 });
       await page.setContent(titleCard(j.title, d.label));
       cut = (Date.now() - began) / 1000;
       await page.waitForTimeout(2500);

@@ -22,6 +22,13 @@ hideTitle: true
 <p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
 </div>
 
+<div class="home-video" id="demo-compare">
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-compare-revisions.jpg" src="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">
+<a href="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">Download the comparison video</a>
+</video>
+<p>What changed between two revisions of the same board, Antmicro's rev 1.1.0 and rev 1.1.3. It steps through one change of each kind, and each step says what that kind means. <code>make demo-video JOURNEY=compare-revisions</code> records it.</p>
+</div>
+
 <div class="features">
 <div class="feature-card">
 <h3>Many formats, one IR</h3>

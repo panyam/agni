@@ -15,8 +15,9 @@ make -C examples/jetson-project stats
 `board` copies the KiCad files into `designs/jetson/` beside `design.yaml`, the one file in that
 folder that is ours, and never overwrites it. The copies are gitignored.
 
-Antmicro's next revision, rev 1.1.2, comes the same way, into `designs/jetson-1.1.2/`, for comparing
-two real revisions (agni issue 1559):
+Antmicro's later revisions, rev 1.1.2 and its current rev 1.1.3, come the same way, into
+`designs/jetson-1.1.2/` and `designs/jetson-1.1.3/`, for comparing real revisions (agni issues 1559
+and 1560). `diff-revision` compares rev 1.1.0 with rev 1.1.3:
 
 ```
 make samples-revisions         # at the repo root, once

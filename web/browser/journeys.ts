@@ -12,15 +12,28 @@
 import type { Page } from "playwright-core";
 import { PANE, TITLE, centreOf, centredIn } from "./picks.js";
 
-// Compare is a later revision of a design, and what changed in it, for the compare journey (agni
-// issue 1559). The Compare picker opens on the folder holding the open design, so dir is the folder
-// to expand there and file the revision's file in it.
+// Example is one changed subject the compare journey clicks, and what to say about it.
+export interface Example {
+  subject: string;
+  note: string; // follows the subject in the caption, such as "a recovery and reset header"
+}
+
+// Compare is a later revision of a design, and one change of each kind in it, for the compare
+// journey (agni issues 1559 and 1560). The Compare picker opens on the folder holding the open
+// design, so dir is the folder to expand there and file the revision's file in it. from and to name
+// the two revisions in captions. A kind with no example is a step the journey skips on this design.
 export interface Compare {
   dir: string;
   file: string;
-  // part is a part the revision adds, and net a net it adds, drawn on one sheet so a click goes there.
-  part: string;
-  net: string;
+  from: string;
+  to: string;
+  added?: Example;
+  removed?: Example;
+  changed?: Example;
+  newNet?: Example;
+  deletedNet?: Example;
+  renamed?: Example & { old: string };
+  hard?: Example;
 }
 
 // Design is a board a journey plays on, with the parts its steps name.
@@ -58,7 +71,17 @@ export const designs: Record<string, Design> = {
     findSheet: "gateway",
     testPoint: "TP1",
     testPointSheet: "gateway",
-    compare: { dir: "gateway", file: "gateway-rev-c.edn", part: "R4", net: "PMIC_ENABLE" },
+    compare: {
+      dir: "gateway",
+      file: "gateway-rev-c.edn",
+      from: "the gateway",
+      to: "rev C",
+      added: { subject: "R4", note: "a pull-up on I2C_SCL" },
+      newNet: { subject: "PMIC_ENABLE", note: "is the PMIC's enable line in rev C" },
+      deletedNet: { subject: "PMIC_EN", note: "was the PMIC's enable line before" },
+      renamed: { subject: "CLK_IN", old: "XTAL_IN", note: "" },
+      hard: { subject: "I2C_SCL", note: "gained the pull-up R4" },
+    },
   },
   // Antmicro's open-source baseboard for the Jetson AGX Thor module, under Apache-2.0, fetched by
   // `make samples-oracle` and copied in by `make -C examples/jetson-project board`.
@@ -70,10 +93,21 @@ export const designs: Record<string, Design> = {
     findSheet: "SoM_IO",
     testPoint: "TP76",
     testPointSheet: "Power",
-    // Rev 1.1.2, fetched by `make samples-revisions` and copied in by `make -C
-    // examples/jetson-project revision` (agni issue 1559). J21 is its new recovery and reset header,
-    // and FAN_DCDC_SW the switch node of its new fan regulator.
-    compare: { dir: "jetson-1.1.2", file: "jetson-agx-thor-baseboard.kicad_sch", part: "J21", net: "/DCDC/FAN_DCDC_SW" },
+    // Rev 1.1.3, Antmicro's current revision, fetched by `make samples-revisions` and copied in by
+    // `make -C examples/jetson-project revision` (agni issues 1559 and 1560).
+    compare: {
+      dir: "jetson-1.1.3",
+      file: "jetson-agx-thor-baseboard.kicad_sch",
+      from: "rev 1.1.0",
+      to: "rev 1.1.3",
+      added: { subject: "J21", note: "a new recovery and reset header" },
+      removed: { subject: "R27", note: "from the Power sheet" },
+      changed: { subject: "D53", note: "was a zener diode and is now a green LED" },
+      newNet: { subject: "/DCDC/FAN_DCDC_SW", note: "is the switch node of a new fan regulator" },
+      deletedNet: { subject: "/Peripherals/FAN_PWM", note: "carried the fan's PWM before it moved to the DCDC sheet" },
+      renamed: { subject: "/SoM_Power/VIN_PWR_ON", old: "/DCDC/VIN_PWR_ON", note: "" },
+      hard: { subject: "/Power/3V3_LDO", note: "is now fed by U79 instead of U15" },
+    },
   },
 };
 
@@ -84,10 +118,16 @@ export interface Pace {
   settle: number; // how long a step's result stays on screen afterwards, in ms
   typeDelay: number; // ms between typed keys
   moveSteps: number; // mouse moves on the way to a click
+  perWord: number; // ms a caption stays up for each of its words, beyond the caption time
 }
 
-export const testPace: Pace = { caption: 0, settle: 0, typeDelay: 0, moveSteps: 1 };
-export const viewerPace: Pace = { caption: 1800, settle: 1600, typeDelay: 140, moveSteps: 40 };
+export const testPace: Pace = { caption: 0, settle: 0, typeDelay: 0, moveSteps: 1, perWord: 0 };
+export const viewerPace: Pace = { caption: 1800, settle: 1600, typeDelay: 140, moveSteps: 40, perWord: 260 };
+
+// readingTime is how long a caption stays up before its step, at least the pace's caption time and
+// longer for a caption with more to read.
+export const readingTime = (pace: Pace, text: string): number =>
+  pace.caption > 0 ? Math.max(pace.caption, text.split(/\s+/).length * pace.perWord) : 0;
 
 // Reader is what a step acts through, at the journey's pace.
 export interface Reader {
@@ -100,10 +140,16 @@ export interface Reader {
 }
 
 export interface Step {
-  caption: string;
+  // caption is what the video shows before the step, the same on every design or written for one.
+  caption: string | ((d: Design) => string);
+  // skip, when it says so, leaves the step out on this design, as for a kind of change it lacks.
+  skip?: (d: Design) => boolean;
   // run acts, waits for the viewer to answer, and throws when the answer is wrong.
   run: (r: Reader, d: Design) => Promise<void>;
 }
+
+// captionOf is the text a step shows on a design.
+export const captionOf = (s: Step, d: Design): string => (typeof s.caption === "string" ? s.caption : s.caption(d));
 
 export interface Journey {
   name: string;
@@ -143,6 +189,28 @@ async function centred(page: Page, el: string, host: string, what: string): Prom
       throw new Error(`${what} did not come to the middle of the view`);
     });
   if (!(await centredIn(page, el, host))) throw new Error(`${what} is off the middle of the view`);
+}
+
+// spanCentred waits for the box around every element el matches to come to the middle third of a
+// host. A net drawn in pieces, as auto-layout draws one, is revealed by the box around all of them.
+async function spanCentred(page: Page, el: string, host: string, what: string): Promise<void> {
+  await page
+    .waitForFunction(
+      ({ el, host }) => {
+        const rs = [...document.querySelectorAll(el)].map((e) => e.getBoundingClientRect());
+        const h = document.querySelector(host)?.getBoundingClientRect();
+        if (rs.length === 0 || !h) return false;
+        const left = Math.min(...rs.map((r) => r.left)), right = Math.max(...rs.map((r) => r.right));
+        const top = Math.min(...rs.map((r) => r.top)), bottom = Math.max(...rs.map((r) => r.bottom));
+        const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        return cx > h.left + h.width / 3 && cx < h.right - h.width / 3 && cy > h.top + h.height / 3 && cy < h.bottom - h.height / 3;
+      },
+      { el, host },
+      { timeout: 30_000 },
+    )
+    .catch(() => {
+      throw new Error(`${what} did not come to the middle of the view`);
+    });
 }
 
 // zoomedIn waits until the canvas shows its sheet at least `factor` times its fitted width.
@@ -251,18 +319,19 @@ export const journeys: Journey[] = [
   },
   {
     name: "compare-revisions",
-    title: "Compare two revisions of a board",
+    title: "What changed between two revisions",
     gate: "gateway",
     steps: [
       {
-        caption: "Open the schematic",
+        caption: (d) => `Open ${revision(d).from} of ${d.label}`,
         run: async (r, d) => {
           await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
           await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
         },
       },
       {
-        caption: "Compare it with the next revision",
+        caption: (d) =>
+          `Compare it with ${revision(d).to}. agni pairs parts by their reference and nets by their connections, so it compares the circuits, not the drawings`,
         run: async (r, d) => {
           const c = revision(d);
           await clickOn(r, r.page.locator("#compare button"));
@@ -277,7 +346,7 @@ export const journeys: Journey[] = [
         },
       },
       {
-        caption: "The list of changes sits beside the two drawings",
+        caption: "The legend counts each kind of change, and the list beside the two drawings groups them",
         run: async (r) => {
           await r.page.locator(".finding-group-head").first().waitFor({ timeout: 30_000 });
           for (const id of ["diff", "changes"]) {
@@ -289,27 +358,63 @@ export const journeys: Journey[] = [
           }
         },
       },
+      changeStep("added", "b", "component", (c, e) => `Added: a part only ${c.to} has. ${e.subject} is ${e.note}`),
+      changeStep("removed", "a", "component", (c, e) => `Removed: a part only ${c.from} has, so it shows on the old drawing. ${e.subject} is gone ${e.note}`),
+      changeStep("changed", "b", "component", (_c, e) => `Changed: the same reference with different properties. ${e.subject} ${e.note}`),
+      changeStep("newNet", "b", "net", (c, e) => `A new net: connections only ${c.to} makes. ${e.subject} ${e.note}`),
+      changeStep("deletedNet", "a", "net", (c, e) => `A deleted net: connections ${c.to} no longer makes. ${e.subject} ${e.note}`),
+      changeStep(
+        "renamed",
+        "b",
+        "net",
+        (_c, e) =>
+          `Renamed: the same pins under a new name. ${(e as Example & { old: string }).old} became ${e.subject}, and agni matched them by their connections, so it's a rename rather than a delete and an add`,
+      ),
+      changeStep("hard", "b", "net", (_c, e) => `A hard change: the net keeps its name and its connections change. ${e.subject} ${e.note}`),
       {
-        caption: "Click a part the new revision adds: the drawings go to its sheet",
-        run: async (r, d) => {
-          const c = revision(d);
-          await clickOn(r, change(r.page, c.part));
-          await stillInList(r.page, c.part);
-          await centred(r.page, `#diff-svg-b [data-kind="component"][data-ref="${c.part}"]`, "#diff-svg-b", `${c.part} in the new revision`);
+        caption: "A soft change keeps every connection and changes only a net's class or attributes. This revision has none, so the legend leaves it out",
+        run: async (r) => {
+          if ((await r.page.locator(".diff-legend .diff-chip", { hasText: /soft/ }).count()) > 0) throw new Error("the legend counts soft changes the caption says aren't there");
         },
       },
       {
-        caption: "Click a net it adds: the drawings go to where it runs",
-        run: async (r, d) => {
-          const c = revision(d);
-          await clickOn(r, change(r.page, c.net));
-          await stillInList(r.page, c.net);
-          await centred(r.page, `#diff-svg-b [data-kind="net"][data-net="${c.net}"]`, "#diff-svg-b", `${c.net} in the new revision`);
+        caption: "Close the comparison, and the list tabs back beside the drawing",
+        run: async (r) => {
+          await clickOn(r, r.page.locator(".diff-close"));
+          await r.page.waitForFunction(() => {
+            const hole = document.querySelector('[data-dock-panel="canvas"]');
+            return !!hole && hole.getBoundingClientRect().width > 0 && getComputedStyle(hole).visibility !== "hidden";
+          }, null, { timeout: 30_000 });
         },
       },
     ],
   },
 ];
+
+// changeStep is the compare journey's step for one kind of change. It clicks the design's example of
+// that kind in the Changes list, and checks that the drawing on the side that holds it, the old one
+// for a removal or a deleted net, centres it, and that the row stays in view. A design with no
+// example of the kind skips the step.
+function changeStep(
+  kind: "added" | "removed" | "changed" | "newNet" | "deletedNet" | "renamed" | "hard",
+  side: "a" | "b",
+  what: "component" | "net",
+  say: (c: Compare, e: Example) => string,
+): Step {
+  const example = (d: Design): Example | undefined => d.compare?.[kind];
+  return {
+    caption: (d) => say(revision(d), example(d)!),
+    skip: (d) => !example(d),
+    run: async (r, d) => {
+      const e = example(d)!;
+      await clickOn(r, change(r.page, e.subject));
+      await stillInList(r.page, e.subject);
+      const where = `${e.subject} in the ${side === "a" ? "old" : "new"} revision`;
+      if (what === "component") await centred(r.page, `#diff-svg-${side} [data-kind="component"][data-ref="${e.subject}"]`, `#diff-svg-${side}`, where);
+      else await spanCentred(r.page, `#diff-svg-${side} [data-kind="net"][data-net="${e.subject}"]`, `#diff-svg-${side}`, where);
+    },
+  };
+}
 
 // revision returns the design's later revision, which the compare journey needs.
 function revision(d: Design): Compare {
