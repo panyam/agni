@@ -164,6 +164,17 @@ inside the panel.
 A located query cell selects too, and so does a finding clicked in the Checks or Review panel, so the
 panel follows a walk through an answer or a run.
 
+**A subject clicked in a panel opens a sheet that draws it, and the canvas zooms to it** (agni issue
+1539). Query cells, Tables cells, findings and verdicts all take one path. The sheet comes from the
+click's badge when it has one. Otherwise `chooseSheet` stays on the sheet on screen if it draws the
+subject, and opens the first sheet that does if not. The subject is lit and selected, so a board view
+beside the canvas follows. Then `SheetSurface.reveal` frames what the locate lit
+(`locatedFocus()`) and nothing under it, so a field of findings does not widen the frame. A verdict
+lights its whole proof and selects its first subject. A Tables row with a pin subject marks its ref
+cell `pin` and reads the pin from the row's pin cell. A verdicts row finds its verdict by its
+`verdict_id` cell. Before 1539, a query row passed no sheet and lit the part on whatever sheet was
+showing, a Tables click selected nothing, and none of them zoomed.
+
 **Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
 link to it, from `DesignService.LocateSubjects` (agni issue 1325). That rpc and a check run's
 findings read one index, so a subject locates where its finding badges. A pin answers the sheets

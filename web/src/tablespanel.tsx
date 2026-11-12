@@ -1,11 +1,43 @@
 import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
+import type { Table, TableRow } from "./gen/agni/v1/webapi/tables_pb.js";
 import { type CompareOptions, type TablesSourceKey, type TablesState, type TablesView, emptyTables } from "./tables.js";
 
-// LOCATABLE are the column kinds a cell click can find on the drawing. A pin needs its part as well
-// as its name, and a table column carries only the cell, so pin columns stay text.
+// LOCATABLE are the column kinds a cell click can find on the drawing by the cell alone. A pin needs
+// its part as well as its name, so a pin column stays text, and locateTarget finds a pin finding.
 const LOCATABLE = new Set(["net", "component"]);
+
+// LocateTarget is what a click on a table cell finds on the drawing. A pin names its part in subject
+// and its designator in pin, and a verdict is found by its id, since its subjects cell spells a whole
+// tuple.
+export interface LocateTarget {
+  kind: string;
+  subject: string;
+  pin?: string;
+}
+
+// locateTarget says what a click on cell i of a row finds, or null when the cell names nothing.
+// - A cell whose row or column names a net or a part finds it by the cell.
+// - A findings row marks its ref cell "pin" (service/tabulate.go). The row's pin column holds the pin.
+// - A verdicts row finds its verdict by its verdict_id cell, from a click on its subjects cell.
+// Columns are found by the names `check --format csv` publishes (agni issue 1539).
+export function locateTarget(t: Table, r: TableRow, i: number): LocateTarget | null {
+  const cell = r.cells[i] ?? "";
+  if (cell === "") return null;
+  const col = (name: string) => t.columns.findIndex((c) => c.name === name);
+  const kind = r.cellKinds[i] || t.columns[i]?.kind || "";
+  if (LOCATABLE.has(kind)) return { kind, subject: cell };
+  if (r.cellKinds[i] === "pin") {
+    const pin = r.cells[col("pin")] ?? "";
+    return pin ? { kind: "pin", subject: cell, pin } : null;
+  }
+  if (t.name === "verdicts" && t.columns[i]?.name === "subjects") {
+    const id = r.cells[col("verdict_id")] ?? "";
+    return id ? { kind: "verdict", subject: id } : null;
+  }
+  return null;
+}
 
 // SOURCES are the buttons that choose what the panel shows. The comparison's appear while one is open.
 const SOURCES: { key: TablesSourceKey; label: string; title: string; compare: boolean }[] = [
@@ -24,7 +56,7 @@ function TablesPanel(props: {
   onSelect: (i: number) => void;
   onSort: (column: string) => void;
   onSave: () => void;
-  onLocate: (kind: string, subject: string) => void;
+  onLocate: (kind: string, subject: string, pin?: string) => void;
 }) {
   const active = () => props.state().tables[props.state().active];
   const arrow = (col: string) => (props.state().orderBy === col ? " ▲" : props.state().orderBy === `-${col}` ? " ▼" : "");
@@ -103,13 +135,20 @@ function TablesPanel(props: {
                           {(cell, i) => {
                             // A row names its own cell's kind where the column names different kinds
                             // on different rows, such as a diff's subject (TableRow.cell_kinds).
-                            const kind = r.cellKinds[i()] || t().columns[i()]?.kind || "";
+                            const target = locateTarget(t(), r, i());
                             return (
                               <td>
-                                <Show when={cell !== "" && LOCATABLE.has(kind)} fallback={<>{cell}</>}>
-                                  <button type="button" class="query-locate tables-locate" data-kind={kind} onClick={() => props.onLocate(kind, cell)}>
-                                    {cell}
-                                  </button>
+                                <Show when={target} fallback={<>{cell}</>}>
+                                  {(at) => (
+                                    <button
+                                      type="button"
+                                      class="query-locate tables-locate"
+                                      data-kind={at().kind}
+                                      onClick={() => (at().pin ? props.onLocate(at().kind, at().subject, at().pin) : props.onLocate(at().kind, at().subject))}
+                                    >
+                                      {cell}
+                                    </button>
+                                  )}
                                 </Show>
                               </td>
                             );
@@ -140,7 +179,7 @@ export function tablesPanelIsland(
     onSelect: (i: number) => void;
     onSort: (column: string) => void;
     onSave: () => void;
-    onLocate: (kind: string, subject: string) => void;
+    onLocate: (kind: string, subject: string, pin?: string) => void;
   },
 ): { island: SolidIsland; view: TablesView } {
   const [state, setState] = signalView<TablesState>(emptyTables());

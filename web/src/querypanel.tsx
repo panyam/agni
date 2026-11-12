@@ -41,6 +41,7 @@ import {
 import { renderMarkdown } from "./markdown.js";
 import { type Selection, entityBindings, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
+import { chooseSheet } from "./sheetfollow.js";
 import { WitnessTree } from "./witnesstree.jsx";
 import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
 import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, fromOrigin, openTab, updateTab } from "./querytabs.js";
@@ -487,6 +488,11 @@ function QueryPanel(props: {
   // (pin, U7, ..., "5") where a component cell sends (component, U7).
   //
   // The tab remembers what it located, so coming back to it shows the same thing on the drawing.
+  // rowSheet is the sheet a click on a cell's name opens, by the rule a sheet view follows a pick
+  // (chooseSheet). It is undefined when the sheet on screen already draws the entity, and the first
+  // sheet that draws it otherwise (agni issue 1539). The badges beside the name list every sheet.
+  const rowSheet = (sheets: readonly { id: string }[]): string | undefined =>
+    chooseSheet(props.currentSheet(), sheets.map((b) => b.id)).open || undefined;
   const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, ref = "") => {
     const sel = selectionFromCell(kind, subject, ref);
     props.setSelection(sel);
@@ -767,22 +773,31 @@ function QueryPanel(props: {
             question. A list, which arrives only from a link or a set, shows as the query would
             spell it and can be removed but not edited, since one text box has no spelling for
             several values. */}
+        {/* The chips and Run share a row, so a short panel keeps its rows for the answer (agni issue
+            1540). */}
+        <div class="query-under">
         <Show when={Object.keys(inUse()).length > 0}>
           <div class="query-bindings" aria-label="bound values">
-            <For each={Object.entries(inUse())}>
-              {([name, value]) => (
-                <span class="query-binding" title={formatBinding(name, value, isSetNumber(name, value))}>
+            {/* Keyed by name, so typing into a value keeps its box (agni issue 1540). Each entry
+                of Object.entries is a new array on every keystroke, and <For> keyed by it made a
+                new box each time, which lost the focus after one character. */}
+            <For each={Object.keys(inUse())}>
+              {(name) => {
+                const value = () => inUse()[name] ?? "";
+                const spelled = () => formatBinding(name, value(), isSetNumber(name, value()));
+                return (
+                <span class="query-binding" title={spelled()}>
                   <Show
-                    when={typeof value === "string"}
-                    fallback={<span class="query-binding-list">{formatBinding(name, value, isSetNumber(name, value))}</span>}
+                    when={typeof value() === "string"}
+                    fallback={<span class="query-binding-list">{spelled()}</span>}
                   >
                     <>
                       <span class="query-binding-name">?{name} =</span>
                       <input
                         class="query-binding-value"
                         aria-label={`value of ?${name}`}
-                        size={Math.max(4, value.length)}
-                        value={value as string}
+                        size={Math.max(4, value().length)}
+                        value={value() as string}
                         onInput={(e) => setBindings({ ...bindings(), [name]: e.currentTarget.value })}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") run();
@@ -803,7 +818,8 @@ function QueryPanel(props: {
                     ×
                   </button>
                 </span>
-              )}
+                );
+              }}
             </For>
           </div>
         </Show>
@@ -812,6 +828,7 @@ function QueryPanel(props: {
             {state().loading ? "Running…" : "Run"}
           </button>
           <span class="query-hint">⌘/Ctrl+Enter</span>
+        </div>
         </div>
       </div>
 
@@ -1071,7 +1088,7 @@ function QueryPanel(props: {
                                   type="button"
                                   class={`query-locate${isCurrent(kind, cell) ? " on" : ""}`}
                                   title={kind === "pin" ? `locate pin ${rowRef}.${cell}` : `locate ${kind} ${cell}`}
-                                  onClick={() => pickCell(kind, cell, undefined, reason, row.cellRefs[ci()] ?? "")}
+                                  onClick={() => pickCell(kind, cell, rowSheet(row.cellSheets[ci()] ?? []), reason, row.cellRefs[ci()] ?? "")}
                                 >
                                   {cell}
                                 </button>

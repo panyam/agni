@@ -158,9 +158,11 @@ export type TableRow = Message<"agni.v1.webapi.TableRow"> & {
   /**
    * cell_kinds aligns with cells. Some columns name different kinds on different rows. A diff's
    * subject is one, since it is a part on one row and a net on the next (agni issue 898). For a cell
-   * in such a column, cell_kinds names the cell's entity kind ("net", "component"). It is "" for a
-   * cell whose column's kind already types it, or a cell that names no entity. cell_kinds is empty
-   * when no cell in the row needs one. A viewer locates a cell by it, and an encoder ignores it.
+   * in such a column, cell_kinds names the cell's entity kind ("net", "component"). A findings row
+   * with a pin subject marks its ref cell "pin", and the row's pin cell names the pin (agni issue
+   * 1539). It is "" for a cell whose column's kind already types it, or a cell that names no entity.
+   * cell_kinds is empty when no cell in the row needs one. A viewer locates a cell by it, and an
+   * encoder ignores it.
    *
    * @generated from field: repeated string cell_kinds = 3;
    */
