@@ -435,10 +435,12 @@ export class SheetPane {
   }
 
   // setUnderlay lays the page's highlight under the selection's in this view, and an empty list
-  // takes it away.
-  async setUnderlay(specs: HighlightSpec[]): Promise<void> {
+  // takes it away. With reveal, a view that follows frames it, and a view whose link is off lights it
+  // where it is (agni issue 1551).
+  async setUnderlay(specs: HighlightSpec[], reveal = false): Promise<void> {
     this.underlay = specs;
     await this.paint(false);
+    if (reveal && specs.length > 0 && this.link !== "off" && this.underlay === specs) this.surface.reveal(undefined, specs);
   }
 
   // setAbsent states that the board does not place sel, or clears the note when sel is null.

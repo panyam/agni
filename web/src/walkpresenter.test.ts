@@ -67,7 +67,7 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
     expectationCaption: vi.fn(), undrawnNote: vi.fn(), staleLinkNote: vi.fn(), hierarchyNote: vi.fn(), drawingNote: vi.fn(),
     rules: { setState: vi.fn() }, report: vi.fn(), query: stubQueryView(),
     walk: { setWalk: onWalk },
-    walkLit,
+    underlay: walkLit,
     reveal,
     showPanel: vi.fn(),
     location: opts.onLocation,
