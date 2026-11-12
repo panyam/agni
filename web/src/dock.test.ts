@@ -77,12 +77,16 @@ describe("defaultLayout", () => {
     ]);
   });
 
-  it("sizes the rail and the query strip, and opens each stack on its first tab", () => {
+  it("opens each stack on its first tab at once, and sizes the rail and the query strip once laid out", () => {
     const { api, sizes, active } = fakeApi();
-    defaultLayout(api);
+    let later: (() => void) | null = null;
+    defaultLayout(api, (apply) => (later = apply));
+    // A page that isn't in front gets no animation frames, so the tabs can't wait on the sizing.
+    expect(active).toEqual(["query", "properties", "canvas"]);
+    expect(sizes).toEqual({});
+    later!();
     expect(sizes.properties).toEqual({ width: 260 });
     expect(sizes.query).toEqual({ height: 320 });
-    expect(active).toEqual(["query", "properties", "canvas"]);
   });
 });
 
@@ -141,6 +145,32 @@ describe("the viewer's dock", () => {
     buttons[0].click();
     expect(toggled).toHaveBeenLastCalledWith("left", false);
     expect(buttons[0].classList.contains("active")).toBe(false);
+  });
+
+  it("closes a panel's drawer for a chosen sheet, and leaves a grid panel alone", () => {
+    const { v } = boot();
+    v.dock.show("overview");
+    const toggled = vi.spyOn(v.dock, "toggleDrawer");
+    v.hideDrawerOf("overview");
+    expect(toggled).toHaveBeenLastCalledWith("left", false);
+    toggled.mockClear();
+    v.hideDrawerOf("canvas");
+    expect(toggled).not.toHaveBeenCalled();
+  });
+
+  it("reveals a grid panel with both drawers closed, and a drawer panel in its open drawer", () => {
+    const { v } = boot();
+    v.dock.show("checks");
+    const toggled = vi.spyOn(v.dock, "toggleDrawer");
+    expect(v.reveal("query")).toBe(true);
+    expect(toggled.mock.calls).toEqual([
+      ["left", false],
+      ["right", false],
+    ]);
+    toggled.mockClear();
+    expect(v.reveal("checks")).toBe(true);
+    expect(toggled).not.toHaveBeenCalled();
+    expect(v.reveal("no-such-panel")).toBe(false);
   });
 
   it("docks a sheet view beside the canvas, tabs the next one with it, and says when one closes", () => {

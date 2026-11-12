@@ -404,7 +404,8 @@
     .board-layer-rows { list-style: none; margin: 0; padding: 0; }
     .board-layer-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; cursor: pointer; user-select: none; }
     .board-layer-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.25); }
-    .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    /* Above the dock's drawers and their scrims, since the Sheets drawer opens it (agni issue 1542). */
+    .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: calc(var(--dv-overlay-z-index, 999) + 300); display: flex; align-items: center; justify-content: center; }
     .board-picker { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 12px; width: min(520px, 90vw); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
     .board-picker-title { font-weight: bold; }
     .board-picker-where { color: #555; overflow-wrap: anywhere; }

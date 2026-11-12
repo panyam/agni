@@ -450,8 +450,15 @@ class AppRoot extends BaseComponent {
     // The sheet overview (WS9-025) shows per-sheet violation tiles, and clicking one shows that
     // sheet.
     const sheetOverview = sheetOverviewPanelIsland(sheetOverviewEl, this._eventBus, {
-      onSelect: (sheetId) => void presenter.showSheet(sheetId),
-      onOpenBeside: (sheetId) => void sheetViews.open(sheetId),
+      // Choosing a sheet closes the Sheets drawer, so the sheet chosen is in view (agni issue 1542).
+      onSelect: (sheetId) => {
+        viewerDock?.hideDrawerOf("overview");
+        void presenter.showSheet(sheetId);
+      },
+      onOpenBeside: (sheetId) => {
+        viewerDock?.hideDrawerOf("overview");
+        void sheetViews.open(sheetId);
+      },
       // The Board tile's layer rows (agni 1351).
       layers: {
         onToggle: (name) => presenter.toggleBoardLayer(name),
@@ -562,7 +569,7 @@ class AppRoot extends BaseComponent {
       onTrace: (end, sel) => {
         // The tab comes forward first. Focusing the field opens its list, and a hidden field takes
         // no focus.
-        viewerDock?.dock.show("trace");
+        viewerDock?.reveal("trace");
         trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
       },
       // A walk starts on the selected part or pin, at its first hop (agni issue 1341).
@@ -579,7 +586,7 @@ class AppRoot extends BaseComponent {
     document.addEventListener("keydown", (e) => {
       if (e.key.toLowerCase() !== "f" || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey)) return;
       if (isTextEntry(e.target) && !(e.target as HTMLElement).classList.contains("query-term")) return;
-      if (!viewerDock?.dock.show("query")) return;
+      if (!viewerDock?.reveal("query")) return;
       if (query.view.findByName()) e.preventDefault();
     });
     // ⌘/Ctrl+Shift+F focuses the query box, and ⌘/Ctrl+G shows or hides the Sheets drawer (agni issue
@@ -590,7 +597,7 @@ class AppRoot extends BaseComponent {
       if (key === "f" && e.shiftKey) {
         if (isTextEntry(e.target) && !(e.target as HTMLElement).classList.contains("query-text")) return;
         e.preventDefault();
-        viewerDock.dock.show("query");
+        viewerDock.reveal("query");
         query.view.focusQuery();
       } else if (key === "g" && !e.shiftKey) {
         if (isTextEntry(e.target)) return;
@@ -780,7 +787,7 @@ class AppRoot extends BaseComponent {
     // A tour's Show me on the area step selects the middle of the view, since a Shift-drag is not
     // something a click can make.
     this.tourHost = {
-      show: (panel) => void viewerDock?.dock.show(panel),
+      show: (panel) => void viewerDock?.reveal(panel),
       selectArea: () => {
         const v = surface.element(canvasEl).getBoundingClientRect();
         const r = { left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 };

@@ -90,28 +90,45 @@ export function defaultLayout(api: DockviewApi, whenReady: (apply: () => void) =
   api.addPanel({ id: "tables", component: "tables", title: "Tables", position: { direction: "within", referencePanel: "query" } });
   api.addPanel({ id: "diff", component: "diff", title: "Diff", position: { direction: "within", referencePanel: "canvas" } });
   api.addPanel({ id: "changes", component: "changes", title: "Changes", position: { direction: "within", referencePanel: "canvas" } });
-  whenReady(() => {
-    api.getPanel("properties")?.api.group?.api.setSize({ width: Math.max(Math.round(api.width * RAIL_FRACTION), RAIL_MIN_PX) });
-    api.getPanel("query")?.api.group?.api.setSize({ height: queryHeight(api.height) });
-    // Each stack opens on its first tab, since dockview makes the last panel added the active one.
+  // Each stack opens on its first tab, since dockview makes the last panel added the active one. This
+  // runs at once rather than with the sizes, since a page that isn't in front gets no animation
+  // frames, and a hidden Query tab would wait on a reader who never arrives.
+  const fronts = (): void => {
     api.getPanel("query")?.api.setActive();
     api.getPanel("properties")?.api.setActive();
     api.getPanel("canvas")?.api.setActive();
+  };
+  fronts();
+  whenReady(() => {
+    api.getPanel("properties")?.api.group?.api.setSize({ width: Math.max(Math.round(api.width * RAIL_FRACTION), RAIL_MIN_PX) });
+    api.getPanel("query")?.api.group?.api.setSize({ height: queryHeight(api.height) });
+    fronts();
   });
 }
 
 // whenLaidOut runs apply once dockview has laid its grid out over the container. Before its first
 // layout dockview reports a 100 by 100 grid, which passes a plain size check and then drops every
-// group size set against it, so this waits for the grid to match the container.
+// group size set against it. A container that already has its size gets laid out before the
+// current task ends, so the sizes go into the first saved layout. A page that redirects as it opens
+// (agni issue 1549) would otherwise save the grid unsized and restore it that way. A container with
+// no size yet waits.
 function whenLaidOut(container: HTMLElement, api: DockviewApi, apply: () => void, framesLeft = 60): void {
+  if (framesLeft === 60 && container.clientWidth > 0 && container.clientHeight > 0) {
+    // A microtask, since createViewerDock adds its buttons to the header after the dock exists and
+    // the header's height settles with them.
+    queueMicrotask(() => {
+      api.layout(container.clientWidth, container.clientHeight);
+      apply();
+    });
+    return;
+  }
   const w = container.clientWidth;
   if ((w > 0 && Math.abs(api.width - w) <= 1 && api.height > 0) || framesLeft <= 0) {
     apply();
     return;
   }
-  const next = (): void => whenLaidOut(container, api, apply, framesLeft - 1);
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(next);
-  else setTimeout(next, 16);
+  // A timer rather than an animation frame, since a page that isn't in front gets no frames.
+  setTimeout(() => whenLaidOut(container, api, apply, framesLeft - 1), 16);
 }
 
 // whenSized runs apply once the dock has a non-zero size, or after about 30 frames if it never does
@@ -152,6 +169,11 @@ export interface ViewerDock {
   // toggleShown brings a panel to the front, opening its drawer, or closes the drawer when the panel
   // is already in front in it. The header's drawer buttons and ⌘/Ctrl+G use it.
   toggleShown(id: string): void;
+  // hideDrawerOf closes the drawer a panel is in, and does nothing for a panel in the grid.
+  hideDrawerOf(id: string): void;
+  // reveal brings a panel to the front. A drawer would cover part of the grid, so for a panel in the
+  // grid it also closes both drawers. A tour step and the Query shortcuts use it.
+  reveal(id: string): boolean;
 }
 
 // DRAWER_PANELS are the panels the header's drawer buttons show, each opening the drawer that holds
@@ -236,6 +258,22 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
   return {
     dock,
     toggleShown,
+    hideDrawerOf: (id) => {
+      const at = dock.where(id);
+      if (at?.kind === "drawer") dock.toggleDrawer(at.edge, false);
+    },
+    reveal: (id) => {
+      if (!dock.show(id)) return false;
+      if (dock.where(id)?.kind === "grid") for (const edge of ["left", "right"] as const) dock.toggleDrawer(edge, false);
+      // dockview shows a panel brought forward in its group on the next animation frame, and a hidden
+      // field takes no focus. The panel sits where its group's last tab sat, so it is shown now.
+      const overlay = container.querySelector<HTMLElement>(`[data-dock-panel="${id}"]`)?.closest<HTMLElement>(".dv-render-overlay");
+      if (overlay && dock.api.getPanel(id)?.api.isVisible) {
+        overlay.style.visibility = "";
+        overlay.style.pointerEvents = "";
+      }
+      return true;
+    },
     addSheetView: (id, title, element, closed) => {
       const open = [...sheetViews.keys()].filter((k) => k !== id && dock.where(k) !== null);
       const last = open[open.length - 1];
@@ -258,7 +296,16 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
 // openDiffPanel focuses the diff view and its changed-item list, opening either first if the reader
 // closed it.
 export function openDiffPanel(dock: Dock): void {
-  if (!dock.where("changes")) dock.show("changes");
+  if (!dock.where("changes")) {
+    dock.show("changes");
+    // A reopened Changes goes to a rail right of the diff, rather than half the centre (agni issue 759).
+    const diff = dock.api.getPanel("diff")?.group;
+    const changes = dock.api.getPanel("changes");
+    if (diff && changes) {
+      changes.api.moveTo({ group: diff, position: "right" });
+      whenSized(dock.api, () => changes.api.group?.api.setSize({ width: RAIL_MIN_PX }));
+    }
+  }
   dock.show("diff");
 }
 
