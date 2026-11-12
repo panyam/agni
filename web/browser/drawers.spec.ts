@@ -49,6 +49,22 @@ describe("the drawer buttons", () => {
     }, 90_000);
   }
 
+  // goapplib issue 148. A drawer left open came back open on the next page, and its scrim took
+  // every click on the drawing.
+  it("brings a drawer left open back closed after a reload, with its tab still in front", async () => {
+    await withPage(browser, async (page) => {
+      await open(page);
+      await page.locator('.dock-drawer-btn[data-panel="review"]').click();
+      await expect.poll(() => shown(page, "review")).toBe(true);
+      await page.reload({ waitUntil: "networkidle" });
+      await page.locator(".dock-drawer-btn").first().waitFor({ timeout: 30_000 });
+      expect(await shown(page, "review"), "the drawer comes back closed").toBe(false);
+      expect(await page.locator(".dock-drawer-scrim:visible").count()).toBe(0);
+      await page.locator('.dock-drawer-btn[data-panel="review"]').click();
+      await expect.poll(() => shown(page, "review"), { message: "Review is still the drawer's front tab" }).toBe(true);
+    });
+  }, 90_000);
+
   it("closes the Sheets drawer once a sheet is picked, on that sheet", async () => {
     await withPage(browser, async (page) => {
       await open(page);

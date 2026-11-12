@@ -41,16 +41,16 @@ closes it. The header's Sheets, Checks and Review buttons open and close their d
 - **An open drawer owns Escape.** The viewer's own Escape clears the highlight and the selection. It
   listens in the capture phase and steps aside while a drawer is open, so the dock closes the drawer
   and the highlight stays.
-- **The dock's saves wait until the grid is laid out.** `tsappkit-dock` saves as it restores, and
-  before its first layout dockview reports a 100 by 100 grid. A save then wrote that grid over the
-  reader's, and the next visit opened with a half-width rail. `createViewerDock` hands the dock a
-  storage that drops writes until the grid matches its container, then saves once (goapplib issue
-  148).
+- **The default sizes go into the dock's first save.** `tsappkit-dock` lays dockview out from its
+  container before it builds the default layout (goapplib issue 148), so `defaultLayout` sizes the
+  rail and the query strip at once. `createViewerDock` adds its header buttons before the dock
+  exists, since a header that grew after the layout shrank the grid, and the query strip with it.
+- **A drawer comes back closed.** The dock restores a drawer's panels, front tab and size, and leaves
+  it closed (goapplib issue 148).
 - **A spec opens a drawer before it clicks inside it.** `showPanel` in `web/browser/panels.ts` opens a
   drawer panel or brings a grid panel forward, and `hideDrawers` closes any open drawer from its scrim
-  before a click on the drawing. The dock saves an open drawer, so a spec that leaves one open opens
-  its next page with the scrim over the grid. A wait on a drawer panel's state waits for it in the
-  DOM with `state: "attached"`, since a closed drawer's content is not visible.
+  before a click on the drawing. A wait on a drawer panel's state waits for it in the DOM with
+  `state: "attached"`, since a closed drawer's content is not visible.
 
 `main.ts` is the composition root and nothing else constructs it. The presenter's view ports are
 OPTIONAL by design, because an embedding host may leave a panel out (see `build/extending.md`). So an
