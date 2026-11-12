@@ -20,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIp0BChBHZXREZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg4KBmxheW91dBgBIAEoCRItCglyZWFkX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEgwKBG5ldHMYBSADKAkSDwoHcmVmX2RlcxgGIAMoCUoECAIQA0oECAMQBFIDdXJpUghhc19uYW1lZCLHAwoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgLIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRIiCgZkZXNpZ24YDCABKAsyEi5hZ25pLnYxLmlyLkRlc2lnbhIWCg5oaWVyYXJjaHlfbm90ZRgNIAEoCRIUCgxkcmF3aW5nX25vdGUYDiABKAkSGgoSZmxhdHRlbl9yZWFkc19tb3JlGA8gASgIIrkBCg9HZXRTaGVldFJlcXVlc3QSEAoIc25hcHNob3QYByABKAkSDQoFc2hlZXQYASABKAkSDgoGbGF5b3V0GAIgASgJEisKBmZvcm1hdBgDIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0Ei0KB3N5bWJvbHMYBCABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgFEAZKBAgGEAdSA3VyaVIIYXNfbmFtZWQijAEKEEdldFNoZWV0UmVzcG9uc2USKwoGcGFja2VkGAEgASgLMhkuYWduaS52MS5nZW9tLlBhY2tlZFNoZWV0SAASDQoDc3ZnGAIgASgJSAASMQoMYm9hcmRfbGF5ZXJzGAMgAygLMhsuYWduaS52MS5nZW9tLkJvYXJkTGF5ZXJSb3dCCQoHY29udGVudCLrAQoVSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAggASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRItCgdzeW1ib2xzGAMgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgEIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAUgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWNKBAgGEAdKBAgHEAhSA3VyaVIIYXNfbmFtZWQiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJ0ChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgCEANKBAgDEARSA3VyaVIIYXNfbmFtZWQiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKnAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAYgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFSgQIARACSgQIBRAGUgN1cmlSCGFzX25hbWVkIi0KDVRyYWNlRW5kcG9pbnQSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkiOwoTVHJhY2VEZXNpZ25SZXNwb25zZRIkCgV0cmFjZRgBIAEoCzIVLmFnbmkudjEud2ViYXBpLlRyYWNlIvsBCgVUcmFjZRImCgRmcm9tGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSJAoCdG8YAiABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBItCgdvdXRjb21lGAMgASgOMhwuYWduaS52MS53ZWJhcGkuVHJhY2VPdXRjb21lEg4KBnJlYXNvbhgEIAEoCRIOCgZyYWRpdXMYBSABKAUSLQoJY3Jvc3NpbmdzGAYgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcxImCgRuZXRzGAcgAygLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQibQoIVHJhY2VFbmQSLwoIZW5kcG9pbnQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EhAKCHBpbl9uYW1lGAIgASgJEgsKA25ldBgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkigwEKClRyYWNlQ3Jvc3MSDwoHcmVmX2RlcxgBIAEoCRINCgVjbGFzcxgCIAEoCRIRCgllbnRlcl9waW4YAyABKAkSEAoIZXhpdF9waW4YBCABKAkSEAoIZnJvbV9uZXQYBSABKAkSDgoGdG9fbmV0GAYgASgJEg4KBnBhaXJlZBgHIAEoCCJ9CghUcmFjZU5ldBIMCgRuYW1lGAEgASgJEigKBXN0dWJzGAIgAygLMhkuYWduaS52MS53ZWJhcGkuVHJhY2VTdHViEhQKDHN0dWJzX2VsaWRlZBgDIAEoBRIQCghidXNfbGlrZRgEIAEoCBIRCglzaGVldF9pZHMYBSADKAkipwEKEVdhbGtEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAEgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EgwKBGtpbmQYAyABKAkSDAoEaG9wcxgEIAEoBRIPCgd0aHJvdWdoGAUgAygJEiYKBGdvYWwYBiABKAsyGC5hZ25pLnYxLndlYmFwaS5XYWxrR29hbCJdCghXYWxrR29hbBIMCgRraW5kGAEgASgJEgoKAmF0GAIgASgJEikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFIsoBCg5XYWxrR29hbEFuc3dlchIMCgRraW5kGAEgASgJEgoKAmF0GAIgASgJEiQKAnRvGAMgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSLQoHb3V0Y29tZRgEIAEoDjIcLmFnbmkudjEud2ViYXBpLlRyYWNlT3V0Y29tZRIOCgZyZWFzb24YBSABKAkSDgoGcmFkaXVzGAYgASgFEikKBnJvdXRlcxgHIAMoCzIZLmFnbmkudjEud2ViYXBpLldhbGtSb3V0ZSKBAQoJV2Fsa1JvdXRlEi0KCWNyb3NzaW5ncxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSJgoEbmV0cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlTmV0Eg8KB2VuZHNfYXQYAyABKAkSDAoEbm90ZRgEIAEoCSI4ChJXYWxrRGVzaWduUmVzcG9uc2USIgoEd2FsaxgBIAEoCzIULmFnbmkudjEud2ViYXBpLldhbGsijQIKBFdhbGsSJgoEZnJvbRgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEgwKBGtpbmQYAiABKAkSDgoGcmFkaXVzGAMgASgFEg4KBnJlYXNvbhgEIAEoCRIlCgRuZXRzGAUgAygLMhcuYWduaS52MS53ZWJhcGkuV2Fsa05ldBIuCghib3VuZGFyeRgGIAMoCzIcLmFnbmkudjEud2ViYXBpLldhbGtCb3VuZGFyeRIqCgZlbGlkZWQYByADKAsyGi5hZ25pLnYxLndlYmFwaS5XYWxrRWxpZGVkEiwKBGdvYWwYCCABKAsyHi5hZ25pLnYxLndlYmFwaS5XYWxrR29hbEFuc3dlciKrAQoHV2Fsa05ldBILCgNob3AYASABKAUSJQoDbmV0GAIgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQSKwoHZW50ZXJlZBgDIAEoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSDQoFZW5kZWQYBCABKAkSMAoMYWxzb19lbnRlcmVkGAUgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcyJYCgxXYWxrQm91bmRhcnkSDwoHcmVmX2RlcxgBIAEoCRINCgVjbGFzcxgCIAEoCRILCgNob3AYAyABKAUSCwoDbmV0GAQgASgJEg4KBnJlYXNvbhgFIAEoCSInCgpXYWxrRWxpZGVkEgsKA2hvcBgBIAEoBRIMCgRuZXRzGAIgASgFIhYKFExpc3RXYWxrS2luZHNSZXF1ZXN0IkAKFUxpc3RXYWxrS2luZHNSZXNwb25zZRInCgVraW5kcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLldhbGtLaW5kIjgKCFdhbGtLaW5kEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHc3VtbWFyeRgDIAEoCSI4CglUcmFjZVN0dWISDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkSDQoFY2xhc3MYAyABKAkiRwoQQ29udmVyc2lvblJlcG9ydBIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UmVwb3J0InMKD0NvbXBvbmVudFJlcG9ydBIPCgdyZWZfZGVzGAEgASgJEg4KBnN5bWJvbBgCIAEoCRIUCgxkZXZpY2VfY2xhc3MYAyABKAkSDAoEY2VsbBgEIAEoCRIMCgRraW5kGAUgASgJEg0KBWxhYmVsGAYgASgJImMKFUxvY2F0ZVN1YmplY3RzUmVxdWVzdBIQCghzbmFwc2hvdBgBIAEoCRIpCghzdWJqZWN0cxgCIAMoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDQoFYm9hcmQYAyABKAgiSQoWTG9jYXRlU3ViamVjdHNSZXNwb25zZRIvCghzdWJqZWN0cxgBIAMoCzIdLmFnbmkudjEud2ViYXBpLlN1YmplY3RTaGVldHMigQEKDVN1YmplY3RTaGVldHMSKAoHc3ViamVjdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSEQoJc2hlZXRfaWRzGAIgAygJEjMKDWxvY2F0ZV9yZWFzb24YAyABKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24qcwoLU2hlZXRGb3JtYXQSHAoYU0hFRVRfRk9STUFUX1VOU1BFQ0lGSUVEEAASFwoTU0hFRVRfRk9STUFUX1BBQ0tFRBABEhQKEFNIRUVUX0ZPUk1BVF9TVkcQAhIXChNTSEVFVF9GT1JNQVRfTkFUSVZFEAMqYgoMU3ltYm9sU291cmNlEh0KGVNZTUJPTF9TT1VSQ0VfVU5TUEVDSUZJRUQQABIXChNTWU1CT0xfU09VUkNFX0dMWVBIEAESGgoWU1lNQk9MX1NPVVJDRV9GQUlUSEZVTBACKoEBCgxUcmFjZU91dGNvbWUSHQoZVFJBQ0VfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhgKFFRSQUNFX09VVENPTUVfUk9VVEVEEAESGgoWVFJBQ0VfT1VUQ09NRV9OT19ST1VURRACEhwKGFRSQUNFX09VVENPTUVfVU5SRVNPTFZFRBADMuEFCg1EZXNpZ25TZXJ2aWNlElAKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaIS5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXNwb25zZRJNCghHZXRTaGVldBIfLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVzcG9uc2USXwoOSGlnaGxpZ2h0U2hlZXQSJS5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlc3BvbnNlEmIKD0dldExheW91dFJlcG9ydBImLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXNwb25zZRJfCg5Mb2NhdGVTdWJqZWN0cxIlLmFnbmkudjEud2ViYXBpLkxvY2F0ZVN1YmplY3RzUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkxvY2F0ZVN1YmplY3RzUmVzcG9uc2USVgoLVHJhY2VEZXNpZ24SIi5hZ25pLnYxLndlYmFwaS5UcmFjZURlc2lnblJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5UcmFjZURlc2lnblJlc3BvbnNlElMKCldhbGtEZXNpZ24SIS5hZ25pLnYxLndlYmFwaS5XYWxrRGVzaWduUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLldhbGtEZXNpZ25SZXNwb25zZRJcCg1MaXN0V2Fsa0tpbmRzEiQuYWduaS52MS53ZWJhcGkuTGlzdFdhbGtLaW5kc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0V2Fsa0tpbmRzUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIp0BChBHZXREZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg4KBmxheW91dBgBIAEoCRItCglyZWFkX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEgwKBG5ldHMYBSADKAkSDwoHcmVmX2RlcxgGIAMoCUoECAIQA0oECAMQBFIDdXJpUghhc19uYW1lZCLHAwoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgLIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRIiCgZkZXNpZ24YDCABKAsyEi5hZ25pLnYxLmlyLkRlc2lnbhIWCg5oaWVyYXJjaHlfbm90ZRgNIAEoCRIUCgxkcmF3aW5nX25vdGUYDiABKAkSGgoSZmxhdHRlbl9yZWFkc19tb3JlGA8gASgIIrkBCg9HZXRTaGVldFJlcXVlc3QSEAoIc25hcHNob3QYByABKAkSDQoFc2hlZXQYASABKAkSDgoGbGF5b3V0GAIgASgJEisKBmZvcm1hdBgDIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0Ei0KB3N5bWJvbHMYBCABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgFEAZKBAgGEAdSA3VyaVIIYXNfbmFtZWQijAEKEEdldFNoZWV0UmVzcG9uc2USKwoGcGFja2VkGAEgASgLMhkuYWduaS52MS5nZW9tLlBhY2tlZFNoZWV0SAASDQoDc3ZnGAIgASgJSAASMQoMYm9hcmRfbGF5ZXJzGAMgAygLMhsuYWduaS52MS5nZW9tLkJvYXJkTGF5ZXJSb3dCCQoHY29udGVudCLrAQoVSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAggASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRItCgdzeW1ib2xzGAMgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgEIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAUgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWNKBAgGEAdKBAgHEAhSA3VyaVIIYXNfbmFtZWQiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJ0ChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgCEANKBAgDEARSA3VyaVIIYXNfbmFtZWQiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKnAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAYgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFSgQIARACSgQIBRAGUgN1cmlSCGFzX25hbWVkIi0KDVRyYWNlRW5kcG9pbnQSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkiYwoUUmVhY2hhYmxlUGluc1JlcXVlc3QSEAoIc25hcHNob3QYASABKAkSKwoEZnJvbRgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSDAoEaG9wcxgDIAEoBSK3AQoVUmVhY2hhYmxlUGluc1Jlc3BvbnNlEiYKBGZyb20YASABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBIOCgZyZWFzb24YAiABKAkSDgoGcmFkaXVzGAMgASgFEioKBHBpbnMYBCADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWFjaGFibGVQaW4SKgoFcmFpbHMYBSADKAsyGy5hZ25pLnYxLndlYmFwaS5SZWFjaGVkUmFpbCJECgxSZWFjaGFibGVQaW4SJQoDZW5kGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSDQoFZGVwdGgYAiABKAUiNwoLUmVhY2hlZFJhaWwSCwoDbmV0GAEgASgJEg0KBWRlcHRoGAIgASgFEgwKBHBpbnMYAyABKAUiOwoTVHJhY2VEZXNpZ25SZXNwb25zZRIkCgV0cmFjZRgBIAEoCzIVLmFnbmkudjEud2ViYXBpLlRyYWNlIvsBCgVUcmFjZRImCgRmcm9tGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSJAoCdG8YAiABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBItCgdvdXRjb21lGAMgASgOMhwuYWduaS52MS53ZWJhcGkuVHJhY2VPdXRjb21lEg4KBnJlYXNvbhgEIAEoCRIOCgZyYWRpdXMYBSABKAUSLQoJY3Jvc3NpbmdzGAYgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcxImCgRuZXRzGAcgAygLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQibQoIVHJhY2VFbmQSLwoIZW5kcG9pbnQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EhAKCHBpbl9uYW1lGAIgASgJEgsKA25ldBgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkigwEKClRyYWNlQ3Jvc3MSDwoHcmVmX2RlcxgBIAEoCRINCgVjbGFzcxgCIAEoCRIRCgllbnRlcl9waW4YAyABKAkSEAoIZXhpdF9waW4YBCABKAkSEAoIZnJvbV9uZXQYBSABKAkSDgoGdG9fbmV0GAYgASgJEg4KBnBhaXJlZBgHIAEoCCJ9CghUcmFjZU5ldBIMCgRuYW1lGAEgASgJEigKBXN0dWJzGAIgAygLMhkuYWduaS52MS53ZWJhcGkuVHJhY2VTdHViEhQKDHN0dWJzX2VsaWRlZBgDIAEoBRIQCghidXNfbGlrZRgEIAEoCBIRCglzaGVldF9pZHMYBSADKAkipwEKEVdhbGtEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAEgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EgwKBGtpbmQYAyABKAkSDAoEaG9wcxgEIAEoBRIPCgd0aHJvdWdoGAUgAygJEiYKBGdvYWwYBiABKAsyGC5hZ25pLnYxLndlYmFwaS5XYWxrR29hbCJdCghXYWxrR29hbBIMCgRraW5kGAEgASgJEgoKAmF0GAIgASgJEikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFIsoBCg5XYWxrR29hbEFuc3dlchIMCgRraW5kGAEgASgJEgoKAmF0GAIgASgJEiQKAnRvGAMgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSLQoHb3V0Y29tZRgEIAEoDjIcLmFnbmkudjEud2ViYXBpLlRyYWNlT3V0Y29tZRIOCgZyZWFzb24YBSABKAkSDgoGcmFkaXVzGAYgASgFEikKBnJvdXRlcxgHIAMoCzIZLmFnbmkudjEud2ViYXBpLldhbGtSb3V0ZSKBAQoJV2Fsa1JvdXRlEi0KCWNyb3NzaW5ncxgBIAMoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSJgoEbmV0cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlTmV0Eg8KB2VuZHNfYXQYAyABKAkSDAoEbm90ZRgEIAEoCSI4ChJXYWxrRGVzaWduUmVzcG9uc2USIgoEd2FsaxgBIAEoCzIULmFnbmkudjEud2ViYXBpLldhbGsijQIKBFdhbGsSJgoEZnJvbRgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEgwKBGtpbmQYAiABKAkSDgoGcmFkaXVzGAMgASgFEg4KBnJlYXNvbhgEIAEoCRIlCgRuZXRzGAUgAygLMhcuYWduaS52MS53ZWJhcGkuV2Fsa05ldBIuCghib3VuZGFyeRgGIAMoCzIcLmFnbmkudjEud2ViYXBpLldhbGtCb3VuZGFyeRIqCgZlbGlkZWQYByADKAsyGi5hZ25pLnYxLndlYmFwaS5XYWxrRWxpZGVkEiwKBGdvYWwYCCABKAsyHi5hZ25pLnYxLndlYmFwaS5XYWxrR29hbEFuc3dlciKrAQoHV2Fsa05ldBILCgNob3AYASABKAUSJQoDbmV0GAIgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQSKwoHZW50ZXJlZBgDIAEoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSDQoFZW5kZWQYBCABKAkSMAoMYWxzb19lbnRlcmVkGAUgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcyJYCgxXYWxrQm91bmRhcnkSDwoHcmVmX2RlcxgBIAEoCRINCgVjbGFzcxgCIAEoCRILCgNob3AYAyABKAUSCwoDbmV0GAQgASgJEg4KBnJlYXNvbhgFIAEoCSInCgpXYWxrRWxpZGVkEgsKA2hvcBgBIAEoBRIMCgRuZXRzGAIgASgFIhYKFExpc3RXYWxrS2luZHNSZXF1ZXN0IkAKFUxpc3RXYWxrS2luZHNSZXNwb25zZRInCgVraW5kcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLldhbGtLaW5kIjgKCFdhbGtLaW5kEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHc3VtbWFyeRgDIAEoCSI4CglUcmFjZVN0dWISDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkSDQoFY2xhc3MYAyABKAkiRwoQQ29udmVyc2lvblJlcG9ydBIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UmVwb3J0InMKD0NvbXBvbmVudFJlcG9ydBIPCgdyZWZfZGVzGAEgASgJEg4KBnN5bWJvbBgCIAEoCRIUCgxkZXZpY2VfY2xhc3MYAyABKAkSDAoEY2VsbBgEIAEoCRIMCgRraW5kGAUgASgJEg0KBWxhYmVsGAYgASgJImMKFUxvY2F0ZVN1YmplY3RzUmVxdWVzdBIQCghzbmFwc2hvdBgBIAEoCRIpCghzdWJqZWN0cxgCIAMoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDQoFYm9hcmQYAyABKAgiSQoWTG9jYXRlU3ViamVjdHNSZXNwb25zZRIvCghzdWJqZWN0cxgBIAMoCzIdLmFnbmkudjEud2ViYXBpLlN1YmplY3RTaGVldHMigQEKDVN1YmplY3RTaGVldHMSKAoHc3ViamVjdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSEQoJc2hlZXRfaWRzGAIgAygJEjMKDWxvY2F0ZV9yZWFzb24YAyABKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24qcwoLU2hlZXRGb3JtYXQSHAoYU0hFRVRfRk9STUFUX1VOU1BFQ0lGSUVEEAASFwoTU0hFRVRfRk9STUFUX1BBQ0tFRBABEhQKEFNIRUVUX0ZPUk1BVF9TVkcQAhIXChNTSEVFVF9GT1JNQVRfTkFUSVZFEAMqYgoMU3ltYm9sU291cmNlEh0KGVNZTUJPTF9TT1VSQ0VfVU5TUEVDSUZJRUQQABIXChNTWU1CT0xfU09VUkNFX0dMWVBIEAESGgoWU1lNQk9MX1NPVVJDRV9GQUlUSEZVTBACKoEBCgxUcmFjZU91dGNvbWUSHQoZVFJBQ0VfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhgKFFRSQUNFX09VVENPTUVfUk9VVEVEEAESGgoWVFJBQ0VfT1VUQ09NRV9OT19ST1VURRACEhwKGFRSQUNFX09VVENPTUVfVU5SRVNPTFZFRBADMr8GCg1EZXNpZ25TZXJ2aWNlElAKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaIS5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXNwb25zZRJNCghHZXRTaGVldBIfLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVzcG9uc2USXwoOSGlnaGxpZ2h0U2hlZXQSJS5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlc3BvbnNlEmIKD0dldExheW91dFJlcG9ydBImLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXNwb25zZRJfCg5Mb2NhdGVTdWJqZWN0cxIlLmFnbmkudjEud2ViYXBpLkxvY2F0ZVN1YmplY3RzUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkxvY2F0ZVN1YmplY3RzUmVzcG9uc2USVgoLVHJhY2VEZXNpZ24SIi5hZ25pLnYxLndlYmFwaS5UcmFjZURlc2lnblJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5UcmFjZURlc2lnblJlc3BvbnNlElwKDVJlYWNoYWJsZVBpbnMSJC5hZ25pLnYxLndlYmFwaS5SZWFjaGFibGVQaW5zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlYWNoYWJsZVBpbnNSZXNwb25zZRJTCgpXYWxrRGVzaWduEiEuYWduaS52MS53ZWJhcGkuV2Fsa0Rlc2lnblJlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5XYWxrRGVzaWduUmVzcG9uc2USXAoNTGlzdFdhbGtLaW5kcxIkLmFnbmkudjEud2ViYXBpLkxpc3RXYWxrS2luZHNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFdhbGtLaW5kc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -547,6 +547,144 @@ export const TraceEndpointSchema: GenMessage<TraceEndpoint> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_design, 10);
 
 /**
+ * @generated from message agni.v1.webapi.ReachablePinsRequest
+ */
+export type ReachablePinsRequest = Message<"agni.v1.webapi.ReachablePinsRequest"> & {
+  /**
+   * snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 1;
+   */
+  snapshot: string;
+
+  /**
+   * from is the start pin, as ref-des and pin designator, or a pin name the part declares.
+   *
+   * @generated from field: agni.v1.webapi.TraceEndpoint from = 2;
+   */
+  from?: TraceEndpoint | undefined;
+
+  /**
+   * hops is the radius in series crossings, and 0 takes the server's default, as on TraceDesign.
+   *
+   * @generated from field: int32 hops = 3;
+   */
+  hops: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ReachablePinsRequest.
+ * Use `create(ReachablePinsRequestSchema)` to create a new message.
+ */
+export const ReachablePinsRequestSchema: GenMessage<ReachablePinsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 11);
+
+/**
+ * @generated from message agni.v1.webapi.ReachablePinsResponse
+ */
+export type ReachablePinsResponse = Message<"agni.v1.webapi.ReachablePinsResponse"> & {
+  /**
+   * from is the start pin resolved, with its net. Its sheet_ids are left empty.
+   *
+   * @generated from field: agni.v1.webapi.TraceEnd from = 1;
+   */
+  from?: TraceEnd | undefined;
+
+  /**
+   * reason says why the start pin did not resolve. pins and rails are empty then.
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
+  /**
+   * radius is the radius searched, so a reader sees what was asked.
+   *
+   * @generated from field: int32 radius = 3;
+   */
+  radius: number;
+
+  /**
+   * pins are the pins a trace from `from` routes to, nearest first, then by ref-des and pin. The
+   * start pin is not among them, and a virtual part (#PWR01) has none.
+   *
+   * @generated from field: repeated agni.v1.webapi.ReachablePin pins = 4;
+   */
+  pins: ReachablePin[];
+
+  /**
+   * rails are the rails and grounds the walk reached and stopped on, nearest first.
+   *
+   * @generated from field: repeated agni.v1.webapi.ReachedRail rails = 5;
+   */
+  rails: ReachedRail[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.ReachablePinsResponse.
+ * Use `create(ReachablePinsResponseSchema)` to create a new message.
+ */
+export const ReachablePinsResponseSchema: GenMessage<ReachablePinsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 12);
+
+/**
+ * ReachablePin is one pin a trace reaches. end carries its net and functional name, with no sheets.
+ *
+ * @generated from message agni.v1.webapi.ReachablePin
+ */
+export type ReachablePin = Message<"agni.v1.webapi.ReachablePin"> & {
+  /**
+   * @generated from field: agni.v1.webapi.TraceEnd end = 1;
+   */
+  end?: TraceEnd | undefined;
+
+  /**
+   * depth is the series crossings between the start pin's net and this pin's, 0 on the start net.
+   *
+   * @generated from field: int32 depth = 2;
+   */
+  depth: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ReachablePin.
+ * Use `create(ReachablePinSchema)` to create a new message.
+ */
+export const ReachablePinSchema: GenMessage<ReachablePin> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 13);
+
+/**
+ * ReachedRail is a bus-like net the walk reached. A trace may end on one and never crosses it.
+ *
+ * @generated from message agni.v1.webapi.ReachedRail
+ */
+export type ReachedRail = Message<"agni.v1.webapi.ReachedRail"> & {
+  /**
+   * @generated from field: string net = 1;
+   */
+  net: string;
+
+  /**
+   * @generated from field: int32 depth = 2;
+   */
+  depth: number;
+
+  /**
+   * pins counts the pins on the net, which the answer does not list.
+   *
+   * @generated from field: int32 pins = 3;
+   */
+  pins: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ReachedRail.
+ * Use `create(ReachedRailSchema)` to create a new message.
+ */
+export const ReachedRailSchema: GenMessage<ReachedRail> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 14);
+
+/**
  * @generated from message agni.v1.webapi.TraceDesignResponse
  */
 export type TraceDesignResponse = Message<"agni.v1.webapi.TraceDesignResponse"> & {
@@ -561,7 +699,7 @@ export type TraceDesignResponse = Message<"agni.v1.webapi.TraceDesignResponse"> 
  * Use `create(TraceDesignResponseSchema)` to create a new message.
  */
 export const TraceDesignResponseSchema: GenMessage<TraceDesignResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 11);
+  messageDesc(file_agni_v1_webapi_design, 15);
 
 /**
  * Trace is one pin-to-pin question and its whole answer.
@@ -614,7 +752,7 @@ export type Trace = Message<"agni.v1.webapi.Trace"> & {
  * Use `create(TraceSchema)` to create a new message.
  */
 export const TraceSchema: GenMessage<Trace> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 12);
+  messageDesc(file_agni_v1_webapi_design, 16);
 
 /**
  * TraceEnd is one resolved endpoint of a trace.
@@ -661,7 +799,7 @@ export type TraceEnd = Message<"agni.v1.webapi.TraceEnd"> & {
  * Use `create(TraceEndSchema)` to create a new message.
  */
 export const TraceEndSchema: GenMessage<TraceEnd> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 13);
+  messageDesc(file_agni_v1_webapi_design, 17);
 
 /**
  * TraceCross is one series element crossed on the route, with its own pins on each side.
@@ -713,7 +851,7 @@ export type TraceCross = Message<"agni.v1.webapi.TraceCross"> & {
  * Use `create(TraceCrossSchema)` to create a new message.
  */
 export const TraceCrossSchema: GenMessage<TraceCross> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 14);
+  messageDesc(file_agni_v1_webapi_design, 18);
 
 /**
  * TraceNet is one net on the route, with what else sits on it.
@@ -765,7 +903,7 @@ export type TraceNet = Message<"agni.v1.webapi.TraceNet"> & {
  * Use `create(TraceNetSchema)` to create a new message.
  */
 export const TraceNetSchema: GenMessage<TraceNet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 15);
+  messageDesc(file_agni_v1_webapi_design, 19);
 
 /**
  * @generated from message agni.v1.webapi.WalkDesignRequest
@@ -821,7 +959,7 @@ export type WalkDesignRequest = Message<"agni.v1.webapi.WalkDesignRequest"> & {
  * Use `create(WalkDesignRequestSchema)` to create a new message.
  */
 export const WalkDesignRequestSchema: GenMessage<WalkDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 16);
+  messageDesc(file_agni_v1_webapi_design, 20);
 
 /**
  * WalkGoal is a goal question asked from a walk: to a pin, to the pull-up, or to the rail.
@@ -866,7 +1004,7 @@ export type WalkGoal = Message<"agni.v1.webapi.WalkGoal"> & {
  * Use `create(WalkGoalSchema)` to create a new message.
  */
 export const WalkGoalSchema: GenMessage<WalkGoal> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 17);
+  messageDesc(file_agni_v1_webapi_design, 21);
 
 /**
  * WalkGoalAnswer answers a goal question. It keeps trace's three outcomes apart: TRACE_OUTCOME_ROUTED
@@ -928,7 +1066,7 @@ export type WalkGoalAnswer = Message<"agni.v1.webapi.WalkGoalAnswer"> & {
  * Use `create(WalkGoalAnswerSchema)` to create a new message.
  */
 export const WalkGoalAnswerSchema: GenMessage<WalkGoalAnswer> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 18);
+  messageDesc(file_agni_v1_webapi_design, 22);
 
 /**
  * WalkRoute is one route a goal found. It runs from the walk's start along the walk's own path to
@@ -968,7 +1106,7 @@ export type WalkRoute = Message<"agni.v1.webapi.WalkRoute"> & {
  * Use `create(WalkRouteSchema)` to create a new message.
  */
 export const WalkRouteSchema: GenMessage<WalkRoute> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 19);
+  messageDesc(file_agni_v1_webapi_design, 23);
 
 /**
  * @generated from message agni.v1.webapi.WalkDesignResponse
@@ -985,7 +1123,7 @@ export type WalkDesignResponse = Message<"agni.v1.webapi.WalkDesignResponse"> & 
  * Use `create(WalkDesignResponseSchema)` to create a new message.
  */
 export const WalkDesignResponseSchema: GenMessage<WalkDesignResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 20);
+  messageDesc(file_agni_v1_webapi_design, 24);
 
 /**
  * Walk is one walk outwards from a part or pin, and its whole answer.
@@ -1054,7 +1192,7 @@ export type Walk = Message<"agni.v1.webapi.Walk"> & {
  * Use `create(WalkSchema)` to create a new message.
  */
 export const WalkSchema: GenMessage<Walk> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 21);
+  messageDesc(file_agni_v1_webapi_design, 25);
 
 /**
  * WalkNet is one net a walk reached.
@@ -1104,7 +1242,7 @@ export type WalkNet = Message<"agni.v1.webapi.WalkNet"> & {
  * Use `create(WalkNetSchema)` to create a new message.
  */
 export const WalkNetSchema: GenMessage<WalkNet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 22);
+  messageDesc(file_agni_v1_webapi_design, 26);
 
 /**
  * WalkBoundary is a part the walk did not cross, and why. Naming it in `through` crosses it.
@@ -1145,7 +1283,7 @@ export type WalkBoundary = Message<"agni.v1.webapi.WalkBoundary"> & {
  * Use `create(WalkBoundarySchema)` to create a new message.
  */
 export const WalkBoundarySchema: GenMessage<WalkBoundary> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 23);
+  messageDesc(file_agni_v1_webapi_design, 27);
 
 /**
  * WalkElided counts the nets one hop left out.
@@ -1169,7 +1307,7 @@ export type WalkElided = Message<"agni.v1.webapi.WalkElided"> & {
  * Use `create(WalkElidedSchema)` to create a new message.
  */
 export const WalkElidedSchema: GenMessage<WalkElided> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 24);
+  messageDesc(file_agni_v1_webapi_design, 28);
 
 /**
  * @generated from message agni.v1.webapi.ListWalkKindsRequest
@@ -1182,7 +1320,7 @@ export type ListWalkKindsRequest = Message<"agni.v1.webapi.ListWalkKindsRequest"
  * Use `create(ListWalkKindsRequestSchema)` to create a new message.
  */
 export const ListWalkKindsRequestSchema: GenMessage<ListWalkKindsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 25);
+  messageDesc(file_agni_v1_webapi_design, 29);
 
 /**
  * @generated from message agni.v1.webapi.ListWalkKindsResponse
@@ -1199,7 +1337,7 @@ export type ListWalkKindsResponse = Message<"agni.v1.webapi.ListWalkKindsRespons
  * Use `create(ListWalkKindsResponseSchema)` to create a new message.
  */
 export const ListWalkKindsResponseSchema: GenMessage<ListWalkKindsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 26);
+  messageDesc(file_agni_v1_webapi_design, 30);
 
 /**
  * WalkKind is one walk a viewer can offer for a part.
@@ -1230,7 +1368,7 @@ export type WalkKind = Message<"agni.v1.webapi.WalkKind"> & {
  * Use `create(WalkKindSchema)` to create a new message.
  */
 export const WalkKindSchema: GenMessage<WalkKind> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 27);
+  messageDesc(file_agni_v1_webapi_design, 31);
 
 /**
  * TraceStub is a part on one of the route's nets, which the route does not pass through. Test points
@@ -1261,7 +1399,7 @@ export type TraceStub = Message<"agni.v1.webapi.TraceStub"> & {
  * Use `create(TraceStubSchema)` to create a new message.
  */
 export const TraceStubSchema: GenMessage<TraceStub> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 28);
+  messageDesc(file_agni_v1_webapi_design, 32);
 
 /**
  * ConversionReport is how an auto-layout mapped each component to a drawn node.
@@ -1280,7 +1418,7 @@ export type ConversionReport = Message<"agni.v1.webapi.ConversionReport"> & {
  * Use `create(ConversionReportSchema)` to create a new message.
  */
 export const ConversionReportSchema: GenMessage<ConversionReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 29);
+  messageDesc(file_agni_v1_webapi_design, 33);
 
 /**
  * ComponentReport is one component's mapping in the conversion report.
@@ -1336,7 +1474,7 @@ export type ComponentReport = Message<"agni.v1.webapi.ComponentReport"> & {
  * Use `create(ComponentReportSchema)` to create a new message.
  */
 export const ComponentReportSchema: GenMessage<ComponentReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 30);
+  messageDesc(file_agni_v1_webapi_design, 34);
 
 /**
  * LocateSubjectsRequest names the entities to locate in one snapshot.
@@ -1376,7 +1514,7 @@ export type LocateSubjectsRequest = Message<"agni.v1.webapi.LocateSubjectsReques
  * Use `create(LocateSubjectsRequestSchema)` to create a new message.
  */
 export const LocateSubjectsRequestSchema: GenMessage<LocateSubjectsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 31);
+  messageDesc(file_agni_v1_webapi_design, 35);
 
 /**
  * LocateSubjectsResponse answers each subject in request order.
@@ -1395,7 +1533,7 @@ export type LocateSubjectsResponse = Message<"agni.v1.webapi.LocateSubjectsRespo
  * Use `create(LocateSubjectsResponseSchema)` to create a new message.
  */
 export const LocateSubjectsResponseSchema: GenMessage<LocateSubjectsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 32);
+  messageDesc(file_agni_v1_webapi_design, 36);
 
 /**
  * SubjectSheets is where one subject is drawn.
@@ -1429,7 +1567,7 @@ export type SubjectSheets = Message<"agni.v1.webapi.SubjectSheets"> & {
  * Use `create(SubjectSheetsSchema)` to create a new message.
  */
 export const SubjectSheetsSchema: GenMessage<SubjectSheets> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 33);
+  messageDesc(file_agni_v1_webapi_design, 37);
 
 /**
  * SheetFormat selects which renderer draws a sheet. It is a separate axis from
@@ -1647,6 +1785,21 @@ export const DesignService: GenService<{
     methodKind: "unary";
     input: typeof TraceDesignRequestSchema;
     output: typeof TraceDesignResponseSchema;
+  },
+  /**
+   * ReachablePins lists the pins a trace from one pin routes to within a radius, nearest first, so
+   * the Trace panel offers only targets a trace can reach (agni issue 1541). It walks as TraceDesign
+   * does. Every listed pin routes at that radius, and every pin that routes and sits on no rail is
+   * listed. A reached rail or ground is named with its pin count instead of pin by pin. `agni trace
+   * --from U1.3 --reachable` prints the same answer. A start that names nothing the design has is an
+   * answer with `reason` set, as on TraceDesign.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.ReachablePins
+   */
+  reachablePins: {
+    methodKind: "unary";
+    input: typeof ReachablePinsRequestSchema;
+    output: typeof ReachablePinsResponseSchema;
   },
   /**
    * WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the

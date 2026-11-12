@@ -307,3 +307,52 @@ func TestTraceTakesAPinByItsFunctionalName(t *testing.T) {
 		t.Errorf("the two spellings answer differently:\n%s\n---\n%s", byName, byNum)
 	}
 }
+
+// `trace --reachable` lists what a trace from one pin can reach, which the viewer's Trace panel
+// offers as targets (agni issue 1541).
+func TestTraceCLIReachableListsPinsByCrossings(t *testing.T) {
+	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--reachable")
+	if err != nil {
+		t.Fatalf("trace --reachable: %v\n%s", err, out)
+	}
+	for _, want := range []string{
+		"from J1.1 (VBUS) on net /VBUS",
+		"0 crossings\n  D5.1 (A)",
+		"  TP3.1                    on /VBUS",
+		"rails reached, where a trace may end and never passes through\n  VBUS_PROT                1 crossing, 7 pins",
+		"3 pins within a radius of 6",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "J1.1                     on") {
+		t.Errorf("the start pin lists itself:\n%s", out)
+	}
+}
+
+func TestTraceCLIReachableJSONIsTheWireMessage(t *testing.T) {
+	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--reachable", "--format", "json", "--hops", "2")
+	if err != nil {
+		t.Fatalf("trace --reachable --format json: %v\n%s", err, out)
+	}
+	var r webapi.ReachablePinsResponse
+	if err := protojson.Unmarshal([]byte(out), &r); err != nil {
+		t.Fatalf("not a ReachablePinsResponse: %v\n%s", err, out)
+	}
+	if r.GetRadius() != 2 || len(r.GetPins()) != 3 || len(r.GetRails()) != 1 || r.GetRails()[0].GetNet() != "VBUS_PROT" {
+		t.Errorf("radius %d, %d pins, rails %v; want radius 2, 3 pins and VBUS_PROT", r.GetRadius(), len(r.GetPins()), r.GetRails())
+	}
+}
+
+func TestTraceCLIReachableRefusesWhatItCannotAnswer(t *testing.T) {
+	if out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--reachable"); err == nil || !strings.Contains(err.Error(), "takes no --to") {
+		t.Errorf("--reachable with --to: err %v, want a refusal\n%s", err, out)
+	}
+	if out, err := runTrace(t, traceFixtureSch, "--from", "J99.1", "--reachable"); err == nil || !strings.Contains(err.Error(), "no component J99") {
+		t.Errorf("an unknown start pin: err %v, want it named\n%s", err, out)
+	}
+	if out, err := runTrace(t, traceFixtureSch, "--from", "J1.1"); err == nil || !strings.Contains(err.Error(), `"to" not set`) {
+		t.Errorf("no --to and no --reachable: err %v, want the missing flag named\n%s", err, out)
+	}
+}

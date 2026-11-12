@@ -106,6 +106,7 @@ type (
 	}
 	traceAPI interface {
 		TraceDesign(context.Context, *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error)
+		ReachablePins(context.Context, *webapi.ReachablePinsRequest) (*webapi.ReachablePinsResponse, error)
 	}
 	walkAPI interface {
 		WalkDesign(context.Context, *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error)
@@ -332,6 +333,10 @@ func (r *remoteServer) trace() traceAPI {
 
 func (r remoteTrace) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
 	return unary(ctx, r.c.TraceDesign, req)
+}
+
+func (r remoteTrace) ReachablePins(ctx context.Context, req *webapi.ReachablePinsRequest) (*webapi.ReachablePinsResponse, error) {
+	return unary(ctx, r.c.ReachablePins, req)
 }
 
 func (r *remoteServer) walk() walkAPI {

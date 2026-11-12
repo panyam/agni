@@ -1127,6 +1127,267 @@ func (x *TraceEndpoint) GetPin() string {
 	return ""
 }
 
+type ReachablePinsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// from is the start pin, as ref-des and pin designator, or a pin name the part declares.
+	From *TraceEndpoint `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	// hops is the radius in series crossings, and 0 takes the server's default, as on TraceDesign.
+	Hops          int32 `protobuf:"varint,3,opt,name=hops,proto3" json:"hops,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReachablePinsRequest) Reset() {
+	*x = ReachablePinsRequest{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReachablePinsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReachablePinsRequest) ProtoMessage() {}
+
+func (x *ReachablePinsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReachablePinsRequest.ProtoReflect.Descriptor instead.
+func (*ReachablePinsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ReachablePinsRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
+func (x *ReachablePinsRequest) GetFrom() *TraceEndpoint {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *ReachablePinsRequest) GetHops() int32 {
+	if x != nil {
+		return x.Hops
+	}
+	return 0
+}
+
+type ReachablePinsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// from is the start pin resolved, with its net. Its sheet_ids are left empty.
+	From *TraceEnd `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	// reason says why the start pin did not resolve. pins and rails are empty then.
+	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// radius is the radius searched, so a reader sees what was asked.
+	Radius int32 `protobuf:"varint,3,opt,name=radius,proto3" json:"radius,omitempty"`
+	// pins are the pins a trace from `from` routes to, nearest first, then by ref-des and pin. The
+	// start pin is not among them, and a virtual part (#PWR01) has none.
+	Pins []*ReachablePin `protobuf:"bytes,4,rep,name=pins,proto3" json:"pins,omitempty"`
+	// rails are the rails and grounds the walk reached and stopped on, nearest first.
+	Rails         []*ReachedRail `protobuf:"bytes,5,rep,name=rails,proto3" json:"rails,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReachablePinsResponse) Reset() {
+	*x = ReachablePinsResponse{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReachablePinsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReachablePinsResponse) ProtoMessage() {}
+
+func (x *ReachablePinsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReachablePinsResponse.ProtoReflect.Descriptor instead.
+func (*ReachablePinsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ReachablePinsResponse) GetFrom() *TraceEnd {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *ReachablePinsResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ReachablePinsResponse) GetRadius() int32 {
+	if x != nil {
+		return x.Radius
+	}
+	return 0
+}
+
+func (x *ReachablePinsResponse) GetPins() []*ReachablePin {
+	if x != nil {
+		return x.Pins
+	}
+	return nil
+}
+
+func (x *ReachablePinsResponse) GetRails() []*ReachedRail {
+	if x != nil {
+		return x.Rails
+	}
+	return nil
+}
+
+// ReachablePin is one pin a trace reaches. end carries its net and functional name, with no sheets.
+type ReachablePin struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	End   *TraceEnd              `protobuf:"bytes,1,opt,name=end,proto3" json:"end,omitempty"`
+	// depth is the series crossings between the start pin's net and this pin's, 0 on the start net.
+	Depth         int32 `protobuf:"varint,2,opt,name=depth,proto3" json:"depth,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReachablePin) Reset() {
+	*x = ReachablePin{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReachablePin) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReachablePin) ProtoMessage() {}
+
+func (x *ReachablePin) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReachablePin.ProtoReflect.Descriptor instead.
+func (*ReachablePin) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ReachablePin) GetEnd() *TraceEnd {
+	if x != nil {
+		return x.End
+	}
+	return nil
+}
+
+func (x *ReachablePin) GetDepth() int32 {
+	if x != nil {
+		return x.Depth
+	}
+	return 0
+}
+
+// ReachedRail is a bus-like net the walk reached. A trace may end on one and never crosses it.
+type ReachedRail struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Net   string                 `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`
+	Depth int32                  `protobuf:"varint,2,opt,name=depth,proto3" json:"depth,omitempty"`
+	// pins counts the pins on the net, which the answer does not list.
+	Pins          int32 `protobuf:"varint,3,opt,name=pins,proto3" json:"pins,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReachedRail) Reset() {
+	*x = ReachedRail{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReachedRail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReachedRail) ProtoMessage() {}
+
+func (x *ReachedRail) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReachedRail.ProtoReflect.Descriptor instead.
+func (*ReachedRail) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ReachedRail) GetNet() string {
+	if x != nil {
+		return x.Net
+	}
+	return ""
+}
+
+func (x *ReachedRail) GetDepth() int32 {
+	if x != nil {
+		return x.Depth
+	}
+	return 0
+}
+
+func (x *ReachedRail) GetPins() int32 {
+	if x != nil {
+		return x.Pins
+	}
+	return 0
+}
+
 type TraceDesignResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Trace         *Trace                 `protobuf:"bytes,1,opt,name=trace,proto3" json:"trace,omitempty"`
@@ -1136,7 +1397,7 @@ type TraceDesignResponse struct {
 
 func (x *TraceDesignResponse) Reset() {
 	*x = TraceDesignResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1148,7 +1409,7 @@ func (x *TraceDesignResponse) String() string {
 func (*TraceDesignResponse) ProtoMessage() {}
 
 func (x *TraceDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1161,7 +1422,7 @@ func (x *TraceDesignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceDesignResponse.ProtoReflect.Descriptor instead.
 func (*TraceDesignResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TraceDesignResponse) GetTrace() *Trace {
@@ -1189,7 +1450,7 @@ type Trace struct {
 
 func (x *Trace) Reset() {
 	*x = Trace{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1201,7 +1462,7 @@ func (x *Trace) String() string {
 func (*Trace) ProtoMessage() {}
 
 func (x *Trace) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,7 +1475,7 @@ func (x *Trace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Trace.ProtoReflect.Descriptor instead.
 func (*Trace) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Trace) GetFrom() *TraceEnd {
@@ -1289,7 +1550,7 @@ type TraceEnd struct {
 
 func (x *TraceEnd) Reset() {
 	*x = TraceEnd{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1301,7 +1562,7 @@ func (x *TraceEnd) String() string {
 func (*TraceEnd) ProtoMessage() {}
 
 func (x *TraceEnd) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1314,7 +1575,7 @@ func (x *TraceEnd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceEnd.ProtoReflect.Descriptor instead.
 func (*TraceEnd) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *TraceEnd) GetEndpoint() *TraceEndpoint {
@@ -1363,7 +1624,7 @@ type TraceCross struct {
 
 func (x *TraceCross) Reset() {
 	*x = TraceCross{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1375,7 +1636,7 @@ func (x *TraceCross) String() string {
 func (*TraceCross) ProtoMessage() {}
 
 func (x *TraceCross) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1388,7 +1649,7 @@ func (x *TraceCross) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceCross.ProtoReflect.Descriptor instead.
 func (*TraceCross) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TraceCross) GetRefDes() string {
@@ -1464,7 +1725,7 @@ type TraceNet struct {
 
 func (x *TraceNet) Reset() {
 	*x = TraceNet{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1476,7 +1737,7 @@ func (x *TraceNet) String() string {
 func (*TraceNet) ProtoMessage() {}
 
 func (x *TraceNet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1489,7 +1750,7 @@ func (x *TraceNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceNet.ProtoReflect.Descriptor instead.
 func (*TraceNet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TraceNet) GetName() string {
@@ -1549,7 +1810,7 @@ type WalkDesignRequest struct {
 
 func (x *WalkDesignRequest) Reset() {
 	*x = WalkDesignRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1561,7 +1822,7 @@ func (x *WalkDesignRequest) String() string {
 func (*WalkDesignRequest) ProtoMessage() {}
 
 func (x *WalkDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1574,7 +1835,7 @@ func (x *WalkDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkDesignRequest.ProtoReflect.Descriptor instead.
 func (*WalkDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *WalkDesignRequest) GetSnapshot() string {
@@ -1639,7 +1900,7 @@ type WalkGoal struct {
 
 func (x *WalkGoal) Reset() {
 	*x = WalkGoal{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1651,7 +1912,7 @@ func (x *WalkGoal) String() string {
 func (*WalkGoal) ProtoMessage() {}
 
 func (x *WalkGoal) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1664,7 +1925,7 @@ func (x *WalkGoal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkGoal.ProtoReflect.Descriptor instead.
 func (*WalkGoal) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *WalkGoal) GetKind() string {
@@ -1719,7 +1980,7 @@ type WalkGoalAnswer struct {
 
 func (x *WalkGoalAnswer) Reset() {
 	*x = WalkGoalAnswer{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1731,7 +1992,7 @@ func (x *WalkGoalAnswer) String() string {
 func (*WalkGoalAnswer) ProtoMessage() {}
 
 func (x *WalkGoalAnswer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1744,7 +2005,7 @@ func (x *WalkGoalAnswer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkGoalAnswer.ProtoReflect.Descriptor instead.
 func (*WalkGoalAnswer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *WalkGoalAnswer) GetKind() string {
@@ -1813,7 +2074,7 @@ type WalkRoute struct {
 
 func (x *WalkRoute) Reset() {
 	*x = WalkRoute{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1825,7 +2086,7 @@ func (x *WalkRoute) String() string {
 func (*WalkRoute) ProtoMessage() {}
 
 func (x *WalkRoute) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1838,7 +2099,7 @@ func (x *WalkRoute) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkRoute.ProtoReflect.Descriptor instead.
 func (*WalkRoute) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *WalkRoute) GetCrossings() []*TraceCross {
@@ -1878,7 +2139,7 @@ type WalkDesignResponse struct {
 
 func (x *WalkDesignResponse) Reset() {
 	*x = WalkDesignResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1890,7 +2151,7 @@ func (x *WalkDesignResponse) String() string {
 func (*WalkDesignResponse) ProtoMessage() {}
 
 func (x *WalkDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1903,7 +2164,7 @@ func (x *WalkDesignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkDesignResponse.ProtoReflect.Descriptor instead.
 func (*WalkDesignResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *WalkDesignResponse) GetWalk() *Walk {
@@ -1938,7 +2199,7 @@ type Walk struct {
 
 func (x *Walk) Reset() {
 	*x = Walk{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1950,7 +2211,7 @@ func (x *Walk) String() string {
 func (*Walk) ProtoMessage() {}
 
 func (x *Walk) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1963,7 +2224,7 @@ func (x *Walk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Walk.ProtoReflect.Descriptor instead.
 func (*Walk) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Walk) GetFrom() *TraceEnd {
@@ -2043,7 +2304,7 @@ type WalkNet struct {
 
 func (x *WalkNet) Reset() {
 	*x = WalkNet{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2055,7 +2316,7 @@ func (x *WalkNet) String() string {
 func (*WalkNet) ProtoMessage() {}
 
 func (x *WalkNet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2068,7 +2329,7 @@ func (x *WalkNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkNet.ProtoReflect.Descriptor instead.
 func (*WalkNet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WalkNet) GetHop() int32 {
@@ -2121,7 +2382,7 @@ type WalkBoundary struct {
 
 func (x *WalkBoundary) Reset() {
 	*x = WalkBoundary{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2133,7 +2394,7 @@ func (x *WalkBoundary) String() string {
 func (*WalkBoundary) ProtoMessage() {}
 
 func (x *WalkBoundary) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2146,7 +2407,7 @@ func (x *WalkBoundary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkBoundary.ProtoReflect.Descriptor instead.
 func (*WalkBoundary) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *WalkBoundary) GetRefDes() string {
@@ -2195,7 +2456,7 @@ type WalkElided struct {
 
 func (x *WalkElided) Reset() {
 	*x = WalkElided{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2207,7 +2468,7 @@ func (x *WalkElided) String() string {
 func (*WalkElided) ProtoMessage() {}
 
 func (x *WalkElided) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2220,7 +2481,7 @@ func (x *WalkElided) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkElided.ProtoReflect.Descriptor instead.
 func (*WalkElided) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{24}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *WalkElided) GetHop() int32 {
@@ -2245,7 +2506,7 @@ type ListWalkKindsRequest struct {
 
 func (x *ListWalkKindsRequest) Reset() {
 	*x = ListWalkKindsRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2257,7 +2518,7 @@ func (x *ListWalkKindsRequest) String() string {
 func (*ListWalkKindsRequest) ProtoMessage() {}
 
 func (x *ListWalkKindsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2270,7 +2531,7 @@ func (x *ListWalkKindsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWalkKindsRequest.ProtoReflect.Descriptor instead.
 func (*ListWalkKindsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{25}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{29}
 }
 
 type ListWalkKindsResponse struct {
@@ -2282,7 +2543,7 @@ type ListWalkKindsResponse struct {
 
 func (x *ListWalkKindsResponse) Reset() {
 	*x = ListWalkKindsResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2294,7 +2555,7 @@ func (x *ListWalkKindsResponse) String() string {
 func (*ListWalkKindsResponse) ProtoMessage() {}
 
 func (x *ListWalkKindsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2307,7 +2568,7 @@ func (x *ListWalkKindsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWalkKindsResponse.ProtoReflect.Descriptor instead.
 func (*ListWalkKindsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{26}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListWalkKindsResponse) GetKinds() []*WalkKind {
@@ -2330,7 +2591,7 @@ type WalkKind struct {
 
 func (x *WalkKind) Reset() {
 	*x = WalkKind{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2342,7 +2603,7 @@ func (x *WalkKind) String() string {
 func (*WalkKind) ProtoMessage() {}
 
 func (x *WalkKind) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2355,7 +2616,7 @@ func (x *WalkKind) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkKind.ProtoReflect.Descriptor instead.
 func (*WalkKind) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{27}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *WalkKind) GetName() string {
@@ -2393,7 +2654,7 @@ type TraceStub struct {
 
 func (x *TraceStub) Reset() {
 	*x = TraceStub{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2405,7 +2666,7 @@ func (x *TraceStub) String() string {
 func (*TraceStub) ProtoMessage() {}
 
 func (x *TraceStub) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2418,7 +2679,7 @@ func (x *TraceStub) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceStub.ProtoReflect.Descriptor instead.
 func (*TraceStub) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{28}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *TraceStub) GetRefDes() string {
@@ -2452,7 +2713,7 @@ type ConversionReport struct {
 
 func (x *ConversionReport) Reset() {
 	*x = ConversionReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2464,7 +2725,7 @@ func (x *ConversionReport) String() string {
 func (*ConversionReport) ProtoMessage() {}
 
 func (x *ConversionReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2477,7 +2738,7 @@ func (x *ConversionReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversionReport.ProtoReflect.Descriptor instead.
 func (*ConversionReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{29}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ConversionReport) GetComponents() []*ComponentReport {
@@ -2505,7 +2766,7 @@ type ComponentReport struct {
 
 func (x *ComponentReport) Reset() {
 	*x = ComponentReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2517,7 +2778,7 @@ func (x *ComponentReport) String() string {
 func (*ComponentReport) ProtoMessage() {}
 
 func (x *ComponentReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2530,7 +2791,7 @@ func (x *ComponentReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentReport.ProtoReflect.Descriptor instead.
 func (*ComponentReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{30}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ComponentReport) GetRefDes() string {
@@ -2595,7 +2856,7 @@ type LocateSubjectsRequest struct {
 
 func (x *LocateSubjectsRequest) Reset() {
 	*x = LocateSubjectsRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2607,7 +2868,7 @@ func (x *LocateSubjectsRequest) String() string {
 func (*LocateSubjectsRequest) ProtoMessage() {}
 
 func (x *LocateSubjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2620,7 +2881,7 @@ func (x *LocateSubjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateSubjectsRequest.ProtoReflect.Descriptor instead.
 func (*LocateSubjectsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{31}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *LocateSubjectsRequest) GetSnapshot() string {
@@ -2654,7 +2915,7 @@ type LocateSubjectsResponse struct {
 
 func (x *LocateSubjectsResponse) Reset() {
 	*x = LocateSubjectsResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2666,7 +2927,7 @@ func (x *LocateSubjectsResponse) String() string {
 func (*LocateSubjectsResponse) ProtoMessage() {}
 
 func (x *LocateSubjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2679,7 +2940,7 @@ func (x *LocateSubjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateSubjectsResponse.ProtoReflect.Descriptor instead.
 func (*LocateSubjectsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{32}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *LocateSubjectsResponse) GetSubjects() []*SubjectSheets {
@@ -2704,7 +2965,7 @@ type SubjectSheets struct {
 
 func (x *SubjectSheets) Reset() {
 	*x = SubjectSheets{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2716,7 +2977,7 @@ func (x *SubjectSheets) String() string {
 func (*SubjectSheets) ProtoMessage() {}
 
 func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2729,7 +2990,7 @@ func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectSheets.ProtoReflect.Descriptor instead.
 func (*SubjectSheets) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{33}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SubjectSheets) GetSubject() *checks.Subject {
@@ -2819,7 +3080,24 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x04hops\x18\x04 \x01(\x05R\x04hopsJ\x04\b\x01\x10\x02J\x04\b\x05\x10\x06R\x03uriR\bas_named\":\n" +
 	"\rTraceEndpoint\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
-	"\x03pin\x18\x02 \x01(\tR\x03pin\"B\n" +
+	"\x03pin\x18\x02 \x01(\tR\x03pin\"y\n" +
+	"\x14ReachablePinsRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x121\n" +
+	"\x04from\x18\x02 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x04from\x12\x12\n" +
+	"\x04hops\x18\x03 \x01(\x05R\x04hops\"\xda\x01\n" +
+	"\x15ReachablePinsResponse\x12,\n" +
+	"\x04from\x18\x01 \x01(\v2\x18.agni.v1.webapi.TraceEndR\x04from\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x16\n" +
+	"\x06radius\x18\x03 \x01(\x05R\x06radius\x120\n" +
+	"\x04pins\x18\x04 \x03(\v2\x1c.agni.v1.webapi.ReachablePinR\x04pins\x121\n" +
+	"\x05rails\x18\x05 \x03(\v2\x1b.agni.v1.webapi.ReachedRailR\x05rails\"P\n" +
+	"\fReachablePin\x12*\n" +
+	"\x03end\x18\x01 \x01(\v2\x18.agni.v1.webapi.TraceEndR\x03end\x12\x14\n" +
+	"\x05depth\x18\x02 \x01(\x05R\x05depth\"I\n" +
+	"\vReachedRail\x12\x10\n" +
+	"\x03net\x18\x01 \x01(\tR\x03net\x12\x14\n" +
+	"\x05depth\x18\x02 \x01(\x05R\x05depth\x12\x12\n" +
+	"\x04pins\x18\x03 \x01(\x05R\x04pins\"B\n" +
 	"\x13TraceDesignResponse\x12+\n" +
 	"\x05trace\x18\x01 \x01(\v2\x15.agni.v1.webapi.TraceR\x05trace\"\xaf\x02\n" +
 	"\x05Trace\x12,\n" +
@@ -2947,14 +3225,15 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x19TRACE_OUTCOME_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14TRACE_OUTCOME_ROUTED\x10\x01\x12\x1a\n" +
 	"\x16TRACE_OUTCOME_NO_ROUTE\x10\x02\x12\x1c\n" +
-	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\xe1\x05\n" +
+	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\xbf\x06\n" +
 	"\rDesignService\x12P\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a!.agni.v1.webapi.GetDesignResponse\x12M\n" +
 	"\bGetSheet\x12\x1f.agni.v1.webapi.GetSheetRequest\x1a .agni.v1.webapi.GetSheetResponse\x12_\n" +
 	"\x0eHighlightSheet\x12%.agni.v1.webapi.HighlightSheetRequest\x1a&.agni.v1.webapi.HighlightSheetResponse\x12b\n" +
 	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponse\x12_\n" +
 	"\x0eLocateSubjects\x12%.agni.v1.webapi.LocateSubjectsRequest\x1a&.agni.v1.webapi.LocateSubjectsResponse\x12V\n" +
-	"\vTraceDesign\x12\".agni.v1.webapi.TraceDesignRequest\x1a#.agni.v1.webapi.TraceDesignResponse\x12S\n" +
+	"\vTraceDesign\x12\".agni.v1.webapi.TraceDesignRequest\x1a#.agni.v1.webapi.TraceDesignResponse\x12\\\n" +
+	"\rReachablePins\x12$.agni.v1.webapi.ReachablePinsRequest\x1a%.agni.v1.webapi.ReachablePinsResponse\x12S\n" +
 	"\n" +
 	"WalkDesign\x12!.agni.v1.webapi.WalkDesignRequest\x1a\".agni.v1.webapi.WalkDesignResponse\x12\\\n" +
 	"\rListWalkKinds\x12$.agni.v1.webapi.ListWalkKindsRequest\x1a%.agni.v1.webapi.ListWalkKindsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
@@ -2972,7 +3251,7 @@ func file_agni_v1_webapi_design_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(SheetFormat)(0),                // 0: agni.v1.webapi.SheetFormat
 	(SymbolSource)(0),               // 1: agni.v1.webapi.SymbolSource
@@ -2988,110 +3267,121 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*GetLayoutReportResponse)(nil), // 11: agni.v1.webapi.GetLayoutReportResponse
 	(*TraceDesignRequest)(nil),      // 12: agni.v1.webapi.TraceDesignRequest
 	(*TraceEndpoint)(nil),           // 13: agni.v1.webapi.TraceEndpoint
-	(*TraceDesignResponse)(nil),     // 14: agni.v1.webapi.TraceDesignResponse
-	(*Trace)(nil),                   // 15: agni.v1.webapi.Trace
-	(*TraceEnd)(nil),                // 16: agni.v1.webapi.TraceEnd
-	(*TraceCross)(nil),              // 17: agni.v1.webapi.TraceCross
-	(*TraceNet)(nil),                // 18: agni.v1.webapi.TraceNet
-	(*WalkDesignRequest)(nil),       // 19: agni.v1.webapi.WalkDesignRequest
-	(*WalkGoal)(nil),                // 20: agni.v1.webapi.WalkGoal
-	(*WalkGoalAnswer)(nil),          // 21: agni.v1.webapi.WalkGoalAnswer
-	(*WalkRoute)(nil),               // 22: agni.v1.webapi.WalkRoute
-	(*WalkDesignResponse)(nil),      // 23: agni.v1.webapi.WalkDesignResponse
-	(*Walk)(nil),                    // 24: agni.v1.webapi.Walk
-	(*WalkNet)(nil),                 // 25: agni.v1.webapi.WalkNet
-	(*WalkBoundary)(nil),            // 26: agni.v1.webapi.WalkBoundary
-	(*WalkElided)(nil),              // 27: agni.v1.webapi.WalkElided
-	(*ListWalkKindsRequest)(nil),    // 28: agni.v1.webapi.ListWalkKindsRequest
-	(*ListWalkKindsResponse)(nil),   // 29: agni.v1.webapi.ListWalkKindsResponse
-	(*WalkKind)(nil),                // 30: agni.v1.webapi.WalkKind
-	(*TraceStub)(nil),               // 31: agni.v1.webapi.TraceStub
-	(*ConversionReport)(nil),        // 32: agni.v1.webapi.ConversionReport
-	(*ComponentReport)(nil),         // 33: agni.v1.webapi.ComponentReport
-	(*LocateSubjectsRequest)(nil),   // 34: agni.v1.webapi.LocateSubjectsRequest
-	(*LocateSubjectsResponse)(nil),  // 35: agni.v1.webapi.LocateSubjectsResponse
-	(*SubjectSheets)(nil),           // 36: agni.v1.webapi.SubjectSheets
-	(*fieldmaskpb.FieldMask)(nil),   // 37: google.protobuf.FieldMask
-	(*geom.UndrawnPlacement)(nil),   // 38: agni.v1.geom.UndrawnPlacement
-	(*ir.UnexpandedHierarchy)(nil),  // 39: agni.v1.ir.UnexpandedHierarchy
-	(*ir.Design)(nil),               // 40: agni.v1.ir.Design
-	(*geom.PackedSheet)(nil),        // 41: agni.v1.geom.PackedSheet
-	(*geom.BoardLayerRow)(nil),      // 42: agni.v1.geom.BoardLayerRow
-	(*geom.HighlightSpec)(nil),      // 43: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 44: agni.v1.geom.PackedHighlight
-	(*checks.Subject)(nil),          // 45: agni.v1.checks.Subject
-	(checks.LocateReason)(0),        // 46: agni.v1.checks.LocateReason
+	(*ReachablePinsRequest)(nil),    // 14: agni.v1.webapi.ReachablePinsRequest
+	(*ReachablePinsResponse)(nil),   // 15: agni.v1.webapi.ReachablePinsResponse
+	(*ReachablePin)(nil),            // 16: agni.v1.webapi.ReachablePin
+	(*ReachedRail)(nil),             // 17: agni.v1.webapi.ReachedRail
+	(*TraceDesignResponse)(nil),     // 18: agni.v1.webapi.TraceDesignResponse
+	(*Trace)(nil),                   // 19: agni.v1.webapi.Trace
+	(*TraceEnd)(nil),                // 20: agni.v1.webapi.TraceEnd
+	(*TraceCross)(nil),              // 21: agni.v1.webapi.TraceCross
+	(*TraceNet)(nil),                // 22: agni.v1.webapi.TraceNet
+	(*WalkDesignRequest)(nil),       // 23: agni.v1.webapi.WalkDesignRequest
+	(*WalkGoal)(nil),                // 24: agni.v1.webapi.WalkGoal
+	(*WalkGoalAnswer)(nil),          // 25: agni.v1.webapi.WalkGoalAnswer
+	(*WalkRoute)(nil),               // 26: agni.v1.webapi.WalkRoute
+	(*WalkDesignResponse)(nil),      // 27: agni.v1.webapi.WalkDesignResponse
+	(*Walk)(nil),                    // 28: agni.v1.webapi.Walk
+	(*WalkNet)(nil),                 // 29: agni.v1.webapi.WalkNet
+	(*WalkBoundary)(nil),            // 30: agni.v1.webapi.WalkBoundary
+	(*WalkElided)(nil),              // 31: agni.v1.webapi.WalkElided
+	(*ListWalkKindsRequest)(nil),    // 32: agni.v1.webapi.ListWalkKindsRequest
+	(*ListWalkKindsResponse)(nil),   // 33: agni.v1.webapi.ListWalkKindsResponse
+	(*WalkKind)(nil),                // 34: agni.v1.webapi.WalkKind
+	(*TraceStub)(nil),               // 35: agni.v1.webapi.TraceStub
+	(*ConversionReport)(nil),        // 36: agni.v1.webapi.ConversionReport
+	(*ComponentReport)(nil),         // 37: agni.v1.webapi.ComponentReport
+	(*LocateSubjectsRequest)(nil),   // 38: agni.v1.webapi.LocateSubjectsRequest
+	(*LocateSubjectsResponse)(nil),  // 39: agni.v1.webapi.LocateSubjectsResponse
+	(*SubjectSheets)(nil),           // 40: agni.v1.webapi.SubjectSheets
+	(*fieldmaskpb.FieldMask)(nil),   // 41: google.protobuf.FieldMask
+	(*geom.UndrawnPlacement)(nil),   // 42: agni.v1.geom.UndrawnPlacement
+	(*ir.UnexpandedHierarchy)(nil),  // 43: agni.v1.ir.UnexpandedHierarchy
+	(*ir.Design)(nil),               // 44: agni.v1.ir.Design
+	(*geom.PackedSheet)(nil),        // 45: agni.v1.geom.PackedSheet
+	(*geom.BoardLayerRow)(nil),      // 46: agni.v1.geom.BoardLayerRow
+	(*geom.HighlightSpec)(nil),      // 47: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 48: agni.v1.geom.PackedHighlight
+	(*checks.Subject)(nil),          // 49: agni.v1.checks.Subject
+	(checks.LocateReason)(0),        // 50: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	37, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
-	38, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	41, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
+	42, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
 	3,  // 2: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	39, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	40, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
+	43, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	44, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
 	0,  // 5: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
 	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	41, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
-	42, // 8: agni.v1.webapi.GetSheetResponse.board_layers:type_name -> agni.v1.geom.BoardLayerRow
+	45, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	46, // 8: agni.v1.webapi.GetSheetResponse.board_layers:type_name -> agni.v1.geom.BoardLayerRow
 	1,  // 9: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	0,  // 10: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	43, // 11: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	44, // 12: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	47, // 11: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	48, // 12: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
 	1,  // 13: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	32, // 14: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
+	36, // 14: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
 	13, // 15: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
 	13, // 16: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
-	15, // 17: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
-	16, // 18: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
-	16, // 19: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
-	2,  // 20: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
-	17, // 21: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
-	18, // 22: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
-	13, // 23: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
-	31, // 24: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
-	13, // 25: agni.v1.webapi.WalkDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
-	20, // 26: agni.v1.webapi.WalkDesignRequest.goal:type_name -> agni.v1.webapi.WalkGoal
-	13, // 27: agni.v1.webapi.WalkGoal.to:type_name -> agni.v1.webapi.TraceEndpoint
-	16, // 28: agni.v1.webapi.WalkGoalAnswer.to:type_name -> agni.v1.webapi.TraceEnd
-	2,  // 29: agni.v1.webapi.WalkGoalAnswer.outcome:type_name -> agni.v1.webapi.TraceOutcome
-	22, // 30: agni.v1.webapi.WalkGoalAnswer.routes:type_name -> agni.v1.webapi.WalkRoute
-	17, // 31: agni.v1.webapi.WalkRoute.crossings:type_name -> agni.v1.webapi.TraceCross
-	18, // 32: agni.v1.webapi.WalkRoute.nets:type_name -> agni.v1.webapi.TraceNet
-	24, // 33: agni.v1.webapi.WalkDesignResponse.walk:type_name -> agni.v1.webapi.Walk
-	16, // 34: agni.v1.webapi.Walk.from:type_name -> agni.v1.webapi.TraceEnd
-	25, // 35: agni.v1.webapi.Walk.nets:type_name -> agni.v1.webapi.WalkNet
-	26, // 36: agni.v1.webapi.Walk.boundary:type_name -> agni.v1.webapi.WalkBoundary
-	27, // 37: agni.v1.webapi.Walk.elided:type_name -> agni.v1.webapi.WalkElided
-	21, // 38: agni.v1.webapi.Walk.goal:type_name -> agni.v1.webapi.WalkGoalAnswer
-	18, // 39: agni.v1.webapi.WalkNet.net:type_name -> agni.v1.webapi.TraceNet
-	17, // 40: agni.v1.webapi.WalkNet.entered:type_name -> agni.v1.webapi.TraceCross
-	17, // 41: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
-	30, // 42: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
-	33, // 43: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	45, // 44: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
-	36, // 45: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
-	45, // 46: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
-	46, // 47: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
-	4,  // 48: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 49: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 50: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	10, // 51: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	34, // 52: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
-	12, // 53: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	19, // 54: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
-	28, // 55: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
-	5,  // 56: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 57: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 58: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	11, // 59: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	35, // 60: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
-	14, // 61: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	23, // 62: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
-	29, // 63: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
-	56, // [56:64] is the sub-list for method output_type
-	48, // [48:56] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	13, // 17: agni.v1.webapi.ReachablePinsRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	20, // 18: agni.v1.webapi.ReachablePinsResponse.from:type_name -> agni.v1.webapi.TraceEnd
+	16, // 19: agni.v1.webapi.ReachablePinsResponse.pins:type_name -> agni.v1.webapi.ReachablePin
+	17, // 20: agni.v1.webapi.ReachablePinsResponse.rails:type_name -> agni.v1.webapi.ReachedRail
+	20, // 21: agni.v1.webapi.ReachablePin.end:type_name -> agni.v1.webapi.TraceEnd
+	19, // 22: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
+	20, // 23: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
+	20, // 24: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 25: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	21, // 26: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
+	22, // 27: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
+	13, // 28: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
+	35, // 29: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
+	13, // 30: agni.v1.webapi.WalkDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	24, // 31: agni.v1.webapi.WalkDesignRequest.goal:type_name -> agni.v1.webapi.WalkGoal
+	13, // 32: agni.v1.webapi.WalkGoal.to:type_name -> agni.v1.webapi.TraceEndpoint
+	20, // 33: agni.v1.webapi.WalkGoalAnswer.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 34: agni.v1.webapi.WalkGoalAnswer.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	26, // 35: agni.v1.webapi.WalkGoalAnswer.routes:type_name -> agni.v1.webapi.WalkRoute
+	21, // 36: agni.v1.webapi.WalkRoute.crossings:type_name -> agni.v1.webapi.TraceCross
+	22, // 37: agni.v1.webapi.WalkRoute.nets:type_name -> agni.v1.webapi.TraceNet
+	28, // 38: agni.v1.webapi.WalkDesignResponse.walk:type_name -> agni.v1.webapi.Walk
+	20, // 39: agni.v1.webapi.Walk.from:type_name -> agni.v1.webapi.TraceEnd
+	29, // 40: agni.v1.webapi.Walk.nets:type_name -> agni.v1.webapi.WalkNet
+	30, // 41: agni.v1.webapi.Walk.boundary:type_name -> agni.v1.webapi.WalkBoundary
+	31, // 42: agni.v1.webapi.Walk.elided:type_name -> agni.v1.webapi.WalkElided
+	25, // 43: agni.v1.webapi.Walk.goal:type_name -> agni.v1.webapi.WalkGoalAnswer
+	22, // 44: agni.v1.webapi.WalkNet.net:type_name -> agni.v1.webapi.TraceNet
+	21, // 45: agni.v1.webapi.WalkNet.entered:type_name -> agni.v1.webapi.TraceCross
+	21, // 46: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
+	34, // 47: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
+	37, // 48: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	49, // 49: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
+	40, // 50: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
+	49, // 51: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
+	50, // 52: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
+	4,  // 53: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 54: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 55: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 56: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	38, // 57: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	12, // 58: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	14, // 59: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
+	23, // 60: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
+	32, // 61: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
+	5,  // 62: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 63: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 64: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 65: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	39, // 66: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	18, // 67: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	15, // 68: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
+	27, // 69: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
+	33, // 70: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
+	62, // [62:71] is the sub-list for method output_type
+	53, // [53:62] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }
@@ -3113,7 +3403,7 @@ func file_agni_v1_webapi_design_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   34,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

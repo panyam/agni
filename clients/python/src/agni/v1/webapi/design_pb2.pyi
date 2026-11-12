@@ -182,6 +182,46 @@ class TraceEndpoint(_message.Message):
     pin: str
     def __init__(self, ref_des: _Optional[str] = ..., pin: _Optional[str] = ...) -> None: ...
 
+class ReachablePinsRequest(_message.Message):
+    __slots__ = ("snapshot", "hops")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    FROM_FIELD_NUMBER: _ClassVar[int]
+    HOPS_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    hops: int
+    def __init__(self, snapshot: _Optional[str] = ..., hops: _Optional[int] = ..., **kwargs) -> None: ...
+
+class ReachablePinsResponse(_message.Message):
+    __slots__ = ("reason", "radius", "pins", "rails")
+    FROM_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    RADIUS_FIELD_NUMBER: _ClassVar[int]
+    PINS_FIELD_NUMBER: _ClassVar[int]
+    RAILS_FIELD_NUMBER: _ClassVar[int]
+    reason: str
+    radius: int
+    pins: _containers.RepeatedCompositeFieldContainer[ReachablePin]
+    rails: _containers.RepeatedCompositeFieldContainer[ReachedRail]
+    def __init__(self, reason: _Optional[str] = ..., radius: _Optional[int] = ..., pins: _Optional[_Iterable[_Union[ReachablePin, _Mapping]]] = ..., rails: _Optional[_Iterable[_Union[ReachedRail, _Mapping]]] = ..., **kwargs) -> None: ...
+
+class ReachablePin(_message.Message):
+    __slots__ = ("end", "depth")
+    END_FIELD_NUMBER: _ClassVar[int]
+    DEPTH_FIELD_NUMBER: _ClassVar[int]
+    end: TraceEnd
+    depth: int
+    def __init__(self, end: _Optional[_Union[TraceEnd, _Mapping]] = ..., depth: _Optional[int] = ...) -> None: ...
+
+class ReachedRail(_message.Message):
+    __slots__ = ("net", "depth", "pins")
+    NET_FIELD_NUMBER: _ClassVar[int]
+    DEPTH_FIELD_NUMBER: _ClassVar[int]
+    PINS_FIELD_NUMBER: _ClassVar[int]
+    net: str
+    depth: int
+    pins: int
+    def __init__(self, net: _Optional[str] = ..., depth: _Optional[int] = ..., pins: _Optional[int] = ...) -> None: ...
+
 class TraceDesignResponse(_message.Message):
     __slots__ = ("trace",)
     TRACE_FIELD_NUMBER: _ClassVar[int]

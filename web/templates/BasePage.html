@@ -633,6 +633,9 @@
     .trace-pin { flex: 1 1 0; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .trace-run { font: inherit; padding: 3px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
     .trace-run:disabled { color: #999; cursor: default; }
+    /* The radius a trace searches, and the radius the end pin list is narrowed to (agni issue 1541). */
+    .trace-hops { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .trace-reach-note { margin: -4px 2px 8px; color: #555; font-size: 12px; }
     .trace-picks { list-style: none; margin: -4px 2px 8px; padding: 2px 0; max-height: 220px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
     .trace-pick { display: flex; gap: 8px; align-items: baseline; padding: 2px 8px; cursor: pointer; }
     .trace-pick[aria-selected="true"], .trace-pick:hover { background: #eef2ff; }

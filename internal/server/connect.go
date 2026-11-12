@@ -206,6 +206,14 @@ func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.Tr
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) ReachablePins(ctx context.Context, req *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error) {
+	resp, err := a.svc.ReachablePins(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) WalkDesign(ctx context.Context, req *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
 	resp, err := a.svc.WalkDesign(ctx, req.Msg)
 	if err != nil {

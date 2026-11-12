@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { ComponentSchema } from "./gen/agni/v1/ir/ir_pb.js";
 import type { Inventory } from "./properties.js";
-import { PICK_LIMIT, matchRank, pickCandidates, tracePicks } from "./tracepick.js";
+import { PICK_LIMIT, matchRank, pickCandidates, tracePicks, reachPicks, type Reach } from "./tracepick.js";
 
 function inventory(pinsOf: Record<string, { pin: string; name: string; net: string }[]>, values: Record<string, string> = {}): Inventory {
   return {
@@ -92,5 +92,45 @@ describe("pickCandidates", () => {
     const big = tracePicks(inventory({ U9: pins, U8: pins }));
     expect(pickCandidates(big, "U9.")).toHaveLength(PICK_LIMIT);
     expect(pickCandidates(big, "u")).toHaveLength(PICK_LIMIT);
+  });
+});
+
+// The "to" picker offers only what a trace from the start pin reaches (agni issue 1541).
+describe("reachPicks", () => {
+  const reach: Reach = {
+    from: "U1.3",
+    hops: 6,
+    reason: "",
+    pins: [
+      { ref: "TP1", pin: "1", name: "", net: "SDA", depth: 0 },
+      { ref: "R1", pin: "2", name: "", net: "SDA", depth: 0 },
+      { ref: "R1", pin: "1", name: "", net: "VCC", depth: 1 },
+      { ref: "J1", pin: "1", name: "VBUS", net: "VCC", depth: 1 },
+    ],
+    rails: [{ net: "GND", depth: 2, pins: 412 }],
+  };
+
+  it("lists only the parts a trace reaches, with how near their nearest pin is", () => {
+    const p = reachPicks(reach);
+    expect(p.components.map((c) => [c.ref, c.detail])).toEqual([
+      ["J1", "1 pin · 1 crossing"],
+      ["R1", "2 pins · on the start net"],
+      ["TP1", "1 pin · on the start net"],
+    ]);
+    expect(pickCandidates(p, "").map((c) => c.value)).toEqual(["J1", "R1", "TP1"]);
+  });
+
+  it("lists a reached part's reachable pins only, each with its crossings", () => {
+    const p = reachPicks(reach);
+    expect(pickCandidates(p, "R1.").map((c) => [c.value, c.detail])).toEqual([
+      ["R1.1", "VCC · 1 crossing"],
+      ["R1.2", "SDA · on the start net"],
+    ]);
+    expect(pickCandidates(p, "vbus").map((c) => [c.value, c.detail])).toEqual([["J1.1", "VBUS · VCC · 1 crossing"]]);
+    expect(pickCandidates(p, "U1")).toEqual([]);
+  });
+
+  it("names the start pin as an example of the other end", () => {
+    expect(reachPicks(reach).examples).toEqual(["U1.3", "J1.1"]);
   });
 });

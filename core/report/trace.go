@@ -104,3 +104,30 @@ func pluralWord(n int, one, many string) string {
 	}
 	return many
 }
+
+// WriteReachableText renders what a trace from one pin can reach, nearest first, one group per
+// number of crossings (agni issue 1541). A rail is named with its pin count at the end, since a
+// trace may end on one and its pins would bury the rest.
+func WriteReachableText(w io.Writer, r check.Reachable) {
+	if r.Reason != "" {
+		fmt.Fprintf(w, "cannot trace from %s: %s\n", r.From.Endpoint, r.Reason)
+		return
+	}
+	fmt.Fprintf(w, "from %s on net %s\n", endpointLabel(r.From), r.From.Net)
+	depth := -1
+	for _, p := range r.Pins {
+		if p.Depth != depth {
+			depth = p.Depth
+			fmt.Fprintf(w, "\n%d %s\n", depth, pluralWord(depth, "crossing", "crossings"))
+		}
+		fmt.Fprintf(w, "  %-24s on %s\n", endpointLabel(p.TraceEnd), p.Net)
+	}
+	if len(r.Rails) > 0 {
+		fmt.Fprint(w, "\nrails reached, where a trace may end and never passes through\n")
+		for _, rl := range r.Rails {
+			fmt.Fprintf(w, "  %-24s %d %s, %d %s\n", rl.Net, rl.Depth, pluralWord(rl.Depth, "crossing", "crossings"),
+				rl.Pins, pluralWord(rl.Pins, "pin", "pins"))
+		}
+	}
+	fmt.Fprintf(w, "\n%d %s within a radius of %d\n", len(r.Pins), pluralWord(len(r.Pins), "pin", "pins"), r.Radius)
+}

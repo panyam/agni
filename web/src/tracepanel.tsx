@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, type Accessor, type Setter } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, type Accessor, type Setter } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
@@ -8,7 +8,7 @@ import {
   TraceOutcome,
   emptyTrace,
 } from "./trace.js";
-import { type TracePick, type TracePicks, emptyPicks, pickCandidates } from "./tracepick.js";
+import { type Reach, type TracePick, type TracePicks, TRACE_HOPS, crossingsLabel, emptyPicks, isPin, pickCandidates, reachPicks } from "./tracepick.js";
 import { type WalkGoalItem, type WalkRequest, type WalkState, type WalkView, WALK_GOAL_COLOR, emptyWalk, hopColor, routeLine } from "./walk.js";
 
 // WalkHandlers are the walk section's intents up. onWalk walks again with a changed request (wider,
@@ -300,15 +300,43 @@ function TracePanel(props: {
   walkHandlers: WalkHandlers;
   picks: () => TracePicks;
   ends: TraceEnds;
-  onTrace: (from: string, to: string) => void;
+  reach: () => Reach | null;
+  onTrace: (from: string, to: string, hops: number) => void;
+  onReach?: (from: string, hops: number) => void;
 }) {
   const ends = props.ends;
+  // hops is the radius a trace searches, and the radius "to" is narrowed to (agni issue 1541).
+  const [hops, setHops] = createSignal(TRACE_HOPS);
   // run reads the fields themselves, which hold whatever the reader typed or pasted however it got
   // there, rather than the text last seen by an input event.
   const run = () => {
     setOpen(null);
     const text = (end: End) => (ends.inputs[end]?.value ?? ends.text[end]()).trim();
-    props.onTrace(text("from"), text("to"));
+    props.onTrace(text("from"), text("to"), hops());
+  };
+  // Once "from" names a pin of the design, the panel asks what a trace from it reaches, and asks
+  // again when the hop count changes. asked keeps one question from going out twice.
+  let asked = "";
+  createEffect(() => {
+    const from = ends.text.from().trim();
+    const n = hops();
+    if (!props.onReach || !isPin(props.picks(), from) || `${from}|${n}` === asked) return;
+    asked = `${from}|${n}`;
+    props.onReach(from, n);
+  });
+  // reached is the answer for the start pin and radius on screen now. An answer for another pin or
+  // radius, such as a late one, is ignored, so "to" never offers what a different start reaches.
+  const reached = () => {
+    const r = props.reach();
+    return r && r.from === ends.text.from().trim() && r.hops === hops() && r.reason === "" ? r : null;
+  };
+  const reachNote = () => {
+    const r = reached();
+    if (!r) return "";
+    const rails = r.rails.map((x) => `${x.net} (${x.pins} pin${x.pins === 1 ? "" : "s"}), ${crossingsLabel(x.depth)} away`);
+    const also = rails.length ? `Also reaches ${rails.join(", and ")}.` : "";
+    const none = r.pins.length === 0 ? `No pins within ${r.hops} crossing${r.hops === 1 ? "" : "s"} of ${r.from}.` : "";
+    return [none, also].filter(Boolean).join(" ");
   };
   // open is the field whose picker is showing, and active the highlighted entry in it, -1 for none.
   // One list serves both fields and sits below them at the panel's width, inside the panel's own flow,
@@ -317,7 +345,9 @@ function TracePanel(props: {
   const [active, setActive] = createSignal(-1);
   const candidates = createMemo(() => {
     const end = open();
-    return end ? pickCandidates(props.picks(), ends.text[end]()) : [];
+    if (!end) return [];
+    const r = end === "to" ? reached() : null;
+    return pickCandidates(r ? reachPicks(r) : props.picks(), ends.text[end]());
   });
   // choose puts a pick in its field. A component lists its pins next, and a pin ends the pick and
   // moves on to the other field when that one is still empty.
@@ -353,7 +383,10 @@ function TracePanel(props: {
     }
   };
   const field = (end: End, label: string, fallback: string) => {
-    const example = () => props.picks().examples[end === "from" ? 0 : 1] || fallback;
+    const example = () => {
+      const r = end === "to" ? reached() : null;
+      return (r ? reachPicks(r) : props.picks()).examples[end === "from" ? 0 : 1] || fallback;
+    };
     return (
       <input
         ref={(el) => (ends.inputs[end] = el)}
@@ -392,10 +425,22 @@ function TracePanel(props: {
       <div class="trace-ask">
         {field("from", "Start pin", "U1.3")}
         {field("to", "End pin", "J1.1")}
+        <select
+          class="trace-hops"
+          aria-label="Most series crossings"
+          title="How many series parts a trace may cross. The end pin list offers only pins within this many."
+          value={String(hops())}
+          onChange={(e) => setHops(Number(e.currentTarget.value))}
+        >
+          <For each={[1, 2, 3, 4, 5, 6]}>{(n) => <option value={String(n)}>within {n}</option>}</For>
+        </select>
         <button type="button" class="trace-run" disabled={s().loading} onClick={run}>
           {s().loading ? "Tracing…" : "Trace"}
         </button>
       </div>
+      <Show when={reachNote()}>
+        <div class="trace-reach-note">{reachNote()}</div>
+      </Show>
       <Show when={open() && candidates().length > 0}>
         <ul class="trace-picks" id="trace-picks" role="listbox" aria-label={open() === "from" ? "Start pin" : "End pin"}>
           <For each={candidates()}>
@@ -523,7 +568,7 @@ function TracePanel(props: {
 export function tracePanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onTrace: (from: string, to: string) => void; walk?: WalkHandlers },
+  handlers: { onTrace: (from: string, to: string, hops: number) => void; onReach?: (from: string, hops: number) => void; walk?: WalkHandlers },
 ): { island: SolidIsland; view: TraceView & TracePickView & WalkView } {
   const [state, setState] = signalView<TraceState>(emptyTrace());
   const [walk, setWalk] = createSignal<WalkState>(emptyWalk());
@@ -531,18 +576,21 @@ export function tracePanelIsland(
   const [picks, setPicks] = createSignal<TracePicks>(emptyPicks());
   const [from, setFrom] = createSignal("");
   const [to, setTo] = createSignal("");
+  const [reach, setReach] = createSignal<Reach | null>(null);
   const ends: TraceEnds = { text: { from, to }, set: { from: setFrom, to: setTo }, inputs: {} };
   const island = new SolidIsland(
     "trace",
     el,
-    () => <TracePanel state={state} walk={walk} walkHandlers={walkHandlers} picks={picks} ends={ends} onTrace={handlers.onTrace} />,
+    () => (
+      <TracePanel state={state} walk={walk} walkHandlers={walkHandlers} picks={picks} ends={ends} reach={reach} onTrace={handlers.onTrace} onReach={handlers.onReach} />
+    ),
     eventBus,
   );
   const setEnd = (end: End, text: string) => {
     ends.set[end](text);
     ends.inputs[end]?.focus();
   };
-  return { island, view: { setState, setPicks, setEnd, setWalk } };
+  return { island, view: { setState, setPicks, setEnd, setWalk, setReach } };
 }
 
 // TracePickView is the pickers' half of the panel's view: the design's parts and pins, and a way to
@@ -550,4 +598,7 @@ export function tracePanelIsland(
 export interface TracePickView {
   setPicks: (p: TracePicks) => void;
   setEnd: (end: End, text: string) => void;
+  // setReach hands the panel what a trace from a start pin reaches (agni issue 1541). The panel uses
+  // it only while its start pin and hop count match the answer's.
+  setReach: (r: Reach | null) => void;
 }

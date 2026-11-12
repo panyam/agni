@@ -92,3 +92,23 @@ func TestThePartnersStepNamesTheBusPeerAndNotTheRail(t *testing.T) {
 		t.Errorf("J1's supply pin is listed as a partner:\n%s", got)
 	}
 }
+
+// The reach step's narration says U1.3 reaches J1.1, the trace's own other end, one crossing away.
+func TestTheStartPinReachesTheTracesOtherEnd(t *testing.T) {
+	d, err := common.AskPath("design", defaultDesign).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	from, _ := parseEndpoint(defaultFrom)
+	r := check.ReachablePins(check.NewModel(d), from, check.DefaultTraceHops)
+	depth := map[string]int{}
+	for _, p := range r.Pins {
+		depth[p.Endpoint.String()] = p.Depth
+	}
+	if d, ok := depth[defaultTo]; !ok || d != 1 {
+		t.Errorf("%s is listed %v at depth %d, want listed one crossing away; pins %v", defaultTo, ok, d, depth)
+	}
+	if d, ok := depth["U2.3"]; !ok || d != 0 {
+		t.Errorf("U2.3 is listed %v at depth %d, want listed on the start net; pins %v", ok, d, depth)
+	}
+}

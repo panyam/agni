@@ -19,6 +19,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/examples/common"
 )
 
@@ -122,6 +123,19 @@ func main() {
 		t := check.TracePins(check.NewModel(d), unreachable[0], unreachable[1], check.DefaultTraceHops)
 		fmt.Printf("%s to %s\n", unreachable[0], unreachable[1])
 		fmt.Print(traceLines(t))
+		return nil
+	})
+
+	demo.Bind("reach").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := design.Load()
+		if err != nil {
+			return demokit.Errf("load %s: %v", design.Path(), err)
+		}
+		start, err := parseEndpoint(from)
+		if err != nil {
+			return demokit.Errf("%v", err)
+		}
+		report.WriteReachableText(os.Stdout, check.ReachablePins(check.NewModel(d), start, check.DefaultTraceHops))
 		return nil
 	})
 

@@ -184,6 +184,15 @@ route ends on a rail that runs across the whole sheet. The address bar
 keeps the goal as `walk_goal=`, `walk_at=` and `walk_to=`. The two-pin trace below the walk stays
 for two ends that no walk has reached.
 
+**The two-pin trace offers only the end pins a trace can reach** (agni issue 1541). Once the start
+field names a pin of the design, the panel asks `ReachablePins` with the radius in the dropdown beside
+the end field, 6 crossings unless the reader picks fewer. The end field then lists only the parts with
+a reached pin, and each pin says how many crossings away it is. A rail is named in a note with its
+pin count rather than listed, since a ground carries hundreds of pins. The engine walks as trace does
+(`ReachToTerminus`), so every offered pin routes, and a pin typed by hand still traces. An answer is
+used only while the start pin and radius on screen match it, so a late answer for an earlier pin
+never fills the list.
+
 ## A design with no drawing opens on agni's layout
 
 Say someone opens a bare `.edn`, or a `.kicad_pcb` with no schematic beside it. Neither holds a

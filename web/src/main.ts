@@ -17,7 +17,7 @@ import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { tracePanelIsland } from "./tracepanel.js";
 import { DEFAULT_WALK_HOPS } from "./walk.js";
-import { tracePicks } from "./tracepick.js";
+import { tracePicks, TRACE_HOPS } from "./tracepick.js";
 import { tablesPanelIsland } from "./tablespanel.js";
 import { TablesPresenter, type TablesSourceKey } from "./tables.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
@@ -813,7 +813,10 @@ class AppRoot extends BaseComponent {
       .then((r) => properties.view.setWalkKinds?.(r.kinds.map((k) => ({ name: k.name, title: k.title, summary: k.summary }))))
       .catch(() => {});
     const trace = tracePanelIsland(traceEl, this._eventBus, {
-      onTrace: (from, to) => void presenter.runTrace(from, to),
+      // The panel's default radius goes up as 0, so a trace link names hops only when the reader
+      // changed it, as before agni issue 1541.
+      onTrace: (from, to, hops) => void presenter.runTrace(from, to, hops === TRACE_HOPS ? 0 : hops),
+      onReach: (from, hops) => void presenter.reachFrom(from, hops).then((r) => trace.view.setReach(r)),
       // The walk outwards from one part shows above the two-pin trace (agni issue 1341).
       walk: {
         onWalk: (r) => void presenter.runWalk(r),
