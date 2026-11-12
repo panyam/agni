@@ -27,11 +27,8 @@ export async function launch(): Promise<Browser> {
   try {
     // A headed window is left to fit the screen. Asking for 1400x1000 on a shorter laptop screen left
     // the view jumping between two offsets as the walk acted.
-    // The suite asks for reduced motion, so a revealed view jumps rather than glides (agni issue 1546)
-    // and a walk never measures or clicks a view still moving. demo-video.spec.ts and glide.spec.ts
-    // turn motion back on for their own pages.
-    const args = ["--force-prefers-reduced-motion", ...(headed ? ["--start-maximized"] : [])];
-    return await chromium.launch({ headless: !headed, slowMo, args });
+    const browser = await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--start-maximized"] : [] });
+    return reducedMotion(browser);
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     throw new Error(
@@ -39,6 +36,19 @@ export async function launch(): Promise<Browser> {
         `Install one with:  cd web && pnpm exec playwright-core install chromium`,
     );
   }
+}
+
+// reducedMotion makes every page and context of the suite ask for reduced motion, so a revealed view
+// jumps rather than glides (agni issue 1546) and a walk never measures or clicks a view still moving.
+// Chrome's --force-prefers-reduced-motion flag does not reach a Playwright page, which sets the media
+// feature per context, so the default goes on each call instead. A spec that passes its own
+// reducedMotion keeps it, as demo-video.spec.ts and glide.spec.ts do to turn motion back on.
+function reducedMotion(browser: Browser): Browser {
+  const newContext = browser.newContext.bind(browser);
+  const newPage = browser.newPage.bind(browser);
+  browser.newContext = (opts = {}) => newContext({ reducedMotion: "reduce", ...opts });
+  browser.newPage = (opts = {}) => newPage({ reducedMotion: "reduce", ...opts });
+  return browser;
 }
 
 // withPage runs one body against a fresh page and always closes it.
