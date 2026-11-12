@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -459,6 +459,24 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/walk-mission.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/walk-mission.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/walk.md 2>/dev/null; exit $$status
+
+# Mission #1442's exercise (agni issue 1545): record one demo journey from web/browser/journeys.ts as
+# $(DEMO_OUT)/<name>.mp4 at 1080p, played on Jetson's whole board at a pace a viewer can follow, with a
+# caption before each step. With no JOURNEY it lists the journeys. A step that breaks fails the run
+# and names the step. The gate plays every journey on the cut at test pace (demo-video.spec.ts).
+#   make demo-video JOURNEY=find-a-part
+#   make demo-video JOURNEY=find-a-part DEMO_OUT=~/Movies/agni
+DEMO_OUT ?= /tmp/agni-demo
+demo-video:
+	@if [ -z "$(JOURNEY)" ]; then \
+		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
+		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
+	fi
+	$(MAKE) ui wasm agni samples-oracle
+	$(MAKE) -C examples/jetson-project board
+	mkdir -p $(DEMO_OUT)
+	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) pnpm exec vitest run -c vitest.browser.config.ts browser/demo-video.spec.ts -t "records"
+	@rm -f $(DEMO_OUT)/page@*.webm
 
 # Mission #1329's exercise (agni issue 1330). It opens Jetson's board and its densest schematic sheet
 # in SVG and then in WebGL, times each sheet's first draw and the frames of a fixed pan and zoom, and
