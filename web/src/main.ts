@@ -407,14 +407,20 @@ class AppRoot extends BaseComponent {
     });
     // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
     // datasheet workbench's keys and never sees this canvas (agni issue 348). An open picker owns
-    // Escape, and so does a text field the reader is typing in.
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      if (comparePick.picker.isOpen()) return;
-      if (isTextEntry(e.target)) return;
-      void presenter.clearHighlights();
-      propertiesPresenter.selectDesign();
-    });
+    // Escape, and so does a text field the reader is typing in. An open drawer owns it too, and the
+    // dock closes the drawer. This listens in the capture phase so it sees the drawer still open.
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key !== "Escape") return;
+        if (comparePick.picker.isOpen()) return;
+        if (isTextEntry(e.target)) return;
+        if (viewerDock?.drawerOpen()) return;
+        void presenter.clearHighlights();
+        propertiesPresenter.selectDesign();
+      },
+      true,
+    );
     // The merged checks panel lists rule findings for the loaded design (grouped/sorted client-side)
     // and hosts the on-demand Run button; clicking a finding highlights its subject (net/ref_des),
     // pressing Run evaluates the current rule selection (WS9).

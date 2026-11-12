@@ -8,7 +8,7 @@
 // what a person asked for (Checks, Review and their reference panels) from a drawer on the right, so
 // the drawing and the board beside it keep the width (agni issue 1542). A reader can dock any of
 // them back into the grid from its ⋯ menu, and Reset layout puts them back in their drawers.
-import { createDock, type Dock, type PanelDef } from "@panyam/tsappkit-dock";
+import { createDock, loadLayout, saveLayout, type Dock, type PanelDef } from "@panyam/tsappkit-dock";
 import type { DockviewApi } from "dockview-core";
 import "dockview-core/dist/styles/dockview.css";
 
@@ -174,6 +174,8 @@ export interface ViewerDock {
   // reveal brings a panel to the front. A drawer would cover part of the grid, so for a panel in the
   // grid it also closes both drawers. A tour step and the Query shortcuts use it.
   reveal(id: string): boolean;
+  // drawerOpen reports whether either drawer is open.
+  drawerOpen(): boolean;
 }
 
 // DRAWER_PANELS are the panels the header's drawer buttons show, each opening the drawer that holds
@@ -211,6 +213,17 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
     if (at?.kind === "drawer" && inFront(id)) dock.toggleDrawer(at.edge, false);
     else dock.show(id);
   };
+  // The dock saves as it restores, before dockview has laid the grid out, and a save then writes
+  // dockview's 100 by 100 grid over the reader's. A group's setSize makes no save either. So the
+  // dock's saves wait until the grid is laid out, and the grid is saved once then.
+  let laidOut = false;
+  const guarded = storage && {
+    getItem: (k: string) => storage.getItem(k),
+    setItem: (k: string, v: string) => {
+      if (laidOut) storage.setItem(k, v);
+    },
+    removeItem: (k: string) => storage.removeItem(k),
+  };
   const dock: Dock = createDock({
     container,
     panels: VIEWER_PANELS,
@@ -236,7 +249,7 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
       else fronts.delete(edge);
       markButtons();
     },
-    storage,
+    storage: guarded,
     key: LAYOUT_KEY,
     // The viewer's page is light-only.
     theme: () => "light",
@@ -255,6 +268,10 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
     menuHost.appendChild(b);
   }
   dock.panelsMenu(menuHost);
+  whenLaidOut(container, dock.api, () => {
+    laidOut = true;
+    if (storage) saveLayout(storage, LAYOUT_KEY, VIEWER_PANELS, dock.api.toJSON(), loadLayout(storage, LAYOUT_KEY)?.drawers);
+  });
   return {
     dock,
     toggleShown,
@@ -262,6 +279,7 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
       const at = dock.where(id);
       if (at?.kind === "drawer") dock.toggleDrawer(at.edge, false);
     },
+    drawerOpen: () => fronts.size > 0,
     reveal: (id) => {
       if (!dock.show(id)) return false;
       if (dock.where(id)?.kind === "grid") for (const edge of ["left", "right"] as const) dock.toggleDrawer(edge, false);
