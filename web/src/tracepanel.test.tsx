@@ -2,15 +2,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { tracePanelIsland } from "./tracepanel.jsx";
 import { type TraceState, TraceOutcome, emptyTrace } from "./trace.js";
+import type { Reach } from "./tracepick.js";
 
 function mount(state?: TraceState) {
   const onTrace = vi.fn();
+  const onReach = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = tracePanelIsland(el, null, { onTrace });
+  const panel = tracePanelIsland(el, null, { onTrace, onReach });
   panel.island.activate();
   if (state) panel.view.setState(state);
-  return { el, onTrace, view: panel.view };
+  return { el, onTrace, onReach, view: panel.view };
 }
 
 const routed: TraceState = {
@@ -69,7 +71,7 @@ describe("tracePanel", () => {
     inputs[0].value = " U1.3 ";
     inputs[1].value = "J1.1";
     el.querySelector<HTMLButtonElement>("button.trace-run")!.click();
-    expect(onTrace).toHaveBeenCalledWith("U1.3", "J1.1");
+    expect(onTrace).toHaveBeenCalledWith("U1.3", "J1.1", 6);
   });
 
   it("disables the button while a walk is running", () => {
@@ -147,7 +149,66 @@ describe("picking a trace's endpoints", () => {
     type(to, "J1.1");
     type(from, "u7.3");
     key(from, "Enter");
-    expect(onTrace).toHaveBeenCalledWith("u7.3", "J1.1");
+    expect(onTrace).toHaveBeenCalledWith("u7.3", "J1.1", 6);
+  });
+
+  // Once "from" names a pin, "to" offers only the pins a trace from it reaches within the hop count
+  // the reader chose (agni issue 1541).
+  const reach = (from: string, hops: number, pins: Reach["pins"], rails: Reach["rails"] = []): Reach => ({ from, hops, reason: "", pins, rails });
+  const fromU13 = (hops = 6) => reach("U1.3", hops, [{ ref: "J1", pin: "1", name: "VBUS", net: "VCC", depth: 1 }], [{ net: "GND", depth: 2, pins: 412 }]);
+  const hopsSelect = (el: HTMLElement) => el.querySelector<HTMLSelectElement>("select.trace-hops")!;
+
+  it("asks for what the start pin reaches once it names a pin, and again when the hop count changes", () => {
+    const { el, from, onReach } = mountPicking();
+    type(from, "U1.");
+    expect(onReach).not.toHaveBeenCalled();
+    type(from, "U1.3");
+    expect(onReach).toHaveBeenLastCalledWith("U1.3", 6);
+    expect([...hopsSelect(el).options].map((o) => o.value)).toEqual(["1", "2", "3", "4", "5", "6"]);
+    hopsSelect(el).value = "2";
+    hopsSelect(el).dispatchEvent(new Event("change", { bubbles: true }));
+    expect(onReach).toHaveBeenLastCalledWith("U1.3", 2);
+  });
+
+  it("offers only the reached pins as the other end, and says which rails it reached", () => {
+    const { el, from, to, view } = mountPicking();
+    type(from, "U1.3");
+    view.setReach(fromU13());
+    to.focus();
+    expect(listed(el)).toEqual(["J1"]);
+    expect(to.placeholder).toBe("to, e.g. J1.1");
+    expect(el.querySelector(".trace-reach-note")!.textContent).toBe("Also reaches GND (412 pins), 2 crossings away.");
+    type(to, "J1.");
+    expect(listed(el)).toEqual(["J1.1"]);
+  });
+
+  it("ignores an answer for another start pin or another hop count", () => {
+    const { el, from, to, view } = mountPicking();
+    type(from, "U1.3");
+    view.setReach(reach("J1.1", 6, []));
+    view.setReach(fromU13(3));
+    to.focus();
+    expect(listed(el)).toEqual(["J1", "U1"]);
+    expect(el.querySelector(".trace-reach-note")).toBeNull();
+  });
+
+  it("says when nothing is within reach", () => {
+    const { el, from, to, view } = mountPicking();
+    type(from, "U1.3");
+    view.setReach(reach("U1.3", 6, []));
+    to.focus();
+    expect(listed(el)).toEqual([]);
+    expect(el.querySelector(".trace-reach-note")!.textContent).toBe("No pins within 6 crossings of U1.3.");
+  });
+
+  it("traces with the hop count the reader chose", () => {
+    const { el, from, to, onTrace } = mountPicking();
+    type(from, "U1.3");
+    type(to, "J1.1");
+    hopsSelect(el).value = "2";
+    hopsSelect(el).dispatchEvent(new Event("change", { bubbles: true }));
+    el.querySelector<HTMLButtonElement>("button.trace-run")!.click();
+    expect(onTrace).toHaveBeenLastCalledWith("U1.3", "J1.1", 2);
   });
 
   it("fills one end from outside the panel", () => {

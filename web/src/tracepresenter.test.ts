@@ -43,6 +43,19 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     highlightSheet: vi.fn(async () => ({ content: { case: "svg", value: "<svg/>" } })),
     getLayoutReport: vi.fn(async () => ({ report: { components: [] } })),
     traceDesign,
+    reachablePins: vi.fn(async (req: { from: { refDes: string; pin: string } }) =>
+      req.from.refDes === "U99"
+        ? { reason: "no component U99 in this design", radius: 6, pins: [], rails: [] }
+        : {
+            reason: "",
+            radius: 2,
+            pins: [
+              { end: { endpoint: { refDes: "TP1", pin: "1" }, pinName: "", net: "SDA" }, depth: 0 },
+              { end: { endpoint: { refDes: "J1", pin: "1" }, pinName: "VBUS", net: "VCC" }, depth: 1 },
+            ],
+            rails: [{ net: "GND", depth: 2, pins: 412 }],
+          },
+    ),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
   const checks = {
@@ -81,7 +94,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     trace: wireTrace ? { setState: onTrace } : undefined,
     location: opts.onLocation,
   }, undefined, undefined, undefined, undefined, fakeSnapshots());
-  return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet };
+  return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet, reachablePins: client.reachablePins };
 }
 
 function lastState(onTrace: ReturnType<typeof vi.fn>): TraceState {
@@ -243,5 +256,34 @@ describe("a trace goes to a sheet the route is on", () => {
     await h.presenter.runTrace("U1.3", "J1.1");
     const asked = h.getSheet.mock.calls.map((c: unknown[]) => (c[0] as { sheet?: string }).sheet);
     expect(asked).not.toContain("s2");
+  });
+});
+
+// The Trace panel narrows its end pin to what a trace from the start pin reaches (agni issue 1541).
+describe("reach presenter", () => {
+  it("asks the engine what a start pin reaches on the open design, within the hops asked", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    const r = await h.presenter.reachFrom("U1.3", 2);
+    expect(h.reachablePins).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "proj/board.edn")), from: { refDes: "U1", pin: "3" }, hops: 2 });
+    expect(r).toEqual({
+      from: "U1.3",
+      hops: 2,
+      reason: "",
+      pins: [
+        { ref: "TP1", pin: "1", name: "", net: "SDA", depth: 0 },
+        { ref: "J1", pin: "1", name: "VBUS", net: "VCC", depth: 1 },
+      ],
+      rails: [{ net: "GND", depth: 2, pins: 412 }],
+    });
+  });
+
+  it("passes on a reason, and asks nothing for text that names no pin or before a design is open", async () => {
+    const h = harness();
+    expect(await h.presenter.reachFrom("U1.3", 6)).toBeNull();
+    await h.presenter.openFile("m", "proj/board.edn");
+    expect((await h.presenter.reachFrom("U99.1", 6))?.reason).toBe("no component U99 in this design");
+    expect(await h.presenter.reachFrom("U1", 6)).toBeNull();
+    expect(h.reachablePins).toHaveBeenCalledTimes(1);
   });
 });

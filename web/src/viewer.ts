@@ -1,3 +1,4 @@
+import type { Reach } from "./tracepick.js";
 import { snapshots } from "./api.js";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Busy } from "./busy.js";
@@ -1882,6 +1883,27 @@ export class ViewerPresenter {
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
     this.lastFocus = focus;
     await this.setHighlights(focusStack(this.field(), subjects, focus));
+  }
+
+  // reachFrom asks what a trace from one pin reaches within hops crossings, for the Trace panel's end
+  // pin list (agni issue 1541). It answers null for text that names no pin, before a design is open,
+  // and when the engine fails, so the list falls back to every pin. A start pin the design does not
+  // have comes back with its reason.
+  async reachFrom(fromText: string, hops: number): Promise<Reach | null> {
+    const from = parseEndpoint(fromText);
+    if (!from || !this.doc.mount || !this.doc.path) return null;
+    try {
+      const r = await this.client.reachablePins({ snapshot: await this.drawn(), from, hops });
+      return {
+        from: fromText,
+        hops,
+        reason: r.reason,
+        pins: r.pins.map((p) => ({ ref: p.end?.endpoint?.refDes ?? "", pin: p.end?.endpoint?.pin ?? "", name: p.end?.pinName ?? "", net: p.end?.net ?? "", depth: p.depth })),
+        rails: r.rails.map((x) => ({ net: x.net, depth: x.depth, pins: x.pins })),
+      };
+    } catch {
+      return null;
+    }
   }
 
   // runWalk walks outwards from a part or pin (agni issue 1341) and shows the walk in the Trace tab.

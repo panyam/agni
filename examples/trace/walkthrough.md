@@ -53,6 +53,12 @@ Agni -->> You: Trace (outcome, crossings, nets, stubs)
 
 > Two pins with nothing between them. This is an ANSWER rather than a failure, so it names both nets and how far it searched. An endpoint can also name nothing the design has. That is a different case, and it reports as unresolved rather than as a disconnection, because a pin spelled wrong and two pins genuinely not connected are opposite problems.
 
+## What the start pin can reach {#reach}
+
+> A trace answers a pair you already know. Picking the second pin is the harder part on a real board, where most pins are nowhere near the first. check.ReachablePins walks from the start pin the same way, to the same radius, and lists every pin a trace from there would route to, nearest first. Every pin it lists traces, and every pin that traces is listed, so the viewer's Trace panel offers these as targets.
+>
+> U1.3 reaches U2's SDA and the pull-up's near end on its own net, then the supply side one crossing away through R1. The trace's other end, J1.1, is there at one crossing. A ground or a rail on a real board is named with its pin count instead of pin by pin.
+
 ## Every pin of one part {#partners}
 
 > A trace answers one pair of pins you already know. Signing off a part's pinout starts from the other end, with every pin of the part and the question of where each one goes. check.PartnersOf walks from each pin of U1 the way the trace walked from one. Each walk reaches some pins on other ICs and connectors, and PartnersOf lists them.
@@ -71,7 +77,12 @@ This walkthrough is the narrated form of one command:
 
     agni trace ../common/designs/i2c-sensor --from U1.3 --to J1.1 --render route.svg
 
-Add `--hops` to widen the search, and `--format json` for the machine-readable form. The every-pin
+Add `--hops` to widen the search, and `--format json` for the machine-readable form. The reach step
+is the same command with `--reachable` in place of `--to`:
+
+    agni trace ../common/designs/i2c-sensor --from U1.3 --reachable
+
+The every-pin
 step is this command. It writes its answer as a draft io_map for `agni check --intent-path`:
 
     agni pinmap ../common/designs/i2c-sensor --device U1

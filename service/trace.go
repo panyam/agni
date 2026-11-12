@@ -134,3 +134,43 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	annotateTraceSheets(p, g, m, traceBoard(ctx, LoaderOr(snap, s.loader), snap))
 	return &webapi.TraceDesignResponse{Trace: p}, nil
 }
+
+// ReachablePins answers which pins a trace from one pin reaches within a radius (agni issue 1541). It
+// reads the snapshot's netlist, as TraceDesign does, and no geometry.
+func (s *DesignService) ReachablePins(ctx context.Context, req *webapi.ReachablePinsRequest) (*webapi.ReachablePinsResponse, error) {
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
+	if err != nil {
+		return nil, err
+	}
+	d, err := LoaderOr(snap, s.loader).Design(ctx, snap.Netlist, snap.Overlay.ReadOptions()...)
+	if err != nil {
+		return nil, err
+	}
+	from := check.Endpoint{RefDes: req.GetFrom().GetRefDes(), Pin: req.GetFrom().GetPin()}
+	return ReachableProto(check.ReachablePins(check.NewModel(d), from, int(req.GetHops()))), nil
+}
+
+// ReachableProto converts a check.Reachable to its wire form. `agni trace --reachable --format json`
+// prints the same fields.
+func ReachableProto(r check.Reachable) *webapi.ReachablePinsResponse {
+	out := &webapi.ReachablePinsResponse{From: traceEndProto(r.From), Reason: r.Reason, Radius: num.Int32(r.Radius)}
+	for _, p := range r.Pins {
+		out.Pins = append(out.Pins, &webapi.ReachablePin{End: traceEndProto(p.TraceEnd), Depth: num.Int32(p.Depth)})
+	}
+	for _, rl := range r.Rails {
+		out.Rails = append(out.Rails, &webapi.ReachedRail{Net: rl.Net, Depth: num.Int32(rl.Depth), Pins: num.Int32(rl.Pins)})
+	}
+	return out
+}
+
+// ReachableFromProto converts the wire answer back, for a client that prints it.
+func ReachableFromProto(p *webapi.ReachablePinsResponse) check.Reachable {
+	r := check.Reachable{From: traceEndFromProto(p.GetFrom()), Reason: p.GetReason(), Radius: int(p.GetRadius())}
+	for _, x := range p.GetPins() {
+		r.Pins = append(r.Pins, check.ReachablePin{TraceEnd: traceEndFromProto(x.GetEnd()), Depth: int(x.GetDepth())})
+	}
+	for _, x := range p.GetRails() {
+		r.Rails = append(r.Rails, check.ReachedRail{Net: x.GetNet(), Depth: int(x.GetDepth()), Pins: int(x.GetPins())})
+	}
+	return r
+}

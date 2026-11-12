@@ -63,6 +63,14 @@ service DesignService {
   // they typed.
   rpc TraceDesign(TraceDesignRequest) returns (TraceDesignResponse);
 
+  // ReachablePins lists the pins a trace from one pin routes to within a radius, nearest first, so
+  // the Trace panel offers only targets a trace can reach (agni issue 1541). It walks as TraceDesign
+  // does. Every listed pin routes at that radius, and every pin that routes and sits on no rail is
+  // listed. A reached rail or ground is named with its pin count instead of pin by pin. `agni trace
+  // --from U1.3 --reachable` prints the same answer. A start that names nothing the design has is an
+  // answer with `reason` set, as on TraceDesign.
+  rpc ReachablePins(ReachablePinsRequest) returns (ReachablePinsResponse);
+
   // WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
   // part it crossed into each, and the parts it left at the boundary with the reason (agni issue
   // 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
@@ -298,6 +306,44 @@ message TraceDesignRequest {
 message TraceEndpoint {
   string ref_des = 1;
   string pin = 2;
+}
+
+message ReachablePinsRequest {
+  // snapshot names the design, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 1;
+  // from is the start pin, as ref-des and pin designator, or a pin name the part declares.
+  TraceEndpoint from = 2;
+  // hops is the radius in series crossings, and 0 takes the server's default, as on TraceDesign.
+  int32 hops = 3;
+}
+
+message ReachablePinsResponse {
+  // from is the start pin resolved, with its net. Its sheet_ids are left empty.
+  TraceEnd from = 1;
+  // reason says why the start pin did not resolve. pins and rails are empty then.
+  string reason = 2;
+  // radius is the radius searched, so a reader sees what was asked.
+  int32 radius = 3;
+  // pins are the pins a trace from `from` routes to, nearest first, then by ref-des and pin. The
+  // start pin is not among them, and a virtual part (#PWR01) has none.
+  repeated ReachablePin pins = 4;
+  // rails are the rails and grounds the walk reached and stopped on, nearest first.
+  repeated ReachedRail rails = 5;
+}
+
+// ReachablePin is one pin a trace reaches. end carries its net and functional name, with no sheets.
+message ReachablePin {
+  TraceEnd end = 1;
+  // depth is the series crossings between the start pin's net and this pin's, 0 on the start net.
+  int32 depth = 2;
+}
+
+// ReachedRail is a bus-like net the walk reached. A trace may end on one and never crosses it.
+message ReachedRail {
+  string net = 1;
+  int32 depth = 2;
+  // pins counts the pins on the net, which the answer does not list.
+  int32 pins = 3;
 }
 
 message TraceDesignResponse {

@@ -49,6 +49,9 @@ const (
 	// DesignServiceTraceDesignProcedure is the fully-qualified name of the DesignService's TraceDesign
 	// RPC.
 	DesignServiceTraceDesignProcedure = "/agni.v1.webapi.DesignService/TraceDesign"
+	// DesignServiceReachablePinsProcedure is the fully-qualified name of the DesignService's
+	// ReachablePins RPC.
+	DesignServiceReachablePinsProcedure = "/agni.v1.webapi.DesignService/ReachablePins"
 	// DesignServiceWalkDesignProcedure is the fully-qualified name of the DesignService's WalkDesign
 	// RPC.
 	DesignServiceWalkDesignProcedure = "/agni.v1.webapi.DesignService/WalkDesign"
@@ -98,6 +101,13 @@ type DesignServiceClient interface {
 	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
+	// ReachablePins lists the pins a trace from one pin routes to within a radius, nearest first, so
+	// the Trace panel offers only targets a trace can reach (agni issue 1541). It walks as TraceDesign
+	// does. Every listed pin routes at that radius, and every pin that routes and sits on no rail is
+	// listed. A reached rail or ground is named with its pin count instead of pin by pin. `agni trace
+	// --from U1.3 --reachable` prints the same answer. A start that names nothing the design has is an
+	// answer with `reason` set, as on TraceDesign.
+	ReachablePins(context.Context, *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error)
 	// WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
 	// part it crossed into each, and the parts it left at the boundary with the reason (agni issue
 	// 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
@@ -159,6 +169,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
 			connect.WithClientOptions(opts...),
 		),
+		reachablePins: connect.NewClient[webapi.ReachablePinsRequest, webapi.ReachablePinsResponse](
+			httpClient,
+			baseURL+DesignServiceReachablePinsProcedure,
+			connect.WithSchema(designServiceMethods.ByName("ReachablePins")),
+			connect.WithClientOptions(opts...),
+		),
 		walkDesign: connect.NewClient[webapi.WalkDesignRequest, webapi.WalkDesignResponse](
 			httpClient,
 			baseURL+DesignServiceWalkDesignProcedure,
@@ -182,6 +198,7 @@ type designServiceClient struct {
 	getLayoutReport *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
 	locateSubjects  *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
 	traceDesign     *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
+	reachablePins   *connect.Client[webapi.ReachablePinsRequest, webapi.ReachablePinsResponse]
 	walkDesign      *connect.Client[webapi.WalkDesignRequest, webapi.WalkDesignResponse]
 	listWalkKinds   *connect.Client[webapi.ListWalkKindsRequest, webapi.ListWalkKindsResponse]
 }
@@ -214,6 +231,11 @@ func (c *designServiceClient) LocateSubjects(ctx context.Context, req *connect.R
 // TraceDesign calls agni.v1.webapi.DesignService.TraceDesign.
 func (c *designServiceClient) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	return c.traceDesign.CallUnary(ctx, req)
+}
+
+// ReachablePins calls agni.v1.webapi.DesignService.ReachablePins.
+func (c *designServiceClient) ReachablePins(ctx context.Context, req *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error) {
+	return c.reachablePins.CallUnary(ctx, req)
 }
 
 // WalkDesign calls agni.v1.webapi.DesignService.WalkDesign.
@@ -267,6 +289,13 @@ type DesignServiceHandler interface {
 	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
+	// ReachablePins lists the pins a trace from one pin routes to within a radius, nearest first, so
+	// the Trace panel offers only targets a trace can reach (agni issue 1541). It walks as TraceDesign
+	// does. Every listed pin routes at that radius, and every pin that routes and sits on no rail is
+	// listed. A reached rail or ground is named with its pin count instead of pin by pin. `agni trace
+	// --from U1.3 --reachable` prints the same answer. A start that names nothing the design has is an
+	// answer with `reason` set, as on TraceDesign.
+	ReachablePins(context.Context, *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error)
 	// WalkDesign walks outwards from one part or pin, hop by hop, and answers the nets it reached, the
 	// part it crossed into each, and the parts it left at the boundary with the reason (agni issue
 	// 1339). Hop 1 is the start's own nets. A ground or a global net is reached and never walked
@@ -324,6 +353,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceReachablePinsHandler := connect.NewUnaryHandler(
+		DesignServiceReachablePinsProcedure,
+		svc.ReachablePins,
+		connect.WithSchema(designServiceMethods.ByName("ReachablePins")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceWalkDesignHandler := connect.NewUnaryHandler(
 		DesignServiceWalkDesignProcedure,
 		svc.WalkDesign,
@@ -350,6 +385,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceLocateSubjectsHandler.ServeHTTP(w, r)
 		case DesignServiceTraceDesignProcedure:
 			designServiceTraceDesignHandler.ServeHTTP(w, r)
+		case DesignServiceReachablePinsProcedure:
+			designServiceReachablePinsHandler.ServeHTTP(w, r)
 		case DesignServiceWalkDesignProcedure:
 			designServiceWalkDesignHandler.ServeHTTP(w, r)
 		case DesignServiceListWalkKindsProcedure:
@@ -385,6 +422,10 @@ func (UnimplementedDesignServiceHandler) LocateSubjects(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.TraceDesign is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) ReachablePins(context.Context, *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.ReachablePins is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) WalkDesign(context.Context, *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {

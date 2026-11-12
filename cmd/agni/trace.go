@@ -23,6 +23,7 @@ func traceCmd() *cobra.Command {
 	var from, to, format, renderOut, serverVal, traceOutPath string
 	var srvSpec serverSpec
 	var hops int
+	var reachable bool
 	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
@@ -30,6 +31,8 @@ func traceCmd() *cobra.Command {
 		Long: "trace walks from one pin to another through series pass elements (resistors, inductors,\n" +
 			"ferrites, fuses) and prints the route: the parts crossed, the nets passed through, and the\n" +
 			"test points and other parts sitting on each one.\n\n" +
+			"With --reachable and no --to, it lists every pin a trace from --from routes to within\n" +
+			"--hops crossings instead, nearest first, and names the rails reached with their pin counts.\n\n" +
 			"A capacitor is a DC block and is never crossed, and a rail or plane may be the END of a\n" +
 			"route but is never passed through.",
 		Args: cobra.ExactArgs(1),
@@ -49,9 +52,17 @@ func traceCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			b, err := parseEndpoint(to, "--to")
-			if err != nil {
-				return err
+			if reachable && (to != "" || renderOut != "") {
+				return fmt.Errorf("--reachable lists the pins --from reaches, so it takes no --to and no --render")
+			}
+			if !reachable && to == "" {
+				return fmt.Errorf(`required flag(s) "to" not set`)
+			}
+			var b check.Endpoint
+			if !reachable {
+				if b, err = parseEndpoint(to, "--to"); err != nil {
+					return err
+				}
 			}
 			if format != "text" && format != "json" {
 				return fmt.Errorf("--format %s: want text or json", format)
@@ -85,6 +96,9 @@ func traceCmd() *cobra.Command {
 				return rpcFailed(err)
 			}
 			defer drop()
+			if reachable {
+				return printReachable(cmd, svc, snap, a, hops, format)
+			}
 			resp, err := svc.TraceDesign(cmd.Context(), &webapi.TraceDesignRequest{
 				Snapshot: snap,
 				From:     &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
@@ -157,9 +171,37 @@ func traceCmd() *cobra.Command {
 		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
 			"design's own schematic where it has one and on an auto-layout of its netlist where it "+
 			"does not. Works for a no-route too, marking the two nets that fail to join.")
+	cmd.Flags().BoolVar(&reachable, "reachable", false,
+		"list every pin a trace from --from routes to within --hops, nearest first, instead of tracing to --to")
 	cmd.MarkFlagRequired("from")
-	cmd.MarkFlagRequired("to")
 	return cmd
+}
+
+// printReachable answers `trace --reachable` through the same DesignService a viewer asks (agni
+// issue 1541). An unresolved start pin exits non-zero, as an unresolved trace does.
+func printReachable(cmd *cobra.Command, svc traceAPI, snap string, from check.Endpoint, hops int, format string) error {
+	resp, err := svc.ReachablePins(cmd.Context(), &webapi.ReachablePinsRequest{
+		Snapshot: snap,
+		From:     &webapi.TraceEndpoint{RefDes: from.RefDes, Pin: from.Pin},
+		Hops:     num.Int32(hops),
+	})
+	if err != nil {
+		return rpcFailed(err)
+	}
+	r := service.ReachableFromProto(resp)
+	if format == "json" {
+		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(b))
+	} else if r.Reason == "" {
+		rpt.WriteReachableText(cmd.OutOrStdout(), r)
+	}
+	if r.Reason != "" {
+		return fmt.Errorf("cannot trace from %s: %s", from, r.Reason)
+	}
+	return nil
 }
 
 // The route and the parts crossed get different colours, so a reader can tell the wire from the part

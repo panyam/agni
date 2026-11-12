@@ -15,8 +15,67 @@ export interface TracePick {
 // examples are two real pins for the fields' placeholders, empty strings when the design has none.
 export interface TracePicks {
   components: { ref: string; detail: string }[];
-  pins: Map<string, { pin: string; name: string; net: string }[]>;
+  pins: Map<string, PickPin[]>;
   examples: [string, string];
+}
+
+// PickPin is one pin a picker can offer. depth is set on a reached pin, the series crossings from
+// the start pin's net (agni issue 1541).
+export interface PickPin {
+  pin: string;
+  name: string;
+  net: string;
+  depth?: number;
+}
+
+// Reach is what a trace from one start pin reaches within hops crossings, as
+// DesignService.ReachablePins answers it. reason is set when the start pin named nothing.
+export interface Reach {
+  from: string;
+  hops: number;
+  reason: string;
+  pins: { ref: string; pin: string; name: string; net: string; depth: number }[];
+  rails: { net: string; depth: number; pins: number }[];
+}
+
+// crossingsLabel says how far a reached pin is, "on the start net" for none.
+export function crossingsLabel(depth: number): string {
+  return depth === 0 ? "on the start net" : `${depth} crossing${depth === 1 ? "" : "s"}`;
+}
+
+// reachPicks is the "to" picker's list once the start pin's reach is known: only the parts with a
+// reached pin, each with its nearest pin's distance, and only their reached pins. The engine walked
+// as a trace does, so every entry traces (check.ReachablePins).
+export function reachPicks(r: Reach): TracePicks {
+  const pins = new Map<string, PickPin[]>();
+  for (const p of r.pins) {
+    const list = pins.get(p.ref) ?? [];
+    list.push({ pin: p.pin, name: p.name, net: p.net, depth: p.depth });
+    pins.set(p.ref, list);
+  }
+  const refs = [...pins.keys()].sort(compareNatural);
+  for (const ref of refs) pins.get(ref)!.sort((a, b) => compareNatural(a.pin, b.pin));
+  const components = refs.map((ref) => {
+    const list = pins.get(ref)!;
+    const nearest = Math.min(...list.map((p) => p.depth ?? 0));
+    return { ref, detail: `${list.length} pin${list.length === 1 ? "" : "s"} · ${crossingsLabel(nearest)}` };
+  });
+  // The example is the nearest pin past the start net, so a placeholder reads as a route.
+  const byNearness = [...r.pins].sort((a, b) => a.depth - b.depth || compareNatural(a.ref, b.ref) || compareNatural(a.pin, b.pin));
+  const far = byNearness.find((p) => p.depth > 0) ?? byNearness[0];
+  return { components, pins, examples: [r.from, far ? `${far.ref}.${far.pin}` : ""] };
+}
+
+// TRACE_HOPS is the radius a trace searches when the reader picks none, check.DefaultTraceHops.
+export const TRACE_HOPS = 6;
+
+// isPin says whether text names a pin of the design as "U7.3", ignoring the ref-des's case.
+export function isPin(picks: TracePicks, text: string): boolean {
+  const dot = text.lastIndexOf(".");
+  if (dot <= 0) return false;
+  const ref = [...picks.pins.keys()].find((r) => r.toLowerCase() === text.slice(0, dot).toLowerCase());
+  const pin = text.slice(dot + 1);
+  return !!ref && pin !== "" && picks.pins.get(ref)!.some((p) => p.pin === pin);
 }
 
 // PICK_LIMIT caps how many entries a picker lists, since a large board has tens of thousands of
@@ -66,10 +125,10 @@ export function matchRank(typed: string, text: string): number {
 // lists the components. A reader who does not know a name starts there.
 export function pickCandidates(picks: TracePicks, typed: string): TracePick[] {
   const t = typed.trim();
-  const pinPick = (ref: string, p: { pin: string; name: string; net: string }): TracePick => ({
+  const pinPick = (ref: string, p: PickPin): TracePick => ({
     value: `${ref}.${p.pin}`,
     kind: "pin",
-    detail: [p.name, p.net].filter(Boolean).join(" · "),
+    detail: [p.name, p.net, p.depth === undefined ? "" : crossingsLabel(p.depth)].filter(Boolean).join(" · "),
   });
   if (t === "") return picks.components.slice(0, PICK_LIMIT).map((c) => ({ value: c.ref, kind: "component", detail: c.detail }));
 
