@@ -15,6 +15,13 @@ hideTitle: true
 </div>
 </div>
 
+<div class="home-video">
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">
+<a href="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">Download the walkthrough video</a>
+</video>
+<p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
+</div>
+
 <div class="features">
 <div class="feature-card">
 <h3>Many formats, one IR</h3>
