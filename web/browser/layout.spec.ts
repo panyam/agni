@@ -966,7 +966,8 @@ describe("the trace pickers", () => {
       const from = page.locator('input.trace-pin[aria-label="Start pin"]');
       await page.waitForFunction(() => document.querySelectorAll(".trace-pick.pin").length > 0, null, { timeout: 30_000 });
       expect(await from.inputValue()).toBe("U1.");
-      expect((await paintedAt(page, ".trace-pick.pin")).ownedByProbe).toBe(true);
+      // dockview places a panel it brought forward on its next frame, so this waits for that frame.
+      await expect.poll(async () => (await paintedAt(page, ".trace-pick.pin")).ownedByProbe, { timeout: 5_000 }).toBe(true);
 
       const first = (await page.locator(".trace-pick.pin .trace-pick-value").first().innerText()).trim();
       await page.locator(".trace-pick.pin").first().click();
