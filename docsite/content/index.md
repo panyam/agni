@@ -6,7 +6,7 @@ hideTitle: true
 
 <div class="home-hero">
 <h1>Agni</h1>
-<p class="hero-subtitle">Agni checks schematics and boards for design mistakes and locates every finding on the schematic. A mistake might be a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs into one representation, then checks, diffs, queries, and renders them.</p>
+<p class="hero-subtitle">Agni checks schematics and boards for design mistakes and locates every finding on the schematic. A mistake might be a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection. It reads KiCad, OrCAD Capture, EDIF, xschem and gEDA schematics, and KiCad, Allegro, Altium, ODB++ and IPC-2581 boards, into one representation, then checks, diffs, queries, and renders them.</p>
 <div class="hero-actions">
 <a href="{{.Site.PathPrefix}}/demo/" class="btn btn-primary">Try it in your browser</a>
 <a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-secondary">Get started</a>
@@ -15,9 +15,16 @@ hideTitle: true
 </div>
 </div>
 
-<div class="home-video">
-<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">
-<a href="https://github.com/panyam/agni/releases/download/v0.6.11/agni-demo-find-a-part.mp4">Download the walkthrough video</a>
+<div class="home-video" id="demo-compare">
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-compare-revisions.jpg" src="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">
+<a href="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">Download the comparison video</a>
+</video>
+<p>What changed between two revisions of the same board, Antmicro's rev 1.1.0 and rev 1.1.3. It steps through one change of each kind, and each step says what that kind means. <code>make demo-video JOURNEY=compare-revisions</code> records it.</p>
+</div>
+
+<div class="home-video" id="demo">
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">
+<a href="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">Download the walkthrough video</a>
 </video>
 <p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
 </div>
@@ -62,10 +69,6 @@ hideTitle: true
 <a href="{{.Site.PathPrefix}}/demo/" class="section-card">
 <h3>Try the demo</h3>
 <p>Open an example board, or drop your own, in the viewer with the engine running in your browser. Nothing to install and nothing uploaded.</p>
-</a>
-<a href="{{.Site.PathPrefix}}/demos/" class="section-card">
-<h3>About the demo</h3>
-<p>What the demo holds, why it runs in the browser, and how it relates to agni serve.</p>
 </a>
 </div>
 </div>

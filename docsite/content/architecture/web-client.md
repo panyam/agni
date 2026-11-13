@@ -15,12 +15,42 @@ failures that only a real browser or a composition-root test can see. The archit
 (`web/src/<panel>.tsx`), its hole in `web/templates/ViewerPage.html` (`data-component="..."`), its
 field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in `web/src/main.ts`.
 
-**A panel that DOCKS costs two more**, and they are not optional. One is an entry in `VIEWER_PANELS`
-and the other is a line in `defaultLayout`, both in `web/src/dock.ts`. `dock.test.ts` asserts the
-registry by exact list, so it catches a missing entry. Nothing catches a missing line, and the line has
-an ordering rule. dockview resolves `referencePanel` against panels that ALREADY EXIST. Suppose a new
-panel tabs with a panel that the layout places later. Then boot throws rather than deferring. The trace
-panel first failed `composition.test.ts` this way. Add the panel after the one it tabs with.
+**A panel that DOCKS costs one or two more.** Every docked panel takes an entry in `VIEWER_PANELS`
+in `web/src/dock.ts`, and `dock.test.ts` asserts the registry by exact list, so it catches a missing
+entry. A panel that starts in a drawer says so in its entry's `defaultPlacement`, and that is all it
+takes. A panel that starts in the grid also takes a line in `defaultLayout`. Nothing catches a missing
+line, and the line has an ordering rule. dockview resolves `referencePanel` against panels that
+ALREADY EXIST. Suppose a new panel tabs with a panel that the layout places later. Then boot throws
+rather than deferring. The trace panel first failed `composition.test.ts` this way. Add the panel
+after the one it tabs with.
+
+## Drawers
+
+The dock is goapplib's `tsappkit-dock` over dockview 7 (agni issue 1549). Sheets starts in a left
+drawer, and Checks, Review, Rules, Lexicon and Coverage start as tabs in a right drawer (agni issue
+1542). A drawer slides over the grid with a scrim behind it, and a click on the scrim or Escape
+closes it. The header's Sheets, Checks and Review buttons open and close their drawers, and
+⌘/Ctrl+G shows or hides Sheets. A reader can dock any drawer panel into the grid from its tab's menu.
+
+- **Bring a panel forward with `ViewerDock.reveal`, not `dock.show`.** dockview shows a panel brought
+  forward in its group on its next animation frame, and a hidden field takes no focus. `reveal` shows
+  the panel at once, so a focus right after it lands. For a panel in the grid it also closes both
+  drawers, since a drawer would cover part of the grid.
+- **Choosing a sheet closes the Sheets drawer.** A tile's select and its open-beside button call
+  `hideDrawerOf("overview")` first, so the sheet chosen is in view.
+- **An open drawer owns Escape.** The viewer's own Escape clears the highlight and the selection. It
+  listens in the capture phase and steps aside while a drawer is open, so the dock closes the drawer
+  and the highlight stays.
+- **The default sizes go into the dock's first save.** `tsappkit-dock` lays dockview out from its
+  container before it builds the default layout (goapplib issue 148), so `defaultLayout` sizes the
+  rail and the query strip at once. `createViewerDock` adds its header buttons before the dock
+  exists, since a header that grew after the layout shrank the grid, and the query strip with it.
+- **A drawer comes back closed.** The dock restores a drawer's panels, front tab and size, and leaves
+  it closed (goapplib issue 148).
+- **A spec opens a drawer before it clicks inside it.** `showPanel` in `web/browser/panels.ts` opens a
+  drawer panel or brings a grid panel forward, and `hideDrawers` closes any open drawer from its scrim
+  before a click on the drawing. A wait on a drawer panel's state waits for it in the DOM with
+  `state: "attached"`, since a closed drawer's content is not visible.
 
 `main.ts` is the composition root and nothing else constructs it. The presenter's view ports are
 OPTIONAL by design, because an embedding host may leave a panel out (see `build/extending.md`). So an
@@ -41,8 +71,9 @@ panel from the ones above.
 
 - **It has no hole in the page and no entry in `VIEWER_PANELS`.** `SheetViews`
   (`web/src/sheetviews.ts`) makes each one, and `addSheetView` in `dock.ts` docks it under an id
-  starting `sheetview-`. The dock's component factory hands that id its element. A saved layout that
-  names a view restores without it, since `prunePanels` drops every id that the registry lacks. A view
+  starting `sheetview-`. The dock's `resolve` and `hostFor` hand that id its title and element. A
+  saved layout that names a view restores without it, since the dock drops every id that neither the
+  registry nor `resolve` knows. A view
   names a sheet of one design, and the next page may open another. The same holds within one page.
   When a link, `ApplyLocation` or back and forward opens another design, `openFile` calls the view
   sink's `closeSheetViews`, and `SheetViews.reset` closes every view (agni issue 1425).
@@ -165,8 +196,9 @@ A reader selects a part or a pin, and Properties offers a walk per kind that `Li
 (agni issue 1341). Choosing one calls `WalkDesign` at one hop and shows the walk in the Trace tab,
 above the two-pin trace. The presenter lights the start alone, and the host zooms to it with
 `SvgView.revealOverlay`. Then the presenter lights the whole walk, each hop in its own shade
-(`walk.ts`, `HOP_COLORS`). A net where the walk stopped is drawn faint, since a rail runs across the
-sheet. The parts crossed are red, and the parts left uncrossed are outlined. The tab groups the nets
+(`walk.ts`, `HOP_COLORS`). A net where the walk stopped, a ground or a rail, is not lit. It runs
+across the sheet, and on a board its overlapping segments stacked to solid grey however faint the
+shade (agni issue 1562). The tab says the walk stopped there. The parts crossed are red, and the parts left uncrossed are outlined. The tab groups the nets
 by hop, and each hop folds. Each net and part locates on its sheet, and `locateInWalk` keeps the
 walk lit under the focus. Wider and Narrower walk again a hop further or nearer. A part left
 uncrossed has a Cross button, which walks again with it in `through`. The address bar keeps the

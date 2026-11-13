@@ -7,6 +7,7 @@ import type { Browser, Page, Request } from "playwright-core";
 import { fromBinary, toBinary, toJson, type DescMessage } from "@bufbuild/protobuf";
 import { HighlightSheetRequestSchema, LocateSubjectsRequestSchema, LocateSubjectsResponseSchema } from "../src/gen/agni/v1/webapi/design_pb.js";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";
 
 // bodyOf is a request's body in its JSON form. The viewer speaks binary Connect (agni issue 1502), so
@@ -100,6 +101,7 @@ describe("a sheet view beside the canvas", () => {
       await openViewer(page, "kicad/hier_numeric_root.kicad_sch");
       await openBeside(page, "Hier numeric root");
       const root = await page.$eval(`${PANE} .sheetview-sheet`, (s) => (s as HTMLSelectElement).value);
+      await showPanel(page, "overview");
       await page.locator(".sheet-tile", { hasText: /^IO$/ }).click();
       await page.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "IO", null, { timeout: 30_000 });
       await page.waitForTimeout(500);
@@ -180,6 +182,7 @@ describe("a sheet view beside the canvas", () => {
       await openViewer(page, "tut/designs/gateway");
       const schematic = (await page.locator(".sheet-tile.active .sheet-tile-name").textContent()) ?? "";
       await openBeside(page, schematic);
+      await showPanel(page, "overview");
       await page.locator(".sheet-tile", { hasText: /^Board$/ }).click();
       await page.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "Board", null, { timeout: 30_000 });
       await page.waitForSelector("#svg-view .picks-front", { timeout: 30_000 });
@@ -353,11 +356,13 @@ describe("the renderer a sheet view opens in", () => {
       await page.addInitScript(hardwareGpu);
       await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
+      await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();
       await expect.poll(() => view(page, 0).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("webgl");
       expect(await view(page, 0).locator(".sheetview-webgl").isChecked()).toBe(true);
       expect(await page.locator("#svg-view svg").count()).toBe(1);
 
+      await showPanel(page, "overview");
       await besideTile(page, /^(?!Board$)/).click();
       await expect.poll(() => view(page, 1).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("svg");
       expect(await view(page, 1).locator(".sheetview-webgl").isChecked()).toBe(false);
@@ -368,6 +373,7 @@ describe("the renderer a sheet view opens in", () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base()}/designs/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
+      await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();
       await expect.poll(() => view(page, 0).getAttribute("data-renderer"), { timeout: 30_000 }).toBe("svg");
       expect(await view(page, 0).locator(".sheetview-webgl").isChecked()).toBe(false);

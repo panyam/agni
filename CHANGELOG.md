@@ -10,6 +10,38 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.15] - 2026-11-12
+
+`agni serve` on macOS raises each request's thread to user-initiated QoS, so a cold parse of the
+Jetson board came back fast 60 times in 60 rather than 27 (PR 1570, issue 1534). The browser suite
+runs as ten CI shards (PR 1571). It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.15.md](RELEASES/v0.6.15.md).
+
+## [0.6.14] - 2026-11-12
+
+A walk lights no net it stopped on, so a ground or a rail no longer fills a board in grey, and the
+Trace tab still says where the walk stopped (PR 1567, issue 1562). The docsite's front page plays the
+compare-revisions walkthrough first (PR 1565). It is a patch with no API changes. The full write-up
+is [RELEASES/v0.6.14.md](RELEASES/v0.6.14.md).
+
+## [0.6.13] - 2026-11-12
+
+agni compares two real revisions of Antmicro's Jetson baseboard, revs 1.1.2 and 1.1.3 against
+rev 1.1.0, and reads KiCad 10 schematics, whose bus aliases and hidden fields moved (PRs 1561, 1563
+and 1564). A comparison opens with the Changes list beside the drawings, and a net clicked there goes
+to a sheet that draws it. `make demo-video JOURNEY=compare-revisions` records a walk through one
+change of each kind. It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.13.md](RELEASES/v0.6.13.md).
+
+## [0.6.12] - 2026-11-12
+
+The last tickets of the demo mission (issue 1442). The viewer's dock moves onto goapplib's
+`tsappkit-dock`, so Sheets, Checks and Review open as drawers and the drawing gets most of the window
+(PR 1555). ⌘/Ctrl+G shows Sheets and ⌘/Ctrl+Shift+F focuses the query box. The dock keeps its sizes
+across visits, and a drawer left open comes back closed (PR 1556). The README and the docsite's front
+page play the find-a-part walkthrough (PR 1554). It is a patch with no API changes. The full write-up
+is [RELEASES/v0.6.12.md](RELEASES/v0.6.12.md).
+
 ## [0.6.11] - 2026-11-12
 
 Most of the demo mission (issue 1442). On Jetson's board beside its schematic, a subject clicked in

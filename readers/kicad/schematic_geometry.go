@@ -319,7 +319,7 @@ func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open
 		// names that the netlist read produces. A per-sheet solve would mis-number N$ stubs and
 		// mis-qualify some names.
 		wireNets: hierWireNets(rootName, rootContent, open, openSym),
-		aliases:  projectBusAliases(rootContent, open),
+		aliases:  projectBusAliases(rootName, rootContent, open),
 		open:     open,
 	}
 	if err := w.walk(rootContent, rootName, "/", "", "", map[string]bool{}); err != nil {
@@ -800,9 +800,14 @@ func fieldsOf(ps *node) []*geom.Field {
 	return out
 }
 
-// fieldHidden reports whether a property's (effects ... (hide yes)) hides it. A bare (hide)
-// (legacy) also counts as hidden; (hide no) does not.
+// fieldHidden reports whether a property is hidden. KiCad 9 and earlier write (hide yes), or a bare
+// hide atom, inside effects, and KiCad 10 writes (hide yes) in the property itself (agni issue
+// 1560). (hide no) hides nothing. In the property itself only the list form counts, since a bare
+// atom there could be its name or value.
 func fieldHidden(p *node) bool {
+	if h := p.Child("hide"); h != nil {
+		return atomOf(h.Arg(1)) != "no"
+	}
 	return hideFlag(p.Child("effects"))
 }
 

@@ -6,6 +6,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 const CANVAS = "#view";
@@ -47,6 +48,7 @@ async function wheel(page: Page, sel: string, steps: number): Promise<void> {
 async function openBoardView(page: Page): Promise<string> {
   const before = await page.$$eval("[data-sheetview]", (vs) => vs.map((v) => (v as HTMLElement).dataset.sheetview!));
   const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
+  await showPanel(page, "overview");
   await row.locator(".sheet-tile-beside").click();
   const id = await page.waitForFunction(
     (known) => [...document.querySelectorAll<HTMLElement>("[data-sheetview]")].map((v) => v.dataset.sheetview!).find((v) => !known.includes(v)) ?? false,

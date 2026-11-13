@@ -13,6 +13,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -40,9 +41,11 @@ async function openAndCheck(page: Page, query: string): Promise<{ rows: string[]
   await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
   await expect.poll(() => page.locator("#readout").textContent(), { timeout: 60_000 }).not.toBe("no sheet loaded");
   // Run is disabled until the rule catalog arrives, and a click waits for it to enable (agni 868).
+  await showPanel(page, "checks");
   await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
   const rows = await page.locator(".check-locate").allTextContents();
+  await hideDrawers(page);
 
   await page.fill("textarea.query-text", "net.has_test_point(?n) => ?n");
   await page.click("button.query-run");
@@ -132,7 +135,9 @@ describe("a link to a design this browser has not read", () => {
       // A trace link carries its question in the address, which the viewer keeps as its own state, so
       // arriving where it pointed shows as the same question in the final address.
       await page.goto(`${base()}${gateway}?engine=wasm&trace=R1.1%2CR1.2`, { waitUntil: "domcontentloaded" });
-      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      // The Checks button means the viewer is up. It sits in a closed drawer, so it is waited on in the
+      // DOM. Opening the drawer here raced the Load page's redirect, which opens a fresh viewer.
+      await page.waitForSelector(".checks-run", { state: "attached", timeout: 60_000 });
       await expect.poll(() => new URL(page.url()).searchParams.get("trace"), { timeout: 60_000 }).toBe("R1.1,R1.2");
       const at = new URL(page.url());
       expect(at.pathname).toBe(gateway);
@@ -142,7 +147,7 @@ describe("a link to a design this browser has not read", () => {
 
       pages.length = 0;
       await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      await page.waitForSelector(".checks-run", { state: "attached", timeout: 60_000 });
       expect(pages).toEqual([gateway]);
     });
   });
@@ -184,6 +189,7 @@ describe("cancelling Run checks", () => {
   }
 
   async function cancelThenRun(page: Page, held: ReturnType<typeof hold>): Promise<void> {
+    await showPanel(page, "checks");
     await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, { timeout: 60_000 });
     await held.on();
     await page.click(".checks-run");

@@ -192,7 +192,6 @@ export function routeLine(r: WalkRouteItem): string {
 export const HOP_COLORS = ["#2563eb", "#f59e0b", "#16a34a", "#9333ea"];
 export const WALK_START_COLOR = "#0f766e";
 export const WALK_CROSSED_COLOR = "#e11d48";
-export const WALK_ENDED_COLOR = "#94a3b8";
 export const WALK_BOUNDARY_COLOR = "#64748b";
 export const WALK_GOAL_COLOR = "#c026d3";
 
@@ -225,27 +224,26 @@ export function walkStartMarks(s: WalkState): HighlightSpec[] {
   return [{ pins: [...exits].map((p) => ({ refDes: ref, pin: p })), color: WALK_START_COLOR }];
 }
 
-// walkSpecs lights the whole walk: each hop's nets in its shade, a net where the walk stopped in a
-// faint grey (a rail or ground runs across the sheet and would bury the circuit), the parts it
-// crossed in red, the parts it did not cross outlined, and the start's pins on top.
+// walkSpecs lights the whole walk: each hop's nets in its shade, the parts it crossed in red, the
+// parts it did not cross outlined, and the start's pins on top. A net where the walk stopped, a
+// ground or a rail, is not lit. It runs across the sheet, and on a board its many overlapping
+// segments stacked to solid grey over the copper, however faint (agni issue 1562). The Trace tab
+// says the walk stopped there.
 export function walkSpecs(s: WalkState): HighlightSpec[] {
   if (!s.ran || s.error || s.reason) return [];
   const specs: HighlightSpec[] = [];
-  const ended: string[] = [];
   const crossed = new Set<string>();
   const [startRef] = splitStart(s.request.start);
   for (const h of s.hops) {
     const nets: string[] = [];
     for (const n of h.nets) {
-      if (n.ended) ended.push(n.name);
-      else nets.push(n.name);
+      if (!n.ended) nets.push(n.name);
       // A hop-1 net was entered by the start's own pin, which crossed nothing.
       if (n.fromNet && n.through !== startRef) crossed.add(n.through);
       for (const r of n.alsoThrough) if (r !== startRef) crossed.add(r);
     }
     if (nets.length > 0) specs.push({ nets, color: hopColor(h.hop), shape: HighlightShape.PATH });
   }
-  if (ended.length > 0) specs.unshift({ nets: ended, color: WALK_ENDED_COLOR, alpha: 0.35, shape: HighlightShape.PATH });
   if (crossed.size > 0) specs.push({ components: [...crossed], color: WALK_CROSSED_COLOR, shape: HighlightShape.BOUNDING_RECT });
   const edge = s.boundary.map((b) => b.refDes).filter((r) => !crossed.has(r));
   if (edge.length > 0) specs.push({ components: edge, color: WALK_BOUNDARY_COLOR, alpha: 0.5 });

@@ -9,6 +9,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -31,13 +32,14 @@ describe("a finding's net on an EDIF companion schematic in WebGL", () => {
       await withPage(browser, async (page) => {
         const q = `mode=webgl${engine === "wasm" ? "&engine=wasm" : ""}`;
         await page.goto(`${base()}/designs/${DESIGN}/view?${q}`, { waitUntil: "networkidle" });
-        await page.waitForSelector(".sheet-tile", { timeout: 60_000 });
+        await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
         await page.waitForFunction(() => !document.getElementById("render-busy")?.dataset.busy, null, { timeout: 60_000 });
 
         await page.click(".highlight-btn");
         const all = page.locator(".highlight-show-all");
         if (!(await all.isChecked())) await all.check();
         await page.click(".highlight-btn");
+        await showPanel(page, "checks");
         await page.click(".checks-run");
         await page.waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, { timeout: 60_000 });
         expect(await page.locator(".check-locate", { hasText: /^SCL$/ }).count()).toBeGreaterThan(0);

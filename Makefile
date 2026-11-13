@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -216,6 +216,12 @@ samples:
 samples-oracle:
 	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
 
+# The later revisions of the corpus's boards, such as Jetson rev 1.1.2 (agni issue 1559). Not in the
+# gate: each revision is about the size of its board's entry in the oracle corpus, and only the demo
+# and examples/jetson-project's `revision` target read one.
+samples-revisions:
+	./hack/fetch_samples.sh revisions
+
 # Lists the cached remote boards unused for 30 days and deletes them only when you answer y. Without a
 # terminal it deletes nothing.
 samples-clean:
@@ -381,8 +387,7 @@ web-test:
 # is a suite that runs after the release.
 #
 # The suite has grown since then. On 2026-11-11 it took about five minutes run serially on a laptop
-# and eight on one CI runner, so CI runs it as four shards of two to five minutes each (agni issue
-# 1147). The browser download is a cached CI step and a one-time cost for a developer.
+# and eight on one CI runner, so CI runs it as ten shards (agni issue 1147). The browser download is a cached CI step and a one-time cost for a developer.
 #
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
@@ -390,8 +395,8 @@ web-test:
 # HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
 # samples-oracle because site.spec.ts seeds the static demo with the RoyalBlue Feather board, which
 # testall used to fetch before this ran; run on its own, or as its own CI job, it fetches it itself.
-# SHARD=i/n runs one slice of the spec files, e.g. `make browser-test SHARD=2/4`. CI runs four shards
-# on four runners. Each shard has its own server and Chromium, so the specs inside a shard still run
+# SHARD=i/n runs one slice of the spec files, e.g. `make browser-test SHARD=2/10`. CI runs ten shards
+# on ten runners. Each shard has its own server and Chromium, so the specs inside a shard still run
 # one at a time and never compete for a CPU (agni issue 1147).
 browser-test: ui wasm samples-oracle
 	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser $(if $(SHARD),--shard=$(SHARD))
@@ -472,8 +477,8 @@ demo-video:
 		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
 		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
 	fi
-	$(MAKE) ui wasm agni samples-oracle
-	$(MAKE) -C examples/jetson-project board
+	$(MAKE) ui wasm agni samples-oracle samples-revisions
+	$(MAKE) -C examples/jetson-project board revision
 	mkdir -p $(DEMO_OUT)
 	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) pnpm exec vitest run -c vitest.browser.config.ts browser/demo-video.spec.ts -t "records"
 	@rm -f $(DEMO_OUT)/page@*.webm
@@ -673,7 +678,7 @@ catalog-docs-check: catalog-docs
 testall: testall-core browser-test
 
 # testall-core is the gate without the browser suite. CI runs testall-test as three jobs and puts
-# them beside testall-scan, testall-docs and four browser-test shards, so the gate takes as long as
+# them beside testall-scan, testall-docs and ten browser-test shards, so the gate takes as long as
 # the slowest job rather than all of them in a row (agni issue 1147). `make testall` still runs every
 # target here, in the order below.
 testall-core: testall-test testall-scan testall-docs

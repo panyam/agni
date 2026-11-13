@@ -9,6 +9,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -41,6 +42,7 @@ describe("a board's fab layers", () => {
         const root = mode === "svg" ? "#svg-view svg" : "#text-overlay svg";
         const before = await shownText(page, root);
 
+        await showPanel(page, "overview");
         await page.locator(".board-layer-preset", { hasText: /^all$/i }).first().click();
         expect(await fab.isChecked()).toBe(true);
         await expect.poll(() => shownText(page, root), { timeout: 30_000 }).toBeGreaterThan(before);

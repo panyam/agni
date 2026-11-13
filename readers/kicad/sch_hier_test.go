@@ -3,6 +3,8 @@ package kicad
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -10,12 +12,15 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
+// hierOpen opens fixtures by name, as a real opener opens files beside the root sheet. A missing file
+// is an error, not a failed test, since the reader asks for the root's .kicad_pro whether or not the
+// fixture has one, as it does on disk.
 func hierOpen(t *testing.T) func(string) ([]byte, error) {
 	return func(rel string) ([]byte, error) {
 		if strings.Contains(rel, "/") {
 			return nil, fmt.Errorf("opener got a non-relative path %q", rel)
 		}
-		return readFixture(t, rel), nil
+		return os.ReadFile(filepath.Join("testdata", rel))
 	}
 }
 

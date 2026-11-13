@@ -45,8 +45,3 @@ render "$learn/tjunc-dotted.svg" readers/kicad/testdata/tjunc_dotted.kicad_sch
 # Chapter 6, the reversed LED, where seeing the drawing is most of the lesson.
 render "$learn/ledpol.svg" cmd/agni/testdata/conformance/ledpol.fires.kicad_sch
 
-# The demos page shows two of the renderer's own goldens, which its tests keep current. They are
-# declared copies in hack/fixture_copies.txt, so fixture-copies-check also fails when one diverges.
-cp core/render/testdata/golden/board-fixture.svg "$designs/demo-board.svg"
-cp core/render/testdata/golden/faithful-sample.svg "$designs/demo-schematic.svg"
-echo "copied the demos page's two render goldens"

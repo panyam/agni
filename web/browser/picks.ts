@@ -4,6 +4,7 @@
 
 import type { Page } from "playwright-core";
 import { inject } from "vitest";
+import { showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -18,6 +19,7 @@ export async function openViewer(page: Page, design: string): Promise<void> {
 // openBeside opens the sheet named exactly `name` in a new view from its Sheets tile, and waits for
 // the view to draw.
 export async function openBeside(page: Page, name: string): Promise<void> {
+  await showPanel(page, "overview");
   const row = page.locator(".sheet-tile-row", { has: page.locator(".sheet-tile-name", { hasText: new RegExp(`^${name}$`) }) });
   await row.locator(".sheet-tile-beside").click();
   await page.waitForSelector(`${PANE} .sheetview-canvas svg`, { timeout: 30_000 });

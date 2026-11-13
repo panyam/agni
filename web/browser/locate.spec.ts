@@ -7,6 +7,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 const DESIGN = "probe/designs/jetson-cut";
@@ -49,8 +50,10 @@ async function zoomedTo(page: Page, factor: number): Promise<number> {
 }
 
 async function runChecks(page: Page): Promise<void> {
+  await showPanel(page, "checks");
   await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
+  await hideDrawers(page);
 }
 
 describe("locating a subject from a panel", () => {
@@ -73,6 +76,7 @@ describe("locating a subject from a panel", () => {
       await open(page);
       await runChecks(page);
       const fitted = await zoom(page);
+      await showPanel(page, "checks");
       await page.locator(".check-locate", { hasText: SMALL_NET }).first().click();
       expect(await zoomedTo(page, fitted * 3)).toBeGreaterThan(fitted * 3);
     });

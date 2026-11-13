@@ -5,10 +5,12 @@ title: Running the gate
 `make testall` is the full gate. It has four parts, `make testall-test`, `make testall-scan`, `make
 testall-docs` and `make browser-test`, and `testall-core` is the first three. CI runs them as parallel
 jobs, and together they are exactly `testall`. `testall-test` runs as three jobs, `testall-go`,
-`testall-web` and `testall-dist`. `browser-test` runs as four shards on four runners, each with `make
-browser-test SHARD=i/4`. The split is only about wall time. The scanners and the tutorial
+`testall-web` and `testall-dist`. `browser-test` runs as ten shards on ten runners, each with `make
+browser-test SHARD=i/10`. The split is only about wall time. The scanners and the tutorial
 captures took about two and a half minutes each, in one job with the tests, so a PR waited for all of
-them in a row. Green means ship-ready. It also lies
+them in a row. A pull request or a push to main that changes only the README, the changelog,
+NEXTSTEPS.md, the release notes or the conduct and security pages skips the gate, since no test reads
+them (`paths-ignore` in `.github/workflows/ci.yml`). Green means ship-ready. It also lies
 to you in three specific ways, and most of this page is about them.
 
 ```mermaid
@@ -392,7 +394,7 @@ passed, because the textarea was present the whole time and only its visibility 
 browser suite did catch it, but it ran after the tag was pushed. If a suite runs only when somebody
 remembers, it runs after the release. The browser download is a cached CI step and a one-time cost
 for a developer. On 2026-11-11 the suite took about five minutes run serially on a laptop and eight
-on one CI runner. Its spec files run one at a time, so CI splits them into four shards on four
+on one CI runner. Its spec files run one at a time, so CI splits them into ten shards on ten
 runners (agni 1147).
 
 **Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, which runs in a

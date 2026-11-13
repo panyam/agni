@@ -143,7 +143,9 @@ describe("walk presenter", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [] });
     const lit = h.walkLit.mock.calls[h.walkLit.mock.calls.length - 1][0] as { nets?: string[] }[];
-    expect(lit.flatMap((s) => s.nets ?? [])).toEqual(expect.arrayContaining(["SDA", "GND"]));
+    expect(lit.flatMap((s) => s.nets ?? [])).toContain("SDA");
+    // GND is where the walk stopped, which no view lights (agni issue 1562).
+    expect(lit.flatMap((s) => s.nets ?? [])).not.toContain("GND");
     await h.presenter.locateInWalk("component", "C1", "s2");
     expect(h.walkLit).toHaveBeenCalledTimes(1);
     await h.presenter.clearWalk();

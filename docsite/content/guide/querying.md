@@ -219,7 +219,9 @@ for you to edit into a better question.
 
 Command-F (Ctrl-F on Linux and Windows) opens **Find by name** from anywhere on the page. It brings
 the query panel forward and puts the cursor in the box, with any text already there selected. In
-another text field, such as the query box, the key does what the browser does.
+another text field, such as the query box, the key does what the browser does. Command-Shift-F
+(Ctrl-Shift-F) brings the query panel forward and puts the cursor in the query box, closing any
+drawer that covers it.
 
 ### Reading a result cell in the viewer
 

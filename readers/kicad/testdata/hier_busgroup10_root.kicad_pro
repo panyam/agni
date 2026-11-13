@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "filename": "hier_busgroup10_root.kicad_pro",
+    "version": 3
+  },
+  "schematic": {
+    "bus_aliases": {
+      "I2C": [
+        "SDA",
+        "SCL"
+      ]
+    }
+  }
+}
