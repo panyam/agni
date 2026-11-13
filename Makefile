@@ -387,8 +387,7 @@ web-test:
 # is a suite that runs after the release.
 #
 # The suite has grown since then. On 2026-11-11 it took about five minutes run serially on a laptop
-# and eight on one CI runner, so CI runs it as four shards of two to five minutes each (agni issue
-# 1147). The browser download is a cached CI step and a one-time cost for a developer.
+# and eight on one CI runner, so CI runs it as ten shards (agni issue 1147). The browser download is a cached CI step and a one-time cost for a developer.
 #
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
@@ -396,8 +395,8 @@ web-test:
 # HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
 # samples-oracle because site.spec.ts seeds the static demo with the RoyalBlue Feather board, which
 # testall used to fetch before this ran; run on its own, or as its own CI job, it fetches it itself.
-# SHARD=i/n runs one slice of the spec files, e.g. `make browser-test SHARD=2/4`. CI runs four shards
-# on four runners. Each shard has its own server and Chromium, so the specs inside a shard still run
+# SHARD=i/n runs one slice of the spec files, e.g. `make browser-test SHARD=2/10`. CI runs ten shards
+# on ten runners. Each shard has its own server and Chromium, so the specs inside a shard still run
 # one at a time and never compete for a CPU (agni issue 1147).
 browser-test: ui wasm samples-oracle
 	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser $(if $(SHARD),--shard=$(SHARD))
@@ -679,7 +678,7 @@ catalog-docs-check: catalog-docs
 testall: testall-core browser-test
 
 # testall-core is the gate without the browser suite. CI runs testall-test as three jobs and puts
-# them beside testall-scan, testall-docs and four browser-test shards, so the gate takes as long as
+# them beside testall-scan, testall-docs and ten browser-test shards, so the gate takes as long as
 # the slowest job rather than all of them in a row (agni issue 1147). `make testall` still runs every
 # target here, in the order below.
 testall-core: testall-test testall-scan testall-docs

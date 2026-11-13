@@ -82,7 +82,7 @@ rule below is here because it cost real work at least once.
 `make testall` is the full gate. CI runs exactly it, as parallel jobs (agni 1147). Its parts are
 `testall-test`, `testall-scan`, `testall-docs` and `browser-test`, and `testall-core` runs the first
 three. CI splits `testall-test` into `testall-go`, `testall-web` and `testall-dist`, and runs
-`browser-test` as four shards (`make browser-test SHARD=i/4`). Read `docsite/content/build/the-gate.md` before trusting a run. It lists three ways to misread
+`browser-test` as ten shards (`make browser-test SHARD=i/10`). Read `docsite/content/build/the-gate.md` before trusting a run. It lists three ways to misread
 the gate. A wrapper can report its own status rather than make's and turn red into green. A
 commit-first ordering rule applies. Each clone needs its own `pnpm install`. The page also lists one
 way a fine tree reads red. A stray `agni serve` on :8080 fails three verdict-link tests, so reproduce
