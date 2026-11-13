@@ -128,8 +128,9 @@ const envSymbolPath = "AGNI_SYMBOL_PATH"
 // agni.yaml names one.
 //
 // It serves an INSTALLED binary run from wherever the design lives. That binary's assets sit at a
-// fixed absolute path. From a checkout the relative default already resolves, so two checkouts each
-// serve their own assets. Precedence is the flag, then agni.yaml, then this.
+// fixed absolute path. A checkout that has its own ./web serves that one, so two checkouts each
+// serve their own assets and a stale web_dir cannot redirect them. Precedence is the flag, then a
+// checkout's ./web, then agni.yaml, then this.
 const envWebDir = "AGNI_WEB_DIR"
 
 // defaultWebDir is where the viewer's assets live relative to a repo checkout. `make serve`,

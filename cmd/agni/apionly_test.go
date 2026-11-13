@@ -63,6 +63,28 @@ func TestServeStillRefusesANamedWebDirThatIsWrong(t *testing.T) {
 	}
 }
 
+// A checkout's own viewer wins over a web_dir named elsewhere, including one that no longer exists.
+// make serve builds ./web and then runs the binary with no --web-dir, so a stale personal path must
+// not redirect that checkout.
+func TestCheckoutWebBeatsAStaleConfigDir(t *testing.T) {
+	clearNamedWebDir(t)
+	envConfigWebDir = filepath.Join(t.TempDir(), "gone")
+	root := t.TempDir()
+	web := filepath.Join(root, defaultWebDir)
+	for _, f := range []string{"templates/ViewerPage.html", "templates/BrowsePage.html", "static/app.js", "static/browse.js"} {
+		touch(t, filepath.Join(web, f))
+	}
+	t.Chdir(root)
+	got, err := resolveServeAssets("", noEnv)
+	if err != nil || !got.viewer || got.dir != defaultWebDir {
+		t.Fatalf("resolveServeAssets = %+v, %v, want this checkout's web", got, err)
+	}
+	dir, _, err := resolveWebAssets("", noEnv)
+	if err != nil || dir != defaultWebDir {
+		t.Fatalf("resolveWebAssets = %q, %v, want this checkout's web", dir, err)
+	}
+}
+
 // A ./web that exists without its bundle is a checkout that forgot `make ui`. That is a mistake to
 // report, not a reason to drop the viewer silently.
 func TestServeStillRefusesAnIncompleteCheckout(t *testing.T) {
