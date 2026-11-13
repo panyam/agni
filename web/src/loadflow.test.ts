@@ -47,6 +47,26 @@ describe("the Load page's flow", () => {
     expect(h.deps.log).toHaveBeenCalledWith("agni loaded mount://m/b.kicad_sch in 100 ms: board persisted");
   });
 
+  // A first browser-engine visit restores the parsed board from the server's seed, and an open on the
+  // board draws from it alone (agni issue 1572). Reading it again cost Jetson about 400 ms.
+  it("reads nothing more for a seeded load that opens on the board, and still records and opens", async () => {
+    const h = harness({ drawing: undefined, seeded: true });
+    expect(await h.flow.run()).toBe(true);
+    expect(h.order).toEqual(["record st", "open"]);
+    expect(h.deps.board).not.toHaveBeenCalled();
+    expect(h.last().map((s) => [s.id, s.state])).toEqual([["files", "done"], ["board", "done"]]);
+    expect(h.deps.log).toHaveBeenCalledWith("agni loaded mount://m/b.kicad_sch in 100 ms: board persisted");
+  });
+
+  it("still reads the board for a seeded load that opens on a schematic, or an unseeded one on the board", async () => {
+    const schematic = harness({ seeded: true });
+    await schematic.flow.run();
+    expect(schematic.order).toEqual(["drawing", "board", "record st", "open"]);
+    const unseeded = harness({ drawing: undefined, seeded: false });
+    await unseeded.flow.run();
+    expect(unseeded.order).toEqual(["board", "record st", "open"]);
+  });
+
   it("counts the files as they arrive, each once", async () => {
     const board = deferred<{ boardRead: boolean; boardPersisted: boolean }>();
     const h = harness({ board: () => board.promise });
