@@ -49,4 +49,4 @@ the read-first version.
   ending in the rules that encode it.
 - **[Reference](../reference/)** holds the rule and relation catalogs, the glossary, the
   software-to-hardware analogy and the format primers.
-- **[Demos](../demos/)** says what the in-browser demo is and why it runs there.
+- **[Demo](../demo/)** opens a board in the viewer, with the engine running in your browser.

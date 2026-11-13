@@ -5,7 +5,7 @@ description: "Run a published agni release on your machine with docker or podman
 
 This page is for trying a released agni on a machine that holds your boards, where nothing about them
 should leave. You run the release from one compose file, try it on a board, and send back a report
-built only from counts, timings and agni's own rule names. The [demo](../../demos/) runs the same
+built only from counts, timings and agni's own rule names. The [demo](../../demo/) runs the same
 release in a browser. Here it runs on your machine as a server, so a board of any size works and
 checklist runs are kept.
 

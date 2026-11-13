@@ -314,7 +314,11 @@ the browser read in 2.4 s and checked in 8.8 s.
 
 With no server at all, `agni site <outdir> --base <path> --seed <name>=<folder>` writes the viewer,
 the engine and the seeded designs as static files for any web host to serve.
-[The public demo](../../demos/) runs this way, since the project hosts no server for it.
+[The public demo](../../demo/) runs this way, since the project hosts no server for it. It holds
+the tutorials' gateway board and a few open-source KiCad boards from the samples corpus. You can also
+drop a folder or a `.zip` of your own files on its "Open files" page. They stay in your browser's
+storage and are never sent anywhere. An agent can't move a demo tab, since that needs a server
+running `--mcp --viewer-rooms`.
 
 ## Kept reads
 
