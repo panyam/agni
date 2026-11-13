@@ -1,7 +1,7 @@
 # The repo gate: `make testall`, run as parallel jobs. `make testall-test` builds and tests the engine,
 # the examples, the web bundle and the Python client, as three jobs: testall-go, testall-web and
 # testall-dist. `make testall-scan` runs the static scanners. `make testall-docs` regenerates the
-# docsite's captures and images. `make browser-test` is the browser layout suite, split into four
+# docsite's captures and images. `make browser-test` is the browser layout suite, split into ten
 # shards. Together they are exactly `make testall`. Keep this in lockstep with the Makefile; a step
 # added to one of those targets runs here for free. The split is only about wall time, since the gate
 # takes as long as its slowest job (agni issue 1147).
@@ -131,15 +131,15 @@ jobs:
         run: make testall-docs
 
   # The browser suite runs its spec files one at a time, so one runner took about eight minutes and set
-  # the gate's wall time. Four shards run on four runners. Each shard starts its own server and
+  # the gate's wall time. Ten shards run on ten runners. Each shard starts its own server and
   # Chromium, so the specs inside it still run serially, as vitest.browser.config.ts requires.
   browser-test:
-    name: browser-test (${{ matrix.shard }}/4)
+    name: browser-test (${{ matrix.shard }}/10)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - uses: actions/checkout@v7
 
@@ -168,5 +168,5 @@ jobs:
           pnpm exec playwright-core install --with-deps chromium
         working-directory: web
 
-      - name: make browser-test SHARD=${{ matrix.shard }}/4
-        run: make browser-test SHARD=${{ matrix.shard }}/4
+      - name: make browser-test SHARD=${{ matrix.shard }}/10
+        run: make browser-test SHARD=${{ matrix.shard }}/10
