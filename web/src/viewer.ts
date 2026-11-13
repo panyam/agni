@@ -1969,11 +1969,30 @@ export class ViewerPresenter {
   // walk's shades, so locating one row of the walk keeps the rest of it lit. The host zooms to it.
   async locateInWalk(kind: string, subject: string, sheet?: string): Promise<void> {
     if (!subject) return;
-    if (sheet && sheet !== this.currentSheet) await this.showSheet(sheet);
+    const target = kind === "component" ? await this.partSheet(subject, sheet) : sheet;
+    if (target && target !== this.currentSheet) await this.showSheet(target);
     if (this.mode === "native") await this.setMode("svg");
     const focus = withFocusShape(entitySpecs(kind, subject), this.highlightStyle);
     await this.setHighlights([...walkSpecs(this.walkState), ...focus]);
     this.views.reveal?.();
+  }
+
+  // partSheet is the sheet to open for a part the Trace tab lists. The tab lists a part under a net,
+  // and the net's sheet need not draw the part, so the engine says where the part is drawn (agni issue
+  // 1580). The shown sheet stays when it draws the part. The net's sheet is the answer when the
+  // engine has none.
+  private async partSheet(ref: string, hint?: string): Promise<string | undefined> {
+    try {
+      const resp = await this.client.locateSubjects({
+        snapshot: await this.drawn(),
+        subjects: [{ kind: "component", ref, pin: "" }],
+        board: this.currentSheet === "board",
+      });
+      const drawnOn = resp.subjects[0]?.sheetIds ?? [];
+      return drawnOn.length > 0 ? sheetToOpen(drawnOn, this.currentSheet) : hint;
+    } catch {
+      return hint;
+    }
   }
 
   // clearWalk drops the walk from the Trace tab and the address bar, and its highlight.
