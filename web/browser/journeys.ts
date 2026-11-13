@@ -36,6 +36,20 @@ export interface Compare {
   hard?: Example;
 }
 
+// Walk is a part to walk outwards from, for the walk journey. stops is a net the first hop reaches
+// and stops at, and rail the rail the start's own net is pulled to. A design without one skips that
+// step.
+export interface Walk {
+  start: string;
+  sheet: string;
+  about: string; // follows the start in a caption, such as "a pull-up on the I2C data line"
+  first: string; // a net the first hop reaches
+  stops?: string;
+  wider: string; // a net the second hop reaches
+  widerNote: string; // follows "the walk" in a caption
+  rail?: string;
+}
+
 // Design is a board a journey plays on, with the parts its steps name.
 export interface Design {
   mount: string;
@@ -48,6 +62,7 @@ export interface Design {
   testPoint: string;
   testPointSheet: string;
   compare?: Compare;
+  walk?: Walk;
 }
 
 export const designs: Record<string, Design> = {
@@ -60,6 +75,14 @@ export const designs: Record<string, Design> = {
     findSheet: "USB Debug, PD",
     testPoint: "TP76",
     testPointSheet: "Power",
+    walk: {
+      start: "R119",
+      sheet: "USB Debug, PD",
+      about: "an LED's series resistor",
+      first: "/USB Debug, PD/FTDI_3V3",
+      wider: "Net-(D21-A)",
+      widerNote: "reaches a second LED through R120",
+    },
   },
   // The tutorial's gateway board, whose rev C the gate compares it with, since the cut has no
   // revision.
@@ -107,6 +130,16 @@ export const designs: Record<string, Design> = {
       deletedNet: { subject: "/Peripherals/FAN_PWM", note: "carried the fan's PWM before it moved to the DCDC sheet" },
       renamed: { subject: "/SoM_Power/VIN_PWR_ON", old: "/DCDC/VIN_PWR_ON", note: "" },
       hard: { subject: "/Power/3V3_LDO", note: "is now fed by U79 instead of U15" },
+    },
+    walk: {
+      start: "R361",
+      sheet: "SoM_IO",
+      about: "a pull-up on the I2C connector's data line",
+      first: "/Peripherals/I2C_{CONN}.SDA",
+      stops: "+3V3",
+      wider: "/SoM_IO/I2C5_SDA_1V8",
+      widerNote: "crosses the level shifter U80 to the module's 1.8 V side",
+      rail: "+3V3",
     },
   },
 };
@@ -389,7 +422,91 @@ export const journeys: Journey[] = [
       },
     ],
   },
+  {
+    name: "walk-a-signal",
+    title: "Follow a signal through the circuit",
+    steps: [
+      {
+        caption: "Open the schematic",
+        run: async (r, d) => {
+          await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
+          await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
+        },
+      },
+      {
+        caption: (d) => `Find ${walkOf(d).start}, ${walkOf(d).about}`,
+        run: async (r, d) => {
+          const w = walkOf(d);
+          await r.press("Control+f");
+          await r.page.waitForSelector("input.query-term", { state: "visible", timeout: 10_000 });
+          await r.type(w.start);
+          await r.press("Enter");
+          const name = r.page.locator(".query-row .query-locate", { hasText: new RegExp(`^${w.start}$`) }).first();
+          await name.waitFor({ timeout: 30_000 });
+          await clickOn(r, name);
+          await onSheet(r.page, w.sheet);
+          await centred(r.page, `${SHEET} [data-kind="component"][data-ref="${w.start}"]`, SHEET, `${w.start} on the schematic`);
+        },
+      },
+      {
+        caption: "Walk outwards from it through small parts. The pins it leaves by light up, and so does each net the walk reaches",
+        run: async (r, d) => {
+          const w = walkOf(d);
+          await clickOn(r, r.page.locator('[data-component="properties"] [data-walk-kind="small-parts"]'));
+          await walked(r.page, w.start, 1);
+          await r.page.locator(`.walk-net[data-walk-net="${w.first}"]`).waitFor({ state: "attached", timeout: 30_000 });
+        },
+      },
+      {
+        caption: (d) => `The walk stops at ${walkOf(d).stops}. A rail reaches nearly every part, so the Trace tab says it ends there and leaves it unlit`,
+        skip: (d) => !walkOf(d).stops,
+        run: async (r, d) => {
+          const row = r.page.locator(`.walk-net[data-walk-net="${walkOf(d).stops}"]`);
+          const said = (await row.locator(".walk-ended").textContent({ timeout: 30_000 })) ?? "";
+          if (!said.includes("ends here")) throw new Error(`the Trace tab does not say the walk ends at ${walkOf(d).stops}`);
+        },
+      },
+      {
+        caption: (d) => `Go one hop wider: the walk ${walkOf(d).widerNote}`,
+        run: async (r, d) => {
+          const w = walkOf(d);
+          await clickOn(r, r.page.locator(".walk-wider"));
+          await walked(r.page, w.start, 2);
+          await r.page.locator(`.walk-net[data-walk-net="${w.wider}"][data-hop="2"]`).waitFor({ state: "attached", timeout: 30_000 });
+        },
+      },
+      {
+        caption: (d) => `Ask which rail the line is pulled to. The route runs through ${walkOf(d).start} to ${walkOf(d).rail}`,
+        skip: (d) => !walkOf(d).rail,
+        run: async (r, d) => {
+          const w = walkOf(d);
+          await clickOn(r, r.page.locator('[data-action="walk-goal"][data-goal="rail"]'));
+          await r.page.waitForFunction(() => !document.querySelector(".walk-loading") && document.querySelector(".walk-goal[data-goal-outcome]"), null, { timeout: 30_000 });
+          const outcome = await r.page.locator(".walk-goal").getAttribute("data-goal-outcome");
+          if (outcome !== "routed") throw new Error(`the rail goal answered ${outcome}, not routed`);
+          const route = (await r.page.locator(".walk-route-line").first().textContent()) ?? "";
+          if (!route.includes(w.start) || !route.includes(w.rail!)) throw new Error(`the route is ${route}, not through ${w.start} to ${w.rail}`);
+        },
+      },
+    ],
+  },
 ];
+
+// walkOf returns the design's walk, which the walk journey needs.
+function walkOf(d: Design): Walk {
+  if (!d.walk) throw new Error(`${d.label} has no part to walk from`);
+  return d.walk;
+}
+
+// walked waits for the Trace tab to show a finished walk from start of the given hops.
+async function walked(page: Page, start: string, hops: number): Promise<void> {
+  const title = `Walk from ${start}, small-parts, ${hops} hop${hops === 1 ? "" : "s"}`;
+  await page
+    .waitForFunction((t) => !document.querySelector(".walk-loading") && (document.querySelector(".walk-title")?.textContent ?? "").replace(/\s+/g, " ").trim() === t, title, { timeout: 60_000 })
+    .catch(async () => {
+      throw new Error(`the Trace tab shows "${(await page.locator(".walk-title").textContent().catch(() => "")) ?? ""}", not "${title}"`);
+    });
+}
 
 // changeStep is the compare journey's step for one kind of change. It clicks the design's example of
 // that kind in the Changes list, and checks that the drawing on the side that holds it, the old one

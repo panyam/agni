@@ -29,6 +29,13 @@ hideTitle: true
 <p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
 </div>
 
+<div class="home-video" id="demo-walk">
+<video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-walk-a-signal.jpg" src="https://github.com/user-attachments/assets/eb9f4803-4316-4d4b-8de4-8aa52e9484a0">
+<a href="https://github.com/user-attachments/assets/eb9f4803-4316-4d4b-8de4-8aa52e9484a0">Download the walk video</a>
+</video>
+<p>Follow a signal outwards from a part, on the same board. It starts at R361, a pull-up on the I2C connector's data line, walks one hop through small parts, and goes one hop wider across the level shifter U80 to the module's 1.8 V side. Then it asks for the route to the rail. <code>make demo-video JOURNEY=walk-a-signal</code> records it.</p>
+</div>
+
 <div class="features">
 <div class="feature-card">
 <h3>Many formats, one IR</h3>
