@@ -38,6 +38,7 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
     highlightSheet: vi.fn(async () => ({ content: { case: "svg", value: "<svg/>" } })),
     getLayoutReport: vi.fn(async () => ({ report: { components: [] } })),
     walkDesign,
+    locateSubjects: vi.fn(async (_req: unknown) => ({ subjects: [{ sheetIds: ["s2"] }] })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
   const checks = {
@@ -72,7 +73,7 @@ function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}
     showPanel: vi.fn(),
     location: opts.onLocation,
   }, undefined, undefined, undefined, undefined, fakeSnapshots());
-  return { presenter, walkDesign, canvas, onWalk, reveal, order, walkLit, getSheet: client.getSheet };
+  return { presenter, walkDesign, canvas, onWalk, reveal, order, walkLit, getSheet: client.getSheet, locateSubjects: client.locateSubjects };
 }
 
 const lastWalk = (onWalk: Mock): WalkState => onWalk.mock.calls[onWalk.mock.calls.length - 1][0] as WalkState;
@@ -135,6 +136,31 @@ describe("walk presenter", () => {
     expect(specs.flatMap((s) => s.nets ?? [])).toContain("SDA");
     expect(specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["C1"]));
     expect(specs.flatMap((s) => s.components ?? [])).not.toContain("R1");
+  });
+
+  // The Trace tab lists a part under a net, and the net's first sheet need not draw it, as J16 sits
+  // under Jetson's SDA net, which SoM_IO draws first (agni issue 1580).
+  it("opens a sheet that draws a located part, not the sheet of the net it sits under", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [] });
+    h.locateSubjects.mockResolvedValueOnce({ subjects: [{ sheetIds: ["s3"] }] });
+    h.getSheet.mockClear();
+    await h.presenter.locateInWalk("component", "J16", "s2");
+    expect(h.locateSubjects).toHaveBeenLastCalledWith(expect.objectContaining({ subjects: [{ kind: "component", ref: "J16", pin: "" }] }));
+    const opened = h.getSheet.mock.calls.map((c: unknown[]) => (c[0] as { sheet: string }).sheet);
+    expect(opened).toContain("s3");
+    expect(opened).not.toContain("s2");
+  });
+
+  it("keeps the shown sheet when it draws the located part", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runWalk({ start: "R1", kind: "small-parts", hops: 2, through: [] });
+    h.locateSubjects.mockResolvedValueOnce({ subjects: [{ sheetIds: ["s1", "s2"] }] });
+    h.getSheet.mockClear();
+    await h.presenter.locateInWalk("component", "C1", "s1");
+    expect(h.getSheet).not.toHaveBeenCalled();
   });
 
   // The walk's shades reach the sheet views beside the canvas too (agni issue 1480).
