@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.20] - 2026-11-13
+
+A cold browser-engine open of Jetson's board takes about 1.3 s rather than 2.3 s. `agni serve` builds a
+design's seed as soon as a request names it, and a seeded load that opens on the board skips reading
+the board again (PR 1585, issue 1572). It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.20.md](RELEASES/v0.6.20.md).
+
 ## [0.6.19] - 2026-11-13
 
 A WebGL frame draws in runs of one group, so Jetson's board takes 1,239 draw calls at most rather
