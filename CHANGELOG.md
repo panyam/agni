@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.17] - 2026-11-13
+
+A lit pin on a schematic draws as a dot in WebGL, the size SVG draws it, so a walk's start pins
+show in the default renderer (PR 1577, issue 1576). It is a patch with no API changes. The full
+write-up is [RELEASES/v0.6.17.md](RELEASES/v0.6.17.md).
+
 ## [0.6.16] - 2026-11-13
 
 A walk from a part marks the pins its first hop leaves by, rather than boxing the part (PR 1575).
