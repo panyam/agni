@@ -102,6 +102,9 @@ export interface ResolvedHighlight {
   // parts says, for each entity in entities, whether it is a whole component. Only a part's frame
   // takes the span floor (frameFloor), so a picked pin keeps a small frame (agni issue 1536).
   parts: boolean[];
+  // pins says, for each entity in entities, whether it is one listed pin, so WebGL can draw it the
+  // dot the SVG overlay draws (pinMarkRadius).
+  pins: boolean[];
   // subjects names each matched entity once in check.SubjectParam's spelling (`component:R1`,
   // `net:SDA`, `pin:U7.3`, `bus:<id>`), in the order the keys first matched it. A net matched by its
   // id is named by its name when the key carries one. The canvas writes them to data-lit, so a
@@ -193,6 +196,7 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
       primitives,
       entities: [...byEntity.values()],
       parts: [...byEntity.keys()].map((k) => k[0] === "c"),
+      pins: [...byEntity.keys()].map((k) => k[0] === "p"),
       subjects: [...subjects],
     };
   });
@@ -346,6 +350,18 @@ export function circleTriangles(f: EntityFrame): number[] {
     out.push(f.cx, f.cy, f.cx + f.r * Math.cos(a0), f.cy + f.r * Math.sin(a0), f.cx + f.r * Math.cos(a1), f.cy + f.r * Math.sin(a1));
   }
   return out;
+}
+
+// PIN_MARK_FRACTION sizes a lit pin's dot on a schematic as a fraction of the sheet's larger world
+// span. The SVG overlay draws a lit pin as a circle of radius pinRPx*1.6 = 4 px on a drawing whose
+// longer side is sheetMaxPx = 1600 px (core/render/svg.go), and 4/1600 is 0.0025. A pin's own
+// primitive is a dot a pixel or two across in WebGL, so recolouring it alone left a lit pin close
+// to invisible.
+export const PIN_MARK_FRACTION = 0.0025;
+
+// pinMarkRadius is a lit pin's dot radius in world units on a sheet whose larger span is maxSpan.
+export function pinMarkRadius(maxSpan: number): number {
+  return PIN_MARK_FRACTION * maxSpan;
 }
 
 // PATH_WIDTH_FRACTION sizes the WebGL PATH highlighter's world-space HALF-width (WS9-043) as a
