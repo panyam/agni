@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import { HighlightShape } from "./highlights.js";
-import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_GOAL_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, type WalkRequest } from "./walk.js";
+import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_GOAL_COLOR, WALK_START_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, walkStartMarks, type WalkRequest } from "./walk.js";
 import { emptyLocation, locationToUrl, parseUrl } from "./router.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };
@@ -36,8 +36,14 @@ describe("walk state", () => {
     expect(specs.flatMap((x) => x.nets ?? [])).not.toContain("+3V3");
     expect(specs.flatMap((x) => x.nets ?? [])).not.toContain("GND");
     expect(byColor(WALK_CROSSED_COLOR).flatMap((x) => x.components ?? []).sort()).toEqual(["C1", "C2", "U5"]);
-    expect(specs[specs.length - 1]).toEqual(expect.objectContaining({ components: ["R1"], shape: HighlightShape.BOUNDING_RECT }));
+    expect(specs[specs.length - 1]).toEqual({ pins: [{ refDes: "R1", pin: "1" }, { refDes: "R1", pin: "2" }], color: WALK_START_COLOR });
+    expect(specs.some((x) => x.shape === HighlightShape.BOUNDING_RECT && (x.components ?? []).includes("R1"))).toBe(false);
     expect(specs.some((x) => (x.components ?? []).includes("U3"))).toBe(true);
+  });
+
+  it("boxes a part start only when its first hop drew no net", () => {
+    const bare = walkFromResponse(req, create(WalkSchema, { nets: [], boundary: [] }));
+    expect(walkStartMarks(bare)).toEqual([expect.objectContaining({ components: ["R1"], shape: HighlightShape.BOUNDING_RECT })]);
   });
 
   it("opens on the first drawn net that the walk went on from", () => {
@@ -80,7 +86,8 @@ describe("walk state", () => {
     });
     const s = walkFromResponse(goalReq, routed);
     const lit = goalRevealSpecs(s);
-    expect(lit.flatMap((x) => x.components ?? [])).toEqual(["R9", "R1"]);
+    expect(lit.flatMap((x) => x.components ?? [])).toEqual(["R9"]);
+    expect(lit.flatMap((x) => x.pins ?? [])).toEqual([{ refDes: "R1", pin: "1" }, { refDes: "R1", pin: "2" }]);
     expect(lit.flatMap((x) => x.nets ?? [])).toEqual([]);
     expect(goalSheet(s, "s2")).toBe("s1");
     expect(goalSheet(s, "s3")).toBe("s3");
