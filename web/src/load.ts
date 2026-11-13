@@ -131,6 +131,7 @@ async function loadDesign(mount: string, path: string, drops: DropStore): Promis
           : async () => {
               await designClient().getDesign({ snapshot: await snapshots().of(uri) });
             },
+      seeded: seeded.has(uri),
       board: async () => {
         const t = (await snapshots().readBoard(uri)).tiers;
         return { boardRead: t?.boardRead ?? false, boardPersisted: t?.boardPersisted ?? false };

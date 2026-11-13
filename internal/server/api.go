@@ -26,6 +26,9 @@ type API struct {
 	// Timing times the requests that ask, and logs the slow ones (agni issue 914). Its zero value
 	// still answers a request that asks with the Agni-Timing header.
 	Timing Timing
+	// Hooks run inside Timing around every service's requests, so a host can act on what a request
+	// names. `agni serve` warms a design's browser-engine seed this way (agni issue 1572).
+	Hooks []connect.Interceptor
 }
 
 // Register mounts every service on mux and returns the paths it registered, in a fixed order.
@@ -38,7 +41,7 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 		paths = append(paths, p)
 	}
 	// Timing wraps every handler, outermost, so a request's total includes the budget's own work.
-	timed := connect.WithInterceptors(a.Timing.Interceptor())
+	timed := connect.WithInterceptors(append([]connect.Interceptor{a.Timing.Interceptor()}, a.Hooks...)...)
 	queried := append([]connect.HandlerOption{timed}, queryOpts...)
 	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed))
 	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))

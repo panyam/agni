@@ -53,6 +53,11 @@ export interface LoadDeps {
   // (agni issue 1501).
   drawing?: () => Promise<void>;
   board(): Promise<BoardRead>;
+  // seeded says the page restored the design's parsed board from the server's seed (agni issue 1525).
+  // A load that opens on the board then reads nothing more, since the board draws from the restored
+  // tier and the viewer builds the check model after it draws (agni issue 1572). Reading the board
+  // here cost Jetson about 400 ms before the viewer could open.
+  seeded?: boolean;
   record(stamp: string): void;
   // open hands over to the viewer.
   open(): void;
@@ -104,9 +109,10 @@ export class LoadFlow {
         this.set("drawing", { state: "done" });
       }
       this.set("board", { state: "running" });
-      const b = await this.deps.board();
-      // Every file a read needs has arrived by now, the board's included.
-      if (this.deps.fetches) this.set("files", { state: "done", detail: this.filesDetail() });
+      const restored = this.deps.seeded === true && !this.deps.drawing;
+      const b = restored ? { boardRead: true, boardPersisted: true } : await this.deps.board();
+      // Every file a read needs has arrived by now, the board's included. A restored board needed none.
+      if (this.deps.fetches) this.set("files", { state: "done", detail: restored ? "the server sent the parsed board" : this.filesDetail() });
       this.set("board", { state: "done", detail: b.boardRead ? "" : "this design has no board" });
       const ms = Math.round(now() - started);
       // The public demo's walk reads this line (web/browser/exercise.mjs).

@@ -379,11 +379,14 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if budget.Enforce <= 0 {
 		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
 	}
+	// A request that lists or reads a design warms its browser-engine seed (agni issue 1572).
+	workspace := service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts))
+	seedCache := newSeeds(workspace, mounts, wasmengine.StoreVersion)
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
 	api := server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts)),
+		Workspace: workspace,
 		Project:   service.NewProjectService(projectStore),
 		Snapshot:  checkSvc.Snapshots(),
 		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
@@ -392,6 +395,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Query:     service.NewQueryService(loader, specs, projectResolver),
 		Review:    reviewSvc,
 		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
+		Hooks:     []connect.Interceptor{warmSeeds(seedCache)},
 	}
 	apiPaths := api.Register(mux, budgeted)
 	if o.listener == nil && o.mcp != mcpStdio {
@@ -455,7 +459,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	mux.Handle("GET /raw/", rawFileHandler(mounts))
 	// A design's store as a browser worker would write it, so a first visit restores the parsed
 	// board rather than parsing it in the page (agni issue 1525).
-	mux.Handle("GET /seed/", seedHandler(api.Workspace, mounts, wasmengine.StoreVersion))
+	mux.Handle("GET /seed/", seedCache)
 	switch {
 	case !assets.viewer:
 		mux.Handle("/", apiOnlyHandler(apiPaths))
