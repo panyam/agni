@@ -43,26 +43,28 @@ describe("enableBlending", () => {
 // A sheet switch builds a new Renderer on the same context, and a context keeps every object until
 // it is deleted (agni issue 1331).
 describe("Renderer.dispose", () => {
-  it("deletes the vertex buffer, the overlay's buffer, both VAOs and the program", () => {
+  it("deletes the vertex buffer, the index buffer, the overlay's buffer, both VAOs and the program", () => {
     const f = fakeGl();
     const r = new Renderer(f.gl, tinySheet());
     r.setOverlays([{ color: [1, 0, 0, 1], vertices: Int32Array.from([0, 0, 10, 0, 0, 10]) }]);
     const created = (kind: string) => f.calls.filter((c) => c.name === `create${kind}`).map((c) => c.args);
-    expect(created("Buffer")).toHaveLength(2);
+    expect(created("Buffer")).toHaveLength(3);
     r.dispose();
     const deleted = (name: string) => f.calls.filter((c) => c.name === name).map((c) => c.args[0]);
-    expect(deleted("deleteBuffer")).toHaveLength(2);
+    expect(deleted("deleteBuffer")).toHaveLength(3);
     expect(deleted("deleteVertexArray")).toHaveLength(2);
     expect(deleted("deleteProgram")).toHaveLength(1);
-    expect(new Set([...deleted("deleteBuffer"), ...deleted("deleteVertexArray"), ...deleted("deleteProgram")]).size).toBe(5);
+    expect(new Set([...deleted("deleteBuffer"), ...deleted("deleteVertexArray"), ...deleted("deleteProgram")]).size).toBe(6);
   });
 
+  // Two lines in one group draw as one call (agni issue 1484).
   it("counts a frame's draw calls", () => {
     const f = fakeGl();
     const r = new Renderer(f.gl, tinySheet());
     const view = { minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9 };
-    expect(r.render(new Float32Array(9), view)).toBe(2);
-    expect(f.count("drawArrays")).toBe(2);
+    expect(r.render(new Float32Array(9), view)).toBe(1);
+    expect(f.count("drawElements")).toBe(1);
+    expect(f.count("drawArrays")).toBe(0);
   });
 });
 
@@ -79,17 +81,21 @@ describe("a line with a width", () => {
     ],
   });
   const view = { minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9 };
-  const draws = (f: ReturnType<typeof fakeGl>) => f.calls.filter((c) => c.name === "drawArrays").map((c) => c.args);
+  const draws = (f: ReturnType<typeof fakeGl>) => f.calls.filter((c) => c.name === "drawElements").map((c) => c.args);
+  const indices = (f: ReturnType<typeof fakeGl>) =>
+    Array.from(f.calls.find((c) => c.name === "bufferData" && c.args[0] === f.gl.ELEMENT_ARRAY_BUFFER)!.args[1] as Uint32Array);
 
   it("draws as triangles once its width spans a pixel, and as a GL line below that", () => {
     const f = fakeGl();
     const r = new Renderer(f.gl, sheet());
+    // The loop's stroke is four sides of two triangles each, the 24 vertices after the sheet's six.
+    // Then the loop's four segments and the strip's one, as index pairs.
+    expect(indices(f)).toEqual([...Array.from({ length: 24 }, (_, k) => 6 + k), 0, 1, 1, 2, 2, 3, 3, 0, 4, 5]);
     r.render(new Float32Array(9), view, 2);
-    // Four sides of two triangles each, after the sheet's six vertices.
-    expect(draws(f)).toEqual([[f.gl.TRIANGLES, 6, 24], [f.gl.LINE_STRIP, 4, 2]]);
+    expect(draws(f)).toEqual([[f.gl.TRIANGLES, 24, f.gl.UNSIGNED_INT, 0], [f.gl.LINES, 2, f.gl.UNSIGNED_INT, 32 * 4]]);
     f.calls.length = 0;
     r.render(new Float32Array(9), view, 2.5);
-    expect(draws(f)).toEqual([[f.gl.LINE_LOOP, 0, 4], [f.gl.LINE_STRIP, 4, 2]]);
+    expect(draws(f)).toEqual([[f.gl.LINES, 10, f.gl.UNSIGNED_INT, 24 * 4]]);
   });
 
   it("uploads the sheet's vertices with the stroke's triangles after them", () => {
