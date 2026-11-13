@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.18] - 2026-11-13
+
+A part clicked in a walk's net row opens a sheet that draws it, rather than the net's first sheet
+(PR 1581, issue 1580). A third demo video follows a signal outwards from a part on Jetson (PR
+1579). It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.18.md](RELEASES/v0.6.18.md).
+
 ## [0.6.17] - 2026-11-13
 
 A lit pin on a schematic draws as a dot in WebGL, the size SVG draws it, so a walk's start pins
