@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.19] - 2026-11-13
+
+A WebGL frame draws in runs of one group, so Jetson's board takes 1,239 draw calls at most rather
+than 36,636, with the same pixels (PR 1584, part of issue 1484). A checkout's own viewer wins over a
+configured `web_dir` (PR 1582). It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.19.md](RELEASES/v0.6.19.md).
+
 ## [0.6.18] - 2026-11-13
 
 A part clicked in a walk's net row opens a sheet that draws it, rather than the net's first sheet
