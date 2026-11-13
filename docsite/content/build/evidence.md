@@ -23,7 +23,7 @@ flowchart LR
 
 ## Measuring, and trusting a measurement
 
-The fifteen rules below are grouped by what was doing the lying.
+The sixteen rules below are grouped by what was doing the lying.
 
 ### The instrument
 
@@ -157,6 +157,14 @@ complete directory passes validation, and it failed. The check wants six files, 
 listed four of them. Had the fixture been used only in the NEGATIVE test, it would have failed for
 the missing files and read exactly like the guard working. A fixture that is supposed to pass has to
 actually pass.
+
+**16. A timing compared with an earlier run measures the machine as well as the change.** The board-open
+exercise ran every step about 40% slower one afternoon than the day before, server-side engine time
+included, though the change under test touched only the browser's draw. Another process held a full
+core. Run the base and the change back to back under the same load, and compare those two. They
+matched within the run's noise, so the change had cost nothing (agni issue 1499). A total also can't
+say where its time went. A ticket blamed a slow step on one call, and a request-by-request timeline of
+the step showed that call starting after the work it was said to hold up (agni issue 1572).
 
 ## Trusting a test
 

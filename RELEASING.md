@@ -67,6 +67,10 @@ From a green `main`:
      --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md --draft=false
    ```
 
+   A publish that waits on the release workflow in the background reads the notes when it runs. If the
+   checkout has moved to another branch by then, the file is gone. Copy the notes out first, or read
+   them from the tag with `git show vX.Y.Z:RELEASES/vX.Y.Z.md`.
+
    The two files are the compose bundle (agni issue 1057).  A customer downloads it to try the
    release on their own boards.  It is `deploy/compose.yaml` with the release's version as its
    default.  The release workflow has already brought it up over the published image
