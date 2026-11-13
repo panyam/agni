@@ -18,6 +18,7 @@ import {
   entityBounds,
   entityFrame,
   pathQuads,
+  pinMarkRadius,
   rectRing,
   rectTriangles,
   resolveHighlights,
@@ -375,6 +376,8 @@ export class CanvasComponent extends BaseComponent {
       // quad like the SVG stroke does.
       if (g.shape === HighlightShape.OUTLINE) {
         draws.push({ color, primitives: g.primitives });
+        const marks = pinMarkTriangles(sheet, g, pinMarkRadius(Math.max(sb.maxX - sb.minX, sb.maxY - sb.minY)));
+        if (marks.length > 0) overlays.push({ color, vertices: Int32Array.from(marks, Math.round) });
         continue;
       }
       // On the board a net repaints its own copper (agni issue 1543), since the path marker is about
@@ -640,6 +643,23 @@ function fromBox(b: RevealBox): Bounds {
 // to light and compare it with what the canvas lit (data-lit, agni issue 1330).
 function askedSubjects(spec: HighlightSpec): Pick<HighlightSpec, "components" | "nets" | "netIds" | "busIds" | "pins"> {
   return { components: spec.components, nets: spec.nets, netIds: spec.netIds, busIds: spec.busIds, pins: spec.pins };
+}
+
+// pinMarkTriangles draws each listed pin of an outline highlight as a filled dot of the given world
+// radius, centred on the pin, as the SVG overlay draws it. A board's pin is a pad, which its recolour
+// already shows at full size, so a board gets none.
+export function pinMarkTriangles(sheet: DecodedSheet, g: { entities: number[][]; pins: boolean[] }, radius: number): number[] {
+  if (sheet.sheetId === "board") return [];
+  const tris: number[] = [];
+  for (const [i, entity] of g.entities.entries()) {
+    if (!g.pins[i]) continue;
+    const b = entityBounds(sheet.vertices, sheet.primitives, entity);
+    if (!b) continue;
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    for (const v of circleTriangles({ minX: cx - radius, minY: cy - radius, maxX: cx + radius, maxY: cy + radius, cx, cy, r: radius })) tris.push(v);
+  }
+  return tris;
 }
 
 // ghostOverlays tessellates a ghost sheet's matches for specs into overlay triangles in the drawn
