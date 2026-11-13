@@ -9,29 +9,25 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-12, at `495f316c`.
+Last pruned 2026-11-13, at `4fa14308`.
 
 ## At a glance
 
-One mission is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
-mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
-exercise run on the mission issue.
+No mission is active. #1499 `mission_board_open` closed on 2026-11-13 with every step of
+`make exercise-board-open` passing at `4fa14308` (v0.6.20): server cold 1.2 s, wasm cold 1.3 s, both
+reloads under 0.5 s. Its last two tickets, #1484 (vertex instancing) and #1504, are `waiting` with
+their triggers. The next mission is chosen with `/retriage`. Until then, work is P3 or a trigger
+coming true on a `waiting` issue.
 
-- **#1499 `mission_board_open`** (open Jetson's board in the browser in under 1.5 s, and reopen it in
-  under 0.5 s), 11 of 14 closed. The last exercise, at `a8cda0fe`, has both reloads passing (server
-  306 ms, wasm 377 ms) and both cold opens failing (server 2.3 s, wasm 2.2 s). The latest log comment
-  on #1499 has the timelines. PRs 1544 to 1568 merged since, for the demo work, so rerun
-  `make exercise-board-open RUNS=5` before trusting those numbers.
-- Next ready: #1534 (P1, a server's request work lands on an efficiency core on Apple Silicon about
-  half the time). #1484 and #1504 are P2.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
-  serve for more than one person. **#1442 `mission_demo_journeys`** is done and closed.
-- This run: v0.6.10 to v0.6.14 released, with the demo mission, the dock's drawers, Jetson revs 1.1.2
-  and 1.1.3 to compare, and KiCad 10 reading. #1531, #1503 and #1442 dropped as closed.
+  serve for more than one person.
+- This run: v0.6.15 to v0.6.20 released, with the macOS request QoS, the WebGL pin dot, the walk-a-signal
+  video, the batched WebGL draw, and the warm seed that brought wasm cold under target. Retriage on
+  2026-11-13 found 70 P3 and 59 `waiting` open, nothing at P0 to P2, and nothing unranked.
 
 ## Open, ranked
 
-1. **Jetson's board open**, the #1499 mission above.
+1. **No mission.** Pick one with `/retriage`.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
