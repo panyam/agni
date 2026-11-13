@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.16] - 2026-11-13
+
+A walk from a part marks the pins its first hop leaves by, rather than boxing the part (PR 1575).
+The docsite's Demo link opens the demo, and the About the demo page is gone (PR 1574). It is a
+patch with no API changes. The full write-up is [RELEASES/v0.6.16.md](RELEASES/v0.6.16.md).
+
 ## [0.6.15] - 2026-11-12
 
 `agni serve` on macOS raises each request's thread to user-initiated QoS, so a cold parse of the
