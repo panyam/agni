@@ -664,6 +664,11 @@ type webAssets struct {
 // `--server self` calls it BEFORE the command it wraps does its work, so a run that cannot serve
 // fails while its artifact is still unwritten, as a taken port does (agni issue 637).
 func resolveWebAssets(flag string, getenv func(string) string) (dir, source string, err error) {
+	if flag == "" {
+		if dir, ok, err := checkoutWeb(); ok || err != nil {
+			return dir, "", err
+		}
+	}
 	dir, source = resolveWebDir(flag, getenv)
 	fi, serr := os.Stat(dir)
 	if flag == "" && source == "" && errors.Is(serr, fs.ErrNotExist) {
@@ -691,6 +696,13 @@ func resolveWebAssets(flag string, getenv func(string) string) (dir, source stri
 //
 // `open` and `--server self` call resolveWebAssets instead, since for them no viewer is an error.
 func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
+	if flag == "" {
+		if dir, ok, err := checkoutWeb(); err != nil {
+			return webAssets{}, err
+		} else if ok {
+			return webAssets{dir: dir, viewer: true}, nil
+		}
+	}
 	dir, source := resolveWebDir(flag, getenv)
 	if flag == "" && source == "" {
 		if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
@@ -706,6 +718,23 @@ func resolveServeAssets(flag string, getenv func(string) string) (webAssets, err
 		return webAssets{}, err
 	}
 	return webAssets{dir: dir, source: source, viewer: true}, nil
+}
+
+// checkoutWeb reports this working directory's ./web when it is a checkout's viewer.
+//
+// A directory that holds ViewerPage.html is a checkout, built or not. A built one is served, so a
+// new clone uses the viewer `make ui` just produced and a web_dir in agni.yaml cannot point it at
+// another tree. A half-built one is an error, the same one checkWebAssets reports, rather than a
+// reason to fall through to that other tree. A folder with no viewer template is not a checkout.
+func checkoutWeb() (dir string, ok bool, err error) {
+	dir = defaultWebDir
+	if _, statErr := os.Stat(filepath.Join(dir, "templates", "ViewerPage.html")); statErr != nil {
+		return "", false, nil
+	}
+	if err := checkWebAssets(dir); err != nil {
+		return dir, false, err
+	}
+	return dir, true, nil
 }
 
 // checkWebAssets verifies dir holds the viewer (its templates plus the built esbuild bundle) before
