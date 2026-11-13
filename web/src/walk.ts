@@ -209,9 +209,25 @@ export function walkStartSpecs(request: WalkRequest): HighlightSpec[] {
   return [{ components: [ref], color: WALK_START_COLOR, shape: HighlightShape.BOUNDING_RECT }];
 }
 
+// walkStartMarks marks where a walk begins. A part start lights the pins its first hop leaves by,
+// since the path itself starts there, so the part is not boxed again. A pin start keeps its dot. A
+// part whose first hop drew no net falls back to the box, so the start still shows.
+export function walkStartMarks(s: WalkState): HighlightSpec[] {
+  const [ref, pin] = splitStart(s.request.start);
+  if (!ref || pin) return walkStartSpecs(s.request);
+  const exits = new Set<string>();
+  for (const h of s.hops) {
+    for (const n of h.nets) {
+      if (n.hop === 1 && n.through === ref && n.exitPin) exits.add(n.exitPin);
+    }
+  }
+  if (exits.size === 0) return walkStartSpecs(s.request);
+  return [{ pins: [...exits].map((p) => ({ refDes: ref, pin: p })), color: WALK_START_COLOR }];
+}
+
 // walkSpecs lights the whole walk: each hop's nets in its shade, a net where the walk stopped in a
 // faint grey (a rail or ground runs across the sheet and would bury the circuit), the parts it
-// crossed in red, the parts it did not cross outlined, and the start on top.
+// crossed in red, the parts it did not cross outlined, and the start's pins on top.
 export function walkSpecs(s: WalkState): HighlightSpec[] {
   if (!s.ran || s.error || s.reason) return [];
   const specs: HighlightSpec[] = [];
@@ -233,7 +249,7 @@ export function walkSpecs(s: WalkState): HighlightSpec[] {
   if (crossed.size > 0) specs.push({ components: [...crossed], color: WALK_CROSSED_COLOR, shape: HighlightShape.BOUNDING_RECT });
   const edge = s.boundary.map((b) => b.refDes).filter((r) => !crossed.has(r));
   if (edge.length > 0) specs.push({ components: edge, color: WALK_BOUNDARY_COLOR, alpha: 0.5 });
-  return [...specs, ...goalSpecs(s), ...walkStartSpecs(s.request)];
+  return [...specs, ...goalSpecs(s), ...walkStartMarks(s)];
 }
 
 // goalSpecs lights a goal's routes over the walk, their nets and the parts they cross in one colour,
@@ -267,7 +283,7 @@ export function goalRevealSpecs(s: WalkState): HighlightSpec[] {
   if (parts.size > 0) specs.push({ components: [...parts], color: WALK_GOAL_COLOR, shape: HighlightShape.BOUNDING_RECT });
   const [ref, pin] = splitStart(s.request.goal?.to ?? "");
   if (g.kind === "pin" && ref && pin) specs.push({ pins: [{ refDes: ref, pin }], color: WALK_GOAL_COLOR });
-  return [...specs, ...walkStartSpecs(s.request)];
+  return [...specs, ...walkStartMarks(s)];
 }
 
 // goalSheet is the sheet a routed goal should open on, given the sheet the walk opens on. That sheet

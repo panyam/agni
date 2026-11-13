@@ -101,7 +101,7 @@ describe("walk presenter", () => {
     expect(h.order).toEqual(["start", "reveal", "walk"]);
     const calls = h.canvas.setHighlights.mock.calls;
     const start = calls[calls.length - 2][0];
-    expect(start).toEqual([expect.objectContaining({ components: ["R1"] })]);
+    expect(start).toEqual([expect.objectContaining({ pins: [{ refDes: "R1", pin: "1" }, { refDes: "R1", pin: "2" }] })]);
   });
 
   it("opens the sheet the walk starts on", async () => {
@@ -133,7 +133,8 @@ describe("walk presenter", () => {
     const hl = h.canvas.setHighlights.mock.calls;
     const specs = hl[hl.length - 1][0] as { nets?: string[]; components?: string[]; shape?: HighlightShape }[];
     expect(specs.flatMap((s) => s.nets ?? [])).toContain("SDA");
-    expect(specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["C1", "R1"]));
+    expect(specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["C1"]));
+    expect(specs.flatMap((s) => s.components ?? [])).not.toContain("R1");
   });
 
   // The walk's shades reach the sheet views beside the canvas too (agni issue 1480).
@@ -180,7 +181,7 @@ describe("walk presenter", () => {
     expect(h.order).toEqual(["walk", "reveal", "walk"]);
     const calls = h.canvas.setHighlights.mock.calls;
     const zoomed = calls[calls.length - 2][0] as { components?: string[] }[];
-    expect(zoomed.flatMap((x) => x.components ?? [])).toEqual(["R9", "R1"]);
+    expect(zoomed.flatMap((x) => x.components ?? [])).toEqual(["R9"]);
   });
 
   it("states a start that names nothing and leaves the canvas alone", async () => {

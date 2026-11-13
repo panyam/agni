@@ -37,7 +37,7 @@ import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlight
 import { chooseSheet } from "./sheetfollow.js";
 import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
-import { type WalkRequest, type WalkView, emptyWalk, errorWalk, goalRevealSpecs, goalSheet, loadingWalk, splitStart, walkFromResponse, walkSheet, walkSpecs, walkStartSpecs } from "./walk.js";
+import { type WalkRequest, type WalkView, emptyWalk, errorWalk, goalRevealSpecs, goalSheet, loadingWalk, splitStart, walkFromResponse, walkSheet, walkSpecs, walkStartMarks } from "./walk.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
@@ -1960,7 +1960,7 @@ export class ViewerPresenter {
     const target = goalSheet(state, onSheet) || onSheet;
     if (target && target !== this.currentSheet) await this.showSheet(target);
     const route = goalRevealSpecs(state);
-    await this.setHighlights(route.length > 0 ? route : walkStartSpecs(req));
+    await this.setHighlights(route.length > 0 ? route : walkStartMarks(state));
     this.views.reveal?.();
     await this.setHighlights(walkSpecs(state));
   }
