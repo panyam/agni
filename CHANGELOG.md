@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.6.15] - 2026-11-12
+
+`agni serve` on macOS raises each request's thread to user-initiated QoS, so a cold parse of the
+Jetson board came back fast 60 times in 60 rather than 27 (PR 1570, issue 1534). The browser suite
+runs as ten CI shards (PR 1571). It is a patch with no API changes. The full write-up is
+[RELEASES/v0.6.15.md](RELEASES/v0.6.15.md).
+
 ## [0.6.14] - 2026-11-12
 
 A walk lights no net it stopped on, so a ground or a rail no longer fills a board in grey, and the
