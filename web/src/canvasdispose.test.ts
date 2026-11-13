@@ -59,7 +59,8 @@ describe("CanvasComponent's sheet switch", () => {
     c.showSheet(wire());
     const made = (name: string) => f.calls.filter((x) => x.name === name).map((x) => x.ret);
     const freed = (name: string) => f.calls.filter((x) => x.name === name).map((x) => x.args[0]);
-    expect(freed("deleteBuffer")).toEqual([made("createBuffer")[0]]);
+    // The vertex buffer and the index buffer (agni issue 1484).
+    expect(freed("deleteBuffer")).toEqual(made("createBuffer").slice(0, 2));
     expect(freed("deleteVertexArray")).toEqual([made("createVertexArray")[0]]);
     expect(freed("deleteProgram")).toEqual([made("createProgram")[0]]);
   });

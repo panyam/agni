@@ -302,7 +302,8 @@ export class CanvasComponent extends BaseComponent {
       if (this.stages) this.stages[name] = now - at;
       at = now;
     };
-    this.renderer = new Renderer(gl, sheet);
+    // The first frame draws before the batches are laid out, so laying them out never delays it.
+    this.renderer = new Renderer(gl, sheet, { defer: true });
     lap("rendererMs");
     this.renderer.setHiddenGroups(this.hidden);
     // A new sheet's camera replaces the old one, and a glide toward the old sheet stops with it.

@@ -1,13 +1,13 @@
 // WebGL2 renderer for a decoded PackedSheet. The vertex positions are int32 and
 // sheet-relative, so the attribute is an INTEGER attribute (ivec2) fed with
 // gl.vertexAttribIPointer + gl.INT. The vertex buffer is uploaded ONCE; only the mat3
-// view uniform changes between frames, and the canvas draws a frame only when something changed. Each primitive record becomes one gl.drawArrays call,
-// with the draw mode and color chosen per record. The renderer culls a record when its
-// precomputed world-space bounds fall entirely outside the current view rect.
+// view uniform changes between frames, and the canvas draws a frame only when something changed. The
+// primitives draw through an index buffer in a few calls per run of one group (glbatch.ts, agni issue
+// 1484), and the renderer culls a chunk of a run when its bounds fall outside the view rect.
 
-import {
-  KIND_TRIANGLES, DecodedSheet, Primitive, KIND_LINE_STRIP, KIND_LINE_LOOP, KIND_POINTS, pickOnly } from "./packed.js";
+import { DecodedSheet, Primitive, KIND_LINE_STRIP, KIND_LINE_LOOP, KIND_POINTS, KIND_TRIANGLES, pickOnly } from "./packed.js";
 import { Bounds } from "./camera.js";
+import { buildBatches, wideCount, type Batches, type Chunk, type Stroke } from "./glbatch.js";
 
 type Rgba = [number, number, number, number];
 
@@ -81,13 +81,20 @@ function drawMode(gl: WebGL2RenderingContext, kind: number): number {
       return gl.LINE_STRIP;
     case KIND_LINE_LOOP:
       return gl.LINE_LOOP;
-    case KIND_POINTS:
-      return gl.POINTS;
     case KIND_TRIANGLES:
       return gl.TRIANGLES;
+    case KIND_POINTS:
     default:
       return gl.POINTS;
   }
+}
+
+// RendererOptions says when the renderer lays out its batches. defer draws the first frame one
+// primitive at a time and lays them out after it, so building them costs the first draw nothing.
+// Jetson's board takes about 30 ms to lay out, and its first draw is what the board-open mission
+// times (agni issue 1499).
+export interface RendererOptions {
+  defer?: boolean;
 }
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
@@ -158,13 +165,6 @@ export function strokeQuads(vertices: Int32Array, p: Primitive, width: number): 
   return tris.map(Math.round);
 }
 
-// Stroke is where a wide line's triangles sit in the vertex buffer, after the sheet's own vertices.
-interface Stroke {
-  first: number;
-  count: number;
-  width: number;
-}
-
 // strokesOf appends a triangle list for every line primitive with a width, and returns the vertex
 // buffer to upload with each primitive's stroke, if it has one.
 function strokesOf(sheet: DecodedSheet): { vertices: Int32Array; strokes: (Stroke | undefined)[] } {
@@ -213,6 +213,16 @@ export class Renderer {
   // layer wins an overlap). Empty means no highlight. Set by the canvas from the resolved
   // highlight specs.
   private highlightColors: Map<number, Rgba> = new Map();
+  // lit holds the chunks with a highlighted primitive. Such a chunk draws around its highlighted
+  // primitives, which draw one by one in their colour, in their place.
+  private lit = new Set<number>();
+  // batches lays the primitives out in the index buffer ibuf, by run and chunk, for the draw order.
+  // Until it is built, a frame draws one primitive at a time.
+  private batches: Batches | null = null;
+  private ibuf: WebGLBuffer;
+  private readonly defer: boolean;
+  private scheduled = false;
+  private disposed = false;
   // version counts the changes made to what this renderer draws since it was built: highlights,
   // overlays, draw order and hidden groups. A view draws a frame only when it or the camera moved
   // (drawgate.ts, agni issue 1479), so every setter bumps it.
@@ -221,7 +231,9 @@ export class Renderer {
   constructor(
     private readonly gl: WebGL2RenderingContext,
     sheet: DecodedSheet,
+    opts: RendererOptions = {},
   ) {
+    this.defer = !!opts.defer;
     const vs = compile(gl, gl.VERTEX_SHADER, VERT_SRC);
     const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG_SRC);
     this.program = link(gl, vs, fs);
@@ -249,16 +261,36 @@ export class Renderer {
     gl.enableVertexAttribArray(aPos);
     // Integer attribute, ivec2 of int32, tightly packed (stride 0 = 8 bytes).
     gl.vertexAttribIPointer(aPos, 2, gl.INT, 0, 0);
+
+    this.primitives = sheet.primitives;
+    this.bounds = sheet.primitives.map((p) => recordBounds(sheet.vertices, p));
+    // The index buffer belongs to the VAO, so it binds while the VAO is bound.
+    const ibuf = gl.createBuffer();
+    if (!ibuf) throw new Error("failed to create the index buffer");
+    this.ibuf = ibuf;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf);
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     enableBlending(gl);
 
-    this.primitives = sheet.primitives;
-    this.bounds = sheet.primitives.map((p) => recordBounds(sheet.vertices, p));
     // A group with an alpha draws translucent, as a board's zones wash over it (agni issue 1334).
     this.colors = sheet.groupColors.map((c, g) => hexToRgba(c, DEFAULT_COLOR, sheet.groupAlphas?.[g] || 1));
     this.background = hexToRgba(sheet.backgroundColor, WHITE);
+    if (!this.defer) this.prepare();
+  }
+
+  // prepare lays out the batches for the current draw order and uploads their index buffer. The
+  // pixels a frame draws don't change, so nothing needs drawing again.
+  prepare(): void {
+    if (this.disposed) return;
+    const gl = this.gl;
+    this.batches = buildBatches(this.primitives, this.bounds, this.strokes, this.order);
+    gl.bindVertexArray(this.vao);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batches.indices, gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    this.markLit();
   }
 
   // setHighlights replaces the highlight layers. Each group's primitives redraw in its RGBA,
@@ -269,6 +301,17 @@ export class Renderer {
     this.highlightColors = new Map();
     for (const g of groups) {
       for (const i of g.primitives) this.highlightColors.set(i, g.color);
+    }
+    this.markLit();
+  }
+
+  // markLit finds the chunks holding a highlighted primitive.
+  private markLit(): void {
+    this.lit = new Set();
+    if (!this.batches) return;
+    for (const i of this.highlightColors.keys()) {
+      const c = this.batches.chunkOf[i];
+      if (c !== undefined && c >= 0) this.lit.add(c);
     }
   }
 
@@ -326,6 +369,7 @@ export class Renderer {
   setOrder(order: Int32Array | null): void {
     this.version++;
     this.order = order;
+    if (this.batches) this.prepare();
   }
 
   // setHiddenGroups replaces the hidden set.
@@ -340,7 +384,9 @@ export class Renderer {
   // issue 1331).
   dispose(): void {
     const gl = this.gl;
+    this.disposed = true;
     gl.deleteBuffer(this.buf);
+    gl.deleteBuffer(this.ibuf);
     gl.deleteVertexArray(this.vao);
     if (this.overlayBuf) gl.deleteBuffer(this.overlayBuf);
     if (this.overlayVao) gl.deleteVertexArray(this.overlayVao);
@@ -348,6 +394,72 @@ export class Renderer {
     this.overlayBuf = null;
     this.overlayVao = null;
     this.overlayGroups = [];
+  }
+
+  // drawEach draws every primitive with a call of its own, in the draw order, as a frame did before
+  // the batches (agni issue 1484). The first frame of a deferred renderer draws this way.
+  private drawEach(perPx: number, viewRect: Bounds): number {
+    const gl = this.gl;
+    let calls = 0;
+    let lastGroup = -1;
+    const order = this.order;
+    for (let n = 0; n < this.primitives.length; n++) {
+      const i = order ? order[n] : n;
+      const p = this.primitives[i];
+      if (p.count === 0 || pickOnly(p.group)) continue;
+      const hl = this.highlightColors.get(i);
+      if (!hl && this.hiddenGroups.has(p.group)) continue;
+      if (!hl && outside(this.bounds[i], viewRect)) continue;
+      if (hl) {
+        gl.uniform4f(this.uColor, hl[0], hl[1], hl[2], hl[3]);
+        lastGroup = -1;
+      } else if (p.group !== lastGroup) {
+        const c = this.colors[p.group] ?? DEFAULT_COLOR;
+        gl.uniform4f(this.uColor, c[0], c[1], c[2], c[3]);
+        lastGroup = p.group;
+      }
+      const st = this.strokes[i];
+      if (st && st.width >= perPx) gl.drawArrays(gl.TRIANGLES, st.first, st.count);
+      else gl.drawArrays(drawMode(gl, p.kind), p.firstVertex, p.count);
+      calls++;
+    }
+    return calls;
+  }
+
+  // drawAround draws one region of a chunk that holds a highlighted primitive. The primitives sit back
+  // to back in the index buffer, so each stretch between two highlighted ones draws as one call in the
+  // base colour, and each highlighted one draws alone in its own. away draws the highlighted ones only.
+  private drawAround(
+    prims: number[],
+    at: Int32Array,
+    count: Int32Array,
+    mode: number,
+    base: Rgba,
+    away: boolean,
+    use: (c: Rgba) => void,
+    draw: (mode: number, start: number, end: number) => void,
+  ): void {
+    let from = -1;
+    let to = -1;
+    const flush = () => {
+      if (from >= 0 && !away) {
+        use(base);
+        draw(mode, from, to);
+      }
+      from = -1;
+    };
+    for (const i of prims) {
+      const hl = this.highlightColors.get(i);
+      if (!hl) {
+        if (from < 0) from = at[i];
+        to = at[i] + count[i];
+        continue;
+      }
+      flush();
+      use(hl);
+      draw(mode, at[i], at[i] + count[i]);
+    }
+    flush();
   }
 
   // Draw one frame and return how many draw calls it made. viewMatrix is the mat3 (column-major)
@@ -362,29 +474,48 @@ export class Renderer {
     gl.bindVertexArray(this.vao);
     gl.uniformMatrix3fv(this.uView, false, viewMatrix);
 
-    let lastGroup = -1;
-    const order = this.order;
-    for (let n = 0; n < this.primitives.length; n++) {
-      const i = order ? order[n] : n;
-      const p = this.primitives[i];
-      if (p.count === 0 || pickOnly(p.group)) continue;
-      const hl = this.highlightColors.get(i);
-      // A highlighted primitive always draws, neither hidden nor culled, so selecting an
-      // off-screen finding still tints its element.
-      if (!hl && this.hiddenGroups.has(p.group)) continue;
-      if (!hl && outside(this.bounds[i], viewRect)) continue;
-      if (hl) {
-        gl.uniform4f(this.uColor, hl[0], hl[1], hl[2], hl[3]);
-        lastGroup = -1; // force the next non-highlighted primitive to re-set its group color
-      } else if (p.group !== lastGroup) {
-        const c = this.colors[p.group] ?? DEFAULT_COLOR;
-        gl.uniform4f(this.uColor, c[0], c[1], c[2], c[3]);
-        lastGroup = p.group;
-      }
-      const st = this.strokes[i];
-      if (st && st.width >= perPx) gl.drawArrays(gl.TRIANGLES, st.first, st.count);
-      else gl.drawArrays(drawMode(gl, p.kind), p.firstVertex, p.count);
+    let color: Rgba | null = null;
+    const use = (c: Rgba) => {
+      if (c === color) return;
+      gl.uniform4f(this.uColor, c[0], c[1], c[2], c[3]);
+      color = c;
+    };
+    const draw = (mode: number, start: number, end: number) => {
+      if (end <= start) return;
+      gl.drawElements(mode, end - start, gl.UNSIGNED_INT, start * 4);
       calls++;
+    };
+    if (!this.batches) {
+      calls += this.drawEach(perPx, viewRect);
+      if (this.defer && !this.scheduled) {
+        this.scheduled = true;
+        setTimeout(() => this.prepare(), 0);
+      }
+    }
+    for (const run of this.batches?.runs ?? []) {
+      const base = this.colors[run.group] ?? DEFAULT_COLOR;
+      const hidden = this.hiddenGroups.has(run.group);
+      for (const c of run.chunks) {
+        const lit = this.lit.has(c.id);
+        // A highlighted primitive always draws, neither hidden nor culled, so selecting an
+        // off-screen finding still tints its element.
+        const away = hidden || outside(c.bounds, viewRect);
+        if (away && !lit) continue;
+        const k = wideCount(c, perPx);
+        if (!lit) {
+          use(base);
+          draw(gl.TRIANGLES, c.strokes.start, k > 0 ? c.strokeEnds[k - 1] : c.strokes.start);
+          draw(gl.LINES, k < c.lineList.length ? this.batches!.at[c.lineList[k]] : c.lines.end, c.lines.end);
+          draw(gl.TRIANGLES, c.triangles.start, c.triangles.end);
+          draw(gl.POINTS, c.points.start, c.points.end);
+          continue;
+        }
+        const b = this.batches!;
+        this.drawAround(c.lineList.slice(0, k), b.strokeAt, b.strokeCount, gl.TRIANGLES, base, away, use, draw);
+        this.drawAround(c.lineList.slice(k), b.at, b.count, gl.LINES, base, away, use, draw);
+        this.drawAround(c.triList, b.at, b.count, gl.TRIANGLES, base, away, use, draw);
+        this.drawAround(c.pointList, b.at, b.count, gl.POINTS, base, away, use, draw);
+      }
     }
     gl.bindVertexArray(null);
 
