@@ -4,6 +4,7 @@ go 1.26.9
 
 require (
 	connectrpc.com/connect v1.20.0
+	github.com/ebitengine/purego v0.8.4
 	github.com/panyam/goapplib v0.7.12
 	github.com/panyam/jaala/frontends/mcp v0.1.101
 	github.com/panyam/jaala/frontends/nl v0.1.101

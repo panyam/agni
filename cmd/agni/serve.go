@@ -465,7 +465,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 
 	// A client that never finishes its headers holds a connection open, so headers get a deadline.
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: requestQoS(mux), ReadHeaderTimeout: 10 * time.Second}
 	if o.banner != nil {
 		o.banner(urls, len(mounts))
 	} else {
