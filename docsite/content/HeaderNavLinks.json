@@ -85,13 +85,9 @@
     ]
   },
   {
-    "name": "Demos",
-    "url": "demos/",
-    "icon": "play",
-    "children": [
-      { "name": "Open a board in your browser", "url": "demo/" },
-      { "name": "About the demo", "url": "demos/" }
-    ]
+    "name": "Demo",
+    "url": "demo/",
+    "icon": "play"
   },
   {
     "name": "Reference",

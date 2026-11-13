@@ -70,9 +70,5 @@ hideTitle: true
 <h3>Try the demo</h3>
 <p>Open an example board, or drop your own, in the viewer with the engine running in your browser. Nothing to install and nothing uploaded.</p>
 </a>
-<a href="{{.Site.PathPrefix}}/demos/" class="section-card">
-<h3>About the demo</h3>
-<p>What the demo holds, why it runs in the browser, and how it relates to agni serve.</p>
-</a>
 </div>
 </div>
