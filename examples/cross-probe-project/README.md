@@ -9,9 +9,12 @@ Mission #1586 grows the same walk. Its first steps turn the board view away from
 capacitor, then click C133 on the schematic. The board view turns over to its back on its own and
 shows B.Cu (agni issue 1587). A later step hides In5.Cu and clicks `Net-(Q2-G)` on the Power sheet.
 That net runs on In5.Cu, so the board view turns In5.Cu back on. With the board view's Follow side
-box cleared, the same clicks change neither. To see it by hand, run `agni open
-examples/cross-probe-project/designs/jetson-cut` from the repo root, open the Board tile beside the
-canvas, and click C133.
+box cleared, the same clicks change neither. Then Back steps to C133 and Forward to `Net-(Q2-G)` again
+(agni issue 1588). Last, a click on GND puts "1 of 2" in the canvas bar, and the next-sheet control
+opens the other sheet that draws GND, lit and centred (agni issue 1589). To see it by hand, run `agni
+open examples/cross-probe-project/designs/jetson-cut` from the repo root, open the Board tile beside
+the canvas, and click C133. Press `[` and `]` to step through what you clicked, and `,` and `.` to
+step through the sheets.
 
 `designs/jetson-cut` is a cut of the Antmicro baseboard for Jetson AGX Thor, Copyright (c)
 2025-2026 Antmicro, licensed under the Apache License, Version 2.0. `make cut` regenerates it from

@@ -103,6 +103,19 @@ panel from the ones above.
   `followBoard` (`web/src/boardfollow.ts`) turns these into a side and a set of rows to show. The pane
   flips to that side and turns those rows on, and never hides one. The bar's Follow side checkbox
   turns this off for every board view, and browser storage keeps the choice.
+- **Back and Forward replay a selection** (agni issue 1588). Say the reader clicks a connector, then
+  a diode, then a regulator. `SelectionHistory` (`web/src/selectionhistory.ts`) records each entity
+  selection that reaches the Properties presenter's `onSelect` hook, whichever view or panel made it,
+  and keeps 100. A clear is no entry. A step selects the entry again with the hook's recording off, so
+  every sheet view follows it as its link says and the canvas follows it through `followOnCanvas`.
+  Another design starts a fresh trail. The keys are `[` and `]`.
+- **A view steps through the sheets that draw the selection** (agni issue 1589). `sheetStep`
+  (`web/src/sheetstep.ts`) orders the sheets `LocateSubjects` names by the design's sheet order, drops
+  the board, and says which sheet is next and previous and where the view stands, such as "2 of 4".
+  An area asks about each part, pin and net in it, and steps through the union. With nothing selected
+  it steps through every sheet. The canvas bar (`web/src/stepbar.tsx`) and each schematic view's bar
+  carry the controls. The keys `,` and `.` step the view the reader last pressed in, the canvas until
+  they press in a sheet view.
 - **A walk lights every view** (agni issue 1480). The presenter hands the walk's shades to
   `SheetViews.setUnderlay` through `ViewSink.underlay`, and each view lights them under its selection.
   A walk row selects its net or part as a query cell does, so a board view centres on it. The pane

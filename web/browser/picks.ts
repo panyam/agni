@@ -163,3 +163,90 @@ export async function pickPoint(page: Page, sel: string, kind: string): Promise<
     { sel, kind },
   );
 }
+
+// The cross-probe walk and the step spec click a net as a reader does, by a point on its copper
+// (agni issues 1323 and 1589).
+// netPoint finds a point on any of a net's copper in a host that the picker reads as that net
+// alone, or null. It tries each piece's two diagonals and its midlines, so a track at any angle has
+// points on it.
+export async function netPoint(page: Page, host: string, name: string): Promise<{ x: number; y: number } | null> {
+  return page.evaluate(
+    ({ host, name }) => {
+      const keyed = (e: Element | null) => e?.closest("[data-kind]") ?? null;
+      const mine = (e: Element | null) => !e || (e.getAttribute("data-kind") === "net" && e.getAttribute("data-net") === name);
+      const h = document.querySelector(host)!.getBoundingClientRect();
+      // The viewer's picker looks a few pixels around a click and takes a pad over a track, so the
+      // point needs the whole ring clear of anything but this net's copper.
+      const ring = [-6, -3, 0, 3, 6];
+      for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
+        if (el.getAttribute("data-net") !== name) continue;
+        const r = el.getBoundingClientRect();
+        for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8]) {
+          const along = [
+            [r.left + r.width * f, r.top + r.height * f],
+            [r.left + r.width * f, r.bottom - r.height * f],
+            [r.left + r.width * f, r.top + r.height / 2],
+            [r.left + r.width / 2, r.top + r.height * f],
+          ];
+          for (const [px, py] of along) {
+            const x = Math.round(px), y = Math.round(py);
+            if (x < h.left + 8 || x > h.right - 8 || y < h.top + 8 || y > h.bottom - 8) continue;
+            const c = keyed(document.elementFromPoint(x, y));
+            if (c && mine(c) && ring.every((dx) => ring.every((dy) => mine(keyed(document.elementFromPoint(x + dx, y + dy)))))) return { x, y };
+          }
+        }
+      }
+      return null;
+    },
+    { host, name },
+  );
+}
+
+// findIn zooms a view out from its middle until an element's centre is inside it. A view that is
+// still drawing its sheet has no box for the element yet, so findIn gives it a few seconds.
+export async function findIn(page: Page, host: string, el: string): Promise<void> {
+  for (let i = 0, waited = 0; i < 15; i++) {
+    const h = await page.locator(host).first().boundingBox();
+    const b = await page.locator(el).first().boundingBox();
+    if ((!h || !b) && waited < 20) {
+      waited++;
+      i--;
+      await page.waitForTimeout(250);
+      continue;
+    }
+    if (!h || !b) throw new Error(`${el} is not drawn`);
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    if (cx > h.x && cx < h.x + h.width && cy > h.y && cy < h.y + h.height) return;
+    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+    await page.mouse.wheel(0, 400);
+    await page.waitForTimeout(150);
+  }
+  throw new Error(`${el} stayed out of the view`);
+}
+
+// clickableNet finds a point on a net's copper to click, zooming the view in on the middle of the
+// net's longest piece in it until one is clear of the pads and labels around it, as a reader would.
+export async function clickableNet(page: Page, host: string, name: string): Promise<{ x: number; y: number }> {
+  for (let i = 0; i < 10; i++) {
+    const at = await netPoint(page, host, name);
+    if (at) return at;
+    const t = await page.evaluate(({ host, name }) => {
+      const h = document.querySelector(host)!.getBoundingClientRect();
+      let best: { x: number; y: number; long: number } | undefined;
+      for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
+        if (el.getAttribute("data-net") !== name) continue;
+        const r = el.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        if (x < h.left || x > h.right || y < h.top || y > h.bottom) continue;
+        const long = Math.max(r.width, r.height);
+        if (!best || long > best.long) best = { x, y, long };
+      }
+      return best;
+    }, { host, name });
+    if (!t) throw new Error(`${name} has no copper in the view`);
+    await page.mouse.move(t.x, t.y);
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(200);
+  }
+  throw new Error(`no point on ${name}'s copper picks only that net, even zoomed in`);
+}
