@@ -5,6 +5,14 @@ schematic and the board as two linked views, click a part in one and find it in 
 board over. The gate walks this project, and the mission's real-board run walks the whole Jetson board in
 `examples/jetson-project`.
 
+Mission #1586 grows the same walk. Its first steps turn the board view away from C133, a back-side
+capacitor, then click C133 on the schematic. The board view turns over to its back on its own and
+shows B.Cu (agni issue 1587). A later step hides In5.Cu and clicks `Net-(Q2-G)` on the Power sheet.
+That net runs on In5.Cu, so the board view turns In5.Cu back on. With the board view's Follow side
+box cleared, the same clicks change neither. To see it by hand, run `agni open
+examples/cross-probe-project/designs/jetson-cut` from the repo root, open the Board tile beside the
+canvas, and click C133.
+
 `designs/jetson-cut` is a cut of the Antmicro baseboard for Jetson AGX Thor, Copyright (c)
 2025-2026 Antmicro, licensed under the Apache License, Version 2.0. `make cut` regenerates it from
 the fetched samples corpus with `tools/kicadcut`. It keeps two sheets and the board's copper around
