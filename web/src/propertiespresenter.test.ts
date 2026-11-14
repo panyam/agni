@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { GetDesignResponseSchema, type GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
 import { INVENTORY_PATHS, SERVED_QUERIES, type PropertiesState } from "./properties.js";
-import { PropertiesPresenter } from "./propertiespresenter.js";
+import { PropertiesPresenter, areaSubjects } from "./propertiespresenter.js";
 import type { VerdictItem } from "./findings.js";
 import type { SubjectRef } from "./router.js";
 
@@ -228,5 +228,17 @@ describe("sharing the inventory (agni issue 1133)", () => {
     await vi.waitFor(() => expect(heard).toEqual([null, ["U1"]]));
     p.setSheets({ mount: "m", path: "other", sheets, activeId: "s1" });
     await vi.waitFor(() => expect(heard).toEqual([null, ["U1"], null, ["U1"]]));
+  });
+});
+
+describe("areaSubjects", () => {
+  it("names each part, loose pin and net in an area, so a sheet step visits every sheet that draws one", () => {
+    expect(areaSubjects({ kind: "area", refs: ["U1"], pins: ["J1.3"], nets: ["GND", "VBUS"] })).toEqual([
+      { kind: "component", ref: "U1", pin: "" },
+      { kind: "pin", ref: "J1", pin: "3" },
+      { kind: "net", ref: "GND", pin: "" },
+      { kind: "net", ref: "VBUS", pin: "" },
+    ]);
+    expect(areaSubjects({ kind: "area" })).toEqual([]);
   });
 });

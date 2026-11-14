@@ -22,7 +22,7 @@ export interface SheetViewHooks {
   onPickEmpty: (pane: SheetPane) => void;
 }
 
-type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl"> & {
+type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl" | "stops" | "history"> & {
   // boardRenderer picks a board view's renderer when the caller names none and the canvas draws in
   // SVG. It answers WebGL on a hardware GPU and SVG on a software one (agni issue 1536). Without it,
   // a board view opens in the canvas's renderer, as a schematic view does.
@@ -34,6 +34,8 @@ export class SheetViews {
   private next = 1;
   // underlay is the page's highlight that every view lights under its selection, such as a walk.
   private underlay: HighlightSpec[] = [];
+  // canStep is how far the page's selection trail goes back and forward, for each view's buttons.
+  private canStep = { back: false, forward: false };
 
   constructor(
     private readonly dock: SheetViewDock,
@@ -68,6 +70,7 @@ export class SheetViews {
       this.doc,
     );
     this.panes.set(id, pane);
+    pane.setHistory(this.canStep.back, this.canStep.forward);
     this.dock.add(id, pane.title(), pane.element, () => {
       pane.dispose();
       this.panes.delete(id);
@@ -109,6 +112,19 @@ export class SheetViews {
     this.panes.get(id)?.dispose();
     this.panes.delete(id);
     return true;
+  }
+
+  // setHistory tells every view, and each opened later, how far the page's selection trail goes back
+  // and forward (agni issue 1588).
+  setHistory(canBack: boolean, canForward: boolean): void {
+    this.canStep = { back: canBack, forward: canForward };
+    for (const p of this.panes.values()) p.setHistory(canBack, canForward);
+  }
+
+  // holding returns the open view whose element holds node, such as the target of a press.
+  holding(node: Node | null): SheetPane | undefined {
+    if (!node) return undefined;
+    return [...this.panes.values()].find((p) => p.element.contains(node));
   }
 
   // get returns the open view with that id.

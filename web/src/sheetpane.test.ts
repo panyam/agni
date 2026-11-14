@@ -698,3 +698,94 @@ describe("a board view following a selection's side and layers", () => {
     expect(label.style.display).toBe("none");
   });
 });
+
+describe("stepping a sheet view through the sheets that draw the selection", () => {
+  const place = (p: SheetPane) => p.element.querySelector("[data-sheet-place]")?.textContent;
+  const control = (p: SheetPane, action: string) => p.element.querySelector(`[data-action="${action}"]`) as HTMLButtonElement;
+
+  it("visits each sheet that draws the selection in the design's order, and reads its place", async () => {
+    const { p, deps } = pane([]);
+    deps.stops = async () => ["s3", "s1"];
+    await p.open("s1");
+    await p.lightPick(U1);
+    await vi.waitFor(() => expect(place(p)).toBe("1 of 2"));
+    expect(control(p, "prev-sheet").disabled).toBe(true);
+    control(p, "next-sheet").click();
+    await vi.waitFor(() => expect(shown(p)).toBe("s3"));
+    await vi.waitFor(() => expect(place(p)).toBe("2 of 2"));
+    expect(control(p, "next-sheet").disabled).toBe(true);
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s3");
+    await p.stepSheet(-1);
+    expect(shown(p)).toBe("s1");
+  });
+
+  it("lights the selection on the sheet it steps to", async () => {
+    const { p, calls } = pane(["s1", "s2"]);
+    await p.open("s1");
+    await p.lightPick(U1);
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s2");
+    expect(calls.overlay[calls.overlay.length - 1]).toBe("s2");
+  });
+
+  it("steps through every schematic sheet with nothing selected, and never onto the board", async () => {
+    const { p } = pane([]);
+    await p.open("s2");
+    expect(place(p)).toBe("2 of 3");
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s3");
+    expect(control(p, "next-sheet").disabled).toBe(true);
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s3");
+  });
+
+  it("steps through the union of an area's sheets the page names", async () => {
+    const { p, deps } = pane([]);
+    deps.stops = async () => ["s2", "s3"];
+    const area: Selection = { kind: "area", refs: ["U1", "R1"] };
+    await p.open("s1");
+    await p.lightPick(area);
+    await vi.waitFor(() => expect(place(p)).toBe("2 sheets"));
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s2");
+    await vi.waitFor(() => expect(place(p)).toBe("1 of 2"));
+  });
+
+  it("asks where the selection is drawn at a step when the page names no stops, and reads no place until then", async () => {
+    const { p, calls } = pane(["s1", "s3"]);
+    await p.open("s1");
+    await p.lightPick(U1);
+    expect(calls.drawnOn).toEqual([]);
+    expect(place(p)).toBe("");
+    expect(control(p, "next-sheet").disabled).toBe(false);
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("s3");
+    expect(calls.drawnOn).toEqual([false]);
+    expect(place(p)).toBe("2 of 2");
+  });
+
+  it("hides its sheet steps on the board and takes none there", async () => {
+    const { p } = pane(["s1"]);
+    await p.open("board");
+    expect(control(p, "next-sheet").style.display).toBe("none");
+    await p.stepSheet(1);
+    expect(shown(p)).toBe("board");
+  });
+
+  it("steps the page's selection trail from its Back and Forward buttons, which show only when the page keeps one", async () => {
+    const bare = pane([]);
+    expect(control(bare.p, "selection-back").style.display).toBe("none");
+    const back = vi.fn();
+    const forward = vi.fn();
+    const { deps } = pane([]);
+    const p = new SheetPane("sheetview-history", { ...deps, history: { back, forward } });
+    document.body.appendChild(p.element);
+    expect(control(p, "selection-back").style.display).toBe("");
+    expect(control(p, "selection-back").disabled).toBe(true);
+    p.setHistory(true, false);
+    control(p, "selection-back").click();
+    expect(back).toHaveBeenCalledOnce();
+    expect(control(p, "selection-forward").disabled).toBe(true);
+  });
+});

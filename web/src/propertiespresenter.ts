@@ -67,6 +67,19 @@ export function subjectOf(sel: Selection): SubjectRef | null {
   }
 }
 
+// areaSubjects names each part, loose pin and net in an area, so the engine can say which sheets
+// draw any of them (agni issue 1589). A loose pin is "REF.PIN" in the area.
+export function areaSubjects(sel: Selection): SubjectRef[] {
+  const out: SubjectRef[] = [];
+  for (const ref of sel.refs ?? []) out.push({ kind: "component", ref, pin: "" });
+  for (const p of sel.pins ?? []) {
+    const dot = p.lastIndexOf(".");
+    if (dot > 0) out.push({ kind: "pin", ref: p.slice(0, dot), pin: p.slice(dot + 1) });
+  }
+  for (const net of sel.nets ?? []) out.push({ kind: "net", ref: net, pin: "" });
+  return out;
+}
+
 export class PropertiesPresenter {
   private mount = "";
   private path = "";

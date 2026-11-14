@@ -162,6 +162,19 @@ describe("the sheet views beside the canvas", () => {
     expect([...docked.keys()]).toEqual([]);
   });
 
+  it("tells every view how far the selection trail goes, a view opened later too, and finds the view that holds a node", async () => {
+    const { views } = setup();
+    const a = await views.open("s1");
+    views.setHistory(true, false);
+    const b = await views.open("s1");
+    for (const p of [a, b]) {
+      expect((p.element.querySelector('[data-action="selection-back"]') as HTMLButtonElement).disabled).toBe(false);
+      expect((p.element.querySelector('[data-action="selection-forward"]') as HTMLButtonElement).disabled).toBe(true);
+    }
+    expect(views.holding(b.element.querySelector(".sheetview-bar"))).toBe(b);
+    expect(views.holding(document.body)).toBeUndefined();
+  });
+
   it("forgets a view the dock closes", async () => {
     const { views, dock } = setup();
     const a = await views.open("s1");

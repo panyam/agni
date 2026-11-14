@@ -19,6 +19,7 @@ import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.
 import { boardLayerListIsland } from "./boardlayerlist.js";
 import { followBoard, type BoardFacts } from "./boardfollow.js";
 import { delayedBusy, type Busy } from "./busy.js";
+import { sheetStep, stepLabel } from "./sheetstep.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
@@ -157,6 +158,13 @@ export interface SheetPaneDeps {
   // parkAfterMs is how long an SVG drawing sits idle before an image stands in for it. PARK_AFTER_MS
   // when unset.
   parkAfterMs?: number;
+  // stops lists the sheets a sheet step visits for a selection, the union of its members' sheets for
+  // an area (agni issue 1589). The view asks it on each selection, to read its place. When unset, the
+  // view asks drawnOn at a step and reads no place for a selection.
+  stops?: (sel: Selection) => Promise<string[]>;
+  // history steps the page's selection trail back or forward (agni issue 1588). The view's Back and
+  // Forward buttons are hidden when unset.
+  history?: { back: () => void; forward: () => void };
 }
 
 // PARK_AFTER_MS is how long a view's SVG drawing sits with the pointer away before the view shows
@@ -207,6 +215,13 @@ export class SheetPane {
   private drawnOnLast: string[] = [];
   // drawing counts renders, so a late answer for a sheet the reader has left draws nothing.
   private drawing = 0;
+  // The step controls (agni issues 1588 and 1589). historyButtons step the page's selection trail.
+  // sheetButtons open the previous and next sheet that draws the selection, and place reads where
+  // this view is among them. stopsFor holds the last answer to which sheets those are.
+  private readonly historyButtons: Record<"back" | "forward", HTMLButtonElement>;
+  private readonly sheetButtons: Record<"prev" | "next", HTMLButtonElement>;
+  private readonly place: HTMLElement;
+  private stopsFor: { sel: Selection | null; sheets: string[] } = { sel: null, sheets: [] };
   // setBusy shows or hides this view's loader, and busyEl is the loader itself.
   private readonly setBusy: (busy: Busy, label?: string) => void;
   private readonly busyEl: HTMLElement;
@@ -303,11 +318,42 @@ export class SheetPane {
       saveFollowSide(this.followSide);
     });
     this.followLabel.append(this.followBox, doc.createTextNode("Follow side"));
+    // The step controls name their actions as the canvas's do, and the page's keys step the view the
+    // reader last pressed in.
+    this.historyButtons = {
+      back: button("sheetview-step-back", "selection-back", "←", "step back to the previous selection ([)", () => this.deps.history?.back()),
+      forward: button("sheetview-step-forward", "selection-forward", "→", "step forward to the next selection (])", () => this.deps.history?.forward()),
+    };
+    if (!this.deps.history) for (const b of Object.values(this.historyButtons)) b.style.display = "none";
+    this.setHistory(false, false);
+    this.sheetButtons = {
+      prev: button("sheetview-prev-sheet", "prev-sheet", "‹", "open the previous sheet that draws the selection, or the previous sheet with nothing selected (,)", () => void this.stepSheet(-1)),
+      next: button("sheetview-next-sheet", "next-sheet", "›", "open the next sheet that draws the selection, or the next sheet with nothing selected (.)", () => void this.stepSheet(1)),
+    };
+    this.place = el("span", "sheetview-place");
+    this.place.dataset.sheetPlace = "";
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.followLabel, this.linkSelect, float, close, this.layerPop);
+    bar.append(
+      this.picker,
+      this.sheetButtons.prev,
+      this.place,
+      this.sheetButtons.next,
+      this.historyButtons.back,
+      this.historyButtons.forward,
+      renderer,
+      this.layersButton,
+      rotate,
+      flipH,
+      flipV,
+      this.followLabel,
+      this.linkSelect,
+      float,
+      close,
+      this.layerPop,
+    );
     this.also = el("div", "sheetview-also");
     this.absentNote = el("span", "sheetview-absent");
     // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
@@ -449,6 +495,7 @@ export class SheetPane {
     this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
     this.followLabel.style.display = this.layerRows.length > 0 ? "" : "none";
     if (this.layerRows.length === 0) this.showLayerPop(false);
+    this.showPlace();
     await this.paint(false);
   }
 
@@ -456,6 +503,7 @@ export class SheetPane {
   // it when its own does not, and centres on it. A view that is off lights it where it is drawn.
   async follow(sel: Selection | null): Promise<void> {
     this.sel = sel;
+    void this.refreshStops();
     this.setAbsent(null);
     if (!sel || this.link === "off") {
       this.drawnOnLast = [];
@@ -517,6 +565,7 @@ export class SheetPane {
   // lightPick takes a selection picked in this view, which it lights and does not move to.
   async lightPick(sel: Selection): Promise<void> {
     this.sel = sel;
+    void this.refreshStops();
     this.setAbsent(null);
     this.drawnOnLast = [];
     this.offer([]);
@@ -544,6 +593,76 @@ export class SheetPane {
       else this.surface.setSvgOverlay(over);
     }
     if (reveal && sel && !this.absent) this.surface.reveal(pinOf(sel), split ? own : undefined);
+  }
+
+  // setHistory enables the view's Back and Forward buttons where the page's selection trail goes
+  // further that way.
+  setHistory(canBack: boolean, canForward: boolean): void {
+    this.historyButtons.back.disabled = !canBack;
+    this.historyButtons.forward.disabled = !canForward;
+  }
+
+  // stepSheet opens the next sheet that draws the selection, or the previous one for a step of -1,
+  // and centres on the selection there (agni issue 1589). With nothing selected it opens the next or
+  // previous sheet. At either end it does nothing. A board view takes no sheet steps.
+  async stepSheet(dir: 1 | -1): Promise<void> {
+    if (this.sheet === BOARD_SHEET) return;
+    const sel = this.sel;
+    const stops = await this.stopsOf(sel);
+    if (this.sel !== sel) return;
+    const step = sheetStep(this.order(), stops, this.sheet);
+    const to = dir > 0 ? step.next : step.prev;
+    if (!to) return;
+    await this.open(to);
+    if (this.sel !== sel) return;
+    this.showPlace();
+    this.setAbsent(null);
+    this.offer(this.drawnOnLast.filter((o) => o !== to));
+    if (sel) await this.paint(true);
+    else this.surface.reveal();
+  }
+
+  // stepPlace is where this view stands among the sheets a step visits, from the last answer.
+  stepPlace(): ReturnType<typeof sheetStep> {
+    return sheetStep(this.order(), this.stopsFor.sel === this.sel ? this.stopsFor.sheets : [], this.sheet);
+  }
+
+  private order(): string[] {
+    return this.deps.sheets().map((s) => s.id);
+  }
+
+  private async stopsOf(sel: Selection | null): Promise<string[]> {
+    if (!sel) return [];
+    if (this.stopsFor.sel === sel) return this.stopsFor.sheets;
+    let sheets: string[] = [];
+    try {
+      sheets = this.deps.stops ? await this.deps.stops(sel) : (await this.deps.drawnOn(sel, false)).sheets;
+    } catch {
+      sheets = [];
+    }
+    if (this.sel === sel) this.stopsFor = { sel, sheets };
+    return sheets;
+  }
+
+  private async refreshStops(): Promise<void> {
+    this.showPlace();
+    if (!this.deps.stops) return;
+    await this.stopsOf(this.sel);
+    this.showPlace();
+  }
+
+  // showPlace enables the sheet steps that go somewhere and reads this view's place, such as "2 of 5".
+  // A board view hides them, since the board is no stop.
+  private showPlace(): void {
+    const onBoard = this.sheet === BOARD_SHEET || !this.sheet;
+    for (const e of [this.sheetButtons.prev, this.place, this.sheetButtons.next]) e.style.display = onBoard ? "none" : "";
+    const step = this.stepPlace();
+    // Before the view knows a selection's sheets, it reads no place and leaves both steps on, since a
+    // step asks.
+    const known = !this.sel || this.stopsFor.sel === this.sel;
+    this.sheetButtons.prev.disabled = known && !step.prev;
+    this.sheetButtons.next.disabled = known && !step.next;
+    this.place.textContent = known ? stepLabel(step) : "";
   }
 
   // offer names the other sheets that draw the selection, each a button that opens it.

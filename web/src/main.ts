@@ -7,6 +7,9 @@ import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from 
 import { CanvasComponent } from "./canvas.js";
 import { type CompareTarget, comparePickerIsland } from "./comparepicker.js";
 import { controlBarIsland } from "./controlbar.js";
+import { stepBarIsland } from "./stepbar.js";
+import { SelectionHistory } from "./selectionhistory.js";
+import { sheetStep, stepLabel } from "./sheetstep.js";
 import { sheetTabsIsland } from "./sheettabs.js";
 import { findingsPanelIsland } from "./findingspanel.js";
 import { rulesPanelIsland } from "./rulespanel.js";
@@ -47,7 +50,7 @@ import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
-import { glDrawing, parseTurn, turnKey, type Located } from "./sheetpane.js";
+import { glDrawing, parseTurn, turnKey, type Located, type SheetPane } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
@@ -65,7 +68,7 @@ import { hierarchyStrip } from "./hierarchy.js";
 import { drawingStrip } from "./drawingnote.js";
 import { labelFor, pinOf, selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
-import { PropertiesPresenter, subjectOf } from "./propertiespresenter.js";
+import { PropertiesPresenter, areaSubjects, subjectOf } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
 import { pageApi, type ViewerPageAPI } from "./pageapi.js";
 import { pageDispatcher } from "./pageservice.js";
@@ -398,6 +401,17 @@ class AppRoot extends BaseComponent {
     const sheetTabs = sheetTabsIsland(sheetTabsEl, this._eventBus, {
       onSelect: (id) => void presenter.showSheet(id),
     });
+    // The step bar steps back and forward through what was selected (agni issue 1588), and through
+    // the sheets that draw the selection (agni issue 1589). Its handlers are defined further down.
+    const stepsEl = document.getElementById("steps");
+    const stepBar = stepsEl
+      ? stepBarIsland(stepsEl, {
+          onBack: () => stepHistory(-1),
+          onForward: () => stepHistory(1),
+          onPrev: () => void stepSheet(-1),
+          onNext: () => void stepSheet(1),
+        })
+      : null;
     // The control bar holds the render-mode buttons and the layout selector. It is a Solid island.
     // It renders from the ControlsState the presenter pushes, and it emits mode/layout intents back
     // up.
@@ -645,6 +659,11 @@ class AppRoot extends BaseComponent {
       onSelect: (focus) => {
         const from = pickedIn;
         pickedIn = "";
+        // The trail records each selection, but neither a step along it nor a clear (agni issue 1588).
+        const sel = focus.level === "entity" ? focus.sel : null;
+        if (sel && !replaying) selections.push(sel);
+        selected = sel;
+        void refreshStops();
         setBoardAbsentNote(null);
         // An agent hears which view the reader picked in (agni issue 1370), so it can tell a pick on
         // the board view from one on the schematic.
@@ -694,6 +713,101 @@ class AppRoot extends BaseComponent {
       const focus = presenter.locatedFocus();
       surface.reveal(pinOf(sel), focus.length > 0 ? focus : undefined);
     };
+    // selections is the trail of what the reader selected (agni issue 1588). selected is the current
+    // selection, and replaying is set while a step selects one again, so the step records nothing.
+    const selections = new SelectionHistory();
+    let selected: Selection | null = null;
+    let replaying = false;
+    // canvasSheets is the design's sheet order and the sheet on the canvas, as the sheet channel last
+    // said. stepsDesign names the design the trail belongs to.
+    let canvasSheets: { order: string[]; current: string } = { order: [], current: "" };
+    let stepsDesign = "";
+    // stepHistory selects the previous or next selection on the trail again. Every sheet view takes it
+    // as a selection made elsewhere and moves as its link says, and the canvas follows it.
+    const stepHistory = (dir: 1 | -1): void => {
+      const sel = dir < 0 ? selections.back() : selections.forward();
+      if (!sel) return;
+      replaying = true;
+      try {
+        propertiesPresenter.selectEntity(sel);
+      } finally {
+        replaying = false;
+      }
+      void followOnCanvas(sel);
+    };
+    // stopsOf lists the sheets that draw a selection, apart from the board. An area asks about each
+    // part, pin and net in it, and steps through every sheet that draws one (agni issue 1589).
+    const stopsOf = async (sel: Selection): Promise<string[]> => {
+      const subjects = (sel.kind === "area" ? areaSubjects(sel) : [subjectOf(sel)]).filter((s): s is NonNullable<typeof s> => s !== null);
+      if (subjects.length === 0) return [];
+      const resp = await designClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects, board: false });
+      return [...new Set(resp.subjects.flatMap((s) => s.sheetIds))];
+    };
+    // canvasStops holds the last answer for the canvas's sheet steps, so its place reads at once.
+    let canvasStops: { sel: Selection | null; sheets: string[] } = { sel: null, sheets: [] };
+    const refreshStops = async (): Promise<void> => {
+      const sel = selected;
+      showSteps();
+      if (!sel) return;
+      const sheets = await stopsOf(sel).catch(() => [] as string[]);
+      if (selected !== sel) return;
+      canvasStops = { sel, sheets };
+      showSteps();
+    };
+    // showSteps enables each step control that goes somewhere, reads the canvas's place among the
+    // sheets, and tells the sheet views how far the trail goes.
+    const showSteps = (): void => {
+      const known = !selected || canvasStops.sel === selected;
+      const step = sheetStep(canvasSheets.order, known && selected ? canvasStops.sheets : [], canvasSheets.current);
+      stepBar?.view.setState({
+        canBack: selections.canBack(),
+        canForward: selections.canForward(),
+        canPrev: known && step.prev !== undefined,
+        canNext: known && step.next !== undefined,
+        place: known ? stepLabel(step) : "",
+      });
+      sheetViews.setHistory(selections.canBack(), selections.canForward());
+    };
+    // stepSheet opens the canvas's previous or next sheet that draws the selection, and centres on it.
+    // With nothing selected it opens the previous or next sheet.
+    const stepSheet = async (dir: 1 | -1): Promise<void> => {
+      const sel = selected;
+      if (sel && canvasStops.sel !== sel) return;
+      const step = sheetStep(canvasSheets.order, sel ? canvasStops.sheets : [], canvasSheets.current);
+      const to = dir > 0 ? step.next : step.prev;
+      if (!to) return;
+      await presenter.showSheet(to);
+      if (sel && selected === sel) {
+        if (sel.kind === "area") await presenter.locateArea(sel);
+        else await presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+        frameLocated(sel);
+      }
+      showSteps();
+    };
+    // The step keys (agni issues 1588 and 1589). [ and ] step the selection trail, and , and . step
+    // the sheets of the view the reader last pressed in, the canvas until they press in a sheet view.
+    // A text field keeps every key, and a key held with a modifier is the browser's.
+    let steppedView: SheetPane | undefined;
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        const t = e.target as Element | null;
+        const pane = sheetViews.holding(t);
+        if (pane) steppedView = pane;
+        else if (t?.closest?.('[data-dock-panel="canvas"]')) steppedView = undefined;
+      },
+      true,
+    );
+    document.addEventListener("keydown", (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || isTextEntry(e.target)) return;
+      const dir = e.key === "[" || e.key === "," ? -1 : e.key === "]" || e.key === "." ? 1 : 0;
+      if (dir === 0) return;
+      e.preventDefault();
+      if (e.key === "[" || e.key === "]") return stepHistory(dir);
+      const view = steppedView && sheetViews.get(steppedView.id) ? steppedView : undefined;
+      if (view) void view.stepSheet(dir);
+      else void stepSheet(dir);
+    });
     // revealOnCanvas brings the canvas forward and frames a subject a panel located (agni issue 1539).
     // The panel already opened its sheet and lit it.
     const revealOnCanvas = (sel: Selection | null) => {
@@ -745,6 +859,8 @@ class AppRoot extends BaseComponent {
           return resp.content.case === "svg" ? resp.content.value : "";
         },
         drawnOn: drawnOnFor,
+        stops: (sel) => stopsOf(sel),
+        history: { back: () => stepHistory(-1), forward: () => stepHistory(1) },
         // A sheet's turn is kept per design and sheet in this browser (agni issue 1327), so a board
         // view opened again comes back the way the bench has it. Storage can be absent or full, and
         // then the view opens upright.
@@ -947,7 +1063,23 @@ class AppRoot extends BaseComponent {
       canvasPort,
       renderView,
       {
-        sheetNavs: [sheetTabs.view, { setState: (st) => propertiesPresenter.setSheets(st) }],
+        sheetNavs: [
+          sheetTabs.view,
+          { setState: (st) => propertiesPresenter.setSheets(st) },
+          // Another design starts a fresh selection trail (agni issue 1588), and every sheet the canvas
+          // opens moves its place among the sheets.
+          {
+            setState: (st) => {
+              const design = `${st.mount}/${st.path}`;
+              canvasSheets = { order: st.sheets.map((s) => s.id), current: st.activeId };
+              if (design !== stepsDesign) {
+                stepsDesign = design;
+                selections.reset();
+              }
+              showSteps();
+            },
+          },
+        ],
         summary: (text) => propertiesPresenter.setSummary(text),
         controls: controls.view,
         findings: {
@@ -1043,6 +1175,7 @@ class AppRoot extends BaseComponent {
       comparePick.island,
       sheetTabs.island,
       controls.island,
+      ...(stepBar ? [stepBar.island] : []),
       findings.island,
       rules.island,
       diffPanel.island,
