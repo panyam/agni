@@ -49,6 +49,7 @@
       { "name": "Interface profiles", "url": "guide/interface-profiles/" },
       { "name": "Design intent", "url": "guide/design-intent/" },
       { "name": "Datasheets", "url": "guide/datasheets/" },
+      { "name": "Cross-probing", "url": "guide/cross-probing/" },
       { "name": "Running the server", "url": "guide/running-the-server/" },
       { "name": "CLI reference", "url": "guide/cli-reference/" },
       { "name": "Developer guide", "url": "build/", "group": true },

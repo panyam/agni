@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, type SheetPaneDeps } from "./sheetpane.js";
+import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, type Located, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
@@ -33,7 +33,7 @@ function pane(drawnOn: string[], rows: BoardLayerRow[] = ROWS) {
     },
     drawnOn: async (_sel, board) => {
       calls.drawnOn.push(board);
-      return drawnOn;
+      return { sheets: drawnOn };
     },
     specs: () => [{ components: ["U1"] } as unknown as HighlightSpec],
     onPick: vi.fn(),
@@ -123,7 +123,7 @@ describe("a sheet view", () => {
     const { p, deps } = pane(["s2"]);
     await p.open("board");
     await p.follow({ kind: "component", ref: "C7" });
-    deps.drawnOn = async () => ["board"];
+    deps.drawnOn = async () => ({ sheets: ["board"] });
     await p.follow(U1);
     expect(shown(p)).toBe("board");
     expect(p.element.querySelector(".sheetview-absent")?.textContent ?? "").toBe("");
@@ -186,12 +186,12 @@ describe("a sheet view", () => {
 
   it("drops an answer for a selection the reader has already replaced", async () => {
     const { p, deps } = pane([]);
-    let release: (v: string[]) => void = () => {};
+    let release: (v: Located) => void = () => {};
     deps.drawnOn = () => new Promise((r) => (release = r));
     await p.open("s1");
     const first = p.follow(U1);
     const second = p.lightPick({ kind: "component", ref: "R1" });
-    release(["s3"]);
+    release({ sheets: ["s3"] });
     await Promise.all([first, second]);
     expect(shown(p)).toBe("s1");
   });
@@ -530,7 +530,7 @@ describe("a sheet view in WebGL", () => {
         overlays++;
         return `<svg width="100" height="100"><circle r="1"/></svg>`;
       },
-      drawnOn: async () => drawnOn,
+      drawnOn: async () => ({ sheets: drawnOn }),
       specs: () => [{ components: ["U1"] } as unknown as HighlightSpec],
       onPick: vi.fn(),
       onPickEmpty: vi.fn(),
@@ -607,5 +607,94 @@ describe("a sheet view in WebGL", () => {
     expect(calls).toContain("dispose");
     expect(asked).toEqual(["board webgl", "board svg"]);
     expect(p.element.dataset.renderer).toBe("svg");
+  });
+});
+
+// agni issue 1587: a board view turns to the side a selection is on and shows the copper it uses.
+describe("a board view following a selection's side and layers", () => {
+  const SIDED = [
+    ["F.Cu", "copper", "front"],
+    ["In1.Cu", "copper", "inner"],
+    ["B.Cu", "copper", "back"],
+    ["F.SilkS", "silk", "front"],
+    ["B.SilkS", "silk", "back"],
+  ].map(([name, kind, side]) => ({ name, kind, side, color: "", svgSelector: `[data-layer="${name}"]`, groups: [] }) as unknown as BoardLayerRow);
+  const C9: Selection = { kind: "component", ref: "C9" };
+  const R1: Selection = { kind: "component", ref: "R1" };
+  const N1: Selection = { kind: "net", net: "N1" };
+  const facts: Record<string, Located> = {
+    C9: { sheets: ["s1", "board"], board: { part: true, side: "back", layers: ["B.Cu"] } },
+    R1: { sheets: ["s1", "board"], board: { part: true, side: "front", layers: ["F.Cu"] } },
+    N1: { sheets: ["s1", "board"], board: { part: false, side: "", layers: ["In1.Cu"] } },
+  };
+  const onBoard = async () => {
+    localStorage.removeItem(FOLLOW_SIDE_KEY);
+    const { p, deps } = pane([], SIDED);
+    deps.drawnOn = async (sel) => facts[sel.ref ?? sel.net ?? ""];
+    await p.open("board");
+    return p;
+  };
+  const hide = (p: SheetPane, name: string) => {
+    (p.element.querySelector('[data-action="layers"]') as HTMLButtonElement).click();
+    ([...p.element.querySelectorAll(".board-layer-row")].find((r) => r.textContent === name) as HTMLElement).click();
+  };
+  const followBox = (p: SheetPane) => p.element.querySelector('[data-action="follow-side"]') as HTMLInputElement;
+
+  it("turns over for a bottom part and shows its copper and silkscreen, and back for a top part", async () => {
+    const p = await onBoard();
+    hide(p, "B.Cu");
+    hide(p, "B.SilkS");
+    await p.follow(C9);
+    expect(p.element.dataset.side).toBe("back");
+    expect(p.hiddenLayersOf().has("B.Cu")).toBe(false);
+    expect(p.hiddenLayersOf().has("B.SilkS")).toBe(false);
+    await p.follow(R1);
+    expect(p.element.dataset.side).toBe("front");
+  });
+
+  it("shows an inner-layer net's layer and keeps the side and every other choice", async () => {
+    const p = await onBoard();
+    hide(p, "In1.Cu");
+    hide(p, "F.SilkS");
+    (p.element.querySelector('[data-action="flip-h"]') as HTMLButtonElement).click();
+    await p.follow(N1);
+    expect(p.element.dataset.side).toBe("back");
+    expect([...p.hiddenLayersOf()]).toEqual(["F.SilkS"]);
+  });
+
+  it("keeps a side the reader set by hand until the next selection", async () => {
+    const p = await onBoard();
+    await p.follow(C9);
+    (p.element.querySelector('[data-action="flip-h"]') as HTMLButtonElement).click();
+    expect(p.element.dataset.side).toBe("front");
+    await p.follow(N1);
+    expect(p.element.dataset.side).toBe("front");
+    await p.follow(C9);
+    expect(p.element.dataset.side).toBe("back");
+  });
+
+  it("changes neither side nor layers with its control off, and remembers that", async () => {
+    const p = await onBoard();
+    expect(followBox(p).checked).toBe(true);
+    followBox(p).click();
+    expect(followBox(p).checked).toBe(false);
+    hide(p, "B.Cu");
+    hide(p, "In1.Cu");
+    await p.follow(C9);
+    await p.follow(N1);
+    expect(p.element.dataset.side).toBe("front");
+    expect(p.hiddenLayersOf()).toEqual(new Set(["B.Cu", "In1.Cu"]));
+    const { p: next } = pane([], SIDED);
+    await next.open("board");
+    expect(followBox(next).checked).toBe(false);
+    localStorage.removeItem(FOLLOW_SIDE_KEY);
+  });
+
+  it("offers its control on the board alone", async () => {
+    const p = await onBoard();
+    const label = followBox(p).parentElement as HTMLElement;
+    expect(label.style.display).toBe("");
+    await p.open("s1");
+    expect(label.style.display).toBe("none");
   });
 });

@@ -19,6 +19,9 @@ import (
 // subjects is an invalid argument, since an empty answer would read as "drawn nowhere". A design
 // with no board answers without the board sheet rather than failing, because "board" asks where the
 // subject is drawn and a board-less design draws it on no board.
+//
+// When it reads the board, it also names the side each part or pin sits on and the copper layers
+// each subject uses, so a board view can turn to a selection and show it (agni issue 1587).
 func (s *DesignService) LocateSubjects(ctx context.Context, req *webapi.LocateSubjectsRequest) (*webapi.LocateSubjectsResponse, error) {
 	if len(req.GetSubjects()) == 0 {
 		return nil, fmt.Errorf("%w: name at least one subject to locate", ErrInvalidArgument)
@@ -50,6 +53,8 @@ func (s *DesignService) LocateSubjects(ctx context.Context, req *webapi.LocateSu
 		if len(out.SheetIds) == 0 {
 			out.LocateReason = ix.reasonFor(sub, m)
 		}
+		out.BoardSide = ix.board.sideOf(sub)
+		out.BoardLayers = ix.board.layersOf(sub)
 		resp.Subjects[i] = out
 	}
 	return resp, nil

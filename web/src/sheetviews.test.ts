@@ -36,7 +36,7 @@ function setup(drawnOn: string[] = ["s1"], modes: { canvas?: "svg" | "webgl"; bo
       },
       drawnOn: async (sel) => {
         asked.push(sel.ref ?? "");
-        return drawnOn;
+        return { sheets: drawnOn };
       },
       specs: () => [{}] as never,
     },

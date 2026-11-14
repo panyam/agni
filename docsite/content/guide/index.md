@@ -22,5 +22,6 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Interface profiles](interface-profiles/)** declares a bus's signals and checks every design against it.
 - **[Design intent](design-intent/)** declares what a board is supposed to contain, and catches it drifting.
 - **[Datasheets](datasheets/)** compares a design against a part's real limits.
+- **[Cross-probing a schematic and its board](cross-probing/)** opens the board beside the schematic, and the board turns to each part's side.
 - **[Running the server](running-the-server/)** brings the viewer up with Docker over your mounted designs.
 - **[CLI reference](cli-reference/)** lists every command and flag.

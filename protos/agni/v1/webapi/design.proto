@@ -601,4 +601,14 @@ message SubjectSheets {
   repeated string sheet_ids = 2;
   // locate_reason is UNSPECIFIED when sheet_ids is not empty.
   agni.v1.checks.LocateReason locate_reason = 3;
+  // board_side is the side of the board a part or pin sits on, "front" or "back", so a board view
+  // can turn to it (agni issue 1587). It is "" for a net, for a subject the board does not place,
+  // for a part whose board states no side, and when the request did not read the board.
+  string board_side = 4;
+  // board_layers are the copper layers that carry the subject, named as the board's layer rows name
+  // them, so a board view can show them (agni issue 1587). A net lists the layers its tracks, copper
+  // shapes, zones and single-layer pads use. A part or pin lists the copper layer it is placed on.
+  // Through-hole pads and vias add no layer, because each spans the stack and the board view's
+  // Through row draws it. Empty when the request did not read the board.
+  repeated string board_layers = 5;
 }

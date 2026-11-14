@@ -241,3 +241,77 @@ func TestLocateSubjectsJoinsAnEDIFNetlistToAnODBJob(t *testing.T) {
 		}
 	}
 }
+
+// sideFixture is locateFixture's design on a board that places U1 on the back and R1 on the front,
+// routes N1 on F.Cu and In2.Cu, and lists each pad's mask layer, as KiCad does.
+func sideFixture() (*ir.Design, *geom.SchematicGeometry, *geom.BoardGeometry) {
+	d, g, _ := locateFixture()
+	pad := func(n, net string, layers ...string) *geom.Pad {
+		return &geom.Pad{Number: n, Net: net, At: &geom.Point{}, Layers: layers}
+	}
+	b := &geom.BoardGeometry{
+		Layers: []*geom.BoardLayer{{Name: "F.Cu", Kind: "signal"}, {Name: "In1.Cu", Kind: "signal"}, {Name: "In2.Cu", Kind: "signal"},
+			{Name: "B.Cu", Kind: "signal"}, {Name: "F.Mask", Kind: "user"}, {Name: "B.Mask", Kind: "user"}},
+		Placements: []*geom.ComponentPlacement{
+			{RefDes: "U1", Layer: "B.Cu", Mirror: true, At: &geom.Point{},
+				Pads: []*geom.Pad{pad("1", "N1", "B.Cu", "B.Mask"), pad("5", "N5", "*.Cu", "*.Mask"), pad("6", "GND", "B.Cu", "B.Mask")}},
+			{RefDes: "R1", Layer: "F.Cu", At: &geom.Point{}, Pads: []*geom.Pad{pad("1", "N1", "F.Cu", "F.Mask"), pad("2", "N5", "*.Cu")}},
+		},
+		Nets: []*geom.NetCopper{
+			{Net: "N1", Segments: []*geom.TrackSegment{
+				{A: &geom.Point{}, B: &geom.Point{X: 1}, Layer: "In2.Cu"},
+				{A: &geom.Point{}, B: &geom.Point{X: 1}, Layer: "F.Cu"}}},
+			{Net: "N5", Vias: []*geom.Via{{At: &geom.Point{}, LayerFrom: "F.Cu", LayerTo: "B.Cu"}}},
+		},
+		Zones: []*geom.Zone{{Net: "GND", Layer: "In1.Cu", Outline: &geom.Polyline{}}},
+	}
+	return d, g, b
+}
+
+// A board view turns to a part's side and shows the copper a selection uses (agni issue 1587). A
+// pin answers its part's side. A net answers every copper layer its tracks, zones and single-layer
+// pads use, in the layer table's order, and leaves out the mask layers its pads also list. N5 runs
+// through a via and two through-hole pads alone, so it names no layer.
+func TestLocateSubjectsNamesTheBoardSideAndLayers(t *testing.T) {
+	d, g, b := sideFixture()
+	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	subjects := []*checkspb.Subject{part("U1"), part("R1"), pinOf("U1", "6"), netNamed("N1"), netNamed("N5"), netNamed("GND")}
+	type want struct {
+		side   string
+		layers []string
+	}
+	wants := []want{{"back", []string{"B.Cu"}}, {"front", []string{"F.Cu"}}, {"back", []string{"B.Cu"}},
+		{"", []string{"F.Cu", "In2.Cu", "B.Cu"}}, {"", nil}, {"", []string{"In1.Cu", "B.Cu"}}}
+	for _, board := range []bool{true, false} {
+		resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{
+			Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Subjects: subjects, Board: board,
+		})
+		if err != nil {
+			t.Fatalf("LocateSubjects: %v", err)
+		}
+		if len(resp.GetSubjects()) != len(wants) {
+			t.Fatalf("answered %d subjects for %d asked", len(resp.GetSubjects()), len(wants))
+		}
+		for i, s := range resp.GetSubjects() {
+			w := wants[i]
+			if !board {
+				w = want{}
+			}
+			if s.GetBoardSide() != w.side || !slicesEqual(s.GetBoardLayers(), w.layers) {
+				t.Errorf("board=%v %v: side %q layers %v, want %q %v", board, s.GetSubject(), s.GetBoardSide(), s.GetBoardLayers(), w.side, w.layers)
+			}
+		}
+	}
+}
+
+// A part whose board names neither outer layer and does not mirror it has no side, so a board view
+// keeps the side it shows.
+func TestBoardIndexLeavesAnUnstatedSideEmpty(t *testing.T) {
+	ix := newBoardIndex(&geom.BoardGeometry{Placements: []*geom.ComponentPlacement{{RefDes: "J1", Layer: "TOP_SIDE", At: &geom.Point{}}}})
+	if got := ix.sideOf(part("J1")); got != "" {
+		t.Errorf("J1's side = %q, want none", got)
+	}
+	if got := ix.sideOf(part("J9")); got != "" {
+		t.Errorf("an unplaced part's side = %q, want none", got)
+	}
+}

@@ -47,7 +47,7 @@ import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
-import { glDrawing, parseTurn, turnKey } from "./sheetpane.js";
+import { glDrawing, parseTurn, turnKey, type Located } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
@@ -662,17 +662,22 @@ class AppRoot extends BaseComponent {
     // sheet and camera. One opens only when the reader asks, from a tile in the Sheets panel.
     // pickedIn names the view a pick came from, for the selection hook above.
     let pickedIn = "";
-    const drawnOnFor = async (sel: Selection, board: boolean): Promise<string[]> => {
+    // drawnOnFor says where a selection is drawn, and with board set where the board places it, so a
+    // board view can turn to its side and show its layers (agni issue 1587).
+    const drawnOnFor = async (sel: Selection, board: boolean): Promise<Located> => {
       const subject = subjectOf(sel);
-      if (!subject) return [];
+      if (!subject) return { sheets: [] };
       const resp = await designClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects: [subject], board });
-      return resp.subjects[0]?.sheetIds ?? [];
+      const got = resp.subjects[0];
+      const sheets = got?.sheetIds ?? [];
+      if (!board || !got || !sheets.includes("board")) return { sheets };
+      return { sheets, board: { part: sel.kind === "component" || sel.kind === "pin", side: got.boardSide, layers: got.boardLayers } };
     };
     // followOnCanvas moves the canvas to a pick made in a sheet view, by the rule a view follows, and
     // centres on it. A pick on the canvas itself does not move the canvas.
     const followOnCanvas = async (sel: Selection): Promise<void> => {
       const current = presenter.currentSheetId();
-      const { open, absent } = chooseSheet(current, await drawnOnFor(sel, current === "board"));
+      const { open, absent } = chooseSheet(current, (await drawnOnFor(sel, current === "board")).sheets);
       if (absent) {
         await presenter.releaseFocus();
         setBoardAbsentNote(`${labelFor(sel)} is not on the board`);

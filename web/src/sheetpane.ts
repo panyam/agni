@@ -17,6 +17,7 @@ import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from ".
 import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
+import { followBoard, type BoardFacts } from "./boardfollow.js";
 import { delayedBusy, type Busy } from "./busy.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
@@ -54,6 +55,34 @@ export interface TurnStore {
 }
 
 export const BOARD_SHEET = "board";
+
+// Located is where a selection is drawn. sheets lists the sheets that draw it, the board included
+// when it was asked for. board says where the board places it, when the board was read and places it.
+export interface Located {
+  sheets: string[];
+  board?: BoardFacts;
+}
+
+// FOLLOW_SIDE_KEY keeps a reader's choice to turn off a board view's following of side and layers
+// (agni issue 1587). Every board view shares it, and an absent key means on.
+export const FOLLOW_SIDE_KEY = "agni.board.followSide";
+
+function loadFollowSide(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(FOLLOW_SIDE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function saveFollowSide(on: boolean): void {
+  try {
+    if (on) globalThis.localStorage?.removeItem(FOLLOW_SIDE_KEY);
+    else globalThis.localStorage?.setItem(FOLLOW_SIDE_KEY, "off");
+  } catch {
+    // A page without storage forgets the choice on reload.
+  }
+}
 
 // SheetDrawing is one sheet as a pane draws it, the SVG document or, in WebGL, the packed sheet.
 // boardLayers is empty for a schematic sheet.
@@ -106,8 +135,9 @@ export interface SheetPaneDeps {
   render: (sheetId: string, mode: SurfaceMode) => Promise<SheetDrawing>;
   // overlay returns the highlight overlay for specs on a sheet, framed like render's document.
   overlay: (sheetId: string, specs: HighlightSpec[]) => Promise<string>;
-  // drawnOn lists the sheets that draw a selection, the board included when board is set.
-  drawnOn: (sel: Selection, board: boolean) => Promise<string[]>;
+  // drawnOn lists the sheets that draw a selection, the board included when board is set. With
+  // board set it also says where the board places the selection.
+  drawnOn: (sel: Selection, board: boolean) => Promise<Located>;
   // specs is the highlight a selection gets, the canvas's focus style.
   specs: (sel: Selection) => HighlightSpec[];
   onPick: (pane: SheetPane, sel: Selection) => void;
@@ -158,6 +188,11 @@ export class SheetPane {
   private rendererChosen = false;
   private layersChosen = false;
   private readonly flipButtons: Record<"h" | "v", HTMLButtonElement>;
+  // followSide turns a board view to a selection's side and shows its copper layers (agni issue
+  // 1587). followBox is its checkbox, shown on the board alone.
+  private followSide = loadFollowSide();
+  private readonly followBox: HTMLInputElement;
+  private readonly followLabel: HTMLElement;
   private turn: ViewTurn = { orientation: UPRIGHT };
   private readonly linkSelect: HTMLSelectElement;
   private readonly also: HTMLElement;
@@ -255,11 +290,24 @@ export class SheetPane {
     this.webglBox.type = "checkbox";
     this.webglBox.addEventListener("change", () => void this.setRenderer(this.webglBox.checked ? "webgl" : "svg"));
     renderer.append(this.webglBox, doc.createTextNode("WebGL"));
+    // The follow checkbox turns the board to each selection's side and shows its copper layers. Off,
+    // the view keeps the side and layers its reader chose. The choice holds across views and reloads.
+    this.followLabel = el("label", "render-toggle sheetview-follow-side");
+    this.followLabel.title = "turn the board to the side a selection is on, and show the copper layers it uses";
+    this.followBox = el("input", "sheetview-follow-side-box") as HTMLInputElement;
+    this.followBox.type = "checkbox";
+    this.followBox.dataset.action = "follow-side";
+    this.followBox.checked = this.followSide;
+    this.followBox.addEventListener("change", () => {
+      this.followSide = this.followBox.checked;
+      saveFollowSide(this.followSide);
+    });
+    this.followLabel.append(this.followBox, doc.createTextNode("Follow side"));
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
     close.type = "button";
     close.textContent = "Close";
     close.addEventListener("click", () => this.deps.onClose(this));
-    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.linkSelect, float, close, this.layerPop);
+    bar.append(this.picker, renderer, this.layersButton, rotate, flipH, flipV, this.followLabel, this.linkSelect, float, close, this.layerPop);
     this.also = el("div", "sheetview-also");
     this.absentNote = el("span", "sheetview-absent");
     // The stage holds the WebGL canvas and its text layer under the SVG host, as the page's canvas
@@ -399,6 +447,7 @@ export class SheetPane {
     this.applyLayers();
     this.applyTurn();
     this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
+    this.followLabel.style.display = this.layerRows.length > 0 ? "" : "none";
     if (this.layerRows.length === 0) this.showLayerPop(false);
     await this.paint(false);
   }
@@ -414,13 +463,14 @@ export class SheetPane {
       await this.paint(false);
       return;
     }
-    let drawnOn: string[] = [];
+    let located: Located = { sheets: [] };
     try {
-      drawnOn = await this.deps.drawnOn(sel, this.sheet === BOARD_SHEET);
+      located = await this.deps.drawnOn(sel, this.sheet === BOARD_SHEET);
     } catch {
-      drawnOn = [];
+      located = { sheets: [] };
     }
     if (this.sel !== sel) return;
+    const drawnOn = located.sheets;
     const choice = chooseSheet(this.sheet, drawnOn);
     this.drawnOnLast = drawnOn;
     if (choice.open) await this.open(choice.open);
@@ -431,7 +481,20 @@ export class SheetPane {
       await this.paint(false);
       return;
     }
+    if (located.board) this.turnToSelection([located.board]);
     await this.paint(true);
+  }
+
+  // turnToSelection turns a board view to the side its selection is on and shows the copper layers
+  // it uses (agni issue 1587). It only turns layers on, so a layer the reader showed stays, and a
+  // layer the reader hid comes back only when a selection uses it.
+  private turnToSelection(facts: BoardFacts[]): void {
+    if (!this.followSide || this.sheet !== BOARD_SHEET) return;
+    const { side, show } = followBoard(facts, this.layerRows);
+    if (side && (side === "back") !== this.seenFromBelow()) this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") });
+    if ([...show].some((name) => this.hiddenLayers.has(name))) {
+      this.setHiddenLayers(new Set([...this.hiddenLayers].filter((name) => !show.has(name))));
+    }
   }
 
   // setUnderlay lays the page's highlight under the selection's in this view, and an empty list
