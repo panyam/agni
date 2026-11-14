@@ -473,11 +473,15 @@ class LocateSubjectsResponse(_message.Message):
     def __init__(self, subjects: _Optional[_Iterable[_Union[SubjectSheets, _Mapping]]] = ...) -> None: ...
 
 class SubjectSheets(_message.Message):
-    __slots__ = ("subject", "sheet_ids", "locate_reason")
+    __slots__ = ("subject", "sheet_ids", "locate_reason", "board_side", "board_layers")
     SUBJECT_FIELD_NUMBER: _ClassVar[int]
     SHEET_IDS_FIELD_NUMBER: _ClassVar[int]
     LOCATE_REASON_FIELD_NUMBER: _ClassVar[int]
+    BOARD_SIDE_FIELD_NUMBER: _ClassVar[int]
+    BOARD_LAYERS_FIELD_NUMBER: _ClassVar[int]
     subject: _checks_pb2.Subject
     sheet_ids: _containers.RepeatedScalarFieldContainer[str]
     locate_reason: _checks_pb2.LocateReason
-    def __init__(self, subject: _Optional[_Union[_checks_pb2.Subject, _Mapping]] = ..., sheet_ids: _Optional[_Iterable[str]] = ..., locate_reason: _Optional[_Union[_checks_pb2.LocateReason, str]] = ...) -> None: ...
+    board_side: str
+    board_layers: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, subject: _Optional[_Union[_checks_pb2.Subject, _Mapping]] = ..., sheet_ids: _Optional[_Iterable[str]] = ..., locate_reason: _Optional[_Union[_checks_pb2.LocateReason, str]] = ..., board_side: _Optional[str] = ..., board_layers: _Optional[_Iterable[str]] = ...) -> None: ...

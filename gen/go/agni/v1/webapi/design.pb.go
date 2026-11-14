@@ -2958,7 +2958,17 @@ type SubjectSheets struct {
 	// and then "board". Empty means drawn nowhere, and locate_reason says why.
 	SheetIds []string `protobuf:"bytes,2,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	// locate_reason is UNSPECIFIED when sheet_ids is not empty.
-	LocateReason  checks.LocateReason `protobuf:"varint,3,opt,name=locate_reason,json=locateReason,proto3,enum=agni.v1.checks.LocateReason" json:"locate_reason,omitempty"`
+	LocateReason checks.LocateReason `protobuf:"varint,3,opt,name=locate_reason,json=locateReason,proto3,enum=agni.v1.checks.LocateReason" json:"locate_reason,omitempty"`
+	// board_side is the side of the board a part or pin sits on, "front" or "back", so a board view
+	// can turn to it (agni issue 1587). It is "" for a net, for a subject the board does not place,
+	// for a part whose board states no side, and when the request did not read the board.
+	BoardSide string `protobuf:"bytes,4,opt,name=board_side,json=boardSide,proto3" json:"board_side,omitempty"`
+	// board_layers are the copper layers that carry the subject, named as the board's layer rows name
+	// them, so a board view can show them (agni issue 1587). A net lists the layers its tracks, copper
+	// shapes, zones and single-layer pads use. A part or pin lists the copper layer it is placed on.
+	// Through-hole pads and vias add no layer, because each spans the stack and the board view's
+	// Through row draws it. Empty when the request did not read the board.
+	BoardLayers   []string `protobuf:"bytes,5,rep,name=board_layers,json=boardLayers,proto3" json:"board_layers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3012,6 +3022,20 @@ func (x *SubjectSheets) GetLocateReason() checks.LocateReason {
 		return x.LocateReason
 	}
 	return checks.LocateReason(0)
+}
+
+func (x *SubjectSheets) GetBoardSide() string {
+	if x != nil {
+		return x.BoardSide
+	}
+	return ""
+}
+
+func (x *SubjectSheets) GetBoardLayers() []string {
+	if x != nil {
+		return x.BoardLayers
+	}
+	return nil
 }
 
 var File_agni_v1_webapi_design_proto protoreflect.FileDescriptor
@@ -3207,11 +3231,14 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bsubjects\x18\x02 \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjects\x12\x14\n" +
 	"\x05board\x18\x03 \x01(\bR\x05board\"S\n" +
 	"\x16LocateSubjectsResponse\x129\n" +
-	"\bsubjects\x18\x01 \x03(\v2\x1d.agni.v1.webapi.SubjectSheetsR\bsubjects\"\xa2\x01\n" +
+	"\bsubjects\x18\x01 \x03(\v2\x1d.agni.v1.webapi.SubjectSheetsR\bsubjects\"\xe4\x01\n" +
 	"\rSubjectSheets\x121\n" +
 	"\asubject\x18\x01 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x12\x1b\n" +
 	"\tsheet_ids\x18\x02 \x03(\tR\bsheetIds\x12A\n" +
-	"\rlocate_reason\x18\x03 \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\flocateReason*s\n" +
+	"\rlocate_reason\x18\x03 \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\flocateReason\x12\x1d\n" +
+	"\n" +
+	"board_side\x18\x04 \x01(\tR\tboardSide\x12!\n" +
+	"\fboard_layers\x18\x05 \x03(\tR\vboardLayers*s\n" +
 	"\vSheetFormat\x12\x1c\n" +
 	"\x18SHEET_FORMAT_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SHEET_FORMAT_PACKED\x10\x01\x12\x14\n" +
