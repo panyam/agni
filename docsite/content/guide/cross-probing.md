@@ -39,3 +39,40 @@ across reloads.
 
 The sides and layers come from the engine. `LocateSubjects` reads the board and answers each
 selection's side and copper layers along with the sheets that draw it (agni issue 1587).
+
+## Step back to what you selected before
+
+Say you follow a fault from a connector pin to a protection diode, then to a regulator, then to its
+feedback divider. You want to get back to the connector. Press `[` to step back one selection at a
+time, and `]` to step forward again. **← Back** and **Forward →** in the canvas bar do the same, and
+so do the arrows in each sheet view's bar. Each step selects that part or net again in every view, and
+each view moves to it as its link says.
+
+The viewer keeps the last 100 selections. A new selection made after stepping back drops the ones
+ahead of it, as a browser's Back does. Clearing the selection with Escape adds nothing. Opening
+another design starts again (agni issue 1588).
+
+## Step through the sheets that draw the selection
+
+Say a net crosses six sheets. Press `.` to open the next sheet that draws it, and `,` to go back.
+The view centres on the net each time and reads where you are, such as "3 of 6". The **‹** and **›**
+buttons beside that count do the same. The steps follow the design's sheet order and stop at the
+first and last sheet. The board is never a step. An area selection steps through every sheet that
+draws any part or net in it. With nothing selected, the same keys move to the next and previous
+sheet (agni issue 1589).
+
+The keys step the view you last pressed in. That is the canvas until you press in a sheet view
+beside it. Then that view steps, and the canvas does not move.
+
+## Keys
+
+| Key | What it does |
+| --- | --- |
+| `[` | Step back to the previous selection |
+| `]` | Step forward to the next selection |
+| `,` | Open the previous sheet that draws the selection |
+| `.` | Open the next sheet that draws the selection |
+| Escape | Clear the selection |
+
+None of these keys does anything while you are typing in a text field, such as the query box. A key
+held with Ctrl, Cmd or Alt is left to the browser, so Alt+Left and Cmd+[ still go back a page.

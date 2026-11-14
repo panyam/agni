@@ -24,7 +24,8 @@
 // checkbox (data-action="follow-side") is off. The steps for #1588 to #1595 name the controls those
 // tickets build, and wait on them:
 // - data-action="selection-back" and "selection-forward" step through what was selected (#1588)
-// - data-action="next-sheet" opens the next sheet that draws the selection (#1589)
+// - data-action="prev-sheet" and "next-sheet" open the previous and next sheet that draws the
+//   selection, and [data-sheet-place] reads where the canvas is among them, such as "2 of 4" (#1589)
 // - data-action="agreement" opens [data-agreement], which counts the parts both views place (#1590)
 // - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
 // - a board layer row states its thickness in [data-thickness] (#1592)
@@ -50,7 +51,7 @@ import { join } from "node:path";
 import { launch, viewportFor } from "./browser.js";
 import { showPanel } from "./panels.js";
 import { exitCode, table, waitedOn, type Row } from "./exercise-report.js";
-import { PANE, TITLE, centreOf, centredIn, clearPoint, extent, lit, openBeside, picked, zoomTo } from "./picks.js";
+import { PANE, TITLE, centreOf, centredIn, clearPoint, clickableNet, extent, findIn, lit, openBeside, picked, zoomTo } from "./picks.js";
 
 const base = (): string => inject("baseUrl");
 // Each walk names a part to click on the schematic, a footprint to click on the board, and a net to
@@ -129,6 +130,42 @@ async function onScreen(page: Page, host: string, name: string): Promise<void> {
   if (b.x + b.width < 0 || b.y + b.height < 0 || b.x > vp.width || b.y > vp.height) throw new Error(`the ${name} view is off screen`);
 }
 
+// stepThrough steps the canvas back to the first sheet that draws the selection, then forward through
+// each one to the last, checking each is lit and reads its place, then back one. It returns the
+// sheets in the order it visited them (agni issue 1589).
+async function stepThrough(page: Page): Promise<string[]> {
+  const placeOf = async () => {
+    await page.waitForFunction(() => /^\d+ of \d+$/.test(document.querySelector("#steps [data-sheet-place]")?.textContent ?? ""), null, { timeout: 10_000 });
+    const [at, of] = ((await page.locator("#steps [data-sheet-place]").textContent()) ?? "").split(" of ").map(Number);
+    return { at, of };
+  };
+  const tile = async () => ((await page.locator(".sheet-tile.active .sheet-tile-name").textContent()) ?? "").trim();
+  const press = async (action: string, from: string) => {
+    await page.locator(`#steps [data-action="${action}"]`).click({ timeout: 5_000 });
+    await page.waitForFunction((b) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent?.trim() !== b, from, { timeout: 15_000 });
+    await lit(page, SHEET);
+  };
+  let { at, of } = await placeOf();
+  if (of < 2) throw new Error(`the selection is drawn on ${of} sheet`);
+  while (at > 1) {
+    await press("prev-sheet", await tile());
+    const now = await placeOf();
+    if (now.at !== at - 1) throw new Error(`previous went from ${at} of ${of} to ${now.at} of ${now.of}`);
+    at = now.at;
+  }
+  const visited = [await tile()];
+  for (let n = 2; n <= of; n++) {
+    await press("next-sheet", visited[visited.length - 1]);
+    const now = await placeOf();
+    if (now.at !== n) throw new Error(`next read ${now.at} of ${now.of} on ${await tile()}, not ${n} of ${of}`);
+    visited.push(await tile());
+  }
+  if (!(await page.locator('#steps [data-action="next-sheet"]').isDisabled())) throw new Error("next is still on at the last sheet");
+  await press("prev-sheet", visited[visited.length - 1]);
+  if ((await tile()) !== visited[visited.length - 2]) throw new Error(`previous opened ${await tile()}, not ${visited[visited.length - 2]}`);
+  return visited;
+}
+
 // The other side of the board from side.
 const opposite = (side: string): string => (side === "back" ? "front" : "back");
 
@@ -182,91 +219,6 @@ async function centres(page: Page, el: string, host: string, name: string): Prom
   });
   if (!(await centredIn(page, el, host))) throw new Error(`${name} is off the middle of the view`);
   return `${name} lit and centred`;
-}
-
-// netPoint finds a point on any of a net's copper in a host that the picker reads as that net
-// alone, or null. It tries each piece's two diagonals and its midlines, so a track at any angle has
-// points on it.
-async function netPoint(page: Page, host: string, name: string): Promise<{ x: number; y: number } | null> {
-  return page.evaluate(
-    ({ host, name }) => {
-      const keyed = (e: Element | null) => e?.closest("[data-kind]") ?? null;
-      const mine = (e: Element | null) => !e || (e.getAttribute("data-kind") === "net" && e.getAttribute("data-net") === name);
-      const h = document.querySelector(host)!.getBoundingClientRect();
-      // The viewer's picker looks a few pixels around a click and takes a pad over a track, so the
-      // point needs the whole ring clear of anything but this net's copper.
-      const ring = [-6, -3, 0, 3, 6];
-      for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
-        if (el.getAttribute("data-net") !== name) continue;
-        const r = el.getBoundingClientRect();
-        for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8]) {
-          const along = [
-            [r.left + r.width * f, r.top + r.height * f],
-            [r.left + r.width * f, r.bottom - r.height * f],
-            [r.left + r.width * f, r.top + r.height / 2],
-            [r.left + r.width / 2, r.top + r.height * f],
-          ];
-          for (const [px, py] of along) {
-            const x = Math.round(px), y = Math.round(py);
-            if (x < h.left + 8 || x > h.right - 8 || y < h.top + 8 || y > h.bottom - 8) continue;
-            const c = keyed(document.elementFromPoint(x, y));
-            if (c && mine(c) && ring.every((dx) => ring.every((dy) => mine(keyed(document.elementFromPoint(x + dx, y + dy)))))) return { x, y };
-          }
-        }
-      }
-      return null;
-    },
-    { host, name },
-  );
-}
-
-// findIn zooms a view out from its middle until an element's centre is inside it. A view that is
-// still drawing its sheet has no box for the element yet, so findIn gives it a few seconds.
-async function findIn(page: Page, host: string, el: string): Promise<void> {
-  for (let i = 0, waited = 0; i < 15; i++) {
-    const h = await page.locator(host).first().boundingBox();
-    const b = await page.locator(el).first().boundingBox();
-    if ((!h || !b) && waited < 20) {
-      waited++;
-      i--;
-      await page.waitForTimeout(250);
-      continue;
-    }
-    if (!h || !b) throw new Error(`${el} is not drawn`);
-    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-    if (cx > h.x && cx < h.x + h.width && cy > h.y && cy < h.y + h.height) return;
-    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
-    await page.mouse.wheel(0, 400);
-    await page.waitForTimeout(150);
-  }
-  throw new Error(`${el} stayed out of the view`);
-}
-
-// clickableNet finds a point on a net's copper to click, zooming the view in on the middle of the
-// net's longest piece in it until one is clear of the pads and labels around it, as a reader would.
-async function clickableNet(page: Page, host: string, name: string): Promise<{ x: number; y: number }> {
-  for (let i = 0; i < 10; i++) {
-    const at = await netPoint(page, host, name);
-    if (at) return at;
-    const t = await page.evaluate(({ host, name }) => {
-      const h = document.querySelector(host)!.getBoundingClientRect();
-      let best: { x: number; y: number; long: number } | undefined;
-      for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
-        if (el.getAttribute("data-net") !== name) continue;
-        const r = el.getBoundingClientRect();
-        const x = r.left + r.width / 2, y = r.top + r.height / 2;
-        if (x < h.left || x > h.right || y < h.top || y > h.bottom) continue;
-        const long = Math.max(r.width, r.height);
-        if (!best || long > best.long) best = { x, y, long };
-      }
-      return best;
-    }, { host, name });
-    if (!t) throw new Error(`${name} has no copper in the view`);
-    await page.mouse.move(t.x, t.y);
-    await page.mouse.wheel(0, -400);
-    await page.waitForTimeout(200);
-  }
-  throw new Error(`no point on ${name}'s copper picks only that net, even zoomed in`);
 }
 
 // inReach lists every visible control in a panel that a reader cannot reach (agni issue 1397). A
@@ -522,25 +474,23 @@ for (const name of chosen) {
           return `clicked ${part.ref} and ${inner.net}, and the view kept its ${side} and left ${inner.layer} hidden`;
         });
 
-        // The rest of the mission (#1586). Each step waits on the ticket that builds it.
-        await step(`step back to ${part.ref}`, { needs: ["with Follow side off, the board stays put"], waitsOn: ["#1588"] }, async () => {
-          await page.locator('[data-action="selection-back"]').first().click({ timeout: 5_000 });
+        // The rest of the mission (#1586). Each step waits on the ticket that builds it, and the canvas
+        // bar's step controls (#steps) built #1588 and #1589.
+        await step(`step back to ${part.ref}`, { needs: ["with Follow side off, the board stays put"] }, async () => {
+          await page.locator('#steps [data-action="selection-back"]').click({ timeout: 5_000 });
           await picked(page, part.ref);
-          await page.locator('[data-action="selection-forward"]').first().click({ timeout: 5_000 });
+          await page.locator('#steps [data-action="selection-forward"]').click({ timeout: 5_000 });
           await picked(page, inner.net);
           return `stepped back to ${part.ref} and forward to ${inner.net}`;
         });
 
-        await step(`step through the sheets that draw ${acrossSheets}`, { needs: ["two views"], waitsOn: ["#1589"] }, async () => {
-          const before = (await page.locator(".sheet-tile.active .sheet-tile-name").innerText()).trim();
+        await step(`step through the sheets that draw ${acrossSheets}`, { needs: ["two views"] }, async () => {
           await findIn(page, SHEET, `${SHEET} [data-kind="net"][data-net="${acrossSheets}"]`);
           const at = await clickableNet(page, SHEET, acrossSheets);
           await page.mouse.click(at.x, at.y);
           await picked(page, acrossSheets);
-          await page.locator('[data-action="next-sheet"]').first().click({ timeout: 5_000 });
-          await page.waitForFunction((b) => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent !== b, before, { timeout: 10_000 });
-          await lit(page, SHEET);
-          return `went from ${before} to ${(await page.locator(".sheet-tile.active .sheet-tile-name").innerText()).trim()}`;
+          const visited = await stepThrough(page);
+          return `${acrossSheets} is drawn on ${visited.length} sheets, and next went through ${visited.join(", ")} and previous back again`;
         });
 
         await step("see how well the schematic and the board agree", { needs: ["two views"], waitsOn: ["#1590"] }, async () => {
