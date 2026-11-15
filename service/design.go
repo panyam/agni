@@ -101,15 +101,20 @@ const boardSheetID = "board"
 // It reads the board at the design's resolved board tier. GetDesign looked there when it listed
 // the sheet (C32). Reading at the request URI refused the Board sheet of every design named
 // by its folder or its netlist entry, since neither is the board (agni issue 865).
+//
+// A net the board names differently from the schematic, with the same pins, comes back under the
+// schematic's name (viewRenames, agni issue 1590). So every drawing of the board, its picks and its
+// highlights join that net to the schematic by name, as they join every other net.
 func (s *DesignService) boardFor(ctx context.Context, snap Snap) (*geom.BoardGeometry, error) {
-	b, err := LoaderOr(snap, s.loader).Board(ctx, snap.BoardRead())
+	loader := LoaderOr(snap, s.loader)
+	b, err := loader.Board(ctx, snap.BoardRead())
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
 	if b == nil {
 		return nil, fmt.Errorf("%w: no board geometry for this file", ErrNotFound)
 	}
-	return b, nil
+	return renamedBoard(b, viewRenames(ctx, loader, snap, b)), nil
 }
 
 // styleOrDefault is the service's theme, falling back so a service constructed without one

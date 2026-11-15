@@ -542,6 +542,17 @@ the CLI transport gets the engine's rows rather than deriving its own (agni issu
 Structural diff between two revisions, over the IR. See
 [Comparing revisions](../comparing-revisions/).
 
+With one argument, `diff <design>` compares the design's schematic with its board instead. It prints
+how many parts, pins and nets the two share, then the lists of what did not match. A design with no
+board reads `Not compared`. `--format json` is the `DiffDesignsResponse`, with the counts in `views`.
+`--format csv`, `--rename-approx`, `--include-equal` and `--order-by` apply to two revisions only.
+[Cross-probing](../cross-probing/#check-that-the-schematic-and-the-board-agree) has the matching
+rules (agni issue 1590).
+
+```
+agni diff examples/cross-probe-project/designs/jetson-cut
+```
+
 | flag | what it does |
 |---|---|
 | `--format <fmt>` | `text` (default human summary), `json`, or `csv` (one row per change, with a `change_class` column naming which kind it is) |

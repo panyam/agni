@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/num"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // sharedPlacementCap bounds the alignment sample (WS9-007) to enough shared components to judge
@@ -49,7 +51,15 @@ func NewDiffService(loader DesignLoader, projects *ProjectResolver) *DiffService
 // highlight maps. Either side failing to load fails the whole call with the classified error
 // (unknown mount -> ErrNotFound, escaping path or parse failure -> invalid argument); there
 // is no partial diff.
+//
+// With views_snapshot set it compares one design's schematic with its board instead (CompareViews).
 func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error) {
+	if req.GetViewsSnapshot() != "" {
+		if req.GetASnapshot() != "" || req.GetBSnapshot() != "" {
+			return nil, fmt.Errorf("%w: views_snapshot compares one design's own views, so name it alone, without a_snapshot or b_snapshot", ErrInvalidArgument)
+		}
+		return s.compareViews(ctx, req.GetViewsSnapshot())
+	}
 	// Each side is its own snapshot with its own config, because a diff may span two projects, and
 	// each side's reads are recorded on its own snapshot.
 	actx, as, err := s.projects.Snapshot(ctx, req.GetASnapshot())
@@ -268,5 +278,58 @@ func AppendEqualNets(resp *webapi.DiffDesignsResponse, r *diff.Report) {
 		resp.Report.Nets = append(resp.Report.Nets, &webapi.DiffReport_NetChange{
 			Kind: string(nc.Kind), Name: nc.Name, OldProv: nc.OldProv, NewProv: nc.NewProv,
 		})
+	}
+}
+
+// compareViews says how well a design's schematic and its board agree (agni issue 1590). The
+// schematic is the old side of the report and the board the new one. A design that lacks either
+// view, or whose view fails to read, answers not compared with the reason, rather than failing,
+// so a viewer can say why it shows no count. An unknown snapshot still fails.
+func (s *DiffService) compareViews(ctx context.Context, name string) (*webapi.DiffDesignsResponse, error) {
+	ctx, snap, err := s.projects.Snapshot(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	notCompared := func(why string) (*webapi.DiffDesignsResponse, error) {
+		return &webapi.DiffDesignsResponse{Report: &webapi.DiffReport{}, Views: &webapi.ViewAgreement{NotCompared: why}}, nil
+	}
+	if !snap.twoViews() {
+		if formats.HasBoard(snap.Netlist.Path) {
+			return notCompared("the design is its board alone, with no schematic to compare it with")
+		}
+		return notCompared("the design has no board to compare its schematic with")
+	}
+	loader := LoaderOr(snap, s.loader)
+	bl, ok := loader.(boardReader)
+	if !ok {
+		return notCompared("this host reads no boards")
+	}
+	opts := snap.Overlay.ReadOptions()
+	sch, err := loader.Design(ctx, snap.Netlist, opts...)
+	if err != nil {
+		return notCompared("the schematic did not read: " + ClassifyLoadErr(err).Error())
+	}
+	b, err := bl.Board(ctx, snap.BoardRead())
+	if err != nil {
+		return notCompared("the board did not read: " + ClassifyLoadErr(err).Error())
+	}
+	if b == nil {
+		return notCompared("the design has no board to compare its schematic with")
+	}
+	v := diff.Views(sch, b)
+	resp := DiffResponseProto(v.Report)
+	resp.Views = viewAgreementProto(v)
+	annotateDiffSheets(resp, check.NewModel(sch), BuildGeometry(ctx, loader, snap.Geometry, opts...), nil, nil)
+	return resp, nil
+}
+
+// viewAgreementProto is the wire form of a diff.ViewReport's counts.
+func viewAgreementProto(v *diff.ViewReport) *webapi.ViewAgreement {
+	t := func(x diff.Tally) *webapi.ViewAgreement_Tally {
+		return &webapi.ViewAgreement_Tally{Matched: num.Int32(x.Matched), Schematic: num.Int32(x.Schematic), Board: num.Int32(x.Board)}
+	}
+	return &webapi.ViewAgreement{
+		Compared: true, Parts: t(v.Parts), Pins: t(v.Pins), Nets: t(v.Nets),
+		SchematicOnlyPins: v.SchematicOnlyPins, BoardOnlyPins: v.BoardOnlyPins,
 	}
 }

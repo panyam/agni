@@ -8,6 +8,8 @@ import { CanvasComponent } from "./canvas.js";
 import { type CompareTarget, comparePickerIsland } from "./comparepicker.js";
 import { controlBarIsland } from "./controlbar.js";
 import { stepBarIsland } from "./stepbar.js";
+import { agreementBarIsland, type AgreementBarState } from "./agreementbar.js";
+import { notCompared, readAgreement, type AgreementEntry } from "./agreement.js";
 import { SelectionHistory } from "./selectionhistory.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import { sheetTabsIsland } from "./sheettabs.js";
@@ -410,6 +412,48 @@ class AppRoot extends BaseComponent {
           onForward: () => stepHistory(1),
           onPrev: () => void stepSheet(-1),
           onNext: () => void stepSheet(1),
+        })
+      : null;
+    // The agreement control says how well the schematic and the board agree (agni issue 1590). The
+    // engine compares them on the jobs lane, which check runs share, so it asks only when the reader
+    // opens the panel or a board view draws beside the schematic, and once per design.
+    // agreementFor names the design the answer is about.
+    let agreementState: AgreementBarState = { agreement: null, busy: false, open: false };
+    let agreementFor = "";
+    const showAgreement = (patch: Partial<AgreementBarState>): void => {
+      agreementState = { ...agreementState, ...patch };
+      agreementBar?.view.setState(agreementState);
+    };
+    const refreshAgreement = async (): Promise<void> => {
+      const design = stepsDesign;
+      if (agreementState.busy || (agreementState.agreement && agreementFor === design)) return;
+      showAgreement({ busy: true });
+      try {
+        const resp = await diffClient().diffDesigns({ viewsSnapshot: await presenter.drawing().snapshot });
+        if (design !== stepsDesign) return;
+        agreementFor = design;
+        showAgreement({ agreement: readAgreement(resp), busy: false });
+      } catch (err) {
+        if (design !== stepsDesign) return;
+        showAgreement({ agreement: notCompared(String(err)), busy: false });
+      }
+    };
+    // A click selects the entry in the view that draws it. A schematic entry moves the canvas as a
+    // step back does. A board entry lights in a board view, and one opens when none is.
+    const pickAgreement = async (e: AgreementEntry): Promise<void> => {
+      const onCanvas = e.view === "schematic" || presenter.currentSheetId() === "board";
+      if (!onCanvas && !sheetViews.list().some((p) => p.sheet === "board")) await sheetViews.open("board");
+      propertiesPresenter.selectEntity(e.sel);
+      if (onCanvas) void followOnCanvas(e.sel);
+    };
+    const agreementEl = document.getElementById("agreement");
+    const agreementBar = agreementEl
+      ? agreementBarIsland(agreementEl, {
+          onToggle: () => {
+            showAgreement({ open: !agreementState.open });
+            if (agreementState.open) void refreshAgreement();
+          },
+          onPick: (e) => void pickAgreement(e),
         })
       : null;
     // The control bar holds the render-mode buttons and the layout selector. It is a Solid island.
@@ -838,6 +882,7 @@ class AppRoot extends BaseComponent {
       {
         sheets: () => presenter.sheetRefs().map((s) => ({ id: s.id, name: s.name })),
         render: async (sheetId, mode) => {
+          if (sheetId === "board") void refreshAgreement();
           const d = presenter.drawing();
           const format = mode === "webgl" ? SheetFormat.PACKED : SheetFormat.SVG;
           const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format });
@@ -1075,6 +1120,7 @@ class AppRoot extends BaseComponent {
               if (design !== stepsDesign) {
                 stepsDesign = design;
                 selections.reset();
+                showAgreement({ agreement: null, busy: false, open: false });
               }
               showSteps();
             },
@@ -1176,6 +1222,7 @@ class AppRoot extends BaseComponent {
       sheetTabs.island,
       controls.island,
       ...(stepBar ? [stepBar.island] : []),
+      ...(agreementBar ? [agreementBar.island] : []),
       findings.island,
       rules.island,
       diffPanel.island,

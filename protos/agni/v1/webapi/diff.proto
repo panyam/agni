@@ -39,6 +39,13 @@ message DiffDesignsRequest {
   // which the viewer tints by. A net's connections are in the design itself (GetDesign's
   // read_mask).
   bool include_equal = 4;
+  // views_snapshot compares one design's schematic with its board rather than two revisions (agni
+  // issue 1590). It names "snapshots/{snapshot}", and a_snapshot and b_snapshot are then left empty.
+  // The schematic is the old side and the board the new one, so the report's removed parts and
+  // deleted nets are on the schematic alone, and its added parts and new nets on the board alone.
+  // The response's views field holds the counts. A design that lacks either view answers with
+  // views.compared false and no report, rather than failing.
+  string views_snapshot = 7;
   reserved 1, 2;
   reserved "a_uri", "b_uri";
 }
@@ -189,4 +196,35 @@ message DiffDesignsResponse {
   }
   map<string, Placement> shared_placements_a = 8;
   map<string, Placement> shared_placements_b = 9;
+
+  // views is set when the request named views_snapshot, and says how well that design's schematic
+  // and board agree.
+  ViewAgreement views = 10;
+}
+
+// ViewAgreement counts what a design's schematic and its board both hold (agni issue 1590). Parts
+// match by ref-des. Nets match by name, then by identical pins when the names differ. Pins match by
+// ref-des and pin number, on the parts both views place. A power symbol's pin is no part, and a net
+// that joins no pin is left out. The lists of what did not match are in the response's report.
+message ViewAgreement {
+  // compared is false when the design has no schematic netlist or no board, or when either failed
+  // to read. not_compared then says which, and every count is zero. A consumer shows "not
+  // compared" rather than a count.
+  bool compared = 1;
+  string not_compared = 2;
+  Tally parts = 3;
+  Tally pins = 4;
+  Tally nets = 5;
+  // schematic_only_pins are "refdes.pin" endpoints on a net in the schematic that join no net on
+  // the board, and board_only_pins the reverse. Both are sorted.
+  repeated string schematic_only_pins = 6;
+  repeated string board_only_pins = 7;
+
+  // Tally is one kind of entity. matched is how many both views hold, schematic how many the
+  // schematic holds, and board how many the board holds.
+  message Tally {
+    int32 matched = 1;
+    int32 schematic = 2;
+    int32 board = 3;
+  }
 }

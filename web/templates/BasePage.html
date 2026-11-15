@@ -425,6 +425,16 @@
     /* WS7-034 render controls float inside the canvas panel (they configure only the render) */
     .canvas-toolbar { background: rgba(255, 255, 255, 0.92); border: 1px solid #ccc; border-radius: 6px; padding: 2px 8px; pointer-events: auto; }
     .step-bar { display: flex; align-items: center; gap: 4px; }
+    /* agni issue 1590: the schematic and board agreement, and its panel of what did not match */
+    .canvas-agreement { position: relative; }
+    .agreement-off { color: #8a5a00; }
+    .agreement-pop { position: absolute; right: 0; top: 100%; z-index: 20; margin-top: 2px; max-height: 60vh; max-width: min(28em, 80vw); overflow: auto; background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); padding: 6px 10px; min-width: 16em; font-size: 12px; }
+    .agreement-pop[hidden] { display: none; }
+    .agreement-line { margin: 2px 0; }
+    .agreement-section h4 { margin: 8px 0 2px; font-size: 12px; }
+    .agreement-section ul { list-style: none; margin: 0; padding: 0; }
+    .agreement-entry { font: inherit; border: 0; background: none; padding: 1px 2px; cursor: pointer; text-align: left; color: #1a4fa0; }
+    .agreement-entry:hover { text-decoration: underline; }
     .step-place, .sheetview-place { min-width: 4.5em; text-align: center; font-size: 12px; color: #444; white-space: nowrap; }
     /* WS9-025 sheet overview: name tiles with violation-count badges */
     .sheet-tiles { list-style: none; margin: 0; padding: 0; }

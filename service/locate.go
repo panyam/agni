@@ -46,6 +46,7 @@ func (s *DesignService) LocateSubjects(ctx context.Context, req *webapi.LocateSu
 		if ix.board, err = boardIndexFor(ctx, loader, snap.BoardRead()); err != nil {
 			return nil, err
 		}
+		ix.board = renamedIndex(ctx, loader, snap, ix.board, true)
 	}
 	resp := &webapi.LocateSubjectsResponse{Subjects: make([]*webapi.SubjectSheets, len(req.GetSubjects()))}
 	for i, sub := range req.GetSubjects() {
