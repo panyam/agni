@@ -236,6 +236,9 @@ message GetSheetResponse {
   // board_layers lists the board sheet's layers, for either format (agni 1351). It is empty for a
   // schematic sheet.
   repeated agni.v1.geom.BoardLayerRow board_layers = 3;
+  // board_stack is the board sheet's physical layer stack, for either format (agni 1603). It is
+  // unset for a schematic sheet and for a board whose file states no stack.
+  agni.v1.geom.BoardStackView board_stack = 4;
 }
 
 message HighlightSheetRequest {

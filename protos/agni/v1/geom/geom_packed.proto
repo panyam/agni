@@ -294,4 +294,34 @@ message BoardLayerRow {
   string color = 4;
   string svg_selector = 5;
   repeated uint32 groups = 6;
+  // thickness is the row's thickness as the board's stack gives it, such as "0.035 mm", or
+  // "thickness unknown" when the stack names the layer and gives no thickness (agni 1603). It is ""
+  // when no stack row names the layer, as for Edge, Through and Zones, or a board with no stack.
+  string thickness = 7;
+}
+
+// BoardStackView is the board's physical layer stack as the viewer's layer list shows it (agni
+// 1603). A dielectric draws nothing, so it has no BoardLayerRow, and a reader still wants to see it
+// between the copper. rows run from the top of the board to the bottom, one per
+// geom.Stackup row. summary compares the rows with the board thickness the file states, such as
+// "1.711 mm, as the file states". It is "" when there is nothing to compare. disagrees says the
+// layers and the stated thickness differ by more than core/stackup's tolerance, and summary then
+// says by how much.
+message BoardStackView {
+  repeated BoardStackRow rows = 1;
+  string summary = 2;
+  bool disagrees = 3;
+}
+
+// BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
+// thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
+// client that draws to scale, and is unset when the file gives none. material is as the file gives
+// it, or "".
+message BoardStackRow {
+  string name = 1;
+  string kind = 2;
+  string layer = 3;
+  string thickness = 4;
+  optional double thickness_mm = 5;
+  string material = 6;
 }
