@@ -64,6 +64,52 @@ sheet (agni issue 1589).
 The keys step the view you last pressed in. That is the canvas until you press in a sheet view
 beside it. Then that view steps, and the canvas does not move.
 
+## Check that the schematic and the board agree
+
+Say you click a resistor on the schematic and nothing lights on the board. The board may lack the
+part, or the cross-probe may have failed, and the two look the same. Before you trust a click, open
+the agreement control at the right of the canvas bar. It compares the design's schematic with its
+board and says how much of each they share, such as "146 of 149 parts on the board". Afterwards the
+button reads the short form, such as "146/149 parts · 160/167 nets", until you open another design.
+
+The comparison follows three rules.
+
+- **Parts** match by ref-des.
+- **Nets** match by name first. A net the two views name differently matches when both join exactly
+  the same pins. Nothing is fuzzy, so a net with one pin more or less does not match by its pins.
+- **Pins** match by ref-des and pin number, on the parts both views place. A pin counts once it is on
+  a net in each view.
+
+A power symbol's pin is no part, so the comparison leaves it out, and it leaves out a net that joins
+no pin.
+
+The panel lists what did not match.
+
+| List | What it means |
+| --- | --- |
+| Parts only on the schematic | The board has no footprint with that ref-des, so the part is not placed yet or was renamed |
+| Parts only on the board | A footprint with no schematic part, such as a mounting hole or a fiducial |
+| Nets only on the schematic | No board net has that name or those pins |
+| Nets only on the board | No schematic net has that name or those pins |
+| Nets whose pins differ | Both views have a net of that name, with different pins. The entry says which pins the board adds or lacks |
+| Nets named differently | The views name a net two ways and join the same pins, so the net matches |
+| Pins on a net only on the schematic or the board | The pin is on a net in one view, and its pad or pin joins no net in the other |
+
+Click an entry to select it in the view that draws it. A schematic entry moves the canvas, as a step
+back does. A board entry lights in the board view, and a board view opens if none is.
+
+A net named differently cross-probes like any other. The board view draws it under the schematic's
+name, so a click on either side lights it on both. Clay R6's Allegro board is an example. Allegro
+cuts a net's name to 31 characters, so 24 of its nets are named differently on the board, and each
+one still lights across.
+
+A design with no board, and a board opened on its own, read "not compared" with the reason. They
+never show a count. The engine compares the views when you open the panel, or when a board view first
+draws beside the schematic.
+
+`agni diff <design>` prints the same counts and lists, and `--format json` gives the engine's answer
+(agni issue 1590).
+
 ## Keys
 
 | Key | What it does |

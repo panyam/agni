@@ -74,18 +74,24 @@ const jetsonPicks = {
   inner: { net: "Net-(Q2-G)", sheet: "Power", layer: "In5.Cu" },
   acrossSheets: "GND",
 };
+// agreement is what the agreement panel's first line reads, and pick an entry of its lists to click
+// (agni issue 1590). The cut's schematic and board agree, so it has none. Jetson's board splits ten
+// of its unconnected nets a pad a net. Clay's Allegro board cuts net names to 31 characters, so a
+// long one pairs with the schematic's by its pins.
 const walks = {
   cut: {
     mount: "probe",
     path: "designs/jetson-cut",
     about: "nineteen parts of Antmicro's Jetson AGX Thor baseboard, cut with their copper",
     ...jetsonPicks,
+    agreement: { parts: "19 of 19 parts on the board", pick: "" },
   },
   jetson: {
     mount: "jetson",
     path: "designs/jetson",
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     ...jetsonPicks,
+    agreement: { parts: "1,123 of 1,123 parts on the board", pick: "unconnected-(U8-GL-Pad10)_2" },
   },
   clay: {
     mount: "cadence",
@@ -96,6 +102,7 @@ const walks = {
     net: "WIFI_TX",
     inner: { net: "VBAT", sheet: "PAGE1", layer: "In2.Cu" },
     acrossSheets: "VBAT",
+    agreement: { parts: "146 of 149 parts on the board", pick: "PTA0/JTAG_TCLK/SWD_CLK/EZP_CLK/UART0_CTS_B/UART0_COL_B/FTM0_CH5" },
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
@@ -275,7 +282,7 @@ const closed = new Set((process.env.CLOSED_TICKETS ?? "").split(",").filter((t) 
 for (const name of chosen) {
   const walk: Walk = walks[name as keyof typeof walks];
   const label = `${walk.path.split("/").pop()} (${walk.mount})`;
-  const { part, footprint, net, inner, acrossSheets } = walk;
+  const { part, footprint, net, inner, acrossSheets, agreement } = walk;
   describe(`the cross-probe walk on ${name}`, () => {
     it("finds a schematic part on the board and back", async () => {
       const rows: Row[] = [];
@@ -493,11 +500,34 @@ for (const name of chosen) {
           return `${acrossSheets} is drawn on ${visited.length} sheets, and next went through ${visited.join(", ")} and previous back again`;
         });
 
+        // The panel counts what both views hold. A click on an entry selects it, and the board view
+        // finds it, a net the board names differently included (agni issue 1590).
         await step("see how well the schematic and the board agree", { needs: ["two views"], waitsOn: ["#1590"] }, async () => {
           await page.locator('[data-action="agreement"]').first().click({ timeout: 5_000 });
-          const text = (await page.locator("[data-agreement]").first().innerText({ timeout: 10_000 })).trim();
-          if (!/\d+ of \d+ parts/.test(text)) throw new Error(`the agreement reads "${text}"`);
-          return text.split("\n")[0];
+          const panel = page.locator("[data-agreement]").first();
+          await page.waitForFunction(() => /[\d,]+ of [\d,]+ parts/.test(document.querySelector("[data-agreement]")?.textContent ?? ""), null, { timeout: 60_000 })
+            .catch(async () => {
+              throw new Error(`the agreement reads "${(await panel.innerText()).trim()}"`);
+            });
+          const first = (await panel.innerText()).trim().split("\n")[0];
+          if (first !== agreement.parts) throw new Error(`the agreement reads "${first}", want "${agreement.parts}"`);
+          if (!agreement.pick) return first;
+          const entry = panel.locator(".agreement-entry", { hasText: agreement.pick }).first();
+          const view = await entry.getAttribute("data-agreement-view");
+          await entry.click({ timeout: 5_000 });
+          // A net the schematic lacks has no Properties of its own, so only a schematic entry is
+          // checked there.
+          if (view === "schematic") await picked(page, agreement.pick);
+          const board = page.locator(PANE).first();
+          await page.waitForFunction(({ pane, pick }) => document.querySelector(pane)?.getAttribute("data-followed") === pick, { pane: PANE, pick: agreement.pick }, { timeout: 30_000 })
+            .catch(async () => {
+              throw new Error(`the board view followed "${await board.getAttribute("data-followed")}", not ${agreement.pick}`);
+            });
+          if ((await board.getAttribute("data-absent")) !== "false") {
+            throw new Error(`the board view says "${((await board.locator(".sheetview-absent").textContent()) ?? "").trim()}"`);
+          }
+          await page.locator('[data-action="agreement"]').first().click({ timeout: 5_000 });
+          return `${first}, and ${agreement.pick} selected and found on the board`;
         });
 
         await step("read each board layer's thickness", { needs: ["two views"], waitsOn: ["#1592"] }, async () => {

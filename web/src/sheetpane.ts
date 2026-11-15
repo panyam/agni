@@ -527,10 +527,21 @@ export class SheetPane {
     if (choice.absent) {
       this.setAbsent(sel);
       await this.paint(false);
+      this.markFollowed(sel, true);
       return;
     }
     if (located.board) this.turnToSelection([located.board]);
     await this.paint(true);
+    this.markFollowed(sel, false);
+  }
+
+  // markFollowed records on the view's element what it last followed and whether its sheet lacks it,
+  // as data-followed and data-absent, once it has drawn the answer. The cross-probe walk waits on
+  // them (agni issue 1590).
+  private markFollowed(sel: Selection, absent: boolean): void {
+    if (this.sel !== sel) return;
+    this.element.dataset.followed = labelFor(sel);
+    this.element.dataset.absent = String(absent);
   }
 
   // turnToSelection turns a board view to the side its selection is on and shows the copper layers
