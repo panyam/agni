@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Renderer, enableBlending, hexToRgba, strokeQuads } from "./webgl.js";
+import { Renderer, enableBlending, flatView, hexToRgba, strokeQuads } from "./webgl.js";
 import { KIND_LINE_LOOP, KIND_LINE_STRIP, type DecodedSheet } from "./packed.js";
 import { fakeGl } from "./fakegl.js";
 
@@ -65,6 +65,47 @@ describe("Renderer.dispose", () => {
     expect(r.render(new Float32Array(9), view)).toBe(1);
     expect(f.count("drawElements")).toBe(1);
     expect(f.count("drawArrays")).toBe(0);
+  });
+});
+
+// A board drawn as its exploded stack draws each group at its own height, with the depth test on, and
+// leaves out a group the stack draws another way (agni issue 1593). The flat view draws at z = 0.
+describe("a frame of the stack view", () => {
+  const twoGroups = (): DecodedSheet => ({
+    ...tinySheet(),
+    primitives: [
+      { kind: KIND_LINE_STRIP, group: 0, firstVertex: 0, count: 2 },
+      { kind: KIND_LINE_STRIP, group: 1, firstVertex: 2, count: 2 },
+      { kind: KIND_LINE_STRIP, group: 2, firstVertex: 0, count: 2 },
+    ],
+    groupColors: ["#000000", "#ff0000", "#00ff00"],
+  });
+  const zs = (calls: { name: string; args: unknown[] }[]) =>
+    calls.filter((c) => c.name === "uniform1f" && (c.args[0] as { uniform: string }).uniform === "u_z").map((c) => c.args[1]);
+
+  it("sets each group's z before it draws, and skips the group that draws as barrels", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, twoGroups());
+    const before = f.calls.length;
+    const z = new Map([[0, 7], [1, -3]]);
+    const calls = r.renderStack({ view: new Float32Array(16), zOf: (g) => (g === 2 ? null : z.get(g)!), overlayZ: 0 }, 1);
+    const frame = f.calls.slice(before);
+    expect(calls).toBe(2);
+    expect(zs(frame)).toEqual([0, 7, -3]);
+    expect(frame.some((c) => c.name === "enable")).toBe(true);
+    expect(frame.filter((c) => c.name === "uniformMatrix4fv")).toHaveLength(1);
+  });
+
+  it("draws the flat view at z = 0 with the depth test off, through its mat3 widened", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, twoGroups());
+    const before = f.calls.length;
+    r.render(Float32Array.of(2, 0, 0, 0, 3, 0, 5, 7, 1), { minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9 });
+    const frame = f.calls.slice(before);
+    expect(zs(frame)).toEqual([0]);
+    expect(frame.some((c) => c.name === "disable")).toBe(true);
+    expect(Array.from(frame.find((c) => c.name === "uniformMatrix4fv")!.args[2] as Float32Array)).toEqual(Array.from(flatView([2, 0, 0, 0, 3, 0, 5, 7, 1])));
+    expect(Array.from(flatView([2, 0, 0, 0, 3, 0, 5, 7, 1]))).toEqual([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 5, 7, 0, 1]);
   });
 });
 

@@ -36,6 +36,34 @@ import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { UPRIGHT, orientTurn, type Orientation, type Point } from "./orient.js";
 import { strataDrawOrder, type StrataRow } from "./boardstrata.js";
 import { unitAround, type RevealBox } from "./svgview.js";
+import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { groupDepths, layoutStack, perMm, stackZ, type GroupDepths, type StackLayout } from "./stacklayout.js";
+import { PRESETS, StackCamera, type StackPreset } from "./stackcamera.js";
+import { StackExtras, stackGeometry } from "./stackgl.js";
+import { pickThroughStack } from "./stackpick.js";
+
+type Rgba = [number, number, number, number];
+
+// StackState is a board view drawn as its exploded stack (agni issue 1593). The flat camera, side and
+// hidden layers wait untouched while it lasts, so leaving the stack view finds them as they were.
+interface StackState {
+  view: BoardStackView;
+  layout: StackLayout;
+  depths: GroupDepths;
+  camera: StackCamera;
+  extras: StackExtras | null;
+  explode: number;
+  mmScale: number;
+  width: number;
+  // planes lists each depth a group draws at, with its groups, for picking a plane at a time.
+  planes: { depth: number; groups: Set<number> }[];
+  groups: Set<number>;
+  barrelColor: Rgba;
+  // candidates lists, for each copper layer, the middle of each net's shape on it, for the probes a
+  // browser spec clicks.
+  candidates: Map<string, ProbeCandidates>;
+  probeTimer: ReturnType<typeof setTimeout> | null;
+}
 
 // CanvasProfile hears a WebGL drawing's costs. SheetSurface hands its DrawProfile over as one.
 export interface CanvasProfile {
@@ -85,6 +113,8 @@ export class CanvasComponent extends BaseComponent {
   private readonly gate = new DrawGate();
   private draws = 0;
   private resizeObserver?: ResizeObserver;
+  private stack: StackState | null = null;
+  private litCache: Map<string, Rgba> | null = null;
 
   // textHost is where the text layer goes, and readout where the canvas reports what it drew. The
   // page's canvas leaves both unset and gets #text-overlay and #readout. A sheet view sets its own
@@ -270,10 +300,178 @@ export class CanvasComponent extends BaseComponent {
     return fromBox(unitAround(toBox(seed), parts));
   }
 
+  // enterStack draws the board as its exploded stack (agni issue 1593), from the stack view and the
+  // board's layer rows. It returns false before the board is drawn, or for a board with no stack.
+  enterStack(view: BoardStackView, rows: BoardLayerRow[]): boolean {
+    if (!this.gl || !this.sheet || !this.renderer || view.rows.length === 0) return false;
+    const sheet = this.sheet;
+    const layout = layoutStack(view.rows.map((r) => ({ name: r.name, kind: r.kind, layer: r.layer, thicknessMm: r.thicknessMm, color: r.color })));
+    const depths = groupDepths(layout, rows);
+    const b = boundsOfVertices(sheet.vertices);
+    const width = Math.max(b.maxX - b.minX, b.maxY - b.minY);
+    const byDepth = new Map<number, Set<number>>();
+    for (const [g, d] of depths.depth) {
+      const set = byDepth.get(d) ?? new Set<number>();
+      set.add(g);
+      byDepth.set(d, set);
+    }
+    const candidates = probeCandidates(sheet, rows);
+    const through = rows.find((r) => r.kind === "through");
+    let extras: StackExtras | null = null;
+    try {
+      extras = new StackExtras(this.gl, stackGeometry(view, layout, sheet.originX, sheet.originY));
+    } catch (e) {
+      console.warn("agni: the stack's barrels and slabs did not build", e);
+    }
+    const centre = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+    this.stack = {
+      view,
+      layout,
+      depths,
+      camera: new StackCamera({ ...centre, z: 0 }, width),
+      extras,
+      explode: 0,
+      mmScale: view.unitsPerMm,
+      width,
+      planes: [...byDepth].map(([depth, groups]) => ({ depth, groups })),
+      groups: new Set(sheet.primitives.map((p) => p.group)),
+      barrelColor: hexToRgba(through?.color ?? "#9aa0a6", [0.6, 0.6, 0.6, 1]),
+      candidates,
+      probeTimer: null,
+    };
+    this.glide.stop();
+    this.overlay?.hide();
+    this.setExplode(0.6);
+    this.resize();
+    this.stack.camera.setPose(PRESETS.iso);
+    this.stack.camera.fit();
+    (this.rootElement as HTMLElement).dataset.stack = "on";
+    this.gate.invalidate();
+    return true;
+  }
+
+  // leaveStack returns to the flat board, with the camera, side and hidden layers it had.
+  leaveStack(): void {
+    const st = this.stack;
+    if (!st) return;
+    if (st.probeTimer) clearTimeout(st.probeTimer);
+    st.extras?.dispose();
+    this.stack = null;
+    const el = this.rootElement as HTMLElement;
+    delete el.dataset.stack;
+    delete el.dataset.stackProbes;
+    delete el.dataset.stackHeightMm;
+    delete el.dataset.stackSpread;
+    delete el.dataset.stackBytes;
+    this.overlay?.show();
+    this.resize();
+    this.gate.invalidate();
+  }
+
+  // setExplode spreads the stack from 0, the board's true proportions, to 1.
+  setExplode(explode: number): void {
+    const st = this.stack;
+    if (!st) return;
+    st.explode = Math.min(Math.max(explode, 0), 1);
+    st.mmScale = perMm(st.explode, st.layout, st.width, st.view.unitsPerMm);
+    const half = (st.layout.totalMm / 2) * st.mmScale;
+    st.camera.setRadius(Math.hypot(st.width / 2, st.width / 2, half));
+    // The drawn height from the top face to the bottom face, in millimetres of the board's own
+    // coordinates. At explode 0 it is the board's thickness.
+    const height = stackZ(0, st.layout, st.mmScale) - stackZ(st.layout.totalMm, st.layout, st.mmScale);
+    (this.rootElement as HTMLElement).dataset.stackHeightMm = String(Math.round((height / st.view.unitsPerMm) * 1e6) / 1e6);
+    (this.rootElement as HTMLElement).dataset.stackSpread = String(st.explode);
+  }
+
+  setStackPreset(p: StackPreset): void {
+    if (!this.stack) return;
+    this.stack.camera.setPose(PRESETS[p]);
+    this.stack.camera.fit();
+  }
+
+  // stackZOf is the world z a group draws at in the stack view, or null for the through copper and
+  // drill holes, which draw as barrels.
+  private stackZOf(st: StackState, group: number): number | null {
+    if (st.depths.barrels.has(group)) return null;
+    return stackZ(st.depths.depth.get(group) ?? 0, st.layout, st.mmScale);
+  }
+
+  // litNets lists the nets the highlight lights, by name, with their colours, for the barrels. It is
+  // kept until the highlight or the sheet changes, since a frame asks for it and a net id's lookup
+  // reads every key on the board.
+  private litNets(): Map<string, Rgba> {
+    if (this.litCache) return this.litCache;
+    const lit = new Map<string, Rgba>();
+    const sheet = this.sheet;
+    if (!sheet) return lit;
+    this.litCache = lit;
+    const fallback = hexToRgba(DEFAULT_HIGHLIGHT_COLOR, [1, 0, 1, 1]);
+    let byId: Map<string, string> | null = null;
+    for (const spec of this.highlights) {
+      const color = hexToRgba(spec.color || DEFAULT_HIGHLIGHT_COLOR, fallback, boardNetAlpha(spec.alpha || 1));
+      for (const n of spec.nets ?? []) lit.set(n, color);
+      if (spec.netIds?.length) {
+        byId ??= new Map(sheet.keys.filter((k) => k.netId && k.net).map((k) => [k.netId, k.net]));
+        for (const id of spec.netIds) {
+          const n = byId.get(id);
+          if (n) lit.set(n, color);
+        }
+      }
+    }
+    return lit;
+  }
+
+  // pickStack picks through the stack view at device pixel (px, py), through the flat board's pick
+  // index (stackpick.ts).
+  // only limits the pick to some of the planes.
+  private pickStack(px: number, py: number, only?: StackState["planes"]): Selection | null {
+    const st = this.stack;
+    const sheet = this.sheet;
+    if (!st || !sheet) return null;
+    const picks = (this.picks ??= new PickIndex(sheet));
+    const planes = (only ?? st.planes).map((p) => ({ z: stackZ(p.depth, st.layout, st.mmScale), groups: p.groups }));
+    return pickThroughStack(st.camera, planes, st.groups, this.hidden, px, py, this.dpr(), (x, y, perPx, hidden) =>
+      picks.pick(x, y, perPx, hidden, this.depth),
+    );
+  }
+
+  // writeProbes names, for each copper layer, a point on one of its tracks that a click picks, in CSS
+  // pixels from the canvas's corner, as data-stack-probes. A browser spec reads it to click a track on
+  // an inner layer, as it reads data-lit for what a highlight lit.
+  private writeProbes(): void {
+    const st = this.stack;
+    if (!st) return;
+    const dpr = this.dpr();
+    const probes: { layer: string; net: string; x: number; y: number }[] = [];
+    for (const [layer, c] of st.candidates) {
+      if (c.groups.every((g) => this.hidden.includes(g))) continue;
+      const z = this.stackZOf(st, c.groups[0]);
+      if (z === null) continue;
+      // The lowest on screen first, since a nearer layer covers a farther one least at the stack's
+      // front edge. A click lands on a whole CSS pixel, so a probe does too, and it counts only if a
+      // pick there finds its net.
+      const all: { x: number; y: number }[] = [];
+      for (let i = 0; i + 1 < c.points.length; i += 2) all.push(st.camera.project({ x: c.points[i], y: c.points[i + 1], z }));
+      const tries = all.sort((a, b) => b.y - a.y).slice(0, PROBE_TRIES);
+      const own = st.planes.filter((p) => c.groups.some((g) => p.groups.has(g)));
+      for (const t of tries) {
+        const x = Math.round(t.x / dpr);
+        const y = Math.round(t.y / dpr);
+        // A probe counts when a click there picks a net, and this layer alone picks the same net there.
+        const sel = this.pickStack(x * dpr, y * dpr);
+        if (sel?.kind !== "net" || this.pickStack(x * dpr, y * dpr, own)?.net !== sel.net) continue;
+        probes.push({ layer, net: sel.net!, x, y });
+        break;
+      }
+    }
+    (this.rootElement as HTMLElement).dataset.stackProbes = JSON.stringify(probes);
+  }
+
   // dispose stops drawing and frees the GPU's copy of the sheet, for a sheet view the reader closed
   // or switched to SVG.
   dispose(): void {
     this.disposed = true;
+    if (this.stack) this.leaveStack();
     cancelAnimationFrame(this.frameId);
     this.resizeObserver?.disconnect();
     this.overlay?.hide();
@@ -292,6 +490,8 @@ export class CanvasComponent extends BaseComponent {
   private draw(sheet: DecodedSheet): void {
     const gl = this.gl!;
     const canvas = this.rootElement as HTMLCanvasElement;
+    // A new sheet's groups and origin are its own, so a stack view of the old one ends.
+    if (this.stack) this.leaveStack();
     this.sheet = sheet;
     this.picks = undefined;
     const built = performance.now();
@@ -350,6 +550,7 @@ export class CanvasComponent extends BaseComponent {
   // rect/circle per matched entity from the vertices already held, with no round-trip, and go to
   // the renderer's overlay path. A no-op without a sheet or renderer yet.
   private applyHighlights(): void {
+    this.litCache = null;
     if (!this.renderer || !this.sheet) return;
     const sheet = this.sheet;
     const lit = new Set<string>();
@@ -462,6 +663,7 @@ export class CanvasComponent extends BaseComponent {
     }
     this.gl!.viewport(0, 0, canvas.width, canvas.height);
     this.camera?.setViewport(canvas.width, canvas.height);
+    this.stack?.camera.setViewport(canvas.width, canvas.height);
   }
 
   // start wires input + the animation loop once; both read the current renderer/camera, so a
@@ -489,10 +691,13 @@ export class CanvasComponent extends BaseComponent {
     let moved = false;
     // selecting is a press with Shift held, which draws a box rather than panning.
     let selecting = false;
+    let panning = false;
     const band = new AreaBand(canvas.parentElement ?? canvas);
     canvas.addEventListener("mousedown", (e) => {
       dragging = true;
-      selecting = e.shiftKey && (this.onArea !== null || this.onToggle !== null);
+      // The stack view orbits on a drag and pans on a Shift-drag, so it draws no box.
+      selecting = !this.stack && e.shiftKey && (this.onArea !== null || this.onToggle !== null);
+      panning = e.shiftKey;
       if (selecting) e.preventDefault();
       lastX = e.clientX;
       lastY = e.clientY;
@@ -516,7 +721,7 @@ export class CanvasComponent extends BaseComponent {
         return;
       }
       if (!wasDragging || moved || !this.onPick) return;
-      const sel = this.pickAt(e.clientX, e.clientY);
+      const sel = this.stack ? this.pickStackAt(e.clientX, e.clientY) : this.pickAt(e.clientX, e.clientY);
       if (sel) this.onPick(sel);
       else this.onPickEmpty?.();
     });
@@ -528,6 +733,13 @@ export class CanvasComponent extends BaseComponent {
         return;
       }
       this.glide.stop();
+      if (this.stack) {
+        if (panning) this.stack.camera.pan((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
+        else this.stack.camera.orbit(e.clientX - lastX, e.clientY - lastY);
+        lastX = e.clientX;
+        lastY = e.clientY;
+        return;
+      }
       this.camera.panPixels((e.clientX - lastX) * this.dpr(), (e.clientY - lastY) * this.dpr());
       this.touched = true;
       this.onViewChange?.();
@@ -541,6 +753,10 @@ export class CanvasComponent extends BaseComponent {
         if (!this.camera) return;
         const rect = canvas.getBoundingClientRect();
         this.glide.stop();
+        if (this.stack) {
+          this.stack.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), wheelZoomFactor(e.deltaY));
+          return;
+        }
         this.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), wheelZoomFactor(e.deltaY));
         this.touched = true;
         this.onViewChange?.();
@@ -550,6 +766,11 @@ export class CanvasComponent extends BaseComponent {
 
     const frame = (): void => {
       if (this.disposed) return;
+      if (this.stack && this.renderer) {
+        this.stackFrame(this.stack, this.renderer, canvas);
+        this.frameId = requestAnimationFrame(frame);
+        return;
+      }
       const matrix = this.camera?.matrix();
       if (
         this.renderer &&
@@ -591,6 +812,46 @@ export class CanvasComponent extends BaseComponent {
     this.frameId = requestAnimationFrame(frame);
   }
 
+  // stackFrame draws one frame of the stack view when its camera, size or drawing changed.
+  private stackFrame(st: StackState, renderer: Renderer, canvas: HTMLCanvasElement): void {
+    const view = st.camera.matrix();
+    // The renderer's version moves with the highlight and the hidden layers, and the key with the
+    // camera and the explode control.
+    const key = Float32Array.from([...view, st.mmScale]);
+    if (!this.gate.shouldDraw({ matrix: key, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: renderer, version: renderer.version })) return;
+    const t0 = performance.now();
+    const zTop = stackZ(0, st.layout, st.mmScale);
+    let calls = renderer.renderStack({ view, zOf: (g) => this.stackZOf(st, g), overlayZ: zTop }, st.camera.worldPerPixel);
+    calls +=
+      st.extras?.draw({
+        view,
+        zTop,
+        zPerMm: st.mmScale,
+        eyeZ: st.camera.basis().eye.z,
+        barrels: !st.depths.barrels.size || ![...st.depths.barrels].some((g) => this.hidden.includes(g)),
+        barrelColor: st.barrelColor,
+        lit: this.litNets(),
+        parseColor: (hex, alpha) => hexToRgba(hex, [0.7, 0.6, 0.4, alpha], alpha),
+      }) ?? 0;
+    canvas.dataset.draws = String(++this.draws);
+    // What the board and the stack view hold on the GPU, in bytes, for the PR's memory budget.
+    canvas.dataset.stackBytes ??= JSON.stringify({ board: renderer.bytes, stack: st.extras?.bytes ?? 0 });
+    this.profile?.rendered(performance.now() - t0, 0, calls);
+    if (st.probeTimer) clearTimeout(st.probeTimer);
+    // The probes go stale as soon as the view moves, so they are gone until the view settles.
+    delete canvas.dataset.stackProbes;
+    st.probeTimer = setTimeout(() => {
+      st.probeTimer = null;
+      if (this.stack === st) this.writeProbes();
+    }, 150);
+  }
+
+  // pickStackAt is pickStack for a client point.
+  private pickStackAt(clientX: number, clientY: number): Selection | null {
+    const rect = (this.rootElement as HTMLCanvasElement).getBoundingClientRect();
+    return this.pickStack((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
+  }
+
   // pickAt resolves a client point to the entity drawn under it, through the camera's inverse and
   // the sheet's pick index. A hidden layer picks nothing.
   private pickAt(clientX: number, clientY: number): Selection | null {
@@ -623,6 +884,63 @@ export class CanvasComponent extends BaseComponent {
   private setReadout(text: string): void {
     const readout = this.readout === undefined ? document.getElementById("readout") : this.readout;
     if (readout) readout.textContent = text;
+  }
+}
+
+// PROBE_TRIES is how many points on a layer writeProbes tries before it gives the layer up.
+const PROBE_TRIES = 24;
+
+// ProbeCandidates is a copper layer's groups and points inside the net shapes drawn in them.
+interface ProbeCandidates {
+  groups: readonly number[];
+  // points holds x, y pairs.
+  points: Float64Array;
+}
+
+// probeCandidates lists points inside each copper layer's net shapes, its tracks, pours and zones,
+// leaving out pads and the pick areas, which a part's key claims first. A filled shape gives the middle
+// of some of its triangles, so a plane with holes still offers points on its copper.
+function probeCandidates(sheet: DecodedSheet, rows: readonly BoardLayerRow[]): Map<string, ProbeCandidates> {
+  const layerOf = new Map<number, string>();
+  const groupsOf = new Map<string, number[]>();
+  const points = new Map<string, number[]>();
+  for (const r of rows) {
+    if (r.kind !== "copper") continue;
+    const groups = r.groups.filter((g) => !pickOnly(g));
+    if (groups.length === 0) continue;
+    groupsOf.set(r.name, groups);
+    points.set(r.name, []);
+    for (const g of groups) if (!layerOf.has(g)) layerOf.set(g, r.name);
+  }
+  for (const k of sheet.keys) {
+    if (!k.net || k.pin || k.refDes) continue;
+    const layer = layerOf.get(sheet.primitives[k.primitive]?.group ?? -1);
+    if (layer !== undefined) shapePoints(sheet, k.primitive, points.get(layer)!);
+  }
+  const out = new Map<string, ProbeCandidates>();
+  for (const [layer, groups] of groupsOf) out.set(layer, { groups, points: Float64Array.from(points.get(layer)!) });
+  return out;
+}
+
+// SHAPE_SAMPLES is how many points shapePoints takes from one filled shape at most.
+const SHAPE_SAMPLES = 16;
+
+// shapePoints appends to out the middle of up to SHAPE_SAMPLES of a filled shape's triangles, spread
+// through it, or the middle of a line's first segment, as x, y pairs.
+function shapePoints(sheet: DecodedSheet, primitive: number, out: number[]): void {
+  const p = sheet.primitives[primitive];
+  const v = sheet.vertices;
+  if (!p || p.count < 2) return;
+  if (p.kind !== KIND_TRIANGLES) {
+    const a = p.firstVertex;
+    out.push((v[a * 2] + v[a * 2 + 2]) / 2, (v[a * 2 + 1] + v[a * 2 + 3]) / 2);
+    return;
+  }
+  const tris = Math.floor(p.count / 3);
+  const step = Math.max(1, Math.floor(tris / SHAPE_SAMPLES));
+  for (let t = 0; t < tris; t += step) {
+    const a = p.firstVertex + t * 3;
+    out.push((v[a * 2] + v[a * 2 + 2] + v[a * 2 + 4]) / 3, (v[a * 2 + 1] + v[a * 2 + 3] + v[a * 2 + 5]) / 3);
   }
 }
 

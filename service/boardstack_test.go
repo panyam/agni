@@ -35,5 +35,9 @@ func TestTheBoardSheetCarriesItsStackInEitherFormat(t *testing.T) {
 		if len(st.GetRows()) != 3 || st.GetRows()[1].GetName() != "dielectric 1" || st.GetSummary() != "1.6 mm, as the file states" {
 			t.Errorf("%v: board stack = %v, want three rows summing to the stated 1.6 mm", f, st)
 		}
+		if len(st.GetOutlineTris()) == 0 || st.GetUnitsPerMm() == 0 || st.GetRows()[1].GetColor() != render.DefaultStyle.Dielectric {
+			t.Errorf("%v: board stack has %d outline values, %g units per mm and dielectric colour %q, want the outline filled, a unit and Style.Dielectric",
+				f, len(st.GetOutlineTris()), st.GetUnitsPerMm(), st.GetRows()[1].GetColor())
+		}
 	}
 }

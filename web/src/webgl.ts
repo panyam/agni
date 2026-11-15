@@ -1,7 +1,7 @@
 // WebGL2 renderer for a decoded PackedSheet. The vertex positions are int32 and
 // sheet-relative, so the attribute is an INTEGER attribute (ivec2) fed with
-// gl.vertexAttribIPointer + gl.INT. The vertex buffer is uploaded ONCE; only the mat3
-// view uniform changes between frames, and the canvas draws a frame only when something changed. The
+// gl.vertexAttribIPointer + gl.INT. The vertex buffer is uploaded ONCE; only the view
+// uniform changes between frames, and the canvas draws a frame only when something changed. The
 // primitives draw through an index buffer in a few calls per run of one group (glbatch.ts, agni issue
 // 1484), and the renderer culls a chunk of a run when its bounds fall outside the view rect.
 
@@ -13,10 +13,10 @@ type Rgba = [number, number, number, number];
 
 const VERT_SRC = `#version 300 es
 in ivec2 a_pos;
-uniform mat3 u_view;
+uniform mat4 u_view;
+uniform float u_z;
 void main() {
-  vec3 p = u_view * vec3(float(a_pos.x), float(a_pos.y), 1.0);
-  gl_Position = vec4(p.xy, 0.0, 1.0);
+  gl_Position = u_view * vec4(float(a_pos.x), float(a_pos.y), u_z, 1.0);
   gl_PointSize = 4.0;
 }
 `;
@@ -93,6 +93,22 @@ function drawMode(gl: WebGL2RenderingContext, kind: number): number {
 // primitive at a time and lays them out after it, so building them costs the first draw nothing.
 // Jetson's board takes about 30 ms to lay out, and its first draw is what the board-open mission
 // times (agni issue 1499).
+// flatView widens a flat camera's mat3 to the mat4 the shader takes. The mat3 is affine, so its third
+// row is (0, 0, 1), and the flat view draws every group at z = 0.
+export function flatView(m: ArrayLike<number>): Float32Array {
+  return Float32Array.of(m[0], m[1], 0, 0, m[3], m[4], 0, 0, 0, 0, 0, 0, m[6], m[7], 0, 1);
+}
+
+// StackFrame is what one frame of a board drawn as its exploded stack needs (agni issue 1593). view is
+// the stack camera's mat4. zOf gives the world z a group draws at, or null for a group the stack view
+// draws another way, such as the through copper that draws as barrels. overlayZ is the z the
+// highlight overlays draw at.
+export interface StackFrame {
+  view: Float32Array;
+  zOf: (group: number) => number | null;
+  overlayZ: number;
+}
+
 export interface RendererOptions {
   defer?: boolean;
 }
@@ -200,6 +216,9 @@ export class Renderer {
   private buf: WebGLBuffer;
   private uView: WebGLUniformLocation;
   private uColor: WebGLUniformLocation;
+  private uZ: WebGLUniformLocation | null;
+  // bytes is what the sheet's vertex and index buffers hold on the GPU.
+  bytes = 0;
   private primitives: Primitive[];
   private bounds: Bounds[];
   // strokes holds the triangles of each line its source draws at a width (agni issue 1486). A line
@@ -245,6 +264,7 @@ export class Renderer {
     if (!uView || !uColor) throw new Error("failed to resolve uniforms");
     this.uView = uView;
     this.uColor = uColor;
+    this.uZ = gl.getUniformLocation(this.program, "u_z");
 
     // Upload the static int32 vertex buffer ONCE.
     const buf = gl.createBuffer();
@@ -257,6 +277,8 @@ export class Renderer {
     const { vertices, strokes } = strokesOf(sheet);
     this.strokes = strokes;
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    this.vertexBytes = vertices.byteLength;
+    this.bytes = this.vertexBytes;
     const aPos = gl.getAttribLocation(this.program, "a_pos");
     gl.enableVertexAttribArray(aPos);
     // Integer attribute, ivec2 of int32, tightly packed (stride 0 = 8 bytes).
@@ -290,8 +312,10 @@ export class Renderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibuf);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batches.indices, gl.STATIC_DRAW);
     gl.bindVertexArray(null);
+    this.bytes = this.vertexBytes + this.batches.indices.byteLength;
     this.markLit();
   }
+  private vertexBytes = 0;
 
   // setHighlights replaces the highlight layers. Each group's primitives redraw in its RGBA,
   // a later group winning where they overlap. An empty array clears every highlight. Called
@@ -398,7 +422,7 @@ export class Renderer {
 
   // drawEach draws every primitive with a call of its own, in the draw order, as a frame did before
   // the batches (agni issue 1484). The first frame of a deferred renderer draws this way.
-  private drawEach(perPx: number, viewRect: Bounds): number {
+  private drawEach(perPx: number, viewRect: Bounds, zOf?: (group: number) => number | null): number {
     const gl = this.gl;
     let calls = 0;
     let lastGroup = -1;
@@ -410,6 +434,9 @@ export class Renderer {
       const hl = this.highlightColors.get(i);
       if (!hl && this.hiddenGroups.has(p.group)) continue;
       if (!hl && outside(this.bounds[i], viewRect)) continue;
+      const z = zOf ? zOf(p.group) : 0;
+      if (z === null) continue;
+      if (zOf) gl.uniform1f(this.uZ, z);
       if (hl) {
         gl.uniform4f(this.uColor, hl[0], hl[1], hl[2], hl[3]);
         lastGroup = -1;
@@ -466,13 +493,36 @@ export class Renderer {
   // from Camera; viewRect is the world-space rectangle it maps to, used for culling. perPx is the
   // world size of one canvas pixel, and a line with a width at least that draws at its width.
   render(viewMatrix: Float32Array, viewRect: Bounds, perPx = Infinity): number {
-    let calls = 0;
     const gl = this.gl;
+    gl.disable(gl.DEPTH_TEST);
     gl.clearColor(this.background[0], this.background[1], this.background[2], this.background[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    return this.drawFrame(flatView(viewMatrix), viewRect, perPx, undefined, 0);
+  }
+
+  // renderStack draws one frame of the board as its exploded stack (agni issue 1593). Each run of a
+  // group draws at the group's z with the depth test on, so a nearer layer covers a farther one from
+  // any side. Nothing is culled, since the flat view's rectangle means nothing to a turned camera. It
+  // leaves the depth test on for the barrels and slabs that the canvas draws next.
+  renderStack(frame: StackFrame, perPx: number): number {
+    const gl = this.gl;
+    if (!this.batches) this.prepare();
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clearColor(this.background[0], this.background[1], this.background[2], this.background[3]);
+    gl.clearDepth(1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const all = { minX: -Infinity, minY: -Infinity, maxX: Infinity, maxY: Infinity };
+    return this.drawFrame(frame.view, all, perPx, frame.zOf, frame.overlayZ);
+  }
+
+  private drawFrame(view: Float32Array, viewRect: Bounds, perPx: number, zOf: ((group: number) => number | null) | undefined, overlayZ: number): number {
+    let calls = 0;
+    const gl = this.gl;
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
-    gl.uniformMatrix3fv(this.uView, false, viewMatrix);
+    gl.uniformMatrix4fv(this.uView, false, view);
+    gl.uniform1f(this.uZ, 0);
 
     let color: Rgba | null = null;
     const use = (c: Rgba) => {
@@ -486,7 +536,7 @@ export class Renderer {
       calls++;
     };
     if (!this.batches) {
-      calls += this.drawEach(perPx, viewRect);
+      calls += this.drawEach(perPx, viewRect, zOf);
       if (this.defer && !this.scheduled) {
         this.scheduled = true;
         setTimeout(() => this.prepare(), 0);
@@ -495,6 +545,11 @@ export class Renderer {
     for (const run of this.batches?.runs ?? []) {
       const base = this.colors[run.group] ?? DEFAULT_COLOR;
       const hidden = this.hiddenGroups.has(run.group);
+      if (zOf) {
+        const z = zOf(run.group);
+        if (z === null) continue;
+        gl.uniform1f(this.uZ, z);
+      }
       for (const c of run.chunks) {
         const lit = this.lit.has(c.id);
         // A highlighted primitive always draws, neither hidden nor culled, so selecting an
@@ -524,6 +579,7 @@ export class Renderer {
     // entity's shape appears the moment it pans in.
     if (this.overlayVao && this.overlayGroups.length > 0) {
       gl.bindVertexArray(this.overlayVao);
+      gl.uniform1f(this.uZ, overlayZ);
       for (const g of this.overlayGroups) {
         gl.uniform4f(this.uColor, g.color[0], g.color[1], g.color[2], g.color[3]);
         gl.drawArrays(gl.TRIANGLES, g.first, g.count);

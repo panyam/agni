@@ -48,6 +48,10 @@ type Style struct {
 	FabBack        string // B.Fab
 	CourtyardFront string // F.CrtYd
 	CourtyardBack  string // B.CrtYd
+	// A board view drawn as its exploded stack fills each dielectric and solder mask as a translucent
+	// slab in these (agni 1593). They travel as BoardStackRow.color.
+	Dielectric string // a core or prepreg
+	SolderMask string // a solder mask
 
 	// Font is the default font-family for all text, a CSS family list rather than one face
 	// (see SchematicFontStack). There is no per-element font.
@@ -137,6 +141,8 @@ var DefaultStyle = Style{
 	FabBack:        "#585d84",
 	CourtyardFront: "#ff26e2",
 	CourtyardBack:  "#00c7de",
+	Dielectric:     "#b59a5b",
+	SolderMask:     "#2f7d3b",
 	TitleBlockFill: "#fffef8",
 	Font:           SchematicFontStack,
 }
@@ -175,6 +181,8 @@ var DarkStyle = Style{
 	FabBack:        "#585d84",
 	CourtyardFront: "#ff26e2",
 	CourtyardBack:  "#26e9ff",
+	Dielectric:     "#c9ae6e",
+	SolderMask:     "#3f9a4c",
 	TitleBlockFill: "#1a1a1a",
 	Font:           SchematicFontStack,
 }

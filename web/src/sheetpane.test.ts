@@ -219,9 +219,9 @@ describe("a sheet view", () => {
     const thick = ROWS.map((r) => ({ ...r, thickness: r.name.startsWith("In") ? "thickness unknown" : "0.035 mm" }) as unknown as BoardLayerRow);
     const stack = {
       rows: [
-        { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", material: "" },
-        { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "1.53 mm", material: "FR4" },
-        { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", material: "" },
+        { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "" },
+        { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "1.53 mm", thicknessMm: 1.53, material: "FR4" },
+        { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "" },
       ],
       summary: "1.6 mm, as the file states",
       disagrees: false,
@@ -811,5 +811,123 @@ describe("stepping a sheet view through the sheets that draw the selection", () 
     control(p, "selection-back").click();
     expect(back).toHaveBeenCalledOnce();
     expect(control(p, "selection-forward").disabled).toBe(true);
+  });
+});
+
+// agni issue 1593: the board view shows its stack apart in WebGL, and leaving puts back the renderer
+// and view it had.
+describe("a board view's stack view", () => {
+  const stack = {
+    rows: [
+      { name: "F.SilkS", kind: "silk", layer: "F.SilkS", thickness: "thickness unknown", material: "", color: "" },
+      { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#c83434" },
+      { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "thickness unknown", material: "FR4", color: "#b59a5b" },
+      { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#4d7fc4" },
+    ],
+    summary: "",
+    disagrees: false,
+    drills: [],
+    outlineTris: [],
+    unitsPerMm: 1e6,
+  } as unknown as BoardStackView;
+
+  function stackPane(withStack: boolean, gl: ReturnType<typeof fakeGl>["gl"] | null) {
+    const asked: string[] = [];
+    const deps: SheetPaneDeps = {
+      sheets: () => SHEETS,
+      render: async (id, mode) => {
+        asked.push(`${id} ${mode}`);
+        return {
+          svg: `<svg width="100" height="100" data-sheet="${id}"></svg>`,
+          packed: mode === "webgl" ? ({ sheetId: id } as never) : undefined,
+          boardLayers: id === "board" ? ROWS : [],
+          boardStack: id === "board" && withStack ? stack : undefined,
+        };
+      },
+      overlay: async () => "",
+      drawnOn: async () => ({ sheets: ["board"] }),
+      specs: () => [],
+      onPick: vi.fn(),
+      onPickEmpty: vi.fn(),
+      onViewChange: vi.fn(),
+      onFloat: vi.fn(),
+      onClose: vi.fn(),
+      onOpened: vi.fn(),
+      renderer: () => "svg",
+      gl: () => gl as never,
+    };
+    const p = new SheetPane(`sheetview-${++panes}`, deps);
+    document.body.appendChild(p.element);
+    return { p, asked };
+  }
+
+  const stackGl = () => {
+    const { gl, calls } = fakeGl();
+    let explode = -1;
+    Object.assign(gl, {
+      enterStack: (v: BoardStackView, rows: BoardLayerRow[]) => (calls.push(`enter ${v.rows.length} ${rows.length}`), true),
+      leaveStack: () => calls.push("leave"),
+      setExplode: (e: number) => (explode = e),
+      setStackPreset: (p: string) => calls.push(`preset ${p}`),
+    });
+    return { gl, calls, explode: () => explode };
+  };
+  const press = (p: SheetPane, sel: string) => (p.element.querySelector(sel) as HTMLButtonElement).click();
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("draws the stack in WebGL from an SVG board, and goes back to SVG when it leaves", async () => {
+    const { gl, calls, explode } = stackGl();
+    const { p, asked } = stackPane(true, gl);
+    await p.open("board");
+    expect(p.element.dataset.renderer).toBe("svg");
+    await p.toggleStack();
+    expect(asked).toEqual(["board svg", "board webgl"]);
+    expect(calls).toContain(`enter 4 ${ROWS.length}`);
+    expect(p.element.dataset.exploded).toBe("true");
+    expect(explode()).toBeCloseTo(0.6, 9);
+    expect((p.element.querySelector(".sheetview-stack-bar") as HTMLElement).hidden).toBe(false);
+    press(p, '[data-stack-preset="front"]');
+    expect(calls).toContain("preset front");
+    press(p, '[data-action="explode"]');
+    await settle();
+    await settle();
+    expect(calls).toContain("leave");
+    expect(p.element.dataset.exploded).toBe("false");
+    expect(asked).toEqual(["board svg", "board webgl", "board svg"]);
+    expect(p.element.dataset.renderer).toBe("svg");
+    expect(p.element.querySelector<HTMLInputElement>(".sheetview-webgl")?.checked).toBe(false);
+  });
+
+  it("disables the Stack button on a board whose file states no stack, or where WebGL2 is missing", async () => {
+    const { p } = stackPane(false, stackGl().gl);
+    await p.open("board");
+    const button = p.element.querySelector('[data-action="explode"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe("the board's file states no layer stack");
+
+    const { p: noGl } = stackPane(true, null);
+    await noGl.open("board");
+    await noGl.toggleStack();
+    const b2 = noGl.element.querySelector('[data-action="explode"]') as HTMLButtonElement;
+    expect(noGl.element.dataset.exploded).toBe("false");
+    expect(b2.disabled).toBe(true);
+    expect(b2.title).toBe("the stack view needs WebGL2, which this browser does not offer");
+    expect(noGl.element.dataset.renderer).toBe("svg");
+  });
+
+  it("labels each stack row the file gives no thickness with the thickness the stack view draws it at", async () => {
+    const { p } = stackPane(true, stackGl().gl);
+    await p.open("board");
+    press(p, '[data-action="layers"]');
+    const defaults = [...p.element.querySelectorAll("[data-board-stack] tr")].map((r) => [
+      r.querySelector(".board-stack-name")?.textContent,
+      r.querySelector("[data-stack-default]")?.textContent ?? null,
+    ]);
+    expect(defaults).toEqual([
+      ["F.SilkS", " (drawn on the surface)"],
+      ["F.Cu", null],
+      ["dielectric 1", " (drawn at 0.1 mm)"],
+      ["B.Cu", null],
+    ]);
   });
 });

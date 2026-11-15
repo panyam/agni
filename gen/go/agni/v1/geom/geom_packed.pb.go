@@ -1257,11 +1257,21 @@ func (x *BoardLayerRow) GetThickness() string {
 // "1.711 mm, as the file states". It is "" when there is nothing to compare. disagrees says the
 // layers and the stated thickness differ by more than core/stackup's tolerance, and summary then
 // says by how much.
+//
+// drills and outline_tris let a client draw the stack apart, layer by layer (agni 1593). drills holds
+// every plated hole, grouped by the copper layers it joins. outline_tris fills the board outline as
+// a triangle list of x,y pairs, in board units like drills, for drawing a dielectric or a mask as a
+// slab. It falls back to the outline's bounding box when the outline's paths do not close.
 type BoardStackView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rows          []*BoardStackRow       `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
-	Summary       string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	Disagrees     bool                   `protobuf:"varint,3,opt,name=disagrees,proto3" json:"disagrees,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Rows        []*BoardStackRow       `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	Summary     string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	Disagrees   bool                   `protobuf:"varint,3,opt,name=disagrees,proto3" json:"disagrees,omitempty"`
+	Drills      []*BoardDrillSpan      `protobuf:"bytes,4,rep,name=drills,proto3" json:"drills,omitempty"`
+	OutlineTris []float64              `protobuf:"fixed64,5,rep,packed,name=outline_tris,json=outlineTris,proto3" json:"outline_tris,omitempty"`
+	// units_per_mm is how many board units make a millimetre, for placing a thickness_mm among the
+	// drills' and the outline's coordinates.
+	UnitsPerMm    float64 `protobuf:"fixed64,6,opt,name=units_per_mm,json=unitsPerMm,proto3" json:"units_per_mm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1317,10 +1327,114 @@ func (x *BoardStackView) GetDisagrees() bool {
 	return false
 }
 
+func (x *BoardStackView) GetDrills() []*BoardDrillSpan {
+	if x != nil {
+		return x.Drills
+	}
+	return nil
+}
+
+func (x *BoardStackView) GetOutlineTris() []float64 {
+	if x != nil {
+		return x.OutlineTris
+	}
+	return nil
+}
+
+func (x *BoardStackView) GetUnitsPerMm() float64 {
+	if x != nil {
+		return x.UnitsPerMm
+	}
+	return 0
+}
+
+// BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
+// F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
+// of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
+// xy holds each hole's centre as x,y pairs in board units, the units of geom.BoardGeometry before
+// PackedSheet's origin rebase. diameter holds each hole's width in board units, and net its net or
+// "", both one per hole.
+type BoardDrillSpan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LayerFrom     string                 `protobuf:"bytes,1,opt,name=layer_from,json=layerFrom,proto3" json:"layer_from,omitempty"`
+	LayerTo       string                 `protobuf:"bytes,2,opt,name=layer_to,json=layerTo,proto3" json:"layer_to,omitempty"`
+	Xy            []float64              `protobuf:"fixed64,3,rep,packed,name=xy,proto3" json:"xy,omitempty"`
+	Diameter      []float64              `protobuf:"fixed64,4,rep,packed,name=diameter,proto3" json:"diameter,omitempty"`
+	Net           []string               `protobuf:"bytes,5,rep,name=net,proto3" json:"net,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BoardDrillSpan) Reset() {
+	*x = BoardDrillSpan{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardDrillSpan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardDrillSpan) ProtoMessage() {}
+
+func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardDrillSpan.ProtoReflect.Descriptor instead.
+func (*BoardDrillSpan) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BoardDrillSpan) GetLayerFrom() string {
+	if x != nil {
+		return x.LayerFrom
+	}
+	return ""
+}
+
+func (x *BoardDrillSpan) GetLayerTo() string {
+	if x != nil {
+		return x.LayerTo
+	}
+	return ""
+}
+
+func (x *BoardDrillSpan) GetXy() []float64 {
+	if x != nil {
+		return x.Xy
+	}
+	return nil
+}
+
+func (x *BoardDrillSpan) GetDiameter() []float64 {
+	if x != nil {
+		return x.Diameter
+	}
+	return nil
+}
+
+func (x *BoardDrillSpan) GetNet() []string {
+	if x != nil {
+		return x.Net
+	}
+	return nil
+}
+
 // BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
 // thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
 // client that draws to scale, and is unset when the file gives none. material is as the file gives
-// it, or "".
+// it, or "". color is what a client draws the row in, from render.Style: a copper or graphics
+// layer's own colour, Style.Dielectric or Style.SolderMask, or "" for a row with no colour.
 type BoardStackRow struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1329,13 +1443,14 @@ type BoardStackRow struct {
 	Thickness     string                 `protobuf:"bytes,4,opt,name=thickness,proto3" json:"thickness,omitempty"`
 	ThicknessMm   *float64               `protobuf:"fixed64,5,opt,name=thickness_mm,json=thicknessMm,proto3,oneof" json:"thickness_mm,omitempty"`
 	Material      string                 `protobuf:"bytes,6,opt,name=material,proto3" json:"material,omitempty"`
+	Color         string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BoardStackRow) Reset() {
 	*x = BoardStackRow{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1347,7 +1462,7 @@ func (x *BoardStackRow) String() string {
 func (*BoardStackRow) ProtoMessage() {}
 
 func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1360,7 +1475,7 @@ func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardStackRow.ProtoReflect.Descriptor instead.
 func (*BoardStackRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *BoardStackRow) GetName() string {
@@ -1405,6 +1520,13 @@ func (x *BoardStackRow) GetMaterial() string {
 	return ""
 }
 
+func (x *BoardStackRow) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
 type PackedHighlight_Group struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Color      string                 `protobuf:"bytes,1,opt,name=color,proto3" json:"color,omitempty"`                   // "#rrggbb"; empty means the renderer's default
@@ -1420,7 +1542,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1432,7 +1554,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1582,18 +1704,30 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x05color\x18\x04 \x01(\tR\x05color\x12!\n" +
 	"\fsvg_selector\x18\x05 \x01(\tR\vsvgSelector\x12\x16\n" +
 	"\x06groups\x18\x06 \x03(\rR\x06groups\x12\x1c\n" +
-	"\tthickness\x18\a \x01(\tR\tthickness\"y\n" +
+	"\tthickness\x18\a \x01(\tR\tthickness\"\xf4\x01\n" +
 	"\x0eBoardStackView\x12/\n" +
 	"\x04rows\x18\x01 \x03(\v2\x1b.agni.v1.geom.BoardStackRowR\x04rows\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x1c\n" +
-	"\tdisagrees\x18\x03 \x01(\bR\tdisagrees\"\xc0\x01\n" +
+	"\tdisagrees\x18\x03 \x01(\bR\tdisagrees\x124\n" +
+	"\x06drills\x18\x04 \x03(\v2\x1c.agni.v1.geom.BoardDrillSpanR\x06drills\x12!\n" +
+	"\foutline_tris\x18\x05 \x03(\x01R\voutlineTris\x12 \n" +
+	"\funits_per_mm\x18\x06 \x01(\x01R\n" +
+	"unitsPerMm\"\x88\x01\n" +
+	"\x0eBoardDrillSpan\x12\x1d\n" +
+	"\n" +
+	"layer_from\x18\x01 \x01(\tR\tlayerFrom\x12\x19\n" +
+	"\blayer_to\x18\x02 \x01(\tR\alayerTo\x12\x0e\n" +
+	"\x02xy\x18\x03 \x03(\x01R\x02xy\x12\x1a\n" +
+	"\bdiameter\x18\x04 \x03(\x01R\bdiameter\x12\x10\n" +
+	"\x03net\x18\x05 \x03(\tR\x03net\"\xd6\x01\n" +
 	"\rBoardStackRow\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n" +
 	"\x05layer\x18\x03 \x01(\tR\x05layer\x12\x1c\n" +
 	"\tthickness\x18\x04 \x01(\tR\tthickness\x12&\n" +
 	"\fthickness_mm\x18\x05 \x01(\x01H\x00R\vthicknessMm\x88\x01\x01\x12\x1a\n" +
-	"\bmaterial\x18\x06 \x01(\tR\bmaterialB\x0f\n" +
+	"\bmaterial\x18\x06 \x01(\tR\bmaterial\x12\x14\n" +
+	"\x05color\x18\a \x01(\tR\x05colorB\x0f\n" +
 	"\r_thickness_mm*\xb0\x01\n" +
 	"\x0eHighlightShape\x12\x1f\n" +
 	"\x1bHIGHLIGHT_SHAPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
@@ -1615,7 +1749,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -1632,13 +1766,14 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*PackedLabelRuns)(nil),       // 12: agni.v1.geom.PackedLabelRuns
 	(*BoardLayerRow)(nil),         // 13: agni.v1.geom.BoardLayerRow
 	(*BoardStackView)(nil),        // 14: agni.v1.geom.BoardStackView
-	(*BoardStackRow)(nil),         // 15: agni.v1.geom.BoardStackRow
-	(*PackedHighlight_Group)(nil), // 16: agni.v1.geom.PackedHighlight.Group
+	(*BoardDrillSpan)(nil),        // 15: agni.v1.geom.BoardDrillSpan
+	(*BoardStackRow)(nil),         // 16: agni.v1.geom.BoardStackRow
+	(*PackedHighlight_Group)(nil), // 17: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	16, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	17, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
 	8,  // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
@@ -1646,13 +1781,14 @@ var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	11, // 7: agni.v1.geom.PackedSheet.label_columns:type_name -> agni.v1.geom.PackedLabels
 	12, // 8: agni.v1.geom.PackedLabels.runs:type_name -> agni.v1.geom.PackedLabelRuns
 	6,  // 9: agni.v1.geom.PackedLabelRuns.runs:type_name -> agni.v1.geom.TextRun
-	15, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
-	0,  // 11: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	16, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
+	15, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
+	0,  // 12: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -1660,14 +1796,14 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 	if File_agni_v1_geom_geom_packed_proto != nil {
 		return
 	}
-	file_agni_v1_geom_geom_packed_proto_msgTypes[13].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

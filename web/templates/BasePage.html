@@ -417,6 +417,11 @@
     .board-stack-rows tr[data-kind="copper"] td.board-stack-name { color: #a0522d; }
     .board-stack-summary { margin-top: 4px; color: #555; }
     .board-stack-summary[data-disagrees="true"] { color: #b00020; }
+    .board-stack-default { color: #888; font-style: italic; }
+    .sheetview-stack-bar { display: inline-flex; align-items: center; gap: 2px; }
+    .sheetview-stack-bar[hidden] { display: none; }
+    .sheetview-explode { width: 80px; }
+    .sheetview-stack.active { background: #dde8f5; color: #1a3a5c; border-color: #7a9cc6; }
     /* Above the dock's drawers and their scrims, since the Sheets drawer opens it (agni issue 1542). */
     .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: calc(var(--dv-overlay-z-index, 999) + 300); display: flex; align-items: center; justify-content: center; }
     .board-picker { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 12px; width: min(520px, 90vw); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }

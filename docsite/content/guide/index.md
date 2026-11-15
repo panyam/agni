@@ -23,5 +23,6 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Design intent](design-intent/)** declares what a board is supposed to contain, and catches it drifting.
 - **[Datasheets](datasheets/)** compares a design against a part's real limits.
 - **[Cross-probing a schematic and its board](cross-probing/)** opens the board beside the schematic, and the board turns to each part's side.
+- **[Seeing the board's layer stack](board-stack/)** draws the board's layers apart, so you can see which inner layer carries a net and which layers a via joins.
 - **[Running the server](running-the-server/)** brings the viewer up with Docker over your mounted designs.
 - **[CLI reference](cli-reference/)** lists every command and flag.

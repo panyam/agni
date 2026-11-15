@@ -82,7 +82,7 @@ const jetsonPicks = {
 // stack is what the board view's layer list says of F.Cu's thickness and of the whole stack (agni
 // issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board carries
 // no stack yet, so its list states no thickness.
-const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states" };
+const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states", thicknessMm: 1.711 };
 const walks = {
   cut: {
     mount: "probe",
@@ -562,12 +562,67 @@ for (const name of chosen) {
           }
         });
 
-        await step("explode the layer stack", { needs: ["two views"], waitsOn: ["#1593"] }, async () => {
+        // The stack view (agni issue 1593). At explode 0 the stack draws as thick as the file states. The
+        // step shows the first inner layer alone, as a reader does to see past Jetson's pours, and a
+        // click on its copper picks its net, which the schematic lights. Leaving puts back the
+        // renderer, and the layers the reader had before. The canvas names a clickable point on each
+        // shown copper layer in data-stack-probes, since a WebGL drawing has no element to aim at.
+        await step("explode the layer stack", { needs: ["two views"] }, async () => {
           const board = page.locator(PANE).first();
-          await board.locator('[data-action="explode"]').click({ timeout: 5_000 });
-          expect(await board.getAttribute("data-exploded")).toBe("true");
-          await board.locator('[data-action="explode"]').click({ timeout: 5_000 });
-          return "the board view showed its layers apart and put them back";
+          const button = board.locator('[data-action="explode"]');
+          if (!walk.stack) {
+            if (!(await button.isDisabled())) throw new Error("the Stack button is on for a board whose file states no stack");
+            return `the Stack button is off, "${await button.getAttribute("title")}"`;
+          }
+          const pop = board.locator(".sheetview-layer-pop");
+          const shown = () => pop.locator(".board-layer-row input").evaluateAll((ins) => ins.map((i) => [i.getAttribute("aria-label")!, (i as HTMLInputElement).checked] as [string, boolean]));
+          const rowOf = (name: string) => pop.locator(".board-layer-row", { has: page.locator(`input[aria-label="${name}"]`) });
+          const before = { renderer: await board.getAttribute("data-renderer"), shown: await shown() };
+          const innerLayers = before.shown.map(([name]) => name).filter((name) => /^In\d+\.Cu$/.test(name));
+          if (innerLayers.length === 0) throw new Error("the board view lists no inner copper layer");
+          await button.click({ timeout: 5_000 });
+          await page.waitForFunction((p) => document.querySelector(p)?.getAttribute("data-exploded") === "true", PANE, { timeout: 60_000 });
+          const gl = board.locator("canvas.sheetview-gl");
+          const slider = board.locator("input[data-stack-explode]");
+          await slider.fill("0");
+          const height = Number(await gl.getAttribute("data-stack-height-mm"));
+          if (!(Math.abs(height - walk.stack.thicknessMm) <= 0.001)) throw new Error(`at explode 0 the stack draws ${height} mm tall, not the stated ${walk.stack.thicknessMm} mm`);
+          await slider.fill("60");
+          // An inner layer that is all plane draws nothing with the Zones row hidden, as on the flat board,
+          // so the step shows each inner layer alone until one has copper to click.
+          type Probe = { layer: string; net: string; x: number; y: number };
+          let inner: Probe | undefined;
+          for (const layer of innerLayers) {
+            await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
+            await rowOf(layer).dblclick({ timeout: 10_000 });
+            await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
+            await page
+              .waitForFunction(({ p, l }) => (JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-probes") ?? "[]") as Probe[]).some((q) => q.layer === l), { p: PANE, l: layer }, { timeout: 5_000 })
+              .catch(() => {});
+            const probes = await page.evaluate((p) => JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-probes") ?? "[]") as Probe[], PANE);
+            inner = probes.find((q) => q.layer === layer);
+            if (inner) break;
+          }
+          if (!inner) throw new Error(`none of ${innerLayers.join(", ")} shown alone offers copper to click`);
+          const box = (await gl.boundingBox())!;
+          await page.mouse.click(box.x + inner.x, box.y + inner.y);
+          await picked(page, inner.net);
+          await lit(page, SHEET);
+          // The reader's layers go back as they were, one row at a time.
+          await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
+          const now = new Map(await shown());
+          for (const [name, on] of before.shown) if (now.get(name) !== on) await rowOf(name).click({ timeout: 10_000 });
+          await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
+          await button.click({ timeout: 5_000 });
+          // Leaving draws the board again in the renderer it had, so the step waits for that drawing.
+          await page
+            .waitForFunction(({ p, r }) => document.querySelector(p)?.getAttribute("data-exploded") === "false" && document.querySelector(p)?.getAttribute("data-renderer") === r, { p: PANE, r: before.renderer }, { timeout: 60_000 })
+            .catch(async () => {
+              throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${before.renderer}`);
+            });
+          const after = { shown: await shown() };
+          if (JSON.stringify(after.shown) !== JSON.stringify(before.shown)) throw new Error("the board view came back with other layers hidden");
+          return `the stack drew ${height} mm tall at explode 0, and a click on ${inner.layer} picked ${inner.net}, which the schematic lit`;
         });
 
         await step("a Windows build is published", { waitsOn: ["#1595"] }, async () => {
