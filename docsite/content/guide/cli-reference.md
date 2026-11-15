@@ -48,6 +48,35 @@ netlist and skips the drawing.
 
 {{ agniRun "content/guide/runs/stats-ir.yaml" }}
 
+### `stackup <design>`
+
+Print a board's layer stack, top to bottom, as the board file states it. Each row gives the
+layer's kind, thickness, material, dielectric type, εr and loss tangent. A thickness the file does
+not give reads `unknown`, and the other values are left blank. The last line gives the board
+thickness the file states and what the layers sum to. When the two differ by more than 10%, the
+line says so. KiCad, ODB++ and IPC-2581 boards carry a stack.
+
+```bash
+agni stackup examples/cross-probe-project/designs/jetson-cut
+```
+
+```text
+LAYER         KIND        THICKNESS  MATERIAL  TYPE     ER    TAN D
+F.SilkS       silk        unknown
+F.Mask        mask        0.01 mm
+F.Cu          copper      0.035 mm
+dielectric 1  dielectric  0.12 mm    PR2116    prepreg  4.1   0.02
+In1.Cu        copper      0.018 mm
+...
+B.Cu          copper      0.035 mm
+
+The file states a board thickness of 1.711 mm. The layers sum to 1.711 mm.
+```
+
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | `text` (the table above, the default) or `json`, the board geometry's `Stackup` message |
+
 ### `check <file>`
 
 Run the rule catalog and report findings. See
