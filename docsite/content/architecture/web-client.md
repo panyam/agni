@@ -158,6 +158,14 @@ panel from the ones above.
   (`[data-sheetview="<id>"] .sheetview-canvas`), so a reader can show In2.Cu alone beside the canvas
   and keep the whole board on the canvas. The set lasts as long as the view, since a view's id does
   not outlive the page.
+- **The layer list states each layer's thickness** (agni issue 1603). Say a reader wants to know
+  how far In2.Cu sits under the surface. The list shows each row's thickness from the board's stack,
+  "0.035 mm" or "thickness unknown". Edge, Through and Zones have no stack row, so they show none. A
+  dielectric draws nothing and has no row to toggle, so a Stack table under the rows lists the whole
+  stack from the top of the board down, dielectrics and masks included. Its last line compares the
+  layers with the board thickness the file states, and turns red when they differ by more than
+  `core/stackup`'s tolerance. `render.BoardLayers` fills `BoardLayerRow.thickness`, and
+  `render.BoardStack` fills `GetSheetResponse.board_stack`, so the client formats nothing.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`

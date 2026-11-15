@@ -14,7 +14,7 @@ import { labelFor, pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from "./orient.js";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
 import { followBoard, type BoardFacts } from "./boardfollow.js";
@@ -86,11 +86,12 @@ function saveFollowSide(on: boolean): void {
 }
 
 // SheetDrawing is one sheet as a pane draws it, the SVG document or, in WebGL, the packed sheet.
-// boardLayers is empty for a schematic sheet.
+// boardLayers is empty for a schematic sheet, and boardStack is unset for one (agni 1603).
 export interface SheetDrawing {
   svg: string;
   packed?: PackedSheet;
   boardLayers: BoardLayerRow[];
+  boardStack?: BoardStackView;
 }
 
 // GlFactory builds a pane's WebGL drawing on its canvas and text host, or returns null where WebGL2
@@ -189,6 +190,7 @@ export class SheetPane {
   private readonly layerStyle: HTMLStyleElement;
   private readonly layerList: ReturnType<typeof boardLayerListIsland>;
   private layerRows: BoardLayerRow[] = [];
+  private layerStack: BoardStackView | undefined;
   private hiddenLayers = new Set<string>();
   // layersChosen says the reader picked this view's layers, so a board drawn again keeps them rather
   // than going back to defaultHidden.
@@ -473,6 +475,7 @@ export class SheetPane {
       if (n !== this.drawing) return;
     }
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
+    this.layerStack = sheetId === BOARD_SHEET ? drawing.boardStack : undefined;
     if (!this.layersChosen) this.hiddenLayers = defaultHidden(this.layerRows);
     this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT };
     // The turn goes to the surface first, so a WebGL sheet draws turned from its first frame.
@@ -763,7 +766,7 @@ export class SheetPane {
   // and every other view keep theirs.
   private applyLayers(): void {
     this.surface.setBoardLayers(this.layerRows, this.hiddenLayers);
-    this.layerList.setState({ rows: this.layerRows, hidden: this.hiddenLayers });
+    this.layerList.setState({ rows: this.layerRows, hidden: this.hiddenLayers, stack: this.layerStack });
   }
 
   private nameOf(id: string): string {

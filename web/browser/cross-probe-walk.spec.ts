@@ -28,7 +28,7 @@
 //   selection, and [data-sheet-place] reads where the canvas is among them, such as "2 of 4" (#1589)
 // - data-action="agreement" opens [data-agreement], which counts the parts both views place (#1590)
 // - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
-// - a board layer row states its thickness in [data-thickness] (#1592)
+// - a board layer row states its thickness in [data-thickness], and the stack follows the rows (#1603)
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
 // - data-action="bookmark" takes a note in [data-bookmark-note], and [data-bookmark] lists it after
 //   a reload (#1594)
@@ -78,6 +78,11 @@ const jetsonPicks = {
 // (agni issue 1590). The cut's schematic and board agree, so it has none. Jetson's board splits ten
 // of its unconnected nets a pad a net. Clay's Allegro board cuts net names to 31 characters, so a
 // long one pairs with the schematic's by its pins.
+//
+// stack is what the board view's layer list says of F.Cu's thickness and of the whole stack (agni
+// issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board carries
+// no stack yet, so its list states no thickness.
+const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states" };
 const walks = {
   cut: {
     mount: "probe",
@@ -85,6 +90,7 @@ const walks = {
     about: "nineteen parts of Antmicro's Jetson AGX Thor baseboard, cut with their copper",
     ...jetsonPicks,
     agreement: { parts: "19 of 19 parts on the board", pick: "" },
+    stack: jetsonStack as typeof jetsonStack | null,
   },
   jetson: {
     mount: "jetson",
@@ -92,6 +98,7 @@ const walks = {
     about: "Antmicro's open-source baseboard for the Jetson AGX Thor module",
     ...jetsonPicks,
     agreement: { parts: "1,123 of 1,123 parts on the board", pick: "unconnected-(U8-GL-Pad10)_2" },
+    stack: jetsonStack as typeof jetsonStack | null,
   },
   clay: {
     mount: "cadence",
@@ -103,6 +110,7 @@ const walks = {
     inner: { net: "VBAT", sheet: "PAGE1", layer: "In2.Cu" },
     acrossSheets: "VBAT",
     agreement: { parts: "146 of 149 parts on the board", pick: "PTA0/JTAG_TCLK/SWD_CLK/EZP_CLK/UART0_CTS_B/UART0_COL_B/FTM0_CH5" },
+    stack: null as typeof jetsonStack | null,
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
@@ -530,16 +538,31 @@ for (const name of chosen) {
           return `${first}, and ${agreement.pick} selected and found on the board`;
         });
 
-        await step("read each board layer's thickness", { needs: ["two views"], waitsOn: ["#1592"] }, async () => {
+        await step("read each board layer's thickness", { needs: ["two views"] }, async () => {
           const board = page.locator(PANE).first();
+          const pop = board.locator(".sheetview-layer-pop");
           await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
-          const n = await board.locator(".sheetview-layer-pop [data-thickness]").count();
-          await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
-          if (n === 0) throw new Error("no layer row states a thickness");
-          return `${n} layer rows state a thickness`;
+          try {
+            await pop.locator(".board-layer-row").first().waitFor({ state: "visible", timeout: 10_000 });
+            const n = await pop.locator("[data-thickness]").count();
+            const stackRows = pop.locator("[data-board-stack] tr");
+            if (!walk.stack) {
+              if (n > 0 || (await stackRows.count()) > 0) throw new Error(`${n} layer rows state a thickness on a board whose file states no stack`);
+              return "the board's file states no stack, and no layer row claims a thickness";
+            }
+            const fCu = await pop.locator(".board-layer-row", { has: page.locator('input[aria-label="F.Cu"]') }).locator("[data-thickness]").getAttribute("data-thickness");
+            if (fCu !== walk.stack.fCu) throw new Error(`F.Cu states "${fCu}", not ${walk.stack.fCu}`);
+            const dielectrics = await pop.locator('[data-board-stack] tr[data-kind="dielectric"]').count();
+            if (dielectrics === 0) throw new Error("the stack lists no dielectric");
+            const summary = ((await pop.locator(".board-stack-summary").textContent()) ?? "").trim();
+            if (summary !== walk.stack.summary) throw new Error(`the stack says "${summary}", not "${walk.stack.summary}"`);
+            return `${n} layer rows state a thickness, F.Cu ${fCu}, and the stack lists ${await stackRows.count()} rows, ${dielectrics} of them dielectric, at ${summary}`;
+          } finally {
+            await board.locator('[data-action="layers"]').click({ timeout: 10_000 });
+          }
         });
 
-        await step("explode the layer stack", { needs: ["two views"], waitsOn: ["#1592", "#1593"] }, async () => {
+        await step("explode the layer stack", { needs: ["two views"], waitsOn: ["#1593"] }, async () => {
           const board = page.locator(PANE).first();
           await board.locator('[data-action="explode"]').click({ timeout: 5_000 });
           expect(await board.getAttribute("data-exploded")).toBe("true");
