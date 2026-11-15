@@ -760,6 +760,12 @@ export class SheetPane {
     this.layerPop.hidden = !open;
     this.layersButton.classList.toggle("active", open);
     this.layersButton.setAttribute("aria-expanded", String(open));
+    // The list scrolls inside the view, so a short view still shows the stack's last line (agni
+    // 1603). The stylesheet's 60vh holds where the view is taller.
+    if (open) {
+      const room = this.element.getBoundingClientRect().bottom - this.layerPop.getBoundingClientRect().top - 6;
+      this.layerPop.style.maxHeight = room > 0 ? `min(60vh, ${Math.max(room, 120)}px)` : "";
+    }
   }
 
   // applyLayers hides this view's hidden layers with rules scoped to its own drawing, so the canvas
