@@ -282,7 +282,7 @@ func locateBoard(ctx context.Context, loader interface {
 	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
 }, snap Snap, m check.Model) *boardIndex {
 	if !snap.BoardOnly() {
-		return renamedIndex(ctx, loader, snap, runBoardIndex(ctx, loader, snap.BoardRead(), m))
+		return renamedIndex(ctx, loader, snap, runBoardIndex(ctx, loader, snap.BoardRead(), m), false)
 	}
 	ix, err := boardIndexFor(ctx, loader, snap.BoardRead())
 	if err != nil {
@@ -292,11 +292,16 @@ func locateBoard(ctx context.Context, loader interface {
 }
 
 // renamedIndex is ix answering a schematic net's name for the board net it is paired with
-// (viewRenames). A loader that reads no netlist leaves ix as it is.
-func renamedIndex(ctx context.Context, loader any, snap Snap, ix *boardIndex) *boardIndex {
+// (viewRenames). With build false it uses only a pairing another request already built
+// (keptViewRenames), so a check run's badges cost no board read. A loader that reads no netlist
+// leaves ix as it is.
+func renamedIndex(ctx context.Context, loader any, snap Snap, ix *boardIndex, build bool) *boardIndex {
 	dl, ok := loader.(DesignLoader)
 	if ix == nil || !ok {
 		return ix
+	}
+	if !build {
+		return ix.withRenames(keptViewRenames(ctx, dl, snap))
 	}
 	return ix.withRenames(viewRenames(ctx, dl, snap, nil))
 }

@@ -502,7 +502,7 @@ for (const name of chosen) {
 
         // The panel counts what both views hold. A click on an entry selects it, and the board view
         // finds it, a net the board names differently included (agni issue 1590).
-        await step("see how well the schematic and the board agree", { needs: ["two views"], waitsOn: ["#1590"] }, async () => {
+        await step("see how well the schematic and the board agree", { needs: ["two views"] }, async () => {
           await page.locator('[data-action="agreement"]').first().click({ timeout: 5_000 });
           const panel = page.locator("[data-agreement]").first();
           await page.waitForFunction(() => /[\d,]+ of [\d,]+ parts/.test(document.querySelector("[data-agreement]")?.textContent ?? ""), null, { timeout: 60_000 })
