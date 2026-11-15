@@ -307,16 +307,41 @@ message BoardLayerRow {
 // "1.711 mm, as the file states". It is "" when there is nothing to compare. disagrees says the
 // layers and the stated thickness differ by more than core/stackup's tolerance, and summary then
 // says by how much.
+//
+// drills and outline_tris let a client draw the stack apart, layer by layer (agni 1593). drills holds
+// every plated hole, grouped by the copper layers it joins. outline_tris fills the board outline as
+// a triangle list of x,y pairs, in board units like drills, for drawing a dielectric or a mask as a
+// slab. It falls back to the outline's bounding box when the outline's paths do not close.
 message BoardStackView {
   repeated BoardStackRow rows = 1;
   string summary = 2;
   bool disagrees = 3;
+  repeated BoardDrillSpan drills = 4;
+  repeated double outline_tris = 5;
+  // units_per_mm is how many board units make a millimetre, for placing a thickness_mm among the
+  // drills' and the outline's coordinates.
+  double units_per_mm = 6;
+}
+
+// BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
+// F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
+// of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
+// xy holds each hole's centre as x,y pairs in board units, the units of geom.BoardGeometry before
+// PackedSheet's origin rebase. diameter holds each hole's width in board units, and net its net or
+// "", both one per hole.
+message BoardDrillSpan {
+  string layer_from = 1;
+  string layer_to = 2;
+  repeated double xy = 3;
+  repeated double diameter = 4;
+  repeated string net = 5;
 }
 
 // BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
 // thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
 // client that draws to scale, and is unset when the file gives none. material is as the file gives
-// it, or "".
+// it, or "". color is what a client draws the row in, from render.Style: a copper or graphics
+// layer's own colour, Style.Dielectric or Style.SolderMask, or "" for a row with no colour.
 message BoardStackRow {
   string name = 1;
   string kind = 2;
@@ -324,4 +349,5 @@ message BoardStackRow {
   string thickness = 4;
   optional double thickness_mm = 5;
   string material = 6;
+  string color = 7;
 }
