@@ -166,6 +166,21 @@ panel from the ones above.
   layers with the board thickness the file states, and turns red when they differ by more than
   `core/stackup`'s tolerance. `render.BoardLayers` fills `BoardLayerRow.thickness`, and
   `render.BoardStack` fills `GetSheetResponse.board_stack`, so the client formats nothing.
+- **A board view can draw its stack apart** (agni issue 1593). Say a reader wants to see which inner
+  layer a net runs on. **Stack** in a board view's bar draws each packed group at a height in WebGL,
+  from the stack's `thickness_mm`. The renderer's shader takes a `mat4` view and a `u_z` per run of a
+  group, so the flat view sets z to 0 and draws as before. `web/src/stacklayout.ts` places each stack
+  row in depth, with a typical thickness for a row the file leaves out, and `groupDepths` puts each
+  `BoardLayerRow`'s groups at their layer's depth. The Through and Hole groups draw as barrels
+  instead, from `BoardStackView.drills`, and each dielectric and mask draws as a slab from
+  `outline_tris` (`web/src/stackgl.ts`). `web/src/stackcamera.ts` is an orthographic orbit camera.
+  Orthographic keeps a length the same at any depth, so the drawn height at explode 0 can equal the
+  board's thickness, and a click becomes a ray that meets each plane at one point.
+  `web/src/stackpick.ts` asks the flat board's pick index at that point, plane by plane from the
+  nearest, with the other planes' groups hidden, so a pick keys a net as the flat board's does. The
+  pane remembers its renderer and view, and leaving the stack view restores them. The canvas writes
+  a clickable point on each copper layer's tracks to `data-stack-probes`, which the cross-probe walk
+  clicks, since a WebGL drawing has no element to aim at.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`

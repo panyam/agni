@@ -2,6 +2,7 @@ import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import type { LayerPreset } from "./boardlayers.js";
+import { TYPICAL_MM } from "./stacklayout.js";
 
 // LayerControl is what a board layer list asks of its owner (agni 1351). A click on a row toggles
 // it, a double-click shows it alone, and a preset button replaces the whole hidden set.
@@ -77,7 +78,8 @@ export function BoardLayerList(props: {
 }
 
 // BoardStackTable is the board's physical stack, top to bottom, then how the layers compare with
-// the board thickness the file states.
+// the board thickness the file states. A row the file gives no thickness also says the typical
+// thickness the stack view draws it at (agni issue 1593).
 function BoardStackTable(props: { stack: BoardStackView }) {
   return (
     <div class="board-stack" data-board-stack>
@@ -90,6 +92,15 @@ function BoardStackTable(props: { stack: BoardStackView }) {
                 <td class="board-stack-name">{r.name}</td>
                 <td class="board-stack-thickness" data-stack-thickness={r.thickness}>
                   {r.thickness}
+                  <Show when={r.thicknessMm === undefined}>
+                    <span
+                      class="board-stack-default"
+                      data-stack-default={String(typicalMm(r.kind))}
+                      title="the stack view draws this layer at a typical thickness, since the file gives none"
+                    >
+                      {typicalMm(r.kind) > 0 ? ` (drawn at ${typicalMm(r.kind)} mm)` : " (drawn on the surface)"}
+                    </span>
+                  </Show>
                 </td>
                 <td class="board-stack-material">{r.material}</td>
               </tr>
@@ -104,6 +115,10 @@ function BoardStackTable(props: { stack: BoardStackView }) {
       </Show>
     </div>
   );
+}
+
+function typicalMm(kind: string): number {
+  return TYPICAL_MM[kind] ?? TYPICAL_MM.other;
 }
 
 // LayerListState is what a mounted list draws.

@@ -20,6 +20,7 @@ import { boardLayerListIsland } from "./boardlayerlist.js";
 import { followBoard, type BoardFacts } from "./boardfollow.js";
 import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
+import type { StackPreset } from "./stackcamera.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
@@ -227,6 +228,15 @@ export class SheetPane {
   // setBusy shows or hides this view's loader, and busyEl is the loader itself.
   private readonly setBusy: (busy: Busy, label?: string) => void;
   private readonly busyEl: HTMLElement;
+  // The stack view (agni issue 1593). stackButton enters and leaves it, and stackBar holds its explode
+  // control and camera presets. stackFrom is the renderer and view the board had before, which leaving
+  // restores.
+  private readonly stackButton: HTMLButtonElement;
+  private readonly stackBar: HTMLElement;
+  private readonly explodeInput: HTMLInputElement;
+  private exploded = false;
+  private noGl = false;
+  private stackFrom: { mode: SurfaceMode; view: unknown } | null = null;
 
   constructor(
     readonly id: string,
@@ -332,6 +342,24 @@ export class SheetPane {
       prev: button("sheetview-prev-sheet", "prev-sheet", "‹", "open the previous sheet that draws the selection, or the previous sheet with nothing selected (,)", () => void this.stepSheet(-1)),
       next: button("sheetview-next-sheet", "next-sheet", "›", "open the next sheet that draws the selection, or the next sheet with nothing selected (.)", () => void this.stepSheet(1)),
     };
+    this.stackButton = button("sheetview-stack", "explode", "Stack", "show the board's layers apart, in stack order", () => void this.toggleStack());
+    this.stackButton.setAttribute("aria-pressed", "false");
+    this.stackBar = el("span", "sheetview-stack-bar");
+    this.stackBar.hidden = true;
+    this.explodeInput = el("input", "sheetview-explode") as HTMLInputElement;
+    this.explodeInput.type = "range";
+    this.explodeInput.min = "0";
+    this.explodeInput.max = "100";
+    this.explodeInput.value = "60";
+    this.explodeInput.dataset.stackExplode = "";
+    this.explodeInput.title = "how far apart the layers draw: 0 is the board's true thickness";
+    this.explodeInput.addEventListener("input", () => this.gl?.setExplode(Number(this.explodeInput.value) / 100));
+    this.stackBar.append(this.explodeInput);
+    for (const [preset, text] of [["top", "Top"], ["iso", "Iso"], ["front", "Front"], ["side", "Side"]] as [StackPreset, string][]) {
+      const b = button("sheetview-stack-preset", `stack-${preset}`, text, `look at the stack from the ${preset === "iso" ? "corner" : preset}`, () => this.gl?.setStackPreset(preset));
+      b.dataset.stackPreset = preset;
+      this.stackBar.append(b);
+    }
     this.place = el("span", "sheetview-place");
     this.place.dataset.sheetPlace = "";
     const close = el("button", "mode-btn sheetview-close") as HTMLButtonElement;
@@ -347,6 +375,8 @@ export class SheetPane {
       this.historyButtons.forward,
       renderer,
       this.layersButton,
+      this.stackButton,
+      this.stackBar,
       rotate,
       flipH,
       flipV,
@@ -397,6 +427,73 @@ export class SheetPane {
     this.surface.setMode(this.deps.renderer?.("") ?? "svg");
     this.surface.parkWhenIdle(this.deps.parkAfterMs ?? PARK_AFTER_MS);
     this.webglBox.checked = this.surface.mode === "webgl";
+    this.element.dataset.exploded = "false";
+    this.stackButton.style.display = "none";
+  }
+
+  // toggleStack shows the board's stack apart, or puts it back (agni issue 1593). The stack draws in
+  // WebGL, so a board drawn in SVG switches to WebGL first and back to SVG on the way out, with the
+  // SVG view's pan and zoom.
+  async toggleStack(): Promise<void> {
+    if (this.exploded) {
+      await this.leaveStack();
+      return;
+    }
+    const stack = this.layerStack;
+    if (!stack || this.sheet !== BOARD_SHEET) return;
+    const mode = this.surface.mode;
+    this.stackFrom = { mode, view: this.surface.getView(mode) };
+    if (mode !== "webgl") await this.switchRenderer("webgl");
+    const gl = this.gl;
+    if (!gl || this.surface.drawnBy !== "webgl" || !gl.enterStack(stack, this.layerRows)) {
+      this.noGl = true;
+      this.showStackButton();
+      await this.restoreFrom();
+      return;
+    }
+    gl.setExplode(Number(this.explodeInput.value) / 100);
+    this.setExploded(true);
+  }
+
+  // showStackButton says on the Stack button why it cannot be pressed, when it cannot.
+  private showStackButton(): void {
+    const why = !this.layerStack?.rows.length
+      ? "the board's file states no layer stack"
+      : this.noGl
+        ? "the stack view needs WebGL2, which this browser does not offer"
+        : "";
+    this.stackButton.disabled = why !== "";
+    this.stackButton.title = why || "show the board's layers apart, in stack order";
+  }
+
+  private async leaveStack(): Promise<void> {
+    this.gl?.leaveStack();
+    this.setExploded(false);
+    await this.restoreFrom();
+  }
+
+  // restoreFrom puts back the renderer and view the board had before the stack view.
+  private async restoreFrom(): Promise<void> {
+    const from = this.stackFrom;
+    this.stackFrom = null;
+    if (!from || from.mode === this.surface.mode) return;
+    await this.switchRenderer(from.mode);
+    if (from.view) this.surface.setView(from.mode, from.view);
+  }
+
+  // switchRenderer draws the sheet again in another renderer without counting as the reader's choice.
+  private async switchRenderer(mode: SurfaceMode): Promise<void> {
+    this.surface.setMode(mode);
+    this.webglBox.checked = mode === "webgl";
+    if (this.sheet) await this.open(this.sheet);
+  }
+
+  private setExploded(on: boolean): void {
+    this.exploded = on;
+    this.element.dataset.exploded = String(on);
+    this.stackBar.hidden = !on;
+    this.stackButton.setAttribute("aria-pressed", String(on));
+    this.stackButton.classList.toggle("active", on);
   }
 
   // renderer is the renderer this view draws in, and drawnBy the one that drew the sheet on screen,
@@ -476,6 +573,8 @@ export class SheetPane {
     }
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
     this.layerStack = sheetId === BOARD_SHEET ? drawing.boardStack : undefined;
+    // Drawing a sheet again ends the stack view, since the canvas draws the new sheet flat.
+    if (this.exploded) this.setExploded(false);
     if (!this.layersChosen) this.hiddenLayers = defaultHidden(this.layerRows);
     this.turn = this.deps.turns?.load(sheetId) ?? { orientation: UPRIGHT };
     // The turn goes to the surface first, so a WebGL sheet draws turned from its first frame.
@@ -497,6 +596,8 @@ export class SheetPane {
     this.applyTurn();
     this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
     this.followLabel.style.display = this.layerRows.length > 0 ? "" : "none";
+    this.stackButton.style.display = this.layerRows.length > 0 ? "" : "none";
+    this.showStackButton();
     if (this.layerRows.length === 0) this.showLayerPop(false);
     this.showPlace();
     await this.paint(false);

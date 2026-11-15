@@ -52,6 +52,7 @@ Jetson it reads "1.711 mm, as the file states". It turns red when the two differ
 The Board tile in the Sheets panel shows the same list for the canvas.
 
 The values come from the board's stack, which `agni stackup <design>` prints too (agni issue 1603).
+To see the layers drawn apart, in that order, press **Stack** ([the board's layer stack](../board-stack/)).
 KiCad, ODB++ and IPC-2581 boards carry one. An Allegro or Altium board carries none yet, so its list
 states no thickness.
 
