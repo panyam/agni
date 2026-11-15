@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, type Located, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
 // ROWS are a board's layer rows as the engine lists them, two inner layers between the outer pair.
 const ROWS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"].map(
@@ -211,6 +211,30 @@ describe("a sheet view", () => {
     expect([...pop.querySelectorAll(".board-layer-name")].map((n) => n.textContent)).toEqual(["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]);
     await p.open("s1");
     expect(pop.hidden).toBe(true);
+  });
+
+  // agni issue 1603: a row the stack names states its thickness, and the stack follows the rows.
+  it("lists each layer's thickness and the board's stack in its layer list", async () => {
+    const { p, deps } = pane([]);
+    const thick = ROWS.map((r) => ({ ...r, thickness: r.name.startsWith("In") ? "thickness unknown" : "0.035 mm" }) as unknown as BoardLayerRow);
+    const stack = {
+      rows: [
+        { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", material: "" },
+        { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "1.53 mm", material: "FR4" },
+        { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", material: "" },
+      ],
+      summary: "1.6 mm, as the file states",
+      disagrees: false,
+    } as unknown as BoardStackView;
+    deps.render = async (id) => ({ svg: `<svg width="100" height="100"></svg>`, boardLayers: id === "board" ? thick : [], boardStack: id === "board" ? stack : undefined });
+    await p.open("board");
+    (p.element.querySelector('[data-action="layers"]') as HTMLButtonElement).click();
+    const pop = p.element.querySelector(".sheetview-layer-pop") as HTMLElement;
+    expect([...pop.querySelectorAll("[data-thickness]")].map((n) => n.getAttribute("data-thickness"))).toEqual(["0.035 mm", "thickness unknown", "thickness unknown", "0.035 mm"]);
+    expect([...pop.querySelectorAll("[data-board-stack] tr")].map((r) => r.textContent)).toEqual(["F.Cu0.035 mm", "dielectric 11.53 mmFR4", "B.Cu0.035 mm"]);
+    expect(pop.querySelector(".board-stack-summary")?.textContent).toBe("1.6 mm, as the file states");
+    await p.open("s1");
+    expect(pop.querySelector("[data-board-stack]")).toBeNull();
   });
 
   // agni issue 1486: a board view opens with the fab rows hidden, as the canvas does, and keeps the

@@ -204,6 +204,22 @@ describe("the Board tile's layers", () => {
     expect(boxes.map((b) => b.checked)).toEqual([true, false]);
   });
 
+  // agni issue 1603
+  it("states each layer's thickness and lists the stack, saying when the layers miss the stated total", () => {
+    const { el, view, tiles } = mountLayers();
+    const thick = [{ ...rows![0], thickness: "0.035 mm" }, { ...rows![1], thickness: "" }] as unknown as OverviewState["boardLayers"];
+    const boardStack = {
+      rows: [{ name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", material: "" }],
+      summary: "the layers sum to 0.035 mm, and the file states a board thickness of 1.6 mm",
+      disagrees: true,
+    } as unknown as OverviewState["boardStack"];
+    view.setState(state({ tiles, activeId: "board", boardLayers: thick, boardStack, hiddenLayers: [] }));
+    expect([...el.querySelectorAll("[data-thickness]")].map((n) => n.textContent)).toEqual(["0.035 mm"]);
+    const summary = el.querySelector(".board-stack-summary") as HTMLElement;
+    expect(summary.dataset.disagrees).toBe("true");
+    expect(summary.textContent).toContain("the file states a board thickness of 1.6 mm");
+  });
+
   it("lists no layers while a schematic sheet is shown", () => {
     const { el, view, tiles } = mountLayers();
     view.setState(state({ tiles, activeId: "s1", boardLayers: rows, hiddenLayers: [] }));

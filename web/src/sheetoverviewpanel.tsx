@@ -107,6 +107,7 @@ function SheetOverviewPanel(props: {
           <BoardLayerList
             rows={() => props.state().boardLayers ?? []}
             hidden={hiddenLayers}
+            stack={() => props.state().boardStack}
             layers={props.layers!}
             indent={(p.depth + 1) * 12}
           />

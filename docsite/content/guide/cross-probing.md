@@ -40,6 +40,21 @@ across reloads.
 The sides and layers come from the engine. `LocateSubjects` reads the board and answers each
 selection's side and copper layers along with the sheets that draw it (agni issue 1587).
 
+## Read how thick each layer is
+
+Say a net runs on In2.Cu and you want to know how far under the surface it sits. Press **Layers** in
+the board view's bar. Each row the board's stack names states its thickness, such as "0.035 mm",
+or "thickness unknown" when the stack gives none. Copper, mask and silkscreen rows have one, and Edge,
+Through and the fab rows have none. Under the
+rows, a **Stack** table lists the whole board from the top down, the dielectrics between the copper
+included. Its last line says whether the layers add up to the board thickness the file states. On
+Jetson it reads "1.711 mm, as the file states". It turns red when the two differ by more than 10%.
+The Board tile in the Sheets panel shows the same list for the canvas.
+
+The values come from the board's stack, which `agni stackup <design>` prints too (agni issue 1603).
+KiCad, ODB++ and IPC-2581 boards carry one. An Allegro or Altium board carries none yet, so its list
+states no thickness.
+
 ## Step back to what you selected before
 
 Say you follow a fault from a connector pin to a protection diode, then to a regulator, then to its

@@ -208,17 +208,45 @@ class PackedLabelRuns(_message.Message):
     def __init__(self, label: _Optional[int] = ..., runs: _Optional[_Iterable[_Union[TextRun, _Mapping]]] = ...) -> None: ...
 
 class BoardLayerRow(_message.Message):
-    __slots__ = ("name", "kind", "side", "color", "svg_selector", "groups")
+    __slots__ = ("name", "kind", "side", "color", "svg_selector", "groups", "thickness")
     NAME_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     SIDE_FIELD_NUMBER: _ClassVar[int]
     COLOR_FIELD_NUMBER: _ClassVar[int]
     SVG_SELECTOR_FIELD_NUMBER: _ClassVar[int]
     GROUPS_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_FIELD_NUMBER: _ClassVar[int]
     name: str
     kind: str
     side: str
     color: str
     svg_selector: str
     groups: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., side: _Optional[str] = ..., color: _Optional[str] = ..., svg_selector: _Optional[str] = ..., groups: _Optional[_Iterable[int]] = ...) -> None: ...
+    thickness: str
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., side: _Optional[str] = ..., color: _Optional[str] = ..., svg_selector: _Optional[str] = ..., groups: _Optional[_Iterable[int]] = ..., thickness: _Optional[str] = ...) -> None: ...
+
+class BoardStackView(_message.Message):
+    __slots__ = ("rows", "summary", "disagrees")
+    ROWS_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    DISAGREES_FIELD_NUMBER: _ClassVar[int]
+    rows: _containers.RepeatedCompositeFieldContainer[BoardStackRow]
+    summary: str
+    disagrees: bool
+    def __init__(self, rows: _Optional[_Iterable[_Union[BoardStackRow, _Mapping]]] = ..., summary: _Optional[str] = ..., disagrees: _Optional[bool] = ...) -> None: ...
+
+class BoardStackRow(_message.Message):
+    __slots__ = ("name", "kind", "layer", "thickness", "thickness_mm", "material")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    LAYER_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_MM_FIELD_NUMBER: _ClassVar[int]
+    MATERIAL_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    kind: str
+    layer: str
+    thickness: str
+    thickness_mm: float
+    material: str
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., layer: _Optional[str] = ..., thickness: _Optional[str] = ..., thickness_mm: _Optional[float] = ..., material: _Optional[str] = ...) -> None: ...

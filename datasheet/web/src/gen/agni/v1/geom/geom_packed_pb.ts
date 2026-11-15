@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_packed.proto.
  */
 export const file_agni_v1_geom_geom_packed: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJ/CgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJEhEKCXBsYWNlbWVudBgHIAEoDSImCgZQaW5SZWYSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAki2AEKDUhpZ2hsaWdodFNwZWMSEgoKY29tcG9uZW50cxgBIAMoCRIMCgRuZXRzGAIgAygJEiIKBHBpbnMYAyADKAsyFC5hZ25pLnYxLmdlb20uUGluUmVmEg8KB25ldF9pZHMYCCADKAkSDwoHYnVzX2lkcxgJIAMoCRINCgVjb2xvchgEIAEoCRINCgVhbHBoYRgFIAEoAhIrCgVzaGFwZRgGIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZRIUCgxzdHJva2Vfc2NhbGUYByABKAIirgEKD1BhY2tlZEhpZ2hsaWdodBIzCgZncm91cHMYASADKAsyIy5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0Lkdyb3VwGmYKBUdyb3VwEg0KBWNvbG9yGAEgASgJEg0KBWFscGhhGAIgASgCEhIKCnByaW1pdGl2ZXMYAyADKA0SKwoFc2hhcGUYBCABKA4yHC5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U2hhcGUilQEKB1RleHRSdW4SDAoEdGV4dBgBIAEoCRIoCgRraW5kGAIgASgOMhouYWduaS52MS5nZW9tLlRleHRSdW4uS2luZCJSCgRLaW5kEg4KCktJTkRfUExBSU4QABIQCgxLSU5EX09WRVJCQVIQARISCg5LSU5EX1NVQlNDUklQVBACEhQKEEtJTkRfU1VQRVJTQ1JJUFQQAyLdAQoLUGFja2VkTGFiZWwSCQoBeBgBIAEoBRIJCgF5GAIgASgFEgwKBHRleHQYAyABKAkSDgoGaGVpZ2h0GAQgASgFEhQKDHJvdGF0aW9uX2RlZxgFIAEoBRIPCgdqdXN0aWZ5GAYgASgJEg0KBWNvbG9yGAcgASgJEhEKCW1heF93aWR0aBgIIAEoBRIjCgRydW5zGAkgAygLMhUuYWduaS52MS5nZW9tLlRleHRSdW4SDQoFZ3JvdXAYCiABKA0SDgoGbWlycm9yGAsgASgIEg0KBXdpZHRoGAwgASgFInsKC1BhY2tlZEltYWdlEgkKAXgYASABKAUSCQoBeRgCIAEoBRIJCgF3GAMgASgFEgkKAWgYBCABKAUSDAoEbWltZRgFIAEoCRIMCgRkYXRhGAYgASgMEhQKDHJvdGF0aW9uX2RlZxgHIAEoBRIOCgZtaXJyb3IYCCABKAgigwMKC1BhY2tlZFNoZWV0EhAKCHNoZWV0X2lkGAEgASgJEhYKDmxheW91dF92ZXJzaW9uGAIgASgFEhAKCG9yaWdpbl94GAMgASgDEhAKCG9yaWdpbl95GAQgASgDEhAKCHZlcnRpY2VzGAUgASgMEhIKCnByaW1pdGl2ZXMYBiABKAwSEwoLZm9udF9mYW1pbHkYCSABKAkSFAoMZ3JvdXBfY29sb3JzGAogAygJEhgKEGJhY2tncm91bmRfY29sb3IYCyABKAkSKQoGaW1hZ2VzGAwgAygLMhkuYWduaS52MS5nZW9tLlBhY2tlZEltYWdlEhQKDGdyb3VwX2FscGhhcxgNIAMoAhItCgtrZXlfY29sdW1ucxgOIAEoCzIYLmFnbmkudjEuZ2VvbS5QYWNrZWRLZXlzEjEKDWxhYmVsX2NvbHVtbnMYDyABKAsyGi5hZ25pLnYxLmdlb20uUGFja2VkTGFiZWxzSgQIBxAISgQICBAJUgRrZXlzUgZsYWJlbHMiLgoKUGFja2VkS2V5cxIPCgdzdHJpbmdzGAEgAygJEg8KB3JlY29yZHMYAiABKAwiXQoMUGFja2VkTGFiZWxzEg8KB3N0cmluZ3MYASADKAkSDwoHcmVjb3JkcxgCIAEoDBIrCgRydW5zGAMgAygLMh0uYWduaS52MS5nZW9tLlBhY2tlZExhYmVsUnVucyJFCg9QYWNrZWRMYWJlbFJ1bnMSDQoFbGFiZWwYASABKA0SIwoEcnVucxgCIAMoCzIVLmFnbmkudjEuZ2VvbS5UZXh0UnVuIm4KDUJvYXJkTGF5ZXJSb3cSDAoEbmFtZRgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHNpZGUYAyABKAkSDQoFY29sb3IYBCABKAkSFAoMc3ZnX3NlbGVjdG9yGAUgASgJEg4KBmdyb3VwcxgGIAMoDSqwAQoOSGlnaGxpZ2h0U2hhcGUSHwobSElHSExJR0hUX1NIQVBFX1VOU1BFQ0lGSUVEEAASGwoXSElHSExJR0hUX1NIQVBFX09VVExJTkUQARIhCh1ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfUkVDVBACEiMKH0hJR0hMSUdIVF9TSEFQRV9CT1VORElOR19DSVJDTEUQAxIYChRISUdITElHSFRfU0hBUEVfUEFUSBAEQixaKmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZ2VvbWIGcHJvdG8z");
+  fileDesc("Ch5hZ25pL3YxL2dlb20vZ2VvbV9wYWNrZWQucHJvdG8SDGFnbmkudjEuZ2VvbSJ/CgxQcmltaXRpdmVLZXkSEQoJcHJpbWl0aXZlGAEgASgNEg8KB3JlZl9kZXMYAiABKAkSCwoDbmV0GAMgASgJEgsKA3BpbhgEIAEoCRIOCgZuZXRfaWQYBSABKAkSDgoGYnVzX2lkGAYgASgJEhEKCXBsYWNlbWVudBgHIAEoDSImCgZQaW5SZWYSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAki2AEKDUhpZ2hsaWdodFNwZWMSEgoKY29tcG9uZW50cxgBIAMoCRIMCgRuZXRzGAIgAygJEiIKBHBpbnMYAyADKAsyFC5hZ25pLnYxLmdlb20uUGluUmVmEg8KB25ldF9pZHMYCCADKAkSDwoHYnVzX2lkcxgJIAMoCRINCgVjb2xvchgEIAEoCRINCgVhbHBoYRgFIAEoAhIrCgVzaGFwZRgGIAEoDjIcLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTaGFwZRIUCgxzdHJva2Vfc2NhbGUYByABKAIirgEKD1BhY2tlZEhpZ2hsaWdodBIzCgZncm91cHMYASADKAsyIy5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0Lkdyb3VwGmYKBUdyb3VwEg0KBWNvbG9yGAEgASgJEg0KBWFscGhhGAIgASgCEhIKCnByaW1pdGl2ZXMYAyADKA0SKwoFc2hhcGUYBCABKA4yHC5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U2hhcGUilQEKB1RleHRSdW4SDAoEdGV4dBgBIAEoCRIoCgRraW5kGAIgASgOMhouYWduaS52MS5nZW9tLlRleHRSdW4uS2luZCJSCgRLaW5kEg4KCktJTkRfUExBSU4QABIQCgxLSU5EX09WRVJCQVIQARISCg5LSU5EX1NVQlNDUklQVBACEhQKEEtJTkRfU1VQRVJTQ1JJUFQQAyLdAQoLUGFja2VkTGFiZWwSCQoBeBgBIAEoBRIJCgF5GAIgASgFEgwKBHRleHQYAyABKAkSDgoGaGVpZ2h0GAQgASgFEhQKDHJvdGF0aW9uX2RlZxgFIAEoBRIPCgdqdXN0aWZ5GAYgASgJEg0KBWNvbG9yGAcgASgJEhEKCW1heF93aWR0aBgIIAEoBRIjCgRydW5zGAkgAygLMhUuYWduaS52MS5nZW9tLlRleHRSdW4SDQoFZ3JvdXAYCiABKA0SDgoGbWlycm9yGAsgASgIEg0KBXdpZHRoGAwgASgFInsKC1BhY2tlZEltYWdlEgkKAXgYASABKAUSCQoBeRgCIAEoBRIJCgF3GAMgASgFEgkKAWgYBCABKAUSDAoEbWltZRgFIAEoCRIMCgRkYXRhGAYgASgMEhQKDHJvdGF0aW9uX2RlZxgHIAEoBRIOCgZtaXJyb3IYCCABKAgigwMKC1BhY2tlZFNoZWV0EhAKCHNoZWV0X2lkGAEgASgJEhYKDmxheW91dF92ZXJzaW9uGAIgASgFEhAKCG9yaWdpbl94GAMgASgDEhAKCG9yaWdpbl95GAQgASgDEhAKCHZlcnRpY2VzGAUgASgMEhIKCnByaW1pdGl2ZXMYBiABKAwSEwoLZm9udF9mYW1pbHkYCSABKAkSFAoMZ3JvdXBfY29sb3JzGAogAygJEhgKEGJhY2tncm91bmRfY29sb3IYCyABKAkSKQoGaW1hZ2VzGAwgAygLMhkuYWduaS52MS5nZW9tLlBhY2tlZEltYWdlEhQKDGdyb3VwX2FscGhhcxgNIAMoAhItCgtrZXlfY29sdW1ucxgOIAEoCzIYLmFnbmkudjEuZ2VvbS5QYWNrZWRLZXlzEjEKDWxhYmVsX2NvbHVtbnMYDyABKAsyGi5hZ25pLnYxLmdlb20uUGFja2VkTGFiZWxzSgQIBxAISgQICBAJUgRrZXlzUgZsYWJlbHMiLgoKUGFja2VkS2V5cxIPCgdzdHJpbmdzGAEgAygJEg8KB3JlY29yZHMYAiABKAwiXQoMUGFja2VkTGFiZWxzEg8KB3N0cmluZ3MYASADKAkSDwoHcmVjb3JkcxgCIAEoDBIrCgRydW5zGAMgAygLMh0uYWduaS52MS5nZW9tLlBhY2tlZExhYmVsUnVucyJFCg9QYWNrZWRMYWJlbFJ1bnMSDQoFbGFiZWwYASABKA0SIwoEcnVucxgCIAMoCzIVLmFnbmkudjEuZ2VvbS5UZXh0UnVuIoEBCg1Cb2FyZExheWVyUm93EgwKBG5hbWUYASABKAkSDAoEa2luZBgCIAEoCRIMCgRzaWRlGAMgASgJEg0KBWNvbG9yGAQgASgJEhQKDHN2Z19zZWxlY3RvchgFIAEoCRIOCgZncm91cHMYBiADKA0SEQoJdGhpY2tuZXNzGAcgASgJIl8KDkJvYXJkU3RhY2tWaWV3EikKBHJvd3MYASADKAsyGy5hZ25pLnYxLmdlb20uQm9hcmRTdGFja1JvdxIPCgdzdW1tYXJ5GAIgASgJEhEKCWRpc2FncmVlcxgDIAEoCCKLAQoNQm9hcmRTdGFja1JvdxIMCgRuYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSDQoFbGF5ZXIYAyABKAkSEQoJdGhpY2tuZXNzGAQgASgJEhkKDHRoaWNrbmVzc19tbRgFIAEoAUgAiAEBEhAKCG1hdGVyaWFsGAYgASgJQg8KDV90aGlja25lc3NfbW0qsAEKDkhpZ2hsaWdodFNoYXBlEh8KG0hJR0hMSUdIVF9TSEFQRV9VTlNQRUNJRklFRBAAEhsKF0hJR0hMSUdIVF9TSEFQRV9PVVRMSU5FEAESIQodSElHSExJR0hUX1NIQVBFX0JPVU5ESU5HX1JFQ1QQAhIjCh9ISUdITElHSFRfU0hBUEVfQk9VTkRJTkdfQ0lSQ0xFEAMSGAoUSElHSExJR0hUX1NIQVBFX1BBVEgQBEIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw");
 
 /**
  * PrimitiveKey maps a primitive (by index into the primitives table) back to the IR
@@ -781,6 +781,15 @@ export type BoardLayerRow = Message<"agni.v1.geom.BoardLayerRow"> & {
    * @generated from field: repeated uint32 groups = 6;
    */
   groups: number[];
+
+  /**
+   * thickness is the row's thickness as the board's stack gives it, such as "0.035 mm", or
+   * "thickness unknown" when the stack names the layer and gives no thickness (agni 1603). It is ""
+   * when no stack row names the layer, as for Edge, Through and Zones, or a board with no stack.
+   *
+   * @generated from field: string thickness = 7;
+   */
+  thickness: string;
 };
 
 /**
@@ -789,6 +798,88 @@ export type BoardLayerRow = Message<"agni.v1.geom.BoardLayerRow"> & {
  */
 export const BoardLayerRowSchema: GenMessage<BoardLayerRow> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_packed, 11);
+
+/**
+ * BoardStackView is the board's physical layer stack as the viewer's layer list shows it (agni
+ * 1603). A dielectric draws nothing, so it has no BoardLayerRow, and a reader still wants to see it
+ * between the copper. rows run from the top of the board to the bottom, one per
+ * geom.Stackup row. summary compares the rows with the board thickness the file states, such as
+ * "1.711 mm, as the file states". It is "" when there is nothing to compare. disagrees says the
+ * layers and the stated thickness differ by more than core/stackup's tolerance, and summary then
+ * says by how much.
+ *
+ * @generated from message agni.v1.geom.BoardStackView
+ */
+export type BoardStackView = Message<"agni.v1.geom.BoardStackView"> & {
+  /**
+   * @generated from field: repeated agni.v1.geom.BoardStackRow rows = 1;
+   */
+  rows: BoardStackRow[];
+
+  /**
+   * @generated from field: string summary = 2;
+   */
+  summary: string;
+
+  /**
+   * @generated from field: bool disagrees = 3;
+   */
+  disagrees: boolean;
+};
+
+/**
+ * Describes the message agni.v1.geom.BoardStackView.
+ * Use `create(BoardStackViewSchema)` to create a new message.
+ */
+export const BoardStackViewSchema: GenMessage<BoardStackView> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 12);
+
+/**
+ * BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
+ * thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
+ * client that draws to scale, and is unset when the file gives none. material is as the file gives
+ * it, or "".
+ *
+ * @generated from message agni.v1.geom.BoardStackRow
+ */
+export type BoardStackRow = Message<"agni.v1.geom.BoardStackRow"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string layer = 3;
+   */
+  layer: string;
+
+  /**
+   * @generated from field: string thickness = 4;
+   */
+  thickness: string;
+
+  /**
+   * @generated from field: optional double thickness_mm = 5;
+   */
+  thicknessMm?: number | undefined;
+
+  /**
+   * @generated from field: string material = 6;
+   */
+  material: string;
+};
+
+/**
+ * Describes the message agni.v1.geom.BoardStackRow.
+ * Use `create(BoardStackRowSchema)` to create a new message.
+ */
+export const BoardStackRowSchema: GenMessage<BoardStackRow> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_packed, 13);
 
 /**
  * HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).

@@ -196,8 +196,11 @@ func (s *boardStrata) artGroup(layer string) uint8 {
 // BoardLayers lists a board's layer rows, in the order the viewer's Sheets panel shows them. Each
 // row carries the selector and the packed groups that hide it in BoardSVG's and PackBoard's
 // output under the same style.
+// A row the board's stack names also carries its thickness (agni 1603).
 func BoardLayers(b *geom.BoardGeometry, opts ...Option) []*geom.BoardLayerRow {
-	return planBoardStrata(b, resolveStyle(opts)).rows
+	rows := planBoardStrata(b, resolveStyle(opts)).rows
+	stackThickness(b, rows)
+	return rows
 }
 
 // copperStack lists the copper layers that carry tracks, pads or zones, front first. It orders

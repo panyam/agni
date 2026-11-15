@@ -645,7 +645,10 @@ type GetSheetResponse struct {
 	Content isGetSheetResponse_Content `protobuf_oneof:"content"`
 	// board_layers lists the board sheet's layers, for either format (agni 1351). It is empty for a
 	// schematic sheet.
-	BoardLayers   []*geom.BoardLayerRow `protobuf:"bytes,3,rep,name=board_layers,json=boardLayers,proto3" json:"board_layers,omitempty"`
+	BoardLayers []*geom.BoardLayerRow `protobuf:"bytes,3,rep,name=board_layers,json=boardLayers,proto3" json:"board_layers,omitempty"`
+	// board_stack is the board sheet's physical layer stack, for either format (agni 1603). It is
+	// unset for a schematic sheet and for a board whose file states no stack.
+	BoardStack    *geom.BoardStackView `protobuf:"bytes,4,opt,name=board_stack,json=boardStack,proto3" json:"board_stack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -708,6 +711,13 @@ func (x *GetSheetResponse) GetSvg() string {
 func (x *GetSheetResponse) GetBoardLayers() []*geom.BoardLayerRow {
 	if x != nil {
 		return x.BoardLayers
+	}
+	return nil
+}
+
+func (x *GetSheetResponse) GetBoardStack() *geom.BoardStackView {
+	if x != nil {
+		return x.BoardStack
 	}
 	return nil
 }
@@ -3075,11 +3085,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +
 	"\x06format\x18\x03 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x126\n" +
-	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbolsJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x03uriR\bas_named\"\xa6\x01\n" +
+	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbolsJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x03uriR\bas_named\"\xe5\x01\n" +
 	"\x10GetSheetResponse\x123\n" +
 	"\x06packed\x18\x01 \x01(\v2\x19.agni.v1.geom.PackedSheetH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svg\x12>\n" +
-	"\fboard_layers\x18\x03 \x03(\v2\x1b.agni.v1.geom.BoardLayerRowR\vboardLayersB\t\n" +
+	"\fboard_layers\x18\x03 \x03(\v2\x1b.agni.v1.geom.BoardLayerRowR\vboardLayers\x12=\n" +
+	"\vboard_stack\x18\x04 \x01(\v2\x1c.agni.v1.geom.BoardStackViewR\n" +
+	"boardStackB\t\n" +
 	"\acontent\"\x9c\x02\n" +
 	"\x15HighlightSheetRequest\x12\x1a\n" +
 	"\bsnapshot\x18\b \x01(\tR\bsnapshot\x12\x14\n" +
@@ -3327,10 +3339,11 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*ir.Design)(nil),               // 44: agni.v1.ir.Design
 	(*geom.PackedSheet)(nil),        // 45: agni.v1.geom.PackedSheet
 	(*geom.BoardLayerRow)(nil),      // 46: agni.v1.geom.BoardLayerRow
-	(*geom.HighlightSpec)(nil),      // 47: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 48: agni.v1.geom.PackedHighlight
-	(*checks.Subject)(nil),          // 49: agni.v1.checks.Subject
-	(checks.LocateReason)(0),        // 50: agni.v1.checks.LocateReason
+	(*geom.BoardStackView)(nil),     // 47: agni.v1.geom.BoardStackView
+	(*geom.HighlightSpec)(nil),      // 48: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 49: agni.v1.geom.PackedHighlight
+	(*checks.Subject)(nil),          // 50: agni.v1.checks.Subject
+	(checks.LocateReason)(0),        // 51: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	41, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
@@ -3342,73 +3355,74 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	45, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
 	46, // 8: agni.v1.webapi.GetSheetResponse.board_layers:type_name -> agni.v1.geom.BoardLayerRow
-	1,  // 9: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	0,  // 10: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	47, // 11: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	48, // 12: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
-	1,  // 13: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	36, // 14: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
-	13, // 15: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
-	13, // 16: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
-	13, // 17: agni.v1.webapi.ReachablePinsRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
-	20, // 18: agni.v1.webapi.ReachablePinsResponse.from:type_name -> agni.v1.webapi.TraceEnd
-	16, // 19: agni.v1.webapi.ReachablePinsResponse.pins:type_name -> agni.v1.webapi.ReachablePin
-	17, // 20: agni.v1.webapi.ReachablePinsResponse.rails:type_name -> agni.v1.webapi.ReachedRail
-	20, // 21: agni.v1.webapi.ReachablePin.end:type_name -> agni.v1.webapi.TraceEnd
-	19, // 22: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
-	20, // 23: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
-	20, // 24: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
-	2,  // 25: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
-	21, // 26: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
-	22, // 27: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
-	13, // 28: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
-	35, // 29: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
-	13, // 30: agni.v1.webapi.WalkDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
-	24, // 31: agni.v1.webapi.WalkDesignRequest.goal:type_name -> agni.v1.webapi.WalkGoal
-	13, // 32: agni.v1.webapi.WalkGoal.to:type_name -> agni.v1.webapi.TraceEndpoint
-	20, // 33: agni.v1.webapi.WalkGoalAnswer.to:type_name -> agni.v1.webapi.TraceEnd
-	2,  // 34: agni.v1.webapi.WalkGoalAnswer.outcome:type_name -> agni.v1.webapi.TraceOutcome
-	26, // 35: agni.v1.webapi.WalkGoalAnswer.routes:type_name -> agni.v1.webapi.WalkRoute
-	21, // 36: agni.v1.webapi.WalkRoute.crossings:type_name -> agni.v1.webapi.TraceCross
-	22, // 37: agni.v1.webapi.WalkRoute.nets:type_name -> agni.v1.webapi.TraceNet
-	28, // 38: agni.v1.webapi.WalkDesignResponse.walk:type_name -> agni.v1.webapi.Walk
-	20, // 39: agni.v1.webapi.Walk.from:type_name -> agni.v1.webapi.TraceEnd
-	29, // 40: agni.v1.webapi.Walk.nets:type_name -> agni.v1.webapi.WalkNet
-	30, // 41: agni.v1.webapi.Walk.boundary:type_name -> agni.v1.webapi.WalkBoundary
-	31, // 42: agni.v1.webapi.Walk.elided:type_name -> agni.v1.webapi.WalkElided
-	25, // 43: agni.v1.webapi.Walk.goal:type_name -> agni.v1.webapi.WalkGoalAnswer
-	22, // 44: agni.v1.webapi.WalkNet.net:type_name -> agni.v1.webapi.TraceNet
-	21, // 45: agni.v1.webapi.WalkNet.entered:type_name -> agni.v1.webapi.TraceCross
-	21, // 46: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
-	34, // 47: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
-	37, // 48: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	49, // 49: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
-	40, // 50: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
-	49, // 51: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
-	50, // 52: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
-	4,  // 53: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 54: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 55: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	10, // 56: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	38, // 57: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
-	12, // 58: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	14, // 59: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
-	23, // 60: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
-	32, // 61: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
-	5,  // 62: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 63: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 64: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	11, // 65: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	39, // 66: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
-	18, // 67: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	15, // 68: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
-	27, // 69: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
-	33, // 70: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
-	62, // [62:71] is the sub-list for method output_type
-	53, // [53:62] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	47, // 9: agni.v1.webapi.GetSheetResponse.board_stack:type_name -> agni.v1.geom.BoardStackView
+	1,  // 10: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	0,  // 11: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
+	48, // 12: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	49, // 13: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	1,  // 14: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	36, // 15: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
+	13, // 16: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	13, // 17: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
+	13, // 18: agni.v1.webapi.ReachablePinsRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	20, // 19: agni.v1.webapi.ReachablePinsResponse.from:type_name -> agni.v1.webapi.TraceEnd
+	16, // 20: agni.v1.webapi.ReachablePinsResponse.pins:type_name -> agni.v1.webapi.ReachablePin
+	17, // 21: agni.v1.webapi.ReachablePinsResponse.rails:type_name -> agni.v1.webapi.ReachedRail
+	20, // 22: agni.v1.webapi.ReachablePin.end:type_name -> agni.v1.webapi.TraceEnd
+	19, // 23: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
+	20, // 24: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
+	20, // 25: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 26: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	21, // 27: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
+	22, // 28: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
+	13, // 29: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
+	35, // 30: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
+	13, // 31: agni.v1.webapi.WalkDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	24, // 32: agni.v1.webapi.WalkDesignRequest.goal:type_name -> agni.v1.webapi.WalkGoal
+	13, // 33: agni.v1.webapi.WalkGoal.to:type_name -> agni.v1.webapi.TraceEndpoint
+	20, // 34: agni.v1.webapi.WalkGoalAnswer.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 35: agni.v1.webapi.WalkGoalAnswer.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	26, // 36: agni.v1.webapi.WalkGoalAnswer.routes:type_name -> agni.v1.webapi.WalkRoute
+	21, // 37: agni.v1.webapi.WalkRoute.crossings:type_name -> agni.v1.webapi.TraceCross
+	22, // 38: agni.v1.webapi.WalkRoute.nets:type_name -> agni.v1.webapi.TraceNet
+	28, // 39: agni.v1.webapi.WalkDesignResponse.walk:type_name -> agni.v1.webapi.Walk
+	20, // 40: agni.v1.webapi.Walk.from:type_name -> agni.v1.webapi.TraceEnd
+	29, // 41: agni.v1.webapi.Walk.nets:type_name -> agni.v1.webapi.WalkNet
+	30, // 42: agni.v1.webapi.Walk.boundary:type_name -> agni.v1.webapi.WalkBoundary
+	31, // 43: agni.v1.webapi.Walk.elided:type_name -> agni.v1.webapi.WalkElided
+	25, // 44: agni.v1.webapi.Walk.goal:type_name -> agni.v1.webapi.WalkGoalAnswer
+	22, // 45: agni.v1.webapi.WalkNet.net:type_name -> agni.v1.webapi.TraceNet
+	21, // 46: agni.v1.webapi.WalkNet.entered:type_name -> agni.v1.webapi.TraceCross
+	21, // 47: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
+	34, // 48: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
+	37, // 49: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	50, // 50: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
+	40, // 51: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
+	50, // 52: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
+	51, // 53: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
+	4,  // 54: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 55: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 56: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 57: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	38, // 58: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	12, // 59: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	14, // 60: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
+	23, // 61: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
+	32, // 62: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
+	5,  // 63: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 64: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 65: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 66: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	39, // 67: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	18, // 68: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	15, // 69: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
+	27, // 70: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
+	33, // 71: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
+	63, // [63:72] is the sub-list for method output_type
+	54, // [54:63] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }

@@ -405,6 +405,18 @@
     .board-layer-rows { list-style: none; margin: 0; padding: 0; }
     .board-layer-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; cursor: pointer; user-select: none; }
     .board-layer-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.25); }
+    /* agni issue 1603: each row's thickness, and the board's whole stack under the rows */
+    .board-layer-thickness { margin-left: auto; padding-left: 8px; color: #666; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .board-stack { margin-top: 6px; border-top: 1px solid #ddd; padding-top: 4px; }
+    .board-stack-title { font-weight: bold; margin-bottom: 2px; }
+    .board-stack-rows { border-collapse: collapse; width: 100%; }
+    .board-stack-rows td { padding: 0 6px 0 0; white-space: nowrap; }
+    .board-stack-thickness { text-align: right; font-variant-numeric: tabular-nums; }
+    .board-stack-material { color: #666; }
+    .board-stack-rows tr[data-kind="dielectric"] td { color: #8a7a4a; }
+    .board-stack-rows tr[data-kind="copper"] td.board-stack-name { color: #a0522d; }
+    .board-stack-summary { margin-top: 4px; color: #555; }
+    .board-stack-summary[data-disagrees="true"] { color: #b00020; }
     /* Above the dock's drawers and their scrims, since the Sheets drawer opens it (agni issue 1542). */
     .board-picker-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: calc(var(--dv-overlay-z-index, 999) + 300); display: flex; align-items: center; justify-content: center; }
     .board-picker { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 12px; width: min(520px, 90vw); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }

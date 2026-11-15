@@ -890,6 +890,7 @@ class AppRoot extends BaseComponent {
             svg: resp.content.case === "svg" ? resp.content.value : "",
             packed: resp.content.case === "packed" ? resp.content.value : undefined,
             boardLayers: resp.boardLayers,
+            boardStack: resp.boardStack,
           };
         },
         // A view opens in the canvas's renderer. The native tool's pages carry no picks, so a view

@@ -1,6 +1,6 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import type { LayerPreset } from "./boardlayers.js";
 
 // LayerControl is what a board layer list asks of its owner (agni 1351). A click on a row toggles
@@ -20,11 +20,14 @@ const PRESETS: { preset: LayerPreset; label: string; title: string }[] = [
 
 // BoardLayerList is a board's layer rows with the preset buttons above them. The Sheets panel shows
 // it under the Board tile for the canvas, and a sheet view beside the canvas shows it in a popover
-// over its own hidden set (agni issue 1401), so both lists behave alike.
+// over its own hidden set (agni issue 1401), so both lists behave alike. A row the board's stack
+// names shows its thickness, and the board's whole stack follows the rows, dielectrics included,
+// since a dielectric draws nothing and has no row to toggle (agni 1603).
 export function BoardLayerList(props: {
   rows: () => BoardLayerRow[];
   hidden: () => ReadonlySet<string>;
   layers: LayerControl;
+  stack?: () => BoardStackView | undefined;
   indent?: number;
 }) {
   return (
@@ -56,11 +59,49 @@ export function BoardLayerList(props: {
                 <input type="checkbox" checked={!props.hidden().has(r.name)} aria-label={r.name} />
                 <span class="board-layer-swatch" style={{ background: r.color }} />
                 <span class="board-layer-name">{r.name}</span>
+                <Show when={r.thickness}>
+                  <span class="board-layer-thickness" data-thickness={r.thickness}>
+                    {r.thickness}
+                  </span>
+                </Show>
               </div>
             </li>
           )}
         </For>
       </ul>
+      <Show when={props.stack?.()?.rows.length}>
+        <BoardStackTable stack={props.stack!()!} />
+      </Show>
+    </div>
+  );
+}
+
+// BoardStackTable is the board's physical stack, top to bottom, then how the layers compare with
+// the board thickness the file states.
+function BoardStackTable(props: { stack: BoardStackView }) {
+  return (
+    <div class="board-stack" data-board-stack>
+      <div class="board-stack-title">Stack</div>
+      <table class="board-stack-rows" aria-label="board layer stack">
+        <tbody>
+          <For each={props.stack.rows}>
+            {(r) => (
+              <tr data-kind={r.kind}>
+                <td class="board-stack-name">{r.name}</td>
+                <td class="board-stack-thickness" data-stack-thickness={r.thickness}>
+                  {r.thickness}
+                </td>
+                <td class="board-stack-material">{r.material}</td>
+              </tr>
+            )}
+          </For>
+        </tbody>
+      </table>
+      <Show when={props.stack.summary}>
+        <div class="board-stack-summary" data-disagrees={String(props.stack.disagrees)}>
+          {props.stack.summary}
+        </div>
+      </Show>
     </div>
   );
 }
@@ -69,6 +110,7 @@ export function BoardLayerList(props: {
 export interface LayerListState {
   rows: BoardLayerRow[];
   hidden: ReadonlySet<string>;
+  stack?: BoardStackView;
 }
 
 // boardLayerListIsland mounts a list into an element that plain DOM code owns, such as a sheet
@@ -78,7 +120,7 @@ export function boardLayerListIsland(el: HTMLElement, layers: LayerControl): { i
   const island = new SolidIsland(
     "board-layer-list",
     el,
-    () => <BoardLayerList rows={() => state().rows} hidden={() => state().hidden} layers={layers} />,
+    () => <BoardLayerList rows={() => state().rows} hidden={() => state().hidden} stack={() => state().stack} layers={layers} />,
     null,
   );
   return { island, setState };

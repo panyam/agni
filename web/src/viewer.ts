@@ -19,7 +19,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { type LayerPreset, type LayerStore, defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emptyLocation, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore, messageOf } from "./document.js";
@@ -772,6 +772,7 @@ export class ViewerPresenter {
       ruleCount: this.doc.selectedRules.length,
       ranCount: this.doc.selectedRules.filter((n) => this.doc.ran(n)).length,
       boardLayers: this.boardRows,
+      boardStack: this.boardStack,
       hiddenLayers: [...this.hiddenLayers],
     });
   }
@@ -780,6 +781,9 @@ export class ViewerPresenter {
   // hidden, kept across sheet switches and, through layerStore, across visits to the design.
   // layersFor is the design the hidden set was loaded for, so opening another design loads its own.
   private boardRows: BoardLayerRow[] = [];
+  // boardStack is the board's physical stack from the same GetSheet, which the Board tile lists
+  // under its rows (agni 1603).
+  private boardStack: BoardStackView | undefined;
   private hiddenLayers = new Set<string>();
   private layersFor = "";
   // layerStore keeps a design's hidden layers in this browser. The composition root sets it, and
@@ -2313,6 +2317,7 @@ export class ViewerPresenter {
     if (sheetId === "board") {
       // restore the chosen view
       this.adoptBoardRows(resp.boardLayers);
+      this.boardStack = resp.boardStack;
       this.render.setBoardLayers(this.boardRows, this.hiddenLayers);
       this.pushOverview(sheetId);
     } else {

@@ -12,8 +12,9 @@ import (
 )
 
 // packedBoardVersion names the layout of a kept packed board. Change it when PackBoard or
-// BoardLayers writes something new, so a store written by an older build reads as a miss.
-const packedBoardVersion = "3"
+// BoardLayers writes something new, so a store written by an older build reads as a miss. Version 4
+// added each row's thickness and the board's stack (agni 1603).
+const packedBoardVersion = "4"
 
 var packedBoardCodec = &protoCodec{empty: func() proto.Message { return &webapi.GetSheetResponse{} }}
 
@@ -37,6 +38,7 @@ func (s *DesignService) packedBoard(ctx context.Context, snap Snap) (*webapi.Get
 		return &webapi.GetSheetResponse{
 			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, style, s.boardNetIDs(ctx, snap))},
 			BoardLayers: render.BoardLayers(b, style),
+			BoardStack:  render.BoardStack(b),
 		}, nil
 	}
 	l, ok := LoaderOr(snap, s.loader).(*CachingLoader)
