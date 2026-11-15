@@ -41,7 +41,14 @@ type DiffDesignsRequest struct {
 	// changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
 	// which the viewer tints by. A net's connections are in the design itself (GetDesign's
 	// read_mask).
-	IncludeEqual  bool `protobuf:"varint,4,opt,name=include_equal,json=includeEqual,proto3" json:"include_equal,omitempty"`
+	IncludeEqual bool `protobuf:"varint,4,opt,name=include_equal,json=includeEqual,proto3" json:"include_equal,omitempty"`
+	// views_snapshot compares one design's schematic with its board rather than two revisions (agni
+	// issue 1590). It names "snapshots/{snapshot}", and a_snapshot and b_snapshot are then left empty.
+	// The schematic is the old side and the board the new one, so the report's removed parts and
+	// deleted nets are on the schematic alone, and its added parts and new nets on the board alone.
+	// The response's views field holds the counts. A design that lacks either view answers with
+	// views.compared false and no report, rather than failing.
+	ViewsSnapshot string `protobuf:"bytes,7,opt,name=views_snapshot,json=viewsSnapshot,proto3" json:"views_snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -102,6 +109,13 @@ func (x *DiffDesignsRequest) GetIncludeEqual() bool {
 		return x.IncludeEqual
 	}
 	return false
+}
+
+func (x *DiffDesignsRequest) GetViewsSnapshot() string {
+	if x != nil {
+		return x.ViewsSnapshot
+	}
+	return ""
 }
 
 // NearRenameOptions tunes the near-rename pass. The pass matches nets by CONNECTIVITY, never by
@@ -310,8 +324,11 @@ type DiffDesignsResponse struct {
 	NetSheetsB        map[string]*DiffDesignsResponse_SheetIds  `protobuf:"bytes,7,rep,name=net_sheets_b,json=netSheetsB,proto3" json:"net_sheets_b,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	SharedPlacementsA map[string]*DiffDesignsResponse_Placement `protobuf:"bytes,8,rep,name=shared_placements_a,json=sharedPlacementsA,proto3" json:"shared_placements_a,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	SharedPlacementsB map[string]*DiffDesignsResponse_Placement `protobuf:"bytes,9,rep,name=shared_placements_b,json=sharedPlacementsB,proto3" json:"shared_placements_b,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// views is set when the request named views_snapshot, and says how well that design's schematic
+	// and board agree.
+	Views         *ViewAgreement `protobuf:"bytes,10,opt,name=views,proto3" json:"views,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DiffDesignsResponse) Reset() {
@@ -407,6 +424,114 @@ func (x *DiffDesignsResponse) GetSharedPlacementsB() map[string]*DiffDesignsResp
 	return nil
 }
 
+func (x *DiffDesignsResponse) GetViews() *ViewAgreement {
+	if x != nil {
+		return x.Views
+	}
+	return nil
+}
+
+// ViewAgreement counts what a design's schematic and its board both hold (agni issue 1590). Parts
+// match by ref-des. Nets match by name, then by identical pins when the names differ. Pins match by
+// ref-des and pin number, on the parts both views place. A power symbol's pin is no part, and a net
+// that joins no pin is left out. The lists of what did not match are in the response's report.
+type ViewAgreement struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// compared is false when the design has no schematic netlist or no board, or when either failed
+	// to read. not_compared then says which, and every count is zero. A consumer shows "not
+	// compared" rather than a count.
+	Compared    bool                 `protobuf:"varint,1,opt,name=compared,proto3" json:"compared,omitempty"`
+	NotCompared string               `protobuf:"bytes,2,opt,name=not_compared,json=notCompared,proto3" json:"not_compared,omitempty"`
+	Parts       *ViewAgreement_Tally `protobuf:"bytes,3,opt,name=parts,proto3" json:"parts,omitempty"`
+	Pins        *ViewAgreement_Tally `protobuf:"bytes,4,opt,name=pins,proto3" json:"pins,omitempty"`
+	Nets        *ViewAgreement_Tally `protobuf:"bytes,5,opt,name=nets,proto3" json:"nets,omitempty"`
+	// schematic_only_pins are "refdes.pin" endpoints on a net in the schematic that join no net on
+	// the board, and board_only_pins the reverse. Both are sorted.
+	SchematicOnlyPins []string `protobuf:"bytes,6,rep,name=schematic_only_pins,json=schematicOnlyPins,proto3" json:"schematic_only_pins,omitempty"`
+	BoardOnlyPins     []string `protobuf:"bytes,7,rep,name=board_only_pins,json=boardOnlyPins,proto3" json:"board_only_pins,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ViewAgreement) Reset() {
+	*x = ViewAgreement{}
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViewAgreement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViewAgreement) ProtoMessage() {}
+
+func (x *ViewAgreement) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViewAgreement.ProtoReflect.Descriptor instead.
+func (*ViewAgreement) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_diff_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ViewAgreement) GetCompared() bool {
+	if x != nil {
+		return x.Compared
+	}
+	return false
+}
+
+func (x *ViewAgreement) GetNotCompared() string {
+	if x != nil {
+		return x.NotCompared
+	}
+	return ""
+}
+
+func (x *ViewAgreement) GetParts() *ViewAgreement_Tally {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+func (x *ViewAgreement) GetPins() *ViewAgreement_Tally {
+	if x != nil {
+		return x.Pins
+	}
+	return nil
+}
+
+func (x *ViewAgreement) GetNets() *ViewAgreement_Tally {
+	if x != nil {
+		return x.Nets
+	}
+	return nil
+}
+
+func (x *ViewAgreement) GetSchematicOnlyPins() []string {
+	if x != nil {
+		return x.SchematicOnlyPins
+	}
+	return nil
+}
+
+func (x *ViewAgreement) GetBoardOnlyPins() []string {
+	if x != nil {
+		return x.BoardOnlyPins
+	}
+	return nil
+}
+
 type DiffReport_ComponentChange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -419,7 +544,7 @@ type DiffReport_ComponentChange struct {
 
 func (x *DiffReport_ComponentChange) Reset() {
 	*x = DiffReport_ComponentChange{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -431,7 +556,7 @@ func (x *DiffReport_ComponentChange) String() string {
 func (*DiffReport_ComponentChange) ProtoMessage() {}
 
 func (x *DiffReport_ComponentChange) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +637,7 @@ type DiffReport_NetChange struct {
 
 func (x *DiffReport_NetChange) Reset() {
 	*x = DiffReport_NetChange{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -524,7 +649,7 @@ func (x *DiffReport_NetChange) String() string {
 func (*DiffReport_NetChange) ProtoMessage() {}
 
 func (x *DiffReport_NetChange) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -620,7 +745,7 @@ type DiffReport_RenameEvidence struct {
 
 func (x *DiffReport_RenameEvidence) Reset() {
 	*x = DiffReport_RenameEvidence{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -632,7 +757,7 @@ func (x *DiffReport_RenameEvidence) String() string {
 func (*DiffReport_RenameEvidence) ProtoMessage() {}
 
 func (x *DiffReport_RenameEvidence) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +857,7 @@ type DiffDesignsResponse_SheetIds struct {
 
 func (x *DiffDesignsResponse_SheetIds) Reset() {
 	*x = DiffDesignsResponse_SheetIds{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +869,7 @@ func (x *DiffDesignsResponse_SheetIds) String() string {
 func (*DiffDesignsResponse_SheetIds) ProtoMessage() {}
 
 func (x *DiffDesignsResponse_SheetIds) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -786,7 +911,7 @@ type DiffDesignsResponse_Placement struct {
 
 func (x *DiffDesignsResponse_Placement) Reset() {
 	*x = DiffDesignsResponse_Placement{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -798,7 +923,7 @@ func (x *DiffDesignsResponse_Placement) String() string {
 func (*DiffDesignsResponse_Placement) ProtoMessage() {}
 
 func (x *DiffDesignsResponse_Placement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,18 +960,81 @@ func (x *DiffDesignsResponse_Placement) GetY() float64 {
 	return 0
 }
 
+// Tally is one kind of entity. matched is how many both views hold, schematic how many the
+// schematic holds, and board how many the board holds.
+type ViewAgreement_Tally struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Matched       int32                  `protobuf:"varint,1,opt,name=matched,proto3" json:"matched,omitempty"`
+	Schematic     int32                  `protobuf:"varint,2,opt,name=schematic,proto3" json:"schematic,omitempty"`
+	Board         int32                  `protobuf:"varint,3,opt,name=board,proto3" json:"board,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ViewAgreement_Tally) Reset() {
+	*x = ViewAgreement_Tally{}
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViewAgreement_Tally) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViewAgreement_Tally) ProtoMessage() {}
+
+func (x *ViewAgreement_Tally) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViewAgreement_Tally.ProtoReflect.Descriptor instead.
+func (*ViewAgreement_Tally) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_diff_proto_rawDescGZIP(), []int{4, 0}
+}
+
+func (x *ViewAgreement_Tally) GetMatched() int32 {
+	if x != nil {
+		return x.Matched
+	}
+	return 0
+}
+
+func (x *ViewAgreement_Tally) GetSchematic() int32 {
+	if x != nil {
+		return x.Schematic
+	}
+	return 0
+}
+
+func (x *ViewAgreement_Tally) GetBoard() int32 {
+	if x != nil {
+		return x.Board
+	}
+	return 0
+}
+
 var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\xd7\x01\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\xfe\x01\n" +
 	"\x12DiffDesignsRequest\x12\x1d\n" +
 	"\n" +
 	"a_snapshot\x18\x05 \x01(\tR\taSnapshot\x12\x1d\n" +
 	"\n" +
 	"b_snapshot\x18\x06 \x01(\tR\tbSnapshot\x12D\n" +
 	"\fnear_renames\x18\x03 \x01(\v2!.agni.v1.webapi.NearRenameOptionsR\vnearRenames\x12#\n" +
-	"\rinclude_equal\x18\x04 \x01(\bR\fincludeEqualJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05a_uriR\x05b_uri\"\xe1\x04\n" +
+	"\rinclude_equal\x18\x04 \x01(\bR\fincludeEqual\x12%\n" +
+	"\x0eviews_snapshot\x18\a \x01(\tR\rviewsSnapshotJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05a_uriR\x05b_uri\"\xe1\x04\n" +
 	"\x11NearRenameOptions\x12-\n" +
 	"\x10min_old_coverage\x18\x01 \x01(\x01H\x00R\x0eminOldCoverage\x88\x01\x01\x12D\n" +
 	"\x1cmin_old_coverage_significant\x18\x02 \x01(\x01H\x01R\x19minOldCoverageSignificant\x88\x01\x01\x12-\n" +
@@ -890,7 +1078,7 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\rold_endpoints\x18\x06 \x01(\x05R\foldEndpoints\x12#\n" +
 	"\rnew_endpoints\x18\a \x01(\x05R\fnewEndpoints\x12'\n" +
 	"\x0fold_significant\x18\b \x01(\x05R\x0eoldSignificant\x12'\n" +
-	"\x0fnew_significant\x18\t \x01(\x05R\x0enewSignificant\"\xe2\r\n" +
+	"\x0fnew_significant\x18\t \x01(\x05R\x0enewSignificant\"\x97\x0e\n" +
 	"\x13DiffDesignsResponse\x122\n" +
 	"\x06report\x18\x01 \x01(\v2\x1a.agni.v1.webapi.DiffReportR\x06report\x12c\n" +
 	"\x10component_status\x18\x02 \x03(\v28.agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntryR\x0fcomponentStatus\x12Q\n" +
@@ -903,7 +1091,9 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\fnet_sheets_b\x18\a \x03(\v23.agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntryR\n" +
 	"netSheetsB\x12j\n" +
 	"\x13shared_placements_a\x18\b \x03(\v2:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntryR\x11sharedPlacementsA\x12j\n" +
-	"\x13shared_placements_b\x18\t \x03(\v2:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntryR\x11sharedPlacementsB\x1aB\n" +
+	"\x13shared_placements_b\x18\t \x03(\v2:.agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntryR\x11sharedPlacementsB\x123\n" +
+	"\x05views\x18\n" +
+	" \x01(\v2\x1d.agni.v1.webapi.ViewAgreementR\x05views\x1aB\n" +
 	"\x14ComponentStatusEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a<\n" +
@@ -933,7 +1123,19 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x028\x01\x1as\n" +
 	"\x16SharedPlacementsBEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12C\n" +
-	"\x05value\x18\x02 \x01(\v2-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x028\x012e\n" +
+	"\x05value\x18\x02 \x01(\v2-.agni.v1.webapi.DiffDesignsResponse.PlacementR\x05value:\x028\x01\"\xaa\x03\n" +
+	"\rViewAgreement\x12\x1a\n" +
+	"\bcompared\x18\x01 \x01(\bR\bcompared\x12!\n" +
+	"\fnot_compared\x18\x02 \x01(\tR\vnotCompared\x129\n" +
+	"\x05parts\x18\x03 \x01(\v2#.agni.v1.webapi.ViewAgreement.TallyR\x05parts\x127\n" +
+	"\x04pins\x18\x04 \x01(\v2#.agni.v1.webapi.ViewAgreement.TallyR\x04pins\x127\n" +
+	"\x04nets\x18\x05 \x01(\v2#.agni.v1.webapi.ViewAgreement.TallyR\x04nets\x12.\n" +
+	"\x13schematic_only_pins\x18\x06 \x03(\tR\x11schematicOnlyPins\x12&\n" +
+	"\x0fboard_only_pins\x18\a \x03(\tR\rboardOnlyPins\x1aU\n" +
+	"\x05Tally\x12\x18\n" +
+	"\amatched\x18\x01 \x01(\x05R\amatched\x12\x1c\n" +
+	"\tschematic\x18\x02 \x01(\x05R\tschematic\x12\x14\n" +
+	"\x05board\x18\x03 \x01(\x05R\x05board2e\n" +
 	"\vDiffService\x12V\n" +
 	"\vDiffDesigns\x12\".agni.v1.webapi.DiffDesignsRequest\x1a#.agni.v1.webapi.DiffDesignsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
@@ -949,56 +1151,62 @@ func file_agni_v1_webapi_diff_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_diff_proto_rawDescData
 }
 
-var file_agni_v1_webapi_diff_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_agni_v1_webapi_diff_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_agni_v1_webapi_diff_proto_goTypes = []any{
 	(*DiffDesignsRequest)(nil),            // 0: agni.v1.webapi.DiffDesignsRequest
 	(*NearRenameOptions)(nil),             // 1: agni.v1.webapi.NearRenameOptions
 	(*DiffReport)(nil),                    // 2: agni.v1.webapi.DiffReport
 	(*DiffDesignsResponse)(nil),           // 3: agni.v1.webapi.DiffDesignsResponse
-	(*DiffReport_ComponentChange)(nil),    // 4: agni.v1.webapi.DiffReport.ComponentChange
-	(*DiffReport_NetChange)(nil),          // 5: agni.v1.webapi.DiffReport.NetChange
-	(*DiffReport_RenameEvidence)(nil),     // 6: agni.v1.webapi.DiffReport.RenameEvidence
-	nil,                                   // 7: agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
-	nil,                                   // 8: agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
-	(*DiffDesignsResponse_SheetIds)(nil),  // 9: agni.v1.webapi.DiffDesignsResponse.SheetIds
-	nil,                                   // 10: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
-	nil,                                   // 11: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
-	nil,                                   // 12: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
-	nil,                                   // 13: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
-	(*DiffDesignsResponse_Placement)(nil), // 14: agni.v1.webapi.DiffDesignsResponse.Placement
-	nil,                                   // 15: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
-	nil,                                   // 16: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
-	(*ir.Provenance)(nil),                 // 17: agni.v1.ir.Provenance
+	(*ViewAgreement)(nil),                 // 4: agni.v1.webapi.ViewAgreement
+	(*DiffReport_ComponentChange)(nil),    // 5: agni.v1.webapi.DiffReport.ComponentChange
+	(*DiffReport_NetChange)(nil),          // 6: agni.v1.webapi.DiffReport.NetChange
+	(*DiffReport_RenameEvidence)(nil),     // 7: agni.v1.webapi.DiffReport.RenameEvidence
+	nil,                                   // 8: agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
+	nil,                                   // 9: agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
+	(*DiffDesignsResponse_SheetIds)(nil),  // 10: agni.v1.webapi.DiffDesignsResponse.SheetIds
+	nil,                                   // 11: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
+	nil,                                   // 12: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
+	nil,                                   // 13: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
+	nil,                                   // 14: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
+	(*DiffDesignsResponse_Placement)(nil), // 15: agni.v1.webapi.DiffDesignsResponse.Placement
+	nil,                                   // 16: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
+	nil,                                   // 17: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
+	(*ViewAgreement_Tally)(nil),           // 18: agni.v1.webapi.ViewAgreement.Tally
+	(*ir.Provenance)(nil),                 // 19: agni.v1.ir.Provenance
 }
 var file_agni_v1_webapi_diff_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.webapi.DiffDesignsRequest.near_renames:type_name -> agni.v1.webapi.NearRenameOptions
-	4,  // 1: agni.v1.webapi.DiffReport.components_changed:type_name -> agni.v1.webapi.DiffReport.ComponentChange
-	5,  // 2: agni.v1.webapi.DiffReport.nets:type_name -> agni.v1.webapi.DiffReport.NetChange
+	5,  // 1: agni.v1.webapi.DiffReport.components_changed:type_name -> agni.v1.webapi.DiffReport.ComponentChange
+	6,  // 2: agni.v1.webapi.DiffReport.nets:type_name -> agni.v1.webapi.DiffReport.NetChange
 	2,  // 3: agni.v1.webapi.DiffDesignsResponse.report:type_name -> agni.v1.webapi.DiffReport
-	7,  // 4: agni.v1.webapi.DiffDesignsResponse.component_status:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
-	8,  // 5: agni.v1.webapi.DiffDesignsResponse.net_status:type_name -> agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
-	10, // 6: agni.v1.webapi.DiffDesignsResponse.component_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
-	11, // 7: agni.v1.webapi.DiffDesignsResponse.component_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
-	12, // 8: agni.v1.webapi.DiffDesignsResponse.net_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
-	13, // 9: agni.v1.webapi.DiffDesignsResponse.net_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
-	15, // 10: agni.v1.webapi.DiffDesignsResponse.shared_placements_a:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
-	16, // 11: agni.v1.webapi.DiffDesignsResponse.shared_placements_b:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
-	17, // 12: agni.v1.webapi.DiffReport.NetChange.old_prov:type_name -> agni.v1.ir.Provenance
-	17, // 13: agni.v1.webapi.DiffReport.NetChange.new_prov:type_name -> agni.v1.ir.Provenance
-	6,  // 14: agni.v1.webapi.DiffReport.NetChange.approx:type_name -> agni.v1.webapi.DiffReport.RenameEvidence
-	9,  // 15: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	9,  // 16: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	9,  // 17: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	9,  // 18: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	14, // 19: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
-	14, // 20: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
-	0,  // 21: agni.v1.webapi.DiffService.DiffDesigns:input_type -> agni.v1.webapi.DiffDesignsRequest
-	3,  // 22: agni.v1.webapi.DiffService.DiffDesigns:output_type -> agni.v1.webapi.DiffDesignsResponse
-	22, // [22:23] is the sub-list for method output_type
-	21, // [21:22] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	8,  // 4: agni.v1.webapi.DiffDesignsResponse.component_status:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
+	9,  // 5: agni.v1.webapi.DiffDesignsResponse.net_status:type_name -> agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
+	11, // 6: agni.v1.webapi.DiffDesignsResponse.component_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
+	12, // 7: agni.v1.webapi.DiffDesignsResponse.component_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
+	13, // 8: agni.v1.webapi.DiffDesignsResponse.net_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
+	14, // 9: agni.v1.webapi.DiffDesignsResponse.net_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
+	16, // 10: agni.v1.webapi.DiffDesignsResponse.shared_placements_a:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
+	17, // 11: agni.v1.webapi.DiffDesignsResponse.shared_placements_b:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
+	4,  // 12: agni.v1.webapi.DiffDesignsResponse.views:type_name -> agni.v1.webapi.ViewAgreement
+	18, // 13: agni.v1.webapi.ViewAgreement.parts:type_name -> agni.v1.webapi.ViewAgreement.Tally
+	18, // 14: agni.v1.webapi.ViewAgreement.pins:type_name -> agni.v1.webapi.ViewAgreement.Tally
+	18, // 15: agni.v1.webapi.ViewAgreement.nets:type_name -> agni.v1.webapi.ViewAgreement.Tally
+	19, // 16: agni.v1.webapi.DiffReport.NetChange.old_prov:type_name -> agni.v1.ir.Provenance
+	19, // 17: agni.v1.webapi.DiffReport.NetChange.new_prov:type_name -> agni.v1.ir.Provenance
+	7,  // 18: agni.v1.webapi.DiffReport.NetChange.approx:type_name -> agni.v1.webapi.DiffReport.RenameEvidence
+	10, // 19: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	10, // 20: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	10, // 21: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	10, // 22: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	15, // 23: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
+	15, // 24: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
+	0,  // 25: agni.v1.webapi.DiffService.DiffDesigns:input_type -> agni.v1.webapi.DiffDesignsRequest
+	3,  // 26: agni.v1.webapi.DiffService.DiffDesigns:output_type -> agni.v1.webapi.DiffDesignsResponse
+	26, // [26:27] is the sub-list for method output_type
+	25, // [25:26] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_diff_proto_init() }
@@ -1013,7 +1221,7 @@ func file_agni_v1_webapi_diff_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_diff_proto_rawDesc), len(file_agni_v1_webapi_diff_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

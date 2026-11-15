@@ -32,6 +32,7 @@ This file covers the transport-neutral services, their ports, snapshots, kept re
 - **The board sheet joins a locate only when the request sets `board`.** It matches by ref-des and net NAME, since an EDIF schematic and an ODB++ job share no net id.
 - **The packed Board sheet is a cache layer of its own, `packedboard`** (agni 1522, `service/packedboard.go`). A board view restores the packed answer rather than the board. Bump `packedBoardVersion` when `PackBoard` or `BoardLayers` writes something new.
 - **A per-click caller goes through `boardIndexFor`, never `Board`.** The caching loader's `Board` returns a COPY of the whole board. A run whose model read the board badges its findings with `"board"` after the schematic sheets.
+- **`boardFor` renames a net the board names differently** to the schematic's name (`viewRenames`, agni 1590). Read `Board` for the board's own names.
 
 ## Kept reads
 

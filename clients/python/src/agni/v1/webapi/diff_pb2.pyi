@@ -8,16 +8,18 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DiffDesignsRequest(_message.Message):
-    __slots__ = ("a_snapshot", "b_snapshot", "near_renames", "include_equal")
+    __slots__ = ("a_snapshot", "b_snapshot", "near_renames", "include_equal", "views_snapshot")
     A_SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     B_SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     NEAR_RENAMES_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_EQUAL_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     a_snapshot: str
     b_snapshot: str
     near_renames: NearRenameOptions
     include_equal: bool
-    def __init__(self, a_snapshot: _Optional[str] = ..., b_snapshot: _Optional[str] = ..., near_renames: _Optional[_Union[NearRenameOptions, _Mapping]] = ..., include_equal: _Optional[bool] = ...) -> None: ...
+    views_snapshot: str
+    def __init__(self, a_snapshot: _Optional[str] = ..., b_snapshot: _Optional[str] = ..., near_renames: _Optional[_Union[NearRenameOptions, _Mapping]] = ..., include_equal: _Optional[bool] = ..., views_snapshot: _Optional[str] = ...) -> None: ...
 
 class NearRenameOptions(_message.Message):
     __slots__ = ("min_old_coverage", "min_old_coverage_significant", "min_new_coverage", "min_new_coverage_significant", "max_added_significant_floor", "min_significant_endpoints", "insignificant_classes")
@@ -101,7 +103,7 @@ class DiffReport(_message.Message):
     def __init__(self, components_added: _Optional[_Iterable[str]] = ..., components_removed: _Optional[_Iterable[str]] = ..., components_changed: _Optional[_Iterable[_Union[DiffReport.ComponentChange, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[DiffReport.NetChange, _Mapping]]] = ...) -> None: ...
 
 class DiffDesignsResponse(_message.Message):
-    __slots__ = ("report", "component_status", "net_status", "component_sheets_a", "component_sheets_b", "net_sheets_a", "net_sheets_b", "shared_placements_a", "shared_placements_b")
+    __slots__ = ("report", "component_status", "net_status", "component_sheets_a", "component_sheets_b", "net_sheets_a", "net_sheets_b", "shared_placements_a", "shared_placements_b", "views")
     class ComponentStatusEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -181,6 +183,7 @@ class DiffDesignsResponse(_message.Message):
     NET_SHEETS_B_FIELD_NUMBER: _ClassVar[int]
     SHARED_PLACEMENTS_A_FIELD_NUMBER: _ClassVar[int]
     SHARED_PLACEMENTS_B_FIELD_NUMBER: _ClassVar[int]
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
     report: DiffReport
     component_status: _containers.ScalarMap[str, str]
     net_status: _containers.ScalarMap[str, str]
@@ -190,4 +193,32 @@ class DiffDesignsResponse(_message.Message):
     net_sheets_b: _containers.MessageMap[str, DiffDesignsResponse.SheetIds]
     shared_placements_a: _containers.MessageMap[str, DiffDesignsResponse.Placement]
     shared_placements_b: _containers.MessageMap[str, DiffDesignsResponse.Placement]
-    def __init__(self, report: _Optional[_Union[DiffReport, _Mapping]] = ..., component_status: _Optional[_Mapping[str, str]] = ..., net_status: _Optional[_Mapping[str, str]] = ..., component_sheets_a: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., component_sheets_b: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., net_sheets_a: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., net_sheets_b: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., shared_placements_a: _Optional[_Mapping[str, DiffDesignsResponse.Placement]] = ..., shared_placements_b: _Optional[_Mapping[str, DiffDesignsResponse.Placement]] = ...) -> None: ...
+    views: ViewAgreement
+    def __init__(self, report: _Optional[_Union[DiffReport, _Mapping]] = ..., component_status: _Optional[_Mapping[str, str]] = ..., net_status: _Optional[_Mapping[str, str]] = ..., component_sheets_a: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., component_sheets_b: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., net_sheets_a: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., net_sheets_b: _Optional[_Mapping[str, DiffDesignsResponse.SheetIds]] = ..., shared_placements_a: _Optional[_Mapping[str, DiffDesignsResponse.Placement]] = ..., shared_placements_b: _Optional[_Mapping[str, DiffDesignsResponse.Placement]] = ..., views: _Optional[_Union[ViewAgreement, _Mapping]] = ...) -> None: ...
+
+class ViewAgreement(_message.Message):
+    __slots__ = ("compared", "not_compared", "parts", "pins", "nets", "schematic_only_pins", "board_only_pins")
+    class Tally(_message.Message):
+        __slots__ = ("matched", "schematic", "board")
+        MATCHED_FIELD_NUMBER: _ClassVar[int]
+        SCHEMATIC_FIELD_NUMBER: _ClassVar[int]
+        BOARD_FIELD_NUMBER: _ClassVar[int]
+        matched: int
+        schematic: int
+        board: int
+        def __init__(self, matched: _Optional[int] = ..., schematic: _Optional[int] = ..., board: _Optional[int] = ...) -> None: ...
+    COMPARED_FIELD_NUMBER: _ClassVar[int]
+    NOT_COMPARED_FIELD_NUMBER: _ClassVar[int]
+    PARTS_FIELD_NUMBER: _ClassVar[int]
+    PINS_FIELD_NUMBER: _ClassVar[int]
+    NETS_FIELD_NUMBER: _ClassVar[int]
+    SCHEMATIC_ONLY_PINS_FIELD_NUMBER: _ClassVar[int]
+    BOARD_ONLY_PINS_FIELD_NUMBER: _ClassVar[int]
+    compared: bool
+    not_compared: str
+    parts: ViewAgreement.Tally
+    pins: ViewAgreement.Tally
+    nets: ViewAgreement.Tally
+    schematic_only_pins: _containers.RepeatedScalarFieldContainer[str]
+    board_only_pins: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, compared: _Optional[bool] = ..., not_compared: _Optional[str] = ..., parts: _Optional[_Union[ViewAgreement.Tally, _Mapping]] = ..., pins: _Optional[_Union[ViewAgreement.Tally, _Mapping]] = ..., nets: _Optional[_Union[ViewAgreement.Tally, _Mapping]] = ..., schematic_only_pins: _Optional[_Iterable[str]] = ..., board_only_pins: _Optional[_Iterable[str]] = ...) -> None: ...

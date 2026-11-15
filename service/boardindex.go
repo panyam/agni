@@ -26,6 +26,29 @@ type boardIndex struct {
 	side      map[string]string   // ref-des -> "front" or "back", absent when the board states neither
 	compLayer map[string]string   // ref-des -> the copper layer it is placed on
 	netLayers map[string][]string // net name -> its copper layers, in the board's layer order
+
+	// boardName maps a schematic net's name to the board's, for a net the two name differently
+	// (agni issue 1590). It is set on a copy by withRenames, since the cache shares the index.
+	boardName map[string]string
+}
+
+// withRenames is ix answering a schematic net's name for the board net viewRenames pairs it with.
+// It returns ix itself when there is nothing to rename.
+func (ix *boardIndex) withRenames(renames map[string]string) *boardIndex {
+	if ix == nil || len(renames) == 0 {
+		return ix
+	}
+	out := *ix
+	out.boardName = schematicToBoard(renames)
+	return &out
+}
+
+// netName is the board's name for the net a subject names.
+func (ix *boardIndex) netName(s *checkspb.Subject) string {
+	if to, ok := ix.boardName[s.GetRef()]; ok {
+		return to
+	}
+	return s.GetRef()
 }
 
 func newBoardIndex(b *geom.BoardGeometry) *boardIndex {
@@ -197,7 +220,7 @@ func (ix *boardIndex) layersOf(s *checkspb.Subject) []string {
 	}
 	switch s.GetKind() {
 	case check.KindNet:
-		return append([]string(nil), ix.netLayers[s.GetRef()]...)
+		return append([]string(nil), ix.netLayers[ix.netName(s)]...)
 	case check.KindPin, check.KindComponent:
 		if ly := ix.compLayer[s.GetRef()]; ly != "" {
 			return []string{ly}
@@ -213,7 +236,7 @@ func (ix *boardIndex) draws(s *checkspb.Subject) bool {
 	}
 	switch s.GetKind() {
 	case check.KindNet:
-		return ix.nets[s.GetRef()]
+		return ix.nets[ix.netName(s)]
 	case check.KindPin:
 		return ix.pins[pinKey(s.GetRef(), s.GetPin())]
 	case check.KindComponent:
@@ -259,13 +282,23 @@ func locateBoard(ctx context.Context, loader interface {
 	Board(context.Context, artifact.URI) (*geom.BoardGeometry, error)
 }, snap Snap, m check.Model) *boardIndex {
 	if !snap.BoardOnly() {
-		return runBoardIndex(ctx, loader, snap.BoardRead(), m)
+		return renamedIndex(ctx, loader, snap, runBoardIndex(ctx, loader, snap.BoardRead(), m))
 	}
 	ix, err := boardIndexFor(ctx, loader, snap.BoardRead())
 	if err != nil {
 		return nil
 	}
 	return ix
+}
+
+// renamedIndex is ix answering a schematic net's name for the board net it is paired with
+// (viewRenames). A loader that reads no netlist leaves ix as it is.
+func renamedIndex(ctx context.Context, loader any, snap Snap, ix *boardIndex) *boardIndex {
+	dl, ok := loader.(DesignLoader)
+	if ix == nil || !ok {
+		return ix
+	}
+	return ix.withRenames(viewRenames(ctx, dl, snap, nil))
 }
 
 // traceBoard is the board a trace or a walk locates on. Only a board-only design has one, since

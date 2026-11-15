@@ -159,6 +159,26 @@ annotation is keyed by the semantic match, not by the native id.
   With `--rename-approx` it may instead be assigned as `renamed-approx` with its evidence
   attached. That is a different claim, and a consumer can filter it separately.
 
+## Comparing a design's schematic with its board
+
+The same matcher compares one design's two views as well as two revisions (agni issue 1590).
+`diff.Views` reads the board's footprints and pad nets as a netlist with `diff.BoardNetlist`, then
+runs `Designs` with the schematic as the old side and the board as the new one. A part only the
+schematic places reads as removed, a footprint only the board places as added, and so on. Parts,
+pins and nets each get a tally of how many the two views share. The near-match pass does not run,
+since a view comparison should report what agrees rather than guess. The component field changes
+are dropped, since a board holds no part fields to compare.
+
+The pairing feeds the cross-probe too. A net the board names differently, with exactly the
+schematic net's pins, is renamed to the schematic's name wherever the service hands out the board
+(`viewRenames` in `service/viewrenames.go`). The board's drawings, picks and locates then join it by
+name, as they join every other net. Allegro cuts a net's name to 31 characters, so on Clay R6 this
+joins 24 nets that the cross-probe used to miss.
+
+`DiffDesigns` takes `views_snapshot` for this mode, and `agni diff <design>` with one argument
+asks it. A design with no board, or a board read as its own netlist, answers `compared: false`
+with the reason rather than failing, so a viewer can say why it shows no count.
+
 ## How it is checked
 
 A hand-built revision pair in the unit tests exercises every class (Hard, Soft, Renamed, New,

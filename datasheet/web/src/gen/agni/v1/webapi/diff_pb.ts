@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/diff.proto.
  */
 export const file_agni_v1_webapi_diff: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3dlYmFwaS9kaWZmLnByb3RvEg5hZ25pLnYxLndlYmFwaSKmAQoSRGlmZkRlc2lnbnNSZXF1ZXN0EhIKCmFfc25hcHNob3QYBSABKAkSEgoKYl9zbmFwc2hvdBgGIAEoCRI3CgxuZWFyX3JlbmFtZXMYAyABKAsyIS5hZ25pLnYxLndlYmFwaS5OZWFyUmVuYW1lT3B0aW9ucxIVCg1pbmNsdWRlX2VxdWFsGAQgASgISgQIARACSgQIAhADUgVhX3VyaVIFYl91cmkiwgMKEU5lYXJSZW5hbWVPcHRpb25zEh0KEG1pbl9vbGRfY292ZXJhZ2UYASABKAFIAIgBARIpChxtaW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBSAGIAQESHQoQbWluX25ld19jb3ZlcmFnZRgDIAEoAUgCiAEBEikKHG1pbl9uZXdfY292ZXJhZ2Vfc2lnbmlmaWNhbnQYBCABKAFIA4gBARIoChttYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3IYBSABKAVIBIgBARImChltaW5fc2lnbmlmaWNhbnRfZW5kcG9pbnRzGAYgASgFSAWIAQESHQoVaW5zaWduaWZpY2FudF9jbGFzc2VzGAcgAygJQhMKEV9taW5fb2xkX2NvdmVyYWdlQh8KHV9taW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50QhMKEV9taW5fbmV3X2NvdmVyYWdlQh8KHV9taW5fbmV3X2NvdmVyYWdlX3NpZ25pZmljYW50Qh4KHF9tYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3JCHAoaX21pbl9zaWduaWZpY2FudF9lbmRwb2ludHMi8QUKCkRpZmZSZXBvcnQSGAoQY29tcG9uZW50c19hZGRlZBgBIAMoCRIaChJjb21wb25lbnRzX3JlbW92ZWQYAiADKAkSRgoSY29tcG9uZW50c19jaGFuZ2VkGAMgAygLMiouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydC5Db21wb25lbnRDaGFuZ2USMgoEbmV0cxgEIAMoCzIkLmFnbmkudjEud2ViYXBpLkRpZmZSZXBvcnQuTmV0Q2hhbmdlGksKD0NvbXBvbmVudENoYW5nZRIPCgdyZWZfZGVzGAEgASgJEg0KBWZpZWxkGAIgASgJEgsKA29sZBgDIAEoCRILCgNuZXcYBCABKAka6AEKCU5ldENoYW5nZRIMCgRraW5kGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIb2xkX25hbWUYAyABKAkSDQoFYWRkZWQYBCADKAkSDwoHcmVtb3ZlZBgFIAMoCRIoCghvbGRfcHJvdhgGIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIoCghuZXdfcHJvdhgHIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRI5CgZhcHByb3gYCCABKAsyKS5hZ25pLnYxLndlYmFwaS5EaWZmUmVwb3J0LlJlbmFtZUV2aWRlbmNlGvgBCg5SZW5hbWVFdmlkZW5jZRIUCgxvbGRfY292ZXJhZ2UYASABKAESIAoYb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBEiAKGG5ld19jb3ZlcmFnZV9zaWduaWZpY2FudBgDIAEoARIPCgdvdmVybGFwGAQgASgFEhsKE292ZXJsYXBfc2lnbmlmaWNhbnQYBSABKAUSFQoNb2xkX2VuZHBvaW50cxgGIAEoBRIVCg1uZXdfZW5kcG9pbnRzGAcgASgFEhcKD29sZF9zaWduaWZpY2FudBgIIAEoBRIXCg9uZXdfc2lnbmlmaWNhbnQYCSABKAUi6gsKE0RpZmZEZXNpZ25zUmVzcG9uc2USKgoGcmVwb3J0GAEgASgLMhouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydBJSChBjb21wb25lbnRfc3RhdHVzGAIgAygLMjguYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5Db21wb25lbnRTdGF0dXNFbnRyeRJGCgpuZXRfc3RhdHVzGAMgAygLMjIuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5OZXRTdGF0dXNFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2EYBCADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0FFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2IYBSADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0JFbnRyeRJJCgxuZXRfc2hlZXRzX2EYBiADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0FFbnRyeRJJCgxuZXRfc2hlZXRzX2IYByADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0JFbnRyeRJXChNzaGFyZWRfcGxhY2VtZW50c19hGAggAygLMjouYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGFyZWRQbGFjZW1lbnRzQUVudHJ5ElcKE3NoYXJlZF9wbGFjZW1lbnRzX2IYCSADKAsyOi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoYXJlZFBsYWNlbWVudHNCRW50cnkaNgoUQ29tcG9uZW50U3RhdHVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARowCg5OZXRTdGF0dXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGhcKCFNoZWV0SWRzEgsKA2lkcxgBIAMoCRplChVDb21wb25lbnRTaGVldHNBRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaZQoVQ29tcG9uZW50U2hlZXRzQkVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGl8KD05ldFNoZWV0c0FFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARpfCg9OZXRTaGVldHNCRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaMAoJUGxhY2VtZW50Eg0KBXNoZWV0GAEgASgJEgkKAXgYAiABKAESCQoBeRgDIAEoARpnChZTaGFyZWRQbGFjZW1lbnRzQUVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ARpnChZTaGFyZWRQbGFjZW1lbnRzQkVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ATJlCgtEaWZmU2VydmljZRJWCgtEaWZmRGVzaWducxIiLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_ir_ir]);
+  fileDesc("ChlhZ25pL3YxL3dlYmFwaS9kaWZmLnByb3RvEg5hZ25pLnYxLndlYmFwaSK+AQoSRGlmZkRlc2lnbnNSZXF1ZXN0EhIKCmFfc25hcHNob3QYBSABKAkSEgoKYl9zbmFwc2hvdBgGIAEoCRI3CgxuZWFyX3JlbmFtZXMYAyABKAsyIS5hZ25pLnYxLndlYmFwaS5OZWFyUmVuYW1lT3B0aW9ucxIVCg1pbmNsdWRlX2VxdWFsGAQgASgIEhYKDnZpZXdzX3NuYXBzaG90GAcgASgJSgQIARACSgQIAhADUgVhX3VyaVIFYl91cmkiwgMKEU5lYXJSZW5hbWVPcHRpb25zEh0KEG1pbl9vbGRfY292ZXJhZ2UYASABKAFIAIgBARIpChxtaW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBSAGIAQESHQoQbWluX25ld19jb3ZlcmFnZRgDIAEoAUgCiAEBEikKHG1pbl9uZXdfY292ZXJhZ2Vfc2lnbmlmaWNhbnQYBCABKAFIA4gBARIoChttYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3IYBSABKAVIBIgBARImChltaW5fc2lnbmlmaWNhbnRfZW5kcG9pbnRzGAYgASgFSAWIAQESHQoVaW5zaWduaWZpY2FudF9jbGFzc2VzGAcgAygJQhMKEV9taW5fb2xkX2NvdmVyYWdlQh8KHV9taW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50QhMKEV9taW5fbmV3X2NvdmVyYWdlQh8KHV9taW5fbmV3X2NvdmVyYWdlX3NpZ25pZmljYW50Qh4KHF9tYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3JCHAoaX21pbl9zaWduaWZpY2FudF9lbmRwb2ludHMi8QUKCkRpZmZSZXBvcnQSGAoQY29tcG9uZW50c19hZGRlZBgBIAMoCRIaChJjb21wb25lbnRzX3JlbW92ZWQYAiADKAkSRgoSY29tcG9uZW50c19jaGFuZ2VkGAMgAygLMiouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydC5Db21wb25lbnRDaGFuZ2USMgoEbmV0cxgEIAMoCzIkLmFnbmkudjEud2ViYXBpLkRpZmZSZXBvcnQuTmV0Q2hhbmdlGksKD0NvbXBvbmVudENoYW5nZRIPCgdyZWZfZGVzGAEgASgJEg0KBWZpZWxkGAIgASgJEgsKA29sZBgDIAEoCRILCgNuZXcYBCABKAka6AEKCU5ldENoYW5nZRIMCgRraW5kGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIb2xkX25hbWUYAyABKAkSDQoFYWRkZWQYBCADKAkSDwoHcmVtb3ZlZBgFIAMoCRIoCghvbGRfcHJvdhgGIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIoCghuZXdfcHJvdhgHIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRI5CgZhcHByb3gYCCABKAsyKS5hZ25pLnYxLndlYmFwaS5EaWZmUmVwb3J0LlJlbmFtZUV2aWRlbmNlGvgBCg5SZW5hbWVFdmlkZW5jZRIUCgxvbGRfY292ZXJhZ2UYASABKAESIAoYb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBEiAKGG5ld19jb3ZlcmFnZV9zaWduaWZpY2FudBgDIAEoARIPCgdvdmVybGFwGAQgASgFEhsKE292ZXJsYXBfc2lnbmlmaWNhbnQYBSABKAUSFQoNb2xkX2VuZHBvaW50cxgGIAEoBRIVCg1uZXdfZW5kcG9pbnRzGAcgASgFEhcKD29sZF9zaWduaWZpY2FudBgIIAEoBRIXCg9uZXdfc2lnbmlmaWNhbnQYCSABKAUimAwKE0RpZmZEZXNpZ25zUmVzcG9uc2USKgoGcmVwb3J0GAEgASgLMhouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydBJSChBjb21wb25lbnRfc3RhdHVzGAIgAygLMjguYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5Db21wb25lbnRTdGF0dXNFbnRyeRJGCgpuZXRfc3RhdHVzGAMgAygLMjIuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5OZXRTdGF0dXNFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2EYBCADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0FFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2IYBSADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0JFbnRyeRJJCgxuZXRfc2hlZXRzX2EYBiADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0FFbnRyeRJJCgxuZXRfc2hlZXRzX2IYByADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0JFbnRyeRJXChNzaGFyZWRfcGxhY2VtZW50c19hGAggAygLMjouYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGFyZWRQbGFjZW1lbnRzQUVudHJ5ElcKE3NoYXJlZF9wbGFjZW1lbnRzX2IYCSADKAsyOi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoYXJlZFBsYWNlbWVudHNCRW50cnkSLAoFdmlld3MYCiABKAsyHS5hZ25pLnYxLndlYmFwaS5WaWV3QWdyZWVtZW50GjYKFENvbXBvbmVudFN0YXR1c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEaMAoOTmV0U3RhdHVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARoXCghTaGVldElkcxILCgNpZHMYASADKAkaZQoVQ29tcG9uZW50U2hlZXRzQUVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGmUKFUNvbXBvbmVudFNoZWV0c0JFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARpfCg9OZXRTaGVldHNBRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaXwoPTmV0U2hlZXRzQkVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGjAKCVBsYWNlbWVudBINCgVzaGVldBgBIAEoCRIJCgF4GAIgASgBEgkKAXkYAyABKAEaZwoWU2hhcmVkUGxhY2VtZW50c0FFbnRyeRILCgNrZXkYASABKAkSPAoFdmFsdWUYAiABKAsyLS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlBsYWNlbWVudDoCOAEaZwoWU2hhcmVkUGxhY2VtZW50c0JFbnRyeRILCgNrZXkYASABKAkSPAoFdmFsdWUYAiABKAsyLS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlBsYWNlbWVudDoCOAEiwwIKDVZpZXdBZ3JlZW1lbnQSEAoIY29tcGFyZWQYASABKAgSFAoMbm90X2NvbXBhcmVkGAIgASgJEjIKBXBhcnRzGAMgASgLMiMuYWduaS52MS53ZWJhcGkuVmlld0FncmVlbWVudC5UYWxseRIxCgRwaW5zGAQgASgLMiMuYWduaS52MS53ZWJhcGkuVmlld0FncmVlbWVudC5UYWxseRIxCgRuZXRzGAUgASgLMiMuYWduaS52MS53ZWJhcGkuVmlld0FncmVlbWVudC5UYWxseRIbChNzY2hlbWF0aWNfb25seV9waW5zGAYgAygJEhcKD2JvYXJkX29ubHlfcGlucxgHIAMoCRo6CgVUYWxseRIPCgdtYXRjaGVkGAEgASgFEhEKCXNjaGVtYXRpYxgCIAEoBRINCgVib2FyZBgDIAEoBTJlCgtEaWZmU2VydmljZRJWCgtEaWZmRGVzaWducxIiLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_ir_ir]);
 
 /**
  * DiffDesignsRequest names the two designs. a is the old revision and b the new, each as a
@@ -56,6 +56,18 @@ export type DiffDesignsRequest = Message<"agni.v1.webapi.DiffDesignsRequest"> & 
    * @generated from field: bool include_equal = 4;
    */
   includeEqual: boolean;
+
+  /**
+   * views_snapshot compares one design's schematic with its board rather than two revisions (agni
+   * issue 1590). It names "snapshots/{snapshot}", and a_snapshot and b_snapshot are then left empty.
+   * The schematic is the old side and the board the new one, so the report's removed parts and
+   * deleted nets are on the schematic alone, and its added parts and new nets on the board alone.
+   * The response's views field holds the counts. A design that lacks either view answers with
+   * views.compared false and no report, rather than failing.
+   *
+   * @generated from field: string views_snapshot = 7;
+   */
+  viewsSnapshot: string;
 };
 
 /**
@@ -430,6 +442,14 @@ export type DiffDesignsResponse = Message<"agni.v1.webapi.DiffDesignsResponse"> 
    * @generated from field: map<string, agni.v1.webapi.DiffDesignsResponse.Placement> shared_placements_b = 9;
    */
   sharedPlacementsB: { [key: string]: DiffDesignsResponse_Placement };
+
+  /**
+   * views is set when the request named views_snapshot, and says how well that design's schematic
+   * and board agree.
+   *
+   * @generated from field: agni.v1.webapi.ViewAgreement views = 10;
+   */
+  views?: ViewAgreement | undefined;
 };
 
 /**
@@ -504,6 +524,95 @@ export type DiffDesignsResponse_Placement = Message<"agni.v1.webapi.DiffDesignsR
  */
 export const DiffDesignsResponse_PlacementSchema: GenMessage<DiffDesignsResponse_Placement> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_diff, 3, 1);
+
+/**
+ * ViewAgreement counts what a design's schematic and its board both hold (agni issue 1590). Parts
+ * match by ref-des. Nets match by name, then by identical pins when the names differ. Pins match by
+ * ref-des and pin number, on the parts both views place. A power symbol's pin is no part, and a net
+ * that joins no pin is left out. The lists of what did not match are in the response's report.
+ *
+ * @generated from message agni.v1.webapi.ViewAgreement
+ */
+export type ViewAgreement = Message<"agni.v1.webapi.ViewAgreement"> & {
+  /**
+   * compared is false when the design has no schematic netlist or no board, or when either failed
+   * to read. not_compared then says which, and every count is zero. A consumer shows "not
+   * compared" rather than a count.
+   *
+   * @generated from field: bool compared = 1;
+   */
+  compared: boolean;
+
+  /**
+   * @generated from field: string not_compared = 2;
+   */
+  notCompared: string;
+
+  /**
+   * @generated from field: agni.v1.webapi.ViewAgreement.Tally parts = 3;
+   */
+  parts?: ViewAgreement_Tally | undefined;
+
+  /**
+   * @generated from field: agni.v1.webapi.ViewAgreement.Tally pins = 4;
+   */
+  pins?: ViewAgreement_Tally | undefined;
+
+  /**
+   * @generated from field: agni.v1.webapi.ViewAgreement.Tally nets = 5;
+   */
+  nets?: ViewAgreement_Tally | undefined;
+
+  /**
+   * schematic_only_pins are "refdes.pin" endpoints on a net in the schematic that join no net on
+   * the board, and board_only_pins the reverse. Both are sorted.
+   *
+   * @generated from field: repeated string schematic_only_pins = 6;
+   */
+  schematicOnlyPins: string[];
+
+  /**
+   * @generated from field: repeated string board_only_pins = 7;
+   */
+  boardOnlyPins: string[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.ViewAgreement.
+ * Use `create(ViewAgreementSchema)` to create a new message.
+ */
+export const ViewAgreementSchema: GenMessage<ViewAgreement> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_diff, 4);
+
+/**
+ * Tally is one kind of entity. matched is how many both views hold, schematic how many the
+ * schematic holds, and board how many the board holds.
+ *
+ * @generated from message agni.v1.webapi.ViewAgreement.Tally
+ */
+export type ViewAgreement_Tally = Message<"agni.v1.webapi.ViewAgreement.Tally"> & {
+  /**
+   * @generated from field: int32 matched = 1;
+   */
+  matched: number;
+
+  /**
+   * @generated from field: int32 schematic = 2;
+   */
+  schematic: number;
+
+  /**
+   * @generated from field: int32 board = 3;
+   */
+  board: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ViewAgreement.Tally.
+ * Use `create(ViewAgreement_TallySchema)` to create a new message.
+ */
+export const ViewAgreement_TallySchema: GenMessage<ViewAgreement_Tally> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_diff, 4, 0);
 
 /**
  * DiffService computes the semantic diff between two designs' netlist IR (diff.Designs,

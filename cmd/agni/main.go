@@ -1308,10 +1308,30 @@ func diffCmd() *cobra.Command {
 	var serverVal, conventions string
 	var srvSpec serverSpec
 	c := &cobra.Command{
-		Use:   "diff <old> <new>",
-		Short: "Structural diff between two revisions of a design (over the IR)",
-		Args:  cobra.ExactArgs(2),
+		Use:   "diff <old> <new> | diff <design>",
+		Short: "Structural diff between two revisions of a design, or between one design's schematic and board",
+		Long: `With two arguments, diff compares two revisions of a design over the IR.
+
+With one, it compares the design's schematic with its board (agni issue 1590). Parts match by
+ref-des. Nets match by name, then by identical pins when the names differ. Pins match by ref-des
+and pin number. It prints how many of each the two views share, then the lists of what did not
+match. A design with no board, or one that is its board alone, reads "Not compared".`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				switch {
+				case format == "csv":
+					return fmt.Errorf("--format csv tabulates a diff of two revisions; compare a design's views with --format text or json")
+				case renameApprox || includeEqual || len(orderBy) > 0:
+					return fmt.Errorf("--rename-approx, --include-equal and --order-by apply to a diff of two revisions, not to a design's views")
+				}
+				reset, err := withConventions(conventions)
+				if err != nil {
+					return err
+				}
+				defer reset()
+				return runViews(cmd, args[0], format)
+			}
 			// Before the reads, so a --server this process cannot honour refuses the run first (agni
 			// issue 637).
 			var err error
