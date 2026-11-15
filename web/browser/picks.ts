@@ -167,8 +167,9 @@ export async function pickPoint(page: Page, sel: string, kind: string): Promise<
 // The cross-probe walk and the step spec click a net as a reader does, by a point on its copper
 // (agni issues 1323 and 1589).
 // netPoint finds a point on any of a net's copper in a host that the picker reads as that net
-// alone, or null. It tries each piece's two diagonals and its midlines, so a track at any angle has
-// points on it.
+// alone, or null. It tries points along each piece's own lines first, since a wire that turns a
+// corner has none on its box's diagonals, which made the walk's GND step fail now and then. Then it
+// tries each piece's two diagonals and its midlines, for a piece that is no line, such as a pad.
 export async function netPoint(page: Page, host: string, name: string): Promise<{ x: number; y: number } | null> {
   return page.evaluate(
     ({ host, name }) => {
@@ -176,30 +177,63 @@ export async function netPoint(page: Page, host: string, name: string): Promise<
       const mine = (e: Element | null) => !e || (e.getAttribute("data-kind") === "net" && e.getAttribute("data-net") === name);
       const h = document.querySelector(host)!.getBoundingClientRect();
       // The viewer's picker looks a few pixels around a click and takes a pad over a track, so the
-      // point needs the whole ring clear of anything but this net's copper.
-      const ring = [-6, -3, 0, 3, 6];
+      // point needs the whole ring clear of anything but this net's copper. The picker's probes sit
+      // PROBE_R (5px) out, so the ring checks every offset from 3 to 6px, and a neighbour exactly 5px
+      // away cannot slip between two samples.
+      const ring = [-6, -5, -4, -3, 0, 3, 4, 5, 6];
+      const fractions = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
+      // onLines is points along el's lines in client pixels, from each SVG shape in it.
+      const onLines = (el: Element): number[][] => {
+        const shapes = el instanceof SVGGeometryElement ? [el] : [...el.querySelectorAll<SVGGeometryElement>("polyline, path, line, polygon")];
+        const out: number[][] = [];
+        for (const sh of shapes) {
+          const len = sh.getTotalLength();
+          const m = sh.getScreenCTM();
+          if (!m || !(len > 0)) continue;
+          for (const f of fractions) {
+            const p = sh.getPointAtLength(len * f);
+            out.push([p.x * m.a + p.y * m.c + m.e, p.x * m.b + p.y * m.d + m.f]);
+          }
+        }
+        return out;
+      };
       for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
         if (el.getAttribute("data-net") !== name) continue;
         const r = el.getBoundingClientRect();
-        for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8]) {
-          const along = [
+        const along = [...onLines(el)];
+        for (const f of fractions) {
+          along.push(
             [r.left + r.width * f, r.top + r.height * f],
             [r.left + r.width * f, r.bottom - r.height * f],
             [r.left + r.width * f, r.top + r.height / 2],
             [r.left + r.width / 2, r.top + r.height * f],
-          ];
-          for (const [px, py] of along) {
-            const x = Math.round(px), y = Math.round(py);
-            if (x < h.left + 8 || x > h.right - 8 || y < h.top + 8 || y > h.bottom - 8) continue;
-            const c = keyed(document.elementFromPoint(x, y));
-            if (c && mine(c) && ring.every((dx) => ring.every((dy) => mine(keyed(document.elementFromPoint(x + dx, y + dy)))))) return { x, y };
-          }
+          );
+        }
+        for (const [px, py] of along) {
+          const x = Math.round(px), y = Math.round(py);
+          if (x < h.left + 8 || x > h.right - 8 || y < h.top + 8 || y > h.bottom - 8) continue;
+          const c = keyed(document.elementFromPoint(x, y));
+          if (c && mine(c) && ring.every((dx) => ring.every((dy) => mine(keyed(document.elementFromPoint(x + dx, y + dy)))))) return { x, y };
         }
       }
       return null;
     },
     { host, name },
   );
+}
+
+// steadyNetPoint is netPoint once the view has stopped moving. A view still settling after a zoom
+// moves the point between finding it and clicking it, and the click then picks a neighbour. It asks
+// until two answers 100ms apart agree.
+async function steadyNetPoint(page: Page, host: string, name: string): Promise<{ x: number; y: number } | null> {
+  let at = await netPoint(page, host, name);
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(100);
+    const again = await netPoint(page, host, name);
+    if (again?.x === at?.x && again?.y === at?.y) return again;
+    at = again;
+  }
+  return at;
 }
 
 // findIn zooms a view out from its middle until an element's centre is inside it. A view that is
@@ -228,7 +262,7 @@ export async function findIn(page: Page, host: string, el: string): Promise<void
 // net's longest piece in it until one is clear of the pads and labels around it, as a reader would.
 export async function clickableNet(page: Page, host: string, name: string): Promise<{ x: number; y: number }> {
   for (let i = 0; i < 10; i++) {
-    const at = await netPoint(page, host, name);
+    const at = await steadyNetPoint(page, host, name);
     if (at) return at;
     const t = await page.evaluate(({ host, name }) => {
       const h = document.querySelector(host)!.getBoundingClientRect();
@@ -236,7 +270,17 @@ export async function clickableNet(page: Page, host: string, name: string): Prom
       for (const el of document.querySelectorAll(`${host} [data-kind="net"]`)) {
         if (el.getAttribute("data-net") !== name) continue;
         const r = el.getBoundingClientRect();
-        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        let x = r.left + r.width / 2, y = r.top + r.height / 2;
+        // Zoom in on a point of the line itself. A wire that turns a corner can miss its box's
+        // centre, and zooming there zooms away from the wire.
+        const sh = el instanceof SVGGeometryElement ? el : el.querySelector<SVGGeometryElement>("polyline, path, line, polygon");
+        const m = sh?.getScreenCTM();
+        const len = sh?.getTotalLength() ?? 0;
+        if (sh && m && len > 0) {
+          const p = sh.getPointAtLength(len / 2);
+          x = p.x * m.a + p.y * m.c + m.e;
+          y = p.x * m.b + p.y * m.d + m.f;
+        }
         if (x < h.left || x > h.right || y < h.top || y > h.bottom) continue;
         const long = Math.max(r.width, r.height);
         if (!best || long > best.long) best = { x, y, long };
