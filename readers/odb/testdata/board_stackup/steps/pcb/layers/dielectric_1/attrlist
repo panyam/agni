@@ -1,0 +1,4 @@
+.layer_dielectric=0.10
+.dielectric_constant=3.960
+.loss_tangent=0.020
+.material=pr1080

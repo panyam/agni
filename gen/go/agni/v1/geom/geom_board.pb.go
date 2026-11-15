@@ -36,6 +36,7 @@ type BoardGeometry struct {
 	Texts         []*BoardText           `protobuf:"bytes,8,rep,name=texts,proto3" json:"texts,omitempty"`                          // silkscreen/legend + free text (WS7)
 	Graphics      []*BoardGraphic        `protobuf:"bytes,9,rep,name=graphics,proto3" json:"graphics,omitempty"`                    // silkscreen/fab body outlines + free graphics (WS7)
 	Padstacks     []*Padstack            `protobuf:"bytes,10,rep,name=padstacks,proto3" json:"padstacks,omitempty"`                 // per-layer pad shapes, named by Pad and Via (agni 1356)
+	Stackup       *Stackup               `protobuf:"bytes,11,opt,name=stackup,proto3" json:"stackup,omitempty"`                     // the physical layer stack, unset when the file has none (agni 1592)
 	Prov          *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -137,6 +138,13 @@ func (x *BoardGeometry) GetGraphics() []*BoardGraphic {
 func (x *BoardGeometry) GetPadstacks() []*Padstack {
 	if x != nil {
 		return x.Padstacks
+	}
+	return nil
+}
+
+func (x *BoardGeometry) GetStackup() *Stackup {
+	if x != nil {
+		return x.Stackup
 	}
 	return nil
 }
@@ -364,7 +372,8 @@ func (x *BoardGraphic) GetWidth() int64 {
 // BoardLayer is one row of the board's layer table, as the source declares it. number is the
 // numeric id, and copper references resolve through it. name is the layer name ("F.Cu",
 // "In1.Cu"). kind is the source's kind word ("signal", "power", "user"), kept verbatim. An enum
-// could hold values a second format does not share.
+// could hold values a second format does not share. The table holds the layers a board draws on.
+// A dielectric has no drawing, so it is a row of the Stackup only (agni 1592).
 type BoardLayer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Number        int32                  `protobuf:"varint,1,opt,name=number,proto3" json:"number,omitempty"`
@@ -425,6 +434,172 @@ func (x *BoardLayer) GetKind() string {
 	return ""
 }
 
+// Stackup is the board's physical layer stack, as the file states it (agni 1592). Say a 3D view
+// draws the board edge-on. It needs each layer's thickness and order, the dielectrics between the
+// copper included, and the layer table lists only layers that draw. layers run from the top of the
+// board to the bottom. thickness is the board's total as the file states it, in unit_nm units,
+// and is unset when the file states none. A reader never computes a total from the layers, and
+// never fills a value the file does not give. A consumer that needs a default applies it itself.
+type Stackup struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Layers        []*StackLayer          `protobuf:"bytes,1,rep,name=layers,proto3" json:"layers,omitempty"`
+	Thickness     *int64                 `protobuf:"varint,2,opt,name=thickness,proto3,oneof" json:"thickness,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Stackup) Reset() {
+	*x = Stackup{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Stackup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Stackup) ProtoMessage() {}
+
+func (x *Stackup) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Stackup.ProtoReflect.Descriptor instead.
+func (*Stackup) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Stackup) GetLayers() []*StackLayer {
+	if x != nil {
+		return x.Layers
+	}
+	return nil
+}
+
+func (x *Stackup) GetThickness() int64 {
+	if x != nil && x.Thickness != nil {
+		return *x.Thickness
+	}
+	return 0
+}
+
+// StackLayer is one physical layer of the Stackup. name is the layer-table name for a row the
+// table holds ("F.Cu"), and the source's name otherwise ("dielectric 1", "DIELECTRIC_1"). kind is
+// one of copper, dielectric, mask, paste, silk or other, so a consumer tells copper from dielectric
+// in every format. layer names the BoardLayer this row is, and is "" for a dielectric or a row the
+// layer table lacks. thickness is in
+// unit_nm units and unset when the file gives none, never 0. material, dielectric_type ("core",
+// "prepreg") and the two electrical values are as the file gives them, and empty or unset
+// otherwise.
+type StackLayer struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Kind           string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Layer          string                 `protobuf:"bytes,3,opt,name=layer,proto3" json:"layer,omitempty"`
+	Thickness      *int64                 `protobuf:"varint,4,opt,name=thickness,proto3,oneof" json:"thickness,omitempty"`
+	Material       string                 `protobuf:"bytes,5,opt,name=material,proto3" json:"material,omitempty"`
+	DielectricType string                 `protobuf:"bytes,6,opt,name=dielectric_type,json=dielectricType,proto3" json:"dielectric_type,omitempty"`
+	EpsilonR       *float64               `protobuf:"fixed64,7,opt,name=epsilon_r,json=epsilonR,proto3,oneof" json:"epsilon_r,omitempty"`
+	LossTangent    *float64               `protobuf:"fixed64,8,opt,name=loss_tangent,json=lossTangent,proto3,oneof" json:"loss_tangent,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *StackLayer) Reset() {
+	*x = StackLayer{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StackLayer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StackLayer) ProtoMessage() {}
+
+func (x *StackLayer) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StackLayer.ProtoReflect.Descriptor instead.
+func (*StackLayer) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *StackLayer) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StackLayer) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *StackLayer) GetLayer() string {
+	if x != nil {
+		return x.Layer
+	}
+	return ""
+}
+
+func (x *StackLayer) GetThickness() int64 {
+	if x != nil && x.Thickness != nil {
+		return *x.Thickness
+	}
+	return 0
+}
+
+func (x *StackLayer) GetMaterial() string {
+	if x != nil {
+		return x.Material
+	}
+	return ""
+}
+
+func (x *StackLayer) GetDielectricType() string {
+	if x != nil {
+		return x.DielectricType
+	}
+	return ""
+}
+
+func (x *StackLayer) GetEpsilonR() float64 {
+	if x != nil && x.EpsilonR != nil {
+		return *x.EpsilonR
+	}
+	return 0
+}
+
+func (x *StackLayer) GetLossTangent() float64 {
+	if x != nil && x.LossTangent != nil {
+		return *x.LossTangent
+	}
+	return 0
+}
+
 // BoardOutline is the board edge, as the closed or to-be-closed paths of the outline layer.
 // Paths are as authored. Sources commonly draw the edge as disconnected lines and arcs. So a
 // consumer that wants a closed polygon must stitch segments. The reader approximates arcs as
@@ -438,7 +613,7 @@ type BoardOutline struct {
 
 func (x *BoardOutline) Reset() {
 	*x = BoardOutline{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[4]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +625,7 @@ func (x *BoardOutline) String() string {
 func (*BoardOutline) ProtoMessage() {}
 
 func (x *BoardOutline) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[4]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +638,7 @@ func (x *BoardOutline) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardOutline.ProtoReflect.Descriptor instead.
 func (*BoardOutline) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *BoardOutline) GetPaths() []*Polyline {
@@ -499,7 +674,7 @@ type ComponentPlacement struct {
 
 func (x *ComponentPlacement) Reset() {
 	*x = ComponentPlacement{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[5]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +686,7 @@ func (x *ComponentPlacement) String() string {
 func (*ComponentPlacement) ProtoMessage() {}
 
 func (x *ComponentPlacement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[5]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +699,7 @@ func (x *ComponentPlacement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentPlacement.ProtoReflect.Descriptor instead.
 func (*ComponentPlacement) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ComponentPlacement) GetRefDes() string {
@@ -602,7 +777,7 @@ type Pad struct {
 
 func (x *Pad) Reset() {
 	*x = Pad{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[6]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +789,7 @@ func (x *Pad) String() string {
 func (*Pad) ProtoMessage() {}
 
 func (x *Pad) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[6]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +802,7 @@ func (x *Pad) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pad.ProtoReflect.Descriptor instead.
 func (*Pad) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Pad) GetNumber() string {
@@ -713,7 +888,7 @@ type Padstack struct {
 
 func (x *Padstack) Reset() {
 	*x = Padstack{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -725,7 +900,7 @@ func (x *Padstack) String() string {
 func (*Padstack) ProtoMessage() {}
 
 func (x *Padstack) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -738,7 +913,7 @@ func (x *Padstack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Padstack.ProtoReflect.Descriptor instead.
 func (*Padstack) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Padstack) GetId() string {
@@ -779,7 +954,7 @@ type PadstackLayer struct {
 
 func (x *PadstackLayer) Reset() {
 	*x = PadstackLayer{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -791,7 +966,7 @@ func (x *PadstackLayer) String() string {
 func (*PadstackLayer) ProtoMessage() {}
 
 func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -804,7 +979,7 @@ func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadstackLayer.ProtoReflect.Descriptor instead.
 func (*PadstackLayer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PadstackLayer) GetLayer() string {
@@ -852,7 +1027,7 @@ type PadShape struct {
 
 func (x *PadShape) Reset() {
 	*x = PadShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -864,7 +1039,7 @@ func (x *PadShape) String() string {
 func (*PadShape) ProtoMessage() {}
 
 func (x *PadShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -877,7 +1052,7 @@ func (x *PadShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadShape.ProtoReflect.Descriptor instead.
 func (*PadShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PadShape) GetShape() string {
@@ -924,7 +1099,7 @@ type NetCopper struct {
 
 func (x *NetCopper) Reset() {
 	*x = NetCopper{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1111,7 @@ func (x *NetCopper) String() string {
 func (*NetCopper) ProtoMessage() {}
 
 func (x *NetCopper) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1124,7 @@ func (x *NetCopper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetCopper.ProtoReflect.Descriptor instead.
 func (*NetCopper) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *NetCopper) GetNet() string {
@@ -996,7 +1171,7 @@ type CopperShape struct {
 
 func (x *CopperShape) Reset() {
 	*x = CopperShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1183,7 @@ func (x *CopperShape) String() string {
 func (*CopperShape) ProtoMessage() {}
 
 func (x *CopperShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1196,7 @@ func (x *CopperShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CopperShape.ProtoReflect.Descriptor instead.
 func (*CopperShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CopperShape) GetLayer() string {
@@ -1063,7 +1238,7 @@ type TrackSegment struct {
 
 func (x *TrackSegment) Reset() {
 	*x = TrackSegment{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1075,7 +1250,7 @@ func (x *TrackSegment) String() string {
 func (*TrackSegment) ProtoMessage() {}
 
 func (x *TrackSegment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1088,7 +1263,7 @@ func (x *TrackSegment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackSegment.ProtoReflect.Descriptor instead.
 func (*TrackSegment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TrackSegment) GetA() *Point {
@@ -1143,7 +1318,7 @@ type Via struct {
 
 func (x *Via) Reset() {
 	*x = Via{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1155,7 +1330,7 @@ func (x *Via) String() string {
 func (*Via) ProtoMessage() {}
 
 func (x *Via) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1168,7 +1343,7 @@ func (x *Via) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Via.ProtoReflect.Descriptor instead.
 func (*Via) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Via) GetAt() *Point {
@@ -1229,7 +1404,7 @@ type Zone struct {
 
 func (x *Zone) Reset() {
 	*x = Zone{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1241,7 +1416,7 @@ func (x *Zone) String() string {
 func (*Zone) ProtoMessage() {}
 
 func (x *Zone) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1254,7 +1429,7 @@ func (x *Zone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Zone.ProtoReflect.Descriptor instead.
 func (*Zone) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Zone) GetNet() string {
@@ -1282,7 +1457,7 @@ var File_agni_v1_geom_geom_board_proto protoreflect.FileDescriptor
 
 const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\x93\x04\n" +
+	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\xc4\x04\n" +
 	"\rBoardGeometry\x12\x1d\n" +
 	"\n" +
 	"design_ref\x18\x01 \x01(\tR\tdesignRef\x12\x17\n" +
@@ -1297,7 +1472,8 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x05texts\x18\b \x03(\v2\x17.agni.v1.geom.BoardTextR\x05texts\x126\n" +
 	"\bgraphics\x18\t \x03(\v2\x1a.agni.v1.geom.BoardGraphicR\bgraphics\x124\n" +
 	"\tpadstacks\x18\n" +
-	" \x03(\v2\x16.agni.v1.geom.PadstackR\tpadstacks\x12,\n" +
+	" \x03(\v2\x16.agni.v1.geom.PadstackR\tpadstacks\x12/\n" +
+	"\astackup\x18\v \x01(\v2\x15.agni.v1.geom.StackupR\astackup\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xa6\x02\n" +
 	"\tBoardText\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12#\n" +
@@ -1321,7 +1497,27 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"BoardLayer\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\x05R\x06number\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"<\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\"l\n" +
+	"\aStackup\x120\n" +
+	"\x06layers\x18\x01 \x03(\v2\x18.agni.v1.geom.StackLayerR\x06layers\x12!\n" +
+	"\tthickness\x18\x02 \x01(\x03H\x00R\tthickness\x88\x01\x01B\f\n" +
+	"\n" +
+	"_thickness\"\xa9\x02\n" +
+	"\n" +
+	"StackLayer\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05layer\x18\x03 \x01(\tR\x05layer\x12!\n" +
+	"\tthickness\x18\x04 \x01(\x03H\x00R\tthickness\x88\x01\x01\x12\x1a\n" +
+	"\bmaterial\x18\x05 \x01(\tR\bmaterial\x12'\n" +
+	"\x0fdielectric_type\x18\x06 \x01(\tR\x0edielectricType\x12 \n" +
+	"\tepsilon_r\x18\a \x01(\x01H\x01R\bepsilonR\x88\x01\x01\x12&\n" +
+	"\floss_tangent\x18\b \x01(\x01H\x02R\vlossTangent\x88\x01\x01B\f\n" +
+	"\n" +
+	"_thicknessB\f\n" +
+	"\n" +
+	"_epsilon_rB\x0f\n" +
+	"\r_loss_tangent\"<\n" +
 	"\fBoardOutline\x12,\n" +
 	"\x05paths\x18\x01 \x03(\v2\x16.agni.v1.geom.PolylineR\x05paths\"\xf8\x01\n" +
 	"\x12ComponentPlacement\x12\x17\n" +
@@ -1396,68 +1592,72 @@ func file_agni_v1_geom_geom_board_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_board_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardGeometry)(nil),      // 0: agni.v1.geom.BoardGeometry
 	(*BoardText)(nil),          // 1: agni.v1.geom.BoardText
 	(*BoardGraphic)(nil),       // 2: agni.v1.geom.BoardGraphic
 	(*BoardLayer)(nil),         // 3: agni.v1.geom.BoardLayer
-	(*BoardOutline)(nil),       // 4: agni.v1.geom.BoardOutline
-	(*ComponentPlacement)(nil), // 5: agni.v1.geom.ComponentPlacement
-	(*Pad)(nil),                // 6: agni.v1.geom.Pad
-	(*Padstack)(nil),           // 7: agni.v1.geom.Padstack
-	(*PadstackLayer)(nil),      // 8: agni.v1.geom.PadstackLayer
-	(*PadShape)(nil),           // 9: agni.v1.geom.PadShape
-	(*NetCopper)(nil),          // 10: agni.v1.geom.NetCopper
-	(*CopperShape)(nil),        // 11: agni.v1.geom.CopperShape
-	(*TrackSegment)(nil),       // 12: agni.v1.geom.TrackSegment
-	(*Via)(nil),                // 13: agni.v1.geom.Via
-	(*Zone)(nil),               // 14: agni.v1.geom.Zone
-	(*Provenance)(nil),         // 15: agni.v1.geom.Provenance
-	(*Point)(nil),              // 16: agni.v1.geom.Point
-	(*Shape)(nil),              // 17: agni.v1.geom.Shape
-	(*Polyline)(nil),           // 18: agni.v1.geom.Polyline
+	(*Stackup)(nil),            // 4: agni.v1.geom.Stackup
+	(*StackLayer)(nil),         // 5: agni.v1.geom.StackLayer
+	(*BoardOutline)(nil),       // 6: agni.v1.geom.BoardOutline
+	(*ComponentPlacement)(nil), // 7: agni.v1.geom.ComponentPlacement
+	(*Pad)(nil),                // 8: agni.v1.geom.Pad
+	(*Padstack)(nil),           // 9: agni.v1.geom.Padstack
+	(*PadstackLayer)(nil),      // 10: agni.v1.geom.PadstackLayer
+	(*PadShape)(nil),           // 11: agni.v1.geom.PadShape
+	(*NetCopper)(nil),          // 12: agni.v1.geom.NetCopper
+	(*CopperShape)(nil),        // 13: agni.v1.geom.CopperShape
+	(*TrackSegment)(nil),       // 14: agni.v1.geom.TrackSegment
+	(*Via)(nil),                // 15: agni.v1.geom.Via
+	(*Zone)(nil),               // 16: agni.v1.geom.Zone
+	(*Provenance)(nil),         // 17: agni.v1.geom.Provenance
+	(*Point)(nil),              // 18: agni.v1.geom.Point
+	(*Shape)(nil),              // 19: agni.v1.geom.Shape
+	(*Polyline)(nil),           // 20: agni.v1.geom.Polyline
 }
 var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.BoardGeometry.layers:type_name -> agni.v1.geom.BoardLayer
-	4,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
-	5,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
-	10, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
-	14, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
+	6,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
+	7,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
+	12, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
+	16, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
 	1,  // 5: agni.v1.geom.BoardGeometry.texts:type_name -> agni.v1.geom.BoardText
 	2,  // 6: agni.v1.geom.BoardGeometry.graphics:type_name -> agni.v1.geom.BoardGraphic
-	7,  // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
-	15, // 8: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
-	16, // 9: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
-	17, // 10: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
-	18, // 11: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
-	16, // 12: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
-	6,  // 13: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
-	15, // 14: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
-	16, // 15: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
-	16, // 16: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
-	8,  // 17: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
-	9,  // 18: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
-	9,  // 19: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
-	9,  // 20: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
-	16, // 21: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
-	16, // 22: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
-	16, // 23: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
-	12, // 24: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	13, // 25: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	11, // 26: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
-	18, // 27: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
-	18, // 28: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
-	16, // 29: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	16, // 30: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	16, // 31: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	16, // 32: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	18, // 33: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	9,  // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
+	4,  // 8: agni.v1.geom.BoardGeometry.stackup:type_name -> agni.v1.geom.Stackup
+	17, // 9: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
+	18, // 10: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
+	19, // 11: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
+	5,  // 12: agni.v1.geom.Stackup.layers:type_name -> agni.v1.geom.StackLayer
+	20, // 13: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
+	18, // 14: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
+	8,  // 15: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
+	17, // 16: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
+	18, // 17: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
+	18, // 18: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
+	10, // 19: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
+	11, // 20: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
+	11, // 21: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
+	11, // 22: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
+	18, // 23: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
+	18, // 24: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
+	18, // 25: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
+	14, // 26: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	15, // 27: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	13, // 28: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
+	20, // 29: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
+	20, // 30: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
+	18, // 31: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	18, // 32: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	18, // 33: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	18, // 34: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	20, // 35: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	36, // [36:36] is the sub-list for method output_type
+	36, // [36:36] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }
@@ -1466,13 +1666,15 @@ func file_agni_v1_geom_geom_board_proto_init() {
 		return
 	}
 	file_agni_v1_geom_geom_proto_init()
+	file_agni_v1_geom_geom_board_proto_msgTypes[4].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_board_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_board_proto_rawDesc), len(file_agni_v1_geom_geom_board_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

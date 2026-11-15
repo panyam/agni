@@ -126,6 +126,7 @@ type matrixLayer struct {
 	polarity  string
 	startName string // a drill or rout layer's span
 	endName   string
+	dielType  string // a dielectric's DIELECTRIC_TYPE, CORE or PREPREG
 }
 
 // matrix is the parsed matrix/matrix file, its layers in row order.
@@ -156,6 +157,7 @@ func parseMatrix(b []byte) (*matrix, error) {
 				polarity:  strings.ToUpper(bl.kv["POLARITY"]),
 				startName: bl.kv["START_NAME"],
 				endName:   bl.kv["END_NAME"],
+				dielType:  bl.kv["DIELECTRIC_TYPE"],
 			})
 		}
 	}

@@ -18,7 +18,8 @@ import (
 // sourceFile is recorded in provenance only (C1).
 //
 // Fidelity: lossy-bounded (C6). This producer emits the board outline (Profile), the layer
-// stackup table, and component placements with their pads. Pads resolve through the padstack
+// table, the Stackup with each row's thickness and its Spec's material and electrical values (agni
+// 1592), and component placements with their pads. Pads resolve through the padstack
 // def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
 // through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular,
 // and each records its layer span. Each pin's and via's lands on every copper layer are gathered
@@ -58,6 +59,11 @@ type ipcGeomFile struct {
 	Pkgs      []gPkgEl         `xml:"Ecad>CadData>Step>Package"`
 	Comps     []gCompEl        `xml:"Ecad>CadData>Step>Component"`
 	Features  []layerFeatureEl `xml:"Ecad>CadData>Step>LayerFeature"`
+	Stackup   *gStackupEl      `xml:"Ecad>CadData>Stackup"`
+	CadHeader struct {
+		Units string   `xml:"units,attr"`
+		Specs []specEl `xml:"Spec"`
+	} `xml:"Ecad>CadHeader"`
 }
 
 // dictStd is a standard-primitive dictionary. It holds a units tag and shape definitions, and
@@ -222,10 +228,14 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 	names := f.layerNames()
 
 	for i, l := range f.Layers {
-		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word.
-		// BoardLayer has no stackup material/thickness until a consumer needs it (C9).
+		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word. A
+		// dielectric draws nothing, so it is a row of the Stackup alone (agni 1592).
+		if k, _ := stackKind(l.Function); k == "dielectric" {
+			continue
+		}
 		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: names.of(l.Name), Kind: l.Function})
 	}
+	g.Stackup = f.stackup(names)
 
 	if o := f.outline(nmPerUnit); o != nil {
 		g.Outline = o

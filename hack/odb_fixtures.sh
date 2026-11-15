@@ -17,6 +17,7 @@ boards=(
   examples/common/designs/mixer.kicad_pcb
   cmd/agni/testdata/conformance/drc.fires.kicad_pcb
   readers/kicad/testdata/board.kicad_pcb
+  readers/kicad/testdata/board_stackup.kicad_pcb
 )
 for b in "${boards[@]}"; do
   name=$(basename "$b" .kicad_pcb)

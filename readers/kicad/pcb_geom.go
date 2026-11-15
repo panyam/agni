@@ -24,7 +24,9 @@ import (
 // silk/fab body graphics (the footprint ref-des and value, free gr_text, and the fp_*/gr_*
 // outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not. An arc
 // track is kept as an arc, with the file's own mid point (agni 1358). A KiCad 9 pad with a
-// (padstack) block gets a padstack entry with its shape on each copper layer (agni 1407). Outline
+// (padstack) block gets a padstack entry with its shape on each copper layer (agni 1407). The
+// stackup in (setup (stackup ...)) is carried, one row per ply, with the board thickness from
+// (general (thickness ...)) (agni 1592). Outline
 // and silk arcs are approximated as polylines. Coordinates are emitted in nanometers (unit_nm=1),
 // Y-flipped to the geom contract's Y-up frame. A footprint's angle is kept verbatim. KiCad writes a
 // pad's angle on the board, and the contract keeps it in the footprint's frame, so the reader
@@ -48,6 +50,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 
 	// The layer table also serves as the number->name map that copper items resolve through.
 	layerName := map[string]string{}
+	tableNames := map[string]bool{}
 	if lt := root.Child("layers"); lt != nil {
 		for _, l := range lt.Kids[1:] { // Kids[0] is the "layers" head atom
 			name := atomOf(l.Arg(1))
@@ -57,8 +60,10 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 				Kind:   atomOf(l.Arg(2)),
 			})
 			layerName[l.Head()] = name
+			tableNames[name] = true
 		}
 	}
+	g.Stackup = boardStackup(root, tableNames)
 
 	// Nets referenced by copper items carry a number; the top-level net table maps it to
 	// the name that the IR keys on. (The netlist reader skips this table because pads carry

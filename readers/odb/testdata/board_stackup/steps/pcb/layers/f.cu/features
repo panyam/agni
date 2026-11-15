@@ -1,0 +1,33 @@
+UNITS=MM
+#
+#Num Features
+#
+F 5
+
+#
+#Feature symbol names
+#
+$0 r500.0
+$1 r800.0
+$2 rect1200.0x1400.0xr300.0
+
+#
+#Feature attribute names
+#
+@0 .pad_usage
+@1 .geometry
+@2 .smd
+
+#
+#Feature attribute text strings
+#
+&0 VIA_ROUNDD500000
+&1 VIA_ROUNDD800000
+#
+#Layer features
+#
+P 20.0 -15.0 0 P 0 8 0.0 ;0=1,1=0
+L 9.0 -6.0 30.0 -6.0 0 P 0 
+P 30.0 -6.0 1 P 0 8 0.0 ;0=1,1=1
+P 7.0 -6.0 2 P 0 8 0.0 ;0=0,2
+P 9.0 -6.0 2 P 0 8 0.0 ;0=0,2

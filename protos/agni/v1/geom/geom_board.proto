@@ -41,6 +41,7 @@ message BoardGeometry {
   repeated BoardText texts = 8;                 // silkscreen/legend + free text (WS7)
   repeated BoardGraphic graphics = 9;           // silkscreen/fab body outlines + free graphics (WS7)
   repeated Padstack padstacks = 10;             // per-layer pad shapes, named by Pad and Via (agni 1356)
+  Stackup stackup = 11;                         // the physical layer stack, unset when the file has none (agni 1592)
   Provenance prov = 16;
 }
 
@@ -89,11 +90,42 @@ message BoardGraphic {
 // BoardLayer is one row of the board's layer table, as the source declares it. number is the
 // numeric id, and copper references resolve through it. name is the layer name ("F.Cu",
 // "In1.Cu"). kind is the source's kind word ("signal", "power", "user"), kept verbatim. An enum
-// could hold values a second format does not share.
+// could hold values a second format does not share. The table holds the layers a board draws on.
+// A dielectric has no drawing, so it is a row of the Stackup only (agni 1592).
 message BoardLayer {
   int32 number = 1;
   string name = 2;
   string kind = 3;
+}
+
+// Stackup is the board's physical layer stack, as the file states it (agni 1592). Say a 3D view
+// draws the board edge-on. It needs each layer's thickness and order, the dielectrics between the
+// copper included, and the layer table lists only layers that draw. layers run from the top of the
+// board to the bottom. thickness is the board's total as the file states it, in unit_nm units,
+// and is unset when the file states none. A reader never computes a total from the layers, and
+// never fills a value the file does not give. A consumer that needs a default applies it itself.
+message Stackup {
+  repeated StackLayer layers = 1;
+  optional int64 thickness = 2;
+}
+
+// StackLayer is one physical layer of the Stackup. name is the layer-table name for a row the
+// table holds ("F.Cu"), and the source's name otherwise ("dielectric 1", "DIELECTRIC_1"). kind is
+// one of copper, dielectric, mask, paste, silk or other, so a consumer tells copper from dielectric
+// in every format. layer names the BoardLayer this row is, and is "" for a dielectric or a row the
+// layer table lacks. thickness is in
+// unit_nm units and unset when the file gives none, never 0. material, dielectric_type ("core",
+// "prepreg") and the two electrical values are as the file gives them, and empty or unset
+// otherwise.
+message StackLayer {
+  string name = 1;
+  string kind = 2;
+  string layer = 3;
+  optional int64 thickness = 4;
+  string material = 5;
+  string dielectric_type = 6;
+  optional double epsilon_r = 7;
+  optional double loss_tangent = 8;
 }
 
 // BoardOutline is the board edge, as the closed or to-be-closed paths of the outline layer.
