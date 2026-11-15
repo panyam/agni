@@ -17,7 +17,9 @@ import (
 //
 // Fidelity: lossy-bounded (C6). This producer reads the following.
 //   - The board outline, from the step's profile.
-//   - The layer stack.
+//   - The layer table, and the physical stack with each layer's thickness, material and electrical
+//     values from its attrlist and the board's thickness (agni 1592). A dielectric is a row of the
+//     stack alone.
 //   - Component placements with their pads. Each pad's shape and size come from the copper feature
 //     eda/data ties to its toeprint, and its drill from the drill layer. A feature's angle is the
 //     pad's on the board, so the reader subtracts the part's to keep it in the footprint's frame
@@ -85,7 +87,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 	}
 	b.indexNets()
 	for _, l := range p.matrix.layers {
-		if l.context != "BOARD" || l.typ == "COMPONENT" {
+		if l.context != "BOARD" || l.typ == "COMPONENT" || l.typ == "DIELECTRIC" {
 			continue
 		}
 		kind := strings.ToLower(l.typ)
@@ -94,6 +96,11 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 		}
 		b.g.Layers = append(b.g.Layers, &geom.BoardLayer{Number: num.Int32(l.row), Name: b.names[strings.ToUpper(l.name)], Kind: kind})
 	}
+	stack, err := b.stackup()
+	if err != nil {
+		return nil, err
+	}
+	b.g.Stackup = stack
 	if err := b.outline(); err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class BoardGeometry(_message.Message):
-    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "padstacks", "prov")
+    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "padstacks", "stackup", "prov")
     DESIGN_REF_FIELD_NUMBER: _ClassVar[int]
     UNIT_NM_FIELD_NUMBER: _ClassVar[int]
     LAYERS_FIELD_NUMBER: _ClassVar[int]
@@ -19,6 +19,7 @@ class BoardGeometry(_message.Message):
     TEXTS_FIELD_NUMBER: _ClassVar[int]
     GRAPHICS_FIELD_NUMBER: _ClassVar[int]
     PADSTACKS_FIELD_NUMBER: _ClassVar[int]
+    STACKUP_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     design_ref: str
     unit_nm: int
@@ -30,8 +31,9 @@ class BoardGeometry(_message.Message):
     texts: _containers.RepeatedCompositeFieldContainer[BoardText]
     graphics: _containers.RepeatedCompositeFieldContainer[BoardGraphic]
     padstacks: _containers.RepeatedCompositeFieldContainer[Padstack]
+    stackup: Stackup
     prov: _geom_pb2.Provenance
-    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class BoardText(_message.Message):
     __slots__ = ("text", "at", "rotation_deg", "height", "layer", "mirror", "justify", "ref_des", "kind", "font", "thickness")
@@ -80,6 +82,34 @@ class BoardLayer(_message.Message):
     name: str
     kind: str
     def __init__(self, number: _Optional[int] = ..., name: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+
+class Stackup(_message.Message):
+    __slots__ = ("layers", "thickness")
+    LAYERS_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_FIELD_NUMBER: _ClassVar[int]
+    layers: _containers.RepeatedCompositeFieldContainer[StackLayer]
+    thickness: int
+    def __init__(self, layers: _Optional[_Iterable[_Union[StackLayer, _Mapping]]] = ..., thickness: _Optional[int] = ...) -> None: ...
+
+class StackLayer(_message.Message):
+    __slots__ = ("name", "kind", "layer", "thickness", "material", "dielectric_type", "epsilon_r", "loss_tangent")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    LAYER_FIELD_NUMBER: _ClassVar[int]
+    THICKNESS_FIELD_NUMBER: _ClassVar[int]
+    MATERIAL_FIELD_NUMBER: _ClassVar[int]
+    DIELECTRIC_TYPE_FIELD_NUMBER: _ClassVar[int]
+    EPSILON_R_FIELD_NUMBER: _ClassVar[int]
+    LOSS_TANGENT_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    kind: str
+    layer: str
+    thickness: int
+    material: str
+    dielectric_type: str
+    epsilon_r: float
+    loss_tangent: float
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., layer: _Optional[str] = ..., thickness: _Optional[int] = ..., material: _Optional[str] = ..., dielectric_type: _Optional[str] = ..., epsilon_r: _Optional[float] = ..., loss_tangent: _Optional[float] = ...) -> None: ...
 
 class BoardOutline(_message.Message):
     __slots__ = ("paths",)

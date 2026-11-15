@@ -89,8 +89,8 @@ func TestReadsAnAllegroExportsCopper(t *testing.T) {
 	for _, l := range g.GetLayers() {
 		names = append(names, l.GetName())
 	}
-	if got := strings.Join(names, " "); got != "F.Cu DIELECTRIC_BELOW_TOP In1.Cu B.Cu IPC2581DRILL_1-3" {
-		t.Errorf("layers = %s, want the copper named F.Cu, In1.Cu, B.Cu", got)
+	if got := strings.Join(names, " "); got != "F.Cu In1.Cu B.Cu IPC2581DRILL_1-3" {
+		t.Errorf("layers = %s, want the copper named F.Cu, In1.Cu, B.Cu, and no dielectric (agni 1592)", got)
 	}
 
 	var widths []int64

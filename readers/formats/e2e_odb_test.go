@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -26,6 +27,12 @@ type odbPair struct {
 	// cluster leaves the board on VCC. Reading the job as written is right, and the job disagrees with
 	// its source.
 	exportRenetsCopper bool
+	// exportSplitsPlies marks a pair whose source has a dielectric of several plies (agni 1592).
+	// KiCad 10's exporter lists each ply in the matrix (DIELECTRIC_1_1, DIELECTRIC_1_2) but writes one
+	// directory for them, dielectric_1, holding the first ply's attrlist. The matrix points at no
+	// attrlist, so the job reads both plies with no thickness, and the pair compares the stack with
+	// each such dielectric left out on both sides.
+	exportSplitsPlies bool
 }
 
 // odbPairs are the synthetic boards the fixtures were exported from. AGNI_ODB_PAIRS adds more as
@@ -33,12 +40,13 @@ type odbPair struct {
 // board, AGNI_ODB_PAIRS holds that board's export to its source.
 func odbPairs(t *testing.T) []odbPair {
 	pairs := []odbPair{
-		{"../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", "../../examples/common/designs/odb/gateway-layout", false},
-		{"../../examples/tutorial-project/designs/gateway/gateway-rev-b.kicad_pcb", "../../examples/common/designs/odb/gateway-rev-b-layout", false},
-		{"../../examples/common/designs/demo-board.kicad_pcb", "../odb/testdata/demo-board", true},
-		{"../../examples/common/designs/mixer.kicad_pcb", "../odb/testdata/mixer", false},
-		{"../../cmd/agni/testdata/conformance/drc.fires.kicad_pcb", "../odb/testdata/drc.fires", false},
-		{"../kicad/testdata/board.kicad_pcb", "../odb/testdata/board", false},
+		{"../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", "../../examples/common/designs/odb/gateway-layout", false, false},
+		{"../../examples/tutorial-project/designs/gateway/gateway-rev-b.kicad_pcb", "../../examples/common/designs/odb/gateway-rev-b-layout", false, false},
+		{"../../examples/common/designs/demo-board.kicad_pcb", "../odb/testdata/demo-board", true, false},
+		{"../../examples/common/designs/mixer.kicad_pcb", "../odb/testdata/mixer", false, false},
+		{"../../cmd/agni/testdata/conformance/drc.fires.kicad_pcb", "../odb/testdata/drc.fires", false, false},
+		{"../kicad/testdata/board.kicad_pcb", "../odb/testdata/board", false, false},
+		{"../kicad/testdata/board_stackup.kicad_pcb", "../odb/testdata/board_stackup", false, true},
 	}
 	for _, kv := range strings.Split(os.Getenv("AGNI_ODB_PAIRS"), ";") {
 		if k, v, ok := strings.Cut(kv, "="); ok {
@@ -308,6 +316,40 @@ func onlyLines(what string, onlyK, onlyO []string) []string {
 }
 
 // compareBoard reads one board both ways and returns every difference, nil when the two agree.
+// stackRows is the board's copper and dielectric layers top to bottom, each as its kind and
+// thickness in microns (agni 1592). The two formats name a dielectric differently, so names are
+// left out. A KiCad dielectric of several plies is one ODB++ layer, so plies of one name add up.
+// splitPlies leaves out a dielectric of several plies, and a dielectric with no thickness, which is
+// how an exportSplitsPlies job reads one.
+func stackRows(g *geom.BoardGeometry, splitPlies bool) []string {
+	type row struct {
+		kind, name string
+		plies      int
+		sum        int64
+		known      bool
+	}
+	var rows []*row
+	for _, l := range g.GetStackup().GetLayers() {
+		if l.GetKind() != "copper" && l.GetKind() != "dielectric" {
+			continue
+		}
+		if n := len(rows); n > 0 && rows[n-1].kind == l.GetKind() && rows[n-1].name == l.GetName() {
+			rows[n-1].plies++
+			rows[n-1].sum += l.GetThickness()
+			continue
+		}
+		rows = append(rows, &row{kind: l.GetKind(), name: l.GetName(), plies: 1, sum: l.GetThickness(), known: l.Thickness != nil})
+	}
+	var out []string
+	for _, r := range rows {
+		if splitPlies && r.kind == "dielectric" && (r.plies > 1 || !r.known) {
+			continue
+		}
+		out = append(out, fmt.Sprintf("%s %d", r.kind, (r.sum+500)/1000))
+	}
+	return out
+}
+
 func compareBoard(p odbPair) ([]string, error) {
 	l := &Loader{}
 	kd, err := l.ReadDesign(p.kicad)
@@ -332,6 +374,11 @@ func compareBoard(p odbPair) ([]string, error) {
 		return nil, fmt.Errorf("odb board: %w", err)
 	}
 	diffs = append(diffs, diffPlaced("pads", padItems(kg), padItems(og))...)
+	if ks := stackRows(kg, p.exportSplitsPlies); len(ks) > 0 {
+		if ob := stackRows(og, p.exportSplitsPlies); !slices.Equal(ks, ob) {
+			diffs = append(diffs, fmt.Sprintf("stack: the KiCad read has %q, the ODB++ read %q", ks, ob))
+		}
+	}
 	if p.exportRenetsCopper {
 		if k, o := len(copperItems(kg)), len(copperItems(og)); k != o {
 			diffs = append(diffs, fmt.Sprintf("copper: %d items in the ODB++ read, %d in the KiCad read", o, k))
