@@ -35,6 +35,18 @@ either by ingesting again under that id or updating, and asks once more. Imagine
 after reading what `read_board` asks. So a client can send an `Ingest` again without first asking
 whether the host holds it.
 
+The host keeps each snapshot's definition apart from the snapshot itself, in a `SnapshotStore` (agni
+issue 1639). A question on a snapshot the host evicted is then answered after the host ingests it
+again under its name, so the client does nothing. `agni serve --state-dir <dir>` keeps the
+definitions on disk, so a restarted server recovers too, and without it they live in memory. A
+snapshot of uploaded files is not recovered after a restart, since its files went with the process,
+and answers NOT_FOUND as before. A definition that sets `refresh` is read again when a file under it
+changed, rather than refused as stale. The answer then carries an `Agni-Snapshot-Refreshed` response
+header naming the tiers that changed, so the caller still learns its earlier answers came from older
+files. `ServerService.GetServerInfo` names `snapshot_recovery` and `snapshot_store` among the host's
+features ([wire compatibility](../../build/compatibility/)). The viewer keeps its own recovery for a
+host that lacks them.
+
 A client can also send a design's files instead of naming files the host serves (agni issue 1061,
 step 4b). The definition then carries a manifest that lists each file's path within the design's
 mount, its SHA-256 and its size. The contents travel separately. If the host is missing any file in

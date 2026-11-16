@@ -207,8 +207,12 @@ func (g *snapshotRegistry) put(name string, e *snapshotEntry) {
 }
 
 // Snapshot returns the snapshot a question names and a context to answer it under. That context
-// records onto the snapshot every file the answer reads. A name the host does not hold is a
-// *SnapshotError, and so is a snapshot whose files changed since they were read.
+// records onto the snapshot every file the answer reads.
+//
+// A snapshot the host no longer holds, evicted or lost to a restart, is ingested again from the
+// definition the store kept (agni issue 1639). A snapshot whose files changed since they were read is
+// read again when its definition sets refresh, and the context's Refreshes records the tiers that
+// changed. Otherwise either is a *SnapshotError, as is a name no store holds.
 func (r *ProjectResolver) Snapshot(ctx context.Context, name string) (context.Context, Snap, error) {
 	if name == "" {
 		return ctx, Snap{}, fmt.Errorf("%w: no snapshot named; ingest the design first", ErrInvalidArgument)
@@ -218,12 +222,100 @@ func (r *ProjectResolver) Snapshot(ctx context.Context, name string) (context.Co
 	}
 	e, ok := r.registry().get(name)
 	if !ok {
-		return ctx, Snap{}, &SnapshotError{Name: name}
+		if e, ok = r.recoverSnapshot(ctx, name); !ok {
+			return ctx, Snap{}, &SnapshotError{Name: name}
+		}
 	}
 	if e.touched.Len() > 0 && !e.touched.Unchanged() {
-		return ctx, Snap{}, &SnapshotError{Name: name, Stale: true, Changed: e.changedTiers(ctx)}
+		changed := e.changedTiers(ctx)
+		e.mu.Lock()
+		def := definitionOf(e.def)
+		e.mu.Unlock()
+		if !def.GetRefresh() || r.reload == nil {
+			return ctx, Snap{}, &SnapshotError{Name: name, Stale: true, Changed: changed}
+		}
+		fresh, err := r.reload(ctx, name, def)
+		if err != nil {
+			return ctx, Snap{}, err
+		}
+		r.registry().put(name, fresh)
+		noteRefreshed(ctx, changed)
+		e = fresh
 	}
 	return withTouched(ctx, e.touched), e.snap, nil
+}
+
+// recoverSnapshot ingests a snapshot the registry does not hold from the definition the store kept,
+// and holds it again. It reports false when no store holds the name, or the definition no longer
+// reads, such as an upload whose files went with a restart.
+func (r *ProjectResolver) recoverSnapshot(ctx context.Context, name string) (*snapshotEntry, bool) {
+	if r.reload == nil {
+		return nil, false
+	}
+	def, err := r.snapshotStore().Get(ctx, name)
+	if err != nil {
+		return nil, false
+	}
+	e, err := r.reload(ctx, name, def)
+	if err != nil {
+		return nil, false
+	}
+	r.registry().put(name, e)
+	return e, true
+}
+
+// snapshotStore is the resolver's store of definitions, an in-memory one when none was configured.
+func (r *ProjectResolver) snapshotStore() SnapshotStore {
+	r.snapMu.Lock()
+	defer r.snapMu.Unlock()
+	if r.defs == nil {
+		r.defs = r.Snapshots
+		if r.defs == nil {
+			r.defs = NewMemSnapshotStore()
+		}
+	}
+	return r.defs
+}
+
+// SnapshotsPersist reports whether this resolver's snapshot definitions outlive the process.
+func (r *ProjectResolver) SnapshotsPersist() bool {
+	return r != nil && r.snapshotStore().Persistent()
+}
+
+// Refreshes collects the tiers that refreshed snapshots found changed while answering one request,
+// so the transport can say so in a response header (agni issue 1639).
+type Refreshes struct {
+	mu      sync.Mutex
+	changed []string
+}
+
+type refreshesKey struct{}
+
+// WithRefreshes returns a context that records refreshes, and the record.
+func WithRefreshes(ctx context.Context) (context.Context, *Refreshes) {
+	rs := &Refreshes{}
+	return context.WithValue(ctx, refreshesKey{}, rs), rs
+}
+
+// Changed is every tier a refreshed snapshot found changed, in the order found, each once.
+func (rs *Refreshes) Changed() []string {
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	return slices.Clone(rs.changed)
+}
+
+func noteRefreshed(ctx context.Context, tiers []string) {
+	rs, ok := ctx.Value(refreshesKey{}).(*Refreshes)
+	if !ok {
+		return
+	}
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+	for _, t := range tiers {
+		if !slices.Contains(rs.changed, t) {
+			rs.changed = append(rs.changed, t)
+		}
+	}
 }
 
 // OptionalSnapshot is Snapshot for a request where naming none is allowed, returning ok false then.
@@ -254,7 +346,33 @@ type SnapshotLoader interface {
 // NewSnapshotService ingests designs into projects' snapshots. baseConvention is the catalog source
 // name of the server's --conventions default, as on NewCheckService.
 func NewSnapshotService(loader SnapshotLoader, projects *ProjectResolver, specs param.ParamProvider, baseConvention string) *SnapshotService {
-	return &SnapshotService{loader: loader, projects: projects, specs: specs, baseConvention: baseConvention}
+	s := &SnapshotService{loader: loader, projects: projects, specs: specs, baseConvention: baseConvention}
+	if projects != nil {
+		projects.snapMu.Lock()
+		if projects.reload == nil {
+			projects.reload = func(ctx context.Context, name string, def *webapi.Snapshot) (*snapshotEntry, error) {
+				return s.load(ctx, name, def, false)
+			}
+		}
+		projects.snapMu.Unlock()
+	}
+	return s
+}
+
+// held is the snapshot by name, recovered from the store when the registry no longer holds it.
+func (s *SnapshotService) held(ctx context.Context, name string) (*snapshotEntry, bool) {
+	if e, ok := s.projects.registry().get(name); ok {
+		return e, true
+	}
+	return s.projects.recoverSnapshot(ctx, name)
+}
+
+// keep records a snapshot's definition in the store, so the snapshot can be recovered.
+func (s *SnapshotService) keep(ctx context.Context, name string, e *snapshotEntry) error {
+	if s.projects == nil {
+		return nil
+	}
+	return s.projects.snapshotStore().Put(ctx, name, definitionOf(e.out()))
 }
 
 // Ingest creates a snapshot from its definition and reads its netlist, and its board when read_board
@@ -288,13 +406,16 @@ func (s *SnapshotService) Ingest(ctx context.Context, req *webapi.IngestRequest)
 	if err != nil {
 		return nil, err
 	}
+	if err := s.keep(ctx, name, e); err != nil {
+		return nil, err
+	}
 	s.projects.registry().put(name, e)
 	return e.out(), nil
 }
 
 // GetSnapshot returns a snapshot's definition and what it resolved to.
 func (s *SnapshotService) GetSnapshot(ctx context.Context, req *webapi.GetSnapshotRequest) (*webapi.Snapshot, error) {
-	e, ok := s.projects.registry().get(req.GetName())
+	e, ok := s.held(ctx, req.GetName())
 	if !ok {
 		return nil, &SnapshotError{Name: req.GetName()}
 	}
@@ -344,7 +465,7 @@ func (s *SnapshotService) ListSnapshots(ctx context.Context, req *webapi.ListSna
 // the same name. An update that cannot be read leaves the snapshot as it was.
 func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.UpdateSnapshotRequest) (*webapi.Snapshot, error) {
 	name := req.GetSnapshot().GetName()
-	old, ok := s.projects.registry().get(name)
+	old, ok := s.held(ctx, name)
 	if !ok {
 		return nil, &SnapshotError{Name: name}
 	}
@@ -371,8 +492,10 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 				def.Files = next.GetFiles()
 			case "flatten_hierarchy":
 				def.FlattenHierarchy = next.GetFlattenHierarchy()
+			case "refresh":
+				def.Refresh = next.GetRefresh()
 			default:
-				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay, files and flatten_hierarchy", ErrInvalidArgument, p)
+				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay, files, flatten_hierarchy and refresh", ErrInvalidArgument, p)
 			}
 		}
 	}
@@ -380,17 +503,24 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 	if err != nil {
 		return nil, err
 	}
+	if err := s.keep(ctx, name, e); err != nil {
+		return nil, err
+	}
 	s.projects.registry().put(name, e)
 	return e.out(), nil
 }
 
-// DeleteSnapshot forgets a snapshot. The DesignCache keeps what it read for another snapshot to use.
+// DeleteSnapshot forgets a snapshot, its kept definition included, so it is not recovered. The
+// DesignCache keeps what it read for another snapshot to use.
 func (s *SnapshotService) DeleteSnapshot(ctx context.Context, req *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error) {
 	g := s.projects.registry()
 	g.mu.Lock()
 	_, ok := g.m[req.GetName()]
 	delete(g.m, req.GetName())
 	g.mu.Unlock()
+	if err := s.projects.snapshotStore().Delete(ctx, req.GetName()); err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, &SnapshotError{Name: req.GetName()}
 	}
@@ -513,6 +643,7 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 		AsNamed:     s.GetAsNamed(),
 		Overlay:     s.GetOverlay(),
 		Files:       s.GetFiles(),
+		Refresh:     s.GetRefresh(),
 
 		FlattenHierarchy: s.GetFlattenHierarchy(),
 	}

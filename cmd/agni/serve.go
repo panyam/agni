@@ -68,6 +68,7 @@ func serveCmd() *cobra.Command {
 	var theme string
 	var paramsDir, paramsURL, profilePath, conventions string
 	var reviewStorePath string
+	var stateDir string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
 	var slowRequest time.Duration
@@ -103,6 +104,7 @@ func serveCmd() *cobra.Command {
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
 				profilePath: profilePath, conventions: conventions,
 				reviewStorePath: reviewStorePath,
+				stateDir:        stateDir,
 				budget:          server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 				slowRequest:     slowRequest,
 				engine:          engine,
@@ -140,6 +142,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&paramsURL, "params-url", "", "a PartSpecService to read published PartSpecs from instead of a directory, e.g. http://host:8090 for an `agnids serve --corpus`; each request fetches its design's parts in one batch, and a spec published there reaches the next request. Not with --params. A project's own params/ still wins over it")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
+	c.Flags().StringVar(&stateDir, "state-dir", "", "a WRITABLE directory this server keeps its own state in, created if absent. Today that is each snapshot's definition, so a question on a snapshot made before a restart still answers (agni issue 1639). Without it, definitions live in memory and a restart forgets them. Like --review-store, it is separate from the read-only design mounts")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
 }
@@ -161,6 +164,8 @@ type viewerOpts struct {
 	conventions string
 
 	reviewStorePath string
+	// stateDir is --state-dir, the writable directory the server keeps snapshot definitions in.
+	stateDir string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
 	budget server.Budget
@@ -343,6 +348,15 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	if o.uploadMaxBytes > 0 {
 		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
 	}
+	// --state-dir keeps snapshot definitions across a restart (agni issue 1639). Without it they live
+	// in memory, which still recovers a snapshot the registry evicted.
+	if o.stateDir != "" {
+		st, err := newOSSnapshotStore(filepath.Join(o.stateDir, "snapshots"))
+		if err != nil {
+			return err
+		}
+		projectResolver.Snapshots = st
+	}
 	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
 	// inside serveRuleServices. A request that names its own conventions REPLACES both halves for
@@ -397,6 +411,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Review:    reviewSvc,
 		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
 		Hooks:     []connect.Interceptor{warmSeeds(seedCache)},
+		// The listener speaks gRPC beside Connect (newHTTPServer, agni issue 1626).
+		Info: &service.ServerInfoService{Version: version.Version(), Features: []string{"grpc"}, Projects: projectResolver},
 	}
 	apiPaths := api.Register(mux, budgeted)
 	if o.listener == nil && o.mcp != mcpStdio {

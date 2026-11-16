@@ -36,10 +36,18 @@ type ProjectResolver struct {
 	// UploadMaxBytes caps the uploaded content the host keeps. Past the cap the host drops the least
 	// recently used. Zero means defaultUploadBytes.
 	UploadMaxBytes int64
+	// Snapshots keeps snapshot definitions, so a question on a snapshot the registry evicted is
+	// answered after ingesting it again, and so is one a restart lost when the store outlives the
+	// process (agni issue 1639). Nil means an in-memory store.
+	Snapshots SnapshotStore
 
 	snapMu sync.Mutex
 	snaps  *snapshotRegistry
 	ups    *uploads
+	defs   SnapshotStore
+	// reload ingests a definition again under its name. The SnapshotService sets it, since only it
+	// holds the loader and the parameter provider an ingest reads through.
+	reload func(ctx context.Context, name string, def *webapi.Snapshot) (*snapshotEntry, error)
 }
 
 // Overlay composes the config for one design, its project's where it has one, and the request's own

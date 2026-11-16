@@ -122,8 +122,14 @@ type Snapshot struct {
 	// placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
 	// same either way. Only EDIF has blocks to walk today. Part of the definition.
 	FlattenHierarchy bool `protobuf:"varint,12,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// refresh answers a question on this snapshot after a file under it changed, rather than refusing it
+	// as stale (agni issue 1639). The host reads the snapshot again, as UpdateSnapshot would, and the
+	// answer carries an Agni-Snapshot-Refreshed response header naming the tiers that changed, so a
+	// caller still learns its earlier answers came from older files. Without it, a question on a stale
+	// snapshot is refused with FAILED_PRECONDITION, as before. Part of the definition.
+	Refresh       bool `protobuf:"varint,13,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Snapshot) Reset() {
@@ -236,6 +242,13 @@ func (x *Snapshot) GetFiles() []*SnapshotFile {
 func (x *Snapshot) GetFlattenHierarchy() bool {
 	if x != nil {
 		return x.FlattenHierarchy
+	}
+	return false
+}
+
+func (x *Snapshot) GetRefresh() bool {
+	if x != nil {
+		return x.Refresh
 	}
 	return false
 }
@@ -691,7 +704,7 @@ type UpdateSnapshotRequest struct {
 	// snapshot holds the new definition and names the snapshot to update.
 	Snapshot *Snapshot `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-	// overlay, files). Empty replaces the whole definition. Sending the same definition again reads the
+	// overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
 	// files again, and that refreshes a stale snapshot.
 	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	// read_board is as on IngestRequest.
@@ -1004,7 +1017,7 @@ var File_agni_v1_webapi_snapshot_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xdc\x03\n" +
+	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xf6\x03\n" +
 	"\bSnapshot\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -1019,7 +1032,8 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\aproject\x18\n" +
 	" \x01(\tR\aproject\x122\n" +
 	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12+\n" +
-	"\x11flatten_hierarchy\x18\f \x01(\bR\x10flattenHierarchy\"N\n" +
+	"\x11flatten_hierarchy\x18\f \x01(\bR\x10flattenHierarchy\x12\x18\n" +
+	"\arefresh\x18\r \x01(\bR\arefresh\"N\n" +
 	"\fSnapshotFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +

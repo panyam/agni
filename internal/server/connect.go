@@ -623,3 +623,20 @@ func (a *Lexicon) CompareLexicons(ctx context.Context, req *connect.Request[weba
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// ServerInfo adapts service.ServerInfoService to the generated Connect handler interface.
+type ServerInfo struct {
+	webapiconnect.UnimplementedServerServiceHandler
+	svc *service.ServerInfoService
+}
+
+// NewServerInfo wraps a ServerInfoService.
+func NewServerInfo(svc *service.ServerInfoService) *ServerInfo { return &ServerInfo{svc: svc} }
+
+func (a *ServerInfo) GetServerInfo(ctx context.Context, req *connect.Request[webapi.GetServerInfoRequest]) (*connect.Response[webapi.ServerInfo], error) {
+	resp, err := a.svc.GetServerInfo(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}

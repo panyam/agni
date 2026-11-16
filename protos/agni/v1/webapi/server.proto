@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// ServerService says what a host is, so a client can check it before relying on it (agni issue
+// 1629). A client built against one release calls GetServerInfo first, and can say clearly when the
+// server it reached is too old for a feature it needs.
+service ServerService {
+  // GetServerInfo answers the release, the proto package and the optional features this host has on.
+  rpc GetServerInfo(GetServerInfoRequest) returns (ServerInfo);
+}
+
+message GetServerInfoRequest {}
+
+// ServerInfo is what a host says about itself.
+message ServerInfo {
+  // version is the release the host was built from, such as "v0.7.0", or "(devel)" for a build that
+  // carries no release tag.
+  string version = 1;
+  // api is the proto package the host speaks, "agni.v1". A client compiled against another package
+  // cannot rely on any rpc's shape.
+  string api = 2;
+  // features names each optional capability this host has on, sorted, from this list:
+  //   grpc               the host answers gRPC and gRPC-Web beside Connect, on the same port
+  //   snapshot_recovery  a question on a snapshot the host lost re-ingests it (SnapshotService)
+  //   snapshot_store     the host keeps snapshot definitions across a restart, not only in memory
+  // A client tests for a name rather than comparing versions, so a feature can be turned off by
+  // configuration without a client mistaking the host's age.
+  repeated string features = 3;
+}
