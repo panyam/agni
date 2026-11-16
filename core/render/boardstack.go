@@ -105,7 +105,7 @@ func copperEnds(s *geom.Stackup) (top, bottom string) {
 func outlineTris(b *geom.BoardGeometry) []float64 {
 	var pts []*geom.Point
 	var holes [][]*geom.Point
-	if rings := outlineRings(b.GetOutline(), outlineGap(b)); len(rings) > 0 {
+	if rings := outlineRings(b.GetOutline(), outlineGap(b), outlineReach(b)); len(rings) > 0 {
 		pts = rings[0]
 		for _, r := range rings[1:] {
 			if insideRing(pts, r[0]) {
@@ -176,6 +176,12 @@ func insideRing(ring []*geom.Point, p *geom.Point) bool {
 	return in
 }
 
+// outlineReach is how far apart two path ends can sit and still join when no end lies within
+// outlineGap, a quarter millimetre in the board's unit.
+func outlineReach(b *geom.BoardGeometry) int64 {
+	return max(250_000/unitNm(b), 1)
+}
+
 // outlineGap is how far apart two path ends can sit and still join, ten micrometres in the board's
 // unit. Readers round arcs to polylines, so a joint rarely matches to the nanometre.
 func outlineGap(b *geom.BoardGeometry) int64 {
@@ -183,10 +189,13 @@ func outlineGap(b *geom.BoardGeometry) int64 {
 }
 
 // outlineRings chains the outline's paths end to end into closed rings, the largest first. A path
-// joins the chain at either end, reversed if it must be. It returns nil when no chain closes.
-func outlineRings(o *geom.BoardOutline, gap int64) [][]*geom.Point {
-	near := func(a, b *geom.Point) bool {
-		return absUnits(a.GetX()-b.GetX()) <= gap && absUnits(a.GetY()-b.GetY()) <= gap
+// joins the chain at either end, reversed if it must be, where its end lies within gap of the chain's.
+// When none does, the nearest end within reach joins instead, as Allegro's parasdr runs an edge
+// 0.1 mm past the corner arc it meets (agni 1669). A chain closes when its ends lie within gap. It
+// returns nil when no chain closes.
+func outlineRings(o *geom.BoardOutline, gap, reach int64) [][]*geom.Point {
+	dist := func(a, b *geom.Point) int64 {
+		return max(absUnits(a.GetX()-b.GetX()), absUnits(a.GetY()-b.GetY()))
 	}
 	var paths [][]*geom.Point
 	for _, p := range o.GetPaths() {
@@ -195,6 +204,23 @@ func outlineRings(o *geom.BoardOutline, gap int64) [][]*geom.Point {
 		}
 	}
 	used := make([]bool, len(paths))
+	// next is the unused path whose end lies nearest end, within limit, and whether to reverse it.
+	next := func(end *geom.Point, limit int64) (int, bool) {
+		best, bestD, rev := -1, limit+1, false
+		for j := range paths {
+			if used[j] {
+				continue
+			}
+			q := paths[j]
+			if d := dist(end, q[0]); d < bestD {
+				best, bestD, rev = j, d, false
+			}
+			if d := dist(end, q[len(q)-1]); d < bestD {
+				best, bestD, rev = j, d, true
+			}
+		}
+		return best, rev
+	}
 	var rings [][]*geom.Point
 	for i := range paths {
 		if used[i] {
@@ -202,31 +228,25 @@ func outlineRings(o *geom.BoardOutline, gap int64) [][]*geom.Point {
 		}
 		used[i] = true
 		ring := append([]*geom.Point{}, paths[i]...)
-		for !near(ring[0], ring[len(ring)-1]) || len(ring) < 3 {
-			grew := false
-			for j := range paths {
-				if used[j] {
-					continue
-				}
-				end, q := ring[len(ring)-1], paths[j]
-				switch {
-				case near(end, q[0]):
-					ring = append(ring, q[1:]...)
-				case near(end, q[len(q)-1]):
-					for k := len(q) - 2; k >= 0; k-- {
-						ring = append(ring, q[k])
-					}
-				default:
-					continue
-				}
-				used[j], grew = true, true
+		for dist(ring[0], ring[len(ring)-1]) > gap || len(ring) < 3 {
+			j, rev := next(ring[len(ring)-1], gap)
+			if j < 0 {
+				j, rev = next(ring[len(ring)-1], reach)
+			}
+			if j < 0 {
 				break
 			}
-			if !grew {
-				break
+			q := paths[j]
+			if rev {
+				for k := len(q) - 2; k >= 0; k-- {
+					ring = append(ring, q[k])
+				}
+			} else {
+				ring = append(ring, q[1:]...)
 			}
+			used[j] = true
 		}
-		if len(ring) < 3 || !near(ring[0], ring[len(ring)-1]) {
+		if len(ring) < 3 || dist(ring[0], ring[len(ring)-1]) > gap {
 			continue
 		}
 		rings = append(rings, ring)

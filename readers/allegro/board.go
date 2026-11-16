@@ -169,6 +169,7 @@ func (b *boardBuilder) pt(x, y int32) *geom.Point {
 func (b *boardBuilder) outline() {
 	p := b.p
 	found := false
+	seen := map[string]bool{}
 	visit := func(off int) {
 		tag, class, sub := p.b[off], p.b[off+2], p.b[off+3]
 		if !(class == classBoardGeom && sub == subOutline) && !(class == classDrawing && sub == subFmtOutline) && !(class == classBoardGeom && sub == subFmtOutline) {
@@ -183,14 +184,35 @@ func (b *boardBuilder) outline() {
 		default:
 			return
 		}
-		if path := b.path(head, p.u32(off, 4)); len(path) > 1 {
-			b.g.Outline = appendOutline(b.g.Outline, path)
-			found = true
+		path := b.path(head, p.u32(off, 4))
+		if len(path) < 2 {
+			return
 		}
+		// A board can store a piece twice, as parasdr does each of its eight.
+		key := fmt.Sprint(path)
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		b.g.Outline = appendOutline(b.g.Outline, path)
+		found = true
 	}
 	p.list(listRects, visit)
 	if !found {
 		p.list(listGraphics, visit)
+	}
+	if !found {
+		// Some boards draw the outline inside a package definition's own graphics, which neither
+		// header list reaches, as parasdr draws its 16 pieces (agni 1669). So every block is
+		// walked, in file order.
+		var offs []int
+		for _, off := range p.keys {
+			offs = append(offs, off)
+		}
+		sort.Ints(offs)
+		for _, off := range offs {
+			visit(off)
+		}
 	}
 	if !found {
 		b.symbolOutline()
