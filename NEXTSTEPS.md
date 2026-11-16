@@ -9,32 +9,36 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-16, at `53829e44`.
+Last pruned 2026-11-16, at `1596f60d`.
 
 ## At a glance
 
 **#1625 `mission_clients`** (build a tool in TypeScript, Rust, Java or C++ against a shared agni server)
-is active, at 9 of 13 tickets closed. Its exercise is `make exercise-clients`, and at `53829e44` all
-five rows pass (Go, TypeScript, Rust, Java and C++), against a server with no auth. The mission log on
-#1625 has each run.
+is active, at 12 of 13 tickets closed. Its exercise is `make exercise-clients`, and at `1596f60d` all
+five rows pass, against a server with no auth. The mission log on #1625 has each run.
 
-- **#1627** (TLS and tokens) is parked, blocked on panyam/oneauth#462 (cache validated API keys),
-  panyam/oneauth#463 (refuse a call in its own protocol) and panyam/servicekit#60 (TLS in
-  `ListenAndServeGraceful`). Its comment records what is decided and what is open.
+- **#1627** (TLS and tokens), the mission's last ticket, is parked. It waits on panyam/oneauth#462
+  (cache validated API keys), panyam/oneauth#463 (refuse a call in its own protocol) and
+  panyam/servicekit#60 (TLS in `ListenAndServeGraceful`), all three still open. Its comment records
+  what is decided and what is open.
+- **#1664 `mission_board_rendering`** (see any board in 3D as its maker's tool shows it) is also active, at 9 of
+  12. Its next tickets are #1652 (3D models) and #1660 (stack loose ends), and it reads the stack depths
+  #1674 now serves.
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1645 to #1649 merged, adding the exercise, the wire fixtures, and the TypeScript, Rust,
-  C++ and Java clients (`clients/CLAUDE.md`). #1651 (P3) moves the viewer onto the TypeScript
-  client's generated code. #1643 (P3) and #1609 (`waiting`) are unchanged.
+- This run: #1654 (paged board geometry), #1663 (the viewer on the TypeScript client's generated
+  code), and #1670, #1674 and #1677 (#1635, moving the viewer's decisions to the server, with a stack
+  twin, a highlight twin and `build/front-end-rules.md`) merged. #1676 fixed `main` after #1673 and
+  #1674 crossed.
 
 ## Open, ranked
 
-1. **#1634** (the board geometry contract, served in binary), the active mission's next ready ticket.
+1. **#1664's next tickets**, #1652 and #1660, while #1625 waits on its pushdowns.
 2. **#1627** once its three pushdowns are tagged, then a ticket for the gRPC clients to trust a CA.
-3. **#1635 and #1651**, the viewer-side tickets on the mission.
-4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+   That closes #1625.
+3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language

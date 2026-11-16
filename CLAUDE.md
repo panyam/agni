@@ -22,6 +22,7 @@ issues or `NEXTSTEPS.md`.
 | Geometry, rendering, the viewer | `architecture/geometry-and-rendering.md`, `architecture/web-app.md`, `web-client.md`, `web-picking.md` |
 | The wire contract, services | `architecture/web-services.md` |
 | Driving a viewer from outside | `architecture/viewer-control.md`, `build/embedding-the-viewer.md` |
+| A client or front end in another language | `build/client-contract.md`, `build/board-geometry.md`, `build/front-end-rules.md` |
 | Net solving, hierarchy | `architecture/net-solving.md` |
 | Rules, datalog, profiles | `architecture/rules-and-checks.md`, `build/check-rule.md`, `architecture/checks-contract.md` |
 | Pin maps, comparing identifiers | `guide/design-intent.md`, `core/ident`'s package comment |

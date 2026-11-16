@@ -9,4 +9,7 @@ This file covers the language clients and the checks that hold them to the serve
 - Homebrew's rustup keeps `cargo` off PATH. Put `/opt/homebrew/opt/rustup/bin` on PATH before the exercise's Rust row or `cargo test` in `clients/rust`.
 - In a fresh worktree, run `pnpm install` before `make proto-check`, since its TypeScript step runs `node_modules/.bin/protoc-gen-es`.
 - The fixtures spell error codes as Connect does. A gRPC client maps its code enum to those names, and gRPC's `CANCELLED` becomes `canceled`.
+- **The viewer imports its generated code from `@panyam/agni-client`** (agni 1651), so a change under `clients/ts/src` is a viewer change too. The Docker image's web stage copies `clients/ts` for the same reason.
+- A fixture for an rpc the Rust or C++ replayer has never called needs that rpc added to its table by hand (`clients/rust/tests/wire_fixtures.rs`, `clients/cpp/test/wirefixtures_test.cc`). Go, TypeScript and Java dispatch by name.
+- gitleaks reads a recorded page token as an API key. Allowlist the exact value in `.gitleaks.toml`, never the pattern.
 - gRPC sends call credentials only over TLS. The gRPC clients send their bearer token as plain `authorization` metadata, so it also reaches a cleartext server (agni issue 1627).

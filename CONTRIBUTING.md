@@ -233,6 +233,9 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   piped command, push included. `gh pr create ... | tail -3` reported `EXIT=0` on a run that had
   FAILED with an auth error, because the pipeline's status is `tail`'s. Redirect to a file and echo
   `$?` on its own line, then read the file.
+- **Two PRs that each pass CI can break `main` together.** Each PR's CI runs without the other's
+  change. When a PR changes what a shared field means, look at the open PRs touching the same files,
+  and rerun CI on the later one after the first merges (agni 1676).
 - **`Closes #A and #B` closes only A.** GitHub parses the keyword PER ISSUE, so a PR fixing two
   tickets needs `Closes #A, closes #B`. The second issue is left open and silently reads as
   unfinished work while its fix is already in `main`. Check both after the merge rather than
@@ -390,6 +393,9 @@ Each of these exits 0.
   because the old file's test is gone. `git status` showing `M` for a file you meant to create is the
   sign, so check the name first.
 - **A test that loops over rows passes over zero rows.** Give it a count guard (agni 727).
+- **`protojson` changes its whitespace from one build to the next, on purpose.** A twin test that
+  compares its bytes with a committed file passes in one build and fails in another. Write the file
+  through `encoding/json` (`json.Compact`, then `json.Indent`) and compare that (agni 1676).
 - **Time two tools on the same clock.** A timer started inside Python runs after the interpreter and
   the client library load. That time does not compare with another tool's launch-to-exit time.
   Compare launch to exit on an idle machine, checking the load average first, or say which clock a
