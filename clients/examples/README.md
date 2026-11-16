@@ -8,7 +8,7 @@ against one server and compares each line with the CLI's answers.
 | Language | Example | Ticket |
 | --- | --- | --- |
 | Go | [go/](go/) | the reference, #1628 |
-| TypeScript | to come | #1630 |
+| TypeScript | [ts/](ts/), through [@panyam/agni-client](../ts/) | #1630 |
 | Rust | to come | #1631 |
 | Java | to come | #1632 |
 | C++ | to come | #1638 |
