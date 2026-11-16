@@ -106,6 +106,6 @@ The server says how. A packed board's vertex plus `origin_x` and `origin_y`, div
 (px, py) in viewBox units lies at `data-mm-x0 + px * data-mm-per-px` and
 `data-mm-y0 - py * data-mm-per-px`. agni's viewer snaps a click on a pad to the pad's centre, the
 middle of the land's bounds, since every land is a disk or a quad centred on its pad. BoardSVG writes
-pad geometry to a hundredth of a pixel for that snap. `web/src/measure.ts` holds both maps, and
+pad geometry to a thousandth of a pixel for that snap. `web/src/measure.ts` holds both maps, and
 `TestBoardPadsSitWhereKiCadPutsThem` and `TestBoardSVGStatesItsMillimetres` hold them to kicad-cli
 (agni issue 133).

@@ -552,7 +552,7 @@ func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheet
 		cx, cy := fr.tx(wx), fr.ty(wy)
 		// The hole carries the pad's keys, so the measuring tool can snap to it. It is written as
 		// finely as the land (agni issue 133).
-		c.El("circle", append([]svg.Attr{svg.F2("cx", cx), svg.F2("cy", cy), svg.F2("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
+		c.El("circle", append([]svg.Attr{svg.F3("cx", cx), svg.F3("cy", cy), svg.F3("r", math.Max(float64(pad.GetDrill())*fr.scale/2, strokePx/2)),
 			svg.A("fill", style.Page)}, keys...)...)
 	}
 }
@@ -565,8 +565,9 @@ func drawPadWith(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr s
 }
 
 // drawShapeAt draws a pad shape centred on a board point, turned deg degrees CCW on the board.
-// A pad's geometry is written to a hundredth of a pixel, so the measuring tool snaps to its centre
-// to the micrometre (agni issue 133).
+// A pad's geometry, its turn's centre included, is written to a thousandth of a pixel, so the
+// measuring tool snaps to its centre to the micrometre (agni issue 133). A half turn about a centre
+// written apart from the pad's own would move the pad by twice the difference.
 func drawShapeAt(c *svg.Canvas, wx, wy int64, shape string, size *geom.Point, deg float64, fr sheetFrame, attrs ...svg.Attr) {
 	cx, cy := fr.tx(wx), fr.ty(wy)
 	w := math.Max(float64(size.GetX())*fr.scale, strokePx)
@@ -576,19 +577,19 @@ func drawShapeAt(c *svg.Canvas, wx, wy int64, shape string, size *geom.Point, de
 		rot = 360 - deg
 	}
 	if rot != 0 {
-		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.2f %.2f)", rot, cx, cy)))
+		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%.1f %.3f %.3f)", rot, cx, cy)))
 	}
 	switch shape {
 	case "circle":
-		c.El("circle", append([]svg.Attr{svg.F2("cx", cx), svg.F2("cy", cy), svg.F2("r", w/2)}, attrs...)...)
+		c.El("circle", append([]svg.Attr{svg.F3("cx", cx), svg.F3("cy", cy), svg.F3("r", w/2)}, attrs...)...)
 	case "oval":
 		attrs = append(attrs, svg.F("rx", math.Min(w, h)/2))
-		c.El("rect", append([]svg.Attr{svg.F2("x", cx-w/2), svg.F2("y", cy-h/2), svg.F2("width", w), svg.F2("height", h)}, attrs...)...)
+		c.El("rect", append([]svg.Attr{svg.F3("x", cx-w/2), svg.F3("y", cy-h/2), svg.F3("width", w), svg.F3("height", h)}, attrs...)...)
 	case "roundrect":
 		attrs = append(attrs, svg.F("rx", math.Min(w, h)*0.25))
-		c.El("rect", append([]svg.Attr{svg.F2("x", cx-w/2), svg.F2("y", cy-h/2), svg.F2("width", w), svg.F2("height", h)}, attrs...)...)
+		c.El("rect", append([]svg.Attr{svg.F3("x", cx-w/2), svg.F3("y", cy-h/2), svg.F3("width", w), svg.F3("height", h)}, attrs...)...)
 	default: // "rect" and anything unknown
-		c.El("rect", append([]svg.Attr{svg.F2("x", cx-w/2), svg.F2("y", cy-h/2), svg.F2("width", w), svg.F2("height", h)}, attrs...)...)
+		c.El("rect", append([]svg.Attr{svg.F3("x", cx-w/2), svg.F3("y", cy-h/2), svg.F3("width", w), svg.F3("height", h)}, attrs...)...)
 	}
 }
 

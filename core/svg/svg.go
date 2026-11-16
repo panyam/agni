@@ -37,9 +37,10 @@ func escapeAttr(v string) string {
 // F is a float attribute formatted to one decimal place.
 func F(key string, v float64) Attr { return Attr{key, f1(v)} }
 
-// F2 is a numeric attribute to two decimals, for geometry a reader measures, such as a board pad's
-// centre (agni issue 133). A tenth of a pixel is 12 micrometres on Jetson's board.
-func F2(key string, v float64) Attr { return Attr{key, strconv.FormatFloat(v, 'f', 2, 64)} }
+// F3 is a numeric attribute to three decimals, for geometry a reader measures, such as a board
+// pad's centre (agni issue 133). A tenth of a pixel is 12 micrometres on Jetson's board, and a
+// thousandth is 0.12.
+func F3(key string, v float64) Attr { return Attr{key, strconv.FormatFloat(v, 'f', 3, 64)} }
 
 // I is an integer attribute.
 func I(key string, v int64) Attr { return Attr{key, strconv.FormatInt(v, 10)} }
