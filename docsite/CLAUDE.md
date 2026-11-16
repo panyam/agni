@@ -35,3 +35,7 @@ This file covers building, testing and previewing the docsite, its figures, and 
 - **Editing any tracked file inside a fixture restamps every capture over it.** `examples/tutorial-project` has 61 such captures. Commit the fixture edit, then run `make tutorial-runs`, then check that the diff holds stamp lines alone.
 - Adding a file to `examples/common/designs` restamps 11 captures. `tutorial-runs-check` refuses an untracked file there, so commit it before `make tutorial-runs` (agni 1352).
 - A fixture under `tools/samples/` has nothing tracked, so its captures hash `hack/samples.pin` instead (agni 682).
+
+## Naming flags in prose
+
+- **`TestDocsNameNoFlagTheCLILacks` fails a page that names a `--flag` agni does not define**, another tool's flag included. Describe the option in words, or add the string to `docFlagExceptions` with its reason (agni 1660).

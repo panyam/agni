@@ -18,3 +18,4 @@ Each of these readers has its own CLAUDE.md:
 - `readers/odb/CLAUDE.md` covers ODB++ jobs, ODX, and Allegro's IPC-2581 export.
 - `readers/orcad/CLAUDE.md` covers OrCAD Capture `.DSN` designs.
 - `internal/sexpr/CLAUDE.md` covers the s-expression parser that the KiCad and EDIF readers share.
+- **`ipc2581.Write` takes the board's stack, `BoardGeometry.stackup`**, since `ir.Design` has none (agni 1660). The board names copper by its place in the stack (`F.Cu`, `In1.Cu`), so the writer maps the k-th copper row back to the design's k-th copper layer. It writes no geometry, so an emitted file opens with no outline or parts.
