@@ -42,6 +42,7 @@ private static final long serialVersionUID = 0L;
     texts_ = java.util.Collections.emptyList();
     graphics_ = java.util.Collections.emptyList();
     padstacks_ = java.util.Collections.emptyList();
+    unreadModels_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -628,6 +629,77 @@ private static final long serialVersionUID = 0L;
     return stackup_ == null ? io.github.panyam.agni.v1.geom.Stackup.getDefaultInstance() : stackup_;
   }
 
+  public static final int UNREAD_MODELS_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private java.util.List<io.github.panyam.agni.v1.geom.UnreadModel> unreadModels_;
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.panyam.agni.v1.geom.UnreadModel> getUnreadModelsList() {
+    return unreadModels_;
+  }
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends io.github.panyam.agni.v1.geom.UnreadModelOrBuilder> 
+      getUnreadModelsOrBuilderList() {
+    return unreadModels_;
+  }
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  @java.lang.Override
+  public int getUnreadModelsCount() {
+    return unreadModels_.size();
+  }
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.UnreadModel getUnreadModels(int index) {
+    return unreadModels_.get(index);
+  }
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.UnreadModelOrBuilder getUnreadModelsOrBuilder(
+      int index) {
+    return unreadModels_.get(index);
+  }
+
   public static final int PROV_FIELD_NUMBER = 16;
   private io.github.panyam.agni.v1.geom.Provenance prov_;
   /**
@@ -700,6 +772,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(11, getStackup());
+    }
+    for (int i = 0; i < unreadModels_.size(); i++) {
+      output.writeMessage(12, unreadModels_.get(i));
     }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(16, getProv());
@@ -786,6 +861,15 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(11, getStackup());
     }
+
+        {
+          final int count = unreadModels_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(unreadModels_.get(i));
+          }
+          size += 1 * count;
+        }
     if (((bitField0_ & 0x00000004) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(16, getProv());
@@ -842,6 +926,8 @@ private static final long serialVersionUID = 0L;
       if (!getStackup()
           .equals(other.getStackup())) return false;
     }
+    if (!getUnreadModelsList()
+        .equals(other.getUnreadModelsList())) return false;
     if (hasProv() != other.hasProv()) return false;
     if (hasProv()) {
       if (!getProv()
@@ -898,6 +984,10 @@ private static final long serialVersionUID = 0L;
     if (hasStackup()) {
       hash = (37 * hash) + STACKUP_FIELD_NUMBER;
       hash = (53 * hash) + getStackup().hashCode();
+    }
+    if (getUnreadModelsCount() > 0) {
+      hash = (37 * hash) + UNREAD_MODELS_FIELD_NUMBER;
+      hash = (53 * hash) + getUnreadModelsList().hashCode();
     }
     if (hasProv()) {
       hash = (37 * hash) + PROV_FIELD_NUMBER;
@@ -1048,6 +1138,7 @@ private static final long serialVersionUID = 0L;
         internalGetGraphicsFieldBuilder();
         internalGetPadstacksFieldBuilder();
         internalGetStackupFieldBuilder();
+        internalGetUnreadModelsFieldBuilder();
         internalGetProvFieldBuilder();
       }
     }
@@ -1116,6 +1207,13 @@ private static final long serialVersionUID = 0L;
         stackupBuilder_.dispose();
         stackupBuilder_ = null;
       }
+      if (unreadModelsBuilder_ == null) {
+        unreadModels_ = java.util.Collections.emptyList();
+      } else {
+        unreadModels_ = null;
+        unreadModelsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000800);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -1217,6 +1315,15 @@ private static final long serialVersionUID = 0L;
       } else {
         result.padstacks_ = padstacksBuilder_.build();
       }
+      if (unreadModelsBuilder_ == null) {
+        if (((bitField0_ & 0x00000800) != 0)) {
+          unreadModels_ = java.util.Collections.unmodifiableList(unreadModels_);
+          bitField0_ = (bitField0_ & ~0x00000800);
+        }
+        result.unreadModels_ = unreadModels_;
+      } else {
+        result.unreadModels_ = unreadModelsBuilder_.build();
+      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.geom.BoardGeometry result) {
@@ -1240,7 +1347,7 @@ private static final long serialVersionUID = 0L;
             : stackupBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
-      if (((from_bitField0_ & 0x00000800) != 0)) {
+      if (((from_bitField0_ & 0x00001000) != 0)) {
         result.prov_ = provBuilder_ == null
             ? prov_
             : provBuilder_.build();
@@ -1457,6 +1564,32 @@ private static final long serialVersionUID = 0L;
       if (other.hasStackup()) {
         mergeStackup(other.getStackup());
       }
+      if (unreadModelsBuilder_ == null) {
+        if (!other.unreadModels_.isEmpty()) {
+          if (unreadModels_.isEmpty()) {
+            unreadModels_ = other.unreadModels_;
+            bitField0_ = (bitField0_ & ~0x00000800);
+          } else {
+            ensureUnreadModelsIsMutable();
+            unreadModels_.addAll(other.unreadModels_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.unreadModels_.isEmpty()) {
+          if (unreadModelsBuilder_.isEmpty()) {
+            unreadModelsBuilder_.dispose();
+            unreadModelsBuilder_ = null;
+            unreadModels_ = other.unreadModels_;
+            bitField0_ = (bitField0_ & ~0x00000800);
+            unreadModelsBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetUnreadModelsFieldBuilder() : null;
+          } else {
+            unreadModelsBuilder_.addAllMessages(other.unreadModels_);
+          }
+        }
+      }
       if (other.hasProv()) {
         mergeProv(other.getProv());
       }
@@ -1599,11 +1732,24 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 98: {
+              io.github.panyam.agni.v1.geom.UnreadModel m =
+                  input.readMessage(
+                      io.github.panyam.agni.v1.geom.UnreadModel.parser(),
+                      extensionRegistry);
+              if (unreadModelsBuilder_ == null) {
+                ensureUnreadModelsIsMutable();
+                unreadModels_.add(m);
+              } else {
+                unreadModelsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 98
             case 130: {
               input.readMessage(
                   internalGetProvFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000800;
+              bitField0_ |= 0x00001000;
               break;
             } // case 130
             default: {
@@ -4211,6 +4357,348 @@ private static final long serialVersionUID = 0L;
       return stackupBuilder_;
     }
 
+    private java.util.List<io.github.panyam.agni.v1.geom.UnreadModel> unreadModels_ =
+      java.util.Collections.emptyList();
+    private void ensureUnreadModelsIsMutable() {
+      if (!((bitField0_ & 0x00000800) != 0)) {
+        unreadModels_ = new java.util.ArrayList<io.github.panyam.agni.v1.geom.UnreadModel>(unreadModels_);
+        bitField0_ |= 0x00000800;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.UnreadModel, io.github.panyam.agni.v1.geom.UnreadModel.Builder, io.github.panyam.agni.v1.geom.UnreadModelOrBuilder> unreadModelsBuilder_;
+
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.UnreadModel> getUnreadModelsList() {
+      if (unreadModelsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(unreadModels_);
+      } else {
+        return unreadModelsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public int getUnreadModelsCount() {
+      if (unreadModelsBuilder_ == null) {
+        return unreadModels_.size();
+      } else {
+        return unreadModelsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.UnreadModel getUnreadModels(int index) {
+      if (unreadModelsBuilder_ == null) {
+        return unreadModels_.get(index);
+      } else {
+        return unreadModelsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder setUnreadModels(
+        int index, io.github.panyam.agni.v1.geom.UnreadModel value) {
+      if (unreadModelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureUnreadModelsIsMutable();
+        unreadModels_.set(index, value);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder setUnreadModels(
+        int index, io.github.panyam.agni.v1.geom.UnreadModel.Builder builderForValue) {
+      if (unreadModelsBuilder_ == null) {
+        ensureUnreadModelsIsMutable();
+        unreadModels_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        unreadModelsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder addUnreadModels(io.github.panyam.agni.v1.geom.UnreadModel value) {
+      if (unreadModelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureUnreadModelsIsMutable();
+        unreadModels_.add(value);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder addUnreadModels(
+        int index, io.github.panyam.agni.v1.geom.UnreadModel value) {
+      if (unreadModelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureUnreadModelsIsMutable();
+        unreadModels_.add(index, value);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder addUnreadModels(
+        io.github.panyam.agni.v1.geom.UnreadModel.Builder builderForValue) {
+      if (unreadModelsBuilder_ == null) {
+        ensureUnreadModelsIsMutable();
+        unreadModels_.add(builderForValue.build());
+        onChanged();
+      } else {
+        unreadModelsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder addUnreadModels(
+        int index, io.github.panyam.agni.v1.geom.UnreadModel.Builder builderForValue) {
+      if (unreadModelsBuilder_ == null) {
+        ensureUnreadModelsIsMutable();
+        unreadModels_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        unreadModelsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder addAllUnreadModels(
+        java.lang.Iterable<? extends io.github.panyam.agni.v1.geom.UnreadModel> values) {
+      if (unreadModelsBuilder_ == null) {
+        ensureUnreadModelsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, unreadModels_);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder clearUnreadModels() {
+      if (unreadModelsBuilder_ == null) {
+        unreadModels_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000800);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public Builder removeUnreadModels(int index) {
+      if (unreadModelsBuilder_ == null) {
+        ensureUnreadModelsIsMutable();
+        unreadModels_.remove(index);
+        onChanged();
+      } else {
+        unreadModelsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.UnreadModel.Builder getUnreadModelsBuilder(
+        int index) {
+      return internalGetUnreadModelsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.UnreadModelOrBuilder getUnreadModelsOrBuilder(
+        int index) {
+      if (unreadModelsBuilder_ == null) {
+        return unreadModels_.get(index);  } else {
+        return unreadModelsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public java.util.List<? extends io.github.panyam.agni.v1.geom.UnreadModelOrBuilder> 
+         getUnreadModelsOrBuilderList() {
+      if (unreadModelsBuilder_ != null) {
+        return unreadModelsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(unreadModels_);
+      }
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.UnreadModel.Builder addUnreadModelsBuilder() {
+      return internalGetUnreadModelsFieldBuilder().addBuilder(
+          io.github.panyam.agni.v1.geom.UnreadModel.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.UnreadModel.Builder addUnreadModelsBuilder(
+        int index) {
+      return internalGetUnreadModelsFieldBuilder().addBuilder(
+          index, io.github.panyam.agni.v1.geom.UnreadModel.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+     * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+     * library lists every library model here, and its parts draw at a typical height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.UnreadModel.Builder> 
+         getUnreadModelsBuilderList() {
+      return internalGetUnreadModelsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.UnreadModel, io.github.panyam.agni.v1.geom.UnreadModel.Builder, io.github.panyam.agni.v1.geom.UnreadModelOrBuilder> 
+        internalGetUnreadModelsFieldBuilder() {
+      if (unreadModelsBuilder_ == null) {
+        unreadModelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            io.github.panyam.agni.v1.geom.UnreadModel, io.github.panyam.agni.v1.geom.UnreadModel.Builder, io.github.panyam.agni.v1.geom.UnreadModelOrBuilder>(
+                unreadModels_,
+                ((bitField0_ & 0x00000800) != 0),
+                getParentForChildren(),
+                isClean());
+        unreadModels_ = null;
+      }
+      return unreadModelsBuilder_;
+    }
+
     private io.github.panyam.agni.v1.geom.Provenance prov_;
     private com.google.protobuf.SingleFieldBuilder<
         io.github.panyam.agni.v1.geom.Provenance, io.github.panyam.agni.v1.geom.Provenance.Builder, io.github.panyam.agni.v1.geom.ProvenanceOrBuilder> provBuilder_;
@@ -4219,7 +4707,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the prov field is set.
      */
     public boolean hasProv() {
-      return ((bitField0_ & 0x00000800) != 0);
+      return ((bitField0_ & 0x00001000) != 0);
     }
     /**
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
@@ -4242,7 +4730,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -4256,7 +4744,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -4265,7 +4753,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeProv(io.github.panyam.agni.v1.geom.Provenance value) {
       if (provBuilder_ == null) {
-        if (((bitField0_ & 0x00000800) != 0) &&
+        if (((bitField0_ & 0x00001000) != 0) &&
           prov_ != null &&
           prov_ != io.github.panyam.agni.v1.geom.Provenance.getDefaultInstance()) {
           getProvBuilder().mergeFrom(value);
@@ -4276,7 +4764,7 @@ private static final long serialVersionUID = 0L;
         provBuilder_.mergeFrom(value);
       }
       if (prov_ != null) {
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00001000;
         onChanged();
       }
       return this;
@@ -4285,7 +4773,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public Builder clearProv() {
-      bitField0_ = (bitField0_ & ~0x00000800);
+      bitField0_ = (bitField0_ & ~0x00001000);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -4298,7 +4786,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public io.github.panyam.agni.v1.geom.Provenance.Builder getProvBuilder() {
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return internalGetProvFieldBuilder().getBuilder();
     }

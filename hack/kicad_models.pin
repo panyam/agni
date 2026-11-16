@@ -1,0 +1,30 @@
+# KiCad library 3D models that tools/samples boards name, fetched from KiCad's own repo rather than
+# shipped here (agni issue 1652). KiCad's library is CC-BY-SA 4.0 with an exception for designs, so
+# this repo carries only where to get each file. `make samples-oracle` runs
+#   hack/fetch_remote.sh hack/kicad_models.pin tools/samples/kicad-models
+# and each file lands in tools/samples/kicad-models/<Library>.3dshapes/, the layout --model-path reads.
+# The commit is KiCad's 10.0.6 tag, whose files hash the same as KiCad 10.0.6's installed library,
+# which wrote core/render/testdata/*.kicad3d.tsv.
+#
+# <sha256>  <library folder>  <url at a fixed commit>
+03e44c4b2b727b8d4b6b1fd598cbd12dd5e614f1dfeefa96a92a07e3a3b312a2  Capacitor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Capacitor_SMD.3dshapes/C_0402_1005Metric.step
+4857b3dc717675bf1fb22edda622ac3b3ae03cf44d81eefaf3fa3ba3a86d84c1  Capacitor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Capacitor_SMD.3dshapes/C_0603_1608Metric.step
+db9f56772f8759b93f4ba0b274e293a14bbd3c7d5f2de835feeabb78b0c02d76  Capacitor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Capacitor_SMD.3dshapes/CP_Elec_6.3x5.9.step
+ead9baddec8fef02cf617004b035cfd0f46d83b0f9023696f0c7bff39c2c6b55  Connector_IDC.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Connector_IDC.3dshapes/IDC-Header_2x10_P2.54mm_Vertical.step
+f0beaecbcec1c7d96c8ae11f65f771fbe75a07789bb1c0d04979f2a9a58c7682  Connector_PinHeader_1.27mm.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Connector_PinHeader_1.27mm.3dshapes/PinHeader_2x22_P1.27mm_Vertical_SMD.step
+d2a89df82ee5f0f56ef23ee59c8161b8d4e92af2b21959d72778316dde3f9f22  Crystal.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Crystal.3dshapes/Crystal_SMD_3225-4Pin_3.2x2.5mm.step
+cd8619b2119cd95683a2c5e660ab4f2d4db674f696cd6f9e9756f221171a214d  Diode_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Diode_SMD.3dshapes/D_SOD-323.step
+b525222377930c32abea58606bffba3aaf171cc66ac292b82d28a82d646d995d  Diode_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Diode_SMD.3dshapes/D_SOD-523.step
+8bf2ae2bbd9d8b716db21d8d7fb903fac5ba2696150c3ec2e35bcea17b208ff2  Inductor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Inductor_SMD.3dshapes/L_0402_1005Metric.step
+98343205ec260ec165026ba2d44329a23096779ac36c553ea84aa7b370242e6d  LED_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/LED_SMD.3dshapes/LED_0603_1608Metric.step
+8da48d27804a2e36a4eccc28349fa8bbe4edb4cdcc7ec213934cac35ca478f69  Package_BGA.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_BGA.3dshapes/BGA-121_9.0x9.0mm_Layout11x11_P0.8mm.step
+9adcc63271a8d92de5c344103df65530465381f8c230b3c709e36700672df2e0  Package_DFN_QFN.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_DFN_QFN.3dshapes/DFN-6-1EP_2x2mm_P0.65mm_EP1x1.6mm.step
+6ad5e98224d02a427d9a6b929a28dbc158b9925fba5adec12db05079f1016948  Package_SO.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_SO.3dshapes/TSSOP-16_4.4x5mm_P0.65mm.step
+2299fb3b85d686800712b24f5411cd4896ad7de29f3aab656d6dc1006211629b  Package_SO.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_SO.3dshapes/TSSOP-8_4.4x3mm_P0.65mm.step
+720a6eab0024069bbee68e7cb4c3ff1149468a34611225cdc852662c5d0ec2b7  Package_TO_SOT_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_TO_SOT_SMD.3dshapes/SOT-23-5.step
+c9fe686b4d1b56927a41fa84a9bc1efb61d8a45a123a3db43bcaa05c2891d635  Package_TO_SOT_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_TO_SOT_SMD.3dshapes/SOT-23-6.step
+acbf75a28fe41aa90efb38cd2b78220968d6eb6ebae1625dfd532dbeb268fece  Package_TO_SOT_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_TO_SOT_SMD.3dshapes/SOT-323_SC-70.step
+045cc95e18ee7a13d1623c3ce6604fc833049bdb4f952f68c26e3c5767d122e4  Package_TO_SOT_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Package_TO_SOT_SMD.3dshapes/SOT-363_SC-70-6.step
+91507e5af4251cb4ef38e04889c9b98da29904432bd83786bba13ae9b605eacb  Resistor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Resistor_SMD.3dshapes/R_0402_1005Metric.step
+1875571c326d0d9e96f36b4efeb8094068ef7619f0a449c781caf0b49c2e5861  Resistor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Resistor_SMD.3dshapes/R_0603_1608Metric.step
+36ded1f7b7c9e9dcddde3eb3200acdf1c0e0b60046893660e6f043afc2ec7fad  Resistor_SMD.3dshapes  https://gitlab.com/kicad/libraries/kicad-packages3D/-/raw/e62ed1fc7862da83f789bd562671b5e4b82afcdf/Resistor_SMD.3dshapes/R_Array_Convex_4x0402.step

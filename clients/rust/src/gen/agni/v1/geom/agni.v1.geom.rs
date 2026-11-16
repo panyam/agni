@@ -784,6 +784,11 @@ pub struct BoardGeometry {
     /// the physical layer stack, unset when the file has none (agni 1592)
     #[prost(message, optional, tag="11")]
     pub stackup: ::core::option::Option<Stackup>,
+    /// unread_models lists each 3D model a footprint names that gave no height, one row per path and
+    /// reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+    /// library lists every library model here, and its parts draw at a typical height.
+    #[prost(message, repeated, tag="12")]
+    pub unread_models: ::prost::alloc::vec::Vec<UnreadModel>,
     #[prost(message, optional, tag="16")]
     pub prov: ::core::option::Option<Provenance>,
 }
@@ -924,6 +929,19 @@ pub struct BoardOutline {
 /// ComponentPlacement is one placed physical component. It gives where the component sits, which
 /// side it is on, and its copper pads. ref_des is the join key to ir.Component. If the source
 /// footprint has no reference, the placement is not emitted, as the netlist reader skips it too.
+/// UnreadModel is a 3D model that gave no part a height (agni 1652). path is as the footprint writes
+/// it, such as `${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0402_1005Metric.step`. reason says why,
+/// such as a model the read could not find or a STEP assembly it refuses. parts counts the placements
+/// that name it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UnreadModel {
+    #[prost(string, tag="1")]
+    pub path: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub reason: ::prost::alloc::string::String,
+    #[prost(int32, tag="3")]
+    pub parts: i32,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ComponentPlacement {
     #[prost(string, tag="1")]
@@ -951,9 +969,11 @@ pub struct ComponentPlacement {
     pub mirror: bool,
     /// rotation) so its pads sit on the mirrored copper. Set by the
     /// reader from the placed side; the renderer applies it.
-    /// height is how far the part's body stands off the board, in unit_nm units, as the file states
-    /// it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
-    /// package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+    /// height is how far the part's body stands off the board, in unit_nm units, as the file or its 3D
+    /// model states it (agni 1352). It is unset when neither gives one, never 0. IPC-2581 gives it on
+    /// the package. KiCad keeps it only inside a part's 3D model, and the reader measures how far the
+    /// model reaches above the pads, so a through-hole part's pins below the board do not count (agni
+    /// 1652).
     #[prost(int64, optional, tag="7")]
     pub height: ::core::option::Option<i64>,
     #[prost(message, optional, tag="16")]

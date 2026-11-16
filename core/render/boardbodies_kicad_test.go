@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/readers/kicad"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // kicadModel is one row of a kicad3d oracle (hack/kicad_3d_oracle.sh): a part's 3D model as
@@ -84,20 +84,32 @@ func outside(ring []float64, unitsPerMm float64, m kicadModel) float64 {
 	return worst
 }
 
-func glasgowBoard(t *testing.T) *geom.BoardGeometry {
+// kicadModelsDir is where `make samples-oracle` puts the KiCad library models the sample boards name
+// (hack/kicad_models.pin).
+var kicadModelsDir = filepath.Join("..", "..", "tools", "samples", "kicad-models")
+
+// readKiCadBoard reads a board through the Loader, as a host does, with modelDirs as its --model-path.
+func readKiCadBoard(t *testing.T, path string, modelDirs ...string) *geom.BoardGeometry {
 	t.Helper()
-	path := filepath.Join("..", "..", "tools", "samples", "boards", "glasgow-revC3", "glasgow.kicad_pcb")
-	f, err := os.Open(path)
-	if err != nil {
+	if _, err := os.Stat(path); err != nil {
 		// Deliberately fatal rather than skipped, so a missing corpus does not read as a pass.
-		t.Fatalf("sample corpus missing, run `make samples`: %v", err)
+		t.Fatalf("sample corpus missing, run `make samples-oracle`: %v", err)
 	}
-	defer f.Close()
-	b, err := kicad.ReadBoardGeometry(f, "glasgow.kicad_pcb")
+	for _, d := range modelDirs {
+		if _, err := os.Stat(d); err != nil {
+			t.Fatalf("KiCad models missing, run `make samples-oracle`: %v", err)
+		}
+	}
+	b, err := (&formats.Loader{ModelPaths: modelDirs}).BoardGeometry(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return b
+}
+
+func glasgowBoard(t *testing.T) *geom.BoardGeometry {
+	t.Helper()
+	return readKiCadBoard(t, filepath.Join("..", "..", "tools", "samples", "boards", "glasgow-revC3", "glasgow.kicad_pcb"), kicadModelsDir)
 }
 
 // kicadOutlineTolMm is how far a model's outline may sit outside its block. The oracle rounds each
@@ -109,8 +121,7 @@ const kicadHeightTolMm = 0.05
 
 // TestBodiesAgreeWithKiCad3D holds the stack view's part blocks to KiCad's own 3D export of Glasgow
 // revC3 (agni 1643). For every part KiCad places a model for, the block must exist, sit on the same
-// side, and enclose the model's outline seen from above. A block that states a height must match the
-// model's. KiCad boards state none yet, so that check waits on the KiCad half of #1643.
+// side, enclose the model's outline seen from above, and stand as tall as the model (agni 1652).
 func TestBodiesAgreeWithKiCad3D(t *testing.T) {
 	v := BoardStack(glasgowBoard(t))
 	byRef := map[string]*geom.BoardPartBody{}
@@ -134,7 +145,9 @@ func TestBodiesAgreeWithKiCad3D(t *testing.T) {
 		if o := outside(body.GetOutline(), v.GetUnitsPerMm(), m); o > kicadOutlineTolMm {
 			t.Errorf("%s: KiCad's model reaches %.3f mm outside the block", m.ref, o)
 		}
-		if body.HeightMm != nil {
+		if body.HeightMm == nil {
+			t.Errorf("%s: block states no height, KiCad's model is %.3f mm", m.ref, m.heightMm)
+		} else {
 			heights++
 			if d := math.Abs(body.GetHeightMm() - m.heightMm); d > kicadHeightTolMm {
 				t.Errorf("%s: block %.3f mm tall, KiCad's model %.3f mm", m.ref, body.GetHeightMm(), m.heightMm)
@@ -142,8 +155,8 @@ func TestBodiesAgreeWithKiCad3D(t *testing.T) {
 		}
 		compared++
 	}
-	if compared != len(rows) {
-		t.Errorf("compared %d of %d parts", compared, len(rows))
+	if compared != len(rows) || heights != len(rows) {
+		t.Errorf("compared %d of %d parts, %d of them by height", compared, len(rows), heights)
 	}
 	t.Logf("%d parts held to KiCad's models, %d of them by height", compared, heights)
 }
@@ -188,5 +201,65 @@ func TestKiCad3DOracleCatchesAMisplacedPart(t *testing.T) {
 		if o := outside(body.GetOutline(), v.GetUnitsPerMm(), m); o <= kicadOutlineTolMm {
 			t.Errorf("C1 %s reads %.3f mm outside its block, want more than %.3f", name, o, kicadOutlineTolMm)
 		}
+	}
+}
+
+// TestModelHeightsAgreeWithKiCad3D holds part heights to KiCad's export of a board whose footprints
+// turn, scale, lift and hide their models (agni 1652). J1 and J2 turn the same IDC header a quarter
+// about X in opposite directions, and come out 27.96 and 5.10 mm tall. So a sign error in the turn
+// swaps them and fails here. J5 is that header on the back, whose model reaches up through the board.
+func TestModelHeightsAgreeWithKiCad3D(t *testing.T) {
+	g := readKiCadBoard(t, filepath.Join("testdata", "model-transforms", "model-transforms.kicad_pcb"), kicadModelsDir)
+	byRef := map[string]*geom.ComponentPlacement{}
+	for _, p := range g.GetPlacements() {
+		byRef[p.GetRefDes()] = p
+	}
+	rows := readKiCad3D(t, filepath.Join("testdata", "model-transforms.kicad3d.tsv"))
+	if len(rows) != 15 {
+		t.Fatalf("the oracle holds %d parts, want 15; regenerate it with hack/kicad_3d_oracle.sh", len(rows))
+	}
+	heights := 0
+	for _, m := range rows {
+		p := byRef[m.ref]
+		switch {
+		case p == nil:
+			t.Errorf("%s: KiCad places a model and agni has no part", m.ref)
+		case placementSide(p) != m.side:
+			t.Errorf("%s: part on the %s, KiCad's model on the %s", m.ref, placementSide(p), m.side)
+		case p.Height == nil:
+			t.Errorf("%s: no height, KiCad's model is %.3f mm", m.ref, m.heightMm)
+		default:
+			heights++
+			mm := float64(p.GetHeight()*g.GetUnitNm()) / 1e6
+			if d := math.Abs(mm - m.heightMm); d > kicadHeightTolMm {
+				t.Errorf("%s: %.3f mm tall, KiCad's model %.3f mm", m.ref, mm, m.heightMm)
+			}
+		}
+	}
+	if heights != len(rows) {
+		t.Errorf("held %d of %d parts by height", heights, len(rows))
+	}
+	if len(g.GetUnreadModels()) != 0 {
+		t.Errorf("unread models: %v", g.GetUnreadModels())
+	}
+}
+
+// TestKiCadHeightsComeFromTheModels is the positive control for the two height tests above. Read with
+// no model library, Glasgow states no KiCad library part's height, and names each library model it
+// could not read.
+func TestKiCadHeightsComeFromTheModels(t *testing.T) {
+	g := readKiCadBoard(t, filepath.Join("..", "..", "tools", "samples", "boards", "glasgow-revC3", "glasgow.kicad_pcb"))
+	for _, p := range g.GetPlacements() {
+		if p.Height != nil {
+			t.Errorf("%s: height %d with no model library", p.GetRefDes(), p.GetHeight())
+		}
+	}
+	parts := int32(0)
+	for _, u := range g.GetUnreadModels() {
+		parts += u.GetParts()
+	}
+	// Glasgow's 224 footprints name a model, and 11 of those models KiCad cannot find either.
+	if parts != 224 {
+		t.Errorf("unread models cover %d parts, want 224: %v", parts, g.GetUnreadModels())
 	}
 }

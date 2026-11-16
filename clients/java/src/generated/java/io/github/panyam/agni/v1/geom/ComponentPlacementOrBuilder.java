@@ -127,9 +127,11 @@ public interface ComponentPlacementOrBuilder extends
    * <pre>
    * rotation) so its pads sit on the mirrored copper. Set by the
    * reader from the placed side; the renderer applies it.
-   * height is how far the part's body stands off the board, in unit_nm units, as the file states
-   * it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
-   * package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+   * height is how far the part's body stands off the board, in unit_nm units, as the file or its 3D
+   * model states it (agni 1352). It is unset when neither gives one, never 0. IPC-2581 gives it on
+   * the package. KiCad keeps it only inside a part's 3D model, and the reader measures how far the
+   * model reaches above the pads, so a through-hole part's pins below the board do not count (agni
+   * 1652).
    * </pre>
    *
    * <code>optional int64 height = 7 [json_name = "height"];</code>
@@ -140,9 +142,11 @@ public interface ComponentPlacementOrBuilder extends
    * <pre>
    * rotation) so its pads sit on the mirrored copper. Set by the
    * reader from the placed side; the renderer applies it.
-   * height is how far the part's body stands off the board, in unit_nm units, as the file states
-   * it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
-   * package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+   * height is how far the part's body stands off the board, in unit_nm units, as the file or its 3D
+   * model states it (agni 1352). It is unset when neither gives one, never 0. IPC-2581 gives it on
+   * the package. KiCad keeps it only inside a part's 3D model, and the reader measures how far the
+   * model reaches above the pads, so a through-hole part's pins below the board do not count (agni
+   * 1652).
    * </pre>
    *
    * <code>optional int64 height = 7 [json_name = "height"];</code>

@@ -403,6 +403,60 @@ public interface BoardGeometryOrBuilder extends
   io.github.panyam.agni.v1.geom.StackupOrBuilder getStackupOrBuilder();
 
   /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  java.util.List<io.github.panyam.agni.v1.geom.UnreadModel> 
+      getUnreadModelsList();
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  io.github.panyam.agni.v1.geom.UnreadModel getUnreadModels(int index);
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  int getUnreadModelsCount();
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  java.util.List<? extends io.github.panyam.agni.v1.geom.UnreadModelOrBuilder> 
+      getUnreadModelsOrBuilderList();
+  /**
+   * <pre>
+   * unread_models lists each 3D model a footprint names that gave no height, one row per path and
+   * reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+   * library lists every library model here, and its parts draw at a typical height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.UnreadModel unread_models = 12 [json_name = "unreadModels"];</code>
+   */
+  io.github.panyam.agni.v1.geom.UnreadModelOrBuilder getUnreadModelsOrBuilder(
+      int index);
+
+  /**
    * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
    * @return Whether the prov field is set.
    */

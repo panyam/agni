@@ -49,5 +49,14 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 
 > A board view's stack view stands each part on its side of the board. The engine gives each
 > part a footprint, the hull of its courtyard, fab outline or pads, and the height its file
-> states. IPC-2581 states a height on each package, and KiCad states none. This step reads
-> parts-board.ipc2581.xml from ../common/designs, where R1's package gives no height.
+> states. IPC-2581 states a height on each package. This step reads parts-board.ipc2581.xml
+> from ../common/designs, where R1's package gives no height.
+
+## Read KiCad heights from the 3D models {#model-heights}
+
+> A KiCad board states no part heights. Each footprint names a 3D model instead, and the reader
+> measures how far the STEP model reaches above the pads. It applies the footprint's own scale and
+> offset first. This step reads model-heights.kicad_pcb from ../common/designs. U1 and U2 name a
+> 0.9 mm block beside the board, and U2 lifts it 0.5 mm and doubles its height. R1 names KiCad's
+> library, and this read passes no `--model-path`, so R1 has no height. The board's
+> `unread_models` says why.

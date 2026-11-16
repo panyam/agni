@@ -206,6 +206,8 @@ mounts:
   shared: /srv/shared
 symbol_paths:
   - /usr/share/kicad/symbols
+model_paths:
+  - /usr/share/kicad/3dmodels
 web_dir: /usr/share/agni/web
 native_tools:
   - kicad-cli
@@ -215,7 +217,7 @@ Paths are resolved against the directory you ran from. A mount is an error when 
 directory that is not there, so a file meant to serve every working directory wants absolute paths.
 
 A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path`,
-`--web-dir` or `--enable-native` wins outright rather than merging, because naming a mount table
+`--model-path`, `--web-dir` or `--enable-native` wins outright rather than merging, because naming a mount table
 answers for the whole table.
 
 `web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
@@ -747,6 +749,7 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 | flag | what it does |
 |---|---|
 | `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent. The container image supplies its bundled libraries to every subcommand this way. |
+| `--model-path <dir>` | KiCad 3D model library folder, the one holding `<Library>.3dshapes/`. It stands for `${KICAD9_3DMODEL_DIR}` and its older spellings in a footprint's model path, so a KiCad board reads each part's height from its STEP model. Repeatable, tried in order. Defaults to `AGNI_MODEL_PATH` (colon-separated), then to KiCad's own `KICAD<n>_3DMODEL_DIR`. A model it cannot find leaves its part at a typical height, and the board's `unread_models` says which. |
 | `--mount <name>=<path>` | expose a folder as a named mount (repeatable). Every command takes it, not just `serve`. An artifact is addressed as `mount://<mount>/<path>`, and with a matching `--mount` the CLI and a server produce **identical URIs for the same design**, so a review created either way records the same design and the two are directly comparable. Without it the CLI mints a mount per argument, rooted at the enclosing project when there is one, so `agni check some/board.edn` still works with no configuration. You may also pass a full `mount://...` URI in place of a path. |
 | `--flatten-hierarchy` | read a hierarchical netlist as its whole schematic, walking into every block cell the top cell places. A net crossing a block's port is one net with its parent's and keeps the parent's name, a net inside a block keeps its name when it is unique and is otherwise named by the block's path (`/A1/MID`), and a part inside a block placed more than once carries the path in its ref-des (`B2/R1`). Parts sharing a designator are sections of one component wherever they sit. A flat netlist reads the same either way, and only EDIF has blocks to walk today. Over `--remote` it travels in the snapshot (`Snapshot.flatten_hierarchy`). A design can declare it once with `flatten_hierarchy: true` in its `design.yaml`, and the viewer's hierarchy strip offers **Read every block**, which adds `?flatten=1` to the page. |
 | `--as-named` | read exactly the file named, even when its `design.yaml` declares it a companion view of a different entry. Without it, analysing a declared companion (a schematic export, a board) reads the design's entry instead, because a companion is a view of the design rather than a second source of it. Reach for this when reading a view as a netlist is the point, such as checking that two views of one design still agree. |

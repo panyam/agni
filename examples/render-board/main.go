@@ -18,6 +18,7 @@ import (
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/examples/common"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
 )
@@ -115,6 +116,26 @@ func main() {
 				height = fmt.Sprintf("%.2f mm tall", body.GetHeightMm())
 			}
 			fmt.Printf("%-3s on the %s, a %d-point footprint, %s\n", body.GetRefDes(), body.GetSide(), len(body.GetOutline())/2, height)
+		}
+		return nil
+	})
+
+	demo.Bind("model-heights").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		const path = "../common/designs/model-heights/model-heights.kicad_pcb"
+		// No ModelPaths, so only the board's own models resolve. A host passes --model-path.
+		b, err := (&formats.Loader{}).BoardGeometry(path)
+		if err != nil {
+			return demokit.Errf("read %s: %v", path, err)
+		}
+		for _, p := range b.GetPlacements() {
+			height := "no height"
+			if p.Height != nil {
+				height = fmt.Sprintf("%.2f mm tall", float64(p.GetHeight()*b.GetUnitNm())/1e6)
+			}
+			fmt.Printf("%-3s %s\n", p.GetRefDes(), height)
+		}
+		for _, u := range b.GetUnreadModels() {
+			fmt.Printf("unread: %s (%d part): %s\n", u.GetPath(), u.GetParts(), u.GetReason())
 		}
 		return nil
 	})

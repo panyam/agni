@@ -3,7 +3,7 @@
 #
 # kicad-cli exports the board as a GLB, with each part's 3D model placed on it and named by its
 # reference. This writes core/render/testdata/<board>.kicad3d.tsv: one row per part with a model, giving
-# the side it sits on, the model's own height, and its outline seen from above, as the convex hull of
+# the side it sits on, how far the model reaches past the seat its pads give it, and its outline seen from above, as the convex hull of
 # its vertices in agni's board frame (millimetres, Y up). TestBodiesAgreeWithKiCad3D holds the stack
 # view's part blocks to these rows, so CI needs no KiCad. Do not hand-edit an output; the point of the
 # file is that we did not choose it.
@@ -19,6 +19,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 # <name> <design dir> <board file>
 boards=(
   "glasgow tools/samples/boards/glasgow-revC3 glasgow.kicad_pcb"
+  "model-transforms core/render/testdata/model-transforms model-transforms.kicad_pcb"
 )
 
 for line in "${boards[@]}"; do
@@ -27,7 +28,7 @@ for line in "${boards[@]}"; do
   # KiCad writes a .kicad_prl beside what it opens, so it runs over a copy.
   rm -rf "$tmp/d"; cp -R "$root/$dir" "$tmp/d"
   "$cli" pcb export glb -o "$tmp/b.glb" "$tmp/d/$pcb" >/dev/null 2>&1
-  python3 -I - "$tmp/b.glb" "$dir/$pcb" "$version" >"$root/core/render/testdata/$name.kicad3d.tsv" <<'PY'
+  python3 -I - "$tmp/b.glb" "$dir/$pcb" "$version" "$tmp/d/$pcb" >"$root/core/render/testdata/$name.kicad3d.tsv" <<'PY'
 import json, struct, sys
 
 # glTF is Y up in metres. KiCad's export puts board X on x, the height off the board's bottom face on
@@ -50,7 +51,7 @@ def transform(n):
         return (p[0] + t[0], p[1] + t[1], p[2] + t[2])
     return f
 
-glb, source, version = sys.argv[1], sys.argv[2], sys.argv[3]
+glb, source, version, pcb = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 d = open(glb, 'rb').read()
 jlen = struct.unpack('<I', d[12:16])[0]
 j = json.loads(d[20:20 + jlen])
@@ -108,16 +109,42 @@ for root in j['scenes'][j.get('scene', 0)]['nodes']:
             board.extend(pts)
 top = max(p[1] for p in board) * 1000 if board else 0.0
 
+from collections import Counter
+
+# A part's side is its footprint's layer in the board file. A back part's model can reach up through
+# the board, so where its points lie does not say.
+import re
+text = open(pcb).read()
+heads = list(re.finditer(r'\(footprint\s+"[^"]*"\s*(?:locked\s*|\(locked[^)]*\)\s*)?\(layer\s+"([FB])\.Cu"\)', text))
+board_side = {}
+for k, h in enumerate(heads):
+    seg = text[h.end():heads[k + 1].start() if k + 1 < len(heads) else len(text)]
+    r = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', seg) or re.search(r'\(fp_text\s+reference\s+"?([^"\s)]+)', seg)
+    if r:
+        board_side[r.group(1)] = 'back' if h.group(1) == 'B' else 'front'
+sides = {}
+for ref in parts:
+    if ref not in board_side:
+        raise SystemExit(f'{ref}: the GLB places it and the board file has no footprint for it')
+    sides[ref] = board_side[ref]
+
+# KiCad seats a model on its pads, some 0.085 mm off a board body that leaves out the copper and the
+# mask. A surface-mount model's lowest point sits on that plane, so the commonest lowest point on the
+# front, or highest on the back, is the seat. A part's height is how far it reaches past its side's
+# seat, so a through-hole part's pins below the board do not count (agni 1652).
+def seat(side, f):
+    c = Counter(round(f(p[1] * 1000 for p in parts[r]), 3) for r in parts if sides[r] == side)
+    return c.most_common(1)[0][0] if c else None
+seats = {'front': seat('front', min), 'back': seat('back', max)}
+
 print(f'# KiCad {version}, kicad-cli pcb export glb of {source}, by hack/kicad_3d_oracle.sh')
-print('# ref, side, the model\'s own height in mm, and its outline seen from above as x,y pairs in mm')
+print(f'# seats: front {seats["front"]} mm, back {seats["back"]} mm, in the export\'s height above the board\'s bottom face')
+print('# ref, side, the model\'s height past its seat in mm, and its outline seen from above as x,y pairs in mm')
 for ref in sorted(parts):
     pts = parts[ref]
     zs = [p[1] * 1000 for p in pts]
-    back = max(zs) <= top / 2
-    # The model's own height. KiCad seats a model on its pad, some 0.085 mm off a board body that
-    # leaves out the copper and the mask, so a height measured from the face would not compare with
-    # a part's stated height.
-    height = max(zs) - min(zs)
+    back = sides[ref] == 'back'
+    height = seats['back'] - min(zs) if back else max(zs) - seats['front']
     ring = hull([(round(p[0] * 1000, 3), round(-p[2] * 1000, 3)) for p in pts])
     print(f'{ref}\t{"back" if back else "front"}\t{height:.3f}\t' + ' '.join(f'{x:.3f},{y:.3f}' for x, y in ring))
 PY
