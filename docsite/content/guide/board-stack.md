@@ -39,8 +39,12 @@ the layers under it show through.
 
 Click a track on an inner plane, and the schematic selects its net, as a click on the flat board
 does. The click goes to the nearest plane with something under the pointer, so an inner track picks
-where nothing on a nearer layer covers it. A selected net lights on every layer it runs on, its vias'
-barrels included.
+where nothing on a nearer layer covers it. Click a via's barrel between the planes, and the schematic
+selects its net too. A selected net lights on every layer it runs on, its vias' barrels included.
+
+The silkscreen's text sits on its layer, at whatever angle you turn the stack to. The top's text reads
+from above and the bottom's from below, so neither shows through the board. The text draws over any
+part block in front of it.
 
 ## See the parts on the board
 
@@ -68,8 +72,13 @@ each package a height, so an IPC-2581 board stands its parts at their real heigh
 **Layers** and **Board** in the bar switch the stack view's look. It opens in Layers, which draws
 each layer apart in the editor's colours. Board draws the board as it is made. An
 opaque green mask covers each face, the tracks show as a lighter green through it, and the pads draw
-in gold. The silkscreen draws white, and the inner layers and the dielectrics hide. The slider and
-the camera work the same in both, and a click picks the same part or net.
+in gold. The silkscreen and its text draw white, and the inner layers and the dielectrics hide. The
+board's edge draws as a darker wall from one face to the other, round the outline and each hole cut
+in it. The slider and the camera work the same in both, and a click picks the same part or net.
+
+Each look cuts a slot in the board's outline out of the board, and a drilled hole 1 mm or wider too,
+as a mounting hole is. A mounting hole stands no block, since it is a hole and not a part. agni takes
+a footprint for a mounting hole when its pads are all one drilled pin, at least 2 mm wide.
 
 ![Glasgow revC3 in the Board look, with its parts coloured by type]({{.Site.PathPrefix}}/static/images/guide/board-stack-look.png)
 

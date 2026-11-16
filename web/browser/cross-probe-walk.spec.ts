@@ -692,6 +692,29 @@ for (const name of chosen) {
           const box = (await gl.boundingBox())!;
           await page.mouse.click(box.x + probe.x, box.y + probe.y);
           await picked(page, probe.ref);
+          // The silkscreen's text sits on the top face in the silkscreen colour, and reads from
+          // above (agni issue 1607).
+          const silkText = () =>
+            page.evaluate((p) => {
+              const host = document.querySelector(p);
+              let shown = 0;
+              for (const g of host?.querySelectorAll<SVGGElement>("g[data-plane][data-look-fill]") ?? []) {
+                if (g.style.display === "none" || !g.getAttribute("transform")?.startsWith("matrix(")) continue;
+                for (const t of g.querySelectorAll<SVGTextElement>("text")) if (t.style.display !== "none" && t.getBoundingClientRect().width > 0) shown++;
+              }
+              return shown;
+            }, PANE);
+          await page.waitForFunction((p) => !!document.querySelector(p)?.querySelector("g[data-plane][data-look-fill]"), PANE, { timeout: 5_000 }).catch(() => {});
+          const texts = await silkText();
+          if (texts === 0) {
+            const seen = await page.evaluate((p) => {
+              const host = document.querySelector(p);
+              return [...(host?.querySelectorAll<SVGGElement>("g[data-plane]") ?? [])].map(
+                (g) => `${g.dataset.plane}${g.hasAttribute("data-look-fill") ? " silk" : ""} ${g.style.display || "shown"} ${g.querySelectorAll("text").length} texts`,
+              );
+            }, PANE);
+            throw new Error(`the board look shows no silkscreen text on the board's face; the text planes are ${JSON.stringify(seen)}`);
+          }
           await board.locator('[data-stack-look="layers"]').click({ timeout: 5_000 });
           if ((await look()) !== "layers") throw new Error(`Layers left the view in the ${await look()} look`);
           await button.click({ timeout: 5_000 });
@@ -700,7 +723,7 @@ for (const name of chosen) {
             .catch(async () => {
               throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
             });
-          return `the board look picked ${probe.ref}'s body, and Layers switched back`;
+          return `the board look picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, and Layers switched back`;
         });
 
         await step("no page errors", {}, async () => {

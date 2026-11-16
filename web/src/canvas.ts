@@ -39,8 +39,9 @@ import { unitAround, type RevealBox } from "./svgview.js";
 import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { groupDepths, layoutStack, perMm, stackZ, type GroupDepths, type StackLayout } from "./stacklayout.js";
 import { PRESETS, StackCamera, type StackPreset } from "./stackcamera.js";
-import { StackExtras, stackGeometry } from "./stackgl.js";
-import { pickThroughStack } from "./stackpick.js";
+import { HOLE_FLOATS, StackExtras, stackGeometry } from "./stackgl.js";
+import { GRAZING, pickThroughStack, type Barrel } from "./stackpick.js";
+import { faceShows } from "./stacktext.js";
 import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
 import { boardLookPlan, padPrimitives, type BoardLookPlan, type StackLook } from "./stacklook.js";
 
@@ -69,6 +70,9 @@ interface StackState {
   planes: { depth: number; groups: Set<number> }[];
   groups: Set<number>;
   barrelColor: Rgba;
+  // holes and nets are the plated holes' rows and nets (stackgl.ts), for picking a barrel.
+  holes: Float32Array;
+  nets: string[];
   // candidates lists, for each copper layer, the middle of each net's shape on it, for the probes a
   // browser spec clicks.
   candidates: Map<string, ProbeCandidates>;
@@ -192,6 +196,8 @@ export class CanvasComponent extends BaseComponent {
     this.overlay.setContent(sheet.images, sheet.labels, sheet.fontFamily);
     const canvas = this.rootElement as HTMLCanvasElement;
     this.overlay.update(this.camera.getView(), canvas.clientWidth, canvas.clientHeight, this.dpr(), orientTurn(this.orientation));
+    // The stack view puts the new text on its planes at its next frame.
+    if (this.stack) this.gate.invalidate();
     if (stages) stages.labelsMs = performance.now() - t;
   }
 
@@ -204,7 +210,7 @@ export class CanvasComponent extends BaseComponent {
   setHiddenGroups(groups: Iterable<number>): void {
     this.hidden = [...groups];
     this.renderer?.setHiddenGroups(this.drawnHidden());
-    this.overlay?.setHiddenGroups(this.hidden);
+    this.overlay?.setHiddenGroups(this.drawnHidden());
   }
 
   // drawnHidden is what the renderer hides: the reader's hidden layers, and in the stack view's board
@@ -338,8 +344,9 @@ export class CanvasComponent extends BaseComponent {
     const through = rows.find((r) => r.kind === "through");
     let extras: StackExtras | null = null;
     const bodies = bodyGeometry(view.bodies, sheet.originX, sheet.originY);
+    const geometry = stackGeometry(view, layout, sheet.originX, sheet.originY);
     try {
-      extras = new StackExtras(this.gl, stackGeometry(view, layout, sheet.originX, sheet.originY), bodies);
+      extras = new StackExtras(this.gl, geometry, bodies);
     } catch (e) {
       console.warn("agni: the stack's barrels and slabs did not build", e);
     }
@@ -360,11 +367,13 @@ export class CanvasComponent extends BaseComponent {
       planes: [...byDepth].map(([depth, groups]) => ({ depth, groups })),
       groups: new Set(sheet.primitives.map((p) => p.group)),
       barrelColor: hexToRgba(through?.color ?? "#9aa0a6", [0.6, 0.6, 0.6, 1]),
+      holes: geometry.holes,
+      nets: geometry.nets,
       candidates,
       probeTimer: null,
     };
     this.glide.stop();
-    this.overlay?.hide();
+    this.overlay?.setHiddenGroups(this.drawnHidden());
     this.setExplode(0.6);
     this.resize();
     this.stack.camera.setPose(PRESETS.iso);
@@ -399,6 +408,7 @@ export class CanvasComponent extends BaseComponent {
   }
 
   private applyLook(st: StackState | null, sheet: DecodedSheet, renderer: Renderer): void {
+    this.overlay?.setHiddenGroups(this.drawnHidden());
     if (!st || st.look !== "board") {
       renderer.setLook(new Map(), new Map());
       renderer.setHiddenGroups(this.drawnHidden());
@@ -456,6 +466,7 @@ export class CanvasComponent extends BaseComponent {
     delete el.dataset.stackBytes;
     delete el.dataset.stackBodies;
     delete el.dataset.stackLook;
+    this.overlay?.flat();
     this.overlay?.show();
     this.resize();
     this.gate.invalidate();
@@ -528,10 +539,48 @@ export class CanvasComponent extends BaseComponent {
     if (!st || !sheet) return null;
     const picks = (this.picks ??= new PickIndex(sheet));
     const planes = (only ?? this.pickPlanes(st)).map((p) => ({ z: stackZ(p.depth, st.layout, st.mmScale), groups: p.groups }));
+    const barrels = only ? [] : this.drawnBarrels(st);
     const layers = () =>
-      pickThroughStack(st.camera, planes, st.groups, this.drawnHidden(), px, py, this.dpr(), (x, y, perPx, hidden) => picks.pick(x, y, perPx, hidden, this.depth));
+      pickThroughStack(st.camera, planes, st.groups, this.drawnHidden(), px, py, this.dpr(), (x, y, perPx, hidden) => picks.pick(x, y, perPx, hidden, this.depth), barrels);
     if (only || !st.showBodies) return layers();
     return pickWithBodies(st.camera, st.bodies.bodies, this.bodyFaces(st), px, py, layers);
+  }
+
+  // barrelsShow says whether the stack view draws its barrels: the layer look draws them unless the
+  // reader hid the through copper they stand for.
+  private barrelsShow(st: StackState): boolean {
+    return st.look !== "board" && (!st.depths.barrels.size || ![...st.depths.barrels].some((g) => this.hidden.includes(g)));
+  }
+
+  // drawnBarrels is each barrel the stack view draws, in world coordinates, for picking (agni issue
+  // 1607).
+  private drawnBarrels(st: StackState): Barrel[] {
+    if (!this.barrelsShow(st)) return [];
+    const out: Barrel[] = [];
+    for (let i = 0; i < st.nets.length; i++) {
+      const h = st.holes.subarray(i * HOLE_FLOATS, (i + 1) * HOLE_FLOATS);
+      out.push({ x: h[0], y: h[1], r: h[2], zTop: stackZ(h[3], st.layout, st.mmScale), zBottom: stackZ(h[4], st.layout, st.mmScale), net: st.nets[i] });
+    }
+    return out;
+  }
+
+  // placeText puts each layer's text on its plane in the stack view (agni issue 1607). A face's text
+  // shows only from its own side, and the board look draws silkscreen text in the silkscreen colour.
+  private placeText(st: StackState): void {
+    const overlay = this.overlay;
+    if (!overlay) return;
+    const eyeZ = st.camera.basis().eye.z;
+    const silk = st.look === "board" ? st.view.boardLook?.silk : undefined;
+    const faceOf = (g: number): "top" | "bottom" | undefined => {
+      const f = st.plan.face.get(g);
+      return st.look === "board" || st.plan.color.get(g) === "silk" ? f : undefined;
+    };
+    overlay.placeOnPlanes((p) => st.camera.project(p), this.dpr(), (g) => {
+      if (Math.abs(eyeZ) < GRAZING) return null;
+      const z = this.stackZOf(st, g);
+      if (z === null || !faceShows(faceOf(g), eyeZ)) return null;
+      return { z, fill: silk && st.plan.color.get(g) === "silk" ? silk : undefined };
+    });
   }
 
   // litParts lists the parts the highlight lights, by ref, with their colours, for the bodies. It is
@@ -973,7 +1022,7 @@ export class CanvasComponent extends BaseComponent {
         zTop,
         zPerMm: st.mmScale,
         eyeZ: st.camera.basis().eye.z,
-        barrels: !st.depths.barrels.size || ![...st.depths.barrels].some((g) => this.hidden.includes(g)),
+        barrels: this.barrelsShow(st),
         barrelColor: st.barrelColor,
         lit: this.litNets(),
         parseColor: (hex, alpha) => hexToRgba(hex, [0.7, 0.6, 0.4, alpha], alpha),
@@ -986,6 +1035,10 @@ export class CanvasComponent extends BaseComponent {
           : undefined,
         board: st.look === "board" ? { mask: hexToRgba(st.view.boardLook?.mask ?? "", [0.12, 0.32, 0.19, 1]) } : undefined,
       }) ?? 0;
+    // A view that opens straight into the stack, as one switched to WebGL to show it does, has had
+    // no flat frame to fill its labels after.
+    if (this.pendingText) this.fillText(null);
+    this.placeText(st);
     canvas.dataset.draws = String(++this.draws);
     // What the board and the stack view hold on the GPU, in bytes, for the PR's memory budget.
     canvas.dataset.stackBytes ??= JSON.stringify({ board: renderer.bytes, stack: st.extras?.bytes ?? 0 });

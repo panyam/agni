@@ -142,6 +142,21 @@ export class StackCamera {
     return { x: o.x - eye.x * s, y: o.y - eye.y * s };
   }
 
+  // ray is the line through a device pixel into the scene: it starts at o, on the plane through the
+  // target that faces the camera, and runs along dir, away from the camera. A point o + dir * s sits
+  // nearer the camera the smaller s is.
+  ray(px: number, py: number): { o: Vec3; dir: Vec3 } {
+    const { right, up, eye } = this.basis();
+    const sx = (px - this.width / 2) * this.worldPerPixel;
+    const sy = (this.height / 2 - py) * this.worldPerPixel;
+    const o = {
+      x: this.target.x + right.x * sx + up.x * sy,
+      y: this.target.y + right.y * sx + up.y * sy,
+      z: this.target.z + right.z * sx + up.z * sy,
+    };
+    return { o, dir: { x: -eye.x, y: -eye.y, z: -eye.z } };
+  }
+
   // orbit turns the camera by a drag of dx, dy CSS pixels.
   orbit(dx: number, dy: number): void {
     this.setPose({ yaw: this.pose.yaw - dx * ORBIT_DEG_PER_PX, pitch: this.pose.pitch + dy * ORBIT_DEG_PER_PX });

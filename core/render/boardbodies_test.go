@@ -169,3 +169,24 @@ func TestAnODBPartStandsOnItsPackageOutline(t *testing.T) {
 		t.Errorf("U1's block = %v, want its package outline %v", got, want)
 	}
 }
+
+// A mounting hole stands no block, and a part with drilled pins does (agni 1607). MH is one pin on a
+// 3.5 mm drill ringed by 0.5 mm vias, as Glasgow's are. TP is one pin on a 1 mm drill, and J two
+// pins on 3.5 mm drills.
+func TestAMountingHoleStandsNoBlock(t *testing.T) {
+	pad := func(num string, x, drill int64) *geom.Pad {
+		return &geom.Pad{Number: num, At: &geom.Point{X: x}, Size: &geom.Point{X: drill + 500_000, Y: drill + 500_000}, Drill: drill}
+	}
+	b := &geom.BoardGeometry{UnitNm: 1, Stackup: bodiesBoard().GetStackup(), Placements: []*geom.ComponentPlacement{
+		{RefDes: "MH", At: &geom.Point{}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 3_500_000), pad("1", 2_600_000, 500_000), pad("1", -2_600_000, 500_000)}},
+		{RefDes: "TP", At: &geom.Point{X: 20_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 1_000_000)}},
+		{RefDes: "J", At: &geom.Point{X: 40_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 3_500_000), pad("2", 5_000_000, 3_500_000)}},
+	}}
+	got := map[string]bool{}
+	for _, body := range BoardStack(b).GetBodies() {
+		got[body.GetRefDes()] = true
+	}
+	if want := map[string]bool{"TP": true, "J": true}; len(got) != len(want) || !got["TP"] || !got["J"] {
+		t.Errorf("bodies for %v, want TP and J and not the mounting hole MH", got)
+	}
+}
