@@ -52,6 +52,12 @@ proto-check-rust:
 		exit 1; \
 	fi
 
+# Regenerate the Java client's messages and gRPC stubs (agni issue 1632) into
+# clients/java/src/generated/java. That directory holds generated code alone, so its template cleans it.
+.PHONY: proto-java
+proto-java:
+	cd clients/java && buf generate ../../protos --template buf.gen.java.yaml
+
 # Freshness gate: fail when the committed generated code does not match the protos it came from.
 #
 # WHY THIS IS NOT GIT-STATUS-BASED like catalog-docs-check. That target regenerates IN PLACE and
@@ -83,6 +89,7 @@ proto-check: proto-check-rust
 	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	(cd clients/ts && buf generate ../../protos --template buf.gen.ts.yaml -o "$$tmp/ts") || exit 1; \
+	(mkdir -p "$$tmp/java" && cd clients/java && buf generate ../../protos --template buf.gen.java.yaml -o "$$tmp/java") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go is stale — run 'make proto' and commit the result:"; \
@@ -112,6 +119,11 @@ proto-check: proto-check-rust
 	if ! diff -r clients/ts/src/gen "$$tmp/ts/src/gen" >/dev/null 2>&1; then \
 		echo "generated TypeScript for the TypeScript client is stale; run 'make proto-web' and commit the result:"; \
 		diff -rq clients/ts/src/gen "$$tmp/ts/src/gen" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r clients/java/src/generated/java "$$tmp/java/src/generated/java" >/dev/null 2>&1; then \
+		echo "generated Java is stale. Run 'make proto-java' and commit the result:"; \
+		diff -rq clients/java/src/generated/java "$$tmp/java/src/generated/java" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	tag=$$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null); \

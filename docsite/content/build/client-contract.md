@@ -81,3 +81,9 @@ same design:
 The fields are the server's version, package and features, then the design's component, net and
 sheet counts from `GetDesign`, the findings from `CheckDesign` with every rule, and the rows of
 `component.class(?c, "resistor") => ?c`. `clients/examples/go` is the reference.
+
+## The clients
+
+The Java client is `clients/java`. It generates its messages and stubs with buf's pinned
+protocolbuffers/java and grpc/java plugins, and calls the server over gRPC. Its `WireFixturesTest`
+replays the fixtures against a real `agni serve`, and its README shows a call.

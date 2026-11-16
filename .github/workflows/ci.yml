@@ -295,3 +295,34 @@ jobs:
           cmake -S clients/cpp -B clients/cpp/build -DAGNI_BINARY="$RUNNER_TEMP/agni"
           cmake --build clients/cpp/build -j "$(nproc)"
           ctest --test-dir clients/cpp/build --output-on-failure
+
+  # The Java client (agni issue 1632). It is no part of `make testall`. It builds agni, then runs the
+  # client's Gradle build, whose test replays clients/wirefixtures/fixtures.json through the client
+  # against a real agni serve. proto-check in testall-go holds the client's generated code fresh.
+  java-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      # The wrapper jar is the one binary the repo commits, so its checksum is checked against
+      # Gradle's published ones before it runs.
+      - uses: gradle/actions/wrapper-validation@v6
+
+      - name: Build agni
+        run: go build -o "$RUNNER_TEMP/agni" ./cmd/agni
+
+      - name: gradle build
+        working-directory: clients/java
+        env:
+          AGNI_BIN: ${{ runner.temp }}/agni
+        run: ./gradlew build
