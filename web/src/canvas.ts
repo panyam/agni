@@ -42,6 +42,7 @@ import { PRESETS, StackCamera, type StackPreset } from "./stackcamera.js";
 import { StackExtras, stackGeometry } from "./stackgl.js";
 import { pickThroughStack } from "./stackpick.js";
 import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
+import { boardLookPlan, padPrimitives, type BoardLookPlan, type StackLook } from "./stacklook.js";
 
 type Rgba = [number, number, number, number];
 
@@ -57,6 +58,10 @@ interface StackState {
   // showBodies whether they draw and pick.
   bodies: BodyGeometry;
   showBodies: boolean;
+  // look is the stack view's look (stacklook.ts), and plan the board look's plan of the board's
+  // layer rows, which it reads from rows (agni issue 1653).
+  look: StackLook;
+  plan: BoardLookPlan;
   explode: number;
   mmScale: number;
   width: number;
@@ -198,8 +203,16 @@ export class CanvasComponent extends BaseComponent {
   // re-applied when a new sheet arrives, so the chosen view survives sheet swaps.
   setHiddenGroups(groups: Iterable<number>): void {
     this.hidden = [...groups];
-    this.renderer?.setHiddenGroups(this.hidden);
+    this.renderer?.setHiddenGroups(this.drawnHidden());
     this.overlay?.setHiddenGroups(this.hidden);
+  }
+
+  // drawnHidden is what the renderer hides: the reader's hidden layers, and in the stack view's board
+  // look the layers that look hides as well.
+  private drawnHidden(): number[] {
+    const st = this.stack;
+    if (!st || st.look !== "board") return this.hidden;
+    return [...new Set([...this.hidden, ...st.plan.hidden])];
   }
   private hidden: number[] = [];
 
@@ -339,6 +352,8 @@ export class CanvasComponent extends BaseComponent {
       extras,
       bodies,
       showBodies: true,
+      look: "layers",
+      plan: boardLookPlan(rows),
       explode: 0,
       mmScale: view.unitsPerMm,
       width,
@@ -356,6 +371,7 @@ export class CanvasComponent extends BaseComponent {
     this.stack.camera.fit();
     const el = this.rootElement as HTMLElement;
     el.dataset.stack = "on";
+    el.dataset.stackLook = "layers";
     el.dataset.stackBodies = JSON.stringify({ parts: bodies.bodies.length, defaulted: bodies.bodies.filter((b) => b.defaulted).length });
     this.gate.invalidate();
     return true;
@@ -367,6 +383,54 @@ export class CanvasComponent extends BaseComponent {
     if (!this.stack || this.stack.showBodies === on) return;
     this.stack.showBodies = on;
     this.gate.invalidate();
+  }
+
+  // setStackLook draws the stack view in the layer look or the board look (agni issue 1653). The board
+  // look recolours the packed groups and the pads through the renderer, and hides the layers it
+  // leaves out, so it repacks nothing and the reader's own hidden layers come back as they were.
+  setStackLook(look: StackLook): void {
+    const st = this.stack;
+    const sheet = this.sheet;
+    if (!st || !sheet || !this.renderer || st.look === look) return;
+    st.look = look;
+    this.applyLook(st, sheet, this.renderer);
+    (this.rootElement as HTMLElement).dataset.stackLook = look;
+    this.gate.invalidate();
+  }
+
+  private applyLook(st: StackState | null, sheet: DecodedSheet, renderer: Renderer): void {
+    if (!st || st.look !== "board") {
+      renderer.setLook(new Map(), new Map());
+      renderer.setHiddenGroups(this.drawnHidden());
+      return;
+    }
+    const pal = st.view.boardLook;
+    const rgba = (hex: string | undefined, fallback: Rgba): Rgba => hexToRgba(hex ?? "", fallback);
+    const colorOf = {
+      mask: rgba(pal?.mask, [0.12, 0.32, 0.19, 1]),
+      maskOverCopper: rgba(pal?.maskOverCopper, [0.23, 0.49, 0.31, 1]),
+      padFinish: rgba(pal?.padFinish, [0.83, 0.69, 0.3, 1]),
+      silk: rgba(pal?.silk, [0.95, 0.95, 0.93, 1]),
+    };
+    const groups = new Map<number, Rgba>();
+    for (const [g, key] of st.plan.color) groups.set(g, colorOf[key]);
+    const pads = new Map<number, Rgba>();
+    for (const i of padPrimitives(sheet.keys, (p) => sheet.primitives[p]?.group ?? -1, st.plan)) pads.set(i, colorOf.padFinish);
+    renderer.setLook(groups, pads);
+    renderer.setHiddenGroups(this.drawnHidden());
+  }
+
+  // pickPlanes lists each depth the look draws groups at, with its groups. The board look draws every
+  // group it shows on the top or the bottom face.
+  private pickPlanes(st: StackState): StackState["planes"] {
+    if (st.look !== "board") return st.planes;
+    const top = new Set<number>();
+    const bottom = new Set<number>();
+    for (const [g, face] of st.plan.face) (face === "top" ? top : bottom).add(g);
+    return [
+      { depth: 0, groups: top },
+      { depth: st.layout.totalMm, groups: bottom },
+    ];
   }
 
   // bodyFaces is where the board's faces sit in world z at the current explode, and the scale a
@@ -382,6 +446,7 @@ export class CanvasComponent extends BaseComponent {
     if (st.probeTimer) clearTimeout(st.probeTimer);
     st.extras?.dispose();
     this.stack = null;
+    if (this.sheet && this.renderer) this.applyLook(null, this.sheet, this.renderer);
     const el = this.rootElement as HTMLElement;
     delete el.dataset.stack;
     delete el.dataset.stackProbes;
@@ -390,6 +455,7 @@ export class CanvasComponent extends BaseComponent {
     delete el.dataset.stackSpread;
     delete el.dataset.stackBytes;
     delete el.dataset.stackBodies;
+    delete el.dataset.stackLook;
     this.overlay?.show();
     this.resize();
     this.gate.invalidate();
@@ -419,6 +485,11 @@ export class CanvasComponent extends BaseComponent {
   // stackZOf is the world z a group draws at in the stack view, or null for the through copper and
   // drill holes, which draw as barrels.
   private stackZOf(st: StackState, group: number): number | null {
+    if (st.look === "board") {
+      const face = st.plan.face.get(group);
+      if (!face) return null;
+      return stackZ(face === "top" ? 0 : st.layout.totalMm, st.layout, st.mmScale);
+    }
     if (st.depths.barrels.has(group)) return null;
     return stackZ(st.depths.depth.get(group) ?? 0, st.layout, st.mmScale);
   }
@@ -456,9 +527,9 @@ export class CanvasComponent extends BaseComponent {
     const sheet = this.sheet;
     if (!st || !sheet) return null;
     const picks = (this.picks ??= new PickIndex(sheet));
-    const planes = (only ?? st.planes).map((p) => ({ z: stackZ(p.depth, st.layout, st.mmScale), groups: p.groups }));
+    const planes = (only ?? this.pickPlanes(st)).map((p) => ({ z: stackZ(p.depth, st.layout, st.mmScale), groups: p.groups }));
     const layers = () =>
-      pickThroughStack(st.camera, planes, st.groups, this.hidden, px, py, this.dpr(), (x, y, perPx, hidden) => picks.pick(x, y, perPx, hidden, this.depth));
+      pickThroughStack(st.camera, planes, st.groups, this.drawnHidden(), px, py, this.dpr(), (x, y, perPx, hidden) => picks.pick(x, y, perPx, hidden, this.depth));
     if (only || !st.showBodies) return layers();
     return pickWithBodies(st.camera, st.bodies.bodies, this.bodyFaces(st), px, py, layers);
   }
@@ -495,7 +566,7 @@ export class CanvasComponent extends BaseComponent {
       const all: { x: number; y: number }[] = [];
       for (let i = 0; i + 1 < c.points.length; i += 2) all.push(st.camera.project({ x: c.points[i], y: c.points[i + 1], z }));
       const tries = all.sort((a, b) => b.y - a.y).slice(0, PROBE_TRIES);
-      const own = st.planes.filter((p) => c.groups.some((g) => p.groups.has(g)));
+      const own = this.pickPlanes(st).filter((p) => c.groups.some((g) => p.groups.has(g)));
       for (const t of tries) {
         const x = Math.round(t.x / dpr);
         const y = Math.round(t.y / dpr);
@@ -891,7 +962,7 @@ export class CanvasComponent extends BaseComponent {
     const view = st.camera.matrix();
     // The renderer's version moves with the highlight and the hidden layers, and the key with the
     // camera and the explode control.
-    const key = Float32Array.from([...view, st.mmScale, st.showBodies ? 1 : 0]);
+    const key = Float32Array.from([...view, st.mmScale, st.showBodies ? 1 : 0, st.look === "board" ? 1 : 0]);
     if (!this.gate.shouldDraw({ matrix: key, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: renderer, version: renderer.version })) return;
     const t0 = performance.now();
     const zTop = stackZ(0, st.layout, st.mmScale);
@@ -909,11 +980,11 @@ export class CanvasComponent extends BaseComponent {
         bodies: st.showBodies
           ? {
               ...this.bodyFaces(st),
-              color: hexToRgba(st.view.bodyColor, [0.3, 0.31, 0.34, 1]),
-              defaultColor: hexToRgba(st.view.defaultBodyColor, [0.65, 0.68, 0.71, 1]),
+              colorOf: (hex, defaulted) => bodyColor(st.view, hex, defaulted),
               litParts: this.litParts(),
             }
           : undefined,
+        board: st.look === "board" ? { mask: hexToRgba(st.view.boardLook?.mask ?? "", [0.12, 0.32, 0.19, 1]) } : undefined,
       }) ?? 0;
     canvas.dataset.draws = String(++this.draws);
     // What the board and the stack view hold on the GPU, in bytes, for the PR's memory budget.
@@ -969,6 +1040,22 @@ export class CanvasComponent extends BaseComponent {
     if (readout) readout.textContent = text;
   }
 }
+
+// bodyColor is the colour a run of part bodies draws in (agni issue 1653). A body whose file gives
+// no height draws paler, so it reads as a guess: the plain body takes the stack's default body
+// colour, and a class colour mixes DEFAULTED_PALER toward white. KiCad states no heights, so every
+// part on a KiCad board is defaulted, and a stronger mix washed a black IC out to grey.
+function bodyColor(view: BoardStackView, hex: string, defaulted: boolean): Rgba {
+  const plain = hexToRgba(view.bodyColor, [0.3, 0.31, 0.34, 1]);
+  if (!defaulted) return hexToRgba(hex, plain);
+  if (!hex || hex === view.bodyColor) return hexToRgba(view.defaultBodyColor, [0.65, 0.68, 0.71, 1]);
+  const c = hexToRgba(hex, plain);
+  const k = DEFAULTED_PALER;
+  return [c[0] + (1 - c[0]) * k, c[1] + (1 - c[1]) * k, c[2] + (1 - c[2]) * k, c[3]];
+}
+
+// DEFAULTED_PALER is how far a class colour mixes toward white for a body at the default height.
+const DEFAULTED_PALER = 0.2;
 
 // PROBE_TRIES is how many points on a layer writeProbes tries before it gives the layer up.
 const PROBE_TRIES = 24;

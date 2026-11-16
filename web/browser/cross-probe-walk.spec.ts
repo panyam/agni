@@ -32,6 +32,8 @@
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
 // - data-action="stack-bodies" shows the parts' bodies in the stack view, and the canvas counts them
 //   in data-stack-bodies (#1352)
+// - [data-stack-look="board"] and "layers" switch the stack view's look, and the canvas names it in
+//   data-stack-look (#1653)
 // The mission's Windows build (#1595) is checked where releases are built, by hack/dist_smoke.sh.
 //
 // `make exercise-cross-probe` tells the walk which of the tickets it waits on are closed
@@ -665,6 +667,40 @@ for (const name of chosen) {
               throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
             });
           return `${counts.parts} parts stand on the board, ${counts.defaulted} at a default height ("${note}"), and a click on ${probe.ref}'s body picked it`;
+        });
+
+        // The board look (agni issue 1653) draws the board as it is made, with the mask, pads and
+        // silkscreen, and recolours what the layer look drew. A pick still answers the same part.
+        await step("see the board as it is made", { needs: ["stand the parts on the stack"] }, async () => {
+          const board = page.locator(PANE).first();
+          if (!walk.stack) return "the board's file states no stack, so it has no stack view";
+          const button = board.locator('[data-action="explode"]');
+          const renderer = await board.getAttribute("data-renderer");
+          await button.click({ timeout: 5_000 });
+          await page.waitForFunction((p) => document.querySelector(p)?.getAttribute("data-exploded") === "true", PANE, { timeout: 60_000 });
+          const gl = board.locator("canvas.sheetview-gl");
+          const look = () => gl.getAttribute("data-stack-look");
+          if ((await look()) !== "layers") throw new Error(`the stack view opened in the ${await look()} look, not the layer look`);
+          await board.locator('[data-stack-look="board"]').click({ timeout: 5_000 });
+          if ((await look()) !== "board") throw new Error(`Board left the view in the ${await look()} look`);
+          type BodyProbe = { ref: string; x: number; y: number };
+          await page
+            .waitForFunction((p) => (JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[]).length > 0, PANE, { timeout: 5_000 })
+            .catch(() => {});
+          const probe = (await page.evaluate((p) => JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[], PANE))[0];
+          if (!probe) throw new Error("no part offers a point to click in the board look");
+          const box = (await gl.boundingBox())!;
+          await page.mouse.click(box.x + probe.x, box.y + probe.y);
+          await picked(page, probe.ref);
+          await board.locator('[data-stack-look="layers"]').click({ timeout: 5_000 });
+          if ((await look()) !== "layers") throw new Error(`Layers left the view in the ${await look()} look`);
+          await button.click({ timeout: 5_000 });
+          await page
+            .waitForFunction(({ p, r }) => document.querySelector(p)?.getAttribute("data-exploded") === "false" && document.querySelector(p)?.getAttribute("data-renderer") === r, { p: PANE, r: renderer }, { timeout: 60_000 })
+            .catch(async () => {
+              throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
+            });
+          return `the board look picked ${probe.ref}'s body, and Layers switched back`;
         });
 
         await step("no page errors", {}, async () => {

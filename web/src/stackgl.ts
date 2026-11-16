@@ -39,6 +39,9 @@ export interface StackGeometry {
   nets: string[];
   slabs: Float32Array;
   faces: SlabFace[];
+  // boardFaces are the board's top and bottom faces, at depth 0 and the stack's total, which the
+  // board look fills in mask (agni issue 1653). Their vertices sit in slabs after the faces'.
+  boardFaces: { first: number; count: number; depth: number }[];
 }
 
 // stackGeometry builds the barrels and slabs of a board's stack. originX and originY are the packed
@@ -67,7 +70,15 @@ export function stackGeometry(view: BoardStackView, layout: StackLayout, originX
       faces.push({ first, count: slabs.length / 3 - first, depth: p.top, color: p.color, alpha });
     }
   }
-  return { holes: Float32Array.from(holes), nets, slabs: Float32Array.from(slabs), faces };
+  const boardFaces: StackGeometry["boardFaces"] = [];
+  if (tris.length >= 6) {
+    for (const depth of [0, layout.totalMm]) {
+      const first = slabs.length / 3;
+      for (let i = 0; i + 1 < tris.length; i += 2) slabs.push(tris[i] - originX, tris[i + 1] - originY, depth);
+      boardFaces.push({ first, count: slabs.length / 3 - first, depth });
+    }
+  }
+  return { holes: Float32Array.from(holes), nets, slabs: Float32Array.from(slabs), faces, boardFaces };
 }
 
 // barrelSides is the shared cylinder, as triangles of (cos, sin, end) with end 0 at the top.
@@ -183,10 +194,14 @@ export interface StackDrawOptions {
   bodies?: {
     zBottom: number;
     hScale: number;
-    color: Rgba;
-    defaultColor: Rgba;
+    // colorOf is the colour a run of bodies draws in, from a body's colour and whether its height
+    // is a default.
+    colorOf: (color: string, defaulted: boolean) => Rgba;
     litParts: Map<string, Rgba>;
   };
+  // board draws the board look (stacklook.ts): no barrels and no translucent slabs, and an opaque
+  // face in mask at the top and the bottom of the board, behind what lies on it.
+  board?: { mask: Rgba };
 }
 
 interface Part {
@@ -310,6 +325,7 @@ export class StackExtras {
     const gl = this.gl;
     let calls = 0;
     if (o.bodies && this.bodies && this.bodies.verts.length > 0) calls += this.drawBodies(o, o.bodies, this.bodies);
+    if (o.board) return calls + this.drawBoardFaces(o, o.board);
     if (this.holeCount > 0) {
       this.use(this.barrels, o);
       if (o.barrels) {
@@ -349,15 +365,35 @@ export class StackExtras {
     return calls;
   }
 
-  // drawBodies draws the parts with stated heights in one call and the defaulted ones in another, in
-  // a paler colour. A lit part draws again over its body in its highlight colour.
+  // drawBoardFaces fills the board's top and bottom faces in mask, opaque. Each sits at its face's
+  // depth, pushed a little away from the eye, so the copper and silkscreen the board look draws on
+  // that face win the depth test and draw over it.
+  private drawBoardFaces(o: StackDrawOptions, b: NonNullable<StackDrawOptions["board"]>): number {
+    const gl = this.gl;
+    if (this.geometry.boardFaces.length === 0) return 0;
+    this.use(this.slabs, o);
+    gl.uniform4f(this.slabs.color, b.mask[0], b.mask[1], b.mask[2], b.mask[3]);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(1, 1);
+    let calls = 0;
+    for (const f of this.geometry.boardFaces) {
+      gl.drawArrays(gl.TRIANGLES, f.first, f.count);
+      calls++;
+    }
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    return calls;
+  }
+
+  // drawBodies draws each run of one colour in one call. A lit part draws again over its body in its
+  // highlight colour.
   private drawBodies(o: StackDrawOptions, b: NonNullable<StackDrawOptions["bodies"]>, g: BodyGeometry): number {
     const gl = this.gl;
     const p = this.bodyPart;
     this.use(p, o);
     gl.uniform1f(p.zBottom, b.zBottom);
     gl.uniform1f(p.hScale, b.hScale);
-    const total = g.verts.length / BODY_FLOATS;
     let calls = 0;
     const run = (first: number, count: number, c: Rgba) => {
       if (count <= 0) return;
@@ -365,8 +401,7 @@ export class StackExtras {
       gl.drawArrays(gl.TRIANGLES, first, count);
       calls++;
     };
-    run(0, g.stated, b.color);
-    run(g.stated, total - g.stated, b.defaultColor);
+    for (const r of g.colorRuns) run(r.first, r.count, b.colorOf(r.color, r.defaulted));
     for (const [ref, c] of b.litParts) {
       const r = g.runs.get(ref);
       if (r) run(r.first, r.count, c);

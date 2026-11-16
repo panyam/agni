@@ -45,13 +45,23 @@ export interface PlacedBody {
   heightMm: number;
   back: boolean;
   defaulted: boolean;
+  color: string;
 }
 
-// BodyGeometry is what the stack view draws for the parts. The stated parts come first and the
-// defaulted ones after, so each set draws in one call. stated is the vertex count of the first set.
+// ColorRun is a run of bodies that draw in one call: one colour, all with stated heights or all at the
+// default.
+export interface ColorRun {
+  color: string;
+  defaulted: boolean;
+  first: number;
+  count: number;
+}
+
+// BodyGeometry is what the stack view draws for the parts. The bodies sort by whether their height
+// is stated and then by colour, so each colorRun draws in one call (agni issue 1653).
 export interface BodyGeometry {
   verts: Float32Array;
-  stated: number;
+  colorRuns: ColorRun[];
   runs: Map<string, BodyRun>;
   bodies: PlacedBody[];
 }
@@ -69,19 +79,22 @@ export function bodyGeometry(bodies: readonly BoardPartBody[], originX: number, 
       ring[2 * i + 1] = b.outline[2 * i + 1] - originY;
     }
     const stated = b.heightMm !== undefined && b.heightMm > 0;
-    placed.push({ ref: b.refDes, ring, heightMm: stated ? b.heightMm! : TYPICAL_BODY_MM, back: b.side === "back", defaulted: !stated });
+    placed.push({ ref: b.refDes, ring, heightMm: stated ? b.heightMm! : TYPICAL_BODY_MM, back: b.side === "back", defaulted: !stated, color: b.color });
   }
-  placed.sort((a, b) => Number(a.defaulted) - Number(b.defaulted));
+  placed.sort((a, b) => Number(a.defaulted) - Number(b.defaulted) || (a.color < b.color ? -1 : a.color > b.color ? 1 : 0));
   const out: number[] = [];
   const runs = new Map<string, BodyRun>();
-  let stated = 0;
+  const colorRuns: ColorRun[] = [];
   for (const p of placed) {
     const first = out.length / BODY_FLOATS;
     pushBody(out, p);
-    runs.set(p.ref, { ref: p.ref, first, count: out.length / BODY_FLOATS - first });
-    if (!p.defaulted) stated = out.length / BODY_FLOATS;
+    const count = out.length / BODY_FLOATS - first;
+    runs.set(p.ref, { ref: p.ref, first, count });
+    const last = colorRuns[colorRuns.length - 1];
+    if (last && last.color === p.color && last.defaulted === p.defaulted) last.count += count;
+    else colorRuns.push({ color: p.color, defaulted: p.defaulted, first, count });
   }
-  return { verts: Float32Array.from(out), stated, runs, bodies: placed };
+  return { verts: Float32Array.from(out), colorRuns, runs, bodies: placed };
 }
 
 // pushBody adds one body's top face as a fan, since the ring is convex, and a quad for each wall.

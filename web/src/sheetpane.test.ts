@@ -874,6 +874,7 @@ describe("a board view's stack view", () => {
       setExplode: (e: number) => (explode = e),
       setStackPreset: (p: string) => calls.push(`preset ${p}`),
       setStackBodies: (on: boolean) => calls.push(`bodies ${on}`),
+      setStackLook: (look: string) => calls.push(`look ${look}`),
     });
     return { gl, calls, explode: () => explode };
   };
@@ -916,6 +917,26 @@ describe("a board view's stack view", () => {
     expect(canvases[0].isConnected).toBe(false);
     expect(canvases[1].isConnected).toBe(true);
     expect(canvases[1].classList.contains("sheetview-gl")).toBe(true);
+  });
+
+  it("opens the stack view in the layer look, and switches to the board look and back", async () => {
+    const { gl, calls } = stackGl();
+    const { p } = stackPane(true, gl);
+    await p.open("board");
+    await p.toggleStack();
+    const pressed = () => [...p.element.querySelectorAll<HTMLButtonElement>("[data-stack-look]")].map((b) => [b.dataset.stackLook, b.getAttribute("aria-pressed")]);
+    expect(pressed()).toEqual([
+      ["layers", "true"],
+      ["board", "false"],
+    ]);
+    press(p, '[data-stack-look="board"]');
+    expect(calls[calls.length - 1]).toBe("look board");
+    expect(pressed()).toEqual([
+      ["layers", "false"],
+      ["board", "true"],
+    ]);
+    press(p, '[data-stack-look="layers"]');
+    expect(calls[calls.length - 1]).toBe("look layers");
   });
 
   it("shows the parts' bodies on entering, and hides them from the Parts toggle", async () => {
