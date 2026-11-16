@@ -7,8 +7,10 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // boardIndex says what a board draws, for locating a subject on the board sheet (agni issue 1325).
@@ -26,6 +28,7 @@ type boardIndex struct {
 	side      map[string]string   // ref-des -> "front" or "back", absent when the board states neither
 	compLayer map[string]string   // ref-des -> the copper layer it is placed on
 	netLayers map[string][]string // net name -> its copper layers, in the board's layer order
+	rows      []layerRow          // the board's layer rows, in render.BoardLayers' order
 
 	// boardName maps a schematic net's name to the board's, for a net the two name differently
 	// (agni issue 1590). It is set on a copy by withRenames, since the cache shares the index.
@@ -112,8 +115,14 @@ func newBoardIndex(b *geom.BoardGeometry) *boardIndex {
 	for net, set := range netLayers {
 		ix.netLayers[net] = order(set)
 	}
+	for _, r := range render.BoardLayers(b) {
+		ix.rows = append(ix.rows, layerRow{name: r.GetName(), kind: r.GetKind(), side: r.GetSide()})
+	}
 	return ix
 }
+
+// layerRow is the part of a BoardLayerRow that followOf reads.
+type layerRow struct{ name, kind, side string }
 
 // copperLayers names the board's copper layers. A layer is copper when a track, a copper shape, a
 // zone or a placement names it, or when the layer table lists it as anything but a user layer. A
@@ -227,6 +236,46 @@ func (ix *boardIndex) layersOf(s *checkspb.Subject) []string {
 		}
 	}
 	return nil
+}
+
+// followOf is how a board view follows a selection of subjects (agni issue 1635), or nil when the
+// board draws none of them. It turns to the side every drawn part and pin shares. A selection on
+// both sides, a part whose side the board does not state, or a selection with no part keeps the
+// view's side. It shows each copper row a subject uses and the silkscreen rows of each side a part
+// sits on, so a selection of several subjects shows the union of theirs.
+func (ix *boardIndex) followOf(subjects []*checkspb.Subject) *webapi.BoardFollow {
+	drawn, sides, silk, copper := false, map[string]bool{}, map[string]bool{}, map[string]bool{}
+	for _, s := range subjects {
+		if !ix.draws(s) {
+			continue
+		}
+		drawn = true
+		for _, ly := range ix.layersOf(s) {
+			copper[ly] = true
+		}
+		if k := s.GetKind(); k == check.KindPin || k == check.KindComponent {
+			side := ix.sideOf(s)
+			sides[side] = true
+			if side != "" {
+				silk[side] = true
+			}
+		}
+	}
+	if !drawn {
+		return nil
+	}
+	out := &webapi.BoardFollow{}
+	if len(sides) == 1 {
+		for side := range sides {
+			out.Side = side
+		}
+	}
+	for _, r := range ix.rows {
+		if (r.kind == "copper" && copper[r.name]) || (r.kind == "silk" && silk[r.side]) {
+			out.Layers = append(out.Layers, r.name)
+		}
+	}
+	return out
 }
 
 // draws reports whether the board draws s. A bus is never on a board.

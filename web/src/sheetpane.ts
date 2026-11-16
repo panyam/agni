@@ -17,7 +17,7 @@ import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from ".
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
-import { followBoard, type BoardFacts } from "./boardfollow.js";
+import type { BoardFollow } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import type { StackPreset } from "./stackcamera.js";
@@ -61,10 +61,11 @@ export interface TurnStore {
 export const BOARD_SHEET = "board";
 
 // Located is where a selection is drawn. sheets lists the sheets that draw it, the board included
-// when it was asked for. board says where the board places it, when the board was read and places it.
+// when it was asked for. follow is LocateSubjects' answer for how a board view follows it, the side
+// to turn to and the layer rows to show, when the board was read and draws it (agni issue 1635).
 export interface Located {
   sheets: string[];
-  board?: BoardFacts;
+  follow?: BoardFollow;
 }
 
 // FOLLOW_SIDE_KEY keeps a reader's choice to turn off a board view's following of side and layers
@@ -683,7 +684,7 @@ export class SheetPane {
       this.markFollowed(sel, true);
       return;
     }
-    if (located.board) this.turnToSelection([located.board]);
+    if (located.follow) this.turnToSelection(located.follow);
     await this.paint(true);
     this.markFollowed(sel, false);
   }
@@ -697,13 +698,14 @@ export class SheetPane {
     this.element.dataset.absent = String(absent);
   }
 
-  // turnToSelection turns a board view to the side its selection is on and shows the copper layers
-  // it uses (agni issue 1587). It only turns layers on, so a layer the reader showed stays, and a
-  // layer the reader hid comes back only when a selection uses it.
-  private turnToSelection(facts: BoardFacts[]): void {
+  // turnToSelection turns a board view to the side the engine says its selection is on and shows the
+  // layer rows it names (agni issues 1587 and 1635). It only turns layers on, so a layer the reader
+  // showed stays, and a layer the reader hid comes back only when a selection uses it.
+  private turnToSelection(follow: BoardFollow): void {
     if (!this.followSide || this.sheet !== BOARD_SHEET) return;
-    const { side, show } = followBoard(facts, this.layerRows);
-    if (side && (side === "back") !== this.seenFromBelow()) this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") });
+    const side = follow.side;
+    const show = new Set(follow.layers);
+    if ((side === "front" || side === "back") && (side === "back") !== this.seenFromBelow()) this.setTurn({ ...this.turn, orientation: flip(this.turn.orientation, "h") });
     if ([...show].some((name) => this.hiddenLayers.has(name))) {
       this.setHiddenLayers(new Set([...this.hiddenLayers].filter((name) => !show.has(name))));
     }

@@ -33,4 +33,37 @@ public interface LocateSubjectsResponseOrBuilder extends
    */
   io.github.panyam.agni.v1.webapi.SubjectSheetsOrBuilder getSubjectsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   * @return Whether the boardFollow field is set.
+   */
+  boolean hasBoardFollow();
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   * @return The boardFollow.
+   */
+  io.github.panyam.agni.v1.webapi.BoardFollow getBoardFollow();
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder getBoardFollowOrBuilder();
 }

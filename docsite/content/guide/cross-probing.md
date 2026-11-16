@@ -37,8 +37,9 @@ Clear **Follow side** to keep the side and the layers you chose. The board view 
 it did before the checkbox existed. Every board view shares the choice, and the browser keeps it
 across reloads.
 
-The sides and layers come from the engine. `LocateSubjects` reads the board and answers each
-selection's side and copper layers along with the sheets that draw it (agni issue 1587).
+The sides and layers come from the engine. `LocateSubjects` reads the board and answers the
+selection's side and the layers to show along with the sheets that draw it (agni issues 1587 and
+1635).
 
 ## Read how thick each layer is
 

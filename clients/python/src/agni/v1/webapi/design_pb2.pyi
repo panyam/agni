@@ -488,10 +488,20 @@ class LocateSubjectsRequest(_message.Message):
     def __init__(self, snapshot: _Optional[str] = ..., subjects: _Optional[_Iterable[_Union[_checks_pb2.Subject, _Mapping]]] = ..., board: _Optional[bool] = ...) -> None: ...
 
 class LocateSubjectsResponse(_message.Message):
-    __slots__ = ("subjects",)
+    __slots__ = ("subjects", "board_follow")
     SUBJECTS_FIELD_NUMBER: _ClassVar[int]
+    BOARD_FOLLOW_FIELD_NUMBER: _ClassVar[int]
     subjects: _containers.RepeatedCompositeFieldContainer[SubjectSheets]
-    def __init__(self, subjects: _Optional[_Iterable[_Union[SubjectSheets, _Mapping]]] = ...) -> None: ...
+    board_follow: BoardFollow
+    def __init__(self, subjects: _Optional[_Iterable[_Union[SubjectSheets, _Mapping]]] = ..., board_follow: _Optional[_Union[BoardFollow, _Mapping]] = ...) -> None: ...
+
+class BoardFollow(_message.Message):
+    __slots__ = ("side", "layers")
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    LAYERS_FIELD_NUMBER: _ClassVar[int]
+    side: str
+    layers: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, side: _Optional[str] = ..., layers: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SubjectSheets(_message.Message):
     __slots__ = ("subject", "sheet_ids", "locate_reason", "board_side", "board_layers")

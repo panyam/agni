@@ -222,6 +222,11 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_webapi_LocateSubjectsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_BoardFollow_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_BoardFollow_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_webapi_SubjectSheets_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -391,52 +396,55 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
       "\024\n\005label\030\006 \001(\tR\005label\"~\n\025LocateSubjectsR" +
       "equest\022\032\n\010snapshot\030\001 \001(\tR\010snapshot\0223\n\010su" +
       "bjects\030\002 \003(\0132\027.agni.v1.checks.SubjectR\010s" +
-      "ubjects\022\024\n\005board\030\003 \001(\010R\005board\"S\n\026LocateS" +
-      "ubjectsResponse\0229\n\010subjects\030\001 \003(\0132\035.agni" +
-      ".v1.webapi.SubjectSheetsR\010subjects\"\344\001\n\rS" +
-      "ubjectSheets\0221\n\007subject\030\001 \001(\0132\027.agni.v1." +
-      "checks.SubjectR\007subject\022\033\n\tsheet_ids\030\002 \003" +
-      "(\tR\010sheetIds\022A\n\rlocate_reason\030\003 \001(\0162\034.ag" +
-      "ni.v1.checks.LocateReasonR\014locateReason\022" +
-      "\035\n\nboard_side\030\004 \001(\tR\tboardSide\022!\n\014board_" +
-      "layers\030\005 \003(\tR\013boardLayers*s\n\013SheetFormat" +
-      "\022\034\n\030SHEET_FORMAT_UNSPECIFIED\020\000\022\027\n\023SHEET_" +
-      "FORMAT_PACKED\020\001\022\024\n\020SHEET_FORMAT_SVG\020\002\022\027\n" +
-      "\023SHEET_FORMAT_NATIVE\020\003*b\n\014SymbolSource\022\035" +
-      "\n\031SYMBOL_SOURCE_UNSPECIFIED\020\000\022\027\n\023SYMBOL_" +
-      "SOURCE_GLYPH\020\001\022\032\n\026SYMBOL_SOURCE_FAITHFUL" +
-      "\020\002*\201\001\n\014TraceOutcome\022\035\n\031TRACE_OUTCOME_UNS" +
-      "PECIFIED\020\000\022\030\n\024TRACE_OUTCOME_ROUTED\020\001\022\032\n\026" +
-      "TRACE_OUTCOME_NO_ROUTE\020\002\022\034\n\030TRACE_OUTCOM" +
-      "E_UNRESOLVED\020\0032\246\007\n\rDesignService\022P\n\tGetD" +
-      "esign\022 .agni.v1.webapi.GetDesignRequest\032" +
-      "!.agni.v1.webapi.GetDesignResponse\022M\n\010Ge" +
-      "tSheet\022\037.agni.v1.webapi.GetSheetRequest\032" +
-      " .agni.v1.webapi.GetSheetResponse\022_\n\016Hig" +
-      "hlightSheet\022%.agni.v1.webapi.HighlightSh" +
-      "eetRequest\032&.agni.v1.webapi.HighlightShe" +
-      "etResponse\022b\n\017GetLayoutReport\022&.agni.v1." +
-      "webapi.GetLayoutReportRequest\032\'.agni.v1." +
-      "webapi.GetLayoutReportResponse\022e\n\020GetBoa" +
-      "rdGeometry\022\'.agni.v1.webapi.GetBoardGeom" +
-      "etryRequest\032(.agni.v1.webapi.GetBoardGeo" +
-      "metryResponse\022_\n\016LocateSubjects\022%.agni.v" +
-      "1.webapi.LocateSubjectsRequest\032&.agni.v1" +
-      ".webapi.LocateSubjectsResponse\022V\n\013TraceD" +
-      "esign\022\".agni.v1.webapi.TraceDesignReques" +
-      "t\032#.agni.v1.webapi.TraceDesignResponse\022\\" +
-      "\n\rReachablePins\022$.agni.v1.webapi.Reachab" +
-      "lePinsRequest\032%.agni.v1.webapi.Reachable" +
-      "PinsResponse\022S\n\nWalkDesign\022!.agni.v1.web" +
-      "api.WalkDesignRequest\032\".agni.v1.webapi.W" +
-      "alkDesignResponse\022\\\n\rListWalkKinds\022$.agn" +
-      "i.v1.webapi.ListWalkKindsRequest\032%.agni." +
-      "v1.webapi.ListWalkKindsResponseB\266\001\n\037io.g" +
-      "ithub.panyam.agni.v1.webapiB\013DesignProto" +
-      "P\001Z,github.com/panyam/agni/gen/go/agni/v" +
-      "1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V" +
-      "1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020" +
-      "Agni::V1::Webapib\006proto3"
+      "ubjects\022\024\n\005board\030\003 \001(\010R\005board\"\223\001\n\026Locate" +
+      "SubjectsResponse\0229\n\010subjects\030\001 \003(\0132\035.agn" +
+      "i.v1.webapi.SubjectSheetsR\010subjects\022>\n\014b" +
+      "oard_follow\030\002 \001(\0132\033.agni.v1.webapi.Board" +
+      "FollowR\013boardFollow\"9\n\013BoardFollow\022\022\n\004si" +
+      "de\030\001 \001(\tR\004side\022\026\n\006layers\030\002 \003(\tR\006layers\"\344" +
+      "\001\n\rSubjectSheets\0221\n\007subject\030\001 \001(\0132\027.agni" +
+      ".v1.checks.SubjectR\007subject\022\033\n\tsheet_ids" +
+      "\030\002 \003(\tR\010sheetIds\022A\n\rlocate_reason\030\003 \001(\0162" +
+      "\034.agni.v1.checks.LocateReasonR\014locateRea" +
+      "son\022\035\n\nboard_side\030\004 \001(\tR\tboardSide\022!\n\014bo" +
+      "ard_layers\030\005 \003(\tR\013boardLayers*s\n\013SheetFo" +
+      "rmat\022\034\n\030SHEET_FORMAT_UNSPECIFIED\020\000\022\027\n\023SH" +
+      "EET_FORMAT_PACKED\020\001\022\024\n\020SHEET_FORMAT_SVG\020" +
+      "\002\022\027\n\023SHEET_FORMAT_NATIVE\020\003*b\n\014SymbolSour" +
+      "ce\022\035\n\031SYMBOL_SOURCE_UNSPECIFIED\020\000\022\027\n\023SYM" +
+      "BOL_SOURCE_GLYPH\020\001\022\032\n\026SYMBOL_SOURCE_FAIT" +
+      "HFUL\020\002*\201\001\n\014TraceOutcome\022\035\n\031TRACE_OUTCOME" +
+      "_UNSPECIFIED\020\000\022\030\n\024TRACE_OUTCOME_ROUTED\020\001" +
+      "\022\032\n\026TRACE_OUTCOME_NO_ROUTE\020\002\022\034\n\030TRACE_OU" +
+      "TCOME_UNRESOLVED\020\0032\246\007\n\rDesignService\022P\n\t" +
+      "GetDesign\022 .agni.v1.webapi.GetDesignRequ" +
+      "est\032!.agni.v1.webapi.GetDesignResponse\022M" +
+      "\n\010GetSheet\022\037.agni.v1.webapi.GetSheetRequ" +
+      "est\032 .agni.v1.webapi.GetSheetResponse\022_\n" +
+      "\016HighlightSheet\022%.agni.v1.webapi.Highlig" +
+      "htSheetRequest\032&.agni.v1.webapi.Highligh" +
+      "tSheetResponse\022b\n\017GetLayoutReport\022&.agni" +
+      ".v1.webapi.GetLayoutReportRequest\032\'.agni" +
+      ".v1.webapi.GetLayoutReportResponse\022e\n\020Ge" +
+      "tBoardGeometry\022\'.agni.v1.webapi.GetBoard" +
+      "GeometryRequest\032(.agni.v1.webapi.GetBoar" +
+      "dGeometryResponse\022_\n\016LocateSubjects\022%.ag" +
+      "ni.v1.webapi.LocateSubjectsRequest\032&.agn" +
+      "i.v1.webapi.LocateSubjectsResponse\022V\n\013Tr" +
+      "aceDesign\022\".agni.v1.webapi.TraceDesignRe" +
+      "quest\032#.agni.v1.webapi.TraceDesignRespon" +
+      "se\022\\\n\rReachablePins\022$.agni.v1.webapi.Rea" +
+      "chablePinsRequest\032%.agni.v1.webapi.Reach" +
+      "ablePinsResponse\022S\n\nWalkDesign\022!.agni.v1" +
+      ".webapi.WalkDesignRequest\032\".agni.v1.weba" +
+      "pi.WalkDesignResponse\022\\\n\rListWalkKinds\022$" +
+      ".agni.v1.webapi.ListWalkKindsRequest\032%.a" +
+      "gni.v1.webapi.ListWalkKindsResponseB\266\001\n\037" +
+      "io.github.panyam.agni.v1.webapiB\013DesignP" +
+      "rotoP\001Z,github.com/panyam/agni/gen/go/ag" +
+      "ni/v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Ag" +
+      "ni\\V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadat" +
+      "a\352\002\020Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -681,9 +689,15 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_LocateSubjectsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_LocateSubjectsResponse_descriptor,
-        new java.lang.String[] { "Subjects", });
-    internal_static_agni_v1_webapi_SubjectSheets_descriptor =
+        new java.lang.String[] { "Subjects", "BoardFollow", });
+    internal_static_agni_v1_webapi_BoardFollow_descriptor =
       getDescriptor().getMessageType(39);
+    internal_static_agni_v1_webapi_BoardFollow_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_BoardFollow_descriptor,
+        new java.lang.String[] { "Side", "Layers", });
+    internal_static_agni_v1_webapi_SubjectSheets_descriptor =
+      getDescriptor().getMessageType(40);
     internal_static_agni_v1_webapi_SubjectSheets_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_SubjectSheets_descriptor,

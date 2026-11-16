@@ -725,8 +725,8 @@ class AppRoot extends BaseComponent {
     // sheet and camera. One opens only when the reader asks, from a tile in the Sheets panel.
     // pickedIn names the view a pick came from, for the selection hook above.
     let pickedIn = "";
-    // drawnOnFor says where a selection is drawn, and with board set where the board places it, so a
-    // board view can turn to its side and show its layers (agni issue 1587).
+    // drawnOnFor says where a selection is drawn, and with board set how a board view follows it, the
+    // side and layers the engine names (agni issues 1587 and 1635).
     const drawnOnFor = async (sel: Selection, board: boolean): Promise<Located> => {
       const subject = subjectOf(sel);
       if (!subject) return { sheets: [] };
@@ -734,7 +734,7 @@ class AppRoot extends BaseComponent {
       const got = resp.subjects[0];
       const sheets = got?.sheetIds ?? [];
       if (!board || !got || !sheets.includes("board")) return { sheets };
-      return { sheets, board: { part: sel.kind === "component" || sel.kind === "pin", side: got.boardSide, layers: got.boardLayers } };
+      return { sheets, follow: resp.boardFollow };
     };
     // followOnCanvas moves the canvas to a pick made in a sheet view, by the rule a view follows, and
     // centres on it. A pick on the canvas itself does not move the canvas.

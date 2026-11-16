@@ -21,8 +21,8 @@ use agni_client::agni::v1::webapi::snapshot_service_client::SnapshotServiceClien
 use agni_client::agni::v1::webapi::{
     BlobsMissing, CheckDesignRequest, CheckDesignResponse, DeleteSnapshotRequest,
     GetBoardGeometryRequest, GetBoardGeometryResponse, GetDesignRequest, GetDesignResponse,
-    GetServerInfoRequest, IngestRequest, RunQueryRequest, RunQueryResponse, ServerInfo, Snapshot,
-    SnapshotUnavailable, TextPosition,
+    GetServerInfoRequest, IngestRequest, LocateSubjectsRequest, LocateSubjectsResponse,
+    RunQueryRequest, RunQueryResponse, ServerInfo, Snapshot, SnapshotUnavailable, TextPosition,
 };
 use agni_client::{Client, Detail};
 use serde::Serialize;
@@ -211,6 +211,7 @@ async fn wire_fixtures() {
             "agni.v1.webapi.SnapshotService" "DeleteSnapshot" => SnapshotServiceClient::delete_snapshot(DeleteSnapshotRequest) -> pbjson_types::Empty,
             "agni.v1.webapi.DesignService" "GetDesign" => DesignServiceClient::get_design(GetDesignRequest) -> GetDesignResponse,
             "agni.v1.webapi.DesignService" "GetBoardGeometry" => DesignServiceClient::get_board_geometry(GetBoardGeometryRequest) -> GetBoardGeometryResponse,
+            "agni.v1.webapi.DesignService" "LocateSubjects" => DesignServiceClient::locate_subjects(LocateSubjectsRequest) -> LocateSubjectsResponse,
             "agni.v1.webapi.CheckService" "CheckDesign" => CheckServiceClient::check_design(CheckDesignRequest) -> CheckDesignResponse,
             "agni.v1.webapi.QueryService" "RunQuery" => QueryServiceClient::run_query(RunQueryRequest) -> RunQueryResponse,
         );

@@ -70,6 +70,9 @@ var wireCalls = []wireFixture{
 	// The board's second page at a one-byte budget, one placement, after a first page of the header
 	// alone. The token is the one that first page answers.
 	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"}`)},
+	// C133 sits on the cut's back, so a board view follows it to the back with B.Cu and B.SilkS on
+	// (agni issue 1635).
+	{Name: "locate-on-board", Service: "agni.v1.webapi.DesignService", Method: "LocateSubjects", Request: json.RawMessage(`{"snapshot":"snapshots/wire","subjects":[{"kind":"component","ref":"C133"}],"board":true}`)},
 	{Name: "query-that-does-not-parse", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c"}`)},
 	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }
