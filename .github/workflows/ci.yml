@@ -218,3 +218,16 @@ jobs:
 
       - name: make browser-test SHARD=${{ matrix.shard }}/10
         run: make browser-test SHARD=${{ matrix.shard }}/10
+
+  # The TypeScript client (agni issue 1630, mission #1625). It is no part of `make testall`, like the
+  # Windows job. It builds agni, starts `agni serve`, and replays the wire fixtures through the client
+  # over Connect and gRPC.
+  ts-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: make ts-client-test
+        run: make ts-client-test

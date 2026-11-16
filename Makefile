@@ -21,10 +21,12 @@ proto:
 # regen. proto-check below is what makes forgetting it fail instead.
 # Two TS outputs since agni issue 744: the viewer's (web/src/gen, from the engine's protos alone)
 # and the datasheets workbench's (datasheet/web/src/gen, from the whole buf workspace, because its
-# API imports engine messages).
+# API imports engine messages). The TypeScript client's (clients/ts/src/gen) is the third, since agni
+# issue 1630.
 proto-web:
 	cd web && pnpm run gen
 	cd datasheet/web && pnpm run gen
+	cd clients/ts && pnpm run gen
 
 # Regenerate the Python half (agni issue 728) into the client package. Its template writes into the
 # package's own src/, which also holds hand-written code, so it cannot use buf's `clean` and removes
@@ -57,12 +59,13 @@ proto-py:
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py"; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py" "$$tmp/ts"; \
 	(cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate -o "$$tmp/protos") || exit 1; \
 	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
 	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
 	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
+	(cd clients/ts && buf generate ../../protos --template buf.gen.ts.yaml -o "$$tmp/ts") || exit 1; \
 	fail=0; \
 	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
 		echo "generated Go is stale — run 'make proto' and commit the result:"; \
@@ -87,6 +90,11 @@ proto-check:
 	if ! diff -r -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" >/dev/null 2>&1; then \
 		echo "generated Python is stale — run 'make proto-py' and commit the result:"; \
 		diff -rq -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r clients/ts/src/gen "$$tmp/ts/src/gen" >/dev/null 2>&1; then \
+		echo "generated TypeScript for the TypeScript client is stale; run 'make proto-web' and commit the result:"; \
+		diff -rq clients/ts/src/gen "$$tmp/ts/src/gen" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	tag=$$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null); \
@@ -1239,3 +1247,12 @@ pdf2doc-all:
 		echo "pdf2doc: $$pdf -> $$out"; \
 		$(PDF2DOC_PY) $(CURDIR)/datasheet/tools/pdf2doc/pdf2doc.py "$$pdf" -o "$$out"; \
 	done
+
+# The TypeScript client (agni issue 1630): typecheck the client and its example, compile the client
+# as it would publish, and run its tests. The tests start an `agni serve` from bin/agni and replay
+# clients/wirefixtures/fixtures.json against it. CI runs this as its own job, ts-client.
+.PHONY: ts-client-test
+ts-client-test: agni
+	cd clients/ts && pnpm run typecheck && pnpm run build && rm -rf dist
+	cd clients/examples/ts && pnpm run typecheck
+	cd clients/ts && AGNI_BIN=$(CURDIR)/bin/agni pnpm test
