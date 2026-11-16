@@ -158,8 +158,14 @@ jobs:
       - name: Build the viewer bundle the server tests serve
         run: cd web && pnpm build
 
+      # It lists every skipped test with its reason, so a test that quietly stops running on Windows
+      # shows in the log.
       - name: go test
-        run: go test ./... 2>&1 | tee go-test.log; grep -E "^(--- FAIL|FAIL|panic)" go-test.log > failures.log || true; cat failures.log; test ! -s failures.log
+        run: |
+          go test -v ./... > go-test.log 2>&1 || true
+          echo "Skipped on Windows:"; grep -E -A1 "^\s*--- SKIP" go-test.log || echo "  none"
+          grep -E "^(--- FAIL|FAIL|panic)" go-test.log > failures.log || true
+          cat failures.log; test ! -s failures.log
 
       - name: Smoke test agni.exe in a browser, on a drive-letter mount
         run: |
