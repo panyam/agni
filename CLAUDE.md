@@ -48,8 +48,8 @@ These hold the detail. Each loads when a session reads files in its directory.
   `core/timing`: engine rules, classes, identifiers, datalog, reports, measuring.
 - `readers` and each reader under it, `internal/sexpr`: per-format traps and oracles.
 - `web`, `web/browser`, `internal/wasmengine`, `internal/webbundle`: viewer, walks, browser engine.
-- `internal/mcpserver`, `intake`, `datasheet`, `protos`, `clients/python`, `examples`, `docsite`,
-  `hack`: MCP, sanitized summaries, datasheets, proto generation, the Python client, examples,
+- `internal/mcpserver`, `intake`, `datasheet`, `protos`, `clients`, `examples`, `docsite`,
+  `hack`: MCP, sanitized summaries, datasheets, proto generation, the language clients, examples,
   docs, samples and seeds.
 - `CONTRIBUTING.md`: the gate, the wiring edit-lists per subsystem, shell and test traps.
 
@@ -77,8 +77,8 @@ or a connection. Never add a free-text field to it.
   update the `agni` on PATH, which `make install` writes. Verify a CLI fix with the right one.
 - `make testall` is the full gate and CI runs exactly it. From a worktree run `make -k testall`, and
   build with the default Go, never `GOTOOLCHAIN=go1.26.9` (CONTRIBUTING.md has why).
-- After any proto change run `make proto`, `make proto-web`, `make proto-py` and `make proto-java`
-  (`protos/CLAUDE.md`).
+- After any proto change run `make proto`, `make proto-web`, `make proto-py`, `make proto-java` and
+  `make proto-rust` (`protos/CLAUDE.md`).
 - A stray `agni serve` can answer instead of yours. `pgrep -af "agni serve"` before trusting a
   served answer, and never `pkill` from the shell that runs the gate.
 - `go test` prints FAIL for a build failure too. A red-check names the assertion it failed on.

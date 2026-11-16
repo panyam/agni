@@ -9,29 +9,32 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-16, at `9816e494`.
+Last pruned 2026-11-16, at `53829e44`.
 
 ## At a glance
 
 **#1625 `mission_clients`** (build a tool in TypeScript, Rust, Java or C++ against a shared agni server)
-is active, at 5 of 12 tickets closed. Its exercise is `make exercise-clients`, which #1645 added. The
-mission log on #1625 says what the last run showed.
+is active, at 9 of 13 tickets closed. Its exercise is `make exercise-clients`, and at `53829e44` all
+five rows pass (Go, TypeScript, Rust, Java and C++), against a server with no auth. The mission log on
+#1625 has each run.
 
+- **#1627** (TLS and tokens) is parked, blocked on panyam/oneauth#462 (cache validated API keys),
+  panyam/oneauth#463 (refuse a call in its own protocol) and panyam/servicekit#60 (TLS in
+  `ListenAndServeGraceful`). Its comment records what is decided and what is open.
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1640 to #1645 merged. #1644 stands each part on the board in the stack view and closes
-  #1352. Its follow-ups are in #1643 (P3): part heights from ODB++, Allegro and KiCad models, and
-  picking a block edge on. #1586 closed, and #1641 dropped the walk's Windows step. #1609 (a single
-  compressed design file) is still `waiting`.
+- This run: #1645 to #1649 merged, adding the exercise, the wire fixtures, and the TypeScript, Rust,
+  C++ and Java clients (`clients/CLAUDE.md`). #1651 (P3) moves the viewer onto the TypeScript
+  client's generated code. #1643 (P3) and #1609 (`waiting`) are unchanged.
 
 ## Open, ranked
 
-1. **#1627** (TLS and tokens for a shared agni serve), the active mission's P1.
-2. **Then the client packages**, #1630 (TypeScript), #1631 (Rust), #1632 (Java) and #1638 (C++), with
-   #1634 (the board geometry contract) beside them.
-3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **#1634** (the board geometry contract, served in binary), the active mission's next ready ticket.
+2. **#1627** once its three pushdowns are tagged, then a ticket for the gRPC clients to trust a CA.
+3. **#1635 and #1651**, the viewer-side tickets on the mission.
+4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
