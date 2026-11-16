@@ -376,6 +376,18 @@ agent logging the mission runs it that way. Headless, the walk still acts throug
 So in the gate a step fails the walk when its hole misses its control, or when the viewer reports no
 event for its action.
 
+**To look at a viewer change by hand, `make try JOURNEY=<name>` is usually the quickest way**
+(agni issue 1600). It plays one demo journey from `web/browser/journeys.ts` in a visible Chrome, at
+the pace and with the captions a recording has. Then it hands the browser to you, open on the state
+the journey left, until you close the window. `make try` alone lists the journeys. `UNTIL=<number or
+caption words>` stops before a step so you take it yourself, `STEP=1` waits for a Next button before
+each step, and `DEMO_DESIGN=cut` plays on the committed cut rather than Jetson's whole board. It
+rebuilds the viewer bundle and the wasm only when their sources changed. A tried page opens in SVG,
+as the gate's and the recording's headless pages do, and the WebGL box still works afterwards. Reach
+for the other tools when the question differs. A spec with `HEADED=1` shows why one assertion
+failed, an exercise walks a whole mission and writes its step table, and `make demo-video` makes the
+mp4 for a release note.
+
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a
 cache holding only 1243 fails with `Looks like Playwright was just installed or updated`. That reads

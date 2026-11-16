@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -482,6 +482,37 @@ demo-video:
 	mkdir -p $(DEMO_OUT)
 	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) pnpm exec vitest run -c vitest.browser.config.ts browser/demo-video.spec.ts -t "records"
 	@rm -f $(DEMO_OUT)/page@*.webm
+
+# Try a demo journey by hand (agni issue 1600): one journey from web/browser/journeys.ts plays in a
+# visible browser at the recording's pace, with its captions, and then the browser is yours until you
+# close its window. With no JOURNEY it lists the journeys. UNTIL=<number or caption words> stops
+# before that step, so you take it yourself, and each run lists the steps first. STEP=1 waits for the
+# Next button on the caption before each step. DEMO_DESIGN=cut plays on the committed cut of Jetson, which
+# needs no samples. It rebuilds the viewer bundle and the wasm only when their sources changed
+# (hack/try.mk).
+#   make try
+#   make try JOURNEY=find-a-part
+#   make try JOURNEY=find-a-part UNTIL=3 DEMO_DESIGN=cut
+DEMO_DESIGN ?= jetson
+try:
+ifeq ($(JOURNEY),)
+	@echo "make try JOURNEY=<name> plays one of these journeys in a browser you can take over:"
+	@awk -F'"' '/^    name: "/ { n = $$2 } /^    title: "/ { printf "  %-20s %s\n", n, $$2 }' web/browser/journeys.ts
+	@echo "UNTIL=<number or caption words> stops before that step, STEP=1 waits for Next before each step,"
+	@echo "and DEMO_DESIGN=cut plays on the committed cut of Jetson instead of the whole board."
+else
+	@$(MAKE) --no-print-directory -f hack/try.mk
+	@if [ "$(DEMO_DESIGN)" = jetson ]; then \
+		test -f examples/jetson-project/designs/jetson/jetson-agx-thor-baseboard.kicad_pcb || \
+			{ $(MAKE) samples-oracle && $(MAKE) -C examples/jetson-project board; }; \
+		if [ "$(JOURNEY)" = compare-revisions ]; then \
+			test -f examples/jetson-project/designs/jetson-1.1.3/jetson-agx-thor-baseboard.kicad_sch || \
+				{ $(MAKE) samples-revisions && $(MAKE) -C examples/jetson-project revision; }; \
+		fi; \
+	fi
+	cd web && TRY=1 HEADED=1 SLOWMO=0 JOURNEY=$(JOURNEY) UNTIL="$(UNTIL)" STEP=$(STEP) DEMO_DESIGN=$(DEMO_DESIGN) \
+		pnpm exec vitest run -c vitest.try.config.ts -t "tries"
+endif
 
 # Mission #1329's exercise (agni issue 1330). It opens Jetson's board and its densest schematic sheet
 # in SVG and then in WebGL, times each sheet's first draw and the frames of a fixed pan and zoom, and
