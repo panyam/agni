@@ -26,6 +26,7 @@ This file covers the viewer's TypeScript, the pnpm workspace it sits in, and how
 
 - **A page opens in WebGL on a hardware GPU, and in SVG otherwise** (`web/src/rendercaps.ts`, DECISIONS.md, agni 1329). Headless Chrome reports SwiftShader, so a headless spec opens in SVG. A spec that reads the SVG view names `?mode=svg`, so a headed run on a GPU tests the same view.
 - **The canvas and every sheet view draw through one `SheetSurface`** (`web/src/sheetsurface.ts`, agni 1368).
+- **A lost WebGL context stays with its canvas.** `dispose` calls `loseContext()`, and `getContext` on that element then returns the lost context, so every shader fails to compile with a null log. A sheet view's `dropGl` swaps in a fresh canvas for the next WebGL drawing (agni 1352).
 - A view picks its renderer with a WebGL checkbox in its bar, as the canvas does (agni 1469). A new view opens in the canvas's renderer.
 - Native has a checkbox only where the server offers it.
 - A WebGL view turns through its camera (`orientTurn`). Seen from below, it draws by `strataDrawOrder`, and a click reads the same order.

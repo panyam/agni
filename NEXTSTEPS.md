@@ -9,27 +9,29 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-15, at `640b6609`.
+Last pruned 2026-11-16, at `9816e494`.
 
 ## At a glance
 
-**#1586 `mission_viewer_improvements`** (probe a board from its schematic) is active, and all 10 of its tickets
-are closed. Its exercise, `make exercise-cross-probe WALK_DESIGN=jetson HEADED=0`, passed 18 steps at
-`28d9763b`. The one step left, "a Windows build is published", waits on a release that carries the
-Windows zips #1623 added. Run the exercise after that release, and close the mission if it passes.
+**#1625 `mission_clients`** (build a tool in TypeScript, Rust, Java or C++ against a shared agni server)
+is active, at 5 of 12 tickets closed. Its exercise is `make exercise-clients`, which #1645 added. The
+mission log on #1625 says what the last run showed.
 
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1606 to #1623 merged. Archives read as folders (#1610), the board view's stack view
-  (#1608), `make try` with recording (#1619 to #1622, `make demo-video` folded in), and Windows
-  release builds with a Windows CI job (#1623). #1609 (a single compressed design file) is `waiting`.
+- This run: #1640 to #1645 merged. #1644 stands each part on the board in the stack view and closes
+  #1352. Its follow-ups are in #1643 (P3): part heights from ODB++, Allegro and KiCad models, and
+  picking a block edge on. #1586 closed, and #1641 dropped the walk's Windows step. #1609 (a single
+  compressed design file) is still `waiting`.
 
 ## Open, ranked
 
-1. **Close #1586** once a release carries the Windows zips and its exercise passes.
-2. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **#1627** (TLS and tokens for a shared agni serve), the active mission's P1.
+2. **Then the client packages**, #1630 (TypeScript), #1631 (Rust), #1632 (Java) and #1638 (C++), with
+   #1634 (the board geometry contract) beside them.
+3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
