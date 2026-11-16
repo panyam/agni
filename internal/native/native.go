@@ -251,8 +251,8 @@ func guiToolFor(absPath string) (string, bool) {
 // OpenArgs returns the command (binary + args) that opens absPath in its native GUI tool on the
 // current platform, or ErrNoTool when no native GUI is known for the format or platform. It launches
 // nothing, so the caller execs the result and the command can be unit tested. On macOS KiCad opens
-// via `open -a`. Otherwise, and for the X11 schematic editors, the binary runs directly, so a
-// missing binary surfaces at exec time.
+// via `open -a`, and on Windows through the file's association. Otherwise, and for the X11 schematic
+// editors, the binary runs directly, so a missing binary surfaces at exec time.
 func OpenArgs(absPath string) (bin string, args []string, err error) {
 	tool, ok := guiToolFor(absPath)
 	if !ok {
@@ -270,6 +270,13 @@ func OpenArgs(absPath string) (bin string, args []string, err error) {
 			bin = "kicad"
 		}
 		return bin, []string{absPath}, nil
+	case "windows":
+		// KiCad's installer registers its file types and leaves kicad.exe off PATH, so the file
+		// opens through its association (agni issue 1595). The empty argument is start's window title.
+		if tool == "KiCad" {
+			return "cmd", []string{"/c", "start", "", absPath}, nil
+		}
+		return tool, []string{absPath}, nil
 	default:
 		return "", nil, ErrNoTool
 	}

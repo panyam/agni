@@ -80,8 +80,9 @@ To run the CLI, install it one of three ways:
 go install github.com/panyam/agni/cmd/agni@latest
 ```
 
-or download the tarball for your platform from the
-[latest release](https://github.com/panyam/agni/releases/latest) and put `agni` on your PATH, or
+or download the archive for your platform from the
+[latest release](https://github.com/panyam/agni/releases/latest), a tarball for macOS and Linux or a
+zip for Windows, and put `agni` on your PATH, or
 run the container image with no install at all:
 
 ```

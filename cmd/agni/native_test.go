@@ -26,11 +26,11 @@ func TestNativeOpenPrint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("native open --print: %v", err)
 	}
-	// The launcher token is platform-specific ("open" on macOS, "kicad" on Linux); assert it
-	// is a known KiCad launcher and that the file is in the command.
+	// The launcher token is platform-specific ("open" on macOS, "kicad" on Linux, "cmd" on
+	// Windows); assert it is a known KiCad launcher and that the file is in the command.
 	fields := strings.Fields(out)
-	if len(fields) == 0 || (fields[0] != "open" && fields[0] != "kicad") {
-		t.Errorf("open --print launcher = %q, want open (macOS) or kicad (Linux)", out)
+	if len(fields) == 0 || (fields[0] != "open" && fields[0] != "kicad" && fields[0] != "cmd") {
+		t.Errorf("open --print launcher = %q, want open (macOS), kicad (Linux) or cmd (Windows)", out)
 	}
 	if !strings.Contains(out, "board.kicad_pcb") {
 		t.Errorf("open --print output = %q, want the fixture path", out)

@@ -120,11 +120,19 @@ func Merge(discovered, explicit []Mount) []Mount {
 	return append(merged, explicit...)
 }
 
+// Rooted reports whether a host path names a place from a root rather than from a folder: an
+// absolute path, a path with a volume such as C: or \\server\share, or a path that starts with a
+// separator. On Windows `\srv` and `C:srv` are rooted without being absolute, so filepath.IsAbs
+// alone would treat them as relative and join them under another folder (agni issue 1595).
+func Rooted(p string) bool {
+	return filepath.IsAbs(p) || filepath.VolumeName(p) != "" || (p != "" && os.IsPathSeparator(p[0]))
+}
+
 // SafeResolve joins a mount-relative path onto root and confirms the result is inside root,
-// returning the cleaned absolute path. It rejects absolute inputs and any path that escapes the
-// mount via "..". Resolve is its only non-test caller.
+// returning the cleaned absolute path. It rejects rooted inputs (Rooted) and any path that escapes
+// the mount via "..". Resolve is its only non-test caller.
 func SafeResolve(root, rel string) (string, error) {
-	if filepath.IsAbs(rel) {
+	if Rooted(rel) {
 		return "", fmt.Errorf("path %q must be relative to the mount", rel)
 	}
 	joined := filepath.Join(root, rel)

@@ -19,6 +19,8 @@
 # docsite/content/build/the-gate.md already catalogues what that costs. There is deliberately no
 # offline escape hatch and no skip-if-absent: if the corpus cannot be fetched, the gate is red.
 set -euo pipefail
+# Git Bash on Windows has sha256sum and no shasum (agni issue 1595).
+command -v shasum >/dev/null || shasum() { shift 2; sha256sum "$@"; }
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 pin="$root/hack/samples.pin"

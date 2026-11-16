@@ -41,6 +41,10 @@ func TestOpenArgs(t *testing.T) {
 		if bin != "kicad" || len(args) != 1 || args[0] != pcb {
 			t.Errorf("linux kicad open = %q %v, want kicad %s", bin, args, pcb)
 		}
+	case "windows":
+		if bin != "cmd" || strings.Join(args, "|") != "/c|start||"+pcb {
+			t.Errorf("windows kicad open = %q %q, want cmd /c start \"\" %s", bin, args, pcb)
+		}
 	}
 
 	// xschem/Lepton launch the binary directly on every supported platform.

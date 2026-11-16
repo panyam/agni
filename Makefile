@@ -295,13 +295,15 @@ python-dist-check:
 	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	$(MAKE) --no-print-directory python-dist V=v0.0.1 PY_DIST="$$tmp/dist"
 
-# The release's binaries (WS16-003): one tarball per platform holding an agni that embeds the viewer,
+# The release's binaries (WS16-003): one archive per platform holding an agni that embeds the viewer,
 # the viewer alone as agni-web-<tag>.tar.gz for a `go install` binary to download, and checksums.txt
-# over all of them. It needs the built bundle, so it runs `make ui`'s viewer build first. The release
-# workflow runs this and attaches dist/release; hack/dist_smoke.sh runs the host's binary at the end.
+# over all of them. macOS and Linux get a tarball. Windows gets agni.exe in a zip, which Windows opens
+# without another tool (agni issue 1595). It needs the built bundle, so it runs `make ui`'s viewer
+# build first. The release workflow runs this and attaches dist/release; hack/dist_smoke.sh checks
+# every archive and runs the host's binary at the end.
 #   make dist V=v0.3.13
 DIST_DIR ?= dist/release
-DIST_PLATFORMS ?= darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
+DIST_PLATFORMS ?= darwin/arm64 darwin/amd64 linux/arm64 linux/amd64 windows/amd64 windows/arm64
 
 dist:
 	@$(check_semver)
@@ -311,24 +313,27 @@ dist:
 	@set -e; export COPYFILE_DISABLE=1; rm -rf "$(DIST_DIR)"; mkdir -p "$(DIST_DIR)"; out=$$(cd "$(DIST_DIR)" && pwd); \
 	(cd web && tar --no-xattrs -czf "$$out/agni-web-$(V).tar.gz" templates static/*.js static/*.css); \
 	for p in $(DIST_PLATFORMS); do \
-		os=$${p%/*}; arch=$${p#*/}; name=agni_$(V)_$${os}_$${arch}; \
+		os=$${p%/*}; arch=$${p#*/}; name=agni_$(V)_$${os}_$${arch}; exe=agni; \
+		if [ "$$os" = windows ]; then exe=agni.exe; fi; \
 		echo "building $$name"; \
 		mkdir -p "$$out/$$name"; \
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build -trimpath -tags embedweb \
 			-ldflags "-s -w -X github.com/panyam/agni/internal/version.stamped=$(V)" \
-			-o "$$out/$$name/agni" ./cmd/agni; \
+			-o "$$out/$$name/$$exe" ./cmd/agni; \
 		cp LICENSE README.md "$$out/$$name/"; \
-		tar --no-xattrs -C "$$out" -czf "$$out/$$name.tar.gz" "$$name"; \
+		if [ "$$os" = windows ]; then (cd "$$out" && zip -qrX "$$name.zip" "$$name"); \
+		else tar --no-xattrs -C "$$out" -czf "$$out/$$name.tar.gz" "$$name"; fi; \
 		rm -rf "$$out/$$name"; \
 	done; \
-	cd "$$out" && shasum -a 256 *.tar.gz > checksums.txt
+	cd "$$out" && shasum -a 256 $$(ls *.tar.gz *.zip 2>/dev/null) > checksums.txt
 	hack/dist_smoke.sh $(DIST_DIR) $(V)
 
-# The gate's run of dist for this machine's platform alone, so a packaging or smoke break shows on the
-# PR rather than on the release, as v0.3.13's did.
+# The gate's run of dist for this machine's platform, so a packaging or smoke break shows on the PR
+# rather than on the release, as v0.3.13's did. windows/amd64 is built too, so the zip's layout is
+# checked on every PR (agni issue 1595).
 dist-check:
 	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
-	$(MAKE) --no-print-directory dist V=v0.0.1 DIST_DIR="$$tmp/dist" DIST_PLATFORMS="$$($(GO) env GOOS)/$$($(GO) env GOARCH)"
+	$(MAKE) --no-print-directory dist V=v0.0.1 DIST_DIR="$$tmp/dist" DIST_PLATFORMS="$$($(GO) env GOOS)/$$($(GO) env GOARCH) windows/amd64"
 
 # The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
 # workbook plus a markdown summary of every tab, the example agni issue 823 finished.
