@@ -30,8 +30,6 @@
 // - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
 // - a board layer row states its thickness in [data-thickness], and the stack follows the rows (#1603)
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
-// - data-action="bookmark" takes a note in [data-bookmark-note], and [data-bookmark] lists it after
-//   a reload (#1594)
 // - the latest release carries a Windows build (#1595)
 //
 // `make exercise-cross-probe` tells the walk which of the tickets it waits on are closed
@@ -638,23 +636,8 @@ for (const name of chosen) {
           return "none";
         });
 
-        // These two leave the page, so they go after the page error check, and a page error on the way out
-        // fails neither.
-        await step(`bookmark ${part.ref} and find it after a reload`, { needs: ["two views"], waitsOn: ["#1594"] }, async () => {
-          await tile(page, part.sheet);
-          await zoomTo(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`);
-          const at = await clearPoint(page, `${SHEET} [data-kind="component"][data-ref="${part.ref}"]`, part.ref);
-          await page.mouse.click(at.x, at.y);
-          await picked(page, part.ref);
-          await page.locator('[data-action="bookmark"]').first().click({ timeout: 5_000 });
-          await page.locator("[data-bookmark-note]").first().fill("suspect, check its value");
-          await page.keyboard.press("Enter");
-          await page.reload({ waitUntil: "networkidle" });
-          const mark = page.locator("[data-bookmark]").filter({ hasText: part.ref });
-          await mark.first().waitFor({ timeout: 30_000 });
-          return (await mark.first().innerText()).trim();
-        });
-
+        // This one leaves the page, so it goes after the page error check, and a page error on the way
+        // out does not fail it. The bookmark step moved to the markup walk (#1612).
         await step("open an ODB++ job packed in a .7z", {}, async () => {
           await page.goto(`${base()}/designs/probe/designs/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
           // Earlier steps may have closed the Sheets panel, so the tile need only be in the page.
