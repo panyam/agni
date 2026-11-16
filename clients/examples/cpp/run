@@ -1,0 +1,15 @@
+#!/bin/sh
+# Runs the C++ client example, as make exercise-clients runs every language's example:
+# clients/examples/<language>/run -server <url> -design <uri>. The first run configures and builds it
+# into build/ beside this script, which git ignores. Later runs build only what changed. The build's
+# output goes to build/build.log, and to stderr when the build fails.
+set -e
+here=$(cd "$(dirname "$0")" && pwd)
+build="$here/build"
+mkdir -p "$build"
+if ! { [ -f "$build/CMakeCache.txt" ] || cmake -S "$here" -B "$build" -DCMAKE_BUILD_TYPE=Release; } >"$build/build.log" 2>&1 ||
+	! cmake --build "$build" --target agni_example -j 4 >>"$build/build.log" 2>&1; then
+	cat "$build/build.log" >&2
+	exit 1
+fi
+exec "$build/agni_example" "$@"

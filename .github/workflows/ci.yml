@@ -266,3 +266,32 @@ jobs:
         run: cargo test --workspace --locked
         env:
           AGNI_BIN: ${{ runner.temp }}/agni
+
+  # The C++ client (agni issue 1638), outside `make testall`. The client generates its protobuf and
+  # gRPC code at build time, so make proto-check covers no C++, and this job's replay of the wire
+  # fixtures holds it to the server. Ubuntu's packages are protobuf 3.21 and gRPC 1.51, older than a
+  # developer's Homebrew or vcpkg install. A proto feature those releases lack fails here first.
+  client-cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # The same source drop as browser-test's, for the same 403.
+      - name: Install protobuf and gRPC for C++
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc
+
+      - name: Build agni
+        run: go build -o "$RUNNER_TEMP/agni" ./cmd/agni
+
+      - name: Build the client and replay the wire fixtures
+        run: |
+          cmake -S clients/cpp -B clients/cpp/build -DAGNI_BINARY="$RUNNER_TEMP/agni"
+          cmake --build clients/cpp/build -j "$(nproc)"
+          ctest --test-dir clients/cpp/build --output-on-failure

@@ -11,7 +11,7 @@ against one server and compares each line with the CLI's answers.
 | TypeScript | [ts/](ts/), through [@panyam/agni-client](../ts/) | #1630 |
 | Rust | [rust/](rust/), through [clients/rust](../rust/) | #1631 |
 | Java | to come | #1632 |
-| C++ | to come | #1638 |
+| C++ | [cpp/](cpp/), through [clients/cpp](../cpp/) | #1638 |
 
 A `run` script takes `-server <url>` and `-design <mount:// URI>`, and its last line of output is the
 summary. [Writing an agni client](../../docsite/content/build/client-contract.md) says what each
