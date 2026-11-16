@@ -67,7 +67,7 @@ func main() {
 			return demokit.Errf("read %s: %v", chosen, err)
 		}
 		var buf bytes.Buffer
-		if err := ipc2581.Write(&buf, d); err != nil {
+		if err := ipc2581.Write(&buf, d, nil); err != nil {
 			return demokit.Errf("emit ipc-2581: %v", err)
 		}
 		fmt.Printf("%s -> IR -> ipc-2581 (%d bytes):\n\n%s\n", chosen, buf.Len(), head(buf.String(), 16))

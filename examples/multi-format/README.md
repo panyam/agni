@@ -11,7 +11,7 @@ example demonstrates the "many readers, one IR" thesis.
   IPC-read report **zero net changes** and the same component set. Same connectivity, keyed on
   `(ref_des, pin)`, regardless of format.
 - Component attributes legitimately differ, such as a Value or a part reference. The physical
-  tier differs too, since footprints, layers, stackup and BOM appear only for KiCad and
+  tier differs too, since footprints, layers and BOM appear only for KiCad and
   IPC-2581. The semantic netlist converges, and format-specific detail is kept in attributes
   and the physical tier (CONSTRAINTS C9).
 

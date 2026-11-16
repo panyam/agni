@@ -59,14 +59,13 @@ func TestStatsLinesPhysicalTier(t *testing.T) {
 		Name:       "P",
 		Footprints: []*ir.Footprint{{Name: "R_0603"}},
 		Layers:     []*ir.Layer{{Name: "F.Cu"}, {Name: "B.Cu"}},
-		Stackup:    &ir.Stackup{Layers: []*ir.StackupLayer{{LayerRef: "F.Cu"}}},
 		Bom:        []*ir.BomLine{{Mpn: "RES-10K"}},
 	}
 	got := StatsLines(d)
 	for _, r := range []struct {
 		label string
 		n     int
-	}{{"footprints", 1}, {"layers", 2}, {"stackup layers", 1}, {"bom lines", 1}} {
+	}{{"footprints", 1}, {"layers", 2}, {"bom lines", 1}} {
 		if !hasRow(got, r.label, r.n) {
 			t.Errorf("StatsLines missing physical-tier row %s: %d in:\n%s", r.label, r.n, got)
 		}

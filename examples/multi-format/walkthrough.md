@@ -16,7 +16,7 @@ This walkthrough proves it on one small board (R1, R2, U1; nets VCC, GND, SIG) a
 
 ## Read the same board three ways {#read}
 
-> Each reader normalizes its format into an ir.Design. The stats split into a netlist group and a format-detail group. The netlist block holds components, nets and sections, and it is identical across all three. Every component carries one section per placement, whether that section names a logical part (EDIF) or a footprint (KiCad/IPC). The format-detail block shows only what each format carries. EDIF has libraries, and KiCad and IPC-2581 have footprints, layers, stackup and BOM. That is the C9 promotion rule at work.
+> Each reader normalizes its format into an ir.Design. The stats split into a netlist group and a format-detail group. The netlist block holds components, nets and sections, and it is identical across all three. Every component carries one section per placement, whether that section names a logical part (EDIF) or a footprint (KiCad/IPC). The format-detail block shows only what each format carries. EDIF has libraries, and KiCad and IPC-2581 have footprints, layers and BOM. That is the C9 promotion rule at work.
 
 ```mermaid
 sequenceDiagram

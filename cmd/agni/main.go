@@ -30,6 +30,7 @@ import (
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/opscmd"
@@ -426,9 +427,6 @@ func statsCmd() *cobra.Command {
 			}
 			if len(d.Layers) > 0 {
 				fmt.Fprintf(w, "layers:              %d\n", len(d.Layers))
-			}
-			if d.Stackup != nil {
-				fmt.Fprintf(w, "stackup layers:      %d\n", len(d.Stackup.Layers))
 			}
 			if len(d.Bom) > 0 {
 				fmt.Fprintf(w, "bom lines:           %d\n", len(d.Bom))
@@ -1494,7 +1492,12 @@ func emitCmd() *cobra.Command {
 			if kind == emitEDIF {
 				return edif.WriteNetlist(w, d)
 			}
-			return ipc2581.Write(w, d)
+			// The stack comes from the board, when the input has one (agni 1660).
+			var stack *geom.Stackup
+			if b, err := newLoader().BoardGeometry(args[0]); err == nil && b != nil {
+				stack = b.GetStackup()
+			}
+			return ipc2581.Write(w, d, stack)
 		},
 	}
 	c.Flags().StringVar(&format, "format", "",

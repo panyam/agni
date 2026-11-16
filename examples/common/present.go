@@ -59,9 +59,6 @@ func StatsLines(d *ir.Design) string {
 		{"footprints", "", len(d.Footprints)},
 		{"layers", "", len(d.Layers)},
 	}
-	if d.Stackup != nil {
-		detail = append(detail, entry{"stackup layers", "", len(d.Stackup.Layers)})
-	}
 	detail = append(detail, entry{"bom lines", "", len(d.Bom)})
 
 	var shown strings.Builder

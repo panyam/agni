@@ -19,7 +19,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/ir";
 // The messages fall into two tiers of maturity.
 //   Tier 1 (netlist): Design, PartLibrary, PartType, Pin, Component, ComponentSection,
 //     Net, Connection, Sheet. Exercised by the EDIF netlist reader; names are frozen.
-//   Tier 2 (physical): Footprint, Layer, Stackup, Constraint, BomLine. PROVISIONAL.
+//   Tier 2 (physical): Footprint, Layer, Constraint, BomLine. PROVISIONAL.
 //     They were designed from the IPC-2581/ODB++ schemas. The IPC-2581 reader fills all five,
 //     KiCad fills Footprint and Constraint, and ODB++ fills Layer. Names and shape may still
 //     change.
@@ -107,7 +107,10 @@ message Design {
   // Semantic layer, tier 2 (physical) -- PROVISIONAL (see file header, CONSTRAINTS C9).
   repeated Footprint footprints = 8;
   repeated Layer layers = 9;
-  Stackup stackup = 10;
+  // Field 10 was the provisional stackup, which only the IPC-2581 design read filled. The board's
+  // stack is BoardGeometry.stackup (agni 1660).
+  reserved 10;
+  reserved "stackup";
   repeated Constraint constraints = 11;
   repeated BomLine bom = 12;
   // net_groups are the sets of nets the design tool declares belong together, read from the source
@@ -834,21 +837,6 @@ message Layer {
   string name = 1;
   int32 index = 2;  // stack order
   LayerFunction function = 3;
-  map<string, string> attributes = 14;
-  Provenance prov = 16;
-}
-
-// StackupLayer is one physical layer in the board stackup (a sub-record; keyed within
-// its parent Stackup).
-message StackupLayer {
-  string layer_ref = 1;    // Layer.name
-  int64 thickness_nm = 2;  // nanometers, matching the geometry sidecar unit convention
-  string material = 3;
-  map<string, string> attributes = 14;
-}
-
-message Stackup {
-  repeated StackupLayer layers = 1;
   map<string, string> attributes = 14;
   Provenance prov = 16;
 }

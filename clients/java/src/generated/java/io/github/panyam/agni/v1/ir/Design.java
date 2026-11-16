@@ -535,32 +535,6 @@ private static final long serialVersionUID = 0L;
     return layers_.get(index);
   }
 
-  public static final int STACKUP_FIELD_NUMBER = 10;
-  private io.github.panyam.agni.v1.ir.Stackup stackup_;
-  /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   * @return Whether the stackup field is set.
-   */
-  @java.lang.Override
-  public boolean hasStackup() {
-    return ((bitField0_ & 0x00000002) != 0);
-  }
-  /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   * @return The stackup.
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.ir.Stackup getStackup() {
-    return stackup_ == null ? io.github.panyam.agni.v1.ir.Stackup.getDefaultInstance() : stackup_;
-  }
-  /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.ir.StackupOrBuilder getStackupOrBuilder() {
-    return stackup_ == null ? io.github.panyam.agni.v1.ir.Stackup.getDefaultInstance() : stackup_;
-  }
-
   public static final int CONSTRAINTS_FIELD_NUMBER = 11;
   @SuppressWarnings("serial")
   private java.util.List<io.github.panyam.agni.v1.ir.Constraint> constraints_;
@@ -873,7 +847,7 @@ java.lang.String defaultValue) {
    */
   @java.lang.Override
   public boolean hasProv() {
-    return ((bitField0_ & 0x00000004) != 0);
+    return ((bitField0_ & 0x00000002) != 0);
   }
   /**
    * <code>.agni.v1.ir.Provenance prov = 16 [json_name = "prov"];</code>
@@ -932,9 +906,6 @@ java.lang.String defaultValue) {
     for (int i = 0; i < layers_.size(); i++) {
       output.writeMessage(9, layers_.get(i));
     }
-    if (((bitField0_ & 0x00000002) != 0)) {
-      output.writeMessage(10, getStackup());
-    }
     for (int i = 0; i < constraints_.size(); i++) {
       output.writeMessage(11, constraints_.get(i));
     }
@@ -950,7 +921,7 @@ java.lang.String defaultValue) {
     for (int i = 0; i < fidelity_.size(); i++) {
       output.writeMessage(15, fidelity_.get(i));
     }
-    if (((bitField0_ & 0x00000004) != 0)) {
+    if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(16, getProv());
     }
     if (((bitField0_ & 0x00000001) != 0)) {
@@ -1026,10 +997,6 @@ java.lang.String defaultValue) {
           }
           size += 1 * count;
         }
-    if (((bitField0_ & 0x00000002) != 0)) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(10, getStackup());
-    }
 
         {
           final int count = constraints_.size();
@@ -1067,7 +1034,7 @@ java.lang.String defaultValue) {
           }
           size += 1 * count;
         }
-    if (((bitField0_ & 0x00000004) != 0)) {
+    if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(16, getProv());
     }
@@ -1131,11 +1098,6 @@ java.lang.String defaultValue) {
         .equals(other.getFootprintsList())) return false;
     if (!getLayersList()
         .equals(other.getLayersList())) return false;
-    if (hasStackup() != other.hasStackup()) return false;
-    if (hasStackup()) {
-      if (!getStackup()
-          .equals(other.getStackup())) return false;
-    }
     if (!getConstraintsList()
         .equals(other.getConstraintsList())) return false;
     if (!getBomList()
@@ -1195,10 +1157,6 @@ java.lang.String defaultValue) {
     if (getLayersCount() > 0) {
       hash = (37 * hash) + LAYERS_FIELD_NUMBER;
       hash = (53 * hash) + getLayersList().hashCode();
-    }
-    if (hasStackup()) {
-      hash = (37 * hash) + STACKUP_FIELD_NUMBER;
-      hash = (53 * hash) + getStackup().hashCode();
     }
     if (getConstraintsCount() > 0) {
       hash = (37 * hash) + CONSTRAINTS_FIELD_NUMBER;
@@ -1387,7 +1345,6 @@ java.lang.String defaultValue) {
         internalGetInputDiagnosticsFieldBuilder();
         internalGetFootprintsFieldBuilder();
         internalGetLayersFieldBuilder();
-        internalGetStackupFieldBuilder();
         internalGetConstraintsFieldBuilder();
         internalGetBomFieldBuilder();
         internalGetNetGroupsFieldBuilder();
@@ -1449,32 +1406,27 @@ java.lang.String defaultValue) {
         layersBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000200);
-      stackup_ = null;
-      if (stackupBuilder_ != null) {
-        stackupBuilder_.dispose();
-        stackupBuilder_ = null;
-      }
       if (constraintsBuilder_ == null) {
         constraints_ = java.util.Collections.emptyList();
       } else {
         constraints_ = null;
         constraintsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000800);
+      bitField0_ = (bitField0_ & ~0x00000400);
       if (bomBuilder_ == null) {
         bom_ = java.util.Collections.emptyList();
       } else {
         bom_ = null;
         bomBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00001000);
+      bitField0_ = (bitField0_ & ~0x00000800);
       if (netGroupsBuilder_ == null) {
         netGroups_ = java.util.Collections.emptyList();
       } else {
         netGroups_ = null;
         netGroupsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00002000);
+      bitField0_ = (bitField0_ & ~0x00001000);
       internalGetMutableAttributes().clear();
       if (fidelityBuilder_ == null) {
         fidelity_ = java.util.Collections.emptyList();
@@ -1482,7 +1434,7 @@ java.lang.String defaultValue) {
         fidelity_ = null;
         fidelityBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00008000);
+      bitField0_ = (bitField0_ & ~0x00004000);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -1576,36 +1528,36 @@ java.lang.String defaultValue) {
         result.layers_ = layersBuilder_.build();
       }
       if (constraintsBuilder_ == null) {
-        if (((bitField0_ & 0x00000800) != 0)) {
+        if (((bitField0_ & 0x00000400) != 0)) {
           constraints_ = java.util.Collections.unmodifiableList(constraints_);
-          bitField0_ = (bitField0_ & ~0x00000800);
+          bitField0_ = (bitField0_ & ~0x00000400);
         }
         result.constraints_ = constraints_;
       } else {
         result.constraints_ = constraintsBuilder_.build();
       }
       if (bomBuilder_ == null) {
-        if (((bitField0_ & 0x00001000) != 0)) {
+        if (((bitField0_ & 0x00000800) != 0)) {
           bom_ = java.util.Collections.unmodifiableList(bom_);
-          bitField0_ = (bitField0_ & ~0x00001000);
+          bitField0_ = (bitField0_ & ~0x00000800);
         }
         result.bom_ = bom_;
       } else {
         result.bom_ = bomBuilder_.build();
       }
       if (netGroupsBuilder_ == null) {
-        if (((bitField0_ & 0x00002000) != 0)) {
+        if (((bitField0_ & 0x00001000) != 0)) {
           netGroups_ = java.util.Collections.unmodifiableList(netGroups_);
-          bitField0_ = (bitField0_ & ~0x00002000);
+          bitField0_ = (bitField0_ & ~0x00001000);
         }
         result.netGroups_ = netGroups_;
       } else {
         result.netGroups_ = netGroupsBuilder_.build();
       }
       if (fidelityBuilder_ == null) {
-        if (((bitField0_ & 0x00008000) != 0)) {
+        if (((bitField0_ & 0x00004000) != 0)) {
           fidelity_ = java.util.Collections.unmodifiableList(fidelity_);
-          bitField0_ = (bitField0_ & ~0x00008000);
+          bitField0_ = (bitField0_ & ~0x00004000);
         }
         result.fidelity_ = fidelity_;
       } else {
@@ -1631,21 +1583,15 @@ java.lang.String defaultValue) {
             : inputDiagnosticsBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
-      if (((from_bitField0_ & 0x00000400) != 0)) {
-        result.stackup_ = stackupBuilder_ == null
-            ? stackup_
-            : stackupBuilder_.build();
-        to_bitField0_ |= 0x00000002;
-      }
-      if (((from_bitField0_ & 0x00004000) != 0)) {
+      if (((from_bitField0_ & 0x00002000) != 0)) {
         result.attributes_ = internalGetAttributes();
         result.attributes_.makeImmutable();
       }
-      if (((from_bitField0_ & 0x00010000) != 0)) {
+      if (((from_bitField0_ & 0x00008000) != 0)) {
         result.prov_ = provBuilder_ == null
             ? prov_
             : provBuilder_.build();
-        to_bitField0_ |= 0x00000004;
+        to_bitField0_ |= 0x00000002;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1836,14 +1782,11 @@ java.lang.String defaultValue) {
           }
         }
       }
-      if (other.hasStackup()) {
-        mergeStackup(other.getStackup());
-      }
       if (constraintsBuilder_ == null) {
         if (!other.constraints_.isEmpty()) {
           if (constraints_.isEmpty()) {
             constraints_ = other.constraints_;
-            bitField0_ = (bitField0_ & ~0x00000800);
+            bitField0_ = (bitField0_ & ~0x00000400);
           } else {
             ensureConstraintsIsMutable();
             constraints_.addAll(other.constraints_);
@@ -1856,7 +1799,7 @@ java.lang.String defaultValue) {
             constraintsBuilder_.dispose();
             constraintsBuilder_ = null;
             constraints_ = other.constraints_;
-            bitField0_ = (bitField0_ & ~0x00000800);
+            bitField0_ = (bitField0_ & ~0x00000400);
             constraintsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetConstraintsFieldBuilder() : null;
@@ -1869,7 +1812,7 @@ java.lang.String defaultValue) {
         if (!other.bom_.isEmpty()) {
           if (bom_.isEmpty()) {
             bom_ = other.bom_;
-            bitField0_ = (bitField0_ & ~0x00001000);
+            bitField0_ = (bitField0_ & ~0x00000800);
           } else {
             ensureBomIsMutable();
             bom_.addAll(other.bom_);
@@ -1882,7 +1825,7 @@ java.lang.String defaultValue) {
             bomBuilder_.dispose();
             bomBuilder_ = null;
             bom_ = other.bom_;
-            bitField0_ = (bitField0_ & ~0x00001000);
+            bitField0_ = (bitField0_ & ~0x00000800);
             bomBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBomFieldBuilder() : null;
@@ -1895,7 +1838,7 @@ java.lang.String defaultValue) {
         if (!other.netGroups_.isEmpty()) {
           if (netGroups_.isEmpty()) {
             netGroups_ = other.netGroups_;
-            bitField0_ = (bitField0_ & ~0x00002000);
+            bitField0_ = (bitField0_ & ~0x00001000);
           } else {
             ensureNetGroupsIsMutable();
             netGroups_.addAll(other.netGroups_);
@@ -1908,7 +1851,7 @@ java.lang.String defaultValue) {
             netGroupsBuilder_.dispose();
             netGroupsBuilder_ = null;
             netGroups_ = other.netGroups_;
-            bitField0_ = (bitField0_ & ~0x00002000);
+            bitField0_ = (bitField0_ & ~0x00001000);
             netGroupsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetNetGroupsFieldBuilder() : null;
@@ -1919,12 +1862,12 @@ java.lang.String defaultValue) {
       }
       internalGetMutableAttributes().mergeFrom(
           other.internalGetAttributes());
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00002000;
       if (fidelityBuilder_ == null) {
         if (!other.fidelity_.isEmpty()) {
           if (fidelity_.isEmpty()) {
             fidelity_ = other.fidelity_;
-            bitField0_ = (bitField0_ & ~0x00008000);
+            bitField0_ = (bitField0_ & ~0x00004000);
           } else {
             ensureFidelityIsMutable();
             fidelity_.addAll(other.fidelity_);
@@ -1937,7 +1880,7 @@ java.lang.String defaultValue) {
             fidelityBuilder_.dispose();
             fidelityBuilder_ = null;
             fidelity_ = other.fidelity_;
-            bitField0_ = (bitField0_ & ~0x00008000);
+            bitField0_ = (bitField0_ & ~0x00004000);
             fidelityBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetFidelityFieldBuilder() : null;
@@ -2066,13 +2009,6 @@ java.lang.String defaultValue) {
               }
               break;
             } // case 74
-            case 82: {
-              input.readMessage(
-                  internalGetStackupFieldBuilder().getBuilder(),
-                  extensionRegistry);
-              bitField0_ |= 0x00000400;
-              break;
-            } // case 82
             case 90: {
               io.github.panyam.agni.v1.ir.Constraint m =
                   input.readMessage(
@@ -2105,7 +2041,7 @@ java.lang.String defaultValue) {
                   AttributesDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
               internalGetMutableAttributes().getMutableMap().put(
                   attributes__.getKey(), attributes__.getValue());
-              bitField0_ |= 0x00004000;
+              bitField0_ |= 0x00002000;
               break;
             } // case 114
             case 122: {
@@ -2125,7 +2061,7 @@ java.lang.String defaultValue) {
               input.readMessage(
                   internalGetProvFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00010000;
+              bitField0_ |= 0x00008000;
               break;
             } // case 130
             case 138: {
@@ -4124,131 +4060,12 @@ java.lang.String defaultValue) {
       return layersBuilder_;
     }
 
-    private io.github.panyam.agni.v1.ir.Stackup stackup_;
-    private com.google.protobuf.SingleFieldBuilder<
-        io.github.panyam.agni.v1.ir.Stackup, io.github.panyam.agni.v1.ir.Stackup.Builder, io.github.panyam.agni.v1.ir.StackupOrBuilder> stackupBuilder_;
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     * @return Whether the stackup field is set.
-     */
-    public boolean hasStackup() {
-      return ((bitField0_ & 0x00000400) != 0);
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     * @return The stackup.
-     */
-    public io.github.panyam.agni.v1.ir.Stackup getStackup() {
-      if (stackupBuilder_ == null) {
-        return stackup_ == null ? io.github.panyam.agni.v1.ir.Stackup.getDefaultInstance() : stackup_;
-      } else {
-        return stackupBuilder_.getMessage();
-      }
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public Builder setStackup(io.github.panyam.agni.v1.ir.Stackup value) {
-      if (stackupBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        stackup_ = value;
-      } else {
-        stackupBuilder_.setMessage(value);
-      }
-      bitField0_ |= 0x00000400;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public Builder setStackup(
-        io.github.panyam.agni.v1.ir.Stackup.Builder builderForValue) {
-      if (stackupBuilder_ == null) {
-        stackup_ = builderForValue.build();
-      } else {
-        stackupBuilder_.setMessage(builderForValue.build());
-      }
-      bitField0_ |= 0x00000400;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public Builder mergeStackup(io.github.panyam.agni.v1.ir.Stackup value) {
-      if (stackupBuilder_ == null) {
-        if (((bitField0_ & 0x00000400) != 0) &&
-          stackup_ != null &&
-          stackup_ != io.github.panyam.agni.v1.ir.Stackup.getDefaultInstance()) {
-          getStackupBuilder().mergeFrom(value);
-        } else {
-          stackup_ = value;
-        }
-      } else {
-        stackupBuilder_.mergeFrom(value);
-      }
-      if (stackup_ != null) {
-        bitField0_ |= 0x00000400;
-        onChanged();
-      }
-      return this;
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public Builder clearStackup() {
-      bitField0_ = (bitField0_ & ~0x00000400);
-      stackup_ = null;
-      if (stackupBuilder_ != null) {
-        stackupBuilder_.dispose();
-        stackupBuilder_ = null;
-      }
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public io.github.panyam.agni.v1.ir.Stackup.Builder getStackupBuilder() {
-      bitField0_ |= 0x00000400;
-      onChanged();
-      return internalGetStackupFieldBuilder().getBuilder();
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    public io.github.panyam.agni.v1.ir.StackupOrBuilder getStackupOrBuilder() {
-      if (stackupBuilder_ != null) {
-        return stackupBuilder_.getMessageOrBuilder();
-      } else {
-        return stackup_ == null ?
-            io.github.panyam.agni.v1.ir.Stackup.getDefaultInstance() : stackup_;
-      }
-    }
-    /**
-     * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-     */
-    private com.google.protobuf.SingleFieldBuilder<
-        io.github.panyam.agni.v1.ir.Stackup, io.github.panyam.agni.v1.ir.Stackup.Builder, io.github.panyam.agni.v1.ir.StackupOrBuilder> 
-        internalGetStackupFieldBuilder() {
-      if (stackupBuilder_ == null) {
-        stackupBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.panyam.agni.v1.ir.Stackup, io.github.panyam.agni.v1.ir.Stackup.Builder, io.github.panyam.agni.v1.ir.StackupOrBuilder>(
-                getStackup(),
-                getParentForChildren(),
-                isClean());
-        stackup_ = null;
-      }
-      return stackupBuilder_;
-    }
-
     private java.util.List<io.github.panyam.agni.v1.ir.Constraint> constraints_ =
       java.util.Collections.emptyList();
     private void ensureConstraintsIsMutable() {
-      if (!((bitField0_ & 0x00000800) != 0)) {
+      if (!((bitField0_ & 0x00000400) != 0)) {
         constraints_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.Constraint>(constraints_);
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00000400;
        }
     }
 
@@ -4392,7 +4209,7 @@ java.lang.String defaultValue) {
     public Builder clearConstraints() {
       if (constraintsBuilder_ == null) {
         constraints_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000800);
+        bitField0_ = (bitField0_ & ~0x00000400);
         onChanged();
       } else {
         constraintsBuilder_.clear();
@@ -4469,7 +4286,7 @@ java.lang.String defaultValue) {
         constraintsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.Constraint, io.github.panyam.agni.v1.ir.Constraint.Builder, io.github.panyam.agni.v1.ir.ConstraintOrBuilder>(
                 constraints_,
-                ((bitField0_ & 0x00000800) != 0),
+                ((bitField0_ & 0x00000400) != 0),
                 getParentForChildren(),
                 isClean());
         constraints_ = null;
@@ -4480,9 +4297,9 @@ java.lang.String defaultValue) {
     private java.util.List<io.github.panyam.agni.v1.ir.BomLine> bom_ =
       java.util.Collections.emptyList();
     private void ensureBomIsMutable() {
-      if (!((bitField0_ & 0x00001000) != 0)) {
+      if (!((bitField0_ & 0x00000800) != 0)) {
         bom_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.BomLine>(bom_);
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00000800;
        }
     }
 
@@ -4626,7 +4443,7 @@ java.lang.String defaultValue) {
     public Builder clearBom() {
       if (bomBuilder_ == null) {
         bom_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00001000);
+        bitField0_ = (bitField0_ & ~0x00000800);
         onChanged();
       } else {
         bomBuilder_.clear();
@@ -4703,7 +4520,7 @@ java.lang.String defaultValue) {
         bomBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.BomLine, io.github.panyam.agni.v1.ir.BomLine.Builder, io.github.panyam.agni.v1.ir.BomLineOrBuilder>(
                 bom_,
-                ((bitField0_ & 0x00001000) != 0),
+                ((bitField0_ & 0x00000800) != 0),
                 getParentForChildren(),
                 isClean());
         bom_ = null;
@@ -4714,9 +4531,9 @@ java.lang.String defaultValue) {
     private java.util.List<io.github.panyam.agni.v1.ir.NetGroup> netGroups_ =
       java.util.Collections.emptyList();
     private void ensureNetGroupsIsMutable() {
-      if (!((bitField0_ & 0x00002000) != 0)) {
+      if (!((bitField0_ & 0x00001000) != 0)) {
         netGroups_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.NetGroup>(netGroups_);
-        bitField0_ |= 0x00002000;
+        bitField0_ |= 0x00001000;
        }
     }
 
@@ -4915,7 +4732,7 @@ java.lang.String defaultValue) {
     public Builder clearNetGroups() {
       if (netGroupsBuilder_ == null) {
         netGroups_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00002000);
+        bitField0_ = (bitField0_ & ~0x00001000);
         onChanged();
       } else {
         netGroupsBuilder_.clear();
@@ -5027,7 +4844,7 @@ java.lang.String defaultValue) {
         netGroupsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.NetGroup, io.github.panyam.agni.v1.ir.NetGroup.Builder, io.github.panyam.agni.v1.ir.NetGroupOrBuilder>(
                 netGroups_,
-                ((bitField0_ & 0x00002000) != 0),
+                ((bitField0_ & 0x00001000) != 0),
                 getParentForChildren(),
                 isClean());
         netGroups_ = null;
@@ -5054,7 +4871,7 @@ java.lang.String defaultValue) {
       if (!attributes_.isMutable()) {
         attributes_ = attributes_.copy();
       }
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return attributes_;
     }
@@ -5130,7 +4947,7 @@ java.lang.String defaultValue) {
       return map.get(key);
     }
     public Builder clearAttributes() {
-      bitField0_ = (bitField0_ & ~0x00004000);
+      bitField0_ = (bitField0_ & ~0x00002000);
       internalGetMutableAttributes().getMutableMap()
           .clear();
       return this;
@@ -5155,7 +4972,7 @@ java.lang.String defaultValue) {
     @java.lang.Deprecated
     public java.util.Map<java.lang.String, java.lang.String>
         getMutableAttributes() {
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00002000;
       return internalGetMutableAttributes().getMutableMap();
     }
     /**
@@ -5172,7 +4989,7 @@ java.lang.String defaultValue) {
       java.util.Objects.requireNonNull(value, "map value");
       internalGetMutableAttributes().getMutableMap()
           .put(key, value);
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00002000;
       return this;
     }
     /**
@@ -5186,16 +5003,16 @@ java.lang.String defaultValue) {
         java.util.Map<java.lang.String, java.lang.String> values) {
       internalGetMutableAttributes().getMutableMap()
           .putAll(values);
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00002000;
       return this;
     }
 
     private java.util.List<io.github.panyam.agni.v1.ir.FidelityFragment> fidelity_ =
       java.util.Collections.emptyList();
     private void ensureFidelityIsMutable() {
-      if (!((bitField0_ & 0x00008000) != 0)) {
+      if (!((bitField0_ & 0x00004000) != 0)) {
         fidelity_ = new java.util.ArrayList<io.github.panyam.agni.v1.ir.FidelityFragment>(fidelity_);
-        bitField0_ |= 0x00008000;
+        bitField0_ |= 0x00004000;
        }
     }
 
@@ -5383,7 +5200,7 @@ java.lang.String defaultValue) {
     public Builder clearFidelity() {
       if (fidelityBuilder_ == null) {
         fidelity_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00008000);
+        bitField0_ = (bitField0_ & ~0x00004000);
         onChanged();
       } else {
         fidelityBuilder_.clear();
@@ -5488,7 +5305,7 @@ java.lang.String defaultValue) {
         fidelityBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             io.github.panyam.agni.v1.ir.FidelityFragment, io.github.panyam.agni.v1.ir.FidelityFragment.Builder, io.github.panyam.agni.v1.ir.FidelityFragmentOrBuilder>(
                 fidelity_,
-                ((bitField0_ & 0x00008000) != 0),
+                ((bitField0_ & 0x00004000) != 0),
                 getParentForChildren(),
                 isClean());
         fidelity_ = null;
@@ -5504,7 +5321,7 @@ java.lang.String defaultValue) {
      * @return Whether the prov field is set.
      */
     public boolean hasProv() {
-      return ((bitField0_ & 0x00010000) != 0);
+      return ((bitField0_ & 0x00008000) != 0);
     }
     /**
      * <code>.agni.v1.ir.Provenance prov = 16 [json_name = "prov"];</code>
@@ -5527,7 +5344,7 @@ java.lang.String defaultValue) {
       } else {
         provBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00010000;
+      bitField0_ |= 0x00008000;
       onChanged();
       return this;
     }
@@ -5541,7 +5358,7 @@ java.lang.String defaultValue) {
       } else {
         provBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00010000;
+      bitField0_ |= 0x00008000;
       onChanged();
       return this;
     }
@@ -5550,7 +5367,7 @@ java.lang.String defaultValue) {
      */
     public Builder mergeProv(io.github.panyam.agni.v1.ir.Provenance value) {
       if (provBuilder_ == null) {
-        if (((bitField0_ & 0x00010000) != 0) &&
+        if (((bitField0_ & 0x00008000) != 0) &&
           prov_ != null &&
           prov_ != io.github.panyam.agni.v1.ir.Provenance.getDefaultInstance()) {
           getProvBuilder().mergeFrom(value);
@@ -5561,7 +5378,7 @@ java.lang.String defaultValue) {
         provBuilder_.mergeFrom(value);
       }
       if (prov_ != null) {
-        bitField0_ |= 0x00010000;
+        bitField0_ |= 0x00008000;
         onChanged();
       }
       return this;
@@ -5570,7 +5387,7 @@ java.lang.String defaultValue) {
      * <code>.agni.v1.ir.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public Builder clearProv() {
-      bitField0_ = (bitField0_ & ~0x00010000);
+      bitField0_ = (bitField0_ & ~0x00008000);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -5583,7 +5400,7 @@ java.lang.String defaultValue) {
      * <code>.agni.v1.ir.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public io.github.panyam.agni.v1.ir.Provenance.Builder getProvBuilder() {
-      bitField0_ |= 0x00010000;
+      bitField0_ |= 0x00008000;
       onChanged();
       return internalGetProvFieldBuilder().getBuilder();
     }

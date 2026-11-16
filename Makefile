@@ -77,6 +77,9 @@ proto-java:
 # It also runs `buf breaking` against the latest release tag, with buf.yaml's FILE rules, so a change
 # that would break a client built against that release fails here (agni issue 1629). It needs the
 # tags, so CI's checkout fetches them.
+# buf breaking runs with --exclude-imports so each proto is checked once, in its own module. Without
+# it, the datasheet module checks the engine's protos it imports again, where the protos module's
+# breaking ignores do not apply (agni 1660).
 proto-check: proto-check-rust
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
@@ -122,7 +125,7 @@ proto-check: proto-check-rust
 	if [ -z "$$tag" ]; then \
 		echo "proto-check: this checkout has no release tag to compare the protos with; fetch the tags (git fetch --tags)"; \
 		fail=1; \
-	elif ! buf breaking --against ".git#tag=$$tag"; then \
+	elif ! buf breaking --against ".git#tag=$$tag" --exclude-imports; then \
 		echo "the protos break $$tag's wire contract (above). A released client relies on it, so keep the old field or rpc, deprecate it, and add the new one beside it (docsite/content/build/compatibility.md)"; \
 		fail=1; \
 	fi; \

@@ -1366,9 +1366,6 @@ impl serde::Serialize for Design {
         if !self.layers.is_empty() {
             len += 1;
         }
-        if self.stackup.is_some() {
-            len += 1;
-        }
         if !self.constraints.is_empty() {
             len += 1;
         }
@@ -1418,9 +1415,6 @@ impl serde::Serialize for Design {
         if !self.layers.is_empty() {
             struct_ser.serialize_field("layers", &self.layers)?;
         }
-        if let Some(v) = self.stackup.as_ref() {
-            struct_ser.serialize_field("stackup", v)?;
-        }
         if !self.constraints.is_empty() {
             struct_ser.serialize_field("constraints", &self.constraints)?;
         }
@@ -1462,7 +1456,6 @@ impl<'de> serde::Deserialize<'de> for Design {
             "inputDiagnostics",
             "footprints",
             "layers",
-            "stackup",
             "constraints",
             "bom",
             "net_groups",
@@ -1484,7 +1477,6 @@ impl<'de> serde::Deserialize<'de> for Design {
             InputDiagnostics,
             Footprints,
             Layers,
-            Stackup,
             Constraints,
             Bom,
             NetGroups,
@@ -1522,7 +1514,6 @@ impl<'de> serde::Deserialize<'de> for Design {
                             "inputDiagnostics" | "input_diagnostics" => Ok(GeneratedField::InputDiagnostics),
                             "footprints" => Ok(GeneratedField::Footprints),
                             "layers" => Ok(GeneratedField::Layers),
-                            "stackup" => Ok(GeneratedField::Stackup),
                             "constraints" => Ok(GeneratedField::Constraints),
                             "bom" => Ok(GeneratedField::Bom),
                             "netGroups" | "net_groups" => Ok(GeneratedField::NetGroups),
@@ -1558,7 +1549,6 @@ impl<'de> serde::Deserialize<'de> for Design {
                 let mut input_diagnostics__ = None;
                 let mut footprints__ = None;
                 let mut layers__ = None;
-                let mut stackup__ = None;
                 let mut constraints__ = None;
                 let mut bom__ = None;
                 let mut net_groups__ = None;
@@ -1627,12 +1617,6 @@ impl<'de> serde::Deserialize<'de> for Design {
                             }
                             layers__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::Stackup => {
-                            if stackup__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("stackup"));
-                            }
-                            stackup__ = map_.next_value()?;
-                        }
                         GeneratedField::Constraints => {
                             if constraints__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("constraints"));
@@ -1684,7 +1668,6 @@ impl<'de> serde::Deserialize<'de> for Design {
                     input_diagnostics: input_diagnostics__,
                     footprints: footprints__.unwrap_or_default(),
                     layers: layers__.unwrap_or_default(),
-                    stackup: stackup__,
                     constraints: constraints__.unwrap_or_default(),
                     bom: bom__.unwrap_or_default(),
                     net_groups: net_groups__.unwrap_or_default(),
@@ -5083,283 +5066,6 @@ impl<'de> serde::Deserialize<'de> for Span {
             }
         }
         deserializer.deserialize_struct("agni.v1.ir.Span", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for Stackup {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if !self.layers.is_empty() {
-            len += 1;
-        }
-        if !self.attributes.is_empty() {
-            len += 1;
-        }
-        if self.prov.is_some() {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("agni.v1.ir.Stackup", len)?;
-        if !self.layers.is_empty() {
-            struct_ser.serialize_field("layers", &self.layers)?;
-        }
-        if !self.attributes.is_empty() {
-            struct_ser.serialize_field("attributes", &self.attributes)?;
-        }
-        if let Some(v) = self.prov.as_ref() {
-            struct_ser.serialize_field("prov", v)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for Stackup {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "layers",
-            "attributes",
-            "prov",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Layers,
-            Attributes,
-            Prov,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "layers" => Ok(GeneratedField::Layers),
-                            "attributes" => Ok(GeneratedField::Attributes),
-                            "prov" => Ok(GeneratedField::Prov),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = Stackup;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct agni.v1.ir.Stackup")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<Stackup, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut layers__ = None;
-                let mut attributes__ = None;
-                let mut prov__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Layers => {
-                            if layers__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("layers"));
-                            }
-                            layers__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Attributes => {
-                            if attributes__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("attributes"));
-                            }
-                            attributes__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
-                            );
-                        }
-                        GeneratedField::Prov => {
-                            if prov__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("prov"));
-                            }
-                            prov__ = map_.next_value()?;
-                        }
-                    }
-                }
-                Ok(Stackup {
-                    layers: layers__.unwrap_or_default(),
-                    attributes: attributes__.unwrap_or_default(),
-                    prov: prov__,
-                })
-            }
-        }
-        deserializer.deserialize_struct("agni.v1.ir.Stackup", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for StackupLayer {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if !self.layer_ref.is_empty() {
-            len += 1;
-        }
-        if self.thickness_nm != 0 {
-            len += 1;
-        }
-        if !self.material.is_empty() {
-            len += 1;
-        }
-        if !self.attributes.is_empty() {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("agni.v1.ir.StackupLayer", len)?;
-        if !self.layer_ref.is_empty() {
-            struct_ser.serialize_field("layerRef", &self.layer_ref)?;
-        }
-        if self.thickness_nm != 0 {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser.serialize_field("thicknessNm", ToString::to_string(&self.thickness_nm).as_str())?;
-        }
-        if !self.material.is_empty() {
-            struct_ser.serialize_field("material", &self.material)?;
-        }
-        if !self.attributes.is_empty() {
-            struct_ser.serialize_field("attributes", &self.attributes)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for StackupLayer {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "layer_ref",
-            "layerRef",
-            "thickness_nm",
-            "thicknessNm",
-            "material",
-            "attributes",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            LayerRef,
-            ThicknessNm,
-            Material,
-            Attributes,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "layerRef" | "layer_ref" => Ok(GeneratedField::LayerRef),
-                            "thicknessNm" | "thickness_nm" => Ok(GeneratedField::ThicknessNm),
-                            "material" => Ok(GeneratedField::Material),
-                            "attributes" => Ok(GeneratedField::Attributes),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = StackupLayer;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct agni.v1.ir.StackupLayer")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<StackupLayer, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut layer_ref__ = None;
-                let mut thickness_nm__ = None;
-                let mut material__ = None;
-                let mut attributes__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::LayerRef => {
-                            if layer_ref__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("layerRef"));
-                            }
-                            layer_ref__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::ThicknessNm => {
-                            if thickness_nm__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("thicknessNm"));
-                            }
-                            thickness_nm__ = 
-                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
-                            ;
-                        }
-                        GeneratedField::Material => {
-                            if material__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("material"));
-                            }
-                            material__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Attributes => {
-                            if attributes__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("attributes"));
-                            }
-                            attributes__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
-                            );
-                        }
-                    }
-                }
-                Ok(StackupLayer {
-                    layer_ref: layer_ref__.unwrap_or_default(),
-                    thickness_nm: thickness_nm__.unwrap_or_default(),
-                    material: material__.unwrap_or_default(),
-                    attributes: attributes__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer.deserialize_struct("agni.v1.ir.StackupLayer", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for UnannotatedComponent {

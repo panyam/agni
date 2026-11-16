@@ -103,7 +103,7 @@ func main() {
 			return demokit.Errf("read mixer.edn: %v", err)
 		}
 		var buf bytes.Buffer
-		if err := ipc2581.Write(&buf, d); err != nil {
+		if err := ipc2581.Write(&buf, d, nil); err != nil {
 			return demokit.Errf("emit ipc-2581: %v", err)
 		}
 		rt, err := ipc2581.Read(bytes.NewReader(buf.Bytes()), "roundtrip.xml")

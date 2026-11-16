@@ -31,6 +31,11 @@ field and its JSON name, and the change has to keep the old field, mark it depre
 one beside it. CI fetches the tags for this, and a checkout without them fails the check and says to
 fetch them.
 
+Until agni has public clients, a removal may skip the deprecation release. `buf.yaml` then ignores
+that delete rule for that one file, and the ignore comes out once a later release tag exists. The
+check passes `--exclude-imports`, so each proto is checked once, in its own module, where its
+module's ignores apply. agni 1660 removed `ir.Design.stackup` this way.
+
 ## Deprecating a field or an rpc
 
 1. Add the replacement beside the old one, and have the server fill or answer both.

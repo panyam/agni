@@ -15,10 +15,12 @@
   <Ecad name="ecad">
     <CadData>
       <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE"/>
+      <Layer name="CORE" layerFunction="DIELCORE" side="INTERNAL" polarity="POSITIVE"/>
       <Layer name="BOTTOM" layerFunction="CONDUCTOR" side="BOTTOM" polarity="POSITIVE"/>
       <Stackup overallThickness="1.6">
         <StackupGroup name="g">
           <StackupLayer layerOrGroupRef="TOP" materialType="COPPER" thickness="0.035"/>
+          <StackupLayer layerOrGroupRef="CORE" materialType="FR4" thickness="1.53"/>
           <StackupLayer layerOrGroupRef="BOTTOM" materialType="COPPER" thickness="0.035"/>
         </StackupGroup>
       </Stackup>
