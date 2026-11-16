@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs the Go client example from the repo root, as make exercise-clients runs every language's
+# example: clients/examples/<language>/run -server <url> -design <uri>.
+cd "$(dirname "$0")/../../.." && exec go run ./clients/examples/go "$@"

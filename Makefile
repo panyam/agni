@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-clients wire-fixtures exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -471,6 +471,21 @@ exercise-cross-probe: ui wasm $(if $(filter jetson clay,$(WALK_DESIGN)),samples-
 	mkdir -p $(EXERCISE_OUT)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/cross-probe-walk.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/cross-probe-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/cross-probe.md 2>/dev/null; exit $$status
+
+# Mission #1625's exercise (agni issue 1628): start one agni serve with a state directory, as a shared
+# server runs, and run each language's client example against it (clients/examples/<language>/run).
+# Each prints a line summing up its answers, and each line must match the CLI's answers on the Jetson
+# cut. A language whose example does not exist yet waits on its ticket. It writes the step table to
+# $(EXERCISE_OUT)/clients.md. Not in the gate.
+#   make exercise-clients
+exercise-clients: agni
+	$(GO) run ./tools/clientexercise -agni bin/agni -out $(EXERCISE_OUT)
+
+# Records clients/wirefixtures/fixtures.json again, the calls every client replays (agni issue 1633).
+# Run it after a change that alters what the server answers on purpose, and read the diff, since the
+# gate's TestWireFixtures holds the server to the file.
+wire-fixtures:
+	WIRE_FIXTURES_RECORD=1 $(GO) test ./cmd/agni/ -run TestWireFixtures -count=1
 
 # Mission #1337's exercise (agni issue 1338): the walk mission's five steps on the cut of Jetson, or
 # on the whole board with WALK_DESIGN=jetson, each as an engine row that passes today and a viewer row
