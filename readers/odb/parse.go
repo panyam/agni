@@ -21,9 +21,10 @@ type parsedJob struct {
 // odxTier holds what an ODX file carries in place of a job's per-layer files. Its maps are keyed by
 // the upper-cased layer name and the lower-cased symbol name.
 type odxTier struct {
-	profile *featuresFile
-	layers  map[string]*featuresFile
-	symbols map[string]*featuresFile
+	thickness int64 // the board thickness CAD_DATA_HEADER states, in nanometres, or 0
+	profile   *featuresFile
+	layers    map[string]*featuresFile
+	symbols   map[string]*featuresFile
 }
 
 // parseJob opens a job and reads the files both the netlist and the board need.

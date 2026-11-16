@@ -16,39 +16,47 @@ import (
 const stackTol = 1_500
 
 // TestAltiumStackMatchesItsODBExport holds each foxBMS board's stack, read from the .PcbDoc, to the
-// ODB++ job Altium exported from it (agni 1601). Altium's export writes no dielectric rows. It gives
-// each copper layer the thickness of the dielectric below it in .layer_dielectric, the bottom copper
-// the bottom mask's, and the board thickness as copper and dielectric together. agni's ODB++ reader
-// reads .layer_dielectric as the layer's own thickness today (#1660), so the job's copper rows carry
-// those values.
+// ODB++ job Altium exported from it (agni 1601, 1660): the same copper and dielectric rows in the
+// same order, each the same thickness, and together the board thickness the job states. Altium's
+// export writes no dielectric rows, and puts each dielectric in the .layer_dielectric of the copper
+// above it, which the ODB++ reader turns back into rows. The masks are left out, since the export
+// writes a placeholder for them. Altium's ODB++ copper weight converts at a slightly different
+// ounce, so a copper row may differ by 1 µm.
 func TestAltiumStackMatchesItsODBExport(t *testing.T) {
 	for _, pr := range altiumPairs(t) {
 		t.Run(pr.name, func(t *testing.T) {
 			_, pg := readBoth(t, pr.pcb)
 			_, og := readBoth(t, pr.odb)
-			ours, theirs := pg.GetStackup(), og.GetStackup()
-			copper := rowsOf(ours, "copper")
-			jobCopper := rowsOf(theirs, "copper")
-			if len(copper) < 2 || len(copper) != len(jobCopper) {
-				t.Fatalf("%d copper rows, the job has %d", len(copper), len(jobCopper))
+			ours, theirs := physical(pg.GetStackup()), physical(og.GetStackup())
+			if len(ours) < 5 || len(ours) != len(theirs) {
+				t.Fatalf("%d copper and dielectric rows, the job has %d", len(ours), len(theirs))
 			}
-			below := belowEachCopper(ours)
-			for i, c := range jobCopper {
-				if c.Thickness == nil || below[i] == nil || abs(below[i].GetThickness()-c.GetThickness()) > stackTol {
-					t.Errorf("under %s: %v, the job says %v", copper[i].GetName(), thick(below[i]), thick(c))
+			for i, o := range ours {
+				w := theirs[i]
+				if o.GetKind() != w.GetKind() || w.Thickness == nil || abs(o.GetThickness()-w.GetThickness()) > stackTol {
+					t.Errorf("row %d: %s %d nm, the job's %s %v", i, o.GetKind(), o.GetThickness(), w.GetKind(), thick(w))
 				}
 			}
 			sum := int64(0)
-			for _, l := range ours.GetLayers() {
-				if l.GetKind() == "copper" || l.GetKind() == "dielectric" {
-					sum += l.GetThickness()
-				}
+			for _, l := range theirs {
+				sum += l.GetThickness()
 			}
-			if theirs.Thickness == nil || abs(sum-theirs.GetThickness()) > 4*stackTol {
-				t.Errorf("copper and dielectric sum to %d nm, the job states %v", sum, theirs.Thickness)
+			if st := og.GetStackup(); st.Thickness == nil || abs(sum-st.GetThickness()) > 4*stackTol*int64(len(theirs)) {
+				t.Errorf("the job's rows sum to %d nm, it states %v", sum, st.Thickness)
 			}
 		})
 	}
+}
+
+// physical is a stack's copper and dielectric rows, in order.
+func physical(s *geom.Stackup) []*geom.StackLayer {
+	var out []*geom.StackLayer
+	for _, l := range s.GetLayers() {
+		if l.GetKind() == "copper" || l.GetKind() == "dielectric" {
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // TestAltiumStackMatchesItsASCIISave holds each OSP board's stack, read from the binary .PcbDoc, to
@@ -106,34 +114,6 @@ func TestAltiumStackMatchesItsASCIISave(t *testing.T) {
 	if checked < 8 {
 		t.Errorf("checked %d copper layers, want at least 8", checked)
 	}
-}
-
-func rowsOf(s *geom.Stackup, kind string) []*geom.StackLayer {
-	var out []*geom.StackLayer
-	for _, l := range s.GetLayers() {
-		if l.GetKind() == kind {
-			out = append(out, l)
-		}
-	}
-	return out
-}
-
-// belowEachCopper is the row under each copper row: its dielectric, or the bottom mask under the
-// last copper.
-func belowEachCopper(s *geom.Stackup) []*geom.StackLayer {
-	var out []*geom.StackLayer
-	ls := s.GetLayers()
-	for i, l := range ls {
-		if l.GetKind() != "copper" {
-			continue
-		}
-		var next *geom.StackLayer
-		if i+1 < len(ls) {
-			next = ls[i+1]
-		}
-		out = append(out, next)
-	}
-	return out
 }
 
 func thick(l *geom.StackLayer) any {

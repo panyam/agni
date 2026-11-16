@@ -144,3 +144,14 @@ func TestBlindDrillLayerSpansItsLayers(t *testing.T) {
 		t.Fatalf("via spans %q, want one F.Cu..In1.Cu from the blind drill layer", spans)
 	}
 }
+
+// A .copper_weight under copperWeightMicrons is ounces, as KiCad and Altium write it, and one at or
+// over it is micrometres, as Allegro writes 18 and 35 (agni 1660).
+func TestCopperWeightReadsOuncesOrMicrometres(t *testing.T) {
+	for in, want := range map[string]int64{"1": 34_798, "0.5": 17_399, "35": 35_000, "18": 18_000, "0": -1, "": -1, "x": -1} {
+		got, ok := copperWeight(in)
+		if (want < 0) == ok || (ok && got != want) {
+			t.Errorf("copperWeight(%q) = %d, %v; want %d", in, got, ok, want)
+		}
+	}
+}
