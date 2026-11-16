@@ -1,10 +1,10 @@
-// The journeys `make demo-video` records (agni issue 1545, mission #1442). A journey is one thing a
+// The journeys `make try` plays and records (agni issues 1545 and 1600). A journey is one thing a
 // person does in the viewer, told as steps in the order they'd do them. Each step has a caption,
 // which the video shows before the step happens, and an action, which acts as a reader would and
 // checks what the viewer did. demo-video.spec.ts plays every journey in the gate at test pace, on the
 // cut of Jetson unless the journey names another design, so a journey that breaks fails CI and names
-// its step. With DEMO_OUT set it plays one journey on the whole board, paced for a viewer, and
-// records it.
+// its step. With TRY set it plays one journey on the whole board, paced for a viewer, and hands it
+// over or records it.
 //
 // Add a journey here when the viewer gives a reader something new to see. The mission issue lists
 // the backlog.

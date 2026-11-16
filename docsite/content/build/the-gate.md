@@ -386,12 +386,12 @@ each step, and `DEMO_DESIGN=cut` plays on the committed cut rather than Jetson's
 `/tmp/agni-demo/<name>-try.mp4` once you close it. That suits showing a bug or a change as you found
 it. Close the window rather than quitting Chrome, which can stop the recording before it is written.
 `HANDOVER=0` closes the browser when the journey ends, for a recording at your screen's size with
-no one at the window. It rebuilds the viewer bundle and the wasm only when their sources changed,
-and `make demo-video` does the same. A tried page opens in SVG,
-as the gate's and the recording's headless pages do, and the WebGL box still works afterwards. Reach
-for the other tools when the question differs. A spec with `HEADED=1` shows why one assertion
-failed, an exercise walks a whole mission and writes its step table, and `make demo-video` makes the
-mp4 for a release note.
+no one at the window. `HEADED=0` records the journey headless at 1920 by 1080 after a title card,
+as `/tmp/agni-demo/<name>.mp4`, which is how the docsite's and the README's videos are made. It
+fails if the page logs an error. It rebuilds the viewer bundle and the wasm only when their sources
+changed. A tried page opens in SVG, as the gate's headless pages do, and the WebGL box still works
+afterwards. Reach for the other tools when the question differs. A spec with `HEADED=1` shows why
+one assertion failed, and an exercise walks a whole mission and writes its step table.
 
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a

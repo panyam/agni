@@ -20,21 +20,21 @@ so your design is never uploaded.
 
 A 33-second walkthrough on Antmicro's open-source Jetson AGX Thor baseboard. It finds a resistor by
 name, and the schematic and the board beside it both go to it. Then a click on a test point on the
-board takes the schematic to that point's page. `make demo-video JOURNEY=find-a-part` records it.
+board takes the schematic to that point's page. `make try JOURNEY=find-a-part HEADED=0` records it.
 
 https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf
 
 A 92-second walkthrough of what changed between two revisions of the same board, Antmicro's rev
 1.1.0 and rev 1.1.3. It steps through one change of each kind, an added, a removed and a changed
 part, a new, a deleted and a renamed net, and a net whose connections changed, and each step says
-what that kind means. `make demo-video JOURNEY=compare-revisions` records it.
+what that kind means. `make try JOURNEY=compare-revisions HEADED=0` records it.
 
 https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8
 
 A 43-second walkthrough that follows a signal outwards from a part on the same board. It starts at
 R361, a pull-up on the I2C connector's data line, and walks one hop through small parts, where it
 stops at the 3.3 V rail. One hop wider it crosses the level shifter U80 to the module's 1.8 V side,
-and then it asks for the route to the rail. `make demo-video JOURNEY=walk-a-signal` records it.
+and then it asks for the route to the rail. `make try JOURNEY=walk-a-signal HEADED=0` records it.
 
 https://github.com/user-attachments/assets/eb9f4803-4316-4d4b-8de4-8aa52e9484a0
 

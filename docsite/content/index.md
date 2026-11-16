@@ -19,21 +19,21 @@ hideTitle: true
 <video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-compare-revisions.jpg" src="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">
 <a href="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8">Download the comparison video</a>
 </video>
-<p>What changed between two revisions of the same board, Antmicro's rev 1.1.0 and rev 1.1.3. It steps through one change of each kind, and each step says what that kind means. <code>make demo-video JOURNEY=compare-revisions</code> records it.</p>
+<p>What changed between two revisions of the same board, Antmicro's rev 1.1.0 and rev 1.1.3. It steps through one change of each kind, and each step says what that kind means. <code>make try JOURNEY=compare-revisions HEADED=0</code> records it.</p>
 </div>
 
 <div class="home-video" id="demo">
 <video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-find-a-part.jpg" src="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">
 <a href="https://github.com/user-attachments/assets/b399f9d5-5440-4de5-8c01-5e1742dbefdf">Download the walkthrough video</a>
 </video>
-<p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make demo-video JOURNEY=find-a-part</code> records it.</p>
+<p>Find a part on the board, on Antmicro's open-source Jetson AGX Thor baseboard. A resistor found by name opens its schematic page, and the board beside it goes to the same part. A test point clicked on the board takes the schematic to that point's page. <code>make try JOURNEY=find-a-part HEADED=0</code> records it.</p>
 </div>
 
 <div class="home-video" id="demo-walk">
 <video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-walk-a-signal.jpg" src="https://github.com/user-attachments/assets/eb9f4803-4316-4d4b-8de4-8aa52e9484a0">
 <a href="https://github.com/user-attachments/assets/eb9f4803-4316-4d4b-8de4-8aa52e9484a0">Download the walk video</a>
 </video>
-<p>Follow a signal outwards from a part, on the same board. It starts at R361, a pull-up on the I2C connector's data line, walks one hop through small parts, and goes one hop wider across the level shifter U80 to the module's 1.8 V side. Then it asks for the route to the rail. <code>make demo-video JOURNEY=walk-a-signal</code> records it.</p>
+<p>Follow a signal outwards from a part, on the same board. It starts at R361, a pull-up on the I2C connector's data line, walks one hop through small parts, and goes one hop wider across the level shifter U80 to the module's 1.8 V side. Then it asks for the route to the rail. <code>make try JOURNEY=walk-a-signal HEADED=0</code> records it.</p>
 </div>
 
 <div class="features">
