@@ -11,6 +11,7 @@
 
 import type { Page } from "playwright-core";
 import { PANE, TITLE, centreOf, centredIn } from "./picks.js";
+import { zoomStep } from "./zoomstep.js";
 
 // Example is one changed subject the compare journey clicks, and what to say about it.
 export interface Example {
@@ -322,16 +323,16 @@ export const journeys: Journey[] = [
           await r.page.mouse.move(host.x + host.width / 2, host.y + host.height / 2, { steps: r.pace.moveSteps });
           await r.page.waitForSelector(`${BOARD} svg:not(.svg-parked)`, { state: "visible", timeout: 10_000 });
           // The board view is zoomed in on the last part, so the reader zooms it out until the test
-          // point is in view, as they would to look for it.
-          for (let i = 0; i < 15; i++) {
+          // point is in view, as they would to look for it, then zooms in on the test point itself.
+          for (let i = 0; ; i++) {
             const h = await r.page.locator(BOARD).first().boundingBox();
             const t = await r.page.locator(footprintOf(d.testPoint)).first().boundingBox();
             if (!h || !t) throw new Error(`${d.testPoint} is not drawn on the board`);
-            const cx = t.x + t.width / 2, cy = t.y + t.height / 2;
-            const inside = cx > h.x + 20 && cx < h.x + h.width - 20 && cy > h.y + 20 && cy < h.y + h.height - 20;
-            if (inside && Math.min(t.width, t.height) >= 8) break;
-            await r.page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
-            await r.page.mouse.wheel(0, inside ? -300 : 300);
+            const turn = zoomStep(h, t);
+            if (!turn) break;
+            if (i === 20) throw new Error(`${d.testPoint} never came into the board view at a size to click`);
+            await r.page.mouse.move(turn.x, turn.y);
+            await r.page.mouse.wheel(0, turn.deltaY);
             await r.page.waitForTimeout(r.pace.moveSteps > 1 ? 350 : 150);
           }
           const at = await centreOf(r.page, footprintOf(d.testPoint));
