@@ -1,0 +1,21 @@
+# core/render/testdata/dimensions.kicad_pcb: pad centres from IPC-D-356 and the outline from GenCAD, by 10.0.6
+# extent	min x	min y	max x	max y (mm, Y up)
+# pad	ref	pin	side	x	y (mm, Y up)
+extent	20.0000	-80.0000	120.0000	-20.0000
+pad	J1	1	through	79.9998	-65.0011
+pad	J1	2	through	79.9998	-67.5411
+pad	U1	1	top	39.0500	-41.0007
+pad	U1	2	top	40.9499	-41.0007
+pad	U1	3	top	39.9999	-38.9992
+pad	U2	1	top	61.0006	-40.9499
+pad	U2	2	top	61.0006	-39.0500
+pad	U2	3	top	58.9991	-39.9999
+pad	U3	1	top	80.0354	-41.3791
+pad	U3	2	top	81.3791	-40.0355
+pad	U3	3	top	79.2937	-39.2938
+pad	U4	1	top	100.9498	-38.9992
+pad	U4	2	top	99.0498	-38.9992
+pad	U4	3	top	99.9998	-41.0007
+pad	U5	1	bottom	38.6766	-64.6100
+pad	U5	2	bottom	40.3225	-63.6600
+pad	U5	3	bottom	40.5003	-65.8673
