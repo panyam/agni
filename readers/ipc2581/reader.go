@@ -263,15 +263,6 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	return d
 }
 
-func (f *ipcFile) units() string {
-	for _, u := range f.Units {
-		if u.Units != "" {
-			return u.Units
-		}
-	}
-	return ""
-}
-
 // allegroUnused is the name Allegro's export gives the net of a pin that is on no net, such as
 // `Unused_05CE8C28`. The board itself names no net there.
 var allegroUnused = regexp.MustCompile(`^Unused_[0-9A-Fa-f]{8}$`)

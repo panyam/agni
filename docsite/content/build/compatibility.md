@@ -33,7 +33,7 @@ fetch them.
 
 Until agni has public clients, a removal may skip the deprecation release. `buf.yaml` then ignores
 that delete rule for that one file, and the ignore comes out once a later release tag exists. The
-check passes `--exclude-imports`, so each proto is checked once, in its own module, where its
+check tells buf to leave out imports, so each proto is checked once, in its own module, where its
 module's ignores apply. agni 1660 removed `ir.Design.stackup` this way.
 
 ## Deprecating a field or an rpc
