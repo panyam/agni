@@ -42,7 +42,7 @@ func (p *board) partHeights() map[uint32]int64 {
 				break
 			}
 			if p.b[fo+p.l.fieldSub] == heightSub && p.b[fo+2] == heightField0 && p.b[fo+3] == heightField1 {
-				if h := p.nm(float64(int32(le32(p.b, fo+p.l.fieldBody)))); h > out[owner] {
+				if h := p.nm(float64(p.i32(fo, p.l.fieldBody))); h > out[owner] {
 					out[owner] = h
 				}
 			}
