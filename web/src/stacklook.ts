@@ -45,6 +45,15 @@ export function boardLookPlan(rows: readonly LookRowIn[]): BoardLookPlan {
   const hide = (groups: readonly number[]) => {
     for (const g of groups) if (!plan.face.has(g)) plan.hidden.add(g);
   };
+  // A layer with a pour draws that pour as its copper, and its zone is only the outline the pour
+  // filled, as Altium and Allegro boards give both. Drawn solid, the outline would cover the pour's
+  // clearances round every pad and track. A KiCad board's zones are its fills, with no pour beside
+  // them, so they stay (agni issue 1643).
+  const pours = new Set(rows.filter((r) => r.kind === "pours").flatMap((r) => r.groups));
+  const zones = new Set(rows.filter((r) => r.kind === "zones").flatMap((r) => r.groups));
+  for (const r of rows) {
+    if (r.kind === "copper" && r.groups.some((g) => pours.has(g))) hide(r.groups.filter((g) => zones.has(g)));
+  }
   const rank = (r: LookRowIn) => (r.kind === "copper" ? 0 : r.kind === "zones" || r.kind === "pours" ? 2 : 1);
   for (const r of [...rows].sort((a, b) => rank(a) - rank(b))) {
     switch (r.kind) {

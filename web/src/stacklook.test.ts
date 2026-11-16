@@ -59,4 +59,20 @@ describe("the board look", () => {
     ];
     expect(padPrimitives(keys, (p) => group.get(p)!, plan)).toEqual([0, 2]);
   });
+
+  // An Altium or Allegro layer gives a pour and the zone it filled (agni issue 1643). The board look
+  // draws the pour, and hides the zone's outline, which would cover the pour's clearances.
+  it("hides a zone outline on a layer whose pour it draws, and keeps a zone with no pour beside it", () => {
+    const withPours: LookRowIn[] = [
+      { kind: "copper", side: "front", groups: [6, 13, 14, 255] },
+      { kind: "copper", side: "back", groups: [7, 27, 254] },
+      { kind: "pours", side: "", groups: [14] },
+      { kind: "zones", side: "", groups: [13, 27] },
+    ];
+    const p = boardLookPlan(withPours);
+    expect(p.hidden.has(13)).toBe(true);
+    expect([p.face.get(14), p.color.get(14)]).toEqual(["top", "maskOverCopper"]);
+    expect(p.hidden.has(27)).toBe(false);
+    expect([p.face.get(27), p.color.get(27)]).toEqual(["bottom", "maskOverCopper"]);
+  });
 });
