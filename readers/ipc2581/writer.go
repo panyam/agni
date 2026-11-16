@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -24,7 +25,41 @@ type emitContent struct {
 }
 
 type emitEcad struct {
-	CadData emitCadData `xml:"CadData"`
+	CadHeader *cadHeaderEl `xml:"CadHeader,omitempty"`
+	CadData   emitCadData  `xml:"CadData"`
+}
+
+// cadHeaderEl holds the Specs that give a stack row its dielectric constant and loss tangent.
+type cadHeaderEl struct {
+	Units string       `xml:"units,attr"`
+	Specs []emitSpecEl `xml:"Spec"`
+}
+
+type emitSpecEl struct {
+	Name       string           `xml:"name,attr"`
+	Dielectric []emitSpecPropEl `xml:"Dielectric"`
+}
+
+type emitSpecPropEl struct {
+	Type     string `xml:"type,attr"`
+	Property struct {
+		Value string `xml:"value,attr"`
+	} `xml:"Property"`
+}
+
+type stackupEl struct {
+	OverallThickness string           `xml:"overallThickness,attr,omitempty"`
+	Layers           []stackupLayerEl `xml:"StackupGroup>StackupLayer"`
+}
+
+type stackupLayerEl struct {
+	LayerRef  string `xml:"layerOrGroupRef,attr"`
+	Material  string `xml:"materialType,attr,omitempty"`
+	Thickness string `xml:"thickness,attr,omitempty"`
+	Sequence  int    `xml:"sequence,attr"`
+	SpecRef   *struct {
+		ID string `xml:"id,attr"`
+	} `xml:"SpecRef"`
 }
 
 type emitCadData struct {
@@ -39,15 +74,20 @@ type emitStep struct {
 	Nets     []netEl  `xml:"LogicalNet"`
 }
 
-// Write emits an IPC-2581 document from an ir.Design (the inverse of Read).
+// Write emits an IPC-2581 document from an ir.Design (the inverse of Read), with the board's stack
+// when stack is non-nil.
 //
 // Fidelity: lossy-bounded, matching the reader. It writes the netlist and physical tier
-// (components, nets, footprints, layers, stackup, BOM). It does not write the source's byte
-// layout or XML namespace. The reader matches by local name, so the output round-trips at the IR
+// (components, nets, footprints, layers, BOM), and the stack it is given. It does not write the
+// source's byte layout or XML namespace. The reader matches by local name, so the output round-trips at the IR
 // level. Copper and pad geometry live in the board sidecar (WS1-006), and Write does not take
 // it. Byte/spec-lossless output waits on the FidelityFragment layer. Units are emitted as
-// NANOMETER with raw thickness_nm values, so a read-back recovers the same IR exactly.
-func Write(w io.Writer, d *ir.Design) error {
+// NANOMETER with raw nanometre values, so a read-back recovers the same IR exactly.
+//
+// The stack comes from the board, BoardGeometry.stackup, since the design carries none (agni 1660).
+// Every row is written, dielectrics included, each naming a Layer of its kind, so a read-back of the
+// board gives the same rows. The total is written only when the stack states one.
+func Write(w io.Writer, d *ir.Design, stack *geom.Stackup) error {
 	f := emitFile{
 		Revision: d.Attributes["ipc2581_revision"],
 		Content:  emitContent{Dict: unitDict{Units: "NANOMETER"}},
@@ -82,17 +122,7 @@ func Write(w io.Writer, d *ir.Design) error {
 			Name: l.Name, Function: fn, Side: l.Attributes["side"], Polarity: l.Attributes["polarity"],
 		})
 	}
-	if d.Stackup != nil {
-		st := &stackupEl{OverallThickness: d.Stackup.Attributes["overall_thickness"]}
-		for _, sl := range d.Stackup.Layers {
-			th := sl.Attributes["thickness_raw"]
-			if sl.ThicknessNm != 0 {
-				th = strconv.FormatInt(sl.ThicknessNm, 10) // paired with units=NANOMETER above
-			}
-			st.Layers = append(st.Layers, stackupLayerEl{LayerRef: sl.LayerRef, Material: sl.Material, Thickness: th})
-		}
-		f.Ecad.CadData.Stackup = st
-	}
+	writeStack(&f, stack)
 	if len(d.Bom) > 0 {
 		b := &bomEl{}
 		for _, bl := range d.Bom {
@@ -138,4 +168,104 @@ func layerFunctionToken(f ir.LayerFunction) string {
 	default:
 		return ""
 	}
+}
+
+// writeStack puts the board's stack into f: one StackupLayer per row, in order, a Layer for each
+// row the design does not already declare, and a Spec for each row with a dielectric constant or
+// loss tangent.
+func writeStack(f *emitFile, stack *geom.Stackup) {
+	if stack == nil || len(stack.GetLayers()) == 0 {
+		return
+	}
+	// The board names copper by its place in the stack (layerNames), so the k-th copper row is the
+	// design's k-th copper layer, under the name the design gives it.
+	declared := map[string]bool{}
+	var copperRefs []string
+	for _, l := range f.Ecad.CadData.Layers {
+		declared[l.Name] = true
+		if kind, _ := stackKind(l.Function); kind == "copper" {
+			copperRefs = append(copperRefs, l.Name)
+		}
+	}
+	coppers := 0
+	for _, row := range stack.GetLayers() {
+		if row.GetKind() == "copper" {
+			coppers++
+		}
+	}
+	if coppers != len(copperRefs) {
+		copperRefs = nil
+	}
+	copper := 0
+	st := &stackupEl{}
+	if stack.Thickness != nil {
+		st.OverallThickness = strconv.FormatInt(stack.GetThickness(), 10)
+	}
+	var specs []emitSpecEl
+	for i, row := range stack.GetLayers() {
+		ref := row.GetLayer()
+		if ref == "" {
+			ref = row.GetName()
+		}
+		if row.GetKind() == "copper" {
+			if copperRefs != nil {
+				ref = copperRefs[copper]
+			}
+			copper++
+		}
+		if !declared[ref] {
+			declared[ref] = true
+			f.Ecad.CadData.Layers = append(f.Ecad.CadData.Layers, layerEl{Name: ref, Function: stackFunction(row)})
+		}
+		sl := stackupLayerEl{LayerRef: ref, Material: row.GetMaterial(), Sequence: i + 1}
+		if row.Thickness != nil {
+			sl.Thickness = strconv.FormatInt(row.GetThickness(), 10)
+		}
+		var props []emitSpecPropEl
+		for _, p := range []struct {
+			typ string
+			v   *float64
+		}{{"DIELECTRIC_CONSTANT", row.EpsilonR}, {"LOSS_TANGENT", row.LossTangent}} {
+			if p.v != nil {
+				prop := emitSpecPropEl{Type: p.typ}
+				prop.Property.Value = strconv.FormatFloat(*p.v, 'g', -1, 64)
+				props = append(props, prop)
+			}
+		}
+		if len(props) > 0 {
+			id := "SPEC_" + strconv.Itoa(i+1)
+			specs = append(specs, emitSpecEl{Name: id, Dielectric: props})
+			sl.SpecRef = &struct {
+				ID string `xml:"id,attr"`
+			}{ID: id}
+		}
+		st.Layers = append(st.Layers, sl)
+	}
+	f.Ecad.CadData.Stackup = st
+	if len(specs) > 0 {
+		f.Ecad.CadHeader = &cadHeaderEl{Units: "NANOMETER", Specs: specs}
+	}
+}
+
+// stackFunction is the layerFunction a stack row's kind reads back as (stackKind's inverse).
+func stackFunction(row *geom.StackLayer) string {
+	switch row.GetKind() {
+	case "copper":
+		return "CONDUCTOR"
+	case "dielectric":
+		switch row.GetDielectricType() {
+		case "core":
+			return "DIELCORE"
+		case "prepreg":
+			return "DIELPREG"
+		}
+		return "DIELECTRIC"
+	case "mask":
+		return "SOLDERMASK"
+	case "paste":
+		return "PASTEMASK"
+	case "silk":
+		return "SILKSCREEN"
+	}
+	return "DOCUMENT"
 }

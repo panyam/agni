@@ -15,7 +15,7 @@
 // The messages fall into two tiers of maturity.
 //    Tier 1 (netlist): Design, PartLibrary, PartType, Pin, Component, ComponentSection,
 //      Net, Connection, Sheet. Exercised by the EDIF netlist reader; names are frozen.
-//    Tier 2 (physical): Footprint, Layer, Stackup, Constraint, BomLine. PROVISIONAL.
+//    Tier 2 (physical): Footprint, Layer, Constraint, BomLine. PROVISIONAL.
 //      They were designed from the IPC-2581/ODB++ schemas. The IPC-2581 reader fills all five,
 //      KiCad fills Footprint and Constraint, and ODB++ fills Layer. Names and shape may still
 //      change.
@@ -101,8 +101,6 @@ pub struct Design {
     pub footprints: ::prost::alloc::vec::Vec<Footprint>,
     #[prost(message, repeated, tag="9")]
     pub layers: ::prost::alloc::vec::Vec<Layer>,
-    #[prost(message, optional, tag="10")]
-    pub stackup: ::core::option::Option<Stackup>,
     #[prost(message, repeated, tag="11")]
     pub constraints: ::prost::alloc::vec::Vec<Constraint>,
     #[prost(message, repeated, tag="12")]
@@ -770,30 +768,6 @@ pub struct Layer {
     pub index: i32,
     #[prost(enumeration="LayerFunction", tag="3")]
     pub function: i32,
-    #[prost(map="string, string", tag="14")]
-    pub attributes: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
-    #[prost(message, optional, tag="16")]
-    pub prov: ::core::option::Option<Provenance>,
-}
-/// StackupLayer is one physical layer in the board stackup (a sub-record; keyed within
-/// its parent Stackup).
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StackupLayer {
-    /// Layer.name
-    #[prost(string, tag="1")]
-    pub layer_ref: ::prost::alloc::string::String,
-    /// nanometers, matching the geometry sidecar unit convention
-    #[prost(int64, tag="2")]
-    pub thickness_nm: i64,
-    #[prost(string, tag="3")]
-    pub material: ::prost::alloc::string::String,
-    #[prost(map="string, string", tag="14")]
-    pub attributes: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Stackup {
-    #[prost(message, repeated, tag="1")]
-    pub layers: ::prost::alloc::vec::Vec<StackupLayer>,
     #[prost(map="string, string", tag="14")]
     pub attributes: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
     #[prost(message, optional, tag="16")]

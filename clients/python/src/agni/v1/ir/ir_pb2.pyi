@@ -145,7 +145,7 @@ class FidelityFragment(_message.Message):
     def __init__(self, prov: _Optional[_Union[Provenance, _Mapping]] = ..., format: _Optional[str] = ..., raw: _Optional[bytes] = ..., note: _Optional[str] = ...) -> None: ...
 
 class Design(_message.Message):
-    __slots__ = ("name", "ir_version", "source_format", "libraries", "components", "nets", "sheets", "input_diagnostics", "footprints", "layers", "stackup", "constraints", "bom", "net_groups", "attributes", "fidelity", "prov")
+    __slots__ = ("name", "ir_version", "source_format", "libraries", "components", "nets", "sheets", "input_diagnostics", "footprints", "layers", "constraints", "bom", "net_groups", "attributes", "fidelity", "prov")
     class AttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -163,7 +163,6 @@ class Design(_message.Message):
     INPUT_DIAGNOSTICS_FIELD_NUMBER: _ClassVar[int]
     FOOTPRINTS_FIELD_NUMBER: _ClassVar[int]
     LAYERS_FIELD_NUMBER: _ClassVar[int]
-    STACKUP_FIELD_NUMBER: _ClassVar[int]
     CONSTRAINTS_FIELD_NUMBER: _ClassVar[int]
     BOM_FIELD_NUMBER: _ClassVar[int]
     NET_GROUPS_FIELD_NUMBER: _ClassVar[int]
@@ -180,14 +179,13 @@ class Design(_message.Message):
     input_diagnostics: InputDiagnostics
     footprints: _containers.RepeatedCompositeFieldContainer[Footprint]
     layers: _containers.RepeatedCompositeFieldContainer[Layer]
-    stackup: Stackup
     constraints: _containers.RepeatedCompositeFieldContainer[Constraint]
     bom: _containers.RepeatedCompositeFieldContainer[BomLine]
     net_groups: _containers.RepeatedCompositeFieldContainer[NetGroup]
     attributes: _containers.ScalarMap[str, str]
     fidelity: _containers.RepeatedCompositeFieldContainer[FidelityFragment]
     prov: Provenance
-    def __init__(self, name: _Optional[str] = ..., ir_version: _Optional[str] = ..., source_format: _Optional[str] = ..., libraries: _Optional[_Iterable[_Union[PartLibrary, _Mapping]]] = ..., components: _Optional[_Iterable[_Union[Component, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[Net, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[Sheet, _Mapping]]] = ..., input_diagnostics: _Optional[_Union[InputDiagnostics, _Mapping]] = ..., footprints: _Optional[_Iterable[_Union[Footprint, _Mapping]]] = ..., layers: _Optional[_Iterable[_Union[Layer, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., constraints: _Optional[_Iterable[_Union[Constraint, _Mapping]]] = ..., bom: _Optional[_Iterable[_Union[BomLine, _Mapping]]] = ..., net_groups: _Optional[_Iterable[_Union[NetGroup, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., fidelity: _Optional[_Iterable[_Union[FidelityFragment, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., ir_version: _Optional[str] = ..., source_format: _Optional[str] = ..., libraries: _Optional[_Iterable[_Union[PartLibrary, _Mapping]]] = ..., components: _Optional[_Iterable[_Union[Component, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[Net, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[Sheet, _Mapping]]] = ..., input_diagnostics: _Optional[_Union[InputDiagnostics, _Mapping]] = ..., footprints: _Optional[_Iterable[_Union[Footprint, _Mapping]]] = ..., layers: _Optional[_Iterable[_Union[Layer, _Mapping]]] = ..., constraints: _Optional[_Iterable[_Union[Constraint, _Mapping]]] = ..., bom: _Optional[_Iterable[_Union[BomLine, _Mapping]]] = ..., net_groups: _Optional[_Iterable[_Union[NetGroup, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., fidelity: _Optional[_Iterable[_Union[FidelityFragment, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class InputDiagnostics(_message.Message):
     __slots__ = ("dangling_endpoints", "ref_des_collisions", "no_junction_endpoints", "unmodeled_buses", "unresolved_symbols", "resolved_symbols", "joined_taps", "unannotated_components", "unexpanded_hierarchy", "range_labels", "group_buses", "supplied")
@@ -581,42 +579,6 @@ class Layer(_message.Message):
     attributes: _containers.ScalarMap[str, str]
     prov: Provenance
     def __init__(self, name: _Optional[str] = ..., index: _Optional[int] = ..., function: _Optional[_Union[LayerFunction, str]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
-
-class StackupLayer(_message.Message):
-    __slots__ = ("layer_ref", "thickness_nm", "material", "attributes")
-    class AttributesEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
-    LAYER_REF_FIELD_NUMBER: _ClassVar[int]
-    THICKNESS_NM_FIELD_NUMBER: _ClassVar[int]
-    MATERIAL_FIELD_NUMBER: _ClassVar[int]
-    ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
-    layer_ref: str
-    thickness_nm: int
-    material: str
-    attributes: _containers.ScalarMap[str, str]
-    def __init__(self, layer_ref: _Optional[str] = ..., thickness_nm: _Optional[int] = ..., material: _Optional[str] = ..., attributes: _Optional[_Mapping[str, str]] = ...) -> None: ...
-
-class Stackup(_message.Message):
-    __slots__ = ("layers", "attributes", "prov")
-    class AttributesEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
-    LAYERS_FIELD_NUMBER: _ClassVar[int]
-    ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
-    PROV_FIELD_NUMBER: _ClassVar[int]
-    layers: _containers.RepeatedCompositeFieldContainer[StackupLayer]
-    attributes: _containers.ScalarMap[str, str]
-    prov: Provenance
-    def __init__(self, layers: _Optional[_Iterable[_Union[StackupLayer, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class Constraint(_message.Message):
     __slots__ = ("name", "kind", "params", "attributes", "prov")

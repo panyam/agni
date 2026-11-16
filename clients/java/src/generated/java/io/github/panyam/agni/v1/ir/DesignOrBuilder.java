@@ -274,21 +274,6 @@ public interface DesignOrBuilder extends
       int index);
 
   /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   * @return Whether the stackup field is set.
-   */
-  boolean hasStackup();
-  /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   * @return The stackup.
-   */
-  io.github.panyam.agni.v1.ir.Stackup getStackup();
-  /**
-   * <code>.agni.v1.ir.Stackup stackup = 10 [json_name = "stackup"];</code>
-   */
-  io.github.panyam.agni.v1.ir.StackupOrBuilder getStackupOrBuilder();
-
-  /**
    * <code>repeated .agni.v1.ir.Constraint constraints = 11 [json_name = "constraints"];</code>
    */
   java.util.List<io.github.panyam.agni.v1.ir.Constraint> 

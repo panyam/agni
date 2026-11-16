@@ -64,11 +64,16 @@ func TestRead(t *testing.T) {
 	if top != nil && top.Attributes["side"] != "TOP" {
 		t.Errorf("TOP layer side attr = %q, want TOP", top.Attributes["side"])
 	}
-	if d.Stackup == nil || len(d.Stackup.Layers) != 2 {
-		t.Fatalf("stackup layers = %v, want 2", d.Stackup)
+	// The stack is the board's, read with the geometry (agni 1660).
+	g, err := ReadBoardGeometry(bytes.NewReader(readFixture(t, "board.xml")), "test.xml")
+	if err != nil {
+		t.Fatalf("ReadBoardGeometry: %v", err)
 	}
-	if sl := d.Stackup.Layers[0]; sl.ThicknessNm != 35000 || sl.Material != "COPPER" {
-		t.Errorf("stackup layer 0 = %+v, want thickness_nm 35000 (0.035mm) material COPPER", sl)
+	if st := g.GetStackup(); len(st.GetLayers()) != 2 {
+		t.Fatalf("stackup layers = %v, want 2", st)
+	}
+	if sl := g.GetStackup().GetLayers()[0]; sl.GetThickness() != 35000 || sl.GetMaterial() != "COPPER" {
+		t.Errorf("stackup layer 0 = %v, want thickness 35000 nm (0.035mm) material COPPER", sl)
 	}
 	if len(d.Bom) != 1 {
 		t.Fatalf("bom lines = %d, want 1", len(d.Bom))

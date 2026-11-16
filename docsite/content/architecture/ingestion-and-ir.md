@@ -73,7 +73,7 @@ The IR is a graph. It has a **containment** tree of nodes, plus **cross-referenc
   - `Component`\* → `ComponentSection`\*         : the placed side (sections = units)
   - `Net`\* → `Connection`\*                     : connectivity
   - `Sheet`\*                                    : logical page refs (geometry is a sidecar)
-  - `Footprint`\*, `Layer`\*, `Stackup`(→`StackupLayer`\*), `Constraint`\*, `BomLine`\*: physical tier (provisional)
+  - `Footprint`\*, `Layer`\*, `Constraint`\*, `BomLine`\*: physical tier (provisional)
 - Cross-cutting on **every** node: `Provenance` (source locator) plus an `attributes` map. `Design` also carries the `FidelityFragment` list.
 
 **Relationships** (who references whom, and by which key):

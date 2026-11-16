@@ -31,7 +31,6 @@ type ipcFile struct {
 	Units    []unitDict `xml:"Content>DictionaryStandard"`
 	Boms     []bomEl    `xml:"Bom"`
 	Layers   []layerEl  `xml:"Ecad>CadData>Layer"`
-	Stackup  *stackupEl `xml:"Ecad>CadData>Stackup"`
 	Packages []pkgEl    `xml:"Ecad>CadData>Step>Package"`
 	Comps    []compEl   `xml:"Ecad>CadData>Step>Component"`
 	Nets     []netEl    `xml:"Ecad>CadData>Step>LogicalNet"`
@@ -70,17 +69,6 @@ type layerEl struct {
 type spanEl struct {
 	From string `xml:"fromLayer,attr"`
 	To   string `xml:"toLayer,attr"`
-}
-
-type stackupEl struct {
-	OverallThickness string           `xml:"overallThickness,attr,omitempty"`
-	Layers           []stackupLayerEl `xml:"StackupGroup>StackupLayer"`
-}
-
-type stackupLayerEl struct {
-	LayerRef  string `xml:"layerOrGroupRef,attr"`
-	Material  string `xml:"materialType,attr,omitempty"`
-	Thickness string `xml:"thickness,attr,omitempty"`
 }
 
 type pkgEl struct {
@@ -161,7 +149,6 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		Prov:         prov(),
 	}
 	putAttr(d.Attributes, "ipc2581_revision", f.Revision)
-	nmPerUnit := unitToNm(f.units())
 
 	// Each package is also the part type of the components placed from it, with the package's
 	// electrical pins as the part's pins. So a part whose package has none, such as a fiducial or a
@@ -262,21 +249,6 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		d.Layers = append(d.Layers, layer)
 	}
 
-	if f.Stackup != nil {
-		st := &ir.Stackup{Attributes: map[string]string{}, Prov: prov()}
-		putAttr(st.Attributes, "overall_thickness", f.Stackup.OverallThickness)
-		for _, sl := range f.Stackup.Layers {
-			esl := &ir.StackupLayer{LayerRef: sl.LayerRef, Material: sl.Material, Attributes: map[string]string{}}
-			if nm, ok := thicknessNm(sl.Thickness, nmPerUnit); ok {
-				esl.ThicknessNm = nm
-			} else {
-				putAttr(esl.Attributes, "thickness_raw", sl.Thickness)
-			}
-			st.Layers = append(st.Layers, esl)
-		}
-		d.Stackup = st
-	}
-
 	for _, b := range f.Boms {
 		for _, it := range b.Items {
 			bl := &ir.BomLine{Mpn: it.InternalPartNumber, Quantity: num.Int32(it.Quantity), Attributes: map[string]string{}, Prov: prov()}
@@ -289,15 +261,6 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		}
 	}
 	return d
-}
-
-func (f *ipcFile) units() string {
-	for _, u := range f.Units {
-		if u.Units != "" {
-			return u.Units
-		}
-	}
-	return ""
 }
 
 // allegroUnused is the name Allegro's export gives the net of a pin that is on no net, such as
