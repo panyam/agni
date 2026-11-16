@@ -28,10 +28,23 @@ of the Go module. The first time `agni open` or `agni serve` needs it, agni down
 attached to its own release, checks it against that release's `checksums.txt`, and keeps it in your
 user cache directory, so later runs work offline.
 
-Without Go, download the tarball for your platform from
-[the latest release](https://github.com/panyam/agni/releases/latest). There is one for macOS and
-Linux on arm64 and amd64. Each holds an `agni` binary that carries the viewer, and `checksums.txt`
-beside them verifies the download. Or run the container image, which needs nothing but Docker:
+Without Go, download the archive for your platform from
+[the latest release](https://github.com/panyam/agni/releases/latest). There is a tarball for macOS
+and Linux, and a zip for Windows, each on arm64 and amd64. Each holds an `agni` binary that carries
+the viewer, `agni.exe` on Windows, and `checksums.txt` beside them verifies the download.
+
+On Windows, unzip the archive, open PowerShell in its folder, and serve a folder of designs. Then
+open the address it prints in your browser:
+
+```
+.\agni.exe serve --mount boards=C:\Users\you\boards
+```
+
+A mount takes a Windows path with its drive letter as it is. Put the folder on your `PATH` to run
+`agni` from anywhere. Windows may warn about an unrecognized app on first run, since the binary is
+not signed.
+
+Or run the container image, which needs nothing but Docker:
 
 ```
 docker run --rm -v "$PWD":/work -w /work ghcr.io/panyam/agni check <board>.kicad_sch

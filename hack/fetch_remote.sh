@@ -20,6 +20,8 @@
 # match is never skipped, since a test reading a board that did not arrive passes over nothing.
 # hack/clean_remote.sh lists old cache entries and deletes them only when asked.
 set -euo pipefail
+# Git Bash on Windows has sha256sum and no shasum (agni issue 1595).
+command -v shasum >/dev/null || shasum() { shift 2; sha256sum "$@"; }
 
 pin=${1:-tools/samples/remote/remote.pin}
 dest=${2:-tools/samples/remote}
