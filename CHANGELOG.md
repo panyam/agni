@@ -10,6 +10,18 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-16
+
+The board view follows a selection to its side and copper, and steps back, forward and across the
+sheets that draw it (PRs 1596 and 1599). It shows the layer stack, each layer's thickness and an
+exploded stack view, and says how well the schematic and board agree (PRs 1602, 1605, 1606 and
+1608). Archives of every common kind read as folders (PR 1610), each release carries Windows zips
+(PR 1623), and `make try` plays, hands over and records a demo journey (PRs 1619 to 1622). It is a
+minor release. **Breaking:** `fshost.ExpandZips` is now `ExpandArchives`, and `odb.FromArchive` and
+`odb.IsArchiveJob` are removed, since archives read as folders everywhere (PR 1610). `make
+demo-video` is now `make try HEADED=0`. The full write-up is
+[RELEASES/v0.7.0.md](RELEASES/v0.7.0.md).
+
 ## [0.6.20] - 2026-11-13
 
 A cold browser-engine open of Jetson's board takes about 1.3 s rather than 2.3 s. `agni serve` builds a
