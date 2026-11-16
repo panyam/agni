@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/panyam/agni/core/results"
@@ -22,7 +23,13 @@ import (
 //
 // There is no index. Ids lead with a UTC timestamp, so filenames sort chronologically as plain
 // strings and a listing is a directory read plus a sort, parsing only the page a client asked for.
-type osReviewStore struct{ dir string }
+type osReviewStore struct {
+	dir string
+	now func() time.Time // the clock, which a test freezes
+
+	mu   sync.Mutex
+	last time.Time // the latest creation time this store handed out
+}
 
 // newOSReviewStore returns a store over dir, creating it when absent so a fresh volume works on first
 // boot rather than failing the first create. A path that exists and is not a directory is an error at
@@ -39,7 +46,7 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 	case !info.IsDir():
 		return nil, fmt.Errorf("--review-store %s: not a directory", dir)
 	}
-	return &osReviewStore{dir: dir}, nil
+	return &osReviewStore{dir: dir, now: time.Now}, nil
 }
 
 // reviewFileSuffix is what marks a file in the store as a run. Anything else in the directory is
@@ -69,10 +76,12 @@ func (s *osReviewStore) dirFor(parent string) string {
 //
 // The id is "<UTC yyyymmddThhmmss>.<nanoseconds>Z-<8 hex>". Listing order is a plain string sort
 // over ids, so the nanoseconds matter. A CI job reviewing several boards creates them inside one
-// second, and at second resolution they would sort by the random tail instead of by time. The tail
-// covers the residual tie, and O_EXCL makes an exact collision fail rather than overwrite.
+// second, and at second resolution they would sort by the random tail instead of by time. A coarse
+// clock, such as Windows' can be, gives runs made back to back the same nanosecond too, so each
+// creation time is at least a nanosecond after the last one this store handed out. The tail covers a
+// tie between two processes, and O_EXCL makes an exact collision fail rather than overwrite.
 func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.CheckResults) (string, string, error) {
-	now := time.Now().UTC()
+	now := s.after(s.now().UTC())
 	createdAt := now.Format(time.RFC3339)
 	// Stamp before marshalling, so the file on disk holds the same creation time the caller gets.
 	stamped, err := withCreatedAt(doc, createdAt)
@@ -201,4 +210,16 @@ func withCreatedAt(doc *checkspb.CheckResults, createdAt string) (*checkspb.Chec
 	}
 	clone.Meta.CreatedAt = createdAt
 	return clone, nil
+}
+
+// after returns now, or a nanosecond after the last creation time when the clock has not moved past
+// it, and records the time it returns.
+func (s *osReviewStore) after(now time.Time) time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !now.After(s.last) {
+		now = s.last.Add(time.Nanosecond)
+	}
+	s.last = now
+	return now
 }

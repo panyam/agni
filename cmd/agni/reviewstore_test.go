@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/panyam/agni/core/results"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -239,5 +241,35 @@ func TestOldFlatRunsReadAsUnparented(t *testing.T) {
 	}
 	if len(owning) != 1 || owning[0] != owned {
 		t.Errorf("listing projects/gateway = %v, want only the run made under it", owning)
+	}
+}
+
+// Runs created within one tick of the clock still list newest first. Windows' clock can give three
+// runs made back to back the same time, and then the ids' random tails decided their order (agni
+// issue 1595's Windows job). A frozen clock stands in for that tick on every platform.
+func TestOSReviewStoreOrdersRunsMadeWithinOneClockTick(t *testing.T) {
+	st, err := newOSReviewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tick := time.Date(2026, 11, 16, 7, 33, 14, 0, time.UTC)
+	st.now = func() time.Time { return tick }
+	ctx := context.Background()
+	var created []string
+	for i := 0; i < 20; i++ {
+		name, _, err := st.Create(ctx, "", storeDoc(fmt.Sprintf("r%d.edn", i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		created = append(created, name)
+	}
+	_, names, _, err := st.List(ctx, "", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, name := range names {
+		if want := created[len(created)-1-i]; name != want {
+			t.Fatalf("position %d = %s, want %s (newest first)", i, name, want)
+		}
 	}
 }
