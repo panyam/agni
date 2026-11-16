@@ -76,3 +76,8 @@ __pycache__/
 
 # The pnpm workspace root's install (agni issue 744); each member keeps its own node_modules too.
 /node_modules/
+
+# The C++ client's CMake build trees (agni issue 1638). The client generates its protobuf and gRPC
+# code into them at build time, and the example's run script builds there on first use.
+/clients/cpp/build/
+/clients/examples/cpp/build/

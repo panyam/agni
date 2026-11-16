@@ -60,6 +60,10 @@ recording. They leave out the fields a fixture lists under `ignore`, and an erro
 prose. The gate replays them over Connect's JSON form and over gRPC (`TestWireFixtures`), so the file
 always matches the server. `make wire-fixtures` records them again after an intended change.
 
+A client that generates its code at build time, as the C++ client in `clients/cpp` does, has no
+committed code for `make proto-check` to compare. So its CI job replays the fixtures on every pull
+request, and the replay holds it to the server.
+
 ## The exercise
 
 `make exercise-clients` runs each language's example from `clients/examples/<language>/run` against
