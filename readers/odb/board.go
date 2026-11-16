@@ -941,7 +941,7 @@ func (b *boardBuilder) packageOutline(pl *geom.ComponentPlacement, c *component,
 	if len(pkg.outline) == 0 {
 		return
 	}
-	mirror := c.back != c.mirror
+	mirror := packageFlips(c)
 	if !packageFitsPads(c, pkg, pl.GetRotationDeg(), mirror) {
 		return
 	}
@@ -957,6 +957,10 @@ func (b *boardBuilder) packageOutline(pl *geom.ComponentPlacement, c *component,
 		b.g.Graphics = append(b.g.Graphics, &geom.BoardGraphic{RefDes: pl.GetRefDes(), Layer: layer, Shape: s})
 	}
 }
+
+// packageFlips says whether a part's package flips onto the board: when the part is on the back or
+// marked M, and not both.
+func packageFlips(c *component) bool { return c.back != c.mirror }
 
 // pinSlack is how far a package pin may sit from its toeprint, in nanometres, and still be the same
 // place. The package and the toeprint each round to the file's precision.

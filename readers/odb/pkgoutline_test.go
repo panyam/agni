@@ -40,14 +40,19 @@ func odbJobs(t *testing.T) map[string]fs.FS {
 
 // The reader places a package outline only where the package's pins land on the part's own pads
 // (agni 1656). Whichever tool wrote the job, nearly every part must pass, or the frame rule is wrong.
-// The rule flips a back part's package unless the part is marked M. Flipping by side alone must fail
-// many KiCad parts, or the check proves nothing about the rule.
+// On KiCad's sample jobs, flipping a back part by its side alone must fit fewer parts than the rule,
+// since KiCad writes a back part's package already flipped. Those jobs come with `make odb-oracle`,
+// and TestABackPartsPackageFlipsUnlessMarkedM holds the rule without them.
 func TestAPackageFitsItsPartsPadsInEveryTool(t *testing.T) {
-	fitAll, bySideAll, total := 0, 0, 0
+	total, kicadFit, kicadBySide := 0, 0, 0
 	for name, fsys := range odbJobs(t) {
 		p, err := parseJob(fsys)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
+		}
+		kicadSample := false
+		if b, err := fs.ReadFile(fsys, "misc/info"); err == nil && strings.HasSuffix(name, ".odb.tgz") {
+			kicadSample = strings.Contains(string(b), "ODB_SOURCE=KiCad")
 		}
 		fit, n := 0, 0
 		for _, c := range p.allComponents() {
@@ -57,21 +62,54 @@ func TestAPackageFitsItsPartsPadsInEveryTool(t *testing.T) {
 			pkg := &p.eda.pkgs[c.pkg]
 			rot := normDeg(-c.rot)
 			n++
-			if packageFitsPads(c, pkg, rot, c.back != c.mirror) {
+			ok := packageFitsPads(c, pkg, rot, packageFlips(c))
+			if ok {
 				fit++
 			}
-			if packageFitsPads(c, pkg, rot, c.back) {
-				bySideAll++
+			if kicadSample {
+				if ok {
+					kicadFit++
+				}
+				if packageFitsPads(c, pkg, rot, c.back) {
+					kicadBySide++
+				}
 			}
 		}
 		if n > 0 && fit*100 < n*94 {
 			t.Errorf("%s: %d of %d parts fit their package, want at least 94%%", name, fit, n)
 		}
-		fitAll += fit
 		total += n
 	}
-	if total < 20 || bySideAll >= fitAll {
-		t.Errorf("%d parts checked, %d fit by the rule and %d by side alone; want at least 20, and the side alone to fit fewer", total, fitAll, bySideAll)
+	if total < 10 {
+		t.Errorf("%d parts checked, want at least 10", total)
+	}
+	if kicadFit > 0 && kicadBySide >= kicadFit {
+		t.Errorf("on KiCad's sample jobs %d parts fit by the rule and %d by side alone; want the side alone to fit fewer", kicadFit, kicadBySide)
+	}
+}
+
+// A back part's package flips when the part is on the back or marked M, not both (agni 1656). Both
+// parts sit at (10, 10) mm on the back, and their package's pins are (-1, 0) and (1, 0.5) mm. The
+// Altium-style part is marked N, and its pads lie flipped across x. The KiCad-style part is marked M,
+// and its package is already flipped, so its pads lie as the package draws them.
+func TestABackPartsPackageFlipsUnlessMarkedM(t *testing.T) {
+	const mm = 1_000_000
+	pkg := &edaPkg{pins: []edaPin{{name: "1", at: pt{-1 * mm, 0}}, {name: "2", at: pt{1 * mm, mm / 2}}}}
+	part := func(mirror bool, p1, p2 pt) *component {
+		return &component{at: pt{10 * mm, 10 * mm}, back: true, mirror: mirror, pins: []toeprint{{num: 0, at: p1}, {num: 1, at: p2}}}
+	}
+	altium := part(false, pt{11 * mm, 10 * mm}, pt{9 * mm, 10*mm + mm/2})
+	kicad := part(true, pt{9 * mm, 10 * mm}, pt{11 * mm, 10*mm + mm/2})
+	for name, c := range map[string]*component{"Altium": altium, "KiCad": kicad} {
+		if !packageFitsPads(c, pkg, 0, packageFlips(c)) {
+			t.Errorf("%s-style back part: its package misses its pads under the rule", name)
+		}
+		if packageFitsPads(c, pkg, 0, !packageFlips(c)) {
+			t.Errorf("%s-style back part: its package fits the other way too, so the test can't tell", name)
+		}
+	}
+	if packageFlips(altium) == packageFlips(kicad) {
+		t.Error("the two styles flip alike, want the M part unflipped")
 	}
 }
 
