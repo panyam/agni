@@ -9,12 +9,12 @@
 import type { SvgView, SvgViewState } from "./svgview.js";
 import { SheetSurface, type SurfaceMode } from "./sheetsurface.js";
 import { CanvasComponent } from "./canvas.js";
-import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { labelFor, pinOf, type Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import { chooseSheet, LINKS, type Link } from "./sheetfollow.js";
 import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from "./orient.js";
-import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
 import { followBoard, type BoardFacts } from "./boardfollow.js";

@@ -1,18 +1,22 @@
 // Connect clients for the WS9 web API. The service contracts are generated from proto
 // (CONSTRAINTS C2), and this module only wires a browser transport onto them. The view layer
 // calls these clients instead of hand-rolling fetch/JSON.
-import { LexiconService } from "./gen/agni/v1/webapi/lexicon_pb.js";
+//
+// The services come from @panyam/agni-client's generated code (agni issue 1651). The page makes each
+// client with createClient rather than taking AgniClient, because AgniClient's constructor names all
+// fourteen services, and that put 62 KB more into the landing page's bundle.
+import { LexiconService } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_pb";
 import { createClient, type Client, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
-import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
-import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
-import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
-import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
-import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
-import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
-import { TableService } from "./gen/agni/v1/webapi/tables_pb.js";
-import { SnapshotService } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
+import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
+import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
+import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
+import { TableService } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
+import { SnapshotService } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 import { pageBoard, pageFlattens } from "./router.js";
 

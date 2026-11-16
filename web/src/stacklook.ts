@@ -6,7 +6,7 @@
 // The board look reads only the board's layer rows and the packed sheet's keys, so it recolours what
 // the server packed and repacks nothing.
 
-import type { BoardLook } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLook } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 export type StackLook = "layers" | "board";
 

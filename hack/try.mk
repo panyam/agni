@@ -9,7 +9,7 @@ GO ?= go
 # id rebuilds the wasm, so the page's engine and the server agree on the browser cache's version.
 BUILD_ID := $(shell git diff HEAD 2>/dev/null | sha256sum | cut -c1-16)
 GO_SRC := $(wildcard $(shell git ls-files '*.go' go.mod go.sum))
-UI_SRC := $(wildcard $(shell git ls-files web/src web/build.mjs web/package.json pnpm-lock.yaml))
+UI_SRC := $(wildcard $(shell git ls-files web/src web/build.mjs web/package.json clients/ts/src pnpm-lock.yaml))
 STAMPS := bin/try
 
 .PHONY: all

@@ -19,7 +19,7 @@ import {
   WorkspaceService,
   type DirEntry,
   type ListMountsResponse,
-} from "./gen/agni/v1/webapi/workspace_pb.js";
+} from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 
 // SiteRead fetches one of the site's files by its path under the site's base and returns its JSON.
 // It throws when the file is missing.

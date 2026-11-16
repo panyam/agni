@@ -2,9 +2,9 @@
 // aggregates per-sheet violation counts from the findings it already holds and pushes
 // OverviewState, and the panel renders tiles and emits an onSelect(sheetId) intent back up.
 
-import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import type { FindingItem } from "./findings.js";
-import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // SheetTile is one row of the overview, a sheet and how many current findings live on it. A zero
 // count draws no badge, so only a sheet with something on it carries a number (agni issue 1132).

@@ -9,10 +9,10 @@
 import { create } from "@bufbuild/protobuf";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
-import { CheckDesignResponseSchema, CheckService, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
-import { type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
-import type { NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { CheckDesignResponseSchema, CheckService, type CheckDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
+import { type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
+import type { NamingConvention } from "@panyam/agni-client/gen/agni/v1/config/naming_pb";
 import { type RuleItem, defaultSelection } from "./rules.js";
 import { type FindingItem, type SheetBadge, type VerdictItem, contextFromWire, outcomeWord } from "./findings.js";
 import type { RuleExpectationItem } from "./expectations.js";

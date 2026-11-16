@@ -2,8 +2,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { JoinToolRoomOptions, PageTool, ToolRefusal, ToolRoom } from "@panyam/mcpkit-rooms";
-import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
-import type { JoinViewerRoomResponse } from "./gen/agni/v1/webapi/viewerroom_pb.js";
+import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
+import type { JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
 import type { PageDispatch } from "./pageservice.js";
 import { AGENTS_KEY, ViewerRoomTab, type RoomClient } from "./viewerroom.js";
 import { toolSchema } from "./toolschema.js";

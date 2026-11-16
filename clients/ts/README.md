@@ -65,7 +65,8 @@ try {
 
 - `pnpm install` at the repo root installs it with the rest of the pnpm workspace.
 - `make proto-web` regenerates `src/gen` with `buf.gen.ts.yaml`, and `make proto-check` fails when it
-  is stale.
+  is stale. The viewer imports this code too, under `@panyam/agni-client/gen/...` (agni issue 1651),
+  so a change here is a change to the viewer, and `make web-test` covers it.
 - `make ts-client-test` typechecks the client and its example, compiles the client to `dist/`, and
   runs the tests. `test/wirefixtures.test.ts` starts `agni serve` on `examples/cross-probe-project`,
   replays `clients/wirefixtures/fixtures.json` over Connect and over gRPC, and compares each answer

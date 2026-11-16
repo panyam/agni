@@ -2,7 +2,7 @@ import { For, Show, createMemo, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type LexiconRow, type LexiconState, type LexiconView, canRemove, emptyLexicon, subjectOf } from "./lexicon.js";
-import type { Table } from "./gen/agni/v1/webapi/tables_pb.js";
+import type { Table } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 
 export interface LexiconHandlers {
   onAdd: (vocabulary: string, kind: string, value: string) => void;

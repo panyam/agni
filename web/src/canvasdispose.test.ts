@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { CanvasComponent } from "./canvas.js";
-import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedSheetSchema, type PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { GROUP_WIRE, KIND_LINE_STRIP } from "./packed.js";
 import { fakeGl, type FakeGl } from "./fakegl.js";
 import { keyColumns } from "./testpacked.js";

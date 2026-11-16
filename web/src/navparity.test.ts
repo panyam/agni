@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { Outcome } from "./gen/agni/v1/checks/checks_pb.js";
-import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+import { Outcome } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import type { HighlightSpec } from "./highlights.js";
 import { pageApi } from "./pageapi.js";
 import { emptyLocation, type ViewerLocation } from "./router.js";

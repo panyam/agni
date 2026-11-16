@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { FileKind, WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { FileKind, WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { staticWorkspace } from "./staticworkspace.js";
 
 // site is what `agni site` writes for two mounts, in the protojson it writes: the gateway holds a

@@ -3,7 +3,7 @@
 // a board is drawn. It turns a set of hidden row names into what each renderer applies, and keeps
 // that set per design.
 
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // LayerPreset names the one-click choices above the layer rows.
 export type LayerPreset = "all" | "none" | "front" | "back";

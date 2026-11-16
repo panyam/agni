@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { TableSchema } from "./gen/agni/v1/webapi/tables_pb.js";
+import { TableSchema } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 import { tablesPanelIsland } from "./tablespanel.jsx";
 import { type TablesState, emptyTables } from "./tables.js";
 

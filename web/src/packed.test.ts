@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, it, expect } from "vitest";
 import { create, toBinary } from "@bufbuild/protobuf";
-import { PackedSheetSchema } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedSheetSchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import {
   decodePackedSheet,
   KIND_LINE_STRIP,

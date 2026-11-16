@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { DescMessage } from "@bufbuild/protobuf";
 import { BytesValueSchema, DescriptorProtoSchema, FieldSchema, Int64ValueSchema, SourceCodeInfoSchema, StructSchema, UninterpretedOptionSchema, ValueSchema } from "@bufbuild/protobuf/wkt";
-import { ViewerLocationSchema, ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
+import { ViewerLocationSchema, ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import { messageSchema, readOnly, toolName, toolSchema } from "./toolschema.js";
 
 const here = dirname(fileURLToPath(import.meta.url));

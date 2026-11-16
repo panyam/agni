@@ -9,9 +9,13 @@ import solid from "vite-plugin-solid";
 // wrapper are inlined, so the tests and the components share ONE reactive core. Externalizing
 // them recreates the two-cores setState-no-op bug inside the test runner itself (see the
 // solidAlias note in build.mjs).
+//
+// The "source" condition reads a workspace package from its .ts rather than its dist, which is built
+// only for publishing. The viewer imports @panyam/agni-client's generated code that way (agni issue
+// 1651).
 export default defineConfig({
   plugins: [solid()],
-  resolve: { conditions: ["development", "browser"] },
+  resolve: { conditions: ["source", "development", "browser"] },
   test: {
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     server: { deps: { inline: [/solid-js/, /@panyam\/tsappkit-solid/] } },

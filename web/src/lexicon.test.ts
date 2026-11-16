@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { ClassVocabSchema, NamingConventionSchema, NamingRuleSchema, type NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
-import { LexiconEntrySchema, LexiconSource, type LexiconEntry } from "./gen/agni/v1/webapi/lexicon_pb.js";
+import { ClassVocabSchema, NamingConventionSchema, NamingRuleSchema, type NamingConvention } from "@panyam/agni-client/gen/agni/v1/config/naming_pb";
+import { LexiconEntrySchema, LexiconSource, type LexiconEntry } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_pb";
 import { LexiconPresenter, addEntry, canRemove, emptyLexicon, removeEntry, rowsOf, setInference, setOff, subjectOf, type LexiconClient, type LexiconState } from "./lexicon.js";
-import { TableSchema } from "./gen/agni/v1/webapi/tables_pb.js";
+import { TableSchema } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 
 const entry = (vocabulary: string, kind: string, value: string, source = LexiconSource.BUILTIN, replaced = false): LexiconEntry =>
   create(LexiconEntrySchema, { vocabulary, kind, value, source, replaced });

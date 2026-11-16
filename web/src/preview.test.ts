@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignPreview, captionFor, pickPreviewSheet, type PreviewView } from "./preview.js";
-import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes follow the diffpresenter.test.ts harness, with plain stubs behind the typed client and a

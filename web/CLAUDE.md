@@ -7,7 +7,7 @@ This file covers the viewer's TypeScript, the pnpm workspace it sits in, and how
 - **The web code is ONE pnpm workspace with one lockfile at the root.** It holds `web/` (the viewer), `datasheet/web/` (the workbench, with pdf.js, served by `agnids`) and `web-shared/`.
 - `web-shared/` is plain TS with no npm dependency of its own. Both pages import it as `@agni/web-shared/<name>.js`, so neither page pulls in the other's libraries through it.
 - Run `pnpm install` at the ROOT. `make ui`, `make web-test` and `make proto-web` cover all three packages.
-- The workbench's TS generates from the whole buf workspace. The viewer's generates from `protos/` alone.
+- The viewer has no generated code of its own. It imports messages and services from `@panyam/agni-client/gen/agni/v1/...` (agni 1651), with no `.js` on the specifier. `build.mjs`, `tsconfig.json` and both vitest configs set the `source` condition, which reads the client's `.ts`. The workbench still generates its own TS, from the whole buf workspace.
 - The workbench has its OWN `BasePage.html` with only the style rules it uses, so `datasheet/web` deploys on its own.
 - **mcpkit bumps in lock-step.** Bump its six Go modules in the root `go.mod`, `examples/ask-over-mcp`, and `@panyam/mcpkit-rooms` in `web/package.json` together.
 - pnpm adds the new mcpkit version to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. Commit that file with the bump.

@@ -23,9 +23,9 @@ import {
   type NamingConvention,
   type NamingLexicon,
   type VocabPatterns,
-} from "./gen/agni/v1/config/naming_pb.js";
-import { LexiconSource, type CompareLexiconsResponse, type GetLexiconResponse, type LexiconEntry, type RenderConventionResponse } from "./gen/agni/v1/webapi/lexicon_pb.js";
-import type { Table } from "./gen/agni/v1/webapi/tables_pb.js";
+} from "@panyam/agni-client/gen/agni/v1/config/naming_pb";
+import { LexiconSource, type CompareLexiconsResponse, type GetLexiconResponse, type LexiconEntry, type RenderConventionResponse } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_pb";
+import type { Table } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 import { conventionError } from "./conventions.js";
 import { messageOf } from "./document.js";
 

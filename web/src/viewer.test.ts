@@ -1,14 +1,14 @@
 import { emptyLocation } from "./router.js";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { TextPositionSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { TextPositionSchema } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { ViewerPresenter, summaryLine, type RenderView } from "./viewer.js";
 import { stubQueryView } from "./testviews.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
-import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
-import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
-import type { Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { LocateReason } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
+import type { Snapshot } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes for the presenter's collaborators. The presenter only calls typed methods, so plain

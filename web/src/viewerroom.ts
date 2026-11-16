@@ -1,8 +1,8 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { JsonValue } from "@bufbuild/protobuf";
 import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type ToolRefusal, type ToolRoom } from "@panyam/mcpkit-rooms";
-import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
-import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "./gen/agni/v1/webapi/viewerroom_pb.js";
+import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
+import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
 import type { PageDispatch } from "./pageservice.js";
 import type { Focus } from "./properties.js";
 import type { ViewerLocation } from "./router.js";

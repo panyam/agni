@@ -9,14 +9,14 @@
 // it, and asks the question once more.
 import { Code, ConnectError, type Interceptor } from "@connectrpc/connect";
 import { toJsonString, type MessageInitShape } from "@bufbuild/protobuf";
-import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
+import { snapshotUnavailable } from "@panyam/agni-client";
+import { OverlayConfigSchema, type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import {
   IngestRequestSchema,
-  SnapshotUnavailableSchema,
   SnapshotUnavailable_Reason,
   UpdateSnapshotRequestSchema,
   type Snapshot,
-} from "./gen/agni/v1/webapi/snapshot_pb.js";
+} from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 
 type IngestInit = MessageInitShape<typeof IngestRequestSchema>;
 type UpdateInit = MessageInitShape<typeof UpdateSnapshotRequestSchema>;
@@ -137,7 +137,7 @@ export function recoveringInterceptor(registry: () => SnapshotRegistry | undefin
     } catch (e) {
       const ce = ConnectError.from(e);
       if (ce.code !== Code.NotFound && ce.code !== Code.FailedPrecondition) throw e;
-      const d = ce.findDetails(SnapshotUnavailableSchema)[0];
+      const d = snapshotUnavailable(ce);
       const reg = registry();
       if (!d || !reg || !(await reg.recover(d.name, d.reason))) throw e;
       return next(req);

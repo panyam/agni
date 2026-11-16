@@ -66,7 +66,10 @@ const loadBuild = {
   logLevel: "info",
 };
 
-const builds = [...appBundles.map(solidBuild), benchBuild, loadBuild];
+// Every bundle reads @panyam/agni-client's generated code from its .ts through the "source" condition
+// (agni issue 1651), since the client's dist is built only for publishing. esbuild still applies its
+// own conditions, such as "browser" and "import".
+const builds = [...appBundles.map(solidBuild), benchBuild, loadBuild].map((b) => ({ ...b, conditions: ["source"] }));
 
 // The engine worker (agni issues 178 and 863) is goapplib's wasmhost worker, shipped prebuilt as a
 // classic script because it loads Go's wasm_exec.js with importScripts. It is copied beside the

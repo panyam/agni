@@ -35,8 +35,9 @@
 FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
 WORKDIR /src
 # The web code is a pnpm workspace with one lockfile at the root (agni issue 744): the viewer
-# (web/), what it shares with the datasheets workbench (web-shared/), and the workbench itself
-# (datasheet/web/, served by agnids rather than this image). Manifests first so a
+# (web/), what it shares with the datasheets workbench (web-shared/), the workbench itself
+# (datasheet/web/, served by agnids rather than this image), and the TypeScript client
+# (clients/ts/), whose generated code the viewer imports (agni issue 1651). Manifests first so a
 # dependency-unchanged rebuild reuses the install layer; the source copy below is what churns.
 # The workbench's manifest is copied too, because --frozen-lockfile checks every workspace member
 # against the lockfile, and the --filter then installs only the viewer and what it depends on.
@@ -44,11 +45,13 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY web/package.json web/
 COPY web-shared/package.json web-shared/
 COPY datasheet/web/package.json datasheet/web/
+COPY clients/ts/package.json clients/ts/
 # corepack activates the pnpm the root package.json's packageManager names, so the image builds with
 # the same pnpm as a developer and CI.
 RUN corepack enable
 RUN pnpm install --frozen-lockfile --filter agni-web...
 COPY web-shared/ web-shared/
+COPY clients/ts/ clients/ts/
 COPY web/ web/
 RUN pnpm -C web build
 

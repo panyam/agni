@@ -9,7 +9,7 @@
 // agree row for row. C35 asks that of every table agni emits.
 
 import type { Client } from "@connectrpc/connect";
-import { type Table, type TabulateRequest, TableEncoding, TableService } from "./gen/agni/v1/webapi/tables_pb.js";
+import { type Table, type TabulateRequest, TableEncoding, TableService } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 
 export type TableClient = Client<typeof TableService>;
 

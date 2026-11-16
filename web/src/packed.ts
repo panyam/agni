@@ -7,7 +7,7 @@
 // backing store goes straight to gl.bufferData without a copy.
 
 import { fromBinary } from "@bufbuild/protobuf";
-import { PackedSheetSchema, type PackedKeys, type PackedLabels, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedSheetSchema, type PackedKeys, type PackedLabels, type PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // DEFAULT_FONT_STACK mirrors render.SchematicFontStack (core/render/style.go). The server sends
 // the family list on every sheet, so this is only the fallback for a sheet packed before the field

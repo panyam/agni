@@ -9,7 +9,7 @@ import { snapshots } from "./api.js";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+import { DesignService, SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 
 type DesignClient = Client<typeof DesignService>;
 

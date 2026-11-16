@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
-import type { Table, TableRow } from "./gen/agni/v1/webapi/tables_pb.js";
+import type { Table, TableRow } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 import { type CompareOptions, type TablesSourceKey, type TablesState, type TablesView, emptyTables } from "./tables.js";
 
 // LOCATABLE are the column kinds a cell click can find on the drawing by the cell alone. A pin needs

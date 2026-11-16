@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { QuerySetSchema, RunQueryResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason, linkTarget, linkNote, type QueryResult, type QueryRowItem } from "./query.js";
 import { probedOneAnswer, resultFromWire } from "./testwire.js";
 

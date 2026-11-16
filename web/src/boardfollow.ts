@@ -4,7 +4,7 @@
 // which side to show and which layer rows to turn on, from what the engine says about the selection.
 // It is pure, so the board view applies its answer and the tests read it directly.
 
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // BoardFacts is where the board places one selected subject, from LocateSubjects. part is set for a
 // part or a pin, which sit on a side. side is "front", "back", or "" when the board states neither.

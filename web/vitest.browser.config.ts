@@ -17,6 +17,9 @@ import { defineConfig } from "vitest/config";
 // separate program. Each spec launches its own page (see browser.ts) so no assertion inherits
 // another's scroll position or open drawer.
 export default defineConfig({
+  // The specs run in Node and build requests from @panyam/agni-client's generated code. The "source"
+  // condition reads it from the client's .ts, since its dist is built only for publishing.
+  ssr: { resolve: { conditions: ["source"] } },
   test: {
     include: ["browser/**/*.spec.ts"],
     globalSetup: ["./browser/serve.ts", "./browser/docsite.ts"],

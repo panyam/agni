@@ -4,17 +4,17 @@
 // through this module, which decodes either codec against the method's own schema.
 
 import { fromBinary, fromJson, toBinary, toJson, type DescMessage, type DescService, type JsonValue, type MessageShape } from "@bufbuild/protobuf";
-import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
-import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
-import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
-import { LexiconService } from "./gen/agni/v1/webapi/lexicon_pb.js";
-import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
-import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
-import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
-import { SnapshotService } from "./gen/agni/v1/webapi/snapshot_pb.js";
-import { TableService } from "./gen/agni/v1/webapi/tables_pb.js";
-import { ViewerRoomService } from "./gen/agni/v1/webapi/viewerroom_pb.js";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
+import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
+import { LexiconService } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_pb";
+import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
+import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
+import { SnapshotService } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
+import { TableService } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
+import { ViewerRoomService } from "@panyam/agni-client/gen/agni/v1/webapi/viewerroom_pb";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 
 const SERVICES: DescService[] = [
   CheckService,

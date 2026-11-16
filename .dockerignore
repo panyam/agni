@@ -14,6 +14,8 @@ node_modules
 web-shared/node_modules
 datasheet/web/node_modules
 datasheet/web/static
+clients/ts/node_modules
+clients/ts/dist
 
 # The local datasheet corpus (DATASHEET_DIR's default) is vendor-licensed PDFs, which must never
 # enter an image, and a docling venv is gigabytes of host-architecture wheels the agnids image

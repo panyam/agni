@@ -1,8 +1,8 @@
 version: v2
 # The TypeScript client's message and service code (agni issue 1630), from the engine's protos alone.
-# It uses the viewer's generator, protoc-gen-es from the workspace's lockfile, so the two cannot
-# drift apart. It differs from web/buf.gen.web.yaml in one option. import_extension=js writes
-# `./server_pb.js` imports, and Node's ES modules need those once tsc compiles the package.
+# The viewer imports it too, from @panyam/agni-client (agni issue 1651). import_extension=js writes
+# `./server_pb.js` imports, and Node's ES modules need those once tsc compiles the package. The
+# viewer's bundler reads them either way.
 clean: true
 plugins:
   - local: node_modules/.bin/protoc-gen-es

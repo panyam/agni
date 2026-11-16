@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { followBoard, type BoardFacts } from "./boardfollow.js";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 const row = (name: string, kind: string, side: string) => ({ name, kind, side, color: "", svgSelector: "", groups: [] }) as unknown as BoardLayerRow;
 const rows = [

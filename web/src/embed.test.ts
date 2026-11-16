@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
+import { ViewerPageService } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import { ACCEPTED, codeName, ENVELOPE, embedOrigins, listenForHosts, originAllowed, parseRequest, type HostWindow } from "./embed.js";
 import { frameFetch } from "./embedclient.js";
 import type { ViewerPageAPI } from "./pageapi.js";

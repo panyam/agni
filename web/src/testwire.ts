@@ -3,7 +3,7 @@
 // 916), with each entity and citation kept once on the response and rows pointing into them, so a
 // test states what a row shows rather than how the wire factors it. Used only by tests.
 import { create } from "@bufbuild/protobuf";
-import { RunQueryResponseSchema, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { RunQueryResponseSchema, type RunQueryResponse } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import type { SheetBadge } from "./findings.js";
 import { resultFromResponse, type QueryResult } from "./query.js";
 

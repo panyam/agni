@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { GetDesignResponseSchema, type GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
+import { GetDesignResponseSchema, type GetDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { INVENTORY_PATHS, SERVED_QUERIES, type PropertiesState } from "./properties.js";
 import { PropertiesPresenter, areaSubjects } from "./propertiespresenter.js";
 import type { VerdictItem } from "./findings.js";

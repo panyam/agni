@@ -5,7 +5,7 @@
 import { beforeAll, afterAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Request } from "playwright-core";
 import { fromBinary, toJson, type DescMessage } from "@bufbuild/protobuf";
-import { HighlightSheetRequestSchema } from "../src/gen/agni/v1/webapi/design_pb.js";
+import { HighlightSheetRequestSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { launch, withPage } from "./browser.js";
 
 const base = (): string => inject("baseUrl");

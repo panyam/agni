@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
+import { TraceSchema, TraceOutcome } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { emptyTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSheet, traceSubjects } from "./trace.js";
 
 // create(TraceSchema, ...) rather than an object literal. A plain literal standing in for a proto

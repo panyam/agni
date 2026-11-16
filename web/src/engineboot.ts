@@ -8,7 +8,7 @@ import { useEngineFetch, timingMode, workspaceClient } from "./api.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
 import { fetchFile } from "./wasm/fetchfile.js";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { appBase, currentLocation, setBase, setStaticHost } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { dropOf, type DropStore } from "./drops.js";

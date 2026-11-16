@@ -6,7 +6,7 @@
 // The dialog is plain DOM. Every string in it came from the visitor's files, so it is set as text and
 // never parsed as markup.
 import { filesFromDrop, filesFromFileList } from "@panyam/tsappkit/wasmhost";
-import type { ProposeDesignsResponse } from "../gen/agni/v1/webapi/workspace_pb.js";
+import type { ProposeDesignsResponse } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { mountOf, type Files, type WasmEngine } from "./client.js";
 import { OVERLAY_DIR, type DropStore } from "../drops.js";
 

@@ -1,13 +1,13 @@
 // The browser half of the wasm bench (agni issue 852). It runs the real worker over one board. It
 // times the same questions as tools/wasmbench does natively, so the two can be compared row for
 // row. It is a measurement entry, loaded only by web/browser/bench.mjs, and no page ships it.
-import { SnapshotService } from "../gen/agni/v1/webapi/snapshot_pb.js";
+import { SnapshotService } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { DesignService } from "../gen/agni/v1/webapi/design_pb.js";
-import { CheckService } from "../gen/agni/v1/webapi/checks_pb.js";
-import { QueryService } from "../gen/agni/v1/webapi/query_pb.js";
-import { WorkspaceService } from "../gen/agni/v1/webapi/workspace_pb.js";
+import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
+import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { mountingFetch, startEngine } from "./client.js";
 import type { Files, WorkerStats } from "./client.js";
 import { loadSplit, type LoadSplit } from "../../browser/exercise-report.js";
