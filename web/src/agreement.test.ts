@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 
 import { NOT_COMPARED, readAgreement } from "./agreement.js";
-import { DiffDesignsResponseSchema } from "./gen/agni/v1/webapi/diff_pb.js";
+import { DiffDesignsResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 
 // The engine's answer for a netlist and its board that disagree in each way the panel lists.
 const disagreeing = create(DiffDesignsResponseSchema, {

@@ -1,6 +1,6 @@
 import { create, fromJson, toJson, type DescMethod, type JsonValue, type MessageInitShape, type MessageShape } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { ViewerLocationSchema, ViewerPageService, type ViewerLocation as WireLocation } from "./gen/agni/v1/viewer/page_pb.js";
+import { ViewerLocationSchema, ViewerPageService, type ViewerLocation as WireLocation } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import type { ViewerPageAPI } from "./pageapi.js";
 import { hasFile, parseUrl, type ViewerLocation } from "./router.js";
 import type { RenderMode } from "./viewer.js";

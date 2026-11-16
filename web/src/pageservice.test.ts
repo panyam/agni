@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { ViewerLocationSchema } from "./gen/agni/v1/viewer/page_pb.js";
+import { ViewerLocationSchema } from "@panyam/agni-client/gen/agni/v1/viewer/page_pb";
 import { pageApi, type SheetViewsHost, type ViewerPageAPI } from "./pageapi.js";
 import { isLinkOnly, locationFromLink, locationFromWire, locationToWire, pageDispatcher } from "./pageservice.js";
 import { emptyLocation, type ViewerLocation } from "./router.js";

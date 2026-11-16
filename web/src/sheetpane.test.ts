@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, type Located, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
-import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // ROWS are a board's layer rows as the engine lists them, two inner layers between the outer pair.
 const ROWS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"].map(

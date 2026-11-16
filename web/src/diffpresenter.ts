@@ -7,13 +7,13 @@
 // file, sheet and highlight state while a diff is open.
 
 import { snapshots } from "./api.js";
-import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
+import type { OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
-import { DiffService, type DiffDesignsResponse } from "./gen/agni/v1/webapi/diff_pb.js";
-import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { DesignService, SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DiffService, type DiffDesignsResponse } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
+import type { PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { HighlightSpec } from "./highlights.js";
 import { toRenderable } from "./packed.js";
 import { boundsOfVertices } from "./camera.js";

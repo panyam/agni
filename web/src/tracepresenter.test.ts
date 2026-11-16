@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat, TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
+import { SheetFormat, TraceSchema, TraceOutcome } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { stubQueryView } from "./testviews.js";
 import type { TraceState } from "./trace.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";

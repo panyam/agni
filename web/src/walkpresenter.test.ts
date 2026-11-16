@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat, TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { SheetFormat, TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { stubQueryView } from "./testviews.js";
 import type { WalkState } from "./walk.js";
 import { HighlightShape } from "./highlights.js";

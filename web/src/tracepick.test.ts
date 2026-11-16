@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { ComponentSchema } from "./gen/agni/v1/ir/ir_pb.js";
+import { ComponentSchema } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
 import type { Inventory } from "./properties.js";
 import { PICK_LIMIT, matchRank, pickCandidates, tracePicks, reachPicks, type Reach } from "./tracepick.js";
 

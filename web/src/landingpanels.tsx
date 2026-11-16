@@ -14,7 +14,7 @@ import { dsToUrl } from "@agni/web-shared/dsrouter.js";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
 import { clearRecents, loadRecents, type Recent, type RecentKind } from "@agni/web-shared/recents.js";
 import { projectClient } from "./api.js";
-import type { Design } from "./gen/agni/v1/webapi/project_pb.js";
+import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 
 // openUrl is where an artifact reopens, by kind. Both halves go through their page's own URL
 // builder rather than assembling a path here, so this cannot drift from what those pages parse. A

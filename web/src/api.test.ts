@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
-import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
-import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
 import { workspaceClient, designClient, reviewClient, timingInterceptor } from "./api.js";
 
 // Guards the generated service contract the frontend depends on. The proto must emit a

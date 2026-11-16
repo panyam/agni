@@ -5,7 +5,7 @@
 import { beforeAll, afterAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page, Request } from "playwright-core";
 import { fromBinary, toBinary, toJson, type DescMessage } from "@bufbuild/protobuf";
-import { HighlightSheetRequestSchema, LocateSubjectsRequestSchema, LocateSubjectsResponseSchema } from "../src/gen/agni/v1/webapi/design_pb.js";
+import { HighlightSheetRequestSchema, LocateSubjectsRequestSchema, LocateSubjectsResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { launch, withPage } from "./browser.js";
 import { showPanel } from "./panels.js";
 import { PANE, TITLE, centreOf, centredIn, clearPoint, firstClear, lit, openBeside, openViewer, picked } from "./picks.js";

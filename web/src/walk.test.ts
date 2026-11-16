@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { HighlightShape } from "./highlights.js";
 import { HOP_COLORS, WALK_CROSSED_COLOR, WALK_GOAL_COLOR, WALK_START_COLOR, goalRevealSpecs, goalSheet, parseWalkParams, splitStart, walkFromResponse, walkParams, walkSheet, walkSpecs, walkStartMarks, type WalkRequest } from "./walk.js";
 import { emptyLocation, locationToUrl, parseUrl } from "./router.js";

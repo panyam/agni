@@ -7,7 +7,7 @@
 // See docsite/content/architecture/web-app.md#the-render-contract.
 
 import type { Primitive, PrimitiveKey } from "./packed.js";
-import { HighlightShape } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { HighlightShape } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 export { HighlightShape };
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { OverlayConfigSchema } from "./gen/agni/v1/webapi/config_pb.js";
-import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { OverlayConfigSchema } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
+import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 
 // A registry over recorded SnapshotService calls, minting ids in order.

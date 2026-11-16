@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
-import { IngestRequestSchema } from "./gen/agni/v1/webapi/snapshot_pb.js";
-import { ListMountsResponseSchema } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { IngestRequestSchema } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
+import { ListMountsResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { answer, requestJson } from "./wirecodec.js";
 
 const INGEST = "http://h/agni.v1.webapi.SnapshotService/Ingest";

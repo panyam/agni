@@ -8,7 +8,7 @@
 // remains.
 
 import { type Bindings, LocateReason } from "./query.js";
-import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
+import type { QuerySet } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { labelFor, type Selection } from "./selection.js";
 
 // Located is the cell a tab last located on the drawing. Switching back to the tab locates it again,

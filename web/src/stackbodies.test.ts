@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { BoardPartBodySchema } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { BoardPartBodySchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { PRESETS, StackCamera } from "./stackcamera.js";
 import { BODY_FLOATS, TYPICAL_BODY_MM, bodyGeometry, bodyTopZ, defaultedNote, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
 

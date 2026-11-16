@@ -4,9 +4,9 @@ import { DiffPresenter, type DiffRenderView, type DiffSideView, type DiffState }
 import { DIFF_COLORS } from "./diff.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { create } from "@bufbuild/protobuf";
-import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
-import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
-import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+import { OverlayConfigSchema, type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
+import { PackedSheetSchema, type PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 
 // packedSheet is a packed sheet naming the side and sheet it came from, 1000 by 800 world units.
 function packedSheet(id: string): PackedSheet {

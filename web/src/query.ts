@@ -1,8 +1,8 @@
 // query.ts is the framework-neutral state for the datalog query panel (WS9-036). The presenter
 // pushes a QueryResult and the panel renders it. The shape lives here rather than in the .tsx, as in
 // rules.ts and findings.ts, so the presenter and tests build state without touching Solid.
-import { type QuerySet, type QueryValue, type QueryWitness, type RelationEntry, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
-import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import { type QuerySet, type QueryValue, type QueryWitness, type RelationEntry, type RunQueryResponse } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
+import { LocateReason } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
 import type { FindingsState, SheetBadge } from "./findings.js";
 import type { Selection } from "./selection.js";
 

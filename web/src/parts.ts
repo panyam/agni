@@ -2,8 +2,8 @@
 // on design load and pushes a PartsState. The panel renders one row per datasheet-backed component,
 // each expanding into its parameter tree, and a click emits onLocate(refDes), the same locate path a
 // finding or a coverage signal uses.
-import type { GetComponentParamsResponse } from "./gen/agni/v1/webapi/checks_pb.js";
-import type { PartSpec } from "./gen/agni/v1/param/param_pb.js";
+import type { GetComponentParamsResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
+import type { PartSpec } from "@panyam/agni-client/gen/agni/v1/param/param_pb";
 
 // PartRow is one design component joined to its datasheet spec.
 export interface PartRow {

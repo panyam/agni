@@ -13,8 +13,8 @@ import {
   type ChangedItem,
   type SheetPair,
 } from "./diff.js";
-import type { DiffDesignsResponse, DiffReport } from "./gen/agni/v1/webapi/diff_pb.js";
-import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
+import type { DiffDesignsResponse, DiffReport } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 
 // The full-taxonomy status maps the server would emit for the diffdemo fixture pair:
 // R2 removed, R3 changed, R4 added; OLD deleted, NEWNET new, SIG->SIG_CLK renamed (both

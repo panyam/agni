@@ -2,10 +2,10 @@
 // lists the runs stored for the open design, creates new ones, and pushes a ReviewState the panel
 // renders. Clicking a finding emits onLocate, which reuses the locate path of a query cell or a
 // finding.
-import type { CheckResults, ReviewManifest } from "./gen/agni/v1/checks/checks_pb.js";
-import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
+import type { CheckResults, ReviewManifest } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
+import type { Review } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
 import { contextFromWire, type FindingItem } from "./findings.js";
-import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import { LocateReason } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
 import type { WitnessItem } from "./query.js";
 
 // OUTCOMES is the review vocabulary, in the order a report reads: the two decided verdicts, then the

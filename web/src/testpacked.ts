@@ -3,7 +3,7 @@
 // Used only by tests. packed.test.ts holds both to the Go packer's twin fixture, so they cannot drift
 // from render.PackedKeys and render.PackedLabels.
 import { create } from "@bufbuild/protobuf";
-import { PackedKeysSchema, PackedLabelsSchema, type PackedKeys, type PackedLabels } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedKeysSchema, PackedLabelsSchema, type PackedKeys, type PackedLabels } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 // strings interns strings for one column message. Index 0 is always "".
 function strings(): { list: string[]; of: (s?: string) => number } {

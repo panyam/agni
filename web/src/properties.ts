@@ -12,10 +12,10 @@
 // screen is under it, and an entity (a component, net, pin or bus) is under the sheet it was picked
 // on. Everything here is pure, so the panel and its tests share one derivation.
 
-import type { Component, Design, Net } from "./gen/agni/v1/ir/ir_pb.js";
-import { ClassSource, Role } from "./gen/agni/v1/ir/ir_pb.js";
-import type { PartSpec } from "./gen/agni/v1/param/param_pb.js";
-import type { ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
+import type { Component, Design, Net } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
+import { ClassSource, Role } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
+import type { PartSpec } from "@panyam/agni-client/gen/agni/v1/param/param_pb";
+import type { ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { checkedState, findingsFor, type FindingItem, type FindingsState, type VerdictItem } from "./findings.js";
 import type { EntityQueryItem } from "./query.js";
 import { labelFor, type Selection } from "./selection.js";

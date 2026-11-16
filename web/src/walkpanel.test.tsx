@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { tracePanelIsland } from "./tracepanel.jsx";
 import { propertiesPanelIsland } from "./propertiespanel.jsx";
-import { TraceOutcome, WalkSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import { TraceOutcome, WalkSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import { emptyWalk, walkFromResponse, type WalkRequest } from "./walk.js";
 
 const req: WalkRequest = { start: "R1", kind: "small-parts", hops: 2, through: [] };

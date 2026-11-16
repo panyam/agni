@@ -1,8 +1,8 @@
 // A fake SnapshotSource for the presenters' tests (agni issue 1061). A snapshot's name carries the
 // design it names, and the convention when it has one, so a test asserting which design a request
 // asked about still can: `snapshots/mount://m/b.edn`, or `snapshots/mount://m/b.edn@acme`.
-import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
-import type { Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import type { OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
+import type { Snapshot } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import type { SnapshotSource } from "./snapshots.js";
 
 export function snapName(uri: string, overlay?: OverlayConfig): string {

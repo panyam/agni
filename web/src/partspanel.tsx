@@ -2,7 +2,7 @@ import { For, Show, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type PartsState, type PartsView, emptyParts } from "./parts.js";
-import type { Parameter, PartSpec } from "./gen/agni/v1/param/param_pb.js";
+import type { Parameter, PartSpec } from "@panyam/agni-client/gen/agni/v1/param/param_pb";
 
 // LIMIT_LABEL maps the PartSpec LimitKind enum (0 unspecified / 1 abs-max / 2 recommended /
 // 3 characteristic) to the short badge a parameter row shows; the `lk-<n>` class colors it.

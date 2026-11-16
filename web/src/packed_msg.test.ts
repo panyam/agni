@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { PackedSheetSchema } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { PackedSheetSchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { toRenderable } from "./packed.js";
 
 // toRenderable maps a decoded PackedSheet message (as the GetSheet RPC returns) into the

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { TableSchema, TableEncoding, type EncodeTablesRequest, type TabulateRequest } from "./gen/agni/v1/webapi/tables_pb.js";
-import { CheckDesignResponseSchema } from "./gen/agni/v1/webapi/checks_pb.js";
+import { TableSchema, TableEncoding, type EncodeTablesRequest, type TabulateRequest } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
+import { CheckDesignResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { type SavedTable, type TableAnswer, type TableClient, type TablesState, TablesPresenter, nextOrder } from "./tables.js";
 
 // The tests here cover agni issues 898 and 956: the panel shows Tabulate's tables for an answer the

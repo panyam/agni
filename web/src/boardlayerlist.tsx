@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { LayerPreset } from "./boardlayers.js";
 import { TYPICAL_MM } from "./stacklayout.js";
 

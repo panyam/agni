@@ -1,6 +1,6 @@
 version: v2
 # Python message classes and .pyi stubs for the Python client (agni issue 728), the third codegen
-# target beside protos/buf.gen.yaml (Go) and web/buf.gen.web.yaml (TS).
+# target beside protos/buf.gen.yaml (Go) and clients/ts/buf.gen.ts.yaml (TS).
 #
 # REMOTE plugins pinned by version, so the version is data here rather than whatever protoc is on
 # PATH, which is the same argument protos/buf.gen.yaml makes for `go tool`. The cost is network at

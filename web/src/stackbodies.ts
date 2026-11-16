@@ -6,7 +6,7 @@
 // A height draws at the board's true scale whatever the explode control says. The explode control
 // spreads the layers to show the stack, and a part would tower over the board if it spread too.
 
-import type { BoardPartBody, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardPartBody, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { Selection } from "./selection.js";
 import type { StackCamera } from "./stackcamera.js";
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { closeTab, emptyTabStrip, sheetTabsIsland, visitSheet, type TabStripState } from "./sheettabs.jsx";
-import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import type { SheetsState } from "./sheets.js";
 
 function sheet(id: string, name: string): SheetRef {

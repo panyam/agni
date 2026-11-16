@@ -19,12 +19,10 @@ proto:
 # Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
 # additive proto changes leave stale TS building green, so the drift only surfaces on the next
 # regen. proto-check below is what makes forgetting it fail instead.
-# Two TS outputs since agni issue 744: the viewer's (web/src/gen, from the engine's protos alone)
-# and the datasheets workbench's (datasheet/web/src/gen, from the whole buf workspace, because its
-# API imports engine messages). The TypeScript client's (clients/ts/src/gen) is the third, since agni
-# issue 1630.
+# Two TS outputs. The TypeScript client's (clients/ts/src/gen, since agni issue 1630) is also the
+# viewer's, which imports it from @panyam/agni-client (agni issue 1651). The datasheets workbench's
+# (datasheet/web/src/gen) comes from the whole buf workspace, because its API imports engine messages.
 proto-web:
-	cd web && pnpm run gen
 	cd datasheet/web && pnpm run gen
 	cd clients/ts && pnpm run gen
 
@@ -68,10 +66,10 @@ proto-java:
 # constraint, and it cannot leave the working tree dirty on failure.
 #
 # THE TEMP TREE MIRRORS THE REPO LAYOUT ON PURPOSE. The buf templates write to RELATIVE paths that
-# climb out of their config directory (`out: ../gen/go` from protos/, `out: src/gen` from web/), and
+# climb out of their config directory (`out: ../gen/go` from protos/, `out: src/gen` from clients/ts/), and
 # `-o` resolves those relative to whatever it is given. Pointing `-o` straight at a bare temp dir
 # makes `../gen/go` escape it and land beside the temp dir instead. So `-o $$tmp/protos`,
-# `-o $$tmp/web` and `-o $$tmp/py` reproduce the config directories' positions and the outputs land
+# `-o $$tmp/ts` and `-o $$tmp/py` reproduce the config directories' positions and the outputs land
 # inside. The Go and TS templates also set `clean: true`, which is another reason never to aim this at
 # the real tree. The Python diff skips __pycache__, which importing the package writes beside the
 # generated modules.
@@ -82,10 +80,9 @@ proto-java:
 proto-check: proto-check-rust
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py" "$$tmp/ts"; \
+	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/dsweb" "$$tmp/py" "$$tmp/ts"; \
 	(cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate -o "$$tmp/protos") || exit 1; \
 	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
-	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
 	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
 	(cd clients/ts && buf generate ../../protos --template buf.gen.ts.yaml -o "$$tmp/ts") || exit 1; \
@@ -104,11 +101,6 @@ proto-check: proto-check-rust
 	if ! diff -r datasheet/web/src/gen "$$tmp/dsweb/src/gen" >/dev/null 2>&1; then \
 		echo "generated TypeScript for the datasheets workbench is stale — run 'make proto-web' and commit the result:"; \
 		diff -rq datasheet/web/src/gen "$$tmp/dsweb/src/gen" 2>&1 | sed 's/^/  /'; \
-		fail=1; \
-	fi; \
-	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
-		echo "generated TypeScript is stale — run 'make proto-web' and commit the result:"; \
-		diff -rq web/src/gen "$$tmp/web/src/gen" 2>&1 | sed 's/^/  /'; \
 		fail=1; \
 	fi; \
 	if ! diff -r -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" >/dev/null 2>&1; then \

@@ -2,7 +2,7 @@
 // GetInterfaceCoverage on design load and pushes a CoverageState. The panel renders the
 // per-interface signal matrix. A click on a signal emits an onLocate(net) intent, which goes down
 // the same locate path as a click on a query cell or a finding.
-import type { GetInterfaceCoverageResponse } from "./gen/agni/v1/webapi/checks_pb.js";
+import type { GetInterfaceCoverageResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 
 // SignalCoverageItem is one required signal's coverage, mirroring the server's SignalCoverage.state values
 // (WS9-041): "present" | "missing" | "dangling" | "pullup_missing".

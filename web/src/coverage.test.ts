@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { coverageFromResponse, presentCount } from "./coverage.js";
-import type { GetInterfaceCoverageResponse } from "./gen/agni/v1/webapi/checks_pb.js";
+import type { GetInterfaceCoverageResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 
 const resp = {
   interfaces: [

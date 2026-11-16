@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { defaultHidden, layerHiding, layersKey, parseHidden, presetHidden, soloHidden, storageLayers, toggled } from "./boardlayers.js";
-import type { BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 const rows = [
   { name: "F.Cu", kind: "copper", side: "front", color: "", svgSelector: '[data-layer="F.Cu"], .picks-front', groups: [6] },

@@ -4,7 +4,7 @@
 
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, type HighlightSpec } from "./highlights.js";
 import { type Selection, sameSelection } from "./selection.js";
-import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import { LocateReason } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
 
 // SheetBadge locates a finding's subject on one sheet (WS9-024). showSheet takes the id and the
 // badge displays the name. The presenter fills badges only on a multi-sheet design, so a

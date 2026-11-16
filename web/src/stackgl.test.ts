@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { BoardDrillSpanSchema, BoardStackViewSchema } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { BoardDrillSpanSchema, BoardStackViewSchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { BARREL_SIDES, HOLE_FLOATS, SLAB_ALPHA, barrelSides, stackGeometry } from "./stackgl.js";
 import { layoutStack } from "./stacklayout.js";
 import { jetsonRows } from "./teststack.js";

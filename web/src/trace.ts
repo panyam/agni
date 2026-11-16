@@ -2,7 +2,7 @@
 // pins, the presenter calls TraceDesign and pushes a TraceState, the panel renders it and the canvas
 // highlights the route. The shape lives here rather than in the .tsx, as in coverage.ts and
 // findings.ts, so the presenter and its tests build state without touching Solid.
-import { type Trace, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
+import { type Trace, TraceOutcome } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import type { HighlightSubject } from "./findings.js";
 
 export { TraceOutcome };

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
-import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { FileKind } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
 import { comparePickerIsland } from "./comparepicker.js";
 
 // The picker's tree builds its own client via workspaceClient(); swap in an in-memory workspace,

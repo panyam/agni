@@ -43,7 +43,7 @@ import { type Selection, entityBindings, labelFor, sameSelection, selectionFromC
 import { SheetBadges } from "./sheetbadges.jsx";
 import { chooseSheet } from "./sheetfollow.js";
 import { WitnessTree } from "./witnesstree.jsx";
-import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
+import type { QuerySet } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, fromOrigin, openTab, updateTab } from "./querytabs.js";
 import { type EmitViewerEvent, viewerEmitter } from "./viewerevents.js";
 

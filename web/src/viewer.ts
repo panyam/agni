@@ -3,23 +3,24 @@ import { snapshots } from "./api.js";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Busy } from "./busy.js";
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
+import { textPosition } from "@panyam/agni-client";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
-import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "./gen/agni/v1/webapi/checks_pb.js";
+import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
-import { QueryService, TextPositionSchema, type QuerySet, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { QueryService, type QuerySet, type RunQueryResponse } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import type { TableAnswer } from "./tables.js";
-import { ReviewService, type Review } from "./gen/agni/v1/webapi/review_pb.js";
-import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
-import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
-import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
-import { type NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
-import type { PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import { ReviewService, type Review } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
+import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import type { ResolveDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import { OverlayConfigSchema, type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
+import { type NamingConvention } from "@panyam/agni-client/gen/agni/v1/config/naming_pb";
+import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
+import type { PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import type { BoardLayerRow, BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { type LayerPreset, type LayerStore, defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emptyLocation, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore, messageOf } from "./document.js";
@@ -473,7 +474,7 @@ export class ViewerPresenter {
     } catch (e) {
       this.answers.delete(tab);
       // A query that would not parse reports where it stopped, as an error detail.
-      const at = e instanceof ConnectError ? e.findDetails(TextPositionSchema)[0] : undefined;
+      const at = textPosition(e);
       push(errorResult(e instanceof Error ? e.message : String(e), at?.caret ?? ""));
     }
   }

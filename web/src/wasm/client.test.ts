@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { create, toBinary } from "@bufbuild/protobuf";
-import { IngestRequestSchema } from "../gen/agni/v1/webapi/snapshot_pb.js";
-import { CheckDesignRequestSchema } from "../gen/agni/v1/webapi/checks_pb.js";
+import { IngestRequestSchema } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
+import { CheckDesignRequestSchema } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

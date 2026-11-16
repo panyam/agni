@@ -4,7 +4,7 @@ import { queryPanelIsland } from "./querypanel.jsx";
 import { type ExampleItem, type QueryResult, type RelationEntryItem, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
 import { probedOneAnswer, resultFromWire } from "./testwire.js";
 import { create } from "@bufbuild/protobuf";
-import { QuerySetSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { QuerySetSchema } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 
 // chips reads the binding chips under the box as [name label, value] pairs.
 function chips(el: HTMLElement): [string, string][] {

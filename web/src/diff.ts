@@ -4,8 +4,8 @@
 // be tested without a transport or a DOM.
 
 import type { HighlightSpec } from "./highlights.js";
-import type { DiffDesignsResponse, DiffReport } from "./gen/agni/v1/webapi/diff_pb.js";
-import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
+import type { DiffDesignsResponse, DiffReport } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 
 // DiffSide names one side of the comparison in the wire's vocabulary (DiffDesignsRequest
 // a_mount/b_mount). "a" is the old revision, "b" the new.

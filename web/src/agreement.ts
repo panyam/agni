@@ -4,7 +4,7 @@
 // The engine compares the views (DiffDesigns with views_snapshot), and this module only reads its
 // answer into words and the entries a reader clicks.
 
-import type { DiffDesignsResponse, ViewAgreement_Tally } from "./gen/agni/v1/webapi/diff_pb.js";
+import type { DiffDesignsResponse, ViewAgreement_Tally } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import type { Selection } from "./selection.js";
 
 // AgreementView names the view that draws an entry, so a click selects it there.

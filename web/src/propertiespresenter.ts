@@ -7,7 +7,7 @@
 // where a selected part or net is drawn, once per selection.
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
-import type { ConversionReport, GetDesignRequestSchema, GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
+import type { ConversionReport, GetDesignRequestSchema, GetDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 import type { FindingsState, VerdictItem } from "./findings.js";
 import type { EntityQueryItem } from "./query.js";
 import {

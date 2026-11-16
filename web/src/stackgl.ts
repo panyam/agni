@@ -8,7 +8,7 @@
 // centre, its radius and the depths it runs between. Jetson has some 3,400 plated holes, and a
 // cylinder of their own for each took 1.9 MB, 18% of what the board's own buffers hold.
 
-import type { BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { spanDepths, type StackLayout } from "./stacklayout.js";
 import { BODY_FLOATS, type BodyGeometry } from "./stackbodies.js";
 

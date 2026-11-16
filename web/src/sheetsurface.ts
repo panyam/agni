@@ -14,7 +14,7 @@ import { orderStrata, type StrataRow } from "./boardstrata.js";
 import { layerHiding } from "./boardlayers.js";
 import { membersIn, type Members } from "./area.js";
 import type { Selection } from "./selection.js";
-import type { PackedSheet, BoardLayerRow } from "./gen/agni/v1/geom/geom_packed_pb.js";
+import type { PackedSheet, BoardLayerRow } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { SHEET_DRAWN } from "./drawmark.js";
 import { DrawProfile, pageEnv } from "./drawprofile.js";
 import { timingMode } from "./api.js";
