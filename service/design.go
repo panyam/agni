@@ -458,7 +458,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 			// (render.Style.PickTargets).
 			Content:     &webapi.GetSheetResponse_Svg{Svg: render.BoardSVG(b, render.WithStyle(s.styleOrDefault()), render.WithPickTargets(), s.boardNetIDs(ctx, snap))},
 			BoardLayers: render.BoardLayers(b, render.WithStyle(s.styleOrDefault())),
-			BoardStack:  render.BoardStack(b, render.WithStyle(s.styleOrDefault())),
+			BoardStack:  render.BoardStack(b, render.WithStyle(s.styleOrDefault()), s.boardPartClasses(ctx, snap)),
 		}, nil
 	}
 	// Native renders the tool's own faithful pages, so its sheet selection comes from the faithful

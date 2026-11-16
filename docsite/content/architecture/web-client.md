@@ -194,6 +194,17 @@ panel from the ones above.
   edge on picks through to the layers. The canvas writes a clickable point on a few parts to
   `data-stack-body-probes`. KiCad's own 3D export checks the blocks (agni issue 1643). On Glasgow
   revC3, every one of the 213 models kicad-cli places sits inside its part's block, on the same side.
+- **The stack view has a board look beside its layer look** (agni issue 1653). Say a reader wants the
+  board as it comes off the line, as kicad-cli renders it. Board in the stack bar draws an opaque mask
+  on each face, outer copper as mask over copper, pads in their finish and white silkscreen, and hides
+  the inner layers and the dielectrics. `web/src/stacklook.ts` plans it from the board's layer rows.
+  The renderer's `setLook` recolours whole groups, and recolours each pad primitive, which its key
+  tells apart from a track by its pin. So nothing repacks, and a highlight still wins over a look
+  colour. The colours come from `render.Style` and travel as `BoardStackView.board_look`. Each block
+  also takes its part's class colour from `Style.PartClass`. The service reads each part's
+  `device_classes` from the design and passes them to `render.BoardStack` as `WithPartClasses`. A
+  board's own stack colours, such as a mask KiCad's file calls White, are not read yet. kicad-cli's
+  default render ignores them too.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`

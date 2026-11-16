@@ -22,6 +22,7 @@ import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import type { StackPreset } from "./stackcamera.js";
 import { defaultedNote } from "./stackbodies.js";
+import type { StackLook } from "./stacklook.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
@@ -239,6 +240,8 @@ export class SheetPane {
   // stand at a default height because the file states none.
   private readonly bodiesBox: HTMLInputElement;
   private readonly bodiesNote: HTMLElement;
+  // lookButtons switch the stack view between the layer look and the board look (agni issue 1653).
+  private readonly lookButtons: Record<StackLook, HTMLButtonElement>;
   private exploded = false;
   private noGl = false;
   private stackFrom: { mode: SurfaceMode; view: unknown } | null = null;
@@ -371,6 +374,14 @@ export class SheetPane {
     this.bodiesNote.dataset.stackBodiesNote = "";
     bodiesLabel.append(this.bodiesBox, doc.createTextNode("Parts"), this.bodiesNote);
     this.stackBar.append(bodiesLabel);
+    this.lookButtons = {
+      layers: button("sheetview-stack-look", "stack-look-layers", "Layers", "draw each layer apart in the editor's colours", () => this.setLook("layers")),
+      board: button("sheetview-stack-look", "stack-look-board", "Board", "draw the board as it is made: mask, pads, silkscreen and parts", () => this.setLook("board")),
+    };
+    for (const [look, b] of Object.entries(this.lookButtons)) {
+      b.dataset.stackLook = look;
+      this.stackBar.append(b);
+    }
     for (const [preset, text] of [["top", "Top"], ["iso", "Iso"], ["front", "Front"], ["side", "Side"]] as [StackPreset, string][]) {
       const b = button("sheetview-stack-preset", `stack-${preset}`, text, `look at the stack from the ${preset === "iso" ? "corner" : preset}`, () => this.gl?.setStackPreset(preset));
       b.dataset.stackPreset = preset;
@@ -475,8 +486,22 @@ export class SheetPane {
     }
     gl.setExplode(Number(this.explodeInput.value) / 100);
     gl.setStackBodies(this.bodiesBox.checked);
+    this.showLook("layers");
     this.bodiesNote.textContent = defaultedNote(stack);
     this.setExploded(true);
+  }
+
+  // setLook switches the stack view's look.
+  private setLook(look: StackLook): void {
+    this.gl?.setStackLook(look);
+    this.showLook(look);
+  }
+
+  private showLook(look: StackLook): void {
+    for (const [l, b] of Object.entries(this.lookButtons)) {
+      b.setAttribute("aria-pressed", String(l === look));
+      b.classList.toggle("active", l === look);
+    }
   }
 
   // showStackButton says on the Stack button why it cannot be pressed, when it cannot.

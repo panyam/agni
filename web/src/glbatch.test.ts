@@ -121,6 +121,34 @@ describe("Renderer, batched", () => {
     expect(draws(f)).toEqual([[3, 6], [3, 9]]);
   });
 
+  // The stack view's board look recolours what was packed (agni issue 1653).
+  it("draws a look's group colour, and a look's primitives in their colour in runs of one colour", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, sheet());
+    const gold: [number, number, number, number] = [1, 0.8, 0, 1];
+    r.setLook(new Map([[1, [0, 0, 1, 1]]]), new Map([[1, gold], [2, gold]]));
+    f.calls.length = 0;
+    r.render(new Float32Array(9), all);
+    expect(draws(f)).toEqual([[3, 0], [6, 3], [3, 9]]);
+    const colours = f.calls.filter((c) => c.name === "uniform4f").map((c) => c.args.slice(1));
+    expect(colours).toEqual([[0, 0, 0, 1], gold, [0, 0, 1, 1]]);
+  });
+
+  it("lets a highlight win over a look, and never shows a look's primitive on a hidden layer", () => {
+    const f = fakeGl();
+    const r = new Renderer(f.gl, sheet());
+    const gold: [number, number, number, number] = [1, 0.8, 0, 1];
+    r.setLook(new Map(), new Map([[0, gold], [1, gold]]));
+    r.setHighlights([{ color: [0, 1, 0, 1], primitives: new Set([1]) }]);
+    f.calls.length = 0;
+    r.render(new Float32Array(9), all);
+    expect(f.calls.filter((c) => c.name === "uniform4f").map((c) => c.args.slice(1))).toEqual([gold, [0, 1, 0, 1], [0, 0, 0, 1], [1, 0, 0, 1]]);
+    r.setHiddenGroups([0]);
+    f.calls.length = 0;
+    r.render(new Float32Array(9), all);
+    expect(draws(f)).toEqual([[3, 3], [3, 9]]);
+  });
+
   // Laying out Jetson's board costs about 30 ms, which the board-open mission would count.
   it("draws a deferred renderer's first frame one primitive at a time, and batches after it", () => {
     vi.useFakeTimers();

@@ -181,4 +181,31 @@ public interface BoardStackViewOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDefaultBodyColorBytes();
+
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   * @return Whether the boardLook field is set.
+   */
+  boolean hasBoardLook();
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   * @return The boardLook.
+   */
+  io.github.panyam.agni.v1.geom.BoardLook getBoardLook();
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   */
+  io.github.panyam.agni.v1.geom.BoardLookOrBuilder getBoardLookOrBuilder();
 }

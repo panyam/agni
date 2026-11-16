@@ -61,4 +61,42 @@ public interface BoardPartBodyOrBuilder extends
    * @return The heightMm.
    */
   double getHeightMm();
+
+  /**
+   * <pre>
+   * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+   * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+   * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+   * body_color otherwise.
+   * </pre>
+   *
+   * <code>string part_class = 5 [json_name = "partClass"];</code>
+   * @return The partClass.
+   */
+  java.lang.String getPartClass();
+  /**
+   * <pre>
+   * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+   * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+   * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+   * body_color otherwise.
+   * </pre>
+   *
+   * <code>string part_class = 5 [json_name = "partClass"];</code>
+   * @return The bytes for partClass.
+   */
+  com.google.protobuf.ByteString
+      getPartClassBytes();
+
+  /**
+   * <code>string color = 6 [json_name = "color"];</code>
+   * @return The color.
+   */
+  java.lang.String getColor();
+  /**
+   * <code>string color = 6 [json_name = "color"];</code>
+   * @return The bytes for color.
+   */
+  com.google.protobuf.ByteString
+      getColorBytes();
 }

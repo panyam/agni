@@ -232,6 +232,12 @@ export class Renderer {
   // layer wins an overlap). Empty means no highlight. Set by the canvas from the resolved
   // highlight specs.
   private highlightColors: Map<number, Rgba> = new Map();
+  // A look recolours what the sheet packed without a repack (agni issue 1653). lookGroups overrides a
+  // group's colour, and lookPrims a primitive's. A highlight wins over both, and unlike a highlight a
+  // look colour never shows a primitive on a hidden layer. The stack view's board look sets them, and
+  // every other drawing leaves them empty.
+  private lookGroups: Map<number, Rgba> = new Map();
+  private lookPrims: Map<number, Rgba> = new Map();
   // lit holds the chunks with a highlighted primitive. Such a chunk draws around its highlighted
   // primitives, which draw one by one in their colour, in their place.
   private lit = new Set<number>();
@@ -329,13 +335,28 @@ export class Renderer {
     this.markLit();
   }
 
-  // markLit finds the chunks holding a highlighted primitive.
+  // setLook replaces the look's colours, by group and by primitive. Empty maps draw the sheet as
+  // packed.
+  setLook(groups: Map<number, Rgba>, prims: Map<number, Rgba>): void {
+    this.version++;
+    this.lookGroups = groups;
+    this.lookPrims = prims;
+    this.markLit();
+  }
+
+  private groupColor(group: number): Rgba {
+    return this.lookGroups.get(group) ?? this.colors[group] ?? DEFAULT_COLOR;
+  }
+
+  // markLit finds the chunks holding a primitive with a colour of its own, a highlight's or a look's.
   private markLit(): void {
     this.lit = new Set();
     if (!this.batches) return;
-    for (const i of this.highlightColors.keys()) {
-      const c = this.batches.chunkOf[i];
-      if (c !== undefined && c >= 0) this.lit.add(c);
+    for (const m of [this.highlightColors, this.lookPrims]) {
+      for (const i of m.keys()) {
+        const c = this.batches.chunkOf[i];
+        if (c !== undefined && c >= 0) this.lit.add(c);
+      }
     }
   }
 
@@ -434,14 +455,15 @@ export class Renderer {
       const hl = this.highlightColors.get(i);
       if (!hl && this.hiddenGroups.has(p.group)) continue;
       if (!hl && outside(this.bounds[i], viewRect)) continue;
+      const own = hl ?? this.lookPrims.get(i);
       const z = zOf ? zOf(p.group) : 0;
       if (z === null) continue;
       if (zOf) gl.uniform1f(this.uZ, z);
-      if (hl) {
-        gl.uniform4f(this.uColor, hl[0], hl[1], hl[2], hl[3]);
+      if (own) {
+        gl.uniform4f(this.uColor, own[0], own[1], own[2], own[3]);
         lastGroup = -1;
       } else if (p.group !== lastGroup) {
-        const c = this.colors[p.group] ?? DEFAULT_COLOR;
+        const c = this.groupColor(p.group);
         gl.uniform4f(this.uColor, c[0], c[1], c[2], c[3]);
         lastGroup = p.group;
       }
@@ -453,9 +475,10 @@ export class Renderer {
     return calls;
   }
 
-  // drawAround draws one region of a chunk that holds a highlighted primitive. The primitives sit back
-  // to back in the index buffer, so each stretch between two highlighted ones draws as one call in the
-  // base colour, and each highlighted one draws alone in its own. away draws the highlighted ones only.
+  // drawAround draws one region of a chunk that holds a primitive with a colour of its own. The
+  // primitives sit back to back in the index buffer, so each stretch of one colour draws as one call,
+  // whether that is the base colour, a highlight's or a look's. away draws the highlighted ones only,
+  // since only a highlight shows a primitive that is hidden or culled.
   private drawAround(
     prims: number[],
     at: Int32Array,
@@ -468,23 +491,29 @@ export class Renderer {
   ): void {
     let from = -1;
     let to = -1;
+    let run: Rgba = base;
     const flush = () => {
-      if (from >= 0 && !away) {
-        use(base);
+      if (from >= 0) {
+        use(run);
         draw(mode, from, to);
       }
       from = -1;
     };
     for (const i of prims) {
       const hl = this.highlightColors.get(i);
-      if (!hl) {
-        if (from < 0) from = at[i];
+      if (away && !hl) {
+        flush();
+        continue;
+      }
+      const c = hl ?? this.lookPrims.get(i) ?? base;
+      if (from >= 0 && c === run && at[i] === to) {
         to = at[i] + count[i];
         continue;
       }
       flush();
-      use(hl);
-      draw(mode, at[i], at[i] + count[i]);
+      from = at[i];
+      to = at[i] + count[i];
+      run = c;
     }
     flush();
   }
@@ -543,7 +572,7 @@ export class Renderer {
       }
     }
     for (const run of this.batches?.runs ?? []) {
-      const base = this.colors[run.group] ?? DEFAULT_COLOR;
+      const base = this.groupColor(run.group);
       const hidden = this.hiddenGroups.has(run.group);
       if (zOf) {
         const z = zOf(run.group);

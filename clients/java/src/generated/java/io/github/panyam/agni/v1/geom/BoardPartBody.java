@@ -40,6 +40,8 @@ private static final long serialVersionUID = 0L;
     refDes_ = "";
     side_ = "";
     outline_ = emptyDoubleList();
+    partClass_ = "";
+    color_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -188,6 +190,98 @@ private static final long serialVersionUID = 0L;
     return heightMm_;
   }
 
+  public static final int PART_CLASS_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object partClass_ = "";
+  /**
+   * <pre>
+   * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+   * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+   * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+   * body_color otherwise.
+   * </pre>
+   *
+   * <code>string part_class = 5 [json_name = "partClass"];</code>
+   * @return The partClass.
+   */
+  @java.lang.Override
+  public java.lang.String getPartClass() {
+    java.lang.Object ref = partClass_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      partClass_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+   * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+   * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+   * body_color otherwise.
+   * </pre>
+   *
+   * <code>string part_class = 5 [json_name = "partClass"];</code>
+   * @return The bytes for partClass.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPartClassBytes() {
+    java.lang.Object ref = partClass_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      partClass_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int COLOR_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object color_ = "";
+  /**
+   * <code>string color = 6 [json_name = "color"];</code>
+   * @return The color.
+   */
+  @java.lang.Override
+  public java.lang.String getColor() {
+    java.lang.Object ref = color_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      color_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string color = 6 [json_name = "color"];</code>
+   * @return The bytes for color.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getColorBytes() {
+    java.lang.Object ref = color_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      color_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -219,6 +313,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeDouble(4, heightMm_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(partClass_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, partClass_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, color_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -243,6 +343,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeDoubleSize(4, heightMm_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(partClass_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, partClass_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, color_);
     }
     return size;
   }
@@ -280,6 +386,10 @@ private static final long serialVersionUID = 0L;
           != java.lang.Double.doubleToLongBits(
               other.getHeightMm())) return false;
     }
+    if (!getPartClass()
+        .equals(other.getPartClass())) return false;
+    if (!getColor()
+        .equals(other.getColor())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -304,6 +414,10 @@ private static final long serialVersionUID = 0L;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           java.lang.Double.doubleToLongBits(getHeightMm()));
     }
+    hash = (37 * hash) + PART_CLASS_FIELD_NUMBER;
+    hash = (53 * hash) + getPartClass().hashCode();
+    hash = (37 * hash) + COLOR_FIELD_NUMBER;
+    hash = (53 * hash) + getColor().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -448,6 +562,8 @@ private static final long serialVersionUID = 0L;
       side_ = "";
       outline_ = emptyDoubleList();
       heightMm_ = 0D;
+      partClass_ = "";
+      color_ = "";
       return this;
     }
 
@@ -496,6 +612,12 @@ private static final long serialVersionUID = 0L;
         result.heightMm_ = heightMm_;
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.partClass_ = partClass_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.color_ = color_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -534,6 +656,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasHeightMm()) {
         setHeightMm(other.getHeightMm());
+      }
+      if (!other.getPartClass().isEmpty()) {
+        partClass_ = other.partClass_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getColor().isEmpty()) {
+        color_ = other.color_;
+        bitField0_ |= 0x00000020;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -591,6 +723,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 33
+            case 42: {
+              partClass_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              color_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -878,6 +1020,185 @@ private static final long serialVersionUID = 0L;
     public Builder clearHeightMm() {
       bitField0_ = (bitField0_ & ~0x00000008);
       heightMm_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object partClass_ = "";
+    /**
+     * <pre>
+     * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+     * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+     * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+     * body_color otherwise.
+     * </pre>
+     *
+     * <code>string part_class = 5 [json_name = "partClass"];</code>
+     * @return The partClass.
+     */
+    public java.lang.String getPartClass() {
+      java.lang.Object ref = partClass_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        partClass_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+     * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+     * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+     * body_color otherwise.
+     * </pre>
+     *
+     * <code>string part_class = 5 [json_name = "partClass"];</code>
+     * @return The bytes for partClass.
+     */
+    public com.google.protobuf.ByteString
+        getPartClassBytes() {
+      java.lang.Object ref = partClass_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        partClass_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+     * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+     * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+     * body_color otherwise.
+     * </pre>
+     *
+     * <code>string part_class = 5 [json_name = "partClass"];</code>
+     * @param value The partClass to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPartClass(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      partClass_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+     * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+     * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+     * body_color otherwise.
+     * </pre>
+     *
+     * <code>string part_class = 5 [json_name = "partClass"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPartClass() {
+      partClass_ = getDefaultInstance().getPartClass();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+     * gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+     * gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+     * body_color otherwise.
+     * </pre>
+     *
+     * <code>string part_class = 5 [json_name = "partClass"];</code>
+     * @param value The bytes for partClass to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPartClassBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      partClass_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object color_ = "";
+    /**
+     * <code>string color = 6 [json_name = "color"];</code>
+     * @return The color.
+     */
+    public java.lang.String getColor() {
+      java.lang.Object ref = color_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        color_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string color = 6 [json_name = "color"];</code>
+     * @return The bytes for color.
+     */
+    public com.google.protobuf.ByteString
+        getColorBytes() {
+      java.lang.Object ref = color_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        color_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string color = 6 [json_name = "color"];</code>
+     * @param value The color to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColor(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      color_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string color = 6 [json_name = "color"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearColor() {
+      color_ = getDefaultInstance().getColor();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string color = 6 [json_name = "color"];</code>
+     * @param value The bytes for color to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColorBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      color_ = value;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

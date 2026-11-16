@@ -1570,6 +1570,24 @@ pub struct BoardStackView {
     pub body_color: ::prost::alloc::string::String,
     #[prost(string, tag="9")]
     pub default_body_color: ::prost::alloc::string::String,
+    /// board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+    #[prost(message, optional, tag="10")]
+    pub board_look: ::core::option::Option<BoardLook>,
+}
+/// BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
+/// 1653). mask is the opaque solder mask on each outer face. mask_over_copper is outer copper seen
+/// through the mask, such as a track. pad_finish is exposed copper, such as a pad. silk is the
+/// silkscreen. Each is "#rrggbb", from render.Style.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BoardLook {
+    #[prost(string, tag="1")]
+    pub mask: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub mask_over_copper: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub pad_finish: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub silk: ::prost::alloc::string::String,
 }
 /// BoardPartBody is one placed part drawn as a solid on its side's face of the board (agni 1352).
 /// outline is the part's footprint as a convex ring of x,y pairs in board units, like
@@ -1587,6 +1605,14 @@ pub struct BoardPartBody {
     pub outline: ::prost::alloc::vec::Vec<f64>,
     #[prost(double, optional, tag="4")]
     pub height_mm: ::core::option::Option<f64>,
+    /// part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+    /// gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+    /// gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+    /// body_color otherwise.
+    #[prost(string, tag="5")]
+    pub part_class: ::prost::alloc::string::String,
+    #[prost(string, tag="6")]
+    pub color: ::prost::alloc::string::String,
 }
 /// BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 /// F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top

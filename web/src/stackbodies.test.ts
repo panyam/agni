@@ -12,9 +12,9 @@ function square(x: number, y: number): number[] {
 
 function bodies() {
   return [
-    create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: square(10, 10), heightMm: 2.5 }),
-    create(BoardPartBodySchema, { refDes: "U2", side: "back", outline: square(60, 10), heightMm: 1.5 }),
-    create(BoardPartBodySchema, { refDes: "U3", side: "front", outline: square(60, 60) }),
+    create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: square(10, 10), heightMm: 2.5, color: "#202024" }),
+    create(BoardPartBodySchema, { refDes: "U2", side: "back", outline: square(60, 10), heightMm: 1.5, color: "#202024" }),
+    create(BoardPartBodySchema, { refDes: "U3", side: "front", outline: square(60, 60), color: "#202024" }),
   ];
 }
 
@@ -33,8 +33,23 @@ describe("the parts' bodies", () => {
       ["U2", 1.5, false],
       ["U3", TYPICAL_BODY_MM, true],
     ]);
-    expect(g.stated).toBe(g.runs.get("U3")!.first);
+    const defaulted = g.colorRuns.filter((r) => r.defaulted);
+    expect(defaulted.map((r) => [r.first, r.count])).toEqual([[g.runs.get("U3")!.first, g.runs.get("U3")!.count]]);
     expect(Math.max(...vertsOf("U3").map((v) => v[2]))).toBe(TYPICAL_BODY_MM);
+  });
+
+  it("draws the bodies of one colour in one run, and a part at the default height in a run of its own", () => {
+    const mixed = bodies();
+    mixed.push(create(BoardPartBodySchema, { refDes: "R1", side: "front", outline: square(30, 30), heightMm: 0.5, color: "#55565c" }));
+    const m = bodyGeometry(mixed, 0, 0);
+    expect(m.colorRuns.map((r) => [r.color, r.defaulted])).toEqual([
+      ["#202024", false],
+      ["#55565c", false],
+      ["#202024", true],
+    ]);
+    const span = (ref: string) => m.runs.get(ref)!;
+    expect(m.colorRuns[0].count).toBe(span("U1").count + span("U2").count);
+    expect(m.colorRuns.reduce((n, r) => n + r.count, 0)).toBe(m.verts.length / BODY_FLOATS);
   });
 
   it("builds a top face and four walls for a square, each at the part's height or the board", () => {

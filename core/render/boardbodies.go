@@ -10,7 +10,7 @@ import (
 // partBodies gives each placed part a body for the stack view to stand on its side's face (agni
 // 1352). A part's footprint is the hull of its courtyard, or of its fab outline when it has no
 // courtyard, or of its pads when it has neither. A part with none of the three has no body.
-func partBodies(b *geom.BoardGeometry) []*geom.BoardPartBody {
+func partBodies(b *geom.BoardGeometry, style Style) []*geom.BoardPartBody {
 	unit := unitNm(b)
 	art := map[string]map[string][][2]float64{}
 	for _, g := range b.GetGraphics() {
@@ -38,6 +38,7 @@ func partBodies(b *geom.BoardGeometry) []*geom.BoardPartBody {
 			continue
 		}
 		body := &geom.BoardPartBody{RefDes: pl.GetRefDes(), Side: placementSide(pl)}
+		body.PartClass, body.Color = partClassColor(style, pl.GetRefDes())
 		for _, p := range ring {
 			body.Outline = append(body.Outline, p[0], p[1])
 		}
@@ -48,6 +49,24 @@ func partBodies(b *geom.BoardGeometry) []*geom.BoardPartBody {
 		out = append(out, body)
 	}
 	return out
+}
+
+// partClassColor is a part's most specific class and the colour of the first of its classes that
+// has one. A part with no class, or none with a colour, keeps PartBody.
+func partClassColor(style Style, ref string) (string, string) {
+	if style.partClasses == nil || *style.partClasses == nil {
+		return "", style.PartBody
+	}
+	classes := (*style.partClasses)(ref)
+	if len(classes) == 0 {
+		return "", style.PartBody
+	}
+	for _, c := range classes {
+		if color := style.PartClass.of(c); color != "" {
+			return classes[0], color
+		}
+	}
+	return classes[0], style.PartBody
 }
 
 // shapePoints is the points a shape reaches. A rect gives its four corners and a circle eight

@@ -97,6 +97,11 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_geom_BoardStackView_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_geom_BoardLook_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_geom_BoardLook_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_geom_BoardPartBody_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -181,7 +186,7 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
       "\003 \001(\tR\004side\022\024\n\005color\030\004 \001(\tR\005color\022!\n\014svg" +
       "_selector\030\005 \001(\tR\013svgSelector\022\026\n\006groups\030\006" +
       " \003(\rR\006groups\022\034\n\tthickness\030\007 \001(\tR\tthickne" +
-      "ss\"\366\002\n\016BoardStackView\022/\n\004rows\030\001 \003(\0132\033.ag" +
+      "ss\"\256\003\n\016BoardStackView\022/\n\004rows\030\001 \003(\0132\033.ag" +
       "ni.v1.geom.BoardStackRowR\004rows\022\030\n\007summar" +
       "y\030\002 \001(\tR\007summary\022\034\n\tdisagrees\030\003 \001(\010R\tdis" +
       "agrees\0224\n\006drills\030\004 \003(\0132\034.agni.v1.geom.Bo" +
@@ -190,28 +195,34 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
       "nitsPerMm\0223\n\006bodies\030\007 \003(\0132\033.agni.v1.geom" +
       ".BoardPartBodyR\006bodies\022\035\n\nbody_color\030\010 \001" +
       "(\tR\tbodyColor\022,\n\022default_body_color\030\t \001(" +
-      "\tR\020defaultBodyColor\"\206\001\n\rBoardPartBody\022\027\n" +
-      "\007ref_des\030\001 \001(\tR\006refDes\022\022\n\004side\030\002 \001(\tR\004si" +
-      "de\022\030\n\007outline\030\003 \003(\001R\007outline\022 \n\theight_m" +
-      "m\030\004 \001(\001H\000R\010heightMm\210\001\001B\014\n\n_height_mm\"\210\001\n" +
-      "\016BoardDrillSpan\022\035\n\nlayer_from\030\001 \001(\tR\tlay" +
-      "erFrom\022\031\n\010layer_to\030\002 \001(\tR\007layerTo\022\016\n\002xy\030" +
-      "\003 \003(\001R\002xy\022\032\n\010diameter\030\004 \003(\001R\010diameter\022\020\n" +
-      "\003net\030\005 \003(\tR\003net\"\326\001\n\rBoardStackRow\022\022\n\004nam" +
-      "e\030\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022\024\n\005lay" +
-      "er\030\003 \001(\tR\005layer\022\034\n\tthickness\030\004 \001(\tR\tthic" +
-      "kness\022&\n\014thickness_mm\030\005 \001(\001H\000R\013thickness" +
-      "Mm\210\001\001\022\032\n\010material\030\006 \001(\tR\010material\022\024\n\005col" +
-      "or\030\007 \001(\tR\005colorB\017\n\r_thickness_mm*\260\001\n\016Hig" +
-      "hlightShape\022\037\n\033HIGHLIGHT_SHAPE_UNSPECIFI" +
-      "ED\020\000\022\033\n\027HIGHLIGHT_SHAPE_OUTLINE\020\001\022!\n\035HIG" +
-      "HLIGHT_SHAPE_BOUNDING_RECT\020\002\022#\n\037HIGHLIGH" +
-      "T_SHAPE_BOUNDING_CIRCLE\020\003\022\030\n\024HIGHLIGHT_S" +
-      "HAPE_PATH\020\004B\256\001\n\035io.github.panyam.agni.v1" +
-      ".geomB\017GeomPackedProtoP\001Z*github.com/pan" +
-      "yam/agni/gen/go/agni/v1/geom\242\002\003AVG\252\002\014Agn" +
-      "i.V1.Geom\312\002\014Agni\\V1\\Geom\342\002\030Agni\\V1\\Geom\\" +
-      "GPBMetadata\352\002\016Agni::V1::Geomb\006proto3"
+      "\tR\020defaultBodyColor\0226\n\nboard_look\030\n \001(\0132" +
+      "\027.agni.v1.geom.BoardLookR\tboardLook\"|\n\tB" +
+      "oardLook\022\022\n\004mask\030\001 \001(\tR\004mask\022(\n\020mask_ove" +
+      "r_copper\030\002 \001(\tR\016maskOverCopper\022\035\n\npad_fi" +
+      "nish\030\003 \001(\tR\tpadFinish\022\022\n\004silk\030\004 \001(\tR\004sil" +
+      "k\"\273\001\n\rBoardPartBody\022\027\n\007ref_des\030\001 \001(\tR\006re" +
+      "fDes\022\022\n\004side\030\002 \001(\tR\004side\022\030\n\007outline\030\003 \003(" +
+      "\001R\007outline\022 \n\theight_mm\030\004 \001(\001H\000R\010heightM" +
+      "m\210\001\001\022\035\n\npart_class\030\005 \001(\tR\tpartClass\022\024\n\005c" +
+      "olor\030\006 \001(\tR\005colorB\014\n\n_height_mm\"\210\001\n\016Boar" +
+      "dDrillSpan\022\035\n\nlayer_from\030\001 \001(\tR\tlayerFro" +
+      "m\022\031\n\010layer_to\030\002 \001(\tR\007layerTo\022\016\n\002xy\030\003 \003(\001" +
+      "R\002xy\022\032\n\010diameter\030\004 \003(\001R\010diameter\022\020\n\003net\030" +
+      "\005 \003(\tR\003net\"\326\001\n\rBoardStackRow\022\022\n\004name\030\001 \001" +
+      "(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022\024\n\005layer\030\003 " +
+      "\001(\tR\005layer\022\034\n\tthickness\030\004 \001(\tR\tthickness" +
+      "\022&\n\014thickness_mm\030\005 \001(\001H\000R\013thicknessMm\210\001\001" +
+      "\022\032\n\010material\030\006 \001(\tR\010material\022\024\n\005color\030\007 " +
+      "\001(\tR\005colorB\017\n\r_thickness_mm*\260\001\n\016Highligh" +
+      "tShape\022\037\n\033HIGHLIGHT_SHAPE_UNSPECIFIED\020\000\022" +
+      "\033\n\027HIGHLIGHT_SHAPE_OUTLINE\020\001\022!\n\035HIGHLIGH" +
+      "T_SHAPE_BOUNDING_RECT\020\002\022#\n\037HIGHLIGHT_SHA" +
+      "PE_BOUNDING_CIRCLE\020\003\022\030\n\024HIGHLIGHT_SHAPE_" +
+      "PATH\020\004B\256\001\n\035io.github.panyam.agni.v1.geom" +
+      "B\017GeomPackedProtoP\001Z*github.com/panyam/a" +
+      "gni/gen/go/agni/v1/geom\242\002\003AVG\252\002\014Agni.V1." +
+      "Geom\312\002\014Agni\\V1\\Geom\342\002\030Agni\\V1\\Geom\\GPBMe" +
+      "tadata\352\002\016Agni::V1::Geomb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -300,21 +311,27 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_geom_BoardStackView_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_geom_BoardStackView_descriptor,
-        new java.lang.String[] { "Rows", "Summary", "Disagrees", "Drills", "OutlineTris", "UnitsPerMm", "Bodies", "BodyColor", "DefaultBodyColor", });
-    internal_static_agni_v1_geom_BoardPartBody_descriptor =
+        new java.lang.String[] { "Rows", "Summary", "Disagrees", "Drills", "OutlineTris", "UnitsPerMm", "Bodies", "BodyColor", "DefaultBodyColor", "BoardLook", });
+    internal_static_agni_v1_geom_BoardLook_descriptor =
       getDescriptor().getMessageType(13);
+    internal_static_agni_v1_geom_BoardLook_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_geom_BoardLook_descriptor,
+        new java.lang.String[] { "Mask", "MaskOverCopper", "PadFinish", "Silk", });
+    internal_static_agni_v1_geom_BoardPartBody_descriptor =
+      getDescriptor().getMessageType(14);
     internal_static_agni_v1_geom_BoardPartBody_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_geom_BoardPartBody_descriptor,
-        new java.lang.String[] { "RefDes", "Side", "Outline", "HeightMm", });
+        new java.lang.String[] { "RefDes", "Side", "Outline", "HeightMm", "PartClass", "Color", });
     internal_static_agni_v1_geom_BoardDrillSpan_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(15);
     internal_static_agni_v1_geom_BoardDrillSpan_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_geom_BoardDrillSpan_descriptor,
         new java.lang.String[] { "LayerFrom", "LayerTo", "Xy", "Diameter", "Net", });
     internal_static_agni_v1_geom_BoardStackRow_descriptor =
-      getDescriptor().getMessageType(15);
+      getDescriptor().getMessageType(16);
     internal_static_agni_v1_geom_BoardStackRow_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_geom_BoardStackRow_descriptor,

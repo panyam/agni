@@ -15,7 +15,8 @@ import (
 // BoardLayers writes something new, so a store written by an older build reads as a miss. Version 4
 // added each row's thickness and the board's stack (agni 1603). Version 5 added the stack's drill
 // spans, outline and colours (agni 1593).
-const packedBoardVersion = "5"
+// Version 6 added each body's class and colour, and the board look (agni 1653).
+const packedBoardVersion = "6"
 
 var packedBoardCodec = &protoCodec{empty: func() proto.Message { return &webapi.GetSheetResponse{} }}
 
@@ -39,7 +40,7 @@ func (s *DesignService) packedBoard(ctx context.Context, snap Snap) (*webapi.Get
 		return &webapi.GetSheetResponse{
 			Content:     &webapi.GetSheetResponse_Packed{Packed: render.PackBoard(b, style, s.boardNetIDs(ctx, snap))},
 			BoardLayers: render.BoardLayers(b, style),
-			BoardStack:  render.BoardStack(b, style),
+			BoardStack:  render.BoardStack(b, style, s.boardPartClasses(ctx, snap)),
 		}, nil
 	}
 	l, ok := LoaderOr(snap, s.loader).(*CachingLoader)
