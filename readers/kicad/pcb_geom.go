@@ -36,6 +36,10 @@ func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, err
 	if err != nil {
 		return nil, err
 	}
+	return boardFromRoot(root, sourceFile)
+}
+
+func boardFromRoot(root *node, sourceFile string) (*geom.BoardGeometry, error) {
 	if root.Head() != "kicad_pcb" {
 		return nil, fmt.Errorf("kicad: not a .kicad_pcb file (root is %q)", root.Head())
 	}

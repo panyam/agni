@@ -25,19 +25,23 @@ const (
 // SchematicGeometry. Coordinates are Points in raw source units, unit_nm nanometers per unit.
 // The KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic contract.
 type BoardGeometry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DesignRef     string                 `protobuf:"bytes,1,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"` // joins to ir.Design.name (may be empty, like the IR)
-	UnitNm        int64                  `protobuf:"varint,2,opt,name=unit_nm,json=unitNm,proto3" json:"unit_nm,omitempty"`         // nanometers per source unit
-	Layers        []*BoardLayer          `protobuf:"bytes,3,rep,name=layers,proto3" json:"layers,omitempty"`                        // the stackup table, in source order
-	Outline       *BoardOutline          `protobuf:"bytes,4,opt,name=outline,proto3" json:"outline,omitempty"`                      // the board edge (KiCad Edge.Cuts)
-	Placements    []*ComponentPlacement  `protobuf:"bytes,5,rep,name=placements,proto3" json:"placements,omitempty"`                // one per placed physical component
-	Nets          []*NetCopper           `protobuf:"bytes,6,rep,name=nets,proto3" json:"nets,omitempty"`                            // routed copper grouped by net
-	Zones         []*Zone                `protobuf:"bytes,7,rep,name=zones,proto3" json:"zones,omitempty"`                          // copper pours, outline only
-	Texts         []*BoardText           `protobuf:"bytes,8,rep,name=texts,proto3" json:"texts,omitempty"`                          // silkscreen/legend + free text (WS7)
-	Graphics      []*BoardGraphic        `protobuf:"bytes,9,rep,name=graphics,proto3" json:"graphics,omitempty"`                    // silkscreen/fab body outlines + free graphics (WS7)
-	Padstacks     []*Padstack            `protobuf:"bytes,10,rep,name=padstacks,proto3" json:"padstacks,omitempty"`                 // per-layer pad shapes, named by Pad and Via (agni 1356)
-	Stackup       *Stackup               `protobuf:"bytes,11,opt,name=stackup,proto3" json:"stackup,omitempty"`                     // the physical layer stack, unset when the file has none (agni 1592)
-	Prov          *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DesignRef  string                 `protobuf:"bytes,1,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"` // joins to ir.Design.name (may be empty, like the IR)
+	UnitNm     int64                  `protobuf:"varint,2,opt,name=unit_nm,json=unitNm,proto3" json:"unit_nm,omitempty"`         // nanometers per source unit
+	Layers     []*BoardLayer          `protobuf:"bytes,3,rep,name=layers,proto3" json:"layers,omitempty"`                        // the stackup table, in source order
+	Outline    *BoardOutline          `protobuf:"bytes,4,opt,name=outline,proto3" json:"outline,omitempty"`                      // the board edge (KiCad Edge.Cuts)
+	Placements []*ComponentPlacement  `protobuf:"bytes,5,rep,name=placements,proto3" json:"placements,omitempty"`                // one per placed physical component
+	Nets       []*NetCopper           `protobuf:"bytes,6,rep,name=nets,proto3" json:"nets,omitempty"`                            // routed copper grouped by net
+	Zones      []*Zone                `protobuf:"bytes,7,rep,name=zones,proto3" json:"zones,omitempty"`                          // copper pours, outline only
+	Texts      []*BoardText           `protobuf:"bytes,8,rep,name=texts,proto3" json:"texts,omitempty"`                          // silkscreen/legend + free text (WS7)
+	Graphics   []*BoardGraphic        `protobuf:"bytes,9,rep,name=graphics,proto3" json:"graphics,omitempty"`                    // silkscreen/fab body outlines + free graphics (WS7)
+	Padstacks  []*Padstack            `protobuf:"bytes,10,rep,name=padstacks,proto3" json:"padstacks,omitempty"`                 // per-layer pad shapes, named by Pad and Via (agni 1356)
+	Stackup    *Stackup               `protobuf:"bytes,11,opt,name=stackup,proto3" json:"stackup,omitempty"`                     // the physical layer stack, unset when the file has none (agni 1592)
+	// unread_models lists each 3D model a footprint names that gave no height, one row per path and
+	// reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
+	// library lists every library model here, and its parts draw at a typical height.
+	UnreadModels  []*UnreadModel `protobuf:"bytes,12,rep,name=unread_models,json=unreadModels,proto3" json:"unread_models,omitempty"`
+	Prov          *Provenance    `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +149,13 @@ func (x *BoardGeometry) GetPadstacks() []*Padstack {
 func (x *BoardGeometry) GetStackup() *Stackup {
 	if x != nil {
 		return x.Stackup
+	}
+	return nil
+}
+
+func (x *BoardGeometry) GetUnreadModels() []*UnreadModel {
+	if x != nil {
+		return x.UnreadModels
 	}
 	return nil
 }
@@ -651,6 +662,70 @@ func (x *BoardOutline) GetPaths() []*Polyline {
 // ComponentPlacement is one placed physical component. It gives where the component sits, which
 // side it is on, and its copper pads. ref_des is the join key to ir.Component. If the source
 // footprint has no reference, the placement is not emitted, as the netlist reader skips it too.
+// UnreadModel is a 3D model that gave no part a height (agni 1652). path is as the footprint writes
+// it, such as `${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0402_1005Metric.step`. reason says why,
+// such as a model the read could not find or a STEP assembly it refuses. parts counts the placements
+// that name it.
+type UnreadModel struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Parts         int32                  `protobuf:"varint,3,opt,name=parts,proto3" json:"parts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnreadModel) Reset() {
+	*x = UnreadModel{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnreadModel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnreadModel) ProtoMessage() {}
+
+func (x *UnreadModel) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnreadModel.ProtoReflect.Descriptor instead.
+func (*UnreadModel) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UnreadModel) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *UnreadModel) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *UnreadModel) GetParts() int32 {
+	if x != nil {
+		return x.Parts
+	}
+	return 0
+}
+
 type ComponentPlacement struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	RefDes      string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -667,9 +742,11 @@ type ComponentPlacement struct {
 	Mirror bool   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"` // component is on the back: mirror the footprint across X (after
 	// rotation) so its pads sit on the mirrored copper. Set by the
 	// reader from the placed side; the renderer applies it.
-	// height is how far the part's body stands off the board, in unit_nm units, as the file states
-	// it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
-	// package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+	// height is how far the part's body stands off the board, in unit_nm units, as the file or its 3D
+	// model states it (agni 1352). It is unset when neither gives one, never 0. IPC-2581 gives it on
+	// the package. KiCad keeps it only inside a part's 3D model, and the reader measures how far the
+	// model reaches above the pads, so a through-hole part's pins below the board do not count (agni
+	// 1652).
 	Height        *int64      `protobuf:"varint,7,opt,name=height,proto3,oneof" json:"height,omitempty"`
 	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -678,7 +755,7 @@ type ComponentPlacement struct {
 
 func (x *ComponentPlacement) Reset() {
 	*x = ComponentPlacement{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +767,7 @@ func (x *ComponentPlacement) String() string {
 func (*ComponentPlacement) ProtoMessage() {}
 
 func (x *ComponentPlacement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[7]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +780,7 @@ func (x *ComponentPlacement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentPlacement.ProtoReflect.Descriptor instead.
 func (*ComponentPlacement) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ComponentPlacement) GetRefDes() string {
@@ -788,7 +865,7 @@ type Pad struct {
 
 func (x *Pad) Reset() {
 	*x = Pad{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -800,7 +877,7 @@ func (x *Pad) String() string {
 func (*Pad) ProtoMessage() {}
 
 func (x *Pad) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[8]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -813,7 +890,7 @@ func (x *Pad) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pad.ProtoReflect.Descriptor instead.
 func (*Pad) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Pad) GetNumber() string {
@@ -899,7 +976,7 @@ type Padstack struct {
 
 func (x *Padstack) Reset() {
 	*x = Padstack{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -911,7 +988,7 @@ func (x *Padstack) String() string {
 func (*Padstack) ProtoMessage() {}
 
 func (x *Padstack) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[9]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -924,7 +1001,7 @@ func (x *Padstack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Padstack.ProtoReflect.Descriptor instead.
 func (*Padstack) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Padstack) GetId() string {
@@ -965,7 +1042,7 @@ type PadstackLayer struct {
 
 func (x *PadstackLayer) Reset() {
 	*x = PadstackLayer{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -977,7 +1054,7 @@ func (x *PadstackLayer) String() string {
 func (*PadstackLayer) ProtoMessage() {}
 
 func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -990,7 +1067,7 @@ func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadstackLayer.ProtoReflect.Descriptor instead.
 func (*PadstackLayer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PadstackLayer) GetLayer() string {
@@ -1038,7 +1115,7 @@ type PadShape struct {
 
 func (x *PadShape) Reset() {
 	*x = PadShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +1127,7 @@ func (x *PadShape) String() string {
 func (*PadShape) ProtoMessage() {}
 
 func (x *PadShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1063,7 +1140,7 @@ func (x *PadShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadShape.ProtoReflect.Descriptor instead.
 func (*PadShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PadShape) GetShape() string {
@@ -1110,7 +1187,7 @@ type NetCopper struct {
 
 func (x *NetCopper) Reset() {
 	*x = NetCopper{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1122,7 +1199,7 @@ func (x *NetCopper) String() string {
 func (*NetCopper) ProtoMessage() {}
 
 func (x *NetCopper) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1135,7 +1212,7 @@ func (x *NetCopper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetCopper.ProtoReflect.Descriptor instead.
 func (*NetCopper) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *NetCopper) GetNet() string {
@@ -1182,7 +1259,7 @@ type CopperShape struct {
 
 func (x *CopperShape) Reset() {
 	*x = CopperShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1194,7 +1271,7 @@ func (x *CopperShape) String() string {
 func (*CopperShape) ProtoMessage() {}
 
 func (x *CopperShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1207,7 +1284,7 @@ func (x *CopperShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CopperShape.ProtoReflect.Descriptor instead.
 func (*CopperShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CopperShape) GetLayer() string {
@@ -1249,7 +1326,7 @@ type TrackSegment struct {
 
 func (x *TrackSegment) Reset() {
 	*x = TrackSegment{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1261,7 +1338,7 @@ func (x *TrackSegment) String() string {
 func (*TrackSegment) ProtoMessage() {}
 
 func (x *TrackSegment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1274,7 +1351,7 @@ func (x *TrackSegment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackSegment.ProtoReflect.Descriptor instead.
 func (*TrackSegment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TrackSegment) GetA() *Point {
@@ -1329,7 +1406,7 @@ type Via struct {
 
 func (x *Via) Reset() {
 	*x = Via{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1341,7 +1418,7 @@ func (x *Via) String() string {
 func (*Via) ProtoMessage() {}
 
 func (x *Via) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1354,7 +1431,7 @@ func (x *Via) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Via.ProtoReflect.Descriptor instead.
 func (*Via) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Via) GetAt() *Point {
@@ -1415,7 +1492,7 @@ type Zone struct {
 
 func (x *Zone) Reset() {
 	*x = Zone{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1427,7 +1504,7 @@ func (x *Zone) String() string {
 func (*Zone) ProtoMessage() {}
 
 func (x *Zone) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1517,7 @@ func (x *Zone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Zone.ProtoReflect.Descriptor instead.
 func (*Zone) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Zone) GetNet() string {
@@ -1468,7 +1545,7 @@ var File_agni_v1_geom_geom_board_proto protoreflect.FileDescriptor
 
 const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\xc4\x04\n" +
+	"\x1dagni/v1/geom/geom_board.proto\x12\fagni.v1.geom\x1a\x17agni/v1/geom/geom.proto\"\x84\x05\n" +
 	"\rBoardGeometry\x12\x1d\n" +
 	"\n" +
 	"design_ref\x18\x01 \x01(\tR\tdesignRef\x12\x17\n" +
@@ -1484,7 +1561,8 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\bgraphics\x18\t \x03(\v2\x1a.agni.v1.geom.BoardGraphicR\bgraphics\x124\n" +
 	"\tpadstacks\x18\n" +
 	" \x03(\v2\x16.agni.v1.geom.PadstackR\tpadstacks\x12/\n" +
-	"\astackup\x18\v \x01(\v2\x15.agni.v1.geom.StackupR\astackup\x12,\n" +
+	"\astackup\x18\v \x01(\v2\x15.agni.v1.geom.StackupR\astackup\x12>\n" +
+	"\runread_models\x18\f \x03(\v2\x19.agni.v1.geom.UnreadModelR\funreadModels\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\xa6\x02\n" +
 	"\tBoardText\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12#\n" +
@@ -1530,7 +1608,11 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"_epsilon_rB\x0f\n" +
 	"\r_loss_tangent\"<\n" +
 	"\fBoardOutline\x12,\n" +
-	"\x05paths\x18\x01 \x03(\v2\x16.agni.v1.geom.PolylineR\x05paths\"\xa0\x02\n" +
+	"\x05paths\x18\x01 \x03(\v2\x16.agni.v1.geom.PolylineR\x05paths\"O\n" +
+	"\vUnreadModel\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05parts\x18\x03 \x01(\x05R\x05parts\"\xa0\x02\n" +
 	"\x12ComponentPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -1605,7 +1687,7 @@ func file_agni_v1_geom_geom_board_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_board_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardGeometry)(nil),      // 0: agni.v1.geom.BoardGeometry
 	(*BoardText)(nil),          // 1: agni.v1.geom.BoardText
@@ -1614,63 +1696,65 @@ var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*Stackup)(nil),            // 4: agni.v1.geom.Stackup
 	(*StackLayer)(nil),         // 5: agni.v1.geom.StackLayer
 	(*BoardOutline)(nil),       // 6: agni.v1.geom.BoardOutline
-	(*ComponentPlacement)(nil), // 7: agni.v1.geom.ComponentPlacement
-	(*Pad)(nil),                // 8: agni.v1.geom.Pad
-	(*Padstack)(nil),           // 9: agni.v1.geom.Padstack
-	(*PadstackLayer)(nil),      // 10: agni.v1.geom.PadstackLayer
-	(*PadShape)(nil),           // 11: agni.v1.geom.PadShape
-	(*NetCopper)(nil),          // 12: agni.v1.geom.NetCopper
-	(*CopperShape)(nil),        // 13: agni.v1.geom.CopperShape
-	(*TrackSegment)(nil),       // 14: agni.v1.geom.TrackSegment
-	(*Via)(nil),                // 15: agni.v1.geom.Via
-	(*Zone)(nil),               // 16: agni.v1.geom.Zone
-	(*Provenance)(nil),         // 17: agni.v1.geom.Provenance
-	(*Point)(nil),              // 18: agni.v1.geom.Point
-	(*Shape)(nil),              // 19: agni.v1.geom.Shape
-	(*Polyline)(nil),           // 20: agni.v1.geom.Polyline
+	(*UnreadModel)(nil),        // 7: agni.v1.geom.UnreadModel
+	(*ComponentPlacement)(nil), // 8: agni.v1.geom.ComponentPlacement
+	(*Pad)(nil),                // 9: agni.v1.geom.Pad
+	(*Padstack)(nil),           // 10: agni.v1.geom.Padstack
+	(*PadstackLayer)(nil),      // 11: agni.v1.geom.PadstackLayer
+	(*PadShape)(nil),           // 12: agni.v1.geom.PadShape
+	(*NetCopper)(nil),          // 13: agni.v1.geom.NetCopper
+	(*CopperShape)(nil),        // 14: agni.v1.geom.CopperShape
+	(*TrackSegment)(nil),       // 15: agni.v1.geom.TrackSegment
+	(*Via)(nil),                // 16: agni.v1.geom.Via
+	(*Zone)(nil),               // 17: agni.v1.geom.Zone
+	(*Provenance)(nil),         // 18: agni.v1.geom.Provenance
+	(*Point)(nil),              // 19: agni.v1.geom.Point
+	(*Shape)(nil),              // 20: agni.v1.geom.Shape
+	(*Polyline)(nil),           // 21: agni.v1.geom.Polyline
 }
 var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.BoardGeometry.layers:type_name -> agni.v1.geom.BoardLayer
 	6,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
-	7,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
-	12, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
-	16, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
+	8,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
+	13, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
+	17, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
 	1,  // 5: agni.v1.geom.BoardGeometry.texts:type_name -> agni.v1.geom.BoardText
 	2,  // 6: agni.v1.geom.BoardGeometry.graphics:type_name -> agni.v1.geom.BoardGraphic
-	9,  // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
+	10, // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
 	4,  // 8: agni.v1.geom.BoardGeometry.stackup:type_name -> agni.v1.geom.Stackup
-	17, // 9: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
-	18, // 10: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
-	19, // 11: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
-	5,  // 12: agni.v1.geom.Stackup.layers:type_name -> agni.v1.geom.StackLayer
-	20, // 13: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
-	18, // 14: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
-	8,  // 15: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
-	17, // 16: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
-	18, // 17: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
-	18, // 18: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
-	10, // 19: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
-	11, // 20: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
-	11, // 21: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
-	11, // 22: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
-	18, // 23: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
-	18, // 24: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
-	18, // 25: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
-	14, // 26: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	15, // 27: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	13, // 28: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
-	20, // 29: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
-	20, // 30: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
-	18, // 31: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	18, // 32: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	18, // 33: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	18, // 34: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	20, // 35: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	7,  // 9: agni.v1.geom.BoardGeometry.unread_models:type_name -> agni.v1.geom.UnreadModel
+	18, // 10: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
+	19, // 11: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
+	20, // 12: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
+	5,  // 13: agni.v1.geom.Stackup.layers:type_name -> agni.v1.geom.StackLayer
+	21, // 14: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
+	19, // 15: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
+	9,  // 16: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
+	18, // 17: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
+	19, // 18: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
+	19, // 19: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
+	11, // 20: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
+	12, // 21: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
+	12, // 22: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
+	12, // 23: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
+	19, // 24: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
+	19, // 25: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
+	19, // 26: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
+	15, // 27: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	16, // 28: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	14, // 29: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
+	21, // 30: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
+	21, // 31: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
+	19, // 32: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	19, // 33: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	19, // 34: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	19, // 35: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	21, // 36: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }
@@ -1681,14 +1765,14 @@ func file_agni_v1_geom_geom_board_proto_init() {
 	file_agni_v1_geom_geom_proto_init()
 	file_agni_v1_geom_geom_board_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agni_v1_geom_geom_board_proto_msgTypes[5].OneofWrappers = []any{}
-	file_agni_v1_geom_geom_board_proto_msgTypes[7].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_board_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_board_proto_rawDesc), len(file_agni_v1_geom_geom_board_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

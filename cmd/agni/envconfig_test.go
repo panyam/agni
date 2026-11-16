@@ -263,7 +263,7 @@ func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
 // file. A relative path names a folder beside the file, wherever the command ran (agni issue 1373).
 func TestEnvConfigResolvesRelativePathsBesideTheFile(t *testing.T) {
 	root := t.TempDir()
-	writeEnvCfg(t, root, "mounts:\n  boards: boards\n  abs: /srv/abs\nsymbol_paths:\n  - syms/lib\n  - mount://shared/syms\nweb_dir: web\n")
+	writeEnvCfg(t, root, "mounts:\n  boards: boards\n  abs: /srv/abs\nsymbol_paths:\n  - syms/lib\n  - mount://shared/syms\nmodel_paths:\n  - kicad/3dmodels\nweb_dir: web\n")
 	sub := filepath.Join(root, "boards", "hackrf")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
@@ -279,6 +279,9 @@ func TestEnvConfigResolvesRelativePathsBesideTheFile(t *testing.T) {
 	}
 	if wantSyms := []string{filepath.Join(root, "syms", "lib"), "mount://shared/syms"}; strings.Join(cfg.SymbolPaths, ",") != strings.Join(wantSyms, ",") {
 		t.Errorf("symbol_paths = %v, want %v", cfg.SymbolPaths, wantSyms)
+	}
+	if want := filepath.Join(root, "kicad", "3dmodels"); len(cfg.ModelPaths) != 1 || cfg.ModelPaths[0] != want {
+		t.Errorf("model_paths = %v, want [%s]", cfg.ModelPaths, want)
 	}
 	if want := filepath.Join(root, "web"); cfg.WebDir != want {
 		t.Errorf("web_dir = %q, want %q", cfg.WebDir, want)

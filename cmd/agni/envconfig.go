@@ -41,6 +41,8 @@ type envConfig struct {
 	// descriptor (AnalysisConfig.symbol_path_uris), where they travel with the design and reach a
 	// served surface too.
 	SymbolPaths []string `yaml:"symbol_paths"`
+	// ModelPaths are KiCad 3D model library folders, the file form of --model-path (agni 1652).
+	ModelPaths []string `yaml:"model_paths"`
 	// WebDir is where the viewer's own assets live, the file form of --web-dir. A wrong value fails
 	// at startup, because checkWebAssets stats four named files before the listener opens.
 	WebDir string `yaml:"web_dir"`
@@ -90,6 +92,9 @@ func (c *envConfig) anchor(dir string) {
 	}
 	for i, p := range c.SymbolPaths {
 		c.SymbolPaths[i] = anchorPath(dir, p)
+	}
+	for i, p := range c.ModelPaths {
+		c.ModelPaths[i] = anchorPath(dir, p)
 	}
 	if c.WebDir != "" {
 		c.WebDir = anchorPath(dir, c.WebDir)

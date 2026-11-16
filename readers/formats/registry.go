@@ -96,7 +96,7 @@ func init() {
 				return nil, err
 			}
 			defer f.Close()
-			return kicad.ReadBoardGeometry(f, path)
+			return kicad.ReadBoardGeometryWithModels(f, path, l.kicadModelOpener(path))
 		},
 	})
 	Register(&Format{

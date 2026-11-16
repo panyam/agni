@@ -53,3 +53,29 @@ func TestResolveSymbolPaths(t *testing.T) {
 		}
 	})
 }
+
+// TestResolveModelPaths covers --model-path's fallbacks (agni 1652). The flag wins outright, then
+// AGNI_MODEL_PATH, then the newest of KiCad's own library variables that is set.
+func TestResolveModelPaths(t *testing.T) {
+	env := func(kv map[string]string) func(string) string {
+		return func(k string) string { return kv[k] }
+	}
+	defer func() { modelPaths = nil }()
+	for _, c := range []struct {
+		name string
+		flag []string
+		env  map[string]string
+		want []string
+	}{
+		{"flag wins", []string{"/flag"}, map[string]string{envModelPath: "/a", "KICAD9_3DMODEL_DIR": "/k9"}, []string{"/flag"}},
+		{"agni's variable next", nil, map[string]string{envModelPath: "/a:/b", "KICAD9_3DMODEL_DIR": "/k9"}, []string{"/a", "/b"}},
+		{"newest KiCad variable", nil, map[string]string{"KICAD8_3DMODEL_DIR": "/k8", "KICAD9_3DMODEL_DIR": "/k9"}, []string{"/k9"}},
+		{"nothing set", nil, nil, nil},
+	} {
+		modelPaths = c.flag
+		got := resolveModelPaths(env(c.env))
+		if len(got) != len(c.want) || (len(got) > 0 && got[len(got)-1] != c.want[len(c.want)-1]) {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}

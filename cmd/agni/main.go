@@ -99,12 +99,20 @@ func rootCmd() *cobra.Command {
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
 			envSymbolPath+" when unset.")
+	root.PersistentFlags().StringArrayVar(&modelPaths, "model-path", nil,
+		"KiCad 3D model library folder, the one holding <Library>.3dshapes/, that stands for "+
+			"${KICAD9_3DMODEL_DIR} in a footprint's model path. A KiCad board takes each part's "+
+			"height from its STEP model (repeatable). Defaults to "+envModelPath+", then to "+
+			"KiCad's own KICAD<n>_3DMODEL_DIR, when unset.")
 	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
 	return root
 }
 
 // symbolPaths holds the --symbol-path search directories for resolving xschem/gEDA symbols.
 var symbolPaths []string
+
+// modelPaths holds the --model-path KiCad 3D model library folders (agni 1652).
+var modelPaths []string
 
 // envConfigWebDir holds the web_dir an agni.yaml named, "" when no file named one. applyEnvConfig
 // fills it and resolveWebDir consults it. The file is read once in PersistentPreRunE, before any
@@ -124,6 +132,11 @@ var envConfigNativeTools []string
 // Colon-separated, like PATH. The flag wins outright rather than appending, so an explicit
 // --symbol-path is never widened by ambient configuration.
 const envSymbolPath = "AGNI_SYMBOL_PATH"
+
+// envModelPath names the environment variable that supplies --model-path when the flag is absent,
+// colon-separated like envSymbolPath. With neither, the first of KiCad's own KICAD10_3DMODEL_DIR
+// down to KICAD6_3DMODEL_DIR that is set is used.
+const envModelPath = "AGNI_MODEL_PATH"
 
 // envWebDir names the environment variable that supplies --web-dir when neither the flag nor an
 // agni.yaml names one.
@@ -166,6 +179,10 @@ func applyEnvConfig(w io.Writer, getenv func(string) string) error {
 	if len(symbolPaths) == 0 && len(cfg.SymbolPaths) > 0 {
 		symbolPaths = cfg.SymbolPaths
 		used = append(used, fmt.Sprintf("%d symbol path(s)", len(cfg.SymbolPaths)))
+	}
+	if len(modelPaths) == 0 && len(cfg.ModelPaths) > 0 {
+		modelPaths = cfg.ModelPaths
+		used = append(used, fmt.Sprintf("%d model path(s)", len(cfg.ModelPaths)))
 	}
 	if cfg.WebDir != "" {
 		envConfigWebDir = cfg.WebDir
@@ -213,10 +230,32 @@ func resolveSymbolPaths(getenv func(string) string) []string {
 	return out
 }
 
+// resolveModelPaths applies the envModelPath fallback, then KiCad's own library variable.
+func resolveModelPaths(getenv func(string) string) []string {
+	if len(modelPaths) > 0 {
+		return modelPaths
+	}
+	var out []string
+	for p := range strings.SplitSeq(getenv(envModelPath), ":") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for v := 10; v >= 6; v-- {
+		if p := strings.TrimSpace(getenv(fmt.Sprintf("KICAD%d_3DMODEL_DIR", v))); p != "" {
+			return []string{p}
+		}
+	}
+	return nil
+}
+
 // newLoader builds the formats.Loader every command reads designs through, carrying the
-// --symbol-path values (or the envSymbolPath fallback).
+// --symbol-path and --model-path values (or their environment fallbacks).
 func newLoader() *formats.Loader {
-	l := &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv)}
+	l := &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv), ModelPaths: resolveModelPaths(os.Getenv)}
 	// The CLI opens a design by absolute host path, so without this every locator would record this
 	// machine's directory layout and `--format json` and `--results-out` would publish it (agni issue
 	// 501). The lookup is deferred because the argument's mount is minted after the loader is built.
