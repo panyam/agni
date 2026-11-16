@@ -60,6 +60,21 @@ read the model. A part with no height stands at 1 mm in a paler grey, and the no
 counts those parts, as "(all at a default 1 mm)". IPC-2581 gives
 each package a height, so an IPC-2581 board stands its parts at their real heights.
 
+## See the board as it is made
+
+**Layers** and **Board** in the bar switch the stack view's look. It opens in Layers, which draws
+each layer apart in the editor's colours. Board draws the board as it is made. An
+opaque green mask covers each face, the tracks show as a lighter green through it, and the pads draw
+in gold. The silkscreen draws white, and the inner layers and the dielectrics hide. The slider and
+the camera work the same in both, and a click picks the same part or net.
+
+![Glasgow revC3 in the Board look, with its parts coloured by type]({{.Site.PathPrefix}}/static/images/guide/board-stack-look.png)
+
+Each part's block takes a colour from its type, in both looks. ICs and transistors are near black,
+resistors dark grey, capacitors tan, connectors ivory, LEDs white and test points gold. A part agni
+can't classify stays plain grey. A block at the default height draws a little paler than one whose file
+gives a height.
+
 ## When the file leaves a thickness out
 
 Each layer draws as thick as the board's file says. A layer with no thickness draws at a typical
