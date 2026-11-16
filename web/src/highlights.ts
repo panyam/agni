@@ -6,7 +6,7 @@
 // join, so the presenter fetches the HighlightSheet SVG overlay and composites it above the sheet.
 // See docsite/content/architecture/web-app.md#the-render-contract.
 
-import type { Primitive, PrimitiveKey } from "./packed.js";
+import { pickOnly, type DecodedSheet, type Primitive, type PrimitiveKey } from "./packed.js";
 import { HighlightShape } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 
 export { HighlightShape };
@@ -200,6 +200,14 @@ export function resolveHighlights(keys: PrimitiveKey[], specs: HighlightSpec[]):
       subjects: [...subjects],
     };
   });
+}
+
+// highlightSheet resolves specs against a packed sheet as render.HighlightPacked does. A pick area is
+// never drawn, so no highlight lights it (packed.ts, pickOnly), and resolveHighlights resolves the
+// rest. core/render's TestHighlightTwin writes what HighlightPacked lights on the Jetson cut's board,
+// and highlights.test.ts holds this to it (agni issue 1635).
+export function highlightSheet(sheet: Pick<DecodedSheet, "keys" | "primitives">, specs: HighlightSpec[]): ResolvedHighlight[] {
+  return resolveHighlights(sheet.keys.filter((k) => !pickOnly(sheet.primitives[k.primitive]?.group ?? 0)), specs);
 }
 
 // EntityFrame is one entity's framing geometry in world coordinates. It holds the padded bbox

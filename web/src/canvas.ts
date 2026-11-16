@@ -21,7 +21,7 @@ import {
   pinMarkRadius,
   rectRing,
   rectTriangles,
-  resolveHighlights,
+  highlightSheet,
   type HighlightSpec,
 } from "./highlights.js";
 import { SHEET_DRAWN } from "./drawmark.js";
@@ -785,9 +785,7 @@ export class CanvasComponent extends BaseComponent {
     const sb = boundsOfVertices(sheet.vertices);
     const minSpan = Math.min(sb.maxX - sb.minX, sb.maxY - sb.minY);
     const pathHalfWidth = PATH_WIDTH_FRACTION * minSpan;
-    // A pick area is never drawn, so no highlight lights it (packed.ts, pickOnly).
-    const drawn = sheet.keys.filter((k) => !pickOnly(sheet.primitives[k.primitive]?.group ?? 0));
-    for (const g of resolveHighlights(drawn, this.highlights)) {
+    for (const g of highlightSheet(sheet, this.highlights)) {
       for (const s of g.subjects) lit.add(s);
       for (const entity of g.entities) {
         const b = entityBounds(sheet.vertices, sheet.primitives, entity);
@@ -1275,9 +1273,8 @@ export function ghostOverlays(
 ): { color: ReturnType<typeof hexToRgba>; vertices: Int32Array; subjects: string[] }[] {
   const dx = ghost.originX - onto.originX;
   const dy = ghost.originY - onto.originY;
-  const drawn = ghost.keys.filter((k) => !pickOnly(ghost.primitives[k.primitive]?.group ?? 0));
   const out: { color: ReturnType<typeof hexToRgba>; vertices: Int32Array; subjects: string[] }[] = [];
-  for (const g of resolveHighlights(drawn, specs)) {
+  for (const g of highlightSheet(ghost, specs)) {
     const tris: number[] = [];
     for (const i of g.primitives) {
       const p = ghost.primitives[i];
