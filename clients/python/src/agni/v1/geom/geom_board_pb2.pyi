@@ -118,13 +118,14 @@ class BoardOutline(_message.Message):
     def __init__(self, paths: _Optional[_Iterable[_Union[_geom_pb2.Polyline, _Mapping]]] = ...) -> None: ...
 
 class ComponentPlacement(_message.Message):
-    __slots__ = ("ref_des", "at", "rotation_deg", "layer", "pads", "mirror", "prov")
+    __slots__ = ("ref_des", "at", "rotation_deg", "layer", "pads", "mirror", "height", "prov")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     AT_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
     LAYER_FIELD_NUMBER: _ClassVar[int]
     PADS_FIELD_NUMBER: _ClassVar[int]
     MIRROR_FIELD_NUMBER: _ClassVar[int]
+    HEIGHT_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     at: _geom_pb2.Point
@@ -132,8 +133,9 @@ class ComponentPlacement(_message.Message):
     layer: str
     pads: _containers.RepeatedCompositeFieldContainer[Pad]
     mirror: bool
+    height: int
     prov: _geom_pb2.Provenance
-    def __init__(self, ref_des: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., layer: _Optional[str] = ..., pads: _Optional[_Iterable[_Union[Pad, _Mapping]]] = ..., mirror: _Optional[bool] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, ref_des: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., layer: _Optional[str] = ..., pads: _Optional[_Iterable[_Union[Pad, _Mapping]]] = ..., mirror: _Optional[bool] = ..., height: _Optional[int] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class Pad(_message.Message):
     __slots__ = ("number", "at", "rotation_deg", "size", "shape", "layers", "drill", "net", "padstack")

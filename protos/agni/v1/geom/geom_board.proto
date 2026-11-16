@@ -154,6 +154,10 @@ message ComponentPlacement {
   bool mirror = 6;          // component is on the back: mirror the footprint across X (after
                             // rotation) so its pads sit on the mirrored copper. Set by the
                             // reader from the placed side; the renderer applies it.
+  // height is how far the part's body stands off the board, in unit_nm units, as the file states
+  // it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
+  // package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+  optional int64 height = 7;
   Provenance prov = 16;
 }
 

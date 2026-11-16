@@ -360,3 +360,15 @@ func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 		}
 	}
 }
+
+func TestBoardGeometryPlacementHeightIsThePackages(t *testing.T) {
+	g := readBoardGeom(t, "board_geom_height.xml")
+	tall := placementByRef(g, "T1")
+	if tall == nil || tall.Height == nil || tall.GetHeight() != 2_500_000 {
+		t.Errorf("T1 height = %v, want 2500000 nm from its package's height", tall.GetHeight())
+	}
+	flat := placementByRef(g, "F1")
+	if flat == nil || flat.Height != nil {
+		t.Errorf("F1 height = %v, want unset since its package states none", flat.GetHeight())
+	}
+}

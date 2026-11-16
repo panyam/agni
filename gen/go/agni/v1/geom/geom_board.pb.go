@@ -667,6 +667,10 @@ type ComponentPlacement struct {
 	Mirror bool   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"` // component is on the back: mirror the footprint across X (after
 	// rotation) so its pads sit on the mirrored copper. Set by the
 	// reader from the placed side; the renderer applies it.
+	// height is how far the part's body stands off the board, in unit_nm units, as the file states
+	// it (agni 1352). It is unset when the file gives none, never 0. IPC-2581 gives it on the
+	// package. KiCad keeps it only inside a part's 3D model file, which the reader does not open.
+	Height        *int64      `protobuf:"varint,7,opt,name=height,proto3,oneof" json:"height,omitempty"`
 	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -742,6 +746,13 @@ func (x *ComponentPlacement) GetMirror() bool {
 		return x.Mirror
 	}
 	return false
+}
+
+func (x *ComponentPlacement) GetHeight() int64 {
+	if x != nil && x.Height != nil {
+		return *x.Height
+	}
+	return 0
 }
 
 func (x *ComponentPlacement) GetProv() *Provenance {
@@ -1519,15 +1530,17 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"_epsilon_rB\x0f\n" +
 	"\r_loss_tangent\"<\n" +
 	"\fBoardOutline\x12,\n" +
-	"\x05paths\x18\x01 \x03(\v2\x16.agni.v1.geom.PolylineR\x05paths\"\xf8\x01\n" +
+	"\x05paths\x18\x01 \x03(\v2\x16.agni.v1.geom.PolylineR\x05paths\"\xa0\x02\n" +
 	"\x12ComponentPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
 	"\frotation_deg\x18\x03 \x01(\x01R\vrotationDeg\x12\x14\n" +
 	"\x05layer\x18\x04 \x01(\tR\x05layer\x12%\n" +
 	"\x04pads\x18\x05 \x03(\v2\x11.agni.v1.geom.PadR\x04pads\x12\x16\n" +
-	"\x06mirror\x18\x06 \x01(\bR\x06mirror\x12,\n" +
-	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\x80\x02\n" +
+	"\x06mirror\x18\x06 \x01(\bR\x06mirror\x12\x1b\n" +
+	"\x06height\x18\a \x01(\x03H\x00R\x06height\x88\x01\x01\x12,\n" +
+	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04provB\t\n" +
+	"\a_height\"\x80\x02\n" +
 	"\x03Pad\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\tR\x06number\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -1668,6 +1681,7 @@ func file_agni_v1_geom_geom_board_proto_init() {
 	file_agni_v1_geom_geom_proto_init()
 	file_agni_v1_geom_geom_board_proto_msgTypes[4].OneofWrappers = []any{}
 	file_agni_v1_geom_geom_board_proto_msgTypes[5].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_board_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

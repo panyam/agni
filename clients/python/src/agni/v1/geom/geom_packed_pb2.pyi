@@ -226,20 +226,38 @@ class BoardLayerRow(_message.Message):
     def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., side: _Optional[str] = ..., color: _Optional[str] = ..., svg_selector: _Optional[str] = ..., groups: _Optional[_Iterable[int]] = ..., thickness: _Optional[str] = ...) -> None: ...
 
 class BoardStackView(_message.Message):
-    __slots__ = ("rows", "summary", "disagrees", "drills", "outline_tris", "units_per_mm")
+    __slots__ = ("rows", "summary", "disagrees", "drills", "outline_tris", "units_per_mm", "bodies", "body_color", "default_body_color")
     ROWS_FIELD_NUMBER: _ClassVar[int]
     SUMMARY_FIELD_NUMBER: _ClassVar[int]
     DISAGREES_FIELD_NUMBER: _ClassVar[int]
     DRILLS_FIELD_NUMBER: _ClassVar[int]
     OUTLINE_TRIS_FIELD_NUMBER: _ClassVar[int]
     UNITS_PER_MM_FIELD_NUMBER: _ClassVar[int]
+    BODIES_FIELD_NUMBER: _ClassVar[int]
+    BODY_COLOR_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_BODY_COLOR_FIELD_NUMBER: _ClassVar[int]
     rows: _containers.RepeatedCompositeFieldContainer[BoardStackRow]
     summary: str
     disagrees: bool
     drills: _containers.RepeatedCompositeFieldContainer[BoardDrillSpan]
     outline_tris: _containers.RepeatedScalarFieldContainer[float]
     units_per_mm: float
-    def __init__(self, rows: _Optional[_Iterable[_Union[BoardStackRow, _Mapping]]] = ..., summary: _Optional[str] = ..., disagrees: _Optional[bool] = ..., drills: _Optional[_Iterable[_Union[BoardDrillSpan, _Mapping]]] = ..., outline_tris: _Optional[_Iterable[float]] = ..., units_per_mm: _Optional[float] = ...) -> None: ...
+    bodies: _containers.RepeatedCompositeFieldContainer[BoardPartBody]
+    body_color: str
+    default_body_color: str
+    def __init__(self, rows: _Optional[_Iterable[_Union[BoardStackRow, _Mapping]]] = ..., summary: _Optional[str] = ..., disagrees: _Optional[bool] = ..., drills: _Optional[_Iterable[_Union[BoardDrillSpan, _Mapping]]] = ..., outline_tris: _Optional[_Iterable[float]] = ..., units_per_mm: _Optional[float] = ..., bodies: _Optional[_Iterable[_Union[BoardPartBody, _Mapping]]] = ..., body_color: _Optional[str] = ..., default_body_color: _Optional[str] = ...) -> None: ...
+
+class BoardPartBody(_message.Message):
+    __slots__ = ("ref_des", "side", "outline", "height_mm")
+    REF_DES_FIELD_NUMBER: _ClassVar[int]
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    OUTLINE_FIELD_NUMBER: _ClassVar[int]
+    HEIGHT_MM_FIELD_NUMBER: _ClassVar[int]
+    ref_des: str
+    side: str
+    outline: _containers.RepeatedScalarFieldContainer[float]
+    height_mm: float
+    def __init__(self, ref_des: _Optional[str] = ..., side: _Optional[str] = ..., outline: _Optional[_Iterable[float]] = ..., height_mm: _Optional[float] = ...) -> None: ...
 
 class BoardDrillSpan(_message.Message):
     __slots__ = ("layer_from", "layer_to", "xy", "diameter", "net")

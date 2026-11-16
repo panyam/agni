@@ -31,6 +31,8 @@ func BoardStack(b *geom.BoardGeometry, opts ...Option) *geom.BoardStackView {
 	v.Summary, v.Disagrees = stackSummary(s, unit)
 	v.Drills = drillSpans(b)
 	v.OutlineTris = outlineTris(b)
+	v.Bodies = partBodies(b)
+	v.BodyColor, v.DefaultBodyColor = style.PartBody, style.PartBodyDefault
 	return v
 }
 

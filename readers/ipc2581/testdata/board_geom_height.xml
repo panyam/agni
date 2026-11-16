@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- agni 1352: a package that states its body height and one that states none. Units MM. -->
+<IPC-2581 revision="C" xmlns="http://webstds.ipc.org/2581">
+  <Content>
+    <DictionaryStandard units="MILLIMETER">
+      <EntryStandard id="CIRCLE_1">
+        <Circle diameter="0.500000"/>
+      </EntryStandard>
+    </DictionaryStandard>
+  </Content>
+  <Ecad name="ecad">
+    <CadData>
+      <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE"/>
+      <Layer name="BOTTOM" layerFunction="CONDUCTOR" side="BOTTOM" polarity="POSITIVE"/>
+      <Step name="step">
+        <Profile>
+          <Polygon>
+            <PolyBegin x="0.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="0.000000"/>
+          </Polygon>
+        </Profile>
+        <Package name="TALL" type="OTHER" height="2.5">
+          <Pin number="1" type="SURFACE">
+            <Location x="-1.000000" y="0.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+          <Pin number="2" type="SURFACE">
+            <Location x="1.000000" y="0.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+        </Package>
+        <Package name="FLAT" type="OTHER">
+          <Pin number="1" type="SURFACE">
+            <Location x="0.000000" y="0.000000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+        </Package>
+        <Component refDes="T1" packageRef="TALL" layerRef="TOP" part="CAP" mountType="SMT">
+          <Location x="3.000000" y="4.000000"/>
+        </Component>
+        <Component refDes="F1" packageRef="FLAT" layerRef="BOTTOM" part="PAD" mountType="SMT">
+          <Location x="7.000000" y="4.000000"/>
+        </Component>
+      </Step>
+    </CadData>
+  </Ecad>
+</IPC-2581>
