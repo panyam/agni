@@ -327,6 +327,19 @@ message BoardStackView {
   // unset, both from render.Style.
   string body_color = 8;
   string default_body_color = 9;
+  // board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+  BoardLook board_look = 10;
+}
+
+// BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
+// 1653). mask is the opaque solder mask on each outer face. mask_over_copper is outer copper seen
+// through the mask, such as a track. pad_finish is exposed copper, such as a pad. silk is the
+// silkscreen. Each is "#rrggbb", from render.Style.
+message BoardLook {
+  string mask = 1;
+  string mask_over_copper = 2;
+  string pad_finish = 3;
+  string silk = 4;
 }
 
 // BoardPartBody is one placed part drawn as a solid on its side's face of the board (agni 1352).
@@ -340,6 +353,12 @@ message BoardPartBody {
   string side = 2;
   repeated double outline = 3;
   optional double height_mm = 4;
+  // part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+  // gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+  // gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+  // body_color otherwise.
+  string part_class = 5;
+  string color = 6;
 }
 
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from

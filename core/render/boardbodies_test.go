@@ -109,3 +109,46 @@ func TestBodiesTakeTheirColoursFromTheStyle(t *testing.T) {
 		t.Errorf("body colours = %q, %q; want the style's", v.GetBodyColor(), v.GetDefaultBodyColor())
 	}
 }
+
+func TestABodyTakesTheColourOfItsFirstClassThatHasOne(t *testing.T) {
+	classes := map[string][]string{"CY": {"tvs", "diode"}, "FAB": {"widget"}}
+	v := BoardStack(bodiesBoard(), WithPartClasses(func(ref string) []string { return classes[ref] }))
+	for ref, want := range map[string][2]string{
+		"CY":   {"tvs", DefaultStyle.PartClass.Diode},
+		"FAB":  {"widget", DefaultStyle.PartBody},
+		"PADS": {"", DefaultStyle.PartBody},
+	} {
+		b := bodyOf(t, v, ref)
+		if b.GetPartClass() != want[0] || b.GetColor() != want[1] {
+			t.Errorf("%s = class %q colour %q, want %q %q", ref, b.GetPartClass(), b.GetColor(), want[0], want[1])
+		}
+	}
+	if c := bodyOf(t, BoardStack(bodiesBoard(), WithPartClasses(nil)), "CY").GetColor(); c != DefaultStyle.PartBody {
+		t.Errorf("with no class function CY draws %q, want PartBody %q", c, DefaultStyle.PartBody)
+	}
+}
+
+func TestEveryPartClassColourDiffers(t *testing.T) {
+	for _, s := range []Style{DefaultStyle, DarkStyle} {
+		seen := map[string]string{}
+		for _, class := range []string{"resistor", "capacitor", "inductor", "diode", "led", "ic", "connector", "transistor", "clock", "test_point", "fuse"} {
+			c := s.PartClass.of(class)
+			if c == "" || c == s.PartBody {
+				t.Errorf("%s has no colour of its own", class)
+			}
+			if prev, ok := seen[c]; ok {
+				t.Errorf("%s and %s share %s", prev, class, c)
+			}
+			seen[c] = class
+		}
+	}
+}
+
+func TestTheBoardLookTakesItsColoursFromTheStyle(t *testing.T) {
+	s := DefaultStyle
+	s.BoardMask, s.MaskOverCopper, s.PadFinish, s.BoardSilk = "#010101", "#020202", "#030303", "#040404"
+	l := BoardStack(bodiesBoard(), WithStyle(s)).GetBoardLook()
+	if l.GetMask() != "#010101" || l.GetMaskOverCopper() != "#020202" || l.GetPadFinish() != "#030303" || l.GetSilk() != "#040404" {
+		t.Errorf("board look = %v, want the style's four colours", l)
+	}
+}

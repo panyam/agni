@@ -56,6 +56,16 @@ type Style struct {
 	// whose file states no height draws at a default height in PartBodyDefault, so it reads apart.
 	PartBody        string
 	PartBodyDefault string
+	// A part's body takes its class's colour where PartClass gives one, so part types read apart in
+	// the stack view (agni 1653). A part with no coloured class keeps PartBody.
+	PartClass PartClassColors
+	// The stack view's board look draws the board as it is made, in these (agni 1653). BoardMask is
+	// the opaque solder mask, MaskOverCopper is outer copper seen through it, PadFinish is exposed
+	// copper such as a pad, and BoardSilk is the silkscreen. They travel as BoardStackView.board_look.
+	BoardMask      string
+	MaskOverCopper string
+	PadFinish      string
+	BoardSilk      string
 
 	// Font is the default font-family for all text, a CSS family list rather than one face
 	// (see SchematicFontStack). There is no per-element font.
@@ -76,6 +86,9 @@ type Style struct {
 	// netIDs names a board net's schematic net id (WithNetIDs). It is a pointer so Style stays
 	// comparable, and nil leaves a board's nets keyed by name alone.
 	netIDs *NetIDFunc
+	// partClasses lists a placed part's classes, most specific first (WithPartClasses). nil gives
+	// every part no class.
+	partClasses *PartClassFunc
 }
 
 // GroupColor returns the geometry color for a schematic primitive group (groupSymbol through
@@ -149,6 +162,11 @@ var DefaultStyle = Style{
 	SolderMask:      "#2f7d3b",
 	PartBody:        "#4a4f57",
 	PartBodyDefault: "#a7adb5",
+	PartClass:       partClassColors,
+	BoardMask:       "#1f5131",
+	MaskOverCopper:  "#3b7d4e",
+	PadFinish:       "#d4af4c",
+	BoardSilk:       "#f2f2ee",
 	TitleBlockFill:  "#fffef8",
 	Font:            SchematicFontStack,
 }
@@ -191,8 +209,67 @@ var DarkStyle = Style{
 	SolderMask:      "#3f9a4c",
 	PartBody:        "#5b616b",
 	PartBodyDefault: "#8b919a",
+	PartClass:       partClassColors,
+	BoardMask:       "#1f5131",
+	MaskOverCopper:  "#3b7d4e",
+	PadFinish:       "#d4af4c",
+	BoardSilk:       "#f2f2ee",
 	TitleBlockFill:  "#1a1a1a",
 	Font:            SchematicFontStack,
+}
+
+// PartClassColors is the colour of a part's body by its class (agni 1653). Each field is one class
+// family, and a class id outside them has no colour. It is a struct rather than a map so Style stays
+// comparable and prints the same way every time, which the packed board's cache key relies on.
+type PartClassColors struct {
+	Resistor, Capacitor, Inductor, Diode, LED, IC, Connector, Transistor, Clock, TestPoint, Fuse string
+}
+
+// partClassColors leans on how each part looks on a real board: black ICs and resistors, tan
+// ceramic capacitors, ivory connectors, gold test points. Each family still differs enough to read
+// apart.
+var partClassColors = PartClassColors{
+	Resistor:   "#55565c",
+	Capacitor:  "#c9a46a",
+	Inductor:   "#7a6248",
+	Diode:      "#3b4466",
+	LED:        "#e3eef7",
+	IC:         "#202024",
+	Connector:  "#d9d2bd",
+	Transistor: "#3a3a40",
+	Clock:      "#b8bcc2",
+	TestPoint:  "#d4a537",
+	Fuse:       "#9a7b5b",
+}
+
+// of is the colour of a class id, or "" for a class with none. A subclass takes its family's
+// colour where it has none of its own, such as a ferrite the inductor's and a crystal the clock's.
+func (p PartClassColors) of(class string) string {
+	switch class {
+	case "resistor", "thermistor":
+		return p.Resistor
+	case "capacitor":
+		return p.Capacitor
+	case "inductor", "ferrite":
+		return p.Inductor
+	case "diode", "tvs", "zener":
+		return p.Diode
+	case "led":
+		return p.LED
+	case "ic", "ideal_diode_controller", "current_limit_switch", "efuse":
+		return p.IC
+	case "connector", "test_connector":
+		return p.Connector
+	case "transistor":
+		return p.Transistor
+	case "clock", "oscillator", "crystal", "ceramic_resonator":
+		return p.Clock
+	case "test_point":
+		return p.TestPoint
+	case "fuse":
+		return p.Fuse
+	}
+	return ""
 }
 
 // Themes maps a theme name to its Style, for the `agni serve --theme` knob.
@@ -226,6 +303,14 @@ func WithPickTargets() Option { return func(dst *Style) { dst.PickTargets = true
 // WithNetIDs has a board render ask f for each net's schematic net id, and key the net's copper and
 // pads with it (see NetIDFunc).
 func WithNetIDs(f NetIDFunc) Option { return func(dst *Style) { dst.netIDs = &f } }
+
+// PartClassFunc answers a placed part's classes by its ref-des, most specific first, as
+// classify.BySpecificity orders a component's device_classes. It answers nil for a part the design
+// does not classify.
+type PartClassFunc func(ref string) []string
+
+// WithPartClasses has the stack view colour each part's body by its classes (agni 1653).
+func WithPartClasses(f PartClassFunc) Option { return func(dst *Style) { dst.partClasses = &f } }
 
 // resolveStyle applies the options over a copy of DefaultStyle.
 func resolveStyle(opts []Option) Style {

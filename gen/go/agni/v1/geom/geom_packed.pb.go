@@ -1278,8 +1278,10 @@ type BoardStackView struct {
 	// unset, both from render.Style.
 	BodyColor        string `protobuf:"bytes,8,opt,name=body_color,json=bodyColor,proto3" json:"body_color,omitempty"`
 	DefaultBodyColor string `protobuf:"bytes,9,opt,name=default_body_color,json=defaultBodyColor,proto3" json:"default_body_color,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+	BoardLook     *BoardLook `protobuf:"bytes,10,opt,name=board_look,json=boardLook,proto3" json:"board_look,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BoardStackView) Reset() {
@@ -1375,6 +1377,85 @@ func (x *BoardStackView) GetDefaultBodyColor() string {
 	return ""
 }
 
+func (x *BoardStackView) GetBoardLook() *BoardLook {
+	if x != nil {
+		return x.BoardLook
+	}
+	return nil
+}
+
+// BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
+// 1653). mask is the opaque solder mask on each outer face. mask_over_copper is outer copper seen
+// through the mask, such as a track. pad_finish is exposed copper, such as a pad. silk is the
+// silkscreen. Each is "#rrggbb", from render.Style.
+type BoardLook struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Mask           string                 `protobuf:"bytes,1,opt,name=mask,proto3" json:"mask,omitempty"`
+	MaskOverCopper string                 `protobuf:"bytes,2,opt,name=mask_over_copper,json=maskOverCopper,proto3" json:"mask_over_copper,omitempty"`
+	PadFinish      string                 `protobuf:"bytes,3,opt,name=pad_finish,json=padFinish,proto3" json:"pad_finish,omitempty"`
+	Silk           string                 `protobuf:"bytes,4,opt,name=silk,proto3" json:"silk,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *BoardLook) Reset() {
+	*x = BoardLook{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardLook) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardLook) ProtoMessage() {}
+
+func (x *BoardLook) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardLook.ProtoReflect.Descriptor instead.
+func (*BoardLook) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BoardLook) GetMask() string {
+	if x != nil {
+		return x.Mask
+	}
+	return ""
+}
+
+func (x *BoardLook) GetMaskOverCopper() string {
+	if x != nil {
+		return x.MaskOverCopper
+	}
+	return ""
+}
+
+func (x *BoardLook) GetPadFinish() string {
+	if x != nil {
+		return x.PadFinish
+	}
+	return ""
+}
+
+func (x *BoardLook) GetSilk() string {
+	if x != nil {
+		return x.Silk
+	}
+	return ""
+}
+
 // BoardPartBody is one placed part drawn as a solid on its side's face of the board (agni 1352).
 // outline is the part's footprint as a convex ring of x,y pairs in board units, like
 // BoardStackView.drills, running counter-clockwise. It is the hull of the part's courtyard, of its
@@ -1382,18 +1463,24 @@ func (x *BoardStackView) GetDefaultBodyColor() string {
 // "back". height_mm is the height geom.ComponentPlacement states, and is unset when the file gives
 // none, so a client that draws one picks a default and says so.
 type BoardPartBody struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
-	Side          string                 `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
-	Outline       []float64              `protobuf:"fixed64,3,rep,packed,name=outline,proto3" json:"outline,omitempty"`
-	HeightMm      *float64               `protobuf:"fixed64,4,opt,name=height_mm,json=heightMm,proto3,oneof" json:"height_mm,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	RefDes   string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Side     string                 `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
+	Outline  []float64              `protobuf:"fixed64,3,rep,packed,name=outline,proto3" json:"outline,omitempty"`
+	HeightMm *float64               `protobuf:"fixed64,4,opt,name=height_mm,json=heightMm,proto3,oneof" json:"height_mm,omitempty"`
+	// part_class is the part's most specific class, such as "resistor" or "tvs", or "" when the design
+	// gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
+	// gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
+	// body_color otherwise.
+	PartClass     string `protobuf:"bytes,5,opt,name=part_class,json=partClass,proto3" json:"part_class,omitempty"`
+	Color         string `protobuf:"bytes,6,opt,name=color,proto3" json:"color,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BoardPartBody) Reset() {
 	*x = BoardPartBody{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1405,7 +1492,7 @@ func (x *BoardPartBody) String() string {
 func (*BoardPartBody) ProtoMessage() {}
 
 func (x *BoardPartBody) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1418,7 +1505,7 @@ func (x *BoardPartBody) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardPartBody.ProtoReflect.Descriptor instead.
 func (*BoardPartBody) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *BoardPartBody) GetRefDes() string {
@@ -1449,6 +1536,20 @@ func (x *BoardPartBody) GetHeightMm() float64 {
 	return 0
 }
 
+func (x *BoardPartBody) GetPartClass() string {
+	if x != nil {
+		return x.PartClass
+	}
+	return ""
+}
+
+func (x *BoardPartBody) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 // F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
 // of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
@@ -1468,7 +1569,7 @@ type BoardDrillSpan struct {
 
 func (x *BoardDrillSpan) Reset() {
 	*x = BoardDrillSpan{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1480,7 +1581,7 @@ func (x *BoardDrillSpan) String() string {
 func (*BoardDrillSpan) ProtoMessage() {}
 
 func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1493,7 +1594,7 @@ func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardDrillSpan.ProtoReflect.Descriptor instead.
 func (*BoardDrillSpan) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *BoardDrillSpan) GetLayerFrom() string {
@@ -1551,7 +1652,7 @@ type BoardStackRow struct {
 
 func (x *BoardStackRow) Reset() {
 	*x = BoardStackRow{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1563,7 +1664,7 @@ func (x *BoardStackRow) String() string {
 func (*BoardStackRow) ProtoMessage() {}
 
 func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1576,7 +1677,7 @@ func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardStackRow.ProtoReflect.Descriptor instead.
 func (*BoardStackRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *BoardStackRow) GetName() string {
@@ -1643,7 +1744,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1655,7 +1756,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1805,7 +1906,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x05color\x18\x04 \x01(\tR\x05color\x12!\n" +
 	"\fsvg_selector\x18\x05 \x01(\tR\vsvgSelector\x12\x16\n" +
 	"\x06groups\x18\x06 \x03(\rR\x06groups\x12\x1c\n" +
-	"\tthickness\x18\a \x01(\tR\tthickness\"\xf6\x02\n" +
+	"\tthickness\x18\a \x01(\tR\tthickness\"\xae\x03\n" +
 	"\x0eBoardStackView\x12/\n" +
 	"\x04rows\x18\x01 \x03(\v2\x1b.agni.v1.geom.BoardStackRowR\x04rows\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x1c\n" +
@@ -1817,12 +1918,24 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x06bodies\x18\a \x03(\v2\x1b.agni.v1.geom.BoardPartBodyR\x06bodies\x12\x1d\n" +
 	"\n" +
 	"body_color\x18\b \x01(\tR\tbodyColor\x12,\n" +
-	"\x12default_body_color\x18\t \x01(\tR\x10defaultBodyColor\"\x86\x01\n" +
+	"\x12default_body_color\x18\t \x01(\tR\x10defaultBodyColor\x126\n" +
+	"\n" +
+	"board_look\x18\n" +
+	" \x01(\v2\x17.agni.v1.geom.BoardLookR\tboardLook\"|\n" +
+	"\tBoardLook\x12\x12\n" +
+	"\x04mask\x18\x01 \x01(\tR\x04mask\x12(\n" +
+	"\x10mask_over_copper\x18\x02 \x01(\tR\x0emaskOverCopper\x12\x1d\n" +
+	"\n" +
+	"pad_finish\x18\x03 \x01(\tR\tpadFinish\x12\x12\n" +
+	"\x04silk\x18\x04 \x01(\tR\x04silk\"\xbb\x01\n" +
 	"\rBoardPartBody\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x12\n" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x18\n" +
 	"\aoutline\x18\x03 \x03(\x01R\aoutline\x12 \n" +
-	"\theight_mm\x18\x04 \x01(\x01H\x00R\bheightMm\x88\x01\x01B\f\n" +
+	"\theight_mm\x18\x04 \x01(\x01H\x00R\bheightMm\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"part_class\x18\x05 \x01(\tR\tpartClass\x12\x14\n" +
+	"\x05color\x18\x06 \x01(\tR\x05colorB\f\n" +
 	"\n" +
 	"_height_mm\"\x88\x01\n" +
 	"\x0eBoardDrillSpan\x12\x1d\n" +
@@ -1861,7 +1974,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -1878,15 +1991,16 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*PackedLabelRuns)(nil),       // 12: agni.v1.geom.PackedLabelRuns
 	(*BoardLayerRow)(nil),         // 13: agni.v1.geom.BoardLayerRow
 	(*BoardStackView)(nil),        // 14: agni.v1.geom.BoardStackView
-	(*BoardPartBody)(nil),         // 15: agni.v1.geom.BoardPartBody
-	(*BoardDrillSpan)(nil),        // 16: agni.v1.geom.BoardDrillSpan
-	(*BoardStackRow)(nil),         // 17: agni.v1.geom.BoardStackRow
-	(*PackedHighlight_Group)(nil), // 18: agni.v1.geom.PackedHighlight.Group
+	(*BoardLook)(nil),             // 15: agni.v1.geom.BoardLook
+	(*BoardPartBody)(nil),         // 16: agni.v1.geom.BoardPartBody
+	(*BoardDrillSpan)(nil),        // 17: agni.v1.geom.BoardDrillSpan
+	(*BoardStackRow)(nil),         // 18: agni.v1.geom.BoardStackRow
+	(*PackedHighlight_Group)(nil), // 19: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	18, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	19, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
 	8,  // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
@@ -1894,15 +2008,16 @@ var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	11, // 7: agni.v1.geom.PackedSheet.label_columns:type_name -> agni.v1.geom.PackedLabels
 	12, // 8: agni.v1.geom.PackedLabels.runs:type_name -> agni.v1.geom.PackedLabelRuns
 	6,  // 9: agni.v1.geom.PackedLabelRuns.runs:type_name -> agni.v1.geom.TextRun
-	17, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
-	16, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
-	15, // 12: agni.v1.geom.BoardStackView.bodies:type_name -> agni.v1.geom.BoardPartBody
-	0,  // 13: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	18, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
+	17, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
+	16, // 12: agni.v1.geom.BoardStackView.bodies:type_name -> agni.v1.geom.BoardPartBody
+	15, // 13: agni.v1.geom.BoardStackView.board_look:type_name -> agni.v1.geom.BoardLook
+	0,  // 14: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -1910,15 +2025,15 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 	if File_agni_v1_geom_geom_packed_proto != nil {
 		return
 	}
-	file_agni_v1_geom_geom_packed_proto_msgTypes[13].OneofWrappers = []any{}
-	file_agni_v1_geom_geom_packed_proto_msgTypes[15].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[14].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   17,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

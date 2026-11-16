@@ -1378,6 +1378,150 @@ impl<'de> serde::Deserialize<'de> for BoardLayerRow {
         deserializer.deserialize_struct("agni.v1.geom.BoardLayerRow", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for BoardLook {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.mask.is_empty() {
+            len += 1;
+        }
+        if !self.mask_over_copper.is_empty() {
+            len += 1;
+        }
+        if !self.pad_finish.is_empty() {
+            len += 1;
+        }
+        if !self.silk.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.geom.BoardLook", len)?;
+        if !self.mask.is_empty() {
+            struct_ser.serialize_field("mask", &self.mask)?;
+        }
+        if !self.mask_over_copper.is_empty() {
+            struct_ser.serialize_field("maskOverCopper", &self.mask_over_copper)?;
+        }
+        if !self.pad_finish.is_empty() {
+            struct_ser.serialize_field("padFinish", &self.pad_finish)?;
+        }
+        if !self.silk.is_empty() {
+            struct_ser.serialize_field("silk", &self.silk)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for BoardLook {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "mask",
+            "mask_over_copper",
+            "maskOverCopper",
+            "pad_finish",
+            "padFinish",
+            "silk",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Mask,
+            MaskOverCopper,
+            PadFinish,
+            Silk,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "mask" => Ok(GeneratedField::Mask),
+                            "maskOverCopper" | "mask_over_copper" => Ok(GeneratedField::MaskOverCopper),
+                            "padFinish" | "pad_finish" => Ok(GeneratedField::PadFinish),
+                            "silk" => Ok(GeneratedField::Silk),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = BoardLook;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.geom.BoardLook")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<BoardLook, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut mask__ = None;
+                let mut mask_over_copper__ = None;
+                let mut pad_finish__ = None;
+                let mut silk__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Mask => {
+                            if mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("mask"));
+                            }
+                            mask__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::MaskOverCopper => {
+                            if mask_over_copper__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maskOverCopper"));
+                            }
+                            mask_over_copper__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::PadFinish => {
+                            if pad_finish__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("padFinish"));
+                            }
+                            pad_finish__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Silk => {
+                            if silk__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("silk"));
+                            }
+                            silk__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(BoardLook {
+                    mask: mask__.unwrap_or_default(),
+                    mask_over_copper: mask_over_copper__.unwrap_or_default(),
+                    pad_finish: pad_finish__.unwrap_or_default(),
+                    silk: silk__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.geom.BoardLook", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for BoardOutline {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -1489,6 +1633,12 @@ impl serde::Serialize for BoardPartBody {
         if self.height_mm.is_some() {
             len += 1;
         }
+        if !self.part_class.is_empty() {
+            len += 1;
+        }
+        if !self.color.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.geom.BoardPartBody", len)?;
         if !self.ref_des.is_empty() {
             struct_ser.serialize_field("refDes", &self.ref_des)?;
@@ -1501,6 +1651,12 @@ impl serde::Serialize for BoardPartBody {
         }
         if let Some(v) = self.height_mm.as_ref() {
             struct_ser.serialize_field("heightMm", v)?;
+        }
+        if !self.part_class.is_empty() {
+            struct_ser.serialize_field("partClass", &self.part_class)?;
+        }
+        if !self.color.is_empty() {
+            struct_ser.serialize_field("color", &self.color)?;
         }
         struct_ser.end()
     }
@@ -1518,6 +1674,9 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
             "outline",
             "height_mm",
             "heightMm",
+            "part_class",
+            "partClass",
+            "color",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -1526,6 +1685,8 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
             Side,
             Outline,
             HeightMm,
+            PartClass,
+            Color,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -1551,6 +1712,8 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
                             "side" => Ok(GeneratedField::Side),
                             "outline" => Ok(GeneratedField::Outline),
                             "heightMm" | "height_mm" => Ok(GeneratedField::HeightMm),
+                            "partClass" | "part_class" => Ok(GeneratedField::PartClass),
+                            "color" => Ok(GeneratedField::Color),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -1574,6 +1737,8 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
                 let mut side__ = None;
                 let mut outline__ = None;
                 let mut height_mm__ = None;
+                let mut part_class__ = None;
+                let mut color__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::RefDes => {
@@ -1605,6 +1770,18 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
                                 map_.next_value::<::std::option::Option<::pbjson::private::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::PartClass => {
+                            if part_class__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("partClass"));
+                            }
+                            part_class__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Color => {
+                            if color__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("color"));
+                            }
+                            color__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(BoardPartBody {
@@ -1612,6 +1789,8 @@ impl<'de> serde::Deserialize<'de> for BoardPartBody {
                     side: side__.unwrap_or_default(),
                     outline: outline__.unwrap_or_default(),
                     height_mm: height_mm__,
+                    part_class: part_class__.unwrap_or_default(),
+                    color: color__.unwrap_or_default(),
                 })
             }
         }
@@ -1849,6 +2028,9 @@ impl serde::Serialize for BoardStackView {
         if !self.default_body_color.is_empty() {
             len += 1;
         }
+        if self.board_look.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.geom.BoardStackView", len)?;
         if !self.rows.is_empty() {
             struct_ser.serialize_field("rows", &self.rows)?;
@@ -1877,6 +2059,9 @@ impl serde::Serialize for BoardStackView {
         if !self.default_body_color.is_empty() {
             struct_ser.serialize_field("defaultBodyColor", &self.default_body_color)?;
         }
+        if let Some(v) = self.board_look.as_ref() {
+            struct_ser.serialize_field("boardLook", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -1900,6 +2085,8 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
             "bodyColor",
             "default_body_color",
             "defaultBodyColor",
+            "board_look",
+            "boardLook",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -1913,6 +2100,7 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
             Bodies,
             BodyColor,
             DefaultBodyColor,
+            BoardLook,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -1943,6 +2131,7 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
                             "bodies" => Ok(GeneratedField::Bodies),
                             "bodyColor" | "body_color" => Ok(GeneratedField::BodyColor),
                             "defaultBodyColor" | "default_body_color" => Ok(GeneratedField::DefaultBodyColor),
+                            "boardLook" | "board_look" => Ok(GeneratedField::BoardLook),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -1971,6 +2160,7 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
                 let mut bodies__ = None;
                 let mut body_color__ = None;
                 let mut default_body_color__ = None;
+                let mut board_look__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Rows => {
@@ -2032,6 +2222,12 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
                             }
                             default_body_color__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::BoardLook => {
+                            if board_look__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("boardLook"));
+                            }
+                            board_look__ = map_.next_value()?;
+                        }
                     }
                 }
                 Ok(BoardStackView {
@@ -2044,6 +2240,7 @@ impl<'de> serde::Deserialize<'de> for BoardStackView {
                     bodies: bodies__.unwrap_or_default(),
                     body_color: body_color__.unwrap_or_default(),
                     default_body_color: default_body_color__.unwrap_or_default(),
+                    board_look: board_look__,
                 })
             }
         }

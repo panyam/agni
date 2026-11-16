@@ -70,6 +70,7 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.geom.BoardStackView.class, io.github.panyam.agni.v1.geom.BoardStackView.Builder.class);
   }
 
+  private int bitField0_;
   public static final int ROWS_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private java.util.List<io.github.panyam.agni.v1.geom.BoardStackRow> rows_;
@@ -397,6 +398,44 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int BOARD_LOOK_FIELD_NUMBER = 10;
+  private io.github.panyam.agni.v1.geom.BoardLook boardLook_;
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   * @return Whether the boardLook field is set.
+   */
+  @java.lang.Override
+  public boolean hasBoardLook() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   * @return The boardLook.
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.BoardLook getBoardLook() {
+    return boardLook_ == null ? io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance() : boardLook_;
+  }
+  /**
+   * <pre>
+   * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+   * </pre>
+   *
+   * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.BoardLookOrBuilder getBoardLookOrBuilder() {
+    return boardLook_ == null ? io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance() : boardLook_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -442,6 +481,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(defaultBodyColor_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 9, defaultBodyColor_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(10, getBoardLook());
     }
     getUnknownFields().writeTo(output);
   }
@@ -502,6 +544,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(defaultBodyColor_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(9, defaultBodyColor_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(10, getBoardLook());
+    }
     return size;
   }
   @java.lang.Override
@@ -545,6 +591,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBodyColor())) return false;
     if (!getDefaultBodyColor()
         .equals(other.getDefaultBodyColor())) return false;
+    if (hasBoardLook() != other.hasBoardLook()) return false;
+    if (hasBoardLook()) {
+      if (!getBoardLook()
+          .equals(other.getBoardLook())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -584,6 +635,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getBodyColor().hashCode();
     hash = (37 * hash) + DEFAULT_BODY_COLOR_FIELD_NUMBER;
     hash = (53 * hash) + getDefaultBodyColor().hashCode();
+    if (hasBoardLook()) {
+      hash = (37 * hash) + BOARD_LOOK_FIELD_NUMBER;
+      hash = (53 * hash) + getBoardLook().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -718,13 +773,22 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.geom.BoardStackView.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetRowsFieldBuilder();
+        internalGetDrillsFieldBuilder();
+        internalGetBodiesFieldBuilder();
+        internalGetBoardLookFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -757,6 +821,11 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000040);
       bodyColor_ = "";
       defaultBodyColor_ = "";
+      boardLook_ = null;
+      if (boardLookBuilder_ != null) {
+        boardLookBuilder_.dispose();
+        boardLookBuilder_ = null;
+      }
       return this;
     }
 
@@ -840,6 +909,14 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000100) != 0)) {
         result.defaultBodyColor_ = defaultBodyColor_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.boardLook_ = boardLookBuilder_ == null
+            ? boardLook_
+            : boardLookBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -964,6 +1041,9 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000100;
         onChanged();
       }
+      if (other.hasBoardLook()) {
+        mergeBoardLook(other.getBoardLook());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1069,6 +1149,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 82: {
+              input.readMessage(
+                  internalGetBoardLookFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2268,6 +2355,161 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000100;
       onChanged();
       return this;
+    }
+
+    private io.github.panyam.agni.v1.geom.BoardLook boardLook_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.geom.BoardLook, io.github.panyam.agni.v1.geom.BoardLook.Builder, io.github.panyam.agni.v1.geom.BoardLookOrBuilder> boardLookBuilder_;
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     * @return Whether the boardLook field is set.
+     */
+    public boolean hasBoardLook() {
+      return ((bitField0_ & 0x00000200) != 0);
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     * @return The boardLook.
+     */
+    public io.github.panyam.agni.v1.geom.BoardLook getBoardLook() {
+      if (boardLookBuilder_ == null) {
+        return boardLook_ == null ? io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance() : boardLook_;
+      } else {
+        return boardLookBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public Builder setBoardLook(io.github.panyam.agni.v1.geom.BoardLook value) {
+      if (boardLookBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        boardLook_ = value;
+      } else {
+        boardLookBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public Builder setBoardLook(
+        io.github.panyam.agni.v1.geom.BoardLook.Builder builderForValue) {
+      if (boardLookBuilder_ == null) {
+        boardLook_ = builderForValue.build();
+      } else {
+        boardLookBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public Builder mergeBoardLook(io.github.panyam.agni.v1.geom.BoardLook value) {
+      if (boardLookBuilder_ == null) {
+        if (((bitField0_ & 0x00000200) != 0) &&
+          boardLook_ != null &&
+          boardLook_ != io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance()) {
+          getBoardLookBuilder().mergeFrom(value);
+        } else {
+          boardLook_ = value;
+        }
+      } else {
+        boardLookBuilder_.mergeFrom(value);
+      }
+      if (boardLook_ != null) {
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public Builder clearBoardLook() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      boardLook_ = null;
+      if (boardLookBuilder_ != null) {
+        boardLookBuilder_.dispose();
+        boardLookBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BoardLook.Builder getBoardLookBuilder() {
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return internalGetBoardLookFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BoardLookOrBuilder getBoardLookOrBuilder() {
+      if (boardLookBuilder_ != null) {
+        return boardLookBuilder_.getMessageOrBuilder();
+      } else {
+        return boardLook_ == null ?
+            io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance() : boardLook_;
+      }
+    }
+    /**
+     * <pre>
+     * board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
+     * </pre>
+     *
+     * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.geom.BoardLook, io.github.panyam.agni.v1.geom.BoardLook.Builder, io.github.panyam.agni.v1.geom.BoardLookOrBuilder> 
+        internalGetBoardLookFieldBuilder() {
+      if (boardLookBuilder_ == null) {
+        boardLookBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.geom.BoardLook, io.github.panyam.agni.v1.geom.BoardLook.Builder, io.github.panyam.agni.v1.geom.BoardLookOrBuilder>(
+                getBoardLook(),
+                getParentForChildren(),
+                isClean());
+        boardLook_ = null;
+      }
+      return boardLookBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.geom.BoardStackView)
