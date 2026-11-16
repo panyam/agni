@@ -232,6 +232,41 @@ jobs:
       - name: make ts-client-test
         run: make ts-client-test
 
+  # The Rust client (agni issue 1631). Its tests replay clients/wirefixtures/fixtures.json against an
+  # agni serve built here. proto-check in testall-go holds its generated code fresh. The job runs
+  # beside `make testall` rather than inside it, so the gate on a machine without Rust is unchanged.
+  client-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/rust
+
+      - name: Build agni
+        run: go build -o "$RUNNER_TEMP/agni" ./cmd/agni
+
+      - name: Lint the Rust client
+        working-directory: clients/rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Test the Rust client
+        working-directory: clients/rust
+        run: cargo test --workspace --locked
+        env:
+          AGNI_BIN: ${{ runner.temp }}/agni
+
   # The C++ client (agni issue 1638), outside `make testall`. The client generates its protobuf and
   # gRPC code at build time, so make proto-check covers no C++, and this job's replay of the wire
   # fixtures holds it to the server. Ubuntu's packages are protobuf 3.21 and gRPC 1.51, older than a
