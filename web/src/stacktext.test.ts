@@ -39,7 +39,7 @@ describe("text on a stack plane", () => {
 // A part's block hides the labels behind it from the camera, a whole label at a time (agni issue
 // 1657). U1 stands 2.5 mm tall on the top face at z 1, on the square from (10, 10) to (20, 20).
 describe("labels a block hides", () => {
-  const bodies = bodyGeometry([create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: [10, 10, 20, 10, 20, 20, 10, 20], heightMm: 2.5, color: "#202024" })], 0, 0).bodies;
+  const bodies = bodyGeometry([create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: [10, 10, 20, 10, 20, 20, 10, 20], heightMm: 2.5, drawnHeightMm: 2.5, color: "#202024" })], 0, 0).bodies;
   const faces = { zTop: 1, zBottom: -1, hScale: 1 };
   const pose = (p: keyof typeof PRESETS) => {
     const c = new StackCamera({ x: 50, y: 50, z: 0 }, 120);
