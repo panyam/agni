@@ -163,7 +163,7 @@ jobs:
       - name: go test
         run: |
           go test -v ./... > go-test.log 2>&1 || true
-          echo "Skipped on Windows:"; grep -E -A1 "^\s*--- SKIP" go-test.log || echo "  none"
+          echo "Skipped on Windows:"; grep -E -B2 "^\s*--- SKIP" go-test.log || echo "  none"
           grep -E "^(--- FAIL|FAIL|panic)" go-test.log > failures.log || true
           cat failures.log; test ! -s failures.log
 
