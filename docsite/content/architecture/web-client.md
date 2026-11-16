@@ -192,7 +192,8 @@ panel from the ones above.
   toggle's note counts those parts. A click meets the near side's parts first, then the layers, then
   the far side's parts, and a body picks as its part. Only a body's top face picks, so a body seen
   edge on picks through to the layers. The canvas writes a clickable point on a few parts to
-  `data-stack-body-probes`.
+  `data-stack-body-probes`. KiCad's own 3D export checks the blocks (agni issue 1643). On Glasgow
+  revC3, every one of the 213 models kicad-cli places sits inside its part's block, on the same side.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`
