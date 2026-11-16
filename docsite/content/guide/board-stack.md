@@ -20,7 +20,7 @@ So a blind via from F.Cu to In1.Cu stops at In1.Cu, and a through via runs the w
 Press **Stack** again to go back to the flat board. It comes back as you left it, with the same pan
 and zoom, side and hidden layers, and in SVG if it was drawing in SVG. The stack view draws in WebGL,
 so the button is off in a browser without WebGL2. It is off too for a board whose file states no
-stack, such as an Allegro board today.
+stack, such as a hand-written ODB++ job with no layer thicknesses.
 
 ## Move around it
 

@@ -53,8 +53,8 @@ The Board tile in the Sheets panel shows the same list for the canvas.
 
 The values come from the board's stack, which `agni stackup <design>` prints too (agni issue 1603).
 To see the layers drawn apart, in that order, press **Stack** ([the board's layer stack](../board-stack/)).
-KiCad, Altium, ODB++ and IPC-2581 boards carry one. An Allegro board carries none yet, so its list
-states no thickness.
+Every board format agni reads carries one: KiCad, Altium, Allegro, ODB++ and IPC-2581. A board
+whose file gives no thicknesses has a list that states none.
 
 ## Step back to what you selected before
 
