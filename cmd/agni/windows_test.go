@@ -32,9 +32,8 @@ func TestADriveLetterMountReadsItsDesigns(t *testing.T) {
 		t.Fatalf("%s holds no backslash", root)
 	}
 	freshWorkspace(t)
-	cliMountSpecs = []string{"tut=" + root}
 	var got webapi.GetDesignResponse
-	if err := protojson.Unmarshal([]byte(runRoot(t, "stats", "mount://tut/designs/gateway", "--format", "json")), &got); err != nil {
+	if err := protojson.Unmarshal([]byte(runRoot(t, "stats", "--mount", "tut="+root, "mount://tut/designs/gateway", "--format", "json")), &got); err != nil {
 		t.Fatal(err)
 	}
 	if got.GetComponentCount() == 0 || got.GetNetCount() == 0 {
