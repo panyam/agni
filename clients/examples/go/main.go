@@ -17,24 +17,33 @@ import (
 	"slices"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 )
 
 // Summary is the line every language's example prints. Its JSON names are the contract.
 type Summary struct {
-	Version    string   `json:"version"`
-	API        string   `json:"api"`
-	Features   []string `json:"features"`
-	Components int32    `json:"components"`
-	Nets       int32    `json:"nets"`
-	Sheets     int      `json:"sheets"`
-	Findings   int      `json:"findings"`
-	QueryRows  int      `json:"query_rows"`
+	Version     string   `json:"version"`
+	API         string   `json:"api"`
+	Features    []string `json:"features"`
+	Components  int32    `json:"components"`
+	Nets        int32    `json:"nets"`
+	Sheets      int      `json:"sheets"`
+	Findings    int      `json:"findings"`
+	QueryRows   int      `json:"query_rows"`
+	BoardLayers int      `json:"board_layers"`
+	BoardParts  int      `json:"board_parts"`
+	BoardTracks int      `json:"board_tracks"`
 }
 
 // The query every example asks, so their answers compare. The check runs every rule.
 const resistorsOf = `component.class(?c, "resistor") => ?c`
+
+// boardPageBytes is small, so the cut's 51 KB board comes in several pages and every example pages.
+const boardPageBytes = 16 << 10
 
 func main() {
 	server := flag.String("server", "http://127.0.0.1:8080", "the agni serve to call")
@@ -79,14 +88,41 @@ func run(ctx context.Context, server, design string) (*Summary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("calling RunQuery: %w", err)
 	}
+	board, err := boardGeometry(ctx, webapiconnect.NewDesignServiceClient(hc, server), name)
+	if err != nil {
+		return nil, err
+	}
+	tracks := 0
+	for _, n := range board.GetNets() {
+		tracks += len(n.GetSegments())
+	}
 	return &Summary{
-		Version:    info.Msg.GetVersion(),
-		API:        info.Msg.GetApi(),
-		Features:   slices.Sorted(slices.Values(info.Msg.GetFeatures())),
-		Components: d.Msg.GetComponentCount(),
-		Nets:       d.Msg.GetNetCount(),
-		Sheets:     len(d.Msg.GetSheets()),
-		Findings:   len(c.Msg.GetFindings()),
-		QueryRows:  len(q.Msg.GetRows()),
+		Version:     info.Msg.GetVersion(),
+		API:         info.Msg.GetApi(),
+		Features:    slices.Sorted(slices.Values(info.Msg.GetFeatures())),
+		Components:  d.Msg.GetComponentCount(),
+		Nets:        d.Msg.GetNetCount(),
+		Sheets:      len(d.Msg.GetSheets()),
+		Findings:    len(c.Msg.GetFindings()),
+		QueryRows:   len(q.Msg.GetRows()),
+		BoardLayers: len(board.GetLayers()),
+		BoardParts:  len(board.GetPlacements()),
+		BoardTracks: tracks,
 	}, nil
+}
+
+// boardGeometry reads every page of the snapshot's board and merges them, as
+// docsite/content/build/board-geometry.md says a client does.
+func boardGeometry(ctx context.Context, designs webapiconnect.DesignServiceClient, snapshot string) (*geom.BoardGeometry, error) {
+	board, token := &geom.BoardGeometry{}, ""
+	for {
+		page, err := designs.GetBoardGeometry(ctx, connect.NewRequest(&webapi.GetBoardGeometryRequest{Snapshot: snapshot, MaxBytes: boardPageBytes, PageToken: token}))
+		if err != nil {
+			return nil, fmt.Errorf("calling GetBoardGeometry: %w", err)
+		}
+		proto.Merge(board, page.Msg.GetBoard())
+		if token = page.Msg.GetNextPageToken(); token == "" {
+			return board, nil
+		}
+	}
 }

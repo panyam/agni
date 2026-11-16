@@ -5,3 +5,6 @@
 export { AgniClient, API, IncompatibleServerError, bearer, interceptorsFor, type ClientOptions } from "./client.js";
 export { blobsMissing, snapshotUnavailable, textPosition } from "./errors.js";
 export { Code, ConnectError } from "@connectrpc/connect";
+// create and merge build and combine messages, such as GetBoardGeometry's pages, without a second
+// dependency on @bufbuild/protobuf.
+export { create, merge } from "@bufbuild/protobuf";

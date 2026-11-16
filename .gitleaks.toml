@@ -7,3 +7,8 @@ useDefault = true
 description = "A Go constant named key holding the SVG attribute prefix stroke-width=, in a since-deleted render test"
 regexTarget = "match"
 regexes = ['''^key = `stroke-width="$''']
+
+[[allowlists]]
+description = "GetBoardGeometry page tokens in the wire fixture, base64 of b1|<the wire snapshot's revision>|0|0 and |0|1"
+regexTarget = "secret"
+regexes = ['''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA$''', '''^YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDE$''']

@@ -77,6 +77,28 @@ The file states a board thickness of 1.711 mm. The layers sum to 1.711 mm.
 |---|---|
 | `--format <fmt>` | `text` (the table above, the default) or `json`, the board geometry's `Stackup` message |
 
+
+### `board <design>`
+
+Write a board's geometry, the `BoardGeometry` message `GetBoardGeometry` serves. The text form counts
+what the board holds. `--format json` writes the whole message as JSON, and `--format binary -o
+board.pb` writes it as protobuf bytes. [Drawing a board from agni](../../build/board-geometry/) says
+what it means.
+
+```bash
+agni board examples/cross-probe-project/designs/jetson-cut
+```
+
+```text
+layers            37
+parts             19
+nets with copper  15
+tracks            397
+vias              202
+zones             0
+units             1 nm per unit
+```
+
 ### `check <file>`
 
 Run the rule catalog and report findings. See

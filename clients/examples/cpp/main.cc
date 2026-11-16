@@ -5,6 +5,7 @@
 //
 //   clients/examples/cpp/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -24,6 +25,9 @@ namespace {
 
 // The query every example asks, so their answers compare. The check runs every rule.
 constexpr char kResistorsOf[] = R"(component.class(?c, "resistor") => ?c)";
+
+// Small, so the cut's 51 KB board comes in several pages and every example pages.
+constexpr int64_t kBoardPageBytes = 16 << 10;
 
 std::string Quote(const std::string& s) {
   std::string out = "\"";
@@ -87,6 +91,7 @@ int main(int argc, char** argv) {
   webapi::GetDesignResponse d;
   webapi::CheckDesignResponse c;
   webapi::RunQueryResponse q;
+  agni::v1::geom::BoardGeometry board;
   grpc::Status st;
   const char* failed = nullptr;
   {
@@ -111,6 +116,26 @@ int main(int argc, char** argv) {
     st = client.Stub<webapi::QueryService>()->RunQuery(&ctx, req, &q);
     if (!st.ok()) failed = "RunQuery";
   }
+  // Read every page of the board and merge them, as docsite/content/build/board-geometry.md says a
+  // client does. MergeFrom appends repeated fields.
+  for (std::string token; !failed;) {
+    webapi::GetBoardGeometryRequest req;
+    req.set_snapshot(name);
+    req.set_max_bytes(kBoardPageBytes);
+    req.set_page_token(token);
+    webapi::GetBoardGeometryResponse page;
+    grpc::ClientContext ctx;
+    st = client.Stub<webapi::DesignService>()->GetBoardGeometry(&ctx, req, &page);
+    if (!st.ok()) {
+      failed = "GetBoardGeometry";
+      break;
+    }
+    board.MergeFrom(page.board());
+    token = page.next_page_token();
+    if (token.empty()) break;
+  }
+  int tracks = 0;
+  for (const auto& n : board.nets()) tracks += n.segments_size();
   {
     webapi::DeleteSnapshotRequest req;
     req.set_name(name);
@@ -127,6 +152,8 @@ int main(int argc, char** argv) {
   std::cout << "{\"version\":" << Quote(info.version()) << ",\"api\":" << Quote(info.api()) << ",\"features\":["
             << joined << "],\"components\":" << d.component_count() << ",\"nets\":" << d.net_count()
             << ",\"sheets\":" << d.sheets_size() << ",\"findings\":" << c.findings_size()
-            << ",\"query_rows\":" << q.rows_size() << "}" << std::endl;
+            << ",\"query_rows\":" << q.rows_size() << ",\"board_layers\":" << board.layers_size()
+            << ",\"board_parts\":" << board.placements_size() << ",\"board_tracks\":" << tracks << "}"
+            << std::endl;
   return 0;
 }

@@ -15,6 +15,8 @@ These guides are for people extending Agni. Most assume you read Go.
   CLI or a server, and what the same contract offers any other language.
 - **[Writing an agni client](client-contract/)** says what a client in any language does against a
   shared server, and how the wire fixtures prove it.
+- **[Drawing a board from agni](board-geometry/)** says how a front end in any language reads a
+  board's geometry page by page, and what each message means.
 - **[Wire compatibility](compatibility/)** says what a client built against one release can rely on in
   later ones, and how a client checks the server it reached.
 - **[Driving an embedded viewer](embedding-the-viewer/)** frames the viewer in your own page and moves

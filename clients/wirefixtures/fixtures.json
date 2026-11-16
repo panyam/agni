@@ -276,6 +276,72 @@
       }
     },
     {
+      "name": "board-geometry-page",
+      "service": "agni.v1.webapi.DesignService",
+      "method": "GetBoardGeometry",
+      "request": {
+        "snapshot": "snapshots/wire",
+        "maxBytes": "1",
+        "pageToken": "YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"
+      },
+      "response": {
+        "board": {
+          "placements": [
+            {
+              "refDes": "R119",
+              "at": {
+                "x": "219600000",
+                "y": "-73599951"
+              },
+              "rotationDeg": 180,
+              "layer": "F.Cu",
+              "pads": [
+                {
+                  "number": "1",
+                  "at": {
+                    "x": "-480000"
+                  },
+                  "size": {
+                    "x": "590000",
+                    "y": "640000"
+                  },
+                  "shape": "roundrect",
+                  "layers": [
+                    "F.Cu",
+                    "F.Mask",
+                    "F.Paste"
+                  ],
+                  "net": "Net-(D20-A)"
+                },
+                {
+                  "number": "2",
+                  "at": {
+                    "x": "480000"
+                  },
+                  "size": {
+                    "x": "590000",
+                    "y": "640000"
+                  },
+                  "shape": "roundrect",
+                  "layers": [
+                    "F.Cu",
+                    "F.Mask",
+                    "F.Paste"
+                  ],
+                  "net": "/USB Debug, PD/FTDI_3V3"
+                }
+              ],
+              "prov": {
+                "sourceFile": "designs/jetson-cut/jetson-cut.kicad_pcb",
+                "sourceId": "35275121-36dc-4039-8033-f8e1087b54f1"
+              }
+            }
+          ]
+        },
+        "nextPageToken": "YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDE"
+      }
+    },
+    {
       "name": "query-that-does-not-parse",
       "service": "agni.v1.webapi.QueryService",
       "method": "RunQuery",

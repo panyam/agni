@@ -5,10 +5,28 @@
 //
 //	clients/examples/ts/run -server http://127.0.0.1:8080 -design mount://probe/designs/jetson-cut
 
+import { create, merge, type AgniClient } from "@panyam/agni-client";
+import { BoardGeometrySchema, type BoardGeometry } from "@panyam/agni-client/gen/agni/v1/geom/geom_board_pb";
 import { createAgniClient } from "@panyam/agni-client/node";
 
 // The query every example asks, so their answers compare. The check runs every rule.
 const resistorsOf = `component.class(?c, "resistor") => ?c`;
+
+// boardPageBytes is small, so the cut's 51 KB board comes in several pages and every example pages.
+const boardPageBytes = 16n << 10n;
+
+// boardGeometry reads every page of the snapshot's board and merges them, as
+// docsite/content/build/board-geometry.md says a client does.
+async function boardGeometry(client: AgniClient, snapshot: string): Promise<BoardGeometry> {
+  const board = create(BoardGeometrySchema);
+  let pageToken = "";
+  do {
+    const page = await client.design.getBoardGeometry({ snapshot, maxBytes: boardPageBytes, pageToken });
+    if (page.board) merge(BoardGeometrySchema, board, page.board);
+    pageToken = page.nextPageToken;
+  } while (pageToken !== "");
+  return board;
+}
 
 // flags reads Go-style flags, -server <url> and -design <uri>, with one or two dashes.
 function flags(args: string[]): { server: string; design: string } {
@@ -33,6 +51,7 @@ async function main(): Promise<void> {
     const d = await client.design.getDesign({ snapshot: snap.name });
     const c = await client.check.checkDesign({ snapshot: snap.name });
     const q = await client.query.runQuery({ snapshot: snap.name, query: resistorsOf });
+    const board = await boardGeometry(client, snap.name);
     console.log(
       JSON.stringify({
         version: info.version,
@@ -43,6 +62,9 @@ async function main(): Promise<void> {
         sheets: d.sheets.length,
         findings: c.findings.length,
         query_rows: q.rows.length,
+        board_layers: board.layers.length,
+        board_parts: board.placements.length,
+        board_tracks: board.nets.reduce((n, net) => n + net.segments.length, 0),
       }),
     );
   } finally {

@@ -190,6 +190,14 @@ func (a *Design) GetLayoutReport(ctx context.Context, req *connect.Request[webap
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) GetBoardGeometry(ctx context.Context, req *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
+	resp, err := a.svc.GetBoardGeometry(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) LocateSubjects(ctx context.Context, req *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
 	resp, err := a.svc.LocateSubjects(ctx, req.Msg)
 	if err != nil {

@@ -67,6 +67,9 @@ var wireCalls = []wireFixture{
 	{Name: "get-design", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"snapshot":"snapshots/wire"}`)},
 	{Name: "check-design", Service: "agni.v1.webapi.CheckService", Method: "CheckDesign", Request: json.RawMessage(`{"snapshot":"snapshots/wire","rules":["bulk-cap"]}`)},
 	{Name: "run-query", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c, \"resistor\") => ?c"}`)},
+	// The board's second page at a one-byte budget, one placement, after a first page of the header
+	// alone. The token is the one that first page answers.
+	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"}`)},
 	{Name: "query-that-does-not-parse", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c"}`)},
 	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }

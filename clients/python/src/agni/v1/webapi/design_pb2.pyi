@@ -1,5 +1,6 @@
 from agni.v1.checks import checks_pb2 as _checks_pb2
 from agni.v1.geom import geom_pb2 as _geom_pb2
+from agni.v1.geom import geom_board_pb2 as _geom_board_pb2
 from agni.v1.geom import geom_packed_pb2 as _geom_packed_pb2
 from agni.v1.ir import ir_pb2 as _ir_pb2
 from google.protobuf import field_mask_pb2 as _field_mask_pb2
@@ -150,6 +151,24 @@ class HighlightSheetResponse(_message.Message):
     packed: _geom_packed_pb2.PackedHighlight
     svg: str
     def __init__(self, packed: _Optional[_Union[_geom_packed_pb2.PackedHighlight, _Mapping]] = ..., svg: _Optional[str] = ...) -> None: ...
+
+class GetBoardGeometryRequest(_message.Message):
+    __slots__ = ("snapshot", "max_bytes", "page_token")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    MAX_BYTES_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    max_bytes: int
+    page_token: str
+    def __init__(self, snapshot: _Optional[str] = ..., max_bytes: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+
+class GetBoardGeometryResponse(_message.Message):
+    __slots__ = ("board", "next_page_token")
+    BOARD_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    board: _geom_board_pb2.BoardGeometry
+    next_page_token: str
+    def __init__(self, board: _Optional[_Union[_geom_board_pb2.BoardGeometry, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class GetLayoutReportRequest(_message.Message):
     __slots__ = ("snapshot", "symbols")

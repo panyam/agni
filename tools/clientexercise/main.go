@@ -48,6 +48,11 @@ type summary struct {
 	Sheets     int      `json:"sheets"`
 	Findings   int      `json:"findings"`
 	QueryRows  int      `json:"query_rows"`
+	// The board's layers, placed parts and routed track segments, from GetBoardGeometry's pages
+	// (agni issue 1634).
+	BoardLayers int `json:"board_layers"`
+	BoardParts  int `json:"board_parts"`
+	BoardTracks int `json:"board_tracks"`
 }
 
 const resistorsOf = `component.class(?c, "resistor") => ?c`
@@ -110,7 +115,7 @@ func exercise(agni, mount, design string) ([]row, error) {
 		return nil, err
 	}
 	defer stop()
-	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --state-dir; the CLI reads %d components, %d nets, %d sheets, %d findings and %d query rows", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows)}}
+	rows := []row{{"serve", "ok", fmt.Sprintf("%s with --state-dir; the CLI reads %d components, %d nets, %d sheets, %d findings, %d query rows, and a board of %d layers, %d parts and %d tracks", server, want.Components, want.Nets, want.Sheets, want.Findings, want.QueryRows, want.BoardLayers, want.BoardParts, want.BoardTracks)}}
 	for _, l := range languages {
 		run := filepath.Join("clients", "examples", l.name, "run")
 		if _, err := os.Stat(run); err != nil {
@@ -148,7 +153,8 @@ func compare(got, want *summary) string {
 	for _, c := range []struct {
 		what      string
 		got, want int
-	}{{"components", got.Components, want.Components}, {"nets", got.Nets, want.Nets}, {"sheets", got.Sheets, want.Sheets}, {"findings", got.Findings, want.Findings}, {"query rows", got.QueryRows, want.QueryRows}} {
+	}{{"components", got.Components, want.Components}, {"nets", got.Nets, want.Nets}, {"sheets", got.Sheets, want.Sheets}, {"findings", got.Findings, want.Findings}, {"query rows", got.QueryRows, want.QueryRows},
+		{"board layers", got.BoardLayers, want.BoardLayers}, {"board parts", got.BoardParts, want.BoardParts}, {"board tracks", got.BoardTracks, want.BoardTracks}} {
 		if c.got != c.want {
 			d = append(d, fmt.Sprintf("%d %s, the CLI reads %d", c.got, c.what, c.want))
 		}
@@ -191,12 +197,22 @@ func cliAnswers(agni, mount, design string) (*summary, error) {
 	if err != nil {
 		return nil, err
 	}
+	board, err := json1("board", design)
+	if err != nil {
+		return nil, err
+	}
+	tracks := 0
+	for _, n := range board["nets"].([]any) {
+		segs, _ := n.(map[string]any)["segments"].([]any)
+		tracks += len(segs)
+	}
 	v, err := exec.Command(agni, "version").Output() // #nosec G204 -- as above
 	if err != nil {
 		return nil, err
 	}
 	version := strings.TrimPrefix(strings.SplitN(string(v), "\n", 2)[0], "agni ")
-	return &summary{Version: version, Components: number(stats, "componentCount"), Nets: number(stats, "netCount"), Sheets: count(stats, "sheets"), Findings: count(check, "findings"), QueryRows: count(query, "rows")}, nil
+	return &summary{Version: version, Components: number(stats, "componentCount"), Nets: number(stats, "netCount"), Sheets: count(stats, "sheets"), Findings: count(check, "findings"), QueryRows: count(query, "rows"),
+		BoardLayers: count(board, "layers"), BoardParts: count(board, "placements"), BoardTracks: tracks}, nil
 }
 
 // serve starts agni serve on a free port with a fresh state directory, from an empty working

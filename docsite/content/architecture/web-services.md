@@ -74,6 +74,7 @@ dropped files already reach it through its `local` mount.
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
 | Design | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
+| Design | GetBoardGeometry | the board's `BoardGeometry`, a page at a time, for a front end that draws it (agni issue 1634, [Drawing a board](../../build/board-geometry/)) |
 | Design | LocateSubjects | which sheets draw each named part, pin, net or bus, the board added on request, with a reason for one drawn nowhere (agni issue 1325) |
 | Design | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
 | Design | ReachablePins | list the pins a trace from one pin routes to within a radius, nearest first, with the rails reached named by pin count, the same answer `agni trace --reachable` prints (agni issue 1541) |

@@ -1326,6 +1326,32 @@ pub mod highlight_sheet_response {
     }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetBoardGeometryRequest {
+    /// snapshot names the design whose board to return, "snapshots/{snapshot}".
+    #[prost(string, tag="1")]
+    pub snapshot: ::prost::alloc::string::String,
+    /// max_bytes bounds one page's encoded size. 0 means 1 MiB, and the server caps it at 3 MiB, so
+    /// a page fits a gRPC client's default 4 MB limit. A page holds at least one element, so an
+    /// element larger than max_bytes arrives alone on a page of its own, and the first page always
+    /// holds the whole header.
+    #[prost(int64, tag="2")]
+    pub max_bytes: i64,
+    /// page_token is "" for the first page, and otherwise the next_page_token of the page before. A
+    /// token belongs to one snapshot revision, and a token from another is invalid_argument.
+    #[prost(string, tag="3")]
+    pub page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBoardGeometryResponse {
+    /// board holds this page's part of the board. Merging every page's board in order gives the whole
+    /// board. No element is split across pages, so a net's copper arrives in one NetCopper.
+    #[prost(message, optional, tag="1")]
+    pub board: ::core::option::Option<super::geom::BoardGeometry>,
+    /// next_page_token is "" on the last page.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetLayoutReportRequest {
     /// snapshot names the design whose auto-layout to report on, "snapshots/{snapshot}" (agni issue 1061).
     #[prost(string, tag="4")]
