@@ -469,8 +469,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
 	}
 
-	// A client that never finishes its headers holds a connection open, so headers get a deadline.
-	srv := &http.Server{Addr: addr, Handler: requestQoS(mux), ReadHeaderTimeout: 10 * time.Second}
+	srv := newHTTPServer(addr, requestQoS(mux))
 	if o.banner != nil {
 		o.banner(urls, len(mounts))
 	} else {
@@ -494,6 +493,20 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		return skhttp.ListenAndServeGraceful(srv, skhttp.WithListener(o.listener))
 	}
 	return skhttp.ListenAndServeGraceful(srv)
+}
+
+// newHTTPServer is the server `agni serve` and `agni open` run. It speaks HTTP/1.1 and HTTP/2,
+// cleartext HTTP/2 included, so one port answers all three protocols the API's handlers speak:
+// Connect for the viewer and the Python client, gRPC for a client built with tonic, grpc-java or
+// gRPC's C++ library, and gRPC-Web (agni issue 1626). A gRPC client on a plain socket speaks HTTP/2
+// from its first byte, which an HTTP/1.1-only server refuses. A client that never finishes its
+// headers holds a connection open, so headers get a deadline.
+func newHTTPServer(addr string, h http.Handler) *http.Server {
+	var protocols http.Protocols
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(true)
+	protocols.SetUnencryptedHTTP2(true)
+	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, Protocols: &protocols}
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is

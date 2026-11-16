@@ -10,6 +10,9 @@ reaches the browser in the first place.
 ## The services
 
 Everything is Connect, proto-first, in JSON or binary, with a generated TypeScript client. The
+server speaks HTTP/1.1 and HTTP/2, cleartext HTTP/2 included, so every rpc also answers gRPC and
+gRPC-Web on the same port (agni issue 1626). A client built with tonic, grpc-java or gRPC's C++
+library calls it as a gRPC server, and a failed rpc's details arrive as gRPC status details. The
 split follows resource lifetimes. Workspace navigation, one design's rendering, checks over a
 design, the two-design diff, ad-hoc datalog search, stored reviews, declared projects and datasheet
 documents are independent concerns with independent cadences.
