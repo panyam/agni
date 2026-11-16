@@ -74,6 +74,9 @@ type layout struct {
 	// A package geometry shape (0x28) or rectangle (0x0E) names its owner at +12 and heads a chain of
 	// field blocks (0x03), which carries the part's height (agni 1643).
 	boundFields28, boundFields0E int
+	// boundRect0E is where a place-bound rectangle's corners sit, x0, y0, x1, y1, and boundRot0E its
+	// turn in thousandths of a degree (agni 1668).
+	boundRect0E, boundRot0E int
 
 	viaX, viaPadstack int
 
@@ -113,7 +116,7 @@ var layout172 = &layout{
 	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
 	rectCoords:    24,
-	boundFields28: 48, boundFields0E: 52,
+	boundFields28: 48, boundFields0E: 52, boundRect0E: 36, boundRot0E: 64,
 	viaX: 32, viaPadstack: 44,
 	defCount: 16, defItems: 32,
 }
@@ -148,7 +151,7 @@ var layout166 = &layout{
 	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
 	rectCoords:    20,
-	boundFields28: 44, boundFields0E: 44,
+	boundFields28: 44, boundFields0E: 44, boundRect0E: 28, boundRot0E: 56,
 	viaX: 24, viaPadstack: 36,
 	defCount: 12, defItems: 28,
 }

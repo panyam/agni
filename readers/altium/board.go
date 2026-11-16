@@ -354,6 +354,28 @@ func (b *boardBuilder) art() {
 			})
 		}
 	}
+	// Each 3D body's outline is the part's assembly outline, as Altium's ODB++ export writes its
+	// package outline from the bodies (agni 1668). The stack view stands the part's block on it.
+	for i := range b.p.comps {
+		c := &b.p.comps[i]
+		if c.ref == "" {
+			continue
+		}
+		layer := "F.Fab"
+		if strings.EqualFold(c.p["LAYER"], "BOTTOM") {
+			layer = "B.Fab"
+		}
+		for _, ring := range c.bodies {
+			pts := make([]*geom.Point, 0, len(ring)+1)
+			for _, q := range ring {
+				pts = append(pts, b.pt(int64(math.Round(q[0])), int64(math.Round(q[1]))))
+			}
+			pts = append(pts, pts[0])
+			b.g.Graphics = append(b.g.Graphics, &geom.BoardGraphic{
+				Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: pts}, Layer: layer, RefDes: c.ref,
+			})
+		}
+	}
 	for _, t := range b.p.texts {
 		layer := silk[t.layer]
 		if layer == "" || t.s == "" || strings.HasPrefix(t.s, ".") {
