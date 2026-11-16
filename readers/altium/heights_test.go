@@ -2,6 +2,7 @@ package altium
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 )
 
@@ -45,5 +46,36 @@ func TestAPartTakesItsHeightThenItsTallestBody(t *testing.T) {
 	}
 	if _, ok := (comp{p: props{"HEIGHT": "0mil"}, height: -1}).partHeight(); ok {
 		t.Error("a part with HEIGHT 0 and no body states a height")
+	}
+}
+
+// A body's outline follows its properties as a vertex count and x, y doubles, and becomes the part's
+// outline (agni 1668). A count under three draws nothing.
+func TestABodyKeepsItsOutline(t *testing.T) {
+	text := "OVERALLHEIGHT=10mil"
+	rec := body(0, text)
+	ring := []float64{0, 0, 1000, 0, 1000, 500}
+	tail := make([]byte, 4+16*3)
+	binary.LittleEndian.PutUint32(tail, 3)
+	for i, v := range ring {
+		binary.LittleEndian.PutUint64(tail[4+8*i:], math.Float64bits(v))
+	}
+	rec = append(rec, tail...)
+	binary.LittleEndian.PutUint32(rec[1:], uint32(len(rec)-5))
+	short := body(0, text)
+	short = append(short, 2, 0, 0, 0)
+	binary.LittleEndian.PutUint32(short[1:], uint32(len(short)-5))
+	p := &pcb{comps: []comp{{p: props{}, height: -1}}}
+	err := p.readBodies(func(name string, _ bool) ([]byte, error) {
+		if name == "ComponentBodies6" {
+			return append(rec, short...), nil
+		}
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.comps[0].bodies; len(got) != 1 || len(got[0]) != 3 || got[0][1] != [2]float64{1000, 0} {
+		t.Errorf("bodies = %v, want the one three-point outline", got)
 	}
 }

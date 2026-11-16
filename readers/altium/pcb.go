@@ -46,6 +46,9 @@ type comp struct {
 	// height is the tallest OVERALLHEIGHT of the part's 3D bodies in nanometres, or -1 when no body
 	// states one (agni 1643).
 	height int64
+	// bodies holds each 3D body's outline seen from above, in board-absolute internal units (agni
+	// 1668).
+	bodies [][][2]float64
 }
 
 type pad struct {
@@ -305,10 +308,11 @@ func (p *pcb) readCopper(read reader) error {
 	return nil
 }
 
-// readBodies reads ComponentBodies6 for each part's height (agni 1643). Each record is one subrecord
-// with the common primitive header, the part's index at 7 and a property list whose length is at 18.
-// OVERALLHEIGHT is how far the body reaches above the board, and a part takes its tallest body's.
-// A body of no part, such as a free 3D model, is skipped.
+// readBodies reads ComponentBodies6 for each part's height (agni 1643) and its bodies' outlines (agni
+// 1668). Each record is one subrecord with the common primitive header, the part's index at 7 and a
+// property list whose length is at 18, then the body's outline seen from above. OVERALLHEIGHT is how
+// far the body reaches above the board, and a part takes its tallest body's. A body of no part, such
+// as a free 3D model, is skipped.
 func (p *pcb) readBodies(read reader) error {
 	b, err := read("ComponentBodies6", false)
 	if err != nil || len(b) == 0 {
@@ -331,6 +335,19 @@ func (p *pcb) readBodies(read reader) error {
 		h, ok := thickness(propsOf(s[22 : 22+plen])["OVERALLHEIGHT"])
 		if ok && h > p.comps[c].height {
 			p.comps[c].height = h
+		}
+		// The outline follows the properties: a vertex count, then x and y doubles for each vertex.
+		if off := 22 + plen; off+4 <= len(s) {
+			n := int(s.u32(off))
+			off += 4
+			if n >= 3 && off+16*n <= len(s) {
+				ring := make([][2]float64, n)
+				for k := range ring {
+					ring[k] = [2]float64{s.f64(off), s.f64(off + 8)}
+					off += 16
+				}
+				p.comps[c].bodies = append(p.comps[c].bodies, ring)
+			}
 		}
 	}
 	return nil

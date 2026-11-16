@@ -322,8 +322,10 @@ func (b *boardBuilder) placements() {
 			Mirror:      bottom,
 			Prov:        &geom.Provenance{SourceFile: b.src, SourceId: pl.ref},
 		}
-		if h, ok := heights[p.u32(pl.inst, 4)]; ok {
+		if pb, ok := heights[p.u32(pl.inst, 4)]; ok {
+			h := pb.height
 			g.Height = &h
+			b.placeBound(pb.outline, pl.ref, bottom)
 		}
 		p.chain(p.u32(pl.inst, p.l.fiPads), p.u32(pl.inst, 4), func(byte) int { return p.l.ppNextInFp }, func(pp int) {
 			if p.b[pp] != tagPlacedPad {
@@ -336,6 +338,36 @@ func (b *boardBuilder) placements() {
 		b.g.Placements = append(b.g.Placements, g)
 		b.footprintArt(pl)
 	}
+}
+
+// placeBound draws a part's place-bound outline as its assembly outline, a closed ring in board
+// coordinates (agni 1668). The stack view stands the part's block on it.
+func (b *boardBuilder) placeBound(off int, ref string, bottom bool) {
+	p := b.p
+	var ring []*geom.Point
+	switch p.b[off] {
+	case 0x0E:
+		// The rectangle is stored unturned, and turns counter-clockwise about its first corner.
+		at := p.l.boundRect0E
+		x0, y0 := float64(p.i32(off, at)), float64(p.i32(off, at+4))
+		x1, y1 := float64(p.i32(off, at+8)), float64(p.i32(off, at+12))
+		s, c := math.Sincos(float64(p.u32(off, p.l.boundRot0E)) / 1000 * math.Pi / 180)
+		turn := func(x, y float64) *geom.Point {
+			dx, dy := x-x0, y-y0
+			return b.pt(int32(math.Round(x0+dx*c-dy*s)), int32(math.Round(y0+dx*s+dy*c)))
+		}
+		ring = []*geom.Point{turn(x0, y0), turn(x1, y0), turn(x1, y1), turn(x0, y1), turn(x0, y0)}
+	case 0x28:
+		ring = b.path(p.u32(off, p.l.shapeSegs), p.u32(off, 4))
+	}
+	if len(ring) < 3 {
+		return
+	}
+	layer := "F.Fab"
+	if bottom {
+		layer = "B.Fab"
+	}
+	b.g.Graphics = append(b.g.Graphics, &geom.BoardGraphic{RefDes: ref, Layer: layer, Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: ring}})
 }
 
 // pad builds one placed pad from the footprint pad it copies and that pad's padstack.

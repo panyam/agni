@@ -9,6 +9,10 @@ package allegro
 // parasdr's 16.6 board gives 284 parts a height this way, and the ODX file Allegro exported from it
 // states the same 284. The BeagleBone AI's 17.2 board stores the same fields at the 17.2 offsets.
 // Its extract states no heights, so those values have no oracle.
+//
+// The same outline is the part's footprint seen from above, so the stack view stands the part's
+// block on it (agni 1668). A rectangle gives its corners, and a shape its path of segments. parasdr's
+// ODX draws each package outline the same size.
 
 const (
 	boundOwner   = 12
@@ -18,10 +22,17 @@ const (
 	heightField1 = 0x01
 )
 
-// partHeights maps each placed part's key to its height in nanometres. A part with more than one
-// outline stating a height, as a top and a bottom place bound, takes the taller.
-func (p *board) partHeights() map[uint32]int64 {
-	out := map[uint32]int64{}
+// placeBound is a part's height and the outline block that states it.
+type placeBound struct {
+	height  int64
+	outline int // the 0x28 or 0x0E block's offset
+}
+
+// partHeights maps each placed part's key to its height in nanometres and the place-bound outline
+// that states it. A part with more than one outline stating a height, as a top and a bottom place
+// bound, takes the taller.
+func (p *board) partHeights() map[uint32]placeBound {
+	out := map[uint32]placeBound{}
 	for _, off := range p.keys {
 		var head uint32
 		switch p.b[off] {
@@ -42,8 +53,8 @@ func (p *board) partHeights() map[uint32]int64 {
 				break
 			}
 			if p.b[fo+p.l.fieldSub] == heightSub && p.b[fo+2] == heightField0 && p.b[fo+3] == heightField1 {
-				if h := p.nm(float64(p.i32(fo, p.l.fieldBody))); h > out[owner] {
-					out[owner] = h
+				if h := p.nm(float64(p.i32(fo, p.l.fieldBody))); h > out[owner].height {
+					out[owner] = placeBound{height: h, outline: off}
 				}
 			}
 			k = le32(p.b, fo+fieldNext)
