@@ -1776,6 +1776,25 @@ pub struct LocateSubjectsRequest {
 pub struct LocateSubjectsResponse {
     #[prost(message, repeated, tag="1")]
     pub subjects: ::prost::alloc::vec::Vec<SubjectSheets>,
+    /// board_follow is what a board view does about the whole selection the request names, so every
+    /// front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+    /// not read the board, or the board draws none of the subjects.
+    #[prost(message, optional, tag="2")]
+    pub board_follow: ::core::option::Option<BoardFollow>,
+}
+/// BoardFollow is how a board view follows a selection: the side to show and the layer rows to turn
+/// on. A view applies it and keeps the rows a reader already shows, so a reader's own choices stay.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BoardFollow {
+    /// side is the side every placed part and pin in the selection shares, "front" or "back". It is ""
+    /// when the selection has no part or pin, when its parts sit on both sides, or when the board states
+    /// no side for one of them, and the view then keeps the side it shows.
+    #[prost(string, tag="1")]
+    pub side: ::prost::alloc::string::String,
+    /// layers name the BoardLayerRow rows to show: each copper row a subject uses, and the silkscreen
+    /// rows of each side a part or pin sits on. They are in the order the board lists its rows.
+    #[prost(string, repeated, tag="2")]
+    pub layers: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// SubjectSheets is where one subject is drawn.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

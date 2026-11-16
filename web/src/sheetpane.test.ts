@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
+import { create } from "@bufbuild/protobuf";
 import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KEY, type Located, type SheetPaneDeps } from "./sheetpane.js";
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
+import { BoardFollowSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
 
 // ROWS are a board's layer rows as the engine lists them, two inner layers between the outer pair.
 const ROWS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"].map(
@@ -634,7 +636,9 @@ describe("a sheet view in WebGL", () => {
   });
 });
 
-// agni issue 1587: a board view turns to the side a selection is on and shows the copper it uses.
+// agni issue 1587: a board view turns to the side a selection is on and shows the copper it uses. The
+// engine decides both (service/boardindex.go's followOf, agni issue 1635), and these check the view
+// applies its answer.
 describe("a board view following a selection's side and layers", () => {
   const SIDED = [
     ["F.Cu", "copper", "front"],
@@ -647,9 +651,9 @@ describe("a board view following a selection's side and layers", () => {
   const R1: Selection = { kind: "component", ref: "R1" };
   const N1: Selection = { kind: "net", net: "N1" };
   const facts: Record<string, Located> = {
-    C9: { sheets: ["s1", "board"], board: { part: true, side: "back", layers: ["B.Cu"] } },
-    R1: { sheets: ["s1", "board"], board: { part: true, side: "front", layers: ["F.Cu"] } },
-    N1: { sheets: ["s1", "board"], board: { part: false, side: "", layers: ["In1.Cu"] } },
+    C9: { sheets: ["s1", "board"], follow: create(BoardFollowSchema, { side: "back", layers: ["B.Cu", "B.SilkS"] }) },
+    R1: { sheets: ["s1", "board"], follow: create(BoardFollowSchema, { side: "front", layers: ["F.Cu", "F.SilkS"] }) },
+    N1: { sheets: ["s1", "board"], follow: create(BoardFollowSchema, { side: "", layers: ["In1.Cu"] }) },
   };
   const onBoard = async () => {
     localStorage.removeItem(FOLLOW_SIDE_KEY);

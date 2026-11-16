@@ -315,3 +315,73 @@ func TestBoardIndexLeavesAnUnstatedSideEmpty(t *testing.T) {
 		t.Errorf("an unplaced part's side = %q, want none", got)
 	}
 }
+
+// silkFixture is sideFixture's board with silkscreen on both sides, so its layer rows list F.SilkS
+// and B.SilkS, and with C9, a part whose board names neither outer layer.
+func silkFixture() (*ir.Design, *geom.SchematicGeometry, *geom.BoardGeometry) {
+	d, g, b := sideFixture()
+	line := &geom.Shape{Kind: geom.Shape_KIND_POLYLINE, Points: []*geom.Point{{}, {X: 1}}}
+	b.Graphics = []*geom.BoardGraphic{{Shape: line, Layer: "F.SilkS"}, {Shape: line, Layer: "B.SilkS"}, {Shape: line, Layer: "F.Fab"}}
+	b.Placements = append(b.Placements, &geom.ComponentPlacement{RefDes: "C9", Layer: "TOP_SIDE", At: &geom.Point{}})
+	return d, g, b
+}
+
+// A board view follows a whole selection by one rule (agni issue 1635). It turns to the side every
+// part and pin shares, and keeps its side for a selection on both sides, a part with no stated side,
+// or a selection of nets alone. It shows each copper row a subject uses and the silkscreen of each
+// side a part sits on, in the board's row order.
+func TestBoardIndexFollowsASelection(t *testing.T) {
+	_, _, b := silkFixture()
+	ix := newBoardIndex(b)
+	cases := []struct {
+		name     string
+		subjects []*checkspb.Subject
+		side     string
+		layers   []string
+	}{
+		{"a back part", []*checkspb.Subject{part("U1")}, "back", []string{"B.Cu", "B.SilkS"}},
+		{"a front part", []*checkspb.Subject{part("R1")}, "front", []string{"F.Cu", "F.SilkS"}},
+		{"a pin answers its part's side", []*checkspb.Subject{pinOf("U1", "6")}, "back", []string{"B.Cu", "B.SilkS"}},
+		{"parts on both sides", []*checkspb.Subject{part("U1"), part("R1")}, "", []string{"F.Cu", "B.Cu", "B.SilkS", "F.SilkS"}},
+		{"a part with no stated side", []*checkspb.Subject{part("C9")}, "", nil},
+		{"a front part and a part with no side", []*checkspb.Subject{part("R1"), part("C9")}, "", []string{"F.Cu", "F.SilkS"}},
+		{"an inner net", []*checkspb.Subject{netNamed("GND")}, "", []string{"In1.Cu", "B.Cu"}},
+		{"a part and a net", []*checkspb.Subject{part("U1"), netNamed("N1")}, "back", []string{"F.Cu", "In2.Cu", "B.Cu", "B.SilkS"}},
+		{"a drawn part and an undrawn one", []*checkspb.Subject{part("R1"), part("X7")}, "front", []string{"F.Cu", "F.SilkS"}},
+	}
+	for _, c := range cases {
+		f := ix.followOf(c.subjects)
+		if f == nil {
+			t.Errorf("%s: no follow, want side %q layers %v", c.name, c.side, c.layers)
+			continue
+		}
+		if f.GetSide() != c.side || !slicesEqual(f.GetLayers(), c.layers) {
+			t.Errorf("%s: side %q layers %v, want %q %v", c.name, f.GetSide(), f.GetLayers(), c.side, c.layers)
+		}
+	}
+	if f := ix.followOf([]*checkspb.Subject{part("X7"), netNamed("NOPE")}); f != nil {
+		t.Errorf("a selection the board draws none of follows %v, want nothing", f)
+	}
+}
+
+// LocateSubjects answers the selection's follow beside each subject's sheets when it reads the
+// board, and none when it does not.
+func TestLocateSubjectsAnswersHowABoardViewFollows(t *testing.T) {
+	d, g, b := silkFixture()
+	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")
+	resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{Snapshot: snap, Subjects: []*checkspb.Subject{part("U1")}, Board: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := resp.GetBoardFollow(); f.GetSide() != "back" || !slicesEqual(f.GetLayers(), []string{"B.Cu", "B.SilkS"}) {
+		t.Errorf("with the board, U1 follows %v, want back with B.Cu and B.SilkS", f)
+	}
+	resp, err = svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{Snapshot: snap, Subjects: []*checkspb.Subject{part("U1")}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := resp.GetBoardFollow(); f != nil {
+		t.Errorf("without the board, U1 follows %v, want nothing", f)
+	}
+}

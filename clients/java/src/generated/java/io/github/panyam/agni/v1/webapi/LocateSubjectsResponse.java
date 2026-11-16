@@ -53,6 +53,7 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.webapi.LocateSubjectsResponse.class, io.github.panyam.agni.v1.webapi.LocateSubjectsResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int SUBJECTS_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private java.util.List<io.github.panyam.agni.v1.webapi.SubjectSheets> subjects_;
@@ -94,6 +95,50 @@ private static final long serialVersionUID = 0L;
     return subjects_.get(index);
   }
 
+  public static final int BOARD_FOLLOW_FIELD_NUMBER = 2;
+  private io.github.panyam.agni.v1.webapi.BoardFollow boardFollow_;
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   * @return Whether the boardFollow field is set.
+   */
+  @java.lang.Override
+  public boolean hasBoardFollow() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   * @return The boardFollow.
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.BoardFollow getBoardFollow() {
+    return boardFollow_ == null ? io.github.panyam.agni.v1.webapi.BoardFollow.getDefaultInstance() : boardFollow_;
+  }
+  /**
+   * <pre>
+   * board_follow is what a board view does about the whole selection the request names, so every
+   * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+   * not read the board, or the board draws none of the subjects.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder getBoardFollowOrBuilder() {
+    return boardFollow_ == null ? io.github.panyam.agni.v1.webapi.BoardFollow.getDefaultInstance() : boardFollow_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -111,6 +156,9 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < subjects_.size(); i++) {
       output.writeMessage(1, subjects_.get(i));
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(2, getBoardFollow());
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -124,6 +172,10 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(2, getBoardFollow());
+    }
     return size;
   }
   @java.lang.Override
@@ -150,6 +202,11 @@ private static final long serialVersionUID = 0L;
 
     if (!getSubjectsList()
         .equals(other.getSubjectsList())) return false;
+    if (hasBoardFollow() != other.hasBoardFollow()) return false;
+    if (hasBoardFollow()) {
+      if (!getBoardFollow()
+          .equals(other.getBoardFollow())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -164,6 +221,10 @@ private static final long serialVersionUID = 0L;
     if (getSubjectsCount() > 0) {
       hash = (37 * hash) + SUBJECTS_FIELD_NUMBER;
       hash = (53 * hash) + getSubjectsList().hashCode();
+    }
+    if (hasBoardFollow()) {
+      hash = (37 * hash) + BOARD_FOLLOW_FIELD_NUMBER;
+      hash = (53 * hash) + getBoardFollow().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -288,13 +349,20 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.webapi.LocateSubjectsResponse.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetSubjectsFieldBuilder();
+        internalGetBoardFollowFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -307,6 +375,11 @@ private static final long serialVersionUID = 0L;
         subjectsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000001);
+      boardFollow_ = null;
+      if (boardFollowBuilder_ != null) {
+        boardFollowBuilder_.dispose();
+        boardFollowBuilder_ = null;
+      }
       return this;
     }
 
@@ -353,6 +426,14 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartial0(io.github.panyam.agni.v1.webapi.LocateSubjectsResponse result) {
       int from_bitField0_ = bitField0_;
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.boardFollow_ = boardFollowBuilder_ == null
+            ? boardFollow_
+            : boardFollowBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -393,6 +474,9 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (other.hasBoardFollow()) {
+        mergeBoardFollow(other.getBoardFollow());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -430,6 +514,13 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 10
+            case 18: {
+              input.readMessage(
+                  internalGetBoardFollowFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 18
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -679,6 +770,179 @@ private static final long serialVersionUID = 0L;
         subjects_ = null;
       }
       return subjectsBuilder_;
+    }
+
+    private io.github.panyam.agni.v1.webapi.BoardFollow boardFollow_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.BoardFollow, io.github.panyam.agni.v1.webapi.BoardFollow.Builder, io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder> boardFollowBuilder_;
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     * @return Whether the boardFollow field is set.
+     */
+    public boolean hasBoardFollow() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     * @return The boardFollow.
+     */
+    public io.github.panyam.agni.v1.webapi.BoardFollow getBoardFollow() {
+      if (boardFollowBuilder_ == null) {
+        return boardFollow_ == null ? io.github.panyam.agni.v1.webapi.BoardFollow.getDefaultInstance() : boardFollow_;
+      } else {
+        return boardFollowBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public Builder setBoardFollow(io.github.panyam.agni.v1.webapi.BoardFollow value) {
+      if (boardFollowBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        boardFollow_ = value;
+      } else {
+        boardFollowBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public Builder setBoardFollow(
+        io.github.panyam.agni.v1.webapi.BoardFollow.Builder builderForValue) {
+      if (boardFollowBuilder_ == null) {
+        boardFollow_ = builderForValue.build();
+      } else {
+        boardFollowBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public Builder mergeBoardFollow(io.github.panyam.agni.v1.webapi.BoardFollow value) {
+      if (boardFollowBuilder_ == null) {
+        if (((bitField0_ & 0x00000002) != 0) &&
+          boardFollow_ != null &&
+          boardFollow_ != io.github.panyam.agni.v1.webapi.BoardFollow.getDefaultInstance()) {
+          getBoardFollowBuilder().mergeFrom(value);
+        } else {
+          boardFollow_ = value;
+        }
+      } else {
+        boardFollowBuilder_.mergeFrom(value);
+      }
+      if (boardFollow_ != null) {
+        bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public Builder clearBoardFollow() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      boardFollow_ = null;
+      if (boardFollowBuilder_ != null) {
+        boardFollowBuilder_.dispose();
+        boardFollowBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.BoardFollow.Builder getBoardFollowBuilder() {
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return internalGetBoardFollowFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder getBoardFollowOrBuilder() {
+      if (boardFollowBuilder_ != null) {
+        return boardFollowBuilder_.getMessageOrBuilder();
+      } else {
+        return boardFollow_ == null ?
+            io.github.panyam.agni.v1.webapi.BoardFollow.getDefaultInstance() : boardFollow_;
+      }
+    }
+    /**
+     * <pre>
+     * board_follow is what a board view does about the whole selection the request names, so every
+     * front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+     * not read the board, or the board draws none of the subjects.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.BoardFollow board_follow = 2 [json_name = "boardFollow"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.BoardFollow, io.github.panyam.agni.v1.webapi.BoardFollow.Builder, io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder> 
+        internalGetBoardFollowFieldBuilder() {
+      if (boardFollowBuilder_ == null) {
+        boardFollowBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.webapi.BoardFollow, io.github.panyam.agni.v1.webapi.BoardFollow.Builder, io.github.panyam.agni.v1.webapi.BoardFollowOrBuilder>(
+                getBoardFollow(),
+                getParentForChildren(),
+                isClean());
+        boardFollow_ = null;
+      }
+      return boardFollowBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.LocateSubjectsResponse)

@@ -26,7 +26,6 @@ import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emp
 import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
-import { sheetIdForNet } from "./netsheetguess.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
@@ -678,9 +677,7 @@ export class ViewerPresenter {
     if (finding) {
       await this.navigateToFindingItem(finding);
     } else {
-      let sh = sheetToOpen(v.sheets, this.currentSheet);
-      const sub = v.subjects[0];
-      if (!sh && sub?.kind === "net") sh = sheetIdForNet(sub.subject, this.sheetHints());
+      const sh = sheetToOpen(v.sheets, this.currentSheet);
       if (sh) await this.showSheet(sh);
     }
     if (this.mode === "native") await this.setMode("svg");
@@ -710,22 +707,12 @@ export class ViewerPresenter {
     return this.doc.scopedFindings.find(match) ?? this.findings.find(match);
   }
 
-  private sheetHints() {
-    return this.doc.sheets.map((s) => ({ id: s.id, name: s.name }));
-  }
-
-  // resolveSheetForFinding picks the sheet that a Violations click or a verdict locate should open.
-  // It tries wire badges first, then the same net/channel heuristics when EDIF has no sheets.
+  // resolveSheetForFinding picks the sheet that a Violations click or a verdict locate should open,
+  // from the sheets the engine badged the finding with. With none, the engine found the subject drawn
+  // nowhere, and the view stays where it is (agni issue 1635).
   private resolveSheetForFinding(f: FindingItem, explicit?: string): string {
     if (explicit) return explicit;
-    if (f.sheets.length > 0) return sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet);
-    if (f.kind === "net") return sheetIdForNet(f.subject, this.sheetHints());
-    if (f.kind === "component") {
-      const low = f.subject.toLowerCase();
-      const hit = this.doc.sheets.find((s) => (s.name || s.id).toLowerCase().includes(low));
-      return hit?.id ?? "";
-    }
-    return "";
+    return f.sheets.length > 0 ? sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet) : "";
   }
 
   // navigateToFindingItem is what a Violations .check-locate click does (without toggle-off).

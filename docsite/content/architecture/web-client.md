@@ -99,9 +99,10 @@ panel from the ones above.
   when it shows the board, through the `#board-absent-note` strip.
 - **A board view turns to the selection** (agni issue 1587). Say the reader picks a capacitor on the
   schematic, and the board places it on the bottom. `drawnOn` asks `LocateSubjects` with the board
-  read, and its answer carries the part's `board_side` and each subject's copper `board_layers`.
-  `followBoard` (`web/src/boardfollow.ts`) turns these into a side and a set of rows to show. The pane
-  flips to that side and turns those rows on, and never hides one. The bar's Follow side checkbox
+  read, and its answer's `board_follow` names the side to show and the layer rows to turn on, the
+  copper the selection uses and the silkscreen of its part's side. The engine decides both
+  (`followOf` in `service/boardindex.go`, agni issue 1635), so a front end in another language follows
+  a selection the same way. The pane flips to that side and turns those rows on, and never hides one. The bar's Follow side checkbox
   turns this off for every board view, and browser storage keeps the choice.
 - **Back and Forward replay a selection** (agni issue 1588). Say the reader clicks a connector, then
   a diode, then a regulator. `SelectionHistory` (`web/src/selectionhistory.ts`) records each entity

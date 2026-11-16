@@ -3039,8 +3039,12 @@ func (x *LocateSubjectsRequest) GetBoard() bool {
 
 // LocateSubjectsResponse answers each subject in request order.
 type LocateSubjectsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Subjects      []*SubjectSheets       `protobuf:"bytes,1,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Subjects []*SubjectSheets       `protobuf:"bytes,1,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	// board_follow is what a board view does about the whole selection the request names, so every
+	// front end turns and shows layers by one rule (agni issue 1635). It is unset when the request did
+	// not read the board, or the board draws none of the subjects.
+	BoardFollow   *BoardFollow `protobuf:"bytes,2,opt,name=board_follow,json=boardFollow,proto3" json:"board_follow,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3082,6 +3086,72 @@ func (x *LocateSubjectsResponse) GetSubjects() []*SubjectSheets {
 	return nil
 }
 
+func (x *LocateSubjectsResponse) GetBoardFollow() *BoardFollow {
+	if x != nil {
+		return x.BoardFollow
+	}
+	return nil
+}
+
+// BoardFollow is how a board view follows a selection: the side to show and the layer rows to turn
+// on. A view applies it and keeps the rows a reader already shows, so a reader's own choices stay.
+type BoardFollow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// side is the side every placed part and pin in the selection shares, "front" or "back". It is ""
+	// when the selection has no part or pin, when its parts sit on both sides, or when the board states
+	// no side for one of them, and the view then keeps the side it shows.
+	Side string `protobuf:"bytes,1,opt,name=side,proto3" json:"side,omitempty"`
+	// layers name the BoardLayerRow rows to show: each copper row a subject uses, and the silkscreen
+	// rows of each side a part or pin sits on. They are in the order the board lists its rows.
+	Layers        []string `protobuf:"bytes,2,rep,name=layers,proto3" json:"layers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BoardFollow) Reset() {
+	*x = BoardFollow{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardFollow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardFollow) ProtoMessage() {}
+
+func (x *BoardFollow) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardFollow.ProtoReflect.Descriptor instead.
+func (*BoardFollow) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *BoardFollow) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
+}
+
+func (x *BoardFollow) GetLayers() []string {
+	if x != nil {
+		return x.Layers
+	}
+	return nil
+}
+
 // SubjectSheets is where one subject is drawn.
 type SubjectSheets struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
@@ -3107,7 +3177,7 @@ type SubjectSheets struct {
 
 func (x *SubjectSheets) Reset() {
 	*x = SubjectSheets{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3119,7 +3189,7 @@ func (x *SubjectSheets) String() string {
 func (*SubjectSheets) ProtoMessage() {}
 
 func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3132,7 +3202,7 @@ func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectSheets.ProtoReflect.Descriptor instead.
 func (*SubjectSheets) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{39}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *SubjectSheets) GetSubject() *checks.Subject {
@@ -3371,9 +3441,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x15LocateSubjectsRequest\x12\x1a\n" +
 	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x123\n" +
 	"\bsubjects\x18\x02 \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjects\x12\x14\n" +
-	"\x05board\x18\x03 \x01(\bR\x05board\"S\n" +
+	"\x05board\x18\x03 \x01(\bR\x05board\"\x93\x01\n" +
 	"\x16LocateSubjectsResponse\x129\n" +
-	"\bsubjects\x18\x01 \x03(\v2\x1d.agni.v1.webapi.SubjectSheetsR\bsubjects\"\xe4\x01\n" +
+	"\bsubjects\x18\x01 \x03(\v2\x1d.agni.v1.webapi.SubjectSheetsR\bsubjects\x12>\n" +
+	"\fboard_follow\x18\x02 \x01(\v2\x1b.agni.v1.webapi.BoardFollowR\vboardFollow\"9\n" +
+	"\vBoardFollow\x12\x12\n" +
+	"\x04side\x18\x01 \x01(\tR\x04side\x12\x16\n" +
+	"\x06layers\x18\x02 \x03(\tR\x06layers\"\xe4\x01\n" +
 	"\rSubjectSheets\x121\n" +
 	"\asubject\x18\x01 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x12\x1b\n" +
 	"\tsheet_ids\x18\x02 \x03(\tR\bsheetIds\x12A\n" +
@@ -3421,7 +3495,7 @@ func file_agni_v1_webapi_design_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(SheetFormat)(0),                 // 0: agni.v1.webapi.SheetFormat
 	(SymbolSource)(0),                // 1: agni.v1.webapi.SymbolSource
@@ -3465,36 +3539,37 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*ComponentReport)(nil),          // 39: agni.v1.webapi.ComponentReport
 	(*LocateSubjectsRequest)(nil),    // 40: agni.v1.webapi.LocateSubjectsRequest
 	(*LocateSubjectsResponse)(nil),   // 41: agni.v1.webapi.LocateSubjectsResponse
-	(*SubjectSheets)(nil),            // 42: agni.v1.webapi.SubjectSheets
-	(*fieldmaskpb.FieldMask)(nil),    // 43: google.protobuf.FieldMask
-	(*geom.UndrawnPlacement)(nil),    // 44: agni.v1.geom.UndrawnPlacement
-	(*ir.UnexpandedHierarchy)(nil),   // 45: agni.v1.ir.UnexpandedHierarchy
-	(*ir.Design)(nil),                // 46: agni.v1.ir.Design
-	(*geom.PackedSheet)(nil),         // 47: agni.v1.geom.PackedSheet
-	(*geom.BoardLayerRow)(nil),       // 48: agni.v1.geom.BoardLayerRow
-	(*geom.BoardStackView)(nil),      // 49: agni.v1.geom.BoardStackView
-	(*geom.HighlightSpec)(nil),       // 50: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),     // 51: agni.v1.geom.PackedHighlight
-	(*geom.BoardGeometry)(nil),       // 52: agni.v1.geom.BoardGeometry
-	(*checks.Subject)(nil),           // 53: agni.v1.checks.Subject
-	(checks.LocateReason)(0),         // 54: agni.v1.checks.LocateReason
+	(*BoardFollow)(nil),              // 42: agni.v1.webapi.BoardFollow
+	(*SubjectSheets)(nil),            // 43: agni.v1.webapi.SubjectSheets
+	(*fieldmaskpb.FieldMask)(nil),    // 44: google.protobuf.FieldMask
+	(*geom.UndrawnPlacement)(nil),    // 45: agni.v1.geom.UndrawnPlacement
+	(*ir.UnexpandedHierarchy)(nil),   // 46: agni.v1.ir.UnexpandedHierarchy
+	(*ir.Design)(nil),                // 47: agni.v1.ir.Design
+	(*geom.PackedSheet)(nil),         // 48: agni.v1.geom.PackedSheet
+	(*geom.BoardLayerRow)(nil),       // 49: agni.v1.geom.BoardLayerRow
+	(*geom.BoardStackView)(nil),      // 50: agni.v1.geom.BoardStackView
+	(*geom.HighlightSpec)(nil),       // 51: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),     // 52: agni.v1.geom.PackedHighlight
+	(*geom.BoardGeometry)(nil),       // 53: agni.v1.geom.BoardGeometry
+	(*checks.Subject)(nil),           // 54: agni.v1.checks.Subject
+	(checks.LocateReason)(0),         // 55: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	43, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
-	44, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	44, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
+	45, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
 	3,  // 2: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	45, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	46, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
+	46, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	47, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
 	0,  // 5: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
 	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	47, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
-	48, // 8: agni.v1.webapi.GetSheetResponse.board_layers:type_name -> agni.v1.geom.BoardLayerRow
-	49, // 9: agni.v1.webapi.GetSheetResponse.board_stack:type_name -> agni.v1.geom.BoardStackView
+	48, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	49, // 8: agni.v1.webapi.GetSheetResponse.board_layers:type_name -> agni.v1.geom.BoardLayerRow
+	50, // 9: agni.v1.webapi.GetSheetResponse.board_stack:type_name -> agni.v1.geom.BoardStackView
 	1,  // 10: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	0,  // 11: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	50, // 12: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	51, // 13: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
-	52, // 14: agni.v1.webapi.GetBoardGeometryResponse.board:type_name -> agni.v1.geom.BoardGeometry
+	51, // 12: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	52, // 13: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	53, // 14: agni.v1.webapi.GetBoardGeometryResponse.board:type_name -> agni.v1.geom.BoardGeometry
 	1,  // 15: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	38, // 16: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
 	15, // 17: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
@@ -3531,35 +3606,36 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	23, // 48: agni.v1.webapi.WalkNet.also_entered:type_name -> agni.v1.webapi.TraceCross
 	36, // 49: agni.v1.webapi.ListWalkKindsResponse.kinds:type_name -> agni.v1.webapi.WalkKind
 	39, // 50: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	53, // 51: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
-	42, // 52: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
-	53, // 53: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
-	54, // 54: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
-	4,  // 55: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 56: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 57: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	12, // 58: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	10, // 59: agni.v1.webapi.DesignService.GetBoardGeometry:input_type -> agni.v1.webapi.GetBoardGeometryRequest
-	40, // 60: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
-	14, // 61: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	16, // 62: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
-	25, // 63: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
-	34, // 64: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
-	5,  // 65: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 66: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 67: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	13, // 68: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	11, // 69: agni.v1.webapi.DesignService.GetBoardGeometry:output_type -> agni.v1.webapi.GetBoardGeometryResponse
-	41, // 70: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
-	20, // 71: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	17, // 72: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
-	29, // 73: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
-	35, // 74: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
-	65, // [65:75] is the sub-list for method output_type
-	55, // [55:65] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	54, // 51: agni.v1.webapi.LocateSubjectsRequest.subjects:type_name -> agni.v1.checks.Subject
+	43, // 52: agni.v1.webapi.LocateSubjectsResponse.subjects:type_name -> agni.v1.webapi.SubjectSheets
+	42, // 53: agni.v1.webapi.LocateSubjectsResponse.board_follow:type_name -> agni.v1.webapi.BoardFollow
+	54, // 54: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
+	55, // 55: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
+	4,  // 56: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 57: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 58: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	12, // 59: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	10, // 60: agni.v1.webapi.DesignService.GetBoardGeometry:input_type -> agni.v1.webapi.GetBoardGeometryRequest
+	40, // 61: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	14, // 62: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	16, // 63: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
+	25, // 64: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
+	34, // 65: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
+	5,  // 66: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 67: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 68: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	13, // 69: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	11, // 70: agni.v1.webapi.DesignService.GetBoardGeometry:output_type -> agni.v1.webapi.GetBoardGeometryResponse
+	41, // 71: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	20, // 72: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	17, // 73: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
+	29, // 74: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
+	35, // 75: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
+	66, // [66:76] is the sub-list for method output_type
+	56, // [56:66] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }
@@ -3581,7 +3657,7 @@ func file_agni_v1_webapi_design_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   40,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

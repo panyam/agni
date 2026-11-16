@@ -522,6 +522,114 @@ impl<'de> serde::Deserialize<'de> for BlobsMissing {
         deserializer.deserialize_struct("agni.v1.webapi.BlobsMissing", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for BoardFollow {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.side.is_empty() {
+            len += 1;
+        }
+        if !self.layers.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.BoardFollow", len)?;
+        if !self.side.is_empty() {
+            struct_ser.serialize_field("side", &self.side)?;
+        }
+        if !self.layers.is_empty() {
+            struct_ser.serialize_field("layers", &self.layers)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for BoardFollow {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "side",
+            "layers",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Side,
+            Layers,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "side" => Ok(GeneratedField::Side),
+                            "layers" => Ok(GeneratedField::Layers),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = BoardFollow;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.BoardFollow")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<BoardFollow, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut side__ = None;
+                let mut layers__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Side => {
+                            if side__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("side"));
+                            }
+                            side__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Layers => {
+                            if layers__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("layers"));
+                            }
+                            layers__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(BoardFollow {
+                    side: side__.unwrap_or_default(),
+                    layers: layers__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.BoardFollow", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for CacheLookup {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -12773,9 +12881,15 @@ impl serde::Serialize for LocateSubjectsResponse {
         if !self.subjects.is_empty() {
             len += 1;
         }
+        if self.board_follow.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.LocateSubjectsResponse", len)?;
         if !self.subjects.is_empty() {
             struct_ser.serialize_field("subjects", &self.subjects)?;
+        }
+        if let Some(v) = self.board_follow.as_ref() {
+            struct_ser.serialize_field("boardFollow", v)?;
         }
         struct_ser.end()
     }
@@ -12788,11 +12902,14 @@ impl<'de> serde::Deserialize<'de> for LocateSubjectsResponse {
     {
         const FIELDS: &[&str] = &[
             "subjects",
+            "board_follow",
+            "boardFollow",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Subjects,
+            BoardFollow,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -12815,6 +12932,7 @@ impl<'de> serde::Deserialize<'de> for LocateSubjectsResponse {
                     {
                         match value {
                             "subjects" => Ok(GeneratedField::Subjects),
+                            "boardFollow" | "board_follow" => Ok(GeneratedField::BoardFollow),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -12835,6 +12953,7 @@ impl<'de> serde::Deserialize<'de> for LocateSubjectsResponse {
                     V: serde::de::MapAccess<'de>,
             {
                 let mut subjects__ = None;
+                let mut board_follow__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Subjects => {
@@ -12843,10 +12962,17 @@ impl<'de> serde::Deserialize<'de> for LocateSubjectsResponse {
                             }
                             subjects__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::BoardFollow => {
+                            if board_follow__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("boardFollow"));
+                            }
+                            board_follow__ = map_.next_value()?;
+                        }
                     }
                 }
                 Ok(LocateSubjectsResponse {
                     subjects: subjects__.unwrap_or_default(),
+                    board_follow: board_follow__,
                 })
             }
         }

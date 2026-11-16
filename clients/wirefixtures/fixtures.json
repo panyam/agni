@@ -342,6 +342,46 @@
       }
     },
     {
+      "name": "locate-on-board",
+      "service": "agni.v1.webapi.DesignService",
+      "method": "LocateSubjects",
+      "request": {
+        "snapshot": "snapshots/wire",
+        "subjects": [
+          {
+            "kind": "component",
+            "ref": "C133"
+          }
+        ],
+        "board": true
+      },
+      "response": {
+        "subjects": [
+          {
+            "subject": {
+              "kind": "component",
+              "ref": "C133"
+            },
+            "sheetIds": [
+              "/USB Debug, PD",
+              "board"
+            ],
+            "boardSide": "back",
+            "boardLayers": [
+              "B.Cu"
+            ]
+          }
+        ],
+        "boardFollow": {
+          "side": "back",
+          "layers": [
+            "B.Cu",
+            "B.SilkS"
+          ]
+        }
+      }
+    },
+    {
       "name": "query-that-does-not-parse",
       "service": "agni.v1.webapi.QueryService",
       "method": "RunQuery",
