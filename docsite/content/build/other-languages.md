@@ -215,5 +215,10 @@ Everything the Python client does is available to any language with a protobuf r
 3. Post to a server with `Content-Type: application/json`. The Connect protocol's unary form needs no
    Connect library.
 
+`agni serve` also answers gRPC on the same port, over cleartext HTTP/2 (agni issue 1626). So a
+language with a gRPC library, such as Rust with tonic, Java with grpc-java or C++ with gRPC's own,
+can generate service stubs as well as messages and call the server with them. A failed rpc's details,
+such as a query's `TextPosition`, arrive in the gRPC status's details.
+
 A generated client committed to this repo belongs in `proto-check`, as the Go, TypeScript and Python
 halves are, so that the gate fails on a proto change that forgets it.
