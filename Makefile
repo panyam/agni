@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk demo-video try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: binaries-check fetch-remote-check samples-clean samples-revisions hooks dist dist-check testall-core testall-test testall-go testall-web testall-dist testall-scan testall-docs lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb exercise-allegro exercise-altium odb-fixtures exercise-public-demo exercise-browser-review exercise-cross-probe exercise-walk try exercise-webgl exercise-board-open exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -466,7 +466,7 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 		status=$$?; cat $(EXERCISE_OUT)/walk.md 2>/dev/null; exit $$status
 
 # demo-design-ready copies in what DEMO_DESIGN=jetson needs when it is missing: Jetson's board, and
-# for compare-revisions its rev 1.1.3. demo-video and try both use it.
+# for compare-revisions its rev 1.1.3. try uses it.
 define demo-design-ready
 	@if [ "$(DEMO_DESIGN)" = jetson ]; then \
 		test -f examples/jetson-project/designs/jetson/jetson-agx-thor-baseboard.kicad_pcb || \
@@ -478,50 +478,42 @@ define demo-design-ready
 	fi
 endef
 
-# Mission #1442's exercise (agni issue 1545): record one demo journey from web/browser/journeys.ts as
-# $(DEMO_OUT)/<name>.mp4 at 1080p, played on Jetson's whole board at a pace a viewer can follow, with a
-# caption before each step. With no JOURNEY it lists the journeys. A step that breaks fails the run
-# and names the step. The gate plays every journey on the cut at test pace (demo-video.spec.ts).
-# DEMO_DESIGN=cut records on the committed cut. Like try, it rebuilds the viewer bundle and the wasm
-# only when their sources changed (hack/try.mk).
-#   make demo-video JOURNEY=find-a-part
-#   make demo-video JOURNEY=find-a-part DEMO_OUT=~/Movies/agni
+# Where make try writes its recordings, and the design it plays on.
 DEMO_OUT ?= /tmp/agni-demo
 DEMO_DESIGN ?= jetson
-demo-video:
-	@if [ -z "$(JOURNEY)" ]; then \
-		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
-		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
-	fi
-	@$(MAKE) --no-print-directory -f hack/try.mk
-	$(demo-design-ready)
-	mkdir -p $(DEMO_OUT)
-	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) DEMO_DESIGN=$(DEMO_DESIGN) pnpm exec vitest run -c vitest.try.config.ts -t "records"
-	@rm -f $(DEMO_OUT)/page@*.webm
 
-# Try a demo journey by hand (agni issue 1600): one journey from web/browser/journeys.ts plays in a
-# visible browser at the recording's pace, with its captions, and then the browser is yours until you
-# close its window. With no JOURNEY it lists the journeys. UNTIL=<number or caption words> stops
-# before that step, so you take it yourself, and each run lists the steps first. STEP=1 waits for the
-# Next button on the caption before each step. DEMO_DESIGN=cut plays on the committed cut of Jetson, which
-# needs no samples. It rebuilds the viewer bundle and the wasm only when their sources changed
-# (hack/try.mk). RECORD=1 records the window, your own clicks included, as $(DEMO_OUT)/<name>-try.mp4
-# once you close it. HANDOVER=0 closes the browser when the journey ends.
+# Try or record a demo journey (agni issues 1545 and 1600). One journey from web/browser/journeys.ts
+# plays at a pace a viewer can follow, with a caption before each step. With no JOURNEY it lists the
+# journeys. A step that breaks fails the run and names the step.
+#
+# Headed, the default, the browser is then yours until you close its window. UNTIL=<number or caption
+# words> stops before that step, so you take it yourself, and each run lists the steps first. STEP=1
+# waits for the Next button on the caption before each step. RECORD=1 records the window, your own
+# clicks included, as $(DEMO_OUT)/<name>-try.mp4 once you close it, and HANDOVER=0 closes the browser
+# when the journey ends.
+#
+# HEADED=0 records the journey headless as $(DEMO_OUT)/<name>.mp4 at 1080p after a title card, for the
+# docsite and release notes, and fails on a page error.
+#
+# DEMO_DESIGN=cut plays on the committed cut of Jetson, which needs no samples. It rebuilds the viewer
+# bundle and the wasm only when their sources changed (hack/try.mk).
 #   make try
 #   make try JOURNEY=find-a-part
-#   make try JOURNEY=find-a-part UNTIL=3 DEMO_DESIGN=cut
 #   make try JOURNEY=find-a-part UNTIL=4 RECORD=1
+#   make try JOURNEY=find-a-part HEADED=0 DEMO_OUT=~/Movies/agni
+try: HEADED ?= 1
 try:
 ifeq ($(JOURNEY),)
 	@echo "make try JOURNEY=<name> plays one of these journeys in a browser you can take over:"
 	@awk -F'"' '/^    name: "/ { n = $$2 } /^    title: "/ { printf "  %-20s %s\n", n, $$2 }' web/browser/journeys.ts
 	@echo "UNTIL=<number or caption words> stops before that step, STEP=1 waits for Next before each step,"
-	@echo "DEMO_DESIGN=cut plays on the committed cut of Jetson instead of the whole board, and RECORD=1"
-	@echo "records the window, your own clicks included, as $(DEMO_OUT)/<name>-try.mp4."
+	@echo "RECORD=1 records the window, your own clicks included, as $(DEMO_OUT)/<name>-try.mp4, HEADED=0"
+	@echo "records the journey headless at 1080p as $(DEMO_OUT)/<name>.mp4, and DEMO_DESIGN=cut plays on the"
+	@echo "committed cut of Jetson instead of the whole board."
 else
 	@$(MAKE) --no-print-directory -f hack/try.mk
 	$(demo-design-ready)
-	cd web && TRY=1 HEADED=1 SLOWMO=0 JOURNEY=$(JOURNEY) UNTIL="$(UNTIL)" STEP=$(STEP) DEMO_DESIGN=$(DEMO_DESIGN) \
+	cd web && TRY=1 HEADED=$(HEADED) SLOWMO=0 JOURNEY=$(JOURNEY) UNTIL="$(UNTIL)" STEP=$(STEP) DEMO_DESIGN=$(DEMO_DESIGN) \
 		RECORD=$(RECORD) HANDOVER=$(HANDOVER) DEMO_OUT=$(DEMO_OUT) \
 		pnpm exec vitest run -c vitest.try.config.ts -t "tries"
 endif

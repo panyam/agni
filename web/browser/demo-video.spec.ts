@@ -1,31 +1,30 @@
 // The demo journeys (agni issue 1545, mission #1442). In the gate, every journey in journeys.ts plays
 // at test pace and checks each step, on the cut of Jetson unless the journey names another design, so
-// a journey that breaks fails here and names the step it broke at. `make demo-video JOURNEY=<name>` sets DEMO_OUT and plays one journey on
-// Jetson's whole board, paced for a viewer, and records it as <name>.mp4 at 1080p.
+// a journey that breaks fails here and names the step it broke at.
 //
-// `make try JOURNEY=<name>` sets TRY and plays one journey in a visible browser at the same pace,
-// with the same captions, and records nothing (agni issue 1600). When the journey ends, or stops
-// before the step UNTIL names, the browser stays open for the reviewer until they close its window.
-// STEP=1 puts a Next button on the caption, and each step waits for it. RECORD=1 records the window,
-// the reviewer's own clicks included, as DEMO_OUT/<name>-try.mp4 once it closes, and HANDOVER=0 closes
-// it when the journey ends.
-//
-// The recording shows a title card, then a caption before each step and a cursor that moves to what
-// it clicks. Both are drawn into the recording page by an init script, so the viewer itself carries no
-// demo code. Playwright records from the moment the page exists, so the video is cut to start at the
-// title card.
+// `make try JOURNEY=<name>` sets TRY and plays one journey at a pace a viewer can follow, with a
+// caption before each step and a cursor that moves to what it clicks (agni issues 1545 and 1600).
+// Both are drawn into the page by an init script, so the viewer itself carries no demo code.
+// - Headed, the default, the browser stays open for the reviewer when the journey ends, or stops
+//   before the step UNTIL names, until they close its window. STEP=1 puts a Next button on the
+//   caption, and each step waits for it. RECORD=1 records the window, the reviewer's own clicks
+//   included, as DEMO_OUT/<name>-try.mp4 once it closes, and HANDOVER=0 closes it when the journey
+//   ends.
+// - HEADED=0 records the journey as DEMO_OUT/<name>.mp4 at 1080p after a title card, for the docsite
+//   and release notes. Playwright records from the moment the page exists, so the video is cut to
+//   start at the title card.
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
-import { launch } from "./browser.js";
+import { headed, launch } from "./browser.js";
 import { type Design, type Journey, type Pace, type Reader, captionOf, designs, journeyNames, journeys, readingTime, testPace, viewerPace } from "./journeys.js";
 import { playedSteps, stepsBefore } from "./trysteps.js";
 
 const base = (): string => inject("baseUrl");
-const out = process.env.DEMO_OUT ?? "";
+const out = process.env.DEMO_OUT || "/tmp/agni-demo";
 const only = process.env.JOURNEY ?? "";
 const recordOn = process.env.DEMO_DESIGN ?? "jetson";
 const trying = process.env.TRY === "1";
@@ -193,46 +192,6 @@ function toMp4(webm: string, mp4: string, cutAt: number): string {
   return execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", mp4]).toString().trim();
 }
 
-describe.runIf(out !== "")("a demo recording", () => {
-  it(`records ${only || "a journey"} at 1080p`, async () => {
-    const j = journeys.find((x) => x.name === only);
-    if (!j) throw new Error(`JOURNEY=${only} names no journey; the journeys are ${journeyNames().join(", ")}`);
-    const d = designs[recordOn];
-    if (!d) throw new Error(`DEMO_DESIGN=${recordOn} names no design; use ${Object.keys(designs).join(", ")}`);
-    mkdirSync(out, { recursive: true });
-    const size = { width: 1920, height: 1080 };
-    const began = Date.now();
-    // A recording shows the view glide to each subject, as a reader without reduced motion sees it.
-    const context = await browser.newContext({ viewport: size, recordVideo: { dir: out, size }, reducedMotion: "no-preference" });
-    await context.addInitScript(OVERLAY);
-    const page = await context.newPage();
-    const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
-    let cut = 0;
-    try {
-      // A first visit reads the design on the Load page before the viewer opens. The video is cut to
-      // start at the title card, so that read happens here, out of the picture, and the journey
-      // opens the viewer as a returning reader does.
-      await page.goto(`${base()}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
-      await page.waitForSelector("#svg-view svg", { timeout: 180_000 });
-      await page.setContent(titleCard(j.title, d.label));
-      cut = (Date.now() - began) / 1000;
-      await page.waitForTimeout(2500);
-      await play(page, j, d, viewerPace, async (text) => {
-        await page.evaluate((t) => (window as unknown as { __demoCaption?: (t: string) => void }).__demoCaption?.(t), text);
-      });
-      await page.evaluate(() => (window as unknown as { __demoCaption?: (t: string) => void }).__demoCaption?.(""));
-      await page.waitForTimeout(1200);
-    } finally {
-      await context.close();
-    }
-    const mp4 = join(out, `${j.name}.mp4`);
-    expect(toMp4(await page.video()!.path(), mp4, cut)).toBe("1920,1080");
-    expect(errors).toEqual([]);
-    console.log(`wrote ${mp4}`);
-  }, 600_000);
-});
-
 // SVG_FIRST makes a page open in SVG, as the gate and the recording do in headless Chrome. The
 // journeys check the board's SVG elements, and a visible Chrome on a hardware GPU would open the board
 // in WebGL. The viewer chooses WebGL only when a context asked with failIfMajorPerformanceCaveat
@@ -248,12 +207,14 @@ const SVG_FIRST = `
 })();
 `;
 
-// A day, as the try mode's test timeout. The reviewer closes the window when they are done, and the
-// run ends then.
+// A day, as the test timeout. A reviewer closes the window when they are done, and the run ends then.
 const reviewerTime = 24 * 60 * 60 * 1000;
 
-describe.runIf(trying)("a journey to try", () => {
-  it(`tries ${only || "a journey"} and hands the browser over`, async () => {
+// The size of a recording made headless, for the docsite, the README and release notes.
+const published = { width: 1920, height: 1080 };
+
+describe.runIf(trying)("a journey to try or record", () => {
+  it(`tries ${only || "a journey"}`, async () => {
     const j = journeys.find((x) => x.name === only);
     if (!j) throw new Error(`JOURNEY=${only} names no journey; the journeys are ${journeyNames().join(", ")}`);
     const d = designs[recordOn];
@@ -265,25 +226,31 @@ describe.runIf(trying)("a journey to try", () => {
     say(`${j.name} on ${d.label}, where UNTIL=<number> stops before a step:\n${steps.map((p) => `  ${p.n}. ${p.caption}`).join("\n")}`);
     // An unknown UNTIL fails here, before the browser opens a page.
     const stop = stepsBefore(j, d, process.env.UNTIL ?? "");
-    const record = process.env.RECORD === "1";
-    const handOver = process.env.HANDOVER !== "0";
-    // A recording is the size of the window the reviewer sees, which a first window measures. x264
-    // wants each side even.
-    let size: { width: number; height: number } | undefined;
-    if (record) {
+    // Headless there is no one to hand over to, so the run records the journey at the published size,
+    // after a title card, and checks the page logged no error. Headed it records only on RECORD=1, at
+    // the window's own size, which a first window measures. x264 wants each side even.
+    const record = !headed || process.env.RECORD === "1";
+    const handOver = headed && process.env.HANDOVER !== "0";
+    let size: { width: number; height: number } | undefined = headed ? undefined : published;
+    if (headed && record) {
       const probe = await browser.newContext({ viewport: null });
       const p = await probe.newPage();
       size = await p.evaluate(() => ({ width: innerWidth - (innerWidth % 2), height: innerHeight - (innerHeight % 2) }));
       await probe.close();
-      mkdirSync(out, { recursive: true });
     }
+    if (record) mkdirSync(out, { recursive: true });
     const began = Date.now();
-    // The window's own size, and the view glides to each subject as a reader without reduced motion
-    // sees it.
-    const context = await browser.newContext({ viewport: null, reducedMotion: "no-preference", ...(size ? { recordVideo: { dir: out, size } } : {}) });
+    // The view glides to each subject, as a reader without reduced motion sees it.
+    const context = await browser.newContext({
+      viewport: headed ? null : published,
+      reducedMotion: "no-preference",
+      ...(record && size ? { recordVideo: { dir: out, size } } : {}),
+    });
     await context.addInitScript(OVERLAY);
     await context.addInitScript(SVG_FIRST);
     const page = await context.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
     const caption = (text: string) => page.evaluate((t) => (window as unknown as { __demoCaption?: (t: string) => void }).__demoCaption?.(t), text);
     const next =
       process.env.STEP === "1"
@@ -293,44 +260,53 @@ describe.runIf(trying)("a journey to try", () => {
       page.once("close", () => done());
       browser.once("disconnected", () => done());
     });
-    // keep closes the window, then writes the recording, from the moment the viewer first opened.
-    // It runs after a broken step too, so the video shows where the journey broke.
+    // keep closes the window, then writes the recording from the cut on. It runs after a broken step
+    // too, so the video shows where the journey broke.
     let cut = 0;
     const keep = async () => {
       await context.close().catch(() => {});
       if (!record) return;
-      const mp4 = join(out, `${j.name}-try.mp4`);
+      const mp4 = join(out, headed ? `${j.name}-try.mp4` : `${j.name}.mp4`);
       try {
         const webm = await page.video()!.path();
         const probed = toMp4(webm, mp4, cut);
         rmSync(webm, { force: true });
+        if (!headed) expect(probed).toBe(`${published.width},${published.height}`);
         say(`wrote ${mp4} (${probed.replace(",", " by ")})`);
       } catch (e) {
+        if (!headed) throw e;
         // Quitting Chrome, rather than closing its window, can stop the recording before it is written.
         say(`could not write ${mp4}: ${(e instanceof Error ? e.message : String(e)).split("\n")[0]}. Close the window rather than quitting Chrome.`);
       }
     };
-    // A first visit reads the design on the Load page, so the journey opens the viewer as a returning
-    // reader does.
     try {
+      // A first visit reads the design on the Load page, out of the picture, so the journey opens the
+      // viewer as a returning reader does.
       await page.goto(`${base()}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
       await page.waitForSelector("#svg-view svg", { timeout: 180_000 });
-      cut = (Date.now() - began) / 1000;
-      await caption(`${j.title}, on ${d.label}`);
+      if (headed) {
+        cut = (Date.now() - began) / 1000;
+        await caption(`${j.title}, on ${d.label}`);
+      } else {
+        await page.setContent(titleCard(j.title, d.label));
+        cut = (Date.now() - began) / 1000;
+      }
       await page.waitForTimeout(2500);
       await play(page, j, d, viewerPace, caption, { stop, next });
     } catch (e) {
       const gone = page.isClosed();
       await keep();
       // A reviewer who closes the window part way through has finished trying, which is no failure.
-      if (gone) return;
+      if (gone && headed) return;
       throw e;
     }
     const left = steps[stop];
     if (!handOver) {
       say(left ? `stopped before step ${left.n}, "${left.caption}"` : "played every step");
+      await caption("");
       await page.waitForTimeout(1200);
       await keep();
+      expect(errors).toEqual([]);
       return;
     }
     await caption(

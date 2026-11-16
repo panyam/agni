@@ -126,7 +126,7 @@ make -C examples/jetson-project diff-revision
 ```
 
 Then open `designs/jetson` in the viewer and pick `designs/jetson-1.1.3` from Compare.
-`make demo-video JOURNEY=compare-revisions` records a walk through one change of each kind as a
+`make try JOURNEY=compare-revisions HEADED=0` records a walk through one change of each kind as a
 video, which plays here:
 
 <video controls muted playsinline preload="metadata" poster="{{.Site.PathPrefix}}/static/images/demo-compare-revisions.jpg" src="https://github.com/user-attachments/assets/1ff74453-c8a3-4b29-8727-99e301f905f8" style="max-width:100%">
