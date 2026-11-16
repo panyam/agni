@@ -154,6 +154,9 @@ func (b *boardBuilder) placements() {
 			RefDes: c.ref, At: b.pt(cx, cy), RotationDeg: rot, Layer: side, Mirror: bottom,
 			Prov: &geom.Provenance{SourceFile: b.src, SourceId: c.ref},
 		}
+		if h, ok := c.partHeight(); ok {
+			pl.Height = &h
+		}
 		s, co := math.Sincos(-rot * math.Pi / 180)
 		for _, pd := range pads {
 			dx, dy := float64(nm(pd.x-cx)), float64(nm(pd.y-cy))

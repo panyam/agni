@@ -15,7 +15,8 @@
 // comment as Value, and its schematic parameters (Part Number among them) from PrimitiveParameters.
 // Assembly variants live in the project file and are not read. The board geometry carries the
 // copper stack in physical order, renamed into the contract's F.Cu/In<n>.Cu/B.Cu vocabulary, every
-// placement with footprint-local pads sized from the top copper, tracks, arc tracks as arcs, vias,
+// placement with footprint-local pads sized from the top copper and a height from its HEIGHT, or
+// from its tallest 3D body in ComponentBodies6 (agni 1643), tracks, arc tracks as arcs, vias,
 // the physical stack from Board6 with each copper layer's thickness, the dielectric under it with
 // its material, type and constant, and each face's solder mask (agni 1601), polygon pour outlines
 // with their nets as zones, the copper regions a pour filled and solid regions

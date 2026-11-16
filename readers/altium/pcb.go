@@ -43,6 +43,9 @@ type comp struct {
 	namedPads  int
 	mechanical bool // a mounting hole, fiducial or other non-electrical part
 	graphical  bool // a drawing such as a layer marker, whose copper Altium's export leaves out
+	// height is the tallest OVERALLHEIGHT of the part's 3D bodies in nanometres, or -1 when no body
+	// states one (agni 1643).
+	height int64
 }
 
 type pad struct {
@@ -158,7 +161,7 @@ func decode(c *cfb.File) (*pcb, error) {
 	}
 	for _, cp := range cps {
 		kind, _ := cp.int("COMPONENTKIND")
-		p.comps = append(p.comps, comp{p: cp, mechanical: kind == 1 || kind == 2, graphical: kind == 2})
+		p.comps = append(p.comps, comp{p: cp, mechanical: kind == 1 || kind == 2, graphical: kind == 2, height: -1})
 	}
 
 	if b, err = read("Polygons6", false); err != nil {
@@ -178,6 +181,9 @@ func decode(c *cfb.File) (*pcb, error) {
 		return nil, err
 	}
 	if err := p.readTexts(read); err != nil {
+		return nil, err
+	}
+	if err := p.readBodies(read); err != nil {
 		return nil, err
 	}
 	if err := p.readParameters(read); err != nil {
@@ -297,6 +303,51 @@ func (p *pcb) readCopper(read reader) error {
 		})
 	}
 	return nil
+}
+
+// readBodies reads ComponentBodies6 for each part's height (agni 1643). Each record is one subrecord
+// with the common primitive header, the part's index at 7 and a property list whose length is at 18.
+// OVERALLHEIGHT is how far the body reaches above the board, and a part takes its tallest body's.
+// A body of no part, such as a free 3D model, is skipped.
+func (p *pcb) readBodies(read reader) error {
+	b, err := read("ComponentBodies6", false)
+	if err != nil || len(b) == 0 {
+		return err
+	}
+	recs, err := parseRecords(b, 0x0C, 1)
+	if err != nil {
+		return fmt.Errorf("ComponentBodies6: %w", err)
+	}
+	for i, r := range recs {
+		s := field(r.subs[0])
+		plen := int(s.u32(18))
+		if 22+plen > len(s) {
+			return fmt.Errorf("ComponentBodies6 record %d: its properties run past its end", i)
+		}
+		c := index16(s.u16(7))
+		if c < 0 || c >= len(p.comps) {
+			continue
+		}
+		h, ok := thickness(propsOf(s[22 : 22+plen])["OVERALLHEIGHT"])
+		if ok && h > p.comps[c].height {
+			p.comps[c].height = h
+		}
+	}
+	return nil
+}
+
+// partHeight is the part's height above the board in nanometres (agni 1643). A component record's
+// HEIGHT wins, as Altium's own ODB++ export writes it for .comp_height. A part whose record states
+// none takes its tallest 3D body's. Altium writes HEIGHT 0 for a part with no height set, which is
+// no height.
+func (c comp) partHeight() (int64, bool) {
+	if h, ok := thickness(c.p["HEIGHT"]); ok && h > 0 {
+		return h, true
+	}
+	if c.height > 0 {
+		return c.height, true
+	}
+	return 0, false
 }
 
 // readRegions reads Regions6. Each record is one subrecord: the common primitive header (layer,

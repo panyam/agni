@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { BoardPartBodySchema } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { PRESETS, StackCamera } from "./stackcamera.js";
-import { BODY_FLOATS, TYPICAL_BODY_MM, bodyGeometry, bodyTopZ, defaultedNote, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
+import { BODY_FLOATS, TYPICAL_BODY_MM, bodyGeometry, bodyTopZ, defaultedNote, enterPrism, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
 
 // Three parts on a 100 by 100 board: a 2.5 mm one on the front, one on the back, and one on the front
 // whose file states no height. Each footprint is a 10 by 10 square, counter-clockwise.
@@ -115,6 +115,22 @@ describe("picking a part's body", () => {
     const cam = camera(PRESETS.top.pitch);
     expect(at(cam, 40, 40, 1, () => ({ kind: "net", net: "GND" }))).toEqual({ kind: "net", net: "GND" });
   });
+
+  // From Front or Side the camera sees a block's walls, and a click on one picks its part (agni
+  // issue 1643). U1 stands from z 1 to 3.5, on the square from (10, 10) to (20, 20).
+  it("picks a part by its wall from the front and from the side, and nothing beside the wall", () => {
+    const pose = (p: keyof typeof PRESETS) => {
+      const cam = new StackCamera({ x: 50, y: 50, z: 0 }, 120);
+      cam.setViewport(800, 800);
+      cam.setPose(PRESETS[p]);
+      cam.fit();
+      return cam;
+    };
+    const gnd = () => ({ kind: "net" as const, net: "GND" });
+    expect(at(pose("front"), 15, 10, 2.25, gnd)).toEqual({ kind: "component", ref: "U1" });
+    expect(at(pose("side"), 10, 15, 2.25, gnd)).toEqual({ kind: "component", ref: "U1" });
+    expect(at(pose("front"), 25, 10, 2.25, gnd)).toEqual({ kind: "net", net: "GND" });
+  });
 });
 
 describe("the note on defaulted heights", () => {
@@ -122,5 +138,15 @@ describe("the note on defaulted heights", () => {
     expect(defaultedNote({ bodies: bodies() })).toBe(" (1 of 3 at a default 1 mm)");
     expect(defaultedNote({ bodies: bodies().slice(2) })).toBe(" (all at a default 1 mm)");
     expect(defaultedNote({ bodies: bodies().slice(0, 2) })).toBe("");
+  });
+});
+
+describe("entering a block", () => {
+  const ring = Float32Array.from([0, 0, 10, 0, 10, 10, 0, 10]);
+  it("enters through the top from above and through a wall from the side, and misses past it", () => {
+    expect(enterPrism(ring, 0, 5, { x: 5, y: 5, z: 20 }, { x: 0, y: 0, z: -1 })).toBeCloseTo(15, 9);
+    expect(enterPrism(ring, 0, 5, { x: -20, y: 5, z: 2 }, { x: 1, y: 0, z: 0 })).toBeCloseTo(20, 9);
+    expect(enterPrism(ring, 0, 5, { x: -20, y: 5, z: 7 }, { x: 1, y: 0, z: 0 })).toBeNull();
+    expect(enterPrism(ring, 0, 5, { x: 5, y: 15, z: 20 }, { x: 0, y: 0, z: -1 })).toBeNull();
   });
 });
