@@ -75,12 +75,14 @@ one server. Each prints one line of JSON, and the exercise compares it with the 
 same design:
 
 ```
-{"version":"v0.7.0","api":"agni.v1","features":["grpc","snapshot_recovery","snapshot_store"],"components":19,"nets":17,"sheets":4,"findings":19,"query_rows":4}
+{"version":"v0.7.0","api":"agni.v1","features":["grpc","snapshot_recovery","snapshot_store"],"components":19,"nets":17,"sheets":4,"findings":19,"query_rows":4,"board_layers":37,"board_parts":19,"board_tracks":397}
 ```
 
 The fields are the server's version, package and features, then the design's component, net and
 sheet counts from `GetDesign`, the findings from `CheckDesign` with every rule, and the rows of
-`component.class(?c, "resistor") => ?c`. `clients/examples/go` is the reference.
+`component.class(?c, "resistor") => ?c`, then the board's layers, parts and track segments from
+`GetBoardGeometry`'s pages, read 16 KB at a time so every example pages ([Drawing a board from
+agni](../board-geometry/)). `clients/examples/go` is the reference.
 
 ## The clients
 

@@ -190,6 +190,7 @@ const std::map<std::string, Call>& Calls() {
       {"agni.v1.webapi.SnapshotService/Ingest", Rpc<webapi::SnapshotService>(&webapi::SnapshotService::Stub::Ingest)},
       {"agni.v1.webapi.SnapshotService/DeleteSnapshot", Rpc<webapi::SnapshotService>(&webapi::SnapshotService::Stub::DeleteSnapshot)},
       {"agni.v1.webapi.DesignService/GetDesign", Rpc<webapi::DesignService>(&webapi::DesignService::Stub::GetDesign)},
+      {"agni.v1.webapi.DesignService/GetBoardGeometry", Rpc<webapi::DesignService>(&webapi::DesignService::Stub::GetBoardGeometry)},
       {"agni.v1.webapi.CheckService/CheckDesign", Rpc<webapi::CheckService>(&webapi::CheckService::Stub::CheckDesign)},
       {"agni.v1.webapi.QueryService/RunQuery", Rpc<webapi::QueryService>(&webapi::QueryService::Stub::RunQuery)},
   };

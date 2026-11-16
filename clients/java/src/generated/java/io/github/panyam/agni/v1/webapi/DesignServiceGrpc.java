@@ -142,6 +142,37 @@ public final class DesignServiceGrpc {
     return getGetLayoutReportMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest,
+      io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getGetBoardGeometryMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetBoardGeometry",
+      requestType = io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest,
+      io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getGetBoardGeometryMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest, io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getGetBoardGeometryMethod;
+    if ((getGetBoardGeometryMethod = DesignServiceGrpc.getGetBoardGeometryMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getGetBoardGeometryMethod = DesignServiceGrpc.getGetBoardGeometryMethod) == null) {
+          DesignServiceGrpc.getGetBoardGeometryMethod = getGetBoardGeometryMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest, io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetBoardGeometry"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetBoardGeometry"))
+              .build();
+        }
+      }
+    }
+    return getGetBoardGeometryMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LocateSubjectsRequest,
       io.github.panyam.agni.v1.webapi.LocateSubjectsResponse> getLocateSubjectsMethod;
 
@@ -423,6 +454,22 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+     * (agni issue 1634). A front end in another language draws the board from it, and
+     * docsite/content/build/board-geometry.md says what each message means. The first page carries
+     * the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+     * nets, zones, texts and graphics, in that order. A client repeats the call with
+     * next_page_token until it comes back empty, and merges the pages with its protobuf library's
+     * merge, which appends repeated fields. A design with no board answers not_found.
+     * </pre>
+     */
+    default void getBoardGeometry(io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetBoardGeometryMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -595,6 +642,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+     * (agni issue 1634). A front end in another language draws the board from it, and
+     * docsite/content/build/board-geometry.md says what each message means. The first page carries
+     * the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+     * nets, zones, texts and graphics, in that order. A client repeats the call with
+     * next_page_token until it comes back empty, and merges the pages with its protobuf library's
+     * merge, which appends repeated fields. A design with no board answers not_found.
+     * </pre>
+     */
+    public void getBoardGeometry(io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetBoardGeometryMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -751,6 +815,22 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+     * (agni issue 1634). A front end in another language draws the board from it, and
+     * docsite/content/build/board-geometry.md says what each message means. The first page carries
+     * the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+     * nets, zones, texts and graphics, in that order. A client repeats the call with
+     * next_page_token until it comes back empty, and merges the pages with its protobuf library's
+     * merge, which appends repeated fields. A design with no board answers not_found.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse getBoardGeometry(io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetBoardGeometryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -898,6 +978,22 @@ public final class DesignServiceGrpc {
     public io.github.panyam.agni.v1.webapi.GetLayoutReportResponse getLayoutReport(io.github.panyam.agni.v1.webapi.GetLayoutReportRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetLayoutReportMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+     * (agni issue 1634). A front end in another language draws the board from it, and
+     * docsite/content/build/board-geometry.md says what each message means. The first page carries
+     * the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+     * nets, zones, texts and graphics, in that order. A client repeats the call with
+     * next_page_token until it comes back empty, and merges the pages with its protobuf library's
+     * merge, which appends repeated fields. A design with no board answers not_found.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse getBoardGeometry(io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetBoardGeometryMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1057,6 +1153,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+     * (agni issue 1634). A front end in another language draws the board from it, and
+     * docsite/content/build/board-geometry.md says what each message means. The first page carries
+     * the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+     * nets, zones, texts and graphics, in that order. A client repeats the call with
+     * next_page_token until it comes back empty, and merges the pages with its protobuf library's
+     * merge, which appends repeated fields. A design with no board answers not_found.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getBoardGeometry(
+        io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetBoardGeometryMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -1138,11 +1251,12 @@ public final class DesignServiceGrpc {
   private static final int METHODID_GET_SHEET = 1;
   private static final int METHODID_HIGHLIGHT_SHEET = 2;
   private static final int METHODID_GET_LAYOUT_REPORT = 3;
-  private static final int METHODID_LOCATE_SUBJECTS = 4;
-  private static final int METHODID_TRACE_DESIGN = 5;
-  private static final int METHODID_REACHABLE_PINS = 6;
-  private static final int METHODID_WALK_DESIGN = 7;
-  private static final int METHODID_LIST_WALK_KINDS = 8;
+  private static final int METHODID_GET_BOARD_GEOMETRY = 4;
+  private static final int METHODID_LOCATE_SUBJECTS = 5;
+  private static final int METHODID_TRACE_DESIGN = 6;
+  private static final int METHODID_REACHABLE_PINS = 7;
+  private static final int METHODID_WALK_DESIGN = 8;
+  private static final int METHODID_LIST_WALK_KINDS = 9;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1176,6 +1290,10 @@ public final class DesignServiceGrpc {
         case METHODID_GET_LAYOUT_REPORT:
           serviceImpl.getLayoutReport((io.github.panyam.agni.v1.webapi.GetLayoutReportRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetLayoutReportResponse>) responseObserver);
+          break;
+        case METHODID_GET_BOARD_GEOMETRY:
+          serviceImpl.getBoardGeometry((io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>) responseObserver);
           break;
         case METHODID_LOCATE_SUBJECTS:
           serviceImpl.locateSubjects((io.github.panyam.agni.v1.webapi.LocateSubjectsRequest) request,
@@ -1243,6 +1361,13 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.GetLayoutReportRequest,
               io.github.panyam.agni.v1.webapi.GetLayoutReportResponse>(
                 service, METHODID_GET_LAYOUT_REPORT)))
+        .addMethod(
+          getGetBoardGeometryMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest,
+              io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>(
+                service, METHODID_GET_BOARD_GEOMETRY)))
         .addMethod(
           getLocateSubjectsMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1330,6 +1455,7 @@ public final class DesignServiceGrpc {
               .addMethod(getGetSheetMethod())
               .addMethod(getHighlightSheetMethod())
               .addMethod(getGetLayoutReportMethod())
+              .addMethod(getGetBoardGeometryMethod())
               .addMethod(getLocateSubjectsMethod())
               .addMethod(getTraceDesignMethod())
               .addMethod(getReachablePinsMethod())

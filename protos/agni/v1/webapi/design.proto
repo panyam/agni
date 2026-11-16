@@ -6,6 +6,7 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
 import "agni/v1/geom/geom.proto";
+import "agni/v1/geom/geom_board.proto";
 import "agni/v1/geom/geom_packed.proto";
 import "agni/v1/ir/ir.proto";
 import "google/protobuf/field_mask.proto";
@@ -44,6 +45,15 @@ service DesignService {
   // or an unresolved fallback. It uses the same symbol source as the render, so it describes what
   // the viewer shows. It points at --symbol-path when provided symbols do not resolve.
   rpc GetLayoutReport(GetLayoutReportRequest) returns (GetLayoutReportResponse);
+
+  // GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+  // (agni issue 1634). A front end in another language draws the board from it, and
+  // docsite/content/build/board-geometry.md says what each message means. The first page carries
+  // the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+  // nets, zones, texts and graphics, in that order. A client repeats the call with
+  // next_page_token until it comes back empty, and merges the pages with its protobuf library's
+  // merge, which appends repeated fields. A design with no board answers not_found.
+  rpc GetBoardGeometry(GetBoardGeometryRequest) returns (GetBoardGeometryResponse);
 
   // LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
   // viewer opens one of them for a selection that came from another pane, a finding or a link. It
@@ -264,6 +274,27 @@ message HighlightSheetResponse {
     agni.v1.geom.PackedHighlight packed = 1;
     string svg = 2;
   }
+}
+
+message GetBoardGeometryRequest {
+  // snapshot names the design whose board to return, "snapshots/{snapshot}".
+  string snapshot = 1;
+  // max_bytes bounds one page's encoded size. 0 means 1 MiB, and the server caps it at 3 MiB, so
+  // a page fits a gRPC client's default 4 MB limit. A page holds at least one element, so an
+  // element larger than max_bytes arrives alone on a page of its own, and the first page always
+  // holds the whole header.
+  int64 max_bytes = 2;
+  // page_token is "" for the first page, and otherwise the next_page_token of the page before. A
+  // token belongs to one snapshot revision, and a token from another is invalid_argument.
+  string page_token = 3;
+}
+
+message GetBoardGeometryResponse {
+  // board holds this page's part of the board. Merging every page's board in order gives the whole
+  // board. No element is split across pages, so a net's copper arrives in one NetCopper.
+  agni.v1.geom.BoardGeometry board = 1;
+  // next_page_token is "" on the last page.
+  string next_page_token = 2;
 }
 
 message GetLayoutReportRequest {

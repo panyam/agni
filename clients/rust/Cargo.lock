@@ -21,6 +21,7 @@ name = "agni-client-example"
 version = "0.1.0"
 dependencies = [
  "agni-client",
+ "prost",
  "serde",
  "serde_json",
  "tokio",

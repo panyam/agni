@@ -62,6 +62,16 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_webapi_HighlightSheetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_GetBoardGeometryRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_GetBoardGeometryRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_GetBoardGeometryResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_GetBoardGeometryResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_webapi_GetLayoutReportRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -227,203 +237,213 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n\033agni/v1/webapi/design.proto\022\016agni.v1.w" +
       "ebapi\032\033agni/v1/checks/checks.proto\032\027agni" +
-      "/v1/geom/geom.proto\032\036agni/v1/geom/geom_p" +
-      "acked.proto\032\023agni/v1/ir/ir.proto\032 google" +
-      "/protobuf/field_mask.proto\"K\n\010SheetRef\022\016" +
-      "\n\002id\030\001 \001(\tR\002id\022\022\n\004name\030\002 \001(\tR\004name\022\033\n\tpa" +
-      "rent_id\030\003 \001(\tR\010parentId\"\307\001\n\020GetDesignReq" +
-      "uest\022\032\n\010snapshot\030\007 \001(\tR\010snapshot\022\026\n\006layo" +
-      "ut\030\001 \001(\tR\006layout\0227\n\tread_mask\030\004 \001(\0132\032.go" +
-      "ogle.protobuf.FieldMaskR\010readMask\022\022\n\004net" +
-      "s\030\005 \003(\tR\004nets\022\027\n\007ref_des\030\006 \003(\tR\006refDesJ\004" +
-      "\010\002\020\003J\004\010\003\020\004R\003uriR\010as_named\"\211\005\n\021GetDesignR" +
-      "esponse\022\022\n\004name\030\001 \001(\tR\004name\022#\n\rsource_fo" +
-      "rmat\030\002 \001(\tR\014sourceFormat\022\'\n\017component_co" +
-      "unt\030\003 \001(\005R\016componentCount\022\033\n\tnet_count\030\004" +
-      " \001(\005R\010netCount\0228\n\007undrawn\030\t \003(\0132\036.agni.v" +
-      "1.geom.UndrawnPlacementR\007undrawn\022\026\n\006layo" +
-      "ut\030\005 \001(\tR\006layout\0220\n\006sheets\030\006 \003(\0132\030.agni." +
-      "v1.webapi.SheetRefR\006sheets\022)\n\020native_ava" +
-      "ilable\030\007 \001(\010R\017nativeAvailable\022+\n\021availab" +
-      "le_layouts\030\010 \003(\tR\020availableLayouts\022!\n\014co" +
-      "ntent_hash\030\n \001(\tR\013contentHash\022R\n\024unexpan" +
-      "ded_hierarchy\030\013 \003(\0132\037.agni.v1.ir.Unexpan" +
-      "dedHierarchyR\023unexpandedHierarchy\022*\n\006des" +
-      "ign\030\014 \001(\0132\022.agni.v1.ir.DesignR\006design\022%\n" +
-      "\016hierarchy_note\030\r \001(\tR\rhierarchyNote\022!\n\014" +
-      "drawing_note\030\016 \001(\tR\013drawingNote\022,\n\022flatt" +
-      "en_reads_more\030\017 \001(\010R\020flattenReadsMore\"\343\001" +
-      "\n\017GetSheetRequest\022\032\n\010snapshot\030\007 \001(\tR\010sna" +
-      "pshot\022\024\n\005sheet\030\001 \001(\tR\005sheet\022\026\n\006layout\030\002 " +
-      "\001(\tR\006layout\0223\n\006format\030\003 \001(\0162\033.agni.v1.we" +
-      "bapi.SheetFormatR\006format\0226\n\007symbols\030\004 \001(" +
-      "\0162\034.agni.v1.webapi.SymbolSourceR\007symbols" +
-      "J\004\010\005\020\006J\004\010\006\020\007R\003uriR\010as_named\"\345\001\n\020GetSheet" +
-      "Response\0223\n\006packed\030\001 \001(\0132\031.agni.v1.geom." +
-      "PackedSheetH\000R\006packed\022\022\n\003svg\030\002 \001(\tH\000R\003sv" +
-      "g\022>\n\014board_layers\030\003 \003(\0132\033.agni.v1.geom.B" +
-      "oardLayerRowR\013boardLayers\022=\n\013board_stack" +
-      "\030\004 \001(\0132\034.agni.v1.geom.BoardStackViewR\nbo" +
-      "ardStackB\t\n\007content\"\234\002\n\025HighlightSheetRe" +
-      "quest\022\032\n\010snapshot\030\010 \001(\tR\010snapshot\022\024\n\005she" +
-      "et\030\001 \001(\tR\005sheet\022\026\n\006layout\030\002 \001(\tR\006layout\022" +
-      "6\n\007symbols\030\003 \001(\0162\034.agni.v1.webapi.Symbol" +
-      "SourceR\007symbols\0223\n\006format\030\004 \001(\0162\033.agni.v" +
-      "1.webapi.SheetFormatR\006format\0221\n\005specs\030\005 " +
-      "\003(\0132\033.agni.v1.geom.HighlightSpecR\005specsJ" +
-      "\004\010\006\020\007J\004\010\007\020\010R\003uriR\010as_named\"p\n\026HighlightS" +
-      "heetResponse\0227\n\006packed\030\001 \001(\0132\035.agni.v1.g" +
-      "eom.PackedHighlightH\000R\006packed\022\022\n\003svg\030\002 \001" +
-      "(\tH\000R\003svgB\t\n\007content\"\207\001\n\026GetLayoutReport" +
-      "Request\022\032\n\010snapshot\030\004 \001(\tR\010snapshot\0226\n\007s" +
-      "ymbols\030\001 \001(\0162\034.agni.v1.webapi.SymbolSour" +
-      "ceR\007symbolsJ\004\010\002\020\003J\004\010\003\020\004R\003uriR\010as_named\"S" +
-      "\n\027GetLayoutReportResponse\0228\n\006report\030\001 \001(" +
-      "\0132 .agni.v1.webapi.ConversionReportR\006rep" +
-      "ort\"\301\001\n\022TraceDesignRequest\022\032\n\010snapshot\030\006" +
-      " \001(\tR\010snapshot\0221\n\004from\030\002 \001(\0132\035.agni.v1.w" +
-      "ebapi.TraceEndpointR\004from\022-\n\002to\030\003 \001(\0132\035." +
-      "agni.v1.webapi.TraceEndpointR\002to\022\022\n\004hops" +
-      "\030\004 \001(\005R\004hopsJ\004\010\001\020\002J\004\010\005\020\006R\003uriR\010as_named\"" +
-      ":\n\rTraceEndpoint\022\027\n\007ref_des\030\001 \001(\tR\006refDe" +
-      "s\022\020\n\003pin\030\002 \001(\tR\003pin\"y\n\024ReachablePinsRequ" +
-      "est\022\032\n\010snapshot\030\001 \001(\tR\010snapshot\0221\n\004from\030" +
-      "\002 \001(\0132\035.agni.v1.webapi.TraceEndpointR\004fr" +
-      "om\022\022\n\004hops\030\003 \001(\005R\004hops\"\332\001\n\025ReachablePins" +
-      "Response\022,\n\004from\030\001 \001(\0132\030.agni.v1.webapi." +
-      "TraceEndR\004from\022\026\n\006reason\030\002 \001(\tR\006reason\022\026" +
-      "\n\006radius\030\003 \001(\005R\006radius\0220\n\004pins\030\004 \003(\0132\034.a" +
-      "gni.v1.webapi.ReachablePinR\004pins\0221\n\005rail" +
-      "s\030\005 \003(\0132\033.agni.v1.webapi.ReachedRailR\005ra" +
-      "ils\"P\n\014ReachablePin\022*\n\003end\030\001 \001(\0132\030.agni." +
-      "v1.webapi.TraceEndR\003end\022\024\n\005depth\030\002 \001(\005R\005" +
-      "depth\"I\n\013ReachedRail\022\020\n\003net\030\001 \001(\tR\003net\022\024" +
-      "\n\005depth\030\002 \001(\005R\005depth\022\022\n\004pins\030\003 \001(\005R\004pins" +
-      "\"B\n\023TraceDesignResponse\022+\n\005trace\030\001 \001(\0132\025" +
-      ".agni.v1.webapi.TraceR\005trace\"\257\002\n\005Trace\022," +
-      "\n\004from\030\001 \001(\0132\030.agni.v1.webapi.TraceEndR\004" +
-      "from\022(\n\002to\030\002 \001(\0132\030.agni.v1.webapi.TraceE" +
-      "ndR\002to\0226\n\007outcome\030\003 \001(\0162\034.agni.v1.webapi" +
-      ".TraceOutcomeR\007outcome\022\026\n\006reason\030\004 \001(\tR\006" +
-      "reason\022\026\n\006radius\030\005 \001(\005R\006radius\0228\n\tcrossi" +
-      "ngs\030\006 \003(\0132\032.agni.v1.webapi.TraceCrossR\tc" +
-      "rossings\022,\n\004nets\030\007 \003(\0132\030.agni.v1.webapi." +
-      "TraceNetR\004nets\"\217\001\n\010TraceEnd\0229\n\010endpoint\030" +
-      "\001 \001(\0132\035.agni.v1.webapi.TraceEndpointR\010en" +
-      "dpoint\022\031\n\010pin_name\030\002 \001(\tR\007pinName\022\020\n\003net" +
-      "\030\003 \001(\tR\003net\022\033\n\tsheet_ids\030\004 \003(\tR\010sheetIds" +
-      "\"\275\001\n\nTraceCross\022\027\n\007ref_des\030\001 \001(\tR\006refDes" +
-      "\022\024\n\005class\030\002 \001(\tR\005class\022\033\n\tenter_pin\030\003 \001(" +
-      "\tR\010enterPin\022\031\n\010exit_pin\030\004 \001(\tR\007exitPin\022\031" +
-      "\n\010from_net\030\005 \001(\tR\007fromNet\022\025\n\006to_net\030\006 \001(" +
-      "\tR\005toNet\022\026\n\006paired\030\007 \001(\010R\006paired\"\252\001\n\010Tra" +
-      "ceNet\022\022\n\004name\030\001 \001(\tR\004name\022/\n\005stubs\030\002 \003(\013" +
-      "2\031.agni.v1.webapi.TraceStubR\005stubs\022!\n\014st" +
-      "ubs_elided\030\003 \001(\005R\013stubsElided\022\031\n\010bus_lik" +
-      "e\030\004 \001(\010R\007busLike\022\033\n\tsheet_ids\030\005 \003(\tR\010she" +
-      "etIds\"\322\001\n\021WalkDesignRequest\022\032\n\010snapshot\030" +
-      "\001 \001(\tR\010snapshot\0221\n\004from\030\002 \001(\0132\035.agni.v1." +
-      "webapi.TraceEndpointR\004from\022\022\n\004kind\030\003 \001(\t" +
-      "R\004kind\022\022\n\004hops\030\004 \001(\005R\004hops\022\030\n\007through\030\005 " +
-      "\003(\tR\007through\022,\n\004goal\030\006 \001(\0132\030.agni.v1.web" +
-      "api.WalkGoalR\004goal\"q\n\010WalkGoal\022\022\n\004kind\030\001" +
-      " \001(\tR\004kind\022\016\n\002at\030\002 \001(\tR\002at\022-\n\002to\030\003 \001(\0132\035" +
-      ".agni.v1.webapi.TraceEndpointR\002to\022\022\n\004hop" +
-      "s\030\004 \001(\005R\004hops\"\371\001\n\016WalkGoalAnswer\022\022\n\004kind" +
-      "\030\001 \001(\tR\004kind\022\016\n\002at\030\002 \001(\tR\002at\022(\n\002to\030\003 \001(\013" +
-      "2\030.agni.v1.webapi.TraceEndR\002to\0226\n\007outcom" +
-      "e\030\004 \001(\0162\034.agni.v1.webapi.TraceOutcomeR\007o" +
-      "utcome\022\026\n\006reason\030\005 \001(\tR\006reason\022\026\n\006radius" +
-      "\030\006 \001(\005R\006radius\0221\n\006routes\030\007 \003(\0132\031.agni.v1" +
-      ".webapi.WalkRouteR\006routes\"\240\001\n\tWalkRoute\022" +
-      "8\n\tcrossings\030\001 \003(\0132\032.agni.v1.webapi.Trac" +
-      "eCrossR\tcrossings\022,\n\004nets\030\002 \003(\0132\030.agni.v" +
-      "1.webapi.TraceNetR\004nets\022\027\n\007ends_at\030\003 \001(\t" +
-      "R\006endsAt\022\022\n\004note\030\004 \001(\tR\004note\">\n\022WalkDesi" +
-      "gnResponse\022(\n\004walk\030\001 \001(\0132\024.agni.v1.webap" +
-      "i.WalkR\004walk\"\307\002\n\004Walk\022,\n\004from\030\001 \001(\0132\030.ag" +
-      "ni.v1.webapi.TraceEndR\004from\022\022\n\004kind\030\002 \001(" +
-      "\tR\004kind\022\026\n\006radius\030\003 \001(\005R\006radius\022\026\n\006reaso" +
-      "n\030\004 \001(\tR\006reason\022+\n\004nets\030\005 \003(\0132\027.agni.v1." +
-      "webapi.WalkNetR\004nets\0228\n\010boundary\030\006 \003(\0132\034" +
-      ".agni.v1.webapi.WalkBoundaryR\010boundary\0222" +
-      "\n\006elided\030\007 \003(\0132\032.agni.v1.webapi.WalkElid" +
-      "edR\006elided\0222\n\004goal\030\010 \001(\0132\036.agni.v1.webap" +
-      "i.WalkGoalAnswerR\004goal\"\322\001\n\007WalkNet\022\020\n\003ho" +
-      "p\030\001 \001(\005R\003hop\022*\n\003net\030\002 \001(\0132\030.agni.v1.weba" +
-      "pi.TraceNetR\003net\0224\n\007entered\030\003 \001(\0132\032.agni" +
-      ".v1.webapi.TraceCrossR\007entered\022\024\n\005ended\030" +
-      "\004 \001(\tR\005ended\022=\n\014also_entered\030\005 \003(\0132\032.agn" +
-      "i.v1.webapi.TraceCrossR\013alsoEntered\"y\n\014W" +
-      "alkBoundary\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\024\n\005" +
-      "class\030\002 \001(\tR\005class\022\020\n\003hop\030\003 \001(\005R\003hop\022\020\n\003" +
-      "net\030\004 \001(\tR\003net\022\026\n\006reason\030\005 \001(\tR\006reason\"2" +
-      "\n\nWalkElided\022\020\n\003hop\030\001 \001(\005R\003hop\022\022\n\004nets\030\002" +
-      " \001(\005R\004nets\"\026\n\024ListWalkKindsRequest\"G\n\025Li" +
-      "stWalkKindsResponse\022.\n\005kinds\030\001 \003(\0132\030.agn" +
-      "i.v1.webapi.WalkKindR\005kinds\"N\n\010WalkKind\022" +
-      "\022\n\004name\030\001 \001(\tR\004name\022\024\n\005title\030\002 \001(\tR\005titl" +
-      "e\022\030\n\007summary\030\003 \001(\tR\007summary\"L\n\tTraceStub" +
-      "\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\020\n\003pin\030\002 \001(\tR\003" +
-      "pin\022\024\n\005class\030\003 \001(\tR\005class\"S\n\020ConversionR" +
-      "eport\022?\n\ncomponents\030\001 \003(\0132\037.agni.v1.weba" +
-      "pi.ComponentReportR\ncomponents\"\243\001\n\017Compo" +
-      "nentReport\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\026\n\006s" +
-      "ymbol\030\002 \001(\tR\006symbol\022!\n\014device_class\030\003 \001(" +
-      "\tR\013deviceClass\022\022\n\004cell\030\004 \001(\tR\004cell\022\022\n\004ki" +
-      "nd\030\005 \001(\tR\004kind\022\024\n\005label\030\006 \001(\tR\005label\"~\n\025" +
-      "LocateSubjectsRequest\022\032\n\010snapshot\030\001 \001(\tR" +
-      "\010snapshot\0223\n\010subjects\030\002 \003(\0132\027.agni.v1.ch" +
-      "ecks.SubjectR\010subjects\022\024\n\005board\030\003 \001(\010R\005b" +
-      "oard\"S\n\026LocateSubjectsResponse\0229\n\010subjec" +
-      "ts\030\001 \003(\0132\035.agni.v1.webapi.SubjectSheetsR" +
-      "\010subjects\"\344\001\n\rSubjectSheets\0221\n\007subject\030\001" +
-      " \001(\0132\027.agni.v1.checks.SubjectR\007subject\022\033" +
-      "\n\tsheet_ids\030\002 \003(\tR\010sheetIds\022A\n\rlocate_re" +
-      "ason\030\003 \001(\0162\034.agni.v1.checks.LocateReason" +
-      "R\014locateReason\022\035\n\nboard_side\030\004 \001(\tR\tboar" +
-      "dSide\022!\n\014board_layers\030\005 \003(\tR\013boardLayers" +
-      "*s\n\013SheetFormat\022\034\n\030SHEET_FORMAT_UNSPECIF" +
-      "IED\020\000\022\027\n\023SHEET_FORMAT_PACKED\020\001\022\024\n\020SHEET_" +
-      "FORMAT_SVG\020\002\022\027\n\023SHEET_FORMAT_NATIVE\020\003*b\n" +
-      "\014SymbolSource\022\035\n\031SYMBOL_SOURCE_UNSPECIFI" +
-      "ED\020\000\022\027\n\023SYMBOL_SOURCE_GLYPH\020\001\022\032\n\026SYMBOL_" +
-      "SOURCE_FAITHFUL\020\002*\201\001\n\014TraceOutcome\022\035\n\031TR" +
-      "ACE_OUTCOME_UNSPECIFIED\020\000\022\030\n\024TRACE_OUTCO" +
-      "ME_ROUTED\020\001\022\032\n\026TRACE_OUTCOME_NO_ROUTE\020\002\022" +
-      "\034\n\030TRACE_OUTCOME_UNRESOLVED\020\0032\277\006\n\rDesign" +
-      "Service\022P\n\tGetDesign\022 .agni.v1.webapi.Ge" +
-      "tDesignRequest\032!.agni.v1.webapi.GetDesig" +
-      "nResponse\022M\n\010GetSheet\022\037.agni.v1.webapi.G" +
-      "etSheetRequest\032 .agni.v1.webapi.GetSheet" +
-      "Response\022_\n\016HighlightSheet\022%.agni.v1.web" +
-      "api.HighlightSheetRequest\032&.agni.v1.weba" +
-      "pi.HighlightSheetResponse\022b\n\017GetLayoutRe" +
-      "port\022&.agni.v1.webapi.GetLayoutReportReq" +
-      "uest\032\'.agni.v1.webapi.GetLayoutReportRes" +
-      "ponse\022_\n\016LocateSubjects\022%.agni.v1.webapi" +
-      ".LocateSubjectsRequest\032&.agni.v1.webapi." +
-      "LocateSubjectsResponse\022V\n\013TraceDesign\022\"." +
-      "agni.v1.webapi.TraceDesignRequest\032#.agni" +
-      ".v1.webapi.TraceDesignResponse\022\\\n\rReacha" +
-      "blePins\022$.agni.v1.webapi.ReachablePinsRe" +
-      "quest\032%.agni.v1.webapi.ReachablePinsResp" +
-      "onse\022S\n\nWalkDesign\022!.agni.v1.webapi.Walk" +
-      "DesignRequest\032\".agni.v1.webapi.WalkDesig" +
-      "nResponse\022\\\n\rListWalkKinds\022$.agni.v1.web" +
-      "api.ListWalkKindsRequest\032%.agni.v1.webap" +
-      "i.ListWalkKindsResponseB\266\001\n\037io.github.pa" +
-      "nyam.agni.v1.webapiB\013DesignProtoP\001Z,gith" +
-      "ub.com/panyam/agni/gen/go/agni/v1/webapi" +
-      "\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi" +
-      "\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1" +
-      "::Webapib\006proto3"
+      "/v1/geom/geom.proto\032\035agni/v1/geom/geom_b" +
+      "oard.proto\032\036agni/v1/geom/geom_packed.pro" +
+      "to\032\023agni/v1/ir/ir.proto\032 google/protobuf" +
+      "/field_mask.proto\"K\n\010SheetRef\022\016\n\002id\030\001 \001(" +
+      "\tR\002id\022\022\n\004name\030\002 \001(\tR\004name\022\033\n\tparent_id\030\003" +
+      " \001(\tR\010parentId\"\307\001\n\020GetDesignRequest\022\032\n\010s" +
+      "napshot\030\007 \001(\tR\010snapshot\022\026\n\006layout\030\001 \001(\tR" +
+      "\006layout\0227\n\tread_mask\030\004 \001(\0132\032.google.prot" +
+      "obuf.FieldMaskR\010readMask\022\022\n\004nets\030\005 \003(\tR\004" +
+      "nets\022\027\n\007ref_des\030\006 \003(\tR\006refDesJ\004\010\002\020\003J\004\010\003\020" +
+      "\004R\003uriR\010as_named\"\211\005\n\021GetDesignResponse\022\022" +
+      "\n\004name\030\001 \001(\tR\004name\022#\n\rsource_format\030\002 \001(" +
+      "\tR\014sourceFormat\022\'\n\017component_count\030\003 \001(\005" +
+      "R\016componentCount\022\033\n\tnet_count\030\004 \001(\005R\010net" +
+      "Count\0228\n\007undrawn\030\t \003(\0132\036.agni.v1.geom.Un" +
+      "drawnPlacementR\007undrawn\022\026\n\006layout\030\005 \001(\tR" +
+      "\006layout\0220\n\006sheets\030\006 \003(\0132\030.agni.v1.webapi" +
+      ".SheetRefR\006sheets\022)\n\020native_available\030\007 " +
+      "\001(\010R\017nativeAvailable\022+\n\021available_layout" +
+      "s\030\010 \003(\tR\020availableLayouts\022!\n\014content_has" +
+      "h\030\n \001(\tR\013contentHash\022R\n\024unexpanded_hiera" +
+      "rchy\030\013 \003(\0132\037.agni.v1.ir.UnexpandedHierar" +
+      "chyR\023unexpandedHierarchy\022*\n\006design\030\014 \001(\013" +
+      "2\022.agni.v1.ir.DesignR\006design\022%\n\016hierarch" +
+      "y_note\030\r \001(\tR\rhierarchyNote\022!\n\014drawing_n" +
+      "ote\030\016 \001(\tR\013drawingNote\022,\n\022flatten_reads_" +
+      "more\030\017 \001(\010R\020flattenReadsMore\"\343\001\n\017GetShee" +
+      "tRequest\022\032\n\010snapshot\030\007 \001(\tR\010snapshot\022\024\n\005" +
+      "sheet\030\001 \001(\tR\005sheet\022\026\n\006layout\030\002 \001(\tR\006layo" +
+      "ut\0223\n\006format\030\003 \001(\0162\033.agni.v1.webapi.Shee" +
+      "tFormatR\006format\0226\n\007symbols\030\004 \001(\0162\034.agni." +
+      "v1.webapi.SymbolSourceR\007symbolsJ\004\010\005\020\006J\004\010" +
+      "\006\020\007R\003uriR\010as_named\"\345\001\n\020GetSheetResponse\022" +
+      "3\n\006packed\030\001 \001(\0132\031.agni.v1.geom.PackedShe" +
+      "etH\000R\006packed\022\022\n\003svg\030\002 \001(\tH\000R\003svg\022>\n\014boar" +
+      "d_layers\030\003 \003(\0132\033.agni.v1.geom.BoardLayer" +
+      "RowR\013boardLayers\022=\n\013board_stack\030\004 \001(\0132\034." +
+      "agni.v1.geom.BoardStackViewR\nboardStackB" +
+      "\t\n\007content\"\234\002\n\025HighlightSheetRequest\022\032\n\010" +
+      "snapshot\030\010 \001(\tR\010snapshot\022\024\n\005sheet\030\001 \001(\tR" +
+      "\005sheet\022\026\n\006layout\030\002 \001(\tR\006layout\0226\n\007symbol" +
+      "s\030\003 \001(\0162\034.agni.v1.webapi.SymbolSourceR\007s" +
+      "ymbols\0223\n\006format\030\004 \001(\0162\033.agni.v1.webapi." +
+      "SheetFormatR\006format\0221\n\005specs\030\005 \003(\0132\033.agn" +
+      "i.v1.geom.HighlightSpecR\005specsJ\004\010\006\020\007J\004\010\007" +
+      "\020\010R\003uriR\010as_named\"p\n\026HighlightSheetRespo" +
+      "nse\0227\n\006packed\030\001 \001(\0132\035.agni.v1.geom.Packe" +
+      "dHighlightH\000R\006packed\022\022\n\003svg\030\002 \001(\tH\000R\003svg" +
+      "B\t\n\007content\"q\n\027GetBoardGeometryRequest\022\032" +
+      "\n\010snapshot\030\001 \001(\tR\010snapshot\022\033\n\tmax_bytes\030" +
+      "\002 \001(\003R\010maxBytes\022\035\n\npage_token\030\003 \001(\tR\tpag" +
+      "eToken\"u\n\030GetBoardGeometryResponse\0221\n\005bo" +
+      "ard\030\001 \001(\0132\033.agni.v1.geom.BoardGeometryR\005" +
+      "board\022&\n\017next_page_token\030\002 \001(\tR\rnextPage" +
+      "Token\"\207\001\n\026GetLayoutReportRequest\022\032\n\010snap" +
+      "shot\030\004 \001(\tR\010snapshot\0226\n\007symbols\030\001 \001(\0162\034." +
+      "agni.v1.webapi.SymbolSourceR\007symbolsJ\004\010\002" +
+      "\020\003J\004\010\003\020\004R\003uriR\010as_named\"S\n\027GetLayoutRepo" +
+      "rtResponse\0228\n\006report\030\001 \001(\0132 .agni.v1.web" +
+      "api.ConversionReportR\006report\"\301\001\n\022TraceDe" +
+      "signRequest\022\032\n\010snapshot\030\006 \001(\tR\010snapshot\022" +
+      "1\n\004from\030\002 \001(\0132\035.agni.v1.webapi.TraceEndp" +
+      "ointR\004from\022-\n\002to\030\003 \001(\0132\035.agni.v1.webapi." +
+      "TraceEndpointR\002to\022\022\n\004hops\030\004 \001(\005R\004hopsJ\004\010" +
+      "\001\020\002J\004\010\005\020\006R\003uriR\010as_named\":\n\rTraceEndpoin" +
+      "t\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\020\n\003pin\030\002 \001(\tR" +
+      "\003pin\"y\n\024ReachablePinsRequest\022\032\n\010snapshot" +
+      "\030\001 \001(\tR\010snapshot\0221\n\004from\030\002 \001(\0132\035.agni.v1" +
+      ".webapi.TraceEndpointR\004from\022\022\n\004hops\030\003 \001(" +
+      "\005R\004hops\"\332\001\n\025ReachablePinsResponse\022,\n\004fro" +
+      "m\030\001 \001(\0132\030.agni.v1.webapi.TraceEndR\004from\022" +
+      "\026\n\006reason\030\002 \001(\tR\006reason\022\026\n\006radius\030\003 \001(\005R" +
+      "\006radius\0220\n\004pins\030\004 \003(\0132\034.agni.v1.webapi.R" +
+      "eachablePinR\004pins\0221\n\005rails\030\005 \003(\0132\033.agni." +
+      "v1.webapi.ReachedRailR\005rails\"P\n\014Reachabl" +
+      "ePin\022*\n\003end\030\001 \001(\0132\030.agni.v1.webapi.Trace" +
+      "EndR\003end\022\024\n\005depth\030\002 \001(\005R\005depth\"I\n\013Reache" +
+      "dRail\022\020\n\003net\030\001 \001(\tR\003net\022\024\n\005depth\030\002 \001(\005R\005" +
+      "depth\022\022\n\004pins\030\003 \001(\005R\004pins\"B\n\023TraceDesign" +
+      "Response\022+\n\005trace\030\001 \001(\0132\025.agni.v1.webapi" +
+      ".TraceR\005trace\"\257\002\n\005Trace\022,\n\004from\030\001 \001(\0132\030." +
+      "agni.v1.webapi.TraceEndR\004from\022(\n\002to\030\002 \001(" +
+      "\0132\030.agni.v1.webapi.TraceEndR\002to\0226\n\007outco" +
+      "me\030\003 \001(\0162\034.agni.v1.webapi.TraceOutcomeR\007" +
+      "outcome\022\026\n\006reason\030\004 \001(\tR\006reason\022\026\n\006radiu" +
+      "s\030\005 \001(\005R\006radius\0228\n\tcrossings\030\006 \003(\0132\032.agn" +
+      "i.v1.webapi.TraceCrossR\tcrossings\022,\n\004net" +
+      "s\030\007 \003(\0132\030.agni.v1.webapi.TraceNetR\004nets\"" +
+      "\217\001\n\010TraceEnd\0229\n\010endpoint\030\001 \001(\0132\035.agni.v1" +
+      ".webapi.TraceEndpointR\010endpoint\022\031\n\010pin_n" +
+      "ame\030\002 \001(\tR\007pinName\022\020\n\003net\030\003 \001(\tR\003net\022\033\n\t" +
+      "sheet_ids\030\004 \003(\tR\010sheetIds\"\275\001\n\nTraceCross" +
+      "\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\024\n\005class\030\002 \001(\t" +
+      "R\005class\022\033\n\tenter_pin\030\003 \001(\tR\010enterPin\022\031\n\010" +
+      "exit_pin\030\004 \001(\tR\007exitPin\022\031\n\010from_net\030\005 \001(" +
+      "\tR\007fromNet\022\025\n\006to_net\030\006 \001(\tR\005toNet\022\026\n\006pai" +
+      "red\030\007 \001(\010R\006paired\"\252\001\n\010TraceNet\022\022\n\004name\030\001" +
+      " \001(\tR\004name\022/\n\005stubs\030\002 \003(\0132\031.agni.v1.weba" +
+      "pi.TraceStubR\005stubs\022!\n\014stubs_elided\030\003 \001(" +
+      "\005R\013stubsElided\022\031\n\010bus_like\030\004 \001(\010R\007busLik" +
+      "e\022\033\n\tsheet_ids\030\005 \003(\tR\010sheetIds\"\322\001\n\021WalkD" +
+      "esignRequest\022\032\n\010snapshot\030\001 \001(\tR\010snapshot" +
+      "\0221\n\004from\030\002 \001(\0132\035.agni.v1.webapi.TraceEnd" +
+      "pointR\004from\022\022\n\004kind\030\003 \001(\tR\004kind\022\022\n\004hops\030" +
+      "\004 \001(\005R\004hops\022\030\n\007through\030\005 \003(\tR\007through\022,\n" +
+      "\004goal\030\006 \001(\0132\030.agni.v1.webapi.WalkGoalR\004g" +
+      "oal\"q\n\010WalkGoal\022\022\n\004kind\030\001 \001(\tR\004kind\022\016\n\002a" +
+      "t\030\002 \001(\tR\002at\022-\n\002to\030\003 \001(\0132\035.agni.v1.webapi" +
+      ".TraceEndpointR\002to\022\022\n\004hops\030\004 \001(\005R\004hops\"\371" +
+      "\001\n\016WalkGoalAnswer\022\022\n\004kind\030\001 \001(\tR\004kind\022\016\n" +
+      "\002at\030\002 \001(\tR\002at\022(\n\002to\030\003 \001(\0132\030.agni.v1.weba" +
+      "pi.TraceEndR\002to\0226\n\007outcome\030\004 \001(\0162\034.agni." +
+      "v1.webapi.TraceOutcomeR\007outcome\022\026\n\006reaso" +
+      "n\030\005 \001(\tR\006reason\022\026\n\006radius\030\006 \001(\005R\006radius\022" +
+      "1\n\006routes\030\007 \003(\0132\031.agni.v1.webapi.WalkRou" +
+      "teR\006routes\"\240\001\n\tWalkRoute\0228\n\tcrossings\030\001 " +
+      "\003(\0132\032.agni.v1.webapi.TraceCrossR\tcrossin" +
+      "gs\022,\n\004nets\030\002 \003(\0132\030.agni.v1.webapi.TraceN" +
+      "etR\004nets\022\027\n\007ends_at\030\003 \001(\tR\006endsAt\022\022\n\004not" +
+      "e\030\004 \001(\tR\004note\">\n\022WalkDesignResponse\022(\n\004w" +
+      "alk\030\001 \001(\0132\024.agni.v1.webapi.WalkR\004walk\"\307\002" +
+      "\n\004Walk\022,\n\004from\030\001 \001(\0132\030.agni.v1.webapi.Tr" +
+      "aceEndR\004from\022\022\n\004kind\030\002 \001(\tR\004kind\022\026\n\006radi" +
+      "us\030\003 \001(\005R\006radius\022\026\n\006reason\030\004 \001(\tR\006reason" +
+      "\022+\n\004nets\030\005 \003(\0132\027.agni.v1.webapi.WalkNetR" +
+      "\004nets\0228\n\010boundary\030\006 \003(\0132\034.agni.v1.webapi" +
+      ".WalkBoundaryR\010boundary\0222\n\006elided\030\007 \003(\0132" +
+      "\032.agni.v1.webapi.WalkElidedR\006elided\0222\n\004g" +
+      "oal\030\010 \001(\0132\036.agni.v1.webapi.WalkGoalAnswe" +
+      "rR\004goal\"\322\001\n\007WalkNet\022\020\n\003hop\030\001 \001(\005R\003hop\022*\n" +
+      "\003net\030\002 \001(\0132\030.agni.v1.webapi.TraceNetR\003ne" +
+      "t\0224\n\007entered\030\003 \001(\0132\032.agni.v1.webapi.Trac" +
+      "eCrossR\007entered\022\024\n\005ended\030\004 \001(\tR\005ended\022=\n" +
+      "\014also_entered\030\005 \003(\0132\032.agni.v1.webapi.Tra" +
+      "ceCrossR\013alsoEntered\"y\n\014WalkBoundary\022\027\n\007" +
+      "ref_des\030\001 \001(\tR\006refDes\022\024\n\005class\030\002 \001(\tR\005cl" +
+      "ass\022\020\n\003hop\030\003 \001(\005R\003hop\022\020\n\003net\030\004 \001(\tR\003net\022" +
+      "\026\n\006reason\030\005 \001(\tR\006reason\"2\n\nWalkElided\022\020\n" +
+      "\003hop\030\001 \001(\005R\003hop\022\022\n\004nets\030\002 \001(\005R\004nets\"\026\n\024L" +
+      "istWalkKindsRequest\"G\n\025ListWalkKindsResp" +
+      "onse\022.\n\005kinds\030\001 \003(\0132\030.agni.v1.webapi.Wal" +
+      "kKindR\005kinds\"N\n\010WalkKind\022\022\n\004name\030\001 \001(\tR\004" +
+      "name\022\024\n\005title\030\002 \001(\tR\005title\022\030\n\007summary\030\003 " +
+      "\001(\tR\007summary\"L\n\tTraceStub\022\027\n\007ref_des\030\001 \001" +
+      "(\tR\006refDes\022\020\n\003pin\030\002 \001(\tR\003pin\022\024\n\005class\030\003 " +
+      "\001(\tR\005class\"S\n\020ConversionReport\022?\n\ncompon" +
+      "ents\030\001 \003(\0132\037.agni.v1.webapi.ComponentRep" +
+      "ortR\ncomponents\"\243\001\n\017ComponentReport\022\027\n\007r" +
+      "ef_des\030\001 \001(\tR\006refDes\022\026\n\006symbol\030\002 \001(\tR\006sy" +
+      "mbol\022!\n\014device_class\030\003 \001(\tR\013deviceClass\022" +
+      "\022\n\004cell\030\004 \001(\tR\004cell\022\022\n\004kind\030\005 \001(\tR\004kind\022" +
+      "\024\n\005label\030\006 \001(\tR\005label\"~\n\025LocateSubjectsR" +
+      "equest\022\032\n\010snapshot\030\001 \001(\tR\010snapshot\0223\n\010su" +
+      "bjects\030\002 \003(\0132\027.agni.v1.checks.SubjectR\010s" +
+      "ubjects\022\024\n\005board\030\003 \001(\010R\005board\"S\n\026LocateS" +
+      "ubjectsResponse\0229\n\010subjects\030\001 \003(\0132\035.agni" +
+      ".v1.webapi.SubjectSheetsR\010subjects\"\344\001\n\rS" +
+      "ubjectSheets\0221\n\007subject\030\001 \001(\0132\027.agni.v1." +
+      "checks.SubjectR\007subject\022\033\n\tsheet_ids\030\002 \003" +
+      "(\tR\010sheetIds\022A\n\rlocate_reason\030\003 \001(\0162\034.ag" +
+      "ni.v1.checks.LocateReasonR\014locateReason\022" +
+      "\035\n\nboard_side\030\004 \001(\tR\tboardSide\022!\n\014board_" +
+      "layers\030\005 \003(\tR\013boardLayers*s\n\013SheetFormat" +
+      "\022\034\n\030SHEET_FORMAT_UNSPECIFIED\020\000\022\027\n\023SHEET_" +
+      "FORMAT_PACKED\020\001\022\024\n\020SHEET_FORMAT_SVG\020\002\022\027\n" +
+      "\023SHEET_FORMAT_NATIVE\020\003*b\n\014SymbolSource\022\035" +
+      "\n\031SYMBOL_SOURCE_UNSPECIFIED\020\000\022\027\n\023SYMBOL_" +
+      "SOURCE_GLYPH\020\001\022\032\n\026SYMBOL_SOURCE_FAITHFUL" +
+      "\020\002*\201\001\n\014TraceOutcome\022\035\n\031TRACE_OUTCOME_UNS" +
+      "PECIFIED\020\000\022\030\n\024TRACE_OUTCOME_ROUTED\020\001\022\032\n\026" +
+      "TRACE_OUTCOME_NO_ROUTE\020\002\022\034\n\030TRACE_OUTCOM" +
+      "E_UNRESOLVED\020\0032\246\007\n\rDesignService\022P\n\tGetD" +
+      "esign\022 .agni.v1.webapi.GetDesignRequest\032" +
+      "!.agni.v1.webapi.GetDesignResponse\022M\n\010Ge" +
+      "tSheet\022\037.agni.v1.webapi.GetSheetRequest\032" +
+      " .agni.v1.webapi.GetSheetResponse\022_\n\016Hig" +
+      "hlightSheet\022%.agni.v1.webapi.HighlightSh" +
+      "eetRequest\032&.agni.v1.webapi.HighlightShe" +
+      "etResponse\022b\n\017GetLayoutReport\022&.agni.v1." +
+      "webapi.GetLayoutReportRequest\032\'.agni.v1." +
+      "webapi.GetLayoutReportResponse\022e\n\020GetBoa" +
+      "rdGeometry\022\'.agni.v1.webapi.GetBoardGeom" +
+      "etryRequest\032(.agni.v1.webapi.GetBoardGeo" +
+      "metryResponse\022_\n\016LocateSubjects\022%.agni.v" +
+      "1.webapi.LocateSubjectsRequest\032&.agni.v1" +
+      ".webapi.LocateSubjectsResponse\022V\n\013TraceD" +
+      "esign\022\".agni.v1.webapi.TraceDesignReques" +
+      "t\032#.agni.v1.webapi.TraceDesignResponse\022\\" +
+      "\n\rReachablePins\022$.agni.v1.webapi.Reachab" +
+      "lePinsRequest\032%.agni.v1.webapi.Reachable" +
+      "PinsResponse\022S\n\nWalkDesign\022!.agni.v1.web" +
+      "api.WalkDesignRequest\032\".agni.v1.webapi.W" +
+      "alkDesignResponse\022\\\n\rListWalkKinds\022$.agn" +
+      "i.v1.webapi.ListWalkKindsRequest\032%.agni." +
+      "v1.webapi.ListWalkKindsResponseB\266\001\n\037io.g" +
+      "ithub.panyam.agni.v1.webapiB\013DesignProto" +
+      "P\001Z,github.com/panyam/agni/gen/go/agni/v" +
+      "1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V" +
+      "1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020" +
+      "Agni::V1::Webapib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           io.github.panyam.agni.v1.checks.ChecksProto.getDescriptor(),
           io.github.panyam.agni.v1.geom.GeomProto.getDescriptor(),
+          io.github.panyam.agni.v1.geom.GeomBoardProto.getDescriptor(),
           io.github.panyam.agni.v1.geom.GeomPackedProto.getDescriptor(),
           io.github.panyam.agni.v1.ir.IrProto.getDescriptor(),
           com.google.protobuf.FieldMaskProto.getDescriptor(),
@@ -470,188 +490,200 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_HighlightSheetResponse_descriptor,
         new java.lang.String[] { "Packed", "Svg", "Content", });
-    internal_static_agni_v1_webapi_GetLayoutReportRequest_descriptor =
+    internal_static_agni_v1_webapi_GetBoardGeometryRequest_descriptor =
       getDescriptor().getMessageType(7);
+    internal_static_agni_v1_webapi_GetBoardGeometryRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_GetBoardGeometryRequest_descriptor,
+        new java.lang.String[] { "Snapshot", "MaxBytes", "PageToken", });
+    internal_static_agni_v1_webapi_GetBoardGeometryResponse_descriptor =
+      getDescriptor().getMessageType(8);
+    internal_static_agni_v1_webapi_GetBoardGeometryResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_GetBoardGeometryResponse_descriptor,
+        new java.lang.String[] { "Board", "NextPageToken", });
+    internal_static_agni_v1_webapi_GetLayoutReportRequest_descriptor =
+      getDescriptor().getMessageType(9);
     internal_static_agni_v1_webapi_GetLayoutReportRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_GetLayoutReportRequest_descriptor,
         new java.lang.String[] { "Snapshot", "Symbols", });
     internal_static_agni_v1_webapi_GetLayoutReportResponse_descriptor =
-      getDescriptor().getMessageType(8);
+      getDescriptor().getMessageType(10);
     internal_static_agni_v1_webapi_GetLayoutReportResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_GetLayoutReportResponse_descriptor,
         new java.lang.String[] { "Report", });
     internal_static_agni_v1_webapi_TraceDesignRequest_descriptor =
-      getDescriptor().getMessageType(9);
+      getDescriptor().getMessageType(11);
     internal_static_agni_v1_webapi_TraceDesignRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceDesignRequest_descriptor,
         new java.lang.String[] { "Snapshot", "From", "To", "Hops", });
     internal_static_agni_v1_webapi_TraceEndpoint_descriptor =
-      getDescriptor().getMessageType(10);
+      getDescriptor().getMessageType(12);
     internal_static_agni_v1_webapi_TraceEndpoint_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceEndpoint_descriptor,
         new java.lang.String[] { "RefDes", "Pin", });
     internal_static_agni_v1_webapi_ReachablePinsRequest_descriptor =
-      getDescriptor().getMessageType(11);
+      getDescriptor().getMessageType(13);
     internal_static_agni_v1_webapi_ReachablePinsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ReachablePinsRequest_descriptor,
         new java.lang.String[] { "Snapshot", "From", "Hops", });
     internal_static_agni_v1_webapi_ReachablePinsResponse_descriptor =
-      getDescriptor().getMessageType(12);
+      getDescriptor().getMessageType(14);
     internal_static_agni_v1_webapi_ReachablePinsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ReachablePinsResponse_descriptor,
         new java.lang.String[] { "From", "Reason", "Radius", "Pins", "Rails", });
     internal_static_agni_v1_webapi_ReachablePin_descriptor =
-      getDescriptor().getMessageType(13);
+      getDescriptor().getMessageType(15);
     internal_static_agni_v1_webapi_ReachablePin_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ReachablePin_descriptor,
         new java.lang.String[] { "End", "Depth", });
     internal_static_agni_v1_webapi_ReachedRail_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(16);
     internal_static_agni_v1_webapi_ReachedRail_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ReachedRail_descriptor,
         new java.lang.String[] { "Net", "Depth", "Pins", });
     internal_static_agni_v1_webapi_TraceDesignResponse_descriptor =
-      getDescriptor().getMessageType(15);
+      getDescriptor().getMessageType(17);
     internal_static_agni_v1_webapi_TraceDesignResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceDesignResponse_descriptor,
         new java.lang.String[] { "Trace", });
     internal_static_agni_v1_webapi_Trace_descriptor =
-      getDescriptor().getMessageType(16);
+      getDescriptor().getMessageType(18);
     internal_static_agni_v1_webapi_Trace_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Trace_descriptor,
         new java.lang.String[] { "From", "To", "Outcome", "Reason", "Radius", "Crossings", "Nets", });
     internal_static_agni_v1_webapi_TraceEnd_descriptor =
-      getDescriptor().getMessageType(17);
+      getDescriptor().getMessageType(19);
     internal_static_agni_v1_webapi_TraceEnd_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceEnd_descriptor,
         new java.lang.String[] { "Endpoint", "PinName", "Net", "SheetIds", });
     internal_static_agni_v1_webapi_TraceCross_descriptor =
-      getDescriptor().getMessageType(18);
+      getDescriptor().getMessageType(20);
     internal_static_agni_v1_webapi_TraceCross_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceCross_descriptor,
         new java.lang.String[] { "RefDes", "Class_", "EnterPin", "ExitPin", "FromNet", "ToNet", "Paired", });
     internal_static_agni_v1_webapi_TraceNet_descriptor =
-      getDescriptor().getMessageType(19);
+      getDescriptor().getMessageType(21);
     internal_static_agni_v1_webapi_TraceNet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceNet_descriptor,
         new java.lang.String[] { "Name", "Stubs", "StubsElided", "BusLike", "SheetIds", });
     internal_static_agni_v1_webapi_WalkDesignRequest_descriptor =
-      getDescriptor().getMessageType(20);
+      getDescriptor().getMessageType(22);
     internal_static_agni_v1_webapi_WalkDesignRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkDesignRequest_descriptor,
         new java.lang.String[] { "Snapshot", "From", "Kind", "Hops", "Through", "Goal", });
     internal_static_agni_v1_webapi_WalkGoal_descriptor =
-      getDescriptor().getMessageType(21);
+      getDescriptor().getMessageType(23);
     internal_static_agni_v1_webapi_WalkGoal_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkGoal_descriptor,
         new java.lang.String[] { "Kind", "At", "To", "Hops", });
     internal_static_agni_v1_webapi_WalkGoalAnswer_descriptor =
-      getDescriptor().getMessageType(22);
+      getDescriptor().getMessageType(24);
     internal_static_agni_v1_webapi_WalkGoalAnswer_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkGoalAnswer_descriptor,
         new java.lang.String[] { "Kind", "At", "To", "Outcome", "Reason", "Radius", "Routes", });
     internal_static_agni_v1_webapi_WalkRoute_descriptor =
-      getDescriptor().getMessageType(23);
+      getDescriptor().getMessageType(25);
     internal_static_agni_v1_webapi_WalkRoute_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkRoute_descriptor,
         new java.lang.String[] { "Crossings", "Nets", "EndsAt", "Note", });
     internal_static_agni_v1_webapi_WalkDesignResponse_descriptor =
-      getDescriptor().getMessageType(24);
+      getDescriptor().getMessageType(26);
     internal_static_agni_v1_webapi_WalkDesignResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkDesignResponse_descriptor,
         new java.lang.String[] { "Walk", });
     internal_static_agni_v1_webapi_Walk_descriptor =
-      getDescriptor().getMessageType(25);
+      getDescriptor().getMessageType(27);
     internal_static_agni_v1_webapi_Walk_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Walk_descriptor,
         new java.lang.String[] { "From", "Kind", "Radius", "Reason", "Nets", "Boundary", "Elided", "Goal", });
     internal_static_agni_v1_webapi_WalkNet_descriptor =
-      getDescriptor().getMessageType(26);
+      getDescriptor().getMessageType(28);
     internal_static_agni_v1_webapi_WalkNet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkNet_descriptor,
         new java.lang.String[] { "Hop", "Net", "Entered", "Ended", "AlsoEntered", });
     internal_static_agni_v1_webapi_WalkBoundary_descriptor =
-      getDescriptor().getMessageType(27);
+      getDescriptor().getMessageType(29);
     internal_static_agni_v1_webapi_WalkBoundary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkBoundary_descriptor,
         new java.lang.String[] { "RefDes", "Class_", "Hop", "Net", "Reason", });
     internal_static_agni_v1_webapi_WalkElided_descriptor =
-      getDescriptor().getMessageType(28);
+      getDescriptor().getMessageType(30);
     internal_static_agni_v1_webapi_WalkElided_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkElided_descriptor,
         new java.lang.String[] { "Hop", "Nets", });
     internal_static_agni_v1_webapi_ListWalkKindsRequest_descriptor =
-      getDescriptor().getMessageType(29);
+      getDescriptor().getMessageType(31);
     internal_static_agni_v1_webapi_ListWalkKindsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListWalkKindsRequest_descriptor,
         new java.lang.String[] { });
     internal_static_agni_v1_webapi_ListWalkKindsResponse_descriptor =
-      getDescriptor().getMessageType(30);
+      getDescriptor().getMessageType(32);
     internal_static_agni_v1_webapi_ListWalkKindsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListWalkKindsResponse_descriptor,
         new java.lang.String[] { "Kinds", });
     internal_static_agni_v1_webapi_WalkKind_descriptor =
-      getDescriptor().getMessageType(31);
+      getDescriptor().getMessageType(33);
     internal_static_agni_v1_webapi_WalkKind_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_WalkKind_descriptor,
         new java.lang.String[] { "Name", "Title", "Summary", });
     internal_static_agni_v1_webapi_TraceStub_descriptor =
-      getDescriptor().getMessageType(32);
+      getDescriptor().getMessageType(34);
     internal_static_agni_v1_webapi_TraceStub_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_TraceStub_descriptor,
         new java.lang.String[] { "RefDes", "Pin", "Class_", });
     internal_static_agni_v1_webapi_ConversionReport_descriptor =
-      getDescriptor().getMessageType(33);
+      getDescriptor().getMessageType(35);
     internal_static_agni_v1_webapi_ConversionReport_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ConversionReport_descriptor,
         new java.lang.String[] { "Components", });
     internal_static_agni_v1_webapi_ComponentReport_descriptor =
-      getDescriptor().getMessageType(34);
+      getDescriptor().getMessageType(36);
     internal_static_agni_v1_webapi_ComponentReport_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ComponentReport_descriptor,
         new java.lang.String[] { "RefDes", "Symbol", "DeviceClass", "Cell", "Kind", "Label", });
     internal_static_agni_v1_webapi_LocateSubjectsRequest_descriptor =
-      getDescriptor().getMessageType(35);
+      getDescriptor().getMessageType(37);
     internal_static_agni_v1_webapi_LocateSubjectsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_LocateSubjectsRequest_descriptor,
         new java.lang.String[] { "Snapshot", "Subjects", "Board", });
     internal_static_agni_v1_webapi_LocateSubjectsResponse_descriptor =
-      getDescriptor().getMessageType(36);
+      getDescriptor().getMessageType(38);
     internal_static_agni_v1_webapi_LocateSubjectsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_LocateSubjectsResponse_descriptor,
         new java.lang.String[] { "Subjects", });
     internal_static_agni_v1_webapi_SubjectSheets_descriptor =
-      getDescriptor().getMessageType(37);
+      getDescriptor().getMessageType(39);
     internal_static_agni_v1_webapi_SubjectSheets_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_SubjectSheets_descriptor,
@@ -659,6 +691,7 @@ public final class DesignProto extends com.google.protobuf.GeneratedFile {
     descriptor.resolveAllFeaturesImmutable();
     io.github.panyam.agni.v1.checks.ChecksProto.getDescriptor();
     io.github.panyam.agni.v1.geom.GeomProto.getDescriptor();
+    io.github.panyam.agni.v1.geom.GeomBoardProto.getDescriptor();
     io.github.panyam.agni.v1.geom.GeomPackedProto.getDescriptor();
     io.github.panyam.agni.v1.ir.IrProto.getDescriptor();
     com.google.protobuf.FieldMaskProto.getDescriptor();

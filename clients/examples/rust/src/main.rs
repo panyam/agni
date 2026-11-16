@@ -8,10 +8,12 @@
 //! ```
 
 use agni_client::Client;
+use agni_client::agni::v1::geom::BoardGeometry;
 use agni_client::agni::v1::webapi::{
-    CheckDesignRequest, DeleteSnapshotRequest, GetDesignRequest, IngestRequest, RunQueryRequest,
-    Snapshot,
+    CheckDesignRequest, DeleteSnapshotRequest, GetBoardGeometryRequest, GetDesignRequest,
+    IngestRequest, RunQueryRequest, Snapshot,
 };
+use prost::Message;
 
 /// The line every language's example prints. Its JSON names are the contract.
 #[derive(serde::Serialize)]
@@ -24,10 +26,45 @@ struct Summary {
     sheets: usize,
     findings: usize,
     query_rows: usize,
+    board_layers: usize,
+    board_parts: usize,
+    board_tracks: usize,
 }
 
 /// The query every example asks, so their answers compare. The check runs every rule.
 const RESISTORS_OF: &str = r#"component.class(?c, "resistor") => ?c"#;
+
+/// Small, so the cut's 51 KB board comes in several pages and every example pages.
+const BOARD_PAGE_BYTES: i64 = 16 << 10;
+
+/// Reads every page of the snapshot's board and merges them, as
+/// docsite/content/build/board-geometry.md says a client does. prost merges from bytes, and a
+/// merge appends repeated fields, so each page is merged in its encoded form.
+async fn board_geometry(client: &Client, snapshot: &str) -> Result<BoardGeometry, String> {
+    let mut board = BoardGeometry::default();
+    let mut page_token = String::new();
+    loop {
+        let page = client
+            .designs()
+            .get_board_geometry(GetBoardGeometryRequest {
+                snapshot: snapshot.to_string(),
+                max_bytes: BOARD_PAGE_BYTES,
+                page_token,
+            })
+            .await
+            .map_err(|s| format!("calling GetBoardGeometry: {s}"))?
+            .into_inner();
+        if let Some(part) = page.board {
+            board
+                .merge(part.encode_to_vec().as_slice())
+                .map_err(|e| format!("merging a board page: {e}"))?;
+        }
+        if page.next_page_token.is_empty() {
+            return Ok(board);
+        }
+        page_token = page.next_page_token;
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -119,6 +156,7 @@ async fn ask(client: &Client, snapshot: &str) -> Result<Summary, String> {
         .await
         .map_err(|s| format!("calling RunQuery: {s}"))?
         .into_inner();
+    let board = board_geometry(client, snapshot).await?;
     let info = client.info();
     let mut features = info.features.clone();
     features.sort();
@@ -131,5 +169,8 @@ async fn ask(client: &Client, snapshot: &str) -> Result<Summary, String> {
         sheets: d.sheets.len(),
         findings: c.findings.len(),
         query_rows: q.rows.len(),
+        board_layers: board.layers.len(),
+        board_parts: board.placements.len(),
+        board_tracks: board.nets.iter().map(|n| n.segments.len()).sum(),
     })
 }

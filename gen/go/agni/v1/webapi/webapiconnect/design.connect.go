@@ -43,6 +43,9 @@ const (
 	// DesignServiceGetLayoutReportProcedure is the fully-qualified name of the DesignService's
 	// GetLayoutReport RPC.
 	DesignServiceGetLayoutReportProcedure = "/agni.v1.webapi.DesignService/GetLayoutReport"
+	// DesignServiceGetBoardGeometryProcedure is the fully-qualified name of the DesignService's
+	// GetBoardGeometry RPC.
+	DesignServiceGetBoardGeometryProcedure = "/agni.v1.webapi.DesignService/GetBoardGeometry"
 	// DesignServiceLocateSubjectsProcedure is the fully-qualified name of the DesignService's
 	// LocateSubjects RPC.
 	DesignServiceLocateSubjectsProcedure = "/agni.v1.webapi.DesignService/LocateSubjects"
@@ -85,6 +88,14 @@ type DesignServiceClient interface {
 	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
 	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+	// (agni issue 1634). A front end in another language draws the board from it, and
+	// docsite/content/build/board-geometry.md says what each message means. The first page carries
+	// the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+	// nets, zones, texts and graphics, in that order. A client repeats the call with
+	// next_page_token until it comes back empty, and merges the pages with its protobuf library's
+	// merge, which appends repeated fields. A design with no board answers not_found.
+	GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error)
 	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
 	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
 	// answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -157,6 +168,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 			connect.WithClientOptions(opts...),
 		),
+		getBoardGeometry: connect.NewClient[webapi.GetBoardGeometryRequest, webapi.GetBoardGeometryResponse](
+			httpClient,
+			baseURL+DesignServiceGetBoardGeometryProcedure,
+			connect.WithSchema(designServiceMethods.ByName("GetBoardGeometry")),
+			connect.WithClientOptions(opts...),
+		),
 		locateSubjects: connect.NewClient[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse](
 			httpClient,
 			baseURL+DesignServiceLocateSubjectsProcedure,
@@ -192,15 +209,16 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // designServiceClient implements DesignServiceClient.
 type designServiceClient struct {
-	getDesign       *connect.Client[webapi.GetDesignRequest, webapi.GetDesignResponse]
-	getSheet        *connect.Client[webapi.GetSheetRequest, webapi.GetSheetResponse]
-	highlightSheet  *connect.Client[webapi.HighlightSheetRequest, webapi.HighlightSheetResponse]
-	getLayoutReport *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
-	locateSubjects  *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
-	traceDesign     *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
-	reachablePins   *connect.Client[webapi.ReachablePinsRequest, webapi.ReachablePinsResponse]
-	walkDesign      *connect.Client[webapi.WalkDesignRequest, webapi.WalkDesignResponse]
-	listWalkKinds   *connect.Client[webapi.ListWalkKindsRequest, webapi.ListWalkKindsResponse]
+	getDesign        *connect.Client[webapi.GetDesignRequest, webapi.GetDesignResponse]
+	getSheet         *connect.Client[webapi.GetSheetRequest, webapi.GetSheetResponse]
+	highlightSheet   *connect.Client[webapi.HighlightSheetRequest, webapi.HighlightSheetResponse]
+	getLayoutReport  *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
+	getBoardGeometry *connect.Client[webapi.GetBoardGeometryRequest, webapi.GetBoardGeometryResponse]
+	locateSubjects   *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
+	traceDesign      *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
+	reachablePins    *connect.Client[webapi.ReachablePinsRequest, webapi.ReachablePinsResponse]
+	walkDesign       *connect.Client[webapi.WalkDesignRequest, webapi.WalkDesignResponse]
+	listWalkKinds    *connect.Client[webapi.ListWalkKindsRequest, webapi.ListWalkKindsResponse]
 }
 
 // GetDesign calls agni.v1.webapi.DesignService.GetDesign.
@@ -221,6 +239,11 @@ func (c *designServiceClient) HighlightSheet(ctx context.Context, req *connect.R
 // GetLayoutReport calls agni.v1.webapi.DesignService.GetLayoutReport.
 func (c *designServiceClient) GetLayoutReport(ctx context.Context, req *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return c.getLayoutReport.CallUnary(ctx, req)
+}
+
+// GetBoardGeometry calls agni.v1.webapi.DesignService.GetBoardGeometry.
+func (c *designServiceClient) GetBoardGeometry(ctx context.Context, req *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
+	return c.getBoardGeometry.CallUnary(ctx, req)
 }
 
 // LocateSubjects calls agni.v1.webapi.DesignService.LocateSubjects.
@@ -273,6 +296,14 @@ type DesignServiceHandler interface {
 	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
 	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// GetBoardGeometry returns the design's board as agni.v1.geom.BoardGeometry, a page at a time
+	// (agni issue 1634). A front end in another language draws the board from it, and
+	// docsite/content/build/board-geometry.md says what each message means. The first page carries
+	// the board's units, layers, stack, outline and padstacks. Later pages carry whole placements,
+	// nets, zones, texts and graphics, in that order. A client repeats the call with
+	// next_page_token until it comes back empty, and merges the pages with its protobuf library's
+	// merge, which appends repeated fields. A design with no board answers not_found.
+	GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error)
 	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
 	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
 	// answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -341,6 +372,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceGetBoardGeometryHandler := connect.NewUnaryHandler(
+		DesignServiceGetBoardGeometryProcedure,
+		svc.GetBoardGeometry,
+		connect.WithSchema(designServiceMethods.ByName("GetBoardGeometry")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceLocateSubjectsHandler := connect.NewUnaryHandler(
 		DesignServiceLocateSubjectsProcedure,
 		svc.LocateSubjects,
@@ -381,6 +418,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceHighlightSheetHandler.ServeHTTP(w, r)
 		case DesignServiceGetLayoutReportProcedure:
 			designServiceGetLayoutReportHandler.ServeHTTP(w, r)
+		case DesignServiceGetBoardGeometryProcedure:
+			designServiceGetBoardGeometryHandler.ServeHTTP(w, r)
 		case DesignServiceLocateSubjectsProcedure:
 			designServiceLocateSubjectsHandler.ServeHTTP(w, r)
 		case DesignServiceTraceDesignProcedure:
@@ -414,6 +453,10 @@ func (UnimplementedDesignServiceHandler) HighlightSheet(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetLayoutReport is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetBoardGeometry is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) LocateSubjects(context.Context, *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {

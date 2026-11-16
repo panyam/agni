@@ -1,9 +1,13 @@
 package io.github.panyam.agni.example;
 
 import io.github.panyam.agni.client.AgniClient;
+import io.github.panyam.agni.v1.geom.BoardGeometry;
+import io.github.panyam.agni.v1.geom.NetCopper;
 import io.github.panyam.agni.v1.webapi.CheckDesignRequest;
 import io.github.panyam.agni.v1.webapi.CheckDesignResponse;
 import io.github.panyam.agni.v1.webapi.DeleteSnapshotRequest;
+import io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest;
+import io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse;
 import io.github.panyam.agni.v1.webapi.GetDesignResponse;
 import io.github.panyam.agni.v1.webapi.GetDesignRequest;
 import io.github.panyam.agni.v1.webapi.IngestRequest;
@@ -27,6 +31,36 @@ import java.util.function.Supplier;
 public final class Main {
   /** The query every example asks, so their answers compare. The check runs every rule. */
   private static final String RESISTORS_OF = "component.class(?c, \"resistor\") => ?c";
+
+  /** Small, so the cut's 51 KB board comes in several pages and every example pages. */
+  private static final long BOARD_PAGE_BYTES = 16 << 10;
+
+  /**
+   * Reads every page of the snapshot's board and merges them, as
+   * docsite/content/build/board-geometry.md says a client does. mergeFrom appends repeated fields.
+   */
+  private static BoardGeometry boardGeometry(AgniClient client, String snapshot) {
+    BoardGeometry.Builder board = BoardGeometry.newBuilder();
+    String token = "";
+    do {
+      String pageToken = token;
+      GetBoardGeometryResponse page =
+          call(
+              "GetBoardGeometry",
+              () ->
+                  client
+                      .designs()
+                      .getBoardGeometry(
+                          GetBoardGeometryRequest.newBuilder()
+                              .setSnapshot(snapshot)
+                              .setMaxBytes(BOARD_PAGE_BYTES)
+                              .setPageToken(pageToken)
+                              .build()));
+      board.mergeFrom(page.getBoard());
+      token = page.getNextPageToken();
+    } while (!token.isEmpty());
+    return board.build();
+  }
 
   public static void main(String[] args) {
     String server = "http://127.0.0.1:8080";
@@ -90,6 +124,11 @@ public final class Main {
                       .queries()
                       .runQuery(
                           RunQueryRequest.newBuilder().setSnapshot(name).setQuery(RESISTORS_OF).build()));
+      BoardGeometry board = boardGeometry(client, name);
+      int tracks = 0;
+      for (NetCopper n : board.getNetsList()) {
+        tracks += n.getSegmentsCount();
+      }
       List<String> features = new ArrayList<>(info.getFeaturesList());
       features.sort(null);
       List<String> quoted = new ArrayList<>();
@@ -112,6 +151,12 @@ public final class Main {
           + c.getFindingsCount()
           + ",\"query_rows\":"
           + q.getRowsCount()
+          + ",\"board_layers\":"
+          + board.getLayersCount()
+          + ",\"board_parts\":"
+          + board.getPlacementsCount()
+          + ",\"board_tracks\":"
+          + tracks
           + "}";
     } finally {
       client.snapshots().deleteSnapshot(DeleteSnapshotRequest.newBuilder().setName(name).build());
