@@ -305,6 +305,7 @@ func samePoint(a, b *geom.Point) bool { return a.GetX() == b.GetX() && a.GetY() 
 // counter-clockwise; the contract rotates and then mirrors, so a bottom footprint's angle is negated.
 func (b *boardBuilder) placements() {
 	p := b.p
+	heights := p.partHeights()
 	for _, pl := range p.placements() {
 		rot := float64(p.u32(pl.inst, p.l.fiRot)) / 1000
 		bottom := p.b[pl.inst+2] == 1
@@ -320,6 +321,9 @@ func (b *boardBuilder) placements() {
 			Layer:       side,
 			Mirror:      bottom,
 			Prov:        &geom.Provenance{SourceFile: b.src, SourceId: pl.ref},
+		}
+		if h, ok := heights[p.u32(pl.inst, 4)]; ok {
+			g.Height = &h
 		}
 		p.chain(p.u32(pl.inst, p.l.fiPads), p.u32(pl.inst, 4), func(byte) int { return p.l.ppNextInFp }, func(pp int) {
 			if p.b[pp] != tagPlacedPad {

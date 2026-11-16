@@ -71,6 +71,10 @@ type layout struct {
 
 	rectCoords int // a rectangle's (0x24) corners, four words
 
+	// A package geometry shape (0x28) or rectangle (0x0E) names its owner at +12 and heads a chain of
+	// field blocks (0x03), which carries the part's height (agni 1643).
+	boundFields28, boundFields0E int
+
 	viaX, viaPadstack int
 
 	defCount, defItems int // a 0x36's item count and the offset of its first item
@@ -108,8 +112,9 @@ var layout172 = &layout{
 	mgGroup:    16, tableFields: 32, tableName: 24,
 	trackSegs: 56, segWidth: 24, graphSegs: 24, shapeSegs: 40, shapeVoids: 36, voidSegs: 24, shapeTable: 52, tablePtr1: 28,
 	textStr: 28, textGroup: 32, textX: 40, textRot: 52,
-	rectCoords: 24,
-	viaX:       32, viaPadstack: 44,
+	rectCoords:    24,
+	boundFields28: 48, boundFields0E: 52,
+	viaX: 32, viaPadstack: 44,
 	defCount: 16, defItems: 32,
 }
 
@@ -142,8 +147,9 @@ var layout166 = &layout{
 	mgGroup:    12, tableFields: 24, tableName: 12,
 	trackSegs: 48, segWidth: 20, graphSegs: 20, shapeSegs: 32, shapeVoids: 28, voidSegs: 20, shapeTable: 48, tablePtr1: 20,
 	textStr: 12, textGroup: 40, textX: 24, textRot: 36,
-	rectCoords: 20,
-	viaX:       24, viaPadstack: 36,
+	rectCoords:    20,
+	boundFields28: 44, boundFields0E: 44,
+	viaX: 24, viaPadstack: 36,
 	defCount: 12, defItems: 28,
 }
 
