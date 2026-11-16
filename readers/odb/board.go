@@ -33,6 +33,8 @@ import (
 //   - Copper surfaces on a net, as copper shapes. Each island keeps its outline and its holes
 //     (agni 1357). A negative feature, which cuts a surface drawn before it, is dropped.
 //   - Silkscreen and fabrication lines and text.
+//   - Each package's outline, placed on its part as a fab graphic, and each part's .comp_height
+//     (agni 1656). A package whose pins miss the part's pads draws no outline.
 //
 // A pad drawn by a user symbol or as a surface is kept as its extent with the shape "custom", not
 // its outline. Negative features and barcodes are dropped. Coordinates are integer nanometres
@@ -342,6 +344,13 @@ func (b *boardBuilder) placements() error {
 					pad.Layers = others
 				}
 				pl.Pads = append(pl.Pads, pad)
+			}
+			if c.height >= 0 {
+				h := c.height
+				pl.Height = &h
+			}
+			if pkg != nil {
+				b.packageOutline(pl, c, pkg)
 			}
 			b.g.Placements = append(b.g.Placements, pl)
 		}
@@ -917,6 +926,65 @@ func normDeg(d float64) float64 {
 		return 0
 	}
 	return d
+}
+
+// packageOutline places each ring of a package's outline on the board as a fab graphic of the part
+// (agni 1656), as the IPC-2581 reader composes a package's Outline. The stack view stands a part's
+// block on its fab outline when the part has no courtyard.
+//
+// Tools disagree on a back part's package frame. Altium and Allegro mark a back part N and draw its
+// package from the top, so the reader flips it. KiCad marks it M and draws its package already
+// flipped. So the package flips when the part is on the back or marked M, and not both. A package
+// whose pins miss the part's own pads draws no outline, as when KiCad gives two footprints that
+// differ one package name.
+func (b *boardBuilder) packageOutline(pl *geom.ComponentPlacement, c *component, pkg *edaPkg) {
+	if len(pkg.outline) == 0 {
+		return
+	}
+	mirror := c.back != c.mirror
+	if !packageFitsPads(c, pkg, pl.GetRotationDeg(), mirror) {
+		return
+	}
+	layer := "F.Fab"
+	if c.back {
+		layer = "B.Fab"
+	}
+	for _, ring := range pkg.outline {
+		s := &geom.Shape{Kind: geom.Shape_KIND_POLYLINE}
+		for _, p := range closedPolyline(ring).GetPoints() {
+			s.Points = append(s.Points, geomath.ComposePlacement(pl.GetAt(), pl.GetRotationDeg(), mirror, p))
+		}
+		b.g.Graphics = append(b.g.Graphics, &geom.BoardGraphic{RefDes: pl.GetRefDes(), Layer: layer, Shape: s})
+	}
+}
+
+// pinSlack is how far a package pin may sit from its toeprint, in nanometres, and still be the same
+// place. The package and the toeprint each round to the file's precision.
+const pinSlack = 5_000
+
+// packageFitsPads reports whether every one of a part's toeprints sits on its package pin, with the
+// package turned by rotDeg and flipped when mirror is set. A part with no pin to check fits nothing.
+func packageFitsPads(c *component, pkg *edaPkg, rotDeg float64, mirror bool) bool {
+	checked := 0
+	for _, tp := range c.pins {
+		if tp.num < 0 || tp.num >= len(pkg.pins) {
+			return false
+		}
+		want := pkg.pins[tp.num].at
+		got := localOffset(c.at, tp.at, rotDeg, mirror)
+		if absNm(got.GetX()-want.x) > pinSlack || absNm(got.GetY()-want.y) > pinSlack {
+			return false
+		}
+		checked++
+	}
+	return checked > 0
+}
+
+func absNm(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func gp(p pt) *geom.Point { return &geom.Point{X: p.x, Y: p.y} }

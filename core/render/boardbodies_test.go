@@ -1,9 +1,12 @@
 package render
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/odb"
 )
 
 func rectGraphic(ref, layer string, x0, y0, x1, y1 int64) *geom.BoardGraphic {
@@ -150,5 +153,19 @@ func TestTheBoardLookTakesItsColoursFromTheStyle(t *testing.T) {
 	l := BoardStack(bodiesBoard(), WithStyle(s)).GetBoardLook()
 	if l.GetMask() != "#010101" || l.GetMaskOverCopper() != "#020202" || l.GetPadFinish() != "#030303" || l.GetSilk() != "#040404" {
 		t.Errorf("board look = %v, want the style's four colours", l)
+	}
+}
+
+// An ODB++ part stands on its package outline, at the height its .comp_height gives (agni 1656).
+// inch-job's U1 has an RC outline wider than its pads, so a block on its pads would be narrower.
+func TestAnODBPartStandsOnItsPackageOutline(t *testing.T) {
+	b, err := odb.ReadBoardGeometry(os.DirFS(filepath.Join("..", "..", "readers", "odb", "testdata", "inch-job")), "inch-job")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const mil = 25_400
+	x0, y0, x1, y1, _ := ringBox(bodyOf(t, BoardStack(b), "U1").GetOutline())
+	if got, want := [4]float64{x0, y0, x1, y1}, [4]float64{470 * mil, 420 * mil, 530 * mil, 580 * mil}; got != want {
+		t.Errorf("U1's block = %v, want its package outline %v", got, want)
 	}
 }

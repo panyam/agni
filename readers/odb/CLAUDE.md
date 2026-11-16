@@ -10,6 +10,7 @@ This file covers the ODB++ job reader, ODB++X (ODX), and the Allegro export quir
 - **The gate reads foxBMS's Altium-written jobs** (`odb-altium`). Their pins are named `J500-1`, and their `FGR` groups are not nets.
 - **ODB++ forbids spaces in a name.** `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`, and a schematic-against-layout diff reports it renamed.
 - **KiCad's exporter leaves out a footprint marked `exclude_from_pos_files`.** It nets copper by what touches, so a planted short moves a track onto the other net (demo-board).
+- **A back part's package flips when it is on the back or marked M, not both** (agni 1656). Altium and Allegro mark it N, and KiCad marks it M with the package already flipped. `odxPlace` and `packageOutline` share the rule.
 - **ODX is ODB++ in one XML file rooted at `<ODX>`** (agni 1372, `readers/odb/odx.go`). It fills the job reader's own `parsedJob`, so its netlist and board come out of the job code. `.xml` is sniffed by root element.
 - **ODX names a pin by its number**, since the name can be a placeholder such as `un_1`.
 - **Allegro writes `encoding = "ISO-8859-1"` with spaces**, and Go's decoder ignores that form. `odxDecoded` reads the declaration itself.

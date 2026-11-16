@@ -235,3 +235,41 @@ func TestODXReadsAViasTracksAndUnnamedPours(t *testing.T) {
 		t.Errorf("shapes by net = %v, want the pour on no net", shapes)
 	}
 }
+
+// ODX gives a package's outline as a CAD_OUTLINE and a part's height as HEIGHT, and both reach the
+// board as the job reader's do (agni 1656). R1 turns 90 degrees clockwise on the top. R2 sits on the
+// back unmirrored, so its package flips.
+func TestODXPlacesEachPackageOutlineAndHeight(t *testing.T) {
+	_, g := readODX(t, odxFixture)
+	const mm = 1_000_000
+	got := map[string][5]int64{}
+	for _, gr := range g.GetGraphics() {
+		if gr.GetRefDes() == "" {
+			continue
+		}
+		var box geomath.Bounds
+		for _, p := range gr.GetShape().GetPoints() {
+			box.Add(p)
+		}
+		x0, y0 := box.Min()
+		x1, y1 := box.Max()
+		side := int64(0)
+		if gr.GetLayer() == "B.Fab" {
+			side = 1
+		}
+		got[gr.GetRefDes()] = [5]int64{x0, y0, x1, y1, side}
+	}
+	want := map[string][5]int64{
+		"R1": {9.6 * mm, 9.2 * mm, 10.4 * mm, 10.8 * mm, 0},
+		"R2": {19.2 * mm, 9.6 * mm, 20.8 * mm, 10.4 * mm, 1},
+	}
+	if len(got) != len(want) || got["R1"] != want["R1"] || got["R2"] != want["R2"] {
+		t.Errorf("outlines = %v, want %v (box, then 1 on B.Fab)", got, want)
+	}
+	for ref, h := range map[string]int64{"R1": 350_000, "R2": -1} {
+		pl := placement(t, g, ref)
+		if (h < 0) != (pl.Height == nil) || (h >= 0 && pl.GetHeight() != h) {
+			t.Errorf("%s height = %v, want %d (-1 for none)", ref, pl.Height, h)
+		}
+	}
+}

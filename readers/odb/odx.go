@@ -351,8 +351,16 @@ func (ps *odxParser) start(e xml.StartElement) error {
 			pkg = -1
 		}
 		rot, _ := strconv.ParseFloat(strings.TrimSpace(attrS(e, "ANGLE")), 64)
+		height := int64(-1)
+		if _, ok := attr(e, "HEIGHT"); ok {
+			h, err := coord(e, "HEIGHT")
+			if err != nil {
+				return err
+			}
+			height = h
+		}
 		ps.step.comps = append(ps.step.comps, component{
-			pkg: pkg, rot: rot, ref: attrS(e, "NAME"), part: attrS(e, "PART"),
+			pkg: pkg, rot: rot, ref: attrS(e, "NAME"), part: attrS(e, "PART"), height: height,
 			mirror: strings.EqualFold(attrS(e, "MIRROR"), "YES"),
 			back:   strings.EqualFold(attrS(e, "SIDE"), "BOTTOM"),
 		})
@@ -513,6 +521,9 @@ func (ps *odxParser) end(name string) error {
 			*isl = append(*isl, *c)
 		case ps.inProf:
 			ps.profile = append(ps.profile, *c)
+		case ps.pkg != nil && ps.pin == nil && !c.hole && len(c.pts) >= 3:
+			// A package's own CAD_OUTLINE, which ODX writes before its pins (agni 1656).
+			ps.pkg.outline = append(ps.pkg.outline, c.pts)
 		}
 	case "CAD_S":
 		if ps.surf != nil {
