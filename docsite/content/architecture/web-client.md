@@ -205,6 +205,13 @@ panel from the ones above.
   `device_classes` from the design and passes them to `render.BoardStack` as `WithPartClasses`. A
   board's own stack colours, such as a mask KiCad's file calls White, are not read yet. kicad-cli's
   default render ignores them too.
+- **The stack view puts each layer's text on its plane** (agni issue 1607). The stack camera is
+  orthographic, so a plane at one height maps onto the screen by a flat transform. The text overlay
+  keeps one `<g>` per primitive group, and `placeOnPlanes` gives each one the matrix
+  `planeMatrix` (`web/src/stacktext.ts`) works out from three projected points. A face's text shows
+  only from its own side. Text draws over the part blocks, and #1657 holds the texture approach that
+  would hide it behind them. A click on a via's barrel picks its net (`hitBarrel` in
+  `web/src/stackpick.ts`) when the barrel is nearer than the plane under the pointer.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`

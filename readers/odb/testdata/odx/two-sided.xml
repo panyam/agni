@@ -26,6 +26,16 @@
           </CAD_PROFILE>
           <CAD_PACKAGE_LIST>
             <CAD_PACKAGE NAME = "R0402">
+              <CAD_OUTLINE>
+                <POLYGON>
+                  <OB X="-0.8" Y="-0.4"/>
+                  <OS X="0.8" Y="-0.4"/>
+                  <OS X="0.8" Y="0.4"/>
+                  <OS X="-0.8" Y="0.4"/>
+                  <OS X="-0.8" Y="-0.4"/>
+                  <OE/>
+                </POLYGON>
+              </CAD_OUTLINE>
               <CAD_PIN_LIST>
                 <CAD_PIN NUMBER = "1" NAME = "1" TYPE = "SURFACE"><LOCATION X="-0.5" Y="0"/></CAD_PIN>
                 <CAD_PIN NUMBER = "2" NAME = "2" TYPE = "SURFACE"><LOCATION X="0.5" Y="0"/></CAD_PIN>
@@ -38,7 +48,7 @@
             </CAD_PACKAGE>
           </CAD_PACKAGE_LIST>
           <CAD_COMPONENT_LIST>
-            <CAD_COMPONENT NAME = "R1" PACKAGE = "R0402" PART = "10µR" SIDE = "TOP" ANGLE = "90.00" MIRROR = "NO">
+            <CAD_COMPONENT NAME = "R1" PACKAGE = "R0402" PART = "10µR" SIDE = "TOP" ANGLE = "90.00" MIRROR = "NO" HEIGHT = "0.35">
               <CAD_PRP_LIST><CAD_PRP NAME = "VALUE" TEXT = "10R"/></CAD_PRP_LIST>
               <LOCATION X="10" Y="10"/>
             </CAD_COMPONENT>

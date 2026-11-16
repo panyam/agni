@@ -42,6 +42,30 @@ export interface StackGeometry {
   // boardFaces are the board's top and bottom faces, at depth 0 and the stack's total, which the
   // board look fills in mask (agni issue 1653). Their vertices sit in slabs after the faces'.
   boardFaces: { first: number; count: number; depth: number }[];
+  // boardWall is the board's edge as a wall from the top face to the bottom one, round the outline
+  // and each hole cut in it, which the board look fills too (agni issue 1607). Its vertices sit in
+  // slabs after the board faces'.
+  boardWall: { first: number; count: number };
+}
+
+// WALL_SHADE darkens the mask colour for the board's edge, so the edge reads apart from the face
+// above it.
+export const WALL_SHADE = 0.7;
+
+// boundaryEdges lists the edges of a flat x,y triangle list that only one triangle uses, as
+// [ax, ay, bx, by] rows. Those run round the outline and each hole in it.
+export function boundaryEdges(tris: readonly number[]): number[][] {
+  const count = new Map<string, number[] | null>();
+  for (let i = 0; i + 5 < tris.length; i += 6) {
+    for (let k = 0; k < 3; k++) {
+      const a = [tris[i + 2 * k], tris[i + 2 * k + 1]];
+      const b = [tris[i + ((2 * k + 2) % 6)], tris[i + ((2 * k + 3) % 6)]];
+      const ka = `${a[0]},${a[1]}`, kb = `${b[0]},${b[1]}`;
+      const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      count.set(key, count.has(key) ? null : [a[0], a[1], b[0], b[1]]);
+    }
+  }
+  return [...count.values()].filter((e): e is number[] => e !== null);
 }
 
 // stackGeometry builds the barrels and slabs of a board's stack. originX and originY are the packed
@@ -78,7 +102,16 @@ export function stackGeometry(view: BoardStackView, layout: StackLayout, originX
       boardFaces.push({ first, count: slabs.length / 3 - first, depth });
     }
   }
-  return { holes: Float32Array.from(holes), nets, slabs: Float32Array.from(slabs), faces, boardFaces };
+  const wallFirst = slabs.length / 3;
+  if (tris.length >= 6) {
+    for (const [ax, ay, bx, by] of boundaryEdges(tris)) {
+      const x0 = ax - originX, y0 = ay - originY, x1 = bx - originX, y1 = by - originY;
+      const top = 0, bottom = layout.totalMm;
+      slabs.push(x0, y0, top, x1, y1, top, x1, y1, bottom, x0, y0, top, x1, y1, bottom, x0, y0, bottom);
+    }
+  }
+  const boardWall = { first: wallFirst, count: slabs.length / 3 - wallFirst };
+  return { holes: Float32Array.from(holes), nets, slabs: Float32Array.from(slabs), faces, boardFaces, boardWall };
 }
 
 // barrelSides is the shared cylinder, as triangles of (cos, sin, end) with end 0 at the top.
@@ -367,7 +400,7 @@ export class StackExtras {
 
   // drawBoardFaces fills the board's top and bottom faces in mask, opaque. Each sits at its face's
   // depth, pushed a little away from the eye, so the copper and silkscreen the board look draws on
-  // that face win the depth test and draw over it.
+  // that face win the depth test and draw over it. The edge wall draws after, a shade darker.
   private drawBoardFaces(o: StackDrawOptions, b: NonNullable<StackDrawOptions["board"]>): number {
     const gl = this.gl;
     if (this.geometry.boardFaces.length === 0) return 0;
@@ -381,6 +414,12 @@ export class StackExtras {
       calls++;
     }
     gl.disable(gl.POLYGON_OFFSET_FILL);
+    const w = this.geometry.boardWall;
+    if (w.count > 0) {
+      gl.uniform4f(this.slabs.color, b.mask[0] * WALL_SHADE, b.mask[1] * WALL_SHADE, b.mask[2] * WALL_SHADE, b.mask[3]);
+      gl.drawArrays(gl.TRIANGLES, w.first, w.count);
+      calls++;
+    }
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     return calls;

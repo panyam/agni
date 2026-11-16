@@ -35,9 +35,13 @@ type fid struct {
 	feat  int
 }
 
+// edaPkg is one PKG record and the records under it. outline holds the package's own outline
+// records as closed rings in the package's frame (pkgoutline.go), and contour the polygon being read.
 type edaPkg struct {
-	name string
-	pins []edaPin
+	name    string
+	pins    []edaPin
+	outline [][]pt
+	contour *pkgContour
 }
 
 // edaPin is one pin of a package. It holds the pin's name, its type (T through-hole, S surface, B
@@ -135,6 +139,12 @@ func parseEDA(b []byte) (*eda, error) {
 			// PIN <name> <type> <xc> <yc> <fhs> <etype> <mtype>, where etype is E, M or U.
 			mech := len(w) > 6 && strings.EqualFold(w[6], "M")
 			pkg.pins = append(pkg.pins, edaPin{name: w[1], typ: strings.ToUpper(w[2]), at: at, mech: mech})
+		default:
+			if pkg != nil {
+				if _, err := outlineRecord(pkg, w, u); err != nil {
+					return fmt.Errorf("line %d: package %s: %w", n, pkg.name, err)
+				}
+			}
 		}
 		return nil
 	})

@@ -127,6 +127,7 @@ func (p *board) toBoard(src string) (*geom.BoardGeometry, error) {
 		}
 		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: l.name, Kind: kind}) // #nosec G115 -- a layer index fits a subclass byte
 	}
+	g.Stackup = p.stackup(layers)
 	b := &boardBuilder{p: p, g: g, layers: layers, src: src, stacks: map[stackKey]string{}}
 	b.outline()
 	b.placements()

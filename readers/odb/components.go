@@ -2,6 +2,7 @@ package odb
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -16,6 +17,8 @@ type component struct {
 	props  [][2]string // PRP records in file order
 	pins   []toeprint
 	back   bool // read from the bottom components layer
+	// height is the part's .comp_height in nanometres, or -1 when the file states none (agni 1656).
+	height int64
 }
 
 // toeprint is one TOP record. It says where a pin sits on the board, and which net number it is on.
@@ -32,9 +35,20 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 	u := unitsOf(b)
 	var out []component
 	var cur *component
+	heightTag := -1
 	err := lines(b, func(n int, line string) error {
-		w, _ := fields(line)
+		w, attrs := fields(line)
 		if len(w) == 0 {
+			return nil
+		}
+		// "@<n> <name>" numbers an attribute. Each file numbers its own, so Altium's .comp_height is
+		// 1 and Allegro's 4.
+		if strings.HasPrefix(w[0], "@") {
+			if len(w) >= 2 && w[1] == ".comp_height" {
+				if i, err := atoi(w[0][1:]); err == nil {
+					heightTag = i
+				}
+			}
 			return nil
 		}
 		switch w[0] {
@@ -42,7 +56,7 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 			if len(w) < 7 {
 				return fmt.Errorf("line %d: CMP needs package, x, y, rotation, mirror and name", n)
 			}
-			c := component{back: back}
+			c := component{back: back, height: -1}
 			var err error
 			if c.pkg, err = atoi(w[1]); err != nil {
 				return fmt.Errorf("line %d: %w", n, err)
@@ -57,6 +71,13 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 			c.ref = w[6]
 			if len(w) > 7 {
 				c.part = w[7]
+			}
+			if v := attrValue(attrs, heightTag); heightTag >= 0 && v != "" {
+				h, err := atof(v)
+				if err != nil {
+					return fmt.Errorf("line %d: .comp_height %q: %w", n, v, err)
+				}
+				c.height = int64(math.Round(h * u.coord))
 			}
 			out = append(out, c)
 			cur = &out[len(out)-1]

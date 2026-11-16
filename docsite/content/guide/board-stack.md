@@ -20,7 +20,7 @@ So a blind via from F.Cu to In1.Cu stops at In1.Cu, and a through via runs the w
 Press **Stack** again to go back to the flat board. It comes back as you left it, with the same pan
 and zoom, side and hidden layers, and in SVG if it was drawing in SVG. The stack view draws in WebGL,
 so the button is off in a browser without WebGL2. It is off too for a board whose file states no
-stack, such as an Allegro or Altium board today.
+stack, such as a hand-written ODB++ job with no layer thicknesses.
 
 ## Move around it
 
@@ -39,14 +39,21 @@ the layers under it show through.
 
 Click a track on an inner plane, and the schematic selects its net, as a click on the flat board
 does. The click goes to the nearest plane with something under the pointer, so an inner track picks
-where nothing on a nearer layer covers it. A selected net lights on every layer it runs on, its vias'
-barrels included.
+where nothing on a nearer layer covers it. Click a via's barrel between the planes, and the schematic
+selects its net too. A selected net lights on every layer it runs on, its vias' barrels included.
+
+The silkscreen's text sits on its layer, at whatever angle you turn the stack to. The top's text reads
+from above and the bottom's from below, so neither shows through the board. The text draws over any
+part block in front of it.
 
 ## See the parts on the board
 
 Each placed part stands on its side of the board as a solid block, front parts on the top face and
 back parts hanging off the bottom one. The block's outline is the part's courtyard, or its fab
-outline, or the area its pads cover. It stands as tall as the board's file says the part is. Click a
+outline, or the area its pads cover. An ODB++ part's fab outline is its package outline, so how
+close it comes to the part depends on the tool that wrote the job. Altium and Allegro draw the body,
+and KiCad's export draws the area the pads cover. A part stands as tall as the board's file says it
+is. Click a
 part's block and the schematic selects that part, as a click on its pads does. Untick **Parts** in
 the bar to hide the blocks and see the layers under them.
 
@@ -65,8 +72,13 @@ each package a height, so an IPC-2581 board stands its parts at their real heigh
 **Layers** and **Board** in the bar switch the stack view's look. It opens in Layers, which draws
 each layer apart in the editor's colours. Board draws the board as it is made. An
 opaque green mask covers each face, the tracks show as a lighter green through it, and the pads draw
-in gold. The silkscreen draws white, and the inner layers and the dielectrics hide. The slider and
-the camera work the same in both, and a click picks the same part or net.
+in gold. The silkscreen and its text draw white, and the inner layers and the dielectrics hide. The
+board's edge draws as a darker wall from one face to the other, round the outline and each hole cut
+in it. The slider and the camera work the same in both, and a click picks the same part or net.
+
+Each look cuts a slot in the board's outline out of the board, and a drilled hole 1 mm or wider too,
+as a mounting hole is. A mounting hole stands no block, since it is a hole and not a part. agni takes
+a footprint for a mounting hole when its pads are all one drilled pin, at least 2 mm wide.
 
 ![Glasgow revC3 in the Board look, with its parts coloured by type]({{.Site.PathPrefix}}/static/images/guide/board-stack-look.png)
 

@@ -82,9 +82,10 @@ const jetsonPicks = {
 // long one pairs with the schematic's by its pins.
 //
 // stack is what the board view's layer list says of F.Cu's thickness and of the whole stack (agni
-// issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board carries
-// no stack yet, so its list states no thickness.
+// issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board gives its
+// stack in its cross-section and states no total, so its layers' 1.651 mm stands (agni issue 1601).
 const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states", thicknessMm: 1.711 };
+const clayStack = { fCu: "0.03556 mm", summary: "the layers sum to 1.651 mm, and the file states no board thickness", thicknessMm: 1.651 };
 const walks = {
   cut: {
     mount: "probe",
@@ -112,7 +113,7 @@ const walks = {
     inner: { net: "VBAT", sheet: "PAGE1", layer: "In2.Cu" },
     acrossSheets: "VBAT",
     agreement: { parts: "146 of 149 parts on the board", pick: "PTA0/JTAG_TCLK/SWD_CLK/EZP_CLK/UART0_CTS_B/UART0_COL_B/FTM0_CH5" },
-    stack: null as typeof jetsonStack | null,
+    stack: clayStack as typeof jetsonStack | null,
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
@@ -692,6 +693,29 @@ for (const name of chosen) {
           const box = (await gl.boundingBox())!;
           await page.mouse.click(box.x + probe.x, box.y + probe.y);
           await picked(page, probe.ref);
+          // The silkscreen's text sits on the top face in the silkscreen colour, and reads from
+          // above (agni issue 1607).
+          const silkText = () =>
+            page.evaluate((p) => {
+              const host = document.querySelector(p);
+              let shown = 0;
+              for (const g of host?.querySelectorAll<SVGGElement>("g[data-plane][data-look-fill]") ?? []) {
+                if (g.style.display === "none" || !g.getAttribute("transform")?.startsWith("matrix(")) continue;
+                for (const t of g.querySelectorAll<SVGTextElement>("text")) if (t.style.display !== "none" && t.getBoundingClientRect().width > 0) shown++;
+              }
+              return shown;
+            }, PANE);
+          await page.waitForFunction((p) => !!document.querySelector(p)?.querySelector("g[data-plane][data-look-fill]"), PANE, { timeout: 5_000 }).catch(() => {});
+          const texts = await silkText();
+          if (texts === 0) {
+            const seen = await page.evaluate((p) => {
+              const host = document.querySelector(p);
+              return [...(host?.querySelectorAll<SVGGElement>("g[data-plane]") ?? [])].map(
+                (g) => `${g.dataset.plane}${g.hasAttribute("data-look-fill") ? " silk" : ""} ${g.style.display || "shown"} ${g.querySelectorAll("text").length} texts`,
+              );
+            }, PANE);
+            throw new Error(`the board look shows no silkscreen text on the board's face; the text planes are ${JSON.stringify(seen)}`);
+          }
           await board.locator('[data-stack-look="layers"]').click({ timeout: 5_000 });
           if ((await look()) !== "layers") throw new Error(`Layers left the view in the ${await look()} look`);
           await button.click({ timeout: 5_000 });
@@ -700,7 +724,7 @@ for (const name of chosen) {
             .catch(async () => {
               throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
             });
-          return `the board look picked ${probe.ref}'s body, and Layers switched back`;
+          return `the board look picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, and Layers switched back`;
         });
 
         await step("no page errors", {}, async () => {

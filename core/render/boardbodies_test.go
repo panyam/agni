@@ -1,9 +1,12 @@
 package render
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/odb"
 )
 
 func rectGraphic(ref, layer string, x0, y0, x1, y1 int64) *geom.BoardGraphic {
@@ -150,5 +153,40 @@ func TestTheBoardLookTakesItsColoursFromTheStyle(t *testing.T) {
 	l := BoardStack(bodiesBoard(), WithStyle(s)).GetBoardLook()
 	if l.GetMask() != "#010101" || l.GetMaskOverCopper() != "#020202" || l.GetPadFinish() != "#030303" || l.GetSilk() != "#040404" {
 		t.Errorf("board look = %v, want the style's four colours", l)
+	}
+}
+
+// An ODB++ part stands on its package outline, at the height its .comp_height gives (agni 1656).
+// inch-job's U1 has an RC outline wider than its pads, so a block on its pads would be narrower.
+func TestAnODBPartStandsOnItsPackageOutline(t *testing.T) {
+	b, err := odb.ReadBoardGeometry(os.DirFS(filepath.Join("..", "..", "readers", "odb", "testdata", "inch-job")), "inch-job")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const mil = 25_400
+	x0, y0, x1, y1, _ := ringBox(bodyOf(t, BoardStack(b), "U1").GetOutline())
+	if got, want := [4]float64{x0, y0, x1, y1}, [4]float64{470 * mil, 420 * mil, 530 * mil, 580 * mil}; got != want {
+		t.Errorf("U1's block = %v, want its package outline %v", got, want)
+	}
+}
+
+// A mounting hole stands no block, and a part with drilled pins does (agni 1607). MH is one pin on a
+// 3.5 mm drill ringed by 0.5 mm vias, as Glasgow's are. TP is one pin on a 1 mm drill, and J two
+// pins on 3.5 mm drills.
+func TestAMountingHoleStandsNoBlock(t *testing.T) {
+	pad := func(num string, x, drill int64) *geom.Pad {
+		return &geom.Pad{Number: num, At: &geom.Point{X: x}, Size: &geom.Point{X: drill + 500_000, Y: drill + 500_000}, Drill: drill}
+	}
+	b := &geom.BoardGeometry{UnitNm: 1, Stackup: bodiesBoard().GetStackup(), Placements: []*geom.ComponentPlacement{
+		{RefDes: "MH", At: &geom.Point{}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 3_500_000), pad("1", 2_600_000, 500_000), pad("1", -2_600_000, 500_000)}},
+		{RefDes: "TP", At: &geom.Point{X: 20_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 1_000_000)}},
+		{RefDes: "J", At: &geom.Point{X: 40_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{pad("1", 0, 3_500_000), pad("2", 5_000_000, 3_500_000)}},
+	}}
+	got := map[string]bool{}
+	for _, body := range BoardStack(b).GetBodies() {
+		got[body.GetRefDes()] = true
+	}
+	if want := map[string]bool{"TP": true, "J": true}; len(got) != len(want) || !got["TP"] || !got["J"] {
+		t.Errorf("bodies for %v, want TP and J and not the mounting hole MH", got)
 	}
 }

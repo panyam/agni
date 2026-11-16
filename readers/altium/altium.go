@@ -16,7 +16,9 @@
 // Assembly variants live in the project file and are not read. The board geometry carries the
 // copper stack in physical order, renamed into the contract's F.Cu/In<n>.Cu/B.Cu vocabulary, every
 // placement with footprint-local pads sized from the top copper, tracks, arc tracks as arcs, vias,
-// polygon pour outlines with their nets as zones, the copper regions a pour filled and solid regions
+// the physical stack from Board6 with each copper layer's thickness, the dielectric under it with
+// its material, type and constant, and each face's solder mask (agni 1601), polygon pour outlines
+// with their nets as zones, the copper regions a pour filled and solid regions
 // as copper shapes with their holes (Regions6, agni 1410), the board outline, and silkscreen lines,
 // arcs and text. Region arcs are approximated by chords, as Regions6 stores them. A graphical
 // component's copper (a layer marker), the tracks a hatched pour drew, fills (Fills6), per-layer

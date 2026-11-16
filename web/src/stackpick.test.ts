@@ -81,3 +81,38 @@ describe("picking through the stack", () => {
     expect(pickThroughStack(cam, planes, all, [], 400, 400, 1, (x, y, perPx, h) => picks.pick(x, y, perPx, h))).toBeNull();
   });
 });
+
+// A barrel picks its net where nothing nearer covers it (agni issue 1607). VIA's barrel runs from the
+// front plane at z 50 down to the inner one at z -20, at (200, -38). From Iso, the ray through its
+// side at z 15 goes on to meet the inner strip near (164, 5), so without the barrel it picks INNER.
+describe("picking a barrel", () => {
+  const planes = [
+    { z: 50, groups: new Set([6]) },
+    { z: -20, groups: new Set([14]) },
+  ];
+  const all = new Set([6, 14]);
+  const barrels = [{ x: 200, y: -38, r: 3, zTop: 50, zBottom: -20, net: "VIA" }];
+  const pickAt = (pose: keyof typeof PRESETS, at: { x: number; y: number; z: number }, with_ = barrels) => {
+    const picks = new PickIndex(sheet());
+    const cam = new StackCamera({ x: 100, y: 5, z: 0 }, 220);
+    cam.setViewport(800, 800);
+    cam.setPose(PRESETS[pose]);
+    cam.fit();
+    const px = cam.project(at);
+    return pickThroughStack(cam, planes, all, [], px.x, px.y, 1, (x, y, perPx, h) => picks.pick(x, y, perPx, h), with_);
+  };
+
+  it("picks the barrel's net on its side, between the planes, over the plane behind it", () => {
+    expect(pickAt("iso", { x: 200, y: -38, z: 15 })).toMatchObject({ kind: "net", net: "VIA" });
+    expect(pickAt("iso", { x: 200, y: -38, z: 15 }, [])).toMatchObject({ kind: "net", net: "INNER" });
+  });
+
+  it("lets a plane in front of the barrel answer first", () => {
+    const front = [{ x: 50, y: 5, r: 3, zTop: 40, zBottom: -20, net: "VIA" }];
+    expect(pickAt("top", { x: 50, y: 5, z: 50 }, front)).toMatchObject({ kind: "net", net: "TOP" });
+  });
+
+  it("picks nothing beside the barrel where no plane has anything", () => {
+    expect(pickAt("iso", { x: 200, y: -80, z: 15 })).toBeNull();
+  });
+});

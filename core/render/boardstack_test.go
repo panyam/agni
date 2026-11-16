@@ -152,10 +152,14 @@ func TestTheOutlineFillsTheBoardFromItsSeparateEdges(t *testing.T) {
 	for i := 0; i < len(tris); i += 6 {
 		area += math.Abs((tris[i+2]-tris[i])*(tris[i+5]-tris[i+1])-(tris[i+4]-tris[i])*(tris[i+3]-tris[i+1])) / 2
 	}
-	if want := 20e6 * 10e6; math.Abs(area-want) > want*1e-9 {
-		t.Errorf("outline triangles cover %g, want the 20 mm by 10 mm board, %g", area, want)
+	if want := 20e6*10e6 - j1Hole; math.Abs(area-want) > want*1e-9 {
+		t.Errorf("outline triangles cover %g, want the 20 mm by 10 mm board less J1's hole, %g", area, want)
 	}
 }
+
+// j1Hole is the area cut for J1's 1 mm drill on the blind-via board, a 16-sided ring of radius
+// 0.5 mm (agni 1607).
+var j1Hole = 8 * 0.5e6 * 0.5e6 * math.Sin(math.Pi/8)
 
 func TestAnOutlineThatDoesNotCloseFillsItsBox(t *testing.T) {
 	b := blindViaBoard(t)
@@ -165,8 +169,49 @@ func TestAnOutlineThatDoesNotCloseFillsItsBox(t *testing.T) {
 	for i := 0; i+5 < len(tris); i += 6 {
 		area += math.Abs((tris[i+2]-tris[i])*(tris[i+5]-tris[i+1])-(tris[i+4]-tris[i])*(tris[i+3]-tris[i+1])) / 2
 	}
-	if want := 20e6 * 10e6; math.Abs(area-want) > want*1e-9 {
-		t.Errorf("open outline fills %g, want its 20 mm by 10 mm box, %g", area, want)
+	if want := 20e6*10e6 - j1Hole; math.Abs(area-want) > want*1e-9 {
+		t.Errorf("open outline fills %g, want its 20 mm by 10 mm box less J1's hole, %g", area, want)
+	}
+}
+
+// covered says whether a point lies inside one of the triangles of a flat x,y triangle list.
+func covered(tris []float64, x, y float64) bool {
+	for i := 0; i+5 < len(tris); i += 6 {
+		ax, ay, bx, by, cx, cy := tris[i], tris[i+1], tris[i+2], tris[i+3], tris[i+4], tris[i+5]
+		d1 := (x-bx)*(ay-by) - (ax-bx)*(y-by)
+		d2 := (x-cx)*(by-cy) - (bx-cx)*(y-cy)
+		d3 := (x-ax)*(cy-ay) - (cx-ax)*(y-ay)
+		neg := d1 < 0 || d2 < 0 || d3 < 0
+		pos := d1 > 0 || d2 > 0 || d3 > 0
+		if !(neg && pos) {
+			return true
+		}
+	}
+	return false
+}
+
+// The slabs leave out a cutout in the outline and a drill of 1 mm or more, and keep a via's (agni
+// 1607). The KiCad reader turns the file's y down, so the blind-via board runs from y 0 to -10 mm. It
+// gains a 2 by 1 mm slot at (10, -7). J1 has a 1 mm drill at (16, -5), and the through via at (4, -3)
+// a 0.3 mm one.
+func TestTheSlabsLeaveTheBoardsHolesOut(t *testing.T) {
+	b := blindViaBoard(t)
+	slot := &geom.Polyline{Points: []*geom.Point{{X: 9e6, Y: -6.5e6}, {X: 11e6, Y: -6.5e6}, {X: 11e6, Y: -7.5e6}, {X: 9e6, Y: -7.5e6}, {X: 9e6, Y: -6.5e6}}}
+	b.Outline.Paths = append(b.Outline.Paths, slot)
+	tris := BoardStack(b).GetOutlineTris()
+	for _, c := range []struct {
+		what string
+		x, y float64
+		want bool
+	}{
+		{"the slot", 10e6, -7e6, false},
+		{"J1's hole", 16e6, -5e6, false},
+		{"the through via", 4e6, -3e6, true},
+		{"the board beside the slot", 10e6, -8.5e6, true},
+	} {
+		if got := covered(tris, c.x, c.y); got != c.want {
+			t.Errorf("%s covered = %v, want %v", c.what, got, c.want)
+		}
 	}
 }
 
