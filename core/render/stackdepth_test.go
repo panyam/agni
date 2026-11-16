@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"encoding/json"
 	"math"
 	"os"
 	"path/filepath"
@@ -121,11 +122,20 @@ func TestAPartBodyDrawsAtItsStatedOrTypicalHeight(t *testing.T) {
 func TestBoardStackTwin(t *testing.T) {
 	v := BoardStack(jetsonCutBoard(t))
 	twin := &geom.BoardStackView{Rows: v.GetRows(), TotalMm: v.GetTotalMm(), UnitsPerMm: v.GetUnitsPerMm()}
-	body, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(twin)
+	raw, err := protojson.Marshal(twin)
 	if err != nil {
 		t.Fatal(err)
 	}
-	body = append(body, '\n')
+	// protojson varies its whitespace from build to build on purpose, so the file is indented by
+	// encoding/json, whose output is stable, and the test can compare bytes.
+	var compact, indented bytes.Buffer
+	if err := json.Compact(&compact, raw); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Indent(&indented, compact.Bytes(), "", "  "); err != nil {
+		t.Fatal(err)
+	}
+	body := append(indented.Bytes(), '\n')
 	path := filepath.Join("testdata", "jetson_cut_stack_twin.json")
 	if *update {
 		if err := os.WriteFile(path, body, 0o600); err != nil {
