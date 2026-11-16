@@ -1,0 +1,6 @@
+# The cut's board, exported by kicad-cli as an ODB++ job and packed by 7-Zip, so the walk opens a
+# job in a .7z (agni issue 1591). `make odb` in the project folder regenerates it.
+name: jetson-cut-odb
+title: Jetson AGX Thor baseboard cut, as an ODB++ job in a .7z
+extends: ../../project.yaml
+entry: jetson-cut.odb.7z
