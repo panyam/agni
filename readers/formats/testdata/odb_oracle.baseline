@@ -45,6 +45,7 @@ jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1600000x1600000 at
 jetson-agx-thor-baseboard	parts: kicad only: A1=Mech_M2_2280_H2.5mm
 jetson-agx-thor-baseboard	parts: kicad only: A2=Mech_M2_2242_H2.5mm
 jetson-agx-thor-baseboard	parts: kicad only: A3=Jetson-Thor-AGX-T5000
+jetson-agx-thor-baseboard	stack: the KiCad read has ["copper 35" "dielectric 120" "copper 18" "dielectric 200" "copper 18" "dielectric 140" "copper 18" "dielectric 200" "copper 18" "dielectric 140" "copper 18" "dielectric 200" "copper 35" "dielectric 140" "copper 18" "dielectric 200" "copper 18" "dielectric 120" "copper 35"], the ODB++ read ["copper 35" "dielectric 120" "copper 18" "dielectric 200" "copper 18" "dielectric 0" "dielectric 0" "copper 18" "dielectric 200" "copper 18" "dielectric 0" "dielectric 0" "copper 18" "dielectric 200" "copper 35" "dielectric 0" "dielectric 0" "copper 18" "dielectric 200" "copper 18" "dielectric 120" "copper 35"]
 mnt-reform-motherboard30	parts: kicad only: H10=LOGO_REFORM
 mnt-reform-motherboard30	parts: kicad only: H11=LABEL_MPCIE1
 mnt-reform-motherboard30	parts: kicad only: H12=LABEL_MPCIE2
