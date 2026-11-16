@@ -76,8 +76,9 @@ From a green `main`:
    default.  The release workflow has already brought it up over the published image
    (`hack/compose_smoke.sh`).
 
-   The workflow's `binaries` job attaches the CLI's tarballs, the viewer bundle and `checksums.txt`
-   (`make dist`, WS16-003) through the same script.  The script creates the release as a draft when
+   The workflow's `binaries` job attaches the CLI's archives, the viewer bundle and `checksums.txt`
+   (`make dist`, WS16-003) through the same script.  macOS and Linux get tarballs, and Windows gets
+   `agni.exe` in a zip (agni issue 1595).  The script creates the release as a draft when
    no release exists yet, so this step attaches and edits rather than creating, and works in either
    order.  Publish only once the job has attached them.  A `go install` binary downloads its viewer
    from the published release, and `agni open` on one fails until the bundle is there.

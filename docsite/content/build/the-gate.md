@@ -10,8 +10,11 @@ browser-test SHARD=i/10`. The split is only about wall time. The scanners and th
 captures took about two and a half minutes each, in one job with the tests, so a PR waited for all of
 them in a row. A pull request or a push to main that changes only the README, the changelog,
 NEXTSTEPS.md, the release notes or the conduct and security pages skips the gate, since no test reads
-them (`paths-ignore` in `.github/workflows/ci.yml`). Green means ship-ready. It also lies
-to you in three specific ways, and most of this page is about them.
+them (`paths-ignore` in `.github/workflows/ci.yml`). A `windows` job runs beside them and is no
+part of `testall` (agni issue 1595). It runs every Go test on a Windows runner, lists each skip with
+its reason, and serves a built `agni.exe` on a drive-letter mount to headless Chromium
+(`web/browser/smoke.mjs`). A test that cannot pass on Windows skips there and says why. Green means
+ship-ready. It also lies to you in three specific ways, and most of this page is about them.
 
 ```mermaid
 flowchart LR

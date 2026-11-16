@@ -9,25 +9,27 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-13, at `4fa14308`.
+Last pruned 2026-11-15, at `640b6609`.
 
 ## At a glance
 
-No mission is active. #1499 `mission_board_open` closed on 2026-11-13 with every step of
-`make exercise-board-open` passing at `4fa14308` (v0.6.20): server cold 1.2 s, wasm cold 1.3 s, both
-reloads under 0.5 s. Its last two tickets, #1484 (vertex instancing) and #1504, are `waiting` with
-their triggers. The next mission is chosen with `/retriage`. Until then, work is P3 or a trigger
-coming true on a `waiting` issue.
+**#1586 `mission_viewer_improvements`** (probe a board from its schematic) is active, and all 10 of its tickets
+are closed. Its exercise, `make exercise-cross-probe WALK_DESIGN=jetson HEADED=0`, passed 18 steps at
+`28d9763b`. The one step left, "a Windows build is published", waits on a release that carries the
+Windows zips #1623 added. Run the exercise after that release, and close the mission if it passes.
 
+- **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
+  active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: v0.6.15 to v0.6.20 released, with the macOS request QoS, the WebGL pin dot, the walk-a-signal
-  video, the batched WebGL draw, and the warm seed that brought wasm cold under target. Retriage on
-  2026-11-13 found 70 P3 and 59 `waiting` open, nothing at P0 to P2, and nothing unranked.
+- This run: #1606 to #1623 merged. Archives read as folders (#1610), the board view's stack view
+  (#1608), `make try` with recording (#1619 to #1622, `make demo-video` folded in), and Windows
+  release builds with a Windows CI job (#1623). #1609 (a single compressed design file) is `waiting`.
 
 ## Open, ranked
 
-1. **No mission.** Pick one with `/retriage`.
+1. **Close #1586** once a release carries the Windows zips and its exercise passes.
+2. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
