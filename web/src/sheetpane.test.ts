@@ -829,9 +829,13 @@ describe("a board view's stack view", () => {
     drills: [],
     outlineTris: [],
     unitsPerMm: 1e6,
+    bodies: [
+      { refDes: "U1", side: "front", outline: [0, 0, 1, 0, 1, 1], heightMm: 2 },
+      { refDes: "R1", side: "back", outline: [0, 0, 1, 0, 1, 1] },
+    ],
   } as unknown as BoardStackView;
 
-  function stackPane(withStack: boolean, gl: ReturnType<typeof fakeGl>["gl"] | null) {
+  function stackPane(withStack: boolean, gl: ReturnType<typeof fakeGl>["gl"] | null, canvases: HTMLCanvasElement[] = []) {
     const asked: string[] = [];
     const deps: SheetPaneDeps = {
       sheets: () => SHEETS,
@@ -854,7 +858,7 @@ describe("a board view's stack view", () => {
       onClose: vi.fn(),
       onOpened: vi.fn(),
       renderer: () => "svg",
-      gl: () => gl as never,
+      gl: (_id, canvas) => (canvases.push(canvas), gl as never),
     };
     const p = new SheetPane(`sheetview-${++panes}`, deps);
     document.body.appendChild(p.element);
@@ -869,6 +873,7 @@ describe("a board view's stack view", () => {
       leaveStack: () => calls.push("leave"),
       setExplode: (e: number) => (explode = e),
       setStackPreset: (p: string) => calls.push(`preset ${p}`),
+      setStackBodies: (on: boolean) => calls.push(`bodies ${on}`),
     });
     return { gl, calls, explode: () => explode };
   };
@@ -896,6 +901,34 @@ describe("a board view's stack view", () => {
     expect(asked).toEqual(["board svg", "board webgl", "board svg"]);
     expect(p.element.dataset.renderer).toBe("svg");
     expect(p.element.querySelector<HTMLInputElement>(".sheetview-webgl")?.checked).toBe(false);
+  });
+
+  it("draws a second stack view on a fresh canvas, since the first one's context is lost", async () => {
+    const { gl } = stackGl();
+    const canvases: HTMLCanvasElement[] = [];
+    const { p } = stackPane(true, gl, canvases);
+    await p.open("board");
+    await p.toggleStack();
+    await p.toggleStack();
+    await p.toggleStack();
+    expect(canvases.length).toBe(2);
+    expect(canvases[1]).not.toBe(canvases[0]);
+    expect(canvases[0].isConnected).toBe(false);
+    expect(canvases[1].isConnected).toBe(true);
+    expect(canvases[1].classList.contains("sheetview-gl")).toBe(true);
+  });
+
+  it("shows the parts' bodies on entering, and hides them from the Parts toggle", async () => {
+    const { gl, calls } = stackGl();
+    const { p } = stackPane(true, gl);
+    await p.open("board");
+    await p.toggleStack();
+    expect(calls).toContain("bodies true");
+    expect(p.element.querySelector("[data-stack-bodies-note]")?.textContent).toBe(" (1 of 2 at a default 1 mm)");
+    const box = p.element.querySelector<HTMLInputElement>('[data-action="stack-bodies"]')!;
+    box.checked = false;
+    box.dispatchEvent(new Event("change"));
+    expect(calls[calls.length - 1]).toBe("bodies false");
   });
 
   it("disables the Stack button on a board whose file states no stack, or where WebGL2 is missing", async () => {

@@ -52,6 +52,10 @@ type Style struct {
 	// slab in these (agni 1593). They travel as BoardStackRow.color.
 	Dielectric string // a core or prepreg
 	SolderMask string // a solder mask
+	// A part stands on its side's face of the stack view as a solid in PartBody (agni 1352). A part
+	// whose file states no height draws at a default height in PartBodyDefault, so it reads apart.
+	PartBody        string
+	PartBodyDefault string
 
 	// Font is the default font-family for all text, a CSS family list rather than one face
 	// (see SchematicFontStack). There is no per-element font.
@@ -134,17 +138,19 @@ var DefaultStyle = Style{
 		"#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b", "#ed7c33",
 		"#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#c1b61b",
 	},
-	Via:            "#9aa0a6",
-	SilkFront:      "#c1b61b",
-	SilkBack:       "#e8b2a7",
-	FabFront:       "#afafaf",
-	FabBack:        "#585d84",
-	CourtyardFront: "#ff26e2",
-	CourtyardBack:  "#00c7de",
-	Dielectric:     "#b59a5b",
-	SolderMask:     "#2f7d3b",
-	TitleBlockFill: "#fffef8",
-	Font:           SchematicFontStack,
+	Via:             "#9aa0a6",
+	SilkFront:       "#c1b61b",
+	SilkBack:        "#e8b2a7",
+	FabFront:        "#afafaf",
+	FabBack:         "#585d84",
+	CourtyardFront:  "#ff26e2",
+	CourtyardBack:   "#00c7de",
+	Dielectric:      "#b59a5b",
+	SolderMask:      "#2f7d3b",
+	PartBody:        "#4a4f57",
+	PartBodyDefault: "#a7adb5",
+	TitleBlockFill:  "#fffef8",
+	Font:            SchematicFontStack,
 }
 
 // DarkStyle is a dark-background preset. A WithStyle override recolors every surface (SVG,
@@ -174,17 +180,19 @@ var DarkStyle = Style{
 		"#ed7c33", "#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1", "#ed7c33",
 		"#5bc3eb", "#f76f8e", "#a7a5c6", "#28ccd9", "#e8b2a7", "#f2eda1",
 	},
-	Via:            "#c0c6cc",
-	SilkFront:      "#f2eda1",
-	SilkBack:       "#e8b2a7",
-	FabFront:       "#afafaf",
-	FabBack:        "#585d84",
-	CourtyardFront: "#ff26e2",
-	CourtyardBack:  "#26e9ff",
-	Dielectric:     "#c9ae6e",
-	SolderMask:     "#3f9a4c",
-	TitleBlockFill: "#1a1a1a",
-	Font:           SchematicFontStack,
+	Via:             "#c0c6cc",
+	SilkFront:       "#f2eda1",
+	SilkBack:        "#e8b2a7",
+	FabFront:        "#afafaf",
+	FabBack:         "#585d84",
+	CourtyardFront:  "#ff26e2",
+	CourtyardBack:   "#26e9ff",
+	Dielectric:      "#c9ae6e",
+	SolderMask:      "#3f9a4c",
+	PartBody:        "#5b616b",
+	PartBodyDefault: "#8b919a",
+	TitleBlockFill:  "#1a1a1a",
+	Font:            SchematicFontStack,
 }
 
 // Themes maps a theme name to its Style, for the `agni serve --theme` knob.

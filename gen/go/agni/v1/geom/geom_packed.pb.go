@@ -1271,9 +1271,15 @@ type BoardStackView struct {
 	OutlineTris []float64              `protobuf:"fixed64,5,rep,packed,name=outline_tris,json=outlineTris,proto3" json:"outline_tris,omitempty"`
 	// units_per_mm is how many board units make a millimetre, for placing a thickness_mm among the
 	// drills' and the outline's coordinates.
-	UnitsPerMm    float64 `protobuf:"fixed64,6,opt,name=units_per_mm,json=unitsPerMm,proto3" json:"units_per_mm,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UnitsPerMm float64 `protobuf:"fixed64,6,opt,name=units_per_mm,json=unitsPerMm,proto3" json:"units_per_mm,omitempty"`
+	// bodies holds one box per placed part, for drawing the parts on the board's faces (agni 1352).
+	Bodies []*BoardPartBody `protobuf:"bytes,7,rep,name=bodies,proto3" json:"bodies,omitempty"`
+	// body_color is what a client draws a body in, and default_body_color a body whose height_mm is
+	// unset, both from render.Style.
+	BodyColor        string `protobuf:"bytes,8,opt,name=body_color,json=bodyColor,proto3" json:"body_color,omitempty"`
+	DefaultBodyColor string `protobuf:"bytes,9,opt,name=default_body_color,json=defaultBodyColor,proto3" json:"default_body_color,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *BoardStackView) Reset() {
@@ -1348,6 +1354,101 @@ func (x *BoardStackView) GetUnitsPerMm() float64 {
 	return 0
 }
 
+func (x *BoardStackView) GetBodies() []*BoardPartBody {
+	if x != nil {
+		return x.Bodies
+	}
+	return nil
+}
+
+func (x *BoardStackView) GetBodyColor() string {
+	if x != nil {
+		return x.BodyColor
+	}
+	return ""
+}
+
+func (x *BoardStackView) GetDefaultBodyColor() string {
+	if x != nil {
+		return x.DefaultBodyColor
+	}
+	return ""
+}
+
+// BoardPartBody is one placed part drawn as a solid on its side's face of the board (agni 1352).
+// outline is the part's footprint as a convex ring of x,y pairs in board units, like
+// BoardStackView.drills, running counter-clockwise. It is the hull of the part's courtyard, of its
+// fab outline when it has no courtyard, and of its pads when it has neither. side is "front" or
+// "back". height_mm is the height geom.ComponentPlacement states, and is unset when the file gives
+// none, so a client that draws one picks a default and says so.
+type BoardPartBody struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Side          string                 `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
+	Outline       []float64              `protobuf:"fixed64,3,rep,packed,name=outline,proto3" json:"outline,omitempty"`
+	HeightMm      *float64               `protobuf:"fixed64,4,opt,name=height_mm,json=heightMm,proto3,oneof" json:"height_mm,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BoardPartBody) Reset() {
+	*x = BoardPartBody{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardPartBody) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardPartBody) ProtoMessage() {}
+
+func (x *BoardPartBody) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardPartBody.ProtoReflect.Descriptor instead.
+func (*BoardPartBody) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BoardPartBody) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *BoardPartBody) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
+}
+
+func (x *BoardPartBody) GetOutline() []float64 {
+	if x != nil {
+		return x.Outline
+	}
+	return nil
+}
+
+func (x *BoardPartBody) GetHeightMm() float64 {
+	if x != nil && x.HeightMm != nil {
+		return *x.HeightMm
+	}
+	return 0
+}
+
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 // F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
 // of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
@@ -1367,7 +1468,7 @@ type BoardDrillSpan struct {
 
 func (x *BoardDrillSpan) Reset() {
 	*x = BoardDrillSpan{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1379,7 +1480,7 @@ func (x *BoardDrillSpan) String() string {
 func (*BoardDrillSpan) ProtoMessage() {}
 
 func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1392,7 +1493,7 @@ func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardDrillSpan.ProtoReflect.Descriptor instead.
 func (*BoardDrillSpan) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *BoardDrillSpan) GetLayerFrom() string {
@@ -1450,7 +1551,7 @@ type BoardStackRow struct {
 
 func (x *BoardStackRow) Reset() {
 	*x = BoardStackRow{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1462,7 +1563,7 @@ func (x *BoardStackRow) String() string {
 func (*BoardStackRow) ProtoMessage() {}
 
 func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1475,7 +1576,7 @@ func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardStackRow.ProtoReflect.Descriptor instead.
 func (*BoardStackRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *BoardStackRow) GetName() string {
@@ -1542,7 +1643,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1554,7 +1655,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1704,7 +1805,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x05color\x18\x04 \x01(\tR\x05color\x12!\n" +
 	"\fsvg_selector\x18\x05 \x01(\tR\vsvgSelector\x12\x16\n" +
 	"\x06groups\x18\x06 \x03(\rR\x06groups\x12\x1c\n" +
-	"\tthickness\x18\a \x01(\tR\tthickness\"\xf4\x01\n" +
+	"\tthickness\x18\a \x01(\tR\tthickness\"\xf6\x02\n" +
 	"\x0eBoardStackView\x12/\n" +
 	"\x04rows\x18\x01 \x03(\v2\x1b.agni.v1.geom.BoardStackRowR\x04rows\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x1c\n" +
@@ -1712,7 +1813,18 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x06drills\x18\x04 \x03(\v2\x1c.agni.v1.geom.BoardDrillSpanR\x06drills\x12!\n" +
 	"\foutline_tris\x18\x05 \x03(\x01R\voutlineTris\x12 \n" +
 	"\funits_per_mm\x18\x06 \x01(\x01R\n" +
-	"unitsPerMm\"\x88\x01\n" +
+	"unitsPerMm\x123\n" +
+	"\x06bodies\x18\a \x03(\v2\x1b.agni.v1.geom.BoardPartBodyR\x06bodies\x12\x1d\n" +
+	"\n" +
+	"body_color\x18\b \x01(\tR\tbodyColor\x12,\n" +
+	"\x12default_body_color\x18\t \x01(\tR\x10defaultBodyColor\"\x86\x01\n" +
+	"\rBoardPartBody\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x12\n" +
+	"\x04side\x18\x02 \x01(\tR\x04side\x12\x18\n" +
+	"\aoutline\x18\x03 \x03(\x01R\aoutline\x12 \n" +
+	"\theight_mm\x18\x04 \x01(\x01H\x00R\bheightMm\x88\x01\x01B\f\n" +
+	"\n" +
+	"_height_mm\"\x88\x01\n" +
 	"\x0eBoardDrillSpan\x12\x1d\n" +
 	"\n" +
 	"layer_from\x18\x01 \x01(\tR\tlayerFrom\x12\x19\n" +
@@ -1749,7 +1861,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -1766,14 +1878,15 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*PackedLabelRuns)(nil),       // 12: agni.v1.geom.PackedLabelRuns
 	(*BoardLayerRow)(nil),         // 13: agni.v1.geom.BoardLayerRow
 	(*BoardStackView)(nil),        // 14: agni.v1.geom.BoardStackView
-	(*BoardDrillSpan)(nil),        // 15: agni.v1.geom.BoardDrillSpan
-	(*BoardStackRow)(nil),         // 16: agni.v1.geom.BoardStackRow
-	(*PackedHighlight_Group)(nil), // 17: agni.v1.geom.PackedHighlight.Group
+	(*BoardPartBody)(nil),         // 15: agni.v1.geom.BoardPartBody
+	(*BoardDrillSpan)(nil),        // 16: agni.v1.geom.BoardDrillSpan
+	(*BoardStackRow)(nil),         // 17: agni.v1.geom.BoardStackRow
+	(*PackedHighlight_Group)(nil), // 18: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	17, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	18, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
 	8,  // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
@@ -1781,14 +1894,15 @@ var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	11, // 7: agni.v1.geom.PackedSheet.label_columns:type_name -> agni.v1.geom.PackedLabels
 	12, // 8: agni.v1.geom.PackedLabels.runs:type_name -> agni.v1.geom.PackedLabelRuns
 	6,  // 9: agni.v1.geom.PackedLabelRuns.runs:type_name -> agni.v1.geom.TextRun
-	16, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
-	15, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
-	0,  // 12: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	17, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
+	16, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
+	15, // 12: agni.v1.geom.BoardStackView.bodies:type_name -> agni.v1.geom.BoardPartBody
+	0,  // 13: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -1796,14 +1910,15 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 	if File_agni_v1_geom_geom_packed_proto != nil {
 		return
 	}
-	file_agni_v1_geom_geom_packed_proto_msgTypes[14].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[13].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

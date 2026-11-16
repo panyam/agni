@@ -21,6 +21,7 @@ import { followBoard, type BoardFacts } from "./boardfollow.js";
 import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import type { StackPreset } from "./stackcamera.js";
+import { defaultedNote } from "./stackbodies.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
 // board again comes back the way the bench has it (agni issue 1327). A board flipped an odd number of
@@ -179,7 +180,7 @@ export class SheetPane {
   sheet = "";
   link: Link = "follow";
   private readonly host: HTMLElement;
-  private readonly glCanvas: HTMLCanvasElement;
+  private glCanvas: HTMLCanvasElement;
   private readonly textHost: HTMLElement;
   private gl: CanvasComponent | null = null;
   private readonly webglBox: HTMLInputElement;
@@ -234,6 +235,10 @@ export class SheetPane {
   private readonly stackButton: HTMLButtonElement;
   private readonly stackBar: HTMLElement;
   private readonly explodeInput: HTMLInputElement;
+  // bodiesBox shows and hides the parts' bodies (agni issue 1352), and bodiesNote says how many parts
+  // stand at a default height because the file states none.
+  private readonly bodiesBox: HTMLInputElement;
+  private readonly bodiesNote: HTMLElement;
   private exploded = false;
   private noGl = false;
   private stackFrom: { mode: SurfaceMode; view: unknown } | null = null;
@@ -355,6 +360,17 @@ export class SheetPane {
     this.explodeInput.title = "how far apart the layers draw: 0 is the board's true thickness";
     this.explodeInput.addEventListener("input", () => this.gl?.setExplode(Number(this.explodeInput.value) / 100));
     this.stackBar.append(this.explodeInput);
+    const bodiesLabel = el("label", "render-toggle sheetview-stack-bodies");
+    bodiesLabel.title = "stand each part on its side of the board, as tall as its file states, or at a default height where the file gives none";
+    this.bodiesBox = el("input", "sheetview-stack-bodies-box") as HTMLInputElement;
+    this.bodiesBox.type = "checkbox";
+    this.bodiesBox.checked = true;
+    this.bodiesBox.dataset.action = "stack-bodies";
+    this.bodiesBox.addEventListener("change", () => this.gl?.setStackBodies(this.bodiesBox.checked));
+    this.bodiesNote = el("span", "sheetview-stack-bodies-note");
+    this.bodiesNote.dataset.stackBodiesNote = "";
+    bodiesLabel.append(this.bodiesBox, doc.createTextNode("Parts"), this.bodiesNote);
+    this.stackBar.append(bodiesLabel);
     for (const [preset, text] of [["top", "Top"], ["iso", "Iso"], ["front", "Front"], ["side", "Side"]] as [StackPreset, string][]) {
       const b = button("sheetview-stack-preset", `stack-${preset}`, text, `look at the stack from the ${preset === "iso" ? "corner" : preset}`, () => this.gl?.setStackPreset(preset));
       b.dataset.stackPreset = preset;
@@ -412,9 +428,15 @@ export class SheetPane {
         if (!this.gl && create) this.gl = (this.deps.gl ?? glDrawing)(this.id, this.glCanvas, this.textHost);
         return this.gl;
       },
+      // Disposing the drawing loses its context on purpose, to free the GPU's copy. A canvas keeps the
+      // context it first made, lost or not, so the next WebGL drawing gets a fresh canvas. Without one,
+      // its shaders fail to compile and a second press of Stack draws nothing.
       dropGl: () => {
         this.gl?.dispose();
         this.gl = null;
+        const fresh = this.glCanvas.cloneNode(false) as HTMLCanvasElement;
+        this.glCanvas.replaceWith(fresh);
+        this.glCanvas = fresh;
       },
       layerScope: `[data-sheetview="${id}"] .sheetview-canvas`,
       layerStyle: this.layerStyle,
@@ -452,6 +474,8 @@ export class SheetPane {
       return;
     }
     gl.setExplode(Number(this.explodeInput.value) / 100);
+    gl.setStackBodies(this.bodiesBox.checked);
+    this.bodiesNote.textContent = defaultedNote(stack);
     this.setExploded(true);
   }
 

@@ -321,6 +321,25 @@ message BoardStackView {
   // units_per_mm is how many board units make a millimetre, for placing a thickness_mm among the
   // drills' and the outline's coordinates.
   double units_per_mm = 6;
+  // bodies holds one box per placed part, for drawing the parts on the board's faces (agni 1352).
+  repeated BoardPartBody bodies = 7;
+  // body_color is what a client draws a body in, and default_body_color a body whose height_mm is
+  // unset, both from render.Style.
+  string body_color = 8;
+  string default_body_color = 9;
+}
+
+// BoardPartBody is one placed part drawn as a solid on its side's face of the board (agni 1352).
+// outline is the part's footprint as a convex ring of x,y pairs in board units, like
+// BoardStackView.drills, running counter-clockwise. It is the hull of the part's courtyard, of its
+// fab outline when it has no courtyard, and of its pads when it has neither. side is "front" or
+// "back". height_mm is the height geom.ComponentPlacement states, and is unset when the file gives
+// none, so a client that draws one picks a default and says so.
+message BoardPartBody {
+  string ref_des = 1;
+  string side = 2;
+  repeated double outline = 3;
+  optional double height_mm = 4;
 }
 
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from

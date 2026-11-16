@@ -18,6 +18,7 @@ import (
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/examples/common"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
 )
 
@@ -93,6 +94,28 @@ func main() {
 		}
 		fmt.Printf("Wrote board-highlight.svg: net %q re-stroked on its copper, connected pads ringed.\n", net)
 		fmt.Println("Stack it over board.svg (same frame) — the join the web viewer's findings use.")
+		return nil
+	})
+
+	demo.Bind("bodies").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		const path = "../common/designs/parts-board.ipc2581.xml"
+		f, err := os.Open(path)
+		if err != nil {
+			return demokit.Errf("open %s: %v", path, err)
+		}
+		defer f.Close()
+		b, err := ipc2581.ReadBoardGeometry(f, path)
+		if err != nil {
+			return demokit.Errf("read %s: %v", path, err)
+		}
+		v := render.BoardStack(b)
+		for _, body := range v.GetBodies() {
+			height := "no height in the file, so a viewer draws a default"
+			if body.HeightMm != nil {
+				height = fmt.Sprintf("%.2f mm tall", body.GetHeightMm())
+			}
+			fmt.Printf("%-3s on the %s, a %d-point footprint, %s\n", body.GetRefDes(), body.GetSide(), len(body.GetOutline())/2, height)
+		}
 		return nil
 	})
 

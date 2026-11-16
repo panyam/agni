@@ -19,9 +19,9 @@ import (
 //
 // Fidelity: lossy-bounded (C6). This producer emits the board outline (Profile), the layer
 // table, the Stackup with each row's thickness and its Spec's material and electrical values (agni
-// 1592), and component placements with their pads. Pads resolve through the padstack
-// def/instance indirection. It also emits routed copper, and a track's arc step is kept as an arc
-// through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular,
+// 1592), and component placements with their pads and their package's height (agni 1352). Pads
+// resolve through the padstack def/instance indirection. It also emits routed copper, and a
+// track's arc step is kept as an arc through its mid point (agni 1358). Vias are drilled holes with the co-located pad as annular,
 // and each records its layer span. Each pin's and via's lands on every copper layer are gathered
 // into padstacks by the padstack each land names (agni 1356). A land keeps its offset from the pin,
 // which the package pin's primitive carries in its Xform, and a contour primitive keeps its outline
@@ -123,6 +123,8 @@ type ptEl struct {
 type gPkgEl struct {
 	Name string   `xml:"name,attr"`
 	Pins []gPinEl `xml:"Pin"`
+	// Height is the body's height off the board, in the file's units (agni 1352).
+	Height string `xml:"height,attr"`
 	// Silkscreen and fab artwork, package-local (composed to the board per placement). Outline is
 	// the component body (fab), Marking is silkscreen, AssemblyDrawing is the assembly layer (fab).
 	Outline  shapeHolderEl   `xml:"Outline"`
@@ -375,6 +377,20 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 	return m
 }
 
+// packageHeights maps each package that states a height to it in nanometres. A package states
+// none when it has no height or one that does not parse to a positive length.
+func (f *ipcGeomFile) packageHeights(nmPerUnit float64) map[string]int64 {
+	m := map[string]int64{}
+	for _, p := range f.Pkgs {
+		v, err := strconv.ParseFloat(strings.TrimSpace(p.Height), 64)
+		if err != nil || v <= 0 {
+			continue
+		}
+		m[p.Name] = int64(math.Round(v * nmPerUnit))
+	}
+	return m
+}
+
 // placements emits one ComponentPlacement per placed component. It resolves each pin through the
 // package's pin list and the primitive dictionary into a flattened Pad. That collapses the
 // def/instance split into the contract's inline pad form. Sorted by ref_des for deterministic
@@ -382,6 +398,7 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl, stacks *padstackIndex) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
 	nets, holes := f.pinNets(), f.pinHoles(nmPerUnit)
+	heights := f.packageHeights(nmPerUnit)
 	for _, c := range f.Comps {
 		if skipRefDes(c.RefDes) {
 			continue
@@ -397,6 +414,9 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 			Layer:       side,
 			Mirror:      side == "B.Cu",
 			Prov:        &geom.Provenance{SourceFile: src},
+		}
+		if h, ok := heights[c.PackageRef]; ok {
+			pl.Height = &h
 		}
 		for _, pin := range pkgPins[c.PackageRef] {
 			p := prims[pin.primID()]

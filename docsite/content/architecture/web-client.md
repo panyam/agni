@@ -181,6 +181,18 @@ panel from the ones above.
   pane remembers its renderer and view, and leaving the stack view restores them. The canvas writes
   a clickable point on each copper layer's tracks to `data-stack-probes`, which the cross-probe walk
   clicks, since a WebGL drawing has no element to aim at.
+- **The stack view stands each part on its side of the board** (agni issue 1352). Say a reader wants
+  to see which parts sit over a via before turning the board over. `BoardStackView.bodies` gives one
+  body per placement. Its footprint is a convex ring, the hull of the part's courtyard, of its fab
+  outline when it has no courtyard, and of its pads when it has neither. Its height is
+  `ComponentPlacement.height` in millimetres, and is unset when the file gives none.
+  `web/src/stackbodies.ts` extrudes each ring off its side's face. A part's height draws at the
+  board's true scale whatever the explode control says, so a 2 mm part never towers over a spread
+  stack. A part with no stated height stands at 1 mm in `Style.PartBodyDefault`, and the **Parts**
+  toggle's note counts those parts. A click meets the near side's parts first, then the layers, then
+  the far side's parts, and a body picks as its part. Only a body's top face picks, so a body seen
+  edge on picks through to the layers. The canvas writes a clickable point on a few parts to
+  `data-stack-body-probes`.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past
   the edges, so a first look read as a rendering bug. `defaultHidden` in `web/src/boardlayers.ts`

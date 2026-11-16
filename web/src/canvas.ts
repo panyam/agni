@@ -41,6 +41,7 @@ import { groupDepths, layoutStack, perMm, stackZ, type GroupDepths, type StackLa
 import { PRESETS, StackCamera, type StackPreset } from "./stackcamera.js";
 import { StackExtras, stackGeometry } from "./stackgl.js";
 import { pickThroughStack } from "./stackpick.js";
+import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
 
 type Rgba = [number, number, number, number];
 
@@ -52,6 +53,10 @@ interface StackState {
   depths: GroupDepths;
   camera: StackCamera;
   extras: StackExtras | null;
+  // bodies holds the parts the stack view stands on the board's faces (agni issue 1352), and
+  // showBodies whether they draw and pick.
+  bodies: BodyGeometry;
+  showBodies: boolean;
   explode: number;
   mmScale: number;
   width: number;
@@ -115,6 +120,7 @@ export class CanvasComponent extends BaseComponent {
   private resizeObserver?: ResizeObserver;
   private stack: StackState | null = null;
   private litCache: Map<string, Rgba> | null = null;
+  private litPartsCache: Map<string, Rgba> | null = null;
 
   // textHost is where the text layer goes, and readout where the canvas reports what it drew. The
   // page's canvas leaves both unset and gets #text-overlay and #readout. A sheet view sets its own
@@ -318,8 +324,9 @@ export class CanvasComponent extends BaseComponent {
     const candidates = probeCandidates(sheet, rows);
     const through = rows.find((r) => r.kind === "through");
     let extras: StackExtras | null = null;
+    const bodies = bodyGeometry(view.bodies, sheet.originX, sheet.originY);
     try {
-      extras = new StackExtras(this.gl, stackGeometry(view, layout, sheet.originX, sheet.originY));
+      extras = new StackExtras(this.gl, stackGeometry(view, layout, sheet.originX, sheet.originY), bodies);
     } catch (e) {
       console.warn("agni: the stack's barrels and slabs did not build", e);
     }
@@ -330,6 +337,8 @@ export class CanvasComponent extends BaseComponent {
       depths,
       camera: new StackCamera({ ...centre, z: 0 }, width),
       extras,
+      bodies,
+      showBodies: true,
       explode: 0,
       mmScale: view.unitsPerMm,
       width,
@@ -345,9 +354,25 @@ export class CanvasComponent extends BaseComponent {
     this.resize();
     this.stack.camera.setPose(PRESETS.iso);
     this.stack.camera.fit();
-    (this.rootElement as HTMLElement).dataset.stack = "on";
+    const el = this.rootElement as HTMLElement;
+    el.dataset.stack = "on";
+    el.dataset.stackBodies = JSON.stringify({ parts: bodies.bodies.length, defaulted: bodies.bodies.filter((b) => b.defaulted).length });
     this.gate.invalidate();
     return true;
+  }
+
+  // setStackBodies shows or hides the parts' bodies in the stack view. A hidden body neither draws
+  // nor picks.
+  setStackBodies(on: boolean): void {
+    if (!this.stack || this.stack.showBodies === on) return;
+    this.stack.showBodies = on;
+    this.gate.invalidate();
+  }
+
+  // bodyFaces is where the board's faces sit in world z at the current explode, and the scale a
+  // part's height draws at, which is the board's true one.
+  private bodyFaces(st: StackState): BodyFaces {
+    return { zTop: stackZ(0, st.layout, st.mmScale), zBottom: stackZ(st.layout.totalMm, st.layout, st.mmScale), hScale: st.view.unitsPerMm };
   }
 
   // leaveStack returns to the flat board, with the camera, side and hidden layers it had.
@@ -360,9 +385,11 @@ export class CanvasComponent extends BaseComponent {
     const el = this.rootElement as HTMLElement;
     delete el.dataset.stack;
     delete el.dataset.stackProbes;
+    delete el.dataset.stackBodyProbes;
     delete el.dataset.stackHeightMm;
     delete el.dataset.stackSpread;
     delete el.dataset.stackBytes;
+    delete el.dataset.stackBodies;
     this.overlay?.show();
     this.resize();
     this.gate.invalidate();
@@ -422,17 +449,32 @@ export class CanvasComponent extends BaseComponent {
   }
 
   // pickStack picks through the stack view at device pixel (px, py), through the flat board's pick
-  // index (stackpick.ts).
-  // only limits the pick to some of the planes.
+  // index (stackpick.ts), and the parts' bodies where they show (stackbodies.ts).
+  // only limits the pick to some of the planes, and leaves the bodies out.
   private pickStack(px: number, py: number, only?: StackState["planes"]): Selection | null {
     const st = this.stack;
     const sheet = this.sheet;
     if (!st || !sheet) return null;
     const picks = (this.picks ??= new PickIndex(sheet));
     const planes = (only ?? st.planes).map((p) => ({ z: stackZ(p.depth, st.layout, st.mmScale), groups: p.groups }));
-    return pickThroughStack(st.camera, planes, st.groups, this.hidden, px, py, this.dpr(), (x, y, perPx, hidden) =>
-      picks.pick(x, y, perPx, hidden, this.depth),
-    );
+    const layers = () =>
+      pickThroughStack(st.camera, planes, st.groups, this.hidden, px, py, this.dpr(), (x, y, perPx, hidden) => picks.pick(x, y, perPx, hidden, this.depth));
+    if (only || !st.showBodies) return layers();
+    return pickWithBodies(st.camera, st.bodies.bodies, this.bodyFaces(st), px, py, layers);
+  }
+
+  // litParts lists the parts the highlight lights, by ref, with their colours, for the bodies. It is
+  // kept until the highlight or the sheet changes, as litNets is.
+  private litParts(): Map<string, Rgba> {
+    if (this.litPartsCache) return this.litPartsCache;
+    const lit = new Map<string, Rgba>();
+    const fallback = hexToRgba(DEFAULT_HIGHLIGHT_COLOR, [1, 0, 1, 1]);
+    for (const spec of this.highlights) {
+      const color = hexToRgba(spec.color || DEFAULT_HIGHLIGHT_COLOR, fallback);
+      for (const ref of spec.components ?? []) lit.set(ref, color);
+    }
+    this.litPartsCache = lit;
+    return lit;
   }
 
   // writeProbes names, for each copper layer, a point on one of its tracks that a click picks, in CSS
@@ -465,6 +507,37 @@ export class CanvasComponent extends BaseComponent {
       }
     }
     (this.rootElement as HTMLElement).dataset.stackProbes = JSON.stringify(probes);
+    (this.rootElement as HTMLElement).dataset.stackBodyProbes = JSON.stringify(this.bodyProbes(st));
+  }
+
+  // bodyProbes names up to BODY_PROBES parts on the side facing the camera, each with the CSS pixel
+  // at the middle of its top face, where a click picks that part.
+  private bodyProbes(st: StackState): { ref: string; x: number; y: number }[] {
+    const out: { ref: string; x: number; y: number }[] = [];
+    if (!st.showBodies) return out;
+    const dpr = this.dpr();
+    const canvas = this.rootElement as HTMLCanvasElement;
+    const f = this.bodyFaces(st);
+    const fromBelow = st.camera.basis().eye.z < 0;
+    for (const b of st.bodies.bodies) {
+      if (b.back !== fromBelow) continue;
+      const n = b.ring.length / 2;
+      let cx = 0;
+      let cy = 0;
+      for (let i = 0; i < n; i++) {
+        cx += b.ring[2 * i] / n;
+        cy += b.ring[2 * i + 1] / n;
+      }
+      const at = st.camera.project({ x: cx, y: cy, z: bodyTopZ(b, f) });
+      const x = Math.round(at.x / dpr);
+      const y = Math.round(at.y / dpr);
+      if (x < 0 || y < 0 || x > canvas.clientWidth || y > canvas.clientHeight) continue;
+      const sel = this.pickStack(x * dpr, y * dpr);
+      if (sel?.kind !== "component" || sel.ref !== b.ref) continue;
+      out.push({ ref: b.ref, x, y });
+      if (out.length >= BODY_PROBES) break;
+    }
+    return out;
   }
 
   // dispose stops drawing and frees the GPU's copy of the sheet, for a sheet view the reader closed
@@ -551,6 +624,7 @@ export class CanvasComponent extends BaseComponent {
   // the renderer's overlay path. A no-op without a sheet or renderer yet.
   private applyHighlights(): void {
     this.litCache = null;
+    this.litPartsCache = null;
     if (!this.renderer || !this.sheet) return;
     const sheet = this.sheet;
     const lit = new Set<string>();
@@ -817,7 +891,7 @@ export class CanvasComponent extends BaseComponent {
     const view = st.camera.matrix();
     // The renderer's version moves with the highlight and the hidden layers, and the key with the
     // camera and the explode control.
-    const key = Float32Array.from([...view, st.mmScale]);
+    const key = Float32Array.from([...view, st.mmScale, st.showBodies ? 1 : 0]);
     if (!this.gate.shouldDraw({ matrix: key, width: canvas.clientWidth, height: canvas.clientHeight, dpr: this.dpr(), content: renderer, version: renderer.version })) return;
     const t0 = performance.now();
     const zTop = stackZ(0, st.layout, st.mmScale);
@@ -832,6 +906,14 @@ export class CanvasComponent extends BaseComponent {
         barrelColor: st.barrelColor,
         lit: this.litNets(),
         parseColor: (hex, alpha) => hexToRgba(hex, [0.7, 0.6, 0.4, alpha], alpha),
+        bodies: st.showBodies
+          ? {
+              ...this.bodyFaces(st),
+              color: hexToRgba(st.view.bodyColor, [0.3, 0.31, 0.34, 1]),
+              defaultColor: hexToRgba(st.view.defaultBodyColor, [0.65, 0.68, 0.71, 1]),
+              litParts: this.litParts(),
+            }
+          : undefined,
       }) ?? 0;
     canvas.dataset.draws = String(++this.draws);
     // What the board and the stack view hold on the GPU, in bytes, for the PR's memory budget.
@@ -840,6 +922,7 @@ export class CanvasComponent extends BaseComponent {
     if (st.probeTimer) clearTimeout(st.probeTimer);
     // The probes go stale as soon as the view moves, so they are gone until the view settles.
     delete canvas.dataset.stackProbes;
+    delete canvas.dataset.stackBodyProbes;
     st.probeTimer = setTimeout(() => {
       st.probeTimer = null;
       if (this.stack === st) this.writeProbes();
@@ -889,6 +972,9 @@ export class CanvasComponent extends BaseComponent {
 
 // PROBE_TRIES is how many points on a layer writeProbes tries before it gives the layer up.
 const PROBE_TRIES = 24;
+
+// BODY_PROBES is how many parts the stack view names a clickable point on, in data-stack-body-probes.
+const BODY_PROBES = 3;
 
 // ProbeCandidates is a copper layer's groups and points inside the net shapes drawn in them.
 interface ProbeCandidates {

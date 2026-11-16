@@ -10,6 +10,7 @@
 
 import type { BoardStackView } from "./gen/agni/v1/geom/geom_packed_pb.js";
 import { spanDepths, type StackLayout } from "./stacklayout.js";
+import { BODY_FLOATS, type BodyGeometry } from "./stackbodies.js";
 
 type Rgba = [number, number, number, number];
 
@@ -105,6 +106,33 @@ void main() {
 }
 `;
 
+// BODY_SRC raises a part's vertex off its side's face by its height, at the board's true scale
+// (stackbodies.ts). a_pos.w holds the shade, plus 2 on the back.
+const BODY_SRC = `#version 300 es
+in vec4 a_pos;
+uniform mat4 u_view;
+uniform float u_zTop;
+uniform float u_zBottom;
+uniform float u_hScale;
+out float v_shade;
+void main() {
+  float back = step(1.5, a_pos.w);
+  v_shade = a_pos.w - 2.0 * back;
+  float z = mix(u_zTop + a_pos.z * u_hScale, u_zBottom - a_pos.z * u_hScale, back);
+  gl_Position = u_view * vec4(a_pos.xy, z, 1.0);
+}
+`;
+
+const BODY_FRAG_SRC = `#version 300 es
+precision highp float;
+uniform vec4 u_color;
+in float v_shade;
+out vec4 outColor;
+void main() {
+  outColor = vec4(u_color.rgb * v_shade, u_color.a);
+}
+`;
+
 const FRAG_SRC = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
@@ -114,7 +142,7 @@ void main() {
 }
 `;
 
-function program(gl: WebGL2RenderingContext, vert: string): WebGLProgram {
+function program(gl: WebGL2RenderingContext, vert: string, frag = FRAG_SRC): WebGLProgram {
   const shader = (type: number, src: string) => {
     const sh = gl.createShader(type);
     if (!sh) throw new Error("createShader failed");
@@ -124,7 +152,7 @@ function program(gl: WebGL2RenderingContext, vert: string): WebGLProgram {
     return sh;
   };
   const vs = shader(gl.VERTEX_SHADER, vert);
-  const fs = shader(gl.FRAGMENT_SHADER, FRAG_SRC);
+  const fs = shader(gl.FRAGMENT_SHADER, frag);
   const prog = gl.createProgram();
   if (!prog) throw new Error("createProgram failed");
   gl.attachShader(prog, vs);
@@ -149,6 +177,16 @@ export interface StackDrawOptions {
   barrelColor: Rgba;
   lit: Map<string, Rgba>;
   parseColor: (hex: string, alpha: number) => Rgba;
+  // The parts' bodies draw when bodies is set. zBottom is the world z of the board's bottom face,
+  // and hScale the world z one millimetre of a part's height spans. litParts names the parts whose
+  // bodies draw in a highlight colour.
+  bodies?: {
+    zBottom: number;
+    hScale: number;
+    color: Rgba;
+    defaultColor: Rgba;
+    litParts: Map<string, Rgba>;
+  };
 }
 
 interface Part {
@@ -172,15 +210,17 @@ export class StackExtras {
   private readonly holeLoc: number;
   private readonly spanLoc: number;
   private readonly holeBuf: WebGLBuffer;
+  private readonly bodyPart: Part & { zBottom: WebGLUniformLocation | null; hScale: WebGLUniformLocation | null };
   // bytes is what the barrels and slabs hold on the GPU.
   readonly bytes: number;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
     private readonly geometry: StackGeometry,
+    private readonly bodies: BodyGeometry | null = null,
   ) {
-    const part = (src: string): Part => {
-      const prog = program(gl, src);
+    const part = (src: string, frag?: string): Part => {
+      const prog = program(gl, src, frag);
       const vao = gl.createVertexArray();
       if (!vao) throw new Error("failed to create a stack vertex array");
       return {
@@ -225,10 +265,18 @@ export class StackExtras {
     const posLoc = gl.getAttribLocation(this.slabs.prog, "a_pos");
     gl.enableVertexAttribArray(posLoc);
     gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+    const bodyPart = part(BODY_SRC, BODY_FRAG_SRC);
+    this.bodyPart = { ...bodyPart, zBottom: gl.getUniformLocation(bodyPart.prog, "u_zBottom"), hScale: gl.getUniformLocation(bodyPart.prog, "u_hScale") };
+    const bodyVerts = bodies?.verts ?? new Float32Array(0);
+    gl.bindVertexArray(this.bodyPart.vao);
+    upload(bodyVerts);
+    const bodyLoc = gl.getAttribLocation(this.bodyPart.prog, "a_pos");
+    gl.enableVertexAttribArray(bodyLoc);
+    gl.vertexAttribPointer(bodyLoc, BODY_FLOATS, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-    this.bytes = sides.byteLength + geometry.holes.byteLength + geometry.slabs.byteLength;
+    this.bytes = sides.byteLength + geometry.holes.byteLength + geometry.slabs.byteLength + bodyVerts.byteLength;
     geometry.nets.forEach((net, i) => {
       if (!net) return;
       const list = this.byNet.get(net) ?? [];
@@ -256,11 +304,12 @@ export class StackExtras {
     gl.uniform1f(p.zPerMm, o.zPerMm);
   }
 
-  // draw draws the barrels, then the slabs from the farthest to the nearest without writing depth, so
-  // every slab tints what lies behind it. It returns the draw calls it made.
+  // draw draws the parts' bodies and the barrels, then the slabs from the farthest to the nearest
+  // without writing depth, so every slab tints what lies behind it. It returns the draw calls it made.
   draw(o: StackDrawOptions): number {
     const gl = this.gl;
     let calls = 0;
+    if (o.bodies && this.bodies && this.bodies.verts.length > 0) calls += this.drawBodies(o, o.bodies, this.bodies);
     if (this.holeCount > 0) {
       this.use(this.barrels, o);
       if (o.barrels) {
@@ -300,10 +349,35 @@ export class StackExtras {
     return calls;
   }
 
+  // drawBodies draws the parts with stated heights in one call and the defaulted ones in another, in
+  // a paler colour. A lit part draws again over its body in its highlight colour.
+  private drawBodies(o: StackDrawOptions, b: NonNullable<StackDrawOptions["bodies"]>, g: BodyGeometry): number {
+    const gl = this.gl;
+    const p = this.bodyPart;
+    this.use(p, o);
+    gl.uniform1f(p.zBottom, b.zBottom);
+    gl.uniform1f(p.hScale, b.hScale);
+    const total = g.verts.length / BODY_FLOATS;
+    let calls = 0;
+    const run = (first: number, count: number, c: Rgba) => {
+      if (count <= 0) return;
+      gl.uniform4f(p.color, c[0], c[1], c[2], c[3]);
+      gl.drawArrays(gl.TRIANGLES, first, count);
+      calls++;
+    };
+    run(0, g.stated, b.color);
+    run(g.stated, total - g.stated, b.defaultColor);
+    for (const [ref, c] of b.litParts) {
+      const r = g.runs.get(ref);
+      if (r) run(r.first, r.count, c);
+    }
+    return calls;
+  }
+
   dispose(): void {
     const gl = this.gl;
     for (const b of this.buffers) gl.deleteBuffer(b);
-    for (const p of [this.barrels, this.slabs]) {
+    for (const p of [this.barrels, this.slabs, this.bodyPart]) {
       gl.deleteVertexArray(p.vao);
       gl.deleteProgram(p.prog);
     }
