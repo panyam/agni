@@ -10,8 +10,9 @@ import solid from "vite-plugin-solid";
 // them recreates the two-cores setState-no-op bug inside the test runner itself (see the
 // solidAlias note in build.mjs).
 //
-// The "source" condition reads @panyam/agni-client's generated code from its .ts, as build.mjs and
-// tsconfig.json do (agni issue 1651).
+// The "source" condition reads a workspace package from its .ts rather than its dist, which is built
+// only for publishing. The viewer imports @panyam/agni-client's generated code that way (agni issue
+// 1651).
 export default defineConfig({
   plugins: [solid()],
   resolve: { conditions: ["source", "development", "browser"] },
