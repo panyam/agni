@@ -229,3 +229,21 @@ describe("board run width", () => {
     expect(text("FREE")?.getAttribute("textLength")).toBeNull();
   });
 });
+
+// The stack view hides a label a block covers, by visibility, so a layer the reader hid stays hidden
+// by display either way (agni issue 1657).
+describe("occluded labels", () => {
+  it("hides the labels named, shows them again when cleared, and leaves a hidden layer hidden", () => {
+    const host = document.createElement("div");
+    const overlay = new TextOverlay(host);
+    const label = { x: 10, y: 20, text: "", height: 5, rotationDeg: 0, justify: "", color: "#000", maxWidth: 0, runs: [] };
+    overlay.setContent([], [{ ...label, text: "A", group: 4 }, { ...label, text: "B", x: 30, group: 4 }, { ...label, text: "C", group: 9 }], "");
+    expect(overlay.anchors().map((a) => [a.x, a.group])).toEqual([[10, 4], [30, 4], [10, 9]]);
+    const el = (t: string) => [...host.querySelectorAll<SVGElement>("text")].find((e) => e.textContent === t)!;
+    overlay.setHiddenGroups([9]);
+    overlay.setOccluded(new Set([0, 2]));
+    expect([el("A").style.visibility, el("B").style.visibility, el("C").style.display]).toEqual(["hidden", "", "none"]);
+    overlay.setOccluded(new Set());
+    expect([el("A").style.visibility, el("C").style.visibility, el("C").style.display]).toEqual(["", "", "none"]);
+  });
+});

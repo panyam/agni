@@ -205,7 +205,11 @@ export class TextOverlay {
       if (a.transform) el.setAttribute("transform", a.transform);
       this.svg.appendChild(el);
     }
+    this.labelEls = [];
+    this.occluded = new Set();
     for (const l of labels) {
+      const entry = { x: l.x, y: l.y, group: l.group ?? 0, els: [] as SVGElement[] };
+      this.labelEls.push(entry);
       const x = l.x * k;
       const fontPx = l.height * k;
       // One <text> per line; see splitLabelLines.
@@ -245,6 +249,7 @@ export class TextOverlay {
         if (l.runs.length > 0 && !l.text.includes("\n")) appendRuns(t, l.runs);
         else t.textContent = line.text;
         if (l.group) t.setAttribute("data-group", String(l.group));
+        entry.els.push(t);
         this.plane(l.group ?? 0).appendChild(t);
       }
     }
@@ -296,6 +301,24 @@ export class TextOverlay {
         g.style.removeProperty("--look-fill");
       }
     }
+  }
+
+  // labelEls holds each label's world anchor, its group and the <text> elements it drew, in the
+  // order setContent took them, for the stack view's occlusion (agni issue 1657).
+  private labelEls: { x: number; y: number; group: number; els: SVGElement[] }[] = [];
+  private occluded = new Set<number>();
+
+  // anchors lists each label's world anchor and group, in setContent's order.
+  anchors(): readonly { x: number; y: number; group: number }[] {
+    return this.labelEls;
+  }
+
+  // setOccluded hides the labels whose indexes it names, and shows the rest. It hides by
+  // visibility, so a group the reader hid, which hides by display, stays hidden either way.
+  setOccluded(hidden: ReadonlySet<number>): void {
+    for (const i of this.occluded) if (!hidden.has(i)) for (const el of this.labelEls[i]?.els ?? []) el.style.visibility = "";
+    for (const i of hidden) if (!this.occluded.has(i)) for (const el of this.labelEls[i]?.els ?? []) el.style.visibility = "hidden";
+    this.occluded = new Set(hidden);
   }
 
   // flat takes the text off the stack view's planes, back to the flat layer update() moves.

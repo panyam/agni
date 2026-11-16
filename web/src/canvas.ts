@@ -41,7 +41,7 @@ import { groupDepths, layoutStack, perMm, stackZ, type GroupDepths, type StackLa
 import { PRESETS, StackCamera, type StackPreset } from "./stackcamera.js";
 import { HOLE_FLOATS, StackExtras, stackGeometry } from "./stackgl.js";
 import { GRAZING, pickThroughStack, type Barrel } from "./stackpick.js";
-import { faceShows } from "./stacktext.js";
+import { faceShows, occludedLabels, type LabelAnchor } from "./stacktext.js";
 import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
 import { boardLookPlan, padPrimitives, type BoardLookPlan, type StackLook } from "./stacklook.js";
 
@@ -466,6 +466,8 @@ export class CanvasComponent extends BaseComponent {
     delete el.dataset.stackBytes;
     delete el.dataset.stackBodies;
     delete el.dataset.stackLook;
+    delete el.dataset.stackOccluded;
+    this.overlay?.setOccluded(new Set());
     this.overlay?.flat();
     this.overlay?.show();
     this.resize();
@@ -581,6 +583,32 @@ export class CanvasComponent extends BaseComponent {
       if (z === null || !faceShows(faceOf(g), eyeZ)) return null;
       return { z, fill: silk && st.plan.color.get(g) === "silk" ? silk : undefined };
     });
+  }
+
+  // occludeText hides each label whose anchor a part's block covers from the camera (agni issue
+  // 1657), and names how many in data-stack-occluded. Labels on hidden layers, or on no plane, are
+  // left as they are, and nothing hides while Parts is off.
+  private occludeText(st: StackState): void {
+    const overlay = this.overlay;
+    if (!overlay) return;
+    if (!st.showBodies) {
+      overlay.setOccluded(new Set());
+      (this.rootElement as HTMLElement).dataset.stackOccluded = "0";
+      return;
+    }
+    const hidden = new Set(this.drawnHidden());
+    const index: number[] = [];
+    const anchors: LabelAnchor[] = [];
+    overlay.anchors().forEach((a, i) => {
+      if (hidden.has(a.group)) return;
+      const z = this.stackZOf(st, a.group);
+      if (z === null) return;
+      index.push(i);
+      anchors.push({ x: a.x, y: a.y, z });
+    });
+    const covered = new Set([...occludedLabels(st.camera, anchors, st.bodies.bodies, this.bodyFaces(st))].map((k) => index[k]));
+    overlay.setOccluded(covered);
+    (this.rootElement as HTMLElement).dataset.stackOccluded = String(covered.size);
   }
 
   // litParts lists the parts the highlight lights, by ref, with their colours, for the bodies. It is
@@ -1044,12 +1072,17 @@ export class CanvasComponent extends BaseComponent {
     canvas.dataset.stackBytes ??= JSON.stringify({ board: renderer.bytes, stack: st.extras?.bytes ?? 0 });
     this.profile?.rendered(performance.now() - t0, 0, calls);
     if (st.probeTimer) clearTimeout(st.probeTimer);
-    // The probes go stale as soon as the view moves, so they are gone until the view settles.
+    // The probes go stale as soon as the view moves, so they are gone until the view settles. So
+    // does which labels a block hides, and every label shows while the view moves.
     delete canvas.dataset.stackProbes;
     delete canvas.dataset.stackBodyProbes;
+    delete canvas.dataset.stackOccluded;
+    this.overlay?.setOccluded(new Set());
     st.probeTimer = setTimeout(() => {
       st.probeTimer = null;
-      if (this.stack === st) this.writeProbes();
+      if (this.stack !== st) return;
+      this.writeProbes();
+      this.occludeText(st);
     }, 150);
   }
 
