@@ -9,7 +9,7 @@ against one server and compares each line with the CLI's answers.
 | --- | --- | --- |
 | Go | [go/](go/) | the reference, #1628 |
 | TypeScript | [ts/](ts/), through [@panyam/agni-client](../ts/) | #1630 |
-| Rust | to come | #1631 |
+| Rust | [rust/](rust/), through [clients/rust](../rust/) | #1631 |
 | Java | [java/](java/), through [clients/java](../java/) | #1632 |
 | C++ | to come | #1638 |
 

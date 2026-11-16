@@ -35,6 +35,23 @@ proto-py:
 	rm -rf clients/python/src/agni/v1
 	cd clients/python && buf generate ../../protos --template buf.gen.py.yaml
 
+# Regenerate the Rust half (agni issue 1631) into clients/rust/src/gen. The template sets `clean`,
+# since src/gen holds generated code alone. proto-check-rust generates it again into a temp tree and
+# diffs, the way proto-check below does for the other languages.
+.PHONY: proto-rust proto-check-rust
+proto-rust:
+	cd clients/rust && buf generate ../../protos --template buf.gen.rust.yaml
+
+proto-check-rust:
+	@tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	(cd clients/rust && buf generate ../../protos --template buf.gen.rust.yaml -o "$$tmp") || exit 1; \
+	if ! diff -r clients/rust/src/gen "$$tmp/src/gen" >/dev/null 2>&1; then \
+		echo "generated Rust is stale; run 'make proto-rust' and commit the result:"; \
+		diff -rq clients/rust/src/gen "$$tmp/src/gen" 2>&1 | sed 's/^/  /'; \
+		exit 1; \
+	fi
+
 # Regenerate the Java client's messages and gRPC stubs (agni issue 1632) into
 # clients/java/src/generated/java. That directory holds generated code alone, so its template cleans it.
 .PHONY: proto-java
@@ -62,7 +79,7 @@ proto-java:
 # It also runs `buf breaking` against the latest release tag, with buf.yaml's FILE rules, so a change
 # that would break a client built against that release fails here (agni issue 1629). It needs the
 # tags, so CI's checkout fetches them.
-proto-check:
+proto-check: proto-check-rust
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
 	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py" "$$tmp/ts"; \

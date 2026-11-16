@@ -77,6 +77,9 @@ __pycache__/
 # The pnpm workspace root's install (agni issue 744); each member keeps its own node_modules too.
 /node_modules/
 
+# The Rust client workspace builds here (agni issue 1631), the exercise example included.
+/clients/rust/target/
+
 # The Java client's Gradle state and build output, and its example's (agni issue 1632).
 /clients/java/.gradle/
 /clients/java/.kotlin/
