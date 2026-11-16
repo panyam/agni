@@ -65,7 +65,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.cache/agni/samples
-          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+          key: remote-boards-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
 
       - name: make testall-go
         run: make testall-go
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.cache/agni/samples
-          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+          key: remote-boards-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
 
       - name: make testall-web
         run: make testall-web
@@ -103,7 +103,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.cache/agni/samples
-          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+          key: remote-boards-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
 
       - name: make testall-dist
         run: make testall-dist
@@ -129,7 +129,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.cache/agni/samples
-          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+          key: remote-boards-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
 
       - name: make testall-docs
         run: make testall-docs
@@ -154,10 +154,12 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.cache/agni/samples
-          key: remote-boards-${{ hashFiles('hack/samples.pin') }}
+          key: remote-boards-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
 
       - name: Fetch the samples the tests read
-        run: ./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
+        run: |
+          ./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
+          ./hack/fetch_remote.sh hack/kicad_models.pin tools/samples/kicad-models
 
       - name: Build the viewer bundle the server tests serve
         run: cd web && pnpm build
