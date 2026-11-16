@@ -21,8 +21,8 @@
 //
 // Mission #1586 grows the walk by a step per ticket (agni issue 1587 and its siblings). A board view
 // turns to the side a selection is on and shows the copper layers it uses, unless its "Follow side"
-// checkbox (data-action="follow-side") is off. The steps for #1588 to #1595 name the controls those
-// tickets build, and wait on them:
+// checkbox (data-action="follow-side") is off. The steps for #1588 to #1603 name the controls those
+// tickets build, and waited on them until each closed:
 // - data-action="selection-back" and "selection-forward" step through what was selected (#1588)
 // - data-action="prev-sheet" and "next-sheet" open the previous and next sheet that draws the
 //   selection, and [data-sheet-place] reads where the canvas is among them, such as "2 of 4" (#1589)
@@ -30,7 +30,7 @@
 // - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
 // - a board layer row states its thickness in [data-thickness], and the stack follows the rows (#1603)
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
-// - the latest release carries a Windows build (#1595)
+// The mission's Windows build (#1595) is checked where releases are built, by hack/dist_smoke.sh.
 //
 // `make exercise-cross-probe` tells the walk which of the tickets it waits on are closed
 // (CLOSED_TICKETS). A step then stops waiting on a closed one, so a step whose tickets have all
@@ -621,14 +621,6 @@ for (const name of chosen) {
           const after = { shown: await shown() };
           if (JSON.stringify(after.shown) !== JSON.stringify(before.shown)) throw new Error("the board view came back with other layers hidden");
           return `the stack drew ${height} mm tall at explode 0, and a click on ${inner.layer} picked ${inner.net}, which the schematic lit`;
-        });
-
-        await step("a Windows build is published", { waitsOn: ["#1595"] }, async () => {
-          const r = await fetch("https://api.github.com/repos/panyam/agni/releases/latest", { signal: AbortSignal.timeout(10_000) });
-          const assets: { name: string }[] = ((await r.json()) as { assets?: { name: string }[] }).assets ?? [];
-          const win = assets.find((a) => /windows/i.test(a.name));
-          if (!win) throw new Error(`the latest release has no Windows build among ${assets.length} assets`);
-          return win.name;
         });
 
         await step("no page errors", {}, async () => {
