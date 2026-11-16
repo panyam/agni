@@ -17,9 +17,10 @@ case "$(uname -m)" in
 esac
 name="agni_${tag}_${os}_${arch}"
 
-# Every tarball is listed in checksums.txt and matches it, the viewer bundle included, since that
+shopt -s nullglob
+# Every archive is listed in checksums.txt and matches it, the viewer bundle included, since that
 # list is what a `go install` binary checks its download against.
-(cd "$dist" && for f in *.tar.gz; do
+(cd "$dist" && for f in *.tar.gz *.zip; do
   grep -q "  $f\$" checksums.txt || { echo "dist_smoke: $f is not in checksums.txt"; exit 1; }
 done && shasum -a 256 -c checksums.txt >/dev/null)
 # macOS tar hides ._ entries when it lists an archive, so another reader lists them.
@@ -27,6 +28,21 @@ for f in "$dist"/*.tar.gz; do
   if python3 -c 'import sys, tarfile; sys.exit(any(n.split("/")[-1].startswith("._") for n in tarfile.open(sys.argv[1]).getnames()))' "$f"; then :; else
     echo "dist_smoke: $(basename "$f") carries macOS ._ shadow files"; exit 1
   fi
+done
+# A Windows zip holds agni.exe, the licence and the README in a folder of its own name, and no macOS
+# shadow files (agni issue 1595).
+for f in "$dist"/*.zip; do
+  if python3 - "$f" <<'PY'; then :; else exit 1; fi
+import os, sys, zipfile
+path = sys.argv[1]
+top = os.path.basename(path)[: -len(".zip")]
+names = set(zipfile.ZipFile(path).namelist())
+missing = [n for n in ("agni.exe", "LICENSE", "README.md") if f"{top}/{n}" not in names]
+shadows = [n for n in names if n.split("/")[-1].startswith("._")]
+if missing or shadows:
+    print(f"dist_smoke: {os.path.basename(path)} lacks {missing} or carries shadow files {shadows}")
+    sys.exit(1)
+PY
 done
 # grep -q would exit at the first match and close the pipe, which GNU tar reports as a write error and
 # pipefail turns into a failure, so grep reads the whole listing.

@@ -18,7 +18,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
@@ -80,7 +79,7 @@ func once(bin, mount, uri, wrap string, attached bool, wait time.Duration, secon
 	cmd.Env = os.Environ()
 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
 	if !attached {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		ownGroup(cmd)
 	}
 	if err := cmd.Start(); err != nil {
 		return 0, 0, err
@@ -89,7 +88,7 @@ func once(bin, mount, uri, wrap string, attached bool, wait time.Duration, secon
 		if attached {
 			_ = cmd.Process.Kill()
 		} else {
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			killGroup(cmd)
 		}
 		_ = cmd.Wait()
 	}()
