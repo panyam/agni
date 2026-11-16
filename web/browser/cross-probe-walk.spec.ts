@@ -82,9 +82,10 @@ const jetsonPicks = {
 // long one pairs with the schematic's by its pins.
 //
 // stack is what the board view's layer list says of F.Cu's thickness and of the whole stack (agni
-// issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board carries
-// no stack yet, so its list states no thickness.
+// issue 1603). Jetson's file states 1.711 mm and its layers sum to it. Clay's Allegro board gives its
+// stack in its cross-section and states no total, so its layers' 1.651 mm stands (agni issue 1601).
 const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states", thicknessMm: 1.711 };
+const clayStack = { fCu: "0.03556 mm", summary: "the layers sum to 1.651 mm, and the file states no board thickness", thicknessMm: 1.651 };
 const walks = {
   cut: {
     mount: "probe",
@@ -112,7 +113,7 @@ const walks = {
     inner: { net: "VBAT", sheet: "PAGE1", layer: "In2.Cu" },
     acrossSheets: "VBAT",
     agreement: { parts: "146 of 149 parts on the board", pick: "PTA0/JTAG_TCLK/SWD_CLK/EZP_CLK/UART0_CTS_B/UART0_COL_B/FTM0_CH5" },
-    stack: null as typeof jetsonStack | null,
+    stack: clayStack as typeof jetsonStack | null,
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
