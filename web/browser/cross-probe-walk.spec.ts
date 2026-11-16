@@ -716,6 +716,18 @@ for (const name of chosen) {
             }, PANE);
             throw new Error(`the board look shows no silkscreen text on the board's face; the text planes are ${JSON.stringify(seen)}`);
           }
+          // Once the view settles, the stack view hides each label a part's block covers, and names how
+          // many in data-stack-occluded. With Parts off nothing hides (agni issue 1657).
+          const occluded = () => gl.getAttribute("data-stack-occluded");
+          await page.waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.hasAttribute("data-stack-occluded"), PANE, { timeout: 5_000 }).catch(async () => {
+            throw new Error("the stack view never reported which labels its blocks hide");
+          });
+          const hiddenByParts = Number(await occluded());
+          await board.locator('[data-action="stack-bodies"]').uncheck({ timeout: 5_000 });
+          await page.waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-occluded") === "0", PANE, { timeout: 5_000 }).catch(async () => {
+            throw new Error(`with Parts off the stack view still hides ${await occluded()} labels`);
+          });
+          await board.locator('[data-action="stack-bodies"]').check({ timeout: 5_000 });
           await board.locator('[data-stack-look="layers"]').click({ timeout: 5_000 });
           if ((await look()) !== "layers") throw new Error(`Layers left the view in the ${await look()} look`);
           await button.click({ timeout: 5_000 });
@@ -724,7 +736,7 @@ for (const name of chosen) {
             .catch(async () => {
               throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
             });
-          return `the board look picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, and Layers switched back`;
+          return `the board look picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, its blocks hid ${hiddenByParts} labels and none with Parts off, and Layers switched back`;
         });
 
         await step("no page errors", {}, async () => {

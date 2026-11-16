@@ -210,8 +210,10 @@ panel from the ones above.
   orthographic, so a plane at one height maps onto the screen by a flat transform. The text overlay
   keeps one `<g>` per primitive group, and `placeOnPlanes` gives each one the matrix
   `planeMatrix` (`web/src/stacktext.ts`) works out from three projected points. A face's text shows
-  only from its own side. Text draws over the part blocks, and #1657 holds the texture approach that
-  would hide it behind them. A click on a via's barrel picks its net (`hitBarrel` in
+  only from its own side. The overlay draws over the scene, so once the view settles,
+  `occludedLabels` hides each label whose anchor a part's block covers: the ray from the camera
+  through the anchor enters a block first (agni issue 1657). It hides a whole label at a time, by
+  visibility, so a reader's hidden layers still hide by display. A click on a via's barrel picks its net (`hitBarrel` in
   `web/src/stackpick.ts`) when the barrel is nearer than the plane under the pointer.
 - **A board opens with its fab layers hidden** (agni issue 1486). Fab text is each part's value and
   reference. On Jetson's board it is most of the 5,732 texts, and it covers the copper and runs past

@@ -43,8 +43,9 @@ where nothing on a nearer layer covers it. Click a via's barrel between the plan
 selects its net too. A selected net lights on every layer it runs on, its vias' barrels included.
 
 The silkscreen's text sits on its layer, at whatever angle you turn the stack to. The top's text reads
-from above and the bottom's from below, so neither shows through the board. The text draws over any
-part block in front of it.
+from above and the bottom's from below, so neither shows through the board. Once the view stops
+moving, a label that a part's block hides from where you look hides too, a whole label at a time.
+Every label shows while you turn the view, and none hides with **Parts** off.
 
 ## See the parts on the board
 
