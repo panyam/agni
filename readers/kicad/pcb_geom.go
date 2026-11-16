@@ -641,6 +641,12 @@ func boardPlacement(fp *node, src string, stacks *padstacks) *geom.ComponentPlac
 				g.Layers = append(g.Layers, atomOf(ls.Arg(i)))
 			}
 		}
+		// A pad that lists only non-copper layers is a paste or mask window, not a land, and a
+		// placement holds only its copper pads. Glasgow's U1 has four (agni issue 133). A pad that
+		// lists no layers stays, as before.
+		if len(g.Layers) > 0 && !onCopper(g.Layers) {
+			continue
+		}
 		if nr := pad.Child("net"); nr != nil {
 			g.Net = atomOf(nr.Arg(len(nr.Kids) - 1)) // name is the last argument in both forms
 		}
@@ -650,6 +656,17 @@ func boardPlacement(fp *node, src string, stacks *padstacks) *geom.ComponentPlac
 		p.Pads = append(p.Pads, g)
 	}
 	return p
+}
+
+// onCopper reports whether a pad's layer list names a copper layer. KiCad names every copper layer
+// with a ".Cu" suffix in a pad's list, "*.Cu" included, whatever the board renames it to.
+func onCopper(layers []string) bool {
+	for _, l := range layers {
+		if strings.HasSuffix(l, ".Cu") {
+			return true
+		}
+	}
+	return false
 }
 
 // netCopper groups the board's segments and vias by resolved net name, sorted by name
