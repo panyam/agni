@@ -139,11 +139,12 @@ type odxStep struct {
 
 // odxParser holds the decoder's state between elements.
 type odxParser struct {
-	units   string
-	info    map[string]string
-	layers  []matrixLayer
-	steps   []*odxStep
-	symbols map[string]*featuresFile
+	units     string
+	thickness int64 // the board thickness CAD_DATA_HEADER states, in nanometres
+	info      map[string]string
+	layers    []matrixLayer
+	steps     []*odxStep
+	symbols   map[string]*featuresFile
 
 	step  *odxStep
 	pkg   *edaPkg
@@ -290,6 +291,15 @@ func (ps *odxParser) start(e xml.StartElement) error {
 			// No ENGLISH sample has been seen, and its symbol sizes may be in mils where its
 			// coordinates are in inches. A guess would read every pad at the wrong size.
 			return fmt.Errorf("UNITS=%q: only METRIC ODX is read", attrS(e, "UNITS"))
+		}
+		// THICKNESS is the board's total in millimetres, the only stack thickness ODX gives (agni
+		// 1660).
+		if _, ok := attr(e, "THICKNESS"); ok {
+			t, err := coord(e, "THICKNESS")
+			if err != nil {
+				return err
+			}
+			ps.thickness = t
 		}
 	case "CAD_LAYER":
 		typ := strings.ToUpper(attrS(e, "TYPE"))
@@ -578,7 +588,7 @@ func (ps *odxParser) job() (*parsedJob, error) {
 		m.steps = append(m.steps, s.name)
 	}
 	p := &parsedJob{job: &job{step: st.name, matrix: m}, info: ps.info, eda: &eda{pkgs: st.pkgs}}
-	p.odx = &odxTier{profile: st.profile, layers: map[string]*featuresFile{}, symbols: ps.symbols}
+	p.odx = &odxTier{thickness: ps.thickness, profile: st.profile, layers: map[string]*featuresFile{}, symbols: ps.symbols}
 
 	layerIdx := map[string]int{}
 	for i, l := range ps.layers {

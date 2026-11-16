@@ -11,6 +11,7 @@ This file covers the ODB++ job reader, ODB++X (ODX), and the Allegro export quir
 - **ODB++ forbids spaces in a name.** `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`, and a schematic-against-layout diff reports it renamed.
 - **KiCad's exporter leaves out a footprint marked `exclude_from_pos_files`.** It nets copper by what touches, so a planted short moves a track onto the other net (demo-board).
 - **A back part's package flips when it is on the back or marked M, not both** (agni 1656). Altium and Allegro mark it N, and KiCad marks it M with the package already flipped. `odxPlace` and `packageOutline` share the rule.
+- **Tools write a stack's `.layer_dielectric` two ways** (agni 1660). KiCad lists each dielectric in the matrix and writes every layer's own thickness. Altium and Allegro's zaius list none, and write the dielectric below each copper on that copper. With no dielectric in the matrix, the reader adds the rows back. Allegro writes `.copper_weight` in micrometres (18, 35), so 10 or more reads as micrometres. `TestAllegroODBStacksSumToTheirStatedThickness` holds the Allegro jobs to their totals.
 - **ODX is ODB++ in one XML file rooted at `<ODX>`** (agni 1372, `readers/odb/odx.go`). It fills the job reader's own `parsedJob`, so its netlist and board come out of the job code. `.xml` is sniffed by root element.
 - **ODX names a pin by its number**, since the name can be a placeholder such as `un_1`.
 - **Allegro writes `encoding = "ISO-8859-1"` with spaces**, and Go's decoder ignores that form. `odxDecoded` reads the declaration itself.
