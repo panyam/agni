@@ -44,6 +44,7 @@ func (p *pcb) toBoard(src string) (*geom.BoardGeometry, error) {
 		}
 		b.g.Layers = append(b.g.Layers, &geom.BoardLayer{Number: int32(i), Name: name, Kind: kind}) // #nosec G115 -- at most 82 layer ids
 	}
+	b.g.Stackup = stackup(p.board, p.stack, b.copper)
 	if path := b.outline(p.board); len(path) > 1 {
 		b.g.Outline = &geom.BoardOutline{Paths: []*geom.Polyline{{Points: path}}}
 	}
