@@ -1,10 +1,12 @@
 # The pnpm workspace (agni issue 744): the viewer, the datasheets workbench, which is the datasheet
 # service's page and is hosted apart from the viewer, and the TS modules both import. One lockfile at
-# the root, one install.
+# the root, one install. The TypeScript client and its example joined it in agni issue 1630.
 packages:
   - web
   - web-shared
   - datasheet/web
+  - clients/ts
+  - clients/examples/ts
 
 # esbuild ships its platform binary as an optional dependency and its postinstall links and verifies
 # it. pnpm refuses to run a dependency's build script until the repo declares a decision about it, so

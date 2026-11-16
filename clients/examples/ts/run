@@ -1,0 +1,16 @@
+#!/bin/sh
+# Runs the TypeScript client example, as make exercise-clients runs every language's example:
+# clients/examples/<language>/run -server <url> -design <uri>. esbuild bundles main.ts with the client
+# from its sources (the "source" export condition) into a temporary file, and node runs that. It
+# needs the pnpm workspace installed (pnpm install at the repo root).
+set -e
+dir=$(cd "$(dirname "$0")" && pwd)
+if [ ! -x "$dir/node_modules/.bin/esbuild" ]; then
+	echo "clients/examples/ts: no esbuild in $dir/node_modules; run pnpm install at the repo root" >&2
+	exit 1
+fi
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+"$dir/node_modules/.bin/esbuild" "$dir/main.ts" --bundle --platform=node --format=esm --conditions=source \
+	--log-level=warning --outfile="$out/main.mjs"
+node "$out/main.mjs" "$@"
