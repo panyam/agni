@@ -534,6 +534,8 @@ function fakeGl() {
     setCentre: () => {},
     drawn: () => null,
     membersIn: () => null,
+    boardMeasurer: () => null,
+    onClick: null,
     dispose: () => calls.push("dispose"),
   };
   return { gl, calls };

@@ -144,6 +144,16 @@ export class Camera {
     return { x, y };
   }
 
+  // worldToPixel maps a world point to the canvas pixel it draws at, the inverse of pixelToWorld. The
+  // measuring tool draws its line through it (agni issue 133).
+  worldToPixel(wx: number, wy: number): { x: number; y: number } {
+    const ux = (wx - this.centerX) / this.worldPerPixel;
+    const uy = -(wy - this.centerY) / this.worldPerPixel;
+    // unturn applies the turn's transpose, so the turn itself maps back.
+    const t = this.turn;
+    return { x: t.a * ux + t.c * uy + this.viewportW / 2, y: t.b * ux + t.d * uy + this.viewportH / 2 };
+  }
+
   // worldPerDevicePixel is how many world units one canvas pixel spans, the same on both axes.
   worldPerDevicePixel(): number {
     return this.worldPerPixel;

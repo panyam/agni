@@ -1478,6 +1478,12 @@ pub struct PackedSheet {
     /// web/src/packed.ts decode it.
     #[prost(message, optional, tag="15")]
     pub label_columns: ::core::option::Option<PackedLabels>,
+    /// units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+    /// a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+    /// in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+    /// (agni issue 133).
+    #[prost(double, tag="16")]
+    pub units_per_mm: f64,
 }
 /// PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a
 /// few thousand names tens of thousands of times, so each name goes into strings once and a record

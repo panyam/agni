@@ -152,7 +152,7 @@ class PackedImage(_message.Message):
     def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., w: _Optional[int] = ..., h: _Optional[int] = ..., mime: _Optional[str] = ..., data: _Optional[bytes] = ..., rotation_deg: _Optional[int] = ..., mirror: _Optional[bool] = ...) -> None: ...
 
 class PackedSheet(_message.Message):
-    __slots__ = ("sheet_id", "layout_version", "origin_x", "origin_y", "vertices", "primitives", "font_family", "group_colors", "background_color", "images", "group_alphas", "key_columns", "label_columns")
+    __slots__ = ("sheet_id", "layout_version", "origin_x", "origin_y", "vertices", "primitives", "font_family", "group_colors", "background_color", "images", "group_alphas", "key_columns", "label_columns", "units_per_mm")
     SHEET_ID_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_VERSION_FIELD_NUMBER: _ClassVar[int]
     ORIGIN_X_FIELD_NUMBER: _ClassVar[int]
@@ -166,6 +166,7 @@ class PackedSheet(_message.Message):
     GROUP_ALPHAS_FIELD_NUMBER: _ClassVar[int]
     KEY_COLUMNS_FIELD_NUMBER: _ClassVar[int]
     LABEL_COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    UNITS_PER_MM_FIELD_NUMBER: _ClassVar[int]
     sheet_id: str
     layout_version: int
     origin_x: int
@@ -179,7 +180,8 @@ class PackedSheet(_message.Message):
     group_alphas: _containers.RepeatedScalarFieldContainer[float]
     key_columns: PackedKeys
     label_columns: PackedLabels
-    def __init__(self, sheet_id: _Optional[str] = ..., layout_version: _Optional[int] = ..., origin_x: _Optional[int] = ..., origin_y: _Optional[int] = ..., vertices: _Optional[bytes] = ..., primitives: _Optional[bytes] = ..., font_family: _Optional[str] = ..., group_colors: _Optional[_Iterable[str]] = ..., background_color: _Optional[str] = ..., images: _Optional[_Iterable[_Union[PackedImage, _Mapping]]] = ..., group_alphas: _Optional[_Iterable[float]] = ..., key_columns: _Optional[_Union[PackedKeys, _Mapping]] = ..., label_columns: _Optional[_Union[PackedLabels, _Mapping]] = ...) -> None: ...
+    units_per_mm: float
+    def __init__(self, sheet_id: _Optional[str] = ..., layout_version: _Optional[int] = ..., origin_x: _Optional[int] = ..., origin_y: _Optional[int] = ..., vertices: _Optional[bytes] = ..., primitives: _Optional[bytes] = ..., font_family: _Optional[str] = ..., group_colors: _Optional[_Iterable[str]] = ..., background_color: _Optional[str] = ..., images: _Optional[_Iterable[_Union[PackedImage, _Mapping]]] = ..., group_alphas: _Optional[_Iterable[float]] = ..., key_columns: _Optional[_Union[PackedKeys, _Mapping]] = ..., label_columns: _Optional[_Union[PackedLabels, _Mapping]] = ..., units_per_mm: _Optional[float] = ...) -> None: ...
 
 class PackedKeys(_message.Message):
     __slots__ = ("strings", "records")

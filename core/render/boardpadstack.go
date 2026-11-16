@@ -119,6 +119,6 @@ func landAt(pl *geom.ComponentPlacement, pad *geom.Pad, sh *geom.PadShape) (cx, 
 
 // drawBarrel draws a plated hole's barrel, a ring at the drill's edge around a page-coloured hole.
 func drawBarrel(c *svg.Canvas, cx, cy, drillPx float64, style Style, keys ...svg.Attr) {
-	c.El("circle", append([]svg.Attr{svg.F("cx", cx), svg.F("cy", cy), svg.F("r", math.Max(drillPx/2, strokePx/2)),
+	c.El("circle", append([]svg.Attr{svg.F2("cx", cx), svg.F2("cy", cy), svg.F2("r", math.Max(drillPx/2, strokePx/2)),
 		svg.A("fill", style.Page), svg.A("stroke", style.Via), svg.F("stroke-width", strokePx)}, keys...)...)
 }

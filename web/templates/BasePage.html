@@ -93,6 +93,15 @@
     .svg-view { position: absolute; inset: 0; overflow: hidden; background: #fff; display: none; }
     /* The rectangle a Shift-drag draws to select an area (agni issue 904). */
     .area-band { position: absolute; border: 1px dashed #2563eb; background: rgba(37, 99, 235, 0.08); pointer-events: none; z-index: 5; }
+    /* agni issue 133: the board measuring tool, over whichever renderer draws */
+    .measure-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+    .measure-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .measure-lines line { stroke: #d81b60; stroke-width: 2; }
+    .measure-lines circle { fill: #fff; stroke: #d81b60; stroke-width: 2; }
+    .measure-readout { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 10px; align-items: center; padding: 4px 8px; background: rgba(255, 255, 255, 0.92); border: 1px solid #d81b60; border-radius: 4px; font: 12px ui-monospace, Menlo, monospace; pointer-events: auto; }
+    .measure-readout button { font: inherit; padding: 0 6px; }
+    .measuring, .measuring * { cursor: crosshair; }
+    .canvas-measure { pointer-events: auto; align-self: flex-start; }
     .text-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
     .canvas-wrap { width: 100%; height: 100%; position: relative; }
     #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }

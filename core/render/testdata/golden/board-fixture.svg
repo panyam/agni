@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1080.0" viewBox="0 0 1680.0 1080.0" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1080.0" viewBox="0 0 1680.0 1080.0" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" data-mm-per-px="0.02" data-mm-x0="-0.8" data-mm-y0="0.8">
 <rect x="0.0" y="0.0" width="1680.0" height="1080.0" fill="#fdfdfb"/>
 <g class="zones-front">
 <polygon points="90.0,90.0 1490.0,90.0 1490.0,990.0 90.0,990.0" data-layer="F.Cu" fill="#c83434" fill-opacity="0.2" stroke="none"/>
@@ -9,16 +9,16 @@
 <g class="copper-front" data-layer="F.Cu">
 <line x1="590.0" y1="540.0" x2="640.0" y2="540.0" stroke="#c83434" stroke-width="25.0" stroke-linecap="round"/>
 <line x1="490.0" y1="540.0" x2="790.0" y2="640.0" stroke="#c83434" stroke-width="12.5" stroke-linecap="round"/>
-<rect x="510.0" y="555.0" width="60.0" height="70.0" fill="#c83434" rx="15.0"/>
-<rect x="510.0" y="455.0" width="60.0" height="70.0" fill="#c83434" transform="rotate(-90.0 540.0 490.0)" rx="15.0"/>
+<rect x="510.00" y="555.00" width="60.00" height="70.00" fill="#c83434" rx="15.0"/>
+<rect x="510.00" y="455.00" width="60.00" height="70.00" fill="#c83434" transform="rotate(-90.0 540.00 490.00)" rx="15.0"/>
 </g>
 <g class="through">
 <circle cx="790.0" cy="640.0" r="20.0" fill="#9aa0a6"/>
 <circle cx="790.0" cy="640.0" r="10.0" fill="#fdfdfb"/>
-<circle cx="1040.0" cy="790.0" r="42.5" fill="#9aa0a6"/>
-<circle cx="1040.0" cy="790.0" r="25.0" fill="#fdfdfb"/>
-<circle cx="1040.0" cy="917.0" r="42.5" fill="#9aa0a6"/>
-<circle cx="1040.0" cy="917.0" r="25.0" fill="#fdfdfb"/>
+<circle cx="1040.00" cy="790.00" r="42.50" fill="#9aa0a6"/>
+<circle cx="1040.00" cy="790.00" r="25.00" fill="#fdfdfb"/>
+<circle cx="1040.00" cy="917.00" r="42.50" fill="#9aa0a6"/>
+<circle cx="1040.00" cy="917.00" r="25.00" fill="#fdfdfb"/>
 </g>
 <g class="edge">
 <polyline fill="none" stroke="#8a6d3b" stroke-width="1.2" points="40.0,40.0 1540.0,40.0 1540.0,1040.0 40.0,1040.0 40.0,40.0"/>

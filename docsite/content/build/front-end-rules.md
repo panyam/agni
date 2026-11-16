@@ -27,6 +27,7 @@ busy worker.
 | How tall each part's body draws | `BoardPartBody.drawn_height_mm`, with `height_defaulted` where the file states no height |
 | Whether the schematic and the board agree | `DiffService.DiffDesigns` with `views_snapshot` |
 | What a highlight lights | `DesignService.HighlightSheet`, as an SVG overlay or as packed primitive indices |
+| Where a drawn point is on the board, in millimetres | `PackedSheet.units_per_mm` with `origin_x` and `origin_y`, or the `data-mm-per-px`, `data-mm-x0` and `data-mm-y0` attributes on BoardSVG's root |
 
 A board view applies `board_follow` and keeps the reader's own choices. It turns to `side` when
 `side` is set, and turns on each row `layers` names. It never hides a row. A "Follow side" control
@@ -96,3 +97,15 @@ so each gap keeps its proportion (`stackZ` and `perMm` in `web/src/stacklayout.t
 draws at the board's true scale whatever the explode, so a part never towers over the board.
 `core/render/testdata/jetson_cut_stack_twin.json` holds the Jetson cut's served rows, for a test
 that draws them.
+
+## Measuring on a board
+
+A measuring tool maps the cursor to the board on every mouse move, so a front end does it itself.
+The server says how. A packed board's vertex plus `origin_x` and `origin_y`, divided by
+`units_per_mm`, is a position in millimetres in the board's own frame, Y up. A BoardSVG point
+(px, py) in viewBox units lies at `data-mm-x0 + px * data-mm-per-px` and
+`data-mm-y0 - py * data-mm-per-px`. agni's viewer snaps a click on a pad to the pad's centre, the
+middle of the land's bounds, since every land is a disk or a quad centred on its pad. BoardSVG writes
+pad geometry to a hundredth of a pixel for that snap. `web/src/measure.ts` holds both maps, and
+`TestBoardPadsSitWhereKiCadPutsThem` and `TestBoardSVGStatesItsMillimetres` hold them to kicad-cli
+(agni issue 133).

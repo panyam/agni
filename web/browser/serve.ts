@@ -60,6 +60,9 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "serve",
       "--addr", `:${port}`,
       "--mount", "kicad=readers/kicad/testdata",
+      // The render package's fixtures, for the measuring tool's board with known pad spacings (agni
+      // issue 133).
+      "--mount", "render=core/render/testdata",
       "--mount", "edif=readers/edif/testdata",
       // The conformance fixtures, for the one design in the tree whose check run reports an
       // INCONCLUSIVE finding (agni issue 350).

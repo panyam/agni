@@ -57,6 +57,21 @@ To see the layers drawn apart, in that order, press **Stack** ([the board's laye
 Every board format agni reads carries one: KiCad, Altium, Allegro, ODB++ and IPC-2581. A board
 whose file gives no thicknesses has a list that states none.
 
+## Measure on the board
+
+Say you want to check a connector's pitch against its datasheet. Press **Measure** in the board
+view's bar, or press **M** on the canvas. A box in the view's corner shows where the cursor is, in
+millimetres on the board, with Y up as the file places it. Click a point, then another, and the box
+shows the distance between them and its steps along x and y. A third click starts a new
+measurement. A click on a pad sets the pad's centre rather than the point under the cursor, so two
+pins read their exact pitch. Two pins of a 2.54 mm header read "2.540 mm". The box names the pad it
+snapped to, as "J1.2".
+
+The **mm** button switches to mils. **Escape** puts the tool away, and while it is on a click
+measures and selects nothing. It works in WebGL and in SVG, on the canvas and in each board view,
+and it stops while the Stack view shows. `make try JOURNEY=measure-a-board` plays it (agni issue
+133).
+
 ## Step back to what you selected before
 
 Say you follow a fault from a connector pin to a protection diode, then to a regulator, then to its

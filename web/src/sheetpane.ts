@@ -235,6 +235,8 @@ export class SheetPane {
   // control and camera presets. stackFrom is the renderer and view the board had before, which leaving
   // restores.
   private readonly stackButton: HTMLButtonElement;
+  // measureButton turns the board measuring tool on and off (agni issue 133).
+  private readonly measureButton: HTMLButtonElement;
   private readonly stackBar: HTMLElement;
   private readonly explodeInput: HTMLInputElement;
   // bodiesBox shows and hides the parts' bodies (agni issue 1352), and bodiesNote says how many parts
@@ -353,6 +355,8 @@ export class SheetPane {
     };
     this.stackButton = button("sheetview-stack", "explode", "Stack", "show the board's layers apart, in stack order", () => void this.toggleStack());
     this.stackButton.setAttribute("aria-pressed", "false");
+    this.measureButton = button("sheetview-measure", "measure", "Measure", "measure on the board: click two points, or two pads (Esc stops)", () => this.surface.measure.toggle());
+    this.measureButton.setAttribute("aria-pressed", "false");
     this.stackBar = el("span", "sheetview-stack-bar");
     this.stackBar.hidden = true;
     this.explodeInput = el("input", "sheetview-explode") as HTMLInputElement;
@@ -403,6 +407,7 @@ export class SheetPane {
       this.historyButtons.forward,
       renderer,
       this.layersButton,
+      this.measureButton,
       this.stackButton,
       this.stackBar,
       rotate,
@@ -457,12 +462,17 @@ export class SheetPane {
     });
     this.surface.onPick = (sel) => this.deps.onPick(this, sel);
     this.surface.onPickEmpty = () => this.deps.onPickEmpty(this);
+    this.surface.measure.onChange = (on) => {
+      this.measureButton.setAttribute("aria-pressed", String(on));
+      this.measureButton.classList.toggle("active", on);
+    };
     this.surface.onViewChange = () => this.deps.onViewChange(this, this.surface.svg.getView());
     this.surface.setMode(this.deps.renderer?.("") ?? "svg");
     this.surface.parkWhenIdle(this.deps.parkAfterMs ?? PARK_AFTER_MS);
     this.webglBox.checked = this.surface.mode === "webgl";
     this.element.dataset.exploded = "false";
     this.stackButton.style.display = "none";
+    this.measureButton.style.display = "none";
   }
 
   // toggleStack shows the board's stack apart, or puts it back (agni issue 1593). The stack draws in
@@ -539,6 +549,9 @@ export class SheetPane {
   }
 
   private setExploded(on: boolean): void {
+    // The stack view is 3D, so the 2D measuring tool stops while it shows.
+    if (on) this.surface.measure.setActive(false);
+    this.measureButton.disabled = on;
     this.exploded = on;
     this.element.dataset.exploded = String(on);
     this.stackBar.hidden = !on;
@@ -647,6 +660,7 @@ export class SheetPane {
     this.layersButton.style.display = this.layerRows.length > 0 ? "" : "none";
     this.followLabel.style.display = this.layerRows.length > 0 ? "" : "none";
     this.stackButton.style.display = this.layerRows.length > 0 ? "" : "none";
+    this.measureButton.style.display = this.layerRows.length > 0 ? "" : "none";
     this.showStackButton();
     if (this.layerRows.length === 0) this.showLayerPop(false);
     this.showPlace();

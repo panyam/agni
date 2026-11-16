@@ -18,6 +18,8 @@ import type { PackedSheet, BoardLayerRow } from "@panyam/agni-client/gen/agni/v1
 import { SHEET_DRAWN } from "./drawmark.js";
 import { DrawProfile, pageEnv } from "./drawprofile.js";
 import { timingMode } from "./api.js";
+import { MeasureTool } from "./measuretool.js";
+import type { BoardMeasurer } from "./measure.js";
 
 // SurfaceMode is the renderer a surface draws in. Native draws the tool's own SVG into the SVG host,
 // so a surface sees it as "svg".
@@ -66,6 +68,10 @@ export class SheetSurface {
   onToggle: ((sel: Selection) => void) | null = null;
   onViewChange: (() => void) | null = null;
 
+  // measure is the board measuring tool over this surface (agni issue 133). It takes clicks before
+  // they pick while it is on, and redraws when the view moves.
+  readonly measure: MeasureTool;
+
   // profile times pan and zoom on this surface when the page's address carries ?timing, and logs an
   // "agni draw" line per burst (drawprofile.ts, agni issue 1331). It is null otherwise.
   readonly profile: DrawProfile | null;
@@ -79,6 +85,8 @@ export class SheetSurface {
     this.svg.onPickEmpty = () => this.onPickEmpty?.();
     this.svg.onToggle = (sel) => this.onToggle?.(sel);
     this.svg.onViewChange = () => this.viewChanged();
+    this.svg.onClick = (x, y) => this.measure.click(x, y);
+    this.measure = new MeasureTool(parts.svgHost.parentElement ?? parts.svgHost, () => this.boardMeasurer());
     this.svg.onArea = (r) => {
       this.svg.wake();
       const doc = parts.svgHost.querySelector("svg");
@@ -96,6 +104,7 @@ export class SheetSurface {
     gl.onArea = (m) => this.onArea?.(m);
     gl.onToggle = (sel) => this.onToggle?.(sel);
     gl.onViewChange = () => this.viewChanged();
+    gl.onClick = (x, y) => this.measure.click(x, y);
     const p = this.profile;
     gl.profile = p ? { sheet: (scene) => p.sheet("webgl", scene), rendered: (d, t, c) => p.rendered(d, t, c) } : null;
     return gl;
@@ -103,7 +112,14 @@ export class SheetSurface {
 
   private viewChanged(): void {
     this.profile?.input();
+    this.measure.redraw();
     this.onViewChange?.();
+  }
+
+  // boardMeasurer is the drawn board's map for the measuring tool, from whichever renderer drew it,
+  // or null when the surface draws no board.
+  boardMeasurer(): BoardMeasurer | null {
+    return this.drawnBy === "webgl" ? (this.parts.gl(false)?.boardMeasurer() ?? null) : this.svg.boardMeasurer();
   }
 
   // parkWhenIdle lets the SVG drawing show as an image while nobody is using it (agni issue 1482),
@@ -132,6 +148,7 @@ export class SheetSurface {
     gl.setStrata(this.strata, this.fromBelow);
     this.svg.hide();
     gl.showText();
+    this.measure.sheetChanged();
     return true;
   }
 
@@ -144,6 +161,7 @@ export class SheetSurface {
     const built = performance.now();
     this.svg.setSvg(markup);
     this.applyTurn();
+    this.measure.sheetChanged();
     this.profile?.sheet("svg", { elements: this.svg.stats().elements, buildMs: performance.now() - built });
     const view = this.parts.markView;
     requestAnimationFrame(() => requestAnimationFrame(() => performance.mark(SHEET_DRAWN, { detail: { mode: "svg", view } })));
