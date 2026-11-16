@@ -27,8 +27,13 @@ import "google/protobuf/field_mask.proto";
 // about the revision it names. UpdateSnapshot reads the snapshot again, whole or one tier at a time.
 //
 // A snapshot is held in the host's memory. A server keeps it until it is deleted or evicted, and a
-// browser worker keeps it until the worker ends. So a client keeps each snapshot's definition, and
-// when a question answers NOT_FOUND, the client ingests the snapshot again under the same id.
+// browser worker keeps it until the worker ends. The host also keeps each snapshot's definition, in
+// memory or in a store that outlives a restart (agni issue 1639). A question on a snapshot the host
+// evicted or lost to a restart then ingests it again under the same name and answers, and a client
+// need keep nothing. Only a snapshot of uploaded files (files set) is not recovered after a restart,
+// since its files went with the process, so it still answers NOT_FOUND. ServerInfo's features say
+// whether a host recovers (snapshot_recovery) and whether it does so across a restart
+// (snapshot_store).
 service SnapshotService {
   // Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
   // and it reads no design file. Opening a KiCad design draws from its schematic's geometry, and the
@@ -101,6 +106,12 @@ message Snapshot {
   // placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
   // same either way. Only EDIF has blocks to walk today. Part of the definition.
   bool flatten_hierarchy = 12;
+  // refresh answers a question on this snapshot after a file under it changed, rather than refusing it
+  // as stale (agni issue 1639). The host reads the snapshot again, as UpdateSnapshot would, and the
+  // answer carries an Agni-Snapshot-Refreshed response header naming the tiers that changed, so a
+  // caller still learns its earlier answers came from older files. Without it, a question on a stale
+  // snapshot is refused with FAILED_PRECONDITION, as before. Part of the definition.
+  bool refresh = 13;
 }
 
 // SnapshotFile is one file of a design that a client sends, named within its mount.
@@ -175,7 +186,7 @@ message UpdateSnapshotRequest {
   // snapshot holds the new definition and names the snapshot to update.
   Snapshot snapshot = 1;
   // update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-  // overlay, files). Empty replaces the whole definition. Sending the same definition again reads the
+  // overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
   // files again, and that refreshes a stale snapshot.
   google.protobuf.FieldMask update_mask = 2;
   // read_board is as on IngestRequest.

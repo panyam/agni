@@ -42,7 +42,11 @@ jobs:
   testall-go:
     runs-on: ubuntu-latest
     steps:
+      # The whole history, tags included, since proto-check compares the protos with the latest
+      # release's (buf breaking, agni issue 1629).
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: ./.github/actions/setup
 
