@@ -64,6 +64,10 @@ The Rust client in `clients/rust` replays them through tonic in `tests/wire_fixt
 each fixture's protojson into the generated message with pbjson and compares messages, and it decodes
 an error's details from gRPC's `grpc-status-details-bin` trailer.
 
+A client that generates its code at build time, as the C++ client in `clients/cpp` does, has no
+committed code for `make proto-check` to compare. So its CI job replays the fixtures on every pull
+request, and the replay holds it to the server.
+
 ## The exercise
 
 `make exercise-clients` runs each language's example from `clients/examples/<language>/run` against

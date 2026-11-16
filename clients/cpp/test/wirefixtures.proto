@@ -1,0 +1,33 @@
+// The shape of clients/wirefixtures/fixtures.json, so the replayer reads it with protobuf's own JSON
+// parser. A request or response is any message's protojson, held as a Struct and parsed again into
+// the rpc's own type. cmd/agni/wirefixtures_test.go writes the file.
+syntax = "proto3";
+
+package agni.clienttest;
+
+import "google/protobuf/struct.proto";
+
+message FixtureFile {
+  string about = 1;
+  repeated Fixture fixtures = 2;
+}
+
+message Fixture {
+  string name = 1;
+  string service = 2;
+  string method = 3;
+  google.protobuf.Struct request = 4;
+  google.protobuf.Struct response = 5;
+  FixtureError error = 6;
+  repeated string ignore = 7;
+}
+
+message FixtureError {
+  string code = 1;
+  repeated Detail details = 2;
+}
+
+message Detail {
+  string type = 1;
+  google.protobuf.Struct value = 2;
+}

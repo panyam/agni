@@ -80,6 +80,11 @@ __pycache__/
 # The Rust client workspace builds here (agni issue 1631), the exercise example included.
 /clients/rust/target/
 
+# The C++ client's CMake build trees (agni issue 1638). The client generates its protobuf and gRPC
+# code into them at build time, and the example's run script builds there on first use.
+/clients/cpp/build/
+/clients/examples/cpp/build/
+
 # The Java client's Gradle state and build output, and its example's (agni issue 1632).
 /clients/java/.gradle/
 /clients/java/.kotlin/
