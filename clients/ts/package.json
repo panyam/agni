@@ -1,0 +1,51 @@
+{
+  "name": "@panyam/agni-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A TypeScript client for a shared agni serve, over Connect, for Node and browsers (agni issue 1630)",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "source": "./src/node.ts",
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./web": {
+      "source": "./src/web.ts",
+      "types": "./dist/web.d.ts",
+      "default": "./dist/web.js"
+    },
+    "./gen/*": {
+      "source": "./src/gen/*.ts",
+      "types": "./dist/gen/*.d.ts",
+      "default": "./dist/gen/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "gen": "buf generate ../../protos --template buf.gen.ts.yaml",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.3",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "~2.1.2",
+    "@connectrpc/connect-web": "^2.0.0"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "^2.2.3",
+    "@types/node": "^26.1.0",
+    "typescript": "^5.6.0",
+    "vitest": "^5.0.5"
+  }
+}

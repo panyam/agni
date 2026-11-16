@@ -1,0 +1,7 @@
+{
+  "extends": "../../ts/tsconfig.json",
+  "compilerOptions": {
+    "customConditions": ["source"]
+  },
+  "include": ["main.ts"]
+}
