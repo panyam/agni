@@ -2,6 +2,7 @@ package formats
 
 import (
 	"fmt"
+	"github.com/panyam/agni/internal/archivefs"
 	"io/fs"
 	"os"
 	"path"
@@ -90,7 +91,9 @@ func (l *Loader) Open(name string) (fs.File, error) {
 	}
 	l.Touched.note(l.FS, name)
 	if l.FS == nil {
-		return os.Open(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
+		// A host path may run through an archive, as /boards/job.7z/odb/matrix/matrix does (agni
+		// issue 1591).
+		return archivefs.OSOpen(name)
 	}
 	return l.FS.Open(name)
 }
@@ -103,7 +106,7 @@ func (l *Loader) ReadFile(name string) ([]byte, error) {
 	}
 	l.Touched.note(l.FS, name)
 	if l.FS == nil {
-		return os.ReadFile(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
+		return archivefs.OSReadFile(name)
 	}
 	return fs.ReadFile(l.FS, name)
 }

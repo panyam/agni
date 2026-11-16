@@ -35,7 +35,7 @@ itself your consent. The tool still has to be registered for the format and inst
 | gEDA / Lepton (`.sch`) | `lepton-cli` (render), `lepton-schematic` (GUI) | Linux, on macOS via Docker | yes | yes (X11) |
 | EDIF (`.edn`, `.edf`, `.edif`, `.eds`) | none open | | no | no |
 | IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
-| ODB++ (directory / `.tgz` / `.zip`) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
+| ODB++ (directory, or any archive of one) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
 | Cadence Allegro board (`.brd`) | Allegro (licensed, Windows); its films render in `gerbv` | `gerbv` via the `natup` image | films only | no |
 | Altium Designer board (`.PcbDoc`) | Altium (licensed, Windows) | none | no | no |
 

@@ -13,7 +13,9 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/readers/kicad"
@@ -87,12 +89,13 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	if !ok {
 		return plain, nil
 	}
+	// An archive is the folder it was made from (agni issue 1591), so it stats as a directory.
 	isDir := false
-	if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path))); statErr == nil {
+	if fi, statErr := archivefs.OSStat(filepath.Join(root, filepath.FromSlash(uri.Path))); statErr == nil {
 		isDir = fi.IsDir()
 	}
 	// The same ProjectService a server hosts, over a store rooted at this argument's mount.
-	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: uri.Mount, FS: os.DirFS(root)}))
+	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: uri.Mount, FS: archivefs.Expand(os.DirFS(root))}))
 	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: uri.String()})
 	if err != nil {
 		return designSource{}, rpcFailed(err)
@@ -101,10 +104,42 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	if d == nil {
 		if isDir {
 			// An ODB++ job is a directory, entered by its matrix file (agni issue 1250).
-			if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path), "matrix", "matrix")); statErr == nil && !fi.IsDir() {
+			if fi, statErr := archivefs.OSStat(filepath.Join(root, filepath.FromSlash(uri.Path), "matrix", "matrix")); statErr == nil && !fi.IsDir() {
 				entry := uri
 				entry.Path = path.Join(uri.Path, "matrix", "matrix")
 				return designSource{DesignSources: service.DesignSources{NetlistURI: entry.String(), BoardURI: entry.String(), GeometryURI: entry.String()}}, nil
+			}
+			// A folder or an archive that holds one design undeclared opens that design, as a dropped
+			// folder does in the browser (agni issue 1591). A job packed one folder down is one.
+			inside, err := designsInside(ctx, root, uri)
+			if err != nil {
+				return designSource{}, err
+			}
+			if len(inside) == 1 {
+				pd := inside[0]
+				// A design.yaml inside declares the design, so it resolves from its folder as any
+				// declared design does. An undeclared one is read as proposed.
+				if pd.GetDeclared() {
+					folder := uri
+					folder.Path = pd.GetFolder()
+					src, err := r.Resolve(ctx, folder.String())
+					if err != nil {
+						return designSource{}, err
+					}
+					src.Note = fmt.Sprintf("note: %s holds one design, in %s.\n%s", named, pd.GetFolder(), src.Note)
+					return src, nil
+				}
+				d := pd.GetDesign()
+				res := service.ResolveSources(d, d.GetEntryUri(), false, r.asNamed)
+				note := fmt.Sprintf("note: %s holds one design, read from %s.\n", named, strings.TrimPrefix(d.GetEntryUri(), "mount://"+uri.Mount+"/"))
+				return designSource{DesignSources: res.DesignSources, Note: note}, nil
+			}
+			if len(inside) > 1 {
+				var where []string
+				for _, pd := range inside {
+					where = append(where, path.Join(pd.GetFolder(), path.Base(pd.GetDesign().GetEntryUri())))
+				}
+				return designSource{}, fmt.Errorf("%s holds %d designs; name one: %s", named, len(inside), strings.Join(where, ", "))
 			}
 			// A reader handed a directory would report an unsupported extension, so name what is missing.
 			return designSource{}, fmt.Errorf("%s is a directory that declares no design: name a design file, or add a %s declaring which file is this design's entry", named, projects.DesignDescriptor)
@@ -304,4 +339,16 @@ func withConventions(path string) (func(), error) {
 // conventionsFlag declares --conventions on a command that reads a design through readDesign.
 func conventionsFlag(cmd *cobra.Command, path *string) {
 	cmd.Flags().StringVar(path, "conventions", "", "read the design under this naming-convention config (YAML) as check does, for a convention not yet in the project")
+}
+
+// designsInside proposes the designs a folder or an archive holds, as `agni propose` does, over the
+// argument's mount with every archive in it read as its folder.
+func designsInside(ctx context.Context, root string, uri artifact.URI) ([]*webapi.ProposedDesign, error) {
+	host := fshost.New(fshost.Mount{Name: uri.Mount, FS: fshost.ExpandArchives(os.DirFS(root))})
+	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
+	resp, err := svc.ProposeDesigns(ctx, &webapi.ProposeDesignsRequest{Uri: uri.String()})
+	if err != nil {
+		return nil, rpcFailed(err)
+	}
+	return resp.GetDesigns(), nil
 }

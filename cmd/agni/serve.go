@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/wasmengine"
 	"io"
 	"io/fs"
@@ -497,11 +498,12 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
 // all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
-// structural, since an fs.FS has no parent to climb into.
+// structural, since an fs.FS has no parent to climb into. An archive in a mount reads as its folder,
+// so a design.yaml inside one declares its design (agni issue 1591).
 func projectTrees(ms []mounts.Mount) []projects.Tree {
 	out := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
-		out = append(out, projects.Tree{Mount: m.Name, FS: os.DirFS(m.Root)})
+		out = append(out, projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(m.Root))})
 	}
 	return out
 }

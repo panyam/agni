@@ -66,7 +66,7 @@ func mountsOf(root fs.FS) ([]fshost.Mount, error) {
 			return nil, err
 		}
 		if e.Name() == BrowserMount {
-			sub = fshost.ExpandZips(sub)
+			sub = fshost.ExpandArchives(sub)
 		}
 		ms = append(ms, fshost.Mount{Name: e.Name(), FS: sub})
 	}

@@ -17,6 +17,7 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/internal/geomath"
 	"google.golang.org/protobuf/proto"
 )
@@ -250,14 +251,15 @@ func archive(t *testing.T, dir, kind string) []byte {
 }
 
 // TestArchivesReadAsTheirDirectory holds a .tgz and a .zip of a job to a read of the job's
-// directory, whichever folder the archive wraps it in.
+// directory, whichever folder the archive wraps it in. internal/archivefs decodes the archive and
+// FindRoot finds the job inside it, as the registry's adapter does (agni issue 1591).
 func TestArchivesReadAsTheirDirectory(t *testing.T) {
 	wantD, wantG := readJob(t, os.DirFS(gatewayJob))
 	if len(wantD.GetNets()) == 0 {
 		t.Fatal("the gateway job reads no nets")
 	}
 	for _, kind := range []string{"tgz", "zip"} {
-		fsys, err := FromArchive(archive(t, gatewayJob, kind))
+		fsys, err := jobIn(archive(t, gatewayJob, kind))
 		if err != nil {
 			t.Fatalf("%s: %v", kind, err)
 		}
@@ -266,12 +268,25 @@ func TestArchivesReadAsTheirDirectory(t *testing.T) {
 			t.Errorf("%s reads differently from the job's directory", kind)
 		}
 	}
-	if _, err := FromArchive([]byte("not an archive")); err == nil {
-		t.Error("FromArchive accepted bytes that are no archive")
+	if _, err := jobIn([]byte("not an archive")); err == nil {
+		t.Error("bytes that are no archive opened as a job")
 	}
-	if IsArchiveJob(archive(t, "testdata/lzw", "zip")) {
+	if _, err := jobIn(archive(t, "testdata/lzw", "zip")); err == nil {
 		t.Error("a zip with no matrix/matrix was taken for an ODB++ job")
 	}
+}
+
+// jobIn is the job inside an archive's bytes.
+func jobIn(b []byte) (fs.FS, error) {
+	members, err := archivefs.Open(b)
+	if err != nil {
+		return nil, err
+	}
+	root, err := FindRoot(members)
+	if err != nil {
+		return nil, err
+	}
+	return fs.Sub(members, root)
 }
 
 // TestCompressedMembersReadAsPlain reads the board job with every features file compressed, as
@@ -349,27 +364,6 @@ func TestOrient(t *testing.T) {
 		rot, mirror := orient(c.in)
 		if rot != c.rot || mirror != c.mirror {
 			t.Errorf("orient(%v) = %v, %v, want %v, %v", c.in, rot, mirror, c.rot, c.mirror)
-		}
-	}
-}
-
-// TestArchiveRefusesEscapingMembers keeps a member named ../x or an AppleDouble shadow out of the
-// job's file system.
-func TestArchiveRefusesEscapingMembers(t *testing.T) {
-	for _, c := range []struct {
-		in   string
-		want string
-		ok   bool
-	}{
-		{"job/matrix/matrix", "job/matrix/matrix", true},
-		{"../../etc/passwd", "etc/passwd", true},
-		{"/abs/matrix/matrix", "abs/matrix/matrix", true},
-		{"job/._matrix", "", false},
-		{"__MACOSX/job/matrix/matrix", "", false},
-	} {
-		got, ok := cleanMember(c.in)
-		if got != c.want || ok != c.ok {
-			t.Errorf("cleanMember(%q) = %q, %v, want %q, %v", c.in, got, ok, c.want, c.ok)
 		}
 	}
 }

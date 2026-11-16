@@ -193,7 +193,8 @@ ODB++ is the one format whose design is a directory tree rather than a file (agn
 reader (`readers/odb`) takes an `fs.FS` rooted at the job instead of an `io.Reader`, so it is as
 runtime-agnostic as a single-file reader. The registry adapter builds that `fs.FS` over the
 `Loader`, so every file the job opens is still reached through `l.Open` and recorded for the cache,
-and an archive (`.tgz`, `.zip`) is unpacked in memory into the same shape.
+and an archive of a job reads as its folder through `internal/archivefs`, which decodes every
+archive kind alike (agni issue 1591).
 
 The registry is keyed by extension and a directory has none, so a job is entered by one file inside
 it, `matrix/matrix`. `lowerExt` files that path under a key of its own. Two hosts then need the

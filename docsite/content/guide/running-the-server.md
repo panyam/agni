@@ -316,7 +316,7 @@ With no server at all, `agni site <outdir> --base <path> --seed <name>=<folder>`
 the engine and the seeded designs as static files for any web host to serve.
 [The public demo](../../demo/) runs this way, since the project hosts no server for it. It holds
 the tutorials' gateway board and a few open-source KiCad boards from the samples corpus. You can also
-drop a folder or a `.zip` of your own files on its "Open files" page. They stay in your browser's
+drop a folder or an archive (`.zip`, `.7z`, `.tar.gz` and the like) of your own files on its "Open files" page. They stay in your browser's
 storage and are never sent anywhere. An agent can't move a demo tab, since that needs a server
 running `--mcp --viewer-rooms`.
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
 )
@@ -19,9 +20,9 @@ import (
 func proposeCmd() *cobra.Command {
 	var format string
 	c := &cobra.Command{
-		Use:   "propose <folder|file.zip>",
-		Short: "Propose the designs a folder or zip of files makes, as design.yaml text",
-		Long: "Group the files under a folder (or inside a .zip) into the designs they make and print the " +
+		Use:   "propose <folder|archive>",
+		Short: "Propose the designs a folder or an archive of files makes, as design.yaml text",
+		Long: "Group the files under a folder (or inside a .zip, .tar, .7z or compressed tar) into the designs they make and print the " +
 			"design.yaml that would declare each, plus every file no design reads and why. A folder " +
 			"already holding a design.yaml is reported as declared. --format json is the " +
 			"ProposeDesignsResponse the ProposeDesigns rpc returns.",
@@ -40,14 +41,14 @@ func proposeCmd() *cobra.Command {
 			}
 			root, sub := abs, ""
 			if !st.IsDir() {
-				if !strings.EqualFold(filepath.Ext(abs), ".zip") {
-					return fmt.Errorf("%s is a file; propose takes a folder or a .zip", args[0])
+				if !archivefs.Candidate(abs) {
+					return fmt.Errorf("%s is a file; propose takes a folder or an archive (.zip, .tar, .7z, .tgz, .tar.xz, .tar.zst, .tar.bz2)", args[0])
 				}
 				root, sub = filepath.Dir(abs), filepath.Base(abs)
 			}
-			// Zips expand here as they do in the browser, so `agni propose drop.zip` answers what the
-			// page would.
-			host := fshost.New(fshost.Mount{Name: "drop", FS: fshost.ExpandZips(os.DirFS(root))})
+			// Archives expand here as they do in the browser, so `agni propose drop.zip` answers what
+			// the page would.
+			host := fshost.New(fshost.Mount{Name: "drop", FS: fshost.ExpandArchives(os.DirFS(root))})
 			svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
 			resp, err := svc.ProposeDesigns(cmd.Context(), &webapi.ProposeDesignsRequest{Uri: "mount://drop/" + filepath.ToSlash(sub)})
 			if err != nil {

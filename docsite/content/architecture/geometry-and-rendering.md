@@ -421,7 +421,7 @@ Cadence Allegro writes `clockwise="TRUE"/"FALSE"` in uppercase, and a case-sensi
 
 ### ODB++ as the third producer
 
-The ODB++ reader (`readers/odb`, agni issue 1250) fills the same contract, again with no proto change. A job is a directory, so the reader takes an `fs.FS` rooted at it rather than one `io.Reader`, and the registry enters it by its `matrix/matrix` file (or a `.tgz` or `.zip` of the whole tree). Four points about it are worth knowing before changing it.
+The ODB++ reader (`readers/odb`, agni issue 1250) fills the same contract, again with no proto change. A job is a directory, so the reader takes an `fs.FS` rooted at it rather than one `io.Reader`, and the registry enters it by its `matrix/matrix` file (or an archive of the whole tree, which `internal/archivefs` reads as its folder). Four points about it are worth knowing before changing it.
 
 - **A feature's net comes from eda/data, never from geometry.** A features file draws copper with no net on it. eda/data lists each net's subnets and, under each, the features by layer and index (`FID C <layer> <index>`). A toeprint subnet is a pad, and a trace, via or plane subnet is routed copper. The reader keeps every record's index, a barcode's included, because eda/data points at that index.
 - **A pad's footprint-local offset is computed, not read.** The components file gives each pin's board position, so the reader inverts the contract's `at + M(R(rotation) * offset)` to get the offset. A pad then composes back onto exactly the point the job put it at, whatever angle convention its producer used. ODB++ angles are clockwise and are negated into the contract's counter-clockwise.

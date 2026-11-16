@@ -292,6 +292,32 @@ So the ingest ordering prefers sanctioned paths, in this order:
 
 The technical argument points the same way. Ingesting via a documented export or API is both the easier path and the legally clean one, so the two reinforce each other rather than competing.
 
+## Archives are folders
+
+Say a fab house sends a board's ODB++ job as `board.7z`, or a colleague zips a KiCad project to mail
+it. Neither archive is a design format. A zip, a tar or a 7z holds many named files, so agni reads it
+as the folder it was made from (agni issue 1591). A tar usually comes wrapped in a stream compressor,
+gzip, bzip2, xz or zstd. That compressor encodes one stream and names nothing, so it is peeled off
+first, and the tar inside is read as the folder. No reader knows an archive was involved. A reader
+that spans files, such as an ODB++ job or a KiCad hierarchy, reads the folder as it reads any other.
+
+`internal/archivefs` does this once for every host. It chooses each archive's decoder from its bytes,
+not its name, since producers name these files loosely. It holds every kind to the same bounds while
+it decodes: 100,000 files, 512 MiB for any one file and 1 GiB in all. An encrypted archive fails with
+an error that says so. A member named `../x` is read from inside the archive. Three hosts use it:
+
+- `fshost.ExpandArchives` shows each archive in an `fs.FS` as a directory of the same name, nested
+  archives included. The browser's drop mount and `agni propose` read through it.
+- On the host filesystem, the `Loader` and the server's mount listing follow a path through an
+  archive, so `/boards/job.7z/odb/matrix/matrix` opens a member. A record of what a read touched
+  stamps the archive file, since its members have no stamp of their own.
+- An archive named as a design resolves to the one design inside it, as a folder does, or names
+  each design when it holds several. ODB++ also keeps its old shape, an archive file read as the job
+  inside it, so `agni check board.odb.tgz` and `Loader.ReadDesign` on an archive still read the job.
+
+A single compressed design file, such as `board.kicad_pcb.gz`, is not an archive, and nothing reads
+it yet.
+
 ## Guarding against overfitting
 
 Two mechanisms keep the schema from drifting toward whatever format is read most.

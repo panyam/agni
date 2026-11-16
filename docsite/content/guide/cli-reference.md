@@ -232,9 +232,10 @@ project that declares none, each say so, since the fix differs.
 |---|---|
 | `--format <fmt>` | `text` (one checklist per line, the default marked) or `json` (the `ListChecklists` rpc's `ListChecklistsResponse`, each checklist carrying its manifest) |
 
-### `propose <folder|file.zip>`
+### `propose <folder|archive>`
 
-Group the files under a folder, or inside a `.zip`, into the designs they make, and print the
+Group the files under a folder, or inside an archive (`.zip`, `.tar`, `.7z`, or a tar compressed with
+gzip, bzip2, xz or zstd), into the designs they make, and print the
 `design.yaml` that would declare each, then each unread file and why no design reads it. The viewer
 shows the same proposal when files are dropped on it, from the same code, so the two agree. A folder
 already holding a `design.yaml` is reported as declared rather than guessed over.
@@ -759,9 +760,11 @@ netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy
 header). An `.xml` file is read by its root element. `<IPC-2581>` is IPC-2581, `<ODX>` is ODB++X, and
 any other root is refused with its name.
 
-An ODB++ job is a directory rather than a file, so it is named by its folder, or by a `.tgz` or
-`.zip` of it, and agni enters it through the folder's `matrix/matrix` file (`agni check board-odb/`,
-`agni check board-odb.tgz`). It reads as a netlist and as a board, as IPC-2581 does, so
+An ODB++ job is a directory rather than a file, so it is named by its folder, or by an archive of
+it, and agni enters it through the folder's `matrix/matrix` file (`agni check board-odb/`,
+`agni check board-odb.tgz`, `agni check board-odb.7z`). Any archive reads as the folder it was made
+from, whatever design it holds, so `agni stats project.zip` reads the one design the zip holds, and
+names each one when it holds several. It reads as a netlist and as a board, as IPC-2581 does, so
 `agni diff schematic.edn board-odb/` checks a layout against the schematic it was drawn from. ODB++
 allows no spaces in a name, so a net the schematic calls `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
 and the diff reports it renamed. Members a producer compressed (`features.Z`, `.gz`) are read as
