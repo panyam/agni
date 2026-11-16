@@ -45,14 +45,22 @@ func partBodies(b *geom.BoardGeometry, style Style) []*geom.BoardPartBody {
 		for _, p := range ring {
 			body.Outline = append(body.Outline, p[0], p[1])
 		}
+		body.DrawnHeightMm, body.HeightDefaulted = TypicalBodyMm, true
 		if pl.Height != nil {
 			mm := float64(pl.GetHeight()*unit) / 1e6
 			body.HeightMm = &mm
+			if mm > 0 {
+				body.DrawnHeightMm, body.HeightDefaulted = mm, false
+			}
 		}
 		out = append(out, body)
 	}
 	return out
 }
+
+// TypicalBodyMm is the height a part whose file states none draws at, in millimetres (agni issue
+// 1352). BoardPartBody.height_defaulted marks such a part, so a client can draw it apart.
+const TypicalBodyMm = 1.0
 
 // HoleDrillMm is the narrowest drill a hole part has, in millimetres. A mounting hole is M2 or
 // wider, and a through-hole test point's drill is about 1 mm.

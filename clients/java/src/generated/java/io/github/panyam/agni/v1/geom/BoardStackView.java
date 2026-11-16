@@ -436,6 +436,21 @@ private static final long serialVersionUID = 0L;
     return boardLook_ == null ? io.github.panyam.agni.v1.geom.BoardLook.getDefaultInstance() : boardLook_;
   }
 
+  public static final int TOTAL_MM_FIELD_NUMBER = 11;
+  private double totalMm_ = 0D;
+  /**
+   * <pre>
+   * total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+   * </pre>
+   *
+   * <code>double total_mm = 11 [json_name = "totalMm"];</code>
+   * @return The totalMm.
+   */
+  @java.lang.Override
+  public double getTotalMm() {
+    return totalMm_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -484,6 +499,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(10, getBoardLook());
+    }
+    if (java.lang.Double.doubleToRawLongBits(totalMm_) != 0) {
+      output.writeDouble(11, totalMm_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -548,6 +566,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, getBoardLook());
     }
+    if (java.lang.Double.doubleToRawLongBits(totalMm_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(11, totalMm_);
+    }
     return size;
   }
   @java.lang.Override
@@ -596,6 +618,9 @@ private static final long serialVersionUID = 0L;
       if (!getBoardLook()
           .equals(other.getBoardLook())) return false;
     }
+    if (java.lang.Double.doubleToLongBits(getTotalMm())
+        != java.lang.Double.doubleToLongBits(
+            other.getTotalMm())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -639,6 +664,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + BOARD_LOOK_FIELD_NUMBER;
       hash = (53 * hash) + getBoardLook().hashCode();
     }
+    hash = (37 * hash) + TOTAL_MM_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getTotalMm()));
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -826,6 +854,7 @@ private static final long serialVersionUID = 0L;
         boardLookBuilder_.dispose();
         boardLookBuilder_ = null;
       }
+      totalMm_ = 0D;
       return this;
     }
 
@@ -915,6 +944,9 @@ private static final long serialVersionUID = 0L;
             ? boardLook_
             : boardLookBuilder_.build();
         to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.totalMm_ = totalMm_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1044,6 +1076,9 @@ private static final long serialVersionUID = 0L;
       if (other.hasBoardLook()) {
         mergeBoardLook(other.getBoardLook());
       }
+      if (java.lang.Double.doubleToRawLongBits(other.getTotalMm()) != 0) {
+        setTotalMm(other.getTotalMm());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1156,6 +1191,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 89: {
+              totalMm_ = input.readDouble();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 89
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2510,6 +2550,50 @@ private static final long serialVersionUID = 0L;
         boardLook_ = null;
       }
       return boardLookBuilder_;
+    }
+
+    private double totalMm_ ;
+    /**
+     * <pre>
+     * total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+     * </pre>
+     *
+     * <code>double total_mm = 11 [json_name = "totalMm"];</code>
+     * @return The totalMm.
+     */
+    @java.lang.Override
+    public double getTotalMm() {
+      return totalMm_;
+    }
+    /**
+     * <pre>
+     * total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+     * </pre>
+     *
+     * <code>double total_mm = 11 [json_name = "totalMm"];</code>
+     * @param value The totalMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTotalMm(double value) {
+
+      totalMm_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+     * </pre>
+     *
+     * <code>double total_mm = 11 [json_name = "totalMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTotalMm() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      totalMm_ = 0D;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.geom.BoardStackView)

@@ -63,6 +63,7 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.geom.BoardDrillSpan.class, io.github.panyam.agni.v1.geom.BoardDrillSpan.Builder.class);
   }
 
+  private int bitField0_;
   public static final int LAYER_FROM_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object layerFrom_ = "";
@@ -238,6 +239,56 @@ private static final long serialVersionUID = 0L;
     return net_.getByteString(index);
   }
 
+  public static final int TOP_MM_FIELD_NUMBER = 6;
+  private double topMm_ = 0D;
+  /**
+   * <pre>
+   * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+   * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+   * either layer nowhere, and a client then draws no barrel for the span.
+   * </pre>
+   *
+   * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+   * @return Whether the topMm field is set.
+   */
+  @java.lang.Override
+  public boolean hasTopMm() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+   * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+   * either layer nowhere, and a client then draws no barrel for the span.
+   * </pre>
+   *
+   * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+   * @return The topMm.
+   */
+  @java.lang.Override
+  public double getTopMm() {
+    return topMm_;
+  }
+
+  public static final int BOTTOM_MM_FIELD_NUMBER = 7;
+  private double bottomMm_ = 0D;
+  /**
+   * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+   * @return Whether the bottomMm field is set.
+   */
+  @java.lang.Override
+  public boolean hasBottomMm() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+   * @return The bottomMm.
+   */
+  @java.lang.Override
+  public double getBottomMm() {
+    return bottomMm_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -275,6 +326,12 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < net_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, net_.getRaw(i));
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeDouble(6, topMm_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeDouble(7, bottomMm_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -316,6 +373,14 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getNetList().size();
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(6, topMm_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(7, bottomMm_);
+    }
     return size;
   }
   @java.lang.Override
@@ -350,6 +415,18 @@ private static final long serialVersionUID = 0L;
         .equals(other.getDiameterList())) return false;
     if (!getNetList()
         .equals(other.getNetList())) return false;
+    if (hasTopMm() != other.hasTopMm()) return false;
+    if (hasTopMm()) {
+      if (java.lang.Double.doubleToLongBits(getTopMm())
+          != java.lang.Double.doubleToLongBits(
+              other.getTopMm())) return false;
+    }
+    if (hasBottomMm() != other.hasBottomMm()) return false;
+    if (hasBottomMm()) {
+      if (java.lang.Double.doubleToLongBits(getBottomMm())
+          != java.lang.Double.doubleToLongBits(
+              other.getBottomMm())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -376,6 +453,16 @@ private static final long serialVersionUID = 0L;
     if (getNetCount() > 0) {
       hash = (37 * hash) + NET_FIELD_NUMBER;
       hash = (53 * hash) + getNetList().hashCode();
+    }
+    if (hasTopMm()) {
+      hash = (37 * hash) + TOP_MM_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          java.lang.Double.doubleToLongBits(getTopMm()));
+    }
+    if (hasBottomMm()) {
+      hash = (37 * hash) + BOTTOM_MM_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          java.lang.Double.doubleToLongBits(getBottomMm()));
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -523,6 +610,8 @@ private static final long serialVersionUID = 0L;
       diameter_ = emptyDoubleList();
       net_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      topMm_ = 0D;
+      bottomMm_ = 0D;
       return this;
     }
 
@@ -574,6 +663,16 @@ private static final long serialVersionUID = 0L;
         net_.makeImmutable();
         result.net_ = net_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.topMm_ = topMm_;
+        to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.bottomMm_ = bottomMm_;
+        to_bitField0_ |= 0x00000002;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -629,6 +728,12 @@ private static final long serialVersionUID = 0L;
           net_.addAll(other.net_);
         }
         onChanged();
+      }
+      if (other.hasTopMm()) {
+        setTopMm(other.getTopMm());
+      }
+      if (other.hasBottomMm()) {
+        setBottomMm(other.getBottomMm());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -703,6 +808,16 @@ private static final long serialVersionUID = 0L;
               net_.add(input.readStringRequireUtf8());
               break;
             } // case 42
+            case 49: {
+              topMm_ = input.readDouble();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 49
+            case 57: {
+              bottomMm_ = input.readDouble();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 57
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1151,6 +1266,110 @@ private static final long serialVersionUID = 0L;
       ensureNetIsMutable();
       net_.add(value);
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private double topMm_ ;
+    /**
+     * <pre>
+     * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+     * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+     * either layer nowhere, and a client then draws no barrel for the span.
+     * </pre>
+     *
+     * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+     * @return Whether the topMm field is set.
+     */
+    @java.lang.Override
+    public boolean hasTopMm() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+     * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+     * either layer nowhere, and a client then draws no barrel for the span.
+     * </pre>
+     *
+     * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+     * @return The topMm.
+     */
+    @java.lang.Override
+    public double getTopMm() {
+      return topMm_;
+    }
+    /**
+     * <pre>
+     * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+     * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+     * either layer nowhere, and a client then draws no barrel for the span.
+     * </pre>
+     *
+     * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+     * @param value The topMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTopMm(double value) {
+
+      topMm_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+     * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+     * either layer nowhere, and a client then draws no barrel for the span.
+     * </pre>
+     *
+     * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTopMm() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      topMm_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private double bottomMm_ ;
+    /**
+     * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+     * @return Whether the bottomMm field is set.
+     */
+    @java.lang.Override
+    public boolean hasBottomMm() {
+      return ((bitField0_ & 0x00000040) != 0);
+    }
+    /**
+     * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+     * @return The bottomMm.
+     */
+    @java.lang.Override
+    public double getBottomMm() {
+      return bottomMm_;
+    }
+    /**
+     * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+     * @param value The bottomMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBottomMm(double value) {
+
+      bottomMm_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBottomMm() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      bottomMm_ = 0D;
       onChanged();
       return this;
     }

@@ -92,4 +92,38 @@ public interface BoardDrillSpanOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNetBytes(int index);
+
+  /**
+   * <pre>
+   * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+   * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+   * either layer nowhere, and a client then draws no barrel for the span.
+   * </pre>
+   *
+   * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+   * @return Whether the topMm field is set.
+   */
+  boolean hasTopMm();
+  /**
+   * <pre>
+   * top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+   * stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+   * either layer nowhere, and a client then draws no barrel for the span.
+   * </pre>
+   *
+   * <code>optional double top_mm = 6 [json_name = "topMm"];</code>
+   * @return The topMm.
+   */
+  double getTopMm();
+
+  /**
+   * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+   * @return Whether the bottomMm field is set.
+   */
+  boolean hasBottomMm();
+  /**
+   * <code>optional double bottom_mm = 7 [json_name = "bottomMm"];</code>
+   * @return The bottomMm.
+   */
+  double getBottomMm();
 }

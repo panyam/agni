@@ -99,4 +99,22 @@ public interface BoardPartBodyOrBuilder extends
    */
   com.google.protobuf.ByteString
       getColorBytes();
+
+  /**
+   * <pre>
+   * drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+   * file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+   * 1635).
+   * </pre>
+   *
+   * <code>double drawn_height_mm = 7 [json_name = "drawnHeightMm"];</code>
+   * @return The drawnHeightMm.
+   */
+  double getDrawnHeightMm();
+
+  /**
+   * <code>bool height_defaulted = 8 [json_name = "heightDefaulted"];</code>
+   * @return The heightDefaulted.
+   */
+  boolean getHeightDefaulted();
 }

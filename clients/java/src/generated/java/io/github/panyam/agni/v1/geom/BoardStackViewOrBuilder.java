@@ -208,4 +208,14 @@ public interface BoardStackViewOrBuilder extends
    * <code>.agni.v1.geom.BoardLook board_look = 10 [json_name = "boardLook"];</code>
    */
   io.github.panyam.agni.v1.geom.BoardLookOrBuilder getBoardLookOrBuilder();
+
+  /**
+   * <pre>
+   * total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+   * </pre>
+   *
+   * <code>double total_mm = 11 [json_name = "totalMm"];</code>
+   * @return The totalMm.
+   */
+  double getTotalMm();
 }

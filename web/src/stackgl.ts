@@ -9,7 +9,7 @@
 // cylinder of their own for each took 1.9 MB, 18% of what the board's own buffers hold.
 
 import type { BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
-import { spanDepths, type StackLayout } from "./stacklayout.js";
+import type { StackLayout } from "./stacklayout.js";
 import { BODY_FLOATS, type BodyGeometry } from "./stackbodies.js";
 
 type Rgba = [number, number, number, number];
@@ -75,10 +75,11 @@ export function stackGeometry(view: BoardStackView, layout: StackLayout, originX
   const holes: number[] = [];
   const nets: string[] = [];
   for (const sp of view.drills) {
-    const depths = spanDepths(layout, sp.layerFrom, sp.layerTo);
-    if (!depths) continue;
+    // The engine says the depths a span runs between (BoardDrillSpan.top_mm, agni issue 1635), and
+    // leaves them unset for a span the stack cannot place.
+    if (sp.topMm === undefined || sp.bottomMm === undefined) continue;
     for (let i = 0; i < sp.diameter.length; i++) {
-      holes.push(sp.xy[2 * i] - originX, sp.xy[2 * i + 1] - originY, sp.diameter[i] / 2, depths[0], depths[1]);
+      holes.push(sp.xy[2 * i] - originX, sp.xy[2 * i + 1] - originY, sp.diameter[i] / 2, sp.topMm, sp.bottomMm);
       nets.push(sp.net[i] ?? "");
     }
   }

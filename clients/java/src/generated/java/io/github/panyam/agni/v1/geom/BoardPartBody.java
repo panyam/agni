@@ -282,6 +282,34 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int DRAWN_HEIGHT_MM_FIELD_NUMBER = 7;
+  private double drawnHeightMm_ = 0D;
+  /**
+   * <pre>
+   * drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+   * file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+   * 1635).
+   * </pre>
+   *
+   * <code>double drawn_height_mm = 7 [json_name = "drawnHeightMm"];</code>
+   * @return The drawnHeightMm.
+   */
+  @java.lang.Override
+  public double getDrawnHeightMm() {
+    return drawnHeightMm_;
+  }
+
+  public static final int HEIGHT_DEFAULTED_FIELD_NUMBER = 8;
+  private boolean heightDefaulted_ = false;
+  /**
+   * <code>bool height_defaulted = 8 [json_name = "heightDefaulted"];</code>
+   * @return The heightDefaulted.
+   */
+  @java.lang.Override
+  public boolean getHeightDefaulted() {
+    return heightDefaulted_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -319,6 +347,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 6, color_);
     }
+    if (java.lang.Double.doubleToRawLongBits(drawnHeightMm_) != 0) {
+      output.writeDouble(7, drawnHeightMm_);
+    }
+    if (heightDefaulted_ != false) {
+      output.writeBool(8, heightDefaulted_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -349,6 +383,14 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(6, color_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(drawnHeightMm_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(7, drawnHeightMm_);
+    }
+    if (heightDefaulted_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(8, heightDefaulted_);
     }
     return size;
   }
@@ -390,6 +432,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPartClass())) return false;
     if (!getColor()
         .equals(other.getColor())) return false;
+    if (java.lang.Double.doubleToLongBits(getDrawnHeightMm())
+        != java.lang.Double.doubleToLongBits(
+            other.getDrawnHeightMm())) return false;
+    if (getHeightDefaulted()
+        != other.getHeightDefaulted()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -418,6 +465,12 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getPartClass().hashCode();
     hash = (37 * hash) + COLOR_FIELD_NUMBER;
     hash = (53 * hash) + getColor().hashCode();
+    hash = (37 * hash) + DRAWN_HEIGHT_MM_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getDrawnHeightMm()));
+    hash = (37 * hash) + HEIGHT_DEFAULTED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getHeightDefaulted());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -564,6 +617,8 @@ private static final long serialVersionUID = 0L;
       heightMm_ = 0D;
       partClass_ = "";
       color_ = "";
+      drawnHeightMm_ = 0D;
+      heightDefaulted_ = false;
       return this;
     }
 
@@ -618,6 +673,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.color_ = color_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.drawnHeightMm_ = drawnHeightMm_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.heightDefaulted_ = heightDefaulted_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -666,6 +727,12 @@ private static final long serialVersionUID = 0L;
         color_ = other.color_;
         bitField0_ |= 0x00000020;
         onChanged();
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getDrawnHeightMm()) != 0) {
+        setDrawnHeightMm(other.getDrawnHeightMm());
+      }
+      if (other.getHeightDefaulted() != false) {
+        setHeightDefaulted(other.getHeightDefaulted());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -733,6 +800,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 57: {
+              drawnHeightMm_ = input.readDouble();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 57
+            case 64: {
+              heightDefaulted_ = input.readBool();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1199,6 +1276,88 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       color_ = value;
       bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private double drawnHeightMm_ ;
+    /**
+     * <pre>
+     * drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+     * file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+     * 1635).
+     * </pre>
+     *
+     * <code>double drawn_height_mm = 7 [json_name = "drawnHeightMm"];</code>
+     * @return The drawnHeightMm.
+     */
+    @java.lang.Override
+    public double getDrawnHeightMm() {
+      return drawnHeightMm_;
+    }
+    /**
+     * <pre>
+     * drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+     * file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+     * 1635).
+     * </pre>
+     *
+     * <code>double drawn_height_mm = 7 [json_name = "drawnHeightMm"];</code>
+     * @param value The drawnHeightMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDrawnHeightMm(double value) {
+
+      drawnHeightMm_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+     * file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+     * 1635).
+     * </pre>
+     *
+     * <code>double drawn_height_mm = 7 [json_name = "drawnHeightMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDrawnHeightMm() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      drawnHeightMm_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private boolean heightDefaulted_ ;
+    /**
+     * <code>bool height_defaulted = 8 [json_name = "heightDefaulted"];</code>
+     * @return The heightDefaulted.
+     */
+    @java.lang.Override
+    public boolean getHeightDefaulted() {
+      return heightDefaulted_;
+    }
+    /**
+     * <code>bool height_defaulted = 8 [json_name = "heightDefaulted"];</code>
+     * @param value The heightDefaulted to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHeightDefaulted(boolean value) {
+
+      heightDefaulted_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool height_defaulted = 8 [json_name = "heightDefaulted"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHeightDefaulted() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      heightDefaulted_ = false;
       onChanged();
       return this;
     }

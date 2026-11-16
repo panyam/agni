@@ -23,19 +23,56 @@ func BoardStack(b *geom.BoardGeometry, opts ...Option) *geom.BoardStackView {
 	for _, l := range s.GetLayers() {
 		row := &geom.BoardStackRow{Name: l.GetName(), Kind: l.GetKind(), Layer: l.GetLayer(),
 			Thickness: thicknessText(l, unit), Material: l.GetMaterial(), Color: stackColor(style, copperColor, l)}
+		drawn, defaulted := TypicalMm[l.GetKind()], true
 		if l.Thickness != nil {
 			mm := float64(l.GetThickness()*unit) / 1e6
 			row.ThicknessMm = &mm
+			if mm > 0 {
+				drawn, defaulted = mm, false
+			}
 		}
+		row.TopMm, row.BottomMm, row.ThicknessDefaulted = v.TotalMm, toNm(v.TotalMm+drawn), defaulted
+		v.TotalMm = row.BottomMm
 		v.Rows = append(v.Rows, row)
 	}
 	v.Summary, v.Disagrees = stackSummary(s, unit)
 	v.Drills = drillSpans(b)
+	spanDepths(v)
 	v.OutlineTris = outlineTris(b)
 	v.Bodies = partBodies(b, style)
 	v.BodyColor, v.DefaultBodyColor = style.PartBody, style.PartBodyDefault
 	v.BoardLook = &geom.BoardLook{Mask: style.BoardMask, MaskOverCopper: style.MaskOverCopper, PadFinish: style.PadFinish, Silk: style.BoardSilk}
 	return v
+}
+
+// TypicalMm is the thickness a stack row of each kind draws at when the file gives none, in
+// millimetres (agni issues 1593 and 1635). BoardStackRow.thickness_defaulted marks such a row.
+// Silkscreen and paste draw on the surface, at 0, since a board's stated thickness leaves them out.
+// A kind not listed draws at 0. KiCad gives silk and paste no thickness, and the Jetson cut's 28
+// rows then sum to its stated 1.711 mm.
+var TypicalMm = map[string]float64{"copper": 0.035, "dielectric": 0.1, "mask": 0.01, "paste": 0, "silk": 0}
+
+// toNm rounds a depth in millimetres to the nanometre, so a sum of thicknesses reads as the depth it
+// is rather than carrying floating-point noise onto the wire.
+func toNm(mm float64) float64 { return math.Round(mm*1e6) / 1e6 }
+
+// spanDepths sets the depths each drill span runs between, from the top of its first layer's stack
+// row to the bottom of its last's. A span whose layer the stack names nowhere keeps neither.
+func spanDepths(v *geom.BoardStackView) {
+	row := map[string]*geom.BoardStackRow{}
+	for _, r := range v.GetRows() {
+		if r.GetLayer() != "" && row[r.GetLayer()] == nil {
+			row[r.GetLayer()] = r
+		}
+	}
+	for _, sp := range v.GetDrills() {
+		a, b := row[sp.GetLayerFrom()], row[sp.GetLayerTo()]
+		if a == nil || b == nil {
+			continue
+		}
+		top, bottom := math.Min(a.GetTopMm(), b.GetTopMm()), math.Max(a.GetBottomMm(), b.GetBottomMm())
+		sp.TopMm, sp.BottomMm = &top, &bottom
+	}
 }
 
 // drillSpans groups the board's plated holes by the copper layers they join, in the order the board

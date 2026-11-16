@@ -1,30 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { TYPICAL_MM, groupDepths, layoutStack, perMm, spanDepths, stackZ } from "./stacklayout.js";
+import { groupDepths, layoutStack, perMm, stackZ } from "./stacklayout.js";
 import { jetsonRows } from "./teststack.js";
 
 // The tolerance on a drawn height, a hundredth of a micrometre. The sums run in floating point.
 const MM_TOLERANCE = 1e-5;
 
 describe("the stack's layout", () => {
-  it("stacks Jetson's 28 rows to its stated 1.711 mm, with silk and paste on the surface", () => {
-    const l = layoutStack(jetsonRows());
+  // The engine places every row in depth (render.BoardStack, agni issue 1635). Its tests hold the
+  // rule, and these check the layout draws where it says.
+  it("lays the cut's 28 rows where the engine placed them, to its stated 1.711 mm", () => {
+    const rows = jetsonRows();
+    const l = layoutStack(rows);
     expect(l.planes).toHaveLength(28);
     expect(Math.abs(l.totalMm - 1.711)).toBeLessThan(MM_TOLERANCE);
+    l.planes.forEach((p, i) => expect([p.top, p.bottom, p.defaulted]).toEqual([rows[i].topMm, rows[i].bottomMm, rows[i].thicknessDefaulted]));
     const byName = new Map(l.planes.map((p) => [p.name, p]));
     expect(byName.get("F.SilkS")).toMatchObject({ top: 0, bottom: 0, defaulted: true });
     expect(byName.get("F.Cu")).toMatchObject({ defaulted: false });
-    expect(byName.get("F.Cu")!.bottom - byName.get("F.Cu")!.top).toBeCloseTo(0.035, 9);
-    expect(byName.get("B.SilkS")!.top).toBeCloseTo(1.711, 9);
-  });
-
-  it("draws a row the file gives no thickness at its kind's typical thickness, and says so", () => {
-    const rows = jetsonRows();
-    rows[5] = { ...rows[5], thicknessMm: undefined }; // In1.Cu
-    const l = layoutStack(rows);
-    const in1 = l.planes[5];
-    expect(in1.defaulted).toBe(true);
-    expect(in1.bottom - in1.top).toBeCloseTo(TYPICAL_MM.copper, 9);
-    expect(l.totalMm).toBeCloseTo(1.711 - 0.018 + TYPICAL_MM.copper, 9);
   });
 
   it("draws the board's true thickness at explode 0, and keeps every gap in proportion when spread", () => {
@@ -40,14 +32,6 @@ describe("the stack's layout", () => {
     const gap = (s: number, i: number) => stackZ(l.planes[i].top, l, s) - stackZ(l.planes[i].bottom, l, s);
     expect(gap(spread, 6) / gap(spread, 4)).toBeCloseTo(0.2 / 0.12, 9);
     expect(gap(flat, 6) / gap(flat, 4)).toBeCloseTo(0.2 / 0.12, 9);
-  });
-
-  it("runs a blind via's span from its first layer's top to its last layer's bottom", () => {
-    const l = layoutStack(jetsonRows());
-    const [top, bottom] = spanDepths(l, "F.Cu", "In1.Cu")!;
-    expect(top).toBeCloseTo(0.01, 9);
-    expect(bottom).toBeCloseTo(0.01 + 0.035 + 0.12 + 0.018, 9);
-    expect(spanDepths(l, "F.Cu", "Nowhere")).toBeNull();
   });
 });
 

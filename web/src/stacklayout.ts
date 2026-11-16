@@ -1,19 +1,7 @@
 // The heights a board view draws its layers at when it shows the board's stack apart (agni issue
-// 1593). Every height here is a depth in millimetres below the board's top face, read from the
-// stack's thickness_mm, and stackZ turns a depth into a world z for the camera.
-
-// TYPICAL_MM is the thickness a stack row of each kind draws at when the file gives none. The Stack
-// table labels such a row as drawn at a default, since the file never said it. Silkscreen and paste
-// draw on the surface, at 0, since a board's stated thickness leaves them out. KiCad gives neither a
-// thickness, and Jetson's 28 rows then sum to its stated 1.711 mm.
-export const TYPICAL_MM: Readonly<Record<string, number>> = {
-  copper: 0.035,
-  dielectric: 0.1,
-  mask: 0.01,
-  paste: 0,
-  silk: 0,
-  other: 0,
-};
+// 1593). Every height here is a depth in millimetres below the board's top face. The engine places
+// each stack row in depth, with a typical thickness where the file gives none (BoardStackRow.top_mm,
+// render.TypicalMm, agni issue 1635), and stackZ turns a depth into a world z for the camera.
 
 // SPREAD_OF_WIDTH is how tall the stack draws at full explode, as a share of the board's width.
 export const SPREAD_OF_WIDTH = 0.6;
@@ -23,12 +11,14 @@ export interface StackRowIn {
   name: string;
   kind: string;
   layer: string;
-  thicknessMm?: number;
   color: string;
+  topMm: number;
+  bottomMm: number;
+  thicknessDefaulted: boolean;
 }
 
 // StackPlane is one stack row placed in depth. top and bottom are millimetres below the board's top
-// face, and defaulted says its thickness is TYPICAL_MM's rather than the file's.
+// face, and defaulted says the row draws at a typical thickness rather than the file's.
 export interface StackPlane {
   name: string;
   kind: string;
@@ -44,18 +34,11 @@ export interface StackLayout {
   totalMm: number;
 }
 
-// layoutStack stacks the rows from the top of the board down, each as thick as the file says or as
-// TYPICAL_MM says for its kind.
+// layoutStack lays the rows at the depths the engine placed them, and the stack's total at the last
+// row's bottom.
 export function layoutStack(rows: readonly StackRowIn[]): StackLayout {
-  const planes: StackPlane[] = [];
-  let at = 0;
-  for (const r of rows) {
-    const stated = r.thicknessMm !== undefined && r.thicknessMm > 0;
-    const mm = stated ? r.thicknessMm! : (TYPICAL_MM[r.kind] ?? TYPICAL_MM.other);
-    planes.push({ name: r.name, kind: r.kind, layer: r.layer, color: r.color, top: at, bottom: at + mm, defaulted: !stated });
-    at += mm;
-  }
-  return { planes, totalMm: at };
+  const planes = rows.map((r) => ({ name: r.name, kind: r.kind, layer: r.layer, color: r.color, top: r.topMm, bottom: r.bottomMm, defaulted: r.thicknessDefaulted }));
+  return { planes, totalMm: planes.reduce((at, p) => Math.max(at, p.bottom), 0) };
 }
 
 // LayerRowIn is the part of a BoardLayerRow that groupDepths reads.
@@ -93,15 +76,6 @@ export function groupDepths(layout: StackLayout, rows: readonly LayerRowIn[]): G
     for (const g of r.groups) if (!depth.has(g)) depth.set(g, d);
   }
   return { depth, barrels };
-}
-
-// spanDepths is the depth a hole joining two copper layers runs over, from the top of the first to
-// the bottom of the second, or null when the stack names neither.
-export function spanDepths(layout: StackLayout, from: string, to: string): [number, number] | null {
-  const a = layout.planes.find((p) => p.layer === from);
-  const b = layout.planes.find((p) => p.layer === to);
-  if (!a || !b) return null;
-  return [Math.min(a.top, b.top), Math.max(a.bottom, b.bottom)];
 }
 
 // perMm is how many world units one millimetre of depth draws as. Explode 0 draws the board's true

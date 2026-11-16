@@ -316,6 +316,46 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int TOP_MM_FIELD_NUMBER = 8;
+  private double topMm_ = 0D;
+  /**
+   * <pre>
+   * top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+   * client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+   * says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+   * thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+   * </pre>
+   *
+   * <code>double top_mm = 8 [json_name = "topMm"];</code>
+   * @return The topMm.
+   */
+  @java.lang.Override
+  public double getTopMm() {
+    return topMm_;
+  }
+
+  public static final int BOTTOM_MM_FIELD_NUMBER = 9;
+  private double bottomMm_ = 0D;
+  /**
+   * <code>double bottom_mm = 9 [json_name = "bottomMm"];</code>
+   * @return The bottomMm.
+   */
+  @java.lang.Override
+  public double getBottomMm() {
+    return bottomMm_;
+  }
+
+  public static final int THICKNESS_DEFAULTED_FIELD_NUMBER = 10;
+  private boolean thicknessDefaulted_ = false;
+  /**
+   * <code>bool thickness_defaulted = 10 [json_name = "thicknessDefaulted"];</code>
+   * @return The thicknessDefaulted.
+   */
+  @java.lang.Override
+  public boolean getThicknessDefaulted() {
+    return thicknessDefaulted_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -351,6 +391,15 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 7, color_);
     }
+    if (java.lang.Double.doubleToRawLongBits(topMm_) != 0) {
+      output.writeDouble(8, topMm_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(bottomMm_) != 0) {
+      output.writeDouble(9, bottomMm_);
+    }
+    if (thicknessDefaulted_ != false) {
+      output.writeBool(10, thicknessDefaulted_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -376,6 +425,18 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(7, color_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(topMm_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(8, topMm_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(bottomMm_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(9, bottomMm_);
+    }
+    if (thicknessDefaulted_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(10, thicknessDefaulted_);
     }
     return size;
   }
@@ -419,6 +480,14 @@ private static final long serialVersionUID = 0L;
         .equals(other.getMaterial())) return false;
     if (!getColor()
         .equals(other.getColor())) return false;
+    if (java.lang.Double.doubleToLongBits(getTopMm())
+        != java.lang.Double.doubleToLongBits(
+            other.getTopMm())) return false;
+    if (java.lang.Double.doubleToLongBits(getBottomMm())
+        != java.lang.Double.doubleToLongBits(
+            other.getBottomMm())) return false;
+    if (getThicknessDefaulted()
+        != other.getThicknessDefaulted()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -447,6 +516,15 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getMaterial().hashCode();
     hash = (37 * hash) + COLOR_FIELD_NUMBER;
     hash = (53 * hash) + getColor().hashCode();
+    hash = (37 * hash) + TOP_MM_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getTopMm()));
+    hash = (37 * hash) + BOTTOM_MM_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getBottomMm()));
+    hash = (37 * hash) + THICKNESS_DEFAULTED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getThicknessDefaulted());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -593,6 +671,9 @@ private static final long serialVersionUID = 0L;
       thicknessMm_ = 0D;
       material_ = "";
       color_ = "";
+      topMm_ = 0D;
+      bottomMm_ = 0D;
+      thicknessDefaulted_ = false;
       return this;
     }
 
@@ -649,6 +730,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.color_ = color_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.topMm_ = topMm_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.bottomMm_ = bottomMm_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.thicknessDefaulted_ = thicknessDefaulted_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -696,6 +786,15 @@ private static final long serialVersionUID = 0L;
         color_ = other.color_;
         bitField0_ |= 0x00000040;
         onChanged();
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getTopMm()) != 0) {
+        setTopMm(other.getTopMm());
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getBottomMm()) != 0) {
+        setBottomMm(other.getBottomMm());
+      }
+      if (other.getThicknessDefaulted() != false) {
+        setThicknessDefaulted(other.getThicknessDefaulted());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -756,6 +855,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 58
+            case 65: {
+              topMm_ = input.readDouble();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 65
+            case 73: {
+              bottomMm_ = input.readDouble();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 73
+            case 80: {
+              thicknessDefaulted_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1241,6 +1355,123 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       color_ = value;
       bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private double topMm_ ;
+    /**
+     * <pre>
+     * top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+     * client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+     * says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+     * thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+     * </pre>
+     *
+     * <code>double top_mm = 8 [json_name = "topMm"];</code>
+     * @return The topMm.
+     */
+    @java.lang.Override
+    public double getTopMm() {
+      return topMm_;
+    }
+    /**
+     * <pre>
+     * top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+     * client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+     * says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+     * thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+     * </pre>
+     *
+     * <code>double top_mm = 8 [json_name = "topMm"];</code>
+     * @param value The topMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTopMm(double value) {
+
+      topMm_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+     * client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+     * says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+     * thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+     * </pre>
+     *
+     * <code>double top_mm = 8 [json_name = "topMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTopMm() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      topMm_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private double bottomMm_ ;
+    /**
+     * <code>double bottom_mm = 9 [json_name = "bottomMm"];</code>
+     * @return The bottomMm.
+     */
+    @java.lang.Override
+    public double getBottomMm() {
+      return bottomMm_;
+    }
+    /**
+     * <code>double bottom_mm = 9 [json_name = "bottomMm"];</code>
+     * @param value The bottomMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBottomMm(double value) {
+
+      bottomMm_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>double bottom_mm = 9 [json_name = "bottomMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBottomMm() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      bottomMm_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private boolean thicknessDefaulted_ ;
+    /**
+     * <code>bool thickness_defaulted = 10 [json_name = "thicknessDefaulted"];</code>
+     * @return The thicknessDefaulted.
+     */
+    @java.lang.Override
+    public boolean getThicknessDefaulted() {
+      return thicknessDefaulted_;
+    }
+    /**
+     * <code>bool thickness_defaulted = 10 [json_name = "thicknessDefaulted"];</code>
+     * @param value The thicknessDefaulted to set.
+     * @return This builder for chaining.
+     */
+    public Builder setThicknessDefaulted(boolean value) {
+
+      thicknessDefaulted_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool thickness_defaulted = 10 [json_name = "thicknessDefaulted"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearThicknessDefaulted() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      thicknessDefaulted_ = false;
       onChanged();
       return this;
     }

@@ -1573,6 +1573,9 @@ pub struct BoardStackView {
     /// board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
     #[prost(message, optional, tag="10")]
     pub board_look: ::core::option::Option<BoardLook>,
+    /// total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+    #[prost(double, tag="11")]
+    pub total_mm: f64,
 }
 /// BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
 /// 1653). mask is the opaque solder mask on each outer face. mask_over_copper is outer copper seen
@@ -1613,6 +1616,13 @@ pub struct BoardPartBody {
     pub part_class: ::prost::alloc::string::String,
     #[prost(string, tag="6")]
     pub color: ::prost::alloc::string::String,
+    /// drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+    /// file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+    /// 1635).
+    #[prost(double, tag="7")]
+    pub drawn_height_mm: f64,
+    #[prost(bool, tag="8")]
+    pub height_defaulted: bool,
 }
 /// BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 /// F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
@@ -1632,6 +1642,13 @@ pub struct BoardDrillSpan {
     pub diameter: ::prost::alloc::vec::Vec<f64>,
     #[prost(string, repeated, tag="5")]
     pub net: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+    /// stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+    /// either layer nowhere, and a client then draws no barrel for the span.
+    #[prost(double, optional, tag="6")]
+    pub top_mm: ::core::option::Option<f64>,
+    #[prost(double, optional, tag="7")]
+    pub bottom_mm: ::core::option::Option<f64>,
 }
 /// BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
 /// thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
@@ -1654,6 +1671,16 @@ pub struct BoardStackRow {
     pub material: ::prost::alloc::string::String,
     #[prost(string, tag="7")]
     pub color: ::prost::alloc::string::String,
+    /// top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+    /// client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+    /// says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+    /// thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+    #[prost(double, tag="8")]
+    pub top_mm: f64,
+    #[prost(double, tag="9")]
+    pub bottom_mm: f64,
+    #[prost(bool, tag="10")]
+    pub thickness_defaulted: bool,
 }
 /// HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).
 ///

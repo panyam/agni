@@ -2,7 +2,6 @@ import { For, Show } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { LayerPreset } from "./boardlayers.js";
-import { TYPICAL_MM } from "./stacklayout.js";
 
 // LayerControl is what a board layer list asks of its owner (agni 1351). A click on a row toggles
 // it, a double-click shows it alone, and a preset button replaces the whole hidden set.
@@ -92,13 +91,13 @@ function BoardStackTable(props: { stack: BoardStackView }) {
                 <td class="board-stack-name">{r.name}</td>
                 <td class="board-stack-thickness" data-stack-thickness={r.thickness}>
                   {r.thickness}
-                  <Show when={r.thicknessMm === undefined}>
+                  <Show when={r.thicknessDefaulted}>
                     <span
                       class="board-stack-default"
-                      data-stack-default={String(typicalMm(r.kind))}
+                      data-stack-default={String(drawnMm(r))}
                       title="the stack view draws this layer at a typical thickness, since the file gives none"
                     >
-                      {typicalMm(r.kind) > 0 ? ` (drawn at ${typicalMm(r.kind)} mm)` : " (drawn on the surface)"}
+                      {drawnMm(r) > 0 ? ` (drawn at ${drawnMm(r)} mm)` : " (drawn on the surface)"}
                     </span>
                   </Show>
                 </td>
@@ -117,8 +116,10 @@ function BoardStackTable(props: { stack: BoardStackView }) {
   );
 }
 
-function typicalMm(kind: string): number {
-  return TYPICAL_MM[kind] ?? TYPICAL_MM.other;
+// drawnMm is how thick the engine draws a row, from its served depths (agni issue 1635), rounded to
+// a tenth of a micrometre so a floating-point difference reads as the thickness it is.
+function drawnMm(r: { topMm: number; bottomMm: number }): number {
+  return Number((r.bottomMm - r.topMm).toFixed(4));
 }
 
 // LayerListState is what a mounted list draws.

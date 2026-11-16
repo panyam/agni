@@ -1,7 +1,7 @@
 // Part bodies on a board's stack view (agni issue 1352). Each placed part stands on its side's face
-// of the board as its footprint's hull, raised to the height the file states. A part whose file
-// states no height stands at TYPICAL_BODY_MM and draws apart, so a reader can tell the file never
-// said it.
+// of the board as its footprint's hull, raised to the height the engine says it draws at
+// (BoardPartBody.drawn_height_mm, agni issue 1635). A part whose file states no height stands at
+// render.TypicalBodyMm and draws apart, so a reader can tell the file never said it.
 //
 // A height draws at the board's true scale whatever the explode control says. The explode control
 // spreads the layers to show the stack, and a part would tower over the board if it spread too.
@@ -10,16 +10,14 @@ import type { BoardPartBody, BoardStackView } from "@panyam/agni-client/gen/agni
 import type { Selection } from "./selection.js";
 import type { StackCamera, Vec3 } from "./stackcamera.js";
 
-// TYPICAL_BODY_MM is the height a part whose file states none draws at.
-export const TYPICAL_BODY_MM = 1;
-
-// defaultedNote says how many of a stack's parts stand at TYPICAL_BODY_MM because their file states
-// no height, as the stack bar shows it beside its Parts toggle. It is "" when every part states one.
+// defaultedNote says how many of a stack's parts stand at the typical height because their file
+// states no height, as the stack bar shows it beside its Parts toggle. It is "" when every part
+// states one.
 export function defaultedNote(view: Pick<BoardStackView, "bodies">): string {
-  const n = view.bodies.filter((b) => b.heightMm === undefined || b.heightMm <= 0).length;
-  if (n === 0) return "";
-  const of = n === view.bodies.length ? "all" : `${n} of ${view.bodies.length}`;
-  return ` (${of} at a default ${TYPICAL_BODY_MM} mm)`;
+  const defaulted = view.bodies.filter((b) => b.heightDefaulted);
+  if (defaulted.length === 0) return "";
+  const of = defaulted.length === view.bodies.length ? "all" : `${defaulted.length} of ${view.bodies.length}`;
+  return ` (${of} at a default ${defaulted[0].drawnHeightMm} mm)`;
 }
 
 // BODY_FLOATS is the length of one vertex: x, y, the height in millimetres, and a code holding the
@@ -78,8 +76,7 @@ export function bodyGeometry(bodies: readonly BoardPartBody[], originX: number, 
       ring[2 * i] = b.outline[2 * i] - originX;
       ring[2 * i + 1] = b.outline[2 * i + 1] - originY;
     }
-    const stated = b.heightMm !== undefined && b.heightMm > 0;
-    placed.push({ ref: b.refDes, ring, heightMm: stated ? b.heightMm! : TYPICAL_BODY_MM, back: b.side === "back", defaulted: !stated, color: b.color });
+    placed.push({ ref: b.refDes, ring, heightMm: b.drawnHeightMm, back: b.side === "back", defaulted: b.heightDefaulted, color: b.color });
   }
   placed.sort((a, b) => Number(a.defaulted) - Number(b.defaulted) || (a.color < b.color ? -1 : a.color > b.color ? 1 : 0));
   const out: number[] = [];

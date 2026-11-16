@@ -92,4 +92,29 @@ public interface BoardStackRowOrBuilder extends
    */
   com.google.protobuf.ByteString
       getColorBytes();
+
+  /**
+   * <pre>
+   * top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+   * client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+   * says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+   * thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+   * </pre>
+   *
+   * <code>double top_mm = 8 [json_name = "topMm"];</code>
+   * @return The topMm.
+   */
+  double getTopMm();
+
+  /**
+   * <code>double bottom_mm = 9 [json_name = "bottomMm"];</code>
+   * @return The bottomMm.
+   */
+  double getBottomMm();
+
+  /**
+   * <code>bool thickness_defaulted = 10 [json_name = "thicknessDefaulted"];</code>
+   * @return The thicknessDefaulted.
+   */
+  boolean getThicknessDefaulted();
 }
