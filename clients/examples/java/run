@@ -1,0 +1,23 @@
+#!/bin/sh
+# Runs the Java client example, as make exercise-clients runs every language's example:
+# clients/examples/<language>/run -server <url> -design <uri>. It works from any directory.
+#
+# It builds the example with clients/java's Gradle wrapper the first time, and again when a source or
+# build file is newer than the last build, then runs the launcher installDist wrote. Gradle's own
+# output goes to stderr, so the summary stays the last line on stdout.
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+client=$(cd "$here/../../java" && pwd)
+launcher="$here/build/install/agni-java-example/bin/agni-java-example"
+stamp="$here/build/run.stamp"
+stale=
+if [ ! -x "$launcher" ] || [ ! -f "$stamp" ]; then
+  stale=1
+elif [ -n "$(find "$here/src" "$here/build.gradle.kts" "$client/src" "$client/build.gradle.kts" "$client/settings.gradle.kts" -newer "$stamp" -type f 2>/dev/null | head -n 1)" ]; then
+  stale=1
+fi
+if [ -n "$stale" ]; then
+  "$client/gradlew" -q -p "$client" :example:installDist >&2
+  touch "$stamp"
+fi
+exec "$launcher" "$@"

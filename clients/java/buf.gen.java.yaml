@@ -1,0 +1,28 @@
+version: v2
+# Java messages and gRPC stubs for the Java client (agni issue 1632), beside protos/buf.gen.yaml (Go),
+# web/buf.gen.web.yaml (TS) and clients/python/buf.gen.py.yaml (Python).
+#
+# Both plugins are buf REMOTE plugins pinned by version, as the Python template pins its own. The
+# protobuf plugin's version fixes the runtime floor: protobuf-java refuses generated code newer than
+# itself, so build.gradle.kts pins protobuf-java to 4.36.2 for v36.2. The grpc plugin's version
+# matches the grpc-java libraries build.gradle.kts pins.
+#
+# Managed mode sets the Java options the protos leave out, so no proto names a Java package. Every
+# package gets the prefix io.github.panyam (agni.v1.webapi becomes io.github.panyam.agni.v1.webapi),
+# and every message gets a class of its own.
+#
+# The output directory holds generated code alone, so clean is on. `make proto-java` regenerates it,
+# and `make proto-check` fails when the committed tree differs from a fresh one.
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: java_package_prefix
+      value: io.github.panyam
+    - file_option: java_multiple_files
+      value: true
+plugins:
+  - remote: buf.build/protocolbuffers/java:v36.2
+    out: src/generated/java
+  - remote: buf.build/grpc/java:v1.85.1
+    out: src/generated/java
