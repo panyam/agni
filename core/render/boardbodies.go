@@ -26,6 +26,9 @@ func partBodies(b *geom.BoardGeometry, style Style) []*geom.BoardPartBody {
 	}
 	var out []*geom.BoardPartBody
 	for _, pl := range b.GetPlacements() {
+		if isHole(pl, unit) {
+			continue
+		}
 		pts := art[pl.GetRefDes()]["courtyard"]
 		if len(pts) < 3 {
 			pts = art[pl.GetRefDes()]["fab"]
@@ -49,6 +52,28 @@ func partBodies(b *geom.BoardGeometry, style Style) []*geom.BoardPartBody {
 		out = append(out, body)
 	}
 	return out
+}
+
+// HoleDrillMm is the narrowest drill a hole part has, in millimetres. A mounting hole is M2 or
+// wider, and a through-hole test point's drill is about 1 mm.
+const HoleDrillMm = 2.0
+
+// isHole says whether a placement is a hole in the board rather than a part on it (agni 1607). Every
+// pad is drilled, all its pads are one pin, and its widest drill is at least HoleDrillMm. KiCad
+// draws no model for one, so the stack view stands no block on it.
+func isHole(pl *geom.ComponentPlacement, unit int64) bool {
+	pads := pl.GetPads()
+	if len(pads) == 0 {
+		return false
+	}
+	widest := int64(0)
+	for _, p := range pads {
+		if p.GetDrill() <= 0 || p.GetNumber() != pads[0].GetNumber() {
+			return false
+		}
+		widest = max(widest, p.GetDrill())
+	}
+	return float64(widest*unit)/1e6 >= HoleDrillMm
 }
 
 // partClassColor is a part's most specific class and the colour of the first of its classes that

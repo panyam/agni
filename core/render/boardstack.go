@@ -2,6 +2,7 @@ package render
 
 import (
 	"math"
+	"sort"
 
 	"github.com/panyam/agni/core/stackup"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -97,20 +98,82 @@ func copperEnds(s *geom.Stackup) (top, bottom string) {
 }
 
 // outlineTris fills the board outline as a triangle list, flattened to x,y pairs. Sources draw the
-// edge as separate lines and arcs, so outlineRing chains them first. An outline that does not close
-// fills its bounding box instead, and a board with no outline fills nothing.
+// edge as separate lines and arcs, so outlineRings chains them first. The largest ring is the board,
+// and a ring inside it is a cutout, as a slot is. A drilled hole of HoleCutMm or wider is cut too, as
+// a mounting hole is (agni 1607). An outline that does not close fills its bounding box instead, and
+// a board with no outline fills nothing.
 func outlineTris(b *geom.BoardGeometry) []float64 {
 	var pts []*geom.Point
-	if ring := outlineRing(b.GetOutline(), outlineGap(b)); len(ring) >= 3 {
-		pts = ring
+	var holes [][]*geom.Point
+	if rings := outlineRings(b.GetOutline(), outlineGap(b)); len(rings) > 0 {
+		pts = rings[0]
+		for _, r := range rings[1:] {
+			if insideRing(pts, r[0]) {
+				holes = append(holes, r)
+			}
+		}
 	} else if box := outlineBox(b.GetOutline()); box != nil {
 		pts = box
 	}
+	if len(pts) >= 3 {
+		holes = append(holes, drillHoles(b, pts)...)
+	}
 	var out []float64
-	for _, p := range polygonTris(pts, nil) {
+	for _, p := range polygonTris(pts, holes) {
 		out = append(out, float64(p[0]), float64(p[1]))
 	}
 	return out
+}
+
+// HoleCutMm is the narrowest drill the stack view cuts out of the board, in millimetres. A mounting
+// hole is 2 mm or more and a via well under 1 mm, so the cut shows the holes a reader looks for and
+// keeps Jetson's thousands of vias out of the triangulation.
+const HoleCutMm = 1.0
+
+// drillHoles is a ring for each drilled pad at least HoleCutMm wide whose centre sits inside the
+// board, one per centre.
+func drillHoles(b *geom.BoardGeometry, board []*geom.Point) [][]*geom.Point {
+	least := int64(HoleCutMm * 1e6 / float64(unitNm(b)))
+	seen := map[[2]int64]bool{}
+	var out [][]*geom.Point
+	for _, pl := range b.GetPlacements() {
+		for _, pad := range pl.GetPads() {
+			if pad.GetDrill() < least {
+				continue
+			}
+			x, y := padWorld(pl, pad)
+			c := &geom.Point{X: x, Y: y}
+			if seen[[2]int64{x, y}] || !insideRing(board, c) {
+				continue
+			}
+			seen[[2]int64{x, y}] = true
+			r := float64(pad.GetDrill()) / 2
+			ring := make([]*geom.Point, 0, holeSides)
+			for i := range holeSides {
+				a := 2 * math.Pi * float64(i) / holeSides
+				ring = append(ring, &geom.Point{X: x + int64(math.Round(r*math.Cos(a))), Y: y + int64(math.Round(r*math.Sin(a)))})
+			}
+			out = append(out, ring)
+		}
+	}
+	return out
+}
+
+// holeSides is how many sides a cut hole has.
+const holeSides = 16
+
+// insideRing says whether p sits inside the ring, by the crossings of a ray to its right.
+func insideRing(ring []*geom.Point, p *geom.Point) bool {
+	in := false
+	x, y := float64(p.GetX()), float64(p.GetY())
+	for i, j := 0, len(ring)-1; i < len(ring); j, i = i, i+1 {
+		xi, yi := float64(ring[i].GetX()), float64(ring[i].GetY())
+		xj, yj := float64(ring[j].GetX()), float64(ring[j].GetY())
+		if (yi > y) != (yj > y) && x < (xj-xi)*(y-yi)/(yj-yi)+xi {
+			in = !in
+		}
+	}
+	return in
 }
 
 // outlineGap is how far apart two path ends can sit and still join, ten micrometres in the board's
@@ -119,9 +182,9 @@ func outlineGap(b *geom.BoardGeometry) int64 {
 	return max(10_000/unitNm(b), 1)
 }
 
-// outlineRing chains the outline's paths end to end into the closed ring with the largest area. A
-// path joins the chain at either end, reversed if it must be. It returns nil when no chain closes.
-func outlineRing(o *geom.BoardOutline, gap int64) []*geom.Point {
+// outlineRings chains the outline's paths end to end into closed rings, the largest first. A path
+// joins the chain at either end, reversed if it must be. It returns nil when no chain closes.
+func outlineRings(o *geom.BoardOutline, gap int64) [][]*geom.Point {
 	near := func(a, b *geom.Point) bool {
 		return absUnits(a.GetX()-b.GetX()) <= gap && absUnits(a.GetY()-b.GetY()) <= gap
 	}
@@ -132,8 +195,7 @@ func outlineRing(o *geom.BoardOutline, gap int64) []*geom.Point {
 		}
 	}
 	used := make([]bool, len(paths))
-	var best []*geom.Point
-	bestArea := 0.0
+	var rings [][]*geom.Point
 	for i := range paths {
 		if used[i] {
 			continue
@@ -167,11 +229,10 @@ func outlineRing(o *geom.BoardOutline, gap int64) []*geom.Point {
 		if len(ring) < 3 || !near(ring[0], ring[len(ring)-1]) {
 			continue
 		}
-		if a := math.Abs(ringArea(ring)); a > bestArea {
-			best, bestArea = ring, a
-		}
+		rings = append(rings, ring)
 	}
-	return best
+	sort.SliceStable(rings, func(i, j int) bool { return math.Abs(ringArea(rings[i])) > math.Abs(ringArea(rings[j])) })
+	return rings
 }
 
 func ringArea(ring []*geom.Point) float64 {

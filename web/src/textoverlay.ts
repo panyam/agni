@@ -1,6 +1,8 @@
 import { DEFAULT_FONT_STACK, type Label, type Image } from "./packed.js";
 import type { CameraView } from "./camera.js";
 import type { Turn } from "./orient.js";
+import type { Vec3 } from "./stackcamera.js";
+import { planeMatrix } from "./stacktext.js";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -182,6 +184,12 @@ export class TextOverlay {
   setContent(images: Image[], labels: Label[], fontFamily: string): void {
     this.svg.style.fontFamily = fontFamily || DEFAULT_FONT_STACK;
     this.svg.replaceChildren();
+    this.planes = new Map();
+    // A plane recoloured by placeOnPlanes sets --look-fill, and this rule outranks each text's own
+    // fill attribute.
+    const style = document.createElementNS(SVGNS, "style");
+    style.textContent = "g[data-look-fill] text { fill: var(--look-fill); }";
+    this.svg.appendChild(style);
     // Images share the layer, so they bake with the same multiplier as the labels.
     const maxFont = labels.reduce((mx, l) => Math.max(mx, l.height), 0);
     this.bakeScale = bakeDivisor(maxFont);
@@ -237,10 +245,70 @@ export class TextOverlay {
         if (l.runs.length > 0 && !l.text.includes("\n")) appendRuns(t, l.runs);
         else t.textContent = line.text;
         if (l.group) t.setAttribute("data-group", String(l.group));
-        this.svg.appendChild(t);
+        this.plane(l.group ?? 0).appendChild(t);
       }
     }
     this.applyHidden();
+  }
+
+  // planes holds one <g> per primitive group, holding that group's text, so the stack view can put
+  // each group's text on its own plane (agni issue 1607). Images sit outside them.
+  private planes = new Map<number, SVGGElement>();
+  private onPlanes = false;
+
+  private plane(group: number): SVGGElement {
+    let g = this.planes.get(group);
+    if (!g) {
+      g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("data-plane", String(group));
+      this.svg.appendChild(g);
+      this.planes.set(group, g);
+    }
+    return g;
+  }
+
+  // placeOnPlanes puts each group's text on its plane in the stack view. place gives the world z of a
+  // group's plane and the colour its text takes, or null to hide the group's text. project and dpr
+  // are the stack camera's, for planeMatrix. Images hide while the text sits on planes.
+  placeOnPlanes(project: (p: Vec3) => { x: number; y: number }, dpr: number, place: (group: number) => { z: number; fill?: string } | null): void {
+    this.onPlanes = true;
+    this.svg.style.transform = "none";
+    for (const el of this.svg.querySelectorAll<SVGElement>(":scope > image")) el.style.display = "none";
+    const byZ = new Map<number, string>();
+    for (const [group, g] of this.planes) {
+      const at = place(group);
+      if (!at) {
+        g.style.display = "none";
+        continue;
+      }
+      let m = byZ.get(at.z);
+      if (m === undefined) {
+        m = `matrix(${planeMatrix(project, at.z, this.bakeScale, dpr).join(" ")})`;
+        byZ.set(at.z, m);
+      }
+      g.style.display = "";
+      g.setAttribute("transform", m);
+      if (at.fill) {
+        g.setAttribute("data-look-fill", "");
+        g.style.setProperty("--look-fill", at.fill);
+      } else {
+        g.removeAttribute("data-look-fill");
+        g.style.removeProperty("--look-fill");
+      }
+    }
+  }
+
+  // flat takes the text off the stack view's planes, back to the flat layer update() moves.
+  flat(): void {
+    if (!this.onPlanes) return;
+    this.onPlanes = false;
+    for (const el of this.svg.querySelectorAll<SVGElement>(":scope > image")) el.style.display = "";
+    for (const g of this.planes.values()) {
+      g.style.display = "";
+      g.removeAttribute("transform");
+      g.removeAttribute("data-look-fill");
+      g.style.removeProperty("--look-fill");
+    }
   }
 
   // setHiddenGroups hides the text of hidden primitive groups, so a board's silkscreen text hides
