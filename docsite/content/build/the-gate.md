@@ -381,8 +381,13 @@ event for its action.
 the pace and with the captions a recording has. Then it hands the browser to you, open on the state
 the journey left, until you close the window. `make try` alone lists the journeys. `UNTIL=<number or
 caption words>` stops before a step so you take it yourself, `STEP=1` waits for a Next button before
-each step, and `DEMO_DESIGN=cut` plays on the committed cut rather than Jetson's whole board. It
-rebuilds the viewer bundle and the wasm only when their sources changed. A tried page opens in SVG,
+each step, and `DEMO_DESIGN=cut` plays on the committed cut rather than Jetson's whole board.
+`RECORD=1` records the window, your own clicks after the hand-over included, and writes
+`/tmp/agni-demo/<name>-try.mp4` once you close it. That suits showing a bug or a change as you found
+it. Close the window rather than quitting Chrome, which can stop the recording before it is written.
+`HANDOVER=0` closes the browser when the journey ends, for a recording at your screen's size with
+no one at the window. It rebuilds the viewer bundle and the wasm only when their sources changed,
+and `make demo-video` does the same. A tried page opens in SVG,
 as the gate's and the recording's headless pages do, and the WebGL box still works afterwards. Reach
 for the other tools when the question differs. A spec with `HEADED=1` shows why one assertion
 failed, an exercise walks a whole mission and writes its step table, and `make demo-video` makes the

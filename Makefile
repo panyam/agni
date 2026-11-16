@@ -465,43 +465,9 @@ exercise-walk: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	cd web && CLOSED_TICKETS=$$(../hack/closed_tickets.sh browser/walk-mission.spec.ts) WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/walk-mission.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/walk.md 2>/dev/null; exit $$status
 
-# Mission #1442's exercise (agni issue 1545): record one demo journey from web/browser/journeys.ts as
-# $(DEMO_OUT)/<name>.mp4 at 1080p, played on Jetson's whole board at a pace a viewer can follow, with a
-# caption before each step. With no JOURNEY it lists the journeys. A step that breaks fails the run
-# and names the step. The gate plays every journey on the cut at test pace (demo-video.spec.ts).
-#   make demo-video JOURNEY=find-a-part
-#   make demo-video JOURNEY=find-a-part DEMO_OUT=~/Movies/agni
-DEMO_OUT ?= /tmp/agni-demo
-demo-video:
-	@if [ -z "$(JOURNEY)" ]; then \
-		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
-		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
-	fi
-	$(MAKE) ui wasm agni samples-oracle samples-revisions
-	$(MAKE) -C examples/jetson-project board revision
-	mkdir -p $(DEMO_OUT)
-	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) pnpm exec vitest run -c vitest.browser.config.ts browser/demo-video.spec.ts -t "records"
-	@rm -f $(DEMO_OUT)/page@*.webm
-
-# Try a demo journey by hand (agni issue 1600): one journey from web/browser/journeys.ts plays in a
-# visible browser at the recording's pace, with its captions, and then the browser is yours until you
-# close its window. With no JOURNEY it lists the journeys. UNTIL=<number or caption words> stops
-# before that step, so you take it yourself, and each run lists the steps first. STEP=1 waits for the
-# Next button on the caption before each step. DEMO_DESIGN=cut plays on the committed cut of Jetson, which
-# needs no samples. It rebuilds the viewer bundle and the wasm only when their sources changed
-# (hack/try.mk).
-#   make try
-#   make try JOURNEY=find-a-part
-#   make try JOURNEY=find-a-part UNTIL=3 DEMO_DESIGN=cut
-DEMO_DESIGN ?= jetson
-try:
-ifeq ($(JOURNEY),)
-	@echo "make try JOURNEY=<name> plays one of these journeys in a browser you can take over:"
-	@awk -F'"' '/^    name: "/ { n = $$2 } /^    title: "/ { printf "  %-20s %s\n", n, $$2 }' web/browser/journeys.ts
-	@echo "UNTIL=<number or caption words> stops before that step, STEP=1 waits for Next before each step,"
-	@echo "and DEMO_DESIGN=cut plays on the committed cut of Jetson instead of the whole board."
-else
-	@$(MAKE) --no-print-directory -f hack/try.mk
+# demo-design-ready copies in what DEMO_DESIGN=jetson needs when it is missing: Jetson's board, and
+# for compare-revisions its rev 1.1.3. demo-video and try both use it.
+define demo-design-ready
 	@if [ "$(DEMO_DESIGN)" = jetson ]; then \
 		test -f examples/jetson-project/designs/jetson/jetson-agx-thor-baseboard.kicad_pcb || \
 			{ $(MAKE) samples-oracle && $(MAKE) -C examples/jetson-project board; }; \
@@ -510,7 +476,53 @@ else
 				{ $(MAKE) samples-revisions && $(MAKE) -C examples/jetson-project revision; }; \
 		fi; \
 	fi
+endef
+
+# Mission #1442's exercise (agni issue 1545): record one demo journey from web/browser/journeys.ts as
+# $(DEMO_OUT)/<name>.mp4 at 1080p, played on Jetson's whole board at a pace a viewer can follow, with a
+# caption before each step. With no JOURNEY it lists the journeys. A step that breaks fails the run
+# and names the step. The gate plays every journey on the cut at test pace (demo-video.spec.ts).
+# DEMO_DESIGN=cut records on the committed cut. Like try, it rebuilds the viewer bundle and the wasm
+# only when their sources changed (hack/try.mk).
+#   make demo-video JOURNEY=find-a-part
+#   make demo-video JOURNEY=find-a-part DEMO_OUT=~/Movies/agni
+DEMO_OUT ?= /tmp/agni-demo
+DEMO_DESIGN ?= jetson
+demo-video:
+	@if [ -z "$(JOURNEY)" ]; then \
+		echo "JOURNEY names one of these, as in make demo-video JOURNEY=find-a-part:"; \
+		sed -n 's/^    name: "\(.*\)",$$/  \1/p' web/browser/journeys.ts; exit 2; \
+	fi
+	@$(MAKE) --no-print-directory -f hack/try.mk
+	$(demo-design-ready)
+	mkdir -p $(DEMO_OUT)
+	cd web && DEMO_OUT=$(DEMO_OUT) JOURNEY=$(JOURNEY) DEMO_DESIGN=$(DEMO_DESIGN) pnpm exec vitest run -c vitest.try.config.ts -t "records"
+	@rm -f $(DEMO_OUT)/page@*.webm
+
+# Try a demo journey by hand (agni issue 1600): one journey from web/browser/journeys.ts plays in a
+# visible browser at the recording's pace, with its captions, and then the browser is yours until you
+# close its window. With no JOURNEY it lists the journeys. UNTIL=<number or caption words> stops
+# before that step, so you take it yourself, and each run lists the steps first. STEP=1 waits for the
+# Next button on the caption before each step. DEMO_DESIGN=cut plays on the committed cut of Jetson, which
+# needs no samples. It rebuilds the viewer bundle and the wasm only when their sources changed
+# (hack/try.mk). RECORD=1 records the window, your own clicks included, as $(DEMO_OUT)/<name>-try.mp4
+# once you close it. HANDOVER=0 closes the browser when the journey ends.
+#   make try
+#   make try JOURNEY=find-a-part
+#   make try JOURNEY=find-a-part UNTIL=3 DEMO_DESIGN=cut
+#   make try JOURNEY=find-a-part UNTIL=4 RECORD=1
+try:
+ifeq ($(JOURNEY),)
+	@echo "make try JOURNEY=<name> plays one of these journeys in a browser you can take over:"
+	@awk -F'"' '/^    name: "/ { n = $$2 } /^    title: "/ { printf "  %-20s %s\n", n, $$2 }' web/browser/journeys.ts
+	@echo "UNTIL=<number or caption words> stops before that step, STEP=1 waits for Next before each step,"
+	@echo "DEMO_DESIGN=cut plays on the committed cut of Jetson instead of the whole board, and RECORD=1"
+	@echo "records the window, your own clicks included, as $(DEMO_OUT)/<name>-try.mp4."
+else
+	@$(MAKE) --no-print-directory -f hack/try.mk
+	$(demo-design-ready)
 	cd web && TRY=1 HEADED=1 SLOWMO=0 JOURNEY=$(JOURNEY) UNTIL="$(UNTIL)" STEP=$(STEP) DEMO_DESIGN=$(DEMO_DESIGN) \
+		RECORD=$(RECORD) HANDOVER=$(HANDOVER) DEMO_OUT=$(DEMO_OUT) \
 		pnpm exec vitest run -c vitest.try.config.ts -t "tries"
 endif
 

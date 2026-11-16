@@ -6,7 +6,9 @@
 // `make try JOURNEY=<name>` sets TRY and plays one journey in a visible browser at the same pace,
 // with the same captions, and records nothing (agni issue 1600). When the journey ends, or stops
 // before the step UNTIL names, the browser stays open for the reviewer until they close its window.
-// STEP=1 puts a Next button on the caption, and each step waits for it.
+// STEP=1 puts a Next button on the caption, and each step waits for it. RECORD=1 records the window,
+// the reviewer's own clicks included, as DEMO_OUT/<name>-try.mp4 once it closes, and HANDOVER=0 closes
+// it when the journey ends.
 //
 // The recording shows a title card, then a caption before each step and a cursor that moves to what
 // it clicks. Both are drawn into the recording page by an init script, so the viewer itself carries no
@@ -14,7 +16,7 @@
 // title card.
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -184,6 +186,13 @@ function titleCard(title: string, about: string): string {
 <div style="font-size:64px;font-weight:600">${title}</div><div style="font-size:30px;margin-top:20px;opacity:0.75">agni, on ${about}</div></body></html>`;
 }
 
+// toMp4 turns a page's webm into an mp4 a chat or a release note can play, cut to start cutAt seconds
+// in, and answers its size as ffprobe reads it, such as "1920,1080".
+function toMp4(webm: string, mp4: string, cutAt: number): string {
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", cutAt.toFixed(2), "-i", webm, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4]);
+  return execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", mp4]).toString().trim();
+}
+
 describe.runIf(out !== "")("a demo recording", () => {
   it(`records ${only || "a journey"} at 1080p`, async () => {
     const j = journeys.find((x) => x.name === only);
@@ -217,11 +226,8 @@ describe.runIf(out !== "")("a demo recording", () => {
     } finally {
       await context.close();
     }
-    const webm = await page.video()!.path();
     const mp4 = join(out, `${j.name}.mp4`);
-    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", cut.toFixed(2), "-i", webm, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4]);
-    const probed = execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", mp4]).toString().trim();
-    expect(probed).toBe("1920,1080");
+    expect(toMp4(await page.video()!.path(), mp4, cut)).toBe("1920,1080");
     expect(errors).toEqual([]);
     console.log(`wrote ${mp4}`);
   }, 600_000);
@@ -259,9 +265,22 @@ describe.runIf(trying)("a journey to try", () => {
     say(`${j.name} on ${d.label}, where UNTIL=<number> stops before a step:\n${steps.map((p) => `  ${p.n}. ${p.caption}`).join("\n")}`);
     // An unknown UNTIL fails here, before the browser opens a page.
     const stop = stepsBefore(j, d, process.env.UNTIL ?? "");
+    const record = process.env.RECORD === "1";
+    const handOver = process.env.HANDOVER !== "0";
+    // A recording is the size of the window the reviewer sees, which a first window measures. x264
+    // wants each side even.
+    let size: { width: number; height: number } | undefined;
+    if (record) {
+      const probe = await browser.newContext({ viewport: null });
+      const p = await probe.newPage();
+      size = await p.evaluate(() => ({ width: innerWidth - (innerWidth % 2), height: innerHeight - (innerHeight % 2) }));
+      await probe.close();
+      mkdirSync(out, { recursive: true });
+    }
+    const began = Date.now();
     // The window's own size, and the view glides to each subject as a reader without reduced motion
     // sees it.
-    const context = await browser.newContext({ viewport: null, reducedMotion: "no-preference" });
+    const context = await browser.newContext({ viewport: null, reducedMotion: "no-preference", ...(size ? { recordVideo: { dir: out, size } } : {}) });
     await context.addInitScript(OVERLAY);
     await context.addInitScript(SVG_FIRST);
     const page = await context.newPage();
@@ -274,26 +293,56 @@ describe.runIf(trying)("a journey to try", () => {
       page.once("close", () => done());
       browser.once("disconnected", () => done());
     });
+    // keep closes the window, then writes the recording, from the moment the viewer first opened.
+    // It runs after a broken step too, so the video shows where the journey broke.
+    let cut = 0;
+    const keep = async () => {
+      await context.close().catch(() => {});
+      if (!record) return;
+      const mp4 = join(out, `${j.name}-try.mp4`);
+      try {
+        const webm = await page.video()!.path();
+        const probed = toMp4(webm, mp4, cut);
+        rmSync(webm, { force: true });
+        say(`wrote ${mp4} (${probed.replace(",", " by ")})`);
+      } catch (e) {
+        // Quitting Chrome, rather than closing its window, can stop the recording before it is written.
+        say(`could not write ${mp4}: ${(e instanceof Error ? e.message : String(e)).split("\n")[0]}. Close the window rather than quitting Chrome.`);
+      }
+    };
     // A first visit reads the design on the Load page, so the journey opens the viewer as a returning
     // reader does.
     try {
       await page.goto(`${base()}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
       await page.waitForSelector("#svg-view svg", { timeout: 180_000 });
+      cut = (Date.now() - began) / 1000;
       await caption(`${j.title}, on ${d.label}`);
       await page.waitForTimeout(2500);
       await play(page, j, d, viewerPace, caption, { stop, next });
     } catch (e) {
+      const gone = page.isClosed();
+      await keep();
       // A reviewer who closes the window part way through has finished trying, which is no failure.
-      if (page.isClosed()) return;
+      if (gone) return;
       throw e;
     }
     const left = steps[stop];
+    if (!handOver) {
+      say(left ? `stopped before step ${left.n}, "${left.caption}"` : "played every step");
+      await page.waitForTimeout(1200);
+      await keep();
+      return;
+    }
     await caption(
       left
         ? `Stopped before step ${left.n} (UNTIL=${process.env.UNTIL}). The journey is paused, so the next step is yours: ${left.caption}. Close the window when you are done.`
         : "That was the whole journey. The viewer is yours. Close the window when you are done.",
     );
-    say(left ? `stopped before step ${left.n}, "${left.caption}"; close the window when you are done` : "played every step; close the window when you are done");
+    say(
+      (left ? `stopped before step ${left.n}, "${left.caption}"; ` : "played every step; ") +
+        (record ? "recording until you close the window" : "close the window when you are done"),
+    );
     await closed;
+    await keep();
   }, reviewerTime);
 });
