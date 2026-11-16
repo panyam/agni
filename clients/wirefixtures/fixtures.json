@@ -1,0 +1,321 @@
+{
+  "about": "The calls every agni client replays to prove it speaks the server's wire (agni issue 1633). Recorded by make wire-fixtures from a server on examples/cross-probe-project mounted as probe. docsite/content/build/client-contract.md says how a client replays them.",
+  "fixtures": [
+    {
+      "name": "server-info",
+      "service": "agni.v1.webapi.ServerService",
+      "method": "GetServerInfo",
+      "request": {},
+      "response": {
+        "version": "(devel)",
+        "api": "agni.v1",
+        "features": [
+          "snapshot_recovery"
+        ]
+      },
+      "ignore": [
+        "version",
+        "features"
+      ]
+    },
+    {
+      "name": "ingest",
+      "service": "agni.v1.webapi.SnapshotService",
+      "method": "Ingest",
+      "request": {
+        "snapshot": {
+          "uri": "mount://probe/designs/jetson-cut"
+        },
+        "snapshotId": "wire"
+      },
+      "response": {
+        "name": "snapshots/wire",
+        "revisionId": "e0c54201071944e2",
+        "uri": "mount://probe/designs/jetson-cut",
+        "tiers": {
+          "netlistUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_sch",
+          "boardUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_pcb",
+          "geometryUri": "mount://probe/designs/jetson-cut/jetson-cut.kicad_sch"
+        },
+        "project": "projects/cross-probe"
+      }
+    },
+    {
+      "name": "get-design",
+      "service": "agni.v1.webapi.DesignService",
+      "method": "GetDesign",
+      "request": {
+        "snapshot": "snapshots/wire"
+      },
+      "response": {
+        "name": "Antmicro Baseboard for Jetson AGX Thor",
+        "sourceFormat": "kicad-sch",
+        "componentCount": 19,
+        "netCount": 17,
+        "layout": "faithful",
+        "sheets": [
+          {
+            "id": "/",
+            "name": "Antmicro Baseboard for Jetson AGX Thor"
+          },
+          {
+            "id": "/USB Debug, PD",
+            "name": "USB Debug, PD",
+            "parentId": "/"
+          },
+          {
+            "id": "/Power",
+            "name": "Power",
+            "parentId": "/"
+          },
+          {
+            "id": "board",
+            "name": "Board"
+          }
+        ],
+        "availableLayouts": [
+          "faithful",
+          "force",
+          "grid",
+          "layered",
+          "orthogonal",
+          "stress"
+        ],
+        "contentHash": "sha256:92ac3fed7f940a5cfcfb0cf0088a1cfc866e7f12f09c5a00158c9ec0b0e64d88"
+      }
+    },
+    {
+      "name": "check-design",
+      "service": "agni.v1.webapi.CheckService",
+      "method": "CheckDesign",
+      "request": {
+        "snapshot": "snapshots/wire",
+        "rules": [
+          "bulk-cap"
+        ]
+      },
+      "response": {
+        "findings": [
+          {
+            "rule": "bulk-cap",
+            "severity": "warning",
+            "subject": {
+              "kind": "net",
+              "ref": "/Power/USBPD1_HV",
+              "netId": "035e938f17b4"
+            },
+            "message": "power rail has no bulk capacitor",
+            "provenance": {
+              "sourceFile": "designs/jetson-cut/jetson-cut.kicad_sch"
+            },
+            "sheets": [
+              "/",
+              "/Power",
+              "board"
+            ],
+            "verdictIds": [
+              "bulk-cap:(net:/Power/USBPD1_HV)"
+            ]
+          }
+        ],
+        "verdicts": [
+          {
+            "id": "bulk-cap:(net:/Power/USBPD1_HV)",
+            "rule": "bulk-cap",
+            "outcome": "OUTCOME_FAIL",
+            "subjects": [
+              {
+                "kind": "net",
+                "ref": "/Power/USBPD1_HV",
+                "netId": "035e938f17b4"
+              }
+            ],
+            "witness": {
+              "statement": "the rail carries no capacitor at all"
+            },
+            "sheets": [
+              "/",
+              "/Power",
+              "board"
+            ]
+          },
+          {
+            "id": "bulk-cap:(net:/USB Debug%2C PD/FTDI_3V3)",
+            "rule": "bulk-cap",
+            "outcome": "OUTCOME_PASS",
+            "subjects": [
+              {
+                "kind": "net",
+                "ref": "/USB Debug, PD/FTDI_3V3",
+                "netId": "35f3983c4169"
+              }
+            ],
+            "witness": {
+              "statement": "capacitor C133 sits on the rail",
+              "terms": [
+                {
+                  "label": "capacitor",
+                  "value": "C133"
+                }
+              ]
+            },
+            "context": [
+              {
+                "subject": {
+                  "kind": "component",
+                  "ref": "C133"
+                },
+                "role": "capacitor on the rail"
+              }
+            ],
+            "sheets": [
+              "/USB Debug, PD",
+              "board"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "run-query",
+      "service": "agni.v1.webapi.QueryService",
+      "method": "RunQuery",
+      "request": {
+        "snapshot": "snapshots/wire",
+        "query": "component.class(?c, \"resistor\") =\u003e ?c"
+      },
+      "response": {
+        "columns": [
+          "c"
+        ],
+        "rows": [
+          {
+            "cells": [
+              "R119"
+            ],
+            "cellEntity": [
+              1
+            ],
+            "citeIndex": [
+              0
+            ]
+          },
+          {
+            "cells": [
+              "R120"
+            ],
+            "cellEntity": [
+              2
+            ],
+            "citeIndex": [
+              0
+            ]
+          },
+          {
+            "cells": [
+              "R123"
+            ],
+            "cellEntity": [
+              3
+            ],
+            "citeIndex": [
+              0
+            ]
+          },
+          {
+            "cells": [
+              "R124"
+            ],
+            "cellEntity": [
+              4
+            ],
+            "citeIndex": [
+              0
+            ]
+          }
+        ],
+        "columnKinds": [
+          "component"
+        ],
+        "query": "component.class(?c, \"resistor\") =\u003e ?c",
+        "source": "mount://probe/designs/jetson-cut",
+        "work": "4",
+        "entities": [
+          {
+            "kind": "component",
+            "ref": "R119",
+            "sheetIds": [
+              "/USB Debug, PD"
+            ]
+          },
+          {
+            "kind": "component",
+            "ref": "R120",
+            "sheetIds": [
+              "/USB Debug, PD"
+            ]
+          },
+          {
+            "kind": "component",
+            "ref": "R123",
+            "sheetIds": [
+              "/USB Debug, PD"
+            ]
+          },
+          {
+            "kind": "component",
+            "ref": "R124",
+            "sheetIds": [
+              "/USB Debug, PD"
+            ]
+          }
+        ],
+        "sources": [
+          "usb_debug_pd.kicad_sch"
+        ]
+      }
+    },
+    {
+      "name": "query-that-does-not-parse",
+      "service": "agni.v1.webapi.QueryService",
+      "method": "RunQuery",
+      "request": {
+        "snapshot": "snapshots/wire",
+        "query": "component.class(?c"
+      },
+      "error": {
+        "code": "invalid_argument",
+        "details": [
+          {
+            "type": "agni.v1.webapi.TextPosition",
+            "value": {
+              "line": 1,
+              "column": 1,
+              "caret": "component.class(?c\n^"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "snapshot-not-found",
+      "service": "agni.v1.webapi.DesignService",
+      "method": "GetDesign",
+      "request": {
+        "snapshot": "snapshots/nonesuch"
+      },
+      "error": {
+        "code": "not_found",
+        "details": [
+          {
+            "type": "agni.v1.webapi.SnapshotUnavailable",
+            "value": {
+              "name": "snapshots/nonesuch",
+              "reason": "REASON_MISSING"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
