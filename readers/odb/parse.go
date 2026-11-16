@@ -91,7 +91,7 @@ func (p *parsedJob) jobName(src string) string {
 	}
 	name := path.Base(src)
 	low := strings.ToLower(name)
-	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".tar", ".xml"} {
+	for _, ext := range []string{".tar.gz", ".tar.xz", ".tar.zst", ".tar.bz2", ".tgz", ".txz", ".tzst", ".tbz2", ".zip", ".7z", ".tar", ".xml"} {
 		if strings.HasSuffix(low, ext) {
 			name, low = name[:len(name)-len(ext)], low[:len(low)-len(ext)]
 			break

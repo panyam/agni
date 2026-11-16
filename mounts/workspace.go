@@ -3,15 +3,16 @@ package mounts
 import (
 	"context"
 	"fmt"
-	"os"
+	"github.com/panyam/agni/internal/archivefs"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/service"
 )
 
 // Workspace is the OS-backed service.Workspace over a mount table. It resolves a URI to a host path
-// with Resolve, which keeps it inside the mount root, and lists it with os.ReadDir. Both the engine's
-// server and the datasheet service list folders through it (agni issue 744).
+// with Resolve, which keeps it inside the mount root, and lists it with archivefs.OSReadDir, which
+// lists an archive as a folder. Both the engine's server and the datasheet service list folders
+// through it (agni issue 744).
 type Workspace struct {
 	ms []Mount
 }
@@ -36,7 +37,8 @@ func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirE
 	if err != nil {
 		return nil, err
 	}
-	dirents, err := os.ReadDir(abs)
+	// An archive lists as the folder it was made from, and a path can run into one (agni issue 1591).
+	dirents, err := archivefs.OSReadDir(abs)
 	if err != nil {
 		return nil, fmt.Errorf("mount %q: %w", uri.Mount, err)
 	}
@@ -53,5 +55,5 @@ func (w *Workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	return os.ReadFile(abs) // #nosec G304 -- abs comes from Resolve, which refuses a path outside its mount
+	return archivefs.OSReadFile(abs)
 }

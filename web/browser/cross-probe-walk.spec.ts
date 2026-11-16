@@ -655,10 +655,12 @@ for (const name of chosen) {
           return (await mark.first().innerText()).trim();
         });
 
-        await step("open an ODB++ job packed in a .7z", { waitsOn: ["#1591"] }, async () => {
+        await step("open an ODB++ job packed in a .7z", {}, async () => {
           await page.goto(`${base()}/designs/probe/designs/jetson-cut-odb/view?mode=svg`, { waitUntil: "networkidle" });
-          await page.locator('#sheet-overview .sheet-tile[title="board"]').waitFor({ timeout: 30_000 });
-          return "the .7z job opened with its board";
+          // Earlier steps may have closed the Sheets panel, so the tile need only be in the page.
+          await page.locator('#sheet-overview .sheet-tile[title="board"]').waitFor({ state: "attached", timeout: 30_000 });
+          await page.locator('#svg-view svg [data-ref="C133"]').first().waitFor({ state: "attached", timeout: 30_000 });
+          return "the .7z job opened, and its board draws C133";
         });
       } finally {
         const report = `## Cross-probe walk, ${walk.about}\n\n${table(rows)}\n`;

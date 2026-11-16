@@ -3,8 +3,8 @@ package formats
 import (
 	"bytes"
 	"fmt"
+	"github.com/panyam/agni/internal/archivefs"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -74,7 +74,7 @@ func (l *Loader) matchEntry(dir, elem string) string {
 	var entries []fs.DirEntry
 	var err error
 	if l == nil || l.FS == nil {
-		entries, err = os.ReadDir(dir)
+		entries, err = archivefs.OSReadDir(dir)
 	} else {
 		entries, err = fs.ReadDir(l.FS, dir)
 	}

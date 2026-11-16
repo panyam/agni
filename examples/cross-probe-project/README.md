@@ -19,7 +19,9 @@ step through the sheets.
 `designs/jetson-cut` is a cut of the Antmicro baseboard for Jetson AGX Thor, Copyright (c)
 2025-2026 Antmicro, licensed under the Apache License, Version 2.0. `make cut` regenerates it from
 the fetched samples corpus with `tools/kicadcut`. It keeps two sheets and the board's copper around
-the parts on them, so it stays small enough to commit.
+the parts on them, so it is small enough to commit. `designs/jetson-cut-odb` holds the same board as
+an ODB++ job that kicad-cli exported and 7-Zip packed, and `make odb` regenerates it. The walk's last
+step opens it, since an archive reads as the folder it was made from (agni issue 1591).
 
 | Sheet | Part | Board side | Angle on the board |
 | --- | --- | --- | --- |

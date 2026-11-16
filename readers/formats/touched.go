@@ -3,6 +3,7 @@ package formats
 import (
 	"crypto/sha256"
 	"errors"
+	"github.com/panyam/agni/internal/archivefs"
 	"io/fs"
 	"os"
 	"sort"
@@ -111,6 +112,13 @@ func (t *Touched) Unchanged() bool {
 func (t *Touched) note(fsys fs.FS, name string) {
 	if t == nil {
 		return
+	}
+	// A member of an archive on the host filesystem has no stamp of its own, so the archive file
+	// stands for it (agni issue 1591).
+	if fsys == nil {
+		if c := archivefs.Container(name); c != "" {
+			name = c
+		}
 	}
 	t.mu.Lock()
 	_, ok := t.seen[name]

@@ -1,7 +1,7 @@
 // Package odb reads an ODB++ job into the neutral IR (agni.v1.ir) and the board-geometry sidecar
 // (agni.v1.geom). It is core, runtime-agnostic Go (CONSTRAINTS C1). A job is a directory tree, so
-// the reader takes an fs.FS rooted at the job and opens nothing itself. FromArchive gives a .tgz or
-// .zip the same shape.
+// the reader takes an fs.FS rooted at the job and opens nothing itself. An archive of a job reads as
+// its folder through internal/archivefs, and FindRoot finds the job inside it.
 //
 // ODB++ is a manufacturing hand-off. Like IPC-2581 it holds the netlist and the physical board, and
 // no schematic. The netlist is the components, their pins and the net each pin is on. The board is
@@ -27,6 +27,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/panyam/agni/internal/archivefs"
 )
 
 // job is one opened ODB++ job. It holds the file system the job lives in, the step being read, and
@@ -100,7 +102,7 @@ func (j *job) read(name string) ([]byte, error) {
 			}
 		}
 		if gb, gerr := fs.ReadFile(j.fsys, cand+".gz"); gerr == nil {
-			out, derr := gunzip(gb)
+			out, derr := archivefs.Gunzip(gb)
 			if derr != nil {
 				return nil, fmt.Errorf("odb: %s.gz: %w", cand, derr)
 			}
@@ -163,7 +165,7 @@ func JobDir(matrixPath string) string {
 	return path.Dir(path.Dir(p))
 }
 
-// readAll is io.ReadAll, named for the archive readers.
+// readAll is io.ReadAll, named for the bounded reads.
 func readAll(r io.Reader) ([]byte, error) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)

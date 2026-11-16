@@ -2,7 +2,7 @@
 
 This file covers the ODB++ job reader, ODB++X (ODX), and the Allegro export quirks that the ODX and IPC-2581 reads share.
 
-- **An ODB++ job is a directory, entered by its `matrix/matrix` file** (agni 1250). The registry keys that path as `.odb++` (`lowerExt`). A `.tgz` or `.zip` holds the whole job in one archive. The CLI and the proposer turn a job folder into its matrix entry.
+- **An ODB++ job is a directory, entered by its `matrix/matrix` file** (agni 1250). The registry keys that path as `.odb++` (`lowerExt`). An archive of the job reads as its folder through `internal/archivefs` (agni 1591), so this reader never unpacks an archive. A job's own compressed members (`.Z`, `.gz`) are the format's, and it decodes those. The CLI and the proposer turn a job folder into its matrix entry.
 - **A host gathering a design's files asks `formats.DesignRoot`.** Otherwise it fetches `matrix/` alone.
 - **A pin's net comes from its toeprint record, and a copper feature's from eda/data's `FID` list**, never from geometry.
 - **The fixtures are `kicad-cli pcb export odb` output** (`make odb-fixtures`, KiCad 9+). `TestODBReadsAsItsKiCadSource` holds each fixture to its source board, pad positions included.

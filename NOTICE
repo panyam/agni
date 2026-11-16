@@ -14,5 +14,6 @@ committed here, apart from three small cuts. readers/kicad/testdata/orient-jetso
 and orient-jetson-fet.kicad_sch each keep a few parts of one sheet (USB Debug, PD and Power),
 unchanged. examples/cross-probe-project/designs/jetson-cut keeps nineteen parts of those two sheets
 with the board's footprints and copper around them, cut by tools/kicadcut, which drops footprint
-artwork on the User layers and renames the board's nets to the cut schematic's. All three are under
-the same copyright and licence.
+artwork on the User layers and renames the board's nets to the cut schematic's.
+examples/cross-probe-project/designs/jetson-cut-odb/jetson-cut.odb.7z is that cut's board, exported
+by kicad-cli as an ODB++ job and packed by 7-Zip. All four are under the same copyright and licence.

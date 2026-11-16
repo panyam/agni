@@ -27,9 +27,9 @@ func zipOf(t *testing.T, files map[string]string) []byte {
 	return buf.Bytes()
 }
 
-// TestExpandZipsReadsAZipAsItsFolder holds the expansion to fs.FS's own conformance checks, with an
+// TestExpandArchivesReadsAZipAsItsFolder holds the expansion to fs.FS's own conformance checks, with an
 // archive at the top, one inside a folder, one inside another archive, and a `.zip` that is not one.
-func TestExpandZipsReadsAZipAsItsFolder(t *testing.T) {
+func TestExpandArchivesReadsAZipAsItsFolder(t *testing.T) {
 	inner := zipOf(t, map[string]string{"deep/x.edn": "x"})
 	board := zipOf(t, map[string]string{"board/board.kicad_sch": "sch", "board/board.kicad_pcb": "pcb", "nested.zip": string(inner)})
 	base := MemFS(map[string][]byte{
@@ -38,7 +38,7 @@ func TestExpandZipsReadsAZipAsItsFolder(t *testing.T) {
 		"plain.txt":     []byte("p"),
 		"broken.zip":    []byte("not a zip"),
 	})
-	fsys := ExpandZips(base)
+	fsys := ExpandArchives(base)
 	if err := fstest.TestFS(fsys,
 		"board.zip/board/board.kicad_sch", "board.zip/board/board.kicad_pcb",
 		"board.zip/nested.zip/deep/x.edn", "sub/again.zip/a.eds", "plain.txt", "broken.zip",
@@ -53,11 +53,11 @@ func TestExpandZipsReadsAZipAsItsFolder(t *testing.T) {
 	}
 }
 
-// TestExpandZipsReadsTheOverlayOverAnArchive covers how the page declares a design that came out of
+// TestExpandArchivesReadsTheOverlayOverAnArchive covers how the page declares a design that came out of
 // a zip. The browser mount's store is goutils' memfs, as goapplib's wasmhost uses. That store
 // refuses a file under a path that is itself a file. So the descriptor is written under OverlayDir
 // and reads as if it sat in the archive's folder.
-func TestExpandZipsReadsTheOverlayOverAnArchive(t *testing.T) {
+func TestExpandArchivesReadsTheOverlayOverAnArchive(t *testing.T) {
 	board := zipOf(t, map[string]string{"g/g.edn": "edn", "g/g.kicad_sch": "sch"})
 	if _, err := memfs.New(map[string][]byte{"d/g.zip": board, "d/g.zip/g/design.yaml": []byte("x")}); err == nil {
 		t.Fatal("memfs accepted a file under a file, so the overlay is no longer needed and this test is stale")
@@ -69,7 +69,7 @@ func TestExpandZipsReadsTheOverlayOverAnArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fsys := ExpandZips(base)
+	fsys := ExpandArchives(base)
 	if err := fstest.TestFS(fsys, "d/g.zip/g/g.edn", "d/g.zip/g/g.kicad_sch", "d/g.zip/g/design.yaml"); err != nil {
 		t.Fatal(err)
 	}

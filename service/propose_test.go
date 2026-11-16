@@ -167,7 +167,7 @@ func TestProposeAZipAsItsFolder(t *testing.T) {
 		f.Write([]byte(body))
 	}
 	w.Close()
-	host := fshost.New(fshost.Mount{Name: "local", FS: fshost.ExpandZips(fshost.MemFS(map[string][]byte{"drop/board.zip": buf.Bytes()}))})
+	host := fshost.New(fshost.Mount{Name: "local", FS: fshost.ExpandArchives(fshost.MemFS(map[string][]byte{"drop/board.zip": buf.Bytes()}))})
 	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(nil, host.Workspace())
 	r, err := svc.ProposeDesigns(context.Background(), &webapi.ProposeDesignsRequest{Uri: "mount://local/drop"})
 	if err != nil {

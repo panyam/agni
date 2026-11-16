@@ -51,7 +51,7 @@ dropped files already reach it through its `local` mount.
 | Workspace | ListMounts | the mount names to root a tree on; `opens` drops each mount holding nothing that client can open and returns how many it dropped. So when an operator configured a mount and cannot find it, the sidebar can account for it |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open. The server then drops each folder with none of it anywhere beneath, through a bounded server-side walk, since one level of listing cannot see that far. So the two trees prune the same mounts to opposite answers |
 | Workspace | ListDesignFiles | every file read by a design's analysis (its folder, its project's descriptor, the config directories the project names), with a size and hash each. A page analysing the design in the browser fetches them from `/raw/<mount>/<path>`. Refused over 256 MB |
-| Workspace | ProposeDesigns | the designs in a folder of files, each with the `design.yaml` that would declare it, and every file left unread by any design, with the reason; a folder holding a `design.yaml` is reported as declared, and a `.zip` reads as a folder on the browser's mount |
+| Workspace | ProposeDesigns | the designs in a folder of files, each with the `design.yaml` that would declare it, and every file left unread by any design, with the reason; a folder holding a `design.yaml` is reported as declared, and an archive reads as a folder |
 | Snapshot | Ingest | load a design once, its tiers resolved and its config composed, and name it `snapshots/{id}` for every question after; `read_board` builds the model with its board too |
 | Snapshot | UploadBlobs | when a client sends a design as files, store their contents keyed by SHA-256, for the manifest named in an Ingest |
 | Snapshot | GetSnapshot, ListSnapshots, UpdateSnapshot, DeleteSnapshot | the standard methods over a host's snapshots; an update re-reads the design, whole or by `update_mask`, under the same name |
@@ -250,7 +250,7 @@ size, time and attempts.
 A visitor can drop files on the Load page's drop target (`/designs/local/load/`), or pick them with
 its "Open files" and "Open folder" buttons. The files go into the browser mount `local` under a
 folder of their own and into the browser's IndexedDB, and nowhere else (agni issues 854 and 1072). A
-`.zip` among them reads as the folder it was made from. The page asks the worker for
+`.zip`, `.tar`, `.7z` or compressed tar among them reads as the folder it was made from. The page asks the worker for
 `ProposeDesigns` over that folder and shows each proposal as its `design.yaml`, which the visitor
 can edit; opening one writes that descriptor beside the kept files and reads the design on its Load
 page. The descriptor is written under the mount's `.agni-overlay/` folder, and files there read over

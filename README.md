@@ -179,7 +179,7 @@ it. N datasheet extractors fill a parameter IR and the checks read it.
 | OrCAD Capture | `.dsn` | yes | schematic |
 | Cadence Allegro | `.brd`, from Allegro 16.6 and 17.2 | yes | board |
 | Altium Designer | `.PcbDoc` | yes | board |
-| ODB++ | a job directory, `.tgz`, `.zip` | yes | board |
+| ODB++ | a job directory, or an archive of one (`.zip`, `.tar`, `.7z`, compressed tar) | yes | board |
 
 A hierarchical EDIF netlist reads its top cell by default and says which blocks it left out. To
 read every block it places, pass `--flatten-hierarchy`, set `flatten_hierarchy: true` in the
