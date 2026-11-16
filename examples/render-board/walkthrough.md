@@ -44,3 +44,10 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 > connected to it; the overlay is framed exactly like the base document, so stacking the
 > two lines everything up. The web viewer lights up a clicked DRC finding on the board the
 > same way.
+
+## Stand the parts on the board {#bodies}
+
+> A board view's stack view stands each part on its side of the board. The engine gives each
+> part a footprint, the hull of its courtyard, fab outline or pads, and the height its file
+> states. IPC-2581 states a height on each package, and KiCad states none. This step reads
+> parts-board.ipc2581.xml from ../common/designs, where R1's package gives no height.

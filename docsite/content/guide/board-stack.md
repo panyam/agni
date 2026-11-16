@@ -42,6 +42,24 @@ does. The click goes to the nearest plane with something under the pointer, so a
 where nothing on a nearer layer covers it. A selected net lights on every layer it runs on, its vias'
 barrels included.
 
+## See the parts on the board
+
+Each placed part stands on its side of the board as a solid block, front parts on the top face and
+back parts hanging off the bottom one. The block's outline is the part's courtyard, or its fab
+outline, or the area its pads cover. It stands as tall as the board's file says the part is. Click a
+part's block and the schematic selects that part, as a click on its pads does. Untick **Parts** in
+the bar to hide the blocks and see the layers under them.
+
+![Parts standing on the top face of Jetson's cut at the board's true thickness, with the selected R119 lit]({{.Site.PathPrefix}}/static/images/guide/board-stack-parts.png)
+
+A part keeps its true height when the slider spreads the layers, so it does not grow with the
+stack.
+
+Most files give no part heights. KiCad keeps a part's height only in its 3D model, and agni does not
+read the model. A part with no height stands at 1 mm in a paler grey, and the note beside **Parts**
+counts those parts, as "(all at a default 1 mm)". IPC-2581 gives
+each package a height, so an IPC-2581 board stands its parts at their real heights.
+
 ## When the file leaves a thickness out
 
 Each layer draws as thick as the board's file says. A layer with no thickness draws at a typical
