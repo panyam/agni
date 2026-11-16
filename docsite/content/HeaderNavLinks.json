@@ -61,6 +61,7 @@
       { "name": "Calling agni from another language", "url": "build/other-languages/" },
       { "name": "Writing an agni client", "url": "build/client-contract/" },
       { "name": "Drawing a board from agni", "url": "build/board-geometry/" },
+      { "name": "What a front end decides for itself", "url": "build/front-end-rules/" },
       { "name": "Wire compatibility", "url": "build/compatibility/" },
       { "name": "Driving an embedded viewer", "url": "build/embedding-the-viewer/" },
       { "name": "Native verification", "url": "build/native-verification/" },

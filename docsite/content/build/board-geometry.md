@@ -93,7 +93,8 @@ which overlaps other nets' tracks. Draw a zone as intent, a hatch or an outline,
 ## Mapping a click back
 
 A GUI that lets someone click the board needs to say what they clicked, in names the rest of agni
-answers to.
+answers to. [What a front end decides for itself](../front-end-rules/) says how agni's viewer turns a
+click into one subject, and what the server answers once it has.
 
 | Clicked | Name | Use it with |
 | --- | --- | --- |

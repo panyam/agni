@@ -17,6 +17,9 @@ These guides are for people extending Agni. Most assume you read Go.
   shared server, and how the wire fixtures prove it.
 - **[Drawing a board from agni](board-geometry/)** says how a front end in any language reads a
   board's geometry page by page, and what each message means.
+- **[What a front end decides for itself](front-end-rules/)** lists what the server answers for a
+  front end, and writes out the rules it applies itself: picking, highlighting, choosing sheets and
+  drawing the stack in depth.
 - **[Wire compatibility](compatibility/)** says what a client built against one release can rely on in
   later ones, and how a client checks the server it reached.
 - **[Driving an embedded viewer](embedding-the-viewer/)** frames the viewer in your own page and moves

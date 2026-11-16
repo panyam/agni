@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_HIGHLIGHT_COLOR, boardNetAlpha, frameFloor, frameStroke, frameStrokeAlpha, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { DEFAULT_HIGHLIGHT_COLOR, boardNetAlpha, highlightSheet, frameFloor, frameStroke, frameStrokeAlpha, HighlightShape, circleRing, circleTriangles, rectRing, entityBounds, entityFrame, normalizePathAlpha, pathQuads, rectTriangles, resolveHighlights, withFocusShape, type HighlightSpec } from "./highlights.js";
 import { KIND_LINE_STRIP, type Primitive, type PrimitiveKey } from "./packed.js";
 
 // The fixture mirrors core/render/highlight_test.go, with R1 (rect prim 2, pins 3/4), U1 (rect 5,
@@ -411,4 +414,27 @@ describe("a frame's stroke ring", () => {
     const [g] = resolveHighlights(keys as never, [{ components: ["R1"], pins: [{ refDes: "U1", pin: "7" }] }]);
     expect(g.parts).toEqual([true, false]);
   });
+});
+
+// The Go twin (core/render/highlighttwin_test.go, TestHighlightTwin) records what HighlightPacked
+// lights on the Jetson cut's packed board for a handful of specs. highlightSheet must light the same
+// primitives from the same keys, so the viewer cannot drift from the server (agni issue 1635).
+describe("the highlight twin", () => {
+  type Twin = { keys: [number, number, string, string, string, string, string, number][]; cases: { name: string; spec: HighlightSpec; primitives: number[] }[] };
+  const twin = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "core", "render", "testdata", "highlight_twin.json"), "utf8")) as Twin;
+  const keys: PrimitiveKey[] = twin.keys.map(([primitive, , refDes, net, netId, pin, busId, placement]) => ({ primitive, refDes, net, netId, pin, busId, placement }));
+  const primitives: Primitive[] = [];
+  for (const [primitive, group] of twin.keys) primitives[primitive] = { kind: KIND_LINE_STRIP, group, firstVertex: 0, count: 0 };
+
+  it("holds enough keys and cases to check something", () => {
+    expect(keys.length).toBeGreaterThan(100);
+    expect(twin.cases.length).toBeGreaterThanOrEqual(5);
+  });
+
+  for (const c of twin.cases) {
+    it(`lights what HighlightPacked lights for ${c.name}`, () => {
+      const [g] = highlightSheet({ keys, primitives }, [c.spec]);
+      expect([...g.primitives].sort((a, b) => a - b)).toEqual(c.primitives);
+    });
+  }
 });
