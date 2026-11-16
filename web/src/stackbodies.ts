@@ -8,7 +8,7 @@
 
 import type { BoardPartBody, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { Selection } from "./selection.js";
-import type { StackCamera } from "./stackcamera.js";
+import type { StackCamera, Vec3 } from "./stackcamera.js";
 
 // TYPICAL_BODY_MM is the height a part whose file states none draws at.
 export const TYPICAL_BODY_MM = 1;
@@ -140,24 +140,51 @@ export function bodyTopZ(b: PlacedBody, f: BodyFaces): number {
   return b.back ? f.zBottom - b.heightMm * f.hScale : f.zTop + b.heightMm * f.hScale;
 }
 
-// pickBody is the part whose top face the ray through device pixel (px, py) meets nearest the eye,
-// among the parts on one side, or null. A body's walls do not pick, so a body seen edge on picks
-// through to the layers.
+// pickBody is the part whose block the ray through device pixel (px, py) enters nearest the eye,
+// among the parts on one side, or null (agni issue 1643). A block is its ring stood between its
+// face and its top, so a click on its side picks it as a click on its top does.
 export function pickBody(camera: StackCamera, bodies: readonly PlacedBody[], f: BodyFaces, back: boolean, px: number, py: number): string | null {
-  const eyeZ = camera.basis().eye.z;
+  const { o, dir } = camera.ray(px, py);
   let best: string | null = null;
-  let bestNear = -Infinity;
+  let bestS = Infinity;
   for (const b of bodies) {
     if (b.back !== back) continue;
-    const z = bodyTopZ(b, f);
-    const at = camera.hitPlane(px, py, z);
-    if (!at || !insideConvex(b.ring, at.x, at.y)) continue;
-    if (z * eyeZ > bestNear) {
-      bestNear = z * eyeZ;
+    const top = bodyTopZ(b, f);
+    const face = b.back ? f.zBottom : f.zTop;
+    const s = enterPrism(b.ring, Math.min(face, top), Math.max(face, top), o, dir);
+    if (s !== null && s < bestS) {
+      bestS = s;
       best = b.ref;
     }
   }
   return best;
+}
+
+// enterPrism is how far along the ray o + dir * s it enters the block a counter-clockwise convex ring
+// stands between z0 and z1, or null when it misses. Each wall keeps the ray on its inner side, and
+// the two ends keep it between z0 and z1, so the ray is inside over one interval, and it enters at
+// the interval's start.
+export function enterPrism(ring: Float32Array, z0: number, z1: number, o: Vec3, dir: Vec3): number | null {
+  let lo = -Infinity;
+  let hi = Infinity;
+  const clip = (a: number, b: number): boolean => {
+    // Keep the s where a + b * s >= 0.
+    if (Math.abs(b) < 1e-12) return a >= 0;
+    const s = -a / b;
+    if (b > 0) lo = Math.max(lo, s);
+    else hi = Math.min(hi, s);
+    return lo <= hi;
+  };
+  if (!clip(o.z - z0, dir.z) || !clip(z1 - o.z, -dir.z)) return null;
+  const n = ring.length / 2;
+  if (n < 3) return null;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const ax = ring[2 * i], ay = ring[2 * i + 1];
+    const ex = ring[2 * j] - ax, ey = ring[2 * j + 1] - ay;
+    if (!clip(ex * (o.y - ay) - ey * (o.x - ax), ex * dir.y - ey * dir.x)) return null;
+  }
+  return lo === -Infinity ? null : lo;
 }
 
 // pickWithBodies picks at device pixel (px, py) in the order the stack draws from the eye. The parts
