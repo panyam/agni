@@ -1279,7 +1279,9 @@ type BoardStackView struct {
 	BodyColor        string `protobuf:"bytes,8,opt,name=body_color,json=bodyColor,proto3" json:"body_color,omitempty"`
 	DefaultBodyColor string `protobuf:"bytes,9,opt,name=default_body_color,json=defaultBodyColor,proto3" json:"default_body_color,omitempty"`
 	// board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
-	BoardLook     *BoardLook `protobuf:"bytes,10,opt,name=board_look,json=boardLook,proto3" json:"board_look,omitempty"`
+	BoardLook *BoardLook `protobuf:"bytes,10,opt,name=board_look,json=boardLook,proto3" json:"board_look,omitempty"`
+	// total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+	TotalMm       float64 `protobuf:"fixed64,11,opt,name=total_mm,json=totalMm,proto3" json:"total_mm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1384,6 +1386,13 @@ func (x *BoardStackView) GetBoardLook() *BoardLook {
 	return nil
 }
 
+func (x *BoardStackView) GetTotalMm() float64 {
+	if x != nil {
+		return x.TotalMm
+	}
+	return 0
+}
+
 // BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
 // 1653). mask is the opaque solder mask on each outer face. mask_over_copper is outer copper seen
 // through the mask, such as a track. pad_finish is exposed copper, such as a pad. silk is the
@@ -1472,10 +1481,15 @@ type BoardPartBody struct {
 	// gives none (agni 1653). color is what a client draws the body in. It is the colour render.Style
 	// gives the first of the part's classes that has one, so a TVS draws in the diode colour, and
 	// body_color otherwise.
-	PartClass     string `protobuf:"bytes,5,opt,name=part_class,json=partClass,proto3" json:"part_class,omitempty"`
-	Color         string `protobuf:"bytes,6,opt,name=color,proto3" json:"color,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PartClass string `protobuf:"bytes,5,opt,name=part_class,json=partClass,proto3" json:"part_class,omitempty"`
+	Color     string `protobuf:"bytes,6,opt,name=color,proto3" json:"color,omitempty"`
+	// drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+	// file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+	// 1635).
+	DrawnHeightMm   float64 `protobuf:"fixed64,7,opt,name=drawn_height_mm,json=drawnHeightMm,proto3" json:"drawn_height_mm,omitempty"`
+	HeightDefaulted bool    `protobuf:"varint,8,opt,name=height_defaulted,json=heightDefaulted,proto3" json:"height_defaulted,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *BoardPartBody) Reset() {
@@ -1550,6 +1564,20 @@ func (x *BoardPartBody) GetColor() string {
 	return ""
 }
 
+func (x *BoardPartBody) GetDrawnHeightMm() float64 {
+	if x != nil {
+		return x.DrawnHeightMm
+	}
+	return 0
+}
+
+func (x *BoardPartBody) GetHeightDefaulted() bool {
+	if x != nil {
+		return x.HeightDefaulted
+	}
+	return false
+}
+
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 // F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
 // of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
@@ -1557,12 +1585,17 @@ func (x *BoardPartBody) GetColor() string {
 // PackedSheet's origin rebase. diameter holds each hole's width in board units, and net its net or
 // "", both one per hole.
 type BoardDrillSpan struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LayerFrom     string                 `protobuf:"bytes,1,opt,name=layer_from,json=layerFrom,proto3" json:"layer_from,omitempty"`
-	LayerTo       string                 `protobuf:"bytes,2,opt,name=layer_to,json=layerTo,proto3" json:"layer_to,omitempty"`
-	Xy            []float64              `protobuf:"fixed64,3,rep,packed,name=xy,proto3" json:"xy,omitempty"`
-	Diameter      []float64              `protobuf:"fixed64,4,rep,packed,name=diameter,proto3" json:"diameter,omitempty"`
-	Net           []string               `protobuf:"bytes,5,rep,name=net,proto3" json:"net,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	LayerFrom string                 `protobuf:"bytes,1,opt,name=layer_from,json=layerFrom,proto3" json:"layer_from,omitempty"`
+	LayerTo   string                 `protobuf:"bytes,2,opt,name=layer_to,json=layerTo,proto3" json:"layer_to,omitempty"`
+	Xy        []float64              `protobuf:"fixed64,3,rep,packed,name=xy,proto3" json:"xy,omitempty"`
+	Diameter  []float64              `protobuf:"fixed64,4,rep,packed,name=diameter,proto3" json:"diameter,omitempty"`
+	Net       []string               `protobuf:"bytes,5,rep,name=net,proto3" json:"net,omitempty"`
+	// top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+	// stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+	// either layer nowhere, and a client then draws no barrel for the span.
+	TopMm         *float64 `protobuf:"fixed64,6,opt,name=top_mm,json=topMm,proto3,oneof" json:"top_mm,omitempty"`
+	BottomMm      *float64 `protobuf:"fixed64,7,opt,name=bottom_mm,json=bottomMm,proto3,oneof" json:"bottom_mm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1632,22 +1665,43 @@ func (x *BoardDrillSpan) GetNet() []string {
 	return nil
 }
 
+func (x *BoardDrillSpan) GetTopMm() float64 {
+	if x != nil && x.TopMm != nil {
+		return *x.TopMm
+	}
+	return 0
+}
+
+func (x *BoardDrillSpan) GetBottomMm() float64 {
+	if x != nil && x.BottomMm != nil {
+		return *x.BottomMm
+	}
+	return 0
+}
+
 // BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
 // thickness is "0.12 mm" or "thickness unknown". thickness_mm is the same value as a number for a
 // client that draws to scale, and is unset when the file gives none. material is as the file gives
 // it, or "". color is what a client draws the row in, from render.Style: a copper or graphics
 // layer's own colour, Style.Dielectric or Style.SolderMask, or "" for a row with no colour.
 type BoardStackRow struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	Layer         string                 `protobuf:"bytes,3,opt,name=layer,proto3" json:"layer,omitempty"`
-	Thickness     string                 `protobuf:"bytes,4,opt,name=thickness,proto3" json:"thickness,omitempty"`
-	ThicknessMm   *float64               `protobuf:"fixed64,5,opt,name=thickness_mm,json=thicknessMm,proto3,oneof" json:"thickness_mm,omitempty"`
-	Material      string                 `protobuf:"bytes,6,opt,name=material,proto3" json:"material,omitempty"`
-	Color         string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Kind        string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Layer       string                 `protobuf:"bytes,3,opt,name=layer,proto3" json:"layer,omitempty"`
+	Thickness   string                 `protobuf:"bytes,4,opt,name=thickness,proto3" json:"thickness,omitempty"`
+	ThicknessMm *float64               `protobuf:"fixed64,5,opt,name=thickness_mm,json=thicknessMm,proto3,oneof" json:"thickness_mm,omitempty"`
+	Material    string                 `protobuf:"bytes,6,opt,name=material,proto3" json:"material,omitempty"`
+	Color       string                 `protobuf:"bytes,7,opt,name=color,proto3" json:"color,omitempty"`
+	// top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+	// client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+	// says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+	// thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+	TopMm              float64 `protobuf:"fixed64,8,opt,name=top_mm,json=topMm,proto3" json:"top_mm,omitempty"`
+	BottomMm           float64 `protobuf:"fixed64,9,opt,name=bottom_mm,json=bottomMm,proto3" json:"bottom_mm,omitempty"`
+	ThicknessDefaulted bool    `protobuf:"varint,10,opt,name=thickness_defaulted,json=thicknessDefaulted,proto3" json:"thickness_defaulted,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *BoardStackRow) Reset() {
@@ -1727,6 +1781,27 @@ func (x *BoardStackRow) GetColor() string {
 		return x.Color
 	}
 	return ""
+}
+
+func (x *BoardStackRow) GetTopMm() float64 {
+	if x != nil {
+		return x.TopMm
+	}
+	return 0
+}
+
+func (x *BoardStackRow) GetBottomMm() float64 {
+	if x != nil {
+		return x.BottomMm
+	}
+	return 0
+}
+
+func (x *BoardStackRow) GetThicknessDefaulted() bool {
+	if x != nil {
+		return x.ThicknessDefaulted
+	}
+	return false
 }
 
 type PackedHighlight_Group struct {
@@ -1906,7 +1981,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x05color\x18\x04 \x01(\tR\x05color\x12!\n" +
 	"\fsvg_selector\x18\x05 \x01(\tR\vsvgSelector\x12\x16\n" +
 	"\x06groups\x18\x06 \x03(\rR\x06groups\x12\x1c\n" +
-	"\tthickness\x18\a \x01(\tR\tthickness\"\xae\x03\n" +
+	"\tthickness\x18\a \x01(\tR\tthickness\"\xc9\x03\n" +
 	"\x0eBoardStackView\x12/\n" +
 	"\x04rows\x18\x01 \x03(\v2\x1b.agni.v1.geom.BoardStackRowR\x04rows\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x1c\n" +
@@ -1921,13 +1996,14 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x12default_body_color\x18\t \x01(\tR\x10defaultBodyColor\x126\n" +
 	"\n" +
 	"board_look\x18\n" +
-	" \x01(\v2\x17.agni.v1.geom.BoardLookR\tboardLook\"|\n" +
+	" \x01(\v2\x17.agni.v1.geom.BoardLookR\tboardLook\x12\x19\n" +
+	"\btotal_mm\x18\v \x01(\x01R\atotalMm\"|\n" +
 	"\tBoardLook\x12\x12\n" +
 	"\x04mask\x18\x01 \x01(\tR\x04mask\x12(\n" +
 	"\x10mask_over_copper\x18\x02 \x01(\tR\x0emaskOverCopper\x12\x1d\n" +
 	"\n" +
 	"pad_finish\x18\x03 \x01(\tR\tpadFinish\x12\x12\n" +
-	"\x04silk\x18\x04 \x01(\tR\x04silk\"\xbb\x01\n" +
+	"\x04silk\x18\x04 \x01(\tR\x04silk\"\x8e\x02\n" +
 	"\rBoardPartBody\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x12\n" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x18\n" +
@@ -1935,16 +2011,23 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\theight_mm\x18\x04 \x01(\x01H\x00R\bheightMm\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"part_class\x18\x05 \x01(\tR\tpartClass\x12\x14\n" +
-	"\x05color\x18\x06 \x01(\tR\x05colorB\f\n" +
+	"\x05color\x18\x06 \x01(\tR\x05color\x12&\n" +
+	"\x0fdrawn_height_mm\x18\a \x01(\x01R\rdrawnHeightMm\x12)\n" +
+	"\x10height_defaulted\x18\b \x01(\bR\x0fheightDefaultedB\f\n" +
 	"\n" +
-	"_height_mm\"\x88\x01\n" +
+	"_height_mm\"\xdf\x01\n" +
 	"\x0eBoardDrillSpan\x12\x1d\n" +
 	"\n" +
 	"layer_from\x18\x01 \x01(\tR\tlayerFrom\x12\x19\n" +
 	"\blayer_to\x18\x02 \x01(\tR\alayerTo\x12\x0e\n" +
 	"\x02xy\x18\x03 \x03(\x01R\x02xy\x12\x1a\n" +
 	"\bdiameter\x18\x04 \x03(\x01R\bdiameter\x12\x10\n" +
-	"\x03net\x18\x05 \x03(\tR\x03net\"\xd6\x01\n" +
+	"\x03net\x18\x05 \x03(\tR\x03net\x12\x1a\n" +
+	"\x06top_mm\x18\x06 \x01(\x01H\x00R\x05topMm\x88\x01\x01\x12 \n" +
+	"\tbottom_mm\x18\a \x01(\x01H\x01R\bbottomMm\x88\x01\x01B\t\n" +
+	"\a_top_mmB\f\n" +
+	"\n" +
+	"_bottom_mm\"\xbb\x02\n" +
 	"\rBoardStackRow\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n" +
@@ -1952,7 +2035,11 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\tthickness\x18\x04 \x01(\tR\tthickness\x12&\n" +
 	"\fthickness_mm\x18\x05 \x01(\x01H\x00R\vthicknessMm\x88\x01\x01\x12\x1a\n" +
 	"\bmaterial\x18\x06 \x01(\tR\bmaterial\x12\x14\n" +
-	"\x05color\x18\a \x01(\tR\x05colorB\x0f\n" +
+	"\x05color\x18\a \x01(\tR\x05color\x12\x15\n" +
+	"\x06top_mm\x18\b \x01(\x01R\x05topMm\x12\x1b\n" +
+	"\tbottom_mm\x18\t \x01(\x01R\bbottomMm\x12/\n" +
+	"\x13thickness_defaulted\x18\n" +
+	" \x01(\bR\x12thicknessDefaultedB\x0f\n" +
 	"\r_thickness_mm*\xb0\x01\n" +
 	"\x0eHighlightShape\x12\x1f\n" +
 	"\x1bHIGHLIGHT_SHAPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
@@ -2026,6 +2113,7 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 		return
 	}
 	file_agni_v1_geom_geom_packed_proto_msgTypes[14].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[15].OneofWrappers = []any{}
 	file_agni_v1_geom_geom_packed_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -329,6 +329,8 @@ message BoardStackView {
   string default_body_color = 9;
   // board_look is the palette a client draws the board look in, beside the layer look (agni 1653).
   BoardLook board_look = 10;
+  // total_mm is the stack's drawn thickness, the bottom_mm of its last row (agni issue 1635).
+  double total_mm = 11;
 }
 
 // BoardLook is the palette of a stack view's board look, which draws the board as it is made (agni
@@ -359,6 +361,11 @@ message BoardPartBody {
   // body_color otherwise.
   string part_class = 5;
   string color = 6;
+  // drawn_height_mm is the height the body draws at: height_mm, or render.TypicalBodyMm when the
+  // file states none, and height_defaulted is then true, so a client can draw it apart (agni issue
+  // 1635).
+  double drawn_height_mm = 7;
+  bool height_defaulted = 8;
 }
 
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
@@ -373,6 +380,11 @@ message BoardDrillSpan {
   repeated double xy = 3;
   repeated double diameter = 4;
   repeated string net = 5;
+  // top_mm and bottom_mm are the depths the span's holes run between, from the top of layer_from's
+  // stack row to the bottom of layer_to's (agni issue 1635). Both are unset when the stack names
+  // either layer nowhere, and a client then draws no barrel for the span.
+  optional double top_mm = 6;
+  optional double bottom_mm = 7;
 }
 
 // BoardStackRow is one row of a BoardStackView. name, kind and layer are the geom.StackLayer's.
@@ -388,4 +400,11 @@ message BoardStackRow {
   optional double thickness_mm = 5;
   string material = 6;
   string color = 7;
+  // top_mm and bottom_mm place the row in depth, in millimetres below the board's top face, so every
+  // client draws the stack at the same heights (agni issue 1635). A row is as thick as thickness_mm
+  // says, or, when the file gives none, as thick as render.TypicalMm gives for its kind, and
+  // thickness_defaulted is then true. Silkscreen and paste draw on the surface, at no thickness.
+  double top_mm = 8;
+  double bottom_mm = 9;
+  bool thickness_defaulted = 10;
 }

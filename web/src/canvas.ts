@@ -330,7 +330,7 @@ export class CanvasComponent extends BaseComponent {
   enterStack(view: BoardStackView, rows: BoardLayerRow[]): boolean {
     if (!this.gl || !this.sheet || !this.renderer || view.rows.length === 0) return false;
     const sheet = this.sheet;
-    const layout = layoutStack(view.rows.map((r) => ({ name: r.name, kind: r.kind, layer: r.layer, thicknessMm: r.thicknessMm, color: r.color })));
+    const layout = layoutStack(view.rows);
     const depths = groupDepths(layout, rows);
     const b = boundsOfVertices(sheet.vertices);
     const width = Math.max(b.maxX - b.minX, b.maxY - b.minY);

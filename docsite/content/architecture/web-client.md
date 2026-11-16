@@ -169,12 +169,17 @@ panel from the ones above.
   `render.BoardStack` fills `GetSheetResponse.board_stack`, so the client formats nothing.
 - **A board view can draw its stack apart** (agni issue 1593). Say a reader wants to see which inner
   layer a net runs on. **Stack** in a board view's bar draws each packed group at a height in WebGL,
-  from the stack's `thickness_mm`. The renderer's shader takes a `mat4` view and a `u_z` per run of a
-  group, so the flat view sets z to 0 and draws as before. `web/src/stacklayout.ts` places each stack
-  row in depth, with a typical thickness for a row the file leaves out, and `groupDepths` puts each
-  `BoardLayerRow`'s groups at their layer's depth. The Through and Hole groups draw as barrels
-  instead, from `BoardStackView.drills`, and each dielectric and mask draws as a slab from
-  `outline_tris` (`web/src/stackgl.ts`). `web/src/stackcamera.ts` is an orthographic orbit camera.
+  at the depths the engine serves. The renderer's shader takes a `mat4` view and a `u_z` per run of a
+  group, so the flat view sets z to 0 and draws as before. `render.BoardStack` places each stack row
+  in depth (`BoardStackRow.top_mm` and `bottom_mm`), with `render.TypicalMm`'s thickness for a row the
+  file leaves out, and gives each drill span the depths it runs between and each part body the height
+  it draws at, `render.TypicalBodyMm` where the file states none (agni issue 1635). So a front end in
+  another language draws the stack at the same heights. `web/src/stacklayout.ts` lays the rows out
+  as served, and `groupDepths` puts each `BoardLayerRow`'s groups at their layer's depth. The Through
+  and Hole groups draw as barrels instead, from `BoardStackView.drills`, and each dielectric and mask
+  draws as a slab from `outline_tris` (`web/src/stackgl.ts`). `core/render`'s `TestBoardStackTwin`
+  writes the Jetson cut's served rows to `core/render/testdata/jetson_cut_stack_twin.json`, which the
+  viewer's stack tests read. `web/src/stackcamera.ts` is an orthographic orbit camera.
   Orthographic keeps a length the same at any depth, so the drawn height at explode 0 can equal the
   board's thickness, and a click becomes a ray that meets each plane at one point.
   `web/src/stackpick.ts` asks the flat board's pick index at that point, plane by plane from the

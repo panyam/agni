@@ -7,15 +7,21 @@ import { PRESETS, StackCamera } from "./stackcamera.js";
 import { hitBarrel } from "./stackpick.js";
 import { jetsonRows } from "./teststack.js";
 
-// The blind-via fixture's three spans (core/render/testdata/blind-via.kicad_pcb), on Jetson's stack.
+// The blind-via fixture's three spans (core/render/testdata/blind-via.kicad_pcb), on Jetson's stack,
+// each with the depths the engine serves for it (render.BoardStack, agni issue 1635), and a fourth
+// span to a layer the stack lacks, which the engine leaves without depths.
 function view() {
+  const row = (layer: string) => jetsonRows().find((r) => r.layer === layer)!;
+  const span = (from: string, to: string, x: number, d: number, net: string) =>
+    create(BoardDrillSpanSchema, { layerFrom: from, layerTo: to, xy: [x, -3e6], diameter: [d], net: [net], topMm: row(from).topMm, bottomMm: row(to).bottomMm });
   return create(BoardStackViewSchema, {
     unitsPerMm: 1e6,
     outlineTris: [0, 0, 20e6, 0, 20e6, 10e6],
     drills: [
-      create(BoardDrillSpanSchema, { layerFrom: "F.Cu", layerTo: "B.Cu", xy: [4e6, -3e6], diameter: [0.3e6], net: ["THRU"] }),
-      create(BoardDrillSpanSchema, { layerFrom: "F.Cu", layerTo: "In1.Cu", xy: [8e6, -3e6], diameter: [0.2e6], net: ["BLIND"] }),
-      create(BoardDrillSpanSchema, { layerFrom: "In1.Cu", layerTo: "In2.Cu", xy: [12e6, -3e6], diameter: [0.2e6], net: ["BURIED"] }),
+      span("F.Cu", "B.Cu", 4e6, 0.3e6, "THRU"),
+      span("F.Cu", "In1.Cu", 8e6, 0.2e6, "BLIND"),
+      span("In1.Cu", "In2.Cu", 12e6, 0.2e6, "BURIED"),
+      create(BoardDrillSpanSchema, { layerFrom: "F.Cu", layerTo: "Nowhere", xy: [16e6, -3e6], diameter: [0.2e6], net: ["LOST"] }),
     ],
   });
 }
@@ -32,7 +38,8 @@ describe("the stack's barrels and slabs", () => {
   };
   const plane = (layer: string) => layout.planes.find((p) => p.layer === layer)!;
 
-  it("runs a blind via's barrel across only the layers it joins", () => {
+  it("stands each barrel at its span's served depths, and draws none for a span with no depths", () => {
+    expect(g.nets).not.toContain("LOST");
     const blind = hole("BLIND");
     expect(blind.top).toBeCloseTo(plane("F.Cu").top, 6);
     expect(blind.bottom).toBeCloseTo(plane("In1.Cu").bottom, 6);

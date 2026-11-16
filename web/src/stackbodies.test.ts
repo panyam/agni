@@ -2,19 +2,21 @@ import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { BoardPartBodySchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { PRESETS, StackCamera } from "./stackcamera.js";
-import { BODY_FLOATS, TYPICAL_BODY_MM, bodyGeometry, bodyTopZ, defaultedNote, enterPrism, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
+import { BODY_FLOATS, bodyGeometry, bodyTopZ, defaultedNote, enterPrism, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
 
 // Three parts on a 100 by 100 board: a 2.5 mm one on the front, one on the back, and one on the front
-// whose file states no height. Each footprint is a 10 by 10 square, counter-clockwise.
+// whose file states no height. Each footprint is a 10 by 10 square, counter-clockwise. The bodies
+// carry the drawn heights the engine serves, and U3 the typical height render.TypicalBodyMm gives.
+const TYPICAL_BODY_MM = 1;
 function square(x: number, y: number): number[] {
   return [x, y, x + 10, y, x + 10, y + 10, x, y + 10];
 }
 
 function bodies() {
   return [
-    create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: square(10, 10), heightMm: 2.5, color: "#202024" }),
-    create(BoardPartBodySchema, { refDes: "U2", side: "back", outline: square(60, 10), heightMm: 1.5, color: "#202024" }),
-    create(BoardPartBodySchema, { refDes: "U3", side: "front", outline: square(60, 60), color: "#202024" }),
+    create(BoardPartBodySchema, { refDes: "U1", side: "front", outline: square(10, 10), heightMm: 2.5, drawnHeightMm: 2.5, color: "#202024" }),
+    create(BoardPartBodySchema, { refDes: "U2", side: "back", outline: square(60, 10), heightMm: 1.5, drawnHeightMm: 1.5, color: "#202024" }),
+    create(BoardPartBodySchema, { refDes: "U3", side: "front", outline: square(60, 60), drawnHeightMm: TYPICAL_BODY_MM, heightDefaulted: true, color: "#202024" }),
   ];
 }
 
@@ -40,7 +42,7 @@ describe("the parts' bodies", () => {
 
   it("draws the bodies of one colour in one run, and a part at the default height in a run of its own", () => {
     const mixed = bodies();
-    mixed.push(create(BoardPartBodySchema, { refDes: "R1", side: "front", outline: square(30, 30), heightMm: 0.5, color: "#55565c" }));
+    mixed.push(create(BoardPartBodySchema, { refDes: "R1", side: "front", outline: square(30, 30), heightMm: 0.5, drawnHeightMm: 0.5, color: "#55565c" }));
     const m = bodyGeometry(mixed, 0, 0);
     expect(m.colorRuns.map((r) => [r.color, r.defaulted])).toEqual([
       ["#202024", false],

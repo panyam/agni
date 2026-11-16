@@ -823,19 +823,20 @@ describe("stepping a sheet view through the sheets that draw the selection", () 
 describe("a board view's stack view", () => {
   const stack = {
     rows: [
-      { name: "F.SilkS", kind: "silk", layer: "F.SilkS", thickness: "thickness unknown", material: "", color: "" },
-      { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#c83434" },
-      { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "thickness unknown", material: "FR4", color: "#b59a5b" },
-      { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#4d7fc4" },
+      { name: "F.SilkS", kind: "silk", layer: "F.SilkS", thickness: "thickness unknown", material: "", color: "", topMm: 0, bottomMm: 0, thicknessDefaulted: true },
+      { name: "F.Cu", kind: "copper", layer: "F.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#c83434", topMm: 0, bottomMm: 0.035 },
+      { name: "dielectric 1", kind: "dielectric", layer: "", thickness: "thickness unknown", material: "FR4", color: "#b59a5b", topMm: 0.035, bottomMm: 0.135, thicknessDefaulted: true },
+      { name: "B.Cu", kind: "copper", layer: "B.Cu", thickness: "0.035 mm", thicknessMm: 0.035, material: "", color: "#4d7fc4", topMm: 0.135, bottomMm: 0.17 },
     ],
+    totalMm: 0.17,
     summary: "",
     disagrees: false,
     drills: [],
     outlineTris: [],
     unitsPerMm: 1e6,
     bodies: [
-      { refDes: "U1", side: "front", outline: [0, 0, 1, 0, 1, 1], heightMm: 2 },
-      { refDes: "R1", side: "back", outline: [0, 0, 1, 0, 1, 1] },
+      { refDes: "U1", side: "front", outline: [0, 0, 1, 0, 1, 1], heightMm: 2, drawnHeightMm: 2 },
+      { refDes: "R1", side: "back", outline: [0, 0, 1, 0, 1, 1], drawnHeightMm: 1, heightDefaulted: true },
     ],
   } as unknown as BoardStackView;
 
