@@ -50,6 +50,10 @@ proto-py:
 # inside. The Go and TS templates also set `clean: true`, which is another reason never to aim this at
 # the real tree. The Python diff skips __pycache__, which importing the package writes beside the
 # generated modules.
+#
+# It also runs `buf breaking` against the latest release tag, with buf.yaml's FILE rules, so a change
+# that would break a client built against that release fails here (agni issue 1629). It needs the
+# tags, so CI's checkout fetches them.
 proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
@@ -83,6 +87,14 @@ proto-check:
 	if ! diff -r -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" >/dev/null 2>&1; then \
 		echo "generated Python is stale — run 'make proto-py' and commit the result:"; \
 		diff -rq -x __pycache__ clients/python/src/agni/v1 "$$tmp/py/src/agni/v1" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	tag=$$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null); \
+	if [ -z "$$tag" ]; then \
+		echo "proto-check: this checkout has no release tag to compare the protos with; fetch the tags (git fetch --tags)"; \
+		fail=1; \
+	elif ! buf breaking --against ".git#tag=$$tag"; then \
+		echo "the protos break $$tag's wire contract (above). A released client relies on it, so keep the old field or rpc, deprecate it, and add the new one beside it (docsite/content/build/compatibility.md)"; \
 		fail=1; \
 	fi; \
 	exit $$fail

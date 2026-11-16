@@ -36,8 +36,9 @@ func TestEveryJSONFormatEmitsAProto(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A json encoder constructed anywhere in a command file. encoding/json is also used for READING
-	// (importresults decodes a stored document), which is fine and not what this looks for.
-	encoder := regexp.MustCompile(`json\.NewEncoder|json\.Marshal(Indent)?\(`)
+	// (importresults decodes a stored document), which is fine and not what this looks for. The word
+	// boundary keeps protojson.Marshal, the encoder C31 asks for, from matching.
+	encoder := regexp.MustCompile(`\bjson\.NewEncoder|\bjson\.Marshal(Indent)?\(`)
 	var offenders []string
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") {

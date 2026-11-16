@@ -48,8 +48,14 @@ func newSnapFixture(t *testing.T, limit int) *snapFixture {
 	if err := os.CopyFS(dir, os.DirFS(filepath.Join("..", "examples", "tutorial-project"))); err != nil {
 		t.Fatal(err)
 	}
+	return snapFixtureOver(dir, limit, nil)
+}
+
+// snapFixtureOver is a host over a copy already made, keeping snapshot definitions in store. A second
+// fixture over the same directory and store is the same server after a restart.
+func snapFixtureOver(dir string, limit int, store service.SnapshotStore) *snapFixture {
 	ms := []Mount{{Name: "m", FS: os.DirFS(dir)}}
-	res := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: "m", FS: ms[0].FS}), Config: &ConfigResolver{Mounts: ms}, SnapshotLimit: limit}
+	res := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: "m", FS: ms[0].FS}), Config: &ConfigResolver{Mounts: ms}, SnapshotLimit: limit, Snapshots: store}
 	host := &readCountingHost{Host: New(ms...)}
 	loader := service.NewCachingLoader(host, service.NewDesignCache(32))
 	chk := service.NewCheckService(loader, check.DefaultCatalog(), nil, "", nil, res)
@@ -220,20 +226,92 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 	}
 }
 
-func TestAnEvictedSnapshotIsNotFound(t *testing.T) {
+// A snapshot the registry evicted is ingested again from its kept definition when a question names
+// it, so the client does nothing (agni issue 1639).
+func TestAnEvictedSnapshotIsIngestedAgain(t *testing.T) {
 	f := newSnapFixture(t, 1)
 	a := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
 	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway/gateway-rev-b.edn"}})
+	if err := f.checkDesign(a.GetName()); err != nil {
+		t.Fatalf("a check of an evicted snapshot answered %v; want it ingested again and answered", err)
+	}
+	got, err := f.snaps.GetSnapshot(context.Background(), &webapi.GetSnapshotRequest{Name: a.GetName()})
+	if err != nil || got.GetUri() != gateway || got.GetRevisionId() != a.GetRevisionId() {
+		t.Errorf("the recovered snapshot reads %q at %s (%v); want %q at %s", got.GetUri(), got.GetRevisionId(), err, gateway, a.GetRevisionId())
+	}
+}
+
+// A deleted snapshot stays gone: its definition goes with it, so a question names a missing snapshot.
+func TestADeletedSnapshotIsNotFound(t *testing.T) {
+	f := newSnapFixture(t, 0)
+	a := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
+	if _, err := f.snaps.DeleteSnapshot(context.Background(), &webapi.DeleteSnapshotRequest{Name: a.GetName()}); err != nil {
+		t.Fatal(err)
+	}
 	err := f.checkDesign(a.GetName())
 	var se *service.SnapshotError
 	if !errors.As(err, &se) || se.Stale || !errors.Is(err, service.ErrNotFound) || se.Name != a.GetName() {
-		t.Fatalf("a check of an evicted snapshot answered %v; want it missing, by name", err)
+		t.Fatalf("a check of a deleted snapshot answered %v; want it missing, by name", err)
 	}
-	// A client recovers by ingesting it again under its id.
+	// A client that wants it back ingests it again under its id.
 	id := a.GetName()[len("snapshots/"):]
 	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}, SnapshotId: id})
 	if err := f.checkDesign(a.GetName()); err != nil {
 		t.Errorf("the snapshot ingested again under its id did not answer: %v", err)
+	}
+}
+
+// A server that restarted over the same store answers a question on a snapshot made before the
+// restart, and one with no store forgets it (agni issue 1639).
+func TestASnapshotOutlivesARestartWithAStore(t *testing.T) {
+	store := service.NewMemSnapshotStore()
+	dir := t.TempDir()
+	if err := os.CopyFS(dir, os.DirFS(filepath.Join("..", "examples", "tutorial-project"))); err != nil {
+		t.Fatal(err)
+	}
+	before := snapFixtureOver(dir, 0, store)
+	a := before.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
+	after := snapFixtureOver(dir, 0, store)
+	if err := after.checkDesign(a.GetName()); err != nil {
+		t.Errorf("after a restart over the same store, a check of %s answered %v", a.GetName(), err)
+	}
+	// As a control, a restart with a store of its own holds nothing from before.
+	forgot := snapFixtureOver(dir, 0, nil)
+	if err := forgot.checkDesign(a.GetName()); !errors.Is(err, service.ErrNotFound) {
+		t.Errorf("a restart without the store answered %v for %s; want it missing", err, a.GetName())
+	}
+}
+
+// A snapshot ingested with refresh answers after its netlist changed, reading it again, and the
+// request's Refreshes names the tier that changed. One without refresh is still refused as stale
+// (TestAStaleSnapshotNamesTheFileAndAnUpdateRefreshesIt).
+func TestARefreshingSnapshotAnswersAfterAChangeAndSaysSo(t *testing.T) {
+	f := newSnapFixture(t, 0)
+	s := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway, Refresh: true}})
+	if err := f.checkDesign(s.GetName()); err != nil {
+		t.Fatalf("control: the fresh snapshot did not answer: %v", err)
+	}
+	netlist := filepath.Join(f.dir, "designs", "gateway", "gateway.edn")
+	b, err := os.ReadFile(netlist)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(netlist, append(b, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(netlist, later, later)
+
+	ctx, rs := service.WithRefreshes(context.Background())
+	if _, err := f.check.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: s.GetName(), Rules: []string{"floating-input"}}); err != nil {
+		t.Fatalf("a check of a refreshing snapshot after its netlist changed answered %v", err)
+	}
+	if got := rs.Changed(); !slices.Equal(got, []string{"mount://m/designs/gateway/gateway.edn"}) {
+		t.Errorf("the refresh names %v, want the netlist tier that changed", got)
+	}
+	got, err := f.snaps.GetSnapshot(context.Background(), &webapi.GetSnapshotRequest{Name: s.GetName()})
+	if err != nil || got.GetRevisionId() == s.GetRevisionId() {
+		t.Errorf("after the refresh the snapshot is at %s (%v); want a new revision than %s", got.GetRevisionId(), err, s.GetRevisionId())
 	}
 }
 

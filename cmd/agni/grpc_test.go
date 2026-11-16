@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -74,6 +75,15 @@ func TestAGRPCClientCallsTheServer(t *testing.T) {
 	}
 	if !proto.Equal(viaGRPC, viaConnect.Msg) {
 		t.Errorf("gRPC answered %d rows and Connect %d, or the messages differ otherwise", len(viaGRPC.GetRows()), len(viaConnect.Msg.GetRows()))
+	}
+
+	// A client checks the server first (agni issue 1629).
+	info := &webapi.ServerInfo{}
+	if err := conn.Invoke(ctx, "/agni.v1.webapi.ServerService/GetServerInfo", &webapi.GetServerInfoRequest{}, info); err != nil {
+		t.Fatalf("GetServerInfo over gRPC: %v", err)
+	}
+	if info.GetApi() != "agni.v1" || info.GetVersion() == "" || !slices.Contains(info.GetFeatures(), "snapshot_recovery") {
+		t.Errorf("GetServerInfo over gRPC answered %v", info)
 	}
 
 	bad := &webapi.RunQueryRequest{Snapshot: snap.GetName(), Query: `component.class(?c`}

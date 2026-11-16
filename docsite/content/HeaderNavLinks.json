@@ -59,6 +59,7 @@
       { "name": "Adding a library member", "url": "build/library-member/" },
       { "name": "Extending and embedding the engine", "url": "build/extending/" },
       { "name": "Calling agni from another language", "url": "build/other-languages/" },
+      { "name": "Wire compatibility", "url": "build/compatibility/" },
       { "name": "Driving an embedded viewer", "url": "build/embedding-the-viewer/" },
       { "name": "Native verification", "url": "build/native-verification/" },
       { "name": "Running the gate", "url": "build/the-gate/" },

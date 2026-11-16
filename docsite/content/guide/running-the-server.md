@@ -192,6 +192,15 @@ so point it at rules that suit the whole mounted set rather than one
 project. See [interface profiles](../interface-profiles/) and
 [naming conventions](../naming-conventions/).
 
+## Keeping snapshots across a restart
+
+A client asks its questions about a snapshot, a design the server ingested once and holds under a
+name. The server keeps each snapshot's definition, so a question on one it evicted is answered after
+it ingests the snapshot again. `serve --state-dir <dir>` keeps those definitions on disk, so a
+question on a snapshot made before a restart answers too (agni issue 1639). Without it they live in
+memory. Like the review store, it wants a writable volume of its own in a container, such as
+`-v agni-state:/var/lib/agni/state` with `--state-dir /var/lib/agni/state`.
+
 ## Keeping review runs
 
 `serve --review-store <dir>` makes the server keep review runs. Without it the server
