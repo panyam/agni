@@ -46,7 +46,10 @@ barrels included.
 
 Each placed part stands on its side of the board as a solid block, front parts on the top face and
 back parts hanging off the bottom one. The block's outline is the part's courtyard, or its fab
-outline, or the area its pads cover. It stands as tall as the board's file says the part is. Click a
+outline, or the area its pads cover. An ODB++ part's fab outline is its package outline, so how
+close it comes to the part depends on the tool that wrote the job. Altium and Allegro draw the body,
+and KiCad's export draws the area the pads cover. A part stands as tall as the board's file says it
+is. Click a
 part's block and the schematic selects that part, as a click on its pads does. Untick **Parts** in
 the bar to hide the blocks and see the layers under them.
 

@@ -186,8 +186,28 @@ func TestReadsAnInchJob(t *testing.T) {
 	if len(g.GetTexts()) != 1 || g.GetTexts()[0].GetText() != "U1" || g.GetTexts()[0].GetLayer() != "F.SilkS" || g.GetTexts()[0].GetHeight() != 60*mil {
 		t.Errorf("texts = %v, want U1 on F.SilkS at 60mil", g.GetTexts())
 	}
-	if len(g.GetGraphics()) != 1 {
-		t.Errorf("graphics = %d, want the one silkscreen line", len(g.GetGraphics()))
+	// U1's package outline is an RC record, turned 90 degrees clockwise about (0.5, 0.5) inch. The SQ
+	// after its PIN outlines the pin, not the package, and draws nothing (agni 1656).
+	var silk, fab []*geom.BoardGraphic
+	for _, gr := range g.GetGraphics() {
+		switch gr.GetLayer() {
+		case "F.SilkS":
+			silk = append(silk, gr)
+		case "F.Fab":
+			fab = append(fab, gr)
+		}
+	}
+	if len(silk) != 1 || len(fab) != 1 || len(g.GetGraphics()) != 2 {
+		t.Fatalf("graphics = %d, %d of them silk and %d fab; want the one silkscreen line and U1's package outline", len(g.GetGraphics()), len(silk), len(fab))
+	}
+	var box geomath.Bounds
+	for _, p := range fab[0].GetShape().GetPoints() {
+		box.Add(p)
+	}
+	x0, y0 := box.Min()
+	x1, y1 := box.Max()
+	if got, want := [5]int64{x0, y0, x1, y1, int64(len(fab[0].GetShape().GetPoints()))}, [5]int64{470 * mil, 420 * mil, 530 * mil, 580 * mil, 5}; fab[0].GetRefDes() != "U1" || got != want {
+		t.Errorf("U1's outline = %s %v, want U1 %v (a closed ring of 5 points)", fab[0].GetRefDes(), got, want)
 	}
 	if pts := g.GetOutline().GetPaths(); len(pts) != 1 || len(pts[0].GetPoints()) != 5 {
 		t.Errorf("outline = %v, want one closed rectangle", g.GetOutline())
