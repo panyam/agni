@@ -30,6 +30,8 @@
 // - an ODB++ job packed in a .7z, the cut's board as designs/jetson-cut-odb, opens as a design (#1591)
 // - a board layer row states its thickness in [data-thickness], and the stack follows the rows (#1603)
 // - data-action="explode" sets data-exploded="true" on the board view (#1593)
+// - data-action="stack-bodies" shows the parts' bodies in the stack view, and the canvas counts them
+//   in data-stack-bodies (#1352)
 // - the latest release carries a Windows build (#1595)
 //
 // `make exercise-cross-probe` tells the walk which of the tickets it waits on are closed
@@ -621,6 +623,48 @@ for (const name of chosen) {
           const after = { shown: await shown() };
           if (JSON.stringify(after.shown) !== JSON.stringify(before.shown)) throw new Error("the board view came back with other layers hidden");
           return `the stack drew ${height} mm tall at explode 0, and a click on ${inner.layer} picked ${inner.net}, which the schematic lit`;
+        });
+
+        // Part bodies in the stack view (agni issue 1352). Each placed part stands on its side's face,
+        // and a part whose file states no height stands at a default, which the Parts toggle's note
+        // counts. A click on a body picks its part, as a click on its pads does. The canvas names a
+        // clickable point on a few parts in data-stack-body-probes.
+        await step("stand the parts on the stack", { needs: ["explode the layer stack"] }, async () => {
+          const board = page.locator(PANE).first();
+          const button = board.locator('[data-action="explode"]');
+          if (!walk.stack) return "the board's file states no stack, so it has no stack view to stand parts in";
+          const renderer = await board.getAttribute("data-renderer");
+          await button.click({ timeout: 5_000 });
+          await page.waitForFunction((p) => document.querySelector(p)?.getAttribute("data-exploded") === "true", PANE, { timeout: 60_000 });
+          const gl = board.locator("canvas.sheetview-gl");
+          const counts = JSON.parse((await gl.getAttribute("data-stack-bodies")) ?? "{}") as { parts?: number; defaulted?: number };
+          if (!counts.parts) throw new Error("the stack view stands no part on the board");
+          const note = ((await board.locator("[data-stack-bodies-note]").textContent()) ?? "").trim();
+          if ((counts.defaulted ?? 0) > 0 && !note.includes("default")) throw new Error(`${counts.defaulted} parts stand at a default height, and the Parts note says "${note}"`);
+          type BodyProbe = { ref: string; x: number; y: number };
+          const bodyProbes = async () =>
+            page.evaluate((p) => JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[], PANE);
+          await page
+            .waitForFunction((p) => (JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[]).length > 0, PANE, { timeout: 5_000 })
+            .catch(() => {});
+          const probe = (await bodyProbes())[0];
+          if (!probe) throw new Error(`none of the ${counts.parts} parts offers a point to click`);
+          const box = (await gl.boundingBox())!;
+          await page.mouse.click(box.x + probe.x, box.y + probe.y);
+          await picked(page, probe.ref);
+          // With the Parts toggle off, the bodies draw nothing and pick nothing, so no part offers a point.
+          await board.locator('[data-action="stack-bodies"]').uncheck({ timeout: 5_000 });
+          await page.waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") === "[]", PANE, { timeout: 5_000 }).catch(async () => {
+            throw new Error(`with Parts off the canvas still names ${JSON.stringify(await bodyProbes())}`);
+          });
+          await board.locator('[data-action="stack-bodies"]').check({ timeout: 5_000 });
+          await button.click({ timeout: 5_000 });
+          await page
+            .waitForFunction(({ p, r }) => document.querySelector(p)?.getAttribute("data-exploded") === "false" && document.querySelector(p)?.getAttribute("data-renderer") === r, { p: PANE, r: renderer }, { timeout: 60_000 })
+            .catch(async () => {
+              throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
+            });
+          return `${counts.parts} parts stand on the board, ${counts.defaulted} at a default height ("${note}"), and a click on ${probe.ref}'s body picked it`;
         });
 
         await step("a Windows build is published", { waitsOn: ["#1595"] }, async () => {
