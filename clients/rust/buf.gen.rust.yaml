@@ -1,0 +1,35 @@
+version: v2
+# Rust messages and gRPC clients for the Rust client (agni issue 1631), beside protos/buf.gen.yaml
+# (Go), web/buf.gen.web.yaml (TypeScript) and clients/python/buf.gen.py.yaml (Python).
+#
+# Remote plugins pinned by version, as the Python template pins its plugins. Each plugin version fixes
+# the crate it writes for: neoeinstein-prost v0.5.0 writes prost 0.14 messages, neoeinstein-tonic
+# v0.5.0 writes tonic 0.14 clients, and neoeinstein-prost-serde v0.4.0 writes pbjson 0.8 serde code,
+# which reads and writes protojson. Cargo.toml pins those crates to match. `make proto-check`
+# generates again into a temp tree and fails on any difference from the committed src/gen.
+#
+# Well-known types (Timestamp, Empty, FieldMask) come from pbjson-types rather than prost-types, so
+# they read and write protojson too. That takes compile_well_known_types plus the extern_path.
+#
+# clean is on because src/gen holds generated code alone.
+clean: true
+plugins:
+  - remote: buf.build/community/neoeinstein-prost:v0.5.0
+    out: src/gen
+    opt:
+      - compile_well_known_types
+      - extern_path=.google.protobuf=::pbjson_types
+  - remote: buf.build/community/neoeinstein-prost-serde:v0.4.0
+    out: src/gen
+    opt:
+      - extern_path=.google.protobuf=::pbjson_types
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
+    out: src/gen
+    opt:
+      - no_server=true
+      - compile_well_known_types
+      - extern_path=.google.protobuf=::pbjson_types
+  - remote: buf.build/community/neoeinstein-prost-crate:v0.5.0
+    out: src/gen
+    opt:
+      - no_features

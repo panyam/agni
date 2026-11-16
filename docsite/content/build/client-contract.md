@@ -60,6 +60,10 @@ recording. They leave out the fields a fixture lists under `ignore`, and an erro
 prose. The gate replays them over Connect's JSON form and over gRPC (`TestWireFixtures`), so the file
 always matches the server. `make wire-fixtures` records them again after an intended change.
 
+The Rust client in `clients/rust` replays them through tonic in `tests/wire_fixtures.rs`. It reads
+each fixture's protojson into the generated message with pbjson and compares messages, and it decodes
+an error's details from gRPC's `grpc-status-details-bin` trailer.
+
 ## The exercise
 
 `make exercise-clients` runs each language's example from `clients/examples/<language>/run` against

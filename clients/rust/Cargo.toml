@@ -1,0 +1,30 @@
+[package]
+name = "agni-client"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "A Rust client for a shared agni serve, over gRPC"
+repository = "https://github.com/panyam/agni"
+# Publishing to crates.io is a later ticket.
+publish = false
+
+# The workspace holds the exercise example too, so the two share one Cargo.lock and one target
+# directory, and the example builds from what the tests already compiled.
+[workspace]
+members = [".", "../examples/rust"]
+
+# The generator versions in buf.gen.rust.yaml fix these. neoeinstein-prost v0.5.0 writes for prost
+# 0.14, neoeinstein-tonic v0.5.0 for tonic 0.14 and tonic-prost, and neoeinstein-prost-serde v0.4.0
+# for pbjson 0.8. Move them together.
+[dependencies]
+prost = "0.14"
+pbjson = "0.8"
+pbjson-types = "0.8"
+serde = "1"
+tonic = { version = "0.14", default-features = false, features = ["transport", "codegen"] }
+tonic-prost = "0.14"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "time"] }

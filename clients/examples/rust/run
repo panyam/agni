@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs the Rust client example, as make exercise-clients runs every language's example:
+# clients/examples/<language>/run -server <url> -design <uri>. Cargo builds it first when the example
+# or the client changed, and the build output goes to stderr so the summary stays the last line.
+here=$(cd "$(dirname "$0")" && pwd)
+if ! command -v cargo >/dev/null 2>&1; then
+	echo "cargo is not on PATH; install Rust (https://rustup.rs) to run the Rust example" >&2
+	exit 1
+fi
+exec cargo run --quiet --manifest-path "$here/Cargo.toml" -- "$@"
