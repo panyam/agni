@@ -62,9 +62,9 @@ the bar to hide the blocks and see the layers under them.
 A part keeps its true height when the slider spreads the layers, so it does not grow with the
 stack.
 
-IPC-2581, ODB++ and Altium boards give each part its height, so their parts stand at their real
-heights. An Altium part takes the height its component states, or its tallest 3D body's when it
-states none. KiCad keeps a part's height only in its 3D model, and agni does not read the model yet,
+IPC-2581, ODB++, Altium and Allegro boards give each part its height, so their parts stand at their
+real heights. An Altium part takes the height its component states, or its tallest 3D body's when it
+states none. An Allegro part takes the height on its place-bound outline. KiCad keeps a part's height only in its 3D model, and agni does not read the model yet,
 so a KiCad part stands at 1 mm in a paler grey. The note beside **Parts** counts the parts at that
 default, as "(all at a default 1 mm)".
 
