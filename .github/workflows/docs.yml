@@ -21,7 +21,6 @@ on:
       - .github/workflows/docs.yml
       - Makefile
       - hack/samples.pin
-      - hack/kicad_models.pin
       - cmd/agni/site*.go
       - web/templates/SitePage.html
       - web/browser/site.spec.ts
@@ -83,7 +82,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: tools/samples
-          key: samples-${{ hashFiles('hack/samples.pin', 'hack/kicad_models.pin') }}
+          key: samples-${{ hashFiles('hack/samples.pin') }}
 
       # `make build`, not the steps by hand. This workflow used to re-implement the build and had
       # already drifted twice: it never ran the esbuild components step (so a page with
