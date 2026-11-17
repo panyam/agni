@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     refDes_ = "";
     layer_ = "";
     pads_ = java.util.Collections.emptyList();
+    modelInstances_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -296,6 +297,77 @@ private static final long serialVersionUID = 0L;
     return height_;
   }
 
+  public static final int MODEL_INSTANCES_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private java.util.List<io.github.panyam.agni.v1.geom.ModelInstance> modelInstances_;
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.panyam.agni.v1.geom.ModelInstance> getModelInstancesList() {
+    return modelInstances_;
+  }
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder> 
+      getModelInstancesOrBuilderList() {
+    return modelInstances_;
+  }
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  @java.lang.Override
+  public int getModelInstancesCount() {
+    return modelInstances_.size();
+  }
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.ModelInstance getModelInstances(int index) {
+    return modelInstances_.get(index);
+  }
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder getModelInstancesOrBuilder(
+      int index) {
+    return modelInstances_.get(index);
+  }
+
   public static final int PROV_FIELD_NUMBER = 16;
   private io.github.panyam.agni.v1.geom.Provenance prov_;
   /**
@@ -357,6 +429,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeInt64(7, height_);
     }
+    for (int i = 0; i < modelInstances_.size(); i++) {
+      output.writeMessage(8, modelInstances_.get(i));
+    }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(16, getProv());
     }
@@ -395,6 +470,15 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(7, height_);
     }
+
+        {
+          final int count = modelInstances_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(modelInstances_.get(i));
+          }
+          size += 1 * count;
+        }
     if (((bitField0_ & 0x00000004) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(16, getProv());
@@ -444,6 +528,8 @@ private static final long serialVersionUID = 0L;
       if (getHeight()
           != other.getHeight()) return false;
     }
+    if (!getModelInstancesList()
+        .equals(other.getModelInstancesList())) return false;
     if (hasProv() != other.hasProv()) return false;
     if (hasProv()) {
       if (!getProv()
@@ -482,6 +568,10 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + HEIGHT_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getHeight());
+    }
+    if (getModelInstancesCount() > 0) {
+      hash = (37 * hash) + MODEL_INSTANCES_FIELD_NUMBER;
+      hash = (53 * hash) + getModelInstancesList().hashCode();
     }
     if (hasProv()) {
       hash = (37 * hash) + PROV_FIELD_NUMBER;
@@ -619,6 +709,7 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
         internalGetAtFieldBuilder();
         internalGetPadsFieldBuilder();
+        internalGetModelInstancesFieldBuilder();
         internalGetProvFieldBuilder();
       }
     }
@@ -643,6 +734,13 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000010);
       mirror_ = false;
       height_ = 0L;
+      if (modelInstancesBuilder_ == null) {
+        modelInstances_ = java.util.Collections.emptyList();
+      } else {
+        modelInstances_ = null;
+        modelInstancesBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000080);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -690,6 +788,15 @@ private static final long serialVersionUID = 0L;
       } else {
         result.pads_ = padsBuilder_.build();
       }
+      if (modelInstancesBuilder_ == null) {
+        if (((bitField0_ & 0x00000080) != 0)) {
+          modelInstances_ = java.util.Collections.unmodifiableList(modelInstances_);
+          bitField0_ = (bitField0_ & ~0x00000080);
+        }
+        result.modelInstances_ = modelInstances_;
+      } else {
+        result.modelInstances_ = modelInstancesBuilder_.build();
+      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.geom.ComponentPlacement result) {
@@ -717,7 +824,7 @@ private static final long serialVersionUID = 0L;
         result.height_ = height_;
         to_bitField0_ |= 0x00000002;
       }
-      if (((from_bitField0_ & 0x00000080) != 0)) {
+      if (((from_bitField0_ & 0x00000100) != 0)) {
         result.prov_ = provBuilder_ == null
             ? prov_
             : provBuilder_.build();
@@ -785,6 +892,32 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasHeight()) {
         setHeight(other.getHeight());
+      }
+      if (modelInstancesBuilder_ == null) {
+        if (!other.modelInstances_.isEmpty()) {
+          if (modelInstances_.isEmpty()) {
+            modelInstances_ = other.modelInstances_;
+            bitField0_ = (bitField0_ & ~0x00000080);
+          } else {
+            ensureModelInstancesIsMutable();
+            modelInstances_.addAll(other.modelInstances_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.modelInstances_.isEmpty()) {
+          if (modelInstancesBuilder_.isEmpty()) {
+            modelInstancesBuilder_.dispose();
+            modelInstancesBuilder_ = null;
+            modelInstances_ = other.modelInstances_;
+            bitField0_ = (bitField0_ & ~0x00000080);
+            modelInstancesBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetModelInstancesFieldBuilder() : null;
+          } else {
+            modelInstancesBuilder_.addAllMessages(other.modelInstances_);
+          }
+        }
       }
       if (other.hasProv()) {
         mergeProv(other.getProv());
@@ -858,11 +991,24 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 56
+            case 66: {
+              io.github.panyam.agni.v1.geom.ModelInstance m =
+                  input.readMessage(
+                      io.github.panyam.agni.v1.geom.ModelInstance.parser(),
+                      extensionRegistry);
+              if (modelInstancesBuilder_ == null) {
+                ensureModelInstancesIsMutable();
+                modelInstances_.add(m);
+              } else {
+                modelInstancesBuilder_.addMessage(m);
+              }
+              break;
+            } // case 66
             case 130: {
               input.readMessage(
                   internalGetProvFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000080;
+              bitField0_ |= 0x00000100;
               break;
             } // case 130
             default: {
@@ -1628,6 +1774,348 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private java.util.List<io.github.panyam.agni.v1.geom.ModelInstance> modelInstances_ =
+      java.util.Collections.emptyList();
+    private void ensureModelInstancesIsMutable() {
+      if (!((bitField0_ & 0x00000080) != 0)) {
+        modelInstances_ = new java.util.ArrayList<io.github.panyam.agni.v1.geom.ModelInstance>(modelInstances_);
+        bitField0_ |= 0x00000080;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.ModelInstance, io.github.panyam.agni.v1.geom.ModelInstance.Builder, io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder> modelInstancesBuilder_;
+
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.ModelInstance> getModelInstancesList() {
+      if (modelInstancesBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(modelInstances_);
+      } else {
+        return modelInstancesBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public int getModelInstancesCount() {
+      if (modelInstancesBuilder_ == null) {
+        return modelInstances_.size();
+      } else {
+        return modelInstancesBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ModelInstance getModelInstances(int index) {
+      if (modelInstancesBuilder_ == null) {
+        return modelInstances_.get(index);
+      } else {
+        return modelInstancesBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder setModelInstances(
+        int index, io.github.panyam.agni.v1.geom.ModelInstance value) {
+      if (modelInstancesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelInstancesIsMutable();
+        modelInstances_.set(index, value);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder setModelInstances(
+        int index, io.github.panyam.agni.v1.geom.ModelInstance.Builder builderForValue) {
+      if (modelInstancesBuilder_ == null) {
+        ensureModelInstancesIsMutable();
+        modelInstances_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        modelInstancesBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder addModelInstances(io.github.panyam.agni.v1.geom.ModelInstance value) {
+      if (modelInstancesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelInstancesIsMutable();
+        modelInstances_.add(value);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder addModelInstances(
+        int index, io.github.panyam.agni.v1.geom.ModelInstance value) {
+      if (modelInstancesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelInstancesIsMutable();
+        modelInstances_.add(index, value);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder addModelInstances(
+        io.github.panyam.agni.v1.geom.ModelInstance.Builder builderForValue) {
+      if (modelInstancesBuilder_ == null) {
+        ensureModelInstancesIsMutable();
+        modelInstances_.add(builderForValue.build());
+        onChanged();
+      } else {
+        modelInstancesBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder addModelInstances(
+        int index, io.github.panyam.agni.v1.geom.ModelInstance.Builder builderForValue) {
+      if (modelInstancesBuilder_ == null) {
+        ensureModelInstancesIsMutable();
+        modelInstances_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        modelInstancesBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder addAllModelInstances(
+        java.lang.Iterable<? extends io.github.panyam.agni.v1.geom.ModelInstance> values) {
+      if (modelInstancesBuilder_ == null) {
+        ensureModelInstancesIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, modelInstances_);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder clearModelInstances() {
+      if (modelInstancesBuilder_ == null) {
+        modelInstances_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000080);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public Builder removeModelInstances(int index) {
+      if (modelInstancesBuilder_ == null) {
+        ensureModelInstancesIsMutable();
+        modelInstances_.remove(index);
+        onChanged();
+      } else {
+        modelInstancesBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ModelInstance.Builder getModelInstancesBuilder(
+        int index) {
+      return internalGetModelInstancesFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder getModelInstancesOrBuilder(
+        int index) {
+      if (modelInstancesBuilder_ == null) {
+        return modelInstances_.get(index);  } else {
+        return modelInstancesBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public java.util.List<? extends io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder> 
+         getModelInstancesOrBuilderList() {
+      if (modelInstancesBuilder_ != null) {
+        return modelInstancesBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(modelInstances_);
+      }
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ModelInstance.Builder addModelInstancesBuilder() {
+      return internalGetModelInstancesFieldBuilder().addBuilder(
+          io.github.panyam.agni.v1.geom.ModelInstance.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ModelInstance.Builder addModelInstancesBuilder(
+        int index) {
+      return internalGetModelInstancesFieldBuilder().addBuilder(
+          index, io.github.panyam.agni.v1.geom.ModelInstance.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+     * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+     * part with none draws as a block of its height.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.ModelInstance.Builder> 
+         getModelInstancesBuilderList() {
+      return internalGetModelInstancesFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.ModelInstance, io.github.panyam.agni.v1.geom.ModelInstance.Builder, io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder> 
+        internalGetModelInstancesFieldBuilder() {
+      if (modelInstancesBuilder_ == null) {
+        modelInstancesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            io.github.panyam.agni.v1.geom.ModelInstance, io.github.panyam.agni.v1.geom.ModelInstance.Builder, io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder>(
+                modelInstances_,
+                ((bitField0_ & 0x00000080) != 0),
+                getParentForChildren(),
+                isClean());
+        modelInstances_ = null;
+      }
+      return modelInstancesBuilder_;
+    }
+
     private io.github.panyam.agni.v1.geom.Provenance prov_;
     private com.google.protobuf.SingleFieldBuilder<
         io.github.panyam.agni.v1.geom.Provenance, io.github.panyam.agni.v1.geom.Provenance.Builder, io.github.panyam.agni.v1.geom.ProvenanceOrBuilder> provBuilder_;
@@ -1636,7 +2124,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the prov field is set.
      */
     public boolean hasProv() {
-      return ((bitField0_ & 0x00000080) != 0);
+      return ((bitField0_ & 0x00000100) != 0);
     }
     /**
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
@@ -1659,7 +2147,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1673,7 +2161,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1682,7 +2170,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeProv(io.github.panyam.agni.v1.geom.Provenance value) {
       if (provBuilder_ == null) {
-        if (((bitField0_ & 0x00000080) != 0) &&
+        if (((bitField0_ & 0x00000100) != 0) &&
           prov_ != null &&
           prov_ != io.github.panyam.agni.v1.geom.Provenance.getDefaultInstance()) {
           getProvBuilder().mergeFrom(value);
@@ -1693,7 +2181,7 @@ private static final long serialVersionUID = 0L;
         provBuilder_.mergeFrom(value);
       }
       if (prov_ != null) {
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
       }
       return this;
@@ -1702,7 +2190,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public Builder clearProv() {
-      bitField0_ = (bitField0_ & ~0x00000080);
+      bitField0_ = (bitField0_ & ~0x00000100);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -1715,7 +2203,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public io.github.panyam.agni.v1.geom.Provenance.Builder getProvBuilder() {
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return internalGetProvFieldBuilder().getBuilder();
     }

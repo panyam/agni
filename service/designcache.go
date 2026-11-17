@@ -13,6 +13,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/timing"
@@ -536,6 +537,19 @@ func (l *CachingLoader) Board(ctx context.Context, uri artifact.URI) (*geom.Boar
 		return nil, nil
 	}
 	return proto.Clone(b).(*geom.BoardGeometry), nil
+}
+
+// BoardMeshes passes through to the wrapped loader's BoardMeshes, or reports every key unread when
+// it has none. Meshes stay out of the DesignCache, since GetBoardMeshes keeps its own fitted sets.
+func (l *CachingLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+	if ml, ok := l.CacheableLoader.(BoardMeshLoader); ok {
+		return ml.BoardMeshes(ctx, uri, keys)
+	}
+	unread := map[string]string{}
+	for _, k := range keys {
+		unread[k] = "this server reads no model meshes"
+	}
+	return nil, unread, nil
 }
 
 // BoardPersisted reports whether the board read for uri is in the cache's persistent tier, so another

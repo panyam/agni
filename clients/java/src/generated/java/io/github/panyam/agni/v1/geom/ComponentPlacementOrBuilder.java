@@ -155,6 +155,60 @@ public interface ComponentPlacementOrBuilder extends
   long getHeight();
 
   /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  java.util.List<io.github.panyam.agni.v1.geom.ModelInstance> 
+      getModelInstancesList();
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  io.github.panyam.agni.v1.geom.ModelInstance getModelInstances(int index);
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  int getModelInstancesCount();
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  java.util.List<? extends io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder> 
+      getModelInstancesOrBuilderList();
+  /**
+   * <pre>
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ModelInstance model_instances = 8 [json_name = "modelInstances"];</code>
+   */
+  io.github.panyam.agni.v1.geom.ModelInstanceOrBuilder getModelInstancesOrBuilder(
+      int index);
+
+  /**
    * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
    * @return Whether the prov field is set.
    */

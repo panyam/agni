@@ -15,6 +15,7 @@ import (
 
 	"github.com/panyam/demokit"
 
+	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/examples/common"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -139,6 +140,43 @@ func main() {
 		for _, u := range b.GetUnreadModels() {
 			fmt.Printf("unread: %s (%d part): %s\n", u.GetPath(), u.GetParts(), u.GetReason())
 		}
+		return nil
+	})
+
+	demo.Bind("model-meshes").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		const path = "../common/designs/model-heights/model-heights.kicad_pcb"
+		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/designs/model-heights/demolib"}}
+		b, err := l.BoardGeometry(path)
+		if err != nil {
+			return demokit.Errf("read %s: %v", path, err)
+		}
+		// Each part names its meshes by key. Parts that share a model share the key, so the meshes are
+		// read once each, as DesignService.GetBoardMeshes reads them.
+		var keys []string
+		seen := map[string]bool{}
+		for _, p := range b.GetPlacements() {
+			for _, in := range p.GetModelInstances() {
+				t := in.GetTransform()
+				fmt.Printf("%-3s draws %s, Z scaled %.0fx and lifted %.1f mm\n", p.GetRefDes(), in.GetMesh(), t[10], t[11])
+				if !seen[in.GetMesh()] {
+					seen[in.GetMesh()] = true
+					keys = append(keys, in.GetMesh())
+				}
+			}
+		}
+		meshes, unread := l.BoardMeshes(path, keys)
+		var items []mesh.Item
+		for _, k := range keys {
+			if m := meshes[k]; m != nil {
+				fmt.Printf("%s: %d triangles\n", k, m.Triangles())
+				items = append(items, mesh.Item{Key: k, Mesh: m, Footprint: 1})
+			} else {
+				fmt.Printf("%s: unread: %s\n", k, unread[k])
+			}
+		}
+		// A weak device asks for a small budget. Below mesh.MinTriangles per mesh, parts draw as blocks.
+		plan := mesh.Fit(items, 20000, 12)
+		fmt.Printf("at a budget of 12 triangles: %d kept, blocks %v\n", plan.Triangles, plan.Blocks)
 		return nil
 	})
 

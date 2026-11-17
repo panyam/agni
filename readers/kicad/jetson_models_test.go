@@ -103,7 +103,8 @@ func outsideMm(ring [][2]float64, p [2]float64) float64 {
 
 // jetsonModelFit reads Jetson's board and every glTF its ${ANT3DMDL} models stand for. It returns how
 // many models it placed, and the names of those that reach more than 0.1 mm past their footprint's
-// courtyard. mirror flips each model's y, the error a wrong axis change makes.
+// courtyard. A back part's model turns half a turn about Z, as its ModelInstance does (agni 1652).
+// mirror flips each model's y, the error a wrong axis change makes.
 func jetsonModelFit(t *testing.T, mirror bool) (placed int, outside map[string]float64) {
 	t.Helper()
 	if _, err := os.Stat(antmicroModels); err != nil {
@@ -153,11 +154,14 @@ func jetsonModelFit(t *testing.T, mirror bool) (placed int, outside map[string]f
 			placed++
 			worst := 0.0
 			for _, q := range pts {
-				y := q[1]
+				x, y := q[0], q[1]
 				if mirror {
 					y = -y
 				}
-				worst = math.Max(worst, outsideMm(ring, [2]float64{q[0], y}))
+				if atomOf(fp.Child("layer").Arg(1)) == "B.Cu" {
+					x, y = -x, -y
+				}
+				worst = math.Max(worst, outsideMm(ring, [2]float64{x, y}))
 			}
 			if worst > 0.1 {
 				name := filepath.Base(raw)

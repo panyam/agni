@@ -158,6 +158,8 @@ type DesignService struct {
 	// a placement resolves, and an unresolved symbol keeps its ref-des while losing its pins, so the
 	// read is missing connections rather than just artwork (agni issue 347).
 	projects *ProjectResolver
+	// meshes keeps GetBoardMeshes' fitted sets, so the pages of one request read the models once.
+	meshes meshCache
 }
 
 // NewDesignService returns a DesignService backed by the given ports and render style. A nil

@@ -146,7 +146,7 @@ class ReadNote(_message.Message):
     def __init__(self, file: _Optional[str] = ..., line: _Optional[int] = ..., field: _Optional[str] = ..., value: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class ComponentPlacement(_message.Message):
-    __slots__ = ("ref_des", "at", "rotation_deg", "layer", "pads", "mirror", "height", "prov")
+    __slots__ = ("ref_des", "at", "rotation_deg", "layer", "pads", "mirror", "height", "model_instances", "prov")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     AT_FIELD_NUMBER: _ClassVar[int]
     ROTATION_DEG_FIELD_NUMBER: _ClassVar[int]
@@ -154,6 +154,7 @@ class ComponentPlacement(_message.Message):
     PADS_FIELD_NUMBER: _ClassVar[int]
     MIRROR_FIELD_NUMBER: _ClassVar[int]
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
+    MODEL_INSTANCES_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     at: _geom_pb2.Point
@@ -162,8 +163,37 @@ class ComponentPlacement(_message.Message):
     pads: _containers.RepeatedCompositeFieldContainer[Pad]
     mirror: bool
     height: int
+    model_instances: _containers.RepeatedCompositeFieldContainer[ModelInstance]
     prov: _geom_pb2.Provenance
-    def __init__(self, ref_des: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., layer: _Optional[str] = ..., pads: _Optional[_Iterable[_Union[Pad, _Mapping]]] = ..., mirror: _Optional[bool] = ..., height: _Optional[int] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, ref_des: _Optional[str] = ..., at: _Optional[_Union[_geom_pb2.Point, _Mapping]] = ..., rotation_deg: _Optional[float] = ..., layer: _Optional[str] = ..., pads: _Optional[_Iterable[_Union[Pad, _Mapping]]] = ..., mirror: _Optional[bool] = ..., height: _Optional[int] = ..., model_instances: _Optional[_Iterable[_Union[ModelInstance, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+
+class ModelInstance(_message.Message):
+    __slots__ = ("mesh", "transform")
+    MESH_FIELD_NUMBER: _ClassVar[int]
+    TRANSFORM_FIELD_NUMBER: _ClassVar[int]
+    mesh: str
+    transform: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, mesh: _Optional[str] = ..., transform: _Optional[_Iterable[float]] = ...) -> None: ...
+
+class ModelMesh(_message.Message):
+    __slots__ = ("key", "parts", "source_triangles")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    PARTS_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_TRIANGLES_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    parts: _containers.RepeatedCompositeFieldContainer[MeshPart]
+    source_triangles: int
+    def __init__(self, key: _Optional[str] = ..., parts: _Optional[_Iterable[_Union[MeshPart, _Mapping]]] = ..., source_triangles: _Optional[int] = ...) -> None: ...
+
+class MeshPart(_message.Message):
+    __slots__ = ("positions", "indices", "rgba")
+    POSITIONS_FIELD_NUMBER: _ClassVar[int]
+    INDICES_FIELD_NUMBER: _ClassVar[int]
+    RGBA_FIELD_NUMBER: _ClassVar[int]
+    positions: _containers.RepeatedScalarFieldContainer[float]
+    indices: _containers.RepeatedScalarFieldContainer[int]
+    rgba: int
+    def __init__(self, positions: _Optional[_Iterable[float]] = ..., indices: _Optional[_Iterable[int]] = ..., rgba: _Optional[int] = ...) -> None: ...
 
 class Pad(_message.Message):
     __slots__ = ("number", "at", "rotation_deg", "size", "shape", "layers", "drill", "net", "padstack")

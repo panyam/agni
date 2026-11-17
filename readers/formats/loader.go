@@ -11,6 +11,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/mesh"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/geomath"
@@ -286,6 +287,30 @@ func (l *Loader) BoardGeometry(path string) (*geom.BoardGeometry, error) {
 	}
 	relocateSources(b, l.sourceName())
 	return b, nil
+}
+
+// BoardMeshes reads model meshes by the keys in a board's ComponentPlacement.model_instances (agni
+// issue 1652). It resolves each key as the board read resolved its model, through ModelPaths and
+// ModelVars, and opens only the keys asked for. A key it cannot read goes in unread with its
+// reason, and its parts then draw as blocks. A format with no 3D models returns no meshes.
+func (l *Loader) BoardMeshes(path string, keys []string) (meshes map[string]*mesh.Mesh, unread map[string]string) {
+	meshes, unread = map[string]*mesh.Mesh{}, map[string]string{}
+	if lowerExt(path) != ".kicad_pcb" {
+		for _, k := range keys {
+			unread[k] = "this format has no 3D models"
+		}
+		return meshes, unread
+	}
+	open := l.kicadModelOpener(path)
+	for _, k := range keys {
+		m, err := kicad.ReadModelMesh(open, k)
+		if err != nil {
+			unread[k] = err.Error()
+			continue
+		}
+		meshes[k] = m
+	}
+	return meshes, unread
 }
 
 // FaithfulGeometry reads a design's ingested schematic geometry. For an extension with no geometry

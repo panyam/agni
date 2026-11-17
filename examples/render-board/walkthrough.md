@@ -63,6 +63,15 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 > defines. The read maps `DEMOLIB` to a folder, as `--model-var` does, and finds a glTF beside the
 > named `.step`, the way Antmicro publishes its library. It stands 1.5 mm tall.
 
+## Draw each part's model mesh {#model-meshes}
+
+> The stack view can draw each part's own model rather than a block. The heights step's read also
+> names a mesh for each part that has a model. U1 and U2 draw `3d/block.wrl`, which KiCad's library
+> ships beside each STEP, and U2's model transform doubles its Z and lifts it 0.5 mm. U3 draws its
+> glTF. The read opens the meshes only when asked, so a check never reads one. Each mesh is read once
+> for every part that shares it. A weak device asks for a small triangle budget, and the parts past
+> it draw as blocks.
+
 ## Skip a value the reader cannot parse {#read-notes}
 
 > An ODB++ job states each part's height as a `.comp_height` attribute on its CMP record. ODB++ 8

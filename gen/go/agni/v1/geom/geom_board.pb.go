@@ -837,10 +837,14 @@ type ComponentPlacement struct {
 	// the package. KiCad keeps it only inside a part's 3D model, and the reader measures how far the
 	// model reaches above the pads, so a through-hole part's pins below the board do not count (agni
 	// 1652).
-	Height        *int64      `protobuf:"varint,7,opt,name=height,proto3,oneof" json:"height,omitempty"`
-	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Height *int64 `protobuf:"varint,7,opt,name=height,proto3,oneof" json:"height,omitempty"`
+	// model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+	// (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+	// part with none draws as a block of its height.
+	ModelInstances []*ModelInstance `protobuf:"bytes,8,rep,name=model_instances,json=modelInstances,proto3" json:"model_instances,omitempty"`
+	Prov           *Provenance      `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ComponentPlacement) Reset() {
@@ -922,11 +926,207 @@ func (x *ComponentPlacement) GetHeight() int64 {
 	return 0
 }
 
+func (x *ComponentPlacement) GetModelInstances() []*ModelInstance {
+	if x != nil {
+		return x.ModelInstances
+	}
+	return nil
+}
+
 func (x *ComponentPlacement) GetProv() *Provenance {
 	if x != nil {
 		return x.Prov
 	}
 	return nil
+}
+
+// ModelInstance places one model mesh on a part (agni issue 1652). mesh is the mesh's key, such as
+// `${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.wrl`, and GetBoardMeshes returns each
+// mesh under its key. Many parts share one key, so a viewer holds each mesh once and draws it per
+// instance.
+//
+// transform takes a mesh point to the part's footprint-local frame, in millimetres with Y up and Z
+// above the pads' seating plane. It holds 12 numbers, a 3x4 matrix in row order, so a point p goes to
+// (t[0]p.x + t[1]p.y + t[2]p.z + t[3], t[4]p.x + ..., t[8]p.x + ...). It carries the source's model
+// offset, rotation and scale. A viewer then places the footprint as it places pads, by the
+// placement's at, rotation_deg and mirror, and a mirrored part also negates Z, so its model hangs
+// below the board.
+type ModelInstance struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mesh          string                 `protobuf:"bytes,1,opt,name=mesh,proto3" json:"mesh,omitempty"`
+	Transform     []float64              `protobuf:"fixed64,2,rep,packed,name=transform,proto3" json:"transform,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModelInstance) Reset() {
+	*x = ModelInstance{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelInstance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelInstance) ProtoMessage() {}
+
+func (x *ModelInstance) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelInstance.ProtoReflect.Descriptor instead.
+func (*ModelInstance) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ModelInstance) GetMesh() string {
+	if x != nil {
+		return x.Mesh
+	}
+	return ""
+}
+
+func (x *ModelInstance) GetTransform() []float64 {
+	if x != nil {
+		return x.Transform
+	}
+	return nil
+}
+
+// ModelMesh is one model's triangles under its key, as GetBoardMeshes returns it. A ModelInstance
+// names the same key. Positions are in millimetres in the mesh's own frame, and
+// ModelInstance.transform maps that frame to the footprint's. source_triangles counts the model
+// file's triangles. The parts hold fewer when the server simplified the mesh to fit the budget.
+type ModelMesh struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Key             string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Parts           []*MeshPart            `protobuf:"bytes,2,rep,name=parts,proto3" json:"parts,omitempty"`
+	SourceTriangles int32                  `protobuf:"varint,3,opt,name=source_triangles,json=sourceTriangles,proto3" json:"source_triangles,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ModelMesh) Reset() {
+	*x = ModelMesh{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelMesh) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelMesh) ProtoMessage() {}
+
+func (x *ModelMesh) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelMesh.ProtoReflect.Descriptor instead.
+func (*ModelMesh) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ModelMesh) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *ModelMesh) GetParts() []*MeshPart {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+func (x *ModelMesh) GetSourceTriangles() int32 {
+	if x != nil {
+		return x.SourceTriangles
+	}
+	return 0
+}
+
+// MeshPart is one coloured triangle list. positions holds x, y and z for each vertex, and indices
+// names three vertices per triangle. rgba is the colour, red in the top byte and alpha in the lowest.
+type MeshPart struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Positions     []float32              `protobuf:"fixed32,1,rep,packed,name=positions,proto3" json:"positions,omitempty"`
+	Indices       []uint32               `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
+	Rgba          uint32                 `protobuf:"fixed32,3,opt,name=rgba,proto3" json:"rgba,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MeshPart) Reset() {
+	*x = MeshPart{}
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MeshPart) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MeshPart) ProtoMessage() {}
+
+func (x *MeshPart) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MeshPart.ProtoReflect.Descriptor instead.
+func (*MeshPart) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MeshPart) GetPositions() []float32 {
+	if x != nil {
+		return x.Positions
+	}
+	return nil
+}
+
+func (x *MeshPart) GetIndices() []uint32 {
+	if x != nil {
+		return x.Indices
+	}
+	return nil
+}
+
+func (x *MeshPart) GetRgba() uint32 {
+	if x != nil {
+		return x.Rgba
+	}
+	return 0
 }
 
 // Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are
@@ -955,7 +1155,7 @@ type Pad struct {
 
 func (x *Pad) Reset() {
 	*x = Pad{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -967,7 +1167,7 @@ func (x *Pad) String() string {
 func (*Pad) ProtoMessage() {}
 
 func (x *Pad) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[10]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +1180,7 @@ func (x *Pad) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pad.ProtoReflect.Descriptor instead.
 func (*Pad) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Pad) GetNumber() string {
@@ -1066,7 +1266,7 @@ type Padstack struct {
 
 func (x *Padstack) Reset() {
 	*x = Padstack{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1078,7 +1278,7 @@ func (x *Padstack) String() string {
 func (*Padstack) ProtoMessage() {}
 
 func (x *Padstack) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[11]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1091,7 +1291,7 @@ func (x *Padstack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Padstack.ProtoReflect.Descriptor instead.
 func (*Padstack) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Padstack) GetId() string {
@@ -1132,7 +1332,7 @@ type PadstackLayer struct {
 
 func (x *PadstackLayer) Reset() {
 	*x = PadstackLayer{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1344,7 @@ func (x *PadstackLayer) String() string {
 func (*PadstackLayer) ProtoMessage() {}
 
 func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[12]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1357,7 @@ func (x *PadstackLayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadstackLayer.ProtoReflect.Descriptor instead.
 func (*PadstackLayer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PadstackLayer) GetLayer() string {
@@ -1205,7 +1405,7 @@ type PadShape struct {
 
 func (x *PadShape) Reset() {
 	*x = PadShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1217,7 +1417,7 @@ func (x *PadShape) String() string {
 func (*PadShape) ProtoMessage() {}
 
 func (x *PadShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[13]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1230,7 +1430,7 @@ func (x *PadShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PadShape.ProtoReflect.Descriptor instead.
 func (*PadShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *PadShape) GetShape() string {
@@ -1277,7 +1477,7 @@ type NetCopper struct {
 
 func (x *NetCopper) Reset() {
 	*x = NetCopper{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1489,7 @@ func (x *NetCopper) String() string {
 func (*NetCopper) ProtoMessage() {}
 
 func (x *NetCopper) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[14]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1502,7 @@ func (x *NetCopper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetCopper.ProtoReflect.Descriptor instead.
 func (*NetCopper) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *NetCopper) GetNet() string {
@@ -1349,7 +1549,7 @@ type CopperShape struct {
 
 func (x *CopperShape) Reset() {
 	*x = CopperShape{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1561,7 @@ func (x *CopperShape) String() string {
 func (*CopperShape) ProtoMessage() {}
 
 func (x *CopperShape) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1574,7 @@ func (x *CopperShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CopperShape.ProtoReflect.Descriptor instead.
 func (*CopperShape) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CopperShape) GetLayer() string {
@@ -1416,7 +1616,7 @@ type TrackSegment struct {
 
 func (x *TrackSegment) Reset() {
 	*x = TrackSegment{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1428,7 +1628,7 @@ func (x *TrackSegment) String() string {
 func (*TrackSegment) ProtoMessage() {}
 
 func (x *TrackSegment) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1441,7 +1641,7 @@ func (x *TrackSegment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackSegment.ProtoReflect.Descriptor instead.
 func (*TrackSegment) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TrackSegment) GetA() *Point {
@@ -1496,7 +1696,7 @@ type Via struct {
 
 func (x *Via) Reset() {
 	*x = Via{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1508,7 +1708,7 @@ func (x *Via) String() string {
 func (*Via) ProtoMessage() {}
 
 func (x *Via) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[17]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1521,7 +1721,7 @@ func (x *Via) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Via.ProtoReflect.Descriptor instead.
 func (*Via) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Via) GetAt() *Point {
@@ -1582,7 +1782,7 @@ type Zone struct {
 
 func (x *Zone) Reset() {
 	*x = Zone{}
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[18]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1594,7 +1794,7 @@ func (x *Zone) String() string {
 func (*Zone) ProtoMessage() {}
 
 func (x *Zone) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[18]
+	mi := &file_agni_v1_geom_geom_board_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1607,7 +1807,7 @@ func (x *Zone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Zone.ProtoReflect.Descriptor instead.
 func (*Zone) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_geom_geom_board_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Zone) GetNet() string {
@@ -1710,7 +1910,7 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x04line\x18\x02 \x01(\x05R\x04line\x12\x14\n" +
 	"\x05field\x18\x03 \x01(\tR\x05field\x12\x14\n" +
 	"\x05value\x18\x04 \x01(\tR\x05value\x12\x16\n" +
-	"\x06reason\x18\x05 \x01(\tR\x06reason\"\xa0\x02\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"\xe6\x02\n" +
 	"\x12ComponentPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -1718,9 +1918,21 @@ const file_agni_v1_geom_geom_board_proto_rawDesc = "" +
 	"\x05layer\x18\x04 \x01(\tR\x05layer\x12%\n" +
 	"\x04pads\x18\x05 \x03(\v2\x11.agni.v1.geom.PadR\x04pads\x12\x16\n" +
 	"\x06mirror\x18\x06 \x01(\bR\x06mirror\x12\x1b\n" +
-	"\x06height\x18\a \x01(\x03H\x00R\x06height\x88\x01\x01\x12,\n" +
+	"\x06height\x18\a \x01(\x03H\x00R\x06height\x88\x01\x01\x12D\n" +
+	"\x0fmodel_instances\x18\b \x03(\v2\x1b.agni.v1.geom.ModelInstanceR\x0emodelInstances\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04provB\t\n" +
-	"\a_height\"\x80\x02\n" +
+	"\a_height\"A\n" +
+	"\rModelInstance\x12\x12\n" +
+	"\x04mesh\x18\x01 \x01(\tR\x04mesh\x12\x1c\n" +
+	"\ttransform\x18\x02 \x03(\x01R\ttransform\"v\n" +
+	"\tModelMesh\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
+	"\x05parts\x18\x02 \x03(\v2\x16.agni.v1.geom.MeshPartR\x05parts\x12)\n" +
+	"\x10source_triangles\x18\x03 \x01(\x05R\x0fsourceTriangles\"V\n" +
+	"\bMeshPart\x12\x1c\n" +
+	"\tpositions\x18\x01 \x03(\x02R\tpositions\x12\x18\n" +
+	"\aindices\x18\x02 \x03(\rR\aindices\x12\x12\n" +
+	"\x04rgba\x18\x03 \x01(\aR\x04rgba\"\x80\x02\n" +
 	"\x03Pad\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\tR\x06number\x12#\n" +
 	"\x02at\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x02at\x12!\n" +
@@ -1785,7 +1997,7 @@ func file_agni_v1_geom_geom_board_proto_rawDescGZIP() []byte {
 	return file_agni_v1_geom_geom_board_proto_rawDescData
 }
 
-var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_agni_v1_geom_geom_board_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*BoardGeometry)(nil),      // 0: agni.v1.geom.BoardGeometry
 	(*BoardText)(nil),          // 1: agni.v1.geom.BoardText
@@ -1797,64 +2009,69 @@ var file_agni_v1_geom_geom_board_proto_goTypes = []any{
 	(*UnreadModel)(nil),        // 7: agni.v1.geom.UnreadModel
 	(*ReadNote)(nil),           // 8: agni.v1.geom.ReadNote
 	(*ComponentPlacement)(nil), // 9: agni.v1.geom.ComponentPlacement
-	(*Pad)(nil),                // 10: agni.v1.geom.Pad
-	(*Padstack)(nil),           // 11: agni.v1.geom.Padstack
-	(*PadstackLayer)(nil),      // 12: agni.v1.geom.PadstackLayer
-	(*PadShape)(nil),           // 13: agni.v1.geom.PadShape
-	(*NetCopper)(nil),          // 14: agni.v1.geom.NetCopper
-	(*CopperShape)(nil),        // 15: agni.v1.geom.CopperShape
-	(*TrackSegment)(nil),       // 16: agni.v1.geom.TrackSegment
-	(*Via)(nil),                // 17: agni.v1.geom.Via
-	(*Zone)(nil),               // 18: agni.v1.geom.Zone
-	(*Provenance)(nil),         // 19: agni.v1.geom.Provenance
-	(*Point)(nil),              // 20: agni.v1.geom.Point
-	(*Shape)(nil),              // 21: agni.v1.geom.Shape
-	(*Polyline)(nil),           // 22: agni.v1.geom.Polyline
+	(*ModelInstance)(nil),      // 10: agni.v1.geom.ModelInstance
+	(*ModelMesh)(nil),          // 11: agni.v1.geom.ModelMesh
+	(*MeshPart)(nil),           // 12: agni.v1.geom.MeshPart
+	(*Pad)(nil),                // 13: agni.v1.geom.Pad
+	(*Padstack)(nil),           // 14: agni.v1.geom.Padstack
+	(*PadstackLayer)(nil),      // 15: agni.v1.geom.PadstackLayer
+	(*PadShape)(nil),           // 16: agni.v1.geom.PadShape
+	(*NetCopper)(nil),          // 17: agni.v1.geom.NetCopper
+	(*CopperShape)(nil),        // 18: agni.v1.geom.CopperShape
+	(*TrackSegment)(nil),       // 19: agni.v1.geom.TrackSegment
+	(*Via)(nil),                // 20: agni.v1.geom.Via
+	(*Zone)(nil),               // 21: agni.v1.geom.Zone
+	(*Provenance)(nil),         // 22: agni.v1.geom.Provenance
+	(*Point)(nil),              // 23: agni.v1.geom.Point
+	(*Shape)(nil),              // 24: agni.v1.geom.Shape
+	(*Polyline)(nil),           // 25: agni.v1.geom.Polyline
 }
 var file_agni_v1_geom_geom_board_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.BoardGeometry.layers:type_name -> agni.v1.geom.BoardLayer
 	6,  // 1: agni.v1.geom.BoardGeometry.outline:type_name -> agni.v1.geom.BoardOutline
 	9,  // 2: agni.v1.geom.BoardGeometry.placements:type_name -> agni.v1.geom.ComponentPlacement
-	14, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
-	18, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
+	17, // 3: agni.v1.geom.BoardGeometry.nets:type_name -> agni.v1.geom.NetCopper
+	21, // 4: agni.v1.geom.BoardGeometry.zones:type_name -> agni.v1.geom.Zone
 	1,  // 5: agni.v1.geom.BoardGeometry.texts:type_name -> agni.v1.geom.BoardText
 	2,  // 6: agni.v1.geom.BoardGeometry.graphics:type_name -> agni.v1.geom.BoardGraphic
-	11, // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
+	14, // 7: agni.v1.geom.BoardGeometry.padstacks:type_name -> agni.v1.geom.Padstack
 	4,  // 8: agni.v1.geom.BoardGeometry.stackup:type_name -> agni.v1.geom.Stackup
 	7,  // 9: agni.v1.geom.BoardGeometry.unread_models:type_name -> agni.v1.geom.UnreadModel
 	8,  // 10: agni.v1.geom.BoardGeometry.read_notes:type_name -> agni.v1.geom.ReadNote
-	19, // 11: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
-	20, // 12: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
-	21, // 13: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
+	22, // 11: agni.v1.geom.BoardGeometry.prov:type_name -> agni.v1.geom.Provenance
+	23, // 12: agni.v1.geom.BoardText.at:type_name -> agni.v1.geom.Point
+	24, // 13: agni.v1.geom.BoardGraphic.shape:type_name -> agni.v1.geom.Shape
 	5,  // 14: agni.v1.geom.Stackup.layers:type_name -> agni.v1.geom.StackLayer
-	22, // 15: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
-	20, // 16: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
-	10, // 17: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
-	19, // 18: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
-	20, // 19: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
-	20, // 20: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
-	12, // 21: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
-	13, // 22: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
-	13, // 23: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
-	13, // 24: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
-	20, // 25: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
-	20, // 26: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
-	20, // 27: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
-	16, // 28: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
-	17, // 29: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
-	15, // 30: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
-	22, // 31: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
-	22, // 32: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
-	20, // 33: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
-	20, // 34: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
-	20, // 35: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
-	20, // 36: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
-	22, // 37: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	25, // 15: agni.v1.geom.BoardOutline.paths:type_name -> agni.v1.geom.Polyline
+	23, // 16: agni.v1.geom.ComponentPlacement.at:type_name -> agni.v1.geom.Point
+	13, // 17: agni.v1.geom.ComponentPlacement.pads:type_name -> agni.v1.geom.Pad
+	10, // 18: agni.v1.geom.ComponentPlacement.model_instances:type_name -> agni.v1.geom.ModelInstance
+	22, // 19: agni.v1.geom.ComponentPlacement.prov:type_name -> agni.v1.geom.Provenance
+	12, // 20: agni.v1.geom.ModelMesh.parts:type_name -> agni.v1.geom.MeshPart
+	23, // 21: agni.v1.geom.Pad.at:type_name -> agni.v1.geom.Point
+	23, // 22: agni.v1.geom.Pad.size:type_name -> agni.v1.geom.Point
+	15, // 23: agni.v1.geom.Padstack.layers:type_name -> agni.v1.geom.PadstackLayer
+	16, // 24: agni.v1.geom.PadstackLayer.pad:type_name -> agni.v1.geom.PadShape
+	16, // 25: agni.v1.geom.PadstackLayer.thermal:type_name -> agni.v1.geom.PadShape
+	16, // 26: agni.v1.geom.PadstackLayer.antipad:type_name -> agni.v1.geom.PadShape
+	23, // 27: agni.v1.geom.PadShape.size:type_name -> agni.v1.geom.Point
+	23, // 28: agni.v1.geom.PadShape.offset:type_name -> agni.v1.geom.Point
+	23, // 29: agni.v1.geom.PadShape.outline:type_name -> agni.v1.geom.Point
+	19, // 30: agni.v1.geom.NetCopper.segments:type_name -> agni.v1.geom.TrackSegment
+	20, // 31: agni.v1.geom.NetCopper.vias:type_name -> agni.v1.geom.Via
+	18, // 32: agni.v1.geom.NetCopper.shapes:type_name -> agni.v1.geom.CopperShape
+	25, // 33: agni.v1.geom.CopperShape.outline:type_name -> agni.v1.geom.Polyline
+	25, // 34: agni.v1.geom.CopperShape.holes:type_name -> agni.v1.geom.Polyline
+	23, // 35: agni.v1.geom.TrackSegment.a:type_name -> agni.v1.geom.Point
+	23, // 36: agni.v1.geom.TrackSegment.b:type_name -> agni.v1.geom.Point
+	23, // 37: agni.v1.geom.TrackSegment.mid:type_name -> agni.v1.geom.Point
+	23, // 38: agni.v1.geom.Via.at:type_name -> agni.v1.geom.Point
+	25, // 39: agni.v1.geom.Zone.outline:type_name -> agni.v1.geom.Polyline
+	40, // [40:40] is the sub-list for method output_type
+	40, // [40:40] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_board_proto_init() }
@@ -1872,7 +2089,7 @@ func file_agni_v1_geom_geom_board_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_board_proto_rawDesc), len(file_agni_v1_geom_geom_board_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

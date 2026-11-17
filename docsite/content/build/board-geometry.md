@@ -76,6 +76,15 @@ A pad's `shape` and `size` give its land on its first layer. A pad that names a 
 per copper layer in `BoardGeometry.padstacks`, and a back-side part names an entry whose layers are
 already turned over. A `drill` of 0 means a surface pad.
 
+A part with a 3D model also lists its meshes in `model_instances` (agni issue 1652). Each names a
+mesh by key and gives a transform, 12 numbers of a 3x4 matrix in row order, from the mesh's frame to
+the footprint's, in millimetres with Z above the board. `GetBoardMeshes` returns the meshes, a page
+at a time, each once however many parts share it. To draw a part's model, apply the instance's
+transform, then place the result as a pad, and negate Z for a part with `mirror` set so it hangs
+below the board. The request's `max_triangles` sets a budget for the whole board. The server
+simplifies the largest meshes first, and then leaves out the smallest parts' meshes. Those parts draw
+as blocks of their `height`. The first page lists both.
+
 Text and graphics are already in board coordinates. `BoardText` and `BoardGraphic` carry the
 `ref_des` of the part that owns them, or "" for free artwork. The board edge is `outline`, as the
 file draws it, which is often separate lines and arcs that a GUI stitches into a polygon.
@@ -113,6 +122,6 @@ differently, so a click on copper joins the schematic's net. Copper on no net ha
 ## What it leaves out
 
 The geometry keeps what a drawing and a geometric check need. It leaves out zone fills a design tool
-computes again, teardrops and 3D models. [Geometry and rendering](../../architecture/geometry-and-rendering/)
+computes again and teardrops. 3D model meshes come from their own call, `GetBoardMeshes`. [Geometry and rendering](../../architecture/geometry-and-rendering/)
 says how each reader fills it, and `protos/agni/v1/geom/geom_board.proto` holds every field's
 comment.

@@ -2741,6 +2741,9 @@ impl serde::Serialize for ComponentPlacement {
         if self.height.is_some() {
             len += 1;
         }
+        if !self.model_instances.is_empty() {
+            len += 1;
+        }
         if self.prov.is_some() {
             len += 1;
         }
@@ -2768,6 +2771,9 @@ impl serde::Serialize for ComponentPlacement {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("height", ToString::to_string(&v).as_str())?;
         }
+        if !self.model_instances.is_empty() {
+            struct_ser.serialize_field("modelInstances", &self.model_instances)?;
+        }
         if let Some(v) = self.prov.as_ref() {
             struct_ser.serialize_field("prov", v)?;
         }
@@ -2790,6 +2796,8 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
             "pads",
             "mirror",
             "height",
+            "model_instances",
+            "modelInstances",
             "prov",
         ];
 
@@ -2802,6 +2810,7 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
             Pads,
             Mirror,
             Height,
+            ModelInstances,
             Prov,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2831,6 +2840,7 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
                             "pads" => Ok(GeneratedField::Pads),
                             "mirror" => Ok(GeneratedField::Mirror),
                             "height" => Ok(GeneratedField::Height),
+                            "modelInstances" | "model_instances" => Ok(GeneratedField::ModelInstances),
                             "prov" => Ok(GeneratedField::Prov),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
@@ -2858,6 +2868,7 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
                 let mut pads__ = None;
                 let mut mirror__ = None;
                 let mut height__ = None;
+                let mut model_instances__ = None;
                 let mut prov__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -2907,6 +2918,12 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
                                 map_.next_value::<::std::option::Option<::pbjson::private::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::ModelInstances => {
+                            if model_instances__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("modelInstances"));
+                            }
+                            model_instances__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::Prov => {
                             if prov__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("prov"));
@@ -2923,6 +2940,7 @@ impl<'de> serde::Deserialize<'de> for ComponentPlacement {
                     pads: pads__.unwrap_or_default(),
                     mirror: mirror__.unwrap_or_default(),
                     height: height__,
+                    model_instances: model_instances__.unwrap_or_default(),
                     prov: prov__,
                 })
             }
@@ -4145,6 +4163,378 @@ impl<'de> serde::Deserialize<'de> for label::Flag {
             }
         }
         deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for MeshPart {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.positions.is_empty() {
+            len += 1;
+        }
+        if !self.indices.is_empty() {
+            len += 1;
+        }
+        if self.rgba != 0 {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.geom.MeshPart", len)?;
+        if !self.positions.is_empty() {
+            struct_ser.serialize_field("positions", &self.positions)?;
+        }
+        if !self.indices.is_empty() {
+            struct_ser.serialize_field("indices", &self.indices)?;
+        }
+        if self.rgba != 0 {
+            struct_ser.serialize_field("rgba", &self.rgba)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for MeshPart {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "positions",
+            "indices",
+            "rgba",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Positions,
+            Indices,
+            Rgba,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "positions" => Ok(GeneratedField::Positions),
+                            "indices" => Ok(GeneratedField::Indices),
+                            "rgba" => Ok(GeneratedField::Rgba),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = MeshPart;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.geom.MeshPart")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<MeshPart, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut positions__ = None;
+                let mut indices__ = None;
+                let mut rgba__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Positions => {
+                            if positions__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("positions"));
+                            }
+                            positions__ = 
+                                Some(map_.next_value::<Vec<::pbjson::private::NumberDeserialize<_>>>()?
+                                    .into_iter().map(|x| x.0).collect())
+                            ;
+                        }
+                        GeneratedField::Indices => {
+                            if indices__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("indices"));
+                            }
+                            indices__ = 
+                                Some(map_.next_value::<Vec<::pbjson::private::NumberDeserialize<_>>>()?
+                                    .into_iter().map(|x| x.0).collect())
+                            ;
+                        }
+                        GeneratedField::Rgba => {
+                            if rgba__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("rgba"));
+                            }
+                            rgba__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                    }
+                }
+                Ok(MeshPart {
+                    positions: positions__.unwrap_or_default(),
+                    indices: indices__.unwrap_or_default(),
+                    rgba: rgba__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.geom.MeshPart", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ModelInstance {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.mesh.is_empty() {
+            len += 1;
+        }
+        if !self.transform.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.geom.ModelInstance", len)?;
+        if !self.mesh.is_empty() {
+            struct_ser.serialize_field("mesh", &self.mesh)?;
+        }
+        if !self.transform.is_empty() {
+            struct_ser.serialize_field("transform", &self.transform)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ModelInstance {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "mesh",
+            "transform",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Mesh,
+            Transform,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "mesh" => Ok(GeneratedField::Mesh),
+                            "transform" => Ok(GeneratedField::Transform),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ModelInstance;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.geom.ModelInstance")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ModelInstance, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut mesh__ = None;
+                let mut transform__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Mesh => {
+                            if mesh__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("mesh"));
+                            }
+                            mesh__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Transform => {
+                            if transform__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("transform"));
+                            }
+                            transform__ = 
+                                Some(map_.next_value::<Vec<::pbjson::private::NumberDeserialize<_>>>()?
+                                    .into_iter().map(|x| x.0).collect())
+                            ;
+                        }
+                    }
+                }
+                Ok(ModelInstance {
+                    mesh: mesh__.unwrap_or_default(),
+                    transform: transform__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.geom.ModelInstance", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ModelMesh {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.key.is_empty() {
+            len += 1;
+        }
+        if !self.parts.is_empty() {
+            len += 1;
+        }
+        if self.source_triangles != 0 {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.geom.ModelMesh", len)?;
+        if !self.key.is_empty() {
+            struct_ser.serialize_field("key", &self.key)?;
+        }
+        if !self.parts.is_empty() {
+            struct_ser.serialize_field("parts", &self.parts)?;
+        }
+        if self.source_triangles != 0 {
+            struct_ser.serialize_field("sourceTriangles", &self.source_triangles)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ModelMesh {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "key",
+            "parts",
+            "source_triangles",
+            "sourceTriangles",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Key,
+            Parts,
+            SourceTriangles,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "key" => Ok(GeneratedField::Key),
+                            "parts" => Ok(GeneratedField::Parts),
+                            "sourceTriangles" | "source_triangles" => Ok(GeneratedField::SourceTriangles),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ModelMesh;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.geom.ModelMesh")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ModelMesh, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut key__ = None;
+                let mut parts__ = None;
+                let mut source_triangles__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Key => {
+                            if key__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("key"));
+                            }
+                            key__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Parts => {
+                            if parts__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("parts"));
+                            }
+                            parts__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::SourceTriangles => {
+                            if source_triangles__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("sourceTriangles"));
+                            }
+                            source_triangles__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                    }
+                }
+                Ok(ModelMesh {
+                    key: key__.unwrap_or_default(),
+                    parts: parts__.unwrap_or_default(),
+                    source_triangles: source_triangles__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.geom.ModelMesh", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for NetCopper {

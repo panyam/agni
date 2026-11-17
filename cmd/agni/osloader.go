@@ -8,6 +8,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -84,6 +85,17 @@ func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeom
 		return nil, err
 	}
 	return service.LoaderIn(ctx, l.loader).BoardGeometry(abs)
+}
+
+// BoardMeshes reads model meshes by the keys in a board's model_instances, and resolves each as the
+// board read resolved its model (agni issue 1652).
+func (l *osLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
+	if err != nil {
+		return nil, nil, err
+	}
+	m, unread := service.LoaderIn(ctx, l.loader).BoardMeshes(abs, keys)
+	return m, unread, nil
 }
 
 // Manifest resolves and parses a review checklist manifest (YAML) under the mount (WS9-047). Unlike

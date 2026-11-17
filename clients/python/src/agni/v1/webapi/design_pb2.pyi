@@ -162,6 +162,34 @@ class GetBoardGeometryRequest(_message.Message):
     page_token: str
     def __init__(self, snapshot: _Optional[str] = ..., max_bytes: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
+class GetBoardMeshesRequest(_message.Message):
+    __slots__ = ("snapshot", "max_triangles", "max_bytes", "page_token")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    MAX_TRIANGLES_FIELD_NUMBER: _ClassVar[int]
+    MAX_BYTES_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    max_triangles: int
+    max_bytes: int
+    page_token: str
+    def __init__(self, snapshot: _Optional[str] = ..., max_triangles: _Optional[int] = ..., max_bytes: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+
+class GetBoardMeshesResponse(_message.Message):
+    __slots__ = ("meshes", "simplified", "blocks", "unread", "triangles", "next_page_token")
+    MESHES_FIELD_NUMBER: _ClassVar[int]
+    SIMPLIFIED_FIELD_NUMBER: _ClassVar[int]
+    BLOCKS_FIELD_NUMBER: _ClassVar[int]
+    UNREAD_FIELD_NUMBER: _ClassVar[int]
+    TRIANGLES_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    meshes: _containers.RepeatedCompositeFieldContainer[_geom_board_pb2.ModelMesh]
+    simplified: _containers.RepeatedScalarFieldContainer[str]
+    blocks: _containers.RepeatedScalarFieldContainer[str]
+    unread: _containers.RepeatedCompositeFieldContainer[_geom_board_pb2.UnreadModel]
+    triangles: int
+    next_page_token: str
+    def __init__(self, meshes: _Optional[_Iterable[_Union[_geom_board_pb2.ModelMesh, _Mapping]]] = ..., simplified: _Optional[_Iterable[str]] = ..., blocks: _Optional[_Iterable[str]] = ..., unread: _Optional[_Iterable[_Union[_geom_board_pb2.UnreadModel, _Mapping]]] = ..., triangles: _Optional[int] = ..., next_page_token: _Optional[str] = ...) -> None: ...
+
 class GetBoardGeometryResponse(_message.Message):
     __slots__ = ("board", "next_page_token")
     BOARD_FIELD_NUMBER: _ClassVar[int]
