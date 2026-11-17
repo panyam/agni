@@ -262,8 +262,8 @@ func TestGlasgowPadsSitWhereKiCadPutsThem(t *testing.T) {
 
 // TestIPC2581PadsSitWhereKiCadPutsThem reads KiCad's IPC-2581 export of the fixture and holds it to
 // the same rows, so the check covers a second reader without a second oracle. KiCad exports U1's
-// paste window and J1's mounting hole as package pins, PAD3 and NPTH2, and the IPC-2581 reader draws
-// every package pin as a copper land (agni issue 1679).
+// paste window and J1's mounting hole as package pins, PAD3 and NPTH2, which no copper land names
+// (agni issue 1679).
 func TestIPC2581PadsSitWhereKiCadPutsThem(t *testing.T) {
 	f, err := os.Open(filepath.Join("testdata", "dimensions.ipc2581.xml"))
 	if err != nil {
@@ -274,7 +274,7 @@ func TestIPC2581PadsSitWhereKiCadPutsThem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	holdToKiCad(t, b, filepath.Join("testdata", "dimensions.kicaddim.tsv"), 17, "U1 PAD3:", "J1 NPTH2:")
+	holdToKiCad(t, b, filepath.Join("testdata", "dimensions.kicaddim.tsv"), 17)
 }
 
 // TestDimensionOracleCatchesATurnAMirrorAndAScale is the positive control for the three tests above.
