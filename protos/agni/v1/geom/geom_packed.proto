@@ -371,6 +371,21 @@ message BoardPartBody {
   // 1635).
   double drawn_height_mm = 7;
   bool height_defaulted = 8;
+  // models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+  // issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+  // block for a part with no models or whose meshes did not come.
+  repeated BodyModel models = 9;
+}
+
+// BodyModel places one model mesh on the stack view (agni issue 1652). mesh is the mesh's key, as
+// GetBoardMeshes returns it. transform holds 12 numbers, a 3x4 matrix in row order. It
+// takes a mesh point in millimetres to the frame the body's outline is in: x and y in board units,
+// and z in millimetres off the part's own face, outward. So a back part's z is its depth below the
+// board. The server composes it from the ModelInstance and the placement, so a client multiplies and
+// draws.
+message BodyModel {
+  string mesh = 1;
+  repeated double transform = 2;
 }
 
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from

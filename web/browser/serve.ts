@@ -81,6 +81,11 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "common=examples/common/designs",
       // The fetched boards, for the naming walk on the MNT Reform motherboard (agni issue 1267).
       "--mount", "boards=tools/samples/boards",
+      // The 3D models the sample boards name, so a KiCad part stands at its model's height and the
+      // board look draws its model (agni issues 1652 and 1687). The cut of Jetson names Antmicro's
+      // library as ${ANT3DMDL}. A folder that was not fetched leaves those parts as blocks.
+      "--model-path", "tools/samples/remote/kicad-models",
+      "--model-var", "ANT3DMDL=tools/samples/remote/antmicro-models/hardware-components",
       // Clay R6, the cross-probe walk's OrCAD design on its Allegro board (agni issue 1382).
       "--mount", "cadence=tools/samples/cadence",
       // Mission #1353's native boards: the BeagleBone AI's Allegro .brd and foxBMS's Altium .PcbDoc

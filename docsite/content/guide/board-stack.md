@@ -67,9 +67,8 @@ stack.
 
 IPC-2581, ODB++, Altium and Allegro boards give each part its height, so their parts stand at their
 real heights. An Altium part takes the height its component states, or its tallest 3D body's when it
-states none. An Allegro part takes the height on its place-bound outline. KiCad keeps a part's height only in its 3D model, and agni does not read the model yet,
-so a KiCad part stands at 1 mm in a paler grey. The note beside **Parts** counts the parts at that
-default, as "(all at a default 1 mm)".
+states none. An Allegro part takes the height on its place-bound outline. KiCad keeps a part's height only in its 3D model, so agni reads the model through `--model-path`, and `--model-var` for a library under its own variable (the [CLI reference](../cli-reference/)). A part with no model to read stands at 1 mm in a paler grey. The note beside **Parts** counts the parts at that
+default, as "(3 of 19 at a default 1 mm)".
 
 Click a part's block on its top or on a side. Seen edge on from **Front** or **Side**, its side
 picks the part.
@@ -88,6 +87,22 @@ as a mounting hole is. A mounting hole stands no block, since it is a hole and n
 a footprint for a mounting hole when its pads are all one drilled pin, at least 2 mm wide.
 
 ![Glasgow revC3 in the Board look, with its parts coloured by type]({{.Site.PathPrefix}}/static/images/guide/board-stack-look.png)
+
+In the Board look, a part with a 3D model draws as that model, as KiCad's 3D viewer shows it. A
+connector shows its shroud and pins, a capacitor its can and polarity stripe, and an IC its body and
+leads. A
+KiCad part draws the `.wrl` mesh KiCad's library ships beside its STEP model, and a part on Jetson
+draws the glTF model Antmicro publishes. A part with no model keeps its block. The models load the
+first time you choose Board.
+
+![Glasgow revC3 in the Board look, with each part drawn as its 3D model]({{.Site.PathPrefix}}/static/images/guide/board-stack-models.png)
+
+**Quality** in the bar sets how many triangles the models may use across the whole board. Low,
+Medium and High allow about 75,000, 300,000 and a million. It starts from how much memory the browser says
+the device has. Over the budget, agni draws the most detailed models with fewer triangles first,
+and then draws the smallest parts as blocks. The note beside it says how many, as "(models: 1
+simplified)". A part's height and every check stay the same whatever you choose, since they come
+from the full model.
 
 Each part's block takes a colour from its type, in both looks. ICs and transistors are near black,
 resistors dark grey, capacitors tan, connectors ivory, LEDs white and test points gold. A part agni

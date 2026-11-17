@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { BoardPartBodySchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { PRESETS, StackCamera } from "./stackcamera.js";
-import { BODY_FLOATS, bodyGeometry, bodyTopZ, defaultedNote, enterPrism, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
+import { BODY_FLOATS, bodyGeometry, bodyTopZ, defaultedNote, drawnRuns, enterPrism, insideConvex, pickWithBodies, type BodyFaces } from "./stackbodies.js";
 
 // Three parts on a 100 by 100 board: a 2.5 mm one on the front, one on the back, and one on the front
 // whose file states no height. Each footprint is a 10 by 10 square, counter-clockwise. The bodies
@@ -150,5 +150,21 @@ describe("entering a block", () => {
     expect(enterPrism(ring, 0, 5, { x: -20, y: 5, z: 2 }, { x: 1, y: 0, z: 0 })).toBeCloseTo(20, 9);
     expect(enterPrism(ring, 0, 5, { x: -20, y: 5, z: 7 }, { x: 1, y: 0, z: 0 })).toBeNull();
     expect(enterPrism(ring, 0, 5, { x: 5, y: 15, z: 20 }, { x: 0, y: 0, z: -1 })).toBeNull();
+  });
+});
+
+describe("the blocks the board look leaves out", () => {
+  const g = bodyGeometry(bodies(), 0, 0);
+  it("draws every colour run when nothing is skipped", () => {
+    expect(drawnRuns(g)).toBe(g.colorRuns);
+  });
+  it("leaves out a part whose model draws, and joins the parts either side of it", () => {
+    const runs = drawnRuns(g, new Set(["U1"]));
+    const drawn = runs.flatMap((r) => [...g.runs.values()].filter((p) => p.first >= r.first && p.first < r.first + r.count).map((p) => p.ref));
+    expect(drawn.sort()).toEqual(["U2", "U3"]);
+    expect(runs.reduce((n, r) => n + r.count, 0)).toBe(g.runs.get("U2")!.count + g.runs.get("U3")!.count);
+  });
+  it("draws nothing when every part's model draws", () => {
+    expect(drawnRuns(g, new Set(["U1", "U2", "U3"]))).toEqual([]);
   });
 });

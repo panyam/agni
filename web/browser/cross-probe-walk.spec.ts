@@ -86,6 +86,12 @@ const jetsonPicks = {
 // stack in its cross-section and states no total, so its layers' 1.651 mm stands (agni issue 1601).
 const jetsonStack = { fCu: "0.035 mm", summary: "1.711 mm, as the file states", thicknessMm: 1.711 };
 const clayStack = { fCu: "0.03556 mm", summary: "the layers sum to 1.651 mm, and the file states no board thickness", thicknessMm: 1.651 };
+//
+// models is how many parts stand at the height their 3D model states and draw that model in the board
+// look, at least (agni issue 1652). The cut's parts name Antmicro's glTF library through ${ANT3DMDL},
+// which the walk's server maps, and two name a SOT-23-6 the library does not have. Clay's Allegro
+// board names no models, so its parts all stay blocks.
+type Models = { stated: number; meshed: number } | null;
 const walks = {
   cut: {
     mount: "probe",
@@ -94,6 +100,7 @@ const walks = {
     ...jetsonPicks,
     agreement: { parts: "19 of 19 parts on the board", pick: "" },
     stack: jetsonStack as typeof jetsonStack | null,
+    models: { stated: 16, meshed: 16 } as Models,
   },
   jetson: {
     mount: "jetson",
@@ -102,6 +109,7 @@ const walks = {
     ...jetsonPicks,
     agreement: { parts: "1,123 of 1,123 parts on the board", pick: "unconnected-(U8-GL-Pad10)_2" },
     stack: jetsonStack as typeof jetsonStack | null,
+    models: { stated: 938, meshed: 938 } as Models,
   },
   clay: {
     mount: "cadence",
@@ -114,6 +122,7 @@ const walks = {
     acrossSheets: "VBAT",
     agreement: { parts: "146 of 149 parts on the board", pick: "PTA0/JTAG_TCLK/SWD_CLK/EZP_CLK/UART0_CTS_B/UART0_COL_B/FTM0_CH5" },
     stack: clayStack as typeof jetsonStack | null,
+    models: null as Models,
   },
 };
 type Walk = (typeof walks)[keyof typeof walks];
@@ -644,6 +653,8 @@ for (const name of chosen) {
           if (!counts.parts) throw new Error("the stack view stands no part on the board");
           const note = ((await board.locator("[data-stack-bodies-note]").textContent()) ?? "").trim();
           if ((counts.defaulted ?? 0) > 0 && !note.includes("default")) throw new Error(`${counts.defaulted} parts stand at a default height, and the Parts note says "${note}"`);
+          const stated = counts.parts - (counts.defaulted ?? 0);
+          if (walk.models && stated < walk.models.stated) throw new Error(`${stated} parts stand at a stated height, want at least ${walk.models.stated} from their 3D models`);
           type BodyProbe = { ref: string; x: number; y: number };
           const bodyProbes = async () =>
             page.evaluate((p) => JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[], PANE);
@@ -684,6 +695,21 @@ for (const name of chosen) {
           if ((await look()) !== "layers") throw new Error(`the stack view opened in the ${await look()} look, not the layer look`);
           await board.locator('[data-stack-look="board"]').click({ timeout: 5_000 });
           if ((await look()) !== "board") throw new Error(`Board left the view in the ${await look()} look`);
+          // The board look draws each part's own model where the server has one (agni issue 1652).
+          type Meshes = { meshes: number; parts: number; triangles: number };
+          let meshes: Meshes = { meshes: 0, parts: 0, triangles: 0 };
+          if (walk.models) {
+            await page
+              .waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.hasAttribute("data-stack-meshes"), PANE, { timeout: 30_000 })
+              .catch(async () => {
+                throw new Error(`the board look drew no models; the stack bar says "${await board.locator("[data-stack-mesh-note]").textContent()}"`);
+              });
+            meshes = JSON.parse((await gl.getAttribute("data-stack-meshes")) ?? "{}") as Meshes;
+            if (meshes.parts < walk.models.meshed) throw new Error(`the board look drew models on ${meshes.parts} parts, want at least ${walk.models.meshed}`);
+          } else {
+            const drawn = await gl.getAttribute("data-stack-meshes");
+            if (drawn && (JSON.parse(drawn) as Meshes).parts > 0) throw new Error(`the board names no 3D models, and the board look drew models on ${drawn}`);
+          }
           type BodyProbe = { ref: string; x: number; y: number };
           await page
             .waitForFunction((p) => (JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[]).length > 0, PANE, { timeout: 5_000 })
@@ -736,7 +762,8 @@ for (const name of chosen) {
             .catch(async () => {
               throw new Error(`the board view came back exploded ${await board.getAttribute("data-exploded")} in ${await board.getAttribute("data-renderer")}, not flat in ${renderer}`);
             });
-          return `the board look picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, its blocks hid ${hiddenByParts} labels and none with Parts off, and Layers switched back`;
+          const models = meshes.parts > 0 ? `drew ${meshes.parts} parts as their models (${meshes.meshes} meshes, ${meshes.triangles} triangles), ` : "drew every part as its block, ";
+          return `the board look ${models}picked ${probe.ref}'s body and showed ${texts} silkscreen labels on its face, its blocks hid ${hiddenByParts} labels and none with Parts off, and Layers switched back`;
         });
 
         await step("no page errors", {}, async () => {

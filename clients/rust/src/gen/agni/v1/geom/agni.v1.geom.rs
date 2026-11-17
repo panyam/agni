@@ -1717,6 +1717,24 @@ pub struct BoardPartBody {
     pub drawn_height_mm: f64,
     #[prost(bool, tag="8")]
     pub height_defaulted: bool,
+    /// models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+    /// issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+    /// block for a part with no models or whose meshes did not come.
+    #[prost(message, repeated, tag="9")]
+    pub models: ::prost::alloc::vec::Vec<BodyModel>,
+}
+/// BodyModel places one model mesh on the stack view (agni issue 1652). mesh is the mesh's key, as
+/// GetBoardMeshes returns it. transform holds 12 numbers, a 3x4 matrix in row order. It
+/// takes a mesh point in millimetres to the frame the body's outline is in: x and y in board units,
+/// and z in millimetres off the part's own face, outward. So a back part's z is its depth below the
+/// board. The server composes it from the ModelInstance and the placement, so a client multiplies and
+/// draws.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BodyModel {
+    #[prost(string, tag="1")]
+    pub mesh: ::prost::alloc::string::String,
+    #[prost(double, repeated, tag="2")]
+    pub transform: ::prost::alloc::vec::Vec<f64>,
 }
 /// BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 /// F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top

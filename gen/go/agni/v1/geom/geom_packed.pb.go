@@ -1500,8 +1500,12 @@ type BoardPartBody struct {
 	// 1635).
 	DrawnHeightMm   float64 `protobuf:"fixed64,7,opt,name=drawn_height_mm,json=drawnHeightMm,proto3" json:"drawn_height_mm,omitempty"`
 	HeightDefaulted bool    `protobuf:"varint,8,opt,name=height_defaulted,json=heightDefaulted,proto3" json:"height_defaulted,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+	// issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+	// block for a part with no models or whose meshes did not come.
+	Models        []*BodyModel `protobuf:"bytes,9,rep,name=models,proto3" json:"models,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BoardPartBody) Reset() {
@@ -1590,6 +1594,71 @@ func (x *BoardPartBody) GetHeightDefaulted() bool {
 	return false
 }
 
+func (x *BoardPartBody) GetModels() []*BodyModel {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+// BodyModel places one model mesh on the stack view (agni issue 1652). mesh is the mesh's key, as
+// GetBoardMeshes returns it. transform holds 12 numbers, a 3x4 matrix in row order. It
+// takes a mesh point in millimetres to the frame the body's outline is in: x and y in board units,
+// and z in millimetres off the part's own face, outward. So a back part's z is its depth below the
+// board. The server composes it from the ModelInstance and the placement, so a client multiplies and
+// draws.
+type BodyModel struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mesh          string                 `protobuf:"bytes,1,opt,name=mesh,proto3" json:"mesh,omitempty"`
+	Transform     []float64              `protobuf:"fixed64,2,rep,packed,name=transform,proto3" json:"transform,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BodyModel) Reset() {
+	*x = BodyModel{}
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BodyModel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BodyModel) ProtoMessage() {}
+
+func (x *BodyModel) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BodyModel.ProtoReflect.Descriptor instead.
+func (*BodyModel) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *BodyModel) GetMesh() string {
+	if x != nil {
+		return x.Mesh
+	}
+	return ""
+}
+
+func (x *BodyModel) GetTransform() []float64 {
+	if x != nil {
+		return x.Transform
+	}
+	return nil
+}
+
 // BoardDrillSpan is the plated holes that join one pair of copper layers, such as a blind via from
 // F.Cu to In1.Cu (agni 1593). layer_from and layer_to name BoardStackRow.layer values, from the top
 // of the stack down. A through via or a through-hole pad joins the stack's first and last copper.
@@ -1614,7 +1683,7 @@ type BoardDrillSpan struct {
 
 func (x *BoardDrillSpan) Reset() {
 	*x = BoardDrillSpan{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1626,7 +1695,7 @@ func (x *BoardDrillSpan) String() string {
 func (*BoardDrillSpan) ProtoMessage() {}
 
 func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[15]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1639,7 +1708,7 @@ func (x *BoardDrillSpan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardDrillSpan.ProtoReflect.Descriptor instead.
 func (*BoardDrillSpan) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *BoardDrillSpan) GetLayerFrom() string {
@@ -1718,7 +1787,7 @@ type BoardStackRow struct {
 
 func (x *BoardStackRow) Reset() {
 	*x = BoardStackRow{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1730,7 +1799,7 @@ func (x *BoardStackRow) String() string {
 func (*BoardStackRow) ProtoMessage() {}
 
 func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[16]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1743,7 +1812,7 @@ func (x *BoardStackRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardStackRow.ProtoReflect.Descriptor instead.
 func (*BoardStackRow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_geom_geom_packed_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *BoardStackRow) GetName() string {
@@ -1831,7 +1900,7 @@ type PackedHighlight_Group struct {
 
 func (x *PackedHighlight_Group) Reset() {
 	*x = PackedHighlight_Group{}
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1843,7 +1912,7 @@ func (x *PackedHighlight_Group) String() string {
 func (*PackedHighlight_Group) ProtoMessage() {}
 
 func (x *PackedHighlight_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[17]
+	mi := &file_agni_v1_geom_geom_packed_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2017,7 +2086,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x10mask_over_copper\x18\x02 \x01(\tR\x0emaskOverCopper\x12\x1d\n" +
 	"\n" +
 	"pad_finish\x18\x03 \x01(\tR\tpadFinish\x12\x12\n" +
-	"\x04silk\x18\x04 \x01(\tR\x04silk\"\x8e\x02\n" +
+	"\x04silk\x18\x04 \x01(\tR\x04silk\"\xbf\x02\n" +
 	"\rBoardPartBody\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x12\n" +
 	"\x04side\x18\x02 \x01(\tR\x04side\x12\x18\n" +
@@ -2027,9 +2096,13 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"part_class\x18\x05 \x01(\tR\tpartClass\x12\x14\n" +
 	"\x05color\x18\x06 \x01(\tR\x05color\x12&\n" +
 	"\x0fdrawn_height_mm\x18\a \x01(\x01R\rdrawnHeightMm\x12)\n" +
-	"\x10height_defaulted\x18\b \x01(\bR\x0fheightDefaultedB\f\n" +
+	"\x10height_defaulted\x18\b \x01(\bR\x0fheightDefaulted\x12/\n" +
+	"\x06models\x18\t \x03(\v2\x17.agni.v1.geom.BodyModelR\x06modelsB\f\n" +
 	"\n" +
-	"_height_mm\"\xdf\x01\n" +
+	"_height_mm\"=\n" +
+	"\tBodyModel\x12\x12\n" +
+	"\x04mesh\x18\x01 \x01(\tR\x04mesh\x12\x1c\n" +
+	"\ttransform\x18\x02 \x03(\x01R\ttransform\"\xdf\x01\n" +
 	"\x0eBoardDrillSpan\x12\x1d\n" +
 	"\n" +
 	"layer_from\x18\x01 \x01(\tR\tlayerFrom\x12\x19\n" +
@@ -2075,7 +2148,7 @@ func file_agni_v1_geom_geom_packed_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_packed_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agni_v1_geom_geom_packed_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(HighlightShape)(0),           // 0: agni.v1.geom.HighlightShape
 	(TextRun_Kind)(0),             // 1: agni.v1.geom.TextRun.Kind
@@ -2094,14 +2167,15 @@ var file_agni_v1_geom_geom_packed_proto_goTypes = []any{
 	(*BoardStackView)(nil),        // 14: agni.v1.geom.BoardStackView
 	(*BoardLook)(nil),             // 15: agni.v1.geom.BoardLook
 	(*BoardPartBody)(nil),         // 16: agni.v1.geom.BoardPartBody
-	(*BoardDrillSpan)(nil),        // 17: agni.v1.geom.BoardDrillSpan
-	(*BoardStackRow)(nil),         // 18: agni.v1.geom.BoardStackRow
-	(*PackedHighlight_Group)(nil), // 19: agni.v1.geom.PackedHighlight.Group
+	(*BodyModel)(nil),             // 17: agni.v1.geom.BodyModel
+	(*BoardDrillSpan)(nil),        // 18: agni.v1.geom.BoardDrillSpan
+	(*BoardStackRow)(nil),         // 19: agni.v1.geom.BoardStackRow
+	(*PackedHighlight_Group)(nil), // 20: agni.v1.geom.PackedHighlight.Group
 }
 var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.geom.HighlightSpec.pins:type_name -> agni.v1.geom.PinRef
 	0,  // 1: agni.v1.geom.HighlightSpec.shape:type_name -> agni.v1.geom.HighlightShape
-	19, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
+	20, // 2: agni.v1.geom.PackedHighlight.groups:type_name -> agni.v1.geom.PackedHighlight.Group
 	1,  // 3: agni.v1.geom.TextRun.kind:type_name -> agni.v1.geom.TextRun.Kind
 	6,  // 4: agni.v1.geom.PackedLabel.runs:type_name -> agni.v1.geom.TextRun
 	8,  // 5: agni.v1.geom.PackedSheet.images:type_name -> agni.v1.geom.PackedImage
@@ -2109,16 +2183,17 @@ var file_agni_v1_geom_geom_packed_proto_depIdxs = []int32{
 	11, // 7: agni.v1.geom.PackedSheet.label_columns:type_name -> agni.v1.geom.PackedLabels
 	12, // 8: agni.v1.geom.PackedLabels.runs:type_name -> agni.v1.geom.PackedLabelRuns
 	6,  // 9: agni.v1.geom.PackedLabelRuns.runs:type_name -> agni.v1.geom.TextRun
-	18, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
-	17, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
+	19, // 10: agni.v1.geom.BoardStackView.rows:type_name -> agni.v1.geom.BoardStackRow
+	18, // 11: agni.v1.geom.BoardStackView.drills:type_name -> agni.v1.geom.BoardDrillSpan
 	16, // 12: agni.v1.geom.BoardStackView.bodies:type_name -> agni.v1.geom.BoardPartBody
 	15, // 13: agni.v1.geom.BoardStackView.board_look:type_name -> agni.v1.geom.BoardLook
-	0,  // 14: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	17, // 14: agni.v1.geom.BoardPartBody.models:type_name -> agni.v1.geom.BodyModel
+	0,  // 15: agni.v1.geom.PackedHighlight.Group.shape:type_name -> agni.v1.geom.HighlightShape
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_packed_proto_init() }
@@ -2127,15 +2202,15 @@ func file_agni_v1_geom_geom_packed_proto_init() {
 		return
 	}
 	file_agni_v1_geom_geom_packed_proto_msgTypes[14].OneofWrappers = []any{}
-	file_agni_v1_geom_geom_packed_proto_msgTypes[15].OneofWrappers = []any{}
 	file_agni_v1_geom_geom_packed_proto_msgTypes[16].OneofWrappers = []any{}
+	file_agni_v1_geom_geom_packed_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_packed_proto_rawDesc), len(file_agni_v1_geom_geom_packed_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

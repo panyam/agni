@@ -43,6 +43,7 @@ import { HOLE_FLOATS, StackExtras, stackGeometry } from "./stackgl.js";
 import { GRAZING, pickThroughStack, type Barrel } from "./stackpick.js";
 import { faceShows, occludedLabels, type LabelAnchor } from "./stacktext.js";
 import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
+import { meshGeometry, StackMeshes, type MeshSet } from "./stackmeshes.js";
 import { boardLookPlan, padPrimitives, type BoardLookPlan, type StackLook } from "./stacklook.js";
 import { mmOfWorld, worldOfMm, type BoardMeasurer } from "./measure.js";
 
@@ -78,6 +79,9 @@ interface StackState {
   // browser spec clicks.
   candidates: Map<string, ProbeCandidates>;
   probeTimer: ReturnType<typeof setTimeout> | null;
+  // meshes draws the parts' own models in the board look once GetBoardMeshes answers (agni issue
+  // 1652), and is null until then or when the server sent none.
+  meshes: StackMeshes | null;
 }
 
 // CanvasProfile hears a WebGL drawing's costs. SheetSurface hands its DrawProfile over as one.
@@ -375,6 +379,7 @@ export class CanvasComponent extends BaseComponent {
       nets: geometry.nets,
       candidates,
       probeTimer: null,
+      meshes: null,
     };
     this.glide.stop();
     this.overlay?.setHiddenGroups(this.drawnHidden());
@@ -386,6 +391,31 @@ export class CanvasComponent extends BaseComponent {
     el.dataset.stack = "on";
     el.dataset.stackLook = "layers";
     el.dataset.stackBodies = JSON.stringify({ parts: bodies.bodies.length, defaulted: bodies.bodies.filter((b) => b.defaulted).length });
+    this.gate.invalidate();
+    return true;
+  }
+
+  // setStackMeshes draws the parts' models in the board look from one GetBoardMeshes answer, in place
+  // of any it drew before (agni issue 1652). A part whose model did not come keeps its block. It
+  // returns false before the stack is drawn, or when the GPU refused the meshes.
+  setStackMeshes(set: MeshSet): boolean {
+    const st = this.stack;
+    if (!st || !this.gl || !this.sheet) return false;
+    st.meshes?.dispose();
+    st.meshes = null;
+    const geometry = meshGeometry(st.view.bodies, set, this.sheet.originX, this.sheet.originY);
+    try {
+      st.meshes = new StackMeshes(this.gl, geometry);
+    } catch (e) {
+      console.warn("agni: the parts' models did not build", e);
+      return false;
+    }
+    (this.rootElement as HTMLElement).dataset.stackMeshes = JSON.stringify({
+      meshes: geometry.draws.length,
+      parts: geometry.meshed.size,
+      triangles: geometry.triangles,
+      bytes: st.meshes.bytes,
+    });
     this.gate.invalidate();
     return true;
   }
@@ -459,6 +489,7 @@ export class CanvasComponent extends BaseComponent {
     if (!st) return;
     if (st.probeTimer) clearTimeout(st.probeTimer);
     st.extras?.dispose();
+    st.meshes?.dispose();
     this.stack = null;
     if (this.sheet && this.renderer) this.applyLook(null, this.sheet, this.renderer);
     const el = this.rootElement as HTMLElement;
@@ -469,6 +500,7 @@ export class CanvasComponent extends BaseComponent {
     delete el.dataset.stackSpread;
     delete el.dataset.stackBytes;
     delete el.dataset.stackBodies;
+    delete el.dataset.stackMeshes;
     delete el.dataset.stackLook;
     delete el.dataset.stackOccluded;
     this.overlay?.setOccluded(new Set());
@@ -1063,10 +1095,12 @@ export class CanvasComponent extends BaseComponent {
               ...this.bodyFaces(st),
               colorOf: (hex, defaulted) => bodyColor(st.view, hex, defaulted),
               litParts: this.litParts(),
+              skip: st.look === "board" && st.meshes ? st.meshes.geometry.meshed : undefined,
             }
           : undefined,
         board: st.look === "board" ? { mask: hexToRgba(st.view.boardLook?.mask ?? "", [0.12, 0.32, 0.19, 1]) } : undefined,
       }) ?? 0;
+    if (st.showBodies && st.look === "board" && st.meshes) calls += st.meshes.draw({ view, ...this.bodyFaces(st) });
     // A view that opens straight into the stack, as one switched to WebGL to show it does, has had
     // no flat frame to fill its labels after.
     if (this.pendingText) this.fillText(null);
