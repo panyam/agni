@@ -70,15 +70,15 @@ dropped files already reach it through its `local` mount.
 | Snapshot | Ingest | load a design once, its tiers resolved and its config composed, and name it `snapshots/{id}` for every question after; `read_board` builds the model with its board too |
 | Snapshot | UploadBlobs | when a client sends a design as files, store their contents keyed by SHA-256, for the manifest named in an Ingest |
 | Snapshot | GetSnapshot, ListSnapshots, UpdateSnapshot, DeleteSnapshot | the standard methods over a host's snapshots; an update re-reads the design, whole or by `update_mask`, under the same name |
-| Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
-| Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
-| Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
-| Design | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
-| Design | GetBoardGeometry | the board's `BoardGeometry`, a page at a time, for a front end that draws it (agni issue 1634, [Drawing a board](../../build/board-geometry/)) |
-| Design | GetBoardMeshes | the 3D model meshes for the board's parts, each once, fitted to the client's triangle budget, a page at a time (agni issue 1652) |
-| Design | LocateSubjects | which sheets draw each named part, pin, net or bus, the board added on request, with a reason for one drawn nowhere (agni issue 1325), and with the board read, the side and layer rows a board view shows for the selection (agni issue 1635) |
-| Design | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
-| Design | ReachablePins | list the pins a trace from one pin routes to within a radius, nearest first, with the rails reached named by pin count, the same answer `agni trace --reachable` prints (agni issue 1541) |
+| DesignView | GetSummary | load and summarize one design: sheet list, effective layout, available layouts, native availability |
+| DesignView | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
+| DesignView | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
+| DesignView | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
+| DesignView | GetBoardGeometry | the board's `BoardGeometry`, a page at a time, for a front end that draws it (agni issue 1634, [Drawing a board](../../build/board-geometry/)) |
+| DesignView | GetBoardMeshes | the 3D model meshes for the board's parts, each once, fitted to the client's triangle budget, a page at a time (agni issue 1652) |
+| DesignView | LocateSubjects | which sheets draw each named part, pin, net or bus, the board added on request, with a reason for one drawn nowhere (agni issue 1325), and with the board read, the side and layer rows a board view shows for the selection (agni issue 1635) |
+| DesignView | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
+| DesignView | ReachablePins | list the pins a trace from one pin routes to within a radius, nearest first, with the rails reached named by pin count, the same answer `agni trace --reachable` prints (agni issue 1541) |
 | Lexicon | GetLexicon | the effective naming lexicon of a snapshot's read, every pattern, exclusion, prefix, family and switch with where it came from, and the whole lexicon stated as a convention, the same answer `agni lexicon` prints. A request's `candidate` lists that convention instead, so an editor never merges one itself. `convention` is the convention as written, rules included, and an editor has to start from it |
 | Lexicon | ExplainNet | one net's stamped roles with their reasons, and every net-name pattern its name matches, exclusions included |
 | Lexicon | CompareLexicons | read a snapshot again with a candidate convention in its own's place, run the catalog over both, and return the `role_changes` and `finding_changes` tables; the Lexicon service is built from the host's CheckService, so the two run one catalog over one loader |
@@ -102,8 +102,10 @@ dropped files already reach it through its `local` mount.
 | Review | ListReviews | stored runs newest first, paginated, filterable by design |
 | Review | DeleteReview | remove a stored run |
 | Review | RenderReviewReport | renders the caller's review as the checklist page, as `agni review --format html` does; nothing is re-run or read from the store |
-| Project | GetProject, ListProjects | the declared projects visible across the server's mounts |
-| Project | GetDesign, ListDesigns | a declared design's identity and which file around it is which (a different question from Design.GetDesign) |
+| Project | GetProject, ListProjects | the projects declared across the server's mounts and the ones it stores, each listing its designs by name |
+| Project | CreateProject, UpdateProject, DeleteProject | a stored project, a title and a list of designs; a mounted one is read-only (agni issue 1694) |
+| Design | CreateDesign, UpdateDesign, DeleteDesign | a stored design from a manifest of its files, contents sent with UploadBlobs; a mounted one is read-only (agni issue 1694) |
+| Design | GetDesign, ListDesigns | a design's identity, `designs/{design}`, and which file around it is which; the list filters by series or project and marks each series' latest |
 | Project | ResolveDesign | whether a file belongs to a declared design, and which; resolving to nothing is a normal answer |
 
 `DatasheetService` is not in this table, because it is the datasheet producer's API (`agni.v1.dsapi`)

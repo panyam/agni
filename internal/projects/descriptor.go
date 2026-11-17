@@ -96,7 +96,7 @@ func (y descriptorYAML) sources() Sources {
 
 // idPattern matches a valid project or design id. It narrows the AIP-122 resource-id shape to ids
 // that are safe in a resource name and comparable without case folding. An id is a path segment in
-// "projects/{p}/designs/{d}", so a slash would make one name parse as two resources. Two ids
+// "projects/{p}" and "designs/{d}", so a slash would make one name parse as two resources. Two ids
 // differing only by case would collide on a case-insensitive filesystem.
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 

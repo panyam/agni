@@ -203,17 +203,21 @@ memory. Like the review store, it wants a writable volume of its own in a contai
 
 ## Keeping designs
 
-`serve --store-dir <dir>` gives the server a folder of its own for designs (agni issue 1693). The
-server serves it as the mount `store`, beside the folders you mount. Say a user keeps a design
-`memory_unit`. The store then holds `memory_unit/` with the design's `design.yaml` and its files. A
-stored design belongs to no project, so `agni check <dir>/memory_unit` reads it like any other
-design folder.
+`serve --store-dir <dir>` gives the server a folder of its own for designs and projects (agni issues
+1693, 1694). It keeps designs in `<dir>/designs`, served as the mount `store` beside the folders
+you mount, and projects in `<dir>/projects`.
 
-A design in the store can be replaced or deleted. A design in a mounted folder stays read-only, and
-a write to it is refused. A design id is unique on one server, across the store and every mount. In
-a container give the store a volume of its own, such as `-v agni-store:/var/lib/agni/store` with
-`--store-dir /var/lib/agni/store`. The calls that create designs over the wire come with agni issue
-1694.
+Say a user keeps a design `memory_unit`. The store then holds `designs/memory_unit/` with the
+design's `design.yaml` and its files. A stored design belongs to no project, so
+`agni check <dir>/designs/memory_unit` reads it like any other design folder. A project is a title
+and a list of design names, kept as `projects/<id>.json`, so one design can sit in several projects.
+
+`DesignService` and `ProjectService` create, replace and delete them over the wire. A client sends a
+design as a manifest of paths and hashes, and sends any contents the server asks for with
+`SnapshotService.UploadBlobs`, as `--remote` already does. A design or project in a mounted folder
+stays read-only, and a write to it is refused. A design id is unique on one server, across the store
+and every mount. In a container give the store a volume of its own, such as
+`-v agni-store:/var/lib/agni/store` with `--store-dir /var/lib/agni/store`.
 
 ## Keeping review runs
 

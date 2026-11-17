@@ -2,7 +2,7 @@
 
 Which design does this file belong to, and which file should analysis actually read? The
 walkthrough form of the descriptors behind `agni check <design-folder>` and
-`projects/{project}/designs/{design}`.
+`designs/{design}`.
 
 ## What it shows
 

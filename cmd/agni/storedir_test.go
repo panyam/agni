@@ -14,18 +14,18 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// --store-dir adds a writable folder as the mount "store", and the server's project store reads a
-// design a DirStore writes there as a design of no project (agni issue 1693).
+// --store-dir mounts its designs folder as "store", and the server's project store reads a design a
+// DirStore writes there as a design of no project (agni issues 1693, 1694).
 func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "not-yet")
 	ms, err := withStoreMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ms) != 2 || ms[1].Name != storeMount || ms[1].Root != dir {
-		t.Fatalf("mounts = %v, want tut then store at %s", ms, dir)
+	if len(ms) != 2 || ms[1].Name != storeMount || ms[1].Root != filepath.Join(dir, storeDesignsDir) {
+		t.Fatalf("mounts = %v, want tut then store at %s", ms, filepath.Join(dir, storeDesignsDir))
 	}
-	ds, err := projects.NewDirStore(dir, storeMount)
+	ds, err := projects.NewDirStore(ms[1].Root, storeMount)
 	if err != nil {
 		t.Fatal(err)
 	}

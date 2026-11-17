@@ -23,9 +23,12 @@ _sym_db = _symbol_database.Default()
 
 
 from agni.v1.webapi import config_pb2 as agni_dot_v1_dot_webapi_dot_config__pb2
+from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mask__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/project.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/config.proto\"\x9b\x01\n\x07Project\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x36\n\x06\x63onfig\x18\t \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfigJ\x04\x08\x04\x10\x05J\x04\x08\x05\x10\x06J\x04\x08\x06\x10\x07J\x04\x08\x07\x10\x08J\x04\x08\x08\x10\t\"\x9c\x02\n\x06\x44\x65sign\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tentry_uri\x18\x04 \x01(\tR\x08\x65ntryUri\x12%\n\x0e\x63ompanion_uris\x18\x05 \x03(\tR\rcompanionUris\x12\x36\n\x06\x63onfig\x18\x07 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12\x16\n\x06series\x18\n \x01(\tR\x06series\x12+\n\x11\x66latten_hierarchy\x18\t \x01(\x08R\x10\x66lattenHierarchyJ\x04\x08\x06\x10\x07J\x04\x08\x08\x10\tR\trevisions\"\'\n\x11GetProjectRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"i\n\x13ListProjectsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"s\n\x14ListProjectsResponse\x12\x33\n\x08projects\x18\x01 \x03(\x0b\x32\x17.agni.v1.webapi.ProjectR\x08projects\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"-\n\x17GetProjectDesignRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\x87\x01\n\x19ListProjectDesignsRequest\x12\x16\n\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n\tpage_size\x18\x02 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x03 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x04 \x01(\tR\x06\x66ilter\"v\n\x1aListProjectDesignsResponse\x12\x30\n\x07\x64\x65signs\x18\x01 \x03(\x0b\x32\x16.agni.v1.webapi.DesignR\x07\x64\x65signs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"(\n\x14ResolveDesignRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"z\n\x15ResolveDesignResponse\x12.\n\x06\x64\x65sign\x18\x01 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65sign\x12\x31\n\x07project\x18\x02 \x01(\x0b\x32\x17.agni.v1.webapi.ProjectR\x07project2\xc7\x03\n\x0eProjectService\x12H\n\nGetProject\x12!.agni.v1.webapi.GetProjectRequest\x1a\x17.agni.v1.webapi.Project\x12Y\n\x0cListProjects\x12#.agni.v1.webapi.ListProjectsRequest\x1a$.agni.v1.webapi.ListProjectsResponse\x12L\n\tGetDesign\x12\'.agni.v1.webapi.GetProjectDesignRequest\x1a\x16.agni.v1.webapi.Design\x12\x64\n\x0bListDesigns\x12).agni.v1.webapi.ListProjectDesignsRequest\x1a*.agni.v1.webapi.ListProjectDesignsResponse\x12\\\n\rResolveDesign\x12$.agni.v1.webapi.ResolveDesignRequest\x1a%.agni.v1.webapi.ResolveDesignResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/project.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/config.proto\x1a google/protobuf/field_mask.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x01\n\x07Project\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x36\n\x06\x63onfig\x18\t \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12\x18\n\x07\x64\x65signs\x18\n \x03(\tR\x07\x64\x65signsJ\x04\x08\x04\x10\x05J\x04\x08\x05\x10\x06J\x04\x08\x06\x10\x07J\x04\x08\x07\x10\x08J\x04\x08\x08\x10\t\"\xfe\x02\n\x06\x44\x65sign\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tentry_uri\x18\x04 \x01(\tR\x08\x65ntryUri\x12%\n\x0e\x63ompanion_uris\x18\x05 \x03(\tR\rcompanionUris\x12\x36\n\x06\x63onfig\x18\x07 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12\x16\n\x06series\x18\n \x01(\tR\x06series\x12+\n\x11\x66latten_hierarchy\x18\t \x01(\x08R\x10\x66lattenHierarchy\x12;\n\x0bupdate_time\x18\x0b \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nupdateTime\x12#\n\rseries_latest\x18\x0c \x01(\x08R\x0cseriesLatestJ\x04\x08\x06\x10\x07J\x04\x08\x08\x10\tR\trevisions\"\'\n\x11GetProjectRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"i\n\x13ListProjectsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"s\n\x14ListProjectsResponse\x12\x33\n\x08projects\x18\x01 \x03(\x0b\x32\x17.agni.v1.webapi.ProjectR\x08projects\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"h\n\x14\x43reateProjectRequest\x12\x1d\n\nproject_id\x18\x01 \x01(\tR\tprojectId\x12\x31\n\x07project\x18\x02 \x01(\x0b\x32\x17.agni.v1.webapi.ProjectR\x07project\"\x86\x01\n\x14UpdateProjectRequest\x12\x31\n\x07project\x18\x01 \x01(\x0b\x32\x17.agni.v1.webapi.ProjectR\x07project\x12;\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMask\"*\n\x14\x44\x65leteProjectRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"(\n\x14ResolveDesignRequest\x12\x10\n\x03uri\x18\x01 \x01(\tR\x03uri\"z\n\x15ResolveDesignResponse\x12.\n\x06\x64\x65sign\x18\x01 \x01(\x0b\x32\x16.agni.v1.webapi.DesignR\x06\x64\x65sign\x12\x31\n\x07project\x18\x02 \x01(\x0b\x32\x17.agni.v1.webapi.ProjectR\x07project2\x82\x04\n\x0eProjectService\x12H\n\nGetProject\x12!.agni.v1.webapi.GetProjectRequest\x1a\x17.agni.v1.webapi.Project\x12Y\n\x0cListProjects\x12#.agni.v1.webapi.ListProjectsRequest\x1a$.agni.v1.webapi.ListProjectsResponse\x12N\n\rCreateProject\x12$.agni.v1.webapi.CreateProjectRequest\x1a\x17.agni.v1.webapi.Project\x12N\n\rUpdateProject\x12$.agni.v1.webapi.UpdateProjectRequest\x1a\x17.agni.v1.webapi.Project\x12M\n\rDeleteProject\x12$.agni.v1.webapi.DeleteProjectRequest\x1a\x16.google.protobuf.Empty\x12\\\n\rResolveDesign\x12$.agni.v1.webapi.ResolveDesignRequest\x1a%.agni.v1.webapi.ResolveDesignResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,26 +36,26 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.project_pb2'
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_PROJECT']._serialized_start=78
-  _globals['_PROJECT']._serialized_end=233
-  _globals['_DESIGN']._serialized_start=236
-  _globals['_DESIGN']._serialized_end=520
-  _globals['_GETPROJECTREQUEST']._serialized_start=522
-  _globals['_GETPROJECTREQUEST']._serialized_end=561
-  _globals['_LISTPROJECTSREQUEST']._serialized_start=563
-  _globals['_LISTPROJECTSREQUEST']._serialized_end=668
-  _globals['_LISTPROJECTSRESPONSE']._serialized_start=670
-  _globals['_LISTPROJECTSRESPONSE']._serialized_end=785
-  _globals['_GETPROJECTDESIGNREQUEST']._serialized_start=787
-  _globals['_GETPROJECTDESIGNREQUEST']._serialized_end=832
-  _globals['_LISTPROJECTDESIGNSREQUEST']._serialized_start=835
-  _globals['_LISTPROJECTDESIGNSREQUEST']._serialized_end=970
-  _globals['_LISTPROJECTDESIGNSRESPONSE']._serialized_start=972
-  _globals['_LISTPROJECTDESIGNSRESPONSE']._serialized_end=1090
-  _globals['_RESOLVEDESIGNREQUEST']._serialized_start=1092
-  _globals['_RESOLVEDESIGNREQUEST']._serialized_end=1132
-  _globals['_RESOLVEDESIGNRESPONSE']._serialized_start=1134
-  _globals['_RESOLVEDESIGNRESPONSE']._serialized_end=1256
-  _globals['_PROJECTSERVICE']._serialized_start=1259
-  _globals['_PROJECTSERVICE']._serialized_end=1714
+  _globals['_PROJECT']._serialized_start=174
+  _globals['_PROJECT']._serialized_end=355
+  _globals['_DESIGN']._serialized_start=358
+  _globals['_DESIGN']._serialized_end=740
+  _globals['_GETPROJECTREQUEST']._serialized_start=742
+  _globals['_GETPROJECTREQUEST']._serialized_end=781
+  _globals['_LISTPROJECTSREQUEST']._serialized_start=783
+  _globals['_LISTPROJECTSREQUEST']._serialized_end=888
+  _globals['_LISTPROJECTSRESPONSE']._serialized_start=890
+  _globals['_LISTPROJECTSRESPONSE']._serialized_end=1005
+  _globals['_CREATEPROJECTREQUEST']._serialized_start=1007
+  _globals['_CREATEPROJECTREQUEST']._serialized_end=1111
+  _globals['_UPDATEPROJECTREQUEST']._serialized_start=1114
+  _globals['_UPDATEPROJECTREQUEST']._serialized_end=1248
+  _globals['_DELETEPROJECTREQUEST']._serialized_start=1250
+  _globals['_DELETEPROJECTREQUEST']._serialized_end=1292
+  _globals['_RESOLVEDESIGNREQUEST']._serialized_start=1294
+  _globals['_RESOLVEDESIGNREQUEST']._serialized_end=1334
+  _globals['_RESOLVEDESIGNRESPONSE']._serialized_start=1336
+  _globals['_RESOLVEDESIGNRESPONSE']._serialized_end=1458
+  _globals['_PROJECTSERVICE']._serialized_start=1461
+  _globals['_PROJECTSERVICE']._serialized_end=1975
 # @@protoc_insertion_point(module_scope)

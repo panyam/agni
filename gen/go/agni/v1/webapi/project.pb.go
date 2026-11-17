@@ -9,6 +9,9 @@ package webapi
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,10 +24,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Project is one declared set of designs that share configuration.
+// Project groups designs. One declared in a mounted folder also carries the configuration its
+// designs extend.
 //
-// One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
-// stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+// One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+// server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+// DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
 // The server never generates design intent either way. Writing intent from a design is a judgment
 // step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
 // the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
@@ -55,7 +60,12 @@ type Project struct {
 	// A Project and a Design use the same message, as their descriptors share one schema (agni issue
 	// 1136). The shape really is the same. Two copies of it would be one more place for two layers to
 	// disagree about what config is. A design's own layer goes on top of its project's.
-	Config        *AnalysisConfig `protobuf:"bytes,9,opt,name=config,proto3" json:"config,omitempty"`
+	Config *AnalysisConfig `protobuf:"bytes,9,opt,name=config,proto3" json:"config,omitempty"`
+	// designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+	// design can sit in many projects, and deleting a project deletes none of them. A stored project
+	// keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+	// a mounted folder lists the designs whose `extends` names it, and that list is output only.
+	Designs       []string `protobuf:"bytes,10,rep,name=designs,proto3" json:"designs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -118,6 +128,13 @@ func (x *Project) GetConfig() *AnalysisConfig {
 	return nil
 }
 
+func (x *Project) GetDesigns() []string {
+	if x != nil {
+		return x.Designs
+	}
+	return nil
+}
+
 // Design is one declared design: an identity, an entry file, and its companion views.
 //
 // The type is named for what it is, at the cost of sharing a word with agni.v1.ir.Design. They are
@@ -125,8 +142,8 @@ func (x *Project) GetConfig() *AnalysisConfig {
 // design's parsed CONTENT.
 type Design struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-	// `design.yaml` on the same terms as a project's.
+	// name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+	// terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// title is the human-readable label, falling back to the id.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
@@ -164,8 +181,14 @@ type Design struct {
 	// 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
 	// snapshot cannot turn off what its design declares.
 	FlattenHierarchy bool `protobuf:"varint,9,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// update_time is when the design's files last changed, as its store reports it. A stored design's
+	// is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// series_latest is true on the design a series updated last, and false on the others and on a
+	// design with no series. Output only.
+	SeriesLatest  bool `protobuf:"varint,12,opt,name=series_latest,json=seriesLatest,proto3" json:"series_latest,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Design) Reset() {
@@ -250,6 +273,20 @@ func (x *Design) GetSeries() string {
 func (x *Design) GetFlattenHierarchy() bool {
 	if x != nil {
 		return x.FlattenHierarchy
+	}
+	return false
+}
+
+func (x *Design) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *Design) GetSeriesLatest() bool {
+	if x != nil {
+		return x.SeriesLatest
 	}
 	return false
 }
@@ -419,27 +456,30 @@ func (x *ListProjectsResponse) GetNextPageToken() string {
 	return ""
 }
 
-type GetProjectDesignRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "projects/{project}/designs/{design}"
+type CreateProjectRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// project_id is the new project's id, lowercase letters, digits, '.', '_' or '-'.
+	ProjectId string `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// project carries the title and designs. Its name is ignored.
+	Project       *Project `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetProjectDesignRequest) Reset() {
-	*x = GetProjectDesignRequest{}
+func (x *CreateProjectRequest) Reset() {
+	*x = CreateProjectRequest{}
 	mi := &file_agni_v1_webapi_project_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetProjectDesignRequest) String() string {
+func (x *CreateProjectRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetProjectDesignRequest) ProtoMessage() {}
+func (*CreateProjectRequest) ProtoMessage() {}
 
-func (x *GetProjectDesignRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_webapi_project_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -451,138 +491,119 @@ func (x *GetProjectDesignRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetProjectDesignRequest.ProtoReflect.Descriptor instead.
-func (*GetProjectDesignRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
+func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetProjectDesignRequest) GetName() string {
+func (x *CreateProjectRequest) GetProjectId() string {
 	if x != nil {
-		return x.Name
+		return x.ProjectId
 	}
 	return ""
 }
 
-type ListProjectDesignsRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// parent is the project whose designs to list, "projects/{project}".
-	Parent    string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	PageSize  int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// filter narrows the listing, on the same terms as ListProjectsRequest.filter. Only `mount` is
-	// supported.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListProjectDesignsRequest) Reset() {
-	*x = ListProjectDesignsRequest{}
-	mi := &file_agni_v1_webapi_project_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListProjectDesignsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListProjectDesignsRequest) ProtoMessage() {}
-
-func (x *ListProjectDesignsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_project_proto_msgTypes[6]
+func (x *CreateProjectRequest) GetProject() *Project {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListProjectDesignsRequest.ProtoReflect.Descriptor instead.
-func (*ListProjectDesignsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *ListProjectDesignsRequest) GetParent() string {
-	if x != nil {
-		return x.Parent
-	}
-	return ""
-}
-
-func (x *ListProjectDesignsRequest) GetPageSize() int32 {
-	if x != nil {
-		return x.PageSize
-	}
-	return 0
-}
-
-func (x *ListProjectDesignsRequest) GetPageToken() string {
-	if x != nil {
-		return x.PageToken
-	}
-	return ""
-}
-
-func (x *ListProjectDesignsRequest) GetFilter() string {
-	if x != nil {
-		return x.Filter
-	}
-	return ""
-}
-
-type ListProjectDesignsResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// designs are ordered by resource name.
-	Designs       []*Design `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
-	NextPageToken string    `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListProjectDesignsResponse) Reset() {
-	*x = ListProjectDesignsResponse{}
-	mi := &file_agni_v1_webapi_project_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListProjectDesignsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListProjectDesignsResponse) ProtoMessage() {}
-
-func (x *ListProjectDesignsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_project_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListProjectDesignsResponse.ProtoReflect.Descriptor instead.
-func (*ListProjectDesignsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *ListProjectDesignsResponse) GetDesigns() []*Design {
-	if x != nil {
-		return x.Designs
+		return x.Project
 	}
 	return nil
 }
 
-func (x *ListProjectDesignsResponse) GetNextPageToken() string {
+type UpdateProjectRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// project names the project and carries the new values.
+	Project *Project `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProjectRequest) Reset() {
+	*x = UpdateProjectRequest{}
+	mi := &file_agni_v1_webapi_project_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProjectRequest) ProtoMessage() {}
+
+func (x *UpdateProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_project_proto_msgTypes[6]
 	if x != nil {
-		return x.NextPageToken
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProjectRequest.ProtoReflect.Descriptor instead.
+func (*UpdateProjectRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateProjectRequest) GetProject() *Project {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
+func (x *UpdateProjectRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
+}
+
+type DeleteProjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "projects/{project}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteProjectRequest) Reset() {
+	*x = DeleteProjectRequest{}
+	mi := &file_agni_v1_webapi_project_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteProjectRequest) ProtoMessage() {}
+
+func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_project_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
+func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteProjectRequest) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -705,12 +726,14 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\"\x9b\x01\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a google/protobuf/field_mask.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb5\x01\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x126\n" +
-	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06configJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x9c\x02\n" +
+	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
+	"\adesigns\x18\n" +
+	" \x03(\tR\adesignsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xfe\x02\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -720,7 +743,10 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06config\x18\a \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x16\n" +
 	"\x06series\x18\n" +
 	" \x01(\tR\x06series\x12+\n" +
-	"\x11flatten_hierarchy\x18\t \x01(\bR\x10flattenHierarchyJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
+	"\x11flatten_hierarchy\x18\t \x01(\bR\x10flattenHierarchy\x12;\n" +
+	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12#\n" +
+	"\rseries_latest\x18\f \x01(\bR\fseriesLatestJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +
@@ -730,29 +756,29 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06filter\x18\x03 \x01(\tR\x06filter\"s\n" +
 	"\x14ListProjectsResponse\x123\n" +
 	"\bprojects\x18\x01 \x03(\v2\x17.agni.v1.webapi.ProjectR\bprojects\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"-\n" +
-	"\x17GetProjectDesignRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"\x87\x01\n" +
-	"\x19ListProjectDesignsRequest\x12\x16\n" +
-	"\x06parent\x18\x01 \x01(\tR\x06parent\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"h\n" +
+	"\x14CreateProjectRequest\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"v\n" +
-	"\x1aListProjectDesignsResponse\x120\n" +
-	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"(\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x121\n" +
+	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject\"\x86\x01\n" +
+	"\x14UpdateProjectRequest\x121\n" +
+	"\aproject\x18\x01 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject\x12;\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask\"*\n" +
+	"\x14DeleteProjectRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"(\n" +
 	"\x14ResolveDesignRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"z\n" +
 	"\x15ResolveDesignResponse\x12.\n" +
 	"\x06design\x18\x01 \x01(\v2\x16.agni.v1.webapi.DesignR\x06design\x121\n" +
-	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject2\xc7\x03\n" +
+	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject2\x82\x04\n" +
 	"\x0eProjectService\x12H\n" +
 	"\n" +
 	"GetProject\x12!.agni.v1.webapi.GetProjectRequest\x1a\x17.agni.v1.webapi.Project\x12Y\n" +
-	"\fListProjects\x12#.agni.v1.webapi.ListProjectsRequest\x1a$.agni.v1.webapi.ListProjectsResponse\x12L\n" +
-	"\tGetDesign\x12'.agni.v1.webapi.GetProjectDesignRequest\x1a\x16.agni.v1.webapi.Design\x12d\n" +
-	"\vListDesigns\x12).agni.v1.webapi.ListProjectDesignsRequest\x1a*.agni.v1.webapi.ListProjectDesignsResponse\x12\\\n" +
+	"\fListProjects\x12#.agni.v1.webapi.ListProjectsRequest\x1a$.agni.v1.webapi.ListProjectsResponse\x12N\n" +
+	"\rCreateProject\x12$.agni.v1.webapi.CreateProjectRequest\x1a\x17.agni.v1.webapi.Project\x12N\n" +
+	"\rUpdateProject\x12$.agni.v1.webapi.UpdateProjectRequest\x1a\x17.agni.v1.webapi.Project\x12M\n" +
+	"\rDeleteProject\x12$.agni.v1.webapi.DeleteProjectRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
 	"\rResolveDesign\x12$.agni.v1.webapi.ResolveDesignRequest\x1a%.agni.v1.webapi.ResolveDesignResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
@@ -769,40 +795,48 @@ func file_agni_v1_webapi_project_proto_rawDescGZIP() []byte {
 
 var file_agni_v1_webapi_project_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_agni_v1_webapi_project_proto_goTypes = []any{
-	(*Project)(nil),                    // 0: agni.v1.webapi.Project
-	(*Design)(nil),                     // 1: agni.v1.webapi.Design
-	(*GetProjectRequest)(nil),          // 2: agni.v1.webapi.GetProjectRequest
-	(*ListProjectsRequest)(nil),        // 3: agni.v1.webapi.ListProjectsRequest
-	(*ListProjectsResponse)(nil),       // 4: agni.v1.webapi.ListProjectsResponse
-	(*GetProjectDesignRequest)(nil),    // 5: agni.v1.webapi.GetProjectDesignRequest
-	(*ListProjectDesignsRequest)(nil),  // 6: agni.v1.webapi.ListProjectDesignsRequest
-	(*ListProjectDesignsResponse)(nil), // 7: agni.v1.webapi.ListProjectDesignsResponse
-	(*ResolveDesignRequest)(nil),       // 8: agni.v1.webapi.ResolveDesignRequest
-	(*ResolveDesignResponse)(nil),      // 9: agni.v1.webapi.ResolveDesignResponse
-	(*AnalysisConfig)(nil),             // 10: agni.v1.webapi.AnalysisConfig
+	(*Project)(nil),               // 0: agni.v1.webapi.Project
+	(*Design)(nil),                // 1: agni.v1.webapi.Design
+	(*GetProjectRequest)(nil),     // 2: agni.v1.webapi.GetProjectRequest
+	(*ListProjectsRequest)(nil),   // 3: agni.v1.webapi.ListProjectsRequest
+	(*ListProjectsResponse)(nil),  // 4: agni.v1.webapi.ListProjectsResponse
+	(*CreateProjectRequest)(nil),  // 5: agni.v1.webapi.CreateProjectRequest
+	(*UpdateProjectRequest)(nil),  // 6: agni.v1.webapi.UpdateProjectRequest
+	(*DeleteProjectRequest)(nil),  // 7: agni.v1.webapi.DeleteProjectRequest
+	(*ResolveDesignRequest)(nil),  // 8: agni.v1.webapi.ResolveDesignRequest
+	(*ResolveDesignResponse)(nil), // 9: agni.v1.webapi.ResolveDesignResponse
+	(*AnalysisConfig)(nil),        // 10: agni.v1.webapi.AnalysisConfig
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil), // 12: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),         // 13: google.protobuf.Empty
 }
 var file_agni_v1_webapi_project_proto_depIdxs = []int32{
 	10, // 0: agni.v1.webapi.Project.config:type_name -> agni.v1.webapi.AnalysisConfig
 	10, // 1: agni.v1.webapi.Design.config:type_name -> agni.v1.webapi.AnalysisConfig
-	0,  // 2: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
-	1,  // 3: agni.v1.webapi.ListProjectDesignsResponse.designs:type_name -> agni.v1.webapi.Design
-	1,  // 4: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
-	0,  // 5: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
-	2,  // 6: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
-	3,  // 7: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
-	5,  // 8: agni.v1.webapi.ProjectService.GetDesign:input_type -> agni.v1.webapi.GetProjectDesignRequest
-	6,  // 9: agni.v1.webapi.ProjectService.ListDesigns:input_type -> agni.v1.webapi.ListProjectDesignsRequest
-	8,  // 10: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
-	0,  // 11: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
-	4,  // 12: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
-	1,  // 13: agni.v1.webapi.ProjectService.GetDesign:output_type -> agni.v1.webapi.Design
-	7,  // 14: agni.v1.webapi.ProjectService.ListDesigns:output_type -> agni.v1.webapi.ListProjectDesignsResponse
-	9,  // 15: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	11, // 2: agni.v1.webapi.Design.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 3: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
+	0,  // 4: agni.v1.webapi.CreateProjectRequest.project:type_name -> agni.v1.webapi.Project
+	0,  // 5: agni.v1.webapi.UpdateProjectRequest.project:type_name -> agni.v1.webapi.Project
+	12, // 6: agni.v1.webapi.UpdateProjectRequest.update_mask:type_name -> google.protobuf.FieldMask
+	1,  // 7: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
+	0,  // 8: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
+	2,  // 9: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
+	3,  // 10: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
+	5,  // 11: agni.v1.webapi.ProjectService.CreateProject:input_type -> agni.v1.webapi.CreateProjectRequest
+	6,  // 12: agni.v1.webapi.ProjectService.UpdateProject:input_type -> agni.v1.webapi.UpdateProjectRequest
+	7,  // 13: agni.v1.webapi.ProjectService.DeleteProject:input_type -> agni.v1.webapi.DeleteProjectRequest
+	8,  // 14: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
+	0,  // 15: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
+	4,  // 16: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
+	0,  // 17: agni.v1.webapi.ProjectService.CreateProject:output_type -> agni.v1.webapi.Project
+	0,  // 18: agni.v1.webapi.ProjectService.UpdateProject:output_type -> agni.v1.webapi.Project
+	13, // 19: agni.v1.webapi.ProjectService.DeleteProject:output_type -> google.protobuf.Empty
+	9,  // 20: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_project_proto_init() }

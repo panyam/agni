@@ -31,6 +31,7 @@ import { file_agni_v1_param_service } from "../src/gen/agni/v1/param/service_pb.
 import { file_agni_v1_viewer_page } from "../src/gen/agni/v1/viewer/page_pb.js";
 import { file_agni_v1_webapi_checks } from "../src/gen/agni/v1/webapi/checks_pb.js";
 import { file_agni_v1_webapi_design_view } from "../src/gen/agni/v1/webapi/design_view_pb.js";
+import { file_agni_v1_webapi_designs } from "../src/gen/agni/v1/webapi/designs_pb.js";
 import { file_agni_v1_webapi_diff } from "../src/gen/agni/v1/webapi/diff_pb.js";
 import { file_agni_v1_webapi_lexicon } from "../src/gen/agni/v1/webapi/lexicon_pb.js";
 import { file_agni_v1_webapi_project } from "../src/gen/agni/v1/webapi/project_pb.js";
@@ -63,6 +64,7 @@ const registry: Registry = createRegistry(
   ...withDependencies([
     file_agni_v1_webapi_checks,
     file_agni_v1_webapi_design_view,
+    file_agni_v1_webapi_designs,
     file_agni_v1_webapi_diff,
     file_agni_v1_webapi_lexicon,
     file_agni_v1_webapi_project,

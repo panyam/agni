@@ -3,6 +3,7 @@ package projects
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -26,8 +27,8 @@ func TestACatalogListsStoredAndMountedDesignsByOneName(t *testing.T) {
 	if _, err := cat.CreateDesign(ctx, "mul", u.files, u.source); err != nil {
 		t.Fatal(err)
 	}
-	all, err := cat.Designs(ctx)
-	if err != nil || len(all) != 2 || all[0].GetName() != "designs/g" || all[1].GetName() != "designs/mul" {
+	all, unreachable, err := cat.Designs(ctx)
+	if err != nil || len(unreachable) != 0 || len(all) != 2 || all[0].GetName() != "designs/g" || all[1].GetName() != "designs/mul" {
 		t.Fatalf("catalog designs = %v, %v; want designs/g then designs/mul", all, err)
 	}
 	if all[0].GetConfig().GetExtends() != "projects/tut" || all[0].GetEntryUri() != "mount://tut/designs/g/g.edn" {
@@ -60,16 +61,39 @@ func TestACatalogRefusesWritesToAMountedDesign(t *testing.T) {
 	}
 }
 
-func TestACatalogRefusesAnIdTwoStoresHold(t *testing.T) {
+// An id two places hold is unreachable, and the rest of the listing still answers (agni issue 1694).
+func TestACatalogLeavesOutAnIdTwoStoresHold(t *testing.T) {
 	ctx := context.Background()
 	ds, _ := dirStore(t)
 	mustDesign(t, ds, "g", map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
+	mustDesign(t, ds, "mul", map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
 	cat := service.NewDesignCatalog(ds, NewMountedDesigns(tutorial()))
-	if _, err := cat.Design(ctx, "designs/g"); err == nil {
-		t.Error("Design of an id two stores hold answered, want an error")
+	if _, err := cat.Design(ctx, "designs/g"); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("Design of an id two stores hold = %v, want ErrFailedPrecondition", err)
 	}
-	if _, err := cat.Designs(ctx); err == nil {
-		t.Error("Designs with an id two stores hold answered, want an error")
+	all, unreachable, err := cat.Designs(ctx)
+	if err != nil || len(all) != 1 || all[0].GetName() != "designs/mul" || len(unreachable) != 1 || unreachable[0] != "designs/g" {
+		t.Errorf("Designs = %v, unreachable %v, %v; want designs/mul listed and designs/g unreachable", all, unreachable, err)
+	}
+}
+
+// Two mounted folders declaring one id leave it unreachable, and Design names both folders.
+func TestTwoMountedFoldersDeclaringOneIdLeaveItUnreachable(t *testing.T) {
+	ctx := context.Background()
+	other := Tree{Mount: "copy", FS: fstest.MapFS{
+		"g/design.yaml": {Data: []byte("name: g\nentry: g.edn\n")},
+		"g/g.edn":       {Data: []byte("(edif g)")},
+		"h/design.yaml": {Data: []byte("name: h\nentry: h.edn\n")},
+		"h/h.edn":       {Data: []byte("(edif h)")},
+	}}
+	cat := service.NewDesignCatalog(nil, NewMountedDesigns(tutorial(), other))
+	_, err := cat.Design(ctx, "designs/g")
+	if !errors.Is(err, service.ErrFailedPrecondition) || !strings.Contains(err.Error(), "mount://tut/designs/g") || !strings.Contains(err.Error(), "mount://copy/g") {
+		t.Errorf("Design of a duplicated id = %v, want ErrFailedPrecondition naming both folders", err)
+	}
+	all, unreachable, err := cat.Designs(ctx)
+	if err != nil || len(all) != 1 || all[0].GetName() != "designs/h" || len(unreachable) != 1 || unreachable[0] != "designs/g" {
+		t.Errorf("Designs = %v, unreachable %v, %v; want designs/h listed and designs/g unreachable", all, unreachable, err)
 	}
 }
 
@@ -80,7 +104,7 @@ func TestACatalogWithNoStoreRefusesWrites(t *testing.T) {
 	if _, err := cat.CreateDesign(ctx, "mul", u.files, u.source); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("CreateDesign with no store = %v, want ErrFailedPrecondition", err)
 	}
-	if all, err := cat.Designs(ctx); err != nil || len(all) != 1 {
+	if all, _, err := cat.Designs(ctx); err != nil || len(all) != 1 {
 		t.Errorf("Designs with no store = %v, %v; want the mounted design", all, err)
 	}
 }

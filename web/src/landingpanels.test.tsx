@@ -16,7 +16,9 @@ vi.mock("./api.js", () => ({
       if (fake.fail) throw new Error("no project service");
       return { projects: fake.projects };
     },
-    listDesigns: async ({ parent }: { parent: string }) => ({ designs: fake.designs[parent] ?? [] }),
+  }),
+  designClient: () => ({
+    listDesigns: async ({ filter }: { filter: string }) => ({ designs: fake.designs[/project = "(.*)"/.exec(filter)?.[1] ?? ""] ?? [] }),
   }),
 }));
 
@@ -106,7 +108,7 @@ describe("projects island", () => {
   it("lists each project's declared designs, linking to the ENTRY file", async () => {
     fake.projects = [{ name: "projects/gateway", title: "Sample Board project" }];
     fake.designs["projects/gateway"] = [
-      { name: "projects/gateway/designs/gw", title: "Sample Board", entryUri: "mount://m/gateway/gw.edn" },
+      { name: "designs/gw", title: "Sample Board", entryUri: "mount://m/gateway/gw.edn" },
     ];
 
     const el = mount((e) => projectsIsland(e, null));

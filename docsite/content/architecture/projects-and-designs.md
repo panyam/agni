@@ -381,8 +381,12 @@ a user creates, updates and deletes it over the wire. Picture an engineer with n
 server who uploads a board's schematic and layout. The server has to keep them somewhere, under a
 name, across a restart, and a stored design is that place.
 
-Mission #1691 builds the stored half: a store port that can write (#1693), the methods on the wire
-(#1694), and a CLI and viewer that use them.
+A design is named `designs/{design}` and ties to no project (agni issue 1694). A stored project is a
+title and a list of design names, so a design can sit in many projects, and deleting a project
+deletes none of them. A mounted project lists the designs whose `extends` names it. `DesignService`
+creates, reads, replaces and deletes designs, and `ProjectService` does the same for stored projects.
+`agni serve --store-dir` keeps both. A design id is unique per server, so an id two mounted folders
+both declare is left out of a listing and named in its `unreachable`.
 
 Scaffolding design intent is still not a server operation. Writing `intent:` from a design is a
 judgment step with a confidentiality boundary, so the server never generates one. A user may upload

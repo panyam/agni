@@ -93,66 +93,97 @@ public final class ProjectServiceGrpc {
     return getListProjectsMethod;
   }
 
-  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetProjectDesignRequest,
-      io.github.panyam.agni.v1.webapi.Design> getGetDesignMethod;
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateProjectRequest,
+      io.github.panyam.agni.v1.webapi.Project> getCreateProjectMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "GetDesign",
-      requestType = io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.class,
-      responseType = io.github.panyam.agni.v1.webapi.Design.class,
+      fullMethodName = SERVICE_NAME + '/' + "CreateProject",
+      requestType = io.github.panyam.agni.v1.webapi.CreateProjectRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Project.class,
       methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetProjectDesignRequest,
-      io.github.panyam.agni.v1.webapi.Design> getGetDesignMethod() {
-    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetProjectDesignRequest, io.github.panyam.agni.v1.webapi.Design> getGetDesignMethod;
-    if ((getGetDesignMethod = ProjectServiceGrpc.getGetDesignMethod) == null) {
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateProjectRequest,
+      io.github.panyam.agni.v1.webapi.Project> getCreateProjectMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateProjectRequest, io.github.panyam.agni.v1.webapi.Project> getCreateProjectMethod;
+    if ((getCreateProjectMethod = ProjectServiceGrpc.getCreateProjectMethod) == null) {
       synchronized (ProjectServiceGrpc.class) {
-        if ((getGetDesignMethod = ProjectServiceGrpc.getGetDesignMethod) == null) {
-          ProjectServiceGrpc.getGetDesignMethod = getGetDesignMethod =
-              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetProjectDesignRequest, io.github.panyam.agni.v1.webapi.Design>newBuilder()
+        if ((getCreateProjectMethod = ProjectServiceGrpc.getCreateProjectMethod) == null) {
+          ProjectServiceGrpc.getCreateProjectMethod = getCreateProjectMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.CreateProjectRequest, io.github.panyam.agni.v1.webapi.Project>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetDesign"))
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateProject"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.getDefaultInstance()))
+                  io.github.panyam.agni.v1.webapi.CreateProjectRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.Design.getDefaultInstance()))
-              .setSchemaDescriptor(new ProjectServiceMethodDescriptorSupplier("GetDesign"))
+                  io.github.panyam.agni.v1.webapi.Project.getDefaultInstance()))
+              .setSchemaDescriptor(new ProjectServiceMethodDescriptorSupplier("CreateProject"))
               .build();
         }
       }
     }
-    return getGetDesignMethod;
+    return getCreateProjectMethod;
   }
 
-  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest,
-      io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> getListDesignsMethod;
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateProjectRequest,
+      io.github.panyam.agni.v1.webapi.Project> getUpdateProjectMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "ListDesigns",
-      requestType = io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest.class,
-      responseType = io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse.class,
+      fullMethodName = SERVICE_NAME + '/' + "UpdateProject",
+      requestType = io.github.panyam.agni.v1.webapi.UpdateProjectRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Project.class,
       methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest,
-      io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> getListDesignsMethod() {
-    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest, io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> getListDesignsMethod;
-    if ((getListDesignsMethod = ProjectServiceGrpc.getListDesignsMethod) == null) {
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateProjectRequest,
+      io.github.panyam.agni.v1.webapi.Project> getUpdateProjectMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.UpdateProjectRequest, io.github.panyam.agni.v1.webapi.Project> getUpdateProjectMethod;
+    if ((getUpdateProjectMethod = ProjectServiceGrpc.getUpdateProjectMethod) == null) {
       synchronized (ProjectServiceGrpc.class) {
-        if ((getListDesignsMethod = ProjectServiceGrpc.getListDesignsMethod) == null) {
-          ProjectServiceGrpc.getListDesignsMethod = getListDesignsMethod =
-              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest, io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse>newBuilder()
+        if ((getUpdateProjectMethod = ProjectServiceGrpc.getUpdateProjectMethod) == null) {
+          ProjectServiceGrpc.getUpdateProjectMethod = getUpdateProjectMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.UpdateProjectRequest, io.github.panyam.agni.v1.webapi.Project>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListDesigns"))
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UpdateProject"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest.getDefaultInstance()))
+                  io.github.panyam.agni.v1.webapi.UpdateProjectRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new ProjectServiceMethodDescriptorSupplier("ListDesigns"))
+                  io.github.panyam.agni.v1.webapi.Project.getDefaultInstance()))
+              .setSchemaDescriptor(new ProjectServiceMethodDescriptorSupplier("UpdateProject"))
               .build();
         }
       }
     }
-    return getListDesignsMethod;
+    return getUpdateProjectMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteProjectRequest,
+      com.google.protobuf.Empty> getDeleteProjectMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteProject",
+      requestType = io.github.panyam.agni.v1.webapi.DeleteProjectRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteProjectRequest,
+      com.google.protobuf.Empty> getDeleteProjectMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteProjectRequest, com.google.protobuf.Empty> getDeleteProjectMethod;
+    if ((getDeleteProjectMethod = ProjectServiceGrpc.getDeleteProjectMethod) == null) {
+      synchronized (ProjectServiceGrpc.class) {
+        if ((getDeleteProjectMethod = ProjectServiceGrpc.getDeleteProjectMethod) == null) {
+          ProjectServiceGrpc.getDeleteProjectMethod = getDeleteProjectMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.DeleteProjectRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteProject"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.DeleteProjectRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new ProjectServiceMethodDescriptorSupplier("DeleteProject"))
+              .build();
+        }
+      }
+    }
+    return getDeleteProjectMethod;
   }
 
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ResolveDesignRequest,
@@ -280,7 +311,7 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * ListProjects returns the projects visible across the server's mounts.
+     * ListProjects returns the projects visible across the server's mounts and its store.
      * </pre>
      */
     default void listProjects(io.github.panyam.agni.v1.webapi.ListProjectsRequest request,
@@ -290,23 +321,35 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+     * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+     * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+     * without --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
-    default void getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Design> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetDesignMethod(), responseObserver);
+    default void createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateProjectMethod(), responseObserver);
     }
 
     /**
      * <pre>
-     * ListDesigns returns the designs belonging to one project.
+     * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+     * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
      * </pre>
      */
-    default void listDesigns(io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListDesignsMethod(), responseObserver);
+    default void updateProject(io.github.panyam.agni.v1.webapi.UpdateProjectRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUpdateProjectMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+     * </pre>
+     */
+    default void deleteProject(io.github.panyam.agni.v1.webapi.DeleteProjectRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteProjectMethod(), responseObserver);
     }
 
     /**
@@ -405,7 +448,7 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * ListProjects returns the projects visible across the server's mounts.
+     * ListProjects returns the projects visible across the server's mounts and its store.
      * </pre>
      */
     public void listProjects(io.github.panyam.agni.v1.webapi.ListProjectsRequest request,
@@ -416,25 +459,38 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+     * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+     * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+     * without --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
-    public void getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Design> responseObserver) {
+    public void createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getGetDesignMethod(), getCallOptions()), request, responseObserver);
+          getChannel().newCall(getCreateProjectMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
      * <pre>
-     * ListDesigns returns the designs belonging to one project.
+     * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+     * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
      * </pre>
      */
-    public void listDesigns(io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> responseObserver) {
+    public void updateProject(io.github.panyam.agni.v1.webapi.UpdateProjectRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getListDesignsMethod(), getCallOptions()), request, responseObserver);
+          getChannel().newCall(getUpdateProjectMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+     * </pre>
+     */
+    public void deleteProject(io.github.panyam.agni.v1.webapi.DeleteProjectRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteProjectMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -503,7 +559,7 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * ListProjects returns the projects visible across the server's mounts.
+     * ListProjects returns the projects visible across the server's mounts and its store.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListProjectsResponse listProjects(io.github.panyam.agni.v1.webapi.ListProjectsRequest request) throws io.grpc.StatusException {
@@ -513,23 +569,35 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+     * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+     * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+     * without --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.Design getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request) throws io.grpc.StatusException {
+    public io.github.panyam.agni.v1.webapi.Project createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
-          getChannel(), getGetDesignMethod(), getCallOptions(), request);
+          getChannel(), getCreateProjectMethod(), getCallOptions(), request);
     }
 
     /**
      * <pre>
-     * ListDesigns returns the designs belonging to one project.
+     * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+     * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse listDesigns(io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest request) throws io.grpc.StatusException {
+    public io.github.panyam.agni.v1.webapi.Project updateProject(io.github.panyam.agni.v1.webapi.UpdateProjectRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
-          getChannel(), getListDesignsMethod(), getCallOptions(), request);
+          getChannel(), getUpdateProjectMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteProject(io.github.panyam.agni.v1.webapi.DeleteProjectRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteProjectMethod(), getCallOptions(), request);
     }
 
     /**
@@ -597,7 +665,7 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * ListProjects returns the projects visible across the server's mounts.
+     * ListProjects returns the projects visible across the server's mounts and its store.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.ListProjectsResponse listProjects(io.github.panyam.agni.v1.webapi.ListProjectsRequest request) {
@@ -607,23 +675,35 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+     * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+     * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+     * without --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.Design getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request) {
+    public io.github.panyam.agni.v1.webapi.Project createProject(io.github.panyam.agni.v1.webapi.CreateProjectRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getGetDesignMethod(), getCallOptions(), request);
+          getChannel(), getCreateProjectMethod(), getCallOptions(), request);
     }
 
     /**
      * <pre>
-     * ListDesigns returns the designs belonging to one project.
+     * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+     * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse listDesigns(io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest request) {
+    public io.github.panyam.agni.v1.webapi.Project updateProject(io.github.panyam.agni.v1.webapi.UpdateProjectRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getListDesignsMethod(), getCallOptions(), request);
+          getChannel(), getUpdateProjectMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+     * </pre>
+     */
+    public com.google.protobuf.Empty deleteProject(io.github.panyam.agni.v1.webapi.DeleteProjectRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteProjectMethod(), getCallOptions(), request);
     }
 
     /**
@@ -692,7 +772,7 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * ListProjects returns the projects visible across the server's mounts.
+     * ListProjects returns the projects visible across the server's mounts and its store.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListProjectsResponse> listProjects(
@@ -703,25 +783,38 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+     * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+     * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+     * without --store-dir answers FAILED_PRECONDITION.
      * </pre>
      */
-    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Design> getDesign(
-        io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request) {
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Project> createProject(
+        io.github.panyam.agni.v1.webapi.CreateProjectRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getGetDesignMethod(), getCallOptions()), request);
+          getChannel().newCall(getCreateProjectMethod(), getCallOptions()), request);
     }
 
     /**
      * <pre>
-     * ListDesigns returns the designs belonging to one project.
+     * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+     * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
      * </pre>
      */
-    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse> listDesigns(
-        io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest request) {
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Project> updateProject(
+        io.github.panyam.agni.v1.webapi.UpdateProjectRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getListDesignsMethod(), getCallOptions()), request);
+          getChannel().newCall(getUpdateProjectMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> deleteProject(
+        io.github.panyam.agni.v1.webapi.DeleteProjectRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteProjectMethod(), getCallOptions()), request);
     }
 
     /**
@@ -745,9 +838,10 @@ public final class ProjectServiceGrpc {
 
   private static final int METHODID_GET_PROJECT = 0;
   private static final int METHODID_LIST_PROJECTS = 1;
-  private static final int METHODID_GET_DESIGN = 2;
-  private static final int METHODID_LIST_DESIGNS = 3;
-  private static final int METHODID_RESOLVE_DESIGN = 4;
+  private static final int METHODID_CREATE_PROJECT = 2;
+  private static final int METHODID_UPDATE_PROJECT = 3;
+  private static final int METHODID_DELETE_PROJECT = 4;
+  private static final int METHODID_RESOLVE_DESIGN = 5;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -774,13 +868,17 @@ public final class ProjectServiceGrpc {
           serviceImpl.listProjects((io.github.panyam.agni.v1.webapi.ListProjectsRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListProjectsResponse>) responseObserver);
           break;
-        case METHODID_GET_DESIGN:
-          serviceImpl.getDesign((io.github.panyam.agni.v1.webapi.GetProjectDesignRequest) request,
-              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Design>) responseObserver);
+        case METHODID_CREATE_PROJECT:
+          serviceImpl.createProject((io.github.panyam.agni.v1.webapi.CreateProjectRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project>) responseObserver);
           break;
-        case METHODID_LIST_DESIGNS:
-          serviceImpl.listDesigns((io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest) request,
-              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse>) responseObserver);
+        case METHODID_UPDATE_PROJECT:
+          serviceImpl.updateProject((io.github.panyam.agni.v1.webapi.UpdateProjectRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Project>) responseObserver);
+          break;
+        case METHODID_DELETE_PROJECT:
+          serviceImpl.deleteProject((io.github.panyam.agni.v1.webapi.DeleteProjectRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
           break;
         case METHODID_RESOLVE_DESIGN:
           serviceImpl.resolveDesign((io.github.panyam.agni.v1.webapi.ResolveDesignRequest) request,
@@ -819,19 +917,26 @@ public final class ProjectServiceGrpc {
               io.github.panyam.agni.v1.webapi.ListProjectsResponse>(
                 service, METHODID_LIST_PROJECTS)))
         .addMethod(
-          getGetDesignMethod(),
+          getCreateProjectMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
-              io.github.panyam.agni.v1.webapi.GetProjectDesignRequest,
-              io.github.panyam.agni.v1.webapi.Design>(
-                service, METHODID_GET_DESIGN)))
+              io.github.panyam.agni.v1.webapi.CreateProjectRequest,
+              io.github.panyam.agni.v1.webapi.Project>(
+                service, METHODID_CREATE_PROJECT)))
         .addMethod(
-          getListDesignsMethod(),
+          getUpdateProjectMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
-              io.github.panyam.agni.v1.webapi.ListProjectDesignsRequest,
-              io.github.panyam.agni.v1.webapi.ListProjectDesignsResponse>(
-                service, METHODID_LIST_DESIGNS)))
+              io.github.panyam.agni.v1.webapi.UpdateProjectRequest,
+              io.github.panyam.agni.v1.webapi.Project>(
+                service, METHODID_UPDATE_PROJECT)))
+        .addMethod(
+          getDeleteProjectMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.DeleteProjectRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DELETE_PROJECT)))
         .addMethod(
           getResolveDesignMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -889,8 +994,9 @@ public final class ProjectServiceGrpc {
               .setSchemaDescriptor(new ProjectServiceFileDescriptorSupplier())
               .addMethod(getGetProjectMethod())
               .addMethod(getListProjectsMethod())
-              .addMethod(getGetDesignMethod())
-              .addMethod(getListDesignsMethod())
+              .addMethod(getCreateProjectMethod())
+              .addMethod(getUpdateProjectMethod())
+              .addMethod(getDeleteProjectMethod())
               .addMethod(getResolveDesignMethod())
               .build();
         }

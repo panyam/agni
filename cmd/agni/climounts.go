@@ -339,22 +339,6 @@ func (c cliProjectStore) Projects(ctx context.Context) ([]*webapi.Project, error
 	return s.Projects(ctx)
 }
 
-func (c cliProjectStore) Design(ctx context.Context, name string) (*webapi.Design, error) {
-	s, err := c.store()
-	if err != nil {
-		return nil, err
-	}
-	return s.Design(ctx, name)
-}
-
-func (c cliProjectStore) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
-	s, err := c.store()
-	if err != nil {
-		return nil, err
-	}
-	return s.Designs(ctx, parent)
-}
-
 func (c cliProjectStore) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
 	s, err := c.store()
 	if err != nil {

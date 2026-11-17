@@ -14,15 +14,17 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use agni_client::agni::v1::webapi::check_service_client::CheckServiceClient;
+use agni_client::agni::v1::webapi::design_service_client::DesignServiceClient;
 use agni_client::agni::v1::webapi::design_view_service_client::DesignViewServiceClient;
 use agni_client::agni::v1::webapi::query_service_client::QueryServiceClient;
 use agni_client::agni::v1::webapi::server_service_client::ServerServiceClient;
 use agni_client::agni::v1::webapi::snapshot_service_client::SnapshotServiceClient;
 use agni_client::agni::v1::webapi::{
-    BlobsMissing, CheckDesignRequest, CheckDesignResponse, DeleteSnapshotRequest,
-    GetBoardGeometryRequest, GetBoardGeometryResponse, GetServerInfoRequest, GetSummaryRequest,
-    GetSummaryResponse, IngestRequest, LocateSubjectsRequest, LocateSubjectsResponse,
-    RunQueryRequest, RunQueryResponse, ServerInfo, Snapshot, SnapshotUnavailable, TextPosition,
+    BlobsMissing, CheckDesignRequest, CheckDesignResponse, DeleteSnapshotRequest, Design,
+    GetBoardGeometryRequest, GetBoardGeometryResponse, GetDesignRequest, GetServerInfoRequest,
+    GetSummaryRequest, GetSummaryResponse, IngestRequest, LocateSubjectsRequest,
+    LocateSubjectsResponse, RunQueryRequest, RunQueryResponse, ServerInfo, Snapshot,
+    SnapshotUnavailable, TextPosition,
 };
 use agni_client::{Client, Detail};
 use serde::Serialize;
@@ -212,6 +214,7 @@ async fn wire_fixtures() {
             "agni.v1.webapi.DesignViewService" "GetSummary" => DesignViewServiceClient::get_summary(GetSummaryRequest) -> GetSummaryResponse,
             "agni.v1.webapi.DesignViewService" "GetBoardGeometry" => DesignViewServiceClient::get_board_geometry(GetBoardGeometryRequest) -> GetBoardGeometryResponse,
             "agni.v1.webapi.DesignViewService" "LocateSubjects" => DesignViewServiceClient::locate_subjects(LocateSubjectsRequest) -> LocateSubjectsResponse,
+            "agni.v1.webapi.DesignService" "GetDesign" => DesignServiceClient::get_design(GetDesignRequest) -> Design,
             "agni.v1.webapi.CheckService" "CheckDesign" => CheckServiceClient::check_design(CheckDesignRequest) -> CheckDesignResponse,
             "agni.v1.webapi.QueryService" "RunQuery" => QueryServiceClient::run_query(RunQueryRequest) -> RunQueryResponse,
         );

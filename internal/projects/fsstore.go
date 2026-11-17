@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // MaxDepth bounds the downward walk that discovers descriptors under a tree. The tree root is depth
@@ -96,39 +97,44 @@ func (s *FSStore) Projects(context.Context) ([]*webapi.Project, error) {
 			out = append(out, lp.msg)
 		}
 	}
+	byDescriptor := map[string]string{}
+	for _, p := range out {
+		byDescriptor[descriptorURI(p)] = p.GetName()
+	}
+	designs, err := s.extending(byDescriptor)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range out {
+		p.Designs = nil
+		for _, d := range designs[p.GetName()] {
+			p.Designs = append(p.Designs, d.GetName())
+		}
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
 	return out, nil
 }
 
-// Design returns one design by resource name, or ErrNotFound.
-func (s *FSStore) Design(ctx context.Context, name string) (*webapi.Design, error) {
-	parent, _, ok := service.SplitDesignName(name)
-	if !ok {
-		return nil, fmt.Errorf("%w: %q is not a design resource name", service.ErrInvalidArgument, name)
-	}
-	all, err := s.Designs(ctx, parent)
-	if err != nil {
-		return nil, err
-	}
-	for _, d := range all {
-		if d.GetName() == name {
-			return d, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: no design %q", service.ErrNotFound, name)
-}
-
 // Designs returns one project's designs, ordered by resource name. A design belongs to the project
-// when its descriptor names that project in `extends`. A duplicate design id is rejected, for the
-// same reason as a duplicate project id. A design may sit anywhere a mount reaches, since it names
-// its parent and is not found under it.
+// when its descriptor names that project in `extends`. A design may sit anywhere a mount reaches,
+// since it names its parent and is not found under it. Each is named "designs/{design}" (agni issue
+// 1694), and two folders declaring one id both appear, for the catalog to report.
 func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
 	p, err := s.Project(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
-	var out []*webapi.Design
-	seen := map[string]string{}
+	all, err := s.extending(map[string]string{descriptorURI(p): parent})
+	if err != nil {
+		return nil, err
+	}
+	return all[parent], nil
+}
+
+// extending loads every design across the trees whose `extends` names one of the given project
+// descriptors, keyed by descriptor URI to project name, and returns them grouped by project name.
+func (s *FSStore) extending(byDescriptor map[string]string) (map[string][]*webapi.Design, error) {
+	out := map[string][]*webapi.Design{}
 	for _, t := range s.trees {
 		dirs, err := s.walks.find(t, ".", DesignDescriptor)
 		if err != nil {
@@ -139,20 +145,18 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 			if err != nil {
 				return nil, err
 			}
-			if d.GetConfig().GetExtends() != descriptorURI(p) {
+			parent, ok := byDescriptor[d.GetConfig().GetExtends()]
+			if !ok {
 				continue
 			}
-			where := t.Mount + ":" + displayDir(dir)
-			if first, dup := seen[id]; dup {
-				return nil, fmt.Errorf("duplicate design id %q in %s, declared at %s and at %s", id, parent, first, where)
-			}
-			seen[id] = where
-			d.Name = service.DesignName(parent, id)
+			d.Name = service.StandaloneDesignName(id)
 			d.Config.Extends = parent
-			out = append(out, d)
+			out[parent] = append(out[parent], d)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
+	for _, ds := range out {
+		sort.Slice(ds, func(i, j int) bool { return ds[i].GetName() < ds[j].GetName() })
+	}
 	return out, nil
 }
 
@@ -162,8 +166,8 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 //
 // A miss is (nil, nil, nil), the ordinary state of a mounted folder.
 //
-// A design that extends nothing is NOT a miss. It comes back with its declaration intact and an
-// EMPTY `name`, since a resource name needs a parent, and the CLI still honours the declaration.
+// A design that extends nothing is NOT a miss. It comes back with its declaration intact, named
+// "designs/{design}" like any other (agni issue 1694), and with no project.
 // Suppose instead that a project descriptor sits above a design that extends nothing. The author
 // most likely forgot the `extends`, and reading the design would run it on the built-in config with
 // nothing said. So that case is an error.
@@ -192,13 +196,14 @@ func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.De
 			return nil, nil, fmt.Errorf("%w: %s:%s extends nothing, and %s:%s sits above it; add `extends: <path to that %s>` to the design, so it reads with that project's config",
 				service.ErrInvalidArgument, t.Mount, path.Join(walkRoot(designDir), DesignDescriptor), t.Mount, path.Join(walkRoot(projectDir), ProjectDescriptor), ProjectDescriptor)
 		}
+		d.Name = service.StandaloneDesignName(designID)
 		return d, nil, nil
 	}
 	p, err := s.projectAt(parent)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: extends: %w", path.Join(walkRoot(designDir), DesignDescriptor), err)
 	}
-	d.Name = service.DesignName(p.GetName(), designID)
+	d.Name = service.StandaloneDesignName(designID)
 	d.Config.Extends = p.GetName()
 	return d, p, nil
 }
@@ -432,6 +437,9 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 	}
 	d.Uri = base.String()
 	d.EntryUri = entry.String()
+	if fi, err := fs.Stat(t.FS, name); err == nil {
+		d.UpdateTime = timestamppb.New(fi.ModTime())
+	}
 	if err := s.attachSources(t, base, src, d.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}

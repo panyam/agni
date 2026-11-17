@@ -63,12 +63,9 @@ func main() {
 		}
 		for _, p := range ps.GetProjects() {
 			fmt.Printf("%-34s %s\n", p.GetName(), p.GetTitle())
-			ds, err := svc.ListDesigns(ctx, &webapi.ListProjectDesignsRequest{Parent: p.GetName()})
-			if err != nil {
-				return demokit.Errf("list designs: %v", err)
-			}
-			for _, d := range ds.GetDesigns() {
-				fmt.Printf("  %-32s %s\n", d.GetName(), d.GetTitle())
+			// A project lists its designs by name (agni issue 1694).
+			for _, d := range p.GetDesigns() {
+				fmt.Printf("  %s\n", d)
 			}
 		}
 		return nil

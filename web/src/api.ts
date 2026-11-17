@@ -13,6 +13,7 @@ import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
 import { TableService } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
@@ -138,6 +139,12 @@ export function diffClient(baseUrl?: string): Client<typeof DiffService> {
 // the config that project supplies).
 export function projectClient(baseUrl?: string): Client<typeof ProjectService> {
   return createClient(ProjectService, newTransport(baseUrl));
+}
+
+// designClient returns a typed client for DesignService, the designs a server holds by name,
+// "designs/{design}" (agni issue 1694).
+export function designClient(baseUrl?: string): Client<typeof DesignService> {
+  return createClient(DesignService, newTransport(baseUrl));
 }
 
 // queryClient returns a typed client for QueryService (ad-hoc datalog queries over a design's
