@@ -189,8 +189,9 @@ describe("the static demo under /agni/demo/", () => {
       await page.waitForSelector(DESIGN_SUMMARY, { timeout: 60_000 });
       await page.click("#compare button");
       const tree = page.locator("#compare-tree");
-      // The tree opens down to the folder holding the open design, which holds its other revisions.
-      await tree.locator("li li li > button.node.dir", { hasText: "gateway" }).click({ timeout: 60_000 });
+      // The tree opens down to the folder holding the open design, which holds rev C. Rev B's folder
+      // sits beside it (agni 1692), so the name is matched whole.
+      await tree.locator("li li li > button.node.dir", { hasText: /^\W*gateway$/ }).click({ timeout: 60_000 });
       await tree.getByText("gateway-rev-c.edn").click();
       await expect
         .poll(() => page.locator(".diff-file").allTextContents(), { timeout: 60_000 })

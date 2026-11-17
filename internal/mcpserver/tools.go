@@ -117,8 +117,8 @@ func (s *srv) designsTool(ctx context.Context, _ designsInput) (core.ToolResult,
 			fmt.Fprintf(&b, "  (%s)", d.Title)
 		}
 		b.WriteString("\n")
-		for _, r := range d.Revisions {
-			fmt.Fprintf(&b, "  revision: %s\n", r)
+		if d.Series != "" {
+			fmt.Fprintf(&b, "  series: %s\n", d.Series)
 		}
 	}
 	if len(list.Mounts) > 0 {
@@ -573,10 +573,11 @@ type listed struct {
 }
 
 type listedDesign struct {
-	Design    string   `json:"design"`
-	Title     string   `json:"title,omitempty"`
-	Project   string   `json:"project"`
-	Revisions []string `json:"revisions,omitempty"`
+	Design  string `json:"design"`
+	Title   string `json:"title,omitempty"`
+	Project string `json:"project"`
+	// Series names the designs that are versions of one board (agni 1692).
+	Series string `json:"series,omitempty"`
 }
 
 func (s *srv) listDesigns(ctx context.Context) (listed, error) {
@@ -604,11 +605,7 @@ func (s *srv) listDesigns(ctx context.Context) (listed, error) {
 			return out, err
 		}
 		for _, d := range ds.GetDesigns() {
-			l := listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: p.GetName()}
-			for _, r := range d.GetRevisions() {
-				l.Revisions = append(l.Revisions, bare(r.GetEntryUri()))
-			}
-			out.Designs = append(out.Designs, l)
+			out.Designs = append(out.Designs, listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: p.GetName(), Series: d.GetSeries()})
 		}
 	}
 	return out, nil

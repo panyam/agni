@@ -7,17 +7,23 @@
 # those files, so CI needs no KiCad. Do not hand-edit an output; the point of the file is that we did
 # not choose it.
 #
-# Usage: hack/kicad_oracle.sh [path/to/kicad-cli]   (make samples-oracle first)
+# A seed with no KiCad schematic, such as the tutorial's rev B (an EDIF netlist and a board), names
+# - for its schematic, and gets DRC alone.
+#
+# Usage: hack/kicad_oracle.sh [path/to/kicad-cli] [seed]   (make samples-oracle first)
+# A seed name writes that seed's file alone.
 set -euo pipefail
 cli="${1:-${KICAD_CLI:-kicad-cli}}"
+only="${2:-}"
 command -v "$cli" >/dev/null || { echo "kicad-cli not found; pass its path or set KICAD_CLI" >&2; exit 1; }
 root="$(cd "$(dirname "$0")/.." && pwd)"
 version="$("$cli" version)"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
-# <seed> <design dir> <schematic> <board, or - for none>
+# <seed> <design dir> <schematic, or - for none> <board, or - for none>
 seeds=(
   "gateway examples/tutorial-project/designs/gateway gateway.kicad_sch gateway.kicad_pcb"
+  "gateway-rev-b examples/tutorial-project/designs/gateway-rev-b - gateway-rev-b.kicad_pcb"
   "jetson-agx-thor-baseboard tools/samples/boards/jetson-agx-thor-baseboard jetson-agx-thor-baseboard.kicad_sch jetson-agx-thor-baseboard.kicad_pcb"
   "royalblue54l-feather tools/samples/boards/royalblue54L-feather RoyalBlue54L-Feather.kicad_sch RoyalBlue54L-Feather.kicad_pcb"
   "royalblue54l-nfc-antenna tools/samples/boards/royalblue54L-feather/nfc_antenna/RoyalBlue54L-NFC-Antenna RoyalBlue54L-NFC-Antenna.kicad_sch RoyalBlue54L-NFC-Antenna.kicad_pcb"
@@ -25,17 +31,22 @@ seeds=(
 
 for line in "${seeds[@]}"; do
   read -r seed dir sch pcb <<<"$line"
+  [ -z "$only" ] || [ "$seed" = "$only" ] || continue
   [ -d "$root/$dir" ] || { echo "$dir is missing; run make samples-oracle" >&2; exit 1; }
   # KiCad writes backups and caches beside what it opens, so it runs over a copy.
   rm -rf "$tmp/d"; cp -R "$root/$dir" "$tmp/d"
-  "$cli" sch erc --format json --severity-all -o "$tmp/erc.json" "$tmp/d/$sch" >/dev/null
-  "$cli" sch export netlist --format kicadsexpr -o "$tmp/net" "$tmp/d/$sch" >/dev/null
+  erc=- net=-
+  if [ "$sch" != - ]; then
+    "$cli" sch erc --format json --severity-all -o "$tmp/erc.json" "$tmp/d/$sch" >/dev/null
+    "$cli" sch export netlist --format kicadsexpr -o "$tmp/net" "$tmp/d/$sch" >/dev/null
+    erc="$tmp/erc.json" net="$tmp/net"
+  fi
   drc=-
   if [ "$pcb" != - ]; then
     "$cli" pcb drc --format json --severity-all -o "$tmp/drc.json" "$tmp/d/$pcb" >/dev/null
     drc="$tmp/drc.json"
   fi
-  python3 -I - "$seed" "$dir" "$sch" "$pcb" "$version" "$tmp/erc.json" "$drc" "$tmp/net" "$tmp/d" \
+  python3 -I - "$seed" "$dir" "$sch" "$pcb" "$version" "$erc" "$drc" "$net" "$tmp/d" \
     >"$root/hack/seed-triage/$seed.kicad.oracle" <<'PY'
 import glob, json, re, sys
 
@@ -45,7 +56,7 @@ NOISE = {"lib_symbol_issues", "lib_footprint_issues", "footprint_link_issues"}
 # Violations between two items, whose subject is the pair, spelled as agni spells a pair finding.
 PAIRED = {"clearance", "shorting_items"}
 
-text = open(netlist).read()
+text = open(netlist).read() if netlist != "-" else ""
 pin_net = {}
 for net in re.finditer(r'\(net\s*\(code "[^"]*"\)\s*\(name "((?:[^"\\]|\\.)*)"\)(.*?)\n\t\t\)', text, re.S):
     for node in re.finditer(r'\(ref "([^"]*)"\)\s*\(pin "([^"]*)"\)', net.group(2)):
@@ -98,7 +109,8 @@ print("# Do not hand-edit: hack/kicad_oracle.sh writes this file, and the point 
 print("# choose the answer. TestSeedTriageAgainstKiCad compares the seed's triage record with it.")
 print("#")
 print(f"# {version}")
-print(f"# kicad-cli sch erc --format json --severity-all {sch}")
+if sch != "-":
+    print(f"# kicad-cli sch erc --format json --severity-all {sch}")
 if pcb != "-":
     print(f"# kicad-cli pcb drc --format json --severity-all {pcb}")
 print("#")

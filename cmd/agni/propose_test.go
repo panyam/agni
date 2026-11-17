@@ -48,7 +48,7 @@ func TestProposeReadsAZipAsTheFolderItWasMadeFrom(t *testing.T) {
 	f.Close()
 
 	out := runRoot(t, "propose", zipPath)
-	for _, want := range []string{"entry: gateway.edn", "  - gateway.kicad_sch", "  - entry: gateway-rev-b.edn"} {
+	for _, want := range []string{"entry: gateway.edn", "  - gateway.kicad_sch", "gateway-rev-c.edn look like other versions of gateway.edn"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}

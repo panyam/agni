@@ -97,7 +97,7 @@ def main(argv=None) -> None:
     ap.add_argument("-o", "--out", required=True, help="the .xlsx to write; the summary goes beside it as .md")
     ap.add_argument("--folder", default=str(TUTORIAL), help="the folder to mount (default: the tutorial project)")
     ap.add_argument("--base", default="designs/gateway/gateway.edn", help="the earlier revision, relative to --folder")
-    ap.add_argument("--head", default="designs/gateway/gateway-rev-b.edn", help="the revision to audit, relative to --folder")
+    ap.add_argument("--head", default="designs/gateway-rev-b/gateway-rev-b.edn", help="the revision to audit, relative to --folder")
     ap.add_argument("--set", default=str(AUDIT_SET), help="the audit query set (default: revision_audit.yaml)")
     ap.add_argument("--server", help="a running `agni serve` to ask instead of the CLI")
     ap.add_argument("--agni", default=os.environ.get("AGNI_BIN", "agni"), help="the agni binary for the CLI transport")

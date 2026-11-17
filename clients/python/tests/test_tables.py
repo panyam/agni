@@ -96,7 +96,7 @@ def test_xlsx_writes_a_large_sheet_in_linear_time(tmp_path):
 
 from agni.v1.webapi import diff_pb2, review_pb2  # noqa: E402
 
-from conftest import DESIGN, snap  # noqa: E402
+from conftest import DESIGN, REV_B, snap  # noqa: E402
 
 
 @pytest.fixture(params=["cli", "connect"])
@@ -110,7 +110,7 @@ def _by_name(resp):
 
 def test_tabulate_a_diff_keeps_near_rename_evidence(client, tmp_path):
     diff = client.diff_designs(
-        a_snapshot=snap(client, DESIGN + "/gateway-rev-b.edn"), b_snapshot=snap(client, DESIGN + "/gateway-rev-c.edn"), near_renames={}
+        a_snapshot=snap(client, REV_B), b_snapshot=snap(client, DESIGN + "/gateway-rev-c.edn"), near_renames={}
     )
     out = client.tabulate(diff=diff, order_by=["change_class", "subject"])
     header, rows = _by_name(out)["diff"]
@@ -124,7 +124,7 @@ def test_tabulate_a_diff_keeps_near_rename_evidence(client, tmp_path):
 
 def test_tabulate_a_diff_carries_unchanged_nets_when_asked(client):
     diff = client.diff_designs(
-        a_snapshot=snap(client, DESIGN + "/gateway.edn"), b_snapshot=snap(client, DESIGN + "/gateway-rev-b.edn"), include_equal=True
+        a_snapshot=snap(client, DESIGN + "/gateway.edn"), b_snapshot=snap(client, REV_B), include_equal=True
     )
     _, rows = _by_name(client.tabulate(diff=diff))["diff"]
     assert sum(1 for r in rows if r[0] == "net-equal") == 10

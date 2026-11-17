@@ -42,7 +42,7 @@ private static final long serialVersionUID = 0L;
     entryUri_ = "";
     companionUris_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
-    revisions_ = java.util.Collections.emptyList();
+    series_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -275,9 +275,9 @@ private static final long serialVersionUID = 0L;
    * locate findings on. They are never a second component source to reconcile against the netlist
    * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry". A later
-   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-   * rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". An
+   * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+   * inferred rule would turn a diff of two netlists into a diff of one against itself.
    * </pre>
    *
    * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -294,9 +294,9 @@ private static final long serialVersionUID = 0L;
    * locate findings on. They are never a second component source to reconcile against the netlist
    * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry". A later
-   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-   * rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". An
+   * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+   * inferred rule would turn a diff of two netlists into a diff of one against itself.
    * </pre>
    *
    * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -312,9 +312,9 @@ private static final long serialVersionUID = 0L;
    * locate findings on. They are never a second component source to reconcile against the netlist
    * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry". A later
-   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-   * rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". An
+   * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+   * inferred rule would turn a diff of two netlists into a diff of one against itself.
    * </pre>
    *
    * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -331,9 +331,9 @@ private static final long serialVersionUID = 0L;
    * locate findings on. They are never a second component source to reconcile against the netlist
    * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry". A later
-   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-   * rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". An
+   * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+   * inferred rule would turn a diff of two netlists into a diff of one against itself.
    * </pre>
    *
    * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -395,85 +395,57 @@ private static final long serialVersionUID = 0L;
     return config_ == null ? io.github.panyam.agni.v1.webapi.AnalysisConfig.getDefaultInstance() : config_;
   }
 
-  public static final int REVISIONS_FIELD_NUMBER = 8;
+  public static final int SERIES_FIELD_NUMBER = 10;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.panyam.agni.v1.webapi.DesignRevision> revisions_;
+  private volatile java.lang.Object series_ = "";
   /**
    * <pre>
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
+   * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+   * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+   * name one series are listed together, and an empty series means the design stands alone. It is
+   * `series:` in design.yaml.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+   * <code>string series = 10 [json_name = "series"];</code>
+   * @return The series.
    */
   @java.lang.Override
-  public java.util.List<io.github.panyam.agni.v1.webapi.DesignRevision> getRevisionsList() {
-    return revisions_;
+  public java.lang.String getSeries() {
+    java.lang.Object ref = series_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      series_ = s;
+      return s;
+    }
   }
   /**
    * <pre>
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
+   * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+   * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+   * name one series are listed together, and an empty series means the design stands alone. It is
+   * `series:` in design.yaml.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+   * <code>string series = 10 [json_name = "series"];</code>
+   * @return The bytes for series.
    */
   @java.lang.Override
-  public java.util.List<? extends io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder> 
-      getRevisionsOrBuilderList() {
-    return revisions_;
-  }
-  /**
-   * <pre>
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-   */
-  @java.lang.Override
-  public int getRevisionsCount() {
-    return revisions_.size();
-  }
-  /**
-   * <pre>
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.DesignRevision getRevisions(int index) {
-    return revisions_.get(index);
-  }
-  /**
-   * <pre>
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder getRevisionsOrBuilder(
-      int index) {
-    return revisions_.get(index);
+  public com.google.protobuf.ByteString
+      getSeriesBytes() {
+    java.lang.Object ref = series_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      series_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   public static final int FLATTEN_HIERARCHY_FIELD_NUMBER = 9;
@@ -483,7 +455,7 @@ private static final long serialVersionUID = 0L;
    * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
    * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
    * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-   * snapshot cannot turn off what its design declares. It applies to every revision.
+   * snapshot cannot turn off what its design declares.
    * </pre>
    *
    * <code>bool flatten_hierarchy = 9 [json_name = "flattenHierarchy"];</code>
@@ -526,11 +498,11 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(7, getConfig());
     }
-    for (int i = 0; i < revisions_.size(); i++) {
-      output.writeMessage(8, revisions_.get(i));
-    }
     if (flattenHierarchy_ != false) {
       output.writeBool(9, flattenHierarchy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, series_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -560,18 +532,12 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(7, getConfig());
     }
-
-        {
-          final int count = revisions_.size();
-          for (int i = 0; i < count; i++) {
-            size += com.google.protobuf.CodedOutputStream
-              .computeMessageSizeNoTag(revisions_.get(i));
-          }
-          size += 1 * count;
-        }
     if (flattenHierarchy_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(9, flattenHierarchy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, series_);
     }
     return size;
   }
@@ -612,8 +578,8 @@ private static final long serialVersionUID = 0L;
       if (!getConfig()
           .equals(other.getConfig())) return false;
     }
-    if (!getRevisionsList()
-        .equals(other.getRevisionsList())) return false;
+    if (!getSeries()
+        .equals(other.getSeries())) return false;
     if (getFlattenHierarchy()
         != other.getFlattenHierarchy()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -643,10 +609,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CONFIG_FIELD_NUMBER;
       hash = (53 * hash) + getConfig().hashCode();
     }
-    if (getRevisionsCount() > 0) {
-      hash = (37 * hash) + REVISIONS_FIELD_NUMBER;
-      hash = (53 * hash) + getRevisionsList().hashCode();
-    }
+    hash = (37 * hash) + SERIES_FIELD_NUMBER;
+    hash = (53 * hash) + getSeries().hashCode();
     hash = (37 * hash) + FLATTEN_HIERARCHY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getFlattenHierarchy());
@@ -789,7 +753,6 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetConfigFieldBuilder();
-        internalGetRevisionsFieldBuilder();
       }
     }
     @java.lang.Override
@@ -807,13 +770,7 @@ private static final long serialVersionUID = 0L;
         configBuilder_.dispose();
         configBuilder_ = null;
       }
-      if (revisionsBuilder_ == null) {
-        revisions_ = java.util.Collections.emptyList();
-      } else {
-        revisions_ = null;
-        revisionsBuilder_.clear();
-      }
-      bitField0_ = (bitField0_ & ~0x00000040);
+      series_ = "";
       flattenHierarchy_ = false;
       return this;
     }
@@ -841,22 +798,9 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public io.github.panyam.agni.v1.webapi.Design buildPartial() {
       io.github.panyam.agni.v1.webapi.Design result = new io.github.panyam.agni.v1.webapi.Design(this);
-      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
-    }
-
-    private void buildPartialRepeatedFields(io.github.panyam.agni.v1.webapi.Design result) {
-      if (revisionsBuilder_ == null) {
-        if (((bitField0_ & 0x00000040) != 0)) {
-          revisions_ = java.util.Collections.unmodifiableList(revisions_);
-          bitField0_ = (bitField0_ & ~0x00000040);
-        }
-        result.revisions_ = revisions_;
-      } else {
-        result.revisions_ = revisionsBuilder_.build();
-      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.webapi.Design result) {
@@ -883,6 +827,9 @@ private static final long serialVersionUID = 0L;
             ? config_
             : configBuilder_.build();
         to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.series_ = series_;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.flattenHierarchy_ = flattenHierarchy_;
@@ -935,31 +882,10 @@ private static final long serialVersionUID = 0L;
       if (other.hasConfig()) {
         mergeConfig(other.getConfig());
       }
-      if (revisionsBuilder_ == null) {
-        if (!other.revisions_.isEmpty()) {
-          if (revisions_.isEmpty()) {
-            revisions_ = other.revisions_;
-            bitField0_ = (bitField0_ & ~0x00000040);
-          } else {
-            ensureRevisionsIsMutable();
-            revisions_.addAll(other.revisions_);
-          }
-          onChanged();
-        }
-      } else {
-        if (!other.revisions_.isEmpty()) {
-          if (revisionsBuilder_.isEmpty()) {
-            revisionsBuilder_.dispose();
-            revisionsBuilder_ = null;
-            revisions_ = other.revisions_;
-            bitField0_ = (bitField0_ & ~0x00000040);
-            revisionsBuilder_ = 
-              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                 internalGetRevisionsFieldBuilder() : null;
-          } else {
-            revisionsBuilder_.addAllMessages(other.revisions_);
-          }
-        }
+      if (!other.getSeries().isEmpty()) {
+        series_ = other.series_;
+        bitField0_ |= 0x00000040;
+        onChanged();
       }
       if (other.getFlattenHierarchy() != false) {
         setFlattenHierarchy(other.getFlattenHierarchy());
@@ -1020,24 +946,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 58
-            case 66: {
-              io.github.panyam.agni.v1.webapi.DesignRevision m =
-                  input.readMessage(
-                      io.github.panyam.agni.v1.webapi.DesignRevision.parser(),
-                      extensionRegistry);
-              if (revisionsBuilder_ == null) {
-                ensureRevisionsIsMutable();
-                revisions_.add(m);
-              } else {
-                revisionsBuilder_.addMessage(m);
-              }
-              break;
-            } // case 66
             case 72: {
               flattenHierarchy_ = input.readBool();
               bitField0_ |= 0x00000080;
               break;
             } // case 72
+            case 82: {
+              series_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1468,9 +1386,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1488,9 +1406,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1506,9 +1424,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1525,9 +1443,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1545,9 +1463,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1571,9 +1489,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1596,9 +1514,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1621,9 +1539,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1643,9 +1561,9 @@ private static final long serialVersionUID = 0L;
      * locate findings on. They are never a second component source to reconcile against the netlist
      * (C21).
      *
-     * Membership is declared per file rather than inferred from "everything beside the entry". A later
-     * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-     * rule would turn a diff of two revisions into a diff of one against itself.
+     * Membership is declared per file rather than inferred from "everything beside the entry". An
+     * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+     * inferred rule would turn a diff of two netlists into a diff of one against itself.
      * </pre>
      *
      * <code>repeated string companion_uris = 5 [json_name = "companionUris"];</code>
@@ -1854,382 +1772,111 @@ private static final long serialVersionUID = 0L;
       return configBuilder_;
     }
 
-    private java.util.List<io.github.panyam.agni.v1.webapi.DesignRevision> revisions_ =
-      java.util.Collections.emptyList();
-    private void ensureRevisionsIsMutable() {
-      if (!((bitField0_ & 0x00000040) != 0)) {
-        revisions_ = new java.util.ArrayList<io.github.panyam.agni.v1.webapi.DesignRevision>(revisions_);
-        bitField0_ |= 0x00000040;
-       }
-    }
-
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.DesignRevision, io.github.panyam.agni.v1.webapi.DesignRevision.Builder, io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder> revisionsBuilder_;
-
+    private java.lang.Object series_ = "";
     /**
      * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
+     * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+     * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+     * name one series are listed together, and an empty series means the design stands alone. It is
+     * `series:` in design.yaml.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+     * <code>string series = 10 [json_name = "series"];</code>
+     * @return The series.
      */
-    public java.util.List<io.github.panyam.agni.v1.webapi.DesignRevision> getRevisionsList() {
-      if (revisionsBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(revisions_);
+    public java.lang.String getSeries() {
+      java.lang.Object ref = series_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        series_ = s;
+        return s;
       } else {
-        return revisionsBuilder_.getMessageList();
+        return (java.lang.String) ref;
       }
     }
     /**
      * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
+     * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+     * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+     * name one series are listed together, and an empty series means the design stands alone. It is
+     * `series:` in design.yaml.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+     * <code>string series = 10 [json_name = "series"];</code>
+     * @return The bytes for series.
      */
-    public int getRevisionsCount() {
-      if (revisionsBuilder_ == null) {
-        return revisions_.size();
+    public com.google.protobuf.ByteString
+        getSeriesBytes() {
+      java.lang.Object ref = series_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        series_ = b;
+        return b;
       } else {
-        return revisionsBuilder_.getCount();
+        return (com.google.protobuf.ByteString) ref;
       }
     }
     /**
      * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
+     * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+     * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+     * name one series are listed together, and an empty series means the design stands alone. It is
+     * `series:` in design.yaml.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+     * <code>string series = 10 [json_name = "series"];</code>
+     * @param value The series to set.
+     * @return This builder for chaining.
      */
-    public io.github.panyam.agni.v1.webapi.DesignRevision getRevisions(int index) {
-      if (revisionsBuilder_ == null) {
-        return revisions_.get(index);
-      } else {
-        return revisionsBuilder_.getMessage(index);
-      }
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder setRevisions(
-        int index, io.github.panyam.agni.v1.webapi.DesignRevision value) {
-      if (revisionsBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureRevisionsIsMutable();
-        revisions_.set(index, value);
-        onChanged();
-      } else {
-        revisionsBuilder_.setMessage(index, value);
-      }
+    public Builder setSeries(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      series_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
       return this;
     }
     /**
      * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
+     * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+     * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+     * name one series are listed together, and an empty series means the design stands alone. It is
+     * `series:` in design.yaml.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+     * <code>string series = 10 [json_name = "series"];</code>
+     * @return This builder for chaining.
      */
-    public Builder setRevisions(
-        int index, io.github.panyam.agni.v1.webapi.DesignRevision.Builder builderForValue) {
-      if (revisionsBuilder_ == null) {
-        ensureRevisionsIsMutable();
-        revisions_.set(index, builderForValue.build());
-        onChanged();
-      } else {
-        revisionsBuilder_.setMessage(index, builderForValue.build());
-      }
+    public Builder clearSeries() {
+      series_ = getDefaultInstance().getSeries();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
       return this;
     }
     /**
      * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
+     * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+     * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+     * name one series are listed together, and an empty series means the design stands alone. It is
+     * `series:` in design.yaml.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
+     * <code>string series = 10 [json_name = "series"];</code>
+     * @param value The bytes for series to set.
+     * @return This builder for chaining.
      */
-    public Builder addRevisions(io.github.panyam.agni.v1.webapi.DesignRevision value) {
-      if (revisionsBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureRevisionsIsMutable();
-        revisions_.add(value);
-        onChanged();
-      } else {
-        revisionsBuilder_.addMessage(value);
-      }
+    public Builder setSeriesBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      series_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
       return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder addRevisions(
-        int index, io.github.panyam.agni.v1.webapi.DesignRevision value) {
-      if (revisionsBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureRevisionsIsMutable();
-        revisions_.add(index, value);
-        onChanged();
-      } else {
-        revisionsBuilder_.addMessage(index, value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder addRevisions(
-        io.github.panyam.agni.v1.webapi.DesignRevision.Builder builderForValue) {
-      if (revisionsBuilder_ == null) {
-        ensureRevisionsIsMutable();
-        revisions_.add(builderForValue.build());
-        onChanged();
-      } else {
-        revisionsBuilder_.addMessage(builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder addRevisions(
-        int index, io.github.panyam.agni.v1.webapi.DesignRevision.Builder builderForValue) {
-      if (revisionsBuilder_ == null) {
-        ensureRevisionsIsMutable();
-        revisions_.add(index, builderForValue.build());
-        onChanged();
-      } else {
-        revisionsBuilder_.addMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder addAllRevisions(
-        java.lang.Iterable<? extends io.github.panyam.agni.v1.webapi.DesignRevision> values) {
-      if (revisionsBuilder_ == null) {
-        ensureRevisionsIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, revisions_);
-        onChanged();
-      } else {
-        revisionsBuilder_.addAllMessages(values);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder clearRevisions() {
-      if (revisionsBuilder_ == null) {
-        revisions_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000040);
-        onChanged();
-      } else {
-        revisionsBuilder_.clear();
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public Builder removeRevisions(int index) {
-      if (revisionsBuilder_ == null) {
-        ensureRevisionsIsMutable();
-        revisions_.remove(index);
-        onChanged();
-      } else {
-        revisionsBuilder_.remove(index);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.DesignRevision.Builder getRevisionsBuilder(
-        int index) {
-      return internalGetRevisionsFieldBuilder().getBuilder(index);
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder getRevisionsOrBuilder(
-        int index) {
-      if (revisionsBuilder_ == null) {
-        return revisions_.get(index);  } else {
-        return revisionsBuilder_.getMessageOrBuilder(index);
-      }
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public java.util.List<? extends io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder> 
-         getRevisionsOrBuilderList() {
-      if (revisionsBuilder_ != null) {
-        return revisionsBuilder_.getMessageOrBuilderList();
-      } else {
-        return java.util.Collections.unmodifiableList(revisions_);
-      }
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.DesignRevision.Builder addRevisionsBuilder() {
-      return internalGetRevisionsFieldBuilder().addBuilder(
-          io.github.panyam.agni.v1.webapi.DesignRevision.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.DesignRevision.Builder addRevisionsBuilder(
-        int index) {
-      return internalGetRevisionsFieldBuilder().addBuilder(
-          index, io.github.panyam.agni.v1.webapi.DesignRevision.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * revisions are the design's other revisions, each with its own entry and the companions that are
-     * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-     * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-     * its own board rather than none, and a companion is never borrowed from another revision. A file
-     * in the folder that no revision lists still reads exactly as named.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.DesignRevision revisions = 8 [json_name = "revisions"];</code>
-     */
-    public java.util.List<io.github.panyam.agni.v1.webapi.DesignRevision.Builder> 
-         getRevisionsBuilderList() {
-      return internalGetRevisionsFieldBuilder().getBuilderList();
-    }
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.DesignRevision, io.github.panyam.agni.v1.webapi.DesignRevision.Builder, io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder> 
-        internalGetRevisionsFieldBuilder() {
-      if (revisionsBuilder_ == null) {
-        revisionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.panyam.agni.v1.webapi.DesignRevision, io.github.panyam.agni.v1.webapi.DesignRevision.Builder, io.github.panyam.agni.v1.webapi.DesignRevisionOrBuilder>(
-                revisions_,
-                ((bitField0_ & 0x00000040) != 0),
-                getParentForChildren(),
-                isClean());
-        revisions_ = null;
-      }
-      return revisionsBuilder_;
     }
 
     private boolean flattenHierarchy_ ;
@@ -2238,7 +1885,7 @@ private static final long serialVersionUID = 0L;
      * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
      * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
      * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-     * snapshot cannot turn off what its design declares. It applies to every revision.
+     * snapshot cannot turn off what its design declares.
      * </pre>
      *
      * <code>bool flatten_hierarchy = 9 [json_name = "flattenHierarchy"];</code>
@@ -2253,7 +1900,7 @@ private static final long serialVersionUID = 0L;
      * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
      * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
      * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-     * snapshot cannot turn off what its design declares. It applies to every revision.
+     * snapshot cannot turn off what its design declares.
      * </pre>
      *
      * <code>bool flatten_hierarchy = 9 [json_name = "flattenHierarchy"];</code>
@@ -2272,7 +1919,7 @@ private static final long serialVersionUID = 0L;
      * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
      * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
      * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-     * snapshot cannot turn off what its design declares. It applies to every revision.
+     * snapshot cannot turn off what its design declares.
      * </pre>
      *
      * <code>bool flatten_hierarchy = 9 [json_name = "flattenHierarchy"];</code>

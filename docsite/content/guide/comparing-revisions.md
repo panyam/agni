@@ -65,39 +65,38 @@ Every net of both revisions is then accounted for once: an unchanged net as `equ
 under its kind, and a rename as one entry covering its old and new names. The API takes it as
 `include_equal` on `DiffDesignsRequest`.
 
-## Declared revisions
+## A revision is a design of its own
 
-A later revision usually sits in the same folder as the first, with a board of its own. Declare it
-in the design's `design.yaml`, under `revisions`, with its own entry and companions:
+A later revision usually comes with a board of its own. Give it its own folder and its own
+`design.yaml`, and name the same `series` as the first (agni issue 1692):
 
 ```yaml
-name: gateway
+# designs/gateway-rev-b/design.yaml
+name: gateway-rev-b
+series: gateway
 extends: ../../project.yaml
-entry: gateway.edn
-companions: [gateway.kicad_sch, gateway.kicad_pcb]
-revisions:
-  - entry: gateway-rev-b.edn
-    companions: [gateway-rev-b.kicad_pcb]
+entry: gateway-rev-b.edn
+companions: [gateway-rev-b.kicad_pcb]
 ```
 
-When you name a declared revision's entry or one of its companions, agni reads that revision with
-its own views, so rev B's board-tier rules run against rev B's copper. A file belongs to one
-revision at most, so a board is never borrowed by a netlist it was not drawn for.
+agni then reads rev B with its own views, so rev B's board-tier rules run against rev B's copper,
+and a board is never borrowed by a netlist it was not drawn for. The series tells a listing that the
+two designs are versions of one board. Any two designs diff, whatever their series.
 
-A revision you have not declared reads exactly as named, with no board. Its connectivity diffs as
+A netlist you have not declared reads exactly as named, with no board. Its connectivity diffs as
 well as a declared one's, but a check of it runs no board-tier rule, and `check` says on stderr which
 ones did not run. Without that note a revision with fewer findings could be read as a cleaner board
 when its copper was never read. The tutorial project keeps `gateway-rev-c.edn` undeclared to show
 the difference:
 
 ```
-agni check examples/tutorial-project/designs/gateway/gateway-rev-b.edn
+agni check examples/tutorial-project/designs/gateway-rev-b
 agni check examples/tutorial-project/designs/gateway/gateway-rev-c.edn
 ```
 
 [Projects and designs](../projects/) covers the rest of `design.yaml`, and
-[the architecture page](../../architecture/projects-and-designs/) says why companions and revisions
-are declared file by file rather than inferred.
+[the architecture page](../../architecture/projects-and-designs/) says why companions are declared
+file by file rather than inferred, and why a revision is a design of its own.
 
 ## In the viewer
 

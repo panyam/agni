@@ -55,8 +55,7 @@ func TestProposedDescriptorsReadBackAsTheProposedDesign(t *testing.T) {
 			t.Fatalf("%s: the written descriptor does not resolve: %v\n%s", want.GetFolder(), err, want.GetDesignYaml())
 		}
 		if got.GetEntryUri() != want.GetDesign().GetEntryUri() ||
-			strings.Join(got.GetCompanionUris(), ",") != strings.Join(want.GetDesign().GetCompanionUris(), ",") ||
-			len(got.GetRevisions()) != len(want.GetDesign().GetRevisions()) {
+			strings.Join(got.GetCompanionUris(), ",") != strings.Join(want.GetDesign().GetCompanionUris(), ",") {
 			t.Errorf("%s: proposed %v, read back %v\n%s", want.GetFolder(), want.GetDesign(), got, want.GetDesignYaml())
 		}
 	}

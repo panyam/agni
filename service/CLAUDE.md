@@ -17,9 +17,9 @@ This file covers the transport-neutral services, their ports, snapshots, kept re
 - **A new rpc takes `snapshot` and reads `Snap.Netlist`, `Snap.Board` and `Snap.Geometry`** (agni 1061). `TestC22AnalysisRequestsNameASnapshot` holds every analysis request to that.
 - **A loader can attach a companion that the service never resolved** (agni 646). Given no board, `BuildModel` asks the loader for one at the design's own URI. The CLI's `localLoader` resolves a descriptor inside `Board`. The served `osLoader` reads exactly what it is handed. So a CLI read is evidence about the loader, not about the request.
 - **`service.SourcesFor` gives a design's tiers, and naming the ENTRY names the design.** A descriptor's `companions` supply the tiers the entry cannot, such as a schematic export for sheets and a board for copper. `NetlistURI` always points at the entry. The folder, the entry filename and a declared companion resolve identically. `--as-named` opts out.
-- **An undeclared sibling is read exactly as named.** Companions are declared file by file, never inferred. A later netlist revision in the same folder is a separate analysis source.
-- **A later revision is declared under `revisions`, with its own entry and companions** (agni 848). It reads with its own board. A file belongs to one revision at most, so a board is never borrowed across revisions.
-- **An undeclared or board-less revision reads with no board.** `check` names the board-tier rules that did not run on stderr (`check.NoBoardReason`). `Tabulate` gives the run's `skipped` table.
+- **An undeclared sibling is read exactly as named.** Companions are declared file by file, never inferred. A later netlist in the same folder is a separate analysis source.
+- **A later revision is a design of its own, in its own folder, naming the same `series`** (agni 1692). It reads with its own board, so a board is never borrowed across revisions.
+- **An undeclared or board-less netlist reads with no board.** `check` names the board-tier rules that did not run on stderr (`check.NoBoardReason`). `Tabulate` gives the run's `skipped` table.
 
 ## The board tier
 

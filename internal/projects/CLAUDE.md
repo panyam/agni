@@ -6,7 +6,8 @@ This file covers project and design descriptors, the config YAML they bind, and 
 - **A new config file binds the same way.** Go structs with yaml tags are the bug shape, because they drop an unknown key silently.
 - **A descriptor NAMES every tier a run reads** (agni 1136). Nothing is found by its folder's name. `project.yaml` and `design.yaml` share one schema, `descriptorYAML` in `internal/projects/descriptor.go`.
 - **The schema has sections and path lists.** `conventions:`, `checklists:` and `intent:` are sections. `profiles`, `params`, `symbols`, `lib` and `queries` are lists of paths, each a file or a directory, relative to the descriptor or a `mount://` URI.
-- **Only a design names its own files**, through `entry`, `companions`, `revisions` and `flatten_hierarchy`.
+- **Only a design names its own files**, through `entry`, `companions` and `flatten_hierarchy`, and only a design names a `series`.
+- **A later revision is a design of its own, in its own folder** (agni 1692). `revisions:` in a `design.yaml` fails at its line with that hint.
 - **A design names its project with `extends: ../../project.yaml`**, as a project names shared config. A design is never found under a project by where it sits. A design that names no project, with a `project.yaml` above it, fails to load as a forgotten extends.
 - **A design's own sections layer over its project's** (`mergeConfig`). A board can carry its own convention or checklist.
 - **A source that names nothing is a load ERROR**, not an absent tier. To reach a tier's off state, delete its line. Tutorial rungs 5, 6 and 11 open with `sed -i.orig '/^params:/d' project.yaml` for this reason.

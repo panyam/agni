@@ -38,7 +38,7 @@ const (
 
 // descriptorYAML is the on-disk SHAPE of both descriptors, giving the YAML decoder field tags. A
 // project and a design share one schema (agni issue 1136), and the file's name says which role it
-// plays. A design names the files it reads (entry, companions, revisions), and a project names
+// plays. A design names the files it reads (entry, companions), and a project names
 // none. It is not a model of either. Parsed values become the proto, and nothing outside this file
 // sees this type.
 type descriptorYAML struct {
@@ -61,21 +61,17 @@ type descriptorYAML struct {
 	Symbols  []string `yaml:"symbols,omitempty"`
 	Lib      []string `yaml:"lib,omitempty"`
 	Queries  []string `yaml:"queries,omitempty"`
-	// The design's own files, relative to its folder. The top-level entry is the current revision.
-	// Revisions lists the other revisions. Each has its own entry and its own companions, so a
-	// later netlist is read with its own board (agni issue 848). A file belongs to one revision at
-	// most.
-	Entry      string         `yaml:"entry,omitempty"`
-	Companions []string       `yaml:"companions,omitempty"`
-	Revisions  []revisionYAML `yaml:"revisions,omitempty"`
+	// The design's own files, relative to its folder.
+	Entry      string   `yaml:"entry,omitempty"`
+	Companions []string `yaml:"companions,omitempty"`
+	// Series groups the designs that are versions of one board (webapi.Design.series, agni 1692).
+	Series string `yaml:"series,omitempty"`
+	// Revisions is read only to refuse it where it sits. A later version is a design of its own, in its
+	// own folder, and an old descriptor would otherwise fail as an unknown key with no hint.
+	Revisions yaml.Node `yaml:"revisions,omitempty"`
 	// FlattenHierarchy reads the design's netlist whole, walking into every hierarchical block
 	// (webapi.Design.flatten_hierarchy, agni issue 1102).
 	FlattenHierarchy bool `yaml:"flatten_hierarchy,omitempty"`
-}
-
-type revisionYAML struct {
-	Entry      string   `yaml:"entry"`
-	Companions []string `yaml:"companions,omitempty"`
 }
 
 // Sources holds a descriptor's references outside itself, as written. They are the descriptor it
@@ -117,7 +113,7 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, src Sources, err e
 	if err != nil {
 		return "", nil, Sources{}, err
 	}
-	for key, set := range map[string]bool{"entry": y.Entry != "", "companions": len(y.Companions) > 0, "revisions": len(y.Revisions) > 0, "flatten_hierarchy": y.FlattenHierarchy} {
+	for key, set := range map[string]bool{"entry": y.Entry != "", "companions": len(y.Companions) > 0, "series": y.Series != "", "flatten_hierarchy": y.FlattenHierarchy} {
 		if set {
 			return "", nil, Sources{}, fmt.Errorf("%s: %s names a design's files, so it belongs in that design's %s", ProjectDescriptor, key, DesignDescriptor)
 		}
@@ -165,36 +161,7 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, src Sources, err err
 		seen[clean] = true
 		out.CompanionUris = append(out.CompanionUris, clean)
 	}
-	// Each revision has its own entry and views. Each is checked against every file already
-	// declared, so no file belongs to two revisions. A netlist never borrows a board drawn for
-	// another revision.
-	for i, r := range y.Revisions {
-		where := fmt.Sprintf("revisions[%d]", i)
-		if r.Entry == "" {
-			return fail(fmt.Errorf("%s: entry is required (name the revision's netlist; its views go under companions)", where))
-		}
-		rev := &webapi.DesignRevision{}
-		for j, f := range append([]string{r.Entry}, r.Companions...) {
-			field := where + ".entry"
-			if j > 0 {
-				field = where + ".companions"
-			}
-			if err := validRel(field, f); err != nil {
-				return fail(err)
-			}
-			clean := CleanRel(f)
-			if seen[clean] {
-				return fail(fmt.Errorf("%q is listed twice (a file belongs to one revision, as its entry or one of its companions)", f))
-			}
-			seen[clean] = true
-			if j == 0 {
-				rev.EntryUri = clean
-			} else {
-				rev.CompanionUris = append(rev.CompanionUris, clean)
-			}
-		}
-		out.Revisions = append(out.Revisions, rev)
-	}
+	out.Series = y.Series
 	return y.Name, out, src, nil
 }
 
@@ -209,6 +176,9 @@ func parseDescriptor(r io.Reader, file string) (descriptorYAML, *webapi.Analysis
 	}
 	if err := decodeStrict(r, &y); err != nil {
 		return fail(err)
+	}
+	if !y.Revisions.IsZero() {
+		return fail(fmt.Errorf("line %d: revisions is no longer read; give each revision its own folder (agni 1692), with its own %s naming the same series", y.Revisions.Line, DesignDescriptor))
 	}
 	if err := validID("name", y.Name); err != nil {
 		return fail(err)

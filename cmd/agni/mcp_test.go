@@ -425,7 +425,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		})
 
 		t.Run("diff", func(t *testing.T) {
-			const a1, b1 = mcpGateway + "/gateway.edn", mcpGateway + "/gateway-rev-b.edn"
+			const a1, b1 = mcpGateway + "/gateway.edn", "tut/designs/gateway-rev-b/gateway-rev-b.edn"
 			res, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
 			resp, err := s.api.diff.DiffDesigns(ctx, connect.NewRequest(&webapi.DiffDesignsRequest{ASnapshot: ingestConnect(t, s, a1), BSnapshot: ingestConnect(t, s, b1)}))
 			if err != nil {

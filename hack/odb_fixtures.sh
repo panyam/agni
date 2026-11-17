@@ -12,7 +12,7 @@ out=readers/odb/testdata
 examples=examples/common/designs/odb
 boards=(
   examples/tutorial-project/designs/gateway/gateway.kicad_pcb
-  examples/tutorial-project/designs/gateway/gateway-rev-b.kicad_pcb
+  examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.kicad_pcb
   examples/common/designs/demo-board.kicad_pcb
   examples/common/designs/mixer.kicad_pcb
   cmd/agni/testdata/conformance/drc.fires.kicad_pcb

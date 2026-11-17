@@ -41,7 +41,7 @@ This is the shape a real review project takes. Two kinds of file live here.
 | Path | What it is |
 |---|---|
 | `design.yaml` | the design's name, the project it `extends`, which file is its entry, and which files are views of it |
-| `gateway.edn` | the netlist, `gateway-rev-b.edn` a later revision of it, and `gateway-rev-c.edn` one more that renames and rewires a net, for `diff --rename-approx` |
+| `gateway.edn` | the netlist, `designs/gateway-rev-b` a later revision as a design of its own in the same `series`, and `gateway-rev-c.edn` one more that renames and rewires a net, for `diff --rename-approx` |
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
 | `design.yaml` `intent:` | what this board is supposed to be: declared modules and what each rail is |

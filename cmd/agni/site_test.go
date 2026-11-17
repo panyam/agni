@@ -97,7 +97,7 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 			t.Errorf("listed %s is not under raw/: %v", f.GetPath(), err)
 		}
 	}
-	wantBoards(t, &listing, "designs/gateway/gateway.kicad_pcb")
+	wantBoards(t, &listing, "designs/gateway-rev-b/gateway-rev-b.kicad_pcb", "designs/gateway/gateway.kicad_pcb")
 }
 
 // wantBoards fails unless the listing flags exactly want as board files, as ListDesignFiles would

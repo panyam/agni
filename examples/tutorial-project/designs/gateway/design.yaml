@@ -10,12 +10,16 @@
 # against the netlist. Asking for analysis of one reads the entry instead and says so; `--as-named`
 # overrides that when reading a view as a netlist is the point (see the Makefile's check-views).
 #
-# `gateway-rev-b.edn` and `gateway-rev-c.edn` are deliberately NOT listed. They are later revisions,
-# analysis sources in their own right: `make diff` compares rev B against the entry, and rev C renames
-# and rewires one net so `agni diff --rename-approx` has a near-rename to pair. That is why companions are declared file
-# by file instead of inferred from "everything beside the entry".
+# `gateway-rev-c.edn` is deliberately NOT listed. It is a later netlist, an analysis source in its own
+# right, and it renames and rewires one net so `agni diff --rename-approx` has a near-rename to pair.
+# It reads exactly as named, with no board, and a check of it says its board-tier rules did not run.
+# That is why companions are declared file by file instead of inferred from "everything beside the
+# entry".
 name: gateway
 title: Sample Board
+# The designs that are versions of this board name the same series. Rev B, which adds the two I2C
+# pull-ups R4 and R5, is a design of its own in ../gateway-rev-b, read with its own board (agni 1692).
+series: gateway
 # The project this design belongs to, named rather than found above it. Its conventions, checklists,
 # profiles and parameters apply here, and anything this file declares layers on top.
 extends: ../../project.yaml
@@ -25,13 +29,6 @@ entry: gateway.edn
 companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
-
-# The later revisions, each read with its own views (agni issue 848). Rev B adds the two I2C
-# pull-ups R4 and R5, so its board is not rev A's. Rev C is left undeclared on purpose: it reads
-# exactly as named, with no board, and a check of it says its board-tier rules did not run.
-revisions:
-  - entry: gateway-rev-b.edn
-    companions: [gateway-rev-b.kicad_pcb]
 
 # What the board is SUPPOSED to be, declared beside what it is. The engine has no built-in opinion
 # about a board's intended architecture, so an intent-bound review item reads needs-design-intent

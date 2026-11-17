@@ -30,7 +30,7 @@ func TestCheckSaysWhenNoBoardWasRead(t *testing.T) {
 	errOut.Reset()
 	cmd.SetOut(&out)
 	cmd.SetErr(&errOut)
-	cmd.SetArgs([]string{tutorialGateway + "gateway-rev-b.edn"})
+	cmd.SetArgs([]string{tutorialRevB})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("check rev B: %v", err)
 	}

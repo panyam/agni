@@ -27,6 +27,8 @@ AGNI = os.environ.get("AGNI_BIN", str(REPO / "bin" / "agni"))
 MOUNTS = {"tut": str(FIXTURE), "hier": str(REPO / "readers" / "edif" / "testdata")}
 
 DESIGN = "mount://tut/designs/gateway"
+# REV_B is rev B of the tutorial board, a design of its own beside the gateway (agni 1692).
+REV_B = "mount://tut/designs/gateway-rev-b/gateway-rev-b.edn"
 
 _HELD: dict = {}
 

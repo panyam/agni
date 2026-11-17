@@ -447,16 +447,6 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 			return "", nil, err
 		}
 	}
-	for _, rev := range d.GetRevisions() {
-		if rev.EntryUri, err = join(rev.GetEntryUri()); err != nil {
-			return "", nil, err
-		}
-		for i, c := range rev.GetCompanionUris() {
-			if rev.CompanionUris[i], err = join(c); err != nil {
-				return "", nil, err
-			}
-		}
-	}
 	return id, d, nil
 }
 

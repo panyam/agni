@@ -1,5 +1,5 @@
-#agni-run 4dbffa1074ae2b77
-diff designs/gateway/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
+#agni-run 96a926a250e638b2
+diff designs/gateway-rev-b/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
 
 Components: +1  -0  ~0
 Nets:       new 1  deleted 1  renamed 0  hard 1  soft 0
@@ -12,7 +12,7 @@ Nets changed (3):
   [hard]    PMIC_IO_1V8: +[R6.2] -[]
   [new]     PMIC_ENABLE
 #agni-step
-diff designs/gateway/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
+diff designs/gateway-rev-b/gateway-rev-b.edn -> designs/gateway/gateway-rev-c.edn
 
 Components: +1  -0  ~0
 Nets:       new 0  deleted 0  renamed 0  hard 1  soft 0

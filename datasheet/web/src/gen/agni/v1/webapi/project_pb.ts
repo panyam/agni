@@ -12,19 +12,17 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKBAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZ0oECAQQBUoECAUQBkoECAYQB0oECAcQCEoECAgQCSLhAQoGRGVzaWduEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJEhEKCWVudHJ5X3VyaRgEIAEoCRIWCg5jb21wYW5pb25fdXJpcxgFIAMoCRIuCgZjb25maWcYByABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIxCglyZXZpc2lvbnMYCCADKAsyHi5hZ25pLnYxLndlYmFwaS5EZXNpZ25SZXZpc2lvbhIZChFmbGF0dGVuX2hpZXJhcmNoeRgJIAEoCEoECAYQByI7Cg5EZXNpZ25SZXZpc2lvbhIRCgllbnRyeV91cmkYASABKAkSFgoOY29tcGFuaW9uX3VyaXMYAiADKAkiIQoRR2V0UHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJMChNMaXN0UHJvamVjdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJaChRMaXN0UHJvamVjdHNSZXNwb25zZRIpCghwcm9qZWN0cxgBIAMoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIicKF0dldFByb2plY3REZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiYgoZTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIl4KGkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MscDCg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJMCglHZXREZXNpZ24SJy5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJkCgtMaXN0RGVzaWducxIpLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_config]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKBAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZ0oECAQQBUoECAUQBkoECAYQB0oECAcQCEoECAgQCSLPAQoGRGVzaWduEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJEhEKCWVudHJ5X3VyaRgEIAEoCRIWCg5jb21wYW5pb25fdXJpcxgFIAMoCRIuCgZjb25maWcYByABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIOCgZzZXJpZXMYCiABKAkSGQoRZmxhdHRlbl9oaWVyYXJjaHkYCSABKAhKBAgGEAdKBAgIEAlSCXJldmlzaW9ucyIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiJwoXR2V0UHJvamVjdERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJiChlMaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRIOCgZmaWx0ZXIYBCABKAkiXgoaTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoUUmVzb2x2ZURlc2lnblJlcXVlc3QSCwoDdXJpGAEgASgJImkKFVJlc29sdmVEZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YASABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SKAoHcHJvamVjdBgCIAEoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QyxwMKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEkwKCUdldERlc2lnbhInLmFnbmkudjEud2ViYXBpLkdldFByb2plY3REZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEmQKC0xpc3REZXNpZ25zEikuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_config]);
 
 /**
  * Project is one declared set of designs that share configuration.
  *
- * It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
- * Scaffolding a project means authoring design intent from a design. That is a judgment step with a
- * confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
- * still AIP-shaped here.
- *
- * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
- * draws the same boundary from the other side. Writing descriptors into a folder an operator named is
- * not a server mutating a mount.
+ * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
+ * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+ * The server never generates design intent either way. Writing intent from a design is a judgment
+ * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+ * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+ * mount.
  *
  * Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
  * a config tier is added once and every surface gets it (agni issue 224).
@@ -132,9 +130,9 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * locate findings on. They are never a second component source to reconcile against the netlist
    * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry". A later
-   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-   * rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". An
+   * undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+   * inferred rule would turn a diff of two netlists into a diff of one against itself.
    *
    * @generated from field: repeated string companion_uris = 5;
    */
@@ -152,21 +150,20 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   config?: AnalysisConfig | undefined;
 
   /**
-   * revisions are the design's other revisions, each with its own entry and the companions that are
-   * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-   * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-   * its own board rather than none, and a companion is never borrowed from another revision. A file
-   * in the folder that no revision lists still reads exactly as named.
+   * series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+   * Each version is its own design, in its own folder, with its own entry and companions. Designs that
+   * name one series are listed together, and an empty series means the design stands alone. It is
+   * `series:` in design.yaml.
    *
-   * @generated from field: repeated agni.v1.webapi.DesignRevision revisions = 8;
+   * @generated from field: string series = 10;
    */
-  revisions: DesignRevision[];
+  series: string;
 
   /**
    * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
    * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
    * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-   * snapshot cannot turn off what its design declares. It applies to every revision.
+   * snapshot cannot turn off what its design declares.
    *
    * @generated from field: bool flatten_hierarchy = 9;
    */
@@ -179,30 +176,6 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
  */
 export const DesignSchema: GenMessage<Design> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_project, 1);
-
-/**
- * DesignRevision is one declared revision of a design: its netlist entry and its own views.
- *
- * @generated from message agni.v1.webapi.DesignRevision
- */
-export type DesignRevision = Message<"agni.v1.webapi.DesignRevision"> & {
-  /**
-   * @generated from field: string entry_uri = 1;
-   */
-  entryUri: string;
-
-  /**
-   * @generated from field: repeated string companion_uris = 2;
-   */
-  companionUris: string[];
-};
-
-/**
- * Describes the message agni.v1.webapi.DesignRevision.
- * Use `create(DesignRevisionSchema)` to create a new message.
- */
-export const DesignRevisionSchema: GenMessage<DesignRevision> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 2);
 
 /**
  * @generated from message agni.v1.webapi.GetProjectRequest
@@ -221,7 +194,7 @@ export type GetProjectRequest = Message<"agni.v1.webapi.GetProjectRequest"> & {
  * Use `create(GetProjectRequestSchema)` to create a new message.
  */
 export const GetProjectRequestSchema: GenMessage<GetProjectRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 3);
+  messageDesc(file_agni_v1_webapi_project, 2);
 
 /**
  * @generated from message agni.v1.webapi.ListProjectsRequest
@@ -258,7 +231,7 @@ export type ListProjectsRequest = Message<"agni.v1.webapi.ListProjectsRequest"> 
  * Use `create(ListProjectsRequestSchema)` to create a new message.
  */
 export const ListProjectsRequestSchema: GenMessage<ListProjectsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 4);
+  messageDesc(file_agni_v1_webapi_project, 3);
 
 /**
  * @generated from message agni.v1.webapi.ListProjectsResponse
@@ -284,7 +257,7 @@ export type ListProjectsResponse = Message<"agni.v1.webapi.ListProjectsResponse"
  * Use `create(ListProjectsResponseSchema)` to create a new message.
  */
 export const ListProjectsResponseSchema: GenMessage<ListProjectsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 5);
+  messageDesc(file_agni_v1_webapi_project, 4);
 
 /**
  * @generated from message agni.v1.webapi.GetProjectDesignRequest
@@ -303,7 +276,7 @@ export type GetProjectDesignRequest = Message<"agni.v1.webapi.GetProjectDesignRe
  * Use `create(GetProjectDesignRequestSchema)` to create a new message.
  */
 export const GetProjectDesignRequestSchema: GenMessage<GetProjectDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 6);
+  messageDesc(file_agni_v1_webapi_project, 5);
 
 /**
  * @generated from message agni.v1.webapi.ListProjectDesignsRequest
@@ -340,7 +313,7 @@ export type ListProjectDesignsRequest = Message<"agni.v1.webapi.ListProjectDesig
  * Use `create(ListProjectDesignsRequestSchema)` to create a new message.
  */
 export const ListProjectDesignsRequestSchema: GenMessage<ListProjectDesignsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 7);
+  messageDesc(file_agni_v1_webapi_project, 6);
 
 /**
  * @generated from message agni.v1.webapi.ListProjectDesignsResponse
@@ -364,7 +337,7 @@ export type ListProjectDesignsResponse = Message<"agni.v1.webapi.ListProjectDesi
  * Use `create(ListProjectDesignsResponseSchema)` to create a new message.
  */
 export const ListProjectDesignsResponseSchema: GenMessage<ListProjectDesignsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 8);
+  messageDesc(file_agni_v1_webapi_project, 7);
 
 /**
  * @generated from message agni.v1.webapi.ResolveDesignRequest
@@ -384,7 +357,7 @@ export type ResolveDesignRequest = Message<"agni.v1.webapi.ResolveDesignRequest"
  * Use `create(ResolveDesignRequestSchema)` to create a new message.
  */
 export const ResolveDesignRequestSchema: GenMessage<ResolveDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 9);
+  messageDesc(file_agni_v1_webapi_project, 8);
 
 /**
  * @generated from message agni.v1.webapi.ResolveDesignResponse
@@ -424,7 +397,7 @@ export type ResolveDesignResponse = Message<"agni.v1.webapi.ResolveDesignRespons
  * Use `create(ResolveDesignResponseSchema)` to create a new message.
  */
 export const ResolveDesignResponseSchema: GenMessage<ResolveDesignResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 10);
+  messageDesc(file_agni_v1_webapi_project, 9);
 
 /**
  * This file defines ProjectService. It answers "which design is this, and whose design is it"

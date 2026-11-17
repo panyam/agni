@@ -22,14 +22,16 @@ tutorial-project/
 ├── params/                   published part specs, one per MPN
 ├── lib/house.dl              the project's own derived relations
 ├── queries/power-review.yaml query sets
-└── designs/gateway/
-    ├── design.yaml           extends:, entry, companions, revisions, intent:
-    ├── gateway.edn           the entry, the netlist analysis reads
-    ├── gateway.kicad_sch     companion views of the same design
-    ├── gateway.kicad_pcb
-    ├── gateway-rev-b.edn     a later revision, with its own board
-    ├── gateway-rev-b.kicad_pcb
-    └── symbols/              this design's own symbol library
+├── designs/gateway/
+│   ├── design.yaml           extends:, series:, entry, companions, intent:
+│   ├── gateway.edn           the entry, the netlist analysis reads
+│   ├── gateway.kicad_sch     companion views of the same design
+│   ├── gateway.kicad_pcb
+│   └── symbols/              this design's own symbol library
+└── designs/gateway-rev-b/    a later version of the board, a design of its own
+    ├── design.yaml           the same series:, its own entry and board
+    ├── gateway-rev-b.edn
+    └── gateway-rev-b.kicad_pcb
 ```
 
 `agni start <design-file> [dir]` writes a project like this around a design file you already have,
@@ -102,12 +104,10 @@ title: Sample Board
 extends: ../../project.yaml
 symbols: [symbols]
 entry: gateway.edn
+series: gateway
 companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
-revisions:
-  - entry: gateway-rev-b.edn
-    companions: [gateway-rev-b.kicad_pcb]
 intent:
   nets:
     PMIC_CORE_3V3: {nominal: 3.3, domain: io}
@@ -124,9 +124,11 @@ against, never read as a second source of components. You can name the design fo
 companion, and each reads the same design with the same tiers. `--as-named` reads exactly the file
 you named instead.
 
-`revisions` declares later revisions, each with its own entry and companions, so each reads with its
-own board. [Comparing revisions](../comparing-revisions/#declared-revisions) covers what happens when
-you leave one undeclared.
+`series` names the board this design is a version of. A later version is a design of its own, in its
+own folder with its own `design.yaml`, and it names the same series (agni issue 1692). A
+`design.yaml` that still lists `revisions:` fails to load at that line.
+[Comparing revisions](../comparing-revisions/#a-revision-is-a-design-of-its-own) covers what happens
+when you leave a netlist undeclared.
 
 `intent:` declares what the board is supposed to contain, its modules, rails and pin maps.
 [Design intent](../design-intent/) covers its forms.
@@ -136,7 +138,7 @@ designs declare only their intent and their own symbol library, but a board kept
 naming scheme can carry its own `conventions:`, and a board with a peculiarity can add a checklist.
 A design's convention or intent replaces its project's, a checklist of the same name replaces the
 project's in place, and the files it names are read beside the project's. Only a design declares
-`entry`, `companions`, `revisions` and `flatten_hierarchy`, and any of those in a `project.yaml` is a
+`entry`, `companions`, `series` and `flatten_hierarchy`, and any of those in a `project.yaml` is a
 load error.
 
 `flatten_hierarchy: true` reads a hierarchical netlist whole. The read walks into every block,

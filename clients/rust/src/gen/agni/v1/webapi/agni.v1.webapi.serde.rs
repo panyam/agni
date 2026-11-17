@@ -2472,7 +2472,7 @@ impl serde::Serialize for Design {
         if self.config.is_some() {
             len += 1;
         }
-        if !self.revisions.is_empty() {
+        if !self.series.is_empty() {
             len += 1;
         }
         if self.flatten_hierarchy {
@@ -2497,8 +2497,8 @@ impl serde::Serialize for Design {
         if let Some(v) = self.config.as_ref() {
             struct_ser.serialize_field("config", v)?;
         }
-        if !self.revisions.is_empty() {
-            struct_ser.serialize_field("revisions", &self.revisions)?;
+        if !self.series.is_empty() {
+            struct_ser.serialize_field("series", &self.series)?;
         }
         if self.flatten_hierarchy {
             struct_ser.serialize_field("flattenHierarchy", &self.flatten_hierarchy)?;
@@ -2521,7 +2521,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             "companion_uris",
             "companionUris",
             "config",
-            "revisions",
+            "series",
             "flatten_hierarchy",
             "flattenHierarchy",
         ];
@@ -2534,7 +2534,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             EntryUri,
             CompanionUris,
             Config,
-            Revisions,
+            Series,
             FlattenHierarchy,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2563,7 +2563,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                             "entryUri" | "entry_uri" => Ok(GeneratedField::EntryUri),
                             "companionUris" | "companion_uris" => Ok(GeneratedField::CompanionUris),
                             "config" => Ok(GeneratedField::Config),
-                            "revisions" => Ok(GeneratedField::Revisions),
+                            "series" => Ok(GeneratedField::Series),
                             "flattenHierarchy" | "flatten_hierarchy" => Ok(GeneratedField::FlattenHierarchy),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
@@ -2590,7 +2590,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                 let mut entry_uri__ = None;
                 let mut companion_uris__ = None;
                 let mut config__ = None;
-                let mut revisions__ = None;
+                let mut series__ = None;
                 let mut flatten_hierarchy__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -2630,11 +2630,11 @@ impl<'de> serde::Deserialize<'de> for Design {
                             }
                             config__ = map_.next_value()?;
                         }
-                        GeneratedField::Revisions => {
-                            if revisions__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("revisions"));
+                        GeneratedField::Series => {
+                            if series__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("series"));
                             }
-                            revisions__ = Some(map_.next_value()?);
+                            series__ = Some(map_.next_value()?);
                         }
                         GeneratedField::FlattenHierarchy => {
                             if flatten_hierarchy__.is_some() {
@@ -2651,7 +2651,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                     entry_uri: entry_uri__.unwrap_or_default(),
                     companion_uris: companion_uris__.unwrap_or_default(),
                     config: config__,
-                    revisions: revisions__.unwrap_or_default(),
+                    series: series__.unwrap_or_default(),
                     flatten_hierarchy: flatten_hierarchy__.unwrap_or_default(),
                 })
             }
@@ -2803,116 +2803,6 @@ impl<'de> serde::Deserialize<'de> for DesignFile {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.DesignFile", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for DesignRevision {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if !self.entry_uri.is_empty() {
-            len += 1;
-        }
-        if !self.companion_uris.is_empty() {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.DesignRevision", len)?;
-        if !self.entry_uri.is_empty() {
-            struct_ser.serialize_field("entryUri", &self.entry_uri)?;
-        }
-        if !self.companion_uris.is_empty() {
-            struct_ser.serialize_field("companionUris", &self.companion_uris)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for DesignRevision {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "entry_uri",
-            "entryUri",
-            "companion_uris",
-            "companionUris",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            EntryUri,
-            CompanionUris,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "entryUri" | "entry_uri" => Ok(GeneratedField::EntryUri),
-                            "companionUris" | "companion_uris" => Ok(GeneratedField::CompanionUris),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = DesignRevision;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct agni.v1.webapi.DesignRevision")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<DesignRevision, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut entry_uri__ = None;
-                let mut companion_uris__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::EntryUri => {
-                            if entry_uri__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("entryUri"));
-                            }
-                            entry_uri__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::CompanionUris => {
-                            if companion_uris__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("companionUris"));
-                            }
-                            companion_uris__ = Some(map_.next_value()?);
-                        }
-                    }
-                }
-                Ok(DesignRevision {
-                    entry_uri: entry_uri__.unwrap_or_default(),
-                    companion_uris: companion_uris__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer.deserialize_struct("agni.v1.webapi.DesignRevision", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for DiffDesignsRequest {
