@@ -15,7 +15,7 @@
 
 #include "agni/client.h"
 #include "agni/v1/webapi/checks.grpc.pb.h"
-#include "agni/v1/webapi/design.grpc.pb.h"
+#include "agni/v1/webapi/design_view.grpc.pb.h"
 #include "agni/v1/webapi/query.grpc.pb.h"
 #include "agni/v1/webapi/snapshot.grpc.pb.h"
 
@@ -88,18 +88,18 @@ int main(int argc, char** argv) {
   }
   const std::string name = snap.name();
 
-  webapi::GetDesignResponse d;
+  webapi::GetSummaryResponse d;
   webapi::CheckDesignResponse c;
   webapi::RunQueryResponse q;
   agni::v1::geom::BoardGeometry board;
   grpc::Status st;
   const char* failed = nullptr;
   {
-    webapi::GetDesignRequest req;
+    webapi::GetSummaryRequest req;
     req.set_snapshot(name);
     grpc::ClientContext ctx;
-    st = client.Stub<webapi::DesignService>()->GetDesign(&ctx, req, &d);
-    if (!st.ok()) failed = "GetDesign";
+    st = client.Stub<webapi::DesignViewService>()->GetSummary(&ctx, req, &d);
+    if (!st.ok()) failed = "GetSummary";
   }
   if (!failed) {
     webapi::CheckDesignRequest req;
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     req.set_page_token(token);
     webapi::GetBoardGeometryResponse page;
     grpc::ClientContext ctx;
-    st = client.Stub<webapi::DesignService>()->GetBoardGeometry(&ctx, req, &page);
+    st = client.Stub<webapi::DesignViewService>()->GetBoardGeometry(&ctx, req, &page);
     if (!st.ok()) {
       failed = "GetBoardGeometry";
       break;

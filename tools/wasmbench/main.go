@@ -113,26 +113,26 @@ func Run(dir, design string) (Result, error) {
 	defer srv.Close()
 	ctx := context.Background()
 	uri := "mount://bench/" + strings.TrimPrefix(filepath.ToSlash(design), "/")
-	ds := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	ds := webapiconnect.NewDesignViewServiceClient(http.DefaultClient, srv.URL)
 	cs := webapiconnect.NewCheckServiceClient(http.DefaultClient, srv.URL)
 	qs := webapiconnect.NewQueryServiceClient(http.DefaultClient, srv.URL)
 	ss := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
 
-	// The read is the ingest and the open's GetDesign. A page waits on both before its first sheet.
+	// The read is the ingest and the open's GetSummary. A page waits on both before its first sheet.
 	t = time.Now()
 	snap, err := ss.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}}))
 	if err != nil {
 		return res, fmt.Errorf("ingest: %w", err)
 	}
 	name := snap.Msg.GetName()
-	d, err := ds.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: name}))
+	d, err := ds.GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: name}))
 	if err != nil {
-		return res, fmt.Errorf("GetDesign: %w", err)
+		return res, fmt.Errorf("GetSummary: %w", err)
 	}
 	res.ReadMS = time.Since(t).Milliseconds()
 	_ = d
-	// Counted by query rather than read off GetDesign, which leaves the counts empty for a file that
-	// is its own drawing (see DesignService.GetDesign). Untimed.
+	// Counted by query rather than read off GetSummary, which leaves the counts empty for a file that
+	// is its own drawing (see DesignViewService.GetSummary). Untimed.
 	for _, c := range []struct {
 		q   string
 		out *int32

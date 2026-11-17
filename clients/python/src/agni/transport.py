@@ -26,7 +26,7 @@ from agni.errors import AgniError, CliUnsupported
 from agni.services import Rpc
 from agni.v1.checks import checks_pb2 as _checks  # noqa: F401  (registers PartSpec's imports)
 from agni.v1.param import param_pb2
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, validate_pb2
+from agni.v1.webapi import checks_pb2, design_view_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, validate_pb2
 
 M = TypeVar("M", bound=Message)
 
@@ -366,7 +366,7 @@ def _review_stdin(req: Message) -> str:
 
 
 def _design_argv(req: Message, snap: Lookup) -> List[str]:
-    # GetDesign is `stats --format json`, which builds the same message through the same service
+    # GetSummary is `stats --format json`, which builds the same message through the same service
     # (agni issue 836). The read_mask, nets and ref_des select what it carries, as on the wire.
     _only(req, ("snapshot", "read_mask", "nets", "ref_des"))
     d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
@@ -437,17 +437,17 @@ CLI_COMMANDS: Dict[str, CliCommand] = {
     "TableService/Tabulate": CliCommand(
         lambda req, snap: ["tabulate", "-", "--format", "json"], tables_pb2.TabulateResponse, stdin=lambda req: json_format.MessageToJson(req)
     ),
-    "DesignService/GetDesign": CliCommand(_design_argv, design_pb2.GetDesignResponse),
-    "DesignService/TraceDesign": CliCommand(
+    "DesignViewService/GetSummary": CliCommand(_design_argv, design_view_pb2.GetSummaryResponse),
+    "DesignViewService/TraceDesign": CliCommand(
         _trace_argv,
-        design_pb2.Trace,
-        wrap=lambda t: design_pb2.TraceDesignResponse(trace=t),
+        design_view_pb2.Trace,
+        wrap=lambda t: design_view_pb2.TraceDesignResponse(trace=t),
         answers_on_failure=True,
     ),
-    "DesignService/GetLayoutReport": CliCommand(
+    "DesignViewService/GetLayoutReport": CliCommand(
         _layout_argv,
-        design_pb2.ConversionReport,
-        wrap=lambda r: design_pb2.GetLayoutReportResponse(report=r),
+        design_view_pb2.ConversionReport,
+        wrap=lambda r: design_view_pb2.GetLayoutReportResponse(report=r),
     ),
 }
 

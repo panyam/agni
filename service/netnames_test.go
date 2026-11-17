@@ -30,7 +30,7 @@ func nameOnlySheet() (*geom.SchematicGeometry, *ir.Design) {
 // 1443). A name two nets share, and a name no net has, keep the name as their only key.
 func TestGetSheetKeysANameOnlyCanvasByNetID(t *testing.T) {
 	g, d := nameOnlySheet()
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	ctx := context.Background()
 
@@ -79,7 +79,7 @@ func TestGetSheetKeysANameOnlyCanvasByNetID(t *testing.T) {
 // drawing cannot say which DUP net a wire is, and nothing that lit before stops lighting.
 func TestHighlightSheetLightsANameOnlyCanvasByID(t *testing.T) {
 	g, d := nameOnlySheet()
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	ctx := context.Background()
 
@@ -120,7 +120,7 @@ func TestHighlightSheetLightsANameOnlyCanvasByID(t *testing.T) {
 func TestSheetWithIDsIsNotRestamped(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Wires: []*geom.WireGeometry{{Net: "/SIG", NetId: "kicad-1"}}}}}
 	d := &ir.Design{Nets: []*ir.Net{{Id: "other", Name: "/SIG"}}}
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 	got := svc.withWireNetIDs(context.Background(), Snap{}, g, g.GetSheets()[0])
 	if got != g.GetSheets()[0] || got.GetWires()[0].GetNetId() != "kicad-1" {
 		t.Errorf("an id-capable sheet was restamped: %v", got.GetWires())

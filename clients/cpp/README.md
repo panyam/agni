@@ -6,7 +6,7 @@ stub from `protos/agni/v1` when it builds. A thin layer above them does what
 
 ```cpp
 #include "agni/client.h"
-#include "agni/v1/webapi/design.grpc.pb.h"
+#include "agni/v1/webapi/design_view.grpc.pb.h"
 #include "agni/v1/webapi/snapshot.grpc.pb.h"
 
 namespace webapi = agni::v1::webapi;

@@ -74,7 +74,7 @@ func Seed(ctx context.Context, mount, uri string, files []SeedFile, version stri
 		return nil, fmt.Errorf("reading %s for its seed: %w", uri, err)
 	}
 	if snap.Msg.GetTiers().GetBoardRead() {
-		if _, err := webapiconnect.NewDesignServiceClient(c, "http://seed").GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap.Msg.GetName(), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})); err != nil {
+		if _, err := webapiconnect.NewDesignViewServiceClient(c, "http://seed").GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap.Msg.GetName(), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})); err != nil {
 			return nil, fmt.Errorf("drawing %s's board for its seed: %w", uri, err)
 		}
 	}

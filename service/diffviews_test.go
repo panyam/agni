@@ -124,7 +124,7 @@ func TestCompareViewsTakesOneSnapshot(t *testing.T) {
 // locating VIN on the board finds it.
 func TestCrossProbeFollowsANetTheBoardNamesDifferently(t *testing.T) {
 	d, b := viewsFixture()
-	svc := NewDesignService(fakeLoader{design: d, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, board: b}, noNative{}, render.Style{}, nil)
 	snap := viewsSnap(t, svc.Snapshots())
 	ctx := context.Background()
 

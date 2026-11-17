@@ -77,7 +77,7 @@ class ResizeObserverStub {
 const REPLIES: Record<string, unknown> = {
   ListMounts: { mounts: [{ name: "m" }] },
   ListDir: { entries: [] },
-  GetDesign: { layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"], nativeAvailable: false },
+  GetSummary: { layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"], nativeAvailable: false },
   GetSheet: { content: { case: "svg", value: "<svg/>" } },
   GetSheetSvg: { svg: "<svg/>" },
   ResolveDesign: {
@@ -143,7 +143,7 @@ beforeAll(async () => {
   // The boot chain is async (initializeFromRoot, then the deep-link replay), so wait on the work
   // finishing rather than on a fixed delay.
   await vi.waitFor(() => {
-    expect(called).toContain("GetDesign");
+    expect(called).toContain("GetSummary");
     expect(document.querySelector('[data-component="findings"]')?.children.length).toBeGreaterThan(0);
   }, 5000);
 });
@@ -236,7 +236,7 @@ describe("a deep-link open reaches every service the page needs", () => {
     // One rpc per client constructed in main.ts. If a client stops being passed, its method stops
     // being called, and the panel that depended on it goes quiet the way WS9-052 did.
     const perClient = {
-      design: "GetDesign",
+      design: "GetSummary",
       checks: "ListRules",
       project: "ResolveDesign",
       review: "ListReviews",

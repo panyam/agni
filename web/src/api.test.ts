@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
-import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
-import { workspaceClient, designClient, reviewClient, timingInterceptor } from "./api.js";
+import { workspaceClient, designViewClient, reviewClient, timingInterceptor } from "./api.js";
 
 // Guards the generated service contract the frontend depends on. The proto must emit a
 // WorkspaceService with a ListMounts RPC, and the typed client must construct against it.
@@ -19,15 +19,15 @@ describe("web api", () => {
     expect(typeof client.listDir).toBe("function");
   });
 
-  it("exposes the DesignService contract (GetDesign, GetSheet)", () => {
-    expect(DesignService.typeName).toBe("agni.v1.webapi.DesignService");
-    expect(DesignService.method.getDesign).toBeDefined();
-    expect(DesignService.method.getSheet).toBeDefined();
+  it("exposes the DesignViewService contract (GetSummary, GetSheet)", () => {
+    expect(DesignViewService.typeName).toBe("agni.v1.webapi.DesignViewService");
+    expect(DesignViewService.method.getSummary).toBeDefined();
+    expect(DesignViewService.method.getSheet).toBeDefined();
   });
 
   it("builds a typed design client", () => {
-    const client = designClient("http://localhost:8080");
-    expect(typeof client.getDesign).toBe("function");
+    const client = designViewClient("http://localhost:8080");
+    expect(typeof client.getSummary).toBe("function");
     expect(typeof client.getSheet).toBe("function");
   });
 
@@ -87,7 +87,7 @@ describe("timing interceptor", () => {
   it("logs nothing when the engine sent no breakdown", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const call = timingInterceptor("1")((async () => ({ header: new Headers() })) as never) as unknown as (r: object) => Promise<unknown>;
-    await call({ header: new Headers(), method: { name: "GetDesign" } });
+    await call({ header: new Headers(), method: { name: "GetSummary" } });
     expect(info).not.toHaveBeenCalled();
     info.mockRestore();
   });

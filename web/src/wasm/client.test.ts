@@ -153,10 +153,10 @@ describe("mountingFetch", () => {
     const h = harness(listing);
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ask(f, "QueryService/RunQuery", "mount://tut/designs/gateway");
-    await ask(f, "DesignService/GetSheet", "mount://tut/designs/gateway");
+    await ask(f, "DesignViewService/GetSheet", "mount://tut/designs/gateway");
     expect(h.mounted).toEqual({ tut: ["designs/gateway/gateway.edn", "project.yaml"] });
     expect(h.fetched).toHaveLength(2);
-    expect(h.engineCalls).toEqual(["/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignService/GetSheet"]);
+    expect(h.engineCalls).toEqual(["/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignViewService/GetSheet"]);
     expect(h.networkCalls).toEqual([]);
   });
 
@@ -177,8 +177,8 @@ describe("mountingFetch", () => {
     const h = harness(new Error("resource exhausted"));
     const told: ServerFallback[] = [];
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000, onServer: (x) => told.push(x) });
-    await ask(f, "DesignService/GetDesign", "mount://tut/designs/gateway");
-    expect(h.networkCalls).toEqual(["/agni.v1.webapi.DesignService/GetDesign"]);
+    await ask(f, "DesignViewService/GetSummary", "mount://tut/designs/gateway");
+    expect(h.networkCalls).toEqual(["/agni.v1.webapi.DesignViewService/GetSummary"]);
     expect(told[0].reason).toMatch(/could not be listed/);
   });
 
@@ -290,7 +290,7 @@ describe("laneFor", () => {
     expect(at("/agni.v1.webapi.DiffService/DiffDesigns")).toBe("jobs");
     expect(at("/agni.v1.webapi.CheckService/ListRules")).toBe("serve");
     expect(at("/agni.v1.webapi.QueryService/RunQuery")).toBe("serve");
-    expect(at("/agni.v1.webapi.DesignService/GetSheet")).toBe("serve");
+    expect(at("/agni.v1.webapi.DesignViewService/GetSheet")).toBe("serve");
     // An Ingest that reads the board goes to a worker of its own, and any other to the serve lane.
     expect(laneFor(new URL("http://h/agni/demo/agni.v1.webapi.SnapshotService/Ingest"), true)).toBe("prepare");
     expect(at("/agni.v1.webapi.SnapshotService/Ingest")).toBe("serve");
@@ -316,9 +316,9 @@ describe("snapshots across the lanes", () => {
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ingest(f, "mount://tut/designs/gateway", "s1");
     await askSnap(f, "QueryService/RunQuery", "snapshots/s1");
-    await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    await askSnap(f, "DesignViewService/GetSheet", "snapshots/s1");
     // The serve worker took the page's own ingest, so it is asked with nothing sent ahead.
-    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignService/GetSheet"]);
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignViewService/GetSheet"]);
     h.replace("serve");
     await askSnap(f, "QueryService/RunQuery", "snapshots/s1");
     expect(h.laneCalls.serve.slice(3)).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery"]);
@@ -402,7 +402,7 @@ const withBoard: DesignFiles = {
   files: [...listing.files, { path: BOARD, sha256: "sha256:c", board: true }],
   totalSize: 3000n,
 };
-const GET_SHEET = "/agni.v1.webapi.DesignService/GetSheet";
+const GET_SHEET = "/agni.v1.webapi.DesignViewService/GetSheet";
 
 describe("holding the board back from the serve lane", () => {
   it("gives the serve worker a placeholder for the board, and fetches no board, for a plain query and the open", async () => {
@@ -410,25 +410,25 @@ describe("holding the board back from the serve lane", () => {
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ingest(f, "mount://tut/designs/gateway", "s1");
     expect((await askSnap(f, "QueryService/RunQuery", "snapshots/s1")).ok).toBe(true);
-    expect((await askSnap(f, "DesignService/GetDesign", "snapshots/s1")).ok).toBe(true);
+    expect((await askSnap(f, "DesignViewService/GetSummary", "snapshots/s1")).ok).toBe(true);
     expect(h.fetched.sort()).toEqual(["designs/gateway/gateway.edn", "project.yaml"]);
     // The board's path is still in the mount, so the design resolves as it does with the file there.
     expect(new TextDecoder().decode(h.given.serve[BOARD])).toBe(`${WITHHELD_PREFIX}sha256:c\n`);
-    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignService/GetDesign"]);
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignViewService/GetSummary"]);
   });
 
   it("brings the board into the serve worker and asks again when the engine says a question read it", async () => {
     const h = harness(withBoard, (p) => p === GET_SHEET);
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
     await ingest(f, "mount://tut/designs/gateway", "s1");
-    const resp = await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    const resp = await askSnap(f, "DesignViewService/GetSheet", "snapshots/s1");
     expect(resp.ok).toBe(true);
     expect(isPlaceholder(h.given.serve[BOARD])).toBe(false);
     expect(h.fetched).toContain(BOARD);
     // The files rebuilt the worker's engine, so the snapshot is ingested again before the question.
     expect(h.laneCalls.serve).toEqual([INGEST_PATH, GET_SHEET, INGEST_PATH, GET_SHEET]);
     // Once the board is in, nothing is held back and nothing is asked twice.
-    await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    await askSnap(f, "DesignViewService/GetSheet", "snapshots/s1");
     expect(h.laneCalls.serve.slice(4)).toEqual([GET_SHEET]);
     expect(h.fetched.filter((p) => p === BOARD)).toHaveLength(1);
   });
@@ -452,7 +452,7 @@ describe("holding the board back from the serve lane", () => {
     const refusing: EngineLane = { ...h.engine.lanes.serve, fetch: async () => new Response(JSON.stringify({ code: "not_found", message: "no such sheet" }), { status: 404 }) };
     const engine = { ...h.engine, lanes: { ...h.engine.lanes, serve: refusing } };
     const f = mountingFetch({ engine, source: h.source, network: h.network, maxBytes: 10_000 });
-    const resp = await ask(f, "DesignService/GetSheet", "mount://tut/designs/gateway");
+    const resp = await ask(f, "DesignViewService/GetSheet", "mount://tut/designs/gateway");
     expect(resp.status).toBe(404);
     expect(h.fetched).not.toContain(BOARD);
   });

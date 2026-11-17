@@ -4,49 +4,49 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 /**
  * <pre>
- * DesignService loads a design file into something the viewer can draw. It reuses the
+ * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
  * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
  * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
  * other supported format is drawn as an auto-layout of its netlist graph.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
-public final class DesignServiceGrpc {
+public final class DesignViewServiceGrpc {
 
-  private DesignServiceGrpc() {}
+  private DesignViewServiceGrpc() {}
 
-  public static final java.lang.String SERVICE_NAME = "agni.v1.webapi.DesignService";
+  public static final java.lang.String SERVICE_NAME = "agni.v1.webapi.DesignViewService";
 
   // Static method descriptors that strictly reflect the proto.
-  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetDesignRequest,
-      io.github.panyam.agni.v1.webapi.GetDesignResponse> getGetDesignMethod;
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSummaryRequest,
+      io.github.panyam.agni.v1.webapi.GetSummaryResponse> getGetSummaryMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "GetDesign",
-      requestType = io.github.panyam.agni.v1.webapi.GetDesignRequest.class,
-      responseType = io.github.panyam.agni.v1.webapi.GetDesignResponse.class,
+      fullMethodName = SERVICE_NAME + '/' + "GetSummary",
+      requestType = io.github.panyam.agni.v1.webapi.GetSummaryRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.GetSummaryResponse.class,
       methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetDesignRequest,
-      io.github.panyam.agni.v1.webapi.GetDesignResponse> getGetDesignMethod() {
-    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetDesignRequest, io.github.panyam.agni.v1.webapi.GetDesignResponse> getGetDesignMethod;
-    if ((getGetDesignMethod = DesignServiceGrpc.getGetDesignMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getGetDesignMethod = DesignServiceGrpc.getGetDesignMethod) == null) {
-          DesignServiceGrpc.getGetDesignMethod = getGetDesignMethod =
-              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetDesignRequest, io.github.panyam.agni.v1.webapi.GetDesignResponse>newBuilder()
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSummaryRequest,
+      io.github.panyam.agni.v1.webapi.GetSummaryResponse> getGetSummaryMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSummaryRequest, io.github.panyam.agni.v1.webapi.GetSummaryResponse> getGetSummaryMethod;
+    if ((getGetSummaryMethod = DesignViewServiceGrpc.getGetSummaryMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getGetSummaryMethod = DesignViewServiceGrpc.getGetSummaryMethod) == null) {
+          DesignViewServiceGrpc.getGetSummaryMethod = getGetSummaryMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetSummaryRequest, io.github.panyam.agni.v1.webapi.GetSummaryResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetDesign"))
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetSummary"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.GetDesignRequest.getDefaultInstance()))
+                  io.github.panyam.agni.v1.webapi.GetSummaryRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  io.github.panyam.agni.v1.webapi.GetDesignResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetDesign"))
+                  io.github.panyam.agni.v1.webapi.GetSummaryResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("GetSummary"))
               .build();
         }
       }
     }
-    return getGetDesignMethod;
+    return getGetSummaryMethod;
   }
 
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSheetRequest,
@@ -60,10 +60,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSheetRequest,
       io.github.panyam.agni.v1.webapi.GetSheetResponse> getGetSheetMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetSheetRequest, io.github.panyam.agni.v1.webapi.GetSheetResponse> getGetSheetMethod;
-    if ((getGetSheetMethod = DesignServiceGrpc.getGetSheetMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getGetSheetMethod = DesignServiceGrpc.getGetSheetMethod) == null) {
-          DesignServiceGrpc.getGetSheetMethod = getGetSheetMethod =
+    if ((getGetSheetMethod = DesignViewServiceGrpc.getGetSheetMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getGetSheetMethod = DesignViewServiceGrpc.getGetSheetMethod) == null) {
+          DesignViewServiceGrpc.getGetSheetMethod = getGetSheetMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetSheetRequest, io.github.panyam.agni.v1.webapi.GetSheetResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetSheet"))
@@ -72,7 +72,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.GetSheetRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.GetSheetResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetSheet"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("GetSheet"))
               .build();
         }
       }
@@ -91,10 +91,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.HighlightSheetRequest,
       io.github.panyam.agni.v1.webapi.HighlightSheetResponse> getHighlightSheetMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.HighlightSheetRequest, io.github.panyam.agni.v1.webapi.HighlightSheetResponse> getHighlightSheetMethod;
-    if ((getHighlightSheetMethod = DesignServiceGrpc.getHighlightSheetMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getHighlightSheetMethod = DesignServiceGrpc.getHighlightSheetMethod) == null) {
-          DesignServiceGrpc.getHighlightSheetMethod = getHighlightSheetMethod =
+    if ((getHighlightSheetMethod = DesignViewServiceGrpc.getHighlightSheetMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getHighlightSheetMethod = DesignViewServiceGrpc.getHighlightSheetMethod) == null) {
+          DesignViewServiceGrpc.getHighlightSheetMethod = getHighlightSheetMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.HighlightSheetRequest, io.github.panyam.agni.v1.webapi.HighlightSheetResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "HighlightSheet"))
@@ -103,7 +103,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.HighlightSheetRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.HighlightSheetResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("HighlightSheet"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("HighlightSheet"))
               .build();
         }
       }
@@ -122,10 +122,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetLayoutReportRequest,
       io.github.panyam.agni.v1.webapi.GetLayoutReportResponse> getGetLayoutReportMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetLayoutReportRequest, io.github.panyam.agni.v1.webapi.GetLayoutReportResponse> getGetLayoutReportMethod;
-    if ((getGetLayoutReportMethod = DesignServiceGrpc.getGetLayoutReportMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getGetLayoutReportMethod = DesignServiceGrpc.getGetLayoutReportMethod) == null) {
-          DesignServiceGrpc.getGetLayoutReportMethod = getGetLayoutReportMethod =
+    if ((getGetLayoutReportMethod = DesignViewServiceGrpc.getGetLayoutReportMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getGetLayoutReportMethod = DesignViewServiceGrpc.getGetLayoutReportMethod) == null) {
+          DesignViewServiceGrpc.getGetLayoutReportMethod = getGetLayoutReportMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetLayoutReportRequest, io.github.panyam.agni.v1.webapi.GetLayoutReportResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetLayoutReport"))
@@ -134,7 +134,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.GetLayoutReportRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.GetLayoutReportResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetLayoutReport"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("GetLayoutReport"))
               .build();
         }
       }
@@ -153,10 +153,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest,
       io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getGetBoardGeometryMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest, io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse> getGetBoardGeometryMethod;
-    if ((getGetBoardGeometryMethod = DesignServiceGrpc.getGetBoardGeometryMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getGetBoardGeometryMethod = DesignServiceGrpc.getGetBoardGeometryMethod) == null) {
-          DesignServiceGrpc.getGetBoardGeometryMethod = getGetBoardGeometryMethod =
+    if ((getGetBoardGeometryMethod = DesignViewServiceGrpc.getGetBoardGeometryMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getGetBoardGeometryMethod = DesignViewServiceGrpc.getGetBoardGeometryMethod) == null) {
+          DesignViewServiceGrpc.getGetBoardGeometryMethod = getGetBoardGeometryMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest, io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetBoardGeometry"))
@@ -165,7 +165,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetBoardGeometry"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("GetBoardGeometry"))
               .build();
         }
       }
@@ -184,10 +184,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest,
       io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getGetBoardMeshesMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest, io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getGetBoardMeshesMethod;
-    if ((getGetBoardMeshesMethod = DesignServiceGrpc.getGetBoardMeshesMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getGetBoardMeshesMethod = DesignServiceGrpc.getGetBoardMeshesMethod) == null) {
-          DesignServiceGrpc.getGetBoardMeshesMethod = getGetBoardMeshesMethod =
+    if ((getGetBoardMeshesMethod = DesignViewServiceGrpc.getGetBoardMeshesMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getGetBoardMeshesMethod = DesignViewServiceGrpc.getGetBoardMeshesMethod) == null) {
+          DesignViewServiceGrpc.getGetBoardMeshesMethod = getGetBoardMeshesMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest, io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetBoardMeshes"))
@@ -196,7 +196,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetBoardMeshes"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("GetBoardMeshes"))
               .build();
         }
       }
@@ -215,10 +215,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LocateSubjectsRequest,
       io.github.panyam.agni.v1.webapi.LocateSubjectsResponse> getLocateSubjectsMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LocateSubjectsRequest, io.github.panyam.agni.v1.webapi.LocateSubjectsResponse> getLocateSubjectsMethod;
-    if ((getLocateSubjectsMethod = DesignServiceGrpc.getLocateSubjectsMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getLocateSubjectsMethod = DesignServiceGrpc.getLocateSubjectsMethod) == null) {
-          DesignServiceGrpc.getLocateSubjectsMethod = getLocateSubjectsMethod =
+    if ((getLocateSubjectsMethod = DesignViewServiceGrpc.getLocateSubjectsMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getLocateSubjectsMethod = DesignViewServiceGrpc.getLocateSubjectsMethod) == null) {
+          DesignViewServiceGrpc.getLocateSubjectsMethod = getLocateSubjectsMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.LocateSubjectsRequest, io.github.panyam.agni.v1.webapi.LocateSubjectsResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LocateSubjects"))
@@ -227,7 +227,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.LocateSubjectsRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.LocateSubjectsResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("LocateSubjects"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("LocateSubjects"))
               .build();
         }
       }
@@ -246,10 +246,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.TraceDesignRequest,
       io.github.panyam.agni.v1.webapi.TraceDesignResponse> getTraceDesignMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.TraceDesignRequest, io.github.panyam.agni.v1.webapi.TraceDesignResponse> getTraceDesignMethod;
-    if ((getTraceDesignMethod = DesignServiceGrpc.getTraceDesignMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getTraceDesignMethod = DesignServiceGrpc.getTraceDesignMethod) == null) {
-          DesignServiceGrpc.getTraceDesignMethod = getTraceDesignMethod =
+    if ((getTraceDesignMethod = DesignViewServiceGrpc.getTraceDesignMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getTraceDesignMethod = DesignViewServiceGrpc.getTraceDesignMethod) == null) {
+          DesignViewServiceGrpc.getTraceDesignMethod = getTraceDesignMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.TraceDesignRequest, io.github.panyam.agni.v1.webapi.TraceDesignResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "TraceDesign"))
@@ -258,7 +258,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.TraceDesignRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.TraceDesignResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("TraceDesign"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("TraceDesign"))
               .build();
         }
       }
@@ -277,10 +277,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ReachablePinsRequest,
       io.github.panyam.agni.v1.webapi.ReachablePinsResponse> getReachablePinsMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ReachablePinsRequest, io.github.panyam.agni.v1.webapi.ReachablePinsResponse> getReachablePinsMethod;
-    if ((getReachablePinsMethod = DesignServiceGrpc.getReachablePinsMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getReachablePinsMethod = DesignServiceGrpc.getReachablePinsMethod) == null) {
-          DesignServiceGrpc.getReachablePinsMethod = getReachablePinsMethod =
+    if ((getReachablePinsMethod = DesignViewServiceGrpc.getReachablePinsMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getReachablePinsMethod = DesignViewServiceGrpc.getReachablePinsMethod) == null) {
+          DesignViewServiceGrpc.getReachablePinsMethod = getReachablePinsMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ReachablePinsRequest, io.github.panyam.agni.v1.webapi.ReachablePinsResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReachablePins"))
@@ -289,7 +289,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.ReachablePinsRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.ReachablePinsResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ReachablePins"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("ReachablePins"))
               .build();
         }
       }
@@ -308,10 +308,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.WalkDesignRequest,
       io.github.panyam.agni.v1.webapi.WalkDesignResponse> getWalkDesignMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.WalkDesignRequest, io.github.panyam.agni.v1.webapi.WalkDesignResponse> getWalkDesignMethod;
-    if ((getWalkDesignMethod = DesignServiceGrpc.getWalkDesignMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getWalkDesignMethod = DesignServiceGrpc.getWalkDesignMethod) == null) {
-          DesignServiceGrpc.getWalkDesignMethod = getWalkDesignMethod =
+    if ((getWalkDesignMethod = DesignViewServiceGrpc.getWalkDesignMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getWalkDesignMethod = DesignViewServiceGrpc.getWalkDesignMethod) == null) {
+          DesignViewServiceGrpc.getWalkDesignMethod = getWalkDesignMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.WalkDesignRequest, io.github.panyam.agni.v1.webapi.WalkDesignResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "WalkDesign"))
@@ -320,7 +320,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.WalkDesignRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.WalkDesignResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("WalkDesign"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("WalkDesign"))
               .build();
         }
       }
@@ -339,10 +339,10 @@ public final class DesignServiceGrpc {
   public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListWalkKindsRequest,
       io.github.panyam.agni.v1.webapi.ListWalkKindsResponse> getListWalkKindsMethod() {
     io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListWalkKindsRequest, io.github.panyam.agni.v1.webapi.ListWalkKindsResponse> getListWalkKindsMethod;
-    if ((getListWalkKindsMethod = DesignServiceGrpc.getListWalkKindsMethod) == null) {
-      synchronized (DesignServiceGrpc.class) {
-        if ((getListWalkKindsMethod = DesignServiceGrpc.getListWalkKindsMethod) == null) {
-          DesignServiceGrpc.getListWalkKindsMethod = getListWalkKindsMethod =
+    if ((getListWalkKindsMethod = DesignViewServiceGrpc.getListWalkKindsMethod) == null) {
+      synchronized (DesignViewServiceGrpc.class) {
+        if ((getListWalkKindsMethod = DesignViewServiceGrpc.getListWalkKindsMethod) == null) {
+          DesignViewServiceGrpc.getListWalkKindsMethod = getListWalkKindsMethod =
               io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ListWalkKindsRequest, io.github.panyam.agni.v1.webapi.ListWalkKindsResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListWalkKinds"))
@@ -351,7 +351,7 @@ public final class DesignServiceGrpc {
                   io.github.panyam.agni.v1.webapi.ListWalkKindsRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   io.github.panyam.agni.v1.webapi.ListWalkKindsResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("ListWalkKinds"))
+              .setSchemaDescriptor(new DesignViewServiceMethodDescriptorSupplier("ListWalkKinds"))
               .build();
         }
       }
@@ -362,65 +362,65 @@ public final class DesignServiceGrpc {
   /**
    * Creates a new async stub that supports all call types for the service
    */
-  public static DesignServiceStub newStub(io.grpc.Channel channel) {
-    io.grpc.stub.AbstractStub.StubFactory<DesignServiceStub> factory =
-      new io.grpc.stub.AbstractStub.StubFactory<DesignServiceStub>() {
+  public static DesignViewServiceStub newStub(io.grpc.Channel channel) {
+    io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceStub> factory =
+      new io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceStub>() {
         @java.lang.Override
-        public DesignServiceStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-          return new DesignServiceStub(channel, callOptions);
+        public DesignViewServiceStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+          return new DesignViewServiceStub(channel, callOptions);
         }
       };
-    return DesignServiceStub.newStub(factory, channel);
+    return DesignViewServiceStub.newStub(factory, channel);
   }
 
   /**
    * Creates a new blocking-style stub that supports all types of calls on the service
    */
-  public static DesignServiceBlockingV2Stub newBlockingV2Stub(
+  public static DesignViewServiceBlockingV2Stub newBlockingV2Stub(
       io.grpc.Channel channel) {
-    io.grpc.stub.AbstractStub.StubFactory<DesignServiceBlockingV2Stub> factory =
-      new io.grpc.stub.AbstractStub.StubFactory<DesignServiceBlockingV2Stub>() {
+    io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceBlockingV2Stub> factory =
+      new io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceBlockingV2Stub>() {
         @java.lang.Override
-        public DesignServiceBlockingV2Stub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-          return new DesignServiceBlockingV2Stub(channel, callOptions);
+        public DesignViewServiceBlockingV2Stub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+          return new DesignViewServiceBlockingV2Stub(channel, callOptions);
         }
       };
-    return DesignServiceBlockingV2Stub.newStub(factory, channel);
+    return DesignViewServiceBlockingV2Stub.newStub(factory, channel);
   }
 
   /**
    * Creates a new blocking-style stub that supports unary and streaming output calls on the service
    */
-  public static DesignServiceBlockingStub newBlockingStub(
+  public static DesignViewServiceBlockingStub newBlockingStub(
       io.grpc.Channel channel) {
-    io.grpc.stub.AbstractStub.StubFactory<DesignServiceBlockingStub> factory =
-      new io.grpc.stub.AbstractStub.StubFactory<DesignServiceBlockingStub>() {
+    io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceBlockingStub> factory =
+      new io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceBlockingStub>() {
         @java.lang.Override
-        public DesignServiceBlockingStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-          return new DesignServiceBlockingStub(channel, callOptions);
+        public DesignViewServiceBlockingStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+          return new DesignViewServiceBlockingStub(channel, callOptions);
         }
       };
-    return DesignServiceBlockingStub.newStub(factory, channel);
+    return DesignViewServiceBlockingStub.newStub(factory, channel);
   }
 
   /**
    * Creates a new ListenableFuture-style stub that supports unary calls on the service
    */
-  public static DesignServiceFutureStub newFutureStub(
+  public static DesignViewServiceFutureStub newFutureStub(
       io.grpc.Channel channel) {
-    io.grpc.stub.AbstractStub.StubFactory<DesignServiceFutureStub> factory =
-      new io.grpc.stub.AbstractStub.StubFactory<DesignServiceFutureStub>() {
+    io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceFutureStub> factory =
+      new io.grpc.stub.AbstractStub.StubFactory<DesignViewServiceFutureStub>() {
         @java.lang.Override
-        public DesignServiceFutureStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-          return new DesignServiceFutureStub(channel, callOptions);
+        public DesignViewServiceFutureStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+          return new DesignViewServiceFutureStub(channel, callOptions);
         }
       };
-    return DesignServiceFutureStub.newStub(factory, channel);
+    return DesignViewServiceFutureStub.newStub(factory, channel);
   }
 
   /**
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
@@ -430,14 +430,14 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+     * GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
      * navigator reads that list. It resolves the render mode per file, faithful for geometry and
      * an auto-layout otherwise.
      * </pre>
      */
-    default void getDesign(io.github.panyam.agni.v1.webapi.GetDesignRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetDesignResponse> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetDesignMethod(), responseObserver);
+    default void getSummary(io.github.panyam.agni.v1.webapi.GetSummaryRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetSummaryResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetSummaryMethod(), responseObserver);
     }
 
     /**
@@ -590,55 +590,55 @@ public final class DesignServiceGrpc {
   }
 
   /**
-   * Base class for the server implementation of the service DesignService.
+   * Base class for the server implementation of the service DesignViewService.
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
    * </pre>
    */
-  public static abstract class DesignServiceImplBase
+  public static abstract class DesignViewServiceImplBase
       implements io.grpc.BindableService, AsyncService {
 
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
-      return DesignServiceGrpc.bindService(this);
+      return DesignViewServiceGrpc.bindService(this);
     }
   }
 
   /**
-   * A stub to allow clients to do asynchronous rpc calls to service DesignService.
+   * A stub to allow clients to do asynchronous rpc calls to service DesignViewService.
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
    * </pre>
    */
-  public static final class DesignServiceStub
-      extends io.grpc.stub.AbstractAsyncStub<DesignServiceStub> {
-    private DesignServiceStub(
+  public static final class DesignViewServiceStub
+      extends io.grpc.stub.AbstractAsyncStub<DesignViewServiceStub> {
+    private DesignViewServiceStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
     }
 
     @java.lang.Override
-    protected DesignServiceStub build(
+    protected DesignViewServiceStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-      return new DesignServiceStub(channel, callOptions);
+      return new DesignViewServiceStub(channel, callOptions);
     }
 
     /**
      * <pre>
-     * GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+     * GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
      * navigator reads that list. It resolves the render mode per file, faithful for geometry and
      * an auto-layout otherwise.
      * </pre>
      */
-    public void getDesign(io.github.panyam.agni.v1.webapi.GetDesignRequest request,
-        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetDesignResponse> responseObserver) {
+    public void getSummary(io.github.panyam.agni.v1.webapi.GetSummaryRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetSummaryResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getGetDesignMethod(), getCallOptions()), request, responseObserver);
+          getChannel().newCall(getGetSummaryMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -801,37 +801,37 @@ public final class DesignServiceGrpc {
   }
 
   /**
-   * A stub to allow clients to do synchronous rpc calls to service DesignService.
+   * A stub to allow clients to do synchronous rpc calls to service DesignViewService.
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
    * </pre>
    */
-  public static final class DesignServiceBlockingV2Stub
-      extends io.grpc.stub.AbstractBlockingStub<DesignServiceBlockingV2Stub> {
-    private DesignServiceBlockingV2Stub(
+  public static final class DesignViewServiceBlockingV2Stub
+      extends io.grpc.stub.AbstractBlockingStub<DesignViewServiceBlockingV2Stub> {
+    private DesignViewServiceBlockingV2Stub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
     }
 
     @java.lang.Override
-    protected DesignServiceBlockingV2Stub build(
+    protected DesignViewServiceBlockingV2Stub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-      return new DesignServiceBlockingV2Stub(channel, callOptions);
+      return new DesignViewServiceBlockingV2Stub(channel, callOptions);
     }
 
     /**
      * <pre>
-     * GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+     * GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
      * navigator reads that list. It resolves the render mode per file, faithful for geometry and
      * an auto-layout otherwise.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.GetDesignResponse getDesign(io.github.panyam.agni.v1.webapi.GetDesignRequest request) throws io.grpc.StatusException {
+    public io.github.panyam.agni.v1.webapi.GetSummaryResponse getSummary(io.github.panyam.agni.v1.webapi.GetSummaryRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
-          getChannel(), getGetDesignMethod(), getCallOptions(), request);
+          getChannel(), getGetSummaryMethod(), getCallOptions(), request);
     }
 
     /**
@@ -984,37 +984,37 @@ public final class DesignServiceGrpc {
   }
 
   /**
-   * A stub to allow clients to do limited synchronous rpc calls to service DesignService.
+   * A stub to allow clients to do limited synchronous rpc calls to service DesignViewService.
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
    * </pre>
    */
-  public static final class DesignServiceBlockingStub
-      extends io.grpc.stub.AbstractBlockingStub<DesignServiceBlockingStub> {
-    private DesignServiceBlockingStub(
+  public static final class DesignViewServiceBlockingStub
+      extends io.grpc.stub.AbstractBlockingStub<DesignViewServiceBlockingStub> {
+    private DesignViewServiceBlockingStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
     }
 
     @java.lang.Override
-    protected DesignServiceBlockingStub build(
+    protected DesignViewServiceBlockingStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-      return new DesignServiceBlockingStub(channel, callOptions);
+      return new DesignViewServiceBlockingStub(channel, callOptions);
     }
 
     /**
      * <pre>
-     * GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+     * GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
      * navigator reads that list. It resolves the render mode per file, faithful for geometry and
      * an auto-layout otherwise.
      * </pre>
      */
-    public io.github.panyam.agni.v1.webapi.GetDesignResponse getDesign(io.github.panyam.agni.v1.webapi.GetDesignRequest request) {
+    public io.github.panyam.agni.v1.webapi.GetSummaryResponse getSummary(io.github.panyam.agni.v1.webapi.GetSummaryRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getGetDesignMethod(), getCallOptions(), request);
+          getChannel(), getGetSummaryMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1167,38 +1167,38 @@ public final class DesignServiceGrpc {
   }
 
   /**
-   * A stub to allow clients to do ListenableFuture-style rpc calls to service DesignService.
+   * A stub to allow clients to do ListenableFuture-style rpc calls to service DesignViewService.
    * <pre>
-   * DesignService loads a design file into something the viewer can draw. It reuses the
+   * DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
    * engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
    * and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
    * other supported format is drawn as an auto-layout of its netlist graph.
    * </pre>
    */
-  public static final class DesignServiceFutureStub
-      extends io.grpc.stub.AbstractFutureStub<DesignServiceFutureStub> {
-    private DesignServiceFutureStub(
+  public static final class DesignViewServiceFutureStub
+      extends io.grpc.stub.AbstractFutureStub<DesignViewServiceFutureStub> {
+    private DesignViewServiceFutureStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
     }
 
     @java.lang.Override
-    protected DesignServiceFutureStub build(
+    protected DesignViewServiceFutureStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
-      return new DesignServiceFutureStub(channel, callOptions);
+      return new DesignViewServiceFutureStub(channel, callOptions);
     }
 
     /**
      * <pre>
-     * GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+     * GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
      * navigator reads that list. It resolves the render mode per file, faithful for geometry and
      * an auto-layout otherwise.
      * </pre>
      */
-    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.GetDesignResponse> getDesign(
-        io.github.panyam.agni.v1.webapi.GetDesignRequest request) {
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.GetSummaryResponse> getSummary(
+        io.github.panyam.agni.v1.webapi.GetSummaryRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getGetDesignMethod(), getCallOptions()), request);
+          getChannel().newCall(getGetSummaryMethod(), getCallOptions()), request);
     }
 
     /**
@@ -1360,7 +1360,7 @@ public final class DesignServiceGrpc {
     }
   }
 
-  private static final int METHODID_GET_DESIGN = 0;
+  private static final int METHODID_GET_SUMMARY = 0;
   private static final int METHODID_GET_SHEET = 1;
   private static final int METHODID_HIGHLIGHT_SHEET = 2;
   private static final int METHODID_GET_LAYOUT_REPORT = 3;
@@ -1389,9 +1389,9 @@ public final class DesignServiceGrpc {
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
-        case METHODID_GET_DESIGN:
-          serviceImpl.getDesign((io.github.panyam.agni.v1.webapi.GetDesignRequest) request,
-              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetDesignResponse>) responseObserver);
+        case METHODID_GET_SUMMARY:
+          serviceImpl.getSummary((io.github.panyam.agni.v1.webapi.GetSummaryRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetSummaryResponse>) responseObserver);
           break;
         case METHODID_GET_SHEET:
           serviceImpl.getSheet((io.github.panyam.agni.v1.webapi.GetSheetRequest) request,
@@ -1452,12 +1452,12 @@ public final class DesignServiceGrpc {
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
         .addMethod(
-          getGetDesignMethod(),
+          getGetSummaryMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
-              io.github.panyam.agni.v1.webapi.GetDesignRequest,
-              io.github.panyam.agni.v1.webapi.GetDesignResponse>(
-                service, METHODID_GET_DESIGN)))
+              io.github.panyam.agni.v1.webapi.GetSummaryRequest,
+              io.github.panyam.agni.v1.webapi.GetSummaryResponse>(
+                service, METHODID_GET_SUMMARY)))
         .addMethod(
           getGetSheetMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1531,32 +1531,32 @@ public final class DesignServiceGrpc {
         .build();
   }
 
-  private static abstract class DesignServiceBaseDescriptorSupplier
+  private static abstract class DesignViewServiceBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
-    DesignServiceBaseDescriptorSupplier() {}
+    DesignViewServiceBaseDescriptorSupplier() {}
 
     @java.lang.Override
     public com.google.protobuf.Descriptors.FileDescriptor getFileDescriptor() {
-      return io.github.panyam.agni.v1.webapi.DesignProto.getDescriptor();
+      return io.github.panyam.agni.v1.webapi.DesignViewProto.getDescriptor();
     }
 
     @java.lang.Override
     public com.google.protobuf.Descriptors.ServiceDescriptor getServiceDescriptor() {
-      return getFileDescriptor().findServiceByName("DesignService");
+      return getFileDescriptor().findServiceByName("DesignViewService");
     }
   }
 
-  private static final class DesignServiceFileDescriptorSupplier
-      extends DesignServiceBaseDescriptorSupplier {
-    DesignServiceFileDescriptorSupplier() {}
+  private static final class DesignViewServiceFileDescriptorSupplier
+      extends DesignViewServiceBaseDescriptorSupplier {
+    DesignViewServiceFileDescriptorSupplier() {}
   }
 
-  private static final class DesignServiceMethodDescriptorSupplier
-      extends DesignServiceBaseDescriptorSupplier
+  private static final class DesignViewServiceMethodDescriptorSupplier
+      extends DesignViewServiceBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoMethodDescriptorSupplier {
     private final java.lang.String methodName;
 
-    DesignServiceMethodDescriptorSupplier(java.lang.String methodName) {
+    DesignViewServiceMethodDescriptorSupplier(java.lang.String methodName) {
       this.methodName = methodName;
     }
 
@@ -1571,12 +1571,12 @@ public final class DesignServiceGrpc {
   public static io.grpc.ServiceDescriptor getServiceDescriptor() {
     io.grpc.ServiceDescriptor result = serviceDescriptor;
     if (result == null) {
-      synchronized (DesignServiceGrpc.class) {
+      synchronized (DesignViewServiceGrpc.class) {
         result = serviceDescriptor;
         if (result == null) {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
-              .setSchemaDescriptor(new DesignServiceFileDescriptorSupplier())
-              .addMethod(getGetDesignMethod())
+              .setSchemaDescriptor(new DesignViewServiceFileDescriptorSupplier())
+              .addMethod(getGetSummaryMethod())
               .addMethod(getGetSheetMethod())
               .addMethod(getHighlightSheetMethod())
               .addMethod(getGetLayoutReportMethod())

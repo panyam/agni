@@ -121,7 +121,7 @@ func TestAQuestionThatReadsTheBoardAsksForIt(t *testing.T) {
 			return err
 		},
 		"the Board sheet": func(srv *httptest.Server, snap string) error {
-			_, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap, Sheet: "board"}))
+			_, err := webapiconnect.NewDesignViewServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap, Sheet: "board"}))
 			return err
 		},
 		"a checks run": func(srv *httptest.Server, snap string) error {
@@ -135,7 +135,7 @@ func TestAQuestionThatReadsTheBoardAsksForIt(t *testing.T) {
 			snap := snapAt(t, srv)
 			// The open and a netlist query read no board, so they are answered with it held back, and
 			// the design still offers its Board sheet.
-			d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(context.Background(), connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap}))
+			d, err := webapiconnect.NewDesignViewServiceClient(srv.Client(), srv.URL).GetSummary(context.Background(), connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: snap}))
 			if err != nil {
 				t.Fatal(err)
 			}

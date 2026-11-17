@@ -12,13 +12,13 @@ const agni = createAgniClient("http://127.0.0.1:8080", { token: process.env.AGNI
 const info = await agni.checkServer(); // refuses a server that does not speak agni.v1
 
 const snap = await agni.snapshot.ingest({ snapshot: { uri: "mount://probe/designs/jetson-cut" } });
-const design = await agni.design.getDesign({ snapshot: snap.name });
+const design = await agni.designView.getSummary({ snapshot: snap.name });
 const rows = await agni.query.runQuery({ snapshot: snap.name, query: 'component.class(?c, "resistor") => ?c' });
 await agni.snapshot.deleteSnapshot({ name: snap.name });
 ```
 
 `AgniClient` holds one Connect client per service. Each field takes the service's name without
-`Service`, so `DesignService.GetDesign` is `agni.design.getDesign`. A method takes its request as a
+`Service`, so `DesignViewService.GetSummary` is `agni.designView.getSummary`. A method takes its request as a
 plain object and returns the response message. The messages, enums and services are under
 `@panyam/agni-client/gen/agni/v1/...`.
 

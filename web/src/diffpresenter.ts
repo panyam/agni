@@ -11,7 +11,7 @@ import type { OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/confi
 import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService, SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { DiffService, type DiffDesignsResponse } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import type { PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { HighlightSpec } from "./highlights.js";
@@ -35,7 +35,7 @@ import {
 } from "./diff.js";
 
 type DiffClient = Client<typeof DiffService>;
-type DesignClient = Client<typeof DesignService>;
+type DesignClient = Client<typeof DesignViewService>;
 
 // DiffFileRef names one side's file by mount and path, and artifactUri turns it into the URI
 // that each RPC takes.
@@ -196,7 +196,7 @@ export class DiffPresenter {
   }
 
   // open runs the comparison. One DiffDesigns call fetches the report and highlight maps and
-  // one GetDesign per side fetches the sheet lists, then the first pair with both sides present
+  // one GetSummary per side fetches the sheet lists, then the first pair with both sides present
   // renders (else the first pair). Either file failing to diff or load fails the whole open,
   // as the RPC has no partial diff, and the panel shows the error over two placeholders.
   async open(a: DiffFileRef, b: DiffFileRef): Promise<void> {
@@ -209,8 +209,8 @@ export class DiffPresenter {
       const [sa, sb] = await Promise.all([this.snaps.of(artifactUri(a.mount, a.path), cfg), this.snaps.of(artifactUri(b.mount, b.path), cfg)]);
       const [resp, da, db] = await Promise.all([
         this.diff.diffDesigns({ aSnapshot: sa, bSnapshot: sb }),
-        this.designs.getDesign({ snapshot: sa, layout: "" }),
-        this.designs.getDesign({ snapshot: sb, layout: "" }),
+        this.designs.getSummary({ snapshot: sa, layout: "" }),
+        this.designs.getSummary({ snapshot: sb, layout: "" }),
       ]);
       this.componentStatus = resp.componentStatus;
       this.netStatus = resp.netStatus;

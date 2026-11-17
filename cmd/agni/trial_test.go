@@ -234,7 +234,7 @@ func TestATrialWithNoIOMapReportsNoPinMap(t *testing.T) {
 }
 
 // A KiCad schematic is its design's netlist, so the report counts its parts and nets as `agni
-// stats` does. It read 0 and 0 for every KiCad design until agni issue 1342, since GetDesign
+// stats` does. It read 0 and 0 for every KiCad design until agni issue 1342, since GetSummary
 // withheld the counts of any file that is both a drawing and its own netlist.
 func TestATrialCountsAKiCadDesign(t *testing.T) {
 	freshWorkspace(t)

@@ -36,7 +36,7 @@ design=mount://designs/designs/gateway
 # Every question names a snapshot of the design, ingested once (agni 1061).
 snapshot=$(rpc SnapshotService/Ingest "{\"snapshot\":{\"uri\":\"$design\"}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["name"])') \
   || fail "Ingest did not take the mounted design"
-rpc DesignService/GetDesign "{\"snapshot\":\"$snapshot\"}" | grep -q '"componentCount"' || fail "GetDesign did not read the mounted design"
+rpc DesignViewService/GetSummary "{\"snapshot\":\"$snapshot\"}" | grep -q '"componentCount"' || fail "GetSummary did not read the mounted design"
 
 # A run the store keeps proves the reviews volume is writable by the image's user.
 manifest=$(rpc ReviewService/ListChecklists "{\"snapshot\":\"$snapshot\"}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["checklists"][0]["manifest"]))')

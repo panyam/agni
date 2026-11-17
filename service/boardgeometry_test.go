@@ -13,7 +13,7 @@ import (
 )
 
 // jetsonCutBoard serves the Jetson cut's real board behind a schematic snapshot.
-func jetsonCutBoard(t *testing.T) (*DesignService, string) {
+func jetsonCutBoard(t *testing.T) (*DesignViewService, string) {
 	t.Helper()
 	b, err := (&formats.Loader{}).BoardGeometry("../examples/cross-probe-project/designs/jetson-cut/jetson-cut.kicad_pcb")
 	if err != nil {
@@ -24,12 +24,12 @@ func jetsonCutBoard(t *testing.T) (*DesignService, string) {
 			len(b.GetPlacements()), len(b.GetNets()), len(b.GetTexts()), len(b.GetGraphics()))
 	}
 	ld := boardLoader{fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}, board: b}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	return svc, schematicWithBoard(t, svc)
 }
 
 // allPages pages through the board at budget, and returns the pages.
-func allPages(t *testing.T, svc *DesignService, snap string, budget int64) []*geom.BoardGeometry {
+func allPages(t *testing.T, svc *DesignViewService, snap string, budget int64) []*geom.BoardGeometry {
 	t.Helper()
 	var pages []*geom.BoardGeometry
 	token := ""
@@ -113,7 +113,7 @@ func TestABoardPageTokenIsRefusedOutsideItsRevision(t *testing.T) {
 
 func TestADesignWithNoBoardHasNoBoardGeometry(t *testing.T) {
 	d, g, _ := locateFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.DefaultStyle, nil)
 	_, err := svc.GetBoardGeometry(context.Background(), &webapi.GetBoardGeometryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("err = %v, want not_found for a netlist with no board", err)

@@ -29,7 +29,7 @@ export interface PickPin {
 }
 
 // Reach is what a trace from one start pin reaches within hops crossings, as
-// DesignService.ReachablePins answers it. reason is set when the start pin named nothing.
+// DesignViewService.ReachablePins answers it. reason is set when the start pin named nothing.
 export interface Reach {
   from: string;
   hops: number;

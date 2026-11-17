@@ -17,19 +17,19 @@ from agni import CLI_COMMANDS, Client, bindings
 from agni.errors import AgniError, CliUnsupported
 from agni.v1.checks import checks_pb2
 from agni.v1.webapi import query_pb2
-from agni.v1.webapi import design_pb2
+from agni.v1.webapi import design_view_pb2
 
 from conftest import DESIGN, REV_B, snap
 
 
-def _endpoint(ref: str) -> design_pb2.TraceEndpoint:
+def _endpoint(ref: str) -> design_view_pb2.TraceEndpoint:
     ref_des, pin = ref.split(".")
-    return design_pb2.TraceEndpoint(ref_des=ref_des, pin=pin)
+    return design_view_pb2.TraceEndpoint(ref_des=ref_des, pin=pin)
 
 
 def _trace(frm: str, to: str) -> Callable[[Client], Message]:
     def ask(c: Client) -> Message:
-        req = design_pb2.TraceDesignRequest(snapshot=snap(c), to=_endpoint(to))
+        req = design_view_pb2.TraceDesignRequest(snapshot=snap(c), to=_endpoint(to))
         getattr(req, "from").CopyFrom(_endpoint(frm))
         return c.trace_design(req)
 
@@ -203,17 +203,17 @@ CASES: List[Case] = [
     ),
     Case("TableService/Tabulate", lambda c: c.tabulate(review=c.create_review(snapshot=snap(c, overlay=_LIB), manifest=_MANIFEST))),
     # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
-    Case("DesignService/GetDesign", lambda c: c.get_design(snapshot=snap(c))),
-    Case("DesignService/GetDesign", lambda c: c.get_design(snapshot=snap(c), read_mask={"paths": ["design"]})),
+    Case("DesignViewService/GetSummary", lambda c: c.get_summary(snapshot=snap(c))),
+    Case("DesignViewService/GetSummary", lambda c: c.get_summary(snapshot=snap(c), read_mask={"paths": ["design"]})),
     Case(
-        "DesignService/GetDesign",
-        lambda c: c.get_design(snapshot=snap(c), read_mask={"paths": ["design.nets", "design.components.mpn"]}, nets=["PMIC_EN"], ref_des=["U1"]),
+        "DesignViewService/GetSummary",
+        lambda c: c.get_summary(snapshot=snap(c), read_mask={"paths": ["design.nets", "design.components.mpn"]}, nets=["PMIC_EN"], ref_des=["U1"]),
     ),
-    Case("DesignService/TraceDesign", _trace("J1.3", "J1.4")),
-    Case("DesignService/TraceDesign", _trace("J1.3", "ZZ9.1")),
-    Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c, DESIGN + "/gateway.edn", as_named=True))),
+    Case("DesignViewService/TraceDesign", _trace("J1.3", "J1.4")),
+    Case("DesignViewService/TraceDesign", _trace("J1.3", "ZZ9.1")),
+    Case("DesignViewService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c, DESIGN + "/gateway.edn", as_named=True))),
     # The folder reads the declared schematic companion on both transports (agni issue 736).
-    Case("DesignService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c))),
+    Case("DesignViewService/GetLayoutReport", lambda c: c.get_layout_report(snapshot=snap(c))),
 ]
 
 
@@ -285,7 +285,7 @@ def test_every_cli_command_is_compared():
 def test_a_trace_to_nothing_still_answers_over_the_cli(cli: Client):
     """`agni trace` prints a complete answer and exits non-zero for an endpoint naming nothing."""
     got = _trace("J1.3", "ZZ9.1")(cli)
-    assert got.trace.outcome == design_pb2.TRACE_OUTCOME_UNRESOLVED
+    assert got.trace.outcome == design_view_pb2.TRACE_OUTCOME_UNRESOLVED
 
 
 def test_a_query_past_its_budget_fails_on_both_transports(cli: Client, connect: Client):
@@ -388,7 +388,7 @@ def test_a_flattened_read_counts_every_block_on_both_transports(cli: Client, con
         counts = []
         for flatten in (False, True):
             name = c.ingest(uri, flatten_hierarchy=flatten)
-            d = c.get_design(snapshot=name)
+            d = c.get_summary(snapshot=name)
             c.delete_snapshot(name)
             counts.append((d.component_count, d.net_count, len(d.unexpanded_hierarchy)))
         got[label] = counts

@@ -1,5 +1,5 @@
 from agni.v1.webapi import checks_pb2 as _checks_pb2
-from agni.v1.webapi import design_pb2 as _design_pb2
+from agni.v1.webapi import design_view_pb2 as _design_view_pb2
 from agni.v1.webapi import diff_pb2 as _diff_pb2
 from agni.v1.webapi import query_pb2 as _query_pb2
 from agni.v1.webapi import review_pb2 as _review_pb2
@@ -110,10 +110,10 @@ class TabulateRequest(_message.Message):
     query_set: _query_pb2.RunQueriesResponse
     diff: _diff_pb2.DiffDesignsResponse
     review: _review_pb2.Review
-    walk: _design_pb2.WalkDesignResponse
+    walk: _design_view_pb2.WalkDesignResponse
     order_by: _containers.RepeatedScalarFieldContainer[str]
     column_types: _containers.ScalarMap[str, ColumnType]
-    def __init__(self, check: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., query: _Optional[_Union[_query_pb2.RunQueryResponse, _Mapping]] = ..., query_set: _Optional[_Union[_query_pb2.RunQueriesResponse, _Mapping]] = ..., diff: _Optional[_Union[_diff_pb2.DiffDesignsResponse, _Mapping]] = ..., review: _Optional[_Union[_review_pb2.Review, _Mapping]] = ..., walk: _Optional[_Union[_design_pb2.WalkDesignResponse, _Mapping]] = ..., order_by: _Optional[_Iterable[str]] = ..., column_types: _Optional[_Mapping[str, ColumnType]] = ...) -> None: ...
+    def __init__(self, check: _Optional[_Union[_checks_pb2.CheckDesignResponse, _Mapping]] = ..., query: _Optional[_Union[_query_pb2.RunQueryResponse, _Mapping]] = ..., query_set: _Optional[_Union[_query_pb2.RunQueriesResponse, _Mapping]] = ..., diff: _Optional[_Union[_diff_pb2.DiffDesignsResponse, _Mapping]] = ..., review: _Optional[_Union[_review_pb2.Review, _Mapping]] = ..., walk: _Optional[_Union[_design_view_pb2.WalkDesignResponse, _Mapping]] = ..., order_by: _Optional[_Iterable[str]] = ..., column_types: _Optional[_Mapping[str, ColumnType]] = ...) -> None: ...
 
 class TabulateResponse(_message.Message):
     __slots__ = ("tables",)

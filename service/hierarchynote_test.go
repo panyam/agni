@@ -57,8 +57,8 @@ func renderSurfaces(t *testing.T, name string) surfaces {
 	uri := "mount://m/" + name
 	var out surfaces
 
-	dsvc := NewDesignService(l, noNative{}, render.Style{}, nil)
-	d, err := dsvc.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snapOf(t, dsvc.Snapshots(), uri)})
+	dsvc := NewDesignViewService(l, noNative{}, render.Style{}, nil)
+	d, err := dsvc.GetSummary(ctx, &webapi.GetSummaryRequest{Snapshot: snapOf(t, dsvc.Snapshots(), uri)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,10 +112,10 @@ func renderSurfaces(t *testing.T, name string) surfaces {
 func TestEverySurfaceSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	hier := renderSurfaces(t, "hier.edn")
 	if hier.designNote != hierSentence {
-		t.Errorf("GetDesign hierarchy_note = %q, want %q", hier.designNote, hierSentence)
+		t.Errorf("GetSummary hierarchy_note = %q, want %q", hier.designNote, hierSentence)
 	}
 	if !hier.readsMore {
-		t.Error("GetDesign flatten_reads_more is false for a top-level read, which reading every block extends")
+		t.Error("GetSummary flatten_reads_more is false for a top-level read, which reading every block extends")
 	}
 	if hier.checkRunLen != 1 || hier.checkDocLen != 1 || hier.reviewDocLen != 1 {
 		t.Errorf("unexpanded_hierarchy entries: check run %d, check document %d, review document %d; want 1 each",

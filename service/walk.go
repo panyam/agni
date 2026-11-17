@@ -90,7 +90,7 @@ func WalkFromProto(p *webapi.Walk) check.Walk {
 // that names nothing is an answer with its reason set, as TraceDesign answers an unresolved endpoint.
 // A request with a goal also asks it from the walk (check.WalkGoalFrom, agni issue 1340). An unknown
 // goal kind is ErrInvalidArgument, and a goal that names nothing is an answer with its outcome set.
-func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error) {
+func (s *DesignViewService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (s *DesignService) WalkDesign(ctx context.Context, req *webapi.WalkDesignRe
 }
 
 // ListWalkKinds lists check.WalkKinds. It reads no design.
-func (s *DesignService) ListWalkKinds(context.Context, *webapi.ListWalkKindsRequest) (*webapi.ListWalkKindsResponse, error) {
+func (s *DesignViewService) ListWalkKinds(context.Context, *webapi.ListWalkKindsRequest) (*webapi.ListWalkKindsResponse, error) {
 	resp := &webapi.ListWalkKindsResponse{}
 	for _, k := range check.WalkKinds() {
 		resp.Kinds = append(resp.Kinds, &webapi.WalkKind{Name: k.Name, Title: k.Title, Summary: k.Summary})

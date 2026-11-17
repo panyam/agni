@@ -36,8 +36,8 @@ not extracted:       7 sub-cells holding 74 instances (counts above are the top 
 
 | flag | what it does |
 |---|---|
-| `--format <fmt>` | `text` (the counts above, the default) or `json`, the `GetDesign` rpc's `GetDesignResponse` |
-| `--mask <paths>` | with `json`, which fields to carry, over `GetDesignResponse`: `design` is the design's whole IR, `design.nets` or `design.components.mpn` parts of it (a path through a list applies to every element), `*` everything. Unset is the summary alone. Repeatable or comma-separated; an unknown path is an error |
+| `--format <fmt>` | `text` (the counts above, the default) or `json`, the `GetDesign` rpc's `GetSummaryResponse` |
+| `--mask <paths>` | with `json`, which fields to carry, over `GetSummaryResponse`: `design` is the design's whole IR, `design.nets` or `design.components.mpn` parts of it (a path through a list applies to every element), `*` everything. Unset is the summary alone. Repeatable or comma-separated; an unknown path is an error |
 | `--net <name>` | with a mask selecting `design`, keep only this net in `design.nets` (repeatable) |
 | `--ref <ref_des>` | with a mask selecting `design`, keep only this component in `design.components` (repeatable) |
 

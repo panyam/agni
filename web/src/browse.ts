@@ -11,7 +11,7 @@ import { fileTreeIsland } from "./filetree.js";
 import { SvgView } from "./svgview.js";
 import { DesignPreview } from "./preview.js";
 import { browseStage, type StageElements } from "./browsestage.js";
-import { designClient } from "./api.js";
+import { designViewClient } from "./api.js";
 import { currentLocation, emptyLocation, hasDir, locationToUrl, type ViewerLocation } from "./router.js";
 
 // syncUrl reflects the browsed folder into the address bar. Only folders are addressable here. A
@@ -41,7 +41,7 @@ class BrowseRoot extends BaseComponent {
     if (!treeEl || !previewEl || !els.note || !els.name || !els.summary || !els.open) return children;
 
     const stage = browseStage(els as StageElements, new SvgView(previewEl), (url) => window.location.assign(url));
-    const preview = new DesignPreview(designClient(), stage);
+    const preview = new DesignPreview(designViewClient(), stage);
 
     // The viewer's own file tree, reused whole. No presenter feeds it sheets here, so it shows a flat
     // file list and keeps its lazy directory listing, auto-reveal and no-reader filter.

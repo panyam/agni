@@ -68,7 +68,7 @@ func locateFixture() (*ir.Design, *geom.SchematicGeometry, *geom.BoardGeometry) 
 func locate(t *testing.T, board bool, subjects ...*checkspb.Subject) []*webapi.SubjectSheets {
 	t.Helper()
 	d, g, b := locateFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
 	resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{
 		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Subjects: subjects, Board: board,
 	})
@@ -142,7 +142,7 @@ func TestLocateSubjectsSaysWhyASubjectIsUndrawn(t *testing.T) {
 
 func TestLocateSubjectsRefusesAnEmptyRequest(t *testing.T) {
 	d, g, b := locateFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
 	_, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("an empty request answered err %v, want invalid argument", err)
@@ -152,7 +152,7 @@ func TestLocateSubjectsRefusesAnEmptyRequest(t *testing.T) {
 // A design with no board answers the schematic alone when the board is asked for.
 func TestLocateSubjectsWithoutABoard(t *testing.T) {
 	d, g, _ := locateFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 	resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{
 		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Subjects: []*checkspb.Subject{part("R1")}, Board: true,
 	})
@@ -228,7 +228,7 @@ func TestLocateSubjectsJoinsAnEDIFNetlistToAnODBJob(t *testing.T) {
 	if len(subjects) < 4 {
 		t.Fatalf("mixer.edn reads %d nets and parts, so the test checks almost nothing", len(subjects))
 	}
-	svc := NewDesignService(fakeLoader{design: d, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, board: b}, noNative{}, render.Style{}, nil)
 	resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{
 		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/mixer.edn"), Subjects: subjects, Board: true,
 	})
@@ -274,7 +274,7 @@ func sideFixture() (*ir.Design, *geom.SchematicGeometry, *geom.BoardGeometry) {
 // through a via and two through-hole pads alone, so it names no layer.
 func TestLocateSubjectsNamesTheBoardSideAndLayers(t *testing.T) {
 	d, g, b := sideFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
 	subjects := []*checkspb.Subject{part("U1"), part("R1"), pinOf("U1", "6"), netNamed("N1"), netNamed("N5"), netNamed("GND")}
 	type want struct {
 		side   string
@@ -368,7 +368,7 @@ func TestBoardIndexFollowsASelection(t *testing.T) {
 // board, and none when it does not.
 func TestLocateSubjectsAnswersHowABoardViewFollows(t *testing.T) {
 	d, g, b := silkFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g, board: b}, noNative{}, render.Style{}, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")
 	resp, err := svc.LocateSubjects(context.Background(), &webapi.LocateSubjectsRequest{Snapshot: snap, Subjects: []*checkspb.Subject{part("U1")}, Board: true})
 	if err != nil {

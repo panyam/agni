@@ -17,15 +17,15 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// newDesignSvc builds a DesignService over the os-backed adapters for the given mounts (no native
+// newDesignSvc builds a DesignViewService over the os-backed adapters for the given mounts (no native
 // tools enabled, default render style), the same composition serve.go wires.
-func newDesignSvc(mounts []mounts.Mount) *service.DesignService {
+func newDesignSvc(mounts []mounts.Mount) *service.DesignViewService {
 	return newDesignSvcNative(mounts, nil)
 }
 
 // newDesignSvcNative is newDesignSvc with a native-tool allowlist, for the native-gate tests.
-func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service.DesignService {
-	return service.NewDesignService(
+func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service.DesignViewService {
+	return service.NewDesignViewService(
 		// The loader's newLoader() matches serve.go. Leaving it nil was survivable only because the
 		// edif fixtures resolve no external symbol library, so the nil reader was never
 		// dereferenced; a kicad schematic with a sym-lib reference panics on it.
@@ -53,7 +53,7 @@ func newCheckSvc(mounts []mounts.Mount) *service.CheckService {
 
 // designFixtureSvc mounts the shared edif testdata (basic.edn netlist, sample.eds geometry)
 // relative to this package.
-func designFixtureSvc(t *testing.T) *service.DesignService {
+func designFixtureSvc(t *testing.T) *service.DesignViewService {
 	t.Helper()
 	return newDesignSvc(edifFixtureMounts(t))
 }
@@ -67,10 +67,10 @@ func edifFixtureMounts(t *testing.T) []mounts.Mount {
 	return []mounts.Mount{{Name: "t", Root: root}}
 }
 
-func TestDesignServiceGetDesign(t *testing.T) {
+func TestDesignViewServiceGetSummary(t *testing.T) {
 	svc := designFixtureSvc(t)
-	get := func(path string) (*webapi.GetDesignResponse, error) {
-		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), uriStr("t", path))})
+	get := func(path string) (*webapi.GetSummaryResponse, error) {
+		return svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), uriStr("t", path))})
 	}
 	// A malformed URI arrives as a STRING from the wire, so it is sent verbatim rather than built.
 	// uriStr would reject it before the service ever saw it, which is the guarantee, not the test.
@@ -131,7 +131,7 @@ func TestDesignServiceGetDesign(t *testing.T) {
 	})
 }
 
-func TestDesignServiceCheckDesign(t *testing.T) {
+func TestDesignViewServiceCheckDesign(t *testing.T) {
 	// A self-contained netlist fixture with known violations. Two I2C nets have no pull-up
 	// (i2c-pull-up), and a resistor is on no net (unconnected-component). basic.edn is clean, so it
 	// would not exercise the endpoint.
@@ -187,11 +187,11 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 	})
 }
 
-// TestDesignServiceGetCheckReport pins the report pivot on the wire. Sections come worst
+// TestDesignViewServiceGetCheckReport pins the report pivot on the wire. Sections come worst
 // severity first with correct counts, findings group by rule, and each group carries the
 // catalog Summary. The conformance fires.edn yields one finding each of error/warning/info,
 // exercising the full ordering through the same loader path CheckDesign uses.
-func TestDesignServiceGetCheckReport(t *testing.T) {
+func TestDesignViewServiceGetCheckReport(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("testdata", "conformance"))
 	if err != nil {
 		t.Fatal(err)
@@ -224,7 +224,7 @@ func TestDesignServiceGetCheckReport(t *testing.T) {
 	}
 }
 
-func TestDesignServiceGetExpectations(t *testing.T) {
+func TestDesignViewServiceGetExpectations(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "d.edn"), []byte("(edif D (edifVersion 2 0 0))"), 0o644); err != nil {
 		t.Fatal(err)
@@ -280,7 +280,7 @@ pending:
 	})
 }
 
-func TestDesignServiceKicadFaithful(t *testing.T) {
+func TestDesignViewServiceKicadFaithful(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
@@ -288,7 +288,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
 
 	t.Run("kicad_sch renders faithfully with a packed sheet", func(t *testing.T) {
-		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
+		d, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -309,7 +309,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 
 	// A board opened on its own lists the board alone, and lays no netlist out (agni issue 1466).
 	t.Run("kicad_pcb lists its board alone", func(t *testing.T) {
-		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/pcb.kicad_pcb")})
+		d, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/pcb.kicad_pcb")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -341,9 +341,9 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	})
 }
 
-// TestDesignServiceGetLayoutReport covers the report RPC (WS7-029b). Every component is classified with
+// TestDesignViewServiceGetLayoutReport covers the report RPC (WS7-029b). Every component is classified with
 // a kind, and because KiCad symbols are inline, a faithful request resolves them all as provided.
-func TestDesignServiceGetLayoutReport(t *testing.T) {
+func TestDesignViewServiceGetLayoutReport(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
@@ -387,7 +387,7 @@ func TestSymbolsFor(t *testing.T) {
 	}
 }
 
-func TestDesignServiceGetSheetFormats(t *testing.T) {
+func TestDesignViewServiceGetSheetFormats(t *testing.T) {
 	svc := designFixtureSvc(t)
 	req := func(format webapi.SheetFormat) *webapi.GetSheetRequest {
 		return &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/sample.eds"), Format: format}
@@ -411,11 +411,11 @@ func TestDesignServiceGetSheetFormats(t *testing.T) {
 	})
 }
 
-func TestDesignServiceMultiSheet(t *testing.T) {
+func TestDesignViewServiceMultiSheet(t *testing.T) {
 	svc := designFixtureSvc(t)
 
-	t.Run("GetDesign lists both sheets in order", func(t *testing.T) {
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/multisheet.eds")})
+	t.Run("GetSummary lists both sheets in order", func(t *testing.T) {
+		resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://t/multisheet.eds")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -449,18 +449,18 @@ func TestDesignServiceMultiSheet(t *testing.T) {
 	})
 }
 
-func TestDesignServiceKicadHierarchy(t *testing.T) {
+func TestDesignViewServiceKicadHierarchy(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/hier.kicad_sch")})
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/hier.kicad_sch")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	sheets := resp.GetSheets()
-	// The edge resolves the sub-sheet's Sheetfile relative to the root, so GetDesign returns
+	// The edge resolves the sub-sheet's Sheetfile relative to the root, so GetSummary returns
 	// the root plus its child with the parent link set.
 	if len(sheets) != 2 {
 		t.Fatalf("sheets = %d, want 2 (root + sub)", len(sheets))
@@ -473,13 +473,13 @@ func TestDesignServiceKicadHierarchy(t *testing.T) {
 	}
 }
 
-// TestLayoutAxis covers the layout axis end to end through GetDesign; the pure availableLayouts /
+// TestLayoutAxis covers the layout axis end to end through GetSummary; the pure availableLayouts /
 // layoutForFile helpers live in service/design.go and are unit-tested there.
 func TestLayoutAxis(t *testing.T) {
-	t.Run("GetDesign reports available_layouts and grid re-derives", func(t *testing.T) {
+	t.Run("GetSummary reports available_layouts and grid re-derives", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 		svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
-		faithful, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
+		faithful, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch")})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -489,7 +489,7 @@ func TestLayoutAxis(t *testing.T) {
 		if faithful.GetLayout() != "faithful" {
 			t.Errorf("default layout = %q, want faithful", faithful.GetLayout())
 		}
-		grid, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch"), Layout: "grid"})
+		grid, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://k/geom.kicad_sch"), Layout: "grid"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -511,7 +511,7 @@ func slicesEqual(a, b []string) bool {
 	return true
 }
 
-func TestDesignServiceGetSheet(t *testing.T) {
+func TestDesignViewServiceGetSheet(t *testing.T) {
 	svc := designFixtureSvc(t)
 
 	t.Run("default format packs geometry", func(t *testing.T) {
@@ -555,7 +555,7 @@ func tutorialMounts(t *testing.T) []mounts.Mount {
 // meets, the served document.
 //
 // The CLI twin (TestRenderResolvesProjectSymbolLibrary) covers `agni render`. This covers `agni
-// serve`. It reaches geometry through DesignService rather than through the render command, and the
+// serve`. It reaches geometry through DesignViewService rather than through the render command, and the
 // issue was reported against that deployment. Both had to be fixed separately, because they resolve
 // config by different routes. A test on either alone would have read as covering both.
 //

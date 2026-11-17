@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat, TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat, TraceOutcome, WalkGoalAnswerSchema, WalkSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { stubQueryView } from "./testviews.js";
 import type { WalkState } from "./walk.js";
 import { HighlightShape } from "./highlights.js";
@@ -28,7 +28,7 @@ function walkAnswer() {
 function harness(opts: { onLocation?: Mock<(loc: ViewerLocation) => void> } = {}) {
   const walkDesign = vi.fn(async (_req: unknown) => ({ walk: walkAnswer() }));
   const client = {
-    getDesign: vi.fn(async () => ({
+    getSummary: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }, { id: "s3", name: "S3" }], nativeAvailable: false, availableLayouts: ["faithful"],
     })),

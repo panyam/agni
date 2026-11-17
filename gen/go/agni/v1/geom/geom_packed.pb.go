@@ -1501,7 +1501,7 @@ type BoardPartBody struct {
 	DrawnHeightMm   float64 `protobuf:"fixed64,7,opt,name=drawn_height_mm,json=drawnHeightMm,proto3" json:"drawn_height_mm,omitempty"`
 	HeightDefaulted bool    `protobuf:"varint,8,opt,name=height_defaulted,json=heightDefaulted,proto3" json:"height_defaulted,omitempty"`
 	// models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-	// issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+	// issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
 	// block for a part with no models or whose meshes did not come.
 	Models        []*BodyModel `protobuf:"bytes,9,rep,name=models,proto3" json:"models,omitempty"`
 	unknownFields protoimpl.UnknownFields

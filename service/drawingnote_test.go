@@ -46,9 +46,9 @@ func TestDrawingNoteNamesWhatWouldDrawTheDesign(t *testing.T) {
 
 func TestGetDesignCarriesTheDrawingNote(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
-	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
 	for file, want := range map[string]bool{"x.edn": true, "x.eds": false} {
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+file)})
+		resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+file)})
 		if err != nil {
 			t.Fatal(err)
 		}

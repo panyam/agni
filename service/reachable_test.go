@@ -63,7 +63,7 @@ func TestReachableFieldCensus(t *testing.T) {
 // The served answer is the walk's answer, so the CLI and the viewer cannot drift (agni issue 1541).
 func TestReachablePinsServesTheWalksAnswer(t *testing.T) {
 	d := traceServiceFixture()
-	svc := NewDesignService(fakeLoader{design: d}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d}, noNative{}, render.Style{}, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	resp, err := svc.ReachablePins(context.Background(), &webapi.ReachablePinsRequest{
 		Snapshot: snap,

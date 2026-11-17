@@ -149,24 +149,24 @@ func (a *Workspace) ProposeDesigns(ctx context.Context, req *connect.Request[web
 	return connect.NewResponse(resp), nil
 }
 
-// Design adapts service.DesignService to the generated Connect handler interface.
-type Design struct {
-	webapiconnect.UnimplementedDesignServiceHandler
-	svc *service.DesignService
+// DesignView adapts service.DesignViewService to the generated Connect handler interface.
+type DesignView struct {
+	webapiconnect.UnimplementedDesignViewServiceHandler
+	svc *service.DesignViewService
 }
 
-// NewDesign wraps svc for Connect.
-func NewDesign(svc *service.DesignService) *Design { return &Design{svc: svc} }
+// NewDesignView wraps svc for Connect.
+func NewDesignView(svc *service.DesignViewService) *DesignView { return &DesignView{svc: svc} }
 
-func (a *Design) GetDesign(ctx context.Context, req *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.GetDesignResponse], error) {
-	resp, err := a.svc.GetDesign(ctx, req.Msg)
+func (a *DesignView) GetSummary(ctx context.Context, req *connect.Request[webapi.GetSummaryRequest]) (*connect.Response[webapi.GetSummaryResponse], error) {
+	resp, err := a.svc.GetSummary(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) GetSheet(ctx context.Context, req *connect.Request[webapi.GetSheetRequest]) (*connect.Response[webapi.GetSheetResponse], error) {
+func (a *DesignView) GetSheet(ctx context.Context, req *connect.Request[webapi.GetSheetRequest]) (*connect.Response[webapi.GetSheetResponse], error) {
 	resp, err := a.svc.GetSheet(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -174,7 +174,7 @@ func (a *Design) GetSheet(ctx context.Context, req *connect.Request[webapi.GetSh
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) HighlightSheet(ctx context.Context, req *connect.Request[webapi.HighlightSheetRequest]) (*connect.Response[webapi.HighlightSheetResponse], error) {
+func (a *DesignView) HighlightSheet(ctx context.Context, req *connect.Request[webapi.HighlightSheetRequest]) (*connect.Response[webapi.HighlightSheetResponse], error) {
 	resp, err := a.svc.HighlightSheet(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -182,7 +182,7 @@ func (a *Design) HighlightSheet(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) GetLayoutReport(ctx context.Context, req *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
+func (a *DesignView) GetLayoutReport(ctx context.Context, req *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	resp, err := a.svc.GetLayoutReport(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -190,7 +190,7 @@ func (a *Design) GetLayoutReport(ctx context.Context, req *connect.Request[webap
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) GetBoardGeometry(ctx context.Context, req *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
+func (a *DesignView) GetBoardGeometry(ctx context.Context, req *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
 	resp, err := a.svc.GetBoardGeometry(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -198,7 +198,7 @@ func (a *Design) GetBoardGeometry(ctx context.Context, req *connect.Request[weba
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) GetBoardMeshes(ctx context.Context, req *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error) {
+func (a *DesignView) GetBoardMeshes(ctx context.Context, req *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error) {
 	resp, err := a.svc.GetBoardMeshes(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -206,7 +206,7 @@ func (a *Design) GetBoardMeshes(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) LocateSubjects(ctx context.Context, req *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
+func (a *DesignView) LocateSubjects(ctx context.Context, req *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
 	resp, err := a.svc.LocateSubjects(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -214,7 +214,7 @@ func (a *Design) LocateSubjects(ctx context.Context, req *connect.Request[webapi
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
+func (a *DesignView) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
 	resp, err := a.svc.TraceDesign(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -222,7 +222,7 @@ func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.Tr
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) ReachablePins(ctx context.Context, req *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error) {
+func (a *DesignView) ReachablePins(ctx context.Context, req *connect.Request[webapi.ReachablePinsRequest]) (*connect.Response[webapi.ReachablePinsResponse], error) {
 	resp, err := a.svc.ReachablePins(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -230,7 +230,7 @@ func (a *Design) ReachablePins(ctx context.Context, req *connect.Request[webapi.
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) WalkDesign(ctx context.Context, req *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
+func (a *DesignView) WalkDesign(ctx context.Context, req *connect.Request[webapi.WalkDesignRequest]) (*connect.Response[webapi.WalkDesignResponse], error) {
 	resp, err := a.svc.WalkDesign(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
@@ -238,7 +238,7 @@ func (a *Design) WalkDesign(ctx context.Context, req *connect.Request[webapi.Wal
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Design) ListWalkKinds(ctx context.Context, req *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error) {
+func (a *DesignView) ListWalkKinds(ctx context.Context, req *connect.Request[webapi.ListWalkKindsRequest]) (*connect.Response[webapi.ListWalkKindsResponse], error) {
 	resp, err := a.svc.ListWalkKinds(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)

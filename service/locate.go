@@ -23,7 +23,7 @@ import (
 // When it reads the board, it also names the side each part or pin sits on and the copper layers
 // each subject uses (agni issue 1587), and how a board view follows the whole selection: the side
 // to turn to and the layer rows to show (agni issue 1635).
-func (s *DesignService) LocateSubjects(ctx context.Context, req *webapi.LocateSubjectsRequest) (*webapi.LocateSubjectsResponse, error) {
+func (s *DesignViewService) LocateSubjects(ctx context.Context, req *webapi.LocateSubjectsRequest) (*webapi.LocateSubjectsResponse, error) {
 	if len(req.GetSubjects()) == 0 {
 		return nil, fmt.Errorf("%w: name at least one subject to locate", ErrInvalidArgument)
 	}

@@ -53,7 +53,7 @@ describe("the public demo exercise's report", () => {
   it("splits a Run checks between its requests and the page's own work", () => {
     const line = (rpc: string, t: object) => `agni timing ${rpc}: ${JSON.stringify(t)}`;
     const lines = [
-      line("GetDesign", { totalMicros: "1000", page: { startMs: 50, wallMs: 10 } }),
+      line("GetSummary", { totalMicros: "1000", page: { startMs: 50, wallMs: 10 } }),
       line("CheckDesign", { totalMicros: "6000000", stages: [{ name: "read", micros: "1000000" }, { name: "rules", micros: "5000000" }], page: { startMs: 110, wallMs: 7000 } }),
       line("GetExpectations", { page: { startMs: 7200, wallMs: 100 }, error: "no netlist" }),
       line("GetInterfaceCoverage", { totalMicros: "1500000", rules: [{ rule: "coverage/emmc", micros: "900000" }, { rule: "coverage/can", micros: "10000" }], page: { startMs: 7300, wallMs: 2000 } }),
@@ -92,7 +92,7 @@ describe("the public demo exercise's report", () => {
     const lines = [
       'agni fetch jetson/b.kicad_sch: {"bytes":1048576,"ms":900,"attempts":1}',
       'agni fetch jetson/b.kicad_pcb: {"bytes":88080384,"ms":31200,"attempts":2}',
-      "agni timing GetDesign: {}",
+      "agni timing GetSummary: {}",
     ];
     expect(slowestFetch(lines)).toBe("slowest file jetson/b.kicad_pcb 84.0 MB in 31.2 s after 2 attempts");
     expect(slowestFetch([])).toBe("");
@@ -137,7 +137,7 @@ describe("splitting a request between loading and answering", () => {
   });
 
   it("reads a request that ran no rules as loading alone", () => {
-    const s = loadSplit(line("GetDesign", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }] }))!;
+    const s = loadSplit(line("GetSummary", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }] }))!;
     expect(s.rulesMs).toBe(0);
     expect(s.loadMs).toBe(250);
     expect(s.outsideMs).toBeUndefined();
@@ -158,7 +158,7 @@ describe("splitting a request between loading and answering", () => {
   });
 
   it("adds an open's requests into one load, merging their stages by name", () => {
-    const a = loadSplit(line("GetDesign", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 0, wallMs: 400 } }))!;
+    const a = loadSplit(line("GetSummary", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 0, wallMs: 400 } }))!;
     const b = loadSplit(line("ListRules", { totalMicros: 100_000, stages: [{ name: "restore.design", startMicros: 0, micros: 50_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 10, wallMs: 150 } }))!;
     const s = sumSplits([a, b]);
     expect(s.loadMs).toBe(300);
@@ -185,7 +185,7 @@ describe("a step that waits on the ticket that builds it", () => {
 
 // Lines a page logged while the browser engine opened the Jetson cut's board (agni issue 1500).
 const getSheet =
-  'agni timing GetSheet: {"procedure":"/agni.v1.webapi.DesignService/GetSheet","totalMicros":"21100","stages":[{"name":"restore.board","micros":"2899"},{"name":"collect.board","startMicros":"2899","micros":"4499"},{"name":"restore.design","startMicros":"8199","micros":"1900"},{"name":"collect.design","startMicros":"10100","micros":"4699"}],"lookups":[{"layer":"board","source":"store"},{"layer":"design","source":"store"}],"page":{"startMs":384.09999990463257,"wallMs":80.29999995231628}}';
+  'agni timing GetSheet: {"procedure":"/agni.v1.webapi.DesignViewService/GetSheet","totalMicros":"21100","stages":[{"name":"restore.board","micros":"2899"},{"name":"collect.board","startMicros":"2899","micros":"4499"},{"name":"restore.design","startMicros":"8199","micros":"1900"},{"name":"collect.design","startMicros":"10100","micros":"4699"}],"lookups":[{"layer":"board","source":"store"},{"layer":"design","source":"store"}],"page":{"startMs":384.09999990463257,"wallMs":80.29999995231628}}';
 const ingest = 'agni timing Ingest: {"procedure":"/agni.v1.webapi.SnapshotService/Ingest","totalMicros":"938000","stages":[{"name":"build.model","micros":"750000"}],"page":{"startMs":12,"wallMs":1210}}';
 const fetchedBoard = 'agni fetch probe/designs/jetson-cut/jetson-cut.kicad_pcb: {"bytes":259498,"ms":3,"attempts":1}';
 const fetchedSheet = 'agni fetch probe/designs/jetson-cut/power.kicad_sch: {"bytes":63397,"ms":3,"attempts":1}';

@@ -324,11 +324,11 @@ func (r remoteQuery) ListQuerySets(ctx context.Context, req *webapi.ListQuerySet
 }
 
 type remoteTrace struct {
-	c webapiconnect.DesignServiceClient
+	c webapiconnect.DesignViewServiceClient
 }
 
 func (r *remoteServer) trace() traceAPI {
-	return remoteTrace{webapiconnect.NewDesignServiceClient(r.http, r.url)}
+	return remoteTrace{webapiconnect.NewDesignViewServiceClient(r.http, r.url)}
 }
 
 func (r remoteTrace) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
@@ -340,7 +340,7 @@ func (r remoteTrace) ReachablePins(ctx context.Context, req *webapi.ReachablePin
 }
 
 func (r *remoteServer) walk() walkAPI {
-	return remoteTrace{webapiconnect.NewDesignServiceClient(r.http, r.url)}
+	return remoteTrace{webapiconnect.NewDesignViewServiceClient(r.http, r.url)}
 }
 
 func (r remoteTrace) WalkDesign(ctx context.Context, req *webapi.WalkDesignRequest) (*webapi.WalkDesignResponse, error) {

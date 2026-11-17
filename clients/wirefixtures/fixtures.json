@@ -41,9 +41,9 @@
       }
     },
     {
-      "name": "get-design",
-      "service": "agni.v1.webapi.DesignService",
-      "method": "GetDesign",
+      "name": "get-summary",
+      "service": "agni.v1.webapi.DesignViewService",
+      "method": "GetSummary",
       "request": {
         "snapshot": "snapshots/wire"
       },
@@ -277,7 +277,7 @@
     },
     {
       "name": "board-geometry-page",
-      "service": "agni.v1.webapi.DesignService",
+      "service": "agni.v1.webapi.DesignViewService",
       "method": "GetBoardGeometry",
       "request": {
         "snapshot": "snapshots/wire",
@@ -343,7 +343,7 @@
     },
     {
       "name": "locate-on-board",
-      "service": "agni.v1.webapi.DesignService",
+      "service": "agni.v1.webapi.DesignViewService",
       "method": "LocateSubjects",
       "request": {
         "snapshot": "snapshots/wire",
@@ -405,8 +405,8 @@
     },
     {
       "name": "snapshot-not-found",
-      "service": "agni.v1.webapi.DesignService",
-      "method": "GetDesign",
+      "service": "agni.v1.webapi.DesignViewService",
+      "method": "GetSummary",
       "request": {
         "snapshot": "snapshots/nonesuch"
       },

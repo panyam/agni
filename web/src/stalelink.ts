@@ -35,7 +35,7 @@ export function shortHash(h: string): string {
 // staleLinkNote compares the revision a link claimed against the one this server read.
 //
 // claimed is the URL's ?hash=, and "" when the link named none. The CLI names none for a design it
-// could not hash. served is GetDesignResponse.content_hash ("" when the server could not hash).
+// could not hash. served is GetSummaryResponse.content_hash ("" when the server could not hash).
 export function staleLinkNote(claimed: string, served: string): StaleLinkNote | null {
   if (!claimed) return null; // the link made no claim, so there is none to check
   if (!served) return { trust: "unverifiable", claimed: shortHash(claimed), served: "" };

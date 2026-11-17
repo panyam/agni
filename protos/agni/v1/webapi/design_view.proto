@@ -11,18 +11,19 @@ import "agni/v1/geom/geom_packed.proto";
 import "agni/v1/ir/ir.proto";
 import "google/protobuf/field_mask.proto";
 
-// This file defines DesignService, which loads and renders one design. Rule checks are in the
-// separate CheckService (checks.proto), and the structural diff is in DiffService (diff.proto).
+// This file defines DesignViewService, which draws and explores a snapshot of a design. Rule checks
+// are in the separate CheckService (checks.proto), and the structural diff is in DiffService
+// (diff.proto). DesignService (agni issue 1694) keeps the stored designs a snapshot is taken of.
 
-// DesignService loads a design file into something the viewer can draw. It reuses the
+// DesignViewService turns a snapshot of a design into something the viewer can draw. It reuses the
 // engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
 // and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
 // other supported format is drawn as an auto-layout of its netlist graph.
-service DesignService {
-  // GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+service DesignViewService {
+  // GetSummary returns a snapshot's summary plus the list of drawable sheets. The sheet
   // navigator reads that list. It resolves the render mode per file, faithful for geometry and
   // an auto-layout otherwise.
-  rpc GetDesign(GetDesignRequest) returns (GetDesignResponse);
+  rpc GetSummary(GetSummaryRequest) returns (GetSummaryResponse);
 
   // GetSheet returns one rendered sheet. The `format` selects the renderer. PACKED is the
   // tier-2 geometry for the WebGL viewer (C8). SVG is the render.SheetSVG verification
@@ -135,7 +136,7 @@ message SheetRef {
   string parent_id = 3;
 }
 
-message GetDesignRequest {
+message GetSummaryRequest {
   // snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
   string snapshot = 7;
   // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered").
@@ -143,7 +144,7 @@ message GetDesignRequest {
   string layout = 1;
   // read_mask selects which fields the response fills (agni issue 836). When unset, the response is
   // the usual summary, with no IR. The viewer asks on every open, and a large board's IR is
-  // megabytes. When set, the response keeps exactly the named paths of GetDesignResponse. `design`
+  // megabytes. When set, the response keeps exactly the named paths of GetSummaryResponse. `design`
   // selects the whole IR. `design.nets` or `design.components.mpn` select parts of it. `sheets`
   // selects a summary field, and `*` selects everything. A path through a repeated or map field
   // applies to every element. When every path is under `design`, the server reads the netlist alone
@@ -159,7 +160,7 @@ message GetDesignRequest {
   reserved "uri", "as_named";
 }
 
-message GetDesignResponse {
+message GetSummaryResponse {
   // name is the design name (from the IR, or the geometry's design ref for .eds).
   string name = 1;
   // source_format is the origin format tag from the IR; empty for a geometry-only file.
@@ -691,7 +692,7 @@ message BoardFollow {
 // SubjectSheets is where one subject is drawn.
 message SubjectSheets {
   agni.v1.checks.Subject subject = 1;
-  // sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+  // sheet_ids are the GetSummary sheet ids that draw the subject, schematic sheets in design order
   // and then "board". Empty means drawn nowhere, and locate_reason says why.
   repeated string sheet_ids = 2;
   // locate_reason is UNSPECIFIED when sheet_ids is not empty.

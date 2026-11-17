@@ -1,4 +1,4 @@
-import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 
 // SheetsState is the current design's sheets plus which one is active. It carries the file
 // (mount+path) so a view keyed by file (the tree) can attach the sheets under the right node.

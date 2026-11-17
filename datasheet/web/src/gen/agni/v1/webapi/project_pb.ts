@@ -446,11 +446,8 @@ export const ProjectService: GenService<{
     output: typeof ListProjectsResponseSchema;
   },
   /**
-   * GetDesign returns one design by resource name. The rpc shares its name with
-   * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-   * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-   * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-   * have different names because one proto package cannot hold two GetDesignRequest.
+   * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+   * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.GetDesign
    */

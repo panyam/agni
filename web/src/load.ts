@@ -7,7 +7,7 @@
 // set as text and never parsed as markup.
 
 import { designListing, fetchSeed, loadedKey, pageEngine, refuseBrowserMounts, seedDesign, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
-import { designClient, snapshots, workspaceClient } from "./api.js";
+import { designViewClient, snapshots, workspaceClient } from "./api.js";
 import { currentLocation, dropPageUrl, emptyLocation, hasFile, keepTiming, locationToUrl, swapPage } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { LoadFlow, type LoadStep } from "./loadflow.js";
@@ -129,7 +129,7 @@ async function loadDesign(mount: string, path: string, drops: DropStore): Promis
         currentLocation().sheet === "board"
           ? undefined
           : async () => {
-              await designClient().getDesign({ snapshot: await snapshots().of(uri) });
+              await designViewClient().getSummary({ snapshot: await snapshots().of(uri) });
             },
       seeded: seeded.has(uri),
       board: async () => {

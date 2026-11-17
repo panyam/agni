@@ -9,7 +9,7 @@ import { LexiconService } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_p
 import { createClient, type Client, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
-import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
@@ -112,9 +112,9 @@ export function workspaceClient(baseUrl?: string): Client<typeof WorkspaceServic
   return createClient(WorkspaceService, newTransport(baseUrl));
 }
 
-// designClient returns a typed client for DesignService (design summary + packed sheets).
-export function designClient(baseUrl?: string): Client<typeof DesignService> {
-  return createClient(DesignService, newTransport(baseUrl));
+// designViewClient returns a typed client for DesignViewService (design summary + packed sheets).
+export function designViewClient(baseUrl?: string): Client<typeof DesignViewService> {
+  return createClient(DesignViewService, newTransport(baseUrl));
 }
 
 // checksClient returns a typed client for CheckService (rule catalog, check runs, the

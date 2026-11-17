@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { FileKind, WorkspaceService, type DirEntry, type Mount } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
-import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { type SheetNode as SheetTreeNode, sheetForest } from "./sheettree.js";
 import { workspaceClient } from "./api.js";
 import { hiddenNote } from "@agni/web-shared/treeprune.js";

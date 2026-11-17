@@ -84,7 +84,7 @@ type Loader interface {
 	// companion the companion's digest and a folder no hash at all, so one spelling reports a wrong
 	// revision and another reports none.
 	//
-	// An error means this server could not hash the file, and GetDesign then reports an empty
+	// An error means this server could not hash the file, and GetSummary then reports an empty
 	// content_hash. That is a THIRD state, distinct from a match and a mismatch. The response's doc
 	// comment binds the consumer to keep it distinct.
 	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
@@ -98,14 +98,14 @@ const boardSheetID = "board"
 // boardFor loads the board sidecar for a sheet request, classifying "this file has no
 // board" as not-found (the caller asked for a sheet that does not exist).
 //
-// It reads the board at the design's resolved board tier. GetDesign looked there when it listed
+// It reads the board at the design's resolved board tier. GetSummary looked there when it listed
 // the sheet (C32). Reading at the request URI refused the Board sheet of every design named
 // by its folder or its netlist entry, since neither is the board (agni issue 865).
 //
 // A net the board names differently from the schematic, with the same pins, comes back under the
 // schematic's name (viewRenames, agni issue 1590). So every drawing of the board, its picks and its
 // highlights join that net to the schematic by name, as they join every other net.
-func (s *DesignService) boardFor(ctx context.Context, snap Snap) (*geom.BoardGeometry, error) {
+func (s *DesignViewService) boardFor(ctx context.Context, snap Snap) (*geom.BoardGeometry, error) {
 	loader := LoaderOr(snap, s.loader)
 	b, err := loader.Board(ctx, snap.BoardRead())
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *DesignService) boardFor(ctx context.Context, snap Snap) (*geom.BoardGeo
 
 // styleOrDefault is the service's theme, falling back so a service constructed without one
 // still renders.
-func (s *DesignService) styleOrDefault() render.Style {
+func (s *DesignViewService) styleOrDefault() render.Style {
 	if s.style == (render.Style{}) {
 		return render.DefaultStyle
 	}
@@ -143,11 +143,11 @@ type NativeRenderer interface {
 	Render(ctx context.Context, uri artifact.URI, page int) (string, error)
 }
 
-// DesignService loads and renders one design over injected ports (CONSTRAINTS C13). It
+// DesignViewService loads and renders one design over injected ports (CONSTRAINTS C13). It
 // resolves a design's IR/geometry via a Loader, renders golden pages via a NativeRenderer,
 // and does the pure select/pack/label itself. It performs no file I/O and knows no transport.
 // Rule checks are the separate CheckService (checks.go).
-type DesignService struct {
+type DesignViewService struct {
 	loader Loader
 	native NativeRenderer
 	// style is the render palette/font applied to both the SVG and packed (WebGL) output. The zero
@@ -162,11 +162,11 @@ type DesignService struct {
 	meshes meshCache
 }
 
-// NewDesignService returns a DesignService backed by the given ports and render style. A nil
+// NewDesignViewService returns a DesignViewService backed by the given ports and render style. A nil
 // projects resolver means this deployment resolves no projects.
-func NewDesignService(loader Loader, native NativeRenderer, style render.Style, projects *ProjectResolver) *DesignService {
+func NewDesignViewService(loader Loader, native NativeRenderer, style render.Style, projects *ProjectResolver) *DesignViewService {
 	projects = orEmptyResolver(projects)
-	return &DesignService{loader: loader, native: native, style: style, projects: projects}
+	return &DesignViewService{loader: loader, native: native, style: style, projects: projects}
 }
 
 // ClassifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
@@ -238,22 +238,22 @@ func layoutForFile(path, requested string) string {
 	return graph.DefaultStrategy
 }
 
-// GetDesign answers what a design is. With no read_mask it returns the summary the viewer opens
+// GetSummary answers what a snapshot's design is. With no read_mask it returns the summary the viewer opens
 // with, unchanged, holding counts, sheets, layout and content hash. With a mask it returns exactly
 // the paths named, and those may include the design's IR (agni issue 836). `design` asks for all of
 // it, `design.nets` or `design.components.mpn` for parts, and `*` for everything. A mask entirely
 // under `design` skips the drawing and reads the netlist alone. nets and ref_des narrow which
 // entities the IR carries.
-func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
+func (s *DesignViewService) GetSummary(ctx context.Context, req *webapi.GetSummaryRequest) (*webapi.GetSummaryResponse, error) {
 	paths := req.GetReadMask().GetPaths()
 	if len(paths) == 0 {
 		return s.designSummary(ctx, req)
 	}
-	tree, err := parseMask((&webapi.GetDesignResponse{}).ProtoReflect().Descriptor(), paths)
+	tree, err := parseMask((&webapi.GetSummaryResponse{}).ProtoReflect().Descriptor(), paths)
 	if err != nil {
 		return nil, err
 	}
-	resp := &webapi.GetDesignResponse{}
+	resp := &webapi.GetSummaryResponse{}
 	if !onlyUnder(tree, "design") {
 		if resp, err = s.designSummary(ctx, req); err != nil {
 			return nil, err
@@ -271,7 +271,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 
 // designIR is the design's netlist tier read as every analysis reads it, narrowed to the requested
 // nets and components. It is a copy, because the loader may hand the same message to later reads.
-func (s *DesignService) designIR(ctx context.Context, req *webapi.GetDesignRequest) (*ir.Design, error) {
+func (s *DesignViewService) designIR(ctx context.Context, req *webapi.GetSummaryRequest) (*ir.Design, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func (s *DesignService) designIR(ctx context.Context, req *webapi.GetDesignReque
 // designSummary loads a file, resolves its geometry, and returns the design summary plus the drawable
 // sheets. Netlist formats also carry IR counts. A geometry-only .eds does not, so its name comes
 // from the geometry's design ref and its counts are zero.
-func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
+func (s *DesignViewService) designSummary(ctx context.Context, req *webapi.GetSummaryRequest) (*webapi.GetSummaryResponse, error) {
 	// The snapshot's tiers decide which artifact each question reads, so a netlist entry whose
 	// schematic lives in a declared companion renders that companion's sheets rather than falling
 	// back to an auto-layout (agni issue 656). Every layout question below asks the GEOMETRY tier and
@@ -301,7 +301,7 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 	u, gu, nu, bu := snap.Design, snap.Geometry, snap.Netlist, snap.BoardRead()
 	layout := layoutForFile(gu.Path, req.GetLayout())
 	opts := snap.Overlay.ReadOptions()
-	resp := &webapi.GetDesignResponse{NativeAvailable: s.native != nil && s.native.Available(u)}
+	resp := &webapi.GetSummaryResponse{NativeAvailable: s.native != nil && s.native.Available(u)}
 	// A board-only design lists its board alone, so it lays nothing out (agni issue 1466). It has no
 	// layout to offer, and no drawing note, since the board is the drawing.
 	var g *geom.SchematicGeometry
@@ -374,7 +374,7 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 // GetLayoutReport explains how an auto-layout would draw each component under the requested symbol
 // source. A resolve error (unknown mount / escaping path) is returned. A file with no netlist has
 // nothing to classify, so it gets an empty report rather than an error.
-func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayoutReportRequest) (*webapi.GetLayoutReportResponse, error) {
+func (s *DesignViewService) GetLayoutReport(ctx context.Context, req *webapi.GetLayoutReportRequest) (*webapi.GetLayoutReportResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
@@ -437,7 +437,7 @@ func ReportProto(r *graph.ConversionReport) *webapi.ConversionReport { return re
 // the default, is tier-2 geometry for the WebGL viewer. SVG is the render.SheetSVG reference. NATIVE
 // uses the format's own tool. A bad selector classifies as ErrNotFound. An unexpected native-render
 // failure past the ErrNative* gates classifies as ErrInternal.
-func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetRequest) (*webapi.GetSheetResponse, error) {
+func (s *DesignViewService) GetSheet(ctx context.Context, req *webapi.GetSheetRequest) (*webapi.GetSheetResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
@@ -524,7 +524,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 // GetSheet SVG. The sheet/layout/symbols selection mirrors GetSheet, so the overlay describes the
 // same geometry as the base render under it. NATIVE is a golden shell-out with no overlay concept,
 // so it classifies as ErrInvalidArgument.
-func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.HighlightSheetRequest) (*webapi.HighlightSheetResponse, error) {
+func (s *DesignViewService) HighlightSheet(ctx context.Context, req *webapi.HighlightSheetRequest) (*webapi.HighlightSheetResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err

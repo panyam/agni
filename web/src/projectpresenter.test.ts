@@ -27,7 +27,7 @@ function harness(
   const resolveDesign = vi.fn(async () => resolve);
   const listRules = vi.fn(async () => ({ rules: [{ name: "bulk-cap", severity: "warning", summary: "", available: true }] }));
   const checkDesign = vi.fn(async () => ({ findings: [] }));
-  const getDesign = vi.fn(async () => ({ layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"] }));
+  const getSummary = vi.fn(async () => ({ layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"] }));
   const getSheet = vi.fn(async () => ({ content: { case: "svg" as const, value: "<svg/>" } }));
   // The load path walks past resolution into the report and parts reads before it fills the pickers,
   // so both are stubbed, because a throw there aborts the load and the pickers are never pushed at all.
@@ -37,7 +37,7 @@ function harness(
 
   const presenter = new ViewerPresenter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { getDesign, getSheet, getLayoutReport } as any,
+    { getSummary, getSheet, getLayoutReport } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { listRules, checkDesign, getComponentParams, getExpectations: async () => ({ expectations: [] }) } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

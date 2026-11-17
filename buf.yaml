@@ -17,7 +17,11 @@ breaking:
   # agni has no public clients yet. Remove this ignore once a release tag after v0.7.0 exists.
   # agni 1692 removed webapi.Design.revisions and DesignRevision the same way. Remove its entries at
   # the first release tag after v0.8.0.
+  # agni 1705 renamed design.proto's DesignService to design_view.proto's DesignViewService, freeing
+  # DesignService for stored designs. Remove its entry at the first release tag after v0.8.0.
   ignore_only:
+    FILE_NO_DELETE:
+      - protos/agni/v1/webapi/design.proto
     FIELD_NO_DELETE:
       - protos/agni/v1/ir/ir.proto
       - protos/agni/v1/webapi/project.proto

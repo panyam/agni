@@ -176,7 +176,7 @@ cell `pin` and reads the pin from the row's pin cell. A verdicts row finds its v
 showing, a Tables click selected nothing, and none of them zoomed.
 
 **Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
-link to it, from `DesignService.LocateSubjects` (agni issue 1325). That rpc and a check run's
+link to it, from `DesignViewService.LocateSubjects` (agni issue 1325). That rpc and a check run's
 findings read one index, so a subject locates where its finding badges. A pin answers the sheets
 that draw its unit, so U1's pin 5 answers U1B's sheet. The board sheet joins when the request asks
 for it, by ref-des and net name, since an EDIF schematic and an ODB++ job share no net id. The

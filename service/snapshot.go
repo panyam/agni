@@ -731,7 +731,7 @@ func parseSnapshotFilter(filter string) (string, error) {
 
 // Snapshots is the SnapshotService over this service's loader and resolver, which holds the snapshots
 // its questions name (agni issue 1061).
-func (s *DesignService) Snapshots() *SnapshotService {
+func (s *DesignViewService) Snapshots() *SnapshotService {
 	return NewSnapshotService(s.loader, s.projects, nil, "")
 }
 

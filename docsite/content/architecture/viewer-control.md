@@ -14,7 +14,7 @@ built on and nowhere else.
 
 | Layer | What it is | Who answers | Where its state lives |
 |---|---|---|---|
-| Questions | `CheckService`, `QueryService`, `DesignService` and the rest, and the MCP tools over them | `agni serve`, `agni mcp`, or the browser engine | snapshots on the host that ingested them, nothing per caller |
+| Questions | `CheckService`, `QueryService`, `DesignViewService` and the rest, and the MCP tools over them | `agni serve`, `agni mcp`, or the browser engine | snapshots on the host that ingested them, nothing per caller |
 | Addresses | a viewer URL, which `router.ts` reads as a `ViewerLocation` | nobody, it is text | in the link itself |
 | The live page | `ViewerPageService` (`protos/agni/v1/viewer/page.proto`) | the open viewer page | in that page, for as long as it is open |
 

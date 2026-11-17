@@ -47,7 +47,7 @@ export interface LoadDeps {
   // design the server or a static host holds).
   fetches: boolean;
   listing(): Promise<Listing>;
-  // drawing reads the design's sheets (GetDesign), board its netlist and board (Ingest with
+  // drawing reads the design's sheets (GetSummary), board its netlist and board (Ingest with
   // read_board), each into the engine's store. A load that opens on the board has no drawing step,
   // since the board draws from the board tier alone and the viewer reads the sheets after it draws
   // (agni issue 1501).

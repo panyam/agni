@@ -37,7 +37,7 @@ func holdBoard(files map[string][]byte) {
 }
 
 func boardSheet(srv *httptest.Server, snap string) (*webapi.GetSheetResponse, error) {
-	r, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap, Sheet: "board"}))
+	r, err := webapiconnect.NewDesignViewServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap, Sheet: "board"}))
 	if err != nil {
 		return nil, err
 	}

@@ -290,11 +290,8 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. The rpc shares its name with
-     * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-     * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-     * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-     * have different names because one proto package cannot hold two GetDesignRequest.
+     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
      * </pre>
      */
     default void getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request,
@@ -419,11 +416,8 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. The rpc shares its name with
-     * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-     * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-     * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-     * have different names because one proto package cannot hold two GetDesignRequest.
+     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
      * </pre>
      */
     public void getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request,
@@ -519,11 +513,8 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. The rpc shares its name with
-     * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-     * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-     * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-     * have different names because one proto package cannot hold two GetDesignRequest.
+     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request) throws io.grpc.StatusException {
@@ -616,11 +607,8 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. The rpc shares its name with
-     * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-     * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-     * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-     * have different names because one proto package cannot hold two GetDesignRequest.
+     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design getDesign(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest request) {
@@ -715,11 +703,8 @@ public final class ProjectServiceGrpc {
 
     /**
      * <pre>
-     * GetDesign returns one design by resource name. The rpc shares its name with
-     * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-     * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-     * the files around it is which. They are distinct rpcs on distinct services. Their request messages
-     * have different names because one proto package cannot hold two GetDesignRequest.
+     * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+     * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Design> getDesign(

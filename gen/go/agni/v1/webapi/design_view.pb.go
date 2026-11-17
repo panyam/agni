@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.12
 // 	protoc        (unknown)
-// source: agni/v1/webapi/design.proto
+// source: agni/v1/webapi/design_view.proto
 
 package webapi
 
@@ -64,11 +64,11 @@ func (x SheetFormat) String() string {
 }
 
 func (SheetFormat) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_design_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_design_view_proto_enumTypes[0].Descriptor()
 }
 
 func (SheetFormat) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_design_proto_enumTypes[0]
+	return &file_agni_v1_webapi_design_view_proto_enumTypes[0]
 }
 
 func (x SheetFormat) Number() protoreflect.EnumNumber {
@@ -77,7 +77,7 @@ func (x SheetFormat) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SheetFormat.Descriptor instead.
 func (SheetFormat) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{0}
 }
 
 // SymbolSource selects what an auto-layout draws at each component node. It draws either
@@ -116,11 +116,11 @@ func (x SymbolSource) String() string {
 }
 
 func (SymbolSource) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_design_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_webapi_design_view_proto_enumTypes[1].Descriptor()
 }
 
 func (SymbolSource) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_design_proto_enumTypes[1]
+	return &file_agni_v1_webapi_design_view_proto_enumTypes[1]
 }
 
 func (x SymbolSource) Number() protoreflect.EnumNumber {
@@ -129,7 +129,7 @@ func (x SymbolSource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SymbolSource.Descriptor instead.
 func (SymbolSource) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{1}
 }
 
 // TraceOutcome is what a trace answered.
@@ -172,11 +172,11 @@ func (x TraceOutcome) String() string {
 }
 
 func (TraceOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_design_proto_enumTypes[2].Descriptor()
+	return file_agni_v1_webapi_design_view_proto_enumTypes[2].Descriptor()
 }
 
 func (TraceOutcome) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_design_proto_enumTypes[2]
+	return &file_agni_v1_webapi_design_view_proto_enumTypes[2]
 }
 
 func (x TraceOutcome) Number() protoreflect.EnumNumber {
@@ -185,7 +185,7 @@ func (x TraceOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TraceOutcome.Descriptor instead.
 func (TraceOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{2}
 }
 
 // SheetRef identifies a drawable sheet within a design.
@@ -203,7 +203,7 @@ type SheetRef struct {
 
 func (x *SheetRef) Reset() {
 	*x = SheetRef{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -215,7 +215,7 @@ func (x *SheetRef) String() string {
 func (*SheetRef) ProtoMessage() {}
 
 func (x *SheetRef) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -228,7 +228,7 @@ func (x *SheetRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SheetRef.ProtoReflect.Descriptor instead.
 func (*SheetRef) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *SheetRef) GetId() string {
@@ -252,7 +252,7 @@ func (x *SheetRef) GetParentId() string {
 	return ""
 }
 
-type GetDesignRequest struct {
+type GetSummaryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string `protobuf:"bytes,7,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
@@ -261,7 +261,7 @@ type GetDesignRequest struct {
 	Layout string `protobuf:"bytes,1,opt,name=layout,proto3" json:"layout,omitempty"`
 	// read_mask selects which fields the response fills (agni issue 836). When unset, the response is
 	// the usual summary, with no IR. The viewer asks on every open, and a large board's IR is
-	// megabytes. When set, the response keeps exactly the named paths of GetDesignResponse. `design`
+	// megabytes. When set, the response keeps exactly the named paths of GetSummaryResponse. `design`
 	// selects the whole IR. `design.nets` or `design.components.mpn` select parts of it. `sheets`
 	// selects a summary field, and `*` selects everything. A path through a repeated or map field
 	// applies to every element. When every path is under `design`, the server reads the netlist alone
@@ -277,21 +277,21 @@ type GetDesignRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetDesignRequest) Reset() {
-	*x = GetDesignRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[1]
+func (x *GetSummaryRequest) Reset() {
+	*x = GetSummaryRequest{}
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetDesignRequest) String() string {
+func (x *GetSummaryRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetDesignRequest) ProtoMessage() {}
+func (*GetSummaryRequest) ProtoMessage() {}
 
-func (x *GetDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[1]
+func (x *GetSummaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -302,47 +302,47 @@ func (x *GetDesignRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetDesignRequest.ProtoReflect.Descriptor instead.
-func (*GetDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use GetSummaryRequest.ProtoReflect.Descriptor instead.
+func (*GetSummaryRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetDesignRequest) GetSnapshot() string {
+func (x *GetSummaryRequest) GetSnapshot() string {
 	if x != nil {
 		return x.Snapshot
 	}
 	return ""
 }
 
-func (x *GetDesignRequest) GetLayout() string {
+func (x *GetSummaryRequest) GetLayout() string {
 	if x != nil {
 		return x.Layout
 	}
 	return ""
 }
 
-func (x *GetDesignRequest) GetReadMask() *fieldmaskpb.FieldMask {
+func (x *GetSummaryRequest) GetReadMask() *fieldmaskpb.FieldMask {
 	if x != nil {
 		return x.ReadMask
 	}
 	return nil
 }
 
-func (x *GetDesignRequest) GetNets() []string {
+func (x *GetSummaryRequest) GetNets() []string {
 	if x != nil {
 		return x.Nets
 	}
 	return nil
 }
 
-func (x *GetDesignRequest) GetRefDes() []string {
+func (x *GetSummaryRequest) GetRefDes() []string {
 	if x != nil {
 		return x.RefDes
 	}
 	return nil
 }
 
-type GetDesignResponse struct {
+type GetSummaryResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the design name (from the IR, or the geometry's design ref for .eds).
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -417,21 +417,21 @@ type GetDesignResponse struct {
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *GetDesignResponse) Reset() {
-	*x = GetDesignResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[2]
+func (x *GetSummaryResponse) Reset() {
+	*x = GetSummaryResponse{}
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetDesignResponse) String() string {
+func (x *GetSummaryResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetDesignResponse) ProtoMessage() {}
+func (*GetSummaryResponse) ProtoMessage() {}
 
-func (x *GetDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[2]
+func (x *GetSummaryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -442,110 +442,110 @@ func (x *GetDesignResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetDesignResponse.ProtoReflect.Descriptor instead.
-func (*GetDesignResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use GetSummaryResponse.ProtoReflect.Descriptor instead.
+func (*GetSummaryResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GetDesignResponse) GetName() string {
+func (x *GetSummaryResponse) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetSourceFormat() string {
+func (x *GetSummaryResponse) GetSourceFormat() string {
 	if x != nil {
 		return x.SourceFormat
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetComponentCount() int32 {
+func (x *GetSummaryResponse) GetComponentCount() int32 {
 	if x != nil {
 		return x.ComponentCount
 	}
 	return 0
 }
 
-func (x *GetDesignResponse) GetNetCount() int32 {
+func (x *GetSummaryResponse) GetNetCount() int32 {
 	if x != nil {
 		return x.NetCount
 	}
 	return 0
 }
 
-func (x *GetDesignResponse) GetUndrawn() []*geom.UndrawnPlacement {
+func (x *GetSummaryResponse) GetUndrawn() []*geom.UndrawnPlacement {
 	if x != nil {
 		return x.Undrawn
 	}
 	return nil
 }
 
-func (x *GetDesignResponse) GetLayout() string {
+func (x *GetSummaryResponse) GetLayout() string {
 	if x != nil {
 		return x.Layout
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetSheets() []*SheetRef {
+func (x *GetSummaryResponse) GetSheets() []*SheetRef {
 	if x != nil {
 		return x.Sheets
 	}
 	return nil
 }
 
-func (x *GetDesignResponse) GetNativeAvailable() bool {
+func (x *GetSummaryResponse) GetNativeAvailable() bool {
 	if x != nil {
 		return x.NativeAvailable
 	}
 	return false
 }
 
-func (x *GetDesignResponse) GetAvailableLayouts() []string {
+func (x *GetSummaryResponse) GetAvailableLayouts() []string {
 	if x != nil {
 		return x.AvailableLayouts
 	}
 	return nil
 }
 
-func (x *GetDesignResponse) GetContentHash() string {
+func (x *GetSummaryResponse) GetContentHash() string {
 	if x != nil {
 		return x.ContentHash
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
+func (x *GetSummaryResponse) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
 	if x != nil {
 		return x.UnexpandedHierarchy
 	}
 	return nil
 }
 
-func (x *GetDesignResponse) GetDesign() *ir.Design {
+func (x *GetSummaryResponse) GetDesign() *ir.Design {
 	if x != nil {
 		return x.Design
 	}
 	return nil
 }
 
-func (x *GetDesignResponse) GetHierarchyNote() string {
+func (x *GetSummaryResponse) GetHierarchyNote() string {
 	if x != nil {
 		return x.HierarchyNote
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetDrawingNote() string {
+func (x *GetSummaryResponse) GetDrawingNote() string {
 	if x != nil {
 		return x.DrawingNote
 	}
 	return ""
 }
 
-func (x *GetDesignResponse) GetFlattenReadsMore() bool {
+func (x *GetSummaryResponse) GetFlattenReadsMore() bool {
 	if x != nil {
 		return x.FlattenReadsMore
 	}
@@ -570,7 +570,7 @@ type GetSheetRequest struct {
 
 func (x *GetSheetRequest) Reset() {
 	*x = GetSheetRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +582,7 @@ func (x *GetSheetRequest) String() string {
 func (*GetSheetRequest) ProtoMessage() {}
 
 func (x *GetSheetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +595,7 @@ func (x *GetSheetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSheetRequest.ProtoReflect.Descriptor instead.
 func (*GetSheetRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetSheetRequest) GetSnapshot() string {
@@ -655,7 +655,7 @@ type GetSheetResponse struct {
 
 func (x *GetSheetResponse) Reset() {
 	*x = GetSheetResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +667,7 @@ func (x *GetSheetResponse) String() string {
 func (*GetSheetResponse) ProtoMessage() {}
 
 func (x *GetSheetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +680,7 @@ func (x *GetSheetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSheetResponse.ProtoReflect.Descriptor instead.
 func (*GetSheetResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetSheetResponse) GetContent() isGetSheetResponse_Content {
@@ -757,7 +757,7 @@ type HighlightSheetRequest struct {
 
 func (x *HighlightSheetRequest) Reset() {
 	*x = HighlightSheetRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +769,7 @@ func (x *HighlightSheetRequest) String() string {
 func (*HighlightSheetRequest) ProtoMessage() {}
 
 func (x *HighlightSheetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +782,7 @@ func (x *HighlightSheetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HighlightSheetRequest.ProtoReflect.Descriptor instead.
 func (*HighlightSheetRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *HighlightSheetRequest) GetSnapshot() string {
@@ -843,7 +843,7 @@ type HighlightSheetResponse struct {
 
 func (x *HighlightSheetResponse) Reset() {
 	*x = HighlightSheetResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -855,7 +855,7 @@ func (x *HighlightSheetResponse) String() string {
 func (*HighlightSheetResponse) ProtoMessage() {}
 
 func (x *HighlightSheetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -868,7 +868,7 @@ func (x *HighlightSheetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HighlightSheetResponse.ProtoReflect.Descriptor instead.
 func (*HighlightSheetResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *HighlightSheetResponse) GetContent() isHighlightSheetResponse_Content {
@@ -930,7 +930,7 @@ type GetBoardGeometryRequest struct {
 
 func (x *GetBoardGeometryRequest) Reset() {
 	*x = GetBoardGeometryRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -942,7 +942,7 @@ func (x *GetBoardGeometryRequest) String() string {
 func (*GetBoardGeometryRequest) ProtoMessage() {}
 
 func (x *GetBoardGeometryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -955,7 +955,7 @@ func (x *GetBoardGeometryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBoardGeometryRequest.ProtoReflect.Descriptor instead.
 func (*GetBoardGeometryRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetBoardGeometryRequest) GetSnapshot() string {
@@ -1000,7 +1000,7 @@ type GetBoardMeshesRequest struct {
 
 func (x *GetBoardMeshesRequest) Reset() {
 	*x = GetBoardMeshesRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1012,7 +1012,7 @@ func (x *GetBoardMeshesRequest) String() string {
 func (*GetBoardMeshesRequest) ProtoMessage() {}
 
 func (x *GetBoardMeshesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1025,7 +1025,7 @@ func (x *GetBoardMeshesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBoardMeshesRequest.ProtoReflect.Descriptor instead.
 func (*GetBoardMeshesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetBoardMeshesRequest) GetSnapshot() string {
@@ -1080,7 +1080,7 @@ type GetBoardMeshesResponse struct {
 
 func (x *GetBoardMeshesResponse) Reset() {
 	*x = GetBoardMeshesResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1092,7 +1092,7 @@ func (x *GetBoardMeshesResponse) String() string {
 func (*GetBoardMeshesResponse) ProtoMessage() {}
 
 func (x *GetBoardMeshesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1105,7 +1105,7 @@ func (x *GetBoardMeshesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBoardMeshesResponse.ProtoReflect.Descriptor instead.
 func (*GetBoardMeshesResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetBoardMeshesResponse) GetMeshes() []*geom.ModelMesh {
@@ -1163,7 +1163,7 @@ type GetBoardGeometryResponse struct {
 
 func (x *GetBoardGeometryResponse) Reset() {
 	*x = GetBoardGeometryResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1175,7 @@ func (x *GetBoardGeometryResponse) String() string {
 func (*GetBoardGeometryResponse) ProtoMessage() {}
 
 func (x *GetBoardGeometryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1188,7 @@ func (x *GetBoardGeometryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBoardGeometryResponse.ProtoReflect.Descriptor instead.
 func (*GetBoardGeometryResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetBoardGeometryResponse) GetBoard() *geom.BoardGeometry {
@@ -1217,7 +1217,7 @@ type GetLayoutReportRequest struct {
 
 func (x *GetLayoutReportRequest) Reset() {
 	*x = GetLayoutReportRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1229,7 +1229,7 @@ func (x *GetLayoutReportRequest) String() string {
 func (*GetLayoutReportRequest) ProtoMessage() {}
 
 func (x *GetLayoutReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1242,7 +1242,7 @@ func (x *GetLayoutReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLayoutReportRequest.ProtoReflect.Descriptor instead.
 func (*GetLayoutReportRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetLayoutReportRequest) GetSnapshot() string {
@@ -1268,7 +1268,7 @@ type GetLayoutReportResponse struct {
 
 func (x *GetLayoutReportResponse) Reset() {
 	*x = GetLayoutReportResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1280,7 +1280,7 @@ func (x *GetLayoutReportResponse) String() string {
 func (*GetLayoutReportResponse) ProtoMessage() {}
 
 func (x *GetLayoutReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1293,7 +1293,7 @@ func (x *GetLayoutReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLayoutReportResponse.ProtoReflect.Descriptor instead.
 func (*GetLayoutReportResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetLayoutReportResponse) GetReport() *ConversionReport {
@@ -1321,7 +1321,7 @@ type TraceDesignRequest struct {
 
 func (x *TraceDesignRequest) Reset() {
 	*x = TraceDesignRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1333,7 +1333,7 @@ func (x *TraceDesignRequest) String() string {
 func (*TraceDesignRequest) ProtoMessage() {}
 
 func (x *TraceDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1346,7 +1346,7 @@ func (x *TraceDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceDesignRequest.ProtoReflect.Descriptor instead.
 func (*TraceDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TraceDesignRequest) GetSnapshot() string {
@@ -1388,7 +1388,7 @@ type TraceEndpoint struct {
 
 func (x *TraceEndpoint) Reset() {
 	*x = TraceEndpoint{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1400,7 +1400,7 @@ func (x *TraceEndpoint) String() string {
 func (*TraceEndpoint) ProtoMessage() {}
 
 func (x *TraceEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1413,7 +1413,7 @@ func (x *TraceEndpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceEndpoint.ProtoReflect.Descriptor instead.
 func (*TraceEndpoint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TraceEndpoint) GetRefDes() string {
@@ -1444,7 +1444,7 @@ type ReachablePinsRequest struct {
 
 func (x *ReachablePinsRequest) Reset() {
 	*x = ReachablePinsRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1456,7 +1456,7 @@ func (x *ReachablePinsRequest) String() string {
 func (*ReachablePinsRequest) ProtoMessage() {}
 
 func (x *ReachablePinsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1469,7 +1469,7 @@ func (x *ReachablePinsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReachablePinsRequest.ProtoReflect.Descriptor instead.
 func (*ReachablePinsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ReachablePinsRequest) GetSnapshot() string {
@@ -1512,7 +1512,7 @@ type ReachablePinsResponse struct {
 
 func (x *ReachablePinsResponse) Reset() {
 	*x = ReachablePinsResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1524,7 +1524,7 @@ func (x *ReachablePinsResponse) String() string {
 func (*ReachablePinsResponse) ProtoMessage() {}
 
 func (x *ReachablePinsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1537,7 +1537,7 @@ func (x *ReachablePinsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReachablePinsResponse.ProtoReflect.Descriptor instead.
 func (*ReachablePinsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ReachablePinsResponse) GetFrom() *TraceEnd {
@@ -1587,7 +1587,7 @@ type ReachablePin struct {
 
 func (x *ReachablePin) Reset() {
 	*x = ReachablePin{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1599,7 +1599,7 @@ func (x *ReachablePin) String() string {
 func (*ReachablePin) ProtoMessage() {}
 
 func (x *ReachablePin) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1612,7 +1612,7 @@ func (x *ReachablePin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReachablePin.ProtoReflect.Descriptor instead.
 func (*ReachablePin) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ReachablePin) GetEnd() *TraceEnd {
@@ -1642,7 +1642,7 @@ type ReachedRail struct {
 
 func (x *ReachedRail) Reset() {
 	*x = ReachedRail{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1654,7 +1654,7 @@ func (x *ReachedRail) String() string {
 func (*ReachedRail) ProtoMessage() {}
 
 func (x *ReachedRail) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1667,7 +1667,7 @@ func (x *ReachedRail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReachedRail.ProtoReflect.Descriptor instead.
 func (*ReachedRail) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReachedRail) GetNet() string {
@@ -1700,7 +1700,7 @@ type TraceDesignResponse struct {
 
 func (x *TraceDesignResponse) Reset() {
 	*x = TraceDesignResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1712,7 +1712,7 @@ func (x *TraceDesignResponse) String() string {
 func (*TraceDesignResponse) ProtoMessage() {}
 
 func (x *TraceDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1725,7 +1725,7 @@ func (x *TraceDesignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceDesignResponse.ProtoReflect.Descriptor instead.
 func (*TraceDesignResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TraceDesignResponse) GetTrace() *Trace {
@@ -1753,7 +1753,7 @@ type Trace struct {
 
 func (x *Trace) Reset() {
 	*x = Trace{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1765,7 +1765,7 @@ func (x *Trace) String() string {
 func (*Trace) ProtoMessage() {}
 
 func (x *Trace) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1778,7 +1778,7 @@ func (x *Trace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Trace.ProtoReflect.Descriptor instead.
 func (*Trace) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Trace) GetFrom() *TraceEnd {
@@ -1853,7 +1853,7 @@ type TraceEnd struct {
 
 func (x *TraceEnd) Reset() {
 	*x = TraceEnd{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1865,7 +1865,7 @@ func (x *TraceEnd) String() string {
 func (*TraceEnd) ProtoMessage() {}
 
 func (x *TraceEnd) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1878,7 +1878,7 @@ func (x *TraceEnd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceEnd.ProtoReflect.Descriptor instead.
 func (*TraceEnd) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *TraceEnd) GetEndpoint() *TraceEndpoint {
@@ -1927,7 +1927,7 @@ type TraceCross struct {
 
 func (x *TraceCross) Reset() {
 	*x = TraceCross{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1939,7 +1939,7 @@ func (x *TraceCross) String() string {
 func (*TraceCross) ProtoMessage() {}
 
 func (x *TraceCross) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1952,7 +1952,7 @@ func (x *TraceCross) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceCross.ProtoReflect.Descriptor instead.
 func (*TraceCross) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *TraceCross) GetRefDes() string {
@@ -2028,7 +2028,7 @@ type TraceNet struct {
 
 func (x *TraceNet) Reset() {
 	*x = TraceNet{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2040,7 +2040,7 @@ func (x *TraceNet) String() string {
 func (*TraceNet) ProtoMessage() {}
 
 func (x *TraceNet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2053,7 +2053,7 @@ func (x *TraceNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceNet.ProtoReflect.Descriptor instead.
 func (*TraceNet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *TraceNet) GetName() string {
@@ -2113,7 +2113,7 @@ type WalkDesignRequest struct {
 
 func (x *WalkDesignRequest) Reset() {
 	*x = WalkDesignRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2125,7 +2125,7 @@ func (x *WalkDesignRequest) String() string {
 func (*WalkDesignRequest) ProtoMessage() {}
 
 func (x *WalkDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[24]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2138,7 +2138,7 @@ func (x *WalkDesignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkDesignRequest.ProtoReflect.Descriptor instead.
 func (*WalkDesignRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{24}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *WalkDesignRequest) GetSnapshot() string {
@@ -2203,7 +2203,7 @@ type WalkGoal struct {
 
 func (x *WalkGoal) Reset() {
 	*x = WalkGoal{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2215,7 +2215,7 @@ func (x *WalkGoal) String() string {
 func (*WalkGoal) ProtoMessage() {}
 
 func (x *WalkGoal) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[25]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2228,7 +2228,7 @@ func (x *WalkGoal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkGoal.ProtoReflect.Descriptor instead.
 func (*WalkGoal) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{25}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *WalkGoal) GetKind() string {
@@ -2283,7 +2283,7 @@ type WalkGoalAnswer struct {
 
 func (x *WalkGoalAnswer) Reset() {
 	*x = WalkGoalAnswer{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2295,7 +2295,7 @@ func (x *WalkGoalAnswer) String() string {
 func (*WalkGoalAnswer) ProtoMessage() {}
 
 func (x *WalkGoalAnswer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[26]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2308,7 +2308,7 @@ func (x *WalkGoalAnswer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkGoalAnswer.ProtoReflect.Descriptor instead.
 func (*WalkGoalAnswer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{26}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WalkGoalAnswer) GetKind() string {
@@ -2377,7 +2377,7 @@ type WalkRoute struct {
 
 func (x *WalkRoute) Reset() {
 	*x = WalkRoute{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2389,7 +2389,7 @@ func (x *WalkRoute) String() string {
 func (*WalkRoute) ProtoMessage() {}
 
 func (x *WalkRoute) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[27]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2402,7 +2402,7 @@ func (x *WalkRoute) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkRoute.ProtoReflect.Descriptor instead.
 func (*WalkRoute) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{27}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *WalkRoute) GetCrossings() []*TraceCross {
@@ -2442,7 +2442,7 @@ type WalkDesignResponse struct {
 
 func (x *WalkDesignResponse) Reset() {
 	*x = WalkDesignResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2454,7 +2454,7 @@ func (x *WalkDesignResponse) String() string {
 func (*WalkDesignResponse) ProtoMessage() {}
 
 func (x *WalkDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[28]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2467,7 +2467,7 @@ func (x *WalkDesignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkDesignResponse.ProtoReflect.Descriptor instead.
 func (*WalkDesignResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{28}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *WalkDesignResponse) GetWalk() *Walk {
@@ -2502,7 +2502,7 @@ type Walk struct {
 
 func (x *Walk) Reset() {
 	*x = Walk{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2514,7 +2514,7 @@ func (x *Walk) String() string {
 func (*Walk) ProtoMessage() {}
 
 func (x *Walk) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[29]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2527,7 +2527,7 @@ func (x *Walk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Walk.ProtoReflect.Descriptor instead.
 func (*Walk) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{29}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *Walk) GetFrom() *TraceEnd {
@@ -2607,7 +2607,7 @@ type WalkNet struct {
 
 func (x *WalkNet) Reset() {
 	*x = WalkNet{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2619,7 +2619,7 @@ func (x *WalkNet) String() string {
 func (*WalkNet) ProtoMessage() {}
 
 func (x *WalkNet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[30]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2632,7 +2632,7 @@ func (x *WalkNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkNet.ProtoReflect.Descriptor instead.
 func (*WalkNet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{30}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *WalkNet) GetHop() int32 {
@@ -2685,7 +2685,7 @@ type WalkBoundary struct {
 
 func (x *WalkBoundary) Reset() {
 	*x = WalkBoundary{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2697,7 +2697,7 @@ func (x *WalkBoundary) String() string {
 func (*WalkBoundary) ProtoMessage() {}
 
 func (x *WalkBoundary) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[31]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2710,7 +2710,7 @@ func (x *WalkBoundary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkBoundary.ProtoReflect.Descriptor instead.
 func (*WalkBoundary) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{31}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *WalkBoundary) GetRefDes() string {
@@ -2759,7 +2759,7 @@ type WalkElided struct {
 
 func (x *WalkElided) Reset() {
 	*x = WalkElided{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2771,7 +2771,7 @@ func (x *WalkElided) String() string {
 func (*WalkElided) ProtoMessage() {}
 
 func (x *WalkElided) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[32]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2784,7 +2784,7 @@ func (x *WalkElided) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkElided.ProtoReflect.Descriptor instead.
 func (*WalkElided) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{32}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *WalkElided) GetHop() int32 {
@@ -2809,7 +2809,7 @@ type ListWalkKindsRequest struct {
 
 func (x *ListWalkKindsRequest) Reset() {
 	*x = ListWalkKindsRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2821,7 +2821,7 @@ func (x *ListWalkKindsRequest) String() string {
 func (*ListWalkKindsRequest) ProtoMessage() {}
 
 func (x *ListWalkKindsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[33]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2834,7 +2834,7 @@ func (x *ListWalkKindsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWalkKindsRequest.ProtoReflect.Descriptor instead.
 func (*ListWalkKindsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{33}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{33}
 }
 
 type ListWalkKindsResponse struct {
@@ -2846,7 +2846,7 @@ type ListWalkKindsResponse struct {
 
 func (x *ListWalkKindsResponse) Reset() {
 	*x = ListWalkKindsResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[34]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2858,7 +2858,7 @@ func (x *ListWalkKindsResponse) String() string {
 func (*ListWalkKindsResponse) ProtoMessage() {}
 
 func (x *ListWalkKindsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[34]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2871,7 +2871,7 @@ func (x *ListWalkKindsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWalkKindsResponse.ProtoReflect.Descriptor instead.
 func (*ListWalkKindsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{34}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListWalkKindsResponse) GetKinds() []*WalkKind {
@@ -2894,7 +2894,7 @@ type WalkKind struct {
 
 func (x *WalkKind) Reset() {
 	*x = WalkKind{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[35]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2906,7 +2906,7 @@ func (x *WalkKind) String() string {
 func (*WalkKind) ProtoMessage() {}
 
 func (x *WalkKind) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[35]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2919,7 +2919,7 @@ func (x *WalkKind) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WalkKind.ProtoReflect.Descriptor instead.
 func (*WalkKind) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{35}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *WalkKind) GetName() string {
@@ -2957,7 +2957,7 @@ type TraceStub struct {
 
 func (x *TraceStub) Reset() {
 	*x = TraceStub{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[36]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2969,7 +2969,7 @@ func (x *TraceStub) String() string {
 func (*TraceStub) ProtoMessage() {}
 
 func (x *TraceStub) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[36]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2982,7 +2982,7 @@ func (x *TraceStub) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TraceStub.ProtoReflect.Descriptor instead.
 func (*TraceStub) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{36}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *TraceStub) GetRefDes() string {
@@ -3016,7 +3016,7 @@ type ConversionReport struct {
 
 func (x *ConversionReport) Reset() {
 	*x = ConversionReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[37]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3028,7 +3028,7 @@ func (x *ConversionReport) String() string {
 func (*ConversionReport) ProtoMessage() {}
 
 func (x *ConversionReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[37]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3041,7 +3041,7 @@ func (x *ConversionReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversionReport.ProtoReflect.Descriptor instead.
 func (*ConversionReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{37}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ConversionReport) GetComponents() []*ComponentReport {
@@ -3069,7 +3069,7 @@ type ComponentReport struct {
 
 func (x *ComponentReport) Reset() {
 	*x = ComponentReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[38]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3081,7 +3081,7 @@ func (x *ComponentReport) String() string {
 func (*ComponentReport) ProtoMessage() {}
 
 func (x *ComponentReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[38]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3094,7 +3094,7 @@ func (x *ComponentReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentReport.ProtoReflect.Descriptor instead.
 func (*ComponentReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{38}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ComponentReport) GetRefDes() string {
@@ -3159,7 +3159,7 @@ type LocateSubjectsRequest struct {
 
 func (x *LocateSubjectsRequest) Reset() {
 	*x = LocateSubjectsRequest{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3171,7 +3171,7 @@ func (x *LocateSubjectsRequest) String() string {
 func (*LocateSubjectsRequest) ProtoMessage() {}
 
 func (x *LocateSubjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[39]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3184,7 +3184,7 @@ func (x *LocateSubjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateSubjectsRequest.ProtoReflect.Descriptor instead.
 func (*LocateSubjectsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{39}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *LocateSubjectsRequest) GetSnapshot() string {
@@ -3222,7 +3222,7 @@ type LocateSubjectsResponse struct {
 
 func (x *LocateSubjectsResponse) Reset() {
 	*x = LocateSubjectsResponse{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[40]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3234,7 +3234,7 @@ func (x *LocateSubjectsResponse) String() string {
 func (*LocateSubjectsResponse) ProtoMessage() {}
 
 func (x *LocateSubjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[40]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3247,7 +3247,7 @@ func (x *LocateSubjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocateSubjectsResponse.ProtoReflect.Descriptor instead.
 func (*LocateSubjectsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{40}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *LocateSubjectsResponse) GetSubjects() []*SubjectSheets {
@@ -3281,7 +3281,7 @@ type BoardFollow struct {
 
 func (x *BoardFollow) Reset() {
 	*x = BoardFollow{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[41]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3293,7 +3293,7 @@ func (x *BoardFollow) String() string {
 func (*BoardFollow) ProtoMessage() {}
 
 func (x *BoardFollow) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[41]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3306,7 +3306,7 @@ func (x *BoardFollow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoardFollow.ProtoReflect.Descriptor instead.
 func (*BoardFollow) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{41}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *BoardFollow) GetSide() string {
@@ -3327,7 +3327,7 @@ func (x *BoardFollow) GetLayers() []string {
 type SubjectSheets struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Subject *checks.Subject        `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
-	// sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+	// sheet_ids are the GetSummary sheet ids that draw the subject, schematic sheets in design order
 	// and then "board". Empty means drawn nowhere, and locate_reason says why.
 	SheetIds []string `protobuf:"bytes,2,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	// locate_reason is UNSPECIFIED when sheet_ids is not empty.
@@ -3348,7 +3348,7 @@ type SubjectSheets struct {
 
 func (x *SubjectSheets) Reset() {
 	*x = SubjectSheets{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[42]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3360,7 +3360,7 @@ func (x *SubjectSheets) String() string {
 func (*SubjectSheets) ProtoMessage() {}
 
 func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[42]
+	mi := &file_agni_v1_webapi_design_view_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3373,7 +3373,7 @@ func (x *SubjectSheets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectSheets.ProtoReflect.Descriptor instead.
 func (*SubjectSheets) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{42}
+	return file_agni_v1_webapi_design_view_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SubjectSheets) GetSubject() *checks.Subject {
@@ -3411,22 +3411,22 @@ func (x *SubjectSheets) GetBoardLayers() []string {
 	return nil
 }
 
-var File_agni_v1_webapi_design_proto protoreflect.FileDescriptor
+var File_agni_v1_webapi_design_view_proto protoreflect.FileDescriptor
 
-const file_agni_v1_webapi_design_proto_rawDesc = "" +
+const file_agni_v1_webapi_design_view_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x17agni/v1/geom/geom.proto\x1a\x1dagni/v1/geom/geom_board.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\x1a google/protobuf/field_mask.proto\"K\n" +
+	" agni/v1/webapi/design_view.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x17agni/v1/geom/geom.proto\x1a\x1dagni/v1/geom/geom_board.proto\x1a\x1eagni/v1/geom/geom_packed.proto\x1a\x13agni/v1/ir/ir.proto\x1a google/protobuf/field_mask.proto\"K\n" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\tparent_id\x18\x03 \x01(\tR\bparentId\"\xc7\x01\n" +
-	"\x10GetDesignRequest\x12\x1a\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\"\xc8\x01\n" +
+	"\x11GetSummaryRequest\x12\x1a\n" +
 	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x16\n" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x127\n" +
 	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
 	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
-	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\x89\x05\n" +
-	"\x11GetDesignResponse\x12\x12\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\x8a\x05\n" +
+	"\x12GetSummaryResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
 	"\x0fcomponent_count\x18\x03 \x01(\x05R\x0ecomponentCount\x12\x1b\n" +
@@ -3654,9 +3654,10 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x19TRACE_OUTCOME_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14TRACE_OUTCOME_ROUTED\x10\x01\x12\x1a\n" +
 	"\x16TRACE_OUTCOME_NO_ROUTE\x10\x02\x12\x1c\n" +
-	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\x87\b\n" +
-	"\rDesignService\x12P\n" +
-	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a!.agni.v1.webapi.GetDesignResponse\x12M\n" +
+	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\x8e\b\n" +
+	"\x11DesignViewService\x12S\n" +
+	"\n" +
+	"GetSummary\x12!.agni.v1.webapi.GetSummaryRequest\x1a\".agni.v1.webapi.GetSummaryResponse\x12M\n" +
 	"\bGetSheet\x12\x1f.agni.v1.webapi.GetSheetRequest\x1a .agni.v1.webapi.GetSheetResponse\x12_\n" +
 	"\x0eHighlightSheet\x12%.agni.v1.webapi.HighlightSheetRequest\x1a&.agni.v1.webapi.HighlightSheetResponse\x12b\n" +
 	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponse\x12e\n" +
@@ -3670,26 +3671,26 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\rListWalkKinds\x12$.agni.v1.webapi.ListWalkKindsRequest\x1a%.agni.v1.webapi.ListWalkKindsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
-	file_agni_v1_webapi_design_proto_rawDescOnce sync.Once
-	file_agni_v1_webapi_design_proto_rawDescData []byte
+	file_agni_v1_webapi_design_view_proto_rawDescOnce sync.Once
+	file_agni_v1_webapi_design_view_proto_rawDescData []byte
 )
 
-func file_agni_v1_webapi_design_proto_rawDescGZIP() []byte {
-	file_agni_v1_webapi_design_proto_rawDescOnce.Do(func() {
-		file_agni_v1_webapi_design_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)))
+func file_agni_v1_webapi_design_view_proto_rawDescGZIP() []byte {
+	file_agni_v1_webapi_design_view_proto_rawDescOnce.Do(func() {
+		file_agni_v1_webapi_design_view_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_view_proto_rawDesc), len(file_agni_v1_webapi_design_view_proto_rawDesc)))
 	})
-	return file_agni_v1_webapi_design_proto_rawDescData
+	return file_agni_v1_webapi_design_view_proto_rawDescData
 }
 
-var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
-var file_agni_v1_webapi_design_proto_goTypes = []any{
+var file_agni_v1_webapi_design_view_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agni_v1_webapi_design_view_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_agni_v1_webapi_design_view_proto_goTypes = []any{
 	(SheetFormat)(0),                 // 0: agni.v1.webapi.SheetFormat
 	(SymbolSource)(0),                // 1: agni.v1.webapi.SymbolSource
 	(TraceOutcome)(0),                // 2: agni.v1.webapi.TraceOutcome
 	(*SheetRef)(nil),                 // 3: agni.v1.webapi.SheetRef
-	(*GetDesignRequest)(nil),         // 4: agni.v1.webapi.GetDesignRequest
-	(*GetDesignResponse)(nil),        // 5: agni.v1.webapi.GetDesignResponse
+	(*GetSummaryRequest)(nil),        // 4: agni.v1.webapi.GetSummaryRequest
+	(*GetSummaryResponse)(nil),       // 5: agni.v1.webapi.GetSummaryResponse
 	(*GetSheetRequest)(nil),          // 6: agni.v1.webapi.GetSheetRequest
 	(*GetSheetResponse)(nil),         // 7: agni.v1.webapi.GetSheetResponse
 	(*HighlightSheetRequest)(nil),    // 8: agni.v1.webapi.HighlightSheetRequest
@@ -3745,12 +3746,12 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*checks.Subject)(nil),           // 58: agni.v1.checks.Subject
 	(checks.LocateReason)(0),         // 59: agni.v1.checks.LocateReason
 }
-var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	46, // 0: agni.v1.webapi.GetDesignRequest.read_mask:type_name -> google.protobuf.FieldMask
-	47, // 1: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
-	3,  // 2: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	48, // 3: agni.v1.webapi.GetDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	49, // 4: agni.v1.webapi.GetDesignResponse.design:type_name -> agni.v1.ir.Design
+var file_agni_v1_webapi_design_view_proto_depIdxs = []int32{
+	46, // 0: agni.v1.webapi.GetSummaryRequest.read_mask:type_name -> google.protobuf.FieldMask
+	47, // 1: agni.v1.webapi.GetSummaryResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	3,  // 2: agni.v1.webapi.GetSummaryResponse.sheets:type_name -> agni.v1.webapi.SheetRef
+	48, // 3: agni.v1.webapi.GetSummaryResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
+	49, // 4: agni.v1.webapi.GetSummaryResponse.design:type_name -> agni.v1.ir.Design
 	0,  // 5: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
 	1,  // 6: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	50, // 7: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
@@ -3804,28 +3805,28 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	44, // 55: agni.v1.webapi.LocateSubjectsResponse.board_follow:type_name -> agni.v1.webapi.BoardFollow
 	58, // 56: agni.v1.webapi.SubjectSheets.subject:type_name -> agni.v1.checks.Subject
 	59, // 57: agni.v1.webapi.SubjectSheets.locate_reason:type_name -> agni.v1.checks.LocateReason
-	4,  // 58: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	6,  // 59: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	8,  // 60: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	14, // 61: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	10, // 62: agni.v1.webapi.DesignService.GetBoardGeometry:input_type -> agni.v1.webapi.GetBoardGeometryRequest
-	11, // 63: agni.v1.webapi.DesignService.GetBoardMeshes:input_type -> agni.v1.webapi.GetBoardMeshesRequest
-	42, // 64: agni.v1.webapi.DesignService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
-	16, // 65: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
-	18, // 66: agni.v1.webapi.DesignService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
-	27, // 67: agni.v1.webapi.DesignService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
-	36, // 68: agni.v1.webapi.DesignService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
-	5,  // 69: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	7,  // 70: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	9,  // 71: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	15, // 72: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	13, // 73: agni.v1.webapi.DesignService.GetBoardGeometry:output_type -> agni.v1.webapi.GetBoardGeometryResponse
-	12, // 74: agni.v1.webapi.DesignService.GetBoardMeshes:output_type -> agni.v1.webapi.GetBoardMeshesResponse
-	43, // 75: agni.v1.webapi.DesignService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
-	22, // 76: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
-	19, // 77: agni.v1.webapi.DesignService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
-	31, // 78: agni.v1.webapi.DesignService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
-	37, // 79: agni.v1.webapi.DesignService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
+	4,  // 58: agni.v1.webapi.DesignViewService.GetSummary:input_type -> agni.v1.webapi.GetSummaryRequest
+	6,  // 59: agni.v1.webapi.DesignViewService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 60: agni.v1.webapi.DesignViewService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	14, // 61: agni.v1.webapi.DesignViewService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	10, // 62: agni.v1.webapi.DesignViewService.GetBoardGeometry:input_type -> agni.v1.webapi.GetBoardGeometryRequest
+	11, // 63: agni.v1.webapi.DesignViewService.GetBoardMeshes:input_type -> agni.v1.webapi.GetBoardMeshesRequest
+	42, // 64: agni.v1.webapi.DesignViewService.LocateSubjects:input_type -> agni.v1.webapi.LocateSubjectsRequest
+	16, // 65: agni.v1.webapi.DesignViewService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	18, // 66: agni.v1.webapi.DesignViewService.ReachablePins:input_type -> agni.v1.webapi.ReachablePinsRequest
+	27, // 67: agni.v1.webapi.DesignViewService.WalkDesign:input_type -> agni.v1.webapi.WalkDesignRequest
+	36, // 68: agni.v1.webapi.DesignViewService.ListWalkKinds:input_type -> agni.v1.webapi.ListWalkKindsRequest
+	5,  // 69: agni.v1.webapi.DesignViewService.GetSummary:output_type -> agni.v1.webapi.GetSummaryResponse
+	7,  // 70: agni.v1.webapi.DesignViewService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 71: agni.v1.webapi.DesignViewService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	15, // 72: agni.v1.webapi.DesignViewService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	13, // 73: agni.v1.webapi.DesignViewService.GetBoardGeometry:output_type -> agni.v1.webapi.GetBoardGeometryResponse
+	12, // 74: agni.v1.webapi.DesignViewService.GetBoardMeshes:output_type -> agni.v1.webapi.GetBoardMeshesResponse
+	43, // 75: agni.v1.webapi.DesignViewService.LocateSubjects:output_type -> agni.v1.webapi.LocateSubjectsResponse
+	22, // 76: agni.v1.webapi.DesignViewService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	19, // 77: agni.v1.webapi.DesignViewService.ReachablePins:output_type -> agni.v1.webapi.ReachablePinsResponse
+	31, // 78: agni.v1.webapi.DesignViewService.WalkDesign:output_type -> agni.v1.webapi.WalkDesignResponse
+	37, // 79: agni.v1.webapi.DesignViewService.ListWalkKinds:output_type -> agni.v1.webapi.ListWalkKindsResponse
 	69, // [69:80] is the sub-list for method output_type
 	58, // [58:69] is the sub-list for method input_type
 	58, // [58:58] is the sub-list for extension type_name
@@ -3833,16 +3834,16 @@ var file_agni_v1_webapi_design_proto_depIdxs = []int32{
 	0,  // [0:58] is the sub-list for field type_name
 }
 
-func init() { file_agni_v1_webapi_design_proto_init() }
-func file_agni_v1_webapi_design_proto_init() {
-	if File_agni_v1_webapi_design_proto != nil {
+func init() { file_agni_v1_webapi_design_view_proto_init() }
+func file_agni_v1_webapi_design_view_proto_init() {
+	if File_agni_v1_webapi_design_view_proto != nil {
 		return
 	}
-	file_agni_v1_webapi_design_proto_msgTypes[4].OneofWrappers = []any{
+	file_agni_v1_webapi_design_view_proto_msgTypes[4].OneofWrappers = []any{
 		(*GetSheetResponse_Packed)(nil),
 		(*GetSheetResponse_Svg)(nil),
 	}
-	file_agni_v1_webapi_design_proto_msgTypes[6].OneofWrappers = []any{
+	file_agni_v1_webapi_design_view_proto_msgTypes[6].OneofWrappers = []any{
 		(*HighlightSheetResponse_Packed)(nil),
 		(*HighlightSheetResponse_Svg)(nil),
 	}
@@ -3850,18 +3851,18 @@ func file_agni_v1_webapi_design_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_view_proto_rawDesc), len(file_agni_v1_webapi_design_view_proto_rawDesc)),
 			NumEnums:      3,
 			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_agni_v1_webapi_design_proto_goTypes,
-		DependencyIndexes: file_agni_v1_webapi_design_proto_depIdxs,
-		EnumInfos:         file_agni_v1_webapi_design_proto_enumTypes,
-		MessageInfos:      file_agni_v1_webapi_design_proto_msgTypes,
+		GoTypes:           file_agni_v1_webapi_design_view_proto_goTypes,
+		DependencyIndexes: file_agni_v1_webapi_design_view_proto_depIdxs,
+		EnumInfos:         file_agni_v1_webapi_design_view_proto_enumTypes,
+		MessageInfos:      file_agni_v1_webapi_design_view_proto_msgTypes,
 	}.Build()
-	File_agni_v1_webapi_design_proto = out.File
-	file_agni_v1_webapi_design_proto_goTypes = nil
-	file_agni_v1_webapi_design_proto_depIdxs = nil
+	File_agni_v1_webapi_design_view_proto = out.File
+	file_agni_v1_webapi_design_view_proto_goTypes = nil
+	file_agni_v1_webapi_design_view_proto_depIdxs = nil
 }

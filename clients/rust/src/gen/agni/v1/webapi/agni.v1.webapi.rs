@@ -1126,7 +1126,7 @@ pub struct SheetRef {
     pub parent_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GetDesignRequest {
+pub struct GetSummaryRequest {
     /// snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
     #[prost(string, tag="7")]
     pub snapshot: ::prost::alloc::string::String,
@@ -1136,7 +1136,7 @@ pub struct GetDesignRequest {
     pub layout: ::prost::alloc::string::String,
     /// read_mask selects which fields the response fills (agni issue 836). When unset, the response is
     /// the usual summary, with no IR. The viewer asks on every open, and a large board's IR is
-    /// megabytes. When set, the response keeps exactly the named paths of GetDesignResponse. `design`
+    /// megabytes. When set, the response keeps exactly the named paths of GetSummaryResponse. `design`
     /// selects the whole IR. `design.nets` or `design.components.mpn` select parts of it. `sheets`
     /// selects a summary field, and `*` selects everything. A path through a repeated or map field
     /// applies to every element. When every path is under `design`, the server reads the netlist alone
@@ -1153,7 +1153,7 @@ pub struct GetDesignRequest {
     pub ref_des: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetDesignResponse {
+pub struct GetSummaryResponse {
     /// name is the design name (from the IR, or the geometry's design ref for .eds).
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
@@ -1846,7 +1846,7 @@ pub struct BoardFollow {
 pub struct SubjectSheets {
     #[prost(message, optional, tag="1")]
     pub subject: ::core::option::Option<super::checks::Subject>,
-    /// sheet_ids are the GetDesign sheet ids that draw the subject, schematic sheets in design order
+    /// sheet_ids are the GetSummary sheet ids that draw the subject, schematic sheets in design order
     /// and then "board". Empty means drawn nowhere, and locate_reason says why.
     #[prost(string, repeated, tag="2")]
     pub sheet_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
@@ -1999,7 +1999,7 @@ pub struct DiffDesignsRequest {
     /// include_equal also reports every net that did not change, as kind "equal" after the changes,
     /// with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
     /// changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-    /// which the viewer tints by. A net's connections are in the design itself (GetDesign's
+    /// which the viewer tints by. A net's connections are in the design itself (GetSummary's
     /// read_mask).
     #[prost(bool, tag="4")]
     pub include_equal: bool,
@@ -2197,7 +2197,7 @@ pub mod diff_designs_response {
     /// where that component appears in that revision. So component_sheets_a\["R3"\] = ["root",
     /// "power"] reads "changed component R3 is placed on sheets root and power in revision a".
     /// net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
-    /// values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+    /// values GetSummary returns for that side, in the design's sheet order, and never entity ids.
     /// Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
     /// A changed component may sit on different sheets in a and b. A renamed net keys under its
     /// OLD name in a's map and its NEW name in b's. The maps are derived from each side's

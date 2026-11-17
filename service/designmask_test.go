@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-// The tests here cover agni issue 836. GetDesign returns the design's IR when a read_mask asks for
+// The tests here cover agni issue 836. GetSummary returns the design's IR when a read_mask asks for
 // it, and only the parts asked for. With no mask it returns the summary it always had.
 
 func irDesign() *ir.Design {
@@ -29,22 +29,22 @@ func irDesign() *ir.Design {
 	}
 }
 
-func askDesign(t *testing.T, l fakeLoader, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
+func askDesign(t *testing.T, l fakeLoader, req *webapi.GetSummaryRequest) (*webapi.GetSummaryResponse, error) {
 	t.Helper()
-	svc := NewDesignService(l, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(l, noNative{}, render.Style{}, nil)
 	req.Snapshot = snapOf(t, svc.Snapshots(), "mount://m/x.edn")
-	return svc.GetDesign(context.Background(), req)
+	return svc.GetSummary(context.Background(), req)
 }
 
 func mask(paths ...string) *fieldmaskpb.FieldMask { return &fieldmaskpb.FieldMask{Paths: paths} }
 
 func TestGetDesignWithNoMaskIsTheSummaryAlone(t *testing.T) {
-	resp, err := askDesign(t, fakeLoader{design: irDesign(), geom: twoSheetGeom()}, &webapi.GetDesignRequest{})
+	resp, err := askDesign(t, fakeLoader{design: irDesign(), geom: twoSheetGeom()}, &webapi.GetSummaryRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp.GetDesign() != nil {
-		t.Error("an unmasked GetDesign carried the IR, which the viewer would pay for on every open")
+		t.Error("an unmasked GetSummary carried the IR, which the viewer would pay for on every open")
 	}
 	if resp.GetComponentCount() != 2 || len(resp.GetSheets()) == 0 {
 		t.Errorf("summary = %d components, %d sheets; want the summary as before", resp.GetComponentCount(), len(resp.GetSheets()))
@@ -54,7 +54,7 @@ func TestGetDesignWithNoMaskIsTheSummaryAlone(t *testing.T) {
 // A mask entirely under `design` reads the netlist alone. The loader here fails any geometry read,
 // so the call succeeding is the proof.
 func TestAMaskUnderDesignSkipsTheDrawing(t *testing.T) {
-	resp, err := askDesign(t, fakeLoader{design: irDesign(), geomErr: errors.New("geometry read")}, &webapi.GetDesignRequest{ReadMask: mask("design")})
+	resp, err := askDesign(t, fakeLoader{design: irDesign(), geomErr: errors.New("geometry read")}, &webapi.GetSummaryRequest{ReadMask: mask("design")})
 	if err != nil {
 		t.Fatalf("an IR-only mask read the drawing: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAMaskUnderDesignSkipsTheDrawing(t *testing.T) {
 
 // A path through a repeated field applies to every element and keeps only the fields named.
 func TestAMaskKeepsOnlyTheFieldsNamed(t *testing.T) {
-	resp, err := askDesign(t, fakeLoader{design: irDesign()}, &webapi.GetDesignRequest{ReadMask: mask("design.components.ref_des", "design.components.mpn")})
+	resp, err := askDesign(t, fakeLoader{design: irDesign()}, &webapi.GetSummaryRequest{ReadMask: mask("design.components.ref_des", "design.components.mpn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestAMaskKeepsOnlyTheFieldsNamed(t *testing.T) {
 }
 
 func TestAStarMaskIsEverything(t *testing.T) {
-	resp, err := askDesign(t, fakeLoader{design: irDesign(), geom: twoSheetGeom()}, &webapi.GetDesignRequest{ReadMask: mask("*")})
+	resp, err := askDesign(t, fakeLoader{design: irDesign(), geom: twoSheetGeom()}, &webapi.GetSummaryRequest{ReadMask: mask("*")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestAStarMaskIsEverything(t *testing.T) {
 // narrowing works on a copy, because the second, unfiltered answer still has every net.
 func TestFiltersNarrowACopyOfTheIR(t *testing.T) {
 	l := fakeLoader{design: irDesign()}
-	resp, err := askDesign(t, l, &webapi.GetDesignRequest{ReadMask: mask("design"), Nets: []string{"SDA", "NOPE"}, RefDes: []string{"U1"}})
+	resp, err := askDesign(t, l, &webapi.GetSummaryRequest{ReadMask: mask("design"), Nets: []string{"SDA", "NOPE"}, RefDes: []string{"U1"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestFiltersNarrowACopyOfTheIR(t *testing.T) {
 	if c := resp.GetDesign().GetComponents(); len(c) != 1 || c[0].GetRefDes() != "U1" {
 		t.Errorf("components = %v, want U1 alone", c)
 	}
-	again, err := askDesign(t, l, &webapi.GetDesignRequest{ReadMask: mask("design.nets")})
+	again, err := askDesign(t, l, &webapi.GetSummaryRequest{ReadMask: mask("design.nets")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestFiltersNarrowACopyOfTheIR(t *testing.T) {
 
 func TestAnUnknownMaskPathIsInvalid(t *testing.T) {
 	for _, p := range []string{"design.no_such_field", "nope", "design.name.deeper", "design.*.name"} {
-		_, err := askDesign(t, fakeLoader{design: irDesign()}, &webapi.GetDesignRequest{ReadMask: mask(p)})
+		_, err := askDesign(t, fakeLoader{design: irDesign()}, &webapi.GetSummaryRequest{ReadMask: mask(p)})
 		if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), p) {
 			t.Errorf("path %q: err = %v, want an invalid argument naming it", p, err)
 		}

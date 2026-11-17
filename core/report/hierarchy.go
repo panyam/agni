@@ -20,7 +20,7 @@ const hierarchyNoteListed = 5
 //
 // Every surface that states the limit uses this ONE sentence. The CLI prints it as a stderr note, the
 // check and checklist HTML reports show it, and the viewer's canvas strip reads it from
-// GetDesignResponse.hierarchy_note. Each surface frames it (the CLI prefixes "note: ") and none
+// GetSummaryResponse.hierarchy_note. Each surface frames it (the CLI prefixes "note: ") and none
 // rewords it, so a reader who has seen it in one place recognises it in the next.
 //
 // It takes the diagnostic rather than the design, so it reads nothing else. A hierarchical design is

@@ -3,7 +3,7 @@
 // A netlist, or a board read alone, carries no schematic drawing, so the viewer draws its parts on
 // agni's default layout. That drawing looks wrong to anyone who knows the board, and the viewer
 // offers no layout picker to explain it. So the server sends a sentence in
-// GetDesignResponse.drawing_note naming the file that would draw the sheets as the designer did,
+// GetSummaryResponse.drawing_note naming the file that would draw the sheets as the designer did,
 // and this strip shows it on every sheet except the board, whose drawing is its own.
 
 // drawingNote returns the sentence for the strip on the given sheet, or null when there is none to

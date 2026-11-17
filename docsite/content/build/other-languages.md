@@ -133,8 +133,8 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `DiffService/DiffDesigns` | `diff --format json` |
 | `TableService/Tabulate` | `tabulate -`, the request sent on stdin |
 | `ReviewService/ListChecklists` | `checklists --format json` |
-| `DesignService/TraceDesign` | `trace --format json` |
-| `DesignService/GetLayoutReport` | `render --report --report-format json` |
+| `DesignViewService/TraceDesign` | `trace --format json` |
+| `DesignViewService/GetLayoutReport` | `render --report --report-format json` |
 
 Any other rpc raises `CliUnsupported`. So does a request field with no flag on the command, because
 dropping the field would answer a different question from the one asked. The CLI sends only one part

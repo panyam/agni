@@ -90,7 +90,7 @@ swappable and dragging smooth (thesis Principles 2-4).
 contract methods carry domain data or HTML, never event objects, DOM nodes, or framework
 types.
 **Note:** this duplex presenter contract is a distinct proto surface from the
-request/response application API (WS9: WorkspaceService and later DesignService /
+request/response application API (WS9: WorkspaceService and later DesignViewService /
 DiffService). Both are proto-defined (C2); the presenter duplex carries view<->presenter
 intents/commands, while the web API carries browse/load/diff calls.
 
@@ -308,7 +308,7 @@ And the sweep must match `font-family=` rather than the bare word: the three ren
 comes from `Style`, so that call obeys the rule.
 
 ## C13: Service impls are importable, transport-neutral, and take I/O via injected ports
-**Rule:** The service implementations (`WorkspaceService`, `DesignService`, `CheckService`,
+**Rule:** The service implementations (`WorkspaceService`, `DesignViewService`, `CheckService`,
 `DiffService`, and any future service such as the WS10 parameter service) live in an
 importable package (`service/`), never in `package main` and never under `internal/`, and are
 **transport-neutral**: every method carries a plain protobuf signature
@@ -321,7 +321,7 @@ mounted designs and resolving secondary files (KiCad sibling schematics, xschem/
 `--symbol-path`), and a persistence port for the core/parameter store comes later. `cmd/agni` (and any
 other entrypoint: a WASM build, a cloud function) is thin wiring that constructs the platform
 adapter and hands the services to a transport. Protos split **per service concern**
-(`workspace.proto`, `design.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
+(`workspace.proto`, `design_view.proto`, `checks.proto`, `diff.proto`, ...), never a per-transport
 bucket file. This is C1 applied to the application tier: the service orchestration is
 runtime-agnostic; only the adapters (I/O and transport) are per-runtime.
 **Why:** the services are reusable orchestration, not domain core. They were first grown onto

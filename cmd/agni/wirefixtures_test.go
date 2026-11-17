@@ -64,17 +64,17 @@ type wireDetail struct {
 var wireCalls = []wireFixture{
 	{Name: "server-info", Service: "agni.v1.webapi.ServerService", Method: "GetServerInfo", Request: json.RawMessage(`{}`), Ignore: []string{"version", "features"}},
 	{Name: "ingest", Service: "agni.v1.webapi.SnapshotService", Method: "Ingest", Request: json.RawMessage(`{"snapshot":{"uri":"mount://probe/designs/jetson-cut"},"snapshotId":"wire"}`)},
-	{Name: "get-design", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"snapshot":"snapshots/wire"}`)},
+	{Name: "get-summary", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/wire"}`)},
 	{Name: "check-design", Service: "agni.v1.webapi.CheckService", Method: "CheckDesign", Request: json.RawMessage(`{"snapshot":"snapshots/wire","rules":["bulk-cap"]}`)},
 	{Name: "run-query", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c, \"resistor\") => ?c"}`)},
 	// The board's second page at a one-byte budget, one placement, after a first page of the header
 	// alone. The token is the one that first page answers.
-	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"}`)},
+	{Name: "board-geometry-page", Service: "agni.v1.webapi.DesignViewService", Method: "GetBoardGeometry", Request: json.RawMessage(`{"snapshot":"snapshots/wire","maxBytes":"1","pageToken":"YjF8ZTBjNTQyMDEwNzE5NDRlMnwwfDA"}`)},
 	// C133 sits on the cut's back, so a board view follows it to the back with B.Cu and B.SilkS on
 	// (agni issue 1635).
-	{Name: "locate-on-board", Service: "agni.v1.webapi.DesignService", Method: "LocateSubjects", Request: json.RawMessage(`{"snapshot":"snapshots/wire","subjects":[{"kind":"component","ref":"C133"}],"board":true}`)},
+	{Name: "locate-on-board", Service: "agni.v1.webapi.DesignViewService", Method: "LocateSubjects", Request: json.RawMessage(`{"snapshot":"snapshots/wire","subjects":[{"kind":"component","ref":"C133"}],"board":true}`)},
 	{Name: "query-that-does-not-parse", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c"}`)},
-	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
+	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }
 
 // wireServer serves the API on the cross-probe project as the mount "probe", over HTTP/1.1 and

@@ -56,7 +56,7 @@ func ball(n int) *mesh.Mesh {
 
 // meshBoard is a board of three parts. U1 is large and names a 5,000-triangle mesh, R1 and R2 are
 // small and share a 1,250-triangle one, and C1 names a mesh no file holds.
-func meshBoard(t *testing.T) (*DesignService, string, *int) {
+func meshBoard(t *testing.T) (*DesignViewService, string, *int) {
 	t.Helper()
 	b := testBoard()
 	b.UnitNm = 1
@@ -79,11 +79,11 @@ func meshBoard(t *testing.T) (*DesignService, string, *int) {
 		meshes:      map[string]*mesh.Mesh{"big.wrl": ball(50), "small.wrl": ball(25)},
 		reads:       &reads,
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	return svc, schematicWithBoard(t, svc), &reads
 }
 
-func meshPages(t *testing.T, svc *DesignService, snap string, tris, bytes int64) []*webapi.GetBoardMeshesResponse {
+func meshPages(t *testing.T, svc *DesignViewService, snap string, tris, bytes int64) []*webapi.GetBoardMeshesResponse {
 	t.Helper()
 	var pages []*webapi.GetBoardMeshesResponse
 	token := ""
@@ -171,7 +171,7 @@ func TestGetBoardMeshesPagesReadTheModelsOnce(t *testing.T) {
 func TestGetBoardMeshesWithoutAMeshLoaderListsEveryMeshUnread(t *testing.T) {
 	b := testBoard()
 	b.Placements = []*geom.ComponentPlacement{{RefDes: "U1", At: &geom.Point{}, ModelInstances: []*geom.ModelInstance{{Mesh: "a.wrl"}}}}
-	svc := NewDesignService(boardLoader{fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}, board: b}, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(boardLoader{fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}, board: b}, noNative{}, render.DefaultStyle, nil)
 	p := meshPages(t, svc, schematicWithBoard(t, svc), 0, 0)[0]
 	if len(p.GetMeshes()) != 0 || len(p.GetUnread()) != 1 || p.GetUnread()[0].GetReason() != "this server reads no model meshes" {
 		t.Errorf("meshes %v, unread %v, want a.wrl unread", p.GetMeshes(), p.GetUnread())

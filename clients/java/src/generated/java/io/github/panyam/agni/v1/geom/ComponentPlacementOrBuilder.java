@@ -157,7 +157,7 @@ public interface ComponentPlacementOrBuilder extends
   /**
    * <pre>
    * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
    * part with none draws as a block of its height.
    * </pre>
    *
@@ -168,7 +168,7 @@ public interface ComponentPlacementOrBuilder extends
   /**
    * <pre>
    * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
    * part with none draws as a block of its height.
    * </pre>
    *
@@ -178,7 +178,7 @@ public interface ComponentPlacementOrBuilder extends
   /**
    * <pre>
    * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
    * part with none draws as a block of its height.
    * </pre>
    *
@@ -188,7 +188,7 @@ public interface ComponentPlacementOrBuilder extends
   /**
    * <pre>
    * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
    * part with none draws as a block of its height.
    * </pre>
    *
@@ -199,7 +199,7 @@ public interface ComponentPlacementOrBuilder extends
   /**
    * <pre>
    * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
    * part with none draws as a block of its height.
    * </pre>
    *

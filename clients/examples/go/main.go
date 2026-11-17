@@ -76,9 +76,9 @@ func run(ctx context.Context, server, design string) (*Summary, error) {
 	name := snap.Msg.GetName()
 	defer snaps.DeleteSnapshot(ctx, connect.NewRequest(&webapi.DeleteSnapshotRequest{Name: name})) //nolint:errcheck
 
-	d, err := webapiconnect.NewDesignServiceClient(hc, server).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: name}))
+	d, err := webapiconnect.NewDesignViewServiceClient(hc, server).GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: name}))
 	if err != nil {
-		return nil, fmt.Errorf("calling GetDesign: %w", err)
+		return nil, fmt.Errorf("calling GetSummary: %w", err)
 	}
 	c, err := webapiconnect.NewCheckServiceClient(hc, server).CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: name}))
 	if err != nil {
@@ -88,7 +88,7 @@ func run(ctx context.Context, server, design string) (*Summary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("calling RunQuery: %w", err)
 	}
-	board, err := boardGeometry(ctx, webapiconnect.NewDesignServiceClient(hc, server), name)
+	board, err := boardGeometry(ctx, webapiconnect.NewDesignViewServiceClient(hc, server), name)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func run(ctx context.Context, server, design string) (*Summary, error) {
 
 // boardGeometry reads every page of the snapshot's board and merges them, as
 // docsite/content/build/board-geometry.md says a client does.
-func boardGeometry(ctx context.Context, designs webapiconnect.DesignServiceClient, snapshot string) (*geom.BoardGeometry, error) {
+func boardGeometry(ctx context.Context, designs webapiconnect.DesignViewServiceClient, snapshot string) (*geom.BoardGeometry, error) {
 	board, token := &geom.BoardGeometry{}, ""
 	for {
 		page, err := designs.GetBoardGeometry(ctx, connect.NewRequest(&webapi.GetBoardGeometryRequest{Snapshot: snapshot, MaxBytes: boardPageBytes, PageToken: token}))

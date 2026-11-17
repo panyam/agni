@@ -40,7 +40,7 @@ type BoardMeshLoader interface {
 // triangle budget by mesh.Fit. Every page of one request comes from one fitted set, which the
 // service keeps for the few budgets asked for most recently, so a page does not read the models
 // again.
-func (s *DesignService) GetBoardMeshes(ctx context.Context, req *webapi.GetBoardMeshesRequest) (*webapi.GetBoardMeshesResponse, error) {
+func (s *DesignViewService) GetBoardMeshes(ctx context.Context, req *webapi.GetBoardMeshesRequest) (*webapi.GetBoardMeshesResponse, error) {
 	tris := req.GetMaxTriangles()
 	switch {
 	case tris < 0:
@@ -130,7 +130,7 @@ func (c *meshCache) put(key string, f *fitted) {
 	}
 }
 
-func (s *DesignService) fittedMeshes(ctx context.Context, snap Snap, budget int) (*fitted, error) {
+func (s *DesignViewService) fittedMeshes(ctx context.Context, snap Snap, budget int) (*fitted, error) {
 	key := fmt.Sprintf("%s|%s|%d", snap.Name, snap.Revision, budget)
 	if f := s.meshes.get(key); f != nil {
 		return f, nil

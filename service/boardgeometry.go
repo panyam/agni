@@ -27,7 +27,7 @@ const (
 //
 // A page holds at least one element. So an element larger than the budget makes a page of its own,
 // and a header larger than the budget makes the first page alone.
-func (s *DesignService) GetBoardGeometry(ctx context.Context, req *webapi.GetBoardGeometryRequest) (*webapi.GetBoardGeometryResponse, error) {
+func (s *DesignViewService) GetBoardGeometry(ctx context.Context, req *webapi.GetBoardGeometryRequest) (*webapi.GetBoardGeometryResponse, error) {
 	budget := req.GetMaxBytes()
 	switch {
 	case budget < 0:

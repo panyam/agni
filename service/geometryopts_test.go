@@ -126,21 +126,21 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	cases := []struct {
 		name   string
 		method string
-		call   func(*testing.T, *DesignService) error
+		call   func(*testing.T, *DesignViewService) error
 	}{
-		{"GetDesign", "Geometry", func(t *testing.T, s *DesignService) error {
-			_, err := s.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
+		{"GetSummary", "Geometry", func(t *testing.T, s *DesignViewService) error {
+			_, err := s.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"GetSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+		{"GetSheet", "Geometry", func(t *testing.T, s *DesignViewService) error {
 			_, err := s.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"HighlightSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+		{"HighlightSheet", "Geometry", func(t *testing.T, s *DesignViewService) error {
 			_, err := s.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"GetLayoutReport", "Report", func(t *testing.T, s *DesignService) error {
+		{"GetLayoutReport", "Report", func(t *testing.T, s *DesignViewService) error {
 			_, err := s.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
@@ -148,7 +148,7 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ld := newRecordingLoader()
-			svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
+			svc := NewDesignViewService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
 			if err := tc.call(t, svc); err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
@@ -166,7 +166,7 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 }
 
 // TestSymbolPathsReachTheNetlistReadsBesideTheRender covers the reads NEXT to the render on the same
-// service. They were equally unconfigured. One is GetDesign's component/net counts. The other is the
+// service. They were equally unconfigured. One is GetSummary's component/net counts. The other is the
 // netlist that HighlightSheet reads to resolve net ids to names for a name-join.
 //
 // They are here rather than in a separate test because they share the defect's cause. The service had
@@ -174,21 +174,21 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 // drawing would leave the counts beside it describing a different read.
 func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 	ld := newRecordingLoader()
-	svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
-	// A netlist extension, so GetDesign takes the auto-layout branch that reads the IR for its counts.
+	svc := NewDesignViewService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
+	// A netlist extension, so GetSummary takes the auto-layout branch that reads the IR for its counts.
 	uri := "mount://m/p/board.edn"
 	snap := snapOf(t, svc.Snapshots(), uri)
-	ld.reset() // the ingest's own read is not GetDesign's
-	if _, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snap}); err != nil {
+	ld.reset() // the ingest's own read is not GetSummary's
+	if _, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snap}); err != nil {
 		t.Fatal(err)
 	}
 	got := ld.symbolPathsFor("Design")
 	if len(got) == 0 {
-		t.Fatal("GetDesign made no netlist read to observe")
+		t.Fatal("GetSummary made no netlist read to observe")
 	}
 	for i, paths := range got {
 		if len(paths) != 1 || paths[0] != "/host/p/symbols" {
-			t.Errorf("GetDesign netlist read %d saw symbol paths %v, want [/host/p/symbols]", i, paths)
+			t.Errorf("GetSummary netlist read %d saw symbol paths %v, want [/host/p/symbols]", i, paths)
 		}
 	}
 }
@@ -240,7 +240,7 @@ func TestDiffReadsBothSidesConfigured(t *testing.T) {
 // FIXED set of paths. A "config arrived" test cannot otherwise tell that failure apart.
 func TestNoProjectResolverReadsUnderDefaults(t *testing.T) {
 	ld := newRecordingLoader()
-	svc := NewDesignService(ld, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.Style{}, nil)
 	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/loose.kicad_sch")}); err != nil {
 		t.Fatal(err)
 	}

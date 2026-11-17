@@ -4,7 +4,7 @@
 import { SnapshotService } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
@@ -110,16 +110,16 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
 
   const transport = createConnectTransport({ baseUrl: location.origin, fetch: engineFetch });
   const jobsOnly = createClient(CheckService, createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.lanes.jobs.fetch(i, init) }));
-  const design = createClient(DesignService, transport);
+  const design = createClient(DesignViewService, transport);
   const checks = createClient(CheckService, transport);
   const query = createClient(QueryService, transport);
 
-  // The read covers the ingest and the open's GetDesign, since the page's first sheet waits on
+  // The read covers the ingest and the open's GetSummary, since the page's first sheet waits on
   // both. Each lane's worker is ingested under the same id before its first question (agni issue
   // 1061).
   t = performance.now();
   const snapshot = (await createClient(SnapshotService, transport).ingest({ snapshot: { uri }, snapshotId: "bench" })).name;
-  await design.getDesign({ snapshot });
+  await design.getSummary({ snapshot });
   const readMS = performance.now() - t;
 
   const count = async (q: string) => Number((await query.runQuery({ snapshot, query: q })).rows[0]?.cells[0] ?? 0);

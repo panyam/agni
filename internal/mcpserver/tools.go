@@ -224,7 +224,7 @@ func (s *srv) trace(ctx context.Context, in traceInput) (core.ToolResult, error)
 	var snap *webapi.Snapshot
 	u, err := s.on(ctx, in.Design, func(sn *webapi.Snapshot) (err error) {
 		snap = sn
-		resp, err = s.api.Design.TraceDesign(ctx, &webapi.TraceDesignRequest{Snapshot: sn.GetName(), From: from, To: to, Hops: in.Hops})
+		resp, err = s.api.DesignView.TraceDesign(ctx, &webapi.TraceDesignRequest{Snapshot: sn.GetName(), From: from, To: to, Hops: in.Hops})
 		return err
 	})
 	if err != nil {
@@ -281,7 +281,7 @@ func (s *srv) walk(ctx context.Context, in walkInput) (core.ToolResult, error) {
 	}
 	var resp *webapi.WalkDesignResponse
 	u, err := s.on(ctx, in.Design, func(sn *webapi.Snapshot) (err error) {
-		resp, err = s.api.Design.WalkDesign(ctx, &webapi.WalkDesignRequest{Snapshot: sn.GetName(), From: start, Kind: in.Kind, Hops: in.Hops, Through: in.Through, Goal: goal})
+		resp, err = s.api.DesignView.WalkDesign(ctx, &webapi.WalkDesignRequest{Snapshot: sn.GetName(), From: start, Kind: in.Kind, Hops: in.Hops, Through: in.Through, Goal: goal})
 		return err
 	})
 	if err != nil {
@@ -372,9 +372,9 @@ func (s *srv) design(ctx context.Context, in designInput) (core.ToolResult, erro
 	if len(mask) == 0 {
 		mask = []string{"design.nets", "design.components"}
 	}
-	var resp *webapi.GetDesignResponse
+	var resp *webapi.GetSummaryResponse
 	u, err := s.on(ctx, in.Design, func(sn *webapi.Snapshot) (err error) {
-		resp, err = s.api.Design.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: sn.GetName(), ReadMask: &fieldmaskpb.FieldMask{Paths: mask}, Nets: in.Nets, RefDes: in.RefDes})
+		resp, err = s.api.DesignView.GetSummary(ctx, &webapi.GetSummaryRequest{Snapshot: sn.GetName(), ReadMask: &fieldmaskpb.FieldMask{Paths: mask}, Nets: in.Nets, RefDes: in.RefDes})
 		return err
 	})
 	if err != nil {
@@ -557,7 +557,7 @@ func tablesJSON(tables []*webapi.Table) []json.RawMessage {
 // viewer can say when the design has changed since (agni issue 392). It is "" when it can't be read,
 // and the link then carries none.
 func (s *srv) contentHash(ctx context.Context, snap *webapi.Snapshot) string {
-	resp, err := s.api.Design.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap.GetName()})
+	resp, err := s.api.DesignView.GetSummary(ctx, &webapi.GetSummaryRequest{Snapshot: snap.GetName()})
 	if err != nil {
 		return ""
 	}

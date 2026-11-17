@@ -27,7 +27,7 @@ function pageBody(): string {
 
 const REPLIES: Record<string, unknown> = {
   ListDesignFiles: { mount: "m", files: [{ path: "d/b.edn", sha256: "sha256:1" }], totalSize: "10" },
-  GetDesign: { layout: "grid", sheets: [{ id: "s1", name: "Top" }] },
+  GetSummary: { layout: "grid", sheets: [{ id: "s1", name: "Top" }] },
   Ingest: { name: "snapshots/abc", tiers: { boardRead: true, boardPersisted: false } },
 };
 
@@ -61,7 +61,7 @@ describe("the Load page boots", () => {
     // The server engine fetches nothing into the page, so there is no files step.
     expect(states).toEqual([["drawing", "done"], ["board", "done"]]);
     const methods = called.map((c) => c.method);
-    expect(methods).toContain("GetDesign");
+    expect(methods).toContain("GetSummary");
     expect(called.some((c) => c.method === "Ingest" && c.body.includes('"readBoard":true'))).toBe(true);
     const record = JSON.parse(window.localStorage.getItem("agni.loaded") ?? "[]") as { key: string; stamp: string }[];
     expect(record).toEqual([{ key: "server v-test mount://m/d/b.edn", stamp: "d/b.edn sha256:1" }]);

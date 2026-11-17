@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
    * where that component appears in that revision. So component_sheets_a["R3"] = ["root",
    * "power"] reads "changed component R3 is placed on sheets root and power in revision a".
    * net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
-   * values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+   * values GetSummary returns for that side, in the design's sheet order, and never entity ids.
    * Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
    * A changed component may sit on different sheets in a and b. A renamed net keys under its
    * OLD name in a's map and its NEW name in b's. The maps are derived from each side's
@@ -385,7 +385,7 @@ private static final long serialVersionUID = 0L;
      * where that component appears in that revision. So component_sheets_a["R3"] = ["root",
      * "power"] reads "changed component R3 is placed on sheets root and power in revision a".
      * net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
-     * values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+     * values GetSummary returns for that side, in the design's sheet order, and never entity ids.
      * Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
      * A changed component may sit on different sheets in a and b. A renamed net keys under its
      * OLD name in a's map and its NEW name in b's. The maps are derived from each side's

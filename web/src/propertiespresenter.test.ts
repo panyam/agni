@@ -1,20 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { GetDesignResponseSchema, type GetDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { GetSummaryResponseSchema, type GetSummaryResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { INVENTORY_PATHS, SERVED_QUERIES, type PropertiesState } from "./properties.js";
 import { PropertiesPresenter, areaSubjects } from "./propertiespresenter.js";
 import type { VerdictItem } from "./findings.js";
 import type { SubjectRef } from "./router.js";
 
-function design(name: string, nets: string[]): GetDesignResponse {
-  return create(GetDesignResponseSchema, { name, design: { nets: nets.map((n) => ({ name: n })) } });
+function design(name: string, nets: string[]): GetSummaryResponse {
+  return create(GetSummaryResponseSchema, { name, design: { nets: nets.map((n) => ({ name: n })) } });
 }
 
-function harness(getDesign = vi.fn(async (_uri: string, _readMask: string[]) => design("gateway", ["VIN"]))) {
+function harness(getSummary = vi.fn(async (_uri: string, _readMask: string[]) => design("gateway", ["VIN"]))) {
   const states: PropertiesState[] = [];
-  const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign, drawn: () => ({ refs: ["U1"], nets: [] }) });
+  const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getSummary, drawn: () => ({ refs: ["U1"], nets: [] }) });
   const last = () => states[states.length - 1];
-  return { p, getDesign, last };
+  return { p, getSummary, last };
 }
 
 const sheets = [
@@ -24,22 +24,22 @@ const sheets = [
 
 describe("PropertiesPresenter", () => {
   it("reads the design's inventory once per open, under the inventory mask", async () => {
-    const { p, getDesign, last } = harness();
+    const { p, getSummary, last } = harness();
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s2" });
     await vi.waitFor(() => expect(last().crumbs[0].label).toBe("gateway"));
-    expect(getDesign).toHaveBeenCalledTimes(1);
-    expect(getDesign.mock.calls[0]).toEqual(["mount://m/d", ["name", ...INVENTORY_PATHS]]);
+    expect(getSummary).toHaveBeenCalledTimes(1);
+    expect(getSummary.mock.calls[0]).toEqual(["mount://m/d", ["name", ...INVENTORY_PATHS]]);
   });
 
   // agni issue 1045: a net's test points and a pin's name are the engine's answers, asked once per open.
   it("asks the engine for pin names and test points once per open, and shows its answers", async () => {
     const states: PropertiesState[] = [];
-    const getDesign = vi.fn(async () =>
-      create(GetDesignResponseSchema, { name: "g", design: { nets: [{ name: "3V3", connections: [{ componentRef: "TP1", pinRef: "1" }, { componentRef: "U1", pinRef: "10" }] }] } }),
+    const getSummary = vi.fn(async () =>
+      create(GetSummaryResponseSchema, { name: "g", design: { nets: [{ name: "3V3", connections: [{ componentRef: "TP1", pinRef: "1" }, { componentRef: "U1", pinRef: "10" }] }] } }),
     );
     const ask = vi.fn(async (_uri: string, q: string) => (q === SERVED_QUERIES.testPoints ? [["TP1"]] : [["U1", "10", "OUT"]]));
-    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign, drawn: () => null, ask });
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getSummary, drawn: () => null, ask });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s2" });
     p.selectEntity({ kind: "net", net: "3V3" });
@@ -68,10 +68,10 @@ describe("PropertiesPresenter", () => {
   });
 
   it("returns to the design when another design opens, and drops a slow answer for the old one", async () => {
-    let release: (r: GetDesignResponse) => void = () => {};
-    const slow = new Promise<GetDesignResponse>((r) => (release = r));
-    const getDesign = vi.fn().mockReturnValueOnce(slow).mockResolvedValueOnce(design("second", ["B"]));
-    const { p, last } = harness(getDesign);
+    let release: (r: GetSummaryResponse) => void = () => {};
+    const slow = new Promise<GetSummaryResponse>((r) => (release = r));
+    const getSummary = vi.fn().mockReturnValueOnce(slow).mockResolvedValueOnce(design("second", ["B"]));
+    const { p, last } = harness(getSummary);
     p.setSheets({ mount: "m", path: "first", sheets, activeId: "s1" });
     p.selectEntity({ kind: "net", net: "VIN" });
     p.setSheets({ mount: "m", path: "second", sheets, activeId: "s1" });
@@ -90,7 +90,7 @@ describe("PropertiesPresenter", () => {
       .mockReturnValueOnce(new Promise<string[]>((r) => (releaseU1 = r)))
       .mockResolvedValueOnce(["s2"]);
     const states: PropertiesState[] = [];
-    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("d", []), drawn: () => null, drawnOn });
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getSummary: async () => design("d", []), drawn: () => null, drawnOn });
     const sheetsGroup = () => states[states.length - 1].groups.find((g) => g.name === "sheets");
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     p.selectEntity({ kind: "component", ref: "U1" });
@@ -126,7 +126,7 @@ describe("PropertiesPresenter", () => {
 describe("a selection's own checks", () => {
   function checking(check: (s: SubjectRef) => Promise<{ verdicts: VerdictItem[]; notAsked: { name: string; reason: string }[] } | null>, key = () => "k1") {
     const states: PropertiesState[] = [];
-    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: key });
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getSummary: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: key });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     return { p, last: () => states[states.length - 1] };
   }
@@ -202,7 +202,7 @@ describe("a selection's checks after a cancelled run", () => {
       return { verdicts: [], notAsked: [] };
     });
     const states: PropertiesState[] = [];
-    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: () => "k" });
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getSummary: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: () => "k" });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     p.selectEntity({ kind: "net", net: "VIN" });
     await vi.waitFor(() => expect(states[states.length - 1].rows.find((r) => r.label === "checks")?.value).toBe("could not check: stopped"));
@@ -220,10 +220,10 @@ describe("a selection's checks after a cancelled run", () => {
 describe("sharing the inventory (agni issue 1133)", () => {
   it("hands each design's inventory on once read, and clears it when another design opens", async () => {
     const heard: (string[] | null)[] = [];
-    const getDesign = vi.fn(async () =>
-      create(GetDesignResponseSchema, { name: "g", design: { nets: [{ name: "SDA", connections: [{ componentRef: "U1", pinRef: "3" }] }] } }),
+    const getSummary = vi.fn(async () =>
+      create(GetSummaryResponseSchema, { name: "g", design: { nets: [{ name: "SDA", connections: [{ componentRef: "U1", pinRef: "3" }] }] } }),
     );
-    const p = new PropertiesPresenter({ setState: () => {} }, { getDesign, drawn: () => null, onInventory: (inv) => heard.push(inv ? [...inv.pinsOf.keys()] : null) });
+    const p = new PropertiesPresenter({ setState: () => {} }, { getSummary, drawn: () => null, onInventory: (inv) => heard.push(inv ? [...inv.pinsOf.keys()] : null) });
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     await vi.waitFor(() => expect(heard).toEqual([null, ["U1"]]));
     p.setSheets({ mount: "m", path: "other", sheets, activeId: "s1" });

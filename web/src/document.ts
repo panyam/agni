@@ -9,7 +9,7 @@
 import { create } from "@bufbuild/protobuf";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { CheckDesignResponseSchema, CheckService, type CheckDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import type { NamingConvention } from "@panyam/agni-client/gen/agni/v1/config/naming_pb";
@@ -32,7 +32,7 @@ export class DocumentStore {
   // whether the native renderer can draw it.
   availableLayouts: string[] = [];
   nativeAvailable = false;
-  // designContentHash is the revision this server actually read, taken off GetDesign. The
+  // designContentHash is the revision this server actually read, taken off GetSummary. The
   // stale-link note compares it with the revision a link claimed.
   designContentHash = "";
 

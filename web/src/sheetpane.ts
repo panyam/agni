@@ -17,7 +17,7 @@ import { UPRIGHT, flip, flipped, fromBelow, rotateBy, type Orientation } from ".
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { defaultHidden, presetHidden, soloHidden, toggled } from "./boardlayers.js";
 import { boardLayerListIsland } from "./boardlayerlist.js";
-import type { BoardFollow } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { BoardFollow } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import type { StackPreset } from "./stackcamera.js";

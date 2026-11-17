@@ -9,9 +9,9 @@ import { snapshots } from "./api.js";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService, SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 
-type DesignClient = Client<typeof DesignService>;
+type DesignClient = Client<typeof DesignViewService>;
 
 // PreviewView is the preview's rendering surface, a plain view adapter with no framework and no
 // presenter coupling (the same shape SvgView already satisfies for the viewer).
@@ -32,7 +32,7 @@ export interface PreviewView {
 // findings, highlights) into the browse bundle. The lines also differ, since the browse page has
 // no layout knobs and naming the effective layout would describe a control the reader cannot see.
 //
-// The sheet count leads because it is the only field GetDesign fills for EVERY design. The netlist
+// The sheet count leads because it is the only field GetSummary fills for EVERY design. The netlist
 // fields are populated only when the server resolves an AUTO-layout. A design that carries its own
 // geometry takes the faithful branch, which leaves format and both counts zero, so a line keyed on
 // those fields alone is blank for every KiCad schematic, the common case.
@@ -49,7 +49,7 @@ export function captionFor(format: string, comps: number, nets: number, sheets: 
 // service/design.go. It is non-numeric so it cannot collide with a sheet index.
 const BOARD_SHEET_ID = "board";
 
-// PreviewSheets is the slice of GetDesignResponse pickPreviewSheet reads.
+// PreviewSheets is the slice of GetSummaryResponse pickPreviewSheet reads.
 interface PreviewSheets {
   sheets: { id: string; name?: string }[];
   availableLayouts?: string[];
@@ -57,7 +57,7 @@ interface PreviewSheets {
 
 // pickPreviewSheet chooses which sheet stands for a design in the browse list.
 //
-// It is NOT simply the first sheet. GetDesign appends the synthetic board sheet AFTER the drawable
+// It is NOT simply the first sheet. GetSummary appends the synthetic board sheet AFTER the drawable
 // ones, so a board file (.kicad_pcb, IPC-2581) answers with [netlist graph, board], and its first
 // sheet is an auto-layout of the board's netlist, a schematic-shaped graph for a file whose content
 // is a physical board.
@@ -93,7 +93,7 @@ export class DesignPreview {
 
   // show renders the sheet that stands for a design. It takes two calls because the sheet has to
   // be named explicitly. GetSheet's empty selector means "index 0 of the geometry for this layout",
-  // which reaches neither the synthetic board sheet nor pickPreviewSheet's choice. Only GetDesign
+  // which reaches neither the synthetic board sheet nor pickPreviewSheet's choice. Only GetSummary
   // knows the sheet list.
   //
   // Both calls request an empty layout, so the preview is faithful-first. The server's
@@ -105,7 +105,7 @@ export class DesignPreview {
     this.view.showNote("rendering preview…", "info");
     try {
       const snapshot = await this.snaps.of(artifactUri(mount, path));
-      const d = await this.client.getDesign({ snapshot, layout: "" });
+      const d = await this.client.getSummary({ snapshot, layout: "" });
       if (token !== this.seq) return;
       const sheet = pickPreviewSheet(d);
       if (!sheet) {

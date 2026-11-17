@@ -82,14 +82,14 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 		t.Fatal(err)
 	}
 	return server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
-		Project:   service.NewProjectService(resolver.Store),
-		Design:    service.NewDesignService(loader, nil, render.DefaultStyle, resolver),
-		Check:     check,
-		Diff:      service.NewDiffService(loader, resolver),
-		Query:     service.NewQueryService(loader, nil, resolver),
-		Review:    review,
-		Snapshot:  check.Snapshots(),
+		Workspace:  service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
+		Project:    service.NewProjectService(resolver.Store),
+		DesignView: service.NewDesignViewService(loader, nil, render.DefaultStyle, resolver),
+		Check:      check,
+		Diff:       service.NewDiffService(loader, resolver),
+		Query:      service.NewQueryService(loader, nil, resolver),
+		Review:     review,
+		Snapshot:   check.Snapshots(),
 	}
 }
 
@@ -120,7 +120,7 @@ func memCopy(t *testing.T, root string) fs.FS {
 
 type parityClients struct {
 	snap   webapiconnect.SnapshotServiceClient
-	design webapiconnect.DesignServiceClient
+	design webapiconnect.DesignViewServiceClient
 	check  webapiconnect.CheckServiceClient
 	query  webapiconnect.QueryServiceClient
 	ws     webapiconnect.WorkspaceServiceClient
@@ -137,7 +137,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 	c := srv.Client()
 	return parityClients{
 		snap:   webapiconnect.NewSnapshotServiceClient(c, srv.URL),
-		design: webapiconnect.NewDesignServiceClient(c, srv.URL),
+		design: webapiconnect.NewDesignViewServiceClient(c, srv.URL),
 		review: webapiconnect.NewReviewServiceClient(c, srv.URL),
 		check:  webapiconnect.NewCheckServiceClient(c, srv.URL),
 		query:  webapiconnect.NewQueryServiceClient(c, srv.URL),
@@ -213,17 +213,17 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		return a
 	}
 
-	got := ask("GetDesign", func(c parityClients) (proto.Message, error) {
-		r, err := c.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snapOn(c)}))
+	got := ask("GetSummary", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: snapOn(c)}))
 		return msgOf(r, err)
 	})
-	sheets := got.(*webapi.GetDesignResponse).GetSheets()
+	sheets := got.(*webapi.GetSummaryResponse).GetSheets()
 	if len(sheets) == 0 {
-		t.Fatal("GetDesign: no sheets, so the sheet comparison below would compare nothing")
+		t.Fatal("GetSummary: no sheets, so the sheet comparison below would compare nothing")
 	}
 	for _, s := range sheets {
 		if s.GetId() == "graph" {
-			t.Fatal("GetDesign: drew the auto-layout, so the design's own schematic was not found and both hosts agreeing on that proves nothing")
+			t.Fatal("GetSummary: drew the auto-layout, so the design's own schematic was not found and both hosts agreeing on that proves nothing")
 		}
 	}
 	for _, s := range sheets {
@@ -555,16 +555,16 @@ func TestWasmEngineAnswersAsTheServerDoesForAnAttachedBoard(t *testing.T) {
 		}
 		return a
 	}
-	got := ask("GetDesign", func(c parityClients) (proto.Message, error) {
-		r, err := c.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snapOn[c.snap]}))
+	got := ask("GetSummary", func(c parityClients) (proto.Message, error) {
+		r, err := c.design.GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: snapOn[c.snap]}))
 		return msgOf(r, err)
-	}).(*webapi.GetDesignResponse)
+	}).(*webapi.GetSummaryResponse)
 	board := false
 	for _, s := range got.GetSheets() {
 		board = board || s.GetId() == "board"
 	}
 	if !board {
-		t.Fatalf("GetDesign lists %v, with no board sheet for the attached job", got.GetSheets())
+		t.Fatalf("GetSummary lists %v, with no board sheet for the attached job", got.GetSheets())
 	}
 	svg := ask("GetSheet board", func(c parityClients) (proto.Message, error) {
 		r, err := c.design.GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snapOn[c.snap], Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}))

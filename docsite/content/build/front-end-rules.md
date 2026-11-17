@@ -18,7 +18,7 @@ busy worker.
 
 | A front end wants to know | The server answers it in |
 | --- | --- |
-| Which sheets draw a part, pin, net or bus | `DesignService.LocateSubjects`, `SubjectSheets.sheet_ids`, schematic sheets in design order and then `board` |
+| Which sheets draw a part, pin, net or bus | `DesignViewService.LocateSubjects`, `SubjectSheets.sheet_ids`, schematic sheets in design order and then `board` |
 | Why a subject is drawn nowhere | `SubjectSheets.locate_reason` |
 | Which side a board view turns to, and which layer rows it shows | `LocateSubjectsResponse.board_follow`, for the whole selection, with the board read |
 | Which sheets a finding or a verdict is drawn on | `Finding.sheets`, `Verdict.sheets`. An empty list means drawn nowhere. |
@@ -26,7 +26,7 @@ busy worker.
 | The depths a plated hole runs between | `BoardStackView.drills[].top_mm`, `bottom_mm`, unset when the stack cannot place the span |
 | How tall each part's body draws | `BoardPartBody.drawn_height_mm`, with `height_defaulted` where the file states no height |
 | Whether the schematic and the board agree | `DiffService.DiffDesigns` with `views_snapshot` |
-| What a highlight lights | `DesignService.HighlightSheet`, as an SVG overlay or as packed primitive indices |
+| What a highlight lights | `DesignViewService.HighlightSheet`, as an SVG overlay or as packed primitive indices |
 | Where a drawn point is on the board, in millimetres | `PackedSheet.units_per_mm` with `origin_x` and `origin_y`, or the `data-mm-per-px`, `data-mm-x0` and `data-mm-y0` attributes on BoardSVG's root |
 
 A board view applies `board_follow` and keeps the reader's own choices. It turns to `side` when

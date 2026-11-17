@@ -13,7 +13,7 @@ import (
 )
 
 // TestOsLoaderCompanionGeometry checks that serving a netlist with a sibling .eds draws on the .eds
-// schematic (WS1-047), so GetDesign/GetSheet/HighlightSheet (all funneling through Geometry) show
+// schematic (WS1-047), so GetSummary/GetSheet/HighlightSheet (all funneling through Geometry) show
 // the design's own drawing; a netlist without a sibling falls back to the auto-layout graph.
 func TestOsLoaderCompanionGeometry(t *testing.T) {
 	l := &osLoader{mounts: []mounts.Mount{{Name: "m", Root: filepath.Join("testdata", "review")}}, loader: &formats.Loader{}}

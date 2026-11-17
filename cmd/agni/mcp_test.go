@@ -459,11 +459,11 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 
 		t.Run("design", func(t *testing.T) {
 			_, a := callMCP(t, s.mcp, "design", map[string]any{"design": mcpGateway, "read_mask": []string{"design.nets"}, "nets": []string{"I2C_SDA"}})
-			resp, err := s.api.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap, ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"design.nets"}}, Nets: []string{"I2C_SDA"}}))
+			resp, err := s.api.design.GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: snap, ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"design.nets"}}, Nets: []string{"I2C_SDA"}}))
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := &webapi.GetDesignResponse{}
+			got := &webapi.GetSummaryResponse{}
 			if err := protojson.Unmarshal(a.Answer, got); err != nil {
 				t.Fatal(err)
 			}

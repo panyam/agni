@@ -9,7 +9,7 @@ client](../client-contract/) covers connecting and snapshots.
 
 ## Fetching the board
 
-`DesignService.GetBoardGeometry` returns the board as one `agni.v1.geom.BoardGeometry`, a page at a
+`DesignViewService.GetBoardGeometry` returns the board as one `agni.v1.geom.BoardGeometry`, a page at a
 time. A large board doesn't fit one message. The Jetson AGX Thor baseboard is 2.7 MB in binary
 protobuf and 6.5 MB in JSON. grpc-go, grpc-java and gRPC C++ refuse a message over 4 MB unless the
 client raises its limit.

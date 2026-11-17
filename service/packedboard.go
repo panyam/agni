@@ -30,7 +30,7 @@ var packedBoardCodec = &protoCodec{empty: func() proto.Message { return &webapi.
 // packedBoardVersion.
 //
 // The kept answer is shared by every request that hits it, so a caller must not change it.
-func (s *DesignService) packedBoard(ctx context.Context, snap Snap) (*webapi.GetSheetResponse, error) {
+func (s *DesignViewService) packedBoard(ctx context.Context, snap Snap) (*webapi.GetSheetResponse, error) {
 	build := func(ctx context.Context) (any, error) {
 		b, err := s.boardFor(ctx, snap)
 		if err != nil {

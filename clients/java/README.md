@@ -47,7 +47,7 @@ try (AgniClient client = AgniClient.create("http://127.0.0.1:8080", token)) {
 - `connect()` calls `ServerService.GetServerInfo`. It throws `IncompatibleServerException` when the
   server's `api` is not `agni.v1`. Test `ServerInfo.getFeaturesList()` for a feature by name, such
   as `snapshot_recovery`, rather than comparing versions.
-- `server()`, `snapshots()`, `designs()`, `checks()` and `queries()` return blocking stubs. Any other
+- `server()`, `snapshots()`, `designViews()`, `checks()` and `queries()` return blocking stubs. Any other
   service takes `channel()`, as in `DiffServiceGrpc.newBlockingStub(client.channel())`, and so does
   an async or future stub.
 - `AgniErrors` reads a failed call. `code(e)` names the code as Connect and the wire fixtures do,
