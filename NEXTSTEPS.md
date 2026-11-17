@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-16, at `4caa3fe2`.
+Last pruned 2026-11-16, at `4db50151`.
 
 ## At a glance
 
@@ -17,27 +17,26 @@ Last pruned 2026-11-16, at `4caa3fe2`.
 is active, at 12 of 13 tickets closed. Its exercise is `make exercise-clients`, and at `1596f60d` all
 five rows pass, against a server with no auth. The mission log on #1625 has each run.
 
-- **#1627** (TLS and tokens), the mission's last ticket, is parked. It waits on panyam/oneauth#462
-  (cache validated API keys), panyam/oneauth#463 (refuse a call in its own protocol) and
-  panyam/servicekit#60 (TLS in `ListenAndServeGraceful`), all three still open. Its comment records
-  what is decided and what is open.
-- **#1664 `mission_board_rendering`** (see any board in 3D as its maker's tool shows it) is also active, at 10 of
-  12. Its next tickets are #1652 (3D models) and #133 (measuring the board render). Its exercise last ran
-  at `4caa3fe2` and works, and the mission log on #1664 has each run.
+- **#1627** (TLS and tokens), the mission's last ticket, is unblocked. Its three pushdowns closed and
+  are tagged, as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3. agni still pins oneauth v0.3.2
+  and servicekit v0.2.2. The ticket's last comment records what is decided and what is open.
+- **#1664 `mission_board_rendering`** (see any board in 3D as its maker's tool shows it) is also active, at 11 of
+  13. #133 closed through #1680 (the dimension oracle) and #1682 (the measuring tool). Its next tickets
+  are #1652 (3D models) and #1679 (IPC-2581 draws paste windows and unplated holes as copper, P3). Its
+  exercise last ran at `4caa3fe2`, and #1680 and #1682 merged since without a run.
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1675 and #1678 closed #1660. ODB++ jobs from Altium and Allegro now read the stack they
-  state, `ir.Stackup` is gone, and `agni emit` writes the board's stack. The clay cross-probe walk's
-  Board look step failed once on CI and passed locally, so watch it for a flake.
+- This run: #1680 and #1682 closed #133, and #1679 was filed from #1680's oracle.
 
 ## Open, ranked
 
-1. **#1664's next tickets**, #1652 then #133, while #1625 waits on its pushdowns.
-2. **#1627** once its three pushdowns are tagged, then a ticket for the gRPC clients to trust a CA.
-   That closes #1625.
-3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+1. **Run #1664's exercise** and post its mission log for #1680 and #1682.
+2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
+   ticket for the gRPC clients to trust a CA, which closes #1625.
+3. **#1652**, then #1679, on #1664.
+4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
@@ -62,8 +61,8 @@ Two items are gated, #677 (only the "declare a NEW class" half, gated on the cla
 - **`severitySections` in `web/src/findings.ts` has no renderer, on purpose.** It is a parity oracle.
   It pins the client against `GetCheckReport`. It exists to catch drift, and "improving" it would
   hide that drift.
-- **Two failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
-  module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). A worktree
+- **Some failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
+  module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). The Glasgow oracle tests also need `tools/samples/kicad-models`, which `make samples-oracle` fetches. `proto-check` needs `protoc-gen-es`, so run `make web-install` first. A worktree
   built under `GOTOOLCHAIN=go1.26.9` carries no VCS stamp, which fails the browser-cache test and rung
   12's capture in `tutorial-runs-check` (#957); the default Go 1.27 stamps a worktree and passes both.
 - **The two `DesignHash` implementations differ on purpose** (see `OUT_OF_SCOPE.md`). Every caller now

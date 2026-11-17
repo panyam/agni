@@ -41,6 +41,8 @@ This file covers the viewer's TypeScript, the pnpm workspace it sits in, and how
 - **A board opens with its fab rows hidden.** Storage keeps "show every layer" as `[]`, and `null` means never chosen (agni 1486).
 - **An idle SVG board view parks as an `<img>`** (`SvgView.parkWhenIdle`, agni 1482). After a second with no pointer over it, the view serialises the svg into a blob image and hides the live svg. Chrome's layerization of a live board svg slows every canvas pan.
 - The parked svg remains in the DOM, so a spec finds it as `img.svg-parked + svg`. A pointer or a reveal wakes it.
+- **A board's `.kicad_pcb` path opens its whole design**, on the schematic's first sheet. Add `&sheet=board` to a URL that should land on the board.
+- **The measuring tool takes a click before the pick** (`onClick` on `CanvasComponent` and `SvgView`, agni 133). Its readout snaps to a pad under the cursor, so a spec that maps the screen from the readout skips points that name a pad, as `measure.spec.ts` places them on empty board.
 - **A board view keeps showing the board.** If its board does not place the selected part, the view says so and does not follow to a schematic sheet (`chooseSheet`'s `absent`, agni 1481).
 
 ## The visual diff
