@@ -8,13 +8,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
 )
 
-// --store-dir adds a writable folder as the mount "store", and the server's project store reads what
-// a DirStore writes there (agni issue 1693).
+// --store-dir adds a writable folder as the mount "store", and the server's project store reads a
+// design a DirStore writes there as a design of no project (agni issue 1693).
 func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "not-yet")
 	ms, err := withStoreMount([]mounts.Mount{{Name: "tut", Root: t.TempDir()}}, dir)
@@ -24,22 +25,30 @@ func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	if len(ms) != 2 || ms[1].Name != storeMount || ms[1].Root != dir {
 		t.Fatalf("mounts = %v, want tut then store at %s", ms, dir)
 	}
-	read := projects.NewFSStore(projectTrees(ms)...)
-	ds, err := projects.NewDirStore(dir, read)
+	ds, err := projects.NewDirStore(dir, storeMount)
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := []byte("title: B200\n")
-	sum := sha256.Sum256(body)
-	h := "sha256:" + hex.EncodeToString(sum[:])
-	files := []*webapi.SnapshotFile{{Path: "project.yaml", Sha256: h, Size: int64(len(body))}}
-	blobs := func(_ context.Context, got string) ([]byte, bool) { return body, got == h }
-	if _, err := ds.CreateProject(context.Background(), "b200", files, blobs); err != nil {
+	var files []*webapi.SnapshotFile
+	blobs := map[string][]byte{}
+	for _, f := range []struct{ path, body string }{{"design.yaml", "title: Memory unit\nentry: mem.edn\n"}, {"mem.edn", "(edif mem)"}} {
+		sum := sha256.Sum256([]byte(f.body))
+		h := "sha256:" + hex.EncodeToString(sum[:])
+		files = append(files, &webapi.SnapshotFile{Path: f.path, Sha256: h, Size: int64(len(f.body))})
+		blobs[h] = []byte(f.body)
+	}
+	source := func(_ context.Context, h string) ([]byte, bool) { b, ok := blobs[h]; return b, ok }
+	if _, err := ds.CreateDesign(context.Background(), "memory_unit", files, source); err != nil {
 		t.Fatal(err)
 	}
-	ps, err := read.Projects(context.Background())
-	if err != nil || len(ps) != 1 || ps[0].GetName() != "projects/b200" || ps[0].GetTitle() != "B200" {
-		t.Fatalf("projects served = %v, %v; want projects/b200 titled B200", ps, err)
+	read := projects.NewFSStore(projectTrees(ms)...)
+	u, err := artifact.Parse("mount://store/memory_unit/mem.edn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, p, err := read.ResolveDesign(context.Background(), u)
+	if err != nil || d == nil || p != nil || d.GetTitle() != "Memory unit" {
+		t.Fatalf("served design = %v, %v, %v; want Memory unit with no project", d, p, err)
 	}
 }
 

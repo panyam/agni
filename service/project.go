@@ -19,8 +19,8 @@ import (
 // (`internal/projects`) walks a directory tree for descriptors, and a database-backed store with
 // designs on object storage should be a wiring change rather than a redesign.
 //
-// It reads. A store that also keeps the projects a user creates implements ProjectWriter beside it.
-// A project declared in a mounted folder stays read-only (agni issue 1693).
+// It reads. A design that stands alone, with no project, is read and written through a
+// DesignCatalog instead (agni issue 1693).
 //
 // Every method deals in the WIRE types, with no parallel value type. A `Project` is a resource whose
 // content is the message, so a twin would be a field-for-field copy that can disagree with it
@@ -42,44 +42,6 @@ type ProjectStore interface {
 	// ORDINARY case on a mounted folder.
 	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
 }
-
-// ProjectWriter creates, replaces and deletes the projects and designs a server keeps for its users
-// (agni issue 1693). A project or a design arrives as its FILES: its descriptor (`project.yaml` or
-// `design.yaml`) and whatever else it holds, such as a netlist, a board, or a project's checklists
-// and intent. The files are a manifest of paths and hashes, and blobs supplies their contents, so
-// nothing here names a host path. Each adapter decides how it keeps them. The filesystem adapter
-// (`internal/projects.DirStore`) writes folders, and a database adapter would write rows and blobs.
-//
-// The resource id comes from the call. A descriptor that names a different id is ErrInvalidArgument.
-// One that names none takes the call's. A design always belongs to the project its parent names,
-// whatever its descriptor's `extends` said.
-//
-// Errors:
-//   - ErrInvalidArgument: a malformed id or name, a path that leaves its folder, a missing or
-//     unparseable descriptor, or a file whose contents do not match its hash.
-//   - ErrAlreadyExists: a create whose id is taken.
-//   - ErrNotFound: a replace, a delete or a parent naming nothing this writer keeps.
-//   - ErrFailedPrecondition: a write to a project or design declared in a mounted folder, or a
-//     delete of a project that still holds designs without cascade.
-//   - *BlobsMissingError: files whose contents blobs does not hold, listing their hashes, so the
-//     caller sends them with UploadBlobs and asks again.
-//
-// A replace swaps the whole file set at once, so a reader sees the old files or the new ones and
-// never a mix. Replacing a project keeps its designs.
-type ProjectWriter interface {
-	CreateProject(ctx context.Context, id string, files []*webapi.SnapshotFile, blobs BlobSource) (*webapi.Project, error)
-	ReplaceProject(ctx context.Context, name string, files []*webapi.SnapshotFile, blobs BlobSource) (*webapi.Project, error)
-	// DeleteProject removes a project. With cascade it removes the project's designs too.
-	DeleteProject(ctx context.Context, name string, cascade bool) error
-	// CreateDesign adds a design under parent, a project resource name.
-	CreateDesign(ctx context.Context, parent, id string, files []*webapi.SnapshotFile, blobs BlobSource) (*webapi.Design, error)
-	ReplaceDesign(ctx context.Context, name string, files []*webapi.SnapshotFile, blobs BlobSource) (*webapi.Design, error)
-	DeleteDesign(ctx context.Context, name string) error
-}
-
-// BlobSource returns a file's contents by its hash, "sha256:<hex>" as SnapshotFile.sha256 writes it.
-// A hash it does not hold answers ok=false, and the writer then reports a *BlobsMissingError.
-type BlobSource func(ctx context.Context, sha256 string) (b []byte, ok bool)
 
 // Resource-name prefixes and separators, written once. A store deals in ids and an API deals in
 // names. If each spelled the boundary by hand, one would end up storing a name as an id.

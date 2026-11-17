@@ -145,7 +145,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&stateDir, "state-dir", "", "a WRITABLE directory this server keeps its own state in, created if absent. Today that is each snapshot's definition, so a question on a snapshot made before a restart still answers (agni issue 1639). Without it, definitions live in memory and a restart forgets them. Like --review-store, it is separate from the read-only design mounts")
-	c.Flags().StringVar(&storeDir, "store-dir", "", "a WRITABLE directory this server keeps the projects and designs its users create in, created if absent, and served as the mount \""+storeMount+"\" (agni issue 1693). Each project is a folder with its project.yaml and each design a folder under its designs/, so the CLI reads them as it reads any project. The mounted design folders stay read-only. In a container, mount a volume here")
+	c.Flags().StringVar(&storeDir, "store-dir", "", "a WRITABLE directory this server keeps the designs its users create in, created if absent, and served as the mount \""+storeMount+"\" (agni issue 1693). Each design is a folder holding its design.yaml and its files, and belongs to no project, so the CLI reads it as it reads any design folder. The mounted design folders stay read-only. In a container, mount a volume here")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
 }
@@ -169,7 +169,7 @@ type viewerOpts struct {
 	reviewStorePath string
 	// stateDir is --state-dir, the writable directory the server keeps snapshot definitions in.
 	stateDir string
-	// storeDir is --store-dir, the writable directory the server keeps its users' projects in.
+	// storeDir is --store-dir, the writable directory the server keeps its users' designs in.
 	storeDir string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
@@ -533,10 +533,6 @@ func newHTTPServer(addr string, h http.Handler) *http.Server {
 	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, Protocols: &protocols}
 }
 
-// projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
-// all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
-// structural, since an fs.FS has no parent to climb into. An archive in a mount reads as its folder,
-// so a design.yaml inside one declares its design (agni issue 1591).
 // storeMount is the mount name --store-dir serves under.
 const storeMount = "store"
 
@@ -561,6 +557,10 @@ func withStoreMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	return append(ms, mounts.Mount{Name: storeMount, Root: abs}), nil
 }
 
+// projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
+// all of the OS adapter for projects. Each mount gets one os.DirFS, which makes containment
+// structural, since an fs.FS has no parent to climb into. An archive in a mount reads as its folder,
+// so a design.yaml inside one declares its design (agni issue 1591).
 func projectTrees(ms []mounts.Mount) []projects.Tree {
 	out := make([]projects.Tree, 0, len(ms))
 	for _, m := range ms {
