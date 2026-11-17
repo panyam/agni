@@ -695,21 +695,19 @@ for (const name of chosen) {
           if ((await look()) !== "layers") throw new Error(`the stack view opened in the ${await look()} look, not the layer look`);
           await board.locator('[data-stack-look="board"]').click({ timeout: 5_000 });
           if ((await look()) !== "board") throw new Error(`Board left the view in the ${await look()} look`);
-          // The board look draws each part's own model where the server has one (agni issue 1652).
+          // The board look draws each part's own model where the server has one (agni issue 1652). The
+          // models' answer redraws the view, and a redraw drops the clickable points until it settles.
+          // So the step waits for the answer on every board, one with no models too, before it looks
+          // for a point.
           type Meshes = { meshes: number; parts: number; triangles: number };
-          let meshes: Meshes = { meshes: 0, parts: 0, triangles: 0 };
-          if (walk.models) {
-            await page
-              .waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.hasAttribute("data-stack-meshes"), PANE, { timeout: 30_000 })
-              .catch(async () => {
-                throw new Error(`the board look drew no models; the stack bar says "${await board.locator("[data-stack-mesh-note]").textContent()}"`);
-              });
-            meshes = JSON.parse((await gl.getAttribute("data-stack-meshes")) ?? "{}") as Meshes;
-            if (meshes.parts < walk.models.meshed) throw new Error(`the board look drew models on ${meshes.parts} parts, want at least ${walk.models.meshed}`);
-          } else {
-            const drawn = await gl.getAttribute("data-stack-meshes");
-            if (drawn && (JSON.parse(drawn) as Meshes).parts > 0) throw new Error(`the board names no 3D models, and the board look drew models on ${drawn}`);
-          }
+          await page
+            .waitForFunction((p) => document.querySelector(`${p} canvas.sheetview-gl`)?.hasAttribute("data-stack-meshes"), PANE, { timeout: 30_000 })
+            .catch(async () => {
+              throw new Error(`the board look never heard from GetBoardMeshes; the stack bar says "${await board.locator("[data-stack-mesh-note]").textContent()}"`);
+            });
+          const meshes = JSON.parse((await gl.getAttribute("data-stack-meshes")) ?? "{}") as Meshes;
+          if (walk.models && meshes.parts < walk.models.meshed) throw new Error(`the board look drew models on ${meshes.parts} parts, want at least ${walk.models.meshed}`);
+          if (!walk.models && meshes.parts > 0) throw new Error(`the board names no 3D models, and the board look drew models on ${meshes.parts} parts`);
           type BodyProbe = { ref: string; x: number; y: number };
           await page
             .waitForFunction((p) => (JSON.parse(document.querySelector(`${p} canvas.sheetview-gl`)?.getAttribute("data-stack-body-probes") ?? "[]") as BodyProbe[]).length > 0, PANE, { timeout: 5_000 })
