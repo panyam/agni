@@ -30,7 +30,8 @@ func lines(b []byte, each func(n int, line string) error) error {
 
 // fields splits a record into whitespace-separated words. It keeps a single-quoted string whole and
 // removes its quotes, since a property value or a text record's string can hold spaces. It returns
-// the attribute tail after `;` separately, unsplit.
+// the attribute tail after `;` separately, unsplit. The tail ends at the next `;`, because ODB++ 8
+// lets a record end with `;ID=<n>` after its attributes (agni 1685).
 func fields(line string) (words []string, attrs string) {
 	var cur strings.Builder
 	inQuote, have := false, false
@@ -54,7 +55,8 @@ func fields(line string) (words []string, attrs string) {
 			inQuote, have = true, true
 		case c == ';':
 			flush()
-			return words, strings.TrimSpace(line[i+1:])
+			tail, _, _ := strings.Cut(line[i+1:], ";")
+			return words, strings.TrimSpace(tail)
 		case c == ' ' || c == '\t':
 			flush()
 		default:

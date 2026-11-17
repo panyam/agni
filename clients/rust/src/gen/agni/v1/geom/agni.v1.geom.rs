@@ -789,6 +789,10 @@ pub struct BoardGeometry {
     /// library lists every library model here, and its parts draw at a typical height.
     #[prost(message, repeated, tag="12")]
     pub unread_models: ::prost::alloc::vec::Vec<UnreadModel>,
+    /// read_notes lists each value the reader skipped because it could not parse it, one row per
+    /// value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+    #[prost(message, repeated, tag="13")]
+    pub read_notes: ::prost::alloc::vec::Vec<ReadNote>,
     #[prost(message, optional, tag="16")]
     pub prov: ::core::option::Option<Provenance>,
 }
@@ -941,6 +945,23 @@ pub struct UnreadModel {
     pub reason: ::prost::alloc::string::String,
     #[prost(int32, tag="3")]
     pub parts: i32,
+}
+/// ReadNote is one value in the source the reader could not parse, and skipped. file is the path
+/// inside the source, such as an ODB++ job's `steps/pcb/layers/comp_+_top/components`. line counts
+/// from 1. field names what the value sets, such as `.comp_height`, and value is the text as written.
+/// reason says why the reader refused it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ReadNote {
+    #[prost(string, tag="1")]
+    pub file: ::prost::alloc::string::String,
+    #[prost(int32, tag="2")]
+    pub line: i32,
+    #[prost(string, tag="3")]
+    pub field: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub value: ::prost::alloc::string::String,
+    #[prost(string, tag="5")]
+    pub reason: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ComponentPlacement {

@@ -707,6 +707,9 @@ impl serde::Serialize for BoardGeometry {
         if !self.unread_models.is_empty() {
             len += 1;
         }
+        if !self.read_notes.is_empty() {
+            len += 1;
+        }
         if self.prov.is_some() {
             len += 1;
         }
@@ -749,6 +752,9 @@ impl serde::Serialize for BoardGeometry {
         if !self.unread_models.is_empty() {
             struct_ser.serialize_field("unreadModels", &self.unread_models)?;
         }
+        if !self.read_notes.is_empty() {
+            struct_ser.serialize_field("readNotes", &self.read_notes)?;
+        }
         if let Some(v) = self.prov.as_ref() {
             struct_ser.serialize_field("prov", v)?;
         }
@@ -777,6 +783,8 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
             "stackup",
             "unread_models",
             "unreadModels",
+            "read_notes",
+            "readNotes",
             "prov",
         ];
 
@@ -794,6 +802,7 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
             Padstacks,
             Stackup,
             UnreadModels,
+            ReadNotes,
             Prov,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -828,6 +837,7 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
                             "padstacks" => Ok(GeneratedField::Padstacks),
                             "stackup" => Ok(GeneratedField::Stackup),
                             "unreadModels" | "unread_models" => Ok(GeneratedField::UnreadModels),
+                            "readNotes" | "read_notes" => Ok(GeneratedField::ReadNotes),
                             "prov" => Ok(GeneratedField::Prov),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
@@ -860,6 +870,7 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
                 let mut padstacks__ = None;
                 let mut stackup__ = None;
                 let mut unread_models__ = None;
+                let mut read_notes__ = None;
                 let mut prov__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -937,6 +948,12 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
                             }
                             unread_models__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::ReadNotes => {
+                            if read_notes__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readNotes"));
+                            }
+                            read_notes__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::Prov => {
                             if prov__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("prov"));
@@ -958,6 +975,7 @@ impl<'de> serde::Deserialize<'de> for BoardGeometry {
                     padstacks: padstacks__.unwrap_or_default(),
                     stackup: stackup__,
                     unread_models: unread_models__.unwrap_or_default(),
+                    read_notes: read_notes__.unwrap_or_default(),
                     prov: prov__,
                 })
             }
@@ -7250,6 +7268,167 @@ impl<'de> serde::Deserialize<'de> for Provenance {
             }
         }
         deserializer.deserialize_struct("agni.v1.geom.Provenance", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ReadNote {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.file.is_empty() {
+            len += 1;
+        }
+        if self.line != 0 {
+            len += 1;
+        }
+        if !self.field.is_empty() {
+            len += 1;
+        }
+        if !self.value.is_empty() {
+            len += 1;
+        }
+        if !self.reason.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.geom.ReadNote", len)?;
+        if !self.file.is_empty() {
+            struct_ser.serialize_field("file", &self.file)?;
+        }
+        if self.line != 0 {
+            struct_ser.serialize_field("line", &self.line)?;
+        }
+        if !self.field.is_empty() {
+            struct_ser.serialize_field("field", &self.field)?;
+        }
+        if !self.value.is_empty() {
+            struct_ser.serialize_field("value", &self.value)?;
+        }
+        if !self.reason.is_empty() {
+            struct_ser.serialize_field("reason", &self.reason)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ReadNote {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "file",
+            "line",
+            "field",
+            "value",
+            "reason",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            File,
+            Line,
+            Field,
+            Value,
+            Reason,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "file" => Ok(GeneratedField::File),
+                            "line" => Ok(GeneratedField::Line),
+                            "field" => Ok(GeneratedField::Field),
+                            "value" => Ok(GeneratedField::Value),
+                            "reason" => Ok(GeneratedField::Reason),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ReadNote;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.geom.ReadNote")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ReadNote, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut file__ = None;
+                let mut line__ = None;
+                let mut field__ = None;
+                let mut value__ = None;
+                let mut reason__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::File => {
+                            if file__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("file"));
+                            }
+                            file__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Line => {
+                            if line__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("line"));
+                            }
+                            line__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::Field => {
+                            if field__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("field"));
+                            }
+                            field__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Value => {
+                            if value__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("value"));
+                            }
+                            value__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Reason => {
+                            if reason__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("reason"));
+                            }
+                            reason__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ReadNote {
+                    file: file__.unwrap_or_default(),
+                    line: line__.unwrap_or_default(),
+                    field: field__.unwrap_or_default(),
+                    value: value__.unwrap_or_default(),
+                    reason: reason__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.geom.ReadNote", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for SchematicGeometry {

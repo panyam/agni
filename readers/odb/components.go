@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
 // component is one CMP record of a components file and the records under it.
@@ -30,10 +32,13 @@ type toeprint struct {
 	name string
 }
 
-// parseComponents reads one side's components file.
-func parseComponents(b []byte, back bool) ([]component, error) {
+// parseComponents reads one side's components file. A height that does not parse leaves its part
+// with none and comes back as a note, so one bad value does not lose the board (agni 1685). The
+// caller sets each note's file.
+func parseComponents(b []byte, back bool) ([]component, []*geom.ReadNote, error) {
 	u := unitsOf(b)
 	var out []component
+	var notes []*geom.ReadNote
 	var cur *component
 	heightTag := -1
 	err := lines(b, func(n int, line string) error {
@@ -73,11 +78,11 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 				c.part = w[7]
 			}
 			if v := attrValue(attrs, heightTag); heightTag >= 0 && v != "" {
-				h, err := atof(v)
-				if err != nil {
-					return fmt.Errorf("line %d: .comp_height %q: %w", n, v, err)
+				if h, err := atof(v); err != nil {
+					notes = append(notes, &geom.ReadNote{Line: int32(n), Field: ".comp_height", Value: v, Reason: err.Error()})
+				} else {
+					c.height = int64(math.Round(h * u.coord))
 				}
-				c.height = int64(math.Round(h * u.coord))
 			}
 			out = append(out, c)
 			cur = &out[len(out)-1]
@@ -115,9 +120,9 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("odb: components: %w", err)
+		return nil, nil, fmt.Errorf("odb: components: %w", err)
 	}
-	return out, nil
+	return out, notes, nil
 }
 
 // componentLayers lists the matrix's component layers, front first, and says which side each is.
