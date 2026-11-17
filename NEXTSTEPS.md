@@ -23,6 +23,10 @@ project. Its exercise (`make exercise-design-store`) does not exist yet, and #16
   v0.3.2 and v0.2.2. The ticket's last comment records what is decided and what is open.
 - **#1664 `mission_board_rendering`** closed on 2026-11-17, at 15 of 15, with its exercise passing at
   `76ef182e`. Run headed, the cross-probe walks still time out at "two views" on the main Mac.
+- **Four missions filed on 2026-11-17 by a retriage, none active.** Each one's first ticket writes its
+  exercise. #1708 `mission_check_verdicts` (#1712), #1709 `mission_rule_authoring` (#1713), #1710
+  `mission_format_fidelity` (#1714), and #1711 `mission_datasheets` (#1715, which needs a datasheet
+  PDF that agni-samples may carry before anything else can run).
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting`.
 
