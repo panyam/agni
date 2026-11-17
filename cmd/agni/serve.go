@@ -555,7 +555,7 @@ func withStoreMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o755); err != nil {
+	if err := os.MkdirAll(abs, 0o750); err != nil {
 		return nil, fmt.Errorf("--store-dir %q: %w", dir, err)
 	}
 	return append(ms, mounts.Mount{Name: storeMount, Root: abs}), nil

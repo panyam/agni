@@ -54,7 +54,7 @@ func NewDirStore(root string, read service.ProjectStore) (*DirStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o755); err != nil {
+	if err := os.MkdirAll(abs, 0o750); err != nil {
 		return nil, err
 	}
 	return &DirStore{root: abs, read: read}, nil
@@ -144,7 +144,7 @@ func (s *DirStore) CreateDesign(ctx context.Context, parent, id string, files []
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(filepath.Join(s.root, pid, designsDir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(s.root, pid, designsDir), 0o750); err != nil {
 		return nil, err
 	}
 	if err := s.place(contents, rel, ""); err != nil {
@@ -348,10 +348,10 @@ func (s *DirStore) place(contents map[string][]byte, rel, keep string) error {
 	defer os.RemoveAll(tmp)
 	for p, b := range contents {
 		dst := filepath.Join(tmp, filepath.FromSlash(p))
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 			return err
 		}
-		if err := os.WriteFile(dst, b, 0o644); err != nil {
+		if err := os.WriteFile(dst, b, 0o600); err != nil {
 			return err
 		}
 	}
