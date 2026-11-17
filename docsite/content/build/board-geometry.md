@@ -74,7 +74,8 @@ offset by the part's angle, mirror X when `mirror` is set, then add `at`. The pa
 
 A pad's `shape` and `size` give its land on its first layer. A pad that names a `padstack` has a land
 per copper layer in `BoardGeometry.padstacks`, and a back-side part names an entry whose layers are
-already turned over. A `drill` of 0 means a surface pad.
+already turned over. A `drill` of 0 means a surface pad. A pad with a drill and no `number` is a
+mechanical hole, such as an unplated mounting hole. It is no pin, so a click on it picks its part.
 
 A part with a 3D model also lists its meshes in `model_instances` (agni issue 1652). Each names a
 mesh by key and gives a transform, 12 numbers of a 3x4 matrix in row order, from the mesh's frame to

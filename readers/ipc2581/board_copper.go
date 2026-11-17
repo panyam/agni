@@ -357,6 +357,21 @@ func (f *ipcGeomFile) pinHoles(nmPerUnit float64) map[[2]int64]int64 {
 	return m
 }
 
+// unplatedHoles marks each unplated hole's position to the micrometre.
+func (f *ipcGeomFile) unplatedHoles(nmPerUnit float64) map[[2]int64]bool {
+	m := map[[2]int64]bool{}
+	for _, lf := range f.Features {
+		for _, s := range lf.Sets {
+			for _, h := range s.Holes {
+				if h.PlatingStatus == "NONPLATED" {
+					m[umKey(ptNm(ptEl{X: h.X, Y: h.Y}, nmPerUnit))] = true
+				}
+			}
+		}
+	}
+	return m
+}
+
 func umKey(p *geom.Point) [2]int64 {
 	return [2]int64{rnd(float64(p.X) / 1000), rnd(float64(p.Y) / 1000)}
 }

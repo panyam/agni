@@ -173,6 +173,7 @@ func (p gPkgEl) graphics() []pkgGraphic {
 
 type gPinEl struct {
 	Number   string    `xml:"number,attr"`
+	Electric string    `xml:"electricalType,attr"`
 	Location ptEl      `xml:"Location"`
 	PrimRef  primRefEl `xml:"StandardPrimitiveRef"`
 	UserRef  primRefEl `xml:"UserPrimitiveRef"`
@@ -397,7 +398,10 @@ func (f *ipcGeomFile) packageHeights(nmPerUnit float64) map[string]int64 {
 // output.
 func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl, stacks *padstackIndex) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
-	nets, holes := f.pinNets(), f.pinHoles(nmPerUnit)
+	nets, holes, unplated := f.pinNets(), f.pinHoles(nmPerUnit), f.unplatedHoles(nmPerUnit)
+	// A file that names its pins on copper lands says which pins are lands (agni 1679). The
+	// hand-written fixtures name none, and keep every pin.
+	landsNamed := len(nets) > 0
 	heights := f.packageHeights(nmPerUnit)
 	for _, c := range f.Comps {
 		if skipRefDes(c.RefDes) {
@@ -421,10 +425,24 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 		for _, pin := range pkgPins[c.PackageRef] {
 			p := prims[pin.primID()]
 			at := ptNm(pin.Location, nmPerUnit)
+			hole := umKey(geomath.ComposePlacement(pl.At, pl.RotationDeg, pl.Mirror, at))
+			number := pin.Number
+			if _, land := nets[[2]string{c.RefDes, pin.Number}]; landsNamed && !land {
+				// KiCad exports a paste window or an unplated hole as a package pin that no copper
+				// land names. An unplated hole stays a hole, with no number, as the KiCad reader reads
+				// it. Allegro leaves out the land of a mechanical pin such as a fiducial, so that pin
+				// stays a pad. Any other pin is a paste window, and no pad.
+				switch {
+				case unplated[hole]:
+					number = ""
+				case !strings.EqualFold(pin.Electric, "MECHANICAL"):
+					continue
+				}
+			}
 			pl.Pads = append(pl.Pads, &geom.Pad{
 				Net:    nets[[2]string{c.RefDes, pin.Number}],
-				Drill:  holes[umKey(geomath.ComposePlacement(pl.At, pl.RotationDeg, pl.Mirror, at))],
-				Number: pin.Number,
+				Drill:  holes[hole],
+				Number: number,
 				At:     at,
 				Size:   &geom.Point{X: p.sizeX, Y: p.sizeY},
 				Shape:  p.shape,

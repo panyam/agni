@@ -3,6 +3,8 @@ package ipc2581
 import (
 	"bytes"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -370,5 +372,50 @@ func TestBoardGeometryPlacementHeightIsThePackages(t *testing.T) {
 	flat := placementByRef(g, "F1")
 	if flat == nil || flat.Height != nil {
 		t.Errorf("F1 height = %v, want unset since its package states none", flat.GetHeight())
+	}
+}
+
+// TestBoardGeometryPinWithNoCopperLandIsNoPad reads KiCad's IPC-2581 export of core/render's
+// dimension fixture (agni 1679). U1's PAD3 is a paste window, which no layer feature names on copper,
+// so it is no pad. J1's NPTH2 sits on an unplated hole, so it stays a hole with no number, as the
+// KiCad reader reads it.
+func TestBoardGeometryPinWithNoCopperLandIsNoPad(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "core", "render", "testdata", "dimensions.ipc2581.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := ReadBoardGeometry(bytes.NewReader(b), "dimensions.ipc2581.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u1 := placementByRef(g, "U1")
+	if len(u1.Pads) != 3 || padByNumber(u1, "PAD3") != nil {
+		t.Errorf("U1 has %d pads, PAD3 = %v; want pads 1 to 3 and no paste window", len(u1.Pads), padByNumber(u1, "PAD3"))
+	}
+	j1 := placementByRef(g, "J1")
+	if len(j1.Pads) != 3 || padByNumber(j1, "NPTH2") != nil {
+		t.Fatalf("J1 has %d pads, NPTH2 = %v; want pins 1 and 2 and one unnumbered hole", len(j1.Pads), padByNumber(j1, "NPTH2"))
+	}
+	hole := padByNumber(j1, "")
+	if hole == nil || hole.Drill != 1_200_000 {
+		t.Errorf("J1 hole = %v, want an unnumbered 1.2 mm drill", hole)
+	}
+	for _, n := range []string{"1", "2"} {
+		if p := padByNumber(j1, n); p == nil || p.Drill != 1_000_000 {
+			t.Errorf("J1 pin %s = %v, want a plated pin with its 1 mm drill", n, p)
+		}
+	}
+}
+
+// TestBoardGeometryKeepsEveryPinWhenNoLandNamesOne is the control for the test above. board_geom.xml
+// names no pin on a copper land, so the reader cannot tell a land from a window and keeps all of them.
+func TestBoardGeometryKeepsEveryPinWhenNoLandNamesOne(t *testing.T) {
+	g := readBoardGeom(t, "board_geom.xml")
+	n := 0
+	for _, pl := range g.Placements {
+		n += len(pl.Pads)
+	}
+	if n != 7 {
+		t.Errorf("board_geom.xml has %d pads, want 7, every package pin of R1, R2 and U1", n)
 	}
 }

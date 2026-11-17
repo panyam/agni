@@ -123,7 +123,9 @@ func TestODXReadsAsItsIPC2581Twin(t *testing.T) {
 		}
 		return out
 	}
-	ipcPads, odxPads := padsAt(padItems(ig), mechPins), padsAt(padItems(og), nil)
+	// IPC-2581 reads X3's two unplated holes as holes with no number, as the board does (agni
+	// 1679), and ODX numbers them.
+	ipcPads, odxPads := padsAt(padItems(ig), mechPins), padsAt(padItems(og), map[string]string{"X3.15": "X3.?", "X3.16": "X3.?"})
 	if len(ipcPads) != 505 || len(odxPads) != 505 {
 		t.Fatalf("pads: IPC-2581 %d, ODX %d, want 505 each", len(ipcPads), len(odxPads))
 	}
