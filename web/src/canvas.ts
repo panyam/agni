@@ -44,6 +44,7 @@ import { GRAZING, pickThroughStack, type Barrel } from "./stackpick.js";
 import { faceShows, occludedLabels, type LabelAnchor } from "./stacktext.js";
 import { bodyGeometry, bodyTopZ, pickWithBodies, type BodyFaces, type BodyGeometry } from "./stackbodies.js";
 import { boardLookPlan, padPrimitives, type BoardLookPlan, type StackLook } from "./stacklook.js";
+import { mmOfWorld, worldOfMm, type BoardMeasurer } from "./measure.js";
 
 type Rgba = [number, number, number, number];
 
@@ -145,6 +146,9 @@ export class CanvasComponent extends BaseComponent {
   onPick: ((sel: Selection) => void) | null = null;
   // onPickEmpty fires when a click hits nothing keyed, such as the paper or the frame.
   onPickEmpty: (() => void) | null = null;
+  // onClick sees a click before it picks, and a true return keeps it from picking. The measuring tool
+  // takes clicks this way while it is on (agni issue 133).
+  onClick: ((clientX: number, clientY: number) => boolean) | null = null;
   // onArea fires when the reader Shift-drags a box over the canvas, with what the box holds, and
   // onToggle when they Shift-click an entity, as SvgView's do (agni issue 1333). The canvas forms
   // the area itself, since only its pick index knows what lies where.
@@ -940,7 +944,9 @@ export class CanvasComponent extends BaseComponent {
         }
         return;
       }
-      if (!wasDragging || moved || !this.onPick) return;
+      if (!wasDragging || moved) return;
+      if (this.onClick?.(e.clientX, e.clientY)) return;
+      if (!this.onPick) return;
       const sel = this.stack ? this.pickStackAt(e.clientX, e.clientY) : this.pickAt(e.clientX, e.clientY);
       if (sel) this.onPick(sel);
       else this.onPickEmpty?.();
@@ -1098,6 +1104,36 @@ export class CanvasComponent extends BaseComponent {
     const at = this.camera.pixelToWorld((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
     this.picks ??= new PickIndex(this.sheet);
     return this.picks.pick(at.x, at.y, this.dpr() * this.camera.worldPerDevicePixel(), new Set(this.hidden), this.depth);
+  }
+
+  // boardMeasurer maps client points to the drawn board in millimetres and back, for the measuring
+  // tool (agni issue 133). It is null on a schematic, before a board draws, and in the stack view.
+  boardMeasurer(): BoardMeasurer | null {
+    const sheet = this.sheet;
+    const perMm = sheet?.unitsPerMm ?? 0;
+    if (!sheet || !this.camera || this.stack || perMm <= 0) return null;
+    const camera = this.camera;
+    const canvas = this.rootElement as HTMLCanvasElement;
+    return {
+      at: (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        const w = camera.pixelToWorld((clientX - rect.left) * this.dpr(), (clientY - rect.top) * this.dpr());
+        this.picks ??= new PickIndex(sheet);
+        const hidden = new Set(this.hidden);
+        const sel = this.picks.pick(w.x, w.y, this.dpr() * camera.worldPerDevicePixel(), hidden, this.depth);
+        const centre = sel?.kind === "pin" ? this.picks.padCentre(sel, w.x, w.y, hidden) : null;
+        return {
+          at: mmOfWorld(centre ?? w, sheet.originX, sheet.originY, perMm),
+          pad: centre && sel ? `${sel.ref}.${sel.pin}` : null,
+        };
+      },
+      client: (p) => {
+        const rect = canvas.getBoundingClientRect();
+        const w = worldOfMm(p, sheet.originX, sheet.originY, perMm);
+        const px = camera.worldToPixel(w.x, w.y);
+        return { x: rect.left + px.x / this.dpr(), y: rect.top + px.y / this.dpr() };
+      },
+    };
   }
 
   // membersIn returns what a client rectangle holds on the drawn sheet, or null before one is drawn.

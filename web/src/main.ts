@@ -463,6 +463,29 @@ class AppRoot extends BaseComponent {
       onMode: (mode) => void presenter.setMode(mode),
       onClearHighlights: () => void presenter.clearHighlights(),
     });
+    // Measure sits beside the control bar and shows while the canvas draws a board (agni issue 133).
+    // M turns it on and off there, and Escape stops it.
+    const measureButton = document.createElement("button");
+    measureButton.type = "button";
+    measureButton.className = "mode-btn canvas-measure";
+    measureButton.dataset.action = "measure";
+    measureButton.textContent = "Measure";
+    measureButton.title = "measure on the board: click two points, or two pads (M, Esc stops)";
+    measureButton.hidden = true;
+    measureButton.setAttribute("aria-pressed", "false");
+    measureButton.addEventListener("click", () => surface.measure.toggle());
+    controlsEl.after(measureButton);
+    surface.measure.onSheet = (available) => (measureButton.hidden = !available);
+    surface.measure.onChange = (on) => {
+      measureButton.setAttribute("aria-pressed", String(on));
+      measureButton.classList.toggle("active", on);
+    };
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() !== "m" || e.metaKey || e.ctrlKey || e.altKey || isTextEntry(e.target)) return;
+      if (!surface.measure.available()) return;
+      e.preventDefault();
+      surface.measure.toggle();
+    });
     // Escape clears the highlight. It lives here and not in pagegestures, which routes only the
     // datasheet workbench's keys and never sees this canvas (agni issue 348). An open picker owns
     // Escape, and so does a text field the reader is typing in. An open drawer owns it too, and the
@@ -471,6 +494,8 @@ class AppRoot extends BaseComponent {
       "keydown",
       (e) => {
         if (e.key !== "Escape") return;
+        // While measuring, Escape stops the measuring tool and leaves the highlight (agni issue 133).
+        if (surface.measure.active) return;
         if (comparePick.picker.isOpen()) return;
         if (isTextEntry(e.target)) return;
         if (viewerDock?.drawerOpen()) return;

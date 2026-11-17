@@ -7,6 +7,7 @@ import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { CLICK_SLOP_PX, pickAt, type Selection } from "./selection.js";
 import { rectOf, type ClientRect } from "./area.js";
 import { AreaBand } from "./areaband.js";
+import { mmOfSvg, svgBoardFrame, svgOfMm, type BoardMeasurer } from "./measure.js";
 import { Glide, lerpSvgView } from "./glide.js";
 import { UPRIGHT, orientBox, orientCss, orientPoint, orientedSize, unorientPoint, type Orientation, type Point } from "./orient.js";
 
@@ -59,6 +60,9 @@ export class SvgView {
   // onPickEmpty fires when a click hits nothing keyed, such as the paper, a label or the frame. That
   // click names the sheet itself rather than an entity on it (agni issue 902).
   onPickEmpty: (() => void) | null = null;
+  // onClick sees a click before it picks, and a true return keeps it from picking. The measuring tool
+  // takes clicks this way while it is on (agni issue 133).
+  onClick: ((clientX: number, clientY: number) => boolean) | null = null;
   // onArea fires when the reader Shift-drags a rectangle over the drawing, and passes the rectangle in
   // client coordinates. onToggle fires when they Shift-click an entity, to add it to the area or take
   // it out (agni issue 904). A plain drag still pans and a plain click still picks.
@@ -220,6 +224,35 @@ export class SvgView {
     this.parking = null;
     this.unpark();
     this.dropParkImage();
+  }
+
+  // boardMeasurer maps client points to the drawn board in millimetres and back, for the measuring
+  // tool (agni issue 133). It goes through the view's own pan, zoom and turn, as getCentre does, so
+  // it works while an image stands in for the drawing, and through the data-mm-* map BoardSVG writes
+  // on its root. It is null for a drawing with no such map, such as a schematic or a tool's own SVG.
+  boardMeasurer(): BoardMeasurer | null {
+    const svg = this.doc();
+    const frame = svg ? svgBoardFrame(svg) : null;
+    if (!svg || !frame) return null;
+    const toDoc = (clientX: number, clientY: number): Point => {
+      const r = this.host.getBoundingClientRect();
+      const { w, h } = this.docSize();
+      const o = { x: (clientX - r.left - this.tx) / this.scale, y: (clientY - r.top - this.ty) / this.scale };
+      return unorientPoint(this.orientation, w, h, o);
+    };
+    return {
+      at: (clientX, clientY) => {
+        const pad = padUnder(this.host.ownerDocument, svg, clientX, clientY);
+        const p = pad?.centre ?? toDoc(clientX, clientY);
+        return { at: mmOfSvg(p.x, p.y, frame), pad: pad?.name ?? null };
+      },
+      client: (mm) => {
+        const r = this.host.getBoundingClientRect();
+        const { w, h } = this.docSize();
+        const o = orientPoint(this.orientation, w, h, svgOfMm(mm, frame));
+        return { x: r.left + this.tx + o.x * this.scale, y: r.top + this.ty + o.y * this.scale };
+      },
+    };
   }
 
   // doc is the drawing, the live one while an image stands in for it.
@@ -464,7 +497,9 @@ export class SvgView {
         }
         return;
       }
-      if (!wasDragging || moved || !this.onPick) return;
+      if (!wasDragging || moved) return;
+      if (this.onClick?.(e.clientX, e.clientY)) return;
+      if (!this.onPick) return;
       const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
       if (sel) this.onPick(sel);
       else this.onPickEmpty?.();
@@ -603,4 +638,21 @@ export function drawnOnSheet(host: HTMLElement): { refs: string[]; nets: string[
     if (n) nets.add(n);
   }
   return { refs: [...refs], nets: [...nets] };
+}
+
+// padUnder finds the pad drawn under a client point on a board drawing, and its centre in the
+// drawing's own units, for the measuring tool's snap (agni issue 133). BoardSVG keys a pad as
+// data-kind="pin" and draws it in the root's own space, turned about its centre, so the middle of
+// its bounding box is the pad's centre. A drawing parked as an image has no elements under the
+// point, so it snaps nothing.
+function padUnder(doc: Document, svg: SVGSVGElement, clientX: number, clientY: number): { name: string; centre: Point } | null {
+  for (const el of doc.elementsFromPoint(clientX, clientY)) {
+    if (!svg.contains(el) || !(el instanceof SVGGraphicsElement)) continue;
+    const ref = el.getAttribute("data-ref");
+    const pin = el.getAttribute("data-pin");
+    if (el.getAttribute("data-kind") !== "pin" || !ref || !pin) continue;
+    const b = el.getBBox();
+    return { name: `${ref}.${pin}`, centre: { x: b.x + b.width / 2, y: b.y + b.height / 2 } };
+  }
+  return null;
 }

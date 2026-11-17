@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -86,12 +87,15 @@ type drawnDims struct {
 	pads   map[string][][2]float64
 }
 
-// measurePacked reads a packed board back into millimetres. Each vertex is relative to the sheet's
-// origin, in units of unitNm nanometres. A pad primitive's centre is the middle of its bounds, which
+// measurePacked reads a packed board back into millimetres, as the viewer's measuring tool does. Each
+// vertex is relative to the sheet's origin, and the sheet's units_per_mm makes it millimetres. A pad primitive's centre is the middle of its bounds, which
 // holds for every land the packer draws, since each is a disk or a quad centred on the pad.
-func measurePacked(t *testing.T, sheet *geom.PackedSheet, unitNm int64) drawnDims {
+func measurePacked(t *testing.T, sheet *geom.PackedSheet) drawnDims {
 	t.Helper()
-	perMm := 1e6 / float64(unitNm)
+	perMm := sheet.GetUnitsPerMm()
+	if perMm <= 0 {
+		t.Fatalf("the packed board states units_per_mm %v", perMm)
+	}
 	ox, oy := float64(sheet.GetOriginX()), float64(sheet.GetOriginY())
 	verts := decodeVerts(sheet.GetVertices())
 	recs := decodeRecords(sheet.GetPrimitives())
@@ -220,7 +224,7 @@ func holdToKiCad(t *testing.T, b *geom.BoardGeometry, oraclePath string, want in
 	if len(oracle.pads) < want {
 		t.Fatalf("%s holds %d pads, want at least %d; regenerate it with hack/kicad_dimension_oracle.sh", oraclePath, len(oracle.pads), want)
 	}
-	errs, compared := dimensionErrors(oracle, measurePacked(t, PackBoard(b), b.GetUnitNm()), unlistedHoles(b))
+	errs, compared := dimensionErrors(oracle, measurePacked(t, PackBoard(b)), unlistedHoles(b))
 	seen := map[string]bool{}
 	for _, e := range errs {
 		i := slices.IndexFunc(known, func(k string) bool { return strings.HasPrefix(e, k) })
@@ -305,11 +309,11 @@ func TestDimensionOracleCatchesATurnAMirrorAndAScale(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			b := dimensionsBoard(t)
-			if errs, _ := dimensionErrors(oracle, measurePacked(t, PackBoard(b), b.GetUnitNm()), unlistedHoles(b)); len(errs) != 0 {
+			if errs, _ := dimensionErrors(oracle, measurePacked(t, PackBoard(b)), unlistedHoles(b)); len(errs) != 0 {
 				t.Fatalf("the unbroken fixture disagrees: %v", errs)
 			}
 			c.breakIt(b)
-			errs, _ := dimensionErrors(oracle, measurePacked(t, PackBoard(b), b.GetUnitNm()), unlistedHoles(b))
+			errs, _ := dimensionErrors(oracle, measurePacked(t, PackBoard(b)), unlistedHoles(b))
 			for _, e := range errs {
 				if strings.HasPrefix(e, c.want) {
 					return
@@ -317,5 +321,45 @@ func TestDimensionOracleCatchesATurnAMirrorAndAScale(t *testing.T) {
 			}
 			t.Fatalf("broken that way, the oracle names no %q pad: %v", c.want, errs)
 		})
+	}
+}
+
+// TestBoardSVGStatesItsMillimetres maps BoardSVG's outline back to millimetres through the
+// data-mm-* attributes on its root, as the viewer's measuring tool does in SVG, and holds it to
+// KiCad's extent (agni issue 133). The drawing writes each coordinate to a tenth of a pixel, which
+// is 6 micrometres on the fixture.
+func TestBoardSVGStatesItsMillimetres(t *testing.T) {
+	s := BoardSVG(dimensionsBoard(t))
+	root := s[:strings.Index(s, ">")]
+	attr := func(name string) float64 {
+		m := regexp.MustCompile(name + `="([^"]+)"`).FindStringSubmatch(root)
+		if m == nil {
+			t.Fatalf("the root <svg> has no %s: %s", name, root)
+		}
+		v, err := strconv.ParseFloat(m[1], 64)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	perPx, x0, y0 := attr("data-mm-per-px"), attr("data-mm-x0"), attr("data-mm-y0")
+	edge := s[strings.Index(s, `<g class="edge"`):]
+	edge = edge[:strings.Index(edge, "</g>")]
+	got := [4]float64{math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)}
+	pts := regexp.MustCompile(`(-?[\d.]+),(-?[\d.]+)`).FindAllStringSubmatch(edge, -1)
+	if len(pts) < 4 {
+		t.Fatalf("the edge group holds %d points: %s", len(pts), edge)
+	}
+	for _, p := range pts {
+		px, _ := strconv.ParseFloat(p[1], 64)
+		py, _ := strconv.ParseFloat(p[2], 64)
+		x, y := x0+px*perPx, y0-py*perPx
+		got = [4]float64{min(got[0], x), min(got[1], y), max(got[2], x), max(got[3], y)}
+	}
+	want := readKiCadDims(t, filepath.Join("testdata", "dimensions.kicaddim.tsv")).extent
+	for i := range want {
+		if d := math.Abs(got[i] - want[i]); d > 0.01 {
+			t.Errorf("outline bound %d reads %s off the SVG, KiCad %s", i, mm(got[i]), mm(want[i]))
+		}
 	}
 }

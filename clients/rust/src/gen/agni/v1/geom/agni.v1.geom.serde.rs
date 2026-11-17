@@ -5428,6 +5428,9 @@ impl serde::Serialize for PackedSheet {
         if self.label_columns.is_some() {
             len += 1;
         }
+        if self.units_per_mm != 0. {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.geom.PackedSheet", len)?;
         if !self.sheet_id.is_empty() {
             struct_ser.serialize_field("sheetId", &self.sheet_id)?;
@@ -5476,6 +5479,9 @@ impl serde::Serialize for PackedSheet {
         if let Some(v) = self.label_columns.as_ref() {
             struct_ser.serialize_field("labelColumns", v)?;
         }
+        if self.units_per_mm != 0. {
+            struct_ser.serialize_field("unitsPerMm", &self.units_per_mm)?;
+        }
         struct_ser.end()
     }
 }
@@ -5509,6 +5515,8 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
             "keyColumns",
             "label_columns",
             "labelColumns",
+            "units_per_mm",
+            "unitsPerMm",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -5526,6 +5534,7 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
             GroupAlphas,
             KeyColumns,
             LabelColumns,
+            UnitsPerMm,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -5560,6 +5569,7 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
                             "groupAlphas" | "group_alphas" => Ok(GeneratedField::GroupAlphas),
                             "keyColumns" | "key_columns" => Ok(GeneratedField::KeyColumns),
                             "labelColumns" | "label_columns" => Ok(GeneratedField::LabelColumns),
+                            "unitsPerMm" | "units_per_mm" => Ok(GeneratedField::UnitsPerMm),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -5592,6 +5602,7 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
                 let mut group_alphas__ = None;
                 let mut key_columns__ = None;
                 let mut label_columns__ = None;
+                let mut units_per_mm__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::SheetId => {
@@ -5685,6 +5696,14 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
                             }
                             label_columns__ = map_.next_value()?;
                         }
+                        GeneratedField::UnitsPerMm => {
+                            if units_per_mm__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("unitsPerMm"));
+                            }
+                            units_per_mm__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
                     }
                 }
                 Ok(PackedSheet {
@@ -5701,6 +5720,7 @@ impl<'de> serde::Deserialize<'de> for PackedSheet {
                     group_alphas: group_alphas__.unwrap_or_default(),
                     key_columns: key_columns__,
                     label_columns: label_columns__,
+                    units_per_mm: units_per_mm__.unwrap_or_default(),
                 })
             }
         }

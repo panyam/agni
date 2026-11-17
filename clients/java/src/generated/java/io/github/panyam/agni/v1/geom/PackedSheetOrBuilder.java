@@ -309,4 +309,17 @@ public interface PackedSheetOrBuilder extends
    * <code>.agni.v1.geom.PackedLabels label_columns = 15 [json_name = "labelColumns"];</code>
    */
   io.github.panyam.agni.v1.geom.PackedLabelsOrBuilder getLabelColumnsOrBuilder();
+
+  /**
+   * <pre>
+   * units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+   * a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+   * in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+   * (agni issue 133).
+   * </pre>
+   *
+   * <code>double units_per_mm = 16 [json_name = "unitsPerMm"];</code>
+   * @return The unitsPerMm.
+   */
+  double getUnitsPerMm();
 }

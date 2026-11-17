@@ -239,6 +239,11 @@ message PackedSheet {
   // label_columns holds a PackedLabel per text the overlay draws. render.PackedLabels and
   // web/src/packed.ts decode it.
   PackedLabels label_columns = 15;
+  // units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+  // a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+  // in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+  // (agni issue 133).
+  double units_per_mm = 16;
 }
 
 // PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a

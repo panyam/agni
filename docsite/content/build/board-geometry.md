@@ -44,6 +44,11 @@ you assume a unit. Widths, sizes, drills, heights and thicknesses use the same u
 The frame is Y-up, with angles in degrees counterclockwise. A GUI that draws Y-down flips Y once, at
 the end.
 
+A packed board, from `GetSheet` with the board's sheet, states the same scale as `units_per_mm`,
+and its vertices sit relative to `origin_x` and `origin_y`. BoardSVG states it on its root
+element as `data-mm-per-px`, `data-mm-x0` and `data-mm-y0`. [What a front end decides for
+itself](../front-end-rules/#measuring-on-a-board) gives the maps.
+
 ## Layers and sides
 
 `layers` is the board's layer table, as the file declares it. Each `BoardLayer` has a `number`, a

@@ -835,7 +835,12 @@ type PackedSheet struct {
 	KeyColumns *PackedKeys `protobuf:"bytes,14,opt,name=key_columns,json=keyColumns,proto3" json:"key_columns,omitempty"`
 	// label_columns holds a PackedLabel per text the overlay draws. render.PackedLabels and
 	// web/src/packed.ts decode it.
-	LabelColumns  *PackedLabels `protobuf:"bytes,15,opt,name=label_columns,json=labelColumns,proto3" json:"label_columns,omitempty"`
+	LabelColumns *PackedLabels `protobuf:"bytes,15,opt,name=label_columns,json=labelColumns,proto3" json:"label_columns,omitempty"`
+	// units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+	// a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+	// in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+	// (agni issue 133).
+	UnitsPerMm    float64 `protobuf:"fixed64,16,opt,name=units_per_mm,json=unitsPerMm,proto3" json:"units_per_mm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -959,6 +964,13 @@ func (x *PackedSheet) GetLabelColumns() *PackedLabels {
 		return x.LabelColumns
 	}
 	return nil
+}
+
+func (x *PackedSheet) GetUnitsPerMm() float64 {
+	if x != nil {
+		return x.UnitsPerMm
+	}
+	return 0
 }
 
 // PackedKeys is a sheet's PrimitiveKeys as columns (agni issue 1532). A board's keys repeat a
@@ -1943,7 +1955,7 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\x04mime\x18\x05 \x01(\tR\x04mime\x12\x12\n" +
 	"\x04data\x18\x06 \x01(\fR\x04data\x12!\n" +
 	"\frotation_deg\x18\a \x01(\x05R\vrotationDeg\x12\x16\n" +
-	"\x06mirror\x18\b \x01(\bR\x06mirror\"\x9c\x04\n" +
+	"\x06mirror\x18\b \x01(\bR\x06mirror\"\xbe\x04\n" +
 	"\vPackedSheet\x12\x19\n" +
 	"\bsheet_id\x18\x01 \x01(\tR\asheetId\x12%\n" +
 	"\x0elayout_version\x18\x02 \x01(\x05R\rlayoutVersion\x12\x19\n" +
@@ -1962,7 +1974,9 @@ const file_agni_v1_geom_geom_packed_proto_rawDesc = "" +
 	"\fgroup_alphas\x18\r \x03(\x02R\vgroupAlphas\x129\n" +
 	"\vkey_columns\x18\x0e \x01(\v2\x18.agni.v1.geom.PackedKeysR\n" +
 	"keyColumns\x12?\n" +
-	"\rlabel_columns\x18\x0f \x01(\v2\x1a.agni.v1.geom.PackedLabelsR\flabelColumnsJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x04keysR\x06labels\"@\n" +
+	"\rlabel_columns\x18\x0f \x01(\v2\x1a.agni.v1.geom.PackedLabelsR\flabelColumns\x12 \n" +
+	"\funits_per_mm\x18\x10 \x01(\x01R\n" +
+	"unitsPerMmJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x04keysR\x06labels\"@\n" +
 	"\n" +
 	"PackedKeys\x12\x18\n" +
 	"\astrings\x18\x01 \x03(\tR\astrings\x12\x18\n" +

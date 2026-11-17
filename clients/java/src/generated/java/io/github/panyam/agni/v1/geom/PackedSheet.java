@@ -534,6 +534,24 @@ private static final long serialVersionUID = 0L;
     return labelColumns_ == null ? io.github.panyam.agni.v1.geom.PackedLabels.getDefaultInstance() : labelColumns_;
   }
 
+  public static final int UNITS_PER_MM_FIELD_NUMBER = 16;
+  private double unitsPerMm_ = 0D;
+  /**
+   * <pre>
+   * units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+   * a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+   * in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+   * (agni issue 133).
+   * </pre>
+   *
+   * <code>double units_per_mm = 16 [json_name = "unitsPerMm"];</code>
+   * @return The unitsPerMm.
+   */
+  @java.lang.Override
+  public double getUnitsPerMm() {
+    return unitsPerMm_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -591,6 +609,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(15, getLabelColumns());
+    }
+    if (java.lang.Double.doubleToRawLongBits(unitsPerMm_) != 0) {
+      output.writeDouble(16, unitsPerMm_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -661,6 +682,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(15, getLabelColumns());
     }
+    if (java.lang.Double.doubleToRawLongBits(unitsPerMm_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(16, unitsPerMm_);
+    }
     return size;
   }
   @java.lang.Override
@@ -717,6 +742,9 @@ private static final long serialVersionUID = 0L;
       if (!getLabelColumns()
           .equals(other.getLabelColumns())) return false;
     }
+    if (java.lang.Double.doubleToLongBits(getUnitsPerMm())
+        != java.lang.Double.doubleToLongBits(
+            other.getUnitsPerMm())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -766,6 +794,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + LABEL_COLUMNS_FIELD_NUMBER;
       hash = (53 * hash) + getLabelColumns().hashCode();
     }
+    hash = (37 * hash) + UNITS_PER_MM_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getUnitsPerMm()));
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -939,6 +970,7 @@ private static final long serialVersionUID = 0L;
         labelColumnsBuilder_.dispose();
         labelColumnsBuilder_ = null;
       }
+      unitsPerMm_ = 0D;
       return this;
     }
 
@@ -1029,6 +1061,9 @@ private static final long serialVersionUID = 0L;
             ? labelColumns_
             : labelColumnsBuilder_.build();
         to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.unitsPerMm_ = unitsPerMm_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1127,6 +1162,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasLabelColumns()) {
         mergeLabelColumns(other.getLabelColumns());
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getUnitsPerMm()) != 0) {
+        setUnitsPerMm(other.getUnitsPerMm());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1241,6 +1279,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00001000;
               break;
             } // case 122
+            case 129: {
+              unitsPerMm_ = input.readDouble();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 129
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2692,6 +2735,59 @@ private static final long serialVersionUID = 0L;
         labelColumns_ = null;
       }
       return labelColumnsBuilder_;
+    }
+
+    private double unitsPerMm_ ;
+    /**
+     * <pre>
+     * units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+     * a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+     * in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+     * (agni issue 133).
+     * </pre>
+     *
+     * <code>double units_per_mm = 16 [json_name = "unitsPerMm"];</code>
+     * @return The unitsPerMm.
+     */
+    @java.lang.Override
+    public double getUnitsPerMm() {
+      return unitsPerMm_;
+    }
+    /**
+     * <pre>
+     * units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+     * a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+     * in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+     * (agni issue 133).
+     * </pre>
+     *
+     * <code>double units_per_mm = 16 [json_name = "unitsPerMm"];</code>
+     * @param value The unitsPerMm to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUnitsPerMm(double value) {
+
+      unitsPerMm_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * units_per_mm is how many units of the board's frame make a millimetre, set on a board and 0 on
+     * a schematic. A vertex plus origin_x and origin_y, divided by it, is a position in millimetres
+     * in the board's own frame, Y up, as the file places it. The viewer's measuring tool reads it
+     * (agni issue 133).
+     * </pre>
+     *
+     * <code>double units_per_mm = 16 [json_name = "unitsPerMm"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUnitsPerMm() {
+      bitField0_ = (bitField0_ & ~0x00002000);
+      unitsPerMm_ = 0D;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.geom.PackedSheet)

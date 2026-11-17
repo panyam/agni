@@ -62,6 +62,9 @@ export interface Design {
   // testPoint is a one-pad part to click on the board, on another sheet than find.
   testPoint: string;
   testPointSheet: string;
+  // findPitch is the distance between pins 1 and 2 of find, as kicad-cli places them, which the
+  // measure-a-board journey reads off the board (agni issue 133).
+  findPitch: string;
   compare?: Compare;
   walk?: Walk;
 }
@@ -73,6 +76,7 @@ export const designs: Record<string, Design> = {
     path: "designs/jetson-cut",
     label: "a cut of Jetson's baseboard",
     find: "R119",
+    findPitch: "0.960",
     findSheet: "USB Debug, PD",
     testPoint: "TP76",
     testPointSheet: "Power",
@@ -92,6 +96,7 @@ export const designs: Record<string, Design> = {
     path: "designs/gateway",
     label: "the tutorial's gateway board",
     find: "R1",
+    findPitch: "1.000",
     findSheet: "gateway",
     testPoint: "TP1",
     testPointSheet: "gateway",
@@ -114,6 +119,7 @@ export const designs: Record<string, Design> = {
     path: "designs/jetson",
     label: "Antmicro's Jetson AGX Thor baseboard",
     find: "R361",
+    findPitch: "0.960",
     findSheet: "SoM_IO",
     testPoint: "TP76",
     testPointSheet: "Power",
@@ -266,53 +272,59 @@ async function zoomedIn(page: Page, factor: number): Promise<void> {
 
 const footprintOf = (ref: string): string => `${BOARD} .picks-front [data-ref="${ref}"], ${BOARD} .picks-back [data-ref="${ref}"]`;
 
+// findOnBoard opens the schematic and the board beside it, finds the design's part by name and
+// clicks it, so the board centres on its footprint. find-a-part and measure-a-board start this way.
+const findOnBoard: Step[] = [
+  {
+    caption: "Open the schematic",
+    run: async (r, d) => {
+      await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
+      await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
+    },
+  },
+  {
+    caption: "Open the board beside it from the Sheets drawer",
+    run: async (r) => {
+      await r.press("Control+g");
+      const row = r.page.locator(".sheet-tile-row", { has: r.page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
+      const b = await row.locator(".sheet-tile-beside").boundingBox({ timeout: 30_000 });
+      if (!b) throw new Error("the Sheets panel lists no Board");
+      await r.click(b.x + b.width / 2, b.y + b.height / 2);
+      await r.page.waitForSelector(`${PANE} .sheetview-canvas svg`, { timeout: 30_000 });
+    },
+  },
+  {
+    caption: "Find a resistor by name",
+    run: async (r, d) => {
+      await r.press("Control+f");
+      await r.page.waitForSelector("input.query-term", { state: "visible", timeout: 10_000 });
+      await r.type(d.find);
+      await r.press("Enter");
+      const row = `.query-row .query-locate`;
+      await r.page.locator(row, { hasText: new RegExp(`^${d.find}$`) }).first().waitFor({ timeout: 30_000 });
+    },
+  },
+  {
+    caption: "Click it: the schematic opens its sheet and zooms in, and the board centres on it",
+    run: async (r, d) => {
+      const name = r.page.locator(".query-row .query-locate", { hasText: new RegExp(`^${d.find}$`) }).first();
+      const b = await name.boundingBox();
+      if (!b) throw new Error(`${d.find} is not in the answer`);
+      await r.click(b.x + b.width / 2, b.y + b.height / 2);
+      await onSheet(r.page, d.findSheet);
+      await zoomedIn(r.page, 2);
+      await centred(r.page, `${SHEET} [data-kind="component"][data-ref="${d.find}"]`, SHEET, `${d.find} on the schematic`);
+      await centred(r.page, footprintOf(d.find), BOARD, `${d.find}'s footprint on the board`);
+    },
+  },
+];
+
 export const journeys: Journey[] = [
   {
     name: "find-a-part",
     title: "Find a part on the board",
     steps: [
-      {
-        caption: "Open the schematic",
-        run: async (r, d) => {
-          await r.page.goto(`${r.base}/designs/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle" });
-          await r.page.waitForSelector(`${SHEET} svg`, { timeout: 60_000 });
-        },
-      },
-      {
-        caption: "Open the board beside it from the Sheets drawer",
-        run: async (r) => {
-          await r.press("Control+g");
-          const row = r.page.locator(".sheet-tile-row", { has: r.page.locator(".sheet-tile-name", { hasText: /^Board$/ }) });
-          const b = await row.locator(".sheet-tile-beside").boundingBox({ timeout: 30_000 });
-          if (!b) throw new Error("the Sheets panel lists no Board");
-          await r.click(b.x + b.width / 2, b.y + b.height / 2);
-          await r.page.waitForSelector(`${PANE} .sheetview-canvas svg`, { timeout: 30_000 });
-        },
-      },
-      {
-        caption: "Find a resistor by name",
-        run: async (r, d) => {
-          await r.press("Control+f");
-          await r.page.waitForSelector("input.query-term", { state: "visible", timeout: 10_000 });
-          await r.type(d.find);
-          await r.press("Enter");
-          const row = `.query-row .query-locate`;
-          await r.page.locator(row, { hasText: new RegExp(`^${d.find}$`) }).first().waitFor({ timeout: 30_000 });
-        },
-      },
-      {
-        caption: "Click it: the schematic opens its sheet and zooms in, and the board centres on it",
-        run: async (r, d) => {
-          const name = r.page.locator(".query-row .query-locate", { hasText: new RegExp(`^${d.find}$`) }).first();
-          const b = await name.boundingBox();
-          if (!b) throw new Error(`${d.find} is not in the answer`);
-          await r.click(b.x + b.width / 2, b.y + b.height / 2);
-          await onSheet(r.page, d.findSheet);
-          await zoomedIn(r.page, 2);
-          await centred(r.page, `${SHEET} [data-kind="component"][data-ref="${d.find}"]`, SHEET, `${d.find} on the schematic`);
-          await centred(r.page, footprintOf(d.find), BOARD, `${d.find}'s footprint on the board`);
-        },
-      },
+      ...findOnBoard,
       {
         caption: "Click a test point on the board: the schematic follows to its sheet",
         run: async (r, d) => {
@@ -487,6 +499,44 @@ export const journeys: Journey[] = [
           if (outcome !== "routed") throw new Error(`the rail goal answered ${outcome}, not routed`);
           const route = (await r.page.locator(".walk-route-line").first().textContent()) ?? "";
           if (!route.includes(w.start) || !route.includes(w.rail!)) throw new Error(`the route is ${route}, not through ${w.start} to ${w.rail}`);
+        },
+      },
+    ],
+  },
+  {
+    name: "measure-a-board",
+    title: "Measure on the board",
+    steps: [
+      ...findOnBoard,
+      {
+        caption: "Turn on Measure in the board view. The corner shows where the cursor is, in millimetres on the board",
+        run: async (r) => {
+          const host = await r.page.locator(BOARD).first().boundingBox();
+          if (!host) throw new Error("the board view is not on screen");
+          await r.page.mouse.move(host.x + host.width / 2, host.y + host.height / 2, { steps: r.pace.moveSteps });
+          await clickOn(r, r.page.locator(`${PANE} [data-action=measure]`));
+          await r.page.mouse.move(host.x + host.width / 3, host.y + host.height / 3, { steps: r.pace.moveSteps });
+          const at = (await r.page.locator(`${PANE} [data-measure-cursor]`).textContent()) ?? "";
+          if (!/x -?[\d.]+\s+y -?[\d.]+ mm/.test(at)) throw new Error(`the readout says ${JSON.stringify(at)}`);
+        },
+      },
+      {
+        caption: (d) => `Click ${d.find}'s two pads. Each click snaps to its pad's centre, so the pitch reads ${d.findPitch} mm exactly`,
+        run: async (r, d) => {
+          await r.page.waitForSelector(`${BOARD} svg:not(.svg-parked)`, { state: "visible", timeout: 10_000 });
+          for (const pin of ["1", "2"]) await clickOn(r, r.page.locator(`${BOARD} [data-ref="${d.find}"][data-pin="${pin}"]`).first());
+          const span = (await r.page.locator(`${PANE} [data-measure-span]`).textContent()) ?? "";
+          if (!span.startsWith(`${d.findPitch} mm`)) throw new Error(`${d.find}'s pitch reads ${JSON.stringify(span)}, not ${d.findPitch} mm`);
+        },
+      },
+      {
+        caption: "The unit button switches to mils, and Escape puts the tool away",
+        run: async (r) => {
+          await clickOn(r, r.page.locator(`${PANE} [data-action=measure-unit]`));
+          const span = (await r.page.locator(`${PANE} [data-measure-span]`).textContent()) ?? "";
+          if (!span.includes(" mil")) throw new Error(`the span reads ${JSON.stringify(span)} after the switch`);
+          await r.press("Escape");
+          if ((await r.page.locator(`${PANE} [data-action=measure]`).getAttribute("aria-pressed")) !== "false") throw new Error("Escape left Measure on");
         },
       },
     ],

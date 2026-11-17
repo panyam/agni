@@ -139,6 +139,10 @@ export interface DecodedSheet {
   // sheet-local int32 space, so origin is only needed to map back to source units.
   originX: number;
   originY: number;
+  // unitsPerMm is how many source units make a millimetre on a board, and 0 or absent on a
+  // schematic. A vertex plus the origin, divided by it, is a board position in millimetres (agni
+  // issue 133).
+  unitsPerMm?: number;
   // int32 LE pairs [x0,y0,x1,y1,...], a view over the decoded vertex bytes.
   vertices: Int32Array;
   primitives: Primitive[];
@@ -262,6 +266,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
     layoutVersion: msg.layoutVersion,
     originX: Number(msg.originX),
     originY: Number(msg.originY),
+    unitsPerMm: msg.unitsPerMm,
     vertices: asInt32Array(msg.vertices),
     primitives: parsePrimitives(msg.primitives),
     keys: decodeKeys(msg.keyColumns),

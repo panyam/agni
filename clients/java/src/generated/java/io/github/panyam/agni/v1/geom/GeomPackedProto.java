@@ -161,7 +161,7 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
       "\003 \001(\005R\001w\022\014\n\001h\030\004 \001(\005R\001h\022\022\n\004mime\030\005 \001(\tR\004mi" +
       "me\022\022\n\004data\030\006 \001(\014R\004data\022!\n\014rotation_deg\030\007" +
       " \001(\005R\013rotationDeg\022\026\n\006mirror\030\010 \001(\010R\006mirro" +
-      "r\"\234\004\n\013PackedSheet\022\031\n\010sheet_id\030\001 \001(\tR\007she" +
+      "r\"\276\004\n\013PackedSheet\022\031\n\010sheet_id\030\001 \001(\tR\007she" +
       "etId\022%\n\016layout_version\030\002 \001(\005R\rlayoutVers" +
       "ion\022\031\n\010origin_x\030\003 \001(\003R\007originX\022\031\n\010origin" +
       "_y\030\004 \001(\003R\007originY\022\032\n\010vertices\030\005 \001(\014R\010ver" +
@@ -173,64 +173,65 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
       "!\n\014group_alphas\030\r \003(\002R\013groupAlphas\0229\n\013ke" +
       "y_columns\030\016 \001(\0132\030.agni.v1.geom.PackedKey" +
       "sR\nkeyColumns\022?\n\rlabel_columns\030\017 \001(\0132\032.a" +
-      "gni.v1.geom.PackedLabelsR\014labelColumnsJ\004" +
-      "\010\007\020\010J\004\010\010\020\tR\004keysR\006labels\"@\n\nPackedKeys\022\030" +
-      "\n\007strings\030\001 \003(\tR\007strings\022\030\n\007records\030\002 \001(" +
-      "\014R\007records\"u\n\014PackedLabels\022\030\n\007strings\030\001 " +
-      "\003(\tR\007strings\022\030\n\007records\030\002 \001(\014R\007records\0221" +
-      "\n\004runs\030\003 \003(\0132\035.agni.v1.geom.PackedLabelR" +
-      "unsR\004runs\"R\n\017PackedLabelRuns\022\024\n\005label\030\001 " +
-      "\001(\rR\005label\022)\n\004runs\030\002 \003(\0132\025.agni.v1.geom." +
-      "TextRunR\004runs\"\272\001\n\rBoardLayerRow\022\022\n\004name\030" +
-      "\001 \001(\tR\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022\022\n\004side\030" +
-      "\003 \001(\tR\004side\022\024\n\005color\030\004 \001(\tR\005color\022!\n\014svg" +
-      "_selector\030\005 \001(\tR\013svgSelector\022\026\n\006groups\030\006" +
-      " \003(\rR\006groups\022\034\n\tthickness\030\007 \001(\tR\tthickne" +
-      "ss\"\311\003\n\016BoardStackView\022/\n\004rows\030\001 \003(\0132\033.ag" +
-      "ni.v1.geom.BoardStackRowR\004rows\022\030\n\007summar" +
-      "y\030\002 \001(\tR\007summary\022\034\n\tdisagrees\030\003 \001(\010R\tdis" +
-      "agrees\0224\n\006drills\030\004 \003(\0132\034.agni.v1.geom.Bo" +
-      "ardDrillSpanR\006drills\022!\n\014outline_tris\030\005 \003" +
-      "(\001R\013outlineTris\022 \n\014units_per_mm\030\006 \001(\001R\nu" +
-      "nitsPerMm\0223\n\006bodies\030\007 \003(\0132\033.agni.v1.geom" +
-      ".BoardPartBodyR\006bodies\022\035\n\nbody_color\030\010 \001" +
-      "(\tR\tbodyColor\022,\n\022default_body_color\030\t \001(" +
-      "\tR\020defaultBodyColor\0226\n\nboard_look\030\n \001(\0132" +
-      "\027.agni.v1.geom.BoardLookR\tboardLook\022\031\n\010t" +
-      "otal_mm\030\013 \001(\001R\007totalMm\"|\n\tBoardLook\022\022\n\004m" +
-      "ask\030\001 \001(\tR\004mask\022(\n\020mask_over_copper\030\002 \001(" +
-      "\tR\016maskOverCopper\022\035\n\npad_finish\030\003 \001(\tR\tp" +
-      "adFinish\022\022\n\004silk\030\004 \001(\tR\004silk\"\216\002\n\rBoardPa" +
-      "rtBody\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\022\n\004side\030" +
-      "\002 \001(\tR\004side\022\030\n\007outline\030\003 \003(\001R\007outline\022 \n" +
-      "\theight_mm\030\004 \001(\001H\000R\010heightMm\210\001\001\022\035\n\npart_" +
-      "class\030\005 \001(\tR\tpartClass\022\024\n\005color\030\006 \001(\tR\005c" +
-      "olor\022&\n\017drawn_height_mm\030\007 \001(\001R\rdrawnHeig" +
-      "htMm\022)\n\020height_defaulted\030\010 \001(\010R\017heightDe" +
-      "faultedB\014\n\n_height_mm\"\337\001\n\016BoardDrillSpan" +
-      "\022\035\n\nlayer_from\030\001 \001(\tR\tlayerFrom\022\031\n\010layer" +
-      "_to\030\002 \001(\tR\007layerTo\022\016\n\002xy\030\003 \003(\001R\002xy\022\032\n\010di" +
-      "ameter\030\004 \003(\001R\010diameter\022\020\n\003net\030\005 \003(\tR\003net" +
-      "\022\032\n\006top_mm\030\006 \001(\001H\000R\005topMm\210\001\001\022 \n\tbottom_m" +
-      "m\030\007 \001(\001H\001R\010bottomMm\210\001\001B\t\n\007_top_mmB\014\n\n_bo" +
-      "ttom_mm\"\273\002\n\rBoardStackRow\022\022\n\004name\030\001 \001(\tR" +
-      "\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022\024\n\005layer\030\003 \001(\t" +
-      "R\005layer\022\034\n\tthickness\030\004 \001(\tR\tthickness\022&\n" +
-      "\014thickness_mm\030\005 \001(\001H\000R\013thicknessMm\210\001\001\022\032\n" +
-      "\010material\030\006 \001(\tR\010material\022\024\n\005color\030\007 \001(\t" +
-      "R\005color\022\025\n\006top_mm\030\010 \001(\001R\005topMm\022\033\n\tbottom" +
-      "_mm\030\t \001(\001R\010bottomMm\022/\n\023thickness_default" +
-      "ed\030\n \001(\010R\022thicknessDefaultedB\017\n\r_thickne" +
-      "ss_mm*\260\001\n\016HighlightShape\022\037\n\033HIGHLIGHT_SH" +
-      "APE_UNSPECIFIED\020\000\022\033\n\027HIGHLIGHT_SHAPE_OUT" +
-      "LINE\020\001\022!\n\035HIGHLIGHT_SHAPE_BOUNDING_RECT\020" +
-      "\002\022#\n\037HIGHLIGHT_SHAPE_BOUNDING_CIRCLE\020\003\022\030" +
-      "\n\024HIGHLIGHT_SHAPE_PATH\020\004B\256\001\n\035io.github.p" +
-      "anyam.agni.v1.geomB\017GeomPackedProtoP\001Z*g" +
-      "ithub.com/panyam/agni/gen/go/agni/v1/geo" +
-      "m\242\002\003AVG\252\002\014Agni.V1.Geom\312\002\014Agni\\V1\\Geom\342\002\030" +
-      "Agni\\V1\\Geom\\GPBMetadata\352\002\016Agni::V1::Geo" +
-      "mb\006proto3"
+      "gni.v1.geom.PackedLabelsR\014labelColumns\022 " +
+      "\n\014units_per_mm\030\020 \001(\001R\nunitsPerMmJ\004\010\007\020\010J\004" +
+      "\010\010\020\tR\004keysR\006labels\"@\n\nPackedKeys\022\030\n\007stri" +
+      "ngs\030\001 \003(\tR\007strings\022\030\n\007records\030\002 \001(\014R\007rec" +
+      "ords\"u\n\014PackedLabels\022\030\n\007strings\030\001 \003(\tR\007s" +
+      "trings\022\030\n\007records\030\002 \001(\014R\007records\0221\n\004runs" +
+      "\030\003 \003(\0132\035.agni.v1.geom.PackedLabelRunsR\004r" +
+      "uns\"R\n\017PackedLabelRuns\022\024\n\005label\030\001 \001(\rR\005l" +
+      "abel\022)\n\004runs\030\002 \003(\0132\025.agni.v1.geom.TextRu" +
+      "nR\004runs\"\272\001\n\rBoardLayerRow\022\022\n\004name\030\001 \001(\tR" +
+      "\004name\022\022\n\004kind\030\002 \001(\tR\004kind\022\022\n\004side\030\003 \001(\tR" +
+      "\004side\022\024\n\005color\030\004 \001(\tR\005color\022!\n\014svg_selec" +
+      "tor\030\005 \001(\tR\013svgSelector\022\026\n\006groups\030\006 \003(\rR\006" +
+      "groups\022\034\n\tthickness\030\007 \001(\tR\tthickness\"\311\003\n" +
+      "\016BoardStackView\022/\n\004rows\030\001 \003(\0132\033.agni.v1." +
+      "geom.BoardStackRowR\004rows\022\030\n\007summary\030\002 \001(" +
+      "\tR\007summary\022\034\n\tdisagrees\030\003 \001(\010R\tdisagrees" +
+      "\0224\n\006drills\030\004 \003(\0132\034.agni.v1.geom.BoardDri" +
+      "llSpanR\006drills\022!\n\014outline_tris\030\005 \003(\001R\013ou" +
+      "tlineTris\022 \n\014units_per_mm\030\006 \001(\001R\nunitsPe" +
+      "rMm\0223\n\006bodies\030\007 \003(\0132\033.agni.v1.geom.Board" +
+      "PartBodyR\006bodies\022\035\n\nbody_color\030\010 \001(\tR\tbo" +
+      "dyColor\022,\n\022default_body_color\030\t \001(\tR\020def" +
+      "aultBodyColor\0226\n\nboard_look\030\n \001(\0132\027.agni" +
+      ".v1.geom.BoardLookR\tboardLook\022\031\n\010total_m" +
+      "m\030\013 \001(\001R\007totalMm\"|\n\tBoardLook\022\022\n\004mask\030\001 " +
+      "\001(\tR\004mask\022(\n\020mask_over_copper\030\002 \001(\tR\016mas" +
+      "kOverCopper\022\035\n\npad_finish\030\003 \001(\tR\tpadFini" +
+      "sh\022\022\n\004silk\030\004 \001(\tR\004silk\"\216\002\n\rBoardPartBody" +
+      "\022\027\n\007ref_des\030\001 \001(\tR\006refDes\022\022\n\004side\030\002 \001(\tR" +
+      "\004side\022\030\n\007outline\030\003 \003(\001R\007outline\022 \n\theigh" +
+      "t_mm\030\004 \001(\001H\000R\010heightMm\210\001\001\022\035\n\npart_class\030" +
+      "\005 \001(\tR\tpartClass\022\024\n\005color\030\006 \001(\tR\005color\022&" +
+      "\n\017drawn_height_mm\030\007 \001(\001R\rdrawnHeightMm\022)" +
+      "\n\020height_defaulted\030\010 \001(\010R\017heightDefaulte" +
+      "dB\014\n\n_height_mm\"\337\001\n\016BoardDrillSpan\022\035\n\nla" +
+      "yer_from\030\001 \001(\tR\tlayerFrom\022\031\n\010layer_to\030\002 " +
+      "\001(\tR\007layerTo\022\016\n\002xy\030\003 \003(\001R\002xy\022\032\n\010diameter" +
+      "\030\004 \003(\001R\010diameter\022\020\n\003net\030\005 \003(\tR\003net\022\032\n\006to" +
+      "p_mm\030\006 \001(\001H\000R\005topMm\210\001\001\022 \n\tbottom_mm\030\007 \001(" +
+      "\001H\001R\010bottomMm\210\001\001B\t\n\007_top_mmB\014\n\n_bottom_m" +
+      "m\"\273\002\n\rBoardStackRow\022\022\n\004name\030\001 \001(\tR\004name\022" +
+      "\022\n\004kind\030\002 \001(\tR\004kind\022\024\n\005layer\030\003 \001(\tR\005laye" +
+      "r\022\034\n\tthickness\030\004 \001(\tR\tthickness\022&\n\014thick" +
+      "ness_mm\030\005 \001(\001H\000R\013thicknessMm\210\001\001\022\032\n\010mater" +
+      "ial\030\006 \001(\tR\010material\022\024\n\005color\030\007 \001(\tR\005colo" +
+      "r\022\025\n\006top_mm\030\010 \001(\001R\005topMm\022\033\n\tbottom_mm\030\t " +
+      "\001(\001R\010bottomMm\022/\n\023thickness_defaulted\030\n \001" +
+      "(\010R\022thicknessDefaultedB\017\n\r_thickness_mm*" +
+      "\260\001\n\016HighlightShape\022\037\n\033HIGHLIGHT_SHAPE_UN" +
+      "SPECIFIED\020\000\022\033\n\027HIGHLIGHT_SHAPE_OUTLINE\020\001" +
+      "\022!\n\035HIGHLIGHT_SHAPE_BOUNDING_RECT\020\002\022#\n\037H" +
+      "IGHLIGHT_SHAPE_BOUNDING_CIRCLE\020\003\022\030\n\024HIGH" +
+      "LIGHT_SHAPE_PATH\020\004B\256\001\n\035io.github.panyam." +
+      "agni.v1.geomB\017GeomPackedProtoP\001Z*github." +
+      "com/panyam/agni/gen/go/agni/v1/geom\242\002\003AV" +
+      "G\252\002\014Agni.V1.Geom\312\002\014Agni\\V1\\Geom\342\002\030Agni\\V" +
+      "1\\Geom\\GPBMetadata\352\002\016Agni::V1::Geomb\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -289,7 +290,7 @@ public final class GeomPackedProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_geom_PackedSheet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_geom_PackedSheet_descriptor,
-        new java.lang.String[] { "SheetId", "LayoutVersion", "OriginX", "OriginY", "Vertices", "Primitives", "FontFamily", "GroupColors", "BackgroundColor", "Images", "GroupAlphas", "KeyColumns", "LabelColumns", });
+        new java.lang.String[] { "SheetId", "LayoutVersion", "OriginX", "OriginY", "Vertices", "Primitives", "FontFamily", "GroupColors", "BackgroundColor", "Images", "GroupAlphas", "KeyColumns", "LabelColumns", "UnitsPerMm", });
     internal_static_agni_v1_geom_PackedKeys_descriptor =
       getDescriptor().getMessageType(8);
     internal_static_agni_v1_geom_PackedKeys_fieldAccessorTable = new

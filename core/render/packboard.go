@@ -237,8 +237,12 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 		Primitives:      records,
 		KeyColumns:      packKeys(keys),
 		LabelColumns:    packLabels(labels),
+		UnitsPerMm:      boardUnitsPerMm(b),
 	}
 }
+
+// boardUnitsPerMm is how many of a board's source units make a millimetre.
+func boardUnitsPerMm(b *geom.BoardGeometry) float64 { return 1e6 / float64(unitNm(b)) }
 
 // packPad packs a pad that has no padstack, a disk or a turned rectangle, keyed as its part's pin.
 func packPad(add func(kind, group uint8, refDes, net, pin string, pts [][2]int64), group uint8, pl *geom.ComponentPlacement, pad *geom.Pad) {

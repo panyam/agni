@@ -118,6 +118,26 @@ export class PickIndex {
     return bestOf(found);
   }
 
+  // padCentre returns the world centre of the pin's land nearest world (x, y), for the measuring
+  // tool's snap (agni issue 133), or null when the sheet draws no land for that pin. A land's centre
+  // is the middle of its bounds, since the packer draws every land as a disk or a quad centred on its
+  // pad. A pin with several lands, such as a thermal pad's, snaps to the one under the point.
+  padCentre(sel: Selection, x: number, y: number, hidden: ReadonlySet<number> = new Set()): { x: number; y: number } | null {
+    let best: { x: number; y: number } | null = null;
+    let bestD = Infinity;
+    for (const t of this.targets) {
+      if (t.sel.kind !== "pin" || t.sel.ref !== sel.ref || t.sel.pin !== sel.pin) continue;
+      if (hidden.has(this.sheet.primitives[t.primitive].group)) continue;
+      const c = { x: (t.bounds.minX + t.bounds.maxX) / 2, y: (t.bounds.minY + t.bounds.maxY) / 2 };
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < bestD) {
+        best = c;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
   // membersIn returns the area a Shift-drag over world rectangle r selects, by area.ts's membersIn
   // rules. A part counts when every shape keyed to it lies inside, and a pin of a part not wholly
   // inside counts on its own. A net counts when any one of its primitives lies inside, since each
