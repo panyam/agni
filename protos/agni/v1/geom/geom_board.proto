@@ -46,6 +46,9 @@ message BoardGeometry {
   // reason (agni 1652). A KiCad part takes its height from its models. So a board read with no model
   // library lists every library model here, and its parts draw at a typical height.
   repeated UnreadModel unread_models = 12;
+  // read_notes lists each value the reader skipped because it could not parse it, one row per
+  // value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+  repeated ReadNote read_notes = 13;
   Provenance prov = 16;
 }
 
@@ -151,6 +154,18 @@ message UnreadModel {
   string path = 1;
   string reason = 2;
   int32 parts = 3;
+}
+
+// ReadNote is one value in the source the reader could not parse, and skipped. file is the path
+// inside the source, such as an ODB++ job's `steps/pcb/layers/comp_+_top/components`. line counts
+// from 1. field names what the value sets, such as `.comp_height`, and value is the text as written.
+// reason says why the reader refused it.
+message ReadNote {
+  string file = 1;
+  int32 line = 2;
+  string field = 3;
+  string value = 4;
+  string reason = 5;
 }
 
 message ComponentPlacement {

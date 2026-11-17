@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"path"
 	"strings"
+
+	"github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
 // parsedJob holds everything both reads share. That is the job, its eda/data, and the components of
@@ -15,7 +17,8 @@ type parsedJob struct {
 	sides   [][]component // one slice per component layer, in componentLayers order
 	sideTop []bool        // whether each side is the front
 	info    map[string]string
-	odx     *odxTier // set for an ODX file, whose features arrive parsed rather than as files
+	odx     *odxTier         // set for an ODX file, whose features arrive parsed rather than as files
+	notes   []*geom.ReadNote // values the read skipped, for the board's read_notes
 }
 
 // odxTier holds what an ODX file carries in place of a job's per-layer files. Its maps are keyed by
@@ -57,10 +60,14 @@ func parseJob(fsys fs.FS) (*parsedJob, error) {
 		if err != nil {
 			return nil, err
 		}
-		comps, err := parseComponents(cb, back[i])
+		comps, notes, err := parseComponents(cb, back[i])
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", strings.ToLower(name), err)
 		}
+		for _, n := range notes {
+			n.File = j.layerFile(name, "components")
+		}
+		p.notes = append(p.notes, notes...)
 		p.sides = append(p.sides, comps)
 		p.sideTop = append(p.sideTop, !back[i])
 	}

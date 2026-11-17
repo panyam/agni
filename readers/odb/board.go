@@ -82,7 +82,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 		features: map[string]*featuresFile{},
 		featNet:  map[string]map[int]netRef{},
 		stackIDs: map[string]string{},
-		g:        &geom.BoardGeometry{DesignRef: p.jobName(src), UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}},
+		g:        &geom.BoardGeometry{DesignRef: p.jobName(src), UnitNm: 1, ReadNotes: p.notes, Prov: &geom.Provenance{SourceFile: src}},
 	}
 	for _, l := range p.matrix.layers {
 		b.byUpper[strings.ToUpper(l.name)] = l

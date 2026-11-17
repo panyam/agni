@@ -160,6 +160,20 @@ describe("LexiconPresenter", () => {
     expect(h.state().tables).toHaveLength(1);
   });
 
+  // A slow machine sends the add before the rename's answer comes back (agni 1683).
+  it("keeps a rename that the next edit overtakes, and saves under it", async () => {
+    const h = harness();
+    const renamed = h.p.rename("exercise-naming");
+    const added = h.p.add("net.rail", "pattern", "^USBH_3V3$");
+    await Promise.all([renamed, added]);
+    expect(h.state().name).toBe("exercise-naming");
+    await h.p.tryDraft();
+    expect(h.sent[0].name).toBe("exercise-naming");
+    expect(h.sent[0].lexicon?.net?.rail?.patterns).toEqual(["^USBH_3V3$"]);
+    await h.p.save();
+    expect(vi.mocked(h.client.renderConvention).mock.calls[0][0].conventions?.name).toBe("exercise-naming");
+  });
+
   it("drops Try's answer when the draft changes", async () => {
     const h = harness();
     await h.p.tryDraft();

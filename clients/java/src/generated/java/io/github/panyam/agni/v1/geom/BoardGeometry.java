@@ -43,6 +43,7 @@ private static final long serialVersionUID = 0L;
     graphics_ = java.util.Collections.emptyList();
     padstacks_ = java.util.Collections.emptyList();
     unreadModels_ = java.util.Collections.emptyList();
+    readNotes_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -700,6 +701,72 @@ private static final long serialVersionUID = 0L;
     return unreadModels_.get(index);
   }
 
+  public static final int READ_NOTES_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private java.util.List<io.github.panyam.agni.v1.geom.ReadNote> readNotes_;
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.panyam.agni.v1.geom.ReadNote> getReadNotesList() {
+    return readNotes_;
+  }
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends io.github.panyam.agni.v1.geom.ReadNoteOrBuilder> 
+      getReadNotesOrBuilderList() {
+    return readNotes_;
+  }
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  @java.lang.Override
+  public int getReadNotesCount() {
+    return readNotes_.size();
+  }
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.ReadNote getReadNotes(int index) {
+    return readNotes_.get(index);
+  }
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.ReadNoteOrBuilder getReadNotesOrBuilder(
+      int index) {
+    return readNotes_.get(index);
+  }
+
   public static final int PROV_FIELD_NUMBER = 16;
   private io.github.panyam.agni.v1.geom.Provenance prov_;
   /**
@@ -775,6 +842,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < unreadModels_.size(); i++) {
       output.writeMessage(12, unreadModels_.get(i));
+    }
+    for (int i = 0; i < readNotes_.size(); i++) {
+      output.writeMessage(13, readNotes_.get(i));
     }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(16, getProv());
@@ -870,6 +940,15 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+
+        {
+          final int count = readNotes_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(readNotes_.get(i));
+          }
+          size += 1 * count;
+        }
     if (((bitField0_ & 0x00000004) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(16, getProv());
@@ -928,6 +1007,8 @@ private static final long serialVersionUID = 0L;
     }
     if (!getUnreadModelsList()
         .equals(other.getUnreadModelsList())) return false;
+    if (!getReadNotesList()
+        .equals(other.getReadNotesList())) return false;
     if (hasProv() != other.hasProv()) return false;
     if (hasProv()) {
       if (!getProv()
@@ -988,6 +1069,10 @@ private static final long serialVersionUID = 0L;
     if (getUnreadModelsCount() > 0) {
       hash = (37 * hash) + UNREAD_MODELS_FIELD_NUMBER;
       hash = (53 * hash) + getUnreadModelsList().hashCode();
+    }
+    if (getReadNotesCount() > 0) {
+      hash = (37 * hash) + READ_NOTES_FIELD_NUMBER;
+      hash = (53 * hash) + getReadNotesList().hashCode();
     }
     if (hasProv()) {
       hash = (37 * hash) + PROV_FIELD_NUMBER;
@@ -1139,6 +1224,7 @@ private static final long serialVersionUID = 0L;
         internalGetPadstacksFieldBuilder();
         internalGetStackupFieldBuilder();
         internalGetUnreadModelsFieldBuilder();
+        internalGetReadNotesFieldBuilder();
         internalGetProvFieldBuilder();
       }
     }
@@ -1214,6 +1300,13 @@ private static final long serialVersionUID = 0L;
         unreadModelsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000800);
+      if (readNotesBuilder_ == null) {
+        readNotes_ = java.util.Collections.emptyList();
+      } else {
+        readNotes_ = null;
+        readNotesBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00001000);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -1324,6 +1417,15 @@ private static final long serialVersionUID = 0L;
       } else {
         result.unreadModels_ = unreadModelsBuilder_.build();
       }
+      if (readNotesBuilder_ == null) {
+        if (((bitField0_ & 0x00001000) != 0)) {
+          readNotes_ = java.util.Collections.unmodifiableList(readNotes_);
+          bitField0_ = (bitField0_ & ~0x00001000);
+        }
+        result.readNotes_ = readNotes_;
+      } else {
+        result.readNotes_ = readNotesBuilder_.build();
+      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.geom.BoardGeometry result) {
@@ -1347,7 +1449,7 @@ private static final long serialVersionUID = 0L;
             : stackupBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
-      if (((from_bitField0_ & 0x00001000) != 0)) {
+      if (((from_bitField0_ & 0x00002000) != 0)) {
         result.prov_ = provBuilder_ == null
             ? prov_
             : provBuilder_.build();
@@ -1590,6 +1692,32 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (readNotesBuilder_ == null) {
+        if (!other.readNotes_.isEmpty()) {
+          if (readNotes_.isEmpty()) {
+            readNotes_ = other.readNotes_;
+            bitField0_ = (bitField0_ & ~0x00001000);
+          } else {
+            ensureReadNotesIsMutable();
+            readNotes_.addAll(other.readNotes_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.readNotes_.isEmpty()) {
+          if (readNotesBuilder_.isEmpty()) {
+            readNotesBuilder_.dispose();
+            readNotesBuilder_ = null;
+            readNotes_ = other.readNotes_;
+            bitField0_ = (bitField0_ & ~0x00001000);
+            readNotesBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetReadNotesFieldBuilder() : null;
+          } else {
+            readNotesBuilder_.addAllMessages(other.readNotes_);
+          }
+        }
+      }
       if (other.hasProv()) {
         mergeProv(other.getProv());
       }
@@ -1745,11 +1873,24 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 98
+            case 106: {
+              io.github.panyam.agni.v1.geom.ReadNote m =
+                  input.readMessage(
+                      io.github.panyam.agni.v1.geom.ReadNote.parser(),
+                      extensionRegistry);
+              if (readNotesBuilder_ == null) {
+                ensureReadNotesIsMutable();
+                readNotes_.add(m);
+              } else {
+                readNotesBuilder_.addMessage(m);
+              }
+              break;
+            } // case 106
             case 130: {
               input.readMessage(
                   internalGetProvFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00001000;
+              bitField0_ |= 0x00002000;
               break;
             } // case 130
             default: {
@@ -4699,6 +4840,330 @@ private static final long serialVersionUID = 0L;
       return unreadModelsBuilder_;
     }
 
+    private java.util.List<io.github.panyam.agni.v1.geom.ReadNote> readNotes_ =
+      java.util.Collections.emptyList();
+    private void ensureReadNotesIsMutable() {
+      if (!((bitField0_ & 0x00001000) != 0)) {
+        readNotes_ = new java.util.ArrayList<io.github.panyam.agni.v1.geom.ReadNote>(readNotes_);
+        bitField0_ |= 0x00001000;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.ReadNote, io.github.panyam.agni.v1.geom.ReadNote.Builder, io.github.panyam.agni.v1.geom.ReadNoteOrBuilder> readNotesBuilder_;
+
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.ReadNote> getReadNotesList() {
+      if (readNotesBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(readNotes_);
+      } else {
+        return readNotesBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public int getReadNotesCount() {
+      if (readNotesBuilder_ == null) {
+        return readNotes_.size();
+      } else {
+        return readNotesBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ReadNote getReadNotes(int index) {
+      if (readNotesBuilder_ == null) {
+        return readNotes_.get(index);
+      } else {
+        return readNotesBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder setReadNotes(
+        int index, io.github.panyam.agni.v1.geom.ReadNote value) {
+      if (readNotesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureReadNotesIsMutable();
+        readNotes_.set(index, value);
+        onChanged();
+      } else {
+        readNotesBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder setReadNotes(
+        int index, io.github.panyam.agni.v1.geom.ReadNote.Builder builderForValue) {
+      if (readNotesBuilder_ == null) {
+        ensureReadNotesIsMutable();
+        readNotes_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        readNotesBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder addReadNotes(io.github.panyam.agni.v1.geom.ReadNote value) {
+      if (readNotesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureReadNotesIsMutable();
+        readNotes_.add(value);
+        onChanged();
+      } else {
+        readNotesBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder addReadNotes(
+        int index, io.github.panyam.agni.v1.geom.ReadNote value) {
+      if (readNotesBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureReadNotesIsMutable();
+        readNotes_.add(index, value);
+        onChanged();
+      } else {
+        readNotesBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder addReadNotes(
+        io.github.panyam.agni.v1.geom.ReadNote.Builder builderForValue) {
+      if (readNotesBuilder_ == null) {
+        ensureReadNotesIsMutable();
+        readNotes_.add(builderForValue.build());
+        onChanged();
+      } else {
+        readNotesBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder addReadNotes(
+        int index, io.github.panyam.agni.v1.geom.ReadNote.Builder builderForValue) {
+      if (readNotesBuilder_ == null) {
+        ensureReadNotesIsMutable();
+        readNotes_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        readNotesBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder addAllReadNotes(
+        java.lang.Iterable<? extends io.github.panyam.agni.v1.geom.ReadNote> values) {
+      if (readNotesBuilder_ == null) {
+        ensureReadNotesIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, readNotes_);
+        onChanged();
+      } else {
+        readNotesBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder clearReadNotes() {
+      if (readNotesBuilder_ == null) {
+        readNotes_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00001000);
+        onChanged();
+      } else {
+        readNotesBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public Builder removeReadNotes(int index) {
+      if (readNotesBuilder_ == null) {
+        ensureReadNotesIsMutable();
+        readNotes_.remove(index);
+        onChanged();
+      } else {
+        readNotesBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ReadNote.Builder getReadNotesBuilder(
+        int index) {
+      return internalGetReadNotesFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ReadNoteOrBuilder getReadNotesOrBuilder(
+        int index) {
+      if (readNotesBuilder_ == null) {
+        return readNotes_.get(index);  } else {
+        return readNotesBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public java.util.List<? extends io.github.panyam.agni.v1.geom.ReadNoteOrBuilder> 
+         getReadNotesOrBuilderList() {
+      if (readNotesBuilder_ != null) {
+        return readNotesBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(readNotes_);
+      }
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ReadNote.Builder addReadNotesBuilder() {
+      return internalGetReadNotesFieldBuilder().addBuilder(
+          io.github.panyam.agni.v1.geom.ReadNote.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.ReadNote.Builder addReadNotesBuilder(
+        int index) {
+      return internalGetReadNotesFieldBuilder().addBuilder(
+          index, io.github.panyam.agni.v1.geom.ReadNote.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * read_notes lists each value the reader skipped because it could not parse it, one row per
+     * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.ReadNote.Builder> 
+         getReadNotesBuilderList() {
+      return internalGetReadNotesFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.ReadNote, io.github.panyam.agni.v1.geom.ReadNote.Builder, io.github.panyam.agni.v1.geom.ReadNoteOrBuilder> 
+        internalGetReadNotesFieldBuilder() {
+      if (readNotesBuilder_ == null) {
+        readNotesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            io.github.panyam.agni.v1.geom.ReadNote, io.github.panyam.agni.v1.geom.ReadNote.Builder, io.github.panyam.agni.v1.geom.ReadNoteOrBuilder>(
+                readNotes_,
+                ((bitField0_ & 0x00001000) != 0),
+                getParentForChildren(),
+                isClean());
+        readNotes_ = null;
+      }
+      return readNotesBuilder_;
+    }
+
     private io.github.panyam.agni.v1.geom.Provenance prov_;
     private com.google.protobuf.SingleFieldBuilder<
         io.github.panyam.agni.v1.geom.Provenance, io.github.panyam.agni.v1.geom.Provenance.Builder, io.github.panyam.agni.v1.geom.ProvenanceOrBuilder> provBuilder_;
@@ -4707,7 +5172,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the prov field is set.
      */
     public boolean hasProv() {
-      return ((bitField0_ & 0x00001000) != 0);
+      return ((bitField0_ & 0x00002000) != 0);
     }
     /**
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
@@ -4730,7 +5195,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }
@@ -4744,7 +5209,7 @@ private static final long serialVersionUID = 0L;
       } else {
         provBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }
@@ -4753,7 +5218,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeProv(io.github.panyam.agni.v1.geom.Provenance value) {
       if (provBuilder_ == null) {
-        if (((bitField0_ & 0x00001000) != 0) &&
+        if (((bitField0_ & 0x00002000) != 0) &&
           prov_ != null &&
           prov_ != io.github.panyam.agni.v1.geom.Provenance.getDefaultInstance()) {
           getProvBuilder().mergeFrom(value);
@@ -4764,7 +5229,7 @@ private static final long serialVersionUID = 0L;
         provBuilder_.mergeFrom(value);
       }
       if (prov_ != null) {
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00002000;
         onChanged();
       }
       return this;
@@ -4773,7 +5238,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public Builder clearProv() {
-      bitField0_ = (bitField0_ & ~0x00001000);
+      bitField0_ = (bitField0_ & ~0x00002000);
       prov_ = null;
       if (provBuilder_ != null) {
         provBuilder_.dispose();
@@ -4786,7 +5251,7 @@ private static final long serialVersionUID = 0L;
      * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
      */
     public io.github.panyam.agni.v1.geom.Provenance.Builder getProvBuilder() {
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00002000;
       onChanged();
       return internalGetProvFieldBuilder().getBuilder();
     }

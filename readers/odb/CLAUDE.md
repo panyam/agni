@@ -8,6 +8,7 @@ This file covers the ODB++ job reader, ODB++X (ODX), and the Allegro export quir
 - **The fixtures are `kicad-cli pcb export odb` output** (`make odb-fixtures`, KiCad 9+). `TestODBReadsAsItsKiCadSource` holds each fixture to its source board, pad positions included.
 - **`make odb-oracle` holds the six samples boards to `readers/formats/testdata/odb_oracle.baseline`.**
 - **The gate reads foxBMS's Altium-written jobs** (`odb-altium`). Their pins are named `J500-1`, and their `FGR` groups are not nets.
+- **A record may end with `;ID=<n>` after its attributes** (ODB++ 8, agni 1685). `fields` ends the attribute tail at the next `;`. A value that does not parse goes in `read_notes`, never fails the read.
 - **ODB++ forbids spaces in a name.** `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`, and a schematic-against-layout diff reports it renamed.
 - **KiCad's exporter leaves out a footprint marked `exclude_from_pos_files`.** It nets copper by what touches, so a planted short moves a track onto the other net (demo-board).
 - **A back part's package flips when it is on the back or marked M, not both** (agni 1656). Altium and Allegro mark it N, and KiCad marks it M with the package already flipped. `odxPlace` and `packageOutline` share the rule.
