@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -135,6 +136,16 @@ func (h *Host) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry
 		return nil, err
 	}
 	return service.LoaderIn(ctx, h.loader).BoardGeometry(n)
+}
+
+// BoardMeshes reads model meshes by the keys in a board's model_instances (agni issue 1652).
+func (h *Host) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+	n, err := h.name(uri)
+	if err != nil {
+		return nil, nil, err
+	}
+	m, unread := service.LoaderIn(ctx, h.loader).BoardMeshes(n, keys)
+	return m, unread, nil
 }
 
 // Manifest parses a review checklist. Absent is an error, since a manifest is a required input.

@@ -46,6 +46,9 @@ const (
 	// DesignServiceGetBoardGeometryProcedure is the fully-qualified name of the DesignService's
 	// GetBoardGeometry RPC.
 	DesignServiceGetBoardGeometryProcedure = "/agni.v1.webapi.DesignService/GetBoardGeometry"
+	// DesignServiceGetBoardMeshesProcedure is the fully-qualified name of the DesignService's
+	// GetBoardMeshes RPC.
+	DesignServiceGetBoardMeshesProcedure = "/agni.v1.webapi.DesignService/GetBoardMeshes"
 	// DesignServiceLocateSubjectsProcedure is the fully-qualified name of the DesignService's
 	// LocateSubjects RPC.
 	DesignServiceLocateSubjectsProcedure = "/agni.v1.webapi.DesignService/LocateSubjects"
@@ -96,6 +99,15 @@ type DesignServiceClient interface {
 	// next_page_token until it comes back empty, and merges the pages with its protobuf library's
 	// merge, which appends repeated fields. A design with no board answers not_found.
 	GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error)
+	// GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+	// 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+	// them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+	//
+	// The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+	// it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+	// page says what the server simplified and what it left as blocks. A part's height never depends on
+	// the budget, since the board's heights come from the full models.
+	GetBoardMeshes(context.Context, *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error)
 	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
 	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
 	// answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -174,6 +186,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("GetBoardGeometry")),
 			connect.WithClientOptions(opts...),
 		),
+		getBoardMeshes: connect.NewClient[webapi.GetBoardMeshesRequest, webapi.GetBoardMeshesResponse](
+			httpClient,
+			baseURL+DesignServiceGetBoardMeshesProcedure,
+			connect.WithSchema(designServiceMethods.ByName("GetBoardMeshes")),
+			connect.WithClientOptions(opts...),
+		),
 		locateSubjects: connect.NewClient[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse](
 			httpClient,
 			baseURL+DesignServiceLocateSubjectsProcedure,
@@ -214,6 +232,7 @@ type designServiceClient struct {
 	highlightSheet   *connect.Client[webapi.HighlightSheetRequest, webapi.HighlightSheetResponse]
 	getLayoutReport  *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
 	getBoardGeometry *connect.Client[webapi.GetBoardGeometryRequest, webapi.GetBoardGeometryResponse]
+	getBoardMeshes   *connect.Client[webapi.GetBoardMeshesRequest, webapi.GetBoardMeshesResponse]
 	locateSubjects   *connect.Client[webapi.LocateSubjectsRequest, webapi.LocateSubjectsResponse]
 	traceDesign      *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
 	reachablePins    *connect.Client[webapi.ReachablePinsRequest, webapi.ReachablePinsResponse]
@@ -244,6 +263,11 @@ func (c *designServiceClient) GetLayoutReport(ctx context.Context, req *connect.
 // GetBoardGeometry calls agni.v1.webapi.DesignService.GetBoardGeometry.
 func (c *designServiceClient) GetBoardGeometry(ctx context.Context, req *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
 	return c.getBoardGeometry.CallUnary(ctx, req)
+}
+
+// GetBoardMeshes calls agni.v1.webapi.DesignService.GetBoardMeshes.
+func (c *designServiceClient) GetBoardMeshes(ctx context.Context, req *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error) {
+	return c.getBoardMeshes.CallUnary(ctx, req)
 }
 
 // LocateSubjects calls agni.v1.webapi.DesignService.LocateSubjects.
@@ -304,6 +328,15 @@ type DesignServiceHandler interface {
 	// next_page_token until it comes back empty, and merges the pages with its protobuf library's
 	// merge, which appends repeated fields. A design with no board answers not_found.
 	GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error)
+	// GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+	// 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+	// them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+	//
+	// The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+	// it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+	// page says what the server simplified and what it left as blocks. A part's height never depends on
+	// the budget, since the board's heights come from the full models.
+	GetBoardMeshes(context.Context, *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error)
 	// LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
 	// viewer opens one of them for a selection that came from another pane, a finding or a link. It
 	// answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -378,6 +411,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("GetBoardGeometry")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceGetBoardMeshesHandler := connect.NewUnaryHandler(
+		DesignServiceGetBoardMeshesProcedure,
+		svc.GetBoardMeshes,
+		connect.WithSchema(designServiceMethods.ByName("GetBoardMeshes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	designServiceLocateSubjectsHandler := connect.NewUnaryHandler(
 		DesignServiceLocateSubjectsProcedure,
 		svc.LocateSubjects,
@@ -420,6 +459,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceGetLayoutReportHandler.ServeHTTP(w, r)
 		case DesignServiceGetBoardGeometryProcedure:
 			designServiceGetBoardGeometryHandler.ServeHTTP(w, r)
+		case DesignServiceGetBoardMeshesProcedure:
+			designServiceGetBoardMeshesHandler.ServeHTTP(w, r)
 		case DesignServiceLocateSubjectsProcedure:
 			designServiceLocateSubjectsHandler.ServeHTTP(w, r)
 		case DesignServiceTraceDesignProcedure:
@@ -457,6 +498,10 @@ func (UnimplementedDesignServiceHandler) GetLayoutReport(context.Context, *conne
 
 func (UnimplementedDesignServiceHandler) GetBoardGeometry(context.Context, *connect.Request[webapi.GetBoardGeometryRequest]) (*connect.Response[webapi.GetBoardGeometryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetBoardGeometry is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) GetBoardMeshes(context.Context, *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetBoardMeshes is not implemented"))
 }
 
 func (UnimplementedDesignServiceHandler) LocateSubjects(context.Context, *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {

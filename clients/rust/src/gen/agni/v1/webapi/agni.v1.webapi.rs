@@ -1341,6 +1341,51 @@ pub struct GetBoardGeometryRequest {
     #[prost(string, tag="3")]
     pub page_token: ::prost::alloc::string::String,
 }
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetBoardMeshesRequest {
+    /// snapshot names the design whose meshes to return, "snapshots/{snapshot}".
+    #[prost(string, tag="1")]
+    pub snapshot: ::prost::alloc::string::String,
+    /// max_triangles bounds the triangles of every distinct mesh together. Parts that share a mesh
+    /// count it once. 0 means 300,000, and the server caps it at 2,000,000. No mesh keeps more than
+    /// 20,000 triangles whatever the budget.
+    #[prost(int64, tag="2")]
+    pub max_triangles: i64,
+    /// max_bytes bounds one page's encoded size, as GetBoardGeometryRequest.max_bytes does. A page holds
+    /// whole meshes, and a mesh larger than max_bytes arrives alone on a page.
+    #[prost(int64, tag="3")]
+    pub max_bytes: i64,
+    /// page_token is "" for the first page, and otherwise the next_page_token of the page before. A
+    /// token belongs to one snapshot revision and one max_triangles, and from another is
+    /// invalid_argument.
+    #[prost(string, tag="4")]
+    pub page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBoardMeshesResponse {
+    /// meshes holds this page's meshes, each under its key. Every page's meshes together cover every key
+    /// in the board's model_instances, less the blocks and the unread.
+    #[prost(message, repeated, tag="1")]
+    pub meshes: ::prost::alloc::vec::Vec<super::geom::ModelMesh>,
+    /// simplified lists each mesh that lost triangles to fit the budget, by key. It is on the first page
+    /// only.
+    #[prost(string, repeated, tag="2")]
+    pub simplified: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// blocks lists each mesh left out to fit the budget, by key, smallest parts first. Its parts draw as
+    /// blocks of their height. It is on the first page only.
+    #[prost(string, repeated, tag="3")]
+    pub blocks: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// unread lists each mesh that failed to read, such as a STEP model with no .wrl beside it, with its
+    /// reason. Its parts draw as blocks. It is on the first page only.
+    #[prost(message, repeated, tag="4")]
+    pub unread: ::prost::alloc::vec::Vec<super::geom::UnreadModel>,
+    /// triangles counts the triangles of every mesh on every page. It is on the first page only.
+    #[prost(int64, tag="5")]
+    pub triangles: i64,
+    /// next_page_token is "" on the last page.
+    #[prost(string, tag="6")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetBoardGeometryResponse {
     /// board holds this page's part of the board. Merging every page's board in order gives the whole

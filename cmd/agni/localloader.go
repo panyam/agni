@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/mesh"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -102,6 +103,16 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 		return nil, err
 	}
 	return l.loader.BoardGeometry(localOf(src.BoardURI))
+}
+
+// BoardMeshes reads model meshes by the keys in the board tier's model_instances (agni issue 1652).
+func (l *localLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
+	src, err := l.resolve(ctx, localPath(uri))
+	if err != nil {
+		return nil, nil, err
+	}
+	m, unread := l.loader.BoardMeshes(localOf(src.BoardURI), keys)
+	return m, unread, nil
 }
 
 // Geometry reads the sheet tier. Once per file, it says when the descriptor declares a schematic

@@ -55,6 +55,16 @@ service DesignService {
   // merge, which appends repeated fields. A design with no board answers not_found.
   rpc GetBoardGeometry(GetBoardGeometryRequest) returns (GetBoardGeometryResponse);
 
+  // GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+  // 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+  // them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+  //
+  // The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+  // it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+  // page says what the server simplified and what it left as blocks. A part's height never depends on
+  // the budget, since the board's heights come from the full models.
+  rpc GetBoardMeshes(GetBoardMeshesRequest) returns (GetBoardMeshesResponse);
+
   // LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
   // viewer opens one of them for a selection that came from another pane, a finding or a link. It
   // answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -287,6 +297,41 @@ message GetBoardGeometryRequest {
   // page_token is "" for the first page, and otherwise the next_page_token of the page before. A
   // token belongs to one snapshot revision, and a token from another is invalid_argument.
   string page_token = 3;
+}
+
+message GetBoardMeshesRequest {
+  // snapshot names the design whose meshes to return, "snapshots/{snapshot}".
+  string snapshot = 1;
+  // max_triangles bounds the triangles of every distinct mesh together. Parts that share a mesh
+  // count it once. 0 means 300,000, and the server caps it at 2,000,000. No mesh keeps more than
+  // 20,000 triangles whatever the budget.
+  int64 max_triangles = 2;
+  // max_bytes bounds one page's encoded size, as GetBoardGeometryRequest.max_bytes does. A page holds
+  // whole meshes, and a mesh larger than max_bytes arrives alone on a page.
+  int64 max_bytes = 3;
+  // page_token is "" for the first page, and otherwise the next_page_token of the page before. A
+  // token belongs to one snapshot revision and one max_triangles, and from another is
+  // invalid_argument.
+  string page_token = 4;
+}
+
+message GetBoardMeshesResponse {
+  // meshes holds this page's meshes, each under its key. Every page's meshes together cover every key
+  // in the board's model_instances, less the blocks and the unread.
+  repeated agni.v1.geom.ModelMesh meshes = 1;
+  // simplified lists each mesh that lost triangles to fit the budget, by key. It is on the first page
+  // only.
+  repeated string simplified = 2;
+  // blocks lists each mesh left out to fit the budget, by key, smallest parts first. Its parts draw as
+  // blocks of their height. It is on the first page only.
+  repeated string blocks = 3;
+  // unread lists each mesh that failed to read, such as a STEP model with no .wrl beside it, with its
+  // reason. Its parts draw as blocks. It is on the first page only.
+  repeated agni.v1.geom.UnreadModel unread = 4;
+  // triangles counts the triangles of every mesh on every page. It is on the first page only.
+  int64 triangles = 5;
+  // next_page_token is "" on the last page.
+  string next_page_token = 6;
 }
 
 message GetBoardGeometryResponse {

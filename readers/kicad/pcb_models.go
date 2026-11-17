@@ -2,6 +2,7 @@ package kicad
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"path"
@@ -10,9 +11,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/mesh"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/readers/gltf"
 	"github.com/panyam/agni/readers/step"
+	"github.com/panyam/agni/readers/wrl"
 )
 
 // ModelOpener returns the bytes of a 3D model a footprint names, given the path exactly as the
@@ -95,16 +98,16 @@ func SplitModelPath(raw string) ModelRef {
 	return ModelRef{Anchor: AnchorBoard, Rel: p}
 }
 
-// modelCandidates lists the files a footprint's model path may stand for, in the order tried. A
-// path is tried as written first. KiCad's library ships a .wrl beside each .step, so a .wrl name
-// also tries the .step. Antmicro ships its library as glTF, so a .step name also tries a .gltf
-// and a .glb of the same name (agni 1687).
+// modelCandidates lists the files a footprint's model path may stand for, in the order tried for a
+// height. KiCad's library ships a .wrl beside each .step. A .wrl name tries the .step first, since
+// kicad-cli's 3D export measures the STEP, and then the .wrl itself (agni 1652). Antmicro ships its
+// library as glTF, so a .step name also tries a .gltf and a .glb of the same name (agni 1687).
 func modelCandidates(raw string) []string {
 	ext := path.Ext(raw)
 	stem := strings.TrimSuffix(raw, ext)
 	switch strings.ToLower(ext) {
 	case ".wrl", ".wrz":
-		return []string{raw, stem + ".step"}
+		return []string{stem + ".step", raw}
 	case ".step", ".stp":
 		return []string{raw, stem + ".gltf", stem + ".glb"}
 	}
@@ -143,11 +146,97 @@ func readModel(open ModelOpener, file, named string) (pts [][3]float64, footprin
 			out[i] = [3]float64{q[0] * scale, -q[2] * scale, q[1] * scale}
 		}
 		return out, true, nil
+	case ".wrl", ".wrz":
+		m, err := wrl.Read(data)
+		if err != nil {
+			return nil, false, err
+		}
+		m.Scale(wrlMm)
+		return m.Points(), false, nil
 	default:
 		pts, err := step.Points(data)
 		return pts, false, err
 	}
 }
+
+// wrlMm is the millimetres in one unit of KiCad's .wrl library, a tenth of an inch.
+const wrlMm = 2.54
+
+// ReadModelMesh reads a ModelInstance's mesh by its key (agni issue 1652). A .wrl comes back
+// in millimetres. A glTF comes back in its own units with its Y-up axes turned to the footprint's
+// Z-up ones, and the instance's transform scales it. open is ReadBoardGeometryWithModels' opener, and
+// a missing file wraps ErrModelNotFound.
+func ReadModelMesh(open ModelOpener, key string) (*mesh.Mesh, error) {
+	data, err := open(key)
+	if err != nil {
+		return nil, err
+	}
+	switch strings.ToLower(path.Ext(key)) {
+	case ".wrl", ".wrz":
+		m, err := wrl.Read(data)
+		if err != nil {
+			return nil, err
+		}
+		m.Scale(wrlMm)
+		return m, nil
+	case ".gltf", ".glb":
+		dir := path.Dir(strings.ReplaceAll(key, `\`, "/"))
+		g, err := gltf.Read(data, func(uri string) ([]byte, error) { return open(dir + "/" + uri) })
+		if err != nil {
+			return nil, err
+		}
+		m := &mesh.Mesh{}
+		for _, pr := range g.Primitives {
+			pos := make([][3]float64, len(pr.Positions))
+			for i, q := range pr.Positions {
+				pos[i] = [3]float64{q[0], -q[2], q[1]}
+			}
+			m.Parts = append(m.Parts, mesh.Part{Positions: pos, Indices: pr.Indices, Color: pr.Color})
+		}
+		return m, nil
+	}
+	return nil, fmt.Errorf("%s: agni draws .wrl and glTF models, not %s", key, path.Ext(key))
+}
+
+// meshKey names the mesh file for a model whose height came from file. A glTF draws itself. A STEP
+// draws as the .wrl of the same name. KiCad's library ships the .wrl beside the STEP, in the STEP's
+// frame.
+func meshKey(file string, footprintFrame bool) string {
+	if footprintFrame {
+		return file
+	}
+	return strings.TrimSuffix(file, path.Ext(file)) + ".wrl"
+}
+
+// matrix returns t as ModelInstance.transform's 12 numbers, a row-order 3x4 matrix.
+// t is affine, so its columns are where it takes each unit axis, less where it takes the origin.
+func (t modelTransform) matrix() []float64 {
+	o := t.apply([3]float64{})
+	var cols [3][3]float64
+	for k := 0; k < 3; k++ {
+		var e [3]float64
+		e[k] = 1
+		q := t.apply(e)
+		cols[k] = [3]float64{q[0] - o[0], q[1] - o[1], q[2] - o[2]}
+	}
+	out := make([]float64, 12)
+	for r := 0; r < 3; r++ {
+		out[r*4], out[r*4+1], out[r*4+2], out[r*4+3] = cols[0][r], cols[1][r], cols[2][r], o[r]
+	}
+	return out
+}
+
+// halfTurn turns a ModelInstance transform half a turn about Z, in place, for a part on the back.
+// KiCad flips a back part's model by a half turn about Y and then one about Z, which mirrors it top
+// to bottom. The contract's mirror negates X instead, and the two differ by this half turn about Z.
+func halfTurn(m []float64) {
+	for i := 0; i < 8; i++ {
+		m[i] = -m[i]
+	}
+}
+
+// scaleMatrix is a uniform scale as a ModelInstance transform.
+func scaleMatrix(s float64) []float64 { return []float64{s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0} }
 
 // modelHeights sets each placement's height from its footprint's models, and records the models it
 // could not use. A file the board names many times is opened and read once.
@@ -155,6 +244,7 @@ func modelHeights(root *node, g *geom.BoardGeometry, open ModelOpener) {
 	type read struct {
 		pts            [][3]float64
 		footprintFrame bool
+		file           string // the candidate that gave the points
 		reason         string
 	}
 	cache := map[string]read{}
@@ -169,7 +259,7 @@ func modelHeights(root *node, g *geom.BoardGeometry, open ModelOpener) {
 		for _, file := range modelCandidates(raw) {
 			pts, inFootprint, err := readModel(open, file, path.Ext(raw))
 			if err == nil {
-				r.pts, r.footprintFrame, missing, broken = pts, inFootprint, nil, nil
+				r.pts, r.footprintFrame, r.file, missing, broken = pts, inFootprint, file, nil, nil
 				break
 			}
 			switch {
@@ -202,13 +292,25 @@ func modelHeights(root *node, g *geom.BoardGeometry, open ModelOpener) {
 			if modelHidden(m) {
 				continue
 			}
-			path := atomOf(m.Arg(1))
-			r := load(path)
+			raw := atomOf(m.Arg(1))
+			r := load(raw)
 			if r.reason != "" {
-				unread[[2]string{path, r.reason}]++
+				unread[[2]string{raw, r.reason}]++
 				continue
 			}
 			t := modelTransformOf(m)
+			inst := &geom.ModelInstance{Mesh: meshKey(r.file, r.footprintFrame), Transform: t.matrix()}
+			if r.footprintFrame {
+				// A glTF stand-in is in millimetres, and one a footprint names directly in metres.
+				inst.Transform = scaleMatrix(1)
+				if e := strings.ToLower(path.Ext(raw)); e != ".step" && e != ".stp" {
+					inst.Transform = scaleMatrix(1000)
+				}
+			}
+			if p.GetMirror() {
+				halfTurn(inst.Transform)
+			}
+			p.ModelInstances = append(p.ModelInstances, inst)
 			for _, q := range r.pts {
 				z := q[2]
 				if !r.footprintFrame {

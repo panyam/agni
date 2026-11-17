@@ -173,6 +173,37 @@ public final class DesignServiceGrpc {
     return getGetBoardGeometryMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest,
+      io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getGetBoardMeshesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetBoardMeshes",
+      requestType = io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest,
+      io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getGetBoardMeshesMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest, io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getGetBoardMeshesMethod;
+    if ((getGetBoardMeshesMethod = DesignServiceGrpc.getGetBoardMeshesMethod) == null) {
+      synchronized (DesignServiceGrpc.class) {
+        if ((getGetBoardMeshesMethod = DesignServiceGrpc.getGetBoardMeshesMethod) == null) {
+          DesignServiceGrpc.getGetBoardMeshesMethod = getGetBoardMeshesMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest, io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetBoardMeshes"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DesignServiceMethodDescriptorSupplier("GetBoardMeshes"))
+              .build();
+        }
+      }
+    }
+    return getGetBoardMeshesMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.LocateSubjectsRequest,
       io.github.panyam.agni.v1.webapi.LocateSubjectsResponse> getLocateSubjectsMethod;
 
@@ -470,6 +501,22 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+     * 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+     * them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+     * The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+     * it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+     * page says what the server simplified and what it left as blocks. A part's height never depends on
+     * the budget, since the board's heights come from the full models.
+     * </pre>
+     */
+    default void getBoardMeshes(io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetBoardMeshesMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -659,6 +706,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+     * 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+     * them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+     * The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+     * it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+     * page says what the server simplified and what it left as blocks. A part's height never depends on
+     * the budget, since the board's heights come from the full models.
+     * </pre>
+     */
+    public void getBoardMeshes(io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetBoardMeshesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -831,6 +895,22 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+     * 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+     * them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+     * The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+     * it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+     * page says what the server simplified and what it left as blocks. A part's height never depends on
+     * the budget, since the board's heights come from the full models.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse getBoardMeshes(io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetBoardMeshesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -994,6 +1074,22 @@ public final class DesignServiceGrpc {
     public io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse getBoardGeometry(io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetBoardGeometryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+     * 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+     * them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+     * The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+     * it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+     * page says what the server simplified and what it left as blocks. A part's height never depends on
+     * the budget, since the board's heights come from the full models.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse getBoardMeshes(io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetBoardMeshesMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1170,6 +1266,23 @@ public final class DesignServiceGrpc {
 
     /**
      * <pre>
+     * GetBoardMeshes returns the 3D model meshes for the board's parts, a page at a time (agni issue
+     * 1652). Each ComponentPlacement's model_instances names its meshes by key. A stack view asks for
+     * them only when it draws models, so a check, a review or the 2D board never reads a mesh.
+     * The request's max_triangles sets a budget for the whole board, and the server fits the meshes to
+     * it. The largest meshes lose detail first, and then the smallest parts draw as blocks. The first
+     * page says what the server simplified and what it left as blocks. A part's height never depends on
+     * the budget, since the board's heights come from the full models.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse> getBoardMeshes(
+        io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetBoardMeshesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * LocateSubjects says which sheets draw each named part, pin, net or bus (agni issue 1325). A
      * viewer opens one of them for a selection that came from another pane, a finding or a link. It
      * answers from the snapshot's schematic, and from its board only when the request asks, since
@@ -1252,11 +1365,12 @@ public final class DesignServiceGrpc {
   private static final int METHODID_HIGHLIGHT_SHEET = 2;
   private static final int METHODID_GET_LAYOUT_REPORT = 3;
   private static final int METHODID_GET_BOARD_GEOMETRY = 4;
-  private static final int METHODID_LOCATE_SUBJECTS = 5;
-  private static final int METHODID_TRACE_DESIGN = 6;
-  private static final int METHODID_REACHABLE_PINS = 7;
-  private static final int METHODID_WALK_DESIGN = 8;
-  private static final int METHODID_LIST_WALK_KINDS = 9;
+  private static final int METHODID_GET_BOARD_MESHES = 5;
+  private static final int METHODID_LOCATE_SUBJECTS = 6;
+  private static final int METHODID_TRACE_DESIGN = 7;
+  private static final int METHODID_REACHABLE_PINS = 8;
+  private static final int METHODID_WALK_DESIGN = 9;
+  private static final int METHODID_LIST_WALK_KINDS = 10;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1294,6 +1408,10 @@ public final class DesignServiceGrpc {
         case METHODID_GET_BOARD_GEOMETRY:
           serviceImpl.getBoardGeometry((io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>) responseObserver);
+          break;
+        case METHODID_GET_BOARD_MESHES:
+          serviceImpl.getBoardMeshes((io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse>) responseObserver);
           break;
         case METHODID_LOCATE_SUBJECTS:
           serviceImpl.locateSubjects((io.github.panyam.agni.v1.webapi.LocateSubjectsRequest) request,
@@ -1368,6 +1486,13 @@ public final class DesignServiceGrpc {
               io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest,
               io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse>(
                 service, METHODID_GET_BOARD_GEOMETRY)))
+        .addMethod(
+          getGetBoardMeshesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.GetBoardMeshesRequest,
+              io.github.panyam.agni.v1.webapi.GetBoardMeshesResponse>(
+                service, METHODID_GET_BOARD_MESHES)))
         .addMethod(
           getLocateSubjectsMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1456,6 +1581,7 @@ public final class DesignServiceGrpc {
               .addMethod(getHighlightSheetMethod())
               .addMethod(getGetLayoutReportMethod())
               .addMethod(getGetBoardGeometryMethod())
+              .addMethod(getGetBoardMeshesMethod())
               .addMethod(getLocateSubjectsMethod())
               .addMethod(getTraceDesignMethod())
               .addMethod(getReachablePinsMethod())

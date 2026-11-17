@@ -189,7 +189,45 @@ message ComponentPlacement {
   // model reaches above the pads, so a through-hole part's pins below the board do not count (agni
   // 1652).
   optional int64 height = 7;
+  // model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+  // (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+  // part with none draws as a block of its height.
+  repeated ModelInstance model_instances = 8;
   Provenance prov = 16;
+}
+
+// ModelInstance places one model mesh on a part (agni issue 1652). mesh is the mesh's key, such as
+// `${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.wrl`, and GetBoardMeshes returns each
+// mesh under its key. Many parts share one key, so a viewer holds each mesh once and draws it per
+// instance.
+//
+// transform takes a mesh point to the part's footprint-local frame, in millimetres with Y up and Z
+// above the pads' seating plane. It holds 12 numbers, a 3x4 matrix in row order, so a point p goes to
+// (t[0]p.x + t[1]p.y + t[2]p.z + t[3], t[4]p.x + ..., t[8]p.x + ...). It carries the source's model
+// offset, rotation and scale. A viewer then places the footprint as it places pads, by the
+// placement's at, rotation_deg and mirror, and a mirrored part also negates Z, so its model hangs
+// below the board.
+message ModelInstance {
+  string mesh = 1;
+  repeated double transform = 2;
+}
+
+// ModelMesh is one model's triangles under its key, as GetBoardMeshes returns it. A ModelInstance
+// names the same key. Positions are in millimetres in the mesh's own frame, and
+// ModelInstance.transform maps that frame to the footprint's. source_triangles counts the model
+// file's triangles. The parts hold fewer when the server simplified the mesh to fit the budget.
+message ModelMesh {
+  string key = 1;
+  repeated MeshPart parts = 2;
+  int32 source_triangles = 3;
+}
+
+// MeshPart is one coloured triangle list. positions holds x, y and z for each vertex, and indices
+// names three vertices per triangle. rgba is the colour, red in the top byte and alpha in the lowest.
+message MeshPart {
+  repeated float positions = 1;
+  repeated uint32 indices = 2;
+  fixed32 rgba = 3;
 }
 
 // Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are

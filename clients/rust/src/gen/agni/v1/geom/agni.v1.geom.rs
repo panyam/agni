@@ -997,8 +997,55 @@ pub struct ComponentPlacement {
     /// 1652).
     #[prost(int64, optional, tag="7")]
     pub height: ::core::option::Option<i64>,
+    /// model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+    /// (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+    /// part with none draws as a block of its height.
+    #[prost(message, repeated, tag="8")]
+    pub model_instances: ::prost::alloc::vec::Vec<ModelInstance>,
     #[prost(message, optional, tag="16")]
     pub prov: ::core::option::Option<Provenance>,
+}
+/// ModelInstance places one model mesh on a part (agni issue 1652). mesh is the mesh's key, such as
+/// `${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.wrl`, and GetBoardMeshes returns each
+/// mesh under its key. Many parts share one key, so a viewer holds each mesh once and draws it per
+/// instance.
+///
+/// transform takes a mesh point to the part's footprint-local frame, in millimetres with Y up and Z
+/// above the pads' seating plane. It holds 12 numbers, a 3x4 matrix in row order, so a point p goes to
+/// (t\[0\]p.x + t\[1\]p.y + t\[2\]p.z + t\[3\], t\[4\]p.x + ..., t\[8\]p.x + ...). It carries the source's model
+/// offset, rotation and scale. A viewer then places the footprint as it places pads, by the
+/// placement's at, rotation_deg and mirror, and a mirrored part also negates Z, so its model hangs
+/// below the board.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ModelInstance {
+    #[prost(string, tag="1")]
+    pub mesh: ::prost::alloc::string::String,
+    #[prost(double, repeated, tag="2")]
+    pub transform: ::prost::alloc::vec::Vec<f64>,
+}
+/// ModelMesh is one model's triangles under its key, as GetBoardMeshes returns it. A ModelInstance
+/// names the same key. Positions are in millimetres in the mesh's own frame, and
+/// ModelInstance.transform maps that frame to the footprint's. source_triangles counts the model
+/// file's triangles. The parts hold fewer when the server simplified the mesh to fit the budget.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ModelMesh {
+    #[prost(string, tag="1")]
+    pub key: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="2")]
+    pub parts: ::prost::alloc::vec::Vec<MeshPart>,
+    #[prost(int32, tag="3")]
+    pub source_triangles: i32,
+}
+/// MeshPart is one coloured triangle list. positions holds x, y and z for each vertex, and indices
+/// names three vertices per triangle. rgba is the colour, red in the top byte and alpha in the lowest.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MeshPart {
+    #[prost(float, repeated, tag="1")]
+    pub positions: ::prost::alloc::vec::Vec<f32>,
+    #[prost(uint32, repeated, tag="2")]
+    pub indices: ::prost::alloc::vec::Vec<u32>,
+    #[prost(fixed32, tag="3")]
+    pub rgba: u32,
 }
 /// Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are
 /// relative to ComponentPlacement.at, before its rotation is applied. Sources author them that

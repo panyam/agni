@@ -6042,6 +6042,340 @@ impl<'de> serde::Deserialize<'de> for GetBoardGeometryResponse {
         deserializer.deserialize_struct("agni.v1.webapi.GetBoardGeometryResponse", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for GetBoardMeshesRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.snapshot.is_empty() {
+            len += 1;
+        }
+        if self.max_triangles != 0 {
+            len += 1;
+        }
+        if self.max_bytes != 0 {
+            len += 1;
+        }
+        if !self.page_token.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetBoardMeshesRequest", len)?;
+        if !self.snapshot.is_empty() {
+            struct_ser.serialize_field("snapshot", &self.snapshot)?;
+        }
+        if self.max_triangles != 0 {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("maxTriangles", ToString::to_string(&self.max_triangles).as_str())?;
+        }
+        if self.max_bytes != 0 {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("maxBytes", ToString::to_string(&self.max_bytes).as_str())?;
+        }
+        if !self.page_token.is_empty() {
+            struct_ser.serialize_field("pageToken", &self.page_token)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetBoardMeshesRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "snapshot",
+            "max_triangles",
+            "maxTriangles",
+            "max_bytes",
+            "maxBytes",
+            "page_token",
+            "pageToken",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Snapshot,
+            MaxTriangles,
+            MaxBytes,
+            PageToken,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "snapshot" => Ok(GeneratedField::Snapshot),
+                            "maxTriangles" | "max_triangles" => Ok(GeneratedField::MaxTriangles),
+                            "maxBytes" | "max_bytes" => Ok(GeneratedField::MaxBytes),
+                            "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetBoardMeshesRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.GetBoardMeshesRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetBoardMeshesRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut snapshot__ = None;
+                let mut max_triangles__ = None;
+                let mut max_bytes__ = None;
+                let mut page_token__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Snapshot => {
+                            if snapshot__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("snapshot"));
+                            }
+                            snapshot__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::MaxTriangles => {
+                            if max_triangles__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxTriangles"));
+                            }
+                            max_triangles__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::MaxBytes => {
+                            if max_bytes__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxBytes"));
+                            }
+                            max_bytes__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::PageToken => {
+                            if page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pageToken"));
+                            }
+                            page_token__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(GetBoardMeshesRequest {
+                    snapshot: snapshot__.unwrap_or_default(),
+                    max_triangles: max_triangles__.unwrap_or_default(),
+                    max_bytes: max_bytes__.unwrap_or_default(),
+                    page_token: page_token__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.GetBoardMeshesRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for GetBoardMeshesResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.meshes.is_empty() {
+            len += 1;
+        }
+        if !self.simplified.is_empty() {
+            len += 1;
+        }
+        if !self.blocks.is_empty() {
+            len += 1;
+        }
+        if !self.unread.is_empty() {
+            len += 1;
+        }
+        if self.triangles != 0 {
+            len += 1;
+        }
+        if !self.next_page_token.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetBoardMeshesResponse", len)?;
+        if !self.meshes.is_empty() {
+            struct_ser.serialize_field("meshes", &self.meshes)?;
+        }
+        if !self.simplified.is_empty() {
+            struct_ser.serialize_field("simplified", &self.simplified)?;
+        }
+        if !self.blocks.is_empty() {
+            struct_ser.serialize_field("blocks", &self.blocks)?;
+        }
+        if !self.unread.is_empty() {
+            struct_ser.serialize_field("unread", &self.unread)?;
+        }
+        if self.triangles != 0 {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("triangles", ToString::to_string(&self.triangles).as_str())?;
+        }
+        if !self.next_page_token.is_empty() {
+            struct_ser.serialize_field("nextPageToken", &self.next_page_token)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetBoardMeshesResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "meshes",
+            "simplified",
+            "blocks",
+            "unread",
+            "triangles",
+            "next_page_token",
+            "nextPageToken",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Meshes,
+            Simplified,
+            Blocks,
+            Unread,
+            Triangles,
+            NextPageToken,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "meshes" => Ok(GeneratedField::Meshes),
+                            "simplified" => Ok(GeneratedField::Simplified),
+                            "blocks" => Ok(GeneratedField::Blocks),
+                            "unread" => Ok(GeneratedField::Unread),
+                            "triangles" => Ok(GeneratedField::Triangles),
+                            "nextPageToken" | "next_page_token" => Ok(GeneratedField::NextPageToken),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetBoardMeshesResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.GetBoardMeshesResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetBoardMeshesResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut meshes__ = None;
+                let mut simplified__ = None;
+                let mut blocks__ = None;
+                let mut unread__ = None;
+                let mut triangles__ = None;
+                let mut next_page_token__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Meshes => {
+                            if meshes__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("meshes"));
+                            }
+                            meshes__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Simplified => {
+                            if simplified__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("simplified"));
+                            }
+                            simplified__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Blocks => {
+                            if blocks__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("blocks"));
+                            }
+                            blocks__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Unread => {
+                            if unread__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("unread"));
+                            }
+                            unread__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Triangles => {
+                            if triangles__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("triangles"));
+                            }
+                            triangles__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::NextPageToken => {
+                            if next_page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nextPageToken"));
+                            }
+                            next_page_token__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(GetBoardMeshesResponse {
+                    meshes: meshes__.unwrap_or_default(),
+                    simplified: simplified__.unwrap_or_default(),
+                    blocks: blocks__.unwrap_or_default(),
+                    unread: unread__.unwrap_or_default(),
+                    triangles: triangles__.unwrap_or_default(),
+                    next_page_token: next_page_token__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.GetBoardMeshesResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for GetCheckReportRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>

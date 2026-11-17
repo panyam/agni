@@ -198,6 +198,14 @@ func (a *Design) GetBoardGeometry(ctx context.Context, req *connect.Request[weba
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) GetBoardMeshes(ctx context.Context, req *connect.Request[webapi.GetBoardMeshesRequest]) (*connect.Response[webapi.GetBoardMeshesResponse], error) {
+	resp, err := a.svc.GetBoardMeshes(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Design) LocateSubjects(ctx context.Context, req *connect.Request[webapi.LocateSubjectsRequest]) (*connect.Response[webapi.LocateSubjectsResponse], error) {
 	resp, err := a.svc.LocateSubjects(ctx, req.Msg)
 	if err != nil {

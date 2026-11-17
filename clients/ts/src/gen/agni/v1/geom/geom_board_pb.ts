@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/geom/geom_board.proto.
  */
 export const file_agni_v1_geom_geom_board: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIroECg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSKQoJcGFkc3RhY2tzGAogAygLMhYuYWduaS52MS5nZW9tLlBhZHN0YWNrEiYKB3N0YWNrdXAYCyABKAsyFS5hZ25pLnYxLmdlb20uU3RhY2t1cBIwCg11bnJlYWRfbW9kZWxzGAwgAygLMhkuYWduaS52MS5nZW9tLlVucmVhZE1vZGVsEioKCnJlYWRfbm90ZXMYDSADKAsyFi5hZ25pLnYxLmdlb20uUmVhZE5vdGUSJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlItABCglCb2FyZFRleHQSDAoEdGV4dBgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDgoGaGVpZ2h0GAQgASgDEg0KBWxheWVyGAUgASgJEg4KBm1pcnJvchgGIAEoCBIPCgdqdXN0aWZ5GAcgASgJEg8KB3JlZl9kZXMYCCABKAkSDAoEa2luZBgJIAEoCRIMCgRmb250GAogASgJEhEKCXRoaWNrbmVzcxgLIAEoAyJhCgxCb2FyZEdyYXBoaWMSIgoFc2hhcGUYASABKAsyEy5hZ25pLnYxLmdlb20uU2hhcGUSDQoFbGF5ZXIYAiABKAkSDwoHcmVmX2RlcxgDIAEoCRINCgV3aWR0aBgEIAEoAyI4CgpCb2FyZExheWVyEg4KBm51bWJlchgBIAEoBRIMCgRuYW1lGAIgASgJEgwKBGtpbmQYAyABKAkiWQoHU3RhY2t1cBIoCgZsYXllcnMYASADKAsyGC5hZ25pLnYxLmdlb20uU3RhY2tMYXllchIWCgl0aGlja25lc3MYAiABKANIAIgBAUIMCgpfdGhpY2tuZXNzItoBCgpTdGFja0xheWVyEgwKBG5hbWUYASABKAkSDAoEa2luZBgCIAEoCRINCgVsYXllchgDIAEoCRIWCgl0aGlja25lc3MYBCABKANIAIgBARIQCghtYXRlcmlhbBgFIAEoCRIXCg9kaWVsZWN0cmljX3R5cGUYBiABKAkSFgoJZXBzaWxvbl9yGAcgASgBSAGIAQESGQoMbG9zc190YW5nZW50GAggASgBSAKIAQFCDAoKX3RoaWNrbmVzc0IMCgpfZXBzaWxvbl9yQg8KDV9sb3NzX3RhbmdlbnQiNQoMQm9hcmRPdXRsaW5lEiUKBXBhdGhzGAEgAygLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lIjoKC1VucmVhZE1vZGVsEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJEg0KBXBhcnRzGAMgASgFIlQKCFJlYWROb3RlEgwKBGZpbGUYASABKAkSDAoEbGluZRgCIAEoBRINCgVmaWVsZBgDIAEoCRINCgV2YWx1ZRgEIAEoCRIOCgZyZWFzb24YBSABKAki5AEKEkNvbXBvbmVudFBsYWNlbWVudBIPCgdyZWZfZGVzGAEgASgJEh8KAmF0GAIgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EhQKDHJvdGF0aW9uX2RlZxgDIAEoARINCgVsYXllchgEIAEoCRIfCgRwYWRzGAUgAygLMhEuYWduaS52MS5nZW9tLlBhZBIOCgZtaXJyb3IYBiABKAgSEwoGaGVpZ2h0GAcgASgDSACIAQESJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlQgkKB19oZWlnaHQivAEKA1BhZBIOCgZudW1iZXIYASABKAkSHwoCYXQYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSFAoMcm90YXRpb25fZGVnGAMgASgBEiEKBHNpemUYBCABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFc2hhcGUYBSABKAkSDgoGbGF5ZXJzGAYgAygJEg0KBWRyaWxsGAcgASgDEgsKA25ldBgIIAEoCRIQCghwYWRzdGFjaxgJIAEoCSJRCghQYWRzdGFjaxIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEisKBmxheWVycxgDIAMoCzIbLmFnbmkudjEuZ2VvbS5QYWRzdGFja0xheWVyIpUBCg1QYWRzdGFja0xheWVyEg0KBWxheWVyGAEgASgJEiMKA3BhZBgCIAEoCzIWLmFnbmkudjEuZ2VvbS5QYWRTaGFwZRInCgd0aGVybWFsGAMgASgLMhYuYWduaS52MS5nZW9tLlBhZFNoYXBlEicKB2FudGlwYWQYBCABKAsyFi5hZ25pLnYxLmdlb20uUGFkU2hhcGUihwEKCFBhZFNoYXBlEg0KBXNoYXBlGAEgASgJEiEKBHNpemUYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSIwoGb2Zmc2V0GAMgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EiQKB291dGxpbmUYBCADKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQikgEKCU5ldENvcHBlchILCgNuZXQYASABKAkSLAoIc2VnbWVudHMYAiADKAsyGi5hZ25pLnYxLmdlb20uVHJhY2tTZWdtZW50Eh8KBHZpYXMYAyADKAsyES5hZ25pLnYxLmdlb20uVmlhEikKBnNoYXBlcxgEIAMoCzIZLmFnbmkudjEuZ2VvbS5Db3BwZXJTaGFwZSJsCgtDb3BwZXJTaGFwZRINCgVsYXllchgBIAEoCRInCgdvdXRsaW5lGAIgASgLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lEiUKBWhvbGVzGAMgAygLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lIo4BCgxUcmFja1NlZ21lbnQSHgoBYRgBIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIeCgFiGAIgASgLMhMuYWduaS52MS5nZW9tLlBvaW50Eg0KBXdpZHRoGAMgASgDEg0KBWxheWVyGAQgASgJEiAKA21pZBgFIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCJ7CgNWaWESHwoCYXQYASABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDAoEc2l6ZRgCIAEoAxINCgVkcmlsbBgDIAEoAxISCgpsYXllcl9mcm9tGAQgASgJEhAKCGxheWVyX3RvGAUgASgJEhAKCHBhZHN0YWNrGAYgASgJIksKBFpvbmUSCwoDbmV0GAEgASgJEg0KBWxheWVyGAIgASgJEicKB291dGxpbmUYAyABKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmVCLFoqZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9nZW9tYgZwcm90bzM", [file_agni_v1_geom_geom]);
+  fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIroECg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSKQoJcGFkc3RhY2tzGAogAygLMhYuYWduaS52MS5nZW9tLlBhZHN0YWNrEiYKB3N0YWNrdXAYCyABKAsyFS5hZ25pLnYxLmdlb20uU3RhY2t1cBIwCg11bnJlYWRfbW9kZWxzGAwgAygLMhkuYWduaS52MS5nZW9tLlVucmVhZE1vZGVsEioKCnJlYWRfbm90ZXMYDSADKAsyFi5hZ25pLnYxLmdlb20uUmVhZE5vdGUSJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlItABCglCb2FyZFRleHQSDAoEdGV4dBgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDgoGaGVpZ2h0GAQgASgDEg0KBWxheWVyGAUgASgJEg4KBm1pcnJvchgGIAEoCBIPCgdqdXN0aWZ5GAcgASgJEg8KB3JlZl9kZXMYCCABKAkSDAoEa2luZBgJIAEoCRIMCgRmb250GAogASgJEhEKCXRoaWNrbmVzcxgLIAEoAyJhCgxCb2FyZEdyYXBoaWMSIgoFc2hhcGUYASABKAsyEy5hZ25pLnYxLmdlb20uU2hhcGUSDQoFbGF5ZXIYAiABKAkSDwoHcmVmX2RlcxgDIAEoCRINCgV3aWR0aBgEIAEoAyI4CgpCb2FyZExheWVyEg4KBm51bWJlchgBIAEoBRIMCgRuYW1lGAIgASgJEgwKBGtpbmQYAyABKAkiWQoHU3RhY2t1cBIoCgZsYXllcnMYASADKAsyGC5hZ25pLnYxLmdlb20uU3RhY2tMYXllchIWCgl0aGlja25lc3MYAiABKANIAIgBAUIMCgpfdGhpY2tuZXNzItoBCgpTdGFja0xheWVyEgwKBG5hbWUYASABKAkSDAoEa2luZBgCIAEoCRINCgVsYXllchgDIAEoCRIWCgl0aGlja25lc3MYBCABKANIAIgBARIQCghtYXRlcmlhbBgFIAEoCRIXCg9kaWVsZWN0cmljX3R5cGUYBiABKAkSFgoJZXBzaWxvbl9yGAcgASgBSAGIAQESGQoMbG9zc190YW5nZW50GAggASgBSAKIAQFCDAoKX3RoaWNrbmVzc0IMCgpfZXBzaWxvbl9yQg8KDV9sb3NzX3RhbmdlbnQiNQoMQm9hcmRPdXRsaW5lEiUKBXBhdGhzGAEgAygLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lIjoKC1VucmVhZE1vZGVsEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJEg0KBXBhcnRzGAMgASgFIlQKCFJlYWROb3RlEgwKBGZpbGUYASABKAkSDAoEbGluZRgCIAEoBRINCgVmaWVsZBgDIAEoCRINCgV2YWx1ZRgEIAEoCRIOCgZyZWFzb24YBSABKAkimgIKEkNvbXBvbmVudFBsYWNlbWVudBIPCgdyZWZfZGVzGAEgASgJEh8KAmF0GAIgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EhQKDHJvdGF0aW9uX2RlZxgDIAEoARINCgVsYXllchgEIAEoCRIfCgRwYWRzGAUgAygLMhEuYWduaS52MS5nZW9tLlBhZBIOCgZtaXJyb3IYBiABKAgSEwoGaGVpZ2h0GAcgASgDSACIAQESNAoPbW9kZWxfaW5zdGFuY2VzGAggAygLMhsuYWduaS52MS5nZW9tLk1vZGVsSW5zdGFuY2USJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlQgkKB19oZWlnaHQiMAoNTW9kZWxJbnN0YW5jZRIMCgRtZXNoGAEgASgJEhEKCXRyYW5zZm9ybRgCIAMoASJZCglNb2RlbE1lc2gSCwoDa2V5GAEgASgJEiUKBXBhcnRzGAIgAygLMhYuYWduaS52MS5nZW9tLk1lc2hQYXJ0EhgKEHNvdXJjZV90cmlhbmdsZXMYAyABKAUiPAoITWVzaFBhcnQSEQoJcG9zaXRpb25zGAEgAygCEg8KB2luZGljZXMYAiADKA0SDAoEcmdiYRgDIAEoByK8AQoDUGFkEg4KBm51bWJlchgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESIQoEc2l6ZRgEIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBINCgVzaGFwZRgFIAEoCRIOCgZsYXllcnMYBiADKAkSDQoFZHJpbGwYByABKAMSCwoDbmV0GAggASgJEhAKCHBhZHN0YWNrGAkgASgJIlEKCFBhZHN0YWNrEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSKwoGbGF5ZXJzGAMgAygLMhsuYWduaS52MS5nZW9tLlBhZHN0YWNrTGF5ZXIilQEKDVBhZHN0YWNrTGF5ZXISDQoFbGF5ZXIYASABKAkSIwoDcGFkGAIgASgLMhYuYWduaS52MS5nZW9tLlBhZFNoYXBlEicKB3RoZXJtYWwYAyABKAsyFi5hZ25pLnYxLmdlb20uUGFkU2hhcGUSJwoHYW50aXBhZBgEIAEoCzIWLmFnbmkudjEuZ2VvbS5QYWRTaGFwZSKHAQoIUGFkU2hhcGUSDQoFc2hhcGUYASABKAkSIQoEc2l6ZRgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIjCgZvZmZzZXQYAyABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSJAoHb3V0bGluZRgEIAMoCzITLmFnbmkudjEuZ2VvbS5Qb2ludCKSAQoJTmV0Q29wcGVyEgsKA25ldBgBIAEoCRIsCghzZWdtZW50cxgCIAMoCzIaLmFnbmkudjEuZ2VvbS5UcmFja1NlZ21lbnQSHwoEdmlhcxgDIAMoCzIRLmFnbmkudjEuZ2VvbS5WaWESKQoGc2hhcGVzGAQgAygLMhkuYWduaS52MS5nZW9tLkNvcHBlclNoYXBlImwKC0NvcHBlclNoYXBlEg0KBWxheWVyGAEgASgJEicKB291dGxpbmUYAiABKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmUSJQoFaG9sZXMYAyADKAsyFi5hZ25pLnYxLmdlb20uUG9seWxpbmUijgEKDFRyYWNrU2VnbWVudBIeCgFhGAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50Eh4KAWIYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFd2lkdGgYAyABKAMSDQoFbGF5ZXIYBCABKAkSIAoDbWlkGAUgASgLMhMuYWduaS52MS5nZW9tLlBvaW50InsKA1ZpYRIfCgJhdBgBIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIMCgRzaXplGAIgASgDEg0KBWRyaWxsGAMgASgDEhIKCmxheWVyX2Zyb20YBCABKAkSEAoIbGF5ZXJfdG8YBSABKAkSEAoIcGFkc3RhY2sYBiABKAkiSwoEWm9uZRILCgNuZXQYASABKAkSDQoFbGF5ZXIYAiABKAkSJwoHb3V0bGluZRgDIAEoCzIWLmFnbmkudjEuZ2VvbS5Qb2x5bGluZUIsWipnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2dlb21iBnByb3RvMw", [file_agni_v1_geom_geom]);
 
 /**
  * BoardGeometry is the root, with one message per board. It is the layout analogue of
@@ -565,6 +565,15 @@ export type ComponentPlacement = Message<"agni.v1.geom.ComponentPlacement"> & {
   height?: bigint | undefined;
 
   /**
+   * model_instances lists this part's 3D model meshes, one for each of its models that gave a height
+   * (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+   * part with none draws as a block of its height.
+   *
+   * @generated from field: repeated agni.v1.geom.ModelInstance model_instances = 8;
+   */
+  modelInstances: ModelInstance[];
+
+  /**
    * @generated from field: agni.v1.geom.Provenance prov = 16;
    */
   prov?: Provenance | undefined;
@@ -576,6 +585,102 @@ export type ComponentPlacement = Message<"agni.v1.geom.ComponentPlacement"> & {
  */
 export const ComponentPlacementSchema: GenMessage<ComponentPlacement> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 9);
+
+/**
+ * ModelInstance places one model mesh on a part (agni issue 1652). mesh is the mesh's key, such as
+ * `${KICAD9_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_0402_1005Metric.wrl`, and GetBoardMeshes returns each
+ * mesh under its key. Many parts share one key, so a viewer holds each mesh once and draws it per
+ * instance.
+ *
+ * transform takes a mesh point to the part's footprint-local frame, in millimetres with Y up and Z
+ * above the pads' seating plane. It holds 12 numbers, a 3x4 matrix in row order, so a point p goes to
+ * (t[0]p.x + t[1]p.y + t[2]p.z + t[3], t[4]p.x + ..., t[8]p.x + ...). It carries the source's model
+ * offset, rotation and scale. A viewer then places the footprint as it places pads, by the
+ * placement's at, rotation_deg and mirror, and a mirrored part also negates Z, so its model hangs
+ * below the board.
+ *
+ * @generated from message agni.v1.geom.ModelInstance
+ */
+export type ModelInstance = Message<"agni.v1.geom.ModelInstance"> & {
+  /**
+   * @generated from field: string mesh = 1;
+   */
+  mesh: string;
+
+  /**
+   * @generated from field: repeated double transform = 2;
+   */
+  transform: number[];
+};
+
+/**
+ * Describes the message agni.v1.geom.ModelInstance.
+ * Use `create(ModelInstanceSchema)` to create a new message.
+ */
+export const ModelInstanceSchema: GenMessage<ModelInstance> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 10);
+
+/**
+ * ModelMesh is one model's triangles under its key, as GetBoardMeshes returns it. A ModelInstance
+ * names the same key. Positions are in millimetres in the mesh's own frame, and
+ * ModelInstance.transform maps that frame to the footprint's. source_triangles counts the model
+ * file's triangles. The parts hold fewer when the server simplified the mesh to fit the budget.
+ *
+ * @generated from message agni.v1.geom.ModelMesh
+ */
+export type ModelMesh = Message<"agni.v1.geom.ModelMesh"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: repeated agni.v1.geom.MeshPart parts = 2;
+   */
+  parts: MeshPart[];
+
+  /**
+   * @generated from field: int32 source_triangles = 3;
+   */
+  sourceTriangles: number;
+};
+
+/**
+ * Describes the message agni.v1.geom.ModelMesh.
+ * Use `create(ModelMeshSchema)` to create a new message.
+ */
+export const ModelMeshSchema: GenMessage<ModelMesh> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 11);
+
+/**
+ * MeshPart is one coloured triangle list. positions holds x, y and z for each vertex, and indices
+ * names three vertices per triangle. rgba is the colour, red in the top byte and alpha in the lowest.
+ *
+ * @generated from message agni.v1.geom.MeshPart
+ */
+export type MeshPart = Message<"agni.v1.geom.MeshPart"> & {
+  /**
+   * @generated from field: repeated float positions = 1;
+   */
+  positions: number[];
+
+  /**
+   * @generated from field: repeated uint32 indices = 2;
+   */
+  indices: number[];
+
+  /**
+   * @generated from field: fixed32 rgba = 3;
+   */
+  rgba: number;
+};
+
+/**
+ * Describes the message agni.v1.geom.MeshPart.
+ * Use `create(MeshPartSchema)` to create a new message.
+ */
+export const MeshPartSchema: GenMessage<MeshPart> = /*@__PURE__*/
+  messageDesc(file_agni_v1_geom_geom_board, 12);
 
 /**
  * Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are
@@ -653,7 +758,7 @@ export type Pad = Message<"agni.v1.geom.Pad"> & {
  * Use `create(PadSchema)` to create a new message.
  */
 export const PadSchema: GenMessage<Pad> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 10);
+  messageDesc(file_agni_v1_geom_geom_board, 13);
 
 /**
  * Padstack is a pad's shape on each copper layer, as the board has it (agni 1356). A through-hole
@@ -690,7 +795,7 @@ export type Padstack = Message<"agni.v1.geom.Padstack"> & {
  * Use `create(PadstackSchema)` to create a new message.
  */
 export const PadstackSchema: GenMessage<Padstack> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 11);
+  messageDesc(file_agni_v1_geom_geom_board, 14);
 
 /**
  * PadstackLayer is a padstack on one copper layer. pad is the land, unset where the padstack has
@@ -728,7 +833,7 @@ export type PadstackLayer = Message<"agni.v1.geom.PadstackLayer"> & {
  * Use `create(PadstackLayerSchema)` to create a new message.
  */
 export const PadstackLayerSchema: GenMessage<PadstackLayer> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 12);
+  messageDesc(file_agni_v1_geom_geom_board, 15);
 
 /**
  * PadShape is one shape of a padstack, turned with the pad. shape is the source word, as Pad.shape
@@ -766,7 +871,7 @@ export type PadShape = Message<"agni.v1.geom.PadShape"> & {
  * Use `create(PadShapeSchema)` to create a new message.
  */
 export const PadShapeSchema: GenMessage<PadShape> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 13);
+  messageDesc(file_agni_v1_geom_geom_board, 16);
 
 /**
  * NetCopper is the copper of one net, with its track segments, vias and filled shapes. They are
@@ -807,7 +912,7 @@ export type NetCopper = Message<"agni.v1.geom.NetCopper"> & {
  * Use `create(NetCopperSchema)` to create a new message.
  */
 export const NetCopperSchema: GenMessage<NetCopper> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 14);
+  messageDesc(file_agni_v1_geom_geom_board, 17);
 
 /**
  * CopperShape is a filled copper polygon on one layer, as the board is etched (agni 1357). It is
@@ -840,7 +945,7 @@ export type CopperShape = Message<"agni.v1.geom.CopperShape"> & {
  * Use `create(CopperShapeSchema)` to create a new message.
  */
 export const CopperShapeSchema: GenMessage<CopperShape> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 15);
+  messageDesc(file_agni_v1_geom_geom_board, 18);
 
 /**
  * TrackSegment is one copper run on one layer, from a to b. A straight run leaves mid unset. An
@@ -887,7 +992,7 @@ export type TrackSegment = Message<"agni.v1.geom.TrackSegment"> & {
  * Use `create(TrackSegmentSchema)` to create a new message.
  */
 export const TrackSegmentSchema: GenMessage<TrackSegment> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 16);
+  messageDesc(file_agni_v1_geom_geom_board, 19);
 
 /**
  * Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
@@ -938,7 +1043,7 @@ export type Via = Message<"agni.v1.geom.Via"> & {
  * Use `create(ViaSchema)` to create a new message.
  */
 export const ViaSchema: GenMessage<Via> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 17);
+  messageDesc(file_agni_v1_geom_geom_board, 20);
 
 /**
  * Zone is a region the designer drew to be filled with a net's copper, with its net, its layer, and
@@ -971,5 +1076,5 @@ export type Zone = Message<"agni.v1.geom.Zone"> & {
  * Use `create(ZoneSchema)` to create a new message.
  */
 export const ZoneSchema: GenMessage<Zone> = /*@__PURE__*/
-  messageDesc(file_agni_v1_geom_geom_board, 18);
+  messageDesc(file_agni_v1_geom_geom_board, 21);
 
