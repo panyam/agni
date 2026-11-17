@@ -210,7 +210,7 @@ func TestCompHeightTakesItsNumberFromTheFile(t *testing.T) {
 		{"Altium", "UNITS=INCH\n@0 .comp_mount_type\n@1 .comp_height\nCMP 0 1 1 0 N L1 P ;0=1,1=0.1\nCMP 0 2 2 0 N L2 P ;0=1\n"},
 		{"Allegro", "UNITS=INCH\n@0 .comp_ignore\n@4 .comp_height\nCMP 0 1 1 0 N L1 P ;0,1,2=1,4=0.1\nCMP 0 2 2 0 N L2 P ;0\n"},
 	} {
-		comps, err := parseComponents([]byte(tc.data), false)
+		comps, _, err := parseComponents([]byte(tc.data), false)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}

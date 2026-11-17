@@ -457,6 +457,55 @@ public interface BoardGeometryOrBuilder extends
       int index);
 
   /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  java.util.List<io.github.panyam.agni.v1.geom.ReadNote> 
+      getReadNotesList();
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  io.github.panyam.agni.v1.geom.ReadNote getReadNotes(int index);
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  int getReadNotesCount();
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  java.util.List<? extends io.github.panyam.agni.v1.geom.ReadNoteOrBuilder> 
+      getReadNotesOrBuilderList();
+  /**
+   * <pre>
+   * read_notes lists each value the reader skipped because it could not parse it, one row per
+   * value (agni 1685). The board still reads, and the thing the value describes reads as unstated.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.ReadNote read_notes = 13 [json_name = "readNotes"];</code>
+   */
+  io.github.panyam.agni.v1.geom.ReadNoteOrBuilder getReadNotesOrBuilder(
+      int index);
+
+  /**
    * <code>.agni.v1.geom.Provenance prov = 16 [json_name = "prov"];</code>
    * @return Whether the prov field is set.
    */

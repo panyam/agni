@@ -142,6 +142,25 @@ func main() {
 		return nil
 	})
 
+	demo.Bind("read-notes").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		const path = "../common/designs/odb/record-ids-layout/matrix/matrix"
+		b, err := (&formats.Loader{}).BoardGeometry(path)
+		if err != nil {
+			return demokit.Errf("read %s: %v", path, err)
+		}
+		for _, p := range b.GetPlacements() {
+			height := "no height"
+			if p.Height != nil {
+				height = fmt.Sprintf("%.2f mm tall", float64(p.GetHeight()*b.GetUnitNm())/1e6)
+			}
+			fmt.Printf("%-3s %s\n", p.GetRefDes(), height)
+		}
+		for _, n := range b.GetReadNotes() {
+			fmt.Printf("skipped: %s line %d: %s %q: %s\n", n.GetFile(), n.GetLine(), n.GetField(), n.GetValue(), n.GetReason())
+		}
+		return nil
+	})
+
 	common.SetupRenderer(demo)
 	demo.Execute()
 }

@@ -8,7 +8,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class BoardGeometry(_message.Message):
-    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "padstacks", "stackup", "unread_models", "prov")
+    __slots__ = ("design_ref", "unit_nm", "layers", "outline", "placements", "nets", "zones", "texts", "graphics", "padstacks", "stackup", "unread_models", "read_notes", "prov")
     DESIGN_REF_FIELD_NUMBER: _ClassVar[int]
     UNIT_NM_FIELD_NUMBER: _ClassVar[int]
     LAYERS_FIELD_NUMBER: _ClassVar[int]
@@ -21,6 +21,7 @@ class BoardGeometry(_message.Message):
     PADSTACKS_FIELD_NUMBER: _ClassVar[int]
     STACKUP_FIELD_NUMBER: _ClassVar[int]
     UNREAD_MODELS_FIELD_NUMBER: _ClassVar[int]
+    READ_NOTES_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     design_ref: str
     unit_nm: int
@@ -34,8 +35,9 @@ class BoardGeometry(_message.Message):
     padstacks: _containers.RepeatedCompositeFieldContainer[Padstack]
     stackup: Stackup
     unread_models: _containers.RepeatedCompositeFieldContainer[UnreadModel]
+    read_notes: _containers.RepeatedCompositeFieldContainer[ReadNote]
     prov: _geom_pb2.Provenance
-    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., unread_models: _Optional[_Iterable[_Union[UnreadModel, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., layers: _Optional[_Iterable[_Union[BoardLayer, _Mapping]]] = ..., outline: _Optional[_Union[BoardOutline, _Mapping]] = ..., placements: _Optional[_Iterable[_Union[ComponentPlacement, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[NetCopper, _Mapping]]] = ..., zones: _Optional[_Iterable[_Union[Zone, _Mapping]]] = ..., texts: _Optional[_Iterable[_Union[BoardText, _Mapping]]] = ..., graphics: _Optional[_Iterable[_Union[BoardGraphic, _Mapping]]] = ..., padstacks: _Optional[_Iterable[_Union[Padstack, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., unread_models: _Optional[_Iterable[_Union[UnreadModel, _Mapping]]] = ..., read_notes: _Optional[_Iterable[_Union[ReadNote, _Mapping]]] = ..., prov: _Optional[_Union[_geom_pb2.Provenance, _Mapping]] = ...) -> None: ...
 
 class BoardText(_message.Message):
     __slots__ = ("text", "at", "rotation_deg", "height", "layer", "mirror", "justify", "ref_des", "kind", "font", "thickness")
@@ -128,6 +130,20 @@ class UnreadModel(_message.Message):
     reason: str
     parts: int
     def __init__(self, path: _Optional[str] = ..., reason: _Optional[str] = ..., parts: _Optional[int] = ...) -> None: ...
+
+class ReadNote(_message.Message):
+    __slots__ = ("file", "line", "field", "value", "reason")
+    FILE_FIELD_NUMBER: _ClassVar[int]
+    LINE_FIELD_NUMBER: _ClassVar[int]
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    file: str
+    line: int
+    field: str
+    value: str
+    reason: str
+    def __init__(self, file: _Optional[str] = ..., line: _Optional[int] = ..., field: _Optional[str] = ..., value: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class ComponentPlacement(_message.Message):
     __slots__ = ("ref_des", "at", "rotation_deg", "layer", "pads", "mirror", "height", "prov")

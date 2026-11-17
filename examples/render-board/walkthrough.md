@@ -62,3 +62,11 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 > `unread_models` says why. U3 names `${DEMOLIB}/block.step`, a variable only its author's KiCad
 > defines. The read maps `DEMOLIB` to a folder, as `--model-var` does, and finds a glTF beside the
 > named `.step`, the way Antmicro publishes its library. It stands 1.5 mm tall.
+
+## Skip a value the reader cannot parse {#read-notes}
+
+> An ODB++ job states each part's height as a `.comp_height` attribute on its CMP record. ODB++ 8
+> lets the record end with `;ID=<n>` after its attributes, and the reader drops it. This step reads
+> record-ids-layout from ../common/designs/odb. U1's height is 0.05 in, so it reads 1.27 mm. U2's
+> height reads `tall`. The board still reads, U2 has no height, and the board's `read_notes` names
+> the file, the line and the value.
