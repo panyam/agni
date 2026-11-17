@@ -70,7 +70,12 @@ func rootCmd() *cobra.Command {
 		// Tier-1 config is applied before ANY command runs, so a mount declared in a file is in the
 		// table by the time the first argument is turned into a URI.
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			return applyEnvConfig(cmd.ErrOrStderr(), os.Getenv)
+			if err := applyEnvConfig(cmd.ErrOrStderr(), os.Getenv); err != nil {
+				return err
+			}
+			// A malformed --model-var fails here, before any command reads a board with it.
+			_, err := resolveModelVars(os.Getenv)
+			return err
 		},
 		// `agni --version`. The same string internal/version stamps into a results document's
 		// provenance. `agni version` adds the toolchain and platform.
@@ -104,6 +109,10 @@ func rootCmd() *cobra.Command {
 			"${KICAD9_3DMODEL_DIR} in a footprint's model path. A KiCad board takes each part's "+
 			"height from its STEP model (repeatable). Defaults to "+envModelPath+", then to "+
 			"KiCad's own KICAD<n>_3DMODEL_DIR, when unset.")
+	root.PersistentFlags().StringArrayVar(&modelVars, "model-var", nil,
+		"NAME=dir: a path variable a footprint's 3D model names, such as Antmicro's ANT3DMDL, and the "+
+			"folder it stands for. A KiCad board takes a part's height from the model it finds there "+
+			"(repeatable). Defaults to "+envModelVars+" when unset.")
 	root.AddCommand(statsCmd(), withTiming(checkCmd(), false), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), mcpCmd(), openCmd(), nativeCmd(), withTiming(queryCmd(), true), withTiming(traceCmd(), false), withTiming(walkCmd(), false), pinmapCmd(), lexiconCmd(), withTiming(reviewCmd(), false), startCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), opscmd.Healthcheck("agni", "localhost:8080"), opscmd.Version("agni"), paramsCmd(), tabulateCmd(), checklistsCmd(), proposeCmd(), siteCmd(), trialCmd(), stackupCmd(), boardCmd())
 	return root
 }
@@ -113,6 +122,9 @@ var symbolPaths []string
 
 // modelPaths holds the --model-path KiCad 3D model library folders (agni 1652).
 var modelPaths []string
+
+// modelVars holds the --model-var NAME=dir values (agni 1687).
+var modelVars []string
 
 // envConfigWebDir holds the web_dir an agni.yaml named, "" when no file named one. applyEnvConfig
 // fills it and resolveWebDir consults it. The file is read once in PersistentPreRunE, before any
@@ -137,6 +149,10 @@ const envSymbolPath = "AGNI_SYMBOL_PATH"
 // colon-separated like envSymbolPath. With neither, the first of KiCad's own KICAD10_3DMODEL_DIR
 // down to KICAD6_3DMODEL_DIR that is set is used.
 const envModelPath = "AGNI_MODEL_PATH"
+
+// envModelVars names the environment variable that supplies --model-var when the flag is absent, as
+// NAME=dir pairs separated by colons.
+const envModelVars = "AGNI_MODEL_VARS"
 
 // envWebDir names the environment variable that supplies --web-dir when neither the flag nor an
 // agni.yaml names one.
@@ -179,6 +195,12 @@ func applyEnvConfig(w io.Writer, getenv func(string) string) error {
 	if len(symbolPaths) == 0 && len(cfg.SymbolPaths) > 0 {
 		symbolPaths = cfg.SymbolPaths
 		used = append(used, fmt.Sprintf("%d symbol path(s)", len(cfg.SymbolPaths)))
+	}
+	if len(modelVars) == 0 && len(cfg.ModelVars) > 0 {
+		for name, dir := range cfg.ModelVars {
+			modelVars = append(modelVars, name+"="+dir)
+		}
+		used = append(used, fmt.Sprintf("%d model variable(s)", len(cfg.ModelVars)))
 	}
 	if len(modelPaths) == 0 && len(cfg.ModelPaths) > 0 {
 		modelPaths = cfg.ModelPaths
@@ -252,10 +274,39 @@ func resolveModelPaths(getenv func(string) string) []string {
 	return nil
 }
 
+// resolveModelVars parses the --model-var values, or envModelVars when the flag is absent, into a
+// map. A pair with no "=", an empty name or an empty folder is an error, so a typo does not read as
+// a model that was never found.
+func resolveModelVars(getenv func(string) string) (map[string]string, error) {
+	pairs := modelVars
+	if len(pairs) == 0 {
+		for p := range strings.SplitSeq(getenv(envModelVars), ":") {
+			if p = strings.TrimSpace(p); p != "" {
+				pairs = append(pairs, p)
+			}
+		}
+	}
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	out := map[string]string{}
+	for _, p := range pairs {
+		name, dir, ok := strings.Cut(p, "=")
+		name, dir = strings.TrimSpace(name), strings.TrimSpace(dir)
+		if !ok || name == "" || dir == "" {
+			return nil, fmt.Errorf("--model-var %q: want NAME=dir", p)
+		}
+		out[name] = dir
+	}
+	return out, nil
+}
+
 // newLoader builds the formats.Loader every command reads designs through, carrying the
-// --symbol-path and --model-path values (or their environment fallbacks).
+// --symbol-path, --model-path and --model-var values (or their environment fallbacks).
+// PersistentPreRunE has already refused a malformed --model-var.
 func newLoader() *formats.Loader {
-	l := &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv), ModelPaths: resolveModelPaths(os.Getenv)}
+	vars, _ := resolveModelVars(os.Getenv)
+	l := &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv), ModelPaths: resolveModelPaths(os.Getenv), ModelVars: vars}
 	// The CLI opens a design by absolute host path, so without this every locator would record this
 	// machine's directory layout and `--format json` and `--results-out` would publish it (agni issue
 	// 501). The lookup is deferred because the argument's mount is minted after the loader is built.

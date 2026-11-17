@@ -122,8 +122,10 @@ func main() {
 
 	demo.Bind("model-heights").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		const path = "../common/designs/model-heights/model-heights.kicad_pcb"
-		// No ModelPaths, so only the board's own models resolve. A host passes --model-path.
-		b, err := (&formats.Loader{}).BoardGeometry(path)
+		// No ModelPaths, so KiCad's library does not resolve. A host passes --model-path. DEMOLIB maps
+		// the variable U3's footprint names to the folder beside the board, as --model-var does.
+		l := &formats.Loader{ModelVars: map[string]string{"DEMOLIB": "../common/designs/model-heights/demolib"}}
+		b, err := l.BoardGeometry(path)
 		if err != nil {
 			return demokit.Errf("read %s: %v", path, err)
 		}

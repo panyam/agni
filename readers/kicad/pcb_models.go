@@ -1,22 +1,31 @@
 package kicad
 
 import (
+	"errors"
 	"io"
 	"math"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/gltf"
 	"github.com/panyam/agni/readers/step"
 )
 
 // ModelOpener returns the bytes of a 3D model a footprint names, given the path exactly as the
 // footprint writes it, such as `${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0402_1005Metric.step`.
 // The caller resolves it, so the reader opens no file (C1). SplitModelPath says where each kind of
-// path is anchored. An error says why the model could not be had, and the reader records it.
+// path is anchored. The reader also asks for files beside the named one: a stand-in in another
+// format, and a glTF's buffers. An error for a file that is not there wraps ErrModelNotFound, so the
+// reader can try the next stand-in. Any other error says why the model could not be had, and the
+// reader records it.
 type ModelOpener func(path string) ([]byte, error)
+
+// ErrModelNotFound is what a ModelOpener's error wraps when the file is not there.
+var ErrModelNotFound = errors.New("not found")
 
 // ReadBoardGeometryWithModels is ReadBoardGeometry plus each part's height, taken from the STEP
 // models its footprint names (agni 1652). A part whose models all fail to open or read keeps no
@@ -45,58 +54,137 @@ const (
 	AnchorLibrary
 	// AnchorAbsolute is a path rooted on the machine that wrote the board.
 	AnchorAbsolute
-	// AnchorUnknown is a path that starts with any other variable, which only that user's KiCad
-	// configuration defines.
-	AnchorUnknown
+	// AnchorVar is a path under any other variable, such as Antmicro's `${ANT3DMDL}` (agni 1687).
+	// Only the configuration of the person who wrote the board defines it, so a reader maps it to
+	// a folder through formats.Loader.ModelVars.
+	AnchorVar
 )
 
-var modelVar = regexp.MustCompile(`^(?:\$\{([A-Za-z0-9_]+)\}|\$\(([A-Za-z0-9_]+)\))[/\\]?`)
+// ModelRef is a footprint's model path split at its anchor. Var names the variable for AnchorVar,
+// and Rel is the slash-separated path below the anchor. For AnchorAbsolute, Rel is the whole path.
+type ModelRef struct {
+	Anchor ModelAnchor
+	Var    string
+	Rel    string
+}
+
+var modelVar = regexp.MustCompile(`^/?(?:\$\{([A-Za-z0-9_]+)\}|\$\(([A-Za-z0-9_]+)\))[/\\]?`)
 var libraryVar = regexp.MustCompile(`^KICAD[0-9]*_3DMODEL_DIR$|^KISYS3DMOD$`)
 
-// SplitModelPath splits a footprint's model path into its anchor and the slash-separated path
-// below it. KiCad writes a variable as `${NAME}` or `$(NAME)`, and a board saved on Windows uses
-// backslashes. KISYS3DMOD is KiCad 5's name for the library.
-func SplitModelPath(raw string) (ModelAnchor, string) {
+// SplitModelPath splits a footprint's model path at its anchor. KiCad writes a variable as `${NAME}`
+// or `$(NAME)`, and a board saved on Windows uses backslashes. KISYS3DMOD is KiCad 5's name for the
+// library. A slash before a variable, as in Jetson's `/${ANT3DMDL}/x.step`, is ignored, since KiCad
+// expands the variable to an absolute folder anyway.
+func SplitModelPath(raw string) ModelRef {
 	p := strings.ReplaceAll(raw, `\`, "/")
 	if m := modelVar.FindStringSubmatch(p); m != nil {
 		name := m[1] + m[2]
 		rest := p[len(m[0]):]
 		switch {
 		case name == "KIPRJMOD":
-			return AnchorBoard, rest
+			return ModelRef{Anchor: AnchorBoard, Rel: rest}
 		case libraryVar.MatchString(name):
-			return AnchorLibrary, rest
+			return ModelRef{Anchor: AnchorLibrary, Rel: rest}
 		default:
-			return AnchorUnknown, p
+			return ModelRef{Anchor: AnchorVar, Var: name, Rel: rest}
 		}
 	}
 	if strings.HasPrefix(p, "/") || len(p) > 2 && p[1] == ':' && p[2] == '/' {
-		return AnchorAbsolute, p
+		return ModelRef{Anchor: AnchorAbsolute, Rel: p}
 	}
-	return AnchorBoard, p
+	return ModelRef{Anchor: AnchorBoard, Rel: p}
+}
+
+// modelCandidates lists the files a footprint's model path may stand for, in the order tried. A
+// path is tried as written first. KiCad's library ships a .wrl beside each .step, so a .wrl name
+// also tries the .step. Antmicro ships its library as glTF, so a .step name also tries a .gltf
+// and a .glb of the same name (agni 1687).
+func modelCandidates(raw string) []string {
+	ext := path.Ext(raw)
+	stem := strings.TrimSuffix(raw, ext)
+	switch strings.ToLower(ext) {
+	case ".wrl", ".wrz":
+		return []string{raw, stem + ".step"}
+	case ".step", ".stp":
+		return []string{raw, stem + ".gltf", stem + ".glb"}
+	}
+	return []string{raw}
+}
+
+// readModel reads one model file's extent points, in millimetres with Z up. named is the extension
+// the footprint wrote. A STEP's points are in the model's own frame, and the footprint's model
+// transform places them (footprintFrame false).
+//
+// A glTF's points are already in the footprint's frame (footprintFrame true), and no model
+// transform applies. Antmicro authors its glTF library that way. On Jetson, 936 of its 938 glTF
+// parts sit inside their courtyards untransformed, and 833 with the footprint's transform applied
+// (agni 1687). A glTF that stands in for a named STEP is read in millimetres, as Antmicro's library
+// writes it. A glTF the footprint names itself is read in metres, as the glTF specification says.
+// glTF's Y is up, so its (x, y, z) is the footprint frame's (x, -z, y).
+func readModel(open ModelOpener, file, named string) (pts [][3]float64, footprintFrame bool, err error) {
+	data, err := open(file)
+	if err != nil {
+		return nil, false, err
+	}
+	switch strings.ToLower(path.Ext(file)) {
+	case ".gltf", ".glb":
+		dir := path.Dir(strings.ReplaceAll(file, `\`, "/"))
+		m, err := gltf.Read(data, func(uri string) ([]byte, error) { return open(dir + "/" + uri) })
+		if err != nil {
+			return nil, false, err
+		}
+		scale := 1000.0
+		if e := strings.ToLower(named); e == ".step" || e == ".stp" {
+			scale = 1
+		}
+		src := m.Points()
+		out := make([][3]float64, len(src))
+		for i, q := range src {
+			out[i] = [3]float64{q[0] * scale, -q[2] * scale, q[1] * scale}
+		}
+		return out, true, nil
+	default:
+		pts, err := step.Points(data)
+		return pts, false, err
+	}
 }
 
 // modelHeights sets each placement's height from its footprint's models, and records the models it
 // could not use. A file the board names many times is opened and read once.
 func modelHeights(root *node, g *geom.BoardGeometry, open ModelOpener) {
 	type read struct {
-		pts    [][3]float64
-		reason string
+		pts            [][3]float64
+		footprintFrame bool
+		reason         string
 	}
 	cache := map[string]read{}
-	load := func(path string) read {
-		if r, ok := cache[path]; ok {
+	load := func(raw string) read {
+		if r, ok := cache[raw]; ok {
 			return r
 		}
+		// The reason a model went unread is the first file that was there and failed to read, or
+		// else why the named file was not there.
 		var r read
-		data, err := open(path)
-		if err == nil {
-			r.pts, err = step.Points(data)
+		var missing, broken error
+		for _, file := range modelCandidates(raw) {
+			pts, inFootprint, err := readModel(open, file, path.Ext(raw))
+			if err == nil {
+				r.pts, r.footprintFrame, missing, broken = pts, inFootprint, nil, nil
+				break
+			}
+			switch {
+			case !errors.Is(err, ErrModelNotFound) && broken == nil:
+				broken = err
+			case missing == nil:
+				missing = err
+			}
 		}
-		if err != nil {
-			r.reason = err.Error()
+		if broken != nil {
+			r.reason = broken.Error()
+		} else if missing != nil {
+			r.reason = missing.Error()
 		}
-		cache[path] = r
+		cache[raw] = r
 		return r
 	}
 	byRef := map[string]*geom.ComponentPlacement{}
@@ -122,7 +210,11 @@ func modelHeights(root *node, g *geom.BoardGeometry, open ModelOpener) {
 			}
 			t := modelTransformOf(m)
 			for _, q := range r.pts {
-				if z := t.z(q); !any || z > top {
+				z := q[2]
+				if !r.footprintFrame {
+					z = t.z(q)
+				}
+				if !any || z > top {
 					top, any = z, true
 				}
 			}
@@ -201,12 +293,16 @@ func xyzOf(n *node) ([3]float64, bool) {
 	return v, true
 }
 
-// z places a model point and returns its height above the seating plane. A turn about Z comes last
-// and moves no point up or down, so z leaves it out.
-func (t modelTransform) z(p [3]float64) float64 {
+// apply places a model point in the footprint's frame, in millimetres with Y up and Z above the
+// pads' seating plane. KiCad scales, then turns about X, Y and Z by the negated angles, then offsets.
+func (t modelTransform) apply(p [3]float64) [3]float64 {
 	x, y, z := p[0]*t.scale[0], p[1]*t.scale[1], p[2]*t.scale[2]
-	rx, ry := -t.rotDeg[0]*math.Pi/180, -t.rotDeg[1]*math.Pi/180
-	z = y*math.Sin(rx) + z*math.Cos(rx)
-	z = -x*math.Sin(ry) + z*math.Cos(ry)
-	return z + t.offsetMm[2]
+	rx, ry, rz := -t.rotDeg[0]*math.Pi/180, -t.rotDeg[1]*math.Pi/180, -t.rotDeg[2]*math.Pi/180
+	y, z = y*math.Cos(rx)-z*math.Sin(rx), y*math.Sin(rx)+z*math.Cos(rx)
+	x, z = x*math.Cos(ry)+z*math.Sin(ry), -x*math.Sin(ry)+z*math.Cos(ry)
+	x, y = x*math.Cos(rz)-y*math.Sin(rz), x*math.Sin(rz)+y*math.Cos(rz)
+	return [3]float64{x + t.offsetMm[0], y + t.offsetMm[1], z + t.offsetMm[2]}
 }
+
+// z returns a model point's height above the seating plane.
+func (t modelTransform) z(p [3]float64) float64 { return t.apply(p)[2] }

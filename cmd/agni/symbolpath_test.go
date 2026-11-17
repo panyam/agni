@@ -79,3 +79,37 @@ func TestResolveModelPaths(t *testing.T) {
 		}
 	}
 }
+
+// TestResolveModelVars covers --model-var (agni 1687). The flag wins over AGNI_MODEL_VARS, and a pair
+// with no folder is an error rather than a variable that never resolves.
+func TestResolveModelVars(t *testing.T) {
+	env := func(v string) func(string) string {
+		return func(k string) string {
+			if k == envModelVars {
+				return v
+			}
+			return ""
+		}
+	}
+	defer func() { modelVars = nil }()
+	modelVars = nil
+	got, err := resolveModelVars(env("ANT3DMDL=/models/ant:OTHER=/x"))
+	if err != nil || len(got) != 2 || got["ANT3DMDL"] != "/models/ant" || got["OTHER"] != "/x" {
+		t.Errorf("from the environment: %v, %v", got, err)
+	}
+	modelVars = []string{"ANT3DMDL=/flag"}
+	got, err = resolveModelVars(env("ANT3DMDL=/env"))
+	if err != nil || len(got) != 1 || got["ANT3DMDL"] != "/flag" {
+		t.Errorf("flag over environment: %v, %v", got, err)
+	}
+	for _, bad := range []string{"ANT3DMDL", "=/x", "ANT3DMDL="} {
+		modelVars = []string{bad}
+		if _, err := resolveModelVars(env("")); err == nil {
+			t.Errorf("--model-var %q: no error", bad)
+		}
+	}
+	modelVars = nil
+	if got, err := resolveModelVars(env("")); err != nil || got != nil {
+		t.Errorf("nothing set: %v, %v", got, err)
+	}
+}

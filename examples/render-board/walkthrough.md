@@ -59,4 +59,6 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 > offset first. This step reads model-heights.kicad_pcb from ../common/designs. U1 and U2 name a
 > 0.9 mm block beside the board, and U2 lifts it 0.5 mm and doubles its height. R1 names KiCad's
 > library, and this read passes no `--model-path`, so R1 has no height. The board's
-> `unread_models` says why.
+> `unread_models` says why. U3 names `${DEMOLIB}/block.step`, a variable only its author's KiCad
+> defines. The read maps `DEMOLIB` to a folder, as `--model-var` does, and finds a glTF beside the
+> named `.step`, the way Antmicro publishes its library. It stands 1.5 mm tall.
