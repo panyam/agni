@@ -56,8 +56,8 @@ the code into its language's error and keeps the details, since they say what to
 `clients/wirefixtures/fixtures.json` holds calls recorded from a server on the Jetson cut: each one's
 service, method, request, and its response or error. A client's tests start `agni serve --mount
 probe=examples/cross-probe-project`, replay every call in order, and compare each answer with the
-recording. They leave out the fields a fixture lists under `ignore`, and an error's message, which is
-prose. The gate replays them over Connect's JSON form and over gRPC (`TestWireFixtures`), so the file
+recording. They leave out the fields a fixture lists under `ignore`, each named by its proto field
+name and dotted through singular messages, and an error's message, which is prose. The gate replays them over Connect's JSON form and over gRPC (`TestWireFixtures`), so the file
 always matches the server. `make wire-fixtures` records them again after an intended change.
 
 The Rust client in `clients/rust` replays them through tonic in `tests/wire_fixtures.rs`. It reads

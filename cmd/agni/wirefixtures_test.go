@@ -76,7 +76,7 @@ var wireCalls = []wireFixture{
 	{Name: "query-that-does-not-parse", Service: "agni.v1.webapi.QueryService", Method: "RunQuery", Request: json.RawMessage(`{"snapshot":"snapshots/wire","query":"component.class(?c"}`)},
 	// A design the server holds, by name (agni issue 1694). Its update time is the descriptor's on
 	// this checkout, so it is not compared.
-	{Name: "get-design", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"name":"designs/jetson-cut"}`), Ignore: []string{"updateTime"}},
+	{Name: "get-design", Service: "agni.v1.webapi.DesignService", Method: "GetDesign", Request: json.RawMessage(`{"name":"designs/jetson-cut"}`), Ignore: []string{"update_time"}},
 	{Name: "snapshot-not-found", Service: "agni.v1.webapi.DesignViewService", Method: "GetSummary", Request: json.RawMessage(`{"snapshot":"snapshots/nonesuch"}`)},
 }
 
