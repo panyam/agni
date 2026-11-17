@@ -20,8 +20,8 @@ use agni_client::agni::v1::webapi::server_service_client::ServerServiceClient;
 use agni_client::agni::v1::webapi::snapshot_service_client::SnapshotServiceClient;
 use agni_client::agni::v1::webapi::{
     BlobsMissing, CheckDesignRequest, CheckDesignResponse, DeleteSnapshotRequest,
-    GetBoardGeometryRequest, GetBoardGeometryResponse, GetSummaryRequest, GetSummaryResponse,
-    GetServerInfoRequest, IngestRequest, LocateSubjectsRequest, LocateSubjectsResponse,
+    GetBoardGeometryRequest, GetBoardGeometryResponse, GetServerInfoRequest, GetSummaryRequest,
+    GetSummaryResponse, IngestRequest, LocateSubjectsRequest, LocateSubjectsResponse,
     RunQueryRequest, RunQueryResponse, ServerInfo, Snapshot, SnapshotUnavailable, TextPosition,
 };
 use agni_client::{Client, Detail};
