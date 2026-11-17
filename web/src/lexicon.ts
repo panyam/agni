@@ -287,6 +287,8 @@ export class LexiconPresenter {
   private state = emptyLexicon();
   // ticket drops an answer once a later edit or design has overtaken it.
   private ticket = 0;
+  // edits settles once every edit asked for so far has.
+  private edits: Promise<void> = Promise.resolve();
 
   constructor(
     private client: LexiconClient,
@@ -320,10 +322,19 @@ export class LexiconPresenter {
   }
 
   // edit lists a new draft through the engine and takes it only if it compiles, so a bad pattern
-  // shows as an inline error and never reaches a run.
-  private async edit(next: NamingConvention): Promise<void> {
+  // shows as an inline error and never reaches a run. Edits run one at a time, and each applies
+  // change to the draft the one before it left. A rename the next edit overtook kept the old name
+  // otherwise (agni 1683).
+  private edit(change: (draft: NamingConvention) => NamingConvention): Promise<void> {
+    const run = this.edits.then(() => this.list(change));
+    this.edits = run;
+    return run;
+  }
+
+  private async list(change: (draft: NamingConvention) => NamingConvention): Promise<void> {
     const t = ++this.ticket;
     try {
+      const next = change(this.draft);
       const snapshot = await this.ports.snapshot();
       if (!snapshot) return;
       const resp = await this.client.getLexicon({ snapshot, candidate: next });
@@ -336,28 +347,31 @@ export class LexiconPresenter {
   }
 
   add(vocabulary: string, kind: string, value: string): Promise<void> {
-    return this.edit(addEntry(this.draft, vocabulary, kind, value.trim()));
+    return this.edit((d) => addEntry(d, vocabulary, kind, value.trim()));
   }
 
   remove(row: LexiconRow): Promise<void> {
-    return this.edit(removeEntry(this.draft, this.state.rows, row));
+    return this.edit((d) => removeEntry(d, this.state.rows, row));
   }
 
   switchOff(vocabulary: string, off: boolean): Promise<void> {
-    return this.edit(setOff(this.draft, vocabulary, off));
+    return this.edit((d) => setOff(d, vocabulary, off));
   }
 
   infer(on: boolean): Promise<void> {
-    return this.edit(setInference(this.draft, on));
+    return this.edit((d) => setInference(d, on));
   }
 
   rename(name: string): Promise<void> {
-    const next = clone(NamingConventionSchema, this.draft);
-    next.name = name;
-    return this.edit(next);
+    return this.edit((d) => {
+      const next = clone(NamingConventionSchema, d);
+      next.name = name;
+      return next;
+    });
   }
 
   async tryDraft(): Promise<void> {
+    await this.edits;
     const t = ++this.ticket;
     this.push({ busy: true, error: "" });
     try {
@@ -371,6 +385,7 @@ export class LexiconPresenter {
   }
 
   async save(): Promise<void> {
+    await this.edits;
     try {
       const resp = await this.client.renderConvention({ conventions: this.draft });
       this.ports.download({ filename: resp.filename, contentType: resp.contentType, content: resp.content });
@@ -380,6 +395,7 @@ export class LexiconPresenter {
   }
 
   async apply(): Promise<void> {
+    await this.edits;
     this.push({ busy: true, error: "" });
     try {
       await this.ports.apply(clone(NamingConventionSchema, this.draft));
