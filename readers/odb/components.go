@@ -79,7 +79,7 @@ func parseComponents(b []byte, back bool) ([]component, []*geom.ReadNote, error)
 			}
 			if v := attrValue(attrs, heightTag); heightTag >= 0 && v != "" {
 				if h, err := atof(v); err != nil {
-					notes = append(notes, &geom.ReadNote{Line: int32(n), Field: ".comp_height", Value: v, Reason: err.Error()})
+					notes = append(notes, &geom.ReadNote{Line: int32(n), Field: ".comp_height", Value: v, Reason: err.Error()}) // #nosec G115 -- a line number in one components file
 				} else {
 					c.height = int64(math.Round(h * u.coord))
 				}
