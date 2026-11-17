@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-16, at `4db50151`.
+Last pruned 2026-11-17, at `6b575fe6`.
 
 ## At a glance
 
@@ -21,21 +21,28 @@ five rows pass, against a server with no auth. The mission log on #1625 has each
   are tagged, as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3. agni still pins oneauth v0.3.2
   and servicekit v0.2.2. The ticket's last comment records what is decided and what is open.
 - **#1664 `mission_board_rendering`** (see any board in 3D as its maker's tool shows it) is also active, at 11 of
-  13. #133 closed through #1680 (the dimension oracle) and #1682 (the measuring tool). Its next tickets
-  are #1652 (3D models) and #1679 (IPC-2581 draws paste windows and unplated holes as copper, P3). Its
-  exercise last ran at `4caa3fe2`, and #1680 and #1682 merged since without a run.
+  13. #1681 gave KiCad parts their STEP models' heights, and #1680 and #1682 closed #133. Its next
+  tickets are #1652's mesh half and #1679 (IPC-2581 draws paste windows and unplated holes as copper,
+  P3). Its exercise ran at `5069757f` and works headless, and #1682 merged since.
+- **A release, then two pin bumps.** The viewer features since v0.7.0 reach a release binary only after
+  the next agni release. Then panyam/agni-samples moves its CI's latest and its README off v0.7.0 and
+  cuts a samples release. Then the engine bumps `hack/samples.pin`, fetches `remote/kicad-models.pin`
+  from the `remote-boards` tarball (agni-samples#29), and drops `hack/kicad_models.pin`.
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1680 and #1682 closed #133, and #1679 was filed from #1680's oracle.
+- This run: #1681 merged and its exercise posted on #1664, agni-samples#29 merged (KiCad models and a
+  viewer section in its README), and #1680 and #1682 closed #133.
 
 ## Open, ranked
 
-1. **Run #1664's exercise** and post its mission log for #1680 and #1682.
+1. **Cut the agni release**, then the agni-samples and engine pin bumps above.
 2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
-3. **#1652**, then #1679, on #1664.
+3. **#1652's mesh half**, then #1679, on #1664. KiCad 10's library ships no `.wrl`, so read the
+   last comment on #1652 before planning it. Jetson's parts need agni to map `${ANT3DMDL}`, which has
+   no ticket yet.
 4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
