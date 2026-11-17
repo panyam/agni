@@ -41,6 +41,7 @@ import type { PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_pack
 import { type Members, areaSelection, emptyMembers, membersIn, membersOf, size, toggle } from "./area.js";
 import { compareButton } from "./compare.js";
 import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
+import { fetchMeshes } from "./stackmeshes.js";
 import { designClient, checksClient, lexiconClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, tableClient, snapshots,
 } from "./api.js";
@@ -930,6 +931,11 @@ class AppRoot extends BaseComponent {
           return resp.content.case === "svg" ? resp.content.value : "";
         },
         drawnOn: drawnOnFor,
+        // The board look's part models, fitted to the Quality control's budget (agni issue 1652).
+        meshes: async (maxTriangles) => {
+          const snapshot = await presenter.drawing().snapshot;
+          return fetchMeshes((pageToken) => designClient().getBoardMeshes({ snapshot, maxTriangles: BigInt(maxTriangles), pageToken }));
+        },
         stops: (sel) => stopsOf(sel),
         history: { back: () => stepHistory(-1), forward: () => stepHistory(1) },
         // A sheet's turn is kept per design and sheet in this browser (agni issue 1327), so a board

@@ -5,7 +5,13 @@
 # reference. This writes core/render/testdata/<board>.kicad3d.tsv: one row per part with a model, giving
 # the side it sits on, how far the model reaches past the seat its pads give it, and its outline seen from above, as the convex hull of
 # its vertices in agni's board frame (millimetres, Y up). TestBodiesAgreeWithKiCad3D holds the stack
-# view's part blocks to these rows, so CI needs no KiCad. Do not hand-edit an output; the point of the
+# view's part blocks to these rows, so CI needs no KiCad.
+#
+# It also writes <board>.kicad3dcolour.tsv: for each part and each material colour, the area of the
+# model's surface in that colour and the centre of that area seen from above (agni issue 1652). A
+# polarized part shows its polarity only in colour, such as an electrolytic cap's stripe or an IC's
+# pin-1 mark, and a half turn moves that colour's centre while its outline stays put.
+# TestMeshColoursSitWhereKiCadsDo holds the meshes agni draws to these rows. Do not hand-edit an output; the point of the
 # file is that we did not choose it.
 #
 # Usage: hack/kicad_3d_oracle.sh [path/to/kicad-cli]   (make samples-oracle first)
@@ -28,7 +34,7 @@ for line in "${boards[@]}"; do
   # KiCad writes a .kicad_prl beside what it opens, so it runs over a copy.
   rm -rf "$tmp/d"; cp -R "$root/$dir" "$tmp/d"
   "$cli" pcb export glb -o "$tmp/b.glb" "$tmp/d/$pcb" >/dev/null 2>&1
-  python3 -I - "$tmp/b.glb" "$dir/$pcb" "$version" "$tmp/d/$pcb" >"$root/core/render/testdata/$name.kicad3d.tsv" <<'PY'
+  python3 -I - "$tmp/b.glb" "$dir/$pcb" "$version" "$tmp/d/$pcb" "$root/core/render/testdata/$name.kicad3dcolour.tsv" >"$root/core/render/testdata/$name.kicad3d.tsv" <<'PY'
 import json, struct, sys
 
 # glTF is Y up in metres. KiCad's export puts board X on x, the height off the board's bottom face on
@@ -51,7 +57,7 @@ def transform(n):
         return (p[0] + t[0], p[1] + t[1], p[2] + t[2])
     return f
 
-glb, source, version, pcb = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+glb, source, version, pcb, colour_out = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
 d = open(glb, 'rb').read()
 jlen = struct.unpack('<I', d[12:16])[0]
 j = json.loads(d[20:20 + jlen])
@@ -147,6 +153,57 @@ for ref in sorted(parts):
     height = seats['back'] - min(zs) if back else max(zs) - seats['front']
     ring = hull([(round(p[0] * 1000, 3), round(-p[2] * 1000, 3)) for p in pts])
     print(f'{ref}\t{"back" if back else "front"}\t{height:.3f}\t' + ' '.join(f'{x:.3f},{y:.3f}' for x, y in ring))
+
+# Each part's surface by material colour: its area in mm² and the centre of that area seen from above,
+# in agni's board frame. The colour is the material's base colour as the GLB writes it, in linear
+# light, so a .wrl's colour c compares as c^2.2.
+import math
+mats = j.get('materials', [])
+
+def indices(i):
+    a = acc[i]
+    fmt, size = {5121: ('<B', 1), 5123: ('<H', 2), 5125: ('<I', 4)}[a['componentType']]
+    v = views[a['bufferView']]
+    base = v.get('byteOffset', 0) + a.get('byteOffset', 0)
+    stride = v.get('byteStride', size)
+    return [struct.unpack_from(fmt, binary, base + k * stride)[0] for k in range(a['count'])]
+
+colours = {}
+def surfaces(i, chain, ref):
+    nd = nodes[i]
+    chain = chain + [transform(nd)]
+    if 'mesh' in nd:
+        for p in meshes[nd['mesh']]['primitives']:
+            w = []
+            for c in vertices(acc[p['attributes']['POSITION']]):
+                for f in reversed(chain):
+                    c = f(c)
+                w.append((c[0] * 1000, -c[2] * 1000, c[1] * 1000))
+            ix = indices(p['indices']) if 'indices' in p else list(range(len(w)))
+            rgb = mats[p['material']]['pbrMetallicRoughness'].get('baseColorFactor', [1, 1, 1])[:3] if 'material' in p else [1, 1, 1]
+            s = colours.setdefault((ref, tuple(round(x, 3) for x in rgb)), [0.0, 0.0, 0.0])
+            for k in range(0, len(ix) - 2, 3):
+                a, b, c = w[ix[k]], w[ix[k + 1]], w[ix[k + 2]]
+                u = [b[q] - a[q] for q in range(3)]
+                v = [c[q] - a[q] for q in range(3)]
+                area = math.sqrt((u[1]*v[2] - u[2]*v[1])**2 + (u[2]*v[0] - u[0]*v[2])**2 + (u[0]*v[1] - u[1]*v[0])**2) / 2
+                s[0] += area
+                s[1] += area * (a[0] + b[0] + c[0]) / 3
+                s[2] += area * (a[1] + b[1] + c[1]) / 3
+    for ch in nd.get('children', []):
+        surfaces(ch, chain, ref)
+
+for root in j['scenes'][j.get('scene', 0)]['nodes']:
+    for ch in nodes[root].get('children', []):
+        name = nodes[ch].get('name', '')
+        if name and not name.startswith('=>'):
+            surfaces(ch, [transform(nodes[root])], name)
+with open(colour_out, 'w') as out:
+    out.write(f'# KiCad {version}, kicad-cli pcb export glb of {source}, by hack/kicad_3d_oracle.sh\n')
+    out.write('# ref, the material colour as linear r,g,b, its area in mm², and its centre seen from above as x,y in mm\n')
+    for (ref, rgb), (area, sx, sy) in sorted(colours.items()):
+        if area > 0:
+            out.write(f'{ref}\t{rgb[0]:.3f},{rgb[1]:.3f},{rgb[2]:.3f}\t{area:.4f}\t{sx / area:.4f},{sy / area:.4f}\n')
 PY
   echo "wrote core/render/testdata/$name.kicad3d.tsv ($(grep -vc '^#' "$root/core/render/testdata/$name.kicad3d.tsv") parts)"
 done

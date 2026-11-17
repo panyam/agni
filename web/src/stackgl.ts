@@ -10,7 +10,7 @@
 
 import type { BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import type { StackLayout } from "./stacklayout.js";
-import { BODY_FLOATS, type BodyGeometry } from "./stackbodies.js";
+import { BODY_FLOATS, drawnRuns, type BodyGeometry } from "./stackbodies.js";
 
 type Rgba = [number, number, number, number];
 
@@ -232,6 +232,9 @@ export interface StackDrawOptions {
     // is a default.
     colorOf: (color: string, defaulted: boolean) => Rgba;
     litParts: Map<string, Rgba>;
+    // skip names the parts whose blocks stay out, because the board look draws their models instead
+    // (stackmeshes.ts). A lit part's block still draws in its highlight colour.
+    skip?: ReadonlySet<string>;
   };
   // board draws the board look (stacklook.ts): no barrels and no translucent slabs, and an opaque
   // face in mask at the top and the bottom of the board, behind what lies on it.
@@ -441,7 +444,7 @@ export class StackExtras {
       gl.drawArrays(gl.TRIANGLES, first, count);
       calls++;
     };
-    for (const r of g.colorRuns) run(r.first, r.count, b.colorOf(r.color, r.defaulted));
+    for (const r of drawnRuns(g, b.skip)) run(r.first, r.count, b.colorOf(r.color, r.defaulted));
     for (const [ref, c] of b.litParts) {
       const r = g.runs.get(ref);
       if (r) run(r.first, r.count, c);

@@ -266,7 +266,7 @@ class BoardLook(_message.Message):
     def __init__(self, mask: _Optional[str] = ..., mask_over_copper: _Optional[str] = ..., pad_finish: _Optional[str] = ..., silk: _Optional[str] = ...) -> None: ...
 
 class BoardPartBody(_message.Message):
-    __slots__ = ("ref_des", "side", "outline", "height_mm", "part_class", "color", "drawn_height_mm", "height_defaulted")
+    __slots__ = ("ref_des", "side", "outline", "height_mm", "part_class", "color", "drawn_height_mm", "height_defaulted", "models")
     REF_DES_FIELD_NUMBER: _ClassVar[int]
     SIDE_FIELD_NUMBER: _ClassVar[int]
     OUTLINE_FIELD_NUMBER: _ClassVar[int]
@@ -275,6 +275,7 @@ class BoardPartBody(_message.Message):
     COLOR_FIELD_NUMBER: _ClassVar[int]
     DRAWN_HEIGHT_MM_FIELD_NUMBER: _ClassVar[int]
     HEIGHT_DEFAULTED_FIELD_NUMBER: _ClassVar[int]
+    MODELS_FIELD_NUMBER: _ClassVar[int]
     ref_des: str
     side: str
     outline: _containers.RepeatedScalarFieldContainer[float]
@@ -283,7 +284,16 @@ class BoardPartBody(_message.Message):
     color: str
     drawn_height_mm: float
     height_defaulted: bool
-    def __init__(self, ref_des: _Optional[str] = ..., side: _Optional[str] = ..., outline: _Optional[_Iterable[float]] = ..., height_mm: _Optional[float] = ..., part_class: _Optional[str] = ..., color: _Optional[str] = ..., drawn_height_mm: _Optional[float] = ..., height_defaulted: _Optional[bool] = ...) -> None: ...
+    models: _containers.RepeatedCompositeFieldContainer[BodyModel]
+    def __init__(self, ref_des: _Optional[str] = ..., side: _Optional[str] = ..., outline: _Optional[_Iterable[float]] = ..., height_mm: _Optional[float] = ..., part_class: _Optional[str] = ..., color: _Optional[str] = ..., drawn_height_mm: _Optional[float] = ..., height_defaulted: _Optional[bool] = ..., models: _Optional[_Iterable[_Union[BodyModel, _Mapping]]] = ...) -> None: ...
+
+class BodyModel(_message.Message):
+    __slots__ = ("mesh", "transform")
+    MESH_FIELD_NUMBER: _ClassVar[int]
+    TRANSFORM_FIELD_NUMBER: _ClassVar[int]
+    mesh: str
+    transform: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, mesh: _Optional[str] = ..., transform: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class BoardDrillSpan(_message.Message):
     __slots__ = ("layer_from", "layer_to", "xy", "diameter", "net", "top_mm", "bottom_mm")

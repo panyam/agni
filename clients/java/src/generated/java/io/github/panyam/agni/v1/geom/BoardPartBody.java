@@ -42,6 +42,7 @@ private static final long serialVersionUID = 0L;
     outline_ = emptyDoubleList();
     partClass_ = "";
     color_ = "";
+    models_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -310,6 +311,77 @@ private static final long serialVersionUID = 0L;
     return heightDefaulted_;
   }
 
+  public static final int MODELS_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private java.util.List<io.github.panyam.agni.v1.geom.BodyModel> models_;
+  /**
+   * <pre>
+   * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * block for a part with no models or whose meshes did not come.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<io.github.panyam.agni.v1.geom.BodyModel> getModelsList() {
+    return models_;
+  }
+  /**
+   * <pre>
+   * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * block for a part with no models or whose meshes did not come.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends io.github.panyam.agni.v1.geom.BodyModelOrBuilder> 
+      getModelsOrBuilderList() {
+    return models_;
+  }
+  /**
+   * <pre>
+   * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * block for a part with no models or whose meshes did not come.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+   */
+  @java.lang.Override
+  public int getModelsCount() {
+    return models_.size();
+  }
+  /**
+   * <pre>
+   * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * block for a part with no models or whose meshes did not come.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.BodyModel getModels(int index) {
+    return models_.get(index);
+  }
+  /**
+   * <pre>
+   * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * block for a part with no models or whose meshes did not come.
+   * </pre>
+   *
+   * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+   */
+  @java.lang.Override
+  public io.github.panyam.agni.v1.geom.BodyModelOrBuilder getModelsOrBuilder(
+      int index) {
+    return models_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -353,6 +425,9 @@ private static final long serialVersionUID = 0L;
     if (heightDefaulted_ != false) {
       output.writeBool(8, heightDefaulted_);
     }
+    for (int i = 0; i < models_.size(); i++) {
+      output.writeMessage(9, models_.get(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -392,6 +467,15 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(8, heightDefaulted_);
     }
+
+        {
+          final int count = models_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(models_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -437,6 +521,8 @@ private static final long serialVersionUID = 0L;
             other.getDrawnHeightMm())) return false;
     if (getHeightDefaulted()
         != other.getHeightDefaulted()) return false;
+    if (!getModelsList()
+        .equals(other.getModelsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -471,6 +557,10 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + HEIGHT_DEFAULTED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getHeightDefaulted());
+    if (getModelsCount() > 0) {
+      hash = (37 * hash) + MODELS_FIELD_NUMBER;
+      hash = (53 * hash) + getModelsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -619,6 +709,13 @@ private static final long serialVersionUID = 0L;
       color_ = "";
       drawnHeightMm_ = 0D;
       heightDefaulted_ = false;
+      if (modelsBuilder_ == null) {
+        models_ = java.util.Collections.emptyList();
+      } else {
+        models_ = null;
+        modelsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000100);
       return this;
     }
 
@@ -645,9 +742,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public io.github.panyam.agni.v1.geom.BoardPartBody buildPartial() {
       io.github.panyam.agni.v1.geom.BoardPartBody result = new io.github.panyam.agni.v1.geom.BoardPartBody(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(io.github.panyam.agni.v1.geom.BoardPartBody result) {
+      if (modelsBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0)) {
+          models_ = java.util.Collections.unmodifiableList(models_);
+          bitField0_ = (bitField0_ & ~0x00000100);
+        }
+        result.models_ = models_;
+      } else {
+        result.models_ = modelsBuilder_.build();
+      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.geom.BoardPartBody result) {
@@ -734,6 +844,32 @@ private static final long serialVersionUID = 0L;
       if (other.getHeightDefaulted() != false) {
         setHeightDefaulted(other.getHeightDefaulted());
       }
+      if (modelsBuilder_ == null) {
+        if (!other.models_.isEmpty()) {
+          if (models_.isEmpty()) {
+            models_ = other.models_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+          } else {
+            ensureModelsIsMutable();
+            models_.addAll(other.models_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.models_.isEmpty()) {
+          if (modelsBuilder_.isEmpty()) {
+            modelsBuilder_.dispose();
+            modelsBuilder_ = null;
+            models_ = other.models_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+            modelsBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetModelsFieldBuilder() : null;
+          } else {
+            modelsBuilder_.addAllMessages(other.models_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -810,6 +946,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 74: {
+              io.github.panyam.agni.v1.geom.BodyModel m =
+                  input.readMessage(
+                      io.github.panyam.agni.v1.geom.BodyModel.parser(),
+                      extensionRegistry);
+              if (modelsBuilder_ == null) {
+                ensureModelsIsMutable();
+                models_.add(m);
+              } else {
+                modelsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1360,6 +1509,348 @@ private static final long serialVersionUID = 0L;
       heightDefaulted_ = false;
       onChanged();
       return this;
+    }
+
+    private java.util.List<io.github.panyam.agni.v1.geom.BodyModel> models_ =
+      java.util.Collections.emptyList();
+    private void ensureModelsIsMutable() {
+      if (!((bitField0_ & 0x00000100) != 0)) {
+        models_ = new java.util.ArrayList<io.github.panyam.agni.v1.geom.BodyModel>(models_);
+        bitField0_ |= 0x00000100;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.BodyModel, io.github.panyam.agni.v1.geom.BodyModel.Builder, io.github.panyam.agni.v1.geom.BodyModelOrBuilder> modelsBuilder_;
+
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.BodyModel> getModelsList() {
+      if (modelsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(models_);
+      } else {
+        return modelsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public int getModelsCount() {
+      if (modelsBuilder_ == null) {
+        return models_.size();
+      } else {
+        return modelsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BodyModel getModels(int index) {
+      if (modelsBuilder_ == null) {
+        return models_.get(index);
+      } else {
+        return modelsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder setModels(
+        int index, io.github.panyam.agni.v1.geom.BodyModel value) {
+      if (modelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelsIsMutable();
+        models_.set(index, value);
+        onChanged();
+      } else {
+        modelsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder setModels(
+        int index, io.github.panyam.agni.v1.geom.BodyModel.Builder builderForValue) {
+      if (modelsBuilder_ == null) {
+        ensureModelsIsMutable();
+        models_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        modelsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder addModels(io.github.panyam.agni.v1.geom.BodyModel value) {
+      if (modelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelsIsMutable();
+        models_.add(value);
+        onChanged();
+      } else {
+        modelsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder addModels(
+        int index, io.github.panyam.agni.v1.geom.BodyModel value) {
+      if (modelsBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        ensureModelsIsMutable();
+        models_.add(index, value);
+        onChanged();
+      } else {
+        modelsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder addModels(
+        io.github.panyam.agni.v1.geom.BodyModel.Builder builderForValue) {
+      if (modelsBuilder_ == null) {
+        ensureModelsIsMutable();
+        models_.add(builderForValue.build());
+        onChanged();
+      } else {
+        modelsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder addModels(
+        int index, io.github.panyam.agni.v1.geom.BodyModel.Builder builderForValue) {
+      if (modelsBuilder_ == null) {
+        ensureModelsIsMutable();
+        models_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        modelsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder addAllModels(
+        java.lang.Iterable<? extends io.github.panyam.agni.v1.geom.BodyModel> values) {
+      if (modelsBuilder_ == null) {
+        ensureModelsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, models_);
+        onChanged();
+      } else {
+        modelsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder clearModels() {
+      if (modelsBuilder_ == null) {
+        models_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000100);
+        onChanged();
+      } else {
+        modelsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public Builder removeModels(int index) {
+      if (modelsBuilder_ == null) {
+        ensureModelsIsMutable();
+        models_.remove(index);
+        onChanged();
+      } else {
+        modelsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BodyModel.Builder getModelsBuilder(
+        int index) {
+      return internalGetModelsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BodyModelOrBuilder getModelsOrBuilder(
+        int index) {
+      if (modelsBuilder_ == null) {
+        return models_.get(index);  } else {
+        return modelsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public java.util.List<? extends io.github.panyam.agni.v1.geom.BodyModelOrBuilder> 
+         getModelsOrBuilderList() {
+      if (modelsBuilder_ != null) {
+        return modelsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(models_);
+      }
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BodyModel.Builder addModelsBuilder() {
+      return internalGetModelsFieldBuilder().addBuilder(
+          io.github.panyam.agni.v1.geom.BodyModel.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public io.github.panyam.agni.v1.geom.BodyModel.Builder addModelsBuilder(
+        int index) {
+      return internalGetModelsFieldBuilder().addBuilder(
+          index, io.github.panyam.agni.v1.geom.BodyModel.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
+     * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+     * block for a part with no models or whose meshes did not come.
+     * </pre>
+     *
+     * <code>repeated .agni.v1.geom.BodyModel models = 9 [json_name = "models"];</code>
+     */
+    public java.util.List<io.github.panyam.agni.v1.geom.BodyModel.Builder> 
+         getModelsBuilderList() {
+      return internalGetModelsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        io.github.panyam.agni.v1.geom.BodyModel, io.github.panyam.agni.v1.geom.BodyModel.Builder, io.github.panyam.agni.v1.geom.BodyModelOrBuilder> 
+        internalGetModelsFieldBuilder() {
+      if (modelsBuilder_ == null) {
+        modelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            io.github.panyam.agni.v1.geom.BodyModel, io.github.panyam.agni.v1.geom.BodyModel.Builder, io.github.panyam.agni.v1.geom.BodyModelOrBuilder>(
+                models_,
+                ((bitField0_ & 0x00000100) != 0),
+                getParentForChildren(),
+                isClean());
+        models_ = null;
+      }
+      return modelsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.geom.BoardPartBody)

@@ -22,6 +22,7 @@ import { delayedBusy, type Busy } from "./busy.js";
 import { sheetStep, stepLabel } from "./sheetstep.js";
 import type { StackPreset } from "./stackcamera.js";
 import { defaultedNote } from "./stackbodies.js";
+import { defaultQuality, meshNote, QUALITY_TRIANGLES, type MeshSet, type Quality } from "./stackmeshes.js";
 import type { StackLook } from "./stacklook.js";
 
 // ViewTurn is how a view is turned for a sheet, kept per design and sheet so a view opened on the
@@ -170,6 +171,10 @@ export interface SheetPaneDeps {
   // history steps the page's selection trail back or forward (agni issue 1588). The view's Back and
   // Forward buttons are hidden when unset.
   history?: { back: () => void; forward: () => void };
+  // meshes returns the board's part models fitted to a triangle budget (agni issue 1652), every page
+  // of GetBoardMeshes. When unset, the board look draws every part as its block, and the Quality
+  // control is hidden.
+  meshes?: (maxTriangles: number) => Promise<MeshSet>;
 }
 
 // PARK_AFTER_MS is how long a view's SVG drawing sits with the pointer away before the view shows
@@ -243,6 +248,13 @@ export class SheetPane {
   // stand at a default height because the file states none.
   private readonly bodiesBox: HTMLInputElement;
   private readonly bodiesNote: HTMLElement;
+  // qualityPick picks the triangle budget the board look's part models draw at (agni issue 1652), and
+  // meshNoteEl says what the server left out to fit it. meshSets keeps each quality's answer for the
+  // board drawn now, and meshAsk counts requests, so an answer that arrives late is dropped.
+  private readonly qualityPick: HTMLSelectElement;
+  private readonly meshNoteEl: HTMLElement;
+  private meshSets = new Map<Quality, MeshSet>();
+  private meshAsk = 0;
   // lookButtons switch the stack view between the layer look and the board look (agni issue 1653).
   private readonly lookButtons: Record<StackLook, HTMLButtonElement>;
   private exploded = false;
@@ -379,6 +391,21 @@ export class SheetPane {
     this.bodiesNote.dataset.stackBodiesNote = "";
     bodiesLabel.append(this.bodiesBox, doc.createTextNode("Parts"), this.bodiesNote);
     this.stackBar.append(bodiesLabel);
+    this.qualityPick = el("select", "sheetview-stack-quality") as HTMLSelectElement;
+    this.qualityPick.dataset.stackQuality = "";
+    this.qualityPick.title = "how many triangles the parts' models may draw with: lower suits a device with less memory, and a part past the budget draws as its block";
+    for (const q of ["low", "medium", "high"] as Quality[]) {
+      const o = el("option", "") as HTMLOptionElement;
+      o.value = q;
+      o.textContent = `${q[0].toUpperCase()}${q.slice(1)} quality`;
+      this.qualityPick.append(o);
+    }
+    this.qualityPick.value = defaultQuality((globalThis.navigator as { deviceMemory?: number } | undefined)?.deviceMemory);
+    this.qualityPick.addEventListener("change", () => void this.loadMeshes());
+    this.qualityPick.hidden = !this.deps.meshes;
+    this.meshNoteEl = el("span", "sheetview-stack-mesh-note");
+    this.meshNoteEl.dataset.stackMeshNote = "";
+    this.stackBar.append(this.qualityPick, this.meshNoteEl);
     this.lookButtons = {
       layers: button("sheetview-stack-look", "stack-look-layers", "Layers", "draw each layer apart in the editor's colours", () => this.setLook("layers")),
       board: button("sheetview-stack-look", "stack-look-board", "Board", "draw the board as it is made: mask, pads, silkscreen and parts", () => this.setLook("board")),
@@ -499,13 +526,39 @@ export class SheetPane {
     gl.setStackBodies(this.bodiesBox.checked);
     this.showLook("layers");
     this.bodiesNote.textContent = defaultedNote(stack);
+    this.meshNoteEl.textContent = "";
     this.setExploded(true);
   }
 
-  // setLook switches the stack view's look.
+  // setLook switches the stack view's look. The board look asks for the parts' models the first time
+  // it shows them at a quality.
   private setLook(look: StackLook): void {
     this.gl?.setStackLook(look);
     this.showLook(look);
+    if (look === "board") void this.loadMeshes();
+  }
+
+  // loadMeshes draws the parts' models at the Quality control's budget, asking the server once per
+  // quality for the board drawn now.
+  private async loadMeshes(): Promise<void> {
+    const ask = ++this.meshAsk;
+    const quality = this.qualityPick.value as Quality;
+    if (!this.deps.meshes || !this.exploded) return;
+    let set = this.meshSets.get(quality);
+    if (!set) {
+      this.meshNoteEl.textContent = "(loading models)";
+      try {
+        set = await this.deps.meshes(QUALITY_TRIANGLES[quality]);
+      } catch (e) {
+        if (ask === this.meshAsk) this.meshNoteEl.textContent = "(models did not load)";
+        console.warn("agni: the parts' models did not load", e);
+        return;
+      }
+      this.meshSets.set(quality, set);
+    }
+    if (ask !== this.meshAsk || !this.exploded) return;
+    this.gl?.setStackMeshes(set);
+    this.meshNoteEl.textContent = meshNote(set);
   }
 
   private showLook(look: StackLook): void {
@@ -636,6 +689,7 @@ export class SheetPane {
     }
     this.layerRows = sheetId === BOARD_SHEET ? drawing.boardLayers : [];
     this.layerStack = sheetId === BOARD_SHEET ? drawing.boardStack : undefined;
+    this.meshSets.clear();
     // Drawing a sheet again ends the stack view, since the canvas draws the new sheet flat.
     if (this.exploded) this.setExploded(false);
     if (!this.layersChosen) this.hiddenLayers = defaultHidden(this.layerRows);

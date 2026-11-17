@@ -22,7 +22,7 @@ export interface SheetViewHooks {
   onPickEmpty: (pane: SheetPane) => void;
 }
 
-type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl" | "stops" | "history"> & {
+type EngineDeps = Pick<SheetPaneDeps, "sheets" | "render" | "overlay" | "drawnOn" | "specs" | "turns" | "renderer" | "gl" | "stops" | "history" | "meshes"> & {
   // boardRenderer picks a board view's renderer when the caller names none and the canvas draws in
   // SVG. It answers WebGL on a hardware GPU and SVG on a software one (agni issue 1536). Without it,
   // a board view opens in the canvas's renderer, as a schematic view does.

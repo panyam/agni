@@ -53,7 +53,48 @@ func partBodies(b *geom.BoardGeometry, style Style) []*geom.BoardPartBody {
 				body.DrawnHeightMm, body.HeightDefaulted = mm, false
 			}
 		}
+		body.Models = bodyModels(pl, unit)
 		out = append(out, body)
+	}
+	return out
+}
+
+// bodyModels composes each of a part's ModelInstances with its placement, so a BodyModel's transform
+// takes a mesh point in millimetres to board units in x and y, and millimetres off the part's face
+// in z (agni issue 1652). The footprint frame's x and y turn by the placement's angle, then mirror in
+// x for a back part, as geomath.ComposePlacement places a pad. Z stays the height off the seating
+// plane, which for a back part is the depth below the board.
+func bodyModels(pl *geom.ComponentPlacement, unit int64) []*geom.BodyModel {
+	if len(pl.GetModelInstances()) == 0 {
+		return nil
+	}
+	perMm := 1e6 / float64(unit)
+	rad := pl.GetRotationDeg() * math.Pi / 180
+	c, s := math.Cos(rad), math.Sin(rad)
+	// l is the placement's 2x2 turn and mirror, scaled to board units.
+	l := [2][2]float64{{c * perMm, -s * perMm}, {s * perMm, c * perMm}}
+	if pl.GetMirror() {
+		l[0] = [2]float64{-l[0][0], -l[0][1]}
+	}
+	var at [2]float64
+	if a := pl.GetAt(); a != nil {
+		at = [2]float64{float64(a.GetX()), float64(a.GetY())}
+	}
+	var out []*geom.BodyModel
+	for _, in := range pl.GetModelInstances() {
+		t := in.GetTransform()
+		if len(t) != 12 {
+			continue
+		}
+		m := make([]float64, 12)
+		for r := 0; r < 2; r++ {
+			for k := 0; k < 4; k++ {
+				m[r*4+k] = l[r][0]*t[k] + l[r][1]*t[4+k]
+			}
+			m[r*4+3] += at[r]
+		}
+		copy(m[8:], t[8:])
+		out = append(out, &geom.BodyModel{Mesh: in.GetMesh(), Transform: m})
 	}
 	return out
 }

@@ -94,6 +94,29 @@ export function bodyGeometry(bodies: readonly BoardPartBody[], originX: number, 
   return { verts: Float32Array.from(out), colorRuns, runs, bodies: placed };
 }
 
+// drawnRuns lists the runs of bodies that draw in one call each, leaving out the parts in skip. The
+// bodies lie in the buffer in g.bodies' order, so the parts between two skipped ones that share a
+// colour still draw in one call. With nothing to skip it is g.colorRuns.
+export function drawnRuns(g: BodyGeometry, skip?: ReadonlySet<string>): ColorRun[] {
+  if (!skip || skip.size === 0) return g.colorRuns;
+  const out: ColorRun[] = [];
+  let span: ColorRun | null = null;
+  for (const body of g.bodies) {
+    const r = g.runs.get(body.ref);
+    if (!r || skip.has(body.ref)) {
+      span = null;
+      continue;
+    }
+    if (span && span.color === body.color && span.defaulted === body.defaulted && span.first + span.count === r.first) {
+      span.count += r.count;
+      continue;
+    }
+    span = { color: body.color, defaulted: body.defaulted, first: r.first, count: r.count };
+    out.push(span);
+  }
+  return out;
+}
+
 // pushBody adds one body's top face as a fan, since the ring is convex, and a quad for each wall.
 function pushBody(out: number[], p: PlacedBody): void {
   const r = p.ring;
