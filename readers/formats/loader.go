@@ -31,6 +31,10 @@ type Loader struct {
 	// height from its models, and with no ModelPaths only the board's own models resolve. Each
 	// entry is a folder holding `<Library>.3dshapes/`, as KiCad installs it.
 	ModelPaths []string
+	// ModelVars maps a path variable a footprint's model names, such as Antmicro's ANT3DMDL, to the
+	// folder it stands for (agni 1687). KiCad defines such a variable in the configuration of
+	// whoever wrote the board, so a reader is told it as a value (C22).
+	ModelVars map[string]string
 	// Lexicon is the naming vocabulary this loader stamps its reads with (WS3-106). Nil means the
 	// process defaults. It is per-loader rather than a package global, so one process can read two
 	// designs under two projects' conventions. See classify.Lexicon.
@@ -437,42 +441,45 @@ func (l *Loader) kicadSymOpener(schPath string) func(lib string) ([]byte, error)
 
 // kicadModelOpener resolves the 3D models a KiCad board's footprints name (agni 1652). A path under
 // `${KIPRJMOD}`, or a plain relative one, is taken from the board's folder. A library path is tried
-// under each ModelPaths folder in order. A footprint naming a `.wrl` also tries the `.step` beside it,
-// since KiCad's library ships both and the reader reads STEP. The readers own no file I/O (C1).
+// under each ModelPaths folder in order. A path under any other variable is taken from the folder
+// ModelVars maps it to (agni 1687). The KiCad reader asks for a stand-in in another format itself.
+// The readers own no file I/O (C1).
 func (l *Loader) kicadModelOpener(pcbPath string) kicad.ModelOpener {
 	dir := l.dir(pcbPath)
 	return func(raw string) ([]byte, error) {
-		anchor, rel := kicad.SplitModelPath(raw)
+		ref := kicad.SplitModelPath(raw)
 		var tries []string
-		switch anchor {
+		switch ref.Anchor {
 		case kicad.AnchorBoard:
-			tries = []string{l.join(dir, rel)}
+			tries = []string{l.join(dir, ref.Rel)}
 		case kicad.AnchorLibrary:
 			if len(l.ModelPaths) == 0 {
 				return nil, fmt.Errorf("no model library given; pass --model-path")
 			}
 			for _, d := range l.ModelPaths {
-				tries = append(tries, l.join(d, rel))
+				tries = append(tries, l.join(d, ref.Rel))
 			}
+		case kicad.AnchorVar:
+			d, ok := l.ModelVars[ref.Var]
+			if !ok {
+				return nil, fmt.Errorf("names ${%s}, which no --model-var maps", ref.Var)
+			}
+			tries = []string{l.join(d, ref.Rel)}
 		case kicad.AnchorAbsolute:
-			tries = []string{rel}
-		default:
-			return nil, fmt.Errorf("names a path variable agni does not know")
+			tries = []string{ref.Rel}
 		}
 		for _, name := range tries {
 			if data, err := l.ReadFile(name); err == nil {
 				return data, nil
 			}
-			if ext := l.ext(name); strings.EqualFold(ext, ".wrl") || strings.EqualFold(ext, ".wrz") {
-				if data, err := l.ReadFile(strings.TrimSuffix(name, ext) + ".step"); err == nil {
-					return data, nil
-				}
-			}
 		}
-		if anchor == kicad.AnchorLibrary {
-			return nil, fmt.Errorf("not found in %d model path(s)", len(l.ModelPaths))
+		switch ref.Anchor {
+		case kicad.AnchorLibrary:
+			return nil, fmt.Errorf("%w in %d model path(s)", kicad.ErrModelNotFound, len(l.ModelPaths))
+		case kicad.AnchorVar:
+			return nil, fmt.Errorf("%w under ${%s}", kicad.ErrModelNotFound, ref.Var)
 		}
-		return nil, fmt.Errorf("not found")
+		return nil, kicad.ErrModelNotFound
 	}
 }
 

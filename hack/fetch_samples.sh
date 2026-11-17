@@ -13,7 +13,7 @@
 # remote-boards carries no boards, because this corpus may not redistribute them. After it lands,
 # hack/fetch_remote.sh fetches each board its pin names from the publisher's own repo, through a
 # cache keyed on sha256 in ~/.cache/agni/samples, into tools/samples/remote/ (agni issue 1446). It
-# also fetches the KiCad library models remote/kicad-models.pin names, into remote/kicad-models/.
+# also fetches the 3D models every other remote/<name>.pin names, into remote/<name>/.
 #
 # EVERY failure path here exits non-zero. That is the whole design. A test that reads a board which
 # quietly failed to download does not fail, it passes over an empty set, and
@@ -53,8 +53,12 @@ fetch_remote() {
   for name in "$@"; do
     [ "$name" = remote-boards ] || continue
     "$root/hack/fetch_remote.sh" "$dest/remote/remote.pin" "$dest/remote"
-    # KiCad's 3D models, which the KiCad boards name for their parts' heights (agni issue 1652).
-    "$root/hack/fetch_remote.sh" "$dest/remote/kicad-models.pin" "$dest/remote/kicad-models"
+    # Every other pin names 3D models the boards' parts take their heights from, such as KiCad's or
+    # Antmicro's (agni issues 1652 and 1687). Each goes into remote/<pin's name>/.
+    for pin in "$dest"/remote/*.pin; do
+      [ "$pin" = "$dest/remote/remote.pin" ] && continue
+      "$root/hack/fetch_remote.sh" "$pin" "${pin%.pin}"
+    done
   done
 }
 

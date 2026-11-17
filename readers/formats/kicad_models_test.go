@@ -75,7 +75,7 @@ func TestLoaderResolvesKiCadModels(t *testing.T) {
 	}
 	if len(reasons) != 2 ||
 		reasons["${KICAD6_3DMODEL_DIR}/L.3dshapes/missing.step"] != "not found in 2 model path(s)" ||
-		reasons["${MY_MODELS}/e.step"] != "names a path variable agni does not know" {
+		reasons["${MY_MODELS}/e.step"] != "names ${MY_MODELS}, which no --model-var maps" {
 		t.Errorf("unread models %v", reasons)
 	}
 }
@@ -90,5 +90,43 @@ func TestLoaderWithNoModelPathNamesTheFlag(t *testing.T) {
 	}
 	if u := g.GetUnreadModels(); len(u) != 1 || u[0].GetReason() != "no model library given; pass --model-path" {
 		t.Errorf("unread models %v", u)
+	}
+}
+
+// TestLoaderMapsAModelVariable covers Jetson's spelling (agni 1687). A model named under ${ANT3DMDL},
+// with or without a slash before it, resolves in the folder ModelVars maps the name to. An unmapped
+// variable and a missing file each say which variable.
+func TestLoaderMapsAModelVariable(t *testing.T) {
+	board := `(kicad_pcb (version 20221018) (generator pcbnew)
+  (layers (0 "F.Cu" signal))
+` + modelFootprint("A", "${ANT3DMDL}/a.step") +
+		modelFootprint("B", "/${ANT3DMDL}/b.step") +
+		modelFootprint("C", "${ANT3DMDL}/missing.step") +
+		modelFootprint("D", "${OTHER}/d.step") + ")\n"
+	fsys := fstest.MapFS{
+		"proj/board.kicad_pcb": {Data: []byte(board)},
+		"ant/a.step":           stepOfHeight("1."),
+		"ant/b.step":           stepOfHeight("2."),
+	}
+	g, err := (&Loader{FS: fsys, ModelVars: map[string]string{"ANT3DMDL": "ant"}}).BoardGeometry("proj/board.kicad_pcb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for _, p := range g.GetPlacements() {
+		if p.Height != nil {
+			got[p.GetRefDes()] = p.GetHeight() * g.GetUnitNm()
+		}
+	}
+	if len(got) != 2 || got["A"] != 1_000_000 || got["B"] != 2_000_000 {
+		t.Errorf("heights %v, want A 1 mm and B 2 mm", got)
+	}
+	reasons := map[string]string{}
+	for _, u := range g.GetUnreadModels() {
+		reasons[u.GetPath()] = u.GetReason()
+	}
+	if len(reasons) != 2 || reasons["${ANT3DMDL}/missing.step"] != "not found under ${ANT3DMDL}" ||
+		reasons["${OTHER}/d.step"] != "names ${OTHER}, which no --model-var maps" {
+		t.Errorf("unread models %v", reasons)
 	}
 }

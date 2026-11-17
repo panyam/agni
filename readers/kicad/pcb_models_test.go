@@ -1,31 +1,31 @@
 package kicad
 
 import (
-	"errors"
+	"math"
 	"strings"
 	"testing"
 )
 
 func TestSplitModelPath(t *testing.T) {
 	for _, c := range []struct {
-		raw    string
-		anchor ModelAnchor
-		rel    string
+		raw  string
+		want ModelRef
 	}{
-		{"${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0402_1005Metric.step", AnchorLibrary, "Resistor_SMD.3dshapes/R_0402_1005Metric.step"},
-		{"${KICAD10_3DMODEL_DIR}/a.3dshapes/b.step", AnchorLibrary, "a.3dshapes/b.step"},
-		{"$(KISYS3DMOD)/a.3dshapes/b.wrl", AnchorLibrary, "a.3dshapes/b.wrl"},
-		{"${KIPRJMOD}/3d/x.step", AnchorBoard, "3d/x.step"},
-		{"$(KIPRJMOD)/../../packages3D/USB.step", AnchorBoard, "../../packages3D/USB.step"},
-		{"../../packages3D/SOT-143.step", AnchorBoard, "../../packages3D/SOT-143.step"},
-		{`${KIPRJMOD}\libs\x.step`, AnchorBoard, "libs/x.step"},
-		{"/home/someone/models/x.step", AnchorAbsolute, "/home/someone/models/x.step"},
-		{`C:\models\x.step`, AnchorAbsolute, "C:/models/x.step"},
-		{"${MY_MODELS}/x.step", AnchorUnknown, "${MY_MODELS}/x.step"},
+		{"${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0402_1005Metric.step", ModelRef{Anchor: AnchorLibrary, Rel: "Resistor_SMD.3dshapes/R_0402_1005Metric.step"}},
+		{"${KICAD10_3DMODEL_DIR}/a.3dshapes/b.step", ModelRef{Anchor: AnchorLibrary, Rel: "a.3dshapes/b.step"}},
+		{"$(KISYS3DMOD)/a.3dshapes/b.wrl", ModelRef{Anchor: AnchorLibrary, Rel: "a.3dshapes/b.wrl"}},
+		{"${KIPRJMOD}/3d/x.step", ModelRef{Anchor: AnchorBoard, Rel: "3d/x.step"}},
+		{"$(KIPRJMOD)/../../packages3D/USB.step", ModelRef{Anchor: AnchorBoard, Rel: "../../packages3D/USB.step"}},
+		{"../../packages3D/SOT-143.step", ModelRef{Anchor: AnchorBoard, Rel: "../../packages3D/SOT-143.step"}},
+		{`${KIPRJMOD}\libs\x.step`, ModelRef{Anchor: AnchorBoard, Rel: "libs/x.step"}},
+		{"/home/someone/models/x.step", ModelRef{Anchor: AnchorAbsolute, Rel: "/home/someone/models/x.step"}},
+		{`C:\models\x.step`, ModelRef{Anchor: AnchorAbsolute, Rel: "C:/models/x.step"}},
+		{"${ANT3DMDL}/R_0402_1005Metric.step", ModelRef{Anchor: AnchorVar, Var: "ANT3DMDL", Rel: "R_0402_1005Metric.step"}},
+		{"/${ANT3DMDL}/R_0402_1005Metric.step", ModelRef{Anchor: AnchorVar, Var: "ANT3DMDL", Rel: "R_0402_1005Metric.step"}},
+		{"$(MY_MODELS)/sub/x.step", ModelRef{Anchor: AnchorVar, Var: "MY_MODELS", Rel: "sub/x.step"}},
 	} {
-		a, rel := SplitModelPath(c.raw)
-		if a != c.anchor || rel != c.rel {
-			t.Errorf("SplitModelPath(%q) = %d, %q; want %d, %q", c.raw, a, rel, c.anchor, c.rel)
+		if got := SplitModelPath(c.raw); got != c.want {
+			t.Errorf("SplitModelPath(%q) = %+v, want %+v", c.raw, got, c.want)
 		}
 	}
 }
@@ -78,7 +78,7 @@ func modelFiles(files map[string]string) ModelOpener {
 		if s, ok := files[path]; ok {
 			return []byte(s), nil
 		}
-		return nil, errors.New("not found")
+		return nil, ErrModelNotFound
 	}
 }
 
@@ -132,5 +132,77 @@ func TestUnreadModelsNameThePathAndReason(t *testing.T) {
 func TestANilOpenerReadsNoModel(t *testing.T) {
 	if got := readModelBoard(t, fp("A", `(model "box.step")`), nil); len(got) != 0 {
 		t.Errorf("heights %v with no opener", got)
+	}
+}
+
+// gltfBlock is a glTF block 2 mm wide along x, 1 mm deep and 0.9 tall along glTF's Y, standing on
+// the origin and offset 0.5 mm toward glTF's -Z, with its buffer in block.bin. In the footprint's
+// frame, glTF's -Z is +y, so the block sits from y = 0 to y = 1.
+const gltfBlock = `{"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],
+"nodes":[{"mesh":0,"translation":[0,0,-0.5]}],
+"meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}],
+"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"},
+             {"bufferView":1,"componentType":5123,"count":3,"type":"SCALAR"}],
+"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":6}],
+"buffers":[{"uri":"block.bin","byteLength":44}]}`
+
+// blockBin holds three positions, (-1, 0, 0.5), (1, 0.9, 0.5) and (1, 0, -0.5), then indices 0 1 2.
+func blockBin() string {
+	var b []byte
+	put := func(f float32) {
+		u := math.Float32bits(f)
+		b = append(b, byte(u), byte(u>>8), byte(u>>16), byte(u>>24))
+	}
+	for _, v := range []float32{-1, 0, 0.5, 1, 0.9, 0.5, 1, 0, -0.5} {
+		put(v)
+	}
+	b = append(b, 0, 0, 1, 0, 2, 0, 0, 0)
+	return string(b)
+}
+
+// TestAGLTFStandsInForANamedSTEP covers Antmicro's library (agni 1687). Jetson names X.step, and
+// Antmicro ships X.gltf. The glTF is read in millimetres, in the footprint's own frame, so the
+// footprint's model offset and turn do not move it. G names a glTF itself, which is read in metres:
+// its block is scaled to 0.0009 m, which reads as 0.9 mm.
+func TestAGLTFStandsInForANamedSTEP(t *testing.T) {
+	open := modelFiles(map[string]string{
+		"${ANT3DMDL}/block.gltf": gltfBlock,
+		"${ANT3DMDL}/block.bin":  blockBin(),
+		// The reader asks for a stand-in under the path as the footprint spells it. A Loader resolves
+		// both spellings the same.
+		"/${ANT3DMDL}/block.gltf": gltfBlock,
+		"/${ANT3DMDL}/block.bin":  blockBin(),
+		"${KIPRJMOD}/m.gltf":      strings.Replace(gltfBlock, `"translation":[0,0,-0.5]`, `"scale":[0.001,0.001,0.001]`, 1),
+		"${KIPRJMOD}/block.bin":   blockBin(),
+	})
+	got := readModelBoard(t, fp("A", `(model "${ANT3DMDL}/block.step")`)+
+		fp("B", `(model "/${ANT3DMDL}/block.step" (offset (xyz 0 0 4)) (rotate (xyz -90 0 0)))`)+
+		fp("G", `(model "${KIPRJMOD}/m.gltf")`), open)
+	for ref, want := range map[string]float64{"A": 0.9, "B": 0.9, "G": 0.9} {
+		if h, ok := got[ref]; !ok || math.Abs(h-want) > 1e-5 {
+			t.Errorf("%s: height %v (set %v), want %v", ref, h, ok, want)
+		}
+	}
+}
+
+// TestAGLTFLiesInTheFootprintFrame holds the axis change, glTF's (x, y, z) to the footprint's
+// (x, -z, y), with the block offset toward glTF's -Z.
+func TestAGLTFLiesInTheFootprintFrame(t *testing.T) {
+	open := modelFiles(map[string]string{"L/block.gltf": gltfBlock, "L/block.bin": blockBin()})
+	pts, inFootprint, err := readModel(open, "L/block.gltf", ".step")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !inFootprint {
+		t.Error("a glTF read as needing the footprint's model transform")
+	}
+	want := [][3]float64{{-1, 0, 0}, {1, 0, 0.9}, {1, 1, 0}}
+	for i, w := range want {
+		for k := range w {
+			if math.Abs(pts[i][k]-w[k]) > 1e-6 {
+				t.Errorf("point %d = %v, want %v", i, pts[i], w)
+				break
+			}
+		}
 	}
 }
