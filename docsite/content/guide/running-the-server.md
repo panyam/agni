@@ -201,6 +201,20 @@ question on a snapshot made before a restart answers too (agni issue 1639). With
 memory. Like the review store, it wants a writable volume of its own in a container, such as
 `-v agni-state:/var/lib/agni/state` with `--state-dir /var/lib/agni/state`.
 
+## Keeping designs
+
+`serve --store-dir <dir>` gives the server a folder of its own for designs (agni issue 1693). The
+server serves it as the mount `store`, beside the folders you mount. Say a user keeps a design
+`memory_unit`. The store then holds `memory_unit/` with the design's `design.yaml` and its files. A
+stored design belongs to no project, so `agni check <dir>/memory_unit` reads it like any other
+design folder.
+
+A design in the store can be replaced or deleted. A design in a mounted folder stays read-only, and
+a write to it is refused. A design id is unique on one server, across the store and every mount. In
+a container give the store a volume of its own, such as `-v agni-store:/var/lib/agni/store` with
+`--store-dir /var/lib/agni/store`. The calls that create designs over the wire come with agni issue
+1694.
+
 ## Keeping review runs
 
 `serve --review-store <dir>` makes the server keep review runs. Without it the server

@@ -2,7 +2,7 @@
 
 This file covers the transport-neutral services, their ports, snapshots, kept reads and tables.
 
-- **An embedder composes against `service/`**, so it sits outside `internal/` (C13). A private deployment implements two ports, `ProjectStore` and `ConfigResolver`, to serve its own designs and config.
+- **An embedder composes against `service/`**, so it sits outside `internal/` (C13). A private deployment implements two ports, `ProjectStore` and `ConfigResolver`, to serve its own designs and config. Stored designs go through `DesignCatalog` and a `DesignStore` (`DirStore`, `--store-dir`, agni 1693).
 - **`ConfigResolver` turns config URIs into a `ResolvedConfig`.** It takes the URIs that a project's or a request's `AnalysisConfig` names. It returns rule sources, a param provider and symbol paths.
 - **The package does no file I/O.** It imports no `os`, no `path/filepath` and no transport. Every I/O concern arrives as an injected port. `internal/projects` holds the directory-walking `FSStore`, and it is internal on purpose.
 - **The backend answers, and a client renders** (agni 1045). When the viewer must still compute what the engine computes, a TWIN fixture holds the two to one answer, and both test suites read it. The twins are `core/review/testdata/tally_twin.json`, `core/results/testdata/severity_twin.json`, `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`, `core/ident/testdata/natural_twin.json` and `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets a twin. Better, it comes off the wire, like `TextPosition.caret`.

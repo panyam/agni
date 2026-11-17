@@ -19,8 +19,8 @@ import (
 // (`internal/projects`) walks a directory tree for descriptors, and a database-backed store with
 // designs on object storage should be a wiring change rather than a redesign.
 //
-// It is READ-ONLY. Creating a project means authoring design intent from a design, which is a
-// judgment step with a confidentiality boundary rather than a server operation.
+// It reads. A design that stands alone, with no project, is read and written through a
+// DesignCatalog instead (agni issue 1693).
 //
 // Every method deals in the WIRE types, with no parallel value type. A `Project` is a resource whose
 // content is the message, so a twin would be a field-for-field copy that can disagree with it

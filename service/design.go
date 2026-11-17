@@ -36,6 +36,7 @@ const faithfulLayout = formats.LayoutFaithful
 //	ErrUnavailable     -> unavailable (a service this one depends on could not be reached, such as
 //	                      the PartSpec service behind --params-url)
 //	ErrResourceExhausted -> resource exhausted (a query stopped at its work budget)
+//	ErrFailedPrecondition -> failed precondition (a write the resource's state refuses)
 //
 // An unclassified error reaching a transport is treated as an invalid argument, the common
 // case for load/parse failures.
@@ -47,6 +48,10 @@ var (
 	// well be a good question, but it costs more than this deployment or this request allows.
 	ErrResourceExhausted = errors.New("resource exhausted")
 	ErrUnavailable       = errors.New("unavailable")
+	// ErrFailedPrecondition marks a request the resource's state refuses, such as a write to a
+	// project declared in a mounted folder or a delete of a project that still holds designs (agni
+	// issue 1693). The same request can succeed once that state changes.
+	ErrFailedPrecondition = errors.New("failed precondition")
 )
 
 // Loader materializes a design's read model from an artifact.URI. osLoader in cmd/agni is the
