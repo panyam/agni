@@ -10,6 +10,18 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-17
+
+A board opens in 3D the way its maker's tool shows it. Each part stands at its real height and
+outline, KiCad's from the part's STEP model (PR 1681) and Altium's, Allegro's and ODB++'s from the
+file (PRs 1658, 1666, 1667 and 1671). Altium and Allegro boards read their layer stacks (PRs 1661,
+1662 and 1675). The stack view gains a Board look, cut holes, barrels and text (PRs 1655, 1659 and
+1673), and the board view measures in millimetres (PR 1682). Clients for TypeScript, Rust, Java and
+C++ ship (PRs 1646 to 1649), and `agni serve` speaks gRPC beside Connect (PR 1640). It is a minor
+release. **Breaking:** `ir.Design.stackup` and its messages are removed, and the stack lives in
+`BoardGeometry.stackup` (PR 1678). A KiCad pad with only paste or mask layers is no longer a pad
+(PR 1680). The full write-up is [RELEASES/v0.8.0.md](RELEASES/v0.8.0.md).
+
 ## [0.7.0] - 2026-11-16
 
 The board view follows a selection to its side and copper, and steps back, forward and across the
