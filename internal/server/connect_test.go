@@ -35,6 +35,7 @@ func TestToConnectErr(t *testing.T) {
 		{service.ErrNativeNoTool, connect.CodeUnimplemented, nil},
 		{service.ErrNativeNotEnabled, connect.CodeFailedPrecondition, nil},
 		{service.ErrNativeNotFound, connect.CodeFailedPrecondition, nil},
+		{fmt.Errorf("%w: projects/tutorial is declared in a mounted folder", service.ErrFailedPrecondition), connect.CodeFailedPrecondition, nil},
 		{fmt.Errorf("%w: exec blew up", service.ErrInternal), connect.CodeInternal, nil},
 		// A request that stopped rather than failed (agni issues 792, 795).
 		{fmt.Errorf("query: evaluation stopped: %w", context.Canceled), connect.CodeCanceled, nil},

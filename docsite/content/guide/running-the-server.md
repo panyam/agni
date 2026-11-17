@@ -201,6 +201,19 @@ question on a snapshot made before a restart answers too (agni issue 1639). With
 memory. Like the review store, it wants a writable volume of its own in a container, such as
 `-v agni-state:/var/lib/agni/state` with `--state-dir /var/lib/agni/state`.
 
+## Keeping projects and designs
+
+`serve --store-dir <dir>` gives the server a folder of its own for projects and designs (agni issue
+1693). The server serves it as the mount `store`, beside the folders you mount. Say a user creates
+project `b200` and a design `memory_unit` in it. The store then holds `b200/project.yaml`, and
+`b200/designs/memory_unit/` with the design's `design.yaml` and its files. That is the layout a
+hand-made project has, so `agni check <dir>/b200/designs/memory_unit` reads it like any other.
+
+A project in the store can be replaced or deleted. A project in a mounted folder stays read-only,
+and a write to it is refused. In a container give the store a volume of its own, such as
+`-v agni-store:/var/lib/agni/store` with `--store-dir /var/lib/agni/store`. The calls that create
+projects and designs over the wire come with agni issue 1694.
+
 ## Keeping review runs
 
 `serve --review-store <dir>` makes the server keep review runs. Without it the server
