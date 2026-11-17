@@ -13,7 +13,7 @@ import { emptyLocation, locationToUrl } from "./router.js";
 import { dsToUrl } from "@agni/web-shared/dsrouter.js";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
 import { clearRecents, loadRecents, type Recent, type RecentKind } from "@agni/web-shared/recents.js";
-import { projectClient } from "./api.js";
+import { designClient, projectClient } from "./api.js";
 import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 
 // openUrl is where an artifact reopens, by kind. Both halves go through their page's own URL
@@ -95,16 +95,16 @@ interface ProjectGroup {
   designs: Design[];
 }
 
-// loadProjects fetches every project and its designs. A deployment with no descriptors is the
-// ordinary case rather than an error (see project.proto), so a failure and an empty answer both
-// leave the section rendering nothing.
+// loadProjects fetches every project and the designs it lists (agni issue 1694). A deployment with
+// no descriptors is the ordinary case rather than an error (see project.proto), so a failure and an
+// empty answer both leave the section rendering nothing.
 async function loadProjects(): Promise<ProjectGroup[]> {
-  const client = projectClient();
-  const { projects } = await client.listProjects({});
+  const { projects } = await projectClient().listProjects({});
+  const designs = designClient();
   const groups = await Promise.all(
     projects.map(async (p) => ({
       title: p.title || p.name,
-      designs: (await client.listDesigns({ parent: p.name })).designs,
+      designs: (await designs.listDesigns({ filter: `project = "${p.name}"` })).designs,
     })),
   );
   return groups.filter((g) => g.designs.length > 0);

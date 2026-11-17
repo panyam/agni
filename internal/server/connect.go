@@ -502,20 +502,27 @@ func (a *Project) ListProjects(ctx context.Context, req *connect.Request[webapi.
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Project) GetDesign(ctx context.Context, req *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error) {
-	resp, err := a.svc.GetDesign(ctx, req.Msg)
+func (a *Project) CreateProject(ctx context.Context, req *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	resp, err := a.svc.CreateProject(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}
 	return connect.NewResponse(resp), nil
 }
 
-func (a *Project) ListDesigns(ctx context.Context, req *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error) {
-	resp, err := a.svc.ListDesigns(ctx, req.Msg)
+func (a *Project) UpdateProject(ctx context.Context, req *connect.Request[webapi.UpdateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	resp, err := a.svc.UpdateProject(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (a *Project) DeleteProject(ctx context.Context, req *connect.Request[webapi.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeleteProject(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 func (a *Project) ResolveDesign(ctx context.Context, req *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error) {
@@ -524,6 +531,54 @@ func (a *Project) ResolveDesign(ctx context.Context, req *connect.Request[webapi
 		return nil, toConnectErr(err)
 	}
 	return connect.NewResponse(resp), nil
+}
+
+// Design adapts service.DesignService to the generated Connect handler interface.
+type Design struct {
+	webapiconnect.UnimplementedDesignServiceHandler
+	svc *service.DesignService
+}
+
+// NewDesign wraps svc for Connect.
+func NewDesign(svc *service.DesignService) *Design { return &Design{svc: svc} }
+
+func (a *Design) CreateDesign(ctx context.Context, req *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error) {
+	resp, err := a.svc.CreateDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) GetDesign(ctx context.Context, req *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.Design], error) {
+	resp, err := a.svc.GetDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) ListDesigns(ctx context.Context, req *connect.Request[webapi.ListDesignsRequest]) (*connect.Response[webapi.ListDesignsResponse], error) {
+	resp, err := a.svc.ListDesigns(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) UpdateDesign(ctx context.Context, req *connect.Request[webapi.UpdateDesignRequest]) (*connect.Response[webapi.Design], error) {
+	resp, err := a.svc.UpdateDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Design) DeleteDesign(ctx context.Context, req *connect.Request[webapi.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeleteDesign(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 // Snapshot adapts service.SnapshotService to the generated Connect handler interface.

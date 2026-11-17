@@ -54,7 +54,7 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ds) != 1 || ds[0].GetName() != "projects/gateway/designs/gateway" {
+	if len(ds) != 1 || ds[0].GetName() != "designs/gateway" {
 		t.Fatalf("designs = %+v", ds)
 	}
 	// Descriptor-relative names become mount:// URIs HERE, once, because every consumer above
@@ -72,8 +72,9 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	if p, err := s.Project(ctx, "projects/gateway"); err != nil || p.GetTitle() != "Gateway program" {
 		t.Errorf("Project = %+v, %v", p, err)
 	}
-	if d, err := s.Design(ctx, "projects/gateway/designs/gateway"); err != nil || d.GetEntryUri() == "" {
-		t.Errorf("Design = %+v, %v", d, err)
+	// A mounted project lists the designs that extend it (agni issue 1694).
+	if p, err := s.Project(ctx, "projects/gateway"); err != nil || len(p.GetDesigns()) != 1 || p.GetDesigns()[0] != "designs/gateway" {
+		t.Errorf("Project designs = %v, %v; want designs/gateway", p.GetDesigns(), err)
 	}
 }
 
@@ -91,7 +92,7 @@ func TestFSStoreResolve(t *testing.T) {
 		if err != nil || d == nil {
 			t.Fatalf("ResolveDesign(%q) = %v, err %v", ref, d, err)
 		}
-		if d.GetName() != "projects/gateway/designs/gateway" || p.GetName() != "projects/gateway" {
+		if d.GetName() != "designs/gateway" || p.GetName() != "projects/gateway" {
 			t.Errorf("ResolveDesign(%q) = design %q, project %q", ref, d.GetName(), p.GetName())
 		}
 	}
@@ -107,7 +108,7 @@ func TestFSStoreResolve(t *testing.T) {
 
 // TestFSStoreResolveWithoutAProjectKeepsTheDeclaration pins that a design with no project above it
 // is a real design, not a half-resolved one. Its declaration still says which file analysis reads.
-// It lacks only a resource NAME, since a name needs a parent.
+// It is named "designs/{design}" like any other (agni issue 1694).
 func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"board/design.yaml": "name: board\nentry: board.edn\n",
@@ -123,8 +124,8 @@ func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	if d.GetEntryUri() != "mount://m/board/board.edn" {
 		t.Errorf("entry ref = %q", d.GetEntryUri())
 	}
-	if d.GetName() != "" {
-		t.Errorf("name = %q, want empty: a resource name needs a parent", d.GetName())
+	if d.GetName() != "designs/board" {
+		t.Errorf("name = %q, want designs/board", d.GetName())
 	}
 	if p != nil {
 		t.Errorf("project = %+v, want none", p)
@@ -382,7 +383,7 @@ func TestFSStoreADesignBelongsToTheProjectItNames(t *testing.T) {
 		"teams/other/c/c.edn":       "x",
 	})})
 	ctx := context.Background()
-	for team, want := range map[string]string{"projects/house": "projects/house/designs/a,projects/house/designs/b", "projects/other": "projects/other/designs/c"} {
+	for team, want := range map[string]string{"projects/house": "designs/a,designs/b", "projects/other": "designs/c"} {
 		ds, err := s.Designs(ctx, team)
 		if err != nil {
 			t.Fatal(err)
@@ -399,7 +400,7 @@ func TestFSStoreADesignBelongsToTheProjectItNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.GetName() != "projects/house" || d.GetName() != "projects/house/designs/b" {
+	if p.GetName() != "projects/house" || d.GetName() != "designs/b" {
 		t.Errorf("a design under one project's folder naming another resolved to %q in %q, want house's", d.GetName(), p.GetName())
 	}
 }

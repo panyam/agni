@@ -742,13 +742,13 @@ what was never stable, and eventually ask why deleting it does not work.
 
 **Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
 standard methods and no bespoke mutator, meaning the four of them for a server-assigned id (with
-`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one until the
-stored projects and designs of agni issues 1693 and 1694 add their writes (each owes a test that a
-write to a mounted resource is refused); every rpc
+`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one, and all
+five for a stored project or design, where a write to a mounted one is refused
+(`TestADesignServiceRefusesWhatItCannotWrite`, `TestAProjectServiceRefusesWhatItCannotWrite`); every rpc
 that reads a design and returns a derived view takes a snapshot and returns no `name`
 (`TestC22AnalysisRequestsNameASnapshot`); a resource's `List` carries `page_size`, `page_token`, and
 `filter`, and its service rejects a filter it does not implement rather than ignoring it
-(`service.parseReviewFilter`, `service.parseProjectFilter`).
+(`service.parseReviewFilter`, `service.parseProjectFilter`, `DesignService.parseFilter`).
 
 **Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
 has no authentication at all. That is a deployment assumption (one team, one trusted network), not

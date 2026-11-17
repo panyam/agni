@@ -3,7 +3,7 @@
 # read because of its folder's name, so a tier this file does not name is not in the run.
 #
 # The name is the project's identity, not its folder. `agni serve` addresses this project as
-# `projects/gateway` and the board below it as `projects/gateway/designs/gateway`, so renaming the
+# `projects/gateway` and the board below it as `designs/gateway`, so renaming the
 # folder or moving it to another mount does not rename either.
 #
 # "Project" is an overloaded word around here. KiCad's own `.kicad_pro` is DESIGN-scoped, one board's

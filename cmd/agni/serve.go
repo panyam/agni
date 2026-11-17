@@ -145,7 +145,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&stateDir, "state-dir", "", "a WRITABLE directory this server keeps its own state in, created if absent. Today that is each snapshot's definition, so a question on a snapshot made before a restart still answers (agni issue 1639). Without it, definitions live in memory and a restart forgets them. Like --review-store, it is separate from the read-only design mounts")
-	c.Flags().StringVar(&storeDir, "store-dir", "", "a WRITABLE directory this server keeps the designs its users create in, created if absent, and served as the mount \""+storeMount+"\" (agni issue 1693). Each design is a folder holding its design.yaml and its files, and belongs to no project, so the CLI reads it as it reads any design folder. The mounted design folders stay read-only. In a container, mount a volume here")
+	c.Flags().StringVar(&storeDir, "store-dir", "", "a WRITABLE directory this server keeps the designs and projects its users create in, created if absent (agni issues 1693, 1694). Designs go in <dir>/designs, served as the mount \""+storeMount+"\", each a folder holding its design.yaml and its files, so the CLI reads it as it reads any design folder. Projects go in <dir>/projects. The mounted folders stay read-only. In a container, mount a volume here")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
 }
@@ -169,7 +169,7 @@ type viewerOpts struct {
 	reviewStorePath string
 	// stateDir is --state-dir, the writable directory the server keeps snapshot definitions in.
 	stateDir string
-	// storeDir is --store-dir, the writable directory the server keeps its users' designs in.
+	// storeDir is --store-dir, the writable directory the server keeps its users' designs and projects in.
 	storeDir string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
@@ -408,9 +408,14 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
+	projectSvc, designSvc, err := storeServices(mounts, o.storeDir, projectStore, projectResolver)
+	if err != nil {
+		return err
+	}
 	api := server.API{
 		Workspace:  workspace,
-		Project:    service.NewProjectService(projectStore),
+		Project:    projectSvc,
+		Design:     designSvc,
 		Snapshot:   checkSvc.Snapshots(),
 		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
 		Check:      checkSvc,
@@ -533,11 +538,19 @@ func newHTTPServer(addr string, h http.Handler) *http.Server {
 	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, Protocols: &protocols}
 }
 
-// storeMount is the mount name --store-dir serves under.
+// storeMount is the mount name --store-dir's designs folder serves under.
 const storeMount = "store"
 
-// withStoreMount adds --store-dir as the mount "store", creating the directory. A mount already
-// named "store" is refused, since the two would answer one name. An empty dir adds nothing.
+// The two folders inside --store-dir. Designs are mounted, and project records are not.
+const (
+	storeDesignsDir  = "designs"
+	storeProjectsDir = "projects"
+)
+
+// withStoreMount adds --store-dir's designs folder, `<dir>/designs`, as the mount "store", creating
+// it. Stored projects go in `<dir>/projects` beside it, outside every mount (agni issue 1694). A
+// mount already named "store" is refused, since the two would answer one name. An empty dir adds
+// nothing.
 func withStoreMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if dir == "" {
 		return ms, nil
@@ -551,10 +564,11 @@ func withStoreMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o750); err != nil {
+	designs := filepath.Join(abs, storeDesignsDir)
+	if err := os.MkdirAll(designs, 0o750); err != nil {
 		return nil, fmt.Errorf("--store-dir %q: %w", dir, err)
 	}
-	return append(ms, mounts.Mount{Name: storeMount, Root: abs}), nil
+	return append(ms, mounts.Mount{Name: storeMount, Root: designs}), nil
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is

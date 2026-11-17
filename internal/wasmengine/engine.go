@@ -190,9 +190,14 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	}
 	check, review := e.RuleServices(agni.RuleServiceDeps{Loader: host})
 	mux := http.NewServeMux()
+	// The page's seeded designs are read-only, the way a mounted folder is. A store of the browser's
+	// own comes with agni issue 1699.
+	projectSvc := service.NewProjectService(store)
+	designSvc := service.NewDesignService(service.NewDesignCatalog(nil, projects.NewMountedDesigns(trees...)), nil).WithProjects(projectSvc)
 	paths := server.API{
 		Workspace:  service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
-		Project:    service.NewProjectService(store),
+		Project:    projectSvc,
+		Design:     designSvc,
 		Snapshot:   check.Snapshots(),
 		DesignView: service.NewDesignViewService(host, nil, render.DefaultStyle, resolver),
 		Check:      check,

@@ -14,7 +14,6 @@ import (
 // needs no tree, no descriptor and no parent directory, and the port exists to guarantee that.
 type memProjects struct {
 	projects []*webapi.Project
-	designs  map[string][]*webapi.Design
 	resolve  map[string]*webapi.Design // "mount:ref" -> design
 }
 
@@ -29,57 +28,32 @@ func (m *memProjects) Project(_ context.Context, name string) (*webapi.Project, 
 
 func (m *memProjects) Projects(context.Context) ([]*webapi.Project, error) { return m.projects, nil }
 
-func (m *memProjects) Design(ctx context.Context, name string) (*webapi.Design, error) {
-	parent, _, ok := SplitDesignName(name)
-	if !ok {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidArgument, name)
-	}
-	ds, err := m.Designs(ctx, parent)
-	if err != nil {
-		return nil, err
-	}
-	for _, d := range ds {
-		if d.GetName() == name {
-			return d, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: no design %q", ErrNotFound, name)
-}
-
-func (m *memProjects) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
-	if _, err := m.Project(ctx, parent); err != nil {
-		return nil, err
-	}
-	return m.designs[parent], nil
-}
-
 func (m *memProjects) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
 	d, ok := m.resolve[uri.String()]
 	if !ok {
 		return nil, nil, nil
 	}
-	parent, _, _ := SplitDesignName(d.GetName())
-	p, err := m.Project(ctx, parent)
+	p, err := m.Project(ctx, d.GetConfig().GetExtends())
 	return d, p, err
 }
 
 func fixtureStore() *memProjects {
 	gw := &webapi.Design{
-		Name: "projects/gateway/designs/gateway", Title: "Sample Board",
+		Name: "designs/gateway", Title: "Sample Board",
 		Uri: "mount://boards/designs/gateway", EntryUri: "mount://boards/designs/gateway/gateway.edn",
 		CompanionUris: []string{"mount://boards/designs/gateway/gateway.kicad_pcb"},
+		Config:        &webapi.AnalysisConfig{Extends: "projects/gateway"},
 	}
 	return &memProjects{
 		projects: []*webapi.Project{
-			{Name: "projects/gateway", Title: "Gateway program", Uri: "mount://boards"},
+			{Name: "projects/gateway", Title: "Gateway program", Uri: "mount://boards", Designs: []string{"designs/gateway"}},
 			{Name: "projects/sensor", Title: "sensor", Uri: "mount://other/sensor"},
 		},
-		designs: map[string][]*webapi.Design{"projects/gateway": {gw}},
 		resolve: map[string]*webapi.Design{"mount://boards/designs/gateway/gateway.kicad_pcb": gw},
 	}
 }
 
-func TestGetProjectAndDesign(t *testing.T) {
+func TestGetProjectListsItsDesigns(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
 	ctx := context.Background()
 
@@ -90,13 +64,8 @@ func TestGetProjectAndDesign(t *testing.T) {
 	if p.GetName() != "projects/gateway" || p.GetTitle() != "Gateway program" || p.GetUri() != "mount://boards" {
 		t.Fatalf("project = %+v", p)
 	}
-
-	d, err := svc.GetDesign(ctx, &webapi.GetProjectDesignRequest{Name: "projects/gateway/designs/gateway"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if d.GetEntryUri() != "mount://boards/designs/gateway/gateway.edn" {
-		t.Errorf("entry_ref = %q, want the declared entry", d.GetEntryUri())
+	if len(p.GetDesigns()) != 1 || p.GetDesigns()[0] != "designs/gateway" {
+		t.Errorf("designs = %v, want designs/gateway", p.GetDesigns())
 	}
 }
 
@@ -112,28 +81,6 @@ func TestGetClassifiesMalformedNameApartFromAbsent(t *testing.T) {
 	}
 	if _, err := svc.GetProject(ctx, &webapi.GetProjectRequest{Name: "projects/nope"}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("GetProject(absent) error = %v, want ErrNotFound", err)
-	}
-	for _, name := range []string{"projects/gateway", "projects/gateway/designs/", "designs/x"} {
-		if _, err := svc.GetDesign(ctx, &webapi.GetProjectDesignRequest{Name: name}); !errors.Is(err, ErrInvalidArgument) {
-			t.Errorf("GetDesign(%q) error = %v, want ErrInvalidArgument", name, err)
-		}
-	}
-}
-
-// TestListDesignsAbsentParentIsNotFound pins that "this project has no designs" and "there is no such
-// project" are different answers, and only one means the client's parent was wrong.
-func TestListDesignsAbsentParentIsNotFound(t *testing.T) {
-	svc := NewProjectService(fixtureStore())
-	_, err := svc.ListDesigns(context.Background(), &webapi.ListProjectDesignsRequest{Parent: "projects/nope"})
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("error = %v, want ErrNotFound", err)
-	}
-	resp, err := svc.ListDesigns(context.Background(), &webapi.ListProjectDesignsRequest{Parent: "projects/sensor"})
-	if err != nil {
-		t.Fatalf("a project with no designs should list empty, got %v", err)
-	}
-	if len(resp.GetDesigns()) != 0 {
-		t.Errorf("designs = %v, want none", resp.GetDesigns())
 	}
 }
 
@@ -177,7 +124,7 @@ func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hit.GetDesign().GetName() != "projects/gateway/designs/gateway" {
+	if hit.GetDesign().GetName() != "designs/gateway" {
 		t.Fatalf("resolved design = %+v", hit.GetDesign())
 	}
 	if hit.GetProject().GetName() != "projects/gateway" {
@@ -215,20 +162,24 @@ func TestResourceNameRoundTrip(t *testing.T) {
 	if got := ProjectName("gateway"); got != "projects/gateway" {
 		t.Errorf("ProjectName = %q", got)
 	}
-	if got := DesignName("projects/gateway", "rev-b"); got != "projects/gateway/designs/rev-b" {
-		t.Errorf("DesignName = %q", got)
+	if got := StandaloneDesignName("rev-b"); got != "designs/rev-b" {
+		t.Errorf("StandaloneDesignName = %q", got)
 	}
 	if id, ok := ProjectID(ProjectName("gateway")); !ok || id != "gateway" {
 		t.Errorf("ProjectID round trip = %q, %v", id, ok)
 	}
-	parent, id, ok := SplitDesignName(DesignName("projects/gateway", "rev-b"))
-	if !ok || parent != "projects/gateway" || id != "rev-b" {
-		t.Errorf("SplitDesignName round trip = %q, %q, %v", parent, id, ok)
+	if id, ok := StandaloneDesignID(StandaloneDesignName("rev-b")); !ok || id != "rev-b" {
+		t.Errorf("StandaloneDesignID round trip = %q, %v", id, ok)
 	}
 	// An id reaching a store that may resolve it against a filesystem must not be able to escape.
 	for _, bad := range []string{"projects/..", "projects/a/b", "projects/", `projects/a\b`} {
 		if _, ok := ProjectID(bad); ok {
 			t.Errorf("ProjectID(%q) accepted an id that could escape the tree", bad)
+		}
+	}
+	for _, bad := range []string{"designs/..", "designs/a/b", "designs/", "projects/p/designs/d"} {
+		if _, ok := StandaloneDesignID(bad); ok {
+			t.Errorf("StandaloneDesignID(%q) accepted a name that is not designs/{design}", bad)
 		}
 	}
 }

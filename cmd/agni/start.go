@@ -52,7 +52,7 @@ func startCmd() *cobra.Command {
 }
 
 // idUnsafe matches every run of characters an AIP resource id may not carry. The id becomes a path
-// segment in "projects/{p}/designs/{d}"; see projects.WriteProject.
+// segment in "projects/{p}" and "designs/{d}"; see projects.WriteProject.
 var idUnsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 // deriveID turns a folder or file name into a legal resource id, or "" when nothing usable survives.

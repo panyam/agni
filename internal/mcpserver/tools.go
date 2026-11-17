@@ -109,7 +109,7 @@ func (s *srv) designsTool(ctx context.Context, _ designsInput) (core.ToolResult,
 	}
 	var b strings.Builder
 	if len(list.Designs) == 0 {
-		b.WriteString("no project on this server declares a design")
+		b.WriteString("this server holds no design")
 	}
 	for _, d := range list.Designs {
 		fmt.Fprintf(&b, "%s", d.Design)
@@ -575,7 +575,7 @@ type listed struct {
 type listedDesign struct {
 	Design  string `json:"design"`
 	Title   string `json:"title,omitempty"`
-	Project string `json:"project"`
+	Project string `json:"project,omitempty"`
 	// Series names the designs that are versions of one board (agni 1692).
 	Series string `json:"series,omitempty"`
 }
@@ -592,23 +592,23 @@ func (s *srv) listDesigns(ctx context.Context) (listed, error) {
 			out.Mounts = append(out.Mounts, m.GetName())
 		}
 	}
-	if s.api.Project == nil {
+	if s.api.Design == nil {
 		return out, nil
 	}
-	projects, err := s.api.Project.ListProjects(ctx, &webapi.ListProjectsRequest{})
-	if err != nil {
-		return out, err
-	}
-	for _, p := range projects.GetProjects() {
-		ds, err := s.api.Project.ListDesigns(ctx, &webapi.ListProjectDesignsRequest{Parent: p.GetName()})
+	// Every design the server holds, mounted or stored (agni issue 1694). A mounted design names the
+	// project it extends, and a stored one names none.
+	for token := ""; ; {
+		ds, err := s.api.Design.ListDesigns(ctx, &webapi.ListDesignsRequest{PageToken: token})
 		if err != nil {
 			return out, err
 		}
 		for _, d := range ds.GetDesigns() {
-			out.Designs = append(out.Designs, listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: p.GetName(), Series: d.GetSeries()})
+			out.Designs = append(out.Designs, listedDesign{Design: bare(d.GetUri()), Title: d.GetTitle(), Project: d.GetConfig().GetExtends(), Series: d.GetSeries()})
+		}
+		if token = ds.GetNextPageToken(); token == "" {
+			return out, nil
 		}
 	}
-	return out, nil
 }
 
 // bare is a mount:// URI as the tools take it, mount/path.

@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/panyam/agni/artifact"
+	"regexp"
+	"slices"
 	"sort"
+
+	"github.com/panyam/agni/artifact"
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -19,8 +23,9 @@ import (
 // (`internal/projects`) walks a directory tree for descriptors, and a database-backed store with
 // designs on object storage should be a wiring change rather than a redesign.
 //
-// It reads. A design that stands alone, with no project, is read and written through a
-// DesignCatalog instead (agni issue 1693).
+// It reads the projects a deployment declares in its mounted folders, and each one's designs are
+// the designs whose `extends` names it. The projects a server stores are ProjectRecords, and the
+// designs themselves are read and written through a DesignCatalog (agni issues 1693, 1694).
 //
 // Every method deals in the WIRE types, with no parallel value type. A `Project` is a resource whose
 // content is the message, so a twin would be a field-for-field copy that can disagree with it
@@ -29,13 +34,9 @@ import (
 type ProjectStore interface {
 	// Project returns one project by resource name. A name naming nothing is ErrNotFound.
 	Project(ctx context.Context, name string) (*webapi.Project, error)
-	// Projects returns every visible project, ordered by resource name.
+	// Projects returns every visible project, ordered by resource name. Each lists its designs, the
+	// ones whose `extends` names it.
 	Projects(ctx context.Context) ([]*webapi.Project, error)
-	// Design returns one design by resource name. A name naming nothing is ErrNotFound.
-	Design(ctx context.Context, name string) (*webapi.Design, error)
-	// Designs returns a project's designs, ordered by resource name. A parent naming nothing is
-	// ErrNotFound, distinct from a project that exists and holds no designs (an empty slice).
-	Designs(ctx context.Context, parent string) ([]*webapi.Design, error)
 	// ResolveDesign maps an artifact ref to the design containing it and that design's project.
 	//
 	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
@@ -45,10 +46,7 @@ type ProjectStore interface {
 
 // Resource-name prefixes and separators, written once. A store deals in ids and an API deals in
 // names. If each spelled the boundary by hand, one would end up storing a name as an id.
-const (
-	projectNamePrefix = "projects/"
-	designNameInfix   = "/designs/"
-)
+const projectNamePrefix = "projects/"
 
 // ProjectName builds a project resource name from its declared id.
 func ProjectName(id string) string { return projectNamePrefix + id }
@@ -62,23 +60,6 @@ func ProjectID(name string) (string, bool) {
 		return "", false
 	}
 	return id, validResourceID(id)
-}
-
-// DesignName builds a design resource name, "projects/{project}/designs/{design}".
-func DesignName(parent, id string) string { return parent + designNameInfix + id }
-
-// SplitDesignName splits a design resource name into its parent project name and its design id,
-// with the same containment rejections as ProjectID applied to both halves.
-func SplitDesignName(name string) (parent, id string, ok bool) {
-	rest, found := strings.CutPrefix(name, projectNamePrefix)
-	if !found {
-		return "", "", false
-	}
-	projectID, designID, found := strings.Cut(rest, designNameInfix)
-	if !found || !validResourceID(projectID) || !validResourceID(designID) {
-		return "", "", false
-	}
-	return ProjectName(projectID), designID, true
 }
 
 // validResourceID rejects an id that could escape a store's tree or split one resource name into
@@ -215,19 +196,30 @@ const (
 	maxProjectPageSize     = 200
 )
 
-// ProjectService serves the project and design resources over an injected ProjectStore (C13). It
-// does no I/O itself. It applies AIP-158 pagination and the one supported AIP-160 filter, and
-// classifies errors for the transport.
+// ProjectService serves the project resource over an injected ProjectStore and ProjectRecords
+// (C13). It does no I/O itself. It applies AIP-158 pagination and the one supported AIP-160 filter,
+// and classifies errors for the transport.
 //
-// It is AIP-shaped with GET and LIST only, the read-only-resource case in CONSTRAINTS C23. A project
-// gets a resource name rather than an artifact URI because an operator DECLARES its identity, so the
-// name survives the folder being renamed or moved between mounts and reviews can be parented by it.
+// A project declared in a mounted folder is a read-only resource, and its id is DECLARED in its
+// `project.yaml`, so the name survives the folder being renamed or moved between mounts. A project
+// the server stores is a title and a list of designs, with the standard methods (CONSTRAINTS C23,
+// agni issue 1694). A project id is unique across both.
 //
 // Every caller goes through here, including the CLI. A second path reaching the store directly would
-// drift on questions invisible from outside, such as whether an unresolved ref is an error or what a
-// malformed descriptor does.
+// be a second place for the malformed-vs-absent rule to drift.
 type ProjectService struct {
-	store ProjectStore
+	store   ProjectStore
+	records ProjectRecords
+}
+
+// ProjectRecords keeps the projects a server stores, each a title and a list of design names (agni
+// issue 1694). Get of an id it does not hold is ErrNotFound, and so is Delete. Put creates or
+// replaces. List returns every record ordered by name. Each record's name is "projects/{id}".
+type ProjectRecords interface {
+	Get(ctx context.Context, id string) (*webapi.Project, error)
+	List(ctx context.Context) ([]*webapi.Project, error)
+	Put(ctx context.Context, id string, p *webapi.Project) error
+	Delete(ctx context.Context, id string) error
 }
 
 // NewProjectService returns a ProjectService backed by store. A nil store is legal and means this
@@ -237,20 +229,40 @@ func NewProjectService(store ProjectStore) *ProjectService {
 	return &ProjectService{store: store}
 }
 
+// WithRecords keeps the projects callers create in records, and returns s. Without it, a write
+// answers ErrFailedPrecondition.
+func (s *ProjectService) WithRecords(records ProjectRecords) *ProjectService {
+	s.records = records
+	return s
+}
+
 // GetProject returns one project by resource name. A malformed name is ErrInvalidArgument and a
 // well-formed name for a project that does not exist is ErrNotFound, so a client can tell a typo
 // from a project it lacks.
 func (s *ProjectService) GetProject(ctx context.Context, req *webapi.GetProjectRequest) (*webapi.Project, error) {
-	if _, ok := ProjectID(req.GetName()); !ok {
+	id, ok := ProjectID(req.GetName())
+	if !ok {
 		return nil, fmt.Errorf("%w: %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, req.GetName())
 	}
-	if s.store == nil {
-		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, req.GetName())
+	if p, err := s.mounted(ctx, req.GetName()); err == nil || !errors.Is(err, ErrNotFound) {
+		return p, err
 	}
-	return s.store.Project(ctx, req.GetName())
+	if s.records != nil {
+		return s.records.Get(ctx, id)
+	}
+	return nil, fmt.Errorf("%w: no project %q", ErrNotFound, req.GetName())
 }
 
-// ListProjects returns the projects visible across the server's mounts, ordered by resource name.
+// mounted returns a project declared in a mounted folder, or ErrNotFound.
+func (s *ProjectService) mounted(ctx context.Context, name string) (*webapi.Project, error) {
+	if s.store == nil {
+		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, name)
+	}
+	return s.store.Project(ctx, name)
+}
+
+// ListProjects returns the projects declared in mounted folders and the ones the server stores,
+// ordered by resource name. A stored project carries no URI, so a mount filter leaves it out.
 func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProjectsRequest) (*webapi.ListProjectsResponse, error) {
 	mount, err := parseProjectFilter(req.GetFilter())
 	if err != nil {
@@ -262,8 +274,20 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 			return nil, err
 		}
 	}
+	if s.records != nil {
+		stored, err := s.records.List(ctx)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, stored...)
+	}
 	var kept []*webapi.Project
+	seen := map[string]bool{}
 	for _, p := range all {
+		if seen[p.GetName()] {
+			return nil, fmt.Errorf("%s is both declared in a mounted folder and stored; a project id is unique per server", p.GetName())
+		}
+		seen[p.GetName()] = true
 		if mount == "" || uriMount(p.GetUri()) == mount {
 			kept = append(kept, p)
 		}
@@ -277,49 +301,118 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 	return resp, nil
 }
 
-// GetDesign returns one design by resource name, with the same malformed-vs-absent split as
-// GetProject.
-func (s *ProjectService) GetDesign(ctx context.Context, req *webapi.GetProjectDesignRequest) (*webapi.Design, error) {
-	if _, _, ok := SplitDesignName(req.GetName()); !ok {
-		return nil, fmt.Errorf("%w: %q is not a design resource name (want \"projects/{project}/designs/{design}\")", ErrInvalidArgument, req.GetName())
+// CreateProject stores a new project. Its id must be one no mounted folder declares.
+func (s *ProjectService) CreateProject(ctx context.Context, req *webapi.CreateProjectRequest) (*webapi.Project, error) {
+	if s.records == nil {
+		return nil, errNoProjectStore
 	}
-	if s.store == nil {
-		return nil, fmt.Errorf("%w: no design %q", ErrNotFound, req.GetName())
+	id := req.GetProjectId()
+	if !newIDPattern.MatchString(id) {
+		return nil, fmt.Errorf("%w: project id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, id)
 	}
-	return s.store.Design(ctx, req.GetName())
+	name := ProjectName(id)
+	if _, err := s.mounted(ctx, name); err == nil {
+		return nil, fmt.Errorf("%w: %s is declared in a mounted folder", ErrAlreadyExists, name)
+	} else if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	if _, err := s.records.Get(ctx, id); err == nil {
+		return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, name)
+	} else if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	designs, err := designNames(req.GetProject().GetDesigns())
+	if err != nil {
+		return nil, err
+	}
+	p := &webapi.Project{Name: name, Title: orID(req.GetProject().GetTitle(), id), Designs: designs}
+	if err := s.records.Put(ctx, id, p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
-// ListDesigns returns one project's designs, ordered by resource name. A parent naming a project
-// that does not exist is ErrNotFound rather than an empty list, so a client can tell a wrong parent
-// from a project with no designs.
-func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjectDesignsRequest) (*webapi.ListProjectDesignsResponse, error) {
-	if _, ok := ProjectID(req.GetParent()); !ok {
-		return nil, fmt.Errorf("%w: parent %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, req.GetParent())
-	}
-	mount, err := parseProjectFilter(req.GetFilter())
+// UpdateProject changes a stored project's title or designs, the fields update_mask names.
+func (s *ProjectService) UpdateProject(ctx context.Context, req *webapi.UpdateProjectRequest) (*webapi.Project, error) {
+	id, p, err := s.stored(ctx, req.GetProject().GetName())
 	if err != nil {
 		return nil, err
 	}
-	if s.store == nil {
-		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, req.GetParent())
+	paths := req.GetUpdateMask().GetPaths()
+	if len(paths) == 0 {
+		paths = []string{"title", "designs"}
 	}
-	all, err := s.store.Designs(ctx, req.GetParent())
-	if err != nil {
-		return nil, err
-	}
-	var kept []*webapi.Design
-	for _, d := range all {
-		if mount == "" || uriMount(d.GetUri()) == mount {
-			kept = append(kept, d)
+	for _, f := range paths {
+		switch f {
+		case "title":
+			p.Title = orID(req.GetProject().GetTitle(), id)
+		case "designs":
+			if p.Designs, err = designNames(req.GetProject().GetDesigns()); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("%w: update_mask names %q; a stored project's title and designs can change", ErrInvalidArgument, f)
 		}
 	}
-	sort.Slice(kept, func(i, j int) bool { return kept[i].GetName() < kept[j].GetName() })
-	page, next := paginate(len(kept), req.GetPageSize(), req.GetPageToken(), func(i int) string { return kept[i].GetName() })
-	resp := &webapi.ListProjectDesignsResponse{NextPageToken: next}
-	for _, i := range page {
-		resp.Designs = append(resp.Designs, kept[i])
+	if err := s.records.Put(ctx, id, p); err != nil {
+		return nil, err
 	}
-	return resp, nil
+	return p, nil
+}
+
+// DeleteProject removes a stored project. The designs it lists stay.
+func (s *ProjectService) DeleteProject(ctx context.Context, req *webapi.DeleteProjectRequest) error {
+	id, _, err := s.stored(ctx, req.GetName())
+	if err != nil {
+		return err
+	}
+	return s.records.Delete(ctx, id)
+}
+
+var errNoProjectStore = fmt.Errorf("%w: this server keeps no projects; start it with --store-dir", ErrFailedPrecondition)
+
+// stored returns a project the server stores, refusing one a mounted folder declares.
+func (s *ProjectService) stored(ctx context.Context, name string) (string, *webapi.Project, error) {
+	id, ok := ProjectID(name)
+	if !ok {
+		return "", nil, fmt.Errorf("%w: %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, name)
+	}
+	if _, err := s.mounted(ctx, name); err == nil {
+		return "", nil, fmt.Errorf("%w: %s is declared in a mounted folder, which is read-only", ErrFailedPrecondition, name)
+	} else if !errors.Is(err, ErrNotFound) {
+		return "", nil, err
+	}
+	if s.records == nil {
+		return "", nil, errNoProjectStore
+	}
+	p, err := s.records.Get(ctx, id)
+	return id, p, err
+}
+
+// newIDPattern is the shape of an id a caller picks, the shape a descriptor's `name` takes.
+var newIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+
+// designNames checks a project's design list. Each entry is "designs/{design}", and none repeats. A
+// name need not name a design that exists, since a design can be deleted after a project lists it.
+func designNames(names []string) ([]string, error) {
+	seen := map[string]bool{}
+	for _, n := range names {
+		if _, ok := StandaloneDesignID(n); !ok {
+			return nil, fmt.Errorf("%w: %q is not a design resource name, designs/{design}", ErrInvalidArgument, n)
+		}
+		if seen[n] {
+			return nil, fmt.Errorf("%w: %s is listed twice", ErrInvalidArgument, n)
+		}
+		seen[n] = true
+	}
+	return slices.Clone(names), nil
+}
+
+func orID(title, id string) string {
+	if strings.TrimSpace(title) == "" {
+		return id
+	}
+	return title
 }
 
 // ResolveDesign answers whether an artifact ref belongs to a declared design, and if so which.

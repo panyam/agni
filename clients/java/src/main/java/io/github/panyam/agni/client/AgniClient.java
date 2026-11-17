@@ -1,6 +1,7 @@
 package io.github.panyam.agni.client;
 
 import io.github.panyam.agni.v1.webapi.CheckServiceGrpc;
+import io.github.panyam.agni.v1.webapi.DesignServiceGrpc;
 import io.github.panyam.agni.v1.webapi.DesignViewServiceGrpc;
 import io.github.panyam.agni.v1.webapi.GetServerInfoRequest;
 import io.github.panyam.agni.v1.webapi.QueryServiceGrpc;
@@ -98,6 +99,11 @@ public final class AgniClient implements AutoCloseable {
 
   public SnapshotServiceGrpc.SnapshotServiceBlockingStub snapshots() {
     return SnapshotServiceGrpc.newBlockingStub(channel);
+  }
+
+  /** The designs a server holds, by name (agni issue 1694). */
+  public DesignServiceGrpc.DesignServiceBlockingStub designs() {
+    return DesignServiceGrpc.newBlockingStub(channel);
   }
 
   public DesignViewServiceGrpc.DesignViewServiceBlockingStub designViews() {

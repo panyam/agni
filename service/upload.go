@@ -247,3 +247,17 @@ func (s *SnapshotService) UploadBlobs(ctx context.Context, req *webapi.UploadBlo
 	}
 	return resp, nil
 }
+
+// Blob returns an uploaded file's contents by hash, "sha256:<hex>", for a DesignService writing a
+// design from a manifest (agni issue 1694). A hash this host does not hold answers ok=false.
+func (r *ProjectResolver) Blob(_ context.Context, hash string) ([]byte, bool) {
+	u := r.uploadsOf()
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	b, ok := u.blobs[hash]
+	if ok {
+		u.tick++
+		u.order[hash] = u.tick
+	}
+	return b, ok
+}

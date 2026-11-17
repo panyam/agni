@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/project.proto";
+import "agni/v1/webapi/snapshot.proto";
+import "google/protobuf/empty.proto";
+
+// This file defines DesignService, which keeps the designs a server holds (agni issue 1694). A
+// design is a set of files with a `design.yaml` among them, named "designs/{design}". It ties to no
+// project, and a project lists it by name. DesignViewService (design_view.proto) answers questions
+// about a snapshot of a design instead.
+//
+// A server holds designs in two kinds of place. The folder named by `agni serve --store-dir` keeps
+// the designs callers create, and they can be replaced and deleted. Mounted folders declare designs
+// too, and those are read-only. A design id is unique across both.
+service DesignService {
+  // CreateDesign stores a new design from its files. The files are a manifest of paths and hashes.
+  // Contents the server lacks are FAILED_PRECONDITION with a BlobsMissing detail naming their hashes,
+  // and the caller sends them with SnapshotService.UploadBlobs and asks again. The `design.yaml`
+  // among the files sets the title and series. A `name` in it naming a different id is
+  // INVALID_ARGUMENT, and so is an `extends`, since a stored design stands alone. An id any design
+  // already holds is ALREADY_EXISTS. A server started without --store-dir answers
+  // FAILED_PRECONDITION.
+  rpc CreateDesign(CreateDesignRequest) returns (Design);
+
+  // GetDesign returns one design by resource name. An id two mounted folders both declare is
+  // FAILED_PRECONDITION naming both, since answering with either could describe the wrong board.
+  rpc GetDesign(GetDesignRequest) returns (Design);
+
+  // ListDesigns returns the designs this server holds, ordered by resource name.
+  rpc ListDesigns(ListDesignsRequest) returns (ListDesignsResponse);
+
+  // UpdateDesign replaces a stored design's whole file set, on the terms CreateDesign states. A
+  // design declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+  rpc UpdateDesign(UpdateDesignRequest) returns (Design);
+
+  // DeleteDesign removes a stored design and its files. A project listing it keeps the name.
+  rpc DeleteDesign(DeleteDesignRequest) returns (google.protobuf.Empty);
+}
+
+message CreateDesignRequest {
+  // design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
+  string design_id = 1;
+  // files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+  repeated SnapshotFile files = 2;
+}
+
+message GetDesignRequest {
+  string name = 1; // "designs/{design}"
+}
+
+message ListDesignsRequest {
+  // page_size is the maximum number of designs to return. 0 uses the server default.
+  int32 page_size = 1;
+  // page_token continues a previous call. An empty token starts at the first design.
+  string page_token = 2;
+  // filter narrows the listing (AIP-160). Two forms are supported, `series = "memory_unit"` and
+  // `project = "projects/b200"`, the second keeping the designs that project lists. Any other filter
+  // is INVALID_ARGUMENT, since a client that believed it had filtered would read the wrong designs.
+  string filter = 3;
+}
+
+message ListDesignsResponse {
+  repeated Design designs = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+  // unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+  // Each entry is "designs/{design}". The rest of the listing is complete.
+  repeated string unreachable = 3;
+}
+
+message UpdateDesignRequest {
+  string name = 1; // "designs/{design}"
+  // files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+  repeated SnapshotFile files = 2;
+}
+
+message DeleteDesignRequest {
+  string name = 1; // "designs/{design}"
+}

@@ -6,13 +6,13 @@
 package io.github.panyam.agni.v1.webapi;
 
 /**
- * Protobuf type {@code agni.v1.webapi.GetProjectDesignRequest}
+ * Protobuf type {@code agni.v1.webapi.DeleteProjectRequest}
  */
 @com.google.protobuf.Generated
-public final class GetProjectDesignRequest extends
+public final class DeleteProjectRequest extends
     com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:agni.v1.webapi.GetProjectDesignRequest)
-    GetProjectDesignRequestOrBuilder {
+    // @@protoc_insertion_point(message_implements:agni.v1.webapi.DeleteProjectRequest)
+    DeleteProjectRequestOrBuilder {
 private static final long serialVersionUID = 0L;
   static {
     com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
@@ -21,32 +21,32 @@ private static final long serialVersionUID = 0L;
       /* minor= */ 36,
       /* patch= */ 2,
       /* suffix= */ "",
-      "GetProjectDesignRequest");
+      "DeleteProjectRequest");
   }
-  // Use GetProjectDesignRequest.newBuilder() to construct.
-  private GetProjectDesignRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+  // Use DeleteProjectRequest.newBuilder() to construct.
+  private DeleteProjectRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
     super(builder);
   }
-  private GetProjectDesignRequest() {
+  private DeleteProjectRequest() {
     name_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_descriptor;
+    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_descriptor;
   }
 
   @java.lang.Override
   public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
-    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_descriptor;
+    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_fieldAccessorTable
+    return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.class, io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.Builder.class);
+            io.github.panyam.agni.v1.webapi.DeleteProjectRequest.class, io.github.panyam.agni.v1.webapi.DeleteProjectRequest.Builder.class);
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
@@ -54,7 +54,7 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object name_ = "";
   /**
    * <pre>
-   * "projects/{project}/designs/{design}"
+   * "projects/{project}"
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -75,7 +75,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * "projects/{project}/designs/{design}"
+   * "projects/{project}"
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -139,10 +139,10 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.panyam.agni.v1.webapi.GetProjectDesignRequest)) {
+    if (!(obj instanceof io.github.panyam.agni.v1.webapi.DeleteProjectRequest)) {
       return super.equals(obj);
     }
-    io.github.panyam.agni.v1.webapi.GetProjectDesignRequest other = (io.github.panyam.agni.v1.webapi.GetProjectDesignRequest) obj;
+    io.github.panyam.agni.v1.webapi.DeleteProjectRequest other = (io.github.panyam.agni.v1.webapi.DeleteProjectRequest) obj;
 
     if (!getName()
         .equals(other.getName())) return false;
@@ -164,44 +164,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(byte[] data)
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(java.io.InputStream input)
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -209,26 +209,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseDelimitedFrom(java.io.InputStream input)
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseDelimitedFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest parseFrom(
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -241,7 +241,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest prototype) {
+  public static Builder newBuilder(io.github.panyam.agni.v1.webapi.DeleteProjectRequest prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -257,26 +257,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code agni.v1.webapi.GetProjectDesignRequest}
+   * Protobuf type {@code agni.v1.webapi.DeleteProjectRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:agni.v1.webapi.GetProjectDesignRequest)
-      io.github.panyam.agni.v1.webapi.GetProjectDesignRequestOrBuilder {
+      // @@protoc_insertion_point(builder_implements:agni.v1.webapi.DeleteProjectRequest)
+      io.github.panyam.agni.v1.webapi.DeleteProjectRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_descriptor;
+      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_fieldAccessorTable
+      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.class, io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.Builder.class);
+              io.github.panyam.agni.v1.webapi.DeleteProjectRequest.class, io.github.panyam.agni.v1.webapi.DeleteProjectRequest.Builder.class);
     }
 
-    // Construct using io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.newBuilder()
+    // Construct using io.github.panyam.agni.v1.webapi.DeleteProjectRequest.newBuilder()
     private Builder() {
 
     }
@@ -297,17 +297,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_GetProjectDesignRequest_descriptor;
+      return io.github.panyam.agni.v1.webapi.ProjectProto.internal_static_agni_v1_webapi_DeleteProjectRequest_descriptor;
     }
 
     @java.lang.Override
-    public io.github.panyam.agni.v1.webapi.GetProjectDesignRequest getDefaultInstanceForType() {
-      return io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.getDefaultInstance();
+    public io.github.panyam.agni.v1.webapi.DeleteProjectRequest getDefaultInstanceForType() {
+      return io.github.panyam.agni.v1.webapi.DeleteProjectRequest.getDefaultInstance();
     }
 
     @java.lang.Override
-    public io.github.panyam.agni.v1.webapi.GetProjectDesignRequest build() {
-      io.github.panyam.agni.v1.webapi.GetProjectDesignRequest result = buildPartial();
+    public io.github.panyam.agni.v1.webapi.DeleteProjectRequest build() {
+      io.github.panyam.agni.v1.webapi.DeleteProjectRequest result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -315,14 +315,14 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public io.github.panyam.agni.v1.webapi.GetProjectDesignRequest buildPartial() {
-      io.github.panyam.agni.v1.webapi.GetProjectDesignRequest result = new io.github.panyam.agni.v1.webapi.GetProjectDesignRequest(this);
+    public io.github.panyam.agni.v1.webapi.DeleteProjectRequest buildPartial() {
+      io.github.panyam.agni.v1.webapi.DeleteProjectRequest result = new io.github.panyam.agni.v1.webapi.DeleteProjectRequest(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest result) {
+    private void buildPartial0(io.github.panyam.agni.v1.webapi.DeleteProjectRequest result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.name_ = name_;
@@ -331,16 +331,16 @@ private static final long serialVersionUID = 0L;
 
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.panyam.agni.v1.webapi.GetProjectDesignRequest) {
-        return mergeFrom((io.github.panyam.agni.v1.webapi.GetProjectDesignRequest)other);
+      if (other instanceof io.github.panyam.agni.v1.webapi.DeleteProjectRequest) {
+        return mergeFrom((io.github.panyam.agni.v1.webapi.DeleteProjectRequest)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.panyam.agni.v1.webapi.GetProjectDesignRequest other) {
-      if (other == io.github.panyam.agni.v1.webapi.GetProjectDesignRequest.getDefaultInstance()) return this;
+    public Builder mergeFrom(io.github.panyam.agni.v1.webapi.DeleteProjectRequest other) {
+      if (other == io.github.panyam.agni.v1.webapi.DeleteProjectRequest.getDefaultInstance()) return this;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
         bitField0_ |= 0x00000001;
@@ -395,7 +395,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object name_ = "";
     /**
      * <pre>
-     * "projects/{project}/designs/{design}"
+     * "projects/{project}"
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -415,7 +415,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "projects/{project}/designs/{design}"
+     * "projects/{project}"
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -436,7 +436,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "projects/{project}/designs/{design}"
+     * "projects/{project}"
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -453,7 +453,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "projects/{project}/designs/{design}"
+     * "projects/{project}"
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -467,7 +467,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * "projects/{project}/designs/{design}"
+     * "projects/{project}"
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -484,23 +484,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:agni.v1.webapi.GetProjectDesignRequest)
+    // @@protoc_insertion_point(builder_scope:agni.v1.webapi.DeleteProjectRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:agni.v1.webapi.GetProjectDesignRequest)
-  private static final io.github.panyam.agni.v1.webapi.GetProjectDesignRequest DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:agni.v1.webapi.DeleteProjectRequest)
+  private static final io.github.panyam.agni.v1.webapi.DeleteProjectRequest DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.panyam.agni.v1.webapi.GetProjectDesignRequest();
+    DEFAULT_INSTANCE = new io.github.panyam.agni.v1.webapi.DeleteProjectRequest();
   }
 
-  public static io.github.panyam.agni.v1.webapi.GetProjectDesignRequest getDefaultInstance() {
+  public static io.github.panyam.agni.v1.webapi.DeleteProjectRequest getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<GetProjectDesignRequest>
-      PARSER = new com.google.protobuf.AbstractParser<GetProjectDesignRequest>() {
+  private static final com.google.protobuf.Parser<DeleteProjectRequest>
+      PARSER = new com.google.protobuf.AbstractParser<DeleteProjectRequest>() {
     @java.lang.Override
-    public GetProjectDesignRequest parsePartialFrom(
+    public DeleteProjectRequest parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -519,17 +519,17 @@ private static final long serialVersionUID = 0L;
     }
   };
 
-  public static com.google.protobuf.Parser<GetProjectDesignRequest> parser() {
+  public static com.google.protobuf.Parser<DeleteProjectRequest> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<GetProjectDesignRequest> getParserForType() {
+  public com.google.protobuf.Parser<DeleteProjectRequest> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.GetProjectDesignRequest getDefaultInstanceForType() {
+  public io.github.panyam.agni.v1.webapi.DeleteProjectRequest getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

@@ -12,8 +12,8 @@ public interface DesignOrBuilder extends
 
   /**
    * <pre>
-   * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-   * `design.yaml` on the same terms as a project's.
+   * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+   * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -22,8 +22,8 @@ public interface DesignOrBuilder extends
   java.lang.String getName();
   /**
    * <pre>
-   * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-   * `design.yaml` on the same terms as a project's.
+   * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+   * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -248,4 +248,45 @@ public interface DesignOrBuilder extends
    * @return The flattenHierarchy.
    */
   boolean getFlattenHierarchy();
+
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   * @return Whether the updateTime field is set.
+   */
+  boolean hasUpdateTime();
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   * @return The updateTime.
+   */
+  com.google.protobuf.Timestamp getUpdateTime();
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder();
+
+  /**
+   * <pre>
+   * series_latest is true on the design a series updated last, and false on the others and on a
+   * design with no series. Output only.
+   * </pre>
+   *
+   * <code>bool series_latest = 12 [json_name = "seriesLatest"];</code>
+   * @return The seriesLatest.
+   */
+  boolean getSeriesLatest();
 }

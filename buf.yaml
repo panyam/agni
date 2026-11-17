@@ -19,12 +19,28 @@ breaking:
   # the first release tag after v0.8.0.
   # agni 1705 renamed design.proto's DesignService to design_view.proto's DesignViewService, freeing
   # DesignService for stored designs. Remove its entry at the first release tag after v0.8.0.
+  # agni 1694 moved a design's name to designs/{design} and removed ProjectService's GetDesign and
+  # ListDesigns, which DesignService replaces. buf matches a service and a message by full name, so
+  # designs.proto's DesignService and GetDesignRequest read as changes to v0.8.0's view service and its
+  # request. Remove its entries at the first release tag after v0.8.0.
   ignore_only:
     FILE_NO_DELETE:
       - protos/agni/v1/webapi/design.proto
     FIELD_NO_DELETE:
       - protos/agni/v1/ir/ir.proto
       - protos/agni/v1/webapi/project.proto
+      - protos/agni/v1/webapi/designs.proto
     MESSAGE_NO_DELETE:
       - protos/agni/v1/ir/ir.proto
       - protos/agni/v1/webapi/project.proto
+    RPC_NO_DELETE:
+      - protos/agni/v1/webapi/project.proto
+      - protos/agni/v1/webapi/designs.proto
+    RPC_SAME_RESPONSE_TYPE:
+      - protos/agni/v1/webapi/designs.proto
+    FIELD_SAME_NAME:
+      - protos/agni/v1/webapi/designs.proto
+    FIELD_SAME_JSON_NAME:
+      - protos/agni/v1/webapi/designs.proto
+    RESERVED_MESSAGE_NO_DELETE:
+      - protos/agni/v1/webapi/designs.proto

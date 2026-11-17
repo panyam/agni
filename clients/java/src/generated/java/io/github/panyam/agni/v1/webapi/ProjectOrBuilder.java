@@ -134,4 +134,57 @@ public interface ProjectOrBuilder extends
    * <code>.agni.v1.webapi.AnalysisConfig config = 9 [json_name = "config"];</code>
    */
   io.github.panyam.agni.v1.webapi.AnalysisConfigOrBuilder getConfigOrBuilder();
+
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @return A list containing the designs.
+   */
+  java.util.List<java.lang.String>
+      getDesignsList();
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @return The count of designs.
+   */
+  int getDesignsCount();
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @param index The index of the element to return.
+   * @return The designs at the given index.
+   */
+  java.lang.String getDesigns(int index);
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the designs at the given index.
+   */
+  com.google.protobuf.ByteString
+      getDesignsBytes(int index);
 }

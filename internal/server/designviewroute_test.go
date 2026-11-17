@@ -10,26 +10,27 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// The view rpcs answer under DesignViewService, and DesignService no longer serves them, so the name
-// is free for the stored designs of agni issue 1694 (agni issue 1705).
+// The view rpcs answer under DesignViewService (agni issue 1705). DesignService serves the stored
+// designs of agni issue 1694 and none of the view rpcs.
 func TestTheViewRpcsServeAsDesignViewService(t *testing.T) {
 	mux := http.NewServeMux()
 	paths := API{DesignView: &service.DesignViewService{}}.Register(mux)
-	if !slices.Contains(paths, "/agni.v1.webapi.DesignViewService/") {
-		t.Fatalf("registered paths = %v, want /agni.v1.webapi.DesignViewService/", paths)
-	}
-	for _, p := range paths {
-		if strings.HasPrefix(p, "/agni.v1.webapi.DesignService/") {
-			t.Errorf("registered %s; DesignService is kept for stored designs", p)
+	for _, want := range []string{"/agni.v1.webapi.DesignViewService/", "/agni.v1.webapi.DesignService/"} {
+		if !slices.Contains(paths, want) {
+			t.Fatalf("registered paths = %v, want %s", paths, want)
 		}
 	}
-	for path, want := range map[string]bool{
-		"/agni.v1.webapi.DesignViewService/GetSummary": true,
-		"/agni.v1.webapi.DesignService/GetDesign":      false,
+	for path, wantFound := range map[string]bool{
+		"/agni.v1.webapi.DesignService/GetDesign":  true,
+		"/agni.v1.webapi.DesignService/GetSheet":   false,
+		"/agni.v1.webapi.DesignService/GetSummary": false,
 	} {
-		_, pattern := mux.Handler(httptest.NewRequest(http.MethodPost, path, nil))
-		if routed := pattern != ""; routed != want {
-			t.Errorf("POST %s routes to %q, want routed: %v", path, pattern, want)
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if found := rec.Code != http.StatusNotFound; found != wantFound {
+			t.Errorf("POST %s = %d, want answered: %v", path, rec.Code, wantFound)
 		}
 	}
 }

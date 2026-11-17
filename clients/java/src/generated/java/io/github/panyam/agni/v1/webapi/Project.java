@@ -7,10 +7,12 @@ package io.github.panyam.agni.v1.webapi;
 
 /**
  * <pre>
- * Project is one declared set of designs that share configuration.
+ * Project groups designs. One declared in a mounted folder also carries the configuration its
+ * designs extend.
  *
- * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
- * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+ * One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+ * server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+ * DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
  * The server never generates design intent either way. Writing intent from a design is a judgment
  * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
  * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
@@ -45,6 +47,8 @@ private static final long serialVersionUID = 0L;
     name_ = "";
     title_ = "";
     uri_ = "";
+    designs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -283,6 +287,71 @@ private static final long serialVersionUID = 0L;
     return config_ == null ? io.github.panyam.agni.v1.webapi.AnalysisConfig.getDefaultInstance() : config_;
   }
 
+  public static final int DESIGNS_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList designs_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @return A list containing the designs.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getDesignsList() {
+    return designs_;
+  }
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @return The count of designs.
+   */
+  public int getDesignsCount() {
+    return designs_.size();
+  }
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @param index The index of the element to return.
+   * @return The designs at the given index.
+   */
+  public java.lang.String getDesigns(int index) {
+    return designs_.get(index);
+  }
+  /**
+   * <pre>
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   * </pre>
+   *
+   * <code>repeated string designs = 10 [json_name = "designs"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the designs at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getDesignsBytes(int index) {
+    return designs_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -309,6 +378,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(9, getConfig());
     }
+    for (int i = 0; i < designs_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, designs_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -325,6 +397,14 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, getConfig());
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < designs_.size(); i++) {
+        dataSize += computeStringSizeNoTag(designs_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getDesignsList().size();
     }
     return size;
   }
@@ -361,6 +441,8 @@ private static final long serialVersionUID = 0L;
       if (!getConfig()
           .equals(other.getConfig())) return false;
     }
+    if (!getDesignsList()
+        .equals(other.getDesignsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -381,6 +463,10 @@ private static final long serialVersionUID = 0L;
     if (hasConfig()) {
       hash = (37 * hash) + CONFIG_FIELD_NUMBER;
       hash = (53 * hash) + getConfig().hashCode();
+    }
+    if (getDesignsCount() > 0) {
+      hash = (37 * hash) + DESIGNS_FIELD_NUMBER;
+      hash = (53 * hash) + getDesignsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -481,10 +567,12 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Project is one declared set of designs that share configuration.
+   * Project groups designs. One declared in a mounted folder also carries the configuration its
+   * designs extend.
    *
-   * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
-   * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+   * One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+   * server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+   * DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
    * The server never generates design intent either way. Writing intent from a design is a judgment
    * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
    * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
@@ -541,6 +629,8 @@ private static final long serialVersionUID = 0L;
         configBuilder_.dispose();
         configBuilder_ = null;
       }
+      designs_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -590,6 +680,10 @@ private static final long serialVersionUID = 0L;
             : configBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        designs_.makeImmutable();
+        result.designs_ = designs_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -622,6 +716,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasConfig()) {
         mergeConfig(other.getConfig());
+      }
+      if (!other.designs_.isEmpty()) {
+        if (designs_.isEmpty()) {
+          designs_ = other.designs_;
+          bitField0_ |= 0x00000010;
+        } else {
+          ensureDesignsIsMutable();
+          designs_.addAll(other.designs_);
+        }
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -669,6 +773,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 74
+            case 82: {
+              ensureDesignsIsMutable();
+              designs_.add(input.readStringRequireUtf8());
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1225,6 +1334,180 @@ private static final long serialVersionUID = 0L;
         config_ = null;
       }
       return configBuilder_;
+    }
+
+    private com.google.protobuf.LazyStringArrayList designs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureDesignsIsMutable() {
+      if (!designs_.isModifiable()) {
+        designs_ = new com.google.protobuf.LazyStringArrayList(designs_);
+      }
+      bitField0_ |= 0x00000010;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @return A list containing the designs.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getDesignsList() {
+      designs_.makeImmutable();
+      return designs_;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @return The count of designs.
+     */
+    public int getDesignsCount() {
+      return designs_.size();
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param index The index of the element to return.
+     * @return The designs at the given index.
+     */
+    public java.lang.String getDesigns(int index) {
+      return designs_.get(index);
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the designs at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getDesignsBytes(int index) {
+      return designs_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param index The index to set the value at.
+     * @param value The designs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDesigns(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureDesignsIsMutable();
+      designs_.set(index, value);
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param value The designs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDesigns(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensureDesignsIsMutable();
+      designs_.add(value);
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param values The designs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllDesigns(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureDesignsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, designs_);
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDesigns() {
+      designs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000010);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+     * design can sit in many projects, and deleting a project deletes none of them. A stored project
+     * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+     * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+     * </pre>
+     *
+     * <code>repeated string designs = 10 [json_name = "designs"];</code>
+     * @param value The bytes of the designs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addDesignsBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensureDesignsIsMutable();
+      designs_.add(value);
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.Project)

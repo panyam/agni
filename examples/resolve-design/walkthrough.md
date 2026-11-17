@@ -28,8 +28,8 @@ Two small YAML files remove the guess. `project.yaml` names a set of designs tha
 sequenceDiagram
 You ->> Agni: ListProjects()
 Agni -->> You: projects/demo
-You ->> Agni: ListDesigns(projects/demo)
-Agni -->> You: projects/demo/designs/mixer
+You ->> Agni: GetProject(projects/demo)
+Agni -->> You: designs: [designs/mixer]
 ```
 
 ## Resolve the file {#resolve}

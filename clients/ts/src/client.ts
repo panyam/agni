@@ -6,6 +6,7 @@ import { createClient, type Client, type Interceptor, type Transport } from "@co
 import { PartSpecService } from "./gen/agni/v1/param/service_pb.js";
 import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
+import { DesignService } from "./gen/agni/v1/webapi/designs_pb.js";
 import { DesignViewService } from "./gen/agni/v1/webapi/design_view_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { LexiconService } from "./gen/agni/v1/webapi/lexicon_pb.js";
@@ -54,6 +55,7 @@ export class IncompatibleServerError extends Error {
 export class AgniClient {
   readonly server: Client<typeof ServerService>;
   readonly snapshot: Client<typeof SnapshotService>;
+  readonly design: Client<typeof DesignService>;
   readonly designView: Client<typeof DesignViewService>;
   readonly check: Client<typeof CheckService>;
   readonly query: Client<typeof QueryService>;
@@ -70,6 +72,7 @@ export class AgniClient {
   constructor(readonly transport: Transport) {
     this.server = createClient(ServerService, transport);
     this.snapshot = createClient(SnapshotService, transport);
+    this.design = createClient(DesignService, transport);
     this.designView = createClient(DesignViewService, transport);
     this.check = createClient(CheckService, transport);
     this.query = createClient(QueryService, transport);

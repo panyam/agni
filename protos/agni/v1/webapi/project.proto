@@ -5,6 +5,9 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/webapi/config.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 // This file defines ProjectService. It answers "which design is this, and whose design is it"
 // (agni issue 170).
@@ -31,15 +34,20 @@ service ProjectService {
   // GetProject returns one project by resource name.
   rpc GetProject(GetProjectRequest) returns (Project);
 
-  // ListProjects returns the projects visible across the server's mounts.
+  // ListProjects returns the projects visible across the server's mounts and its store.
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 
-  // GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-  // files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
-  rpc GetDesign(GetProjectDesignRequest) returns (Design);
+  // CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+  // (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+  // without --store-dir answers FAILED_PRECONDITION.
+  rpc CreateProject(CreateProjectRequest) returns (Project);
 
-  // ListDesigns returns the designs belonging to one project.
-  rpc ListDesigns(ListProjectDesignsRequest) returns (ListProjectDesignsResponse);
+  // UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+  // project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+  rpc UpdateProject(UpdateProjectRequest) returns (Project);
+
+  // DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+  rpc DeleteProject(DeleteProjectRequest) returns (google.protobuf.Empty);
 
   // ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
   // design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
@@ -53,10 +61,12 @@ service ProjectService {
   rpc ResolveDesign(ResolveDesignRequest) returns (ResolveDesignResponse);
 }
 
-// Project is one declared set of designs that share configuration.
+// Project groups designs. One declared in a mounted folder also carries the configuration its
+// designs extend.
 //
-// One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
-// stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+// One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+// server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+// DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
 // The server never generates design intent either way. Writing intent from a design is a judgment
 // step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
 // the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
@@ -89,6 +99,12 @@ message Project {
   // disagree about what config is. A design's own layer goes on top of its project's.
   AnalysisConfig config = 9;
 
+  // designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+  // design can sit in many projects, and deleting a project deletes none of them. A stored project
+  // keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+  // a mounted folder lists the designs whose `extends` names it, and that list is output only.
+  repeated string designs = 10;
+
   // conventions, profile_uris, param_uris, checklist_uri and conventions_uri, which moved into config.
   reserved 4, 5, 6, 7, 8;
 }
@@ -99,8 +115,8 @@ message Project {
 // different layers of the same idea: this is the design's IDENTITY and file layout, that is the
 // design's parsed CONTENT.
 message Design {
-  // name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-  // `design.yaml` on the same terms as a project's.
+  // name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+  // terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
   string name = 1;
   // title is the human-readable label, falling back to the id.
   string title = 2;
@@ -139,6 +155,12 @@ message Design {
   // 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
   // snapshot cannot turn off what its design declares.
   bool flatten_hierarchy = 9;
+  // update_time is when the design's files last changed, as its store reports it. A stored design's
+  // is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+  google.protobuf.Timestamp update_time = 11;
+  // series_latest is true on the design a series updated last, and false on the others and on a
+  // design with no series. Output only.
+  bool series_latest = 12;
 
   // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
   // designs of their own named by series (agni issue 1692).
@@ -170,24 +192,22 @@ message ListProjectsResponse {
   string next_page_token = 2;
 }
 
-message GetProjectDesignRequest {
-  string name = 1; // "projects/{project}/designs/{design}"
+message CreateProjectRequest {
+  // project_id is the new project's id, lowercase letters, digits, '.', '_' or '-'.
+  string project_id = 1;
+  // project carries the title and designs. Its name is ignored.
+  Project project = 2;
 }
 
-message ListProjectDesignsRequest {
-  // parent is the project whose designs to list, "projects/{project}".
-  string parent = 1;
-  int32 page_size = 2;
-  string page_token = 3;
-  // filter narrows the listing, on the same terms as ListProjectsRequest.filter. Only `mount` is
-  // supported.
-  string filter = 4;
+message UpdateProjectRequest {
+  // project names the project and carries the new values.
+  Project project = 1;
+  // update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+  google.protobuf.FieldMask update_mask = 2;
 }
 
-message ListProjectDesignsResponse {
-  // designs are ordered by resource name.
-  repeated Design designs = 1;
-  string next_page_token = 2;
+message DeleteProjectRequest {
+  string name = 1; // "projects/{project}"
 }
 
 message ResolveDesignRequest {

@@ -19,7 +19,9 @@ import (
 type DesignReader interface {
 	// Design returns one design by id. An id naming nothing is ErrNotFound.
 	Design(ctx context.Context, id string) (*webapi.Design, error)
-	// Designs returns every design, ordered by name.
+	// Designs returns every design, ordered by name. A reader of folders it does not own may return
+	// two designs with one name, when two folders declare one id. The catalog reports such a name as
+	// unreachable.
 	Designs(ctx context.Context) ([]*webapi.Design, error)
 }
 
@@ -79,7 +81,8 @@ func StandaloneDesignID(name string) (string, bool) {
 // design that only a reader holds is ErrFailedPrecondition, since a mounted folder is read-only. With
 // no store, every write is ErrFailedPrecondition.
 //
-// Two stores holding one id is an error on any read that meets it. Picking the first could answer a
+// Two places holding one id leave that id unreachable. Designs lists it in unreachable rather than
+// failing the whole listing, and Design answers ErrFailedPrecondition. Picking either could answer a
 // question about one design with another's files.
 type DesignCatalog struct {
 	store   DesignStore
@@ -105,25 +108,34 @@ func (c *DesignCatalog) Design(ctx context.Context, name string) (*webapi.Design
 	return d, err
 }
 
-// Designs returns every design in every store, ordered by name.
-func (c *DesignCatalog) Designs(ctx context.Context) ([]*webapi.Design, error) {
-	var out []*webapi.Design
-	seen := map[string]bool{}
+// Designs returns every design in every store, ordered by name. Names held twice are left out and
+// returned in unreachable, ordered.
+func (c *DesignCatalog) Designs(ctx context.Context) (designs []*webapi.Design, unreachable []string, err error) {
+	count := map[string]int{}
+	var all []*webapi.Design
 	for _, r := range c.readers() {
 		ds, err := r.Designs(ctx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, d := range ds {
-			if seen[d.GetName()] {
-				return nil, fmt.Errorf("two stores hold %s; a design id is unique per server", d.GetName())
-			}
-			seen[d.GetName()] = true
-			out = append(out, d)
+			count[d.GetName()]++
+			all = append(all, d)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
-	return out, nil
+	for _, d := range all {
+		if count[d.GetName()] == 1 {
+			designs = append(designs, d)
+		}
+	}
+	for name, n := range count {
+		if n > 1 {
+			unreachable = append(unreachable, name)
+		}
+	}
+	sort.Slice(designs, func(i, j int) bool { return designs[i].GetName() < designs[j].GetName() })
+	sort.Strings(unreachable)
+	return designs, unreachable, nil
 }
 
 // CreateDesign adds a design to the store, under an id no store holds.
@@ -198,7 +210,7 @@ func (c *DesignCatalog) find(ctx context.Context, name string) (*webapi.Design, 
 			return nil, nil, err
 		}
 		if found != nil {
-			return nil, nil, fmt.Errorf("two stores hold %s; a design id is unique per server", name)
+			return nil, nil, fmt.Errorf("%w: two stores hold %s; a design id is unique per server", ErrFailedPrecondition, name)
 		}
 		found, holder = d, r
 	}

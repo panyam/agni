@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -39,12 +40,15 @@ const (
 	// ProjectServiceListProjectsProcedure is the fully-qualified name of the ProjectService's
 	// ListProjects RPC.
 	ProjectServiceListProjectsProcedure = "/agni.v1.webapi.ProjectService/ListProjects"
-	// ProjectServiceGetDesignProcedure is the fully-qualified name of the ProjectService's GetDesign
-	// RPC.
-	ProjectServiceGetDesignProcedure = "/agni.v1.webapi.ProjectService/GetDesign"
-	// ProjectServiceListDesignsProcedure is the fully-qualified name of the ProjectService's
-	// ListDesigns RPC.
-	ProjectServiceListDesignsProcedure = "/agni.v1.webapi.ProjectService/ListDesigns"
+	// ProjectServiceCreateProjectProcedure is the fully-qualified name of the ProjectService's
+	// CreateProject RPC.
+	ProjectServiceCreateProjectProcedure = "/agni.v1.webapi.ProjectService/CreateProject"
+	// ProjectServiceUpdateProjectProcedure is the fully-qualified name of the ProjectService's
+	// UpdateProject RPC.
+	ProjectServiceUpdateProjectProcedure = "/agni.v1.webapi.ProjectService/UpdateProject"
+	// ProjectServiceDeleteProjectProcedure is the fully-qualified name of the ProjectService's
+	// DeleteProject RPC.
+	ProjectServiceDeleteProjectProcedure = "/agni.v1.webapi.ProjectService/DeleteProject"
 	// ProjectServiceResolveDesignProcedure is the fully-qualified name of the ProjectService's
 	// ResolveDesign RPC.
 	ProjectServiceResolveDesignProcedure = "/agni.v1.webapi.ProjectService/ResolveDesign"
@@ -54,13 +58,17 @@ const (
 type ProjectServiceClient interface {
 	// GetProject returns one project by resource name.
 	GetProject(context.Context, *connect.Request[webapi.GetProjectRequest]) (*connect.Response[webapi.Project], error)
-	// ListProjects returns the projects visible across the server's mounts.
+	// ListProjects returns the projects visible across the server's mounts and its store.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
-	// GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-	// files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
-	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
-	// ListDesigns returns the designs belonging to one project.
-	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)
+	// CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+	// (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+	// without --store-dir answers FAILED_PRECONDITION.
+	CreateProject(context.Context, *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error)
+	// UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+	// project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+	UpdateProject(context.Context, *connect.Request[webapi.UpdateProjectRequest]) (*connect.Response[webapi.Project], error)
+	// DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+	DeleteProject(context.Context, *connect.Request[webapi.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
 	// design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
 	// convention. A file-backed store walks the tree for descriptors, and another store may consult an
@@ -96,16 +104,22 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
 			connect.WithClientOptions(opts...),
 		),
-		getDesign: connect.NewClient[webapi.GetProjectDesignRequest, webapi.Design](
+		createProject: connect.NewClient[webapi.CreateProjectRequest, webapi.Project](
 			httpClient,
-			baseURL+ProjectServiceGetDesignProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("GetDesign")),
+			baseURL+ProjectServiceCreateProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
 			connect.WithClientOptions(opts...),
 		),
-		listDesigns: connect.NewClient[webapi.ListProjectDesignsRequest, webapi.ListProjectDesignsResponse](
+		updateProject: connect.NewClient[webapi.UpdateProjectRequest, webapi.Project](
 			httpClient,
-			baseURL+ProjectServiceListDesignsProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("ListDesigns")),
+			baseURL+ProjectServiceUpdateProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteProject: connect.NewClient[webapi.DeleteProjectRequest, emptypb.Empty](
+			httpClient,
+			baseURL+ProjectServiceDeleteProjectProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 			connect.WithClientOptions(opts...),
 		),
 		resolveDesign: connect.NewClient[webapi.ResolveDesignRequest, webapi.ResolveDesignResponse](
@@ -121,8 +135,9 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type projectServiceClient struct {
 	getProject    *connect.Client[webapi.GetProjectRequest, webapi.Project]
 	listProjects  *connect.Client[webapi.ListProjectsRequest, webapi.ListProjectsResponse]
-	getDesign     *connect.Client[webapi.GetProjectDesignRequest, webapi.Design]
-	listDesigns   *connect.Client[webapi.ListProjectDesignsRequest, webapi.ListProjectDesignsResponse]
+	createProject *connect.Client[webapi.CreateProjectRequest, webapi.Project]
+	updateProject *connect.Client[webapi.UpdateProjectRequest, webapi.Project]
+	deleteProject *connect.Client[webapi.DeleteProjectRequest, emptypb.Empty]
 	resolveDesign *connect.Client[webapi.ResolveDesignRequest, webapi.ResolveDesignResponse]
 }
 
@@ -136,14 +151,19 @@ func (c *projectServiceClient) ListProjects(ctx context.Context, req *connect.Re
 	return c.listProjects.CallUnary(ctx, req)
 }
 
-// GetDesign calls agni.v1.webapi.ProjectService.GetDesign.
-func (c *projectServiceClient) GetDesign(ctx context.Context, req *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error) {
-	return c.getDesign.CallUnary(ctx, req)
+// CreateProject calls agni.v1.webapi.ProjectService.CreateProject.
+func (c *projectServiceClient) CreateProject(ctx context.Context, req *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	return c.createProject.CallUnary(ctx, req)
 }
 
-// ListDesigns calls agni.v1.webapi.ProjectService.ListDesigns.
-func (c *projectServiceClient) ListDesigns(ctx context.Context, req *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error) {
-	return c.listDesigns.CallUnary(ctx, req)
+// UpdateProject calls agni.v1.webapi.ProjectService.UpdateProject.
+func (c *projectServiceClient) UpdateProject(ctx context.Context, req *connect.Request[webapi.UpdateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	return c.updateProject.CallUnary(ctx, req)
+}
+
+// DeleteProject calls agni.v1.webapi.ProjectService.DeleteProject.
+func (c *projectServiceClient) DeleteProject(ctx context.Context, req *connect.Request[webapi.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteProject.CallUnary(ctx, req)
 }
 
 // ResolveDesign calls agni.v1.webapi.ProjectService.ResolveDesign.
@@ -155,13 +175,17 @@ func (c *projectServiceClient) ResolveDesign(ctx context.Context, req *connect.R
 type ProjectServiceHandler interface {
 	// GetProject returns one project by resource name.
 	GetProject(context.Context, *connect.Request[webapi.GetProjectRequest]) (*connect.Response[webapi.Project], error)
-	// ListProjects returns the projects visible across the server's mounts.
+	// ListProjects returns the projects visible across the server's mounts and its store.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
-	// GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-	// files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
-	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
-	// ListDesigns returns the designs belonging to one project.
-	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)
+	// CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+	// (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+	// without --store-dir answers FAILED_PRECONDITION.
+	CreateProject(context.Context, *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error)
+	// UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+	// project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
+	UpdateProject(context.Context, *connect.Request[webapi.UpdateProjectRequest]) (*connect.Response[webapi.Project], error)
+	// DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+	DeleteProject(context.Context, *connect.Request[webapi.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error)
 	// ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
 	// design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
 	// convention. A file-backed store walks the tree for descriptors, and another store may consult an
@@ -193,16 +217,22 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
 		connect.WithHandlerOptions(opts...),
 	)
-	projectServiceGetDesignHandler := connect.NewUnaryHandler(
-		ProjectServiceGetDesignProcedure,
-		svc.GetDesign,
-		connect.WithSchema(projectServiceMethods.ByName("GetDesign")),
+	projectServiceCreateProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceCreateProjectProcedure,
+		svc.CreateProject,
+		connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
 		connect.WithHandlerOptions(opts...),
 	)
-	projectServiceListDesignsHandler := connect.NewUnaryHandler(
-		ProjectServiceListDesignsProcedure,
-		svc.ListDesigns,
-		connect.WithSchema(projectServiceMethods.ByName("ListDesigns")),
+	projectServiceUpdateProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceUpdateProjectProcedure,
+		svc.UpdateProject,
+		connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectServiceDeleteProjectHandler := connect.NewUnaryHandler(
+		ProjectServiceDeleteProjectProcedure,
+		svc.DeleteProject,
+		connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 		connect.WithHandlerOptions(opts...),
 	)
 	projectServiceResolveDesignHandler := connect.NewUnaryHandler(
@@ -217,10 +247,12 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceGetProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceListProjectsProcedure:
 			projectServiceListProjectsHandler.ServeHTTP(w, r)
-		case ProjectServiceGetDesignProcedure:
-			projectServiceGetDesignHandler.ServeHTTP(w, r)
-		case ProjectServiceListDesignsProcedure:
-			projectServiceListDesignsHandler.ServeHTTP(w, r)
+		case ProjectServiceCreateProjectProcedure:
+			projectServiceCreateProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceUpdateProjectProcedure:
+			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceDeleteProjectProcedure:
+			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceResolveDesignProcedure:
 			projectServiceResolveDesignHandler.ServeHTTP(w, r)
 		default:
@@ -240,12 +272,16 @@ func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.ListProjects is not implemented"))
 }
 
-func (UnimplementedProjectServiceHandler) GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.GetDesign is not implemented"))
+func (UnimplementedProjectServiceHandler) CreateProject(context.Context, *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.CreateProject is not implemented"))
 }
 
-func (UnimplementedProjectServiceHandler) ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.ListDesigns is not implemented"))
+func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connect.Request[webapi.UpdateProjectRequest]) (*connect.Response[webapi.Project], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.UpdateProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connect.Request[webapi.DeleteProjectRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ProjectService.DeleteProject is not implemented"))
 }
 
 func (UnimplementedProjectServiceHandler) ResolveDesign(context.Context, *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error) {

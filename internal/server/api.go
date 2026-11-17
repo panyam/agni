@@ -22,10 +22,13 @@ type API struct {
 	// none of them holds.
 	Snapshot   *service.SnapshotService
 	DesignView *service.DesignViewService
-	Check      *service.CheckService
-	Diff       *service.DiffService
-	Query      *service.QueryService
-	Review     *service.ReviewService
+	// Design serves the stored designs, "designs/{design}" (agni issue 1694). Nil serves an empty
+	// catalog that refuses every write.
+	Design *service.DesignService
+	Check  *service.CheckService
+	Diff   *service.DiffService
+	Query  *service.QueryService
+	Review *service.ReviewService
 	// Info answers ServerService.GetServerInfo (agni issue 1629). Nil answers this build's version and
 	// the snapshot features alone, as the browser engine does.
 	Info *service.ServerInfoService
@@ -53,6 +56,11 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))
 	add(webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed))
 	add(webapiconnect.NewDesignViewServiceHandler(NewDesignView(a.DesignView), timed))
+	design := a.Design
+	if design == nil {
+		design = service.NewDesignService(nil, nil)
+	}
+	add(webapiconnect.NewDesignServiceHandler(NewDesign(design), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
 	// The lexicon questions run the check service's catalog over its loader, so they are built from
 	// the check service. A field would let a host fill in a different catalog (agni issue 1266).

@@ -1979,6 +1979,505 @@ impl TraceOutcome {
         }
     }
 }
+/// Project groups designs. One declared in a mounted folder also carries the configuration its
+/// designs extend.
+///
+/// One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+/// server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+/// DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
+/// The server never generates design intent either way. Writing intent from a design is a judgment
+/// step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+/// the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+/// mount.
+///
+/// Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
+/// a config tier is added once and every surface gets it (agni issue 224).
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Project {
+    /// name is the resource name, "projects/{project}". The operator DECLARES the id in
+    /// `project.yaml`. It is not derived from the folder path and not server-assigned, so it is stable.
+    /// A project keeps its identity when its folder is renamed or moved between mounts, and two mounts
+    /// do not accidentally collide by having directories of the same name.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// title is the human-readable label, falling back to the id when the descriptor gave none.
+    #[prost(string, tag="2")]
+    pub title: ::prost::alloc::string::String,
+    /// uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
+    /// injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
+    #[prost(string, tag="3")]
+    pub uri: ::prost::alloc::string::String,
+    /// config is what this project's designs are checked against, and the reason the resource exists.
+    /// Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
+    /// one board. So they belong to the project, and they reach a run through the design's edge to it.
+    /// Before this they could only be `agni serve` startup flags. A deployment mounting a mixed set
+    /// applied those flags to every design it read. An overlay's profiles superseded the built-ins for
+    /// every board on the server, and an overlay's rail lexicon changed net roles on designs that never
+    /// asked.
+    ///
+    /// A Project and a Design use the same message, as their descriptors share one schema (agni issue
+    /// 1136). The shape really is the same. Two copies of it would be one more place for two layers to
+    /// disagree about what config is. A design's own layer goes on top of its project's.
+    #[prost(message, optional, tag="9")]
+    pub config: ::core::option::Option<AnalysisConfig>,
+    /// designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+    /// design can sit in many projects, and deleting a project deletes none of them. A stored project
+    /// keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+    /// a mounted folder lists the designs whose `extends` names it, and that list is output only.
+    #[prost(string, repeated, tag="10")]
+    pub designs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Design is one declared design: an identity, an entry file, and its companion views.
+///
+/// The type is named for what it is, at the cost of sharing a word with agni.v1.ir.Design. They are
+/// different layers of the same idea: this is the design's IDENTITY and file layout, that is the
+/// design's parsed CONTENT.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Design {
+    /// name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+    /// terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// title is the human-readable label, falling back to the id.
+    #[prost(string, tag="2")]
+    pub title: ::prost::alloc::string::String,
+    /// uri is the folder holding `design.yaml`.
+    #[prost(string, tag="3")]
+    pub uri: ::prost::alloc::string::String,
+    /// entry_uri names the file this design's ANALYSIS reads, which is the netlist the design team
+    /// produces (CONSTRAINTS C21). Imagine a folder holding an OrCAD `.eds` schematic export beside the
+    /// `.edn` netlist. The component count depends on which file a tool opens. Nothing in the engine
+    /// modelled "this folder is one design, and this file is its entry". So the CLI could only print a
+    /// warning telling the operator to consult their own descriptor. With entry_uri explicit, the
+    /// engine acts on it instead of warning.
+    #[prost(string, tag="4")]
+    pub entry_uri: ::prost::alloc::string::String,
+    /// companion_uris name files that are VIEWS of this same design rather than independent sources of
+    /// it, such as a schematic export, a board file, or an IPC-2581. They are geometry to render and to
+    /// locate findings on. They are never a second component source to reconcile against the netlist
+    /// (C21).
+    ///
+    /// Membership is declared per file rather than inferred from "everything beside the entry". An
+    /// undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+    /// inferred rule would turn a diff of two netlists into a diff of one against itself.
+    #[prost(string, repeated, tag="5")]
+    pub companion_uris: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// config is this design's own analysis config, which its descriptor declares on top of its
+    /// project's. It usually has the design's intent and symbol library. It also has any section a board
+    /// needs apart from its team, such as its own convention or an extra checklist. Its extends names the
+    /// design's project. The project and the design use one message shape, so a composer can layer them
+    /// without knowing which tier it holds.
+    #[prost(message, optional, tag="7")]
+    pub config: ::core::option::Option<AnalysisConfig>,
+    /// series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+    /// Each version is its own design, in its own folder, with its own entry and companions. Designs that
+    /// name one series are listed together, and an empty series means the design stands alone. It is
+    /// `series:` in design.yaml.
+    #[prost(string, tag="10")]
+    pub series: ::prost::alloc::string::String,
+    /// flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
+    /// that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
+    /// 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
+    /// snapshot cannot turn off what its design declares.
+    #[prost(bool, tag="9")]
+    pub flatten_hierarchy: bool,
+    /// update_time is when the design's files last changed, as its store reports it. A stored design's
+    /// is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+    #[prost(message, optional, tag="11")]
+    pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+    /// series_latest is true on the design a series updated last, and false on the others and on a
+    /// design with no series. Output only.
+    #[prost(bool, tag="12")]
+    pub series_latest: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetProjectRequest {
+    /// "projects/{project}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListProjectsRequest {
+    /// page_size is the maximum number of projects to return. 0 uses the server default; the server may
+    /// return fewer.
+    #[prost(int32, tag="1")]
+    pub page_size: i32,
+    /// page_token continues a previous call. An empty token starts at the first project.
+    #[prost(string, tag="2")]
+    pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). Only `mount` is supported, as in `mount="boards"`, matched
+    /// against the authority of the project's URI. An unsupported filter is an error rather than a
+    /// silently ignored argument. A client that believed it had filtered, and had not, would read
+    /// another mount's projects as its own.
+    #[prost(string, tag="3")]
+    pub filter: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListProjectsResponse {
+    /// projects are ordered by resource name, so a listing is stable across calls.
+    #[prost(message, repeated, tag="1")]
+    pub projects: ::prost::alloc::vec::Vec<Project>,
+    /// next_page_token is empty when the last page has been reached.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateProjectRequest {
+    /// project_id is the new project's id, lowercase letters, digits, '.', '_' or '-'.
+    #[prost(string, tag="1")]
+    pub project_id: ::prost::alloc::string::String,
+    /// project carries the title and designs. Its name is ignored.
+    #[prost(message, optional, tag="2")]
+    pub project: ::core::option::Option<Project>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateProjectRequest {
+    /// project names the project and carries the new values.
+    #[prost(message, optional, tag="1")]
+    pub project: ::core::option::Option<Project>,
+    /// update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+    #[prost(message, optional, tag="2")]
+    pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteProjectRequest {
+    /// "projects/{project}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ResolveDesignRequest {
+    /// uri names the file or folder to resolve. A URI's authority is a key in a server-defined
+    /// namespace that the injected Loader resolves, NOT a host path.
+    #[prost(string, tag="1")]
+    pub uri: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ResolveDesignResponse {
+    /// design is the design the ref belongs to, UNSET when it belongs to none.
+    ///
+    /// Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
+    /// ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
+    /// catalog. Turning the common path into an error would push every caller into treating a failure
+    /// path as normal. A real failure would then go unnoticed.
+    #[prost(message, optional, tag="1")]
+    pub design: ::core::option::Option<Design>,
+    /// project is the design's project, UNSET when the design has none above it.
+    ///
+    /// A design without a project is a real design, not a half-resolved one. Its declaration still says
+    /// which file that folder's analysis reads. A caller that a human pointed at a path needs nothing
+    /// more. Such a design has no NAME, because a resource name needs a parent. So it comes back with
+    /// `Design.name` empty and cannot be fetched by name later.
+    ///
+    /// This edge also gives the guarantee. Project config reaches a design only through it. So a design
+    /// with no project has no project config to apply, and it cannot be checked against another
+    /// project's rules. The structure enforces that.
+    #[prost(message, optional, tag="2")]
+    pub project: ::core::option::Option<Project>,
+}
+/// Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
+/// Ingest and changes with UpdateSnapshot. The rest are output only.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Snapshot {
+    /// name is "snapshots/{snapshot}". The host assigns the id unless Ingest names one.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// revision_id names this definition over the netlist as it was read. It hashes the definition, the
+    /// tiers the definition resolved to and the netlist entry's content. So two hosts that ingested one
+    /// definition over the same netlist report the same revision_id. It moves on an UpdateSnapshot that
+    /// changed any of those three. A change to another tier's file is caught as stale rather than by the
+    /// revision, since hashing a large board on every ingest cost about a second in a browser worker.
+    #[prost(string, tag="2")]
+    pub revision_id: ::prost::alloc::string::String,
+    /// uri names the design, a key the Loader resolves and never a host path. The entry, its folder and
+    /// a declared companion all name one design and resolve to the same tiers (C32).
+    #[prost(string, tag="3")]
+    pub uri: ::prost::alloc::string::String,
+    /// board_uri attaches a different board-geometry export from the one the design declares, such as a
+    /// fab's returned file or a layout under review. Empty uses the design's own.
+    #[prost(string, tag="4")]
+    pub board_uri: ::prost::alloc::string::String,
+    /// geometry_uri draws the design from a different schematic from the one the design declares. Empty
+    /// uses the design's own.
+    #[prost(string, tag="5")]
+    pub geometry_uri: ::prost::alloc::string::String,
+    /// as_named reads exactly the artifact that uri names, even when the design declares that artifact
+    /// a companion of a different entry. Two views of one design are compared by reading a companion as
+    /// a netlist.
+    #[prost(bool, tag="6")]
+    pub as_named: bool,
+    /// overlay is the config for every question about this snapshot. It holds conventions, profiles,
+    /// intent, parameters, libraries and query sets, from the request or from the project.
+    #[prost(message, optional, tag="7")]
+    pub overlay: ::core::option::Option<OverlayConfig>,
+    /// tiers are the artifacts the definition resolved to. Output only.
+    #[prost(message, optional, tag="8")]
+    pub tiers: ::core::option::Option<SnapshotTiers>,
+    /// consistency compares the tiers that have been read with each other. Imagine a board updated on
+    /// its own, so it no longer matches its netlist. consistency then reports the difference. It is
+    /// absent until two tiers have been read. Output only.
+    #[prost(message, optional, tag="9")]
+    pub consistency: ::core::option::Option<SnapshotConsistency>,
+    /// project is the project the design belongs to, "projects/{project}", empty for none. Output only.
+    #[prost(string, tag="10")]
+    pub project: ::prost::alloc::string::String,
+    /// files lists the design's files when the client sends them, instead of naming files the host
+    /// serves. Each entry gives a path within uri's mount, a SHA-256 and a size. With files set, uri's
+    /// mount is read from these files alone. So the list must hold the design, its companions, and its
+    /// project's descriptor and config directories. ListDesignFiles names that set. The contents go up
+    /// with UploadBlobs. Paths are the client's own, so every locator in an answer reads as it would on
+    /// the client (C28). Part of the definition.
+    #[prost(message, repeated, tag="11")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// flatten_hierarchy reads a hierarchical netlist as its whole schematic rather than as its top cell
+    /// alone (agni issue 718). The read walks into every block cell that the top cell places. A net
+    /// crossing a block's port joins its parent's net. A net inside a block keeps its name when no other
+    /// net has that name. Otherwise the block's instance path names it ("/A1/MID"). When a block is
+    /// placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
+    /// same either way. Only EDIF has blocks to walk today. Part of the definition.
+    #[prost(bool, tag="12")]
+    pub flatten_hierarchy: bool,
+    /// refresh answers a question on this snapshot after a file under it changed, rather than refusing it
+    /// as stale (agni issue 1639). The host reads the snapshot again, as UpdateSnapshot would, and the
+    /// answer carries an Agni-Snapshot-Refreshed response header naming the tiers that changed, so a
+    /// caller still learns its earlier answers came from older files. Without it, a question on a stale
+    /// snapshot is refused with FAILED_PRECONDITION, as before. Part of the definition.
+    #[prost(bool, tag="13")]
+    pub refresh: bool,
+}
+/// SnapshotFile is one file of a design that a client sends, named within its mount.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SnapshotFile {
+    #[prost(string, tag="1")]
+    pub path: ::prost::alloc::string::String,
+    /// sha256 is "sha256:<hex>", as DesignFile.sha256 is.
+    #[prost(string, tag="2")]
+    pub sha256: ::prost::alloc::string::String,
+    #[prost(int64, tag="3")]
+    pub size: i64,
+}
+/// SnapshotTiers are the artifacts that a snapshot's definition resolved to (C32's ResolveSources).
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SnapshotTiers {
+    /// netlist_uri is what analysis reads.
+    #[prost(string, tag="1")]
+    pub netlist_uri: ::prost::alloc::string::String,
+    /// board_uri is the copper tier, empty when the design has none.
+    #[prost(string, tag="2")]
+    pub board_uri: ::prost::alloc::string::String,
+    /// geometry_uri is what its sheets are drawn from.
+    #[prost(string, tag="3")]
+    pub geometry_uri: ::prost::alloc::string::String,
+    /// board_read says whether this host has read the board for this snapshot. board_persisted says
+    /// whether that board is in the host's persistent store. If it is, another process restores the
+    /// board rather than parsing it. Both are false on a host that has not read the board yet.
+    #[prost(bool, tag="4")]
+    pub board_read: bool,
+    #[prost(bool, tag="5")]
+    pub board_persisted: bool,
+}
+/// SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
+/// rather than refused. A board part that is not yet in the netlist is an ordinary state of a design
+/// being edited, and the cross-view rules say what each difference means.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SnapshotConsistency {
+    /// board_only and netlist_only are the reference designators found in one tier and not the other.
+    /// Each list is sorted and holds at most 20. The counts are the full numbers.
+    #[prost(string, repeated, tag="1")]
+    pub board_only: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(int32, tag="2")]
+    pub board_only_count: i32,
+    #[prost(string, repeated, tag="3")]
+    pub netlist_only: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(int32, tag="4")]
+    pub netlist_only_count: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct IngestRequest {
+    /// snapshot is the definition to ingest. Its name, revision_id and output fields are ignored.
+    #[prost(message, optional, tag="1")]
+    pub snapshot: ::core::option::Option<Snapshot>,
+    /// snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of letting the host
+    /// assign one. Every browser worker keeps its own snapshots, so a page passes its id to each worker
+    /// it asks. An id already in use with the same definition returns that snapshot, after reading
+    /// whatever read_board asks for. So a client can send its ingest again without first asking whether
+    /// the host still holds it. The same id with a different definition is ALREADY_EXISTS.
+    #[prost(string, tag="2")]
+    pub snapshot_id: ::prost::alloc::string::String,
+    /// read_board reads the board now, so a later question finds it parsed (agni issue 1061). The
+    /// browser's prepare lane sends this from a worker that ends when it answers. The board is left in
+    /// the store, and the worker that runs the checks restores it from there.
+    #[prost(bool, tag="3")]
+    pub read_board: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSnapshotRequest {
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListSnapshotsRequest {
+    #[prost(int32, tag="1")]
+    pub page_size: i32,
+    #[prost(string, tag="2")]
+    pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). Only `uri` is supported, as in `uri="mount://m/board"`, and
+    /// it matches a snapshot's definition exactly. Anything else is an error.
+    #[prost(string, tag="3")]
+    pub filter: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListSnapshotsResponse {
+    /// snapshots are ordered by name.
+    #[prost(message, repeated, tag="1")]
+    pub snapshots: ::prost::alloc::vec::Vec<Snapshot>,
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateSnapshotRequest {
+    /// snapshot holds the new definition and names the snapshot to update.
+    #[prost(message, optional, tag="1")]
+    pub snapshot: ::core::option::Option<Snapshot>,
+    /// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
+    /// overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
+    /// files again, and that refreshes a stale snapshot.
+    #[prost(message, optional, tag="2")]
+    pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
+    /// read_board is as on IngestRequest.
+    #[prost(bool, tag="3")]
+    pub read_board: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteSnapshotRequest {
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+/// BlobsMissing is the error detail when an Ingest or UpdateSnapshot names files whose contents the
+/// host does not hold (FAILED_PRECONDITION). It lists their hashes. The client sends those contents
+/// with UploadBlobs and then asks again.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BlobsMissing {
+    #[prost(string, repeated, tag="1")]
+    pub sha256: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UploadBlobsRequest {
+    #[prost(bytes="vec", repeated, tag="1")]
+    pub contents: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UploadBlobsResponse {
+    /// sha256 is each content's hash, "sha256:<hex>", in the request's order.
+    #[prost(string, repeated, tag="1")]
+    pub sha256: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// SnapshotUnavailable is the error detail when a question's snapshot cannot answer it. Either the
+/// host does not hold the snapshot (NOT_FOUND), or the snapshot's files changed since they were read
+/// (FAILED_PRECONDITION). A client uses this detail to tell both cases from a missing design file, and
+/// no ingest would fix a missing file. On MISSING the client ingests the snapshot again under the same
+/// name, and on STALE it updates the snapshot. Then it asks again.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SnapshotUnavailable {
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(enumeration="snapshot_unavailable::Reason", tag="2")]
+    pub reason: i32,
+    /// changed is set for a STALE snapshot. It names the netlist tier when the netlist's entry file no
+    /// longer reads as it did. Otherwise it names every tier, since the file that moved may belong to
+    /// any tier, or a tier may have read it beneath its entry (a sub-sheet, a symbol library). The names
+    /// are artifact URIs, never the host's own paths.
+    #[prost(string, repeated, tag="3")]
+    pub changed: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Nested message and enum types in `SnapshotUnavailable`.
+pub mod snapshot_unavailable {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+    #[repr(i32)]
+    pub enum Reason {
+        Unspecified = 0,
+        Missing = 1,
+        Stale = 2,
+    }
+    impl Reason {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unspecified => "REASON_UNSPECIFIED",
+                Self::Missing => "REASON_MISSING",
+                Self::Stale => "REASON_STALE",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "REASON_UNSPECIFIED" => Some(Self::Unspecified),
+                "REASON_MISSING" => Some(Self::Missing),
+                "REASON_STALE" => Some(Self::Stale),
+                _ => None,
+            }
+        }
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateDesignRequest {
+    /// design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
+    #[prost(string, tag="1")]
+    pub design_id: ::prost::alloc::string::String,
+    /// files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+    #[prost(message, repeated, tag="2")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetDesignRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListDesignsRequest {
+    /// page_size is the maximum number of designs to return. 0 uses the server default.
+    #[prost(int32, tag="1")]
+    pub page_size: i32,
+    /// page_token continues a previous call. An empty token starts at the first design.
+    #[prost(string, tag="2")]
+    pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). Two forms are supported, `series = "memory_unit"` and
+    /// `project = "projects/b200"`, the second keeping the designs that project lists. Any other filter
+    /// is INVALID_ARGUMENT, since a client that believed it had filtered would read the wrong designs.
+    #[prost(string, tag="3")]
+    pub filter: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListDesignsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub designs: ::prost::alloc::vec::Vec<Design>,
+    /// next_page_token is empty when the last page has been reached.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+    /// unreachable names the designs left out because two mounted folders declare the same id (AIP-217).
+    /// Each entry is "designs/{design}". The rest of the listing is complete.
+    #[prost(string, repeated, tag="3")]
+    pub unreachable: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateDesignRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+    #[prost(message, repeated, tag="2")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteDesignRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
 /// DiffDesignsRequest names the two designs. a is the old revision and b the new, each as a
 /// snapshot.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2811,190 +3310,6 @@ impl LexiconSource {
         }
     }
 }
-/// Project is one declared set of designs that share configuration.
-///
-/// One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
-/// stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
-/// The server never generates design intent either way. Writing intent from a design is a judgment
-/// step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
-/// the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
-/// mount.
-///
-/// Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
-/// a config tier is added once and every surface gets it (agni issue 224).
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Project {
-    /// name is the resource name, "projects/{project}". The operator DECLARES the id in
-    /// `project.yaml`. It is not derived from the folder path and not server-assigned, so it is stable.
-    /// A project keeps its identity when its folder is renamed or moved between mounts, and two mounts
-    /// do not accidentally collide by having directories of the same name.
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-    /// title is the human-readable label, falling back to the id when the descriptor gave none.
-    #[prost(string, tag="2")]
-    pub title: ::prost::alloc::string::String,
-    /// uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
-    /// injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
-    #[prost(string, tag="3")]
-    pub uri: ::prost::alloc::string::String,
-    /// config is what this project's designs are checked against, and the reason the resource exists.
-    /// Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
-    /// one board. So they belong to the project, and they reach a run through the design's edge to it.
-    /// Before this they could only be `agni serve` startup flags. A deployment mounting a mixed set
-    /// applied those flags to every design it read. An overlay's profiles superseded the built-ins for
-    /// every board on the server, and an overlay's rail lexicon changed net roles on designs that never
-    /// asked.
-    ///
-    /// A Project and a Design use the same message, as their descriptors share one schema (agni issue
-    /// 1136). The shape really is the same. Two copies of it would be one more place for two layers to
-    /// disagree about what config is. A design's own layer goes on top of its project's.
-    #[prost(message, optional, tag="9")]
-    pub config: ::core::option::Option<AnalysisConfig>,
-}
-/// Design is one declared design: an identity, an entry file, and its companion views.
-///
-/// The type is named for what it is, at the cost of sharing a word with agni.v1.ir.Design. They are
-/// different layers of the same idea: this is the design's IDENTITY and file layout, that is the
-/// design's parsed CONTENT.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Design {
-    /// name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-    /// `design.yaml` on the same terms as a project's.
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-    /// title is the human-readable label, falling back to the id.
-    #[prost(string, tag="2")]
-    pub title: ::prost::alloc::string::String,
-    /// uri is the folder holding `design.yaml`.
-    #[prost(string, tag="3")]
-    pub uri: ::prost::alloc::string::String,
-    /// entry_uri names the file this design's ANALYSIS reads, which is the netlist the design team
-    /// produces (CONSTRAINTS C21). Imagine a folder holding an OrCAD `.eds` schematic export beside the
-    /// `.edn` netlist. The component count depends on which file a tool opens. Nothing in the engine
-    /// modelled "this folder is one design, and this file is its entry". So the CLI could only print a
-    /// warning telling the operator to consult their own descriptor. With entry_uri explicit, the
-    /// engine acts on it instead of warning.
-    #[prost(string, tag="4")]
-    pub entry_uri: ::prost::alloc::string::String,
-    /// companion_uris name files that are VIEWS of this same design rather than independent sources of
-    /// it, such as a schematic export, a board file, or an IPC-2581. They are geometry to render and to
-    /// locate findings on. They are never a second component source to reconcile against the netlist
-    /// (C21).
-    ///
-    /// Membership is declared per file rather than inferred from "everything beside the entry". An
-    /// undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
-    /// inferred rule would turn a diff of two netlists into a diff of one against itself.
-    #[prost(string, repeated, tag="5")]
-    pub companion_uris: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// config is this design's own analysis config, which its descriptor declares on top of its
-    /// project's. It usually has the design's intent and symbol library. It also has any section a board
-    /// needs apart from its team, such as its own convention or an extra checklist. Its extends names the
-    /// design's project. The project and the design use one message shape, so a composer can layer them
-    /// without knowing which tier it holds.
-    #[prost(message, optional, tag="7")]
-    pub config: ::core::option::Option<AnalysisConfig>,
-    /// series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
-    /// Each version is its own design, in its own folder, with its own entry and companions. Designs that
-    /// name one series are listed together, and an empty series means the design stands alone. It is
-    /// `series:` in design.yaml.
-    #[prost(string, tag="10")]
-    pub series: ::prost::alloc::string::String,
-    /// flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
-    /// that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
-    /// 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-    /// snapshot cannot turn off what its design declares.
-    #[prost(bool, tag="9")]
-    pub flatten_hierarchy: bool,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GetProjectRequest {
-    /// "projects/{project}"
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ListProjectsRequest {
-    /// page_size is the maximum number of projects to return. 0 uses the server default; the server may
-    /// return fewer.
-    #[prost(int32, tag="1")]
-    pub page_size: i32,
-    /// page_token continues a previous call. An empty token starts at the first project.
-    #[prost(string, tag="2")]
-    pub page_token: ::prost::alloc::string::String,
-    /// filter narrows the listing (AIP-160). Only `mount` is supported, as in `mount="boards"`, matched
-    /// against the authority of the project's URI. An unsupported filter is an error rather than a
-    /// silently ignored argument. A client that believed it had filtered, and had not, would read
-    /// another mount's projects as its own.
-    #[prost(string, tag="3")]
-    pub filter: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListProjectsResponse {
-    /// projects are ordered by resource name, so a listing is stable across calls.
-    #[prost(message, repeated, tag="1")]
-    pub projects: ::prost::alloc::vec::Vec<Project>,
-    /// next_page_token is empty when the last page has been reached.
-    #[prost(string, tag="2")]
-    pub next_page_token: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GetProjectDesignRequest {
-    /// "projects/{project}/designs/{design}"
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ListProjectDesignsRequest {
-    /// parent is the project whose designs to list, "projects/{project}".
-    #[prost(string, tag="1")]
-    pub parent: ::prost::alloc::string::String,
-    #[prost(int32, tag="2")]
-    pub page_size: i32,
-    #[prost(string, tag="3")]
-    pub page_token: ::prost::alloc::string::String,
-    /// filter narrows the listing, on the same terms as ListProjectsRequest.filter. Only `mount` is
-    /// supported.
-    #[prost(string, tag="4")]
-    pub filter: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListProjectDesignsResponse {
-    /// designs are ordered by resource name.
-    #[prost(message, repeated, tag="1")]
-    pub designs: ::prost::alloc::vec::Vec<Design>,
-    #[prost(string, tag="2")]
-    pub next_page_token: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ResolveDesignRequest {
-    /// uri names the file or folder to resolve. A URI's authority is a key in a server-defined
-    /// namespace that the injected Loader resolves, NOT a host path.
-    #[prost(string, tag="1")]
-    pub uri: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ResolveDesignResponse {
-    /// design is the design the ref belongs to, UNSET when it belongs to none.
-    ///
-    /// Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
-    /// ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
-    /// catalog. Turning the common path into an error would push every caller into treating a failure
-    /// path as normal. A real failure would then go unnoticed.
-    #[prost(message, optional, tag="1")]
-    pub design: ::core::option::Option<Design>,
-    /// project is the design's project, UNSET when the design has none above it.
-    ///
-    /// A design without a project is a real design, not a half-resolved one. Its declaration still says
-    /// which file that folder's analysis reads. A caller that a human pointed at a path needs nothing
-    /// more. Such a design has no NAME, because a resource name needs a parent. So it comes back with
-    /// `Design.name` empty and cannot be fetched by name later.
-    ///
-    /// This edge also gives the guarantee. Project config reaches a design only through it. So a design
-    /// with no project has no project config to apply, and it cannot be checked against another
-    /// project's rules. The structure enforces that.
-    #[prost(message, optional, tag="2")]
-    pub project: ::core::option::Option<Project>,
-}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetServerInfoRequest {
 }
@@ -3017,253 +3332,6 @@ pub struct ServerInfo {
     /// configuration without a client mistaking the host's age.
     #[prost(string, repeated, tag="3")]
     pub features: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-/// Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
-/// Ingest and changes with UpdateSnapshot. The rest are output only.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Snapshot {
-    /// name is "snapshots/{snapshot}". The host assigns the id unless Ingest names one.
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-    /// revision_id names this definition over the netlist as it was read. It hashes the definition, the
-    /// tiers the definition resolved to and the netlist entry's content. So two hosts that ingested one
-    /// definition over the same netlist report the same revision_id. It moves on an UpdateSnapshot that
-    /// changed any of those three. A change to another tier's file is caught as stale rather than by the
-    /// revision, since hashing a large board on every ingest cost about a second in a browser worker.
-    #[prost(string, tag="2")]
-    pub revision_id: ::prost::alloc::string::String,
-    /// uri names the design, a key the Loader resolves and never a host path. The entry, its folder and
-    /// a declared companion all name one design and resolve to the same tiers (C32).
-    #[prost(string, tag="3")]
-    pub uri: ::prost::alloc::string::String,
-    /// board_uri attaches a different board-geometry export from the one the design declares, such as a
-    /// fab's returned file or a layout under review. Empty uses the design's own.
-    #[prost(string, tag="4")]
-    pub board_uri: ::prost::alloc::string::String,
-    /// geometry_uri draws the design from a different schematic from the one the design declares. Empty
-    /// uses the design's own.
-    #[prost(string, tag="5")]
-    pub geometry_uri: ::prost::alloc::string::String,
-    /// as_named reads exactly the artifact that uri names, even when the design declares that artifact
-    /// a companion of a different entry. Two views of one design are compared by reading a companion as
-    /// a netlist.
-    #[prost(bool, tag="6")]
-    pub as_named: bool,
-    /// overlay is the config for every question about this snapshot. It holds conventions, profiles,
-    /// intent, parameters, libraries and query sets, from the request or from the project.
-    #[prost(message, optional, tag="7")]
-    pub overlay: ::core::option::Option<OverlayConfig>,
-    /// tiers are the artifacts the definition resolved to. Output only.
-    #[prost(message, optional, tag="8")]
-    pub tiers: ::core::option::Option<SnapshotTiers>,
-    /// consistency compares the tiers that have been read with each other. Imagine a board updated on
-    /// its own, so it no longer matches its netlist. consistency then reports the difference. It is
-    /// absent until two tiers have been read. Output only.
-    #[prost(message, optional, tag="9")]
-    pub consistency: ::core::option::Option<SnapshotConsistency>,
-    /// project is the project the design belongs to, "projects/{project}", empty for none. Output only.
-    #[prost(string, tag="10")]
-    pub project: ::prost::alloc::string::String,
-    /// files lists the design's files when the client sends them, instead of naming files the host
-    /// serves. Each entry gives a path within uri's mount, a SHA-256 and a size. With files set, uri's
-    /// mount is read from these files alone. So the list must hold the design, its companions, and its
-    /// project's descriptor and config directories. ListDesignFiles names that set. The contents go up
-    /// with UploadBlobs. Paths are the client's own, so every locator in an answer reads as it would on
-    /// the client (C28). Part of the definition.
-    #[prost(message, repeated, tag="11")]
-    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
-    /// flatten_hierarchy reads a hierarchical netlist as its whole schematic rather than as its top cell
-    /// alone (agni issue 718). The read walks into every block cell that the top cell places. A net
-    /// crossing a block's port joins its parent's net. A net inside a block keeps its name when no other
-    /// net has that name. Otherwise the block's instance path names it ("/A1/MID"). When a block is
-    /// placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
-    /// same either way. Only EDIF has blocks to walk today. Part of the definition.
-    #[prost(bool, tag="12")]
-    pub flatten_hierarchy: bool,
-    /// refresh answers a question on this snapshot after a file under it changed, rather than refusing it
-    /// as stale (agni issue 1639). The host reads the snapshot again, as UpdateSnapshot would, and the
-    /// answer carries an Agni-Snapshot-Refreshed response header naming the tiers that changed, so a
-    /// caller still learns its earlier answers came from older files. Without it, a question on a stale
-    /// snapshot is refused with FAILED_PRECONDITION, as before. Part of the definition.
-    #[prost(bool, tag="13")]
-    pub refresh: bool,
-}
-/// SnapshotFile is one file of a design that a client sends, named within its mount.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SnapshotFile {
-    #[prost(string, tag="1")]
-    pub path: ::prost::alloc::string::String,
-    /// sha256 is "sha256:<hex>", as DesignFile.sha256 is.
-    #[prost(string, tag="2")]
-    pub sha256: ::prost::alloc::string::String,
-    #[prost(int64, tag="3")]
-    pub size: i64,
-}
-/// SnapshotTiers are the artifacts that a snapshot's definition resolved to (C32's ResolveSources).
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SnapshotTiers {
-    /// netlist_uri is what analysis reads.
-    #[prost(string, tag="1")]
-    pub netlist_uri: ::prost::alloc::string::String,
-    /// board_uri is the copper tier, empty when the design has none.
-    #[prost(string, tag="2")]
-    pub board_uri: ::prost::alloc::string::String,
-    /// geometry_uri is what its sheets are drawn from.
-    #[prost(string, tag="3")]
-    pub geometry_uri: ::prost::alloc::string::String,
-    /// board_read says whether this host has read the board for this snapshot. board_persisted says
-    /// whether that board is in the host's persistent store. If it is, another process restores the
-    /// board rather than parsing it. Both are false on a host that has not read the board yet.
-    #[prost(bool, tag="4")]
-    pub board_read: bool,
-    #[prost(bool, tag="5")]
-    pub board_persisted: bool,
-}
-/// SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
-/// rather than refused. A board part that is not yet in the netlist is an ordinary state of a design
-/// being edited, and the cross-view rules say what each difference means.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SnapshotConsistency {
-    /// board_only and netlist_only are the reference designators found in one tier and not the other.
-    /// Each list is sorted and holds at most 20. The counts are the full numbers.
-    #[prost(string, repeated, tag="1")]
-    pub board_only: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(int32, tag="2")]
-    pub board_only_count: i32,
-    #[prost(string, repeated, tag="3")]
-    pub netlist_only: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(int32, tag="4")]
-    pub netlist_only_count: i32,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct IngestRequest {
-    /// snapshot is the definition to ingest. Its name, revision_id and output fields are ignored.
-    #[prost(message, optional, tag="1")]
-    pub snapshot: ::core::option::Option<Snapshot>,
-    /// snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of letting the host
-    /// assign one. Every browser worker keeps its own snapshots, so a page passes its id to each worker
-    /// it asks. An id already in use with the same definition returns that snapshot, after reading
-    /// whatever read_board asks for. So a client can send its ingest again without first asking whether
-    /// the host still holds it. The same id with a different definition is ALREADY_EXISTS.
-    #[prost(string, tag="2")]
-    pub snapshot_id: ::prost::alloc::string::String,
-    /// read_board reads the board now, so a later question finds it parsed (agni issue 1061). The
-    /// browser's prepare lane sends this from a worker that ends when it answers. The board is left in
-    /// the store, and the worker that runs the checks restores it from there.
-    #[prost(bool, tag="3")]
-    pub read_board: bool,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GetSnapshotRequest {
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ListSnapshotsRequest {
-    #[prost(int32, tag="1")]
-    pub page_size: i32,
-    #[prost(string, tag="2")]
-    pub page_token: ::prost::alloc::string::String,
-    /// filter narrows the listing (AIP-160). Only `uri` is supported, as in `uri="mount://m/board"`, and
-    /// it matches a snapshot's definition exactly. Anything else is an error.
-    #[prost(string, tag="3")]
-    pub filter: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListSnapshotsResponse {
-    /// snapshots are ordered by name.
-    #[prost(message, repeated, tag="1")]
-    pub snapshots: ::prost::alloc::vec::Vec<Snapshot>,
-    #[prost(string, tag="2")]
-    pub next_page_token: ::prost::alloc::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct UpdateSnapshotRequest {
-    /// snapshot holds the new definition and names the snapshot to update.
-    #[prost(message, optional, tag="1")]
-    pub snapshot: ::core::option::Option<Snapshot>,
-    /// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-    /// overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-    /// files again, and that refreshes a stale snapshot.
-    #[prost(message, optional, tag="2")]
-    pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
-    /// read_board is as on IngestRequest.
-    #[prost(bool, tag="3")]
-    pub read_board: bool,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct DeleteSnapshotRequest {
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-}
-/// BlobsMissing is the error detail when an Ingest or UpdateSnapshot names files whose contents the
-/// host does not hold (FAILED_PRECONDITION). It lists their hashes. The client sends those contents
-/// with UploadBlobs and then asks again.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct BlobsMissing {
-    #[prost(string, repeated, tag="1")]
-    pub sha256: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct UploadBlobsRequest {
-    #[prost(bytes="vec", repeated, tag="1")]
-    pub contents: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-}
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct UploadBlobsResponse {
-    /// sha256 is each content's hash, "sha256:<hex>", in the request's order.
-    #[prost(string, repeated, tag="1")]
-    pub sha256: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-/// SnapshotUnavailable is the error detail when a question's snapshot cannot answer it. Either the
-/// host does not hold the snapshot (NOT_FOUND), or the snapshot's files changed since they were read
-/// (FAILED_PRECONDITION). A client uses this detail to tell both cases from a missing design file, and
-/// no ingest would fix a missing file. On MISSING the client ingests the snapshot again under the same
-/// name, and on STALE it updates the snapshot. Then it asks again.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SnapshotUnavailable {
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-    #[prost(enumeration="snapshot_unavailable::Reason", tag="2")]
-    pub reason: i32,
-    /// changed is set for a STALE snapshot. It names the netlist tier when the netlist's entry file no
-    /// longer reads as it did. Otherwise it names every tier, since the file that moved may belong to
-    /// any tier, or a tier may have read it beneath its entry (a sub-sheet, a symbol library). The names
-    /// are artifact URIs, never the host's own paths.
-    #[prost(string, repeated, tag="3")]
-    pub changed: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-/// Nested message and enum types in `SnapshotUnavailable`.
-pub mod snapshot_unavailable {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-    #[repr(i32)]
-    pub enum Reason {
-        Unspecified = 0,
-        Missing = 1,
-        Stale = 2,
-    }
-    impl Reason {
-        /// String value of the enum field names used in the ProtoBuf definition.
-        ///
-        /// The values are not transformed in any way and thus are considered stable
-        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        pub fn as_str_name(&self) -> &'static str {
-            match self {
-                Self::Unspecified => "REASON_UNSPECIFIED",
-                Self::Missing => "REASON_MISSING",
-                Self::Stale => "REASON_STALE",
-            }
-        }
-        /// Creates an enum from field names used in the ProtoBuf definition.
-        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-            match value {
-                "REASON_UNSPECIFIED" => Some(Self::Unspecified),
-                "REASON_MISSING" => Some(Self::Missing),
-                "REASON_STALE" => Some(Self::Stale),
-                _ => None,
-            }
-        }
-    }
 }
 // This file records where one request's time went (agni issue 914).
 //

@@ -81,9 +81,14 @@ func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	if err != nil {
 		t.Fatal(err)
 	}
+	projectSvc, designSvc, err := storeServices(ms, "", resolver.Store, resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return server.API{
 		Workspace:  service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
-		Project:    service.NewProjectService(resolver.Store),
+		Project:    projectSvc,
+		Design:     designSvc,
 		DesignView: service.NewDesignViewService(loader, nil, render.DefaultStyle, resolver),
 		Check:      check,
 		Diff:       service.NewDiffService(loader, resolver),

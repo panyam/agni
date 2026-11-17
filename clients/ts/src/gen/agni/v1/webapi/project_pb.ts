@@ -6,19 +6,23 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { AnalysisConfig } from "./config_pb.js";
 import { file_agni_v1_webapi_config } from "./config_pb.js";
+import type { EmptySchema, FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKBAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZ0oECAQQBUoECAUQBkoECAYQB0oECAcQCEoECAgQCSLPAQoGRGVzaWduEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJEhEKCWVudHJ5X3VyaRgEIAEoCRIWCg5jb21wYW5pb25fdXJpcxgFIAMoCRIuCgZjb25maWcYByABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIOCgZzZXJpZXMYCiABKAkSGQoRZmxhdHRlbl9oaWVyYXJjaHkYCSABKAhKBAgGEAdKBAgIEAlSCXJldmlzaW9ucyIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiJwoXR2V0UHJvamVjdERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJiChlMaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRIOCgZmaWx0ZXIYBCABKAkiXgoaTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoUUmVzb2x2ZURlc2lnblJlcXVlc3QSCwoDdXJpGAEgASgJImkKFVJlc29sdmVEZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YASABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SKAoHcHJvamVjdBgCIAEoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QyxwMKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEkwKCUdldERlc2lnbhInLmFnbmkudjEud2ViYXBpLkdldFByb2plY3REZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEmQKC0xpc3REZXNpZ25zEikuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_config]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKSAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIPCgdkZXNpZ25zGAogAygJSgQIBBAFSgQIBRAGSgQIBhAHSgQIBxAISgQICBAJIpcCCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRINCgV0aXRsZRgCIAEoCRILCgN1cmkYAyABKAkSEQoJZW50cnlfdXJpGAQgASgJEhYKDmNvbXBhbmlvbl91cmlzGAUgAygJEi4KBmNvbmZpZxgHIAEoCzIeLmFnbmkudjEud2ViYXBpLkFuYWx5c2lzQ29uZmlnEg4KBnNlcmllcxgKIAEoCRIZChFmbGF0dGVuX2hpZXJhcmNoeRgJIAEoCBIvCgt1cGRhdGVfdGltZRgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFQoNc2VyaWVzX2xhdGVzdBgMIAEoCEoECAYQB0oECAgQCVIJcmV2aXNpb25zIiEKEUdldFByb2plY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiTAoTTGlzdFByb2plY3RzUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiWgoUTGlzdFByb2plY3RzUmVzcG9uc2USKQoIcHJvamVjdHMYASADKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJUChRDcmVhdGVQcm9qZWN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0InEKFFVwZGF0ZVByb2plY3RSZXF1ZXN0EigKB3Byb2plY3QYASABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0Ei8KC3VwZGF0ZV9tYXNrGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzayIkChREZWxldGVQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MoIECg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJOCg1DcmVhdGVQcm9qZWN0EiQuYWduaS52MS53ZWJhcGkuQ3JlYXRlUHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0Ek4KDVVwZGF0ZVByb2plY3QSJC5hZ25pLnYxLndlYmFwaS5VcGRhdGVQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSTQoNRGVsZXRlUHJvamVjdBIkLmFnbmkudjEud2ViYXBpLkRlbGV0ZVByb2plY3RSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5ElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_config, file_google_protobuf_field_mask, file_google_protobuf_empty, file_google_protobuf_timestamp]);
 
 /**
- * Project is one declared set of designs that share configuration.
+ * Project groups designs. One declared in a mounted folder also carries the configuration its
+ * designs extend.
  *
- * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
- * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+ * One declared in a mounted folder is read-only, and the service refuses a write to it. One the
+ * server stores is a title and a list of designs, written through CreateProject, UpdateProject and
+ * DeleteProject (agni issue 1694). It carries no configuration until packs do (agni issue 1704).
  * The server never generates design intent either way. Writing intent from a design is a judgment
  * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
  * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
@@ -71,6 +75,16 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
    * @generated from field: agni.v1.webapi.AnalysisConfig config = 9;
    */
   config?: AnalysisConfig | undefined;
+
+  /**
+   * designs lists the designs this project groups, each "designs/{design}" (agni issue 1694). A
+   * design can sit in many projects, and deleting a project deletes none of them. A stored project
+   * keeps the list the caller wrote, and a name may outlive the design it names. A project declared in
+   * a mounted folder lists the designs whose `extends` names it, and that list is output only.
+   *
+   * @generated from field: repeated string designs = 10;
+   */
+  designs: string[];
 };
 
 /**
@@ -91,8 +105,8 @@ export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
  */
 export type Design = Message<"agni.v1.webapi.Design"> & {
   /**
-   * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-   * `design.yaml` on the same terms as a project's.
+   * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+   * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
    *
    * @generated from field: string name = 1;
    */
@@ -168,6 +182,22 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * @generated from field: bool flatten_hierarchy = 9;
    */
   flattenHierarchy: boolean;
+
+  /**
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp update_time = 11;
+   */
+  updateTime?: Timestamp | undefined;
+
+  /**
+   * series_latest is true on the design a series updated last, and false on the others and on a
+   * design with no series. Output only.
+   *
+   * @generated from field: bool series_latest = 12;
+   */
+  seriesLatest: boolean;
 };
 
 /**
@@ -260,11 +290,63 @@ export const ListProjectsResponseSchema: GenMessage<ListProjectsResponse> = /*@_
   messageDesc(file_agni_v1_webapi_project, 4);
 
 /**
- * @generated from message agni.v1.webapi.GetProjectDesignRequest
+ * @generated from message agni.v1.webapi.CreateProjectRequest
  */
-export type GetProjectDesignRequest = Message<"agni.v1.webapi.GetProjectDesignRequest"> & {
+export type CreateProjectRequest = Message<"agni.v1.webapi.CreateProjectRequest"> & {
   /**
-   * "projects/{project}/designs/{design}"
+   * project_id is the new project's id, lowercase letters, digits, '.', '_' or '-'.
+   *
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * project carries the title and designs. Its name is ignored.
+   *
+   * @generated from field: agni.v1.webapi.Project project = 2;
+   */
+  project?: Project | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.CreateProjectRequest.
+ * Use `create(CreateProjectRequestSchema)` to create a new message.
+ */
+export const CreateProjectRequestSchema: GenMessage<CreateProjectRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_project, 5);
+
+/**
+ * @generated from message agni.v1.webapi.UpdateProjectRequest
+ */
+export type UpdateProjectRequest = Message<"agni.v1.webapi.UpdateProjectRequest"> & {
+  /**
+   * project names the project and carries the new values.
+   *
+   * @generated from field: agni.v1.webapi.Project project = 1;
+   */
+  project?: Project | undefined;
+
+  /**
+   * update_mask names the fields to change, `title` or `designs`. An empty mask changes both.
+   *
+   * @generated from field: google.protobuf.FieldMask update_mask = 2;
+   */
+  updateMask?: FieldMask | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.UpdateProjectRequest.
+ * Use `create(UpdateProjectRequestSchema)` to create a new message.
+ */
+export const UpdateProjectRequestSchema: GenMessage<UpdateProjectRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_project, 6);
+
+/**
+ * @generated from message agni.v1.webapi.DeleteProjectRequest
+ */
+export type DeleteProjectRequest = Message<"agni.v1.webapi.DeleteProjectRequest"> & {
+  /**
+   * "projects/{project}"
    *
    * @generated from field: string name = 1;
    */
@@ -272,71 +354,10 @@ export type GetProjectDesignRequest = Message<"agni.v1.webapi.GetProjectDesignRe
 };
 
 /**
- * Describes the message agni.v1.webapi.GetProjectDesignRequest.
- * Use `create(GetProjectDesignRequestSchema)` to create a new message.
+ * Describes the message agni.v1.webapi.DeleteProjectRequest.
+ * Use `create(DeleteProjectRequestSchema)` to create a new message.
  */
-export const GetProjectDesignRequestSchema: GenMessage<GetProjectDesignRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 5);
-
-/**
- * @generated from message agni.v1.webapi.ListProjectDesignsRequest
- */
-export type ListProjectDesignsRequest = Message<"agni.v1.webapi.ListProjectDesignsRequest"> & {
-  /**
-   * parent is the project whose designs to list, "projects/{project}".
-   *
-   * @generated from field: string parent = 1;
-   */
-  parent: string;
-
-  /**
-   * @generated from field: int32 page_size = 2;
-   */
-  pageSize: number;
-
-  /**
-   * @generated from field: string page_token = 3;
-   */
-  pageToken: string;
-
-  /**
-   * filter narrows the listing, on the same terms as ListProjectsRequest.filter. Only `mount` is
-   * supported.
-   *
-   * @generated from field: string filter = 4;
-   */
-  filter: string;
-};
-
-/**
- * Describes the message agni.v1.webapi.ListProjectDesignsRequest.
- * Use `create(ListProjectDesignsRequestSchema)` to create a new message.
- */
-export const ListProjectDesignsRequestSchema: GenMessage<ListProjectDesignsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_project, 6);
-
-/**
- * @generated from message agni.v1.webapi.ListProjectDesignsResponse
- */
-export type ListProjectDesignsResponse = Message<"agni.v1.webapi.ListProjectDesignsResponse"> & {
-  /**
-   * designs are ordered by resource name.
-   *
-   * @generated from field: repeated agni.v1.webapi.Design designs = 1;
-   */
-  designs: Design[];
-
-  /**
-   * @generated from field: string next_page_token = 2;
-   */
-  nextPageToken: string;
-};
-
-/**
- * Describes the message agni.v1.webapi.ListProjectDesignsResponse.
- * Use `create(ListProjectDesignsResponseSchema)` to create a new message.
- */
-export const ListProjectDesignsResponseSchema: GenMessage<ListProjectDesignsResponse> = /*@__PURE__*/
+export const DeleteProjectRequestSchema: GenMessage<DeleteProjectRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_project, 7);
 
 /**
@@ -436,7 +457,7 @@ export const ProjectService: GenService<{
     output: typeof ProjectSchema;
   },
   /**
-   * ListProjects returns the projects visible across the server's mounts.
+   * ListProjects returns the projects visible across the server's mounts and its store.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.ListProjects
    */
@@ -446,25 +467,37 @@ export const ProjectService: GenService<{
     output: typeof ListProjectsResponseSchema;
   },
   /**
-   * GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
-   * files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
+   * CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
+   * (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
+   * without --store-dir answers FAILED_PRECONDITION.
    *
-   * @generated from rpc agni.v1.webapi.ProjectService.GetDesign
+   * @generated from rpc agni.v1.webapi.ProjectService.CreateProject
    */
-  getDesign: {
+  createProject: {
     methodKind: "unary";
-    input: typeof GetProjectDesignRequestSchema;
-    output: typeof DesignSchema;
+    input: typeof CreateProjectRequestSchema;
+    output: typeof ProjectSchema;
   },
   /**
-   * ListDesigns returns the designs belonging to one project.
+   * UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
+   * project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
    *
-   * @generated from rpc agni.v1.webapi.ProjectService.ListDesigns
+   * @generated from rpc agni.v1.webapi.ProjectService.UpdateProject
    */
-  listDesigns: {
+  updateProject: {
     methodKind: "unary";
-    input: typeof ListProjectDesignsRequestSchema;
-    output: typeof ListProjectDesignsResponseSchema;
+    input: typeof UpdateProjectRequestSchema;
+    output: typeof ProjectSchema;
+  },
+  /**
+   * DeleteProject removes a stored project. Its designs stay, since a project only lists them.
+   *
+   * @generated from rpc agni.v1.webapi.ProjectService.DeleteProject
+   */
+  deleteProject: {
+    methodKind: "unary";
+    input: typeof DeleteProjectRequestSchema;
+    output: typeof EmptySchema;
   },
   /**
    * ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared

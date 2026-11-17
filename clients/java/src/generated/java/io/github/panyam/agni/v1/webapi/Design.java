@@ -69,8 +69,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object name_ = "";
   /**
    * <pre>
-   * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-   * `design.yaml` on the same terms as a project's.
+   * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+   * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -91,8 +91,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-   * `design.yaml` on the same terms as a project's.
+   * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+   * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
    * </pre>
    *
    * <code>string name = 1 [json_name = "name"];</code>
@@ -466,6 +466,63 @@ private static final long serialVersionUID = 0L;
     return flattenHierarchy_;
   }
 
+  public static final int UPDATE_TIME_FIELD_NUMBER = 11;
+  private com.google.protobuf.Timestamp updateTime_;
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   * @return Whether the updateTime field is set.
+   */
+  @java.lang.Override
+  public boolean hasUpdateTime() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   * @return The updateTime.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getUpdateTime() {
+    return updateTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updateTime_;
+  }
+  /**
+   * <pre>
+   * update_time is when the design's files last changed, as its store reports it. A stored design's
+   * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+   * </pre>
+   *
+   * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder() {
+    return updateTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updateTime_;
+  }
+
+  public static final int SERIES_LATEST_FIELD_NUMBER = 12;
+  private boolean seriesLatest_ = false;
+  /**
+   * <pre>
+   * series_latest is true on the design a series updated last, and false on the others and on a
+   * design with no series. Output only.
+   * </pre>
+   *
+   * <code>bool series_latest = 12 [json_name = "seriesLatest"];</code>
+   * @return The seriesLatest.
+   */
+  @java.lang.Override
+  public boolean getSeriesLatest() {
+    return seriesLatest_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -504,6 +561,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 10, series_);
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(11, getUpdateTime());
+    }
+    if (seriesLatest_ != false) {
+      output.writeBool(12, seriesLatest_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -538,6 +601,14 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(series_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(10, series_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, getUpdateTime());
+    }
+    if (seriesLatest_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(12, seriesLatest_);
     }
     return size;
   }
@@ -582,6 +653,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getSeries())) return false;
     if (getFlattenHierarchy()
         != other.getFlattenHierarchy()) return false;
+    if (hasUpdateTime() != other.hasUpdateTime()) return false;
+    if (hasUpdateTime()) {
+      if (!getUpdateTime()
+          .equals(other.getUpdateTime())) return false;
+    }
+    if (getSeriesLatest()
+        != other.getSeriesLatest()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -614,6 +692,13 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + FLATTEN_HIERARCHY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getFlattenHierarchy());
+    if (hasUpdateTime()) {
+      hash = (37 * hash) + UPDATE_TIME_FIELD_NUMBER;
+      hash = (53 * hash) + getUpdateTime().hashCode();
+    }
+    hash = (37 * hash) + SERIES_LATEST_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSeriesLatest());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -753,6 +838,7 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetConfigFieldBuilder();
+        internalGetUpdateTimeFieldBuilder();
       }
     }
     @java.lang.Override
@@ -772,6 +858,12 @@ private static final long serialVersionUID = 0L;
       }
       series_ = "";
       flattenHierarchy_ = false;
+      updateTime_ = null;
+      if (updateTimeBuilder_ != null) {
+        updateTimeBuilder_.dispose();
+        updateTimeBuilder_ = null;
+      }
+      seriesLatest_ = false;
       return this;
     }
 
@@ -834,6 +926,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.flattenHierarchy_ = flattenHierarchy_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.updateTime_ = updateTimeBuilder_ == null
+            ? updateTime_
+            : updateTimeBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.seriesLatest_ = seriesLatest_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -889,6 +990,12 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getFlattenHierarchy() != false) {
         setFlattenHierarchy(other.getFlattenHierarchy());
+      }
+      if (other.hasUpdateTime()) {
+        mergeUpdateTime(other.getUpdateTime());
+      }
+      if (other.getSeriesLatest() != false) {
+        setSeriesLatest(other.getSeriesLatest());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -956,6 +1063,18 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 82
+            case 90: {
+              input.readMessage(
+                  internalGetUpdateTimeFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 90
+            case 96: {
+              seriesLatest_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 96
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -976,8 +1095,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object name_ = "";
     /**
      * <pre>
-     * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-     * `design.yaml` on the same terms as a project's.
+     * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+     * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -997,8 +1116,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-     * `design.yaml` on the same terms as a project's.
+     * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+     * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -1019,8 +1138,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-     * `design.yaml` on the same terms as a project's.
+     * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+     * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -1037,8 +1156,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-     * `design.yaml` on the same terms as a project's.
+     * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+     * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -1052,8 +1171,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * name is the resource name, "projects/{project}/designs/{design}", with the id declared in
-     * `design.yaml` on the same terms as a project's.
+     * name is the resource name, "designs/{design}", with the id declared in `design.yaml` on the same
+     * terms as a project's (agni issue 1694). A design ties to no project. A project lists it by name.
      * </pre>
      *
      * <code>string name = 1 [json_name = "name"];</code>
@@ -1928,6 +2047,217 @@ private static final long serialVersionUID = 0L;
     public Builder clearFlattenHierarchy() {
       bitField0_ = (bitField0_ & ~0x00000080);
       flattenHierarchy_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp updateTime_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> updateTimeBuilder_;
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     * @return Whether the updateTime field is set.
+     */
+    public boolean hasUpdateTime() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     * @return The updateTime.
+     */
+    public com.google.protobuf.Timestamp getUpdateTime() {
+      if (updateTimeBuilder_ == null) {
+        return updateTime_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updateTime_;
+      } else {
+        return updateTimeBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public Builder setUpdateTime(com.google.protobuf.Timestamp value) {
+      if (updateTimeBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        updateTime_ = value;
+      } else {
+        updateTimeBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public Builder setUpdateTime(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (updateTimeBuilder_ == null) {
+        updateTime_ = builderForValue.build();
+      } else {
+        updateTimeBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public Builder mergeUpdateTime(com.google.protobuf.Timestamp value) {
+      if (updateTimeBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          updateTime_ != null &&
+          updateTime_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getUpdateTimeBuilder().mergeFrom(value);
+        } else {
+          updateTime_ = value;
+        }
+      } else {
+        updateTimeBuilder_.mergeFrom(value);
+      }
+      if (updateTime_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public Builder clearUpdateTime() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      updateTime_ = null;
+      if (updateTimeBuilder_ != null) {
+        updateTimeBuilder_.dispose();
+        updateTimeBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getUpdateTimeBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetUpdateTimeFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getUpdateTimeOrBuilder() {
+      if (updateTimeBuilder_ != null) {
+        return updateTimeBuilder_.getMessageOrBuilder();
+      } else {
+        return updateTime_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : updateTime_;
+      }
+    }
+    /**
+     * <pre>
+     * update_time is when the design's files last changed, as its store reports it. A stored design's
+     * is its last write, and a mounted design's is its `design.yaml`'s modification time. Output only.
+     * </pre>
+     *
+     * <code>.google.protobuf.Timestamp update_time = 11 [json_name = "updateTime"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetUpdateTimeFieldBuilder() {
+      if (updateTimeBuilder_ == null) {
+        updateTimeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getUpdateTime(),
+                getParentForChildren(),
+                isClean());
+        updateTime_ = null;
+      }
+      return updateTimeBuilder_;
+    }
+
+    private boolean seriesLatest_ ;
+    /**
+     * <pre>
+     * series_latest is true on the design a series updated last, and false on the others and on a
+     * design with no series. Output only.
+     * </pre>
+     *
+     * <code>bool series_latest = 12 [json_name = "seriesLatest"];</code>
+     * @return The seriesLatest.
+     */
+    @java.lang.Override
+    public boolean getSeriesLatest() {
+      return seriesLatest_;
+    }
+    /**
+     * <pre>
+     * series_latest is true on the design a series updated last, and false on the others and on a
+     * design with no series. Output only.
+     * </pre>
+     *
+     * <code>bool series_latest = 12 [json_name = "seriesLatest"];</code>
+     * @param value The seriesLatest to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSeriesLatest(boolean value) {
+
+      seriesLatest_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * series_latest is true on the design a series updated last, and false on the others and on a
+     * design with no series. Output only.
+     * </pre>
+     *
+     * <code>bool series_latest = 12 [json_name = "seriesLatest"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSeriesLatest() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      seriesLatest_ = false;
       onChanged();
       return this;
     }
