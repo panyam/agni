@@ -32,7 +32,7 @@ This file covers the release bundle, the images, the native tools, the fetched s
 - `kicad-cli` writes a `.kicad_prl` beside any board it exports. An export run over `tools/samples` or a fixture folder leaves one there, and both export scripts remove it.
 - The oracle corpus carries a `design.yaml` per real design, naming the entry, the board companion and the internal connectors. The tutorial tarball carries none. That tarball leaves the boards out, and a declared companion missing from a tarball fails every read.
 - **A board whose repo states no licence is fetched from its publisher, never shipped** (agni 1446). The `remote-boards` artifact carries `remote/remote.pin` alone. Each line is a URL at a fixed commit and a sha256.
-- `hack/fetch_remote.sh` is the twin of agni-samples' own script. It downloads each file into `~/.cache/agni/samples/<sha256>` and copies it into `tools/samples/remote/<board>/`. It never downloads a cached file again.
+- `hack/fetch_remote.sh` is the twin of agni-samples' own script. It downloads each file into `~/.cache/agni/samples/<sha256>` and copies it into `tools/samples/remote/<board>/`. It never downloads a cached file again. Its done-stamp names each file's checksum and name, since two KiCad crystals ship one `.wrl` byte for byte.
 - `make samples-clean` lists files unused for 30 days and deletes them only when you answer y.
 - **`panyam/agni-samples` builds the tarballs with its `make dist`**, on Linux or macOS. Any walk over `tools/samples/` skips `._` names, since a macOS AppleDouble shadow sorts ahead of the file it shadows (the oracle's `globCorpus`, agni 812). That Makefile runs under `pipefail`, so an empty tarball fails `make verify`.
 

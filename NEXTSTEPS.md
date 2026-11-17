@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material goes in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-11-17, at `03faa855`.
+Last pruned 2026-11-17, at `28bc4cf0`.
 
 ## At a glance
 
@@ -21,10 +21,10 @@ project. Its exercise (`make exercise-design-store`) does not exist yet, and #16
 - **#1625 `mission_clients`** is active, at 12 of 13. Its last ticket is #1627 (TLS and tokens). The
   pushdowns are tagged as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3, and agni still pins
   v0.3.2 and v0.2.2. The ticket's last comment records what is decided and what is open.
-- **#1664 `mission_board_rendering`** is active, at 13 of 15. #1688 (ODB++ `;ID=`), #1689 (Jetson's
-  Antmicro models) and #1690 (model meshes through `GetBoardMeshes`) merged. Left are #1652, still open
-  after #1690, and #1679 (P3). Its exercise ran at `5e60ed8b` and works headless. Run headed, both walks
-  time out at "two views" on the main Mac.
+- **#1664 `mission_board_rendering`** is active, at 14 of 15. #1700 closed #1652: the board look draws
+  each part's 3D model, with a Quality control and a colour oracle. Left is #1679 (P3), and #1701 (a
+  walk race #1700 left on clay) is open. Its exercise ran at `28bc4cf0` and works headless. Run headed,
+  both walks time out at "two views" on the main Mac.
 - **#1611 `mission_markup`** is filed and not active. #1612 and #1613 come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting`.
 
@@ -34,7 +34,8 @@ project. Its exercise (`make exercise-design-store`) does not exist yet, and #16
    and #1693 builds the read-write store port. #1694, #1695, #1696 and #1697 wait on #1693's port.
 2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
-3. **#1652**, then #1679, on #1664. Read #1652's last comment and #1690 before planning it.
+3. **#1701**, then #1679, on #1664. #1679 is the mission's last ticket, after which its exercise
+   decides whether it closes.
 4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
