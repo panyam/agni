@@ -85,8 +85,8 @@ func outside(ring []float64, unitsPerMm float64, m kicadModel) float64 {
 }
 
 // kicadModelsDir is where `make samples-oracle` puts the KiCad library models the sample boards name
-// (hack/kicad_models.pin).
-var kicadModelsDir = filepath.Join("..", "..", "tools", "samples", "kicad-models")
+// (remote/kicad-models.pin in agni-samples' remote-boards).
+var kicadModelsDir = filepath.Join("..", "..", "tools", "samples", "remote", "kicad-models")
 
 // readKiCadBoard reads a board through the Loader, as a host does, with modelDirs as its --model-path.
 func readKiCadBoard(t *testing.T, path string, modelDirs ...string) *geom.BoardGeometry {

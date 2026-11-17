@@ -257,11 +257,10 @@ samples:
 #
 # remote-boards adds the boards the corpus may not redistribute, fetched from their publishers' repos
 # through a cache in ~/.cache/agni/samples, so each file is downloaded once per machine (agni 1446).
-# hack/kicad_models.pin fetches the KiCad library models the sample boards name the same way, so a
-# KiCad board's parts read their heights (agni 1652).
+# remote-boards also carries remote/kicad-models.pin, the KiCad library models the sample boards name,
+# fetched the same way so a KiCad board's parts read their heights (agni 1652).
 samples-oracle:
 	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium allegro cadence-exports altium remote-boards
-	./hack/fetch_remote.sh hack/kicad_models.pin tools/samples/kicad-models
 
 # The later revisions of the corpus's boards, such as Jetson rev 1.1.2 (agni issue 1559). Not in the
 # gate: each revision is about the size of its board's entry in the oracle corpus, and only the demo

@@ -24,26 +24,21 @@ five rows pass, against a server with no auth. The mission log on #1625 has each
   13. #1681 gave KiCad parts their STEP models' heights, and #1680 and #1682 closed #133. Its next
   tickets are #1652's mesh half and #1679 (IPC-2581 draws paste windows and unplated holes as copper,
   P3). Its exercise ran at `5069757f` and works headless, and #1682 merged since.
-- **A release, then two pin bumps.** The viewer features since v0.7.0 reach a release binary only after
-  the next agni release. Then panyam/agni-samples moves its CI's latest and its README off v0.7.0 and
-  cuts a samples release. Then the engine bumps `hack/samples.pin`, fetches `remote/kicad-models.pin`
-  from the `remote-boards` tarball (agni-samples#29), and drops `hack/kicad_models.pin`.
 - **#1611 `mission_markup`** (mark places on a design, find them on the next revision) is filed and not
   active. #1612 (its exercise) and #1613 (the design of a mark and its stores) come first, then #1594.
 - **#1176 `mission_shared_viewer_rooms`** is not active, and #1173 is `waiting` until someone runs agni
   serve for more than one person.
-- This run: #1681 merged and its exercise posted on #1664, agni-samples#29 merged (KiCad models and a
-  viewer section in its README), and #1680 and #1682 closed #133.
+- This run: v0.8.0 released with mission 1664's 3D board, agni-samples v0.1.19 carries KiCad's models
+  (agni-samples#29 and #30), and the engine pins v0.1.19 and fetches the models through it.
 
 ## Open, ranked
 
-1. **Cut the agni release**, then the agni-samples and engine pin bumps above.
-2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
+1. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
-3. **#1652's mesh half**, then #1679, on #1664. KiCad 10's library ships no `.wrl`, so read the
+2. **#1652's mesh half**, then #1679, on #1664. KiCad 10's library ships no `.wrl`, so read the
    last comment on #1652 before planning it. Jetson's parts need agni to map `${ANT3DMDL}`, which has
    no ticket yet.
-4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
