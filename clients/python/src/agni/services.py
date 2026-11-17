@@ -20,6 +20,7 @@ from google.protobuf.message import Message
 from agni.v1.webapi import (  # noqa: F401
     checks_pb2,
     design_view_pb2,
+    designs_pb2,
     diff_pb2,
     lexicon_pb2,
     project_pb2,
@@ -37,6 +38,7 @@ PACKAGE = "agni.v1.webapi"
 _MODULES = (
     checks_pb2,
     design_view_pb2,
+    designs_pb2,
     diff_pb2,
     lexicon_pb2,
     project_pb2,
