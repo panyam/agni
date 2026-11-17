@@ -2813,14 +2813,12 @@ impl LexiconSource {
 }
 /// Project is one declared set of designs that share configuration.
 ///
-/// It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
-/// Scaffolding a project means authoring design intent from a design. That is a judgment step with a
-/// confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
-/// still AIP-shaped here.
-///
-/// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
-/// draws the same boundary from the other side. Writing descriptors into a folder an operator named is
-/// not a server mutating a mount.
+/// One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
+/// stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+/// The server never generates design intent either way. Writing intent from a design is a judgment
+/// step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+/// the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+/// mount.
 ///
 /// Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
 /// a config tier is added once and every surface gets it (agni issue 224).
@@ -2883,9 +2881,9 @@ pub struct Design {
     /// locate findings on. They are never a second component source to reconcile against the netlist
     /// (C21).
     ///
-    /// Membership is declared per file rather than inferred from "everything beside the entry". A later
-    /// revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-    /// rule would turn a diff of two revisions into a diff of one against itself.
+    /// Membership is declared per file rather than inferred from "everything beside the entry". An
+    /// undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+    /// inferred rule would turn a diff of two netlists into a diff of one against itself.
     #[prost(string, repeated, tag="5")]
     pub companion_uris: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// config is this design's own analysis config, which its descriptor declares on top of its
@@ -2895,27 +2893,18 @@ pub struct Design {
     /// without knowing which tier it holds.
     #[prost(message, optional, tag="7")]
     pub config: ::core::option::Option<AnalysisConfig>,
-    /// revisions are the design's other revisions, each with its own entry and the companions that are
-    /// views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-    /// Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-    /// its own board rather than none, and a companion is never borrowed from another revision. A file
-    /// in the folder that no revision lists still reads exactly as named.
-    #[prost(message, repeated, tag="8")]
-    pub revisions: ::prost::alloc::vec::Vec<DesignRevision>,
+    /// series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+    /// Each version is its own design, in its own folder, with its own entry and companions. Designs that
+    /// name one series are listed together, and an empty series means the design stands alone. It is
+    /// `series:` in design.yaml.
+    #[prost(string, tag="10")]
+    pub series: ::prost::alloc::string::String,
     /// flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
     /// that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
     /// 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-    /// snapshot cannot turn off what its design declares. It applies to every revision.
+    /// snapshot cannot turn off what its design declares.
     #[prost(bool, tag="9")]
     pub flatten_hierarchy: bool,
-}
-/// DesignRevision is one declared revision of a design: its netlist entry and its own views.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct DesignRevision {
-    #[prost(string, tag="1")]
-    pub entry_uri: ::prost::alloc::string::String,
-    #[prost(string, repeated, tag="2")]
-    pub companion_uris: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {

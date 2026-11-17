@@ -305,7 +305,7 @@ func (p *proposer) kicadDesign(entry string, extra []string) {
 	for _, f := range files {
 		p.claim(f)
 	}
-	d := p.add(entry, companions, nil, files, "")
+	d := p.add(entry, companions, files, "")
 	if _, ok := p.kicadDirs[dirOf(entry)]; !ok {
 		p.kicadDirs[dirOf(entry)] = d
 	}
@@ -313,7 +313,9 @@ func (p *proposer) kicadDesign(entry string, extra []string) {
 
 func (p *proposer) edif() {
 	// Netlists group by folder and by the first word of their name, so gateway.edn and
-	// gateway-rev-b.edn are one design's revisions while basic.edn and bus.edn beside them are not.
+	// gateway-rev-b.edn are versions of one board while basic.edn and bus.edn beside them are not. A
+	// version is a design of its own in its own folder (agni 1692), so the group proposes its entry
+	// and names the other versions to move out.
 	groups := map[string][]string{}
 	var keys []string
 	for _, f := range p.files {
@@ -353,7 +355,7 @@ func (p *proposer) edif() {
 			return out
 		}
 		// The entry is the netlist named exactly what the group shares (board.edn among its
-		// revisions), else the first with a view beside it, else the first.
+		// versions), else the first with a view beside it, else the first.
 		entry := nets[0]
 		for _, n := range nets {
 			if len(companionOf(n)) > 0 {
@@ -367,16 +369,16 @@ func (p *proposer) edif() {
 				break
 			}
 		}
-		var files []string
-		var revisions []*webapi.DesignRevision
+		files := readsOf(entry)
+		var others []string
 		for _, n := range nets {
-			files = append(files, readsOf(n)...)
 			if n != entry {
-				rev := &webapi.DesignRevision{EntryUri: p.uri(n)}
-				for _, c := range companionOf(n) {
-					rev.CompanionUris = append(rev.CompanionUris, p.uri(c))
+				others = append(others, path.Base(n))
+				// The other versions are claimed, so they are not proposed as designs beside this one
+				// in the same folder. The note names them to move out instead.
+				for _, f := range readsOf(n) {
+					p.claim(f)
 				}
-				revisions = append(revisions, rev)
 			}
 		}
 		companions := companionOf(entry)
@@ -385,10 +387,10 @@ func (p *proposer) edif() {
 		}
 		files = dedupe(files)
 		note := ""
-		if len(revisions) > 0 {
-			note = fmt.Sprintf("%d more netlist(s) in this folder are listed as revisions of %s, not merged into it", len(revisions), path.Base(entry))
+		if len(others) > 0 {
+			note = fmt.Sprintf("%s look like other versions of %s, so this proposal leaves them out. Give each its own folder with its own design.yaml, naming the same series", strings.Join(others, ", "), path.Base(entry))
 		}
-		d := p.add(entry, companions, revisions, files, note)
+		d := p.add(entry, companions, files, note)
 		for _, c := range companions {
 			if strings.HasPrefix(ext(c), ".kicad") {
 				if _, ok := p.kicadDirs[dirOf(entry)]; !ok {
@@ -400,7 +402,7 @@ func (p *proposer) edif() {
 	for _, f := range p.files {
 		if ext(f) == ".eds" && p.free(f) {
 			p.claim(f)
-			p.add(f, nil, nil, []string{f}, "a schematic export with no netlist beside it: it draws and answers queries, but its counts are per drawn sheet, not a netlist's")
+			p.add(f, nil, []string{f}, "a schematic export with no netlist beside it: it draws and answers queries, but its counts are per drawn sheet, not a netlist's")
 		}
 	}
 }
@@ -428,7 +430,7 @@ func (p *proposer) odbJobs() {
 		if job != "" {
 			name = designID(path.Base(job))
 		}
-		p.addIn(dirOf(job), name, f, nil, nil, files, "")
+		p.addIn(dirOf(job), name, f, nil, files, "")
 	}
 }
 
@@ -496,7 +498,7 @@ func (p *proposer) blockDesigns() {
 				files = append(files, c)
 			}
 		}
-		p.add(f, nil, nil, files, "")
+		p.add(f, nil, files, "")
 	}
 }
 
@@ -512,7 +514,7 @@ func (p *proposer) loose() {
 			continue
 		}
 		p.claim(f)
-		p.add(f, nil, nil, []string{f}, "")
+		p.add(f, nil, []string{f}, "")
 	}
 }
 
@@ -607,35 +609,29 @@ func (p *proposer) leftovers() {
 }
 
 // add records one proposal and its descriptor.
-func (p *proposer) add(entry string, companions []string, revisions []*webapi.DesignRevision, files []string, note string) *webapi.ProposedDesign {
-	return p.addIn(dirOf(entry), designID(stemOf(entry)), entry, companions, revisions, files, note)
+func (p *proposer) add(entry string, companions []string, files []string, note string) *webapi.ProposedDesign {
+	return p.addIn(dirOf(entry), designID(stemOf(entry)), entry, companions, files, note)
 }
 
 // addIn is add for a design whose folder and name differ from the entry's own, as an ODB++ job's do.
-func (p *proposer) addIn(folder, name, entry string, companions []string, revisions []*webapi.DesignRevision, files []string, note string) *webapi.ProposedDesign {
-	d := &webapi.Design{Name: name, Uri: p.uri(folder), EntryUri: p.uri(entry), Revisions: revisions}
+func (p *proposer) addIn(folder, name, entry string, companions []string, files []string, note string) *webapi.ProposedDesign {
+	d := &webapi.Design{Name: name, Uri: p.uri(folder), EntryUri: p.uri(entry)}
 	for _, c := range companions {
 		d.CompanionUris = append(d.CompanionUris, p.uri(c))
 	}
 	sort.Strings(files)
-	pd := &webapi.ProposedDesign{Folder: folder, Design: d, Files: files, Note: note, DesignYaml: p.descriptor(folder, name, entry, companions, revisions)}
+	pd := &webapi.ProposedDesign{Folder: folder, Design: d, Files: files, Note: note, DesignYaml: p.descriptor(folder, name, entry, companions)}
 	p.resp.Designs = append(p.resp.Designs, pd)
 	return pd
 }
 
 // descriptor writes the design.yaml that declares a proposal, paths relative to its folder.
-func (p *proposer) descriptor(dir, name, entry string, companions []string, revisions []*webapi.DesignRevision) string {
+func (p *proposer) descriptor(dir, name, entry string, companions []string) string {
 	rel := func(f string) string {
 		if dir == "" {
 			return f
 		}
 		return strings.TrimPrefix(f, dir+"/")
-	}
-	fromURI := func(u string) string {
-		if a, err := artifact.Parse(u); err == nil {
-			return rel(a.Path)
-		}
-		return u
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "name: %s\n", yamlScalar(name))
@@ -647,18 +643,6 @@ func (p *proposer) descriptor(dir, name, entry string, companions []string, revi
 		b.WriteString("companions:\n")
 		for _, c := range companions {
 			fmt.Fprintf(&b, "  - %s\n", yamlScalar(rel(c)))
-		}
-	}
-	if len(revisions) > 0 {
-		b.WriteString("revisions:\n")
-		for _, r := range revisions {
-			fmt.Fprintf(&b, "  - entry: %s\n", yamlScalar(fromURI(r.GetEntryUri())))
-			if len(r.GetCompanionUris()) > 0 {
-				b.WriteString("    companions:\n")
-				for _, c := range r.GetCompanionUris() {
-					fmt.Fprintf(&b, "      - %s\n", yamlScalar(fromURI(c)))
-				}
-			}
 		}
 	}
 	return b.String()

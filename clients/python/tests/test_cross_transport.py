@@ -19,7 +19,7 @@ from agni.v1.checks import checks_pb2
 from agni.v1.webapi import query_pb2
 from agni.v1.webapi import design_pb2
 
-from conftest import DESIGN, snap
+from conftest import DESIGN, REV_B, snap
 
 
 def _endpoint(ref: str) -> design_pb2.TraceEndpoint:
@@ -131,7 +131,7 @@ _LIB = {
 CASES: List[Case] = [
     Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c))),
     # A declared revision reads its own board on both surfaces (agni issue 848).
-    Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"))),
+    Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c, REV_B))),
     Case("CheckService/CheckDesign", lambda c: c.check_design(snapshot=snap(c), rules=["i2c-pull-up", "decoupling-present"])),
     Case("CheckService/GetCheckReport", lambda c: c.get_check_report(snapshot=snap(c))),
     Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query='component.class(?c, "resistor") => ?c')),
@@ -177,13 +177,13 @@ CASES: List[Case] = [
         ),
     ),
     Case("QueryService/RunQueries", lambda c: c.run_queries(snapshot=snap(c), set=_SET_WITH_TYPO)),
-    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"))),
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, REV_B))),
     # Unchanged nets, asked for (agni issue 818).
-    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), include_equal=True)),
+    Case("DiffService/DiffDesigns", lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, REV_B), include_equal=True)),
     # A near-rename, asked for (agni issue 817): rev C renames PMIC_EN and adds a pull-up to it.
     Case(
         "DiffService/DiffDesigns",
-        lambda c: c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-c.edn"), near_renames={}),
+        lambda c: c.diff_designs(a_snapshot=snap(c, REV_B), b_snapshot=snap(c, DESIGN + "/gateway-rev-c.edn"), near_renames={}),
     ),
     Case(
         "ReviewService/CreateReview",
@@ -199,7 +199,7 @@ CASES: List[Case] = [
     Case("TableService/Tabulate", lambda c: c.tabulate(query_set=c.run_queries(snapshot=snap(c), set=_SET), order_by=["-provenance"])),
     Case(
         "TableService/Tabulate",
-        lambda c: c.tabulate(diff=c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"), include_equal=True)),
+        lambda c: c.tabulate(diff=c.diff_designs(a_snapshot=snap(c, DESIGN + "/gateway.edn"), b_snapshot=snap(c, REV_B), include_equal=True)),
     ),
     Case("TableService/Tabulate", lambda c: c.tabulate(review=c.create_review(snapshot=snap(c, overlay=_LIB), manifest=_MANIFEST))),
     # The design itself, whole or in parts (agni issue 836); unmasked it is the summary alone.
@@ -329,7 +329,7 @@ def test_the_cli_refuses_a_near_rename_threshold_it_cannot_pass(cli: Client, con
     than silently dropped; over Connect it applies."""
     def ask(c: Client) -> dict:
         return dict(
-            a_snapshot=snap(c, DESIGN + "/gateway-rev-b.edn"),
+            a_snapshot=snap(c, REV_B),
             b_snapshot=snap(c, DESIGN + "/gateway-rev-c.edn"),
             near_renames={"min_new_coverage_significant": 0.9},
         )

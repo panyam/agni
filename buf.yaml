@@ -15,8 +15,12 @@ breaking:
     - FILE
   # agni 1660 removed ir.Design.stackup and its two messages without a deprecation release, since
   # agni has no public clients yet. Remove this ignore once a release tag after v0.7.0 exists.
+  # agni 1692 removed webapi.Design.revisions and DesignRevision the same way. Remove its entries at
+  # the first release tag after v0.8.0.
   ignore_only:
     FIELD_NO_DELETE:
       - protos/agni/v1/ir/ir.proto
+      - protos/agni/v1/webapi/project.proto
     MESSAGE_NO_DELETE:
       - protos/agni/v1/ir/ir.proto
+      - protos/agni/v1/webapi/project.proto

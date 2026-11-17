@@ -682,20 +682,29 @@ a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
 side by ONE question: does what it returns still exist after the call? A derived view of files on
 disk does not, and is verb-shaped. Persisted state does, and is a resource.
 
-**In a third case, a DECLARED-identity resource is AIP-shaped and READ-ONLY.** Sometimes an OPERATOR
-declares a resource's id by writing a `name:` in a descriptor, and the server neither assigns the id
-nor derives it from a path. Such a resource is AIP-shaped with `Get` and `List` and NO mutators. This
-is a real third case rather than a loosening of the first two. A second question separates it: is
-the identity the caller's to invent (verb-shaped, the arguments ARE the input), the server's to
-assign (a full resource), or the operator's to declare (this case)?
+**A DECLARED-identity resource is AIP-shaped, and where it is declared decides whether it is
+writable.** Sometimes a person declares a resource's id by writing a `name:` in a descriptor, and
+the server neither assigns the id nor derives it from a path. A second question separates this case
+from the first two: is the identity the caller's to invent (verb-shaped, the arguments ARE the
+input), the server's to assign (a full resource), or a person's to declare (this case)?
 
-A `Project` is derived from files, so by the question above it sounds verb-shaped. It is not, for
+A `Project` is derived from files, so by the first question it sounds verb-shaped. It is not, for
 two reasons, and `GetDesign(uri)` can claim neither. Its id is DECLARED, so it is not a cache key
 over its arguments: the project keeps its identity when its folder is renamed or moved between
 mounts, and a URI does not. And it is a PARENT (reviews nest under
-`projects/{p}/reviews/{r}`), which a thing with no name cannot be. Mutators are absent because
-creation is genuinely out of scope rather than pending: scaffolding a project means authoring design
-intent, a judgment step with a confidentiality boundary, not a server operation.
+`projects/{p}/reviews/{r}`), which a thing with no name cannot be.
+
+**As amended by agni issue 1692, a declared resource has two homes.** A project or design declared
+in a MOUNTED folder is read-only, with `Get` and `List` and no mutators, since the folder belongs to
+whoever mounted it and the server only reads it. A project or design the server STORES, in a
+writable tree such as `agni serve --store-dir`, is a full resource. A user creates, gets, lists,
+updates and deletes it, and still picks its id (AIP-122). Imagine an engineer with no folder on the
+server who uploads a board's files. Without a stored home, the upload has nothing to be a design of,
+and it is gone at the next restart. A write that names a mounted resource is refused rather than
+written. Scaffolding design intent stays out of scope either way. Writing `intent:` from a design is a
+judgment step with a confidentiality boundary, so the server never generates one, though a user may
+upload an intent they wrote. A later version of a board is a design of its own, and designs that
+name one `series` group as its versions.
 
 **A snapshot is a full resource whose create is a custom method, `Ingest`** (agni issue 1061, AIP-136).
 It is the server's state: a loaded design with its tiers and config resolved, held until it is
@@ -713,9 +722,10 @@ beyond their hash, no lifetime a client can rely on, and nothing to get, list or
 keeps them as a cache it may drop, and an ingest that needs one it dropped says so, so the client
 sends it again.
 
-The read-only carve-out is narrow on purpose. It does NOT license a stateless query to wear a
-`name`; that failure is called out below and is unchanged. It licenses exactly the case where an
-identity exists in the world, was written down by a person, and the server only reads it.
+The declared case is narrow on purpose. It does NOT license a stateless query to wear a `name`;
+that failure is called out below and is unchanged. It licenses exactly the case where an identity
+exists in the world and was written down by a person, in a folder the server reads or in a store the
+server keeps.
 
 **Why:** two conventions in one API is a cost, and this one is deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
 takes a URI, and that one argument IS its whole input, so a resource name would be
@@ -732,7 +742,9 @@ what was never stable, and eventually ask why deleting it does not work.
 
 **Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
 standard methods and no bespoke mutator, meaning the four of them for a server-assigned id (with
-`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one; every rpc
+`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one until the
+stored projects and designs of agni issues 1693 and 1694 add their writes (each owes a test that a
+write to a mounted resource is refused); every rpc
 that reads a design and returns a derived view takes a snapshot and returns no `name`
 (`TestC22AnalysisRequestsNameASnapshot`); a resource's `List` carries `page_size`, `page_token`, and
 `filter`, and its service rejects a filter it does not implement rather than ignoring it

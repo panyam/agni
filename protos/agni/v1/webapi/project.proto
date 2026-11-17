@@ -58,14 +58,12 @@ service ProjectService {
 
 // Project is one declared set of designs that share configuration.
 //
-// It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
-// Scaffolding a project means authoring design intent from a design. That is a judgment step with a
-// confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
-// still AIP-shaped here.
-//
-// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
-// draws the same boundary from the other side. Writing descriptors into a folder an operator named is
-// not a server mutating a mount.
+// One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
+// stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+// The server never generates design intent either way. Writing intent from a design is a judgment
+// step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+// the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+// mount.
 //
 // Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
 // a config tier is added once and every surface gets it (agni issue 224).
@@ -123,9 +121,9 @@ message Design {
   // locate findings on. They are never a second component source to reconcile against the netlist
   // (C21).
   //
-  // Membership is declared per file rather than inferred from "everything beside the entry". A later
-  // revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
-  // rule would turn a diff of two revisions into a diff of one against itself.
+  // Membership is declared per file rather than inferred from "everything beside the entry". An
+  // undeclared netlist beside the entry IS a legitimate analysis source, read exactly as named. An
+  // inferred rule would turn a diff of two netlists into a diff of one against itself.
   repeated string companion_uris = 5;
   // config is this design's own analysis config, which its descriptor declares on top of its
   // project's. It usually has the design's intent and symbol library. It also has any section a board
@@ -134,26 +132,21 @@ message Design {
   // without knowing which tier it holds.
   AnalysisConfig config = 7;
 
-  // revisions are the design's other revisions, each with its own entry and the companions that are
-  // views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
-  // Naming a revision's entry reads it with its own companions, so a later netlist is checked against
-  // its own board rather than none, and a companion is never borrowed from another revision. A file
-  // in the folder that no revision lists still reads exactly as named.
-  repeated DesignRevision revisions = 8;
+  // series groups designs that are versions of one board, such as `memory_unit` (agni issue 1692).
+  // Each version is its own design, in its own folder, with its own entry and companions. Designs that
+  // name one series are listed together, and an empty series means the design stands alone. It is
+  // `series:` in design.yaml.
+  string series = 10;
   // flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
   // that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
   // 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
-  // snapshot cannot turn off what its design declares. It applies to every revision.
+  // snapshot cannot turn off what its design declares.
   bool flatten_hierarchy = 9;
 
-  // intent_uri, which moved into config and is now config.intent.
-  reserved 6;
-}
-
-// DesignRevision is one declared revision of a design: its netlist entry and its own views.
-message DesignRevision {
-  string entry_uri = 1;
-  repeated string companion_uris = 2;
+  // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
+  // designs of their own named by series (agni issue 1692).
+  reserved 6, 8;
+  reserved "revisions";
 }
 
 message GetProjectRequest {

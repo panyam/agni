@@ -41,7 +41,7 @@ type odbPair struct {
 func odbPairs(t *testing.T) []odbPair {
 	pairs := []odbPair{
 		{"../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", "../../examples/common/designs/odb/gateway-layout", false, false},
-		{"../../examples/tutorial-project/designs/gateway/gateway-rev-b.kicad_pcb", "../../examples/common/designs/odb/gateway-rev-b-layout", false, false},
+		{"../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.kicad_pcb", "../../examples/common/designs/odb/gateway-rev-b-layout", false, false},
 		{"../../examples/common/designs/demo-board.kicad_pcb", "../odb/testdata/demo-board", true, false},
 		{"../../examples/common/designs/mixer.kicad_pcb", "../odb/testdata/mixer", false, false},
 		{"../../cmd/agni/testdata/conformance/drc.fires.kicad_pcb", "../odb/testdata/drc.fires", false, false},

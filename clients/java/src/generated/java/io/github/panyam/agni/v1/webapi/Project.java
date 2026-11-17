@@ -9,14 +9,12 @@ package io.github.panyam.agni.v1.webapi;
  * <pre>
  * Project is one declared set of designs that share configuration.
  *
- * It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
- * Scaffolding a project means authoring design intent from a design. That is a judgment step with a
- * confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
- * still AIP-shaped here.
- *
- * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
- * draws the same boundary from the other side. Writing descriptors into a folder an operator named is
- * not a server mutating a mount.
+ * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
+ * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+ * The server never generates design intent either way. Writing intent from a design is a judgment
+ * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+ * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+ * mount.
  *
  * Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
  * a config tier is added once and every surface gets it (agni issue 224).
@@ -485,14 +483,12 @@ private static final long serialVersionUID = 0L;
    * <pre>
    * Project is one declared set of designs that share configuration.
    *
-   * It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
-   * Scaffolding a project means authoring design intent from a design. That is a judgment step with a
-   * confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
-   * still AIP-shaped here.
-   *
-   * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
-   * draws the same boundary from the other side. Writing descriptors into a folder an operator named is
-   * not a server mutating a mount.
+   * One declared in a mounted folder is read-only, and the service has no mutator for it. One the server
+   * stores is writable, and agni issues 1693 and 1694 add its writes (CONSTRAINTS C23, agni issue 1692).
+   * The server never generates design intent either way. Writing intent from a design is a judgment
+   * step with a confidentiality boundary, not a server operation. `agni start` scaffolds a project at
+   * the CLI edge, and writing descriptors into a folder an operator named is not a server mutating a
+   * mount.
    *
    * Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
    * a config tier is added once and every surface gets it (agni issue 224).

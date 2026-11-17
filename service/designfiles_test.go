@@ -67,7 +67,7 @@ func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 		"designs/gateway/gateway.edn",               // the entry
 		"designs/gateway/gateway.kicad_sch",         // the schematic companion
 		"designs/gateway/gateway.kicad_pcb",         // the board companion
-		"designs/gateway/gateway-rev-b.edn",         // a revision, for a diff
+		"designs/gateway/gateway-rev-c.edn",         // a later netlist, for a diff
 		"designs/gateway/design.yaml",               // the design's descriptor
 		"designs/gateway/symbols/gateway.kicad_sym", // the design's own symbol library
 		"project.yaml",                              // the project's descriptor

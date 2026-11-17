@@ -85,11 +85,6 @@ func TestParseDesignRejects(t *testing.T) {
 		{"empty", "", "is empty"},
 		// A revision is declared file by file, and a file belongs to one revision at most, so a board
 		// is never shared between two netlists that differ (agni issue 848).
-		{"revision without entry", "name: g\nentry: a.edn\nrevisions:\n  - companions: [b.kicad_pcb]\n", "revisions[0]: entry is required"},
-		{"revision reuses the entry", "name: g\nentry: a.edn\nrevisions:\n  - entry: a.edn\n", "listed twice"},
-		{"companion shared across revisions", "name: g\nentry: a.edn\ncompanions: [a.kicad_pcb]\nrevisions:\n  - entry: b.edn\n    companions: [a.kicad_pcb]\n", "listed twice"},
-		{"escaping revision", "name: g\nentry: a.edn\nrevisions:\n  - entry: ../b.edn\n", "stay inside"},
-		{"unknown revision field", "name: g\nentry: a.edn\nrevisions:\n  - entry: b.edn\n    companion: [c.kicad_pcb]\n", "field companion not found"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -104,15 +99,27 @@ func TestParseDesignRejects(t *testing.T) {
 	}
 }
 
-func TestParseDesignReadsRevisions(t *testing.T) {
-	_, d, _, err := ParseDesign(strings.NewReader("name: g\nentry: a.edn\ncompanions: [a.kicad_pcb]\nrevisions:\n  - entry: ./b.edn\n    companions: [b.kicad_pcb]\n  - entry: c.edn\n"))
+// A later version of a board is a design of its own, in its own folder (agni 1692). An old
+// descriptor still listing revisions fails where the key sits, and says where each one goes.
+func TestParseDesignRefusesRevisions(t *testing.T) {
+	_, _, _, err := ParseDesign(strings.NewReader("name: g\nentry: a.edn\nrevisions:\n  - entry: b.edn\n"))
+	if err == nil {
+		t.Fatal("a design listing revisions read, want an error")
+	}
+	for _, want := range []string{"line 4", "give each revision its own folder (agni 1692)"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want it to mention %q", err, want)
+		}
+	}
+}
+
+func TestParseDesignReadsSeries(t *testing.T) {
+	_, d, _, err := ParseDesign(strings.NewReader("name: g-rev-b\nseries: g\nentry: a.edn\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	revs := d.GetRevisions()
-	if len(revs) != 2 || revs[0].GetEntryUri() != "b.edn" || len(revs[0].GetCompanionUris()) != 1 || revs[0].GetCompanionUris()[0] != "b.kicad_pcb" ||
-		revs[1].GetEntryUri() != "c.edn" || len(revs[1].GetCompanionUris()) != 0 {
-		t.Errorf("revisions = %v, want b.edn with b.kicad_pcb, then c.edn alone", revs)
+	if d.GetSeries() != "g" {
+		t.Errorf("series = %q, want g", d.GetSeries())
 	}
 }
 
@@ -142,7 +149,7 @@ func TestParseProjectRefusesADesignsKeys(t *testing.T) {
 	for _, doc := range []string{
 		"name: p\nentry: a.edn\n",
 		"name: p\ncompanions: [a.kicad_pcb]\n",
-		"name: p\nrevisions:\n  - entry: b.edn\n",
+		"name: p\nseries: g\n",
 		"name: p\nflatten_hierarchy: true\n",
 	} {
 		_, _, _, err := ParseProject(strings.NewReader(doc))

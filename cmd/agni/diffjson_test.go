@@ -10,6 +10,12 @@ import (
 
 const tutorialGateway = "../../examples/tutorial-project/designs/gateway/"
 
+// tutorialDesigns is the tutorial project's designs folder, holding one folder per design.
+const tutorialDesigns = "../../examples/tutorial-project/designs/"
+
+// tutorialRevB is rev B of the tutorial board, a design of its own (agni 1692).
+const tutorialRevB = "../../examples/tutorial-project/designs/gateway-rev-b/gateway-rev-b.edn"
+
 func diffJSON(t *testing.T, args ...string) *webapi.DiffDesignsResponse {
 	t.Helper()
 	out := runCLI(t, diffCmd(), append([]string{"--format", "json"}, args...)...)
@@ -24,7 +30,7 @@ func diffJSON(t *testing.T, args ...string) *webapi.DiffDesignsResponse {
 // DiffDesigns rpc returns, sheet and placement maps included, because the command now calls the
 // service rather than converting a diff of its own.
 func TestDiffJSONCarriesTheSheetMaps(t *testing.T) {
-	resp := diffJSON(t, tutorialGateway+"gateway.edn", tutorialGateway+"gateway-rev-b.edn")
+	resp := diffJSON(t, tutorialGateway+"gateway.edn", tutorialRevB)
 	if len(resp.GetNetSheetsA()) == 0 || len(resp.GetComponentSheetsB()) == 0 {
 		t.Errorf("net_sheets_a has %d entries and component_sheets_b %d, want both filled", len(resp.GetNetSheetsA()), len(resp.GetComponentSheetsB()))
 	}
@@ -45,7 +51,7 @@ func TestDiffJSONAsksTheServiceForNearRenames(t *testing.T) {
 		}
 		return n
 	}
-	b, c := tutorialGateway+"gateway-rev-b.edn", tutorialGateway+"gateway-rev-c.edn"
+	b, c := tutorialRevB, tutorialGateway+"gateway-rev-c.edn"
 	if n := count(diffJSON(t, b, c)); n != 0 {
 		t.Errorf("without --rename-approx: %d renamed-approx entries, want 0", n)
 	}
@@ -58,7 +64,7 @@ func TestDiffJSONAsksTheServiceForNearRenames(t *testing.T) {
 // json (through the service), net-equal rows to the csv, and a count to the text, and changes none
 // of them without the flag.
 func TestDiffIncludeEqual(t *testing.T) {
-	a, b := tutorialGateway+"gateway.edn", tutorialGateway+"gateway-rev-b.edn"
+	a, b := tutorialGateway+"gateway.edn", tutorialRevB
 	equal := 0
 	for _, n := range diffJSON(t, "--include-equal", a, b).GetReport().GetNets() {
 		if n.GetKind() == "equal" {

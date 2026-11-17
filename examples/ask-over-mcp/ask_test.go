@@ -43,7 +43,7 @@ func TestTheWalkthroughAnswersAsItSays(t *testing.T) {
 		}
 	}
 	want := map[string][]string{
-		"designs": {"ex/designs/gateway", "revision: ex/designs/gateway/gateway-rev-b.edn"},
+		"designs": {"ex/designs/gateway", "ex/designs/gateway-rev-b", "series: gateway"},
 		"look":    {"net.has_test_point("},
 		"query":   {"query: net.rail(?net), not net.has_test_point(?net) => ?net", "| provenance |", "no viewer link:"},
 		"trace":   {"J1", "U1", "route"},

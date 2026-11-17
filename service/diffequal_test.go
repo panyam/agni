@@ -14,12 +14,12 @@ import (
 // one entry covering two names. Without it the response is unchanged, and the status maps never list
 // equal nets.
 func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
-	base := filepath.Join("..", "examples", "tutorial-project", "designs", "gateway")
+	base := filepath.Join("..", "examples", "tutorial-project", "designs")
 	svc := NewDiffService(fsQueryLoader{base: base}, nil)
 	ask := func(equal bool) *webapi.DiffDesignsResponse {
 		t.Helper()
 		resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-			ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b.edn"), IncludeEqual: equal,
+			ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway/gateway.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b/gateway-rev-b.edn"), IncludeEqual: equal,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -43,7 +43,7 @@ func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
 		t.Fatal("no equal nets on a revision pair that shares most of its nets, so the sum below proves nothing")
 	}
 	names := map[string]bool{}
-	for _, uri := range []string{"gateway.edn", "gateway-rev-b.edn"} {
+	for _, uri := range []string{"gateway/gateway.edn", "gateway-rev-b/gateway-rev-b.edn"} {
 		qs := NewQueryService(fsQueryLoader{base: base}, nil, nil)
 		r, err := qs.RunQuery(context.Background(),
 			&webapi.RunQueryRequest{Snapshot: snapOf(t, qs.Snapshots(), "mount://m/"+uri), Query: `entity(?n, "net") => ?n`})

@@ -3,7 +3,7 @@
 # and the CLI's agree.
 folder: ../../tutorial-project
 design: designs/gateway
-revision: designs/gateway/gateway-rev-b.edn
+revision: designs/gateway-rev-b/gateway-rev-b.edn
 questions:
   - ask: Which I2C nets have no pull-up, and which rail would one go to?
     calls:

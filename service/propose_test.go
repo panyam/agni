@@ -86,18 +86,18 @@ func TestProposeEdifPairsANetlistWithItsSchematic(t *testing.T) {
 	}
 }
 
-// Two netlists in one drop are two revisions of one design, never merged into one read.
-func TestProposeTwoNetlistsAreRevisionsNotOneDesign(t *testing.T) {
+// Two netlists in one drop are two versions, and each version is a design in its own folder (agni
+// 1692). The proposal reads one and names the other to move out, never merging the two.
+func TestProposeTwoNetlistsNameTheOtherToMoveOut(t *testing.T) {
 	d := onlyDesign(t, propose(t, map[string]string{"x-rev-a.edn": "", "x-rev-a.eds": "", "x-rev-b.edn": ""}))
 	if d.GetDesign().GetEntryUri() != "mount://m/x-rev-a.edn" {
 		t.Errorf("entry %s, want the netlist with a schematic beside it", d.GetDesign().GetEntryUri())
 	}
-	revs := d.GetDesign().GetRevisions()
-	if len(revs) != 1 || revs[0].GetEntryUri() != "mount://m/x-rev-b.edn" || len(revs[0].GetCompanionUris()) != 0 {
-		t.Errorf("revisions %v", revs)
+	if strings.Contains(d.GetDesignYaml(), "x-rev-b") || strings.Contains(d.GetDesignYaml(), "revisions") {
+		t.Errorf("descriptor names the other netlist:\n%s", d.GetDesignYaml())
 	}
-	if !strings.Contains(d.GetDesignYaml(), "revisions:\n  - entry: x-rev-b.edn") || !strings.Contains(d.GetNote(), "revisions") {
-		t.Errorf("descriptor or note does not say so:\n%s\n%s", d.GetDesignYaml(), d.GetNote())
+	if !strings.Contains(d.GetNote(), "x-rev-b.edn") || !strings.Contains(d.GetNote(), "own folder") {
+		t.Errorf("note = %q, want it to name x-rev-b.edn and say it goes in its own folder", d.GetNote())
 	}
 }
 

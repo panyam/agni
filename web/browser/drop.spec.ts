@@ -113,7 +113,7 @@ describe("dropping files on the Load page", () => {
       const yaml = await dialog.locator(".drop-design-yaml").first().inputValue();
       expect(yaml).toContain("entry: gateway.edn");
       expect(yaml).toContain("  - gateway.kicad_sch");
-      expect(yaml).toContain("revisions:");
+      expect(yaml).not.toContain("gateway-rev-c");
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);

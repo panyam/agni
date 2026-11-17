@@ -25,7 +25,8 @@ deployment mounting a mixed set applied one team's config to every design it rea
 
 ```
 projects/gateway                      a set of designs that share configuration
-└── designs/gateway                   one design: an entry, and companion views of it
+├── designs/gateway                   one design: an entry, and companion views of it
+└── designs/gateway-rev-b             a later version of the same board, a design of its own
 ```
 
 A **project** owns what is shared across designs: the team's naming vocabulary, its interface
@@ -34,8 +35,8 @@ which file is the analysis source, which files are views of it, its design inten
 it belongs to.
 
 Both descriptors share ONE schema (agni issue 1136), and the file's name says which role it plays.
-Only a design names its own files (`entry`, `companions`, `revisions`, `flatten_hierarchy`), and any
-of those in a `project.yaml` is a load error. Every other section is open to both, and a design's
+Only a design names its own files (`entry`, `companions`, `flatten_hierarchy`) and its `series`,
+and any of those in a `project.yaml` is a load error. Every other section is open to both, and a design's
 own layer goes on top of its project's, so a board kept under an older naming scheme carries its own
 `conventions:` and a board with a peculiarity adds a checklist. Before 1136 the two had separate
 schemas, and a design could carry only its intent and symbols. That split said nothing about what
@@ -125,23 +126,30 @@ component set is the entry's.
 {{ includeFile "figures/design-entry-companions.svg" }}
 
 Companions are declared **file by file**, never inferred from "everything beside the entry". A later
-revision of the netlist sits in the same folder and is a legitimate analysis source in its own
-right; an inferred rule would turn a diff of two revisions into a diff of one against itself.
+netlist that sits in the same folder is a legitimate analysis source in its own right; an inferred
+rule would turn a diff of two netlists into a diff of one against itself.
 
-A later revision is declared the same way, under `revisions`, each with its own entry and its own
-companions (agni issue 848):
+**A later version of a board is a design of its own, in its own folder** (agni issue 1692). Rev B of
+the gateway has its own netlist and its own board, so it lives in `designs/gateway-rev-b` with its
+own `design.yaml`. Both descriptors name the same `series`, and the series is how a listing knows
+the two are versions of one board:
 
 ```yaml
-revisions:
-  - entry: gateway-rev-b.edn
-    companions: [gateway-rev-b.kicad_pcb]
+# designs/gateway-rev-b/design.yaml
+name: gateway-rev-b
+series: gateway
+extends: ../../project.yaml
+entry: gateway-rev-b.edn
+companions: [gateway-rev-b.kicad_pcb]
 ```
 
-Naming a revision's entry, or one of its companions, reads that revision with its own views, so rev
-B's board-tier rules run against rev B's copper. A file belongs to one revision at most, so a board
-is never borrowed by a netlist it was not drawn for. A revision with no board declared, or one not
-declared at all, reads with none, and a check of it says on stderr which board-tier rules did not
-run, since "no copper was read" and "the copper is clean" otherwise look the same.
+Rev B's board-tier rules then run against rev B's copper, and a board is never borrowed by a netlist
+it was not drawn for. Until 1692 a `design.yaml` listed its later versions under `revisions:` in the
+same folder. That gave one folder several entries and a resolver rule to pick between them, and a
+server that stores designs has no folder to share. A `design.yaml` still carrying `revisions:` fails
+to load at that line. A netlist declared nowhere, such as the gateway's rev C, reads with no board,
+and a check of it says on stderr which board-tier rules did not run, since "no copper was read" and
+"the copper is clean" otherwise look the same.
 
 At the CLI it looks like this.
 
@@ -149,7 +157,7 @@ At the CLI it looks like this.
 agni check designs/gateway                    # names the DESIGN: the entry's netlist, the companion's copper
 agni check designs/gateway/gateway.kicad_pcb  # names a companion: reads the entry, and says so
 agni check designs/gateway/gateway.edn        # names the ENTRY: the same design, so the same tiers
-agni check designs/gateway/gateway-rev-b.edn  # names a declared REVISION: rev B's netlist, rev B's copper
+agni check designs/gateway-rev-b              # names ANOTHER design: rev B's netlist, rev B's copper
 agni check designs/gateway/gateway-rev-c.edn  # names an undeclared sibling: exactly that file, no board
 ```
 
@@ -364,17 +372,25 @@ descriptor's mtime and size, and an edit shows on the next request (agni issue 1
 operator fixes a design's entry and the index still answers with the old one. That is a silent
 wrong answer.
 
-## Read-only, on purpose
+## Mounted is read-only, stored is writable
 
-There is no `CreateProject`, and its absence is not a gap waiting to be filled. Scaffolding a
-project means authoring design intent from a design, which is a judgment step with a confidentiality
-boundary rather than a server operation. Read-side resolution unblocks everything else;
-mutating a project's files raises ownership, concurrency, and provenance questions that nothing here
-needs answered.
+Where a project or design is declared decides whether the server may change it (agni issue 1692).
+One declared in a MOUNTED folder is read-only. The folder belongs to whoever mounted it, and the
+server only reads it. One the server STORES, in a writable tree it was given, is a full resource, and
+a user creates, updates and deletes it over the wire. Picture an engineer with no folder on the
+server who uploads a board's schematic and layout. The server has to keep them somewhere, under a
+name, across a restart, and a stored design is that place.
 
-That makes `Project` and `Design` the read-only-resource case in
-[C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), AIP-shaped resources with `Get` and `List`
-and no mutators.
+Mission #1691 builds the stored half: a store port that can write (#1693), the methods on the wire
+(#1694), and a CLI and viewer that use them.
+
+Scaffolding design intent is still not a server operation. Writing `intent:` from a design is a
+judgment step with a confidentiality boundary, so the server never generates one. A user may upload
+an intent they wrote, as part of a project or design.
+
+That makes `Project` and `Design` the declared-identity case in
+[C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), with two homes. A mounted one has
+`Get` and `List`. A stored one has every standard method.
 
 ## Every surface has to HOLD the resolver, and a missing one is silent
 

@@ -114,11 +114,11 @@ func TestDiffCSVIsTheTabulatedTable(t *testing.T) {
 		a, b  string
 		flags []string
 	}{
-		{"unchanged nets", "gateway.edn", "gateway-rev-b.edn", []string{"--include-equal"}},
-		{"near renames", "gateway-rev-b.edn", "gateway-rev-c.edn", []string{"--rename-approx"}},
+		{"unchanged nets", "gateway/gateway.edn", "gateway-rev-b/gateway-rev-b.edn", []string{"--include-equal"}},
+		{"near renames", "gateway-rev-b/gateway-rev-b.edn", "gateway/gateway-rev-c.edn", []string{"--rename-approx"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			a, b := tutorialGateway+tc.a, tutorialGateway+tc.b
+			a, b := tutorialDesigns+tc.a, tutorialDesigns+tc.b
 			var resp webapi.DiffDesignsResponse
 			js := runCLI(t, diffCmd(), append([]string{a, b, "--format", "json"}, tc.flags...)...)
 			if err := protojson.Unmarshal([]byte(js), &resp); err != nil {

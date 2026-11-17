@@ -43,10 +43,10 @@ coverage: ## Per-area rollup: how many items each area actually decided
 	@$(AGNI) review $(DIR) --checklist review $(TIERS) --coverage
 
 diff: ## Structural diff of the two bundled revisions
-	@$(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway-rev-b.edn
+	@$(AGNI) diff $(DIR)/gateway.edn designs/gateway-rev-b/gateway-rev-b.edn
 
 diff-approx: ## Diff rev B against rev C, pairing the net it renamed and rewired
-	@$(AGNI) diff --rename-approx $(DIR)/gateway-rev-b.edn $(DIR)/gateway-rev-c.edn
+	@$(AGNI) diff --rename-approx designs/gateway-rev-b/gateway-rev-b.edn $(DIR)/gateway-rev-c.edn
 
 report: ## Write the review as a self-contained results document you can re-render later
 	@mkdir -p reports/$(DESIGN)

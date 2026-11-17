@@ -1,0 +1,24 @@
+# Rev B of the gateway board, a design of its own (agni 1692). It adds the two I2C pull-ups R4 and R5,
+# so its board is not rev A's, and it reads with its own board below. It names the gateway's series,
+# so a listing shows the two as versions of one board, and `make diff` compares them.
+name: gateway-rev-b
+title: Sample Board, rev B
+series: gateway
+extends: ../../project.yaml
+symbols: [../gateway/symbols]
+entry: gateway-rev-b.edn
+companions:
+  - gateway-rev-b.kicad_pcb
+
+# Rev B is meant to be the same board as rev A, so it declares the same intent, including the
+# deliberately wrong core domain that ../gateway/design.yaml explains.
+intent:
+  modules:
+    - {name: regulators, class: regulator, count: 2}
+    - {name: connectors, class: connector, count: 1}
+    - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+    - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}
+  nets:
+    PMIC_MAIN_12V0: {nominal: 12.0, domain: main}
+    PMIC_CORE_3V3: {nominal: 3.3, domain: io}
+    PMIC_IO_1V8: {nominal: 3.3, domain: core}

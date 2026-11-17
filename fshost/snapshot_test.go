@@ -148,7 +148,7 @@ func TestABoardOnlyUpdateKeepsTheNetlistItRead(t *testing.T) {
 		t.Fatalf("the ingest's board is %q, read %v; want the declared board, read", s.GetTiers().GetBoardUri(), s.GetTiers().GetBoardRead())
 	}
 	reads := f.host.reads.Load()
-	other := "mount://m/designs/gateway/gateway-rev-b.kicad_pcb"
+	other := "mount://m/designs/gateway-rev-b/gateway-rev-b.kicad_pcb"
 	u, err := f.snaps.UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
 		Snapshot:   &webapi.Snapshot{Name: s.GetName(), BoardUri: other},
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"board_uri"}},
@@ -231,7 +231,7 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 func TestAnEvictedSnapshotIsIngestedAgain(t *testing.T) {
 	f := newSnapFixture(t, 1)
 	a := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
-	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway/gateway-rev-b.edn"}})
+	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway-rev-b/gateway-rev-b.edn"}})
 	if err := f.checkDesign(a.GetName()); err != nil {
 		t.Fatalf("a check of an evicted snapshot answered %v; want it ingested again and answered", err)
 	}
@@ -318,7 +318,7 @@ func TestARefreshingSnapshotAnswersAfterAChangeAndSaysSo(t *testing.T) {
 func TestListSnapshotsFiltersByURI(t *testing.T) {
 	f := newSnapFixture(t, 0)
 	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
-	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway/gateway-rev-b.edn"}})
+	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway-rev-b/gateway-rev-b.edn"}})
 	all, err := f.snaps.ListSnapshots(context.Background(), &webapi.ListSnapshotsRequest{})
 	if err != nil || len(all.GetSnapshots()) != 2 {
 		t.Fatalf("listed %d snapshots (%v), want both", len(all.GetSnapshots()), err)
