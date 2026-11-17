@@ -42,7 +42,7 @@ import { type Members, areaSelection, emptyMembers, membersIn, membersOf, size, 
 import { compareButton } from "./compare.js";
 import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
 import { fetchMeshes } from "./stackmeshes.js";
-import { designClient, checksClient, lexiconClient, diffClient, queryClient, reviewClient, workspaceClient,
+import { designViewClient, checksClient, lexiconClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, tableClient, snapshots,
 } from "./api.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
@@ -55,7 +55,7 @@ import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { SheetViews } from "./sheetviews.js";
 import { glDrawing, parseTurn, turnKey, type Located, type SheetPane } from "./sheetpane.js";
 import { chooseSheet } from "./sheetfollow.js";
-import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
 import { BOARD_PARAM, appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withBoard, withFlatten, type ViewerLocation } from "./router.js";
 import { pickBoard } from "./boardpicker.js";
@@ -328,7 +328,7 @@ class AppRoot extends BaseComponent {
     const diffChanges = diffChangesPanelIsland(diffChangesEl, this._eventBus, {
       onSelect: (id, pair) => void diffPresenter.selectItem(id, pair),
     });
-    const diffPresenter = new DiffPresenter(diffClient(), designClient(), diffView, (s) => {
+    const diffPresenter = new DiffPresenter(diffClient(), designViewClient(), diffView, (s) => {
       diffPanel.view.setState(s);
       diffChanges.view.setState(s);
       tablesPresenter.setCompareOpen(s.active && s.error === "");
@@ -699,12 +699,12 @@ class AppRoot extends BaseComponent {
     // adds the board only while the board is on screen, since this worker has read the board then, and
     // asking on a schematic would read a large board for one panel row (agni issue 943).
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
-      getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
+      getSummary: async (uri, readMask) => designViewClient().getSummary({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
       drawn: () => surface.drawn(),
       drawnOn: async (uri, sel) => {
         const subject = subjectOf(sel);
         if (!subject) return [];
-        const resp = await designClient().locateSubjects({
+        const resp = await designViewClient().locateSubjects({
           snapshot: await snapshots().of(uri, presenter.overlayConfig()),
           subjects: [subject],
           board: propertiesPresenter.activeSheetId() === "board",
@@ -756,7 +756,7 @@ class AppRoot extends BaseComponent {
     const drawnOnFor = async (sel: Selection, board: boolean): Promise<Located> => {
       const subject = subjectOf(sel);
       if (!subject) return { sheets: [] };
-      const resp = await designClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects: [subject], board });
+      const resp = await designViewClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects: [subject], board });
       const got = resp.subjects[0];
       const sheets = got?.sheetIds ?? [];
       if (!board || !got || !sheets.includes("board")) return { sheets };
@@ -810,7 +810,7 @@ class AppRoot extends BaseComponent {
     const stopsOf = async (sel: Selection): Promise<string[]> => {
       const subjects = (sel.kind === "area" ? areaSubjects(sel) : [subjectOf(sel)]).filter((s): s is NonNullable<typeof s> => s !== null);
       if (subjects.length === 0) return [];
-      const resp = await designClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects, board: false });
+      const resp = await designViewClient().locateSubjects({ snapshot: await presenter.drawing().snapshot, subjects, board: false });
       return [...new Set(resp.subjects.flatMap((s) => s.sheetIds))];
     };
     // canvasStops holds the last answer for the canvas's sheet steps, so its place reads at once.
@@ -911,7 +911,7 @@ class AppRoot extends BaseComponent {
           if (sheetId === "board") void refreshAgreement();
           const d = presenter.drawing();
           const format = mode === "webgl" ? SheetFormat.PACKED : SheetFormat.SVG;
-          const resp = await designClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format });
+          const resp = await designViewClient().getSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format });
           return {
             svg: resp.content.case === "svg" ? resp.content.value : "",
             packed: resp.content.case === "packed" ? resp.content.value : undefined,
@@ -927,14 +927,14 @@ class AppRoot extends BaseComponent {
         boardRenderer: () => gpuMode,
         overlay: async (sheetId, specs) => {
           const d = presenter.drawing();
-          const resp = await designClient().highlightSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG, specs });
+          const resp = await designViewClient().highlightSheet({ snapshot: await d.snapshot, sheet: sheetId, layout: d.layout, symbols: d.symbols, format: SheetFormat.SVG, specs });
           return resp.content.case === "svg" ? resp.content.value : "";
         },
         drawnOn: drawnOnFor,
         // The board look's part models, fitted to the Quality control's budget (agni issue 1652).
         meshes: async (maxTriangles) => {
           const snapshot = await presenter.drawing().snapshot;
-          return fetchMeshes((pageToken) => designClient().getBoardMeshes({ snapshot, maxTriangles: BigInt(maxTriangles), pageToken }));
+          return fetchMeshes((pageToken) => designViewClient().getBoardMeshes({ snapshot, maxTriangles: BigInt(maxTriangles), pageToken }));
         },
         stops: (sel) => stopsOf(sel),
         history: { back: () => stepHistory(-1), forward: () => stepHistory(1) },
@@ -1029,7 +1029,7 @@ class AppRoot extends BaseComponent {
     // and lights the route through the same highlight stack a query cell and a verdict use.
     // The walk kinds a part offers come from the engine once per page, so the panel keeps no list of
     // its own (agni issue 1341). A host that cannot answer offers no walk.
-    void designClient()
+    void designViewClient()
       .listWalkKinds({})
       .then((r) => properties.view.setWalkKinds?.(r.kinds.map((k) => ({ name: k.name, title: k.title, summary: k.summary }))))
       .catch(() => {});
@@ -1135,7 +1135,7 @@ class AppRoot extends BaseComponent {
     // (the file tree left this page in WS9-049). The Sheets overview panel takes its own `overview`
     // channel.
     const presenter = new ViewerPresenter(
-      designClient(),
+      designViewClient(),
       checksClient(),
       canvasPort,
       renderView,

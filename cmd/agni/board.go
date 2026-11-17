@@ -15,7 +15,7 @@ import (
 )
 
 // boardCmd writes a design's board geometry, the same agni.v1.geom.BoardGeometry that
-// DesignService.GetBoardGeometry serves (agni issue 1634). The text form counts what the board
+// DesignViewService.GetBoardGeometry serves (agni issue 1634). The text form counts what the board
 // holds. --format json and --format binary write the whole message, for a front end that draws it
 // or a test that compares against it. docsite/content/build/board-geometry.md says what it means.
 //

@@ -8,18 +8,18 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func statsJSONOf(t *testing.T, args ...string) *webapi.GetDesignResponse {
+func statsJSONOf(t *testing.T, args ...string) *webapi.GetSummaryResponse {
 	t.Helper()
 	out := runCLI(t, statsCmd(), append([]string{tutorialGateway + "gateway.edn", "--format", "json"}, args...)...)
-	var resp webapi.GetDesignResponse
+	var resp webapi.GetSummaryResponse
 	if err := protojson.Unmarshal([]byte(out), &resp); err != nil {
-		t.Fatalf("not a GetDesignResponse: %v\n%s", err, out)
+		t.Fatalf("not a GetSummaryResponse: %v\n%s", err, out)
 	}
 	return &resp
 }
 
 // TestStatsJSONIsGetDesign covers agni issue 836 from the CLI. `stats --format json` is the message
-// GetDesign returns, the summary alone by default and the IR when --mask asks for it.
+// GetSummary returns, the summary alone by default and the IR when --mask asks for it.
 func TestStatsJSONIsGetDesign(t *testing.T) {
 	sum := statsJSONOf(t)
 	if sum.GetComponentCount() == 0 || sum.GetDesign() != nil {

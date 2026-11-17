@@ -6,7 +6,7 @@ import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { create } from "@bufbuild/protobuf";
 import { OverlayConfigSchema, type OverlayConfig } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import { PackedSheetSchema, type PackedSheet } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
-import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 
 // packedSheet is a packed sheet naming the side and sheet it came from, 1000 by 800 world units.
 function packedSheet(id: string): PackedSheet {
@@ -40,7 +40,7 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
     }));
   // Each side's design carries its path so per-side requests are distinguishable; the layout
   // echoes a per-path value to prove renderSide uses each side's own effective layout.
-  const getDesign = vi.fn(async (req: { snapshot: string }) => ({
+  const getSummary = vi.fn(async (req: { snapshot: string }) => ({
     layout: `layout-${snapPath(req.snapshot)}`,
     sheets: [
       { id: "s1", name: "Top" },
@@ -88,7 +88,7 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
   const states: DiffState[] = [];
   const presenter = new DiffPresenter(
     { diffDesigns } as never,
-    { getDesign, getSheet, highlightSheet } as never,
+    { getSummary, getSheet, highlightSheet } as never,
     view,
     (s) => states.push(s),
     fakeSnapshots(),
@@ -97,7 +97,7 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: Overl
   );
   const A = { mount: "m", path: "a.edn" };
   const B = { mount: "m", path: "b.edn" };
-  return { presenter, diffDesigns, getDesign, getSheet, highlightSheet, a, b, setBusy, setOverlayMode, states, A, B };
+  return { presenter, diffDesigns, getSummary, getSheet, highlightSheet, a, b, setBusy, setOverlayMode, states, A, B };
 }
 
 function last(states: DiffState[]): DiffState {
@@ -264,7 +264,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: {},
       })),
     });
-    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+    h.getSummary.mockImplementation(async (req: { snapshot: string }) => ({
       layout: `layout-${snapPath(req.snapshot)}`,
       sheets: [
         { id: "s1", name: "Top" },
@@ -297,7 +297,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: { "/sub/OUT": { ids: ["s2"] } },
       })),
     });
-    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+    h.getSummary.mockImplementation(async (req: { snapshot: string }) => ({
       layout: `layout-${snapPath(req.snapshot)}`,
       sheets: [
         { id: "s1", name: "Top" },
@@ -329,7 +329,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: { "/DCDC/FAN_PWM": { ids: ["s1", "s2", "s3"] } },
       })),
     });
-    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+    h.getSummary.mockImplementation(async (req: { snapshot: string }) => ({
       layout: `layout-${snapPath(req.snapshot)}`,
       sheets: [
         { id: "s1", name: "Top" },
@@ -351,7 +351,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
 
   it("takes a net from a sub-sheet that doesn't show it to a sub-sheet that does, past the top", async () => {
     const h = crossingNet();
-    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+    h.getSummary.mockImplementation(async (req: { snapshot: string }) => ({
       layout: `layout-${snapPath(req.snapshot)}`,
       sheets: [
         { id: "s1", name: "Top" },
@@ -378,7 +378,7 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: { "/SoM_Power/VIN": { ids: ["s1", "s3"] } },
       })),
     });
-    h.getDesign.mockImplementation(async (req: { snapshot: string }) => ({
+    h.getSummary.mockImplementation(async (req: { snapshot: string }) => ({
       layout: `layout-${snapPath(req.snapshot)}`,
       sheets: [
         { id: "s1", name: "Top" },

@@ -97,7 +97,7 @@ type AnnotationStore interface {
 
 // DatasheetService serves a datasheet's doc-IR and its saved PartSpec to the extraction workbench
 // (the /datasheets page, WS13-006) over injected ports (CONSTRAINTS C13). It is the document
-// analogue of DesignService, plus the manual backend's read/write side for the shared PartSpec.
+// analogue of DesignViewService, plus the manual backend's read/write side for the shared PartSpec.
 // It performs no file I/O and knows no transport. Directory listing goes through the engine's
 // WorkspaceService over the same Workspace port, so the workbench's folder tree answers exactly as
 // the viewer's does. Per-user workbench UI state is kept in the client (localStorage), never here.

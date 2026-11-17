@@ -4,7 +4,7 @@
 // A canvas click used to write a query into the query panel and run it. That mixed looking around
 // with asking a question, and it overwrote whatever the reader had typed. A click now selects. This
 // module describes the selection from data already in the viewer, namely the design's own IR (one
-// masked GetDesign per open), the findings of the run on screen, and the datasheet join. Asking a
+// masked GetSummary per open), the findings of the run on screen, and the datasheet join. Asking a
 // question about the selection is a separate act. An Ask row opens the served question in a query
 // tab.
 //
@@ -15,7 +15,7 @@
 import type { Component, Design, Net } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
 import { ClassSource, Role } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
 import type { PartSpec } from "@panyam/agni-client/gen/agni/v1/param/param_pb";
-import type { ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { checkedState, findingsFor, type FindingItem, type FindingsState, type VerdictItem } from "./findings.js";
 import type { EntityQueryItem } from "./query.js";
 import { labelFor, type Selection } from "./selection.js";
@@ -62,7 +62,7 @@ export interface Inventory {
   unexpanded: { name: string; instances: number }[];
 }
 
-// INVENTORY_PATHS is the read_mask for the one GetDesign Properties makes per open. It names the
+// INVENTORY_PATHS is the read_mask for the one GetSummary Properties makes per open. It names the
 // fields the panel shows and nothing else, so provenance and section attributes are left on the
 // server. On the largest seed the masked answer is about 1.8 MB of JSON, against 3.9 MB for the
 // three collections whole.

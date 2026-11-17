@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { type ReviewState, findingKey } from "./review.js";
 import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
@@ -46,7 +46,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const wireClients = opts.wireClients !== false;
   const wireConventionBar = opts.wireConventionBar !== false;
   const client = {
-    getDesign: vi.fn(async () => ({
+    getSummary: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["faithful"],
     })),
@@ -545,7 +545,7 @@ describe("review presenter — locating a finding", () => {
 
   async function twoSheets() {
     const h = harness();
-    h.client.getDesign.mockResolvedValue({
+    h.client.getSummary.mockResolvedValue({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }], nativeAvailable: false, availableLayouts: ["faithful"],
     });

@@ -29,8 +29,8 @@ func TestABoardOnlyDesignListsItsBoardAlone(t *testing.T) {
 	d, g, b := locateFixture()
 	for _, uri := range []string{"mount://m/x.brd", "mount://m/x.PcbDoc", "mount://m/x.xml", "mount://m/x.tgz", "mount://m/x.kicad_pcb"} {
 		reads := 0
-		svc := NewDesignService(geomCountingLoader{fakeLoader{design: d, geom: g, board: b}, &reads}, noNative{}, render.DefaultStyle, nil)
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), uri)})
+		svc := NewDesignViewService(geomCountingLoader{fakeLoader{design: d, geom: g, board: b}, &reads}, noNative{}, render.DefaultStyle, nil)
+		resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), uri)})
 		if err != nil {
 			t.Fatalf("%s: %v", uri, err)
 		}
@@ -56,8 +56,8 @@ func TestABoardOnlyDesignListsItsBoardAlone(t *testing.T) {
 // A netlist with no board keeps its auto-layout, since that is the only drawing it has.
 func TestANetlistWithNoBoardKeepsItsAutoLayout(t *testing.T) {
 	d, g, _ := locateFixture()
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.DefaultStyle, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestABoardOnlyDesignLocatesOnItsBoard(t *testing.T) {
 	const uri = "mount://m/x.brd"
 	board := []string{boardSheetID}
 
-	designs := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	designs := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	loc, err := designs.LocateSubjects(ctx, &webapi.LocateSubjectsRequest{
 		Snapshot: snapOf(t, designs.Snapshots(), uri), Subjects: []*checkspb.Subject{part("U1"), netNamed("N1")},
 	})

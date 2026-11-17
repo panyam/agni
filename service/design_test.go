@@ -447,7 +447,7 @@ func TestHighlightSheet(t *testing.T) {
 			}},
 		}},
 	}
-	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
 	specs := []*geom.HighlightSpec{{Components: []string{"R1"}, Nets: []string{"NET1"}, Color: "#ff0000"}}
 
 	// PACKED (the default): primitives 0 (NET1 wire), 1 (R1 rect), 2 (R1 pin).
@@ -537,7 +537,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}
 }
 
-// boardLoader is a fakeLoader whose file also has a board sidecar (a .kicad_pcb). GetDesign
+// boardLoader is a fakeLoader whose file also has a board sidecar (a .kicad_pcb). GetSummary
 // must list the synthetic board sheet after the drawable ones, and GetSheet/HighlightSheet
 // must answer for it, SVG from BoardSVG and PACKED from PackBoard (WS7-035).
 type boardLoader struct {
@@ -564,7 +564,7 @@ func testBoard() *geom.BoardGeometry {
 // schematicWithBoard ingests a design whose schematic draws its sheets and whose board is a companion.
 // A board opened on its own lists the board alone (agni issue 1466), so a test of the sheets a
 // schematic lists before its board opens one of these.
-func schematicWithBoard(t *testing.T, svc *DesignService) string {
+func schematicWithBoard(t *testing.T, svc *DesignViewService) string {
 	t.Helper()
 	return ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/x.kicad_sch", BoardUri: "mount://m/x.kicad_pcb"})
 }
@@ -574,8 +574,8 @@ func TestGetDesignListsBoardSheet(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph", Name: "netlist graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: schematicWithBoard(t, svc)})
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: schematicWithBoard(t, svc)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -602,7 +602,7 @@ func (b countingBoardLoader) Board(ctx context.Context, u artifact.URI) (*geom.B
 	return b.boardLoader.Board(ctx, u)
 }
 
-// TestGetDesignListsTheBoardWithoutReadingIt holds GetDesign to listing the Board sheet from the
+// TestGetDesignListsTheBoardWithoutReadingIt holds GetSummary to listing the Board sheet from the
 // board tier's format alone (agni issue 943). Reading the board here parsed an 85 MB file on every
 // open of the Jetson seed, before the first sheet or the rule catalog could answer.
 func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
@@ -614,8 +614,8 @@ func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
 		},
 		reads: &reads,
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: schematicWithBoard(t, svc)})
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: schematicWithBoard(t, svc)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,7 +623,7 @@ func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
 		t.Fatalf("sheets = %v, want the drawable sheet and the board", resp.GetSheets())
 	}
 	if reads != 0 {
-		t.Errorf("GetDesign read the board %d times to list it, want none", reads)
+		t.Errorf("GetSummary read the board %d times to list it, want none", reads)
 	}
 	// Positive control: the counter does count, since opening the board sheet reads it.
 	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}); err != nil {
@@ -639,7 +639,7 @@ func TestGetSheetBoard(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
 	if err != nil {
 		t.Fatal(err)
@@ -664,7 +664,7 @@ func TestHighlightSheetBoard(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
 		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}},
@@ -693,7 +693,7 @@ func TestBoardJoinsANetByItsSchematicID(t *testing.T) {
 		},
 		board: board,
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	ctx := context.Background()
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")
 	highlight := func(format webapi.SheetFormat, id string) *webapi.HighlightSheetResponse {
@@ -740,8 +740,8 @@ func TestBoardJoinsANetByItsSchematicID(t *testing.T) {
 // asking for one is ErrNotFound. Such a loader returns (nil, nil), since absence is normal.
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -763,7 +763,7 @@ func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 		Wires: []*geom.WireGeometry{{Net: "SIGA", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 100, Y: 0}}}}}},
 	}}}
 	d := &ir.Design{Nets: []*ir.Net{{Id: "n1", Name: "SIGA"}}}
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
 		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Sheet: "P1",
@@ -812,8 +812,8 @@ func uriStr(mount, p string) string {
 func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	g := twoSheetGeom()
 	g.Undrawn = []*geom.UndrawnPlacement{{RefDes: "U1", CellRef: "MCU", LibraryRef: "Acme", SheetId: "P1"}}
-	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
+	svc := NewDesignViewService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -826,8 +826,8 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 
 	// This is the common case. A clean design must report nothing, so a banner is worth reading
 	// when it appears.
-	clean := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	got, err := clean.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, clean.Snapshots(), "mount://m/x.eds")})
+	clean := NewDesignViewService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	got, err := clean.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, clean.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -842,8 +842,8 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 // ref and resolves against an edited design just as readily. By the time the proof paints it is too
 // late to say so (agni issue 392).
 func TestGetDesignReportsContentHash(t *testing.T) {
-	svc := NewDesignService(fakeLoader{geom: twoSheetGeom(), hash: "sha256:abc"}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
+	svc := NewDesignViewService(fakeLoader{geom: twoSheetGeom(), hash: "sha256:abc"}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,11 +857,11 @@ func TestGetDesignReportsContentHash(t *testing.T) {
 // response's contract makes that a THIRD state, distinct from a match, so the viewer reports "could
 // not check" rather than waving the link through.
 func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
-	svc := NewDesignService(
+	svc := NewDesignViewService(
 		fakeLoader{geom: twoSheetGeom(), hashErr: errors.New("permission denied")},
 		noNative{}, render.Style{}, nil,
 	)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatalf("a hash failure must not fail the open: %v", err)
 	}

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Outcome } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
-import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import type { HighlightSpec } from "./highlights.js";
 import { pageApi } from "./pageapi.js";
 import { emptyLocation, type ViewerLocation } from "./router.js";
@@ -33,7 +33,7 @@ const verdicts = [
 const findings = [{ rule: RULE, severity: "error", subject: { kind: "net", ref: "PG", pin: "" }, message: "PG has no pull-up", sheets: ["s-power"], verdictIds: [PG] }];
 
 function harness() {
-  const getDesign = vi.fn(async () => ({
+  const getSummary = vi.fn(async () => ({
     name: "demo-board",
     layout: "faithful",
     sourceFormat: "kicad",
@@ -61,7 +61,7 @@ function harness() {
     rules: [{ name: RULE, severity: "error", summary: "pull-up", reads: [], tags: {}, available: true, unavailableReason: "" }],
   }));
   const getExpectations = vi.fn(async () => ({ expectations: [], hasSidecar: false }));
-  const client = { getDesign, getSheet, getLayoutReport: vi.fn(), highlightSheet: vi.fn(async () => ({ content: { case: "svg", value: "" } })) } as any;
+  const client = { getSummary, getSheet, getLayoutReport: vi.fn(), highlightSheet: vi.fn(async () => ({ content: { case: "svg", value: "" } })) } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
   const render: RenderView = { showWebgl: vi.fn(), showSvg: vi.fn(), setSvgOverlay: vi.fn(), setBusy: vi.fn(), getView: vi.fn(), setView: vi.fn(), setBoardLayers: vi.fn() };

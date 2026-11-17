@@ -16,7 +16,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ## Use
 
 ```rust
-use agni_client::agni::v1::webapi::{GetDesignRequest, IngestRequest, RunQueryRequest, Snapshot};
+use agni_client::agni::v1::webapi::{GetSummaryRequest, IngestRequest, RunQueryRequest, Snapshot};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,8 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let snap = client.snapshots().ingest(ingest).await?.into_inner();
 
     let design = client
-        .designs()
-        .get_design(GetDesignRequest { snapshot: snap.name.clone(), ..Default::default() })
+        .design_views()
+        .get_summary(GetSummaryRequest { snapshot: snap.name.clone(), ..Default::default() })
         .await?
         .into_inner();
     println!("{} components, {} nets", design.component_count, design.net_count);
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-`Client` has accessors for the services most tools call: `server()`, `snapshots()`, `designs()`,
+`Client` has accessors for the services most tools call: `server()`, `snapshots()`, `design_views()`,
 `checks()` and `queries()`. Every other generated client takes `client.transport()`, as in
 `DiffServiceClient::new(client.transport())`, and so carries the token too.
 

@@ -41,7 +41,7 @@ func TestLayoutReportAndComponentParamsReadTheDesignsTiers(t *testing.T) {
 	for _, spelling := range spellings {
 		t.Run(spelling, func(t *testing.T) {
 			l := &uriLoader{recordingLoader: newRecordingLoader()}
-			ds := NewDesignService(l, noNative{}, render.DefaultStyle, projects)
+			ds := NewDesignViewService(l, noNative{}, render.DefaultStyle, projects)
 			snap := snapOf(t, ds.Snapshots(), spelling)
 			l.design = nil // forget the ingest's read, so l.design holds GetComponentParams' alone
 			if _, err := ds.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snap}); err != nil {

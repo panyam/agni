@@ -20,7 +20,7 @@ import (
 func TestC22AnalysisRequestsNameASnapshot(t *testing.T) {
 	services := []protoreflect.ServiceDescriptor{
 		webapi.File_agni_v1_webapi_checks_proto.Services().ByName("CheckService"),
-		webapi.File_agni_v1_webapi_design_proto.Services().ByName("DesignService"),
+		webapi.File_agni_v1_webapi_design_view_proto.Services().ByName("DesignViewService"),
 		webapi.File_agni_v1_webapi_query_proto.Services().ByName("QueryService"),
 		webapi.File_agni_v1_webapi_review_proto.Services().ByName("ReviewService"),
 		webapi.File_agni_v1_webapi_diff_proto.Services().ByName("DiffService"),

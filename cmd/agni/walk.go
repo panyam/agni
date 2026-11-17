@@ -69,7 +69,7 @@ func walkCmd() *cobra.Command {
 				return fmt.Errorf("--at, --to and --goal-hops ask a goal question; name it with --goal pin|pull-up|rail")
 			}
 			ll := &localLoader{loader: newLoader()}
-			var svc walkAPI = service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+			var svc walkAPI = service.NewDesignViewService(ll, nil, render.Style{}, cliProjects())
 			var snaps snapshotAPI = service.NewSnapshotService(ll, cliProjects(), nil, "")
 			addr := cliArgURI
 			if remoteURL != "" {

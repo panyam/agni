@@ -59,7 +59,7 @@ func TestBuildRegistry(t *testing.T) {
 }
 
 // A sheet whose id is numeric (e.g. a flat single-sheet .sch) must be selectable by that id, not
-// misread as a positional index. In the regression, the viewer requested the id from GetDesign, so an
+// misread as a positional index. In the regression, the viewer requested the id from GetSummary, so an
 // id of "1" was read as index 1 -> out of range -> a blank sheet.
 func TestPickSheetIdBeatsIndex(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "1", Name: "root"}}}

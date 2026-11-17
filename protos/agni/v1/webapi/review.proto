@@ -27,7 +27,7 @@ import "google/protobuf/empty.proto";
 //
 // This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
 // CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-// the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+// the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
 // independent of its inputs, so it needs an identity of its own.
 //
 // The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.

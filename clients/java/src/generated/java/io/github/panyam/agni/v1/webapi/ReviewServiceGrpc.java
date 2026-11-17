@@ -15,7 +15,7 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * whatever that file says today.
  * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
  * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
- * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+ * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
  * independent of its inputs, so it needs an identity of its own.
  * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
  * The service composes them once into the catalog it holds. So a create request sends the
@@ -319,7 +319,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the
@@ -442,7 +442,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the
@@ -471,7 +471,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the
@@ -612,7 +612,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the
@@ -746,7 +746,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the
@@ -880,7 +880,7 @@ public final class ReviewServiceGrpc {
    * whatever that file says today.
    * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
    * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
-   * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+   * the snapshot it names, so `GetSummary(snapshot)` names its whole input. A review run has a lifetime
    * independent of its inputs, so it needs an identity of its own.
    * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
    * The service composes them once into the catalog it holds. So a create request sends the

@@ -18,7 +18,7 @@ func kicadInstalled() bool {
 	return err == nil
 }
 
-func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignService {
+func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignViewService {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
@@ -28,7 +28,7 @@ func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignService {
 }
 
 func TestGetSheetNativeGates(t *testing.T) {
-	native := func(t *testing.T, svc *service.DesignService, mount, path string) error {
+	native := func(t *testing.T, svc *service.DesignViewService, mount, path string) error {
 		_, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
 			Snapshot: snapOf(t, svc.Snapshots(), uriStr(mount, path)), Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 		})

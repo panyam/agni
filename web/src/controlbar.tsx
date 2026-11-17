@@ -6,7 +6,7 @@ import type { ControlsState, ControlsView } from "./controls.js";
 
 // Controls renders the renderer checkboxes and the other toggles from ControlsState. It offers no
 // layout or symbol-source choice. A design draws as its schematic does, or on agni's default layout
-// with a note saying why (GetDesignResponse.drawing_note). `?layout=`, `?symbols=` and `?mode=` still
+// with a note saying why (GetSummaryResponse.drawing_note). `?layout=`, `?symbols=` and `?mode=` still
 // choose one from the address, for experiments. Everything derives from the signal, so the presenter
 // drives it by pushing state, and every click or selection emits an intent up.
 //

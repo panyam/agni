@@ -408,7 +408,7 @@ func ListedAvailable(r *Rule, params bool) (ok bool, reason string) {
 // issue 943) while the listing must still say what a run of that design would skip (agni issue 950).
 // The parameter set and every source-format capability are read off m exactly as the run's model
 // answers them, so m must be built from the same netlist, overlay and corpus as the run's. The board
-// tier's format says whether a board is attached without reading it, the same way GetDesign lists the
+// tier's format says whether a board is attached without reading it, the same way GetSummary lists the
 // Board sheet.
 func AvailableBoardUnread(r *Rule, m Model, board bool) (ok bool, reason string) {
 	return available(r, boardAsRun{Model: m, board: board}, m.HasParams())

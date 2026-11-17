@@ -5,7 +5,7 @@
 
 import { fromBinary, fromJson, toBinary, toJson, type DescMessage, type DescService, type JsonValue, type MessageShape } from "@bufbuild/protobuf";
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
-import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import { LexiconService } from "@panyam/agni-client/gen/agni/v1/webapi/lexicon_pb";
 import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
@@ -18,7 +18,7 @@ import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspa
 
 const SERVICES: DescService[] = [
   CheckService,
-  DesignService,
+  DesignViewService,
   DiffService,
   LexiconService,
   ProjectService,

@@ -191,14 +191,14 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	check, review := e.RuleServices(agni.RuleServiceDeps{Loader: host})
 	mux := http.NewServeMux()
 	paths := server.API{
-		Workspace: service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
-		Project:   service.NewProjectService(store),
-		Snapshot:  check.Snapshots(),
-		Design:    service.NewDesignService(host, nil, render.DefaultStyle, resolver),
-		Check:     check,
-		Diff:      service.NewDiffService(host, resolver),
-		Query:     service.NewQueryService(host, nil, resolver),
-		Review:    review,
+		Workspace:  service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
+		Project:    service.NewProjectService(store),
+		Snapshot:   check.Snapshots(),
+		DesignView: service.NewDesignViewService(host, nil, render.DefaultStyle, resolver),
+		Check:      check,
+		Diff:       service.NewDiffService(host, resolver),
+		Query:      service.NewQueryService(host, nil, resolver),
+		Review:     review,
 	}.Register(mux)
 	// A page puts a seed built by its server into this engine's store before a first read (agni issue
 	// 1525). An engine with no store, or one built under another version, puts nothing.

@@ -21,7 +21,7 @@ type netNames struct {
 // readNetNames reads the snapshot's netlist through its loader with its options, so the ids match
 // the ones the design's findings carry. A design that fails to read joins nothing, since the
 // drawing still draws and only the id join is lost.
-func (s *DesignService) readNetNames(ctx context.Context, snap Snap) netNames {
+func (s *DesignViewService) readNetNames(ctx context.Context, snap Snap) netNames {
 	d, err := LoaderOr(snap, s.loader).Design(ctx, snap.Netlist, snap.Overlay.ReadOptions()...)
 	if err != nil {
 		return netNames{}
@@ -57,7 +57,7 @@ func (n netNames) id(name string) string {
 //
 // So a packed wire key carries the id, and the WebGL canvas, which matches a highlight against
 // the packed keys in the page, lights a finding's net as the SVG overlay does.
-func (s *DesignService) withWireNetIDs(ctx context.Context, snap Snap, g *geom.SchematicGeometry, sheet *geom.SheetGeometry) *geom.SheetGeometry {
+func (s *DesignViewService) withWireNetIDs(ctx context.Context, snap Snap, g *geom.SchematicGeometry, sheet *geom.SheetGeometry) *geom.SheetGeometry {
 	if !nameOnlyCanvas(g) {
 		return sheet
 	}

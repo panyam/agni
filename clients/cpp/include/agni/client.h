@@ -55,7 +55,7 @@ class Client {
   bool HasFeature(std::string_view feature) const;
 
   // Stub returns a stub for one of agni's services on this client's channel, such as
-  // client.Stub<agni::v1::webapi::DesignService>().
+  // client.Stub<agni::v1::webapi::DesignViewService>().
   template <class Service>
   std::unique_ptr<typename Service::Stub> Stub() const {
     return Service::NewStub(channel_);

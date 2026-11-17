@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignPreview, captionFor, pickPreviewSheet, type PreviewView } from "./preview.js";
-import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes follow the diffpresenter.test.ts harness, with plain stubs behind the typed client and a
 // recording view. defer lets a test hold a response open, so a test can reach an out-of-order
 // arrival.
-function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: ReturnType<typeof vi.fn> } = {}) {
-  const getDesign =
-    over.getDesign ??
+function harness(over: { getSummary?: ReturnType<typeof vi.fn>; getSheet?: ReturnType<typeof vi.fn> } = {}) {
+  const getSummary =
+    over.getSummary ??
     vi.fn(async (_req: object) => ({
       name: "Amplifier",
       sourceFormat: "kicad-sch",
@@ -30,8 +30,8 @@ function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: Return
   const showNote = vi.fn();
   const setCaption = vi.fn();
   const view: PreviewView = { showSvg, showNote, setCaption };
-  const client = { getDesign, getSheet } as unknown as ConstructorParameters<typeof DesignPreview>[0];
-  return { preview: new DesignPreview(client, view, fakeSnapshots()), getDesign, getSheet, showSvg, showNote, setCaption };
+  const client = { getSummary, getSheet } as unknown as ConstructorParameters<typeof DesignPreview>[0];
+  return { preview: new DesignPreview(client, view, fakeSnapshots()), getSummary, getSheet, showSvg, showNote, setCaption };
 }
 
 // deferred is a promise a test resolves by hand, so two loads can finish in a chosen order.
@@ -49,7 +49,7 @@ describe("DesignPreview", () => {
     // The preview asks for an EMPTY layout to be faithful-first. The server resolves "" to the
     // faithful layout whenever the file carries geometry. Pinning it stops a later edit
     // from hard-coding a layout and silently drawing every design as a netlist graph.
-    expect(h.getDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")), layout: "" });
+    expect(h.getSummary).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")), layout: "" });
     expect(h.getSheet).toHaveBeenCalledWith({
       snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")),
       sheet: "s1",
@@ -61,10 +61,10 @@ describe("DesignPreview", () => {
   });
 
   // Because of the board case, the preview makes two calls rather than one, AND chooses the sheet
-  // rather than taking the first. Shapes below are the real GetDesign responses, read off the wire
+  // rather than taking the first. Shapes below are the real GetSummary responses, read off the wire
   // from a running server against cmd/agni/testdata/conformance.
   it("previews a board file as its board sheet, not as its netlist graph", async () => {
-    const getDesign = vi.fn(async (_req: object) => ({
+    const getSummary = vi.fn(async (_req: object) => ({
       name: "Board Geom Fixture",
       sourceFormat: "kicad-pcb",
       componentCount: 2,
@@ -77,7 +77,7 @@ describe("DesignPreview", () => {
       ],
       availableLayouts: ["force", "grid", "layered", "orthogonal", "stress"],
     }));
-    const h = harness({ getDesign });
+    const h = harness({ getSummary });
     await h.preview.show("fixtures", "drc.passes.kicad_pcb");
 
     expect(h.getSheet).toHaveBeenCalledWith(expect.objectContaining({ sheet: "board", format: SheetFormat.SVG }));
@@ -87,15 +87,15 @@ describe("DesignPreview", () => {
   // Clicking down a file list starts a load per file, and a small design behind a large one
   // returns first. The stage must settle on the LAST design asked for, not the last to answer.
   // There are two places a load can go stale, and they need separate cases. A load can still be
-  // waiting on GetDesign when a newer one starts, or it can already be waiting on GetSheet. One
+  // waiting on GetSummary when a newer one starts, or it can already be waiting on GetSheet. One
   // test only ever reaches whichever guard comes first.
   it("drops a stale load still waiting on the design lookup", async () => {
     const slow = deferred<{ sheets: { id: string; name: string }[] }>();
     const base = { name: "Fast", sourceFormat: "kicad-sch", componentCount: 1, netCount: 1 };
-    const getDesign = vi.fn((req: { snapshot: string }) =>
+    const getSummary = vi.fn((req: { snapshot: string }) =>
       req.snapshot === snapName(artifactUri("corpus", "slow.kicad_sch")) ? slow.promise : Promise.resolve({ ...base, sheets: [{ id: "f1", name: "Fast" }] }),
     );
-    const h = harness({ getDesign });
+    const h = harness({ getSummary });
 
     const first = h.preview.show("corpus", "slow.kicad_sch");
     const second = h.preview.show("corpus", "fast.kicad_sch");
@@ -133,8 +133,8 @@ describe("DesignPreview", () => {
   });
 
   it("reports a design with no drawable sheet as a note, not an error", async () => {
-    const getDesign = vi.fn(async (_req: object) => ({ name: "", sourceFormat: "", componentCount: 0, netCount: 0, sheets: [] }));
-    const h = harness({ getDesign });
+    const getSummary = vi.fn(async (_req: object) => ({ name: "", sourceFormat: "", componentCount: 0, netCount: 0, sheets: [] }));
+    const h = harness({ getSummary });
     await h.preview.show("corpus", "empty.edn");
 
     expect(h.getSheet).not.toHaveBeenCalled();
@@ -143,10 +143,10 @@ describe("DesignPreview", () => {
   });
 
   it("shows a load failure in the stage instead of leaving it blank", async () => {
-    const getDesign = vi.fn(async (_req: object) => {
+    const getSummary = vi.fn(async (_req: object) => {
       throw new Error("unknown mount");
     });
-    const h = harness({ getDesign });
+    const h = harness({ getSummary });
     await h.preview.show("nope", "x.kicad_sch");
 
     expect(h.showNote).toHaveBeenLastCalledWith(expect.stringContaining("unknown mount"), "error");
@@ -167,14 +167,14 @@ describe("DesignPreview", () => {
   });
 
   it("falls back to the file name when the design declares none", async () => {
-    const getDesign = vi.fn(async (_req: object) => ({
+    const getSummary = vi.fn(async (_req: object) => ({
       name: "",
       sourceFormat: "edif",
       componentCount: 4,
       netCount: 3,
       sheets: [{ id: "p1", name: "Page 1" }],
     }));
-    const h = harness({ getDesign });
+    const h = harness({ getSummary });
     await h.preview.show("corpus", "nested/dir/board.edn");
 
     expect(h.setCaption).toHaveBeenLastCalledWith("board.edn", "edif · 4 components · 3 nets · 1 sheet");
@@ -182,7 +182,7 @@ describe("DesignPreview", () => {
 });
 
 describe("pickPreviewSheet", () => {
-  // Sheet lists below are the real GetDesign responses for each shape, read off a running server.
+  // Sheet lists below are the real GetSummary responses for each shape, read off a running server.
   it("keeps the schematic when the design carries faithful geometry", () => {
     const d = {
       sheets: [{ id: "/", name: "Showcase Board (passes)" }],
@@ -234,7 +234,7 @@ describe("captionFor", () => {
     expect(captionFor("", 0, 0, 0)).toBe("");
   });
 
-  // GetDesign fills format and both counts only on the AUTO-layout branch. A design carrying its
+  // GetSummary fills format and both counts only on the AUTO-layout branch. A design carrying its
   // own geometry takes the faithful branch, where all three are empty, so a caption built from
   // them alone is blank for every KiCad schematic. That is the common case, not an edge one.
   it("still says something for a faithful design, whose netlist fields are empty", () => {

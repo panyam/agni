@@ -208,7 +208,7 @@ private static final long serialVersionUID = 0L;
    * include_equal also reports every net that did not change, as kind "equal" after the changes,
    * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
    * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-   * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+   * which the viewer tints by. A net's connections are in the design itself (GetSummary's
    * read_mask).
    * </pre>
    *
@@ -1076,7 +1076,7 @@ private static final long serialVersionUID = 0L;
      * include_equal also reports every net that did not change, as kind "equal" after the changes,
      * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
      * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-     * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+     * which the viewer tints by. A net's connections are in the design itself (GetSummary's
      * read_mask).
      * </pre>
      *
@@ -1092,7 +1092,7 @@ private static final long serialVersionUID = 0L;
      * include_equal also reports every net that did not change, as kind "equal" after the changes,
      * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
      * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-     * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+     * which the viewer tints by. A net's connections are in the design itself (GetSummary's
      * read_mask).
      * </pre>
      *
@@ -1112,7 +1112,7 @@ private static final long serialVersionUID = 0L;
      * include_equal also reports every net that did not change, as kind "equal" after the changes,
      * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
      * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-     * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+     * which the viewer tints by. A net's connections are in the design itself (GetSummary's
      * read_mask).
      * </pre>
      *

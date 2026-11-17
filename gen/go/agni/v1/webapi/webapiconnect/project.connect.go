@@ -56,11 +56,8 @@ type ProjectServiceClient interface {
 	GetProject(context.Context, *connect.Request[webapi.GetProjectRequest]) (*connect.Response[webapi.Project], error)
 	// ListProjects returns the projects visible across the server's mounts.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
-	// GetDesign returns one design by resource name. The rpc shares its name with
-	// DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-	// design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-	// the files around it is which. They are distinct rpcs on distinct services. Their request messages
-	// have different names because one proto package cannot hold two GetDesignRequest.
+	// GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+	// files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
 	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs belonging to one project.
 	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)
@@ -160,11 +157,8 @@ type ProjectServiceHandler interface {
 	GetProject(context.Context, *connect.Request[webapi.GetProjectRequest]) (*connect.Response[webapi.Project], error)
 	// ListProjects returns the projects visible across the server's mounts.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
-	// GetDesign returns one design by resource name. The rpc shares its name with
-	// DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
-	// design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
-	// the files around it is which. They are distinct rpcs on distinct services. Their request messages
-	// have different names because one proto package cannot hold two GetDesignRequest.
+	// GetDesign returns one design by resource name. It returns a design's IDENTITY and which of the
+	// files around it is which. DesignViewService.GetSummary describes a snapshot's CONTENT instead.
 	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs belonging to one project.
 	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)

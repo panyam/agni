@@ -524,16 +524,16 @@ func statsCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVar(&format, "format", "text", "text (the summary above) or json (the GetDesignResponse the GetDesign rpc returns)")
+	c.Flags().StringVar(&format, "format", "text", "text (the summary above) or json (the GetSummaryResponse the GetSummary rpc returns)")
 	conventionsFlag(c, &conventions)
-	c.Flags().StringSliceVar(&maskPaths, "mask", nil, "with --format json, the read_mask: which fields to carry, over GetDesignResponse. `design` is the whole IR, `design.nets` or `design.components.mpn` parts of it, `*` everything. Repeatable or comma-separated; unset is the summary alone")
+	c.Flags().StringSliceVar(&maskPaths, "mask", nil, "with --format json, the read_mask: which fields to carry, over GetSummaryResponse. `design` is the whole IR, `design.nets` or `design.components.mpn` parts of it, `*` everything. Repeatable or comma-separated; unset is the summary alone")
 	c.Flags().StringArrayVar(&nets, "net", nil, "with --format json and a mask selecting design, keep only this net in design.nets (repeatable)")
 	c.Flags().StringArrayVar(&refs, "ref", nil, "with --format json and a mask selecting design, keep only this component in design.components (repeatable)")
 	return c
 }
 
-// statsJSON answers `stats --format json` with the GetDesignResponse the GetDesign rpc returns,
-// through the same in-process DesignService the server runs (C31), so --mask, --net and --ref mean
+// statsJSON answers `stats --format json` with the GetSummaryResponse the GetSummary rpc returns,
+// through the same in-process DesignViewService the server runs (C31), so --mask, --net and --ref mean
 // what read_mask, nets and ref_des mean on the wire (agni issue 836).
 func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string) error {
 	uri, err := cliArgURI(design)
@@ -546,12 +546,12 @@ func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string
 		return rpcFailed(err)
 	}
 	defer drop()
-	req := &webapi.GetDesignRequest{Snapshot: snap, Nets: nets, RefDes: refs}
+	req := &webapi.GetSummaryRequest{Snapshot: snap, Nets: nets, RefDes: refs}
 	if len(maskPaths) > 0 {
 		req.ReadMask = &fieldmaskpb.FieldMask{Paths: maskPaths}
 	}
-	svc := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
-	resp, err := svc.GetDesign(cmd.Context(), req)
+	svc := service.NewDesignViewService(ll, nil, render.Style{}, cliProjects())
+	resp, err := svc.GetSummary(cmd.Context(), req)
 	if err != nil {
 		return rpcFailed(err)
 	}

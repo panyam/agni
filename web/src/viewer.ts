@@ -6,7 +6,7 @@ import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { textPosition } from "@panyam/agni-client";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
-import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { DesignViewService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckDesignResponse } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { QueryService, type QuerySet, type RunQueryResponse } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
@@ -59,7 +59,7 @@ import {
 // no row (agni issue 1166).
 const NO_LONGER_HOLDS = "This finding no longer holds on the design as it is open now, so there is no derivation to show.";
 
-type DesignClient = Client<typeof DesignService>;
+type DesignClient = Client<typeof DesignViewService>;
 type CheckClient = Client<typeof CheckService>;
 type QueryClient = Client<typeof QueryService>;
 type ReviewClient = Client<typeof ReviewService>;
@@ -237,7 +237,7 @@ export interface SavedFile {
   content: Uint8Array;
 }
 
-// ViewerPresenter coordinates the viewer's semantic loop. An opened file is loaded (GetDesign), its
+// ViewerPresenter coordinates the viewer's semantic loop. An opened file is loaded (GetSummary), its
 // sheets fill the navigator, and the chosen sheet is rendered in the active mode (GetSheet ->
 // WebGL, or GetSheetSvg -> the SVG reference). It is framework-neutral, calling the canvas, the
 // navigator's view interface, and RenderView and never a DOM node or a Solid signal (C3). It runs
@@ -263,7 +263,7 @@ export class ViewerPresenter {
   // attachedBoard is the board the page attaches to its design, kept so every address it writes keeps
   // it (agni issue 1367). The page's snapshots read it from the address at boot.
   private attachedBoard = "";
-  // servedDrawingNote is the open design's GetDesignResponse.drawing_note, shown on each sheet but
+  // servedDrawingNote is the open design's GetSummaryResponse.drawing_note, shown on each sheet but
   // the board.
   private servedDrawingNote = "";
 
@@ -295,7 +295,7 @@ export class ViewerPresenter {
   // frame (agni issue 1539).
   private lastFocus: HighlightSpec[] = [];
   // linkHash is the design revision the viewer's URL claimed, "" when it claimed none.
-  // designContentHash is the revision this server actually read, off GetDesign. The stale-link note
+  // designContentHash is the revision this server actually read, off GetSummary. The stale-link note
   // is computed from the pair. The two are kept apart rather than reduced to a boolean, so the note
   // can tell "different bytes" from "could not check".
   //
@@ -853,15 +853,15 @@ export class ViewerPresenter {
     let soft = false;
     try {
       // A design opened on its board draws the board first (agni issue 1501). The board draws from the
-      // board tier alone, while GetDesign lays out every schematic sheet. GetDesign waits for the draw.
-      // A browser engine's worker runs its requests on one thread, so a GetDesign sent alongside
+      // board tier alone, while GetSummary lays out every schematic sheet. GetSummary waits for the draw.
+      // A browser engine's worker runs its requests on one thread, so a GetSummary sent alongside
       // slowed the board's request to its own pace. The sheet list, the Properties panel's inventory
       // and the project wait too.
       // The previous design's sheets would otherwise be pushed with the board.
       if (wantSheet === "board" && newFile) this.doc.sheets = [];
       const drewBoard = wantSheet === "board" ? await this.showSheet("board") : false;
       if (superseded()) return;
-      const d = await this.client.getDesign({ snapshot: await this.snaps.of(artifactUri(mount, path)), layout: this.currentLayout });
+      const d = await this.client.getSummary({ snapshot: await this.snaps.of(artifactUri(mount, path)), layout: this.currentLayout });
       if (superseded()) return;
       this.doc.sheets = d.sheets;
       // Adopt the effective layout the server chose (the request may have been empty or

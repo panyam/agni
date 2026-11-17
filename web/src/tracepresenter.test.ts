@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { type ViewerLocation } from "./router.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
-import { SheetFormat, TraceSchema, TraceOutcome } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat, TraceSchema, TraceOutcome } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { stubQueryView } from "./testviews.js";
 import type { TraceState } from "./trace.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
@@ -31,7 +31,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     return { trace: answer };
   });
   const client = {
-    getDesign: vi.fn(async () => ({
+    getSummary: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }], nativeAvailable: false, availableLayouts: ["faithful"],
     })),

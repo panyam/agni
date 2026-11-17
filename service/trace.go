@@ -111,7 +111,7 @@ func traceOutcomeFromProto(o webapi.TraceOutcome) check.TraceOutcome {
 // It calls the same check.TracePins the CLI calls, so a route in a terminal and a route on the canvas
 // cannot disagree. A design with no netlist is an ERROR rather than an empty trace, because an empty
 // answer is indistinguishable from "these two pins are not connected".
-func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
+func (s *DesignViewService) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
 	// The walk is over the snapshot's NETLIST and the sheets come from its geometry tier, a different
 	// artifact for a netlist entry (C32).
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
@@ -137,7 +137,7 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 
 // ReachablePins answers which pins a trace from one pin reaches within a radius (agni issue 1541). It
 // reads the snapshot's netlist, as TraceDesign does, and no geometry.
-func (s *DesignService) ReachablePins(ctx context.Context, req *webapi.ReachablePinsRequest) (*webapi.ReachablePinsResponse, error) {
+func (s *DesignViewService) ReachablePins(ctx context.Context, req *webapi.ReachablePinsRequest) (*webapi.ReachablePinsResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err

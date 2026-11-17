@@ -2,7 +2,7 @@
 // aggregates per-sheet violation counts from the findings it already holds and pushes
 // OverviewState, and the panel renders tiles and emits an onSelect(sheetId) intent back up.
 
-import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import type { FindingItem } from "./findings.js";
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 

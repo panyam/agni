@@ -93,7 +93,7 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 	}
 	shipped := service.ShippedRules()
 	ll := &localLoader{loader: newLoader()}
-	design := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+	design := service.NewDesignViewService(ll, nil, render.Style{}, cliProjects())
 	checks := service.NewCheckService(ll, catalog, nil, "", nil, cliProjects())
 	reviews := service.NewReviewService(ll, nil, catalog, byName, nil, service.ReviewEnv{ProducerVersion: version.Version()}, "", cliProjects())
 	queries := service.NewQueryService(ll, nil, cliProjects())
@@ -119,7 +119,7 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 		if snap, drop, err = ingest(ctx, snaps, &webapi.Snapshot{Uri: uri}); err != nil {
 			return "", err
 		}
-		d, err := design.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap})
+		d, err := design.GetSummary(ctx, &webapi.GetSummaryRequest{Snapshot: snap})
 		if err != nil {
 			return "", err
 		}

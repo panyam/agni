@@ -22,7 +22,7 @@ func TestTheBoardSheetCarriesItsStackInEitherFormat(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      b,
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	snap := schematicWithBoard(t, svc)
 	for _, f := range []webapi.SheetFormat{webapi.SheetFormat_SHEET_FORMAT_SVG, webapi.SheetFormat_SHEET_FORMAT_PACKED} {
 		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snap, Sheet: boardSheetID, Format: f})
@@ -69,7 +69,7 @@ func TestTheBoardStackColoursEachPartByItsDesignClass(t *testing.T) {
 		fakeLoader: fakeLoader{design: design, geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      b,
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, nil)
 	snap := schematicWithBoard(t, svc)
 	for _, f := range []webapi.SheetFormat{webapi.SheetFormat_SHEET_FORMAT_SVG, webapi.SheetFormat_SHEET_FORMAT_PACKED} {
 		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snap, Sheet: boardSheetID, Format: f})

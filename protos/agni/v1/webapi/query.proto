@@ -11,7 +11,7 @@ import "agni/v1/webapi/config.proto";
 // design's fact base. It is the web front end to the same `query` engine `agni query` runs.
 // Search is a separate concern from the rule checks, since a rule is one named query among
 // arbitrary ones. So search has its own service, as WS9-026 extracted CheckService from
-// DesignService. v1 evaluates on the server. The client posts query text, and the backend loads
+// DesignViewService. v1 evaluates on the server. The client posts query text, and the backend loads
 // the file and runs query.Default. The engine is WASM-clean, so client-side evaluation is a later
 // option and not a rewrite.
 

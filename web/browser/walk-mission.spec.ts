@@ -124,7 +124,7 @@ async function walkOf(hops: number): Promise<Walk> {
     const s = await rpc<{ name: string }>("SnapshotService/Ingest", { snapshot: { uri: `mount://${walk.mount}/${walk.path}` } });
     snapshot = s.name;
   }
-  const r = await rpc<{ walk: Walk }>("DesignService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops });
+  const r = await rpc<{ walk: Walk }>("DesignViewService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops });
   if (r.walk.reason) throw new Error(`the walk did not start: ${r.walk.reason}`);
   return r.walk;
 }
@@ -134,7 +134,7 @@ async function goalOf(goal: { kind: string; at: string; to?: string }): Promise<
   await walkOf(1);
   const [ref, pin] = (goal.to ?? "").split(".");
   const body = { kind: goal.kind, at: goal.at, ...(goal.to ? { to: { refDes: ref, pin } } : {}) };
-  const r = await rpc<{ walk: Walk }>("DesignService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops: 3, goal: body });
+  const r = await rpc<{ walk: Walk }>("DesignViewService/WalkDesign", { snapshot, from: { refDes: walk.start }, kind, hops: 3, goal: body });
   if (!r.walk.goal) throw new Error("the walk answered no goal");
   return r.walk.goal;
 }
@@ -367,7 +367,7 @@ describe("the walk mission", () => {
         // Past `at`, the route is the one agni trace finds from the pin the walk entered `at` through.
         const [fromRef, fromPin] = walk.pin.traceFrom.split(".");
         const [toRef, toPin] = walk.pin.to.split(".");
-        const tr = await rpc<{ trace: Route & { outcome?: string } }>("DesignService/TraceDesign", { snapshot, from: { refDes: fromRef, pin: fromPin }, to: { refDes: toRef, pin: toPin } });
+        const tr = await rpc<{ trace: Route & { outcome?: string } }>("DesignViewService/TraceDesign", { snapshot, from: { refDes: fromRef, pin: fromPin }, to: { refDes: toRef, pin: toPin } });
         const nets = (route.nets ?? []).map((x) => x.name);
         const i = nets.indexOf(walk.pin.at);
         const leg = { nets: (route.nets ?? []).slice(i), crossings: (route.crossings ?? []).slice(i) };

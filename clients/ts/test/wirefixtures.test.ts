@@ -30,7 +30,7 @@ import { createAgniClient, type NodeClientOptions } from "../src/node.js";
 import { file_agni_v1_param_service } from "../src/gen/agni/v1/param/service_pb.js";
 import { file_agni_v1_viewer_page } from "../src/gen/agni/v1/viewer/page_pb.js";
 import { file_agni_v1_webapi_checks } from "../src/gen/agni/v1/webapi/checks_pb.js";
-import { file_agni_v1_webapi_design } from "../src/gen/agni/v1/webapi/design_pb.js";
+import { file_agni_v1_webapi_design_view } from "../src/gen/agni/v1/webapi/design_view_pb.js";
 import { file_agni_v1_webapi_diff } from "../src/gen/agni/v1/webapi/diff_pb.js";
 import { file_agni_v1_webapi_lexicon } from "../src/gen/agni/v1/webapi/lexicon_pb.js";
 import { file_agni_v1_webapi_project } from "../src/gen/agni/v1/webapi/project_pb.js";
@@ -62,7 +62,7 @@ const fixtures: Fixture[] = JSON.parse(readFileSync(fixturesFile, "utf8")).fixtu
 const registry: Registry = createRegistry(
   ...withDependencies([
     file_agni_v1_webapi_checks,
-    file_agni_v1_webapi_design,
+    file_agni_v1_webapi_design_view,
     file_agni_v1_webapi_diff,
     file_agni_v1_webapi_lexicon,
     file_agni_v1_webapi_project,
@@ -150,7 +150,7 @@ async function healthy(url: string, timeoutMs: number): Promise<void> {
 }
 
 // call makes a fixture's call through the client's field for its service, such as client.design
-// for agni.v1.webapi.DesignService.
+// for agni.v1.webapi.DesignViewService.
 async function call(client: AgniClient, f: Fixture): Promise<{ output: DescMessage; response?: Message; error?: ConnectError }> {
   const service = registry.getService(f.service);
   if (!service) throw new Error(`${f.name}: no service ${f.service}`);

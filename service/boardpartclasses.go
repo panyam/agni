@@ -11,7 +11,7 @@ import (
 // specific first, so the stack view colours a part by what it is (agni 1653). A board holds no
 // classes, so the join is by ref-des. A part the design does not hold, or a design that does not
 // read, gets no class, and its body keeps the plain colour.
-func (s *DesignService) boardPartClasses(ctx context.Context, snap Snap) render.Option {
+func (s *DesignViewService) boardPartClasses(ctx context.Context, snap Snap) render.Option {
 	d, err := LoaderOr(snap, s.loader).Design(ctx, snap.Netlist, snap.Overlay.ReadOptions()...)
 	if err != nil {
 		return render.WithPartClasses(nil)

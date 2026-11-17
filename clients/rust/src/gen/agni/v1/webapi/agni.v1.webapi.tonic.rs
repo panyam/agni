@@ -513,7 +513,7 @@ pub mod check_service_client {
     }
 }
 /// Generated client implementations.
-pub mod design_service_client {
+pub mod design_view_service_client {
     #![allow(
         unused_variables,
         dead_code,
@@ -524,10 +524,10 @@ pub mod design_service_client {
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
     #[derive(Debug, Clone)]
-    pub struct DesignServiceClient<T> {
+    pub struct DesignViewServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
-    impl DesignServiceClient<tonic::transport::Channel> {
+    impl DesignViewServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
@@ -538,7 +538,7 @@ pub mod design_service_client {
             Ok(Self::new(conn))
         }
     }
-    impl<T> DesignServiceClient<T>
+    impl<T> DesignViewServiceClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::Body>,
         T::Error: Into<StdError>,
@@ -556,7 +556,7 @@ pub mod design_service_client {
         pub fn with_interceptor<F>(
             inner: T,
             interceptor: F,
-        ) -> DesignServiceClient<InterceptedService<T, F>>
+        ) -> DesignViewServiceClient<InterceptedService<T, F>>
         where
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
@@ -570,7 +570,7 @@ pub mod design_service_client {
                 http::Request<tonic::body::Body>,
             >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
         {
-            DesignServiceClient::new(InterceptedService::new(inner, interceptor))
+            DesignViewServiceClient::new(InterceptedService::new(inner, interceptor))
         }
         /// Compress requests with the given encoding.
         ///
@@ -603,11 +603,11 @@ pub mod design_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        pub async fn get_design(
+        pub async fn get_summary(
             &mut self,
-            request: impl tonic::IntoRequest<super::GetDesignRequest>,
+            request: impl tonic::IntoRequest<super::GetSummaryRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetDesignResponse>,
+            tonic::Response<super::GetSummaryResponse>,
             tonic::Status,
         > {
             self.inner
@@ -620,11 +620,13 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/GetDesign",
+                "/agni.v1.webapi.DesignViewService/GetSummary",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "GetDesign"));
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "GetSummary"),
+                );
             self.inner.unary(req, path, codec).await
         }
         pub async fn get_sheet(
@@ -644,11 +646,11 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/GetSheet",
+                "/agni.v1.webapi.DesignViewService/GetSheet",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "GetSheet"));
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignViewService", "GetSheet"));
             self.inner.unary(req, path, codec).await
         }
         pub async fn highlight_sheet(
@@ -668,12 +670,12 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/HighlightSheet",
+                "/agni.v1.webapi.DesignViewService/HighlightSheet",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "HighlightSheet"),
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "HighlightSheet"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -694,12 +696,15 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/GetLayoutReport",
+                "/agni.v1.webapi.DesignViewService/GetLayoutReport",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "GetLayoutReport"),
+                    GrpcMethod::new(
+                        "agni.v1.webapi.DesignViewService",
+                        "GetLayoutReport",
+                    ),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -720,12 +725,15 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/GetBoardGeometry",
+                "/agni.v1.webapi.DesignViewService/GetBoardGeometry",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "GetBoardGeometry"),
+                    GrpcMethod::new(
+                        "agni.v1.webapi.DesignViewService",
+                        "GetBoardGeometry",
+                    ),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -746,12 +754,12 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/GetBoardMeshes",
+                "/agni.v1.webapi.DesignViewService/GetBoardMeshes",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "GetBoardMeshes"),
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "GetBoardMeshes"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -772,12 +780,12 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/LocateSubjects",
+                "/agni.v1.webapi.DesignViewService/LocateSubjects",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "LocateSubjects"),
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "LocateSubjects"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -798,11 +806,13 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/TraceDesign",
+                "/agni.v1.webapi.DesignViewService/TraceDesign",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "TraceDesign"));
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "TraceDesign"),
+                );
             self.inner.unary(req, path, codec).await
         }
         pub async fn reachable_pins(
@@ -822,12 +832,12 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/ReachablePins",
+                "/agni.v1.webapi.DesignViewService/ReachablePins",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "ReachablePins"),
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "ReachablePins"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -848,11 +858,13 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/WalkDesign",
+                "/agni.v1.webapi.DesignViewService/WalkDesign",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "WalkDesign"));
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "WalkDesign"),
+                );
             self.inner.unary(req, path, codec).await
         }
         pub async fn list_walk_kinds(
@@ -872,12 +884,12 @@ pub mod design_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/agni.v1.webapi.DesignService/ListWalkKinds",
+                "/agni.v1.webapi.DesignViewService/ListWalkKinds",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new("agni.v1.webapi.DesignService", "ListWalkKinds"),
+                    GrpcMethod::new("agni.v1.webapi.DesignViewService", "ListWalkKinds"),
                 );
             self.inner.unary(req, path, codec).await
         }

@@ -5,13 +5,13 @@
 // wrong. The sheet draws, the counts are plausible, and a check run comes back clean over a design
 // that is mostly absent.
 //
-// The server sends the sentence in GetDesignResponse.hierarchy_note, and report.HierarchyNote builds
+// The server sends the sentence in GetSummaryResponse.hierarchy_note, and report.HierarchyNote builds
 // it. The CLI prints the same sentence on stderr, and both HTML reports show it in their header. The
 // viewer renders it as sent rather than composing its own copy, so the three surfaces cannot drift
 // apart.
 
 // HierarchyNote is the strip's content as the server sent it. flattenReadsMore says whether reading
-// every block would take in a block the note lists (GetDesignResponse.flatten_reads_more). The
+// every block would take in a block the note lists (GetSummaryResponse.flatten_reads_more). The
 // server decides it, since only the engine knows why each block was left out (agni issue 1406).
 export interface HierarchyNote {
   text: string;

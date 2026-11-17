@@ -1,7 +1,7 @@
 // walk.ts is the framework-neutral state for a walk outwards from one part (agni issue 1341). The
 // reader picks a walk kind on a part in Properties, the presenter calls WalkDesign and pushes a
 // WalkState, the Trace tab lists it hop by hop, and the canvas lights each hop in its own shade.
-import { TraceOutcome, type Walk, type WalkGoalAnswer } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { TraceOutcome, type Walk, type WalkGoalAnswer } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { HighlightShape, type HighlightSpec } from "./highlights.js";
 
 // WalkNetItem is one net the walk reached, with the part it was entered through.

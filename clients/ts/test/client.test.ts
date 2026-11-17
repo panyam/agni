@@ -5,7 +5,7 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect";
 import { describe, expect, test } from "vitest";
 import { AgniClient, IncompatibleServerError, blobsMissing, interceptorsFor, snapshotUnavailable, textPosition } from "../src/index.js";
-import { DesignService } from "../src/gen/agni/v1/webapi/design_pb.js";
+import { DesignViewService } from "../src/gen/agni/v1/webapi/design_view_pb.js";
 import { TextPositionSchema } from "../src/gen/agni/v1/webapi/query_pb.js";
 import { ServerService } from "../src/gen/agni/v1/webapi/server_pb.js";
 import {
@@ -69,16 +69,16 @@ describe("the bearer token", () => {
 });
 
 describe("error details", () => {
-  // failing answers GetDesign with err, so the detail crosses the router's wire encoding.
+  // failing answers GetSummary with err, so the detail crosses the router's wire encoding.
   async function failing(err: ConnectError): Promise<unknown> {
     const transport = createRouterTransport(({ service }) => {
-      service(DesignService, {
-        getDesign() {
+      service(DesignViewService, {
+        getSummary() {
           throw err;
         },
       });
     });
-    return new AgniClient(transport).design.getDesign({ snapshot: "snapshots/x" }).catch((e: unknown) => e);
+    return new AgniClient(transport).designView.getSummary({ snapshot: "snapshots/x" }).catch((e: unknown) => e);
   }
 
   test("each reader finds its own detail and no other", async () => {

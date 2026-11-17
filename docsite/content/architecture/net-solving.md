@@ -213,7 +213,7 @@ default and prints the radius with its answer, since a route eight crossings lon
 route. The `net.reaches` relation searches the whole series neighbourhood (100 hops), because "what is
 connected to what through passives" is a topology question and not a claim about protection.
 
-`agni trace --from U1.3 --reachable` and `DesignService.ReachablePins` answer the other half of a
+`agni trace --from U1.3 --reachable` and `DesignViewService.ReachablePins` answer the other half of a
 trace, which pins it can end on (agni issue 1541). They run the same `ReachToTerminus` walk to the
 same radius and list every pin on the nets it reached, nearest first. So every listed pin routes, and
 every pin that routes and sits on no rail is listed, which `TestReachablePinsAgreeWithTrace` holds.
@@ -222,7 +222,7 @@ A rail or ground the walk stopped on is named with its pin count instead.
 ## Walking outwards from a part
 
 A trace needs both ends. On a large board a reader often knows one part and wants to see what is
-around it, so `agni walk` and `DesignService.WalkDesign` start from a part or one pin and widen hop
+around it, so `agni walk` and `DesignViewService.WalkDesign` start from a part or one pin and widen hop
 by hop (agni issue 1339). Hop 1 is the start's own nets. Each later hop crosses the parts on the
 previous hop's nets into their other nets, and records the part and its pin on each side.
 

@@ -15,7 +15,7 @@ import (
 )
 
 // twoSheetGeom is a minimal drawable geometry with two identifiable sheets, enough for
-// GetDesign's sheet listing and GetSheet's selector to have something to choose between.
+// GetSummary's sheet listing and GetSheet's selector to have something to choose between.
 func twoSheetGeom() *geom.SchematicGeometry {
 	return &geom.SchematicGeometry{
 		DesignRef: "TOPGEOM",
@@ -35,8 +35,8 @@ type availNative struct{ noNative }
 func (availNative) Available(artifact.URI) bool { return true }
 
 func TestGetDesignFaithful(t *testing.T) {
-	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, availNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
+	svc := NewDesignViewService(fakeLoader{geom: twoSheetGeom()}, availNative{}, render.Style{}, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,8 +70,8 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 		Components:   []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}},
 		Nets:         []*ir.Net{{Name: "A"}, {Name: "B"}, {Name: "C"}},
 	}
-	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
+	svc := NewDesignViewService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 }
 
 // TestGetDesignCarriesUnexpandedHierarchy covers agni issue 707. When a read leaves blocks out,
-// GetDesign's counts cover the top level alone. The wire says so, and not only the CLI.
+// GetSummary's counts cover the top level alone. The wire says so, and not only the CLI.
 func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1"}},
@@ -96,8 +96,8 @@ func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 			UnexpandedHierarchy: []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 12}},
 		},
 	}
-	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
+	svc := NewDesignViewService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 }
 
 func TestGetSheetSelectorAndFormats(t *testing.T) {
-	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.eds")
 	get := func(sel string, format webapi.SheetFormat) (*webapi.GetSheetResponse, error) {
 		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
@@ -153,7 +153,7 @@ func TestGetLayoutReport(t *testing.T) {
 		{RefDes: "R1", Symbol: "res", Class: "resistor", Cell: "res_glyph", Kind: graph.KindGlyph},
 		{RefDes: "U9", Cell: "box", Kind: graph.KindBox},
 	}}
-	svc := NewDesignService(fakeLoader{report: rep}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{report: rep}, noNative{}, render.Style{}, nil)
 	resp, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
@@ -170,18 +170,18 @@ func TestGetLayoutReport(t *testing.T) {
 	}
 
 	// A build failure (e.g. no netlist to classify) yields an empty report, not an error.
-	failing := NewDesignService(reportErrLoader{err: errors.New("no netlist")}, noNative{}, render.Style{}, nil)
+	failing := NewDesignViewService(reportErrLoader{err: errors.New("no netlist")}, noNative{}, render.Style{}, nil)
 	resp, err = failing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, failing.Snapshots(), "mount://m/x.eds")})
 	if err != nil || len(resp.GetReport().GetComponents()) != 0 {
 		t.Errorf("build failure = (%+v, %v), want an empty report and no error", resp.GetReport(), err)
 	}
 
 	// But a resolve failure (unknown mount) is still an error, not an empty report.
-	missing := NewDesignService(fakeLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
+	missing := NewDesignViewService(fakeLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
 	if _, err = missing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, missing.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown mount err = %v, want ErrNotFound", err)
 	}
-	unresolved := NewDesignService(reportErrLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
+	unresolved := NewDesignViewService(reportErrLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
 	if _, err = unresolved.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, unresolved.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unresolved report err = %v, want ErrNotFound", err)
 	}

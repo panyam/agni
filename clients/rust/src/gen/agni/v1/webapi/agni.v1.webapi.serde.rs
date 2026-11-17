@@ -6665,510 +6665,6 @@ impl<'de> serde::Deserialize<'de> for GetComponentParamsResponse {
         deserializer.deserialize_struct("agni.v1.webapi.GetComponentParamsResponse", FIELDS, GeneratedVisitor)
     }
 }
-impl serde::Serialize for GetDesignRequest {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if !self.snapshot.is_empty() {
-            len += 1;
-        }
-        if !self.layout.is_empty() {
-            len += 1;
-        }
-        if self.read_mask.is_some() {
-            len += 1;
-        }
-        if !self.nets.is_empty() {
-            len += 1;
-        }
-        if !self.ref_des.is_empty() {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetDesignRequest", len)?;
-        if !self.snapshot.is_empty() {
-            struct_ser.serialize_field("snapshot", &self.snapshot)?;
-        }
-        if !self.layout.is_empty() {
-            struct_ser.serialize_field("layout", &self.layout)?;
-        }
-        if let Some(v) = self.read_mask.as_ref() {
-            struct_ser.serialize_field("readMask", v)?;
-        }
-        if !self.nets.is_empty() {
-            struct_ser.serialize_field("nets", &self.nets)?;
-        }
-        if !self.ref_des.is_empty() {
-            struct_ser.serialize_field("refDes", &self.ref_des)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for GetDesignRequest {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "snapshot",
-            "layout",
-            "read_mask",
-            "readMask",
-            "nets",
-            "ref_des",
-            "refDes",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Snapshot,
-            Layout,
-            ReadMask,
-            Nets,
-            RefDes,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "snapshot" => Ok(GeneratedField::Snapshot),
-                            "layout" => Ok(GeneratedField::Layout),
-                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
-                            "nets" => Ok(GeneratedField::Nets),
-                            "refDes" | "ref_des" => Ok(GeneratedField::RefDes),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = GetDesignRequest;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct agni.v1.webapi.GetDesignRequest")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetDesignRequest, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut snapshot__ = None;
-                let mut layout__ = None;
-                let mut read_mask__ = None;
-                let mut nets__ = None;
-                let mut ref_des__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Snapshot => {
-                            if snapshot__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("snapshot"));
-                            }
-                            snapshot__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Layout => {
-                            if layout__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("layout"));
-                            }
-                            layout__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::ReadMask => {
-                            if read_mask__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("readMask"));
-                            }
-                            read_mask__ = map_.next_value()?;
-                        }
-                        GeneratedField::Nets => {
-                            if nets__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nets"));
-                            }
-                            nets__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::RefDes => {
-                            if ref_des__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("refDes"));
-                            }
-                            ref_des__ = Some(map_.next_value()?);
-                        }
-                    }
-                }
-                Ok(GetDesignRequest {
-                    snapshot: snapshot__.unwrap_or_default(),
-                    layout: layout__.unwrap_or_default(),
-                    read_mask: read_mask__,
-                    nets: nets__.unwrap_or_default(),
-                    ref_des: ref_des__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer.deserialize_struct("agni.v1.webapi.GetDesignRequest", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for GetDesignResponse {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if !self.name.is_empty() {
-            len += 1;
-        }
-        if !self.source_format.is_empty() {
-            len += 1;
-        }
-        if self.component_count != 0 {
-            len += 1;
-        }
-        if self.net_count != 0 {
-            len += 1;
-        }
-        if !self.undrawn.is_empty() {
-            len += 1;
-        }
-        if !self.layout.is_empty() {
-            len += 1;
-        }
-        if !self.sheets.is_empty() {
-            len += 1;
-        }
-        if self.native_available {
-            len += 1;
-        }
-        if !self.available_layouts.is_empty() {
-            len += 1;
-        }
-        if !self.content_hash.is_empty() {
-            len += 1;
-        }
-        if !self.unexpanded_hierarchy.is_empty() {
-            len += 1;
-        }
-        if self.design.is_some() {
-            len += 1;
-        }
-        if !self.hierarchy_note.is_empty() {
-            len += 1;
-        }
-        if !self.drawing_note.is_empty() {
-            len += 1;
-        }
-        if self.flatten_reads_more {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetDesignResponse", len)?;
-        if !self.name.is_empty() {
-            struct_ser.serialize_field("name", &self.name)?;
-        }
-        if !self.source_format.is_empty() {
-            struct_ser.serialize_field("sourceFormat", &self.source_format)?;
-        }
-        if self.component_count != 0 {
-            struct_ser.serialize_field("componentCount", &self.component_count)?;
-        }
-        if self.net_count != 0 {
-            struct_ser.serialize_field("netCount", &self.net_count)?;
-        }
-        if !self.undrawn.is_empty() {
-            struct_ser.serialize_field("undrawn", &self.undrawn)?;
-        }
-        if !self.layout.is_empty() {
-            struct_ser.serialize_field("layout", &self.layout)?;
-        }
-        if !self.sheets.is_empty() {
-            struct_ser.serialize_field("sheets", &self.sheets)?;
-        }
-        if self.native_available {
-            struct_ser.serialize_field("nativeAvailable", &self.native_available)?;
-        }
-        if !self.available_layouts.is_empty() {
-            struct_ser.serialize_field("availableLayouts", &self.available_layouts)?;
-        }
-        if !self.content_hash.is_empty() {
-            struct_ser.serialize_field("contentHash", &self.content_hash)?;
-        }
-        if !self.unexpanded_hierarchy.is_empty() {
-            struct_ser.serialize_field("unexpandedHierarchy", &self.unexpanded_hierarchy)?;
-        }
-        if let Some(v) = self.design.as_ref() {
-            struct_ser.serialize_field("design", v)?;
-        }
-        if !self.hierarchy_note.is_empty() {
-            struct_ser.serialize_field("hierarchyNote", &self.hierarchy_note)?;
-        }
-        if !self.drawing_note.is_empty() {
-            struct_ser.serialize_field("drawingNote", &self.drawing_note)?;
-        }
-        if self.flatten_reads_more {
-            struct_ser.serialize_field("flattenReadsMore", &self.flatten_reads_more)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for GetDesignResponse {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "name",
-            "source_format",
-            "sourceFormat",
-            "component_count",
-            "componentCount",
-            "net_count",
-            "netCount",
-            "undrawn",
-            "layout",
-            "sheets",
-            "native_available",
-            "nativeAvailable",
-            "available_layouts",
-            "availableLayouts",
-            "content_hash",
-            "contentHash",
-            "unexpanded_hierarchy",
-            "unexpandedHierarchy",
-            "design",
-            "hierarchy_note",
-            "hierarchyNote",
-            "drawing_note",
-            "drawingNote",
-            "flatten_reads_more",
-            "flattenReadsMore",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Name,
-            SourceFormat,
-            ComponentCount,
-            NetCount,
-            Undrawn,
-            Layout,
-            Sheets,
-            NativeAvailable,
-            AvailableLayouts,
-            ContentHash,
-            UnexpandedHierarchy,
-            Design,
-            HierarchyNote,
-            DrawingNote,
-            FlattenReadsMore,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "name" => Ok(GeneratedField::Name),
-                            "sourceFormat" | "source_format" => Ok(GeneratedField::SourceFormat),
-                            "componentCount" | "component_count" => Ok(GeneratedField::ComponentCount),
-                            "netCount" | "net_count" => Ok(GeneratedField::NetCount),
-                            "undrawn" => Ok(GeneratedField::Undrawn),
-                            "layout" => Ok(GeneratedField::Layout),
-                            "sheets" => Ok(GeneratedField::Sheets),
-                            "nativeAvailable" | "native_available" => Ok(GeneratedField::NativeAvailable),
-                            "availableLayouts" | "available_layouts" => Ok(GeneratedField::AvailableLayouts),
-                            "contentHash" | "content_hash" => Ok(GeneratedField::ContentHash),
-                            "unexpandedHierarchy" | "unexpanded_hierarchy" => Ok(GeneratedField::UnexpandedHierarchy),
-                            "design" => Ok(GeneratedField::Design),
-                            "hierarchyNote" | "hierarchy_note" => Ok(GeneratedField::HierarchyNote),
-                            "drawingNote" | "drawing_note" => Ok(GeneratedField::DrawingNote),
-                            "flattenReadsMore" | "flatten_reads_more" => Ok(GeneratedField::FlattenReadsMore),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = GetDesignResponse;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct agni.v1.webapi.GetDesignResponse")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetDesignResponse, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut name__ = None;
-                let mut source_format__ = None;
-                let mut component_count__ = None;
-                let mut net_count__ = None;
-                let mut undrawn__ = None;
-                let mut layout__ = None;
-                let mut sheets__ = None;
-                let mut native_available__ = None;
-                let mut available_layouts__ = None;
-                let mut content_hash__ = None;
-                let mut unexpanded_hierarchy__ = None;
-                let mut design__ = None;
-                let mut hierarchy_note__ = None;
-                let mut drawing_note__ = None;
-                let mut flatten_reads_more__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Name => {
-                            if name__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("name"));
-                            }
-                            name__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::SourceFormat => {
-                            if source_format__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("sourceFormat"));
-                            }
-                            source_format__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::ComponentCount => {
-                            if component_count__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("componentCount"));
-                            }
-                            component_count__ = 
-                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
-                            ;
-                        }
-                        GeneratedField::NetCount => {
-                            if net_count__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("netCount"));
-                            }
-                            net_count__ = 
-                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
-                            ;
-                        }
-                        GeneratedField::Undrawn => {
-                            if undrawn__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("undrawn"));
-                            }
-                            undrawn__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Layout => {
-                            if layout__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("layout"));
-                            }
-                            layout__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Sheets => {
-                            if sheets__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("sheets"));
-                            }
-                            sheets__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::NativeAvailable => {
-                            if native_available__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nativeAvailable"));
-                            }
-                            native_available__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::AvailableLayouts => {
-                            if available_layouts__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("availableLayouts"));
-                            }
-                            available_layouts__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::ContentHash => {
-                            if content_hash__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("contentHash"));
-                            }
-                            content_hash__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::UnexpandedHierarchy => {
-                            if unexpanded_hierarchy__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("unexpandedHierarchy"));
-                            }
-                            unexpanded_hierarchy__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::Design => {
-                            if design__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("design"));
-                            }
-                            design__ = map_.next_value()?;
-                        }
-                        GeneratedField::HierarchyNote => {
-                            if hierarchy_note__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("hierarchyNote"));
-                            }
-                            hierarchy_note__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::DrawingNote => {
-                            if drawing_note__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("drawingNote"));
-                            }
-                            drawing_note__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::FlattenReadsMore => {
-                            if flatten_reads_more__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("flattenReadsMore"));
-                            }
-                            flatten_reads_more__ = Some(map_.next_value()?);
-                        }
-                    }
-                }
-                Ok(GetDesignResponse {
-                    name: name__.unwrap_or_default(),
-                    source_format: source_format__.unwrap_or_default(),
-                    component_count: component_count__.unwrap_or_default(),
-                    net_count: net_count__.unwrap_or_default(),
-                    undrawn: undrawn__.unwrap_or_default(),
-                    layout: layout__.unwrap_or_default(),
-                    sheets: sheets__.unwrap_or_default(),
-                    native_available: native_available__.unwrap_or_default(),
-                    available_layouts: available_layouts__.unwrap_or_default(),
-                    content_hash: content_hash__.unwrap_or_default(),
-                    unexpanded_hierarchy: unexpanded_hierarchy__.unwrap_or_default(),
-                    design: design__,
-                    hierarchy_note: hierarchy_note__.unwrap_or_default(),
-                    drawing_note: drawing_note__.unwrap_or_default(),
-                    flatten_reads_more: flatten_reads_more__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer.deserialize_struct("agni.v1.webapi.GetDesignResponse", FIELDS, GeneratedVisitor)
-    }
-}
 impl serde::Serialize for GetExpectationsRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -9089,6 +8585,510 @@ impl<'de> serde::Deserialize<'de> for GetSnapshotRequest {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.GetSnapshotRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for GetSummaryRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.snapshot.is_empty() {
+            len += 1;
+        }
+        if !self.layout.is_empty() {
+            len += 1;
+        }
+        if self.read_mask.is_some() {
+            len += 1;
+        }
+        if !self.nets.is_empty() {
+            len += 1;
+        }
+        if !self.ref_des.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetSummaryRequest", len)?;
+        if !self.snapshot.is_empty() {
+            struct_ser.serialize_field("snapshot", &self.snapshot)?;
+        }
+        if !self.layout.is_empty() {
+            struct_ser.serialize_field("layout", &self.layout)?;
+        }
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser.serialize_field("readMask", v)?;
+        }
+        if !self.nets.is_empty() {
+            struct_ser.serialize_field("nets", &self.nets)?;
+        }
+        if !self.ref_des.is_empty() {
+            struct_ser.serialize_field("refDes", &self.ref_des)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetSummaryRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "snapshot",
+            "layout",
+            "read_mask",
+            "readMask",
+            "nets",
+            "ref_des",
+            "refDes",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Snapshot,
+            Layout,
+            ReadMask,
+            Nets,
+            RefDes,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "snapshot" => Ok(GeneratedField::Snapshot),
+                            "layout" => Ok(GeneratedField::Layout),
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "nets" => Ok(GeneratedField::Nets),
+                            "refDes" | "ref_des" => Ok(GeneratedField::RefDes),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetSummaryRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.GetSummaryRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetSummaryRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut snapshot__ = None;
+                let mut layout__ = None;
+                let mut read_mask__ = None;
+                let mut nets__ = None;
+                let mut ref_des__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Snapshot => {
+                            if snapshot__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("snapshot"));
+                            }
+                            snapshot__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Layout => {
+                            if layout__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("layout"));
+                            }
+                            layout__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_.next_value()?;
+                        }
+                        GeneratedField::Nets => {
+                            if nets__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nets"));
+                            }
+                            nets__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::RefDes => {
+                            if ref_des__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("refDes"));
+                            }
+                            ref_des__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(GetSummaryRequest {
+                    snapshot: snapshot__.unwrap_or_default(),
+                    layout: layout__.unwrap_or_default(),
+                    read_mask: read_mask__,
+                    nets: nets__.unwrap_or_default(),
+                    ref_des: ref_des__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.GetSummaryRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for GetSummaryResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.name.is_empty() {
+            len += 1;
+        }
+        if !self.source_format.is_empty() {
+            len += 1;
+        }
+        if self.component_count != 0 {
+            len += 1;
+        }
+        if self.net_count != 0 {
+            len += 1;
+        }
+        if !self.undrawn.is_empty() {
+            len += 1;
+        }
+        if !self.layout.is_empty() {
+            len += 1;
+        }
+        if !self.sheets.is_empty() {
+            len += 1;
+        }
+        if self.native_available {
+            len += 1;
+        }
+        if !self.available_layouts.is_empty() {
+            len += 1;
+        }
+        if !self.content_hash.is_empty() {
+            len += 1;
+        }
+        if !self.unexpanded_hierarchy.is_empty() {
+            len += 1;
+        }
+        if self.design.is_some() {
+            len += 1;
+        }
+        if !self.hierarchy_note.is_empty() {
+            len += 1;
+        }
+        if !self.drawing_note.is_empty() {
+            len += 1;
+        }
+        if self.flatten_reads_more {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.GetSummaryResponse", len)?;
+        if !self.name.is_empty() {
+            struct_ser.serialize_field("name", &self.name)?;
+        }
+        if !self.source_format.is_empty() {
+            struct_ser.serialize_field("sourceFormat", &self.source_format)?;
+        }
+        if self.component_count != 0 {
+            struct_ser.serialize_field("componentCount", &self.component_count)?;
+        }
+        if self.net_count != 0 {
+            struct_ser.serialize_field("netCount", &self.net_count)?;
+        }
+        if !self.undrawn.is_empty() {
+            struct_ser.serialize_field("undrawn", &self.undrawn)?;
+        }
+        if !self.layout.is_empty() {
+            struct_ser.serialize_field("layout", &self.layout)?;
+        }
+        if !self.sheets.is_empty() {
+            struct_ser.serialize_field("sheets", &self.sheets)?;
+        }
+        if self.native_available {
+            struct_ser.serialize_field("nativeAvailable", &self.native_available)?;
+        }
+        if !self.available_layouts.is_empty() {
+            struct_ser.serialize_field("availableLayouts", &self.available_layouts)?;
+        }
+        if !self.content_hash.is_empty() {
+            struct_ser.serialize_field("contentHash", &self.content_hash)?;
+        }
+        if !self.unexpanded_hierarchy.is_empty() {
+            struct_ser.serialize_field("unexpandedHierarchy", &self.unexpanded_hierarchy)?;
+        }
+        if let Some(v) = self.design.as_ref() {
+            struct_ser.serialize_field("design", v)?;
+        }
+        if !self.hierarchy_note.is_empty() {
+            struct_ser.serialize_field("hierarchyNote", &self.hierarchy_note)?;
+        }
+        if !self.drawing_note.is_empty() {
+            struct_ser.serialize_field("drawingNote", &self.drawing_note)?;
+        }
+        if self.flatten_reads_more {
+            struct_ser.serialize_field("flattenReadsMore", &self.flatten_reads_more)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetSummaryResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "name",
+            "source_format",
+            "sourceFormat",
+            "component_count",
+            "componentCount",
+            "net_count",
+            "netCount",
+            "undrawn",
+            "layout",
+            "sheets",
+            "native_available",
+            "nativeAvailable",
+            "available_layouts",
+            "availableLayouts",
+            "content_hash",
+            "contentHash",
+            "unexpanded_hierarchy",
+            "unexpandedHierarchy",
+            "design",
+            "hierarchy_note",
+            "hierarchyNote",
+            "drawing_note",
+            "drawingNote",
+            "flatten_reads_more",
+            "flattenReadsMore",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Name,
+            SourceFormat,
+            ComponentCount,
+            NetCount,
+            Undrawn,
+            Layout,
+            Sheets,
+            NativeAvailable,
+            AvailableLayouts,
+            ContentHash,
+            UnexpandedHierarchy,
+            Design,
+            HierarchyNote,
+            DrawingNote,
+            FlattenReadsMore,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "name" => Ok(GeneratedField::Name),
+                            "sourceFormat" | "source_format" => Ok(GeneratedField::SourceFormat),
+                            "componentCount" | "component_count" => Ok(GeneratedField::ComponentCount),
+                            "netCount" | "net_count" => Ok(GeneratedField::NetCount),
+                            "undrawn" => Ok(GeneratedField::Undrawn),
+                            "layout" => Ok(GeneratedField::Layout),
+                            "sheets" => Ok(GeneratedField::Sheets),
+                            "nativeAvailable" | "native_available" => Ok(GeneratedField::NativeAvailable),
+                            "availableLayouts" | "available_layouts" => Ok(GeneratedField::AvailableLayouts),
+                            "contentHash" | "content_hash" => Ok(GeneratedField::ContentHash),
+                            "unexpandedHierarchy" | "unexpanded_hierarchy" => Ok(GeneratedField::UnexpandedHierarchy),
+                            "design" => Ok(GeneratedField::Design),
+                            "hierarchyNote" | "hierarchy_note" => Ok(GeneratedField::HierarchyNote),
+                            "drawingNote" | "drawing_note" => Ok(GeneratedField::DrawingNote),
+                            "flattenReadsMore" | "flatten_reads_more" => Ok(GeneratedField::FlattenReadsMore),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetSummaryResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.GetSummaryResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetSummaryResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut name__ = None;
+                let mut source_format__ = None;
+                let mut component_count__ = None;
+                let mut net_count__ = None;
+                let mut undrawn__ = None;
+                let mut layout__ = None;
+                let mut sheets__ = None;
+                let mut native_available__ = None;
+                let mut available_layouts__ = None;
+                let mut content_hash__ = None;
+                let mut unexpanded_hierarchy__ = None;
+                let mut design__ = None;
+                let mut hierarchy_note__ = None;
+                let mut drawing_note__ = None;
+                let mut flatten_reads_more__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
+                            }
+                            name__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::SourceFormat => {
+                            if source_format__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("sourceFormat"));
+                            }
+                            source_format__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ComponentCount => {
+                            if component_count__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("componentCount"));
+                            }
+                            component_count__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::NetCount => {
+                            if net_count__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("netCount"));
+                            }
+                            net_count__ = 
+                                Some(map_.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::Undrawn => {
+                            if undrawn__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("undrawn"));
+                            }
+                            undrawn__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Layout => {
+                            if layout__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("layout"));
+                            }
+                            layout__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Sheets => {
+                            if sheets__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("sheets"));
+                            }
+                            sheets__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::NativeAvailable => {
+                            if native_available__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nativeAvailable"));
+                            }
+                            native_available__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::AvailableLayouts => {
+                            if available_layouts__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("availableLayouts"));
+                            }
+                            available_layouts__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ContentHash => {
+                            if content_hash__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("contentHash"));
+                            }
+                            content_hash__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::UnexpandedHierarchy => {
+                            if unexpanded_hierarchy__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("unexpandedHierarchy"));
+                            }
+                            unexpanded_hierarchy__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Design => {
+                            if design__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("design"));
+                            }
+                            design__ = map_.next_value()?;
+                        }
+                        GeneratedField::HierarchyNote => {
+                            if hierarchy_note__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("hierarchyNote"));
+                            }
+                            hierarchy_note__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::DrawingNote => {
+                            if drawing_note__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("drawingNote"));
+                            }
+                            drawing_note__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::FlattenReadsMore => {
+                            if flatten_reads_more__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("flattenReadsMore"));
+                            }
+                            flatten_reads_more__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(GetSummaryResponse {
+                    name: name__.unwrap_or_default(),
+                    source_format: source_format__.unwrap_or_default(),
+                    component_count: component_count__.unwrap_or_default(),
+                    net_count: net_count__.unwrap_or_default(),
+                    undrawn: undrawn__.unwrap_or_default(),
+                    layout: layout__.unwrap_or_default(),
+                    sheets: sheets__.unwrap_or_default(),
+                    native_available: native_available__.unwrap_or_default(),
+                    available_layouts: available_layouts__.unwrap_or_default(),
+                    content_hash: content_hash__.unwrap_or_default(),
+                    unexpanded_hierarchy: unexpanded_hierarchy__.unwrap_or_default(),
+                    design: design__,
+                    hierarchy_note: hierarchy_note__.unwrap_or_default(),
+                    drawing_note: drawing_note__.unwrap_or_default(),
+                    flatten_reads_more: flatten_reads_more__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.GetSummaryResponse", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for HighlightSheetRequest {

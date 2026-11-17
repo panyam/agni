@@ -20,7 +20,7 @@ import "agni/v1/webapi/workspace.proto";
 // posture).
 
 // DatasheetService serves a datasheet's doc-IR to the extraction workbench. It is the analogue
-// of DesignService for documents. DesignService turns a schematic file into drawable geometry,
+// of DesignViewService for documents. DesignViewService turns a schematic file into drawable geometry,
 // and DatasheetService turns a datasheet into its decomposed region model. The shared
 // WorkspaceService lists directories, and mounts are the security boundary. This service only
 // resolves and returns doc-IR for a named datasheet.

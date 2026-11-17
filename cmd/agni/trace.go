@@ -67,14 +67,14 @@ func traceCmd() *cobra.Command {
 			if format != "text" && format != "json" {
 				return fmt.Errorf("--format %s: want text or json", format)
 			}
-			// Thin client of the in-process DesignService, like `check` and `query` (WS9-048), so the
+			// Thin client of the in-process DesignViewService, like `check` and `query` (WS9-048), so the
 			// terminal and the viewer get their answer from ONE implementation.
 			//
 			// The native renderer is nil because TraceDesign never reaches it.
 			ll := &localLoader{loader: newLoader()}
 			// --remote asks a running server the same question (agni issue 998). --render still draws
 			// here, from this machine's copy of the design.
-			var svc traceAPI = service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+			var svc traceAPI = service.NewDesignViewService(ll, nil, render.Style{}, cliProjects())
 			var snaps snapshotAPI = service.NewSnapshotService(ll, cliProjects(), nil, "")
 			addr := cliArgURI
 			if remoteURL != "" {
@@ -177,7 +177,7 @@ func traceCmd() *cobra.Command {
 	return cmd
 }
 
-// printReachable answers `trace --reachable` through the same DesignService a viewer asks (agni
+// printReachable answers `trace --reachable` through the same DesignViewService a viewer asks (agni
 // issue 1541). An unresolved start pin exits non-zero, as an unresolved trace does.
 func printReachable(cmd *cobra.Command, svc traceAPI, snap string, from check.Endpoint, hops int, format string) error {
 	resp, err := svc.ReachablePins(cmd.Context(), &webapi.ReachablePinsRequest{

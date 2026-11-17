@@ -1,6 +1,6 @@
 // The Trace panel offers as end pins only those a trace from the start pin reaches, within the hop
 // count the reader picks (agni issue 1541). jsdom runs no engine, so only a browser against a server
-// shows the panel asking DesignService.ReachablePins and narrowing its list to the answer. The design
+// shows the panel asking DesignViewService.ReachablePins and narrowing its list to the answer. The design
 // is the gate's cut of Jetson, where R119.1 reaches seven pins within one crossing and nine within
 // six, D21.2 two crossings away through R120.
 

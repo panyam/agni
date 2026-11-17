@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { BoardPartBodySchema, BodyModelSchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
 import { MeshPartSchema, ModelMeshSchema, UnreadModelSchema } from "@panyam/agni-client/gen/agni/v1/geom/geom_board_pb";
-import { GetBoardMeshesResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { GetBoardMeshesResponseSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { defaultQuality, fetchMeshes, MESH_FLOATS, meshGeometry, meshNote, type MeshSet } from "./stackmeshes.js";
 
 // A one-triangle mesh in red, half transparent.

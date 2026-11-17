@@ -34,7 +34,7 @@ type LocateSource interface {
 // sheetIndex maps a finding subject to the sheets it appears on (WS9-024). A component or pin
 // subject maps through the ref_des of the sheet's placements. A net subject maps through the net
 // names of its wires. The index is built once per check call from the geometry the viewer renders,
-// which is the file's default layout. So the ids join the SheetRefs GetDesign returned.
+// which is the file's default layout. So the ids join the SheetRefs GetSummary returned.
 type sheetIndex struct {
 	comps map[string][]string // ref_des -> sheet ids, in sheet order
 	// pins maps pinKey(ref, pin) to the sheets whose placement of ref draws that pin. A multi-unit

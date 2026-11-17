@@ -50,7 +50,7 @@ export type DiffDesignsRequest = Message<"agni.v1.webapi.DiffDesignsRequest"> & 
    * include_equal also reports every net that did not change, as kind "equal" after the changes,
    * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
    * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
-   * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+   * which the viewer tints by. A net's connections are in the design itself (GetSummary's
    * read_mask).
    *
    * @generated from field: bool include_equal = 4;
@@ -465,7 +465,7 @@ export const DiffDesignsResponseSchema: GenMessage<DiffDesignsResponse> = /*@__P
  * where that component appears in that revision. So component_sheets_a["R3"] = ["root",
  * "power"] reads "changed component R3 is placed on sheets root and power in revision a".
  * net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
- * values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+ * values GetSummary returns for that side, in the design's sheet order, and never entity ids.
  * Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
  * A changed component may sit on different sheets in a and b. A renamed net keys under its
  * OLD name in a's map and its NEW name in b's. The maps are derived from each side's

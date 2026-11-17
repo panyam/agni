@@ -25,7 +25,7 @@ func (b boardOnlyAt) Board(_ context.Context, u artifact.URI) (*geom.BoardGeomet
 	return nil, nil
 }
 
-// TestTheBoardSheetGetDesignListsOpens covers agni issue 865. GetDesign lists a Board sheet from the
+// TestTheBoardSheetGetDesignListsOpens covers agni issue 865. GetSummary lists a Board sheet from the
 // design's resolved board tier, so the sheet and its highlight must read the board there too, for
 // every spelling of the design, rather than at the URI the request named.
 func TestTheBoardSheetGetDesignListsOpens(t *testing.T) {
@@ -39,20 +39,20 @@ func TestTheBoardSheetGetDesignListsOpens(t *testing.T) {
 		at:         "mount://m/d/gateway.kicad_pcb",
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, &ProjectResolver{Store: declaringStore{design: design}})
+	svc := NewDesignViewService(ld, noNative{}, render.DefaultStyle, &ProjectResolver{Store: declaringStore{design: design}})
 	ctx := context.Background()
 	for _, uri := range []string{"mount://m/d", "mount://m/d/gateway.edn", "mount://m/d/gateway.kicad_pcb"} {
 		snap := snapOf(t, svc.Snapshots(), uri)
-		d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap})
+		d, err := svc.GetSummary(ctx, &webapi.GetSummaryRequest{Snapshot: snap})
 		if err != nil {
-			t.Fatalf("%s: GetDesign: %v", uri, err)
+			t.Fatalf("%s: GetSummary: %v", uri, err)
 		}
 		listed := false
 		for _, s := range d.GetSheets() {
 			listed = listed || s.GetId() == boardSheetID
 		}
 		if !listed {
-			t.Fatalf("%s: GetDesign lists no board sheet, so opening one proves nothing", uri)
+			t.Fatalf("%s: GetSummary lists no board sheet, so opening one proves nothing", uri)
 		}
 		if _, err := svc.GetSheet(ctx, &webapi.GetSheetRequest{Snapshot: snap, Sheet: boardSheetID}); err != nil {
 			t.Errorf("%s: GetSheet board: %v", uri, err)

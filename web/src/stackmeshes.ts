@@ -1,6 +1,6 @@
 // Part models on a board's stack view (agni issue 1652). The board look draws each part as its own 3D
 // model, as its maker's tool shows it, where the server has a mesh for it. Every other part keeps its
-// block (stackbodies.ts). The meshes come from DesignService.GetBoardMeshes, fitted to a triangle
+// block (stackbodies.ts). The meshes come from DesignViewService.GetBoardMeshes, fitted to a triangle
 // budget the reader picks with the Quality control. A part's height never depends on the budget,
 // since the server takes heights from the full models.
 //
@@ -11,7 +11,7 @@
 
 import type { ModelMesh } from "@panyam/agni-client/gen/agni/v1/geom/geom_board_pb";
 import type { BoardPartBody } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
-import type { GetBoardMeshesResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { GetBoardMeshesResponse } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 
 // Quality is the stack bar's Quality setting, and QUALITY_TRIANGLES the board-wide triangle budget
 // each asks the server for.

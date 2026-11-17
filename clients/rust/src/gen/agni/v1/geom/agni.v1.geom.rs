@@ -998,7 +998,7 @@ pub struct ComponentPlacement {
     #[prost(int64, optional, tag="7")]
     pub height: ::core::option::Option<i64>,
     /// model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-    /// (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+    /// (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
     /// part with none draws as a block of its height.
     #[prost(message, repeated, tag="8")]
     pub model_instances: ::prost::alloc::vec::Vec<ModelInstance>,
@@ -1718,7 +1718,7 @@ pub struct BoardPartBody {
     #[prost(bool, tag="8")]
     pub height_defaulted: bool,
     /// models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-    /// issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+    /// issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
     /// block for a part with no models or whose meshes did not come.
     #[prost(message, repeated, tag="9")]
     pub models: ::prost::alloc::vec::Vec<BodyModel>,

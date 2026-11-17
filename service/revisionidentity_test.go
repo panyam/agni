@@ -25,20 +25,20 @@ func (perArtifactHash) DesignHash(_ context.Context, u artifact.URI) (string, er
 // resolve to one set of tiers (agni issue 656, constraint C32), since they analyse the same bytes.
 //
 // TestSourcesAgreeAcrossEverySpelling is the tier half of this and the hash half was left behind.
-// GetDesign resolved the netlist tier and then handed DesignHash the REQUEST instead. Asking by
+// GetSummary resolved the netlist tier and then handed DesignHash the REQUEST instead. Asking by
 // companion then reported the companion's digest, while a link the CLI minted holds the entry's. The
 // viewer compared the two and drew a stale-link note on a design that was perfectly in sync.
 // localLoader.DesignHash's own doc says it fixed that failure on the CLI side, and nobody had fixed
 // it here.
 func TestRevisionIdentityAgreesAcrossEverySpelling(t *testing.T) {
 	ld := perArtifactHash{fakeLoader{geom: twoSheetGeom()}}
-	svc := NewDesignService(ld, noNative{}, render.Style{}, &ProjectResolver{Store: declaringStore{design: withCompanion()}})
+	svc := NewDesignViewService(ld, noNative{}, render.Style{}, &ProjectResolver{Store: declaringStore{design: withCompanion()}})
 
 	got := map[string]string{}
 	for _, spelling := range []string{"mount://m/d", "mount://m/d/board.edn", "mount://m/d/board.eds"} {
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), spelling)})
+		resp, err := svc.GetSummary(context.Background(), &webapi.GetSummaryRequest{Snapshot: snapOf(t, svc.Snapshots(), spelling)})
 		if err != nil {
-			t.Fatalf("GetDesign(%s): %v", spelling, err)
+			t.Fatalf("GetSummary(%s): %v", spelling, err)
 		}
 		got[spelling] = resp.GetContentHash()
 	}
@@ -47,7 +47,7 @@ func TestRevisionIdentityAgreesAcrossEverySpelling(t *testing.T) {
 	const want = "sha256:d/board.edn"
 	for spelling, h := range got {
 		if h != want {
-			t.Errorf("GetDesign(%s) content_hash = %q, want the declared entry's %q", spelling, h, want)
+			t.Errorf("GetSummary(%s) content_hash = %q, want the declared entry's %q", spelling, h, want)
 		}
 	}
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { clone, create } from "@bufbuild/protobuf";
 import { ClassSource, DesignSchema, InputDiagnosticsSchema, NetSchema, Role } from "@panyam/agni-client/gen/agni/v1/ir/ir_pb";
 import { PartSpecSchema } from "@panyam/agni-client/gen/agni/v1/param/param_pb";
-import { ConversionReportSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { ConversionReportSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import type { FindingItem, FindingsState, VerdictItem } from "./findings.js";
 import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines, netRowsFor } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";

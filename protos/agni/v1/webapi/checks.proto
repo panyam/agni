@@ -13,7 +13,7 @@ import "agni/v1/webapi/query.proto";
 import "agni/v1/param/param.proto";
 
 // This file defines CheckService, the rule checks over a loaded design. WS9-026 moved it out of
-// DesignService, because checks are their own concern. They run on demand and do not depend on
+// DesignViewService, because checks are their own concern. They run on demand and do not depend on
 // rendering.
 //
 // This file does NOT declare the Finding, Subject, DatasheetCitation and CheckReport shapes that

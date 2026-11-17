@@ -108,7 +108,7 @@ func TestTraceFieldCensus(t *testing.T) {
 // unresolved endpoint as "not connected" sends its reader to the board instead of to what they typed.
 func TestTraceDesignServesTheSameAnswerAsTheWalk(t *testing.T) {
 	d := traceServiceFixture()
-	svc := NewDesignService(fakeLoader{design: d}, noNative{}, render.Style{}, nil)
+	svc := NewDesignViewService(fakeLoader{design: d}, noNative{}, render.Style{}, nil)
 	ctx := context.Background()
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 

@@ -9,7 +9,7 @@ from google.protobuf.message import Message
 
 from agni import services
 from agni.errors import AgniError
-from agni.v1.webapi import checks_pb2, config_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
+from agni.v1.webapi import checks_pb2, config_pb2, design_view_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
 
 
 class Transport(Protocol):
@@ -212,21 +212,21 @@ class Client:
     def diff_designs(self, request: Optional[diff_pb2.DiffDesignsRequest] = None, **fields) -> diff_pb2.DiffDesignsResponse:
         return self.call("DiffService", "DiffDesigns", request, **fields)  # type: ignore[return-value]
 
-    def get_design(self, request: Optional[design_pb2.GetDesignRequest] = None, **fields) -> design_pb2.GetDesignResponse:
-        return self.call("DesignService", "GetDesign", request, **fields)  # type: ignore[return-value]
+    def get_summary(self, request: Optional[design_view_pb2.GetSummaryRequest] = None, **fields) -> design_view_pb2.GetSummaryResponse:
+        return self.call("DesignViewService", "GetSummary", request, **fields)  # type: ignore[return-value]
 
-    def trace_design(self, request: Optional[design_pb2.TraceDesignRequest] = None, **fields) -> design_pb2.TraceDesignResponse:
+    def trace_design(self, request: Optional[design_view_pb2.TraceDesignRequest] = None, **fields) -> design_view_pb2.TraceDesignResponse:
         """Follow a signal between two pins. ``from`` is a Python keyword, so pass the request
         message, or ``**{"from": ...}``."""
-        return self.call("DesignService", "TraceDesign", request, **fields)  # type: ignore[return-value]
+        return self.call("DesignViewService", "TraceDesign", request, **fields)  # type: ignore[return-value]
 
-    def locate_subjects(self, request: Optional[design_pb2.LocateSubjectsRequest] = None, **fields) -> design_pb2.LocateSubjectsResponse:
+    def locate_subjects(self, request: Optional[design_view_pb2.LocateSubjectsRequest] = None, **fields) -> design_view_pb2.LocateSubjectsResponse:
         """The sheets that draw each of ``subjects``, a pin on its own unit's sheet, with ``board=True``
         adding the board sheet. Connect only."""
-        return self.call("DesignService", "LocateSubjects", request, **fields)  # type: ignore[return-value]
+        return self.call("DesignViewService", "LocateSubjects", request, **fields)  # type: ignore[return-value]
 
-    def get_layout_report(self, request: Optional[design_pb2.GetLayoutReportRequest] = None, **fields) -> design_pb2.GetLayoutReportResponse:
-        return self.call("DesignService", "GetLayoutReport", request, **fields)  # type: ignore[return-value]
+    def get_layout_report(self, request: Optional[design_view_pb2.GetLayoutReportRequest] = None, **fields) -> design_view_pb2.GetLayoutReportResponse:
+        return self.call("DesignViewService", "GetLayoutReport", request, **fields)  # type: ignore[return-value]
 
     def create_review(self, request: Optional[review_pb2.CreateReviewRequest] = None, **fields) -> review_pb2.Review:
         """Score a checklist. Connect only until agni issue 734 lands."""

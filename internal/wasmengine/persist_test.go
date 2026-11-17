@@ -37,7 +37,7 @@ func opened(t *testing.T, eng *Engine) []proto.Message {
 	defer srv.Close()
 	ctx := context.Background()
 	snap := snapAt(t, srv)
-	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap}))
+	d, err := webapiconnect.NewDesignViewServiceClient(srv.Client(), srv.URL).GetSummary(ctx, connect.NewRequest(&webapi.GetSummaryRequest{Snapshot: snap}))
 	if err != nil {
 		t.Fatal(err)
 	}

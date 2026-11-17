@@ -22,7 +22,7 @@ func timedBoardSheet(t *testing.T, srv *httptest.Server, snap string) (*webapi.G
 	t.Helper()
 	req := connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snap, Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
 	req.Header().Set("Agni-Timing", "1")
-	resp, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), req)
+	resp, err := webapiconnect.NewDesignViewServiceClient(srv.Client(), srv.URL).GetSheet(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}

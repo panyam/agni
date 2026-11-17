@@ -401,16 +401,16 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
 	api := server.API{
-		Workspace: workspace,
-		Project:   service.NewProjectService(projectStore),
-		Snapshot:  checkSvc.Snapshots(),
-		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
-		Check:     checkSvc,
-		Diff:      service.NewDiffService(loader, projectResolver),
-		Query:     service.NewQueryService(loader, specs, projectResolver),
-		Review:    reviewSvc,
-		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
-		Hooks:     []connect.Interceptor{warmSeeds(seedCache)},
+		Workspace:  workspace,
+		Project:    service.NewProjectService(projectStore),
+		Snapshot:   checkSvc.Snapshots(),
+		DesignView: service.NewDesignViewService(loader, nativeR, style, projectResolver),
+		Check:      checkSvc,
+		Diff:       service.NewDiffService(loader, projectResolver),
+		Query:      service.NewQueryService(loader, specs, projectResolver),
+		Review:     reviewSvc,
+		Timing:     server.Timing{Slow: o.slowRequest, Log: budget.Log},
+		Hooks:      []connect.Interceptor{warmSeeds(seedCache)},
 		// The listener speaks gRPC beside Connect (newHTTPServer, agni issue 1626).
 		Info: &service.ServerInfoService{Version: version.Version(), Features: []string{"grpc"}, Projects: projectResolver},
 	}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { sheetTiles } from "./sheetoverview.js";
-import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import type { SheetRef } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import type { FindingItem } from "./findings.js";
 
 function sheet(id: string, name: string, parentId = ""): SheetRef {

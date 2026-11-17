@@ -121,7 +121,7 @@ public interface BoardPartBodyOrBuilder extends
   /**
    * <pre>
    * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
    * block for a part with no models or whose meshes did not come.
    * </pre>
    *
@@ -132,7 +132,7 @@ public interface BoardPartBodyOrBuilder extends
   /**
    * <pre>
    * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
    * block for a part with no models or whose meshes did not come.
    * </pre>
    *
@@ -142,7 +142,7 @@ public interface BoardPartBodyOrBuilder extends
   /**
    * <pre>
    * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
    * block for a part with no models or whose meshes did not come.
    * </pre>
    *
@@ -152,7 +152,7 @@ public interface BoardPartBodyOrBuilder extends
   /**
    * <pre>
    * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
    * block for a part with no models or whose meshes did not come.
    * </pre>
    *
@@ -163,7 +163,7 @@ public interface BoardPartBodyOrBuilder extends
   /**
    * <pre>
    * models places the part's 3D model meshes, one per ComponentPlacement.model_instances entry (agni
-   * issue 1652). A client asks DesignService.GetBoardMeshes for each mesh by key, and draws the body's
+   * issue 1652). A client asks DesignViewService.GetBoardMeshes for each mesh by key, and draws the body's
    * block for a part with no models or whose meshes did not come.
    * </pre>
    *

@@ -733,7 +733,7 @@ var File_agni_v1_webapi_tables_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_tables_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bagni/v1/webapi/design.proto\x1a\x19agni/v1/webapi/diff.proto\x1a\x1aagni/v1/webapi/query.proto\x1a\x1bagni/v1/webapi/review.proto\"\x93\x01\n" +
+	"\x1bagni/v1/webapi/tables.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a agni/v1/webapi/design_view.proto\x1a\x19agni/v1/webapi/diff.proto\x1a\x1aagni/v1/webapi/query.proto\x1a\x1bagni/v1/webapi/review.proto\"\x93\x01\n" +
 	"\x13EncodeTablesRequest\x12-\n" +
 	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables\x129\n" +
 	"\bencoding\x18\x02 \x01(\x0e2\x1d.agni.v1.webapi.TableEncodingR\bencoding\x12\x12\n" +
@@ -852,7 +852,7 @@ func file_agni_v1_webapi_tables_proto_init() {
 		return
 	}
 	file_agni_v1_webapi_checks_proto_init()
-	file_agni_v1_webapi_design_proto_init()
+	file_agni_v1_webapi_design_view_proto_init()
 	file_agni_v1_webapi_diff_proto_init()
 	file_agni_v1_webapi_query_proto_init()
 	file_agni_v1_webapi_review_proto_init()

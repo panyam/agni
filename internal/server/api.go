@@ -20,12 +20,12 @@ type API struct {
 	// Snapshot ingests designs, and every other service answers questions about them (agni issue
 	// 1061). It must hold the same ProjectResolver as they do, or a question names a snapshot that
 	// none of them holds.
-	Snapshot *service.SnapshotService
-	Design   *service.DesignService
-	Check    *service.CheckService
-	Diff     *service.DiffService
-	Query    *service.QueryService
-	Review   *service.ReviewService
+	Snapshot   *service.SnapshotService
+	DesignView *service.DesignViewService
+	Check      *service.CheckService
+	Diff       *service.DiffService
+	Query      *service.QueryService
+	Review     *service.ReviewService
 	// Info answers ServerService.GetServerInfo (agni issue 1629). Nil answers this build's version and
 	// the snapshot features alone, as the browser engine does.
 	Info *service.ServerInfoService
@@ -52,7 +52,7 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed))
 	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))
 	add(webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed))
-	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design), timed))
+	add(webapiconnect.NewDesignViewServiceHandler(NewDesignView(a.DesignView), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
 	// The lexicon questions run the check service's catalog over its loader, so they are built from
 	// the check service. A field would let a host fill in a different catalog (agni issue 1266).

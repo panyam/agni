@@ -21,7 +21,7 @@ async function boardGeometry(client: AgniClient, snapshot: string): Promise<Boar
   const board = create(BoardGeometrySchema);
   let pageToken = "";
   do {
-    const page = await client.design.getBoardGeometry({ snapshot, maxBytes: boardPageBytes, pageToken });
+    const page = await client.designView.getBoardGeometry({ snapshot, maxBytes: boardPageBytes, pageToken });
     if (page.board) merge(BoardGeometrySchema, board, page.board);
     pageToken = page.nextPageToken;
   } while (pageToken !== "");
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const info = await client.checkServer();
   const snap = await client.snapshot.ingest({ snapshot: { uri: design } });
   try {
-    const d = await client.design.getDesign({ snapshot: snap.name });
+    const d = await client.designView.getSummary({ snapshot: snap.name });
     const c = await client.check.checkDesign({ snapshot: snap.name });
     const q = await client.query.runQuery({ snapshot: snap.name, query: resistorsOf });
     const board = await boardGeometry(client, snap.name);

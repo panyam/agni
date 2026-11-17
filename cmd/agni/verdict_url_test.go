@@ -296,7 +296,7 @@ func withDeclaredMount(t *testing.T, dir string) {
 // has no symptom until the argument is not the entry (agni issue 489).
 //
 // A design FOLDER produced /designs/<mount>/<dir>/view, which the viewer's URL space reads as the
-// FILE at <dir>. GetDesign refuses it and the page loads nothing, on the form the tutorial teaches.
+// FILE at <dir>. GetSummary refuses it and the page loads nothing, on the form the tutorial teaches.
 // A declared COMPANION produced its own path carrying the entry's hash, so the viewer compared two
 // different files and drew the stale-link banner over a design that was in sync.
 func TestVerdictLinkTargetNamesTheResolvedEntry(t *testing.T) {

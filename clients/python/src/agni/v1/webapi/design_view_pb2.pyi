@@ -54,7 +54,7 @@ class SheetRef(_message.Message):
     parent_id: str
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ...) -> None: ...
 
-class GetDesignRequest(_message.Message):
+class GetSummaryRequest(_message.Message):
     __slots__ = ("snapshot", "layout", "read_mask", "nets", "ref_des")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_FIELD_NUMBER: _ClassVar[int]
@@ -68,7 +68,7 @@ class GetDesignRequest(_message.Message):
     ref_des: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, snapshot: _Optional[str] = ..., layout: _Optional[str] = ..., read_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., nets: _Optional[_Iterable[str]] = ..., ref_des: _Optional[_Iterable[str]] = ...) -> None: ...
 
-class GetDesignResponse(_message.Message):
+class GetSummaryResponse(_message.Message):
     __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy", "design", "hierarchy_note", "drawing_note", "flatten_reads_more")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FORMAT_FIELD_NUMBER: _ClassVar[int]

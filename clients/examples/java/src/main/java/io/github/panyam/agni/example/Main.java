@@ -8,8 +8,8 @@ import io.github.panyam.agni.v1.webapi.CheckDesignResponse;
 import io.github.panyam.agni.v1.webapi.DeleteSnapshotRequest;
 import io.github.panyam.agni.v1.webapi.GetBoardGeometryRequest;
 import io.github.panyam.agni.v1.webapi.GetBoardGeometryResponse;
-import io.github.panyam.agni.v1.webapi.GetDesignResponse;
-import io.github.panyam.agni.v1.webapi.GetDesignRequest;
+import io.github.panyam.agni.v1.webapi.GetSummaryResponse;
+import io.github.panyam.agni.v1.webapi.GetSummaryRequest;
 import io.github.panyam.agni.v1.webapi.IngestRequest;
 import io.github.panyam.agni.v1.webapi.RunQueryRequest;
 import io.github.panyam.agni.v1.webapi.RunQueryResponse;
@@ -49,7 +49,7 @@ public final class Main {
               "GetBoardGeometry",
               () ->
                   client
-                      .designs()
+                      .designViews()
                       .getBoardGeometry(
                           GetBoardGeometryRequest.newBuilder()
                               .setSnapshot(snapshot)
@@ -108,10 +108,10 @@ public final class Main {
                             .build()));
     String name = snap.getName();
     try {
-      GetDesignResponse d =
+      GetSummaryResponse d =
           call(
-              "GetDesign",
-              () -> client.designs().getDesign(GetDesignRequest.newBuilder().setSnapshot(name).build()));
+              "GetSummary",
+              () -> client.designViews().getSummary(GetSummaryRequest.newBuilder().setSnapshot(name).build()));
       CheckDesignResponse c =
           call(
               "CheckDesign",

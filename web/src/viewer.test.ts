@@ -6,7 +6,7 @@ import { artifactUri } from "@agni/web-shared/uri.js";
 import { ViewerPresenter, summaryLine, type RenderView } from "./viewer.js";
 import { stubQueryView } from "./testviews.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
-import { SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { SheetFormat, SymbolSource } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 import { LocateReason } from "@panyam/agni-client/gen/agni/v1/checks/checks_pb";
 import type { Snapshot } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
@@ -15,7 +15,7 @@ import { fakeSnapshots, snapName } from "./testsnaps.js";
 // stubs suffice, with no DOM and no transport. getSheet returns the oneof-shaped response the real
 // client would, keyed on the requested format.
 function harness() {
-  // getDesign echoes the requested layout (empty -> faithful) so the presenter's adopted
+  // getSummary echoes the requested layout (empty -> faithful) so the presenter's adopted
   // layout reflects the request, as the real server's effective-layout does.
   // undrawn is OPTIONAL here as it is on the wire, so a response that omits it means a complete
   // drawing, and every existing override in this file predates the field (agni issue 354).
@@ -39,7 +39,7 @@ function harness() {
     flattenReadsMore?: boolean;
     drawingNote?: string;
   };
-  const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
+  const getSummary = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
     name: "D",
     layout: req.layout || "faithful",
     sourceFormat: "",
@@ -76,7 +76,7 @@ function harness() {
   }));
   // Two mock clients mirror the WS9-026 service split, with rendering RPCs on the design client,
   // rules/findings/expectations on the checks client.
-  const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
+  const client = { getSummary, getSheet, getLayoutReport, highlightSheet } as any;
   // readBoard answers like an engine that persisted the board; the open never waits on it.
   const fake = fakeSnapshots();
   const readBoard = vi.fn(fake.readBoard);
@@ -157,7 +157,7 @@ function harness() {
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel, onCloseSheetViews };
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, onDrawingNote, getSummary, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel, onCloseSheetViews };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -216,7 +216,7 @@ describe("ViewerPresenter", () => {
   it("opens a file in the default SVG mode: requests SVG and shows the svg", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.eds");
-    expect(h.getDesign).toHaveBeenCalledOnce();
+    expect(h.getSummary).toHaveBeenCalledOnce();
     expect(h.getSheet).toHaveBeenCalledOnce();
     expect(h.getSheet.mock.calls[0][0].format).toBe(SheetFormat.SVG);
     expect(h.render.showSvg).toHaveBeenCalledWith("<svg data-mode='svg'/>");
@@ -262,7 +262,7 @@ describe("ViewerPresenter", () => {
 
   it("keeps GLYPH symbols for a netlist-only design (no faithful layout)", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValueOnce({
+    h.getSummary.mockResolvedValueOnce({
       name: "N", layout: "grid", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid", "layered"],
     });
@@ -314,7 +314,7 @@ describe("ViewerPresenter", () => {
     await h.presenter.openFile("m", "a.kicad_sch");
     await h.presenter.setMode("native");
     h.getSheet.mockClear();
-    h.getDesign.mockResolvedValueOnce({
+    h.getSummary.mockResolvedValueOnce({
       name: "B",
       layout: "grid",
       sourceFormat: "",
@@ -426,11 +426,11 @@ describe("ViewerPresenter", () => {
     const h = harness();
     await h.presenter.openFile("m", "a.eds"); // faithful
     await h.presenter.setLayout("grid");
-    h.getDesign.mockClear();
+    h.getSummary.mockClear();
     await h.presenter.openFile("m", "b.eds");
     // The new design is requested with no layout, so the server's effective default
     // (faithful, per the fake's empty->faithful echo) wins over the previous grid choice.
-    expect(h.getDesign.mock.calls[0][0].layout).toBe("");
+    expect(h.getSummary.mock.calls[0][0].layout).toBe("");
     const shown = h.getSheet.mock.calls;
     expect(shown[shown.length - 1][0].layout).toBe("faithful");
   });
@@ -439,19 +439,19 @@ describe("ViewerPresenter", () => {
     const h = harness();
     await h.presenter.openFile("m", "a.eds");
     await h.presenter.setLayout("grid");
-    h.getDesign.mockClear();
+    h.getSummary.mockClear();
     await h.presenter.openFile("m", "a.eds");
-    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+    expect(h.getSummary.mock.calls[0][0].layout).toBe("grid");
   });
 
-  it("changing layout re-opens the design and threads the layout through GetDesign and GetSheet", async () => {
+  it("changing layout re-opens the design and threads the layout through GetSummary and GetSheet", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn"); // opens at faithful
-    h.getDesign.mockClear();
+    h.getSummary.mockClear();
     h.getSheet.mockClear();
     await h.presenter.setLayout("grid");
-    expect(h.getDesign).toHaveBeenCalledOnce();
-    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+    expect(h.getSummary).toHaveBeenCalledOnce();
+    expect(h.getSummary.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls;
     expect(gs[gs.length - 1][0].layout).toBe("grid"); // sheet render uses the new layout
   });
@@ -459,9 +459,9 @@ describe("ViewerPresenter", () => {
   it("setLayout to the current layout is a no-op", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn"); // faithful
-    h.getDesign.mockClear();
+    h.getSummary.mockClear();
     await h.presenter.setLayout("faithful");
-    expect(h.getDesign).not.toHaveBeenCalled();
+    expect(h.getSummary).not.toHaveBeenCalled();
   });
 
   it("reports the URL-addressable location on open and on sheet/mode/layout change", async () => {
@@ -477,7 +477,7 @@ describe("ViewerPresenter", () => {
   it("restore opens the named file at the requested sheet and adopts the URL's mode/layout/symbols", async () => {
     const h = harness();
     // A two-sheet design so restoring a non-first sheet is observable.
-    h.getDesign.mockResolvedValueOnce({
+    h.getSummary.mockResolvedValueOnce({
       name: "D",
       layout: "grid",
       sourceFormat: "",
@@ -489,7 +489,7 @@ describe("ViewerPresenter", () => {
     } as any);
     await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
-    expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
+    expect(h.getSummary.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
     expect(gs).toMatchObject({ sheet: "s2", format: SheetFormat.PACKED, layout: "grid", symbols: SymbolSource.FAITHFUL });
     // Both nav surfaces mark the restored (non-first) sheet active.
@@ -503,7 +503,7 @@ describe("ViewerPresenter", () => {
   // design to the host's Compare once the open design has loaded, so side A is set when it starts.
   it("starts a comparison against the design a link names, after the design opens", async () => {
     const h = harness();
-    h.onCompare.mockImplementation(() => expect(h.getDesign).toHaveBeenCalled());
+    h.onCompare.mockImplementation(() => expect(h.getSummary).toHaveBeenCalled());
     await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn" });
     expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" }, { nearRenames: false });
   });
@@ -631,7 +631,7 @@ describe("ViewerPresenter", () => {
       return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
-      h.getDesign.mockResolvedValue({
+      h.getSummary.mockResolvedValue({
         name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
         sheets: [{ id: "s1", name: "S1" }], nativeAvailable: true, availableLayouts: ["faithful"],
         contentHash,
@@ -711,7 +711,7 @@ describe("ViewerPresenter", () => {
     await h.presenter.setMode("native");
     const last = lastControls(h);
     expect(last.mode).toBe("native");
-    const opened = h.getDesign.mock.calls;
+    const opened = h.getSummary.mock.calls;
     expect(opened[opened.length - 1][0].layout).toBe("faithful"); // native forced the layout back to faithful
   });
 
@@ -734,7 +734,7 @@ describe("ViewerPresenter", () => {
   // wire rather than the mark. Navigating by any other route has to move it too.
   it("tells the query panel which sheet is on screen, on every navigation", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "faithful",
       sourceFormat: "",
@@ -791,7 +791,7 @@ describe("ViewerPresenter", () => {
 
   it("maps finding sheets to named badges and navigates to the subject's sheet before highlighting (WS9-024)", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "faithful",
       sourceFormat: "",
@@ -829,7 +829,7 @@ describe("ViewerPresenter", () => {
 
   it("an explicit badge click navigates to that sheet even when the subject is already focused", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "faithful",
       sourceFormat: "",
@@ -855,7 +855,7 @@ describe("ViewerPresenter", () => {
 
   it("locateEntity navigates to a query cell's sheet then highlights the entity (WS9-038)", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "faithful",
       sourceFormat: "",
@@ -878,7 +878,7 @@ describe("ViewerPresenter", () => {
 
   it("locateEntity highlights an entity on the current sheet with no navigation when no sheet is given", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "faithful",
       sourceFormat: "",
@@ -912,7 +912,7 @@ describe("ViewerPresenter", () => {
 
   it("locateEntity suppresses the locate note on an auto-layout, where every entity is drawn", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D",
       layout: "grid",
       sourceFormat: "",
@@ -1237,7 +1237,7 @@ describe("on-demand checks (WS9)", () => {
   // a board leaves it to the store rather than reading it again.
   it("opens a design with a board without reading the board", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValueOnce({
+    h.getSummary.mockResolvedValueOnce({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
       nativeAvailable: true, availableLayouts: ["faithful"],
@@ -1295,7 +1295,7 @@ describe("on-demand checks (WS9)", () => {
 
   it("an open that fails before the catalog loads leaves Run enabled", async () => {
     const h = harness();
-    h.getDesign.mockRejectedValueOnce(new Error("unreadable"));
+    h.getSummary.mockRejectedValueOnce(new Error("unreadable"));
     await h.presenter.openFile("m", "broken.edn");
     expect(h.listRules).not.toHaveBeenCalled();
     expect(lastFindings(h).catalogLoading).toBe(false);
@@ -1355,7 +1355,7 @@ describe("board layer visibility (agni 1351)", () => {
   ];
   function boardHarness() {
     const h = harness();
-    h.getDesign.mockImplementation(async (req: { layout?: string }) => ({
+    h.getSummary.mockImplementation(async (req: { layout?: string }) => ({
       name: "B",
       layout: req.layout || "grid",
       sourceFormat: "kicad",
@@ -1499,7 +1499,7 @@ describe("clearHighlights (agni issue 348)", () => {
 describe("the incomplete-drawing notice", () => {
   it("pushes a note when the design reports undrawn placements", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "Root" }], nativeAvailable: false, availableLayouts: ["faithful"],
       undrawn: [
@@ -1530,7 +1530,7 @@ describe("the hierarchical-read notice", () => {
 
   it("pushes the served sentence unchanged", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue({
+    h.getSummary.mockResolvedValue({
       name: "TEST", layout: "grid", sourceFormat: "edif", componentCount: 1, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["grid"],
       hierarchyNote: sentence, flattenReadsMore: true,
@@ -1563,7 +1563,7 @@ describe("the computed-layout notice", () => {
 
   it("shows the served sentence on the computed sheet and clears it on the board", async () => {
     const h = harness();
-    h.getDesign.mockResolvedValue(reply);
+    h.getSummary.mockResolvedValue(reply);
     await h.presenter.openFile("m", "x.kicad_pcb");
     const calls = h.onDrawingNote.mock.calls;
     expect(calls[calls.length - 1][0]).toBe(sentence);
@@ -2082,29 +2082,29 @@ describe("opening a design on its board", () => {
   it("asks for the board before the design's sheets, and draws it once", async () => {
     const h = harness();
     const order: string[] = [];
-    h.getDesign.mockImplementation(async (req) => (order.push("getDesign"), withBoard(req)));
+    h.getSummary.mockImplementation(async (req) => (order.push("getSummary"), withBoard(req)));
     h.getSheet.mockImplementation(async (req) => (order.push(`getSheet ${req.sheet}`), svg));
     await h.presenter.openFile("m", "d.kicad_pcb", "board");
-    expect(order).toEqual(["getSheet board", "getDesign"]);
+    expect(order).toEqual(["getSheet board", "getSummary"]);
     const last = h.navA.setState.mock.calls[h.navA.setState.mock.calls.length - 1][0];
     expect(last).toMatchObject({ mount: "m", path: "d.kicad_pcb", activeId: "board" });
     expect(last.sheets).toHaveLength(2);
   });
 
-  it("sends GetDesign and pushes no sheet list until the board has drawn", async () => {
+  it("sends GetSummary and pushes no sheet list until the board has drawn", async () => {
     const h = harness();
     let release!: () => void;
     const held = new Promise<void>((r) => (release = r));
-    h.getDesign.mockImplementation(withBoard);
+    h.getSummary.mockImplementation(withBoard);
     h.getSheet.mockImplementation(async () => (await held, svg));
     const opening = h.presenter.openFile("m", "d.kicad_pcb", "board");
     await vi.waitFor(() => expect(h.getSheet).toHaveBeenCalledOnce());
     await new Promise((r) => setTimeout(r, 0));
-    expect(h.getDesign).not.toHaveBeenCalled();
+    expect(h.getSummary).not.toHaveBeenCalled();
     expect(h.navA.setState).not.toHaveBeenCalled();
     release();
     await opening;
-    expect(h.getDesign).toHaveBeenCalledOnce();
+    expect(h.getSummary).toHaveBeenCalledOnce();
     expect(h.navA.setState).toHaveBeenCalled();
   });
 

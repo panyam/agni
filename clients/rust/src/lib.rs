@@ -11,7 +11,7 @@
 //!
 //! ```no_run
 //! # async fn demo() -> Result<(), agni_client::Error> {
-//! use agni_client::agni::v1::webapi::{GetDesignRequest, IngestRequest, Snapshot};
+//! use agni_client::agni::v1::webapi::{GetSummaryRequest, IngestRequest, Snapshot};
 //!
 //! let client = agni_client::Client::connect("http://127.0.0.1:8080", None).await?;
 //! let ingest = IngestRequest {
@@ -20,8 +20,8 @@
 //! };
 //! let snap = client.snapshots().ingest(ingest).await?.into_inner();
 //! let design = client
-//!     .designs()
-//!     .get_design(GetDesignRequest { snapshot: snap.name.clone(), ..Default::default() })
+//!     .design_views()
+//!     .get_summary(GetSummaryRequest { snapshot: snap.name.clone(), ..Default::default() })
 //!     .await?
 //!     .into_inner();
 //! println!("{} components", design.component_count);
@@ -41,7 +41,7 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::{Code, Request, Status};
 
 use agni::v1::webapi::check_service_client::CheckServiceClient;
-use agni::v1::webapi::design_service_client::DesignServiceClient;
+use agni::v1::webapi::design_view_service_client::DesignViewServiceClient;
 use agni::v1::webapi::query_service_client::QueryServiceClient;
 use agni::v1::webapi::server_service_client::ServerServiceClient;
 use agni::v1::webapi::snapshot_service_client::SnapshotServiceClient;
@@ -128,9 +128,9 @@ impl Client {
         SnapshotServiceClient::new(self.transport())
     }
 
-    /// `agni.v1.webapi.DesignService`.
-    pub fn designs(&self) -> DesignServiceClient<Transport> {
-        DesignServiceClient::new(self.transport())
+    /// `agni.v1.webapi.DesignViewService`.
+    pub fn design_views(&self) -> DesignViewServiceClient<Transport> {
+        DesignViewServiceClient::new(self.transport())
     }
 
     /// `agni.v1.webapi.CheckService`.

@@ -151,7 +151,7 @@ func main() {
 			return demokit.Errf("read %s: %v", path, err)
 		}
 		// Each part names its meshes by key. Parts that share a model share the key, so the meshes are
-		// read once each, as DesignService.GetBoardMeshes reads them.
+		// read once each, as DesignViewService.GetBoardMeshes reads them.
 		var keys []string
 		seen := map[string]bool{}
 		for _, p := range b.GetPlacements() {

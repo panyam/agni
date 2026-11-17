@@ -839,7 +839,7 @@ type ComponentPlacement struct {
 	// 1652).
 	Height *int64 `protobuf:"varint,7,opt,name=height,proto3,oneof" json:"height,omitempty"`
 	// model_instances lists this part's 3D model meshes, one for each of its models that gave a height
-	// (agni issue 1652). DesignService.GetBoardMeshes returns each mesh by its key. A
+	// (agni issue 1652). DesignViewService.GetBoardMeshes returns each mesh by its key. A
 	// part with none draws as a block of its height.
 	ModelInstances []*ModelInstance `protobuf:"bytes,8,rep,name=model_instances,json=modelInstances,proto3" json:"model_instances,omitempty"`
 	Prov           *Provenance      `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`

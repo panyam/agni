@@ -59,9 +59,9 @@ func isolated(t *testing.T) string {
 	return dir
 }
 
-func statsOf(t *testing.T, design string) *webapi.GetDesignResponse {
+func statsOf(t *testing.T, design string) *webapi.GetSummaryResponse {
 	t.Helper()
-	var got webapi.GetDesignResponse
+	var got webapi.GetSummaryResponse
 	if err := protojson.Unmarshal([]byte(runRoot(t, "stats", design, "--format", "json")), &got); err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@
 use agni_client::Client;
 use agni_client::agni::v1::geom::BoardGeometry;
 use agni_client::agni::v1::webapi::{
-    CheckDesignRequest, DeleteSnapshotRequest, GetBoardGeometryRequest, GetDesignRequest,
+    CheckDesignRequest, DeleteSnapshotRequest, GetBoardGeometryRequest, GetSummaryRequest,
     IngestRequest, RunQueryRequest, Snapshot,
 };
 use prost::Message;
@@ -45,7 +45,7 @@ async fn board_geometry(client: &Client, snapshot: &str) -> Result<BoardGeometry
     let mut page_token = String::new();
     loop {
         let page = client
-            .designs()
+            .design_views()
             .get_board_geometry(GetBoardGeometryRequest {
                 snapshot: snapshot.to_string(),
                 max_bytes: BOARD_PAGE_BYTES,
@@ -129,13 +129,13 @@ async fn run(server: &str, design: &str) -> Result<Summary, String> {
 
 async fn ask(client: &Client, snapshot: &str) -> Result<Summary, String> {
     let d = client
-        .designs()
-        .get_design(GetDesignRequest {
+        .design_views()
+        .get_summary(GetSummaryRequest {
             snapshot: snapshot.to_string(),
             ..Default::default()
         })
         .await
-        .map_err(|s| format!("calling GetDesign: {s}"))?
+        .map_err(|s| format!("calling GetSummary: {s}"))?
         .into_inner();
     let c = client
         .checks()

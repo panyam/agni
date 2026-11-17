@@ -39,7 +39,7 @@ const REPLIES: Record<string, unknown> = {
       { name: "notes.txt", uri: "mount://m/notes.txt", isDir: false, format: "", kind: 0 },
     ],
   },
-  GetDesign: {
+  GetSummary: {
     name: "Sample Board",
     sourceFormat: "edif-2.0.0",
     componentCount: 19,

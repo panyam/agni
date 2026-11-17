@@ -21,7 +21,7 @@ import (
 )
 
 // CheckService runs the rule checks over a design's netlist IR and serves the rule catalog, over
-// the same injected Loader the design service uses (C13). It was split out of DesignService
+// the same injected Loader the design service uses (C13). It was split out of DesignViewService
 // (WS9-026) and knows no transport.
 type CheckService struct {
 	// projects resolves a design to its project's config, nil when the deployment declares none. See

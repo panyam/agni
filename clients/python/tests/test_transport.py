@@ -107,7 +107,7 @@ def test_cli_argv_carries_the_snapshot_definition():
     c.run_query(snapshot=board, query="q", work_budget=7)
     c.create_review(snapshot=board, manifest={"name": "m"})
     c.get_layout_report(snapshot=named)
-    c.get_design(snapshot=named)
+    c.get_summary(snapshot=named)
     c.diff_designs(a_snapshot=plain, b_snapshot=plain)
     c.run_query(snapshot=lib, query="q")
     assert t.argvs[:6] == [
@@ -121,7 +121,7 @@ def test_cli_argv_carries_the_snapshot_definition():
     assert t.argvs[6][:5] == ["query", DESIGN, "q", "--format", "json"] and t.argvs[6][5] == "--lib", t.argvs[6]
     # A definition field a command has no flag for is refused at the question, never dropped.
     with pytest.raises(CliUnsupported, match="board_uri"):
-        c.get_design(snapshot=board)
+        c.get_summary(snapshot=board)
     with pytest.raises(CliUnsupported, match="as_named"):
         c.diff_designs(a_snapshot=named, b_snapshot=named)
     assert len(t.argvs) == 7
@@ -139,9 +139,9 @@ def test_cli_argv_carries_flatten_hierarchy():
     c.check_design(snapshot=flat)
     c.run_query(snapshot=flat, query="q")
     c.create_review(snapshot=flat, manifest={"name": "m"})
-    c.get_design(snapshot=flat)
+    c.get_summary(snapshot=flat)
     c.get_layout_report(snapshot=flat)
-    c.get_design(snapshot=plain)
+    c.get_summary(snapshot=plain)
     assert [a[-1] for a in t.argvs[:5]] == ["--flatten-hierarchy"] * 5, t.argvs
     assert "--flatten-hierarchy" not in t.argvs[5]
 

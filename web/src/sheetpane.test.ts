@@ -5,7 +5,7 @@ import { SheetPane, parseTurn, heavyDrawing, HEAVY_DRAWING_BYTES, FOLLOW_SIDE_KE
 import type { Selection } from "./selection.js";
 import type { HighlightSpec } from "./highlights.js";
 import type { BoardLayerRow, BoardStackView } from "@panyam/agni-client/gen/agni/v1/geom/geom_packed_pb";
-import { BoardFollowSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_pb";
+import { BoardFollowSchema } from "@panyam/agni-client/gen/agni/v1/webapi/design_view_pb";
 
 // ROWS are a board's layer rows as the engine lists them, two inner layers between the outer pair.
 const ROWS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"].map(
