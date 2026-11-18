@@ -8,24 +8,67 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class MountKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    MOUNT_KIND_UNSPECIFIED: _ClassVar[MountKind]
+    MOUNT_KIND_FILE: _ClassVar[MountKind]
+    MOUNT_KIND_UPLOADS: _ClassVar[MountKind]
+    MOUNT_KIND_GITHUB: _ClassVar[MountKind]
+
 class FileKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     FILE_KIND_UNSPECIFIED: _ClassVar[FileKind]
     FILE_KIND_DESIGN: _ClassVar[FileKind]
     FILE_KIND_DATASHEET: _ClassVar[FileKind]
+MOUNT_KIND_UNSPECIFIED: MountKind
+MOUNT_KIND_FILE: MountKind
+MOUNT_KIND_UPLOADS: MountKind
+MOUNT_KIND_GITHUB: MountKind
 FILE_KIND_UNSPECIFIED: FileKind
 FILE_KIND_DESIGN: FileKind
 FILE_KIND_DATASHEET: FileKind
 
 class Mount(_message.Message):
-    __slots__ = ("name", "root", "uri")
+    __slots__ = ("name", "root", "uri", "kind", "source", "ref", "commit", "fixed", "writable")
     NAME_FIELD_NUMBER: _ClassVar[int]
     ROOT_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
+    COMMIT_FIELD_NUMBER: _ClassVar[int]
+    FIXED_FIELD_NUMBER: _ClassVar[int]
+    WRITABLE_FIELD_NUMBER: _ClassVar[int]
     name: str
     root: str
     uri: str
-    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
+    kind: MountKind
+    source: str
+    ref: str
+    commit: str
+    fixed: bool
+    writable: bool
+    def __init__(self, name: _Optional[str] = ..., root: _Optional[str] = ..., uri: _Optional[str] = ..., kind: _Optional[_Union[MountKind, str]] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ..., commit: _Optional[str] = ..., fixed: _Optional[bool] = ..., writable: _Optional[bool] = ...) -> None: ...
+
+class CreateMountRequest(_message.Message):
+    __slots__ = ("name", "source", "ref")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    source: str
+    ref: str
+    def __init__(self, name: _Optional[str] = ..., source: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
+
+class DeleteMountRequest(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class DeleteMountResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
 
 class GetMountRequest(_message.Message):
     __slots__ = ("name",)

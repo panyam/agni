@@ -4,8 +4,9 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 /**
  * <pre>
- * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
- * The server is started with the mounts. Mounts are the security boundary. A client names an
+ * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+ * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+ * (agni issue 1735). Mounts are the security boundary. A client names an
  * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
  * host path.
  * </pre>
@@ -78,6 +79,68 @@ public final class WorkspaceServiceGrpc {
       }
     }
     return getGetMountMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountRequest,
+      io.github.panyam.agni.v1.webapi.Mount> getCreateMountMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateMount",
+      requestType = io.github.panyam.agni.v1.webapi.CreateMountRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Mount.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountRequest,
+      io.github.panyam.agni.v1.webapi.Mount> getCreateMountMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.CreateMountRequest, io.github.panyam.agni.v1.webapi.Mount> getCreateMountMethod;
+    if ((getCreateMountMethod = WorkspaceServiceGrpc.getCreateMountMethod) == null) {
+      synchronized (WorkspaceServiceGrpc.class) {
+        if ((getCreateMountMethod = WorkspaceServiceGrpc.getCreateMountMethod) == null) {
+          WorkspaceServiceGrpc.getCreateMountMethod = getCreateMountMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.CreateMountRequest, io.github.panyam.agni.v1.webapi.Mount>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateMount"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.CreateMountRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Mount.getDefaultInstance()))
+              .setSchemaDescriptor(new WorkspaceServiceMethodDescriptorSupplier("CreateMount"))
+              .build();
+        }
+      }
+    }
+    return getCreateMountMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteMountRequest,
+      io.github.panyam.agni.v1.webapi.DeleteMountResponse> getDeleteMountMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteMount",
+      requestType = io.github.panyam.agni.v1.webapi.DeleteMountRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.DeleteMountResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteMountRequest,
+      io.github.panyam.agni.v1.webapi.DeleteMountResponse> getDeleteMountMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.DeleteMountRequest, io.github.panyam.agni.v1.webapi.DeleteMountResponse> getDeleteMountMethod;
+    if ((getDeleteMountMethod = WorkspaceServiceGrpc.getDeleteMountMethod) == null) {
+      synchronized (WorkspaceServiceGrpc.class) {
+        if ((getDeleteMountMethod = WorkspaceServiceGrpc.getDeleteMountMethod) == null) {
+          WorkspaceServiceGrpc.getDeleteMountMethod = getDeleteMountMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.DeleteMountRequest, io.github.panyam.agni.v1.webapi.DeleteMountResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteMount"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.DeleteMountRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.DeleteMountResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new WorkspaceServiceMethodDescriptorSupplier("DeleteMount"))
+              .build();
+        }
+      }
+    }
+    return getDeleteMountMethod;
   }
 
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDirRequest,
@@ -265,8 +328,9 @@ public final class WorkspaceServiceGrpc {
 
   /**
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -295,6 +359,32 @@ public final class WorkspaceServiceGrpc {
     default void getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request,
         io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMountMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+     * in --store so it is served again after a restart (agni issue 1735). A github:// source is
+     * snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+     * --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+     * folder on the server's disk cannot be named here, since a client must not choose which host
+     * path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+     * </pre>
+     */
+    default void createMount(io.github.panyam.agni.v1.webapi.CreateMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateMountMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+     * server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+     * </pre>
+     */
+    default void deleteMount(io.github.panyam.agni.v1.webapi.DeleteMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.DeleteMountResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteMountMethod(), responseObserver);
     }
 
     /**
@@ -360,8 +450,9 @@ public final class WorkspaceServiceGrpc {
   /**
    * Base class for the server implementation of the service WorkspaceService.
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -377,8 +468,9 @@ public final class WorkspaceServiceGrpc {
   /**
    * A stub to allow clients to do asynchronous rpc calls to service WorkspaceService.
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -420,6 +512,34 @@ public final class WorkspaceServiceGrpc {
         io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetMountMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+     * in --store so it is served again after a restart (agni issue 1735). A github:// source is
+     * snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+     * --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+     * folder on the server's disk cannot be named here, since a client must not choose which host
+     * path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+     * </pre>
+     */
+    public void createMount(io.github.panyam.agni.v1.webapi.CreateMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateMountMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+     * server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+     * </pre>
+     */
+    public void deleteMount(io.github.panyam.agni.v1.webapi.DeleteMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.DeleteMountResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteMountMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -489,8 +609,9 @@ public final class WorkspaceServiceGrpc {
   /**
    * A stub to allow clients to do synchronous rpc calls to service WorkspaceService.
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -530,6 +651,32 @@ public final class WorkspaceServiceGrpc {
     public io.github.panyam.agni.v1.webapi.Mount getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getGetMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+     * in --store so it is served again after a restart (agni issue 1735). A github:// source is
+     * snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+     * --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+     * folder on the server's disk cannot be named here, since a client must not choose which host
+     * path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Mount createMount(io.github.panyam.agni.v1.webapi.CreateMountRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+     * server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.DeleteMountResponse deleteMount(io.github.panyam.agni.v1.webapi.DeleteMountRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteMountMethod(), getCallOptions(), request);
     }
 
     /**
@@ -595,8 +742,9 @@ public final class WorkspaceServiceGrpc {
   /**
    * A stub to allow clients to do limited synchronous rpc calls to service WorkspaceService.
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -636,6 +784,32 @@ public final class WorkspaceServiceGrpc {
     public io.github.panyam.agni.v1.webapi.Mount getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+     * in --store so it is served again after a restart (agni issue 1735). A github:// source is
+     * snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+     * --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+     * folder on the server's disk cannot be named here, since a client must not choose which host
+     * path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Mount createMount(io.github.panyam.agni.v1.webapi.CreateMountRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+     * server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.DeleteMountResponse deleteMount(io.github.panyam.agni.v1.webapi.DeleteMountRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteMountMethod(), getCallOptions(), request);
     }
 
     /**
@@ -701,8 +875,9 @@ public final class WorkspaceServiceGrpc {
   /**
    * A stub to allow clients to do ListenableFuture-style rpc calls to service WorkspaceService.
    * <pre>
-   * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
-   * The server is started with the mounts. Mounts are the security boundary. A client names an
+   * WorkspaceService exposes the server's folders ("mounts") and their directory contents. The server
+   * is started with its folders, and with --store and --uploads it can mount a GitHub repo at runtime
+   * (agni issue 1735). Mounts are the security boundary. A client names an
    * artifact by a `mount://&lt;mount&gt;/&lt;path&gt;` URI. The URI's authority is a mount, never an absolute
    * host path.
    * </pre>
@@ -744,6 +919,34 @@ public final class WorkspaceServiceGrpc {
         io.github.panyam.agni.v1.webapi.GetMountRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetMountMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * CreateMount makes a mount at runtime over a source the request names, and the server keeps it
+     * in --store so it is served again after a restart (agni issue 1735). A github:// source is
+     * snapshotted at the commit its ref names, into --uploads, and served read-only. A server with no
+     * --store or no --uploads is FAILED_PRECONDITION. A name already served is ALREADY_EXISTS. A
+     * folder on the server's disk cannot be named here, since a client must not choose which host
+     * path the server exposes, so a file:// source is INVALID_ARGUMENT. Use --mount for a folder.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Mount> createMount(
+        io.github.panyam.agni.v1.webapi.CreateMountRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateMountMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * DeleteMount stops serving a mount CreateMount made and forgets its record. A mount from the
+     * server's flags is FAILED_PRECONDITION, and an unknown name is NOT_FOUND.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.DeleteMountResponse> deleteMount(
+        io.github.panyam.agni.v1.webapi.DeleteMountRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteMountMethod(), getCallOptions()), request);
     }
 
     /**
@@ -812,10 +1015,12 @@ public final class WorkspaceServiceGrpc {
 
   private static final int METHODID_LIST_MOUNTS = 0;
   private static final int METHODID_GET_MOUNT = 1;
-  private static final int METHODID_LIST_DIR = 2;
-  private static final int METHODID_LIST_DESIGN_FILES = 3;
-  private static final int METHODID_PROPOSE_DESIGNS = 4;
-  private static final int METHODID_DECLARE_COMPANION = 5;
+  private static final int METHODID_CREATE_MOUNT = 2;
+  private static final int METHODID_DELETE_MOUNT = 3;
+  private static final int METHODID_LIST_DIR = 4;
+  private static final int METHODID_LIST_DESIGN_FILES = 5;
+  private static final int METHODID_PROPOSE_DESIGNS = 6;
+  private static final int METHODID_DECLARE_COMPANION = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -841,6 +1046,14 @@ public final class WorkspaceServiceGrpc {
         case METHODID_GET_MOUNT:
           serviceImpl.getMount((io.github.panyam.agni.v1.webapi.GetMountRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount>) responseObserver);
+          break;
+        case METHODID_CREATE_MOUNT:
+          serviceImpl.createMount((io.github.panyam.agni.v1.webapi.CreateMountRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount>) responseObserver);
+          break;
+        case METHODID_DELETE_MOUNT:
+          serviceImpl.deleteMount((io.github.panyam.agni.v1.webapi.DeleteMountRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.DeleteMountResponse>) responseObserver);
           break;
         case METHODID_LIST_DIR:
           serviceImpl.listDir((io.github.panyam.agni.v1.webapi.ListDirRequest) request,
@@ -890,6 +1103,20 @@ public final class WorkspaceServiceGrpc {
               io.github.panyam.agni.v1.webapi.GetMountRequest,
               io.github.panyam.agni.v1.webapi.Mount>(
                 service, METHODID_GET_MOUNT)))
+        .addMethod(
+          getCreateMountMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.CreateMountRequest,
+              io.github.panyam.agni.v1.webapi.Mount>(
+                service, METHODID_CREATE_MOUNT)))
+        .addMethod(
+          getDeleteMountMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.DeleteMountRequest,
+              io.github.panyam.agni.v1.webapi.DeleteMountResponse>(
+                service, METHODID_DELETE_MOUNT)))
         .addMethod(
           getListDirMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -968,6 +1195,8 @@ public final class WorkspaceServiceGrpc {
               .setSchemaDescriptor(new WorkspaceServiceFileDescriptorSupplier())
               .addMethod(getListMountsMethod())
               .addMethod(getGetMountMethod())
+              .addMethod(getCreateMountMethod())
+              .addMethod(getDeleteMountMethod())
               .addMethod(getListDirMethod())
               .addMethod(getListDesignFilesMethod())
               .addMethod(getProposeDesignsMethod())

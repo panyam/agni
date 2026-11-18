@@ -21,6 +21,63 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// MountKind is how a mount's files are reached. S3, GCS and SharePoint come with agni issues 1729
+// and 1730.
+type MountKind int32
+
+const (
+	MountKind_MOUNT_KIND_UNSPECIFIED MountKind = 0
+	// MOUNT_KIND_FILE is a folder on the server's disk, from --mount or --mount-root.
+	MountKind_MOUNT_KIND_FILE MountKind = 1
+	// MOUNT_KIND_UPLOADS is the views of designs users uploaded, kept in --uploads.
+	MountKind_MOUNT_KIND_UPLOADS MountKind = 2
+	// MOUNT_KIND_GITHUB is a snapshot of a GitHub repo at one commit, kept in --uploads.
+	MountKind_MOUNT_KIND_GITHUB MountKind = 3
+)
+
+// Enum value maps for MountKind.
+var (
+	MountKind_name = map[int32]string{
+		0: "MOUNT_KIND_UNSPECIFIED",
+		1: "MOUNT_KIND_FILE",
+		2: "MOUNT_KIND_UPLOADS",
+		3: "MOUNT_KIND_GITHUB",
+	}
+	MountKind_value = map[string]int32{
+		"MOUNT_KIND_UNSPECIFIED": 0,
+		"MOUNT_KIND_FILE":        1,
+		"MOUNT_KIND_UPLOADS":     2,
+		"MOUNT_KIND_GITHUB":      3,
+	}
+)
+
+func (x MountKind) Enum() *MountKind {
+	p := new(MountKind)
+	*p = x
+	return p
+}
+
+func (x MountKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MountKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_workspace_proto_enumTypes[0].Descriptor()
+}
+
+func (MountKind) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_workspace_proto_enumTypes[0]
+}
+
+func (x MountKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MountKind.Descriptor instead.
+func (MountKind) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{0}
+}
+
 // FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
 // the READER. A browser cares which of its pages a file belongs to. It does not care whether the
 // netlist behind the file is EDIF or KiCad.
@@ -66,11 +123,11 @@ func (x FileKind) String() string {
 }
 
 func (FileKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_workspace_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_webapi_workspace_proto_enumTypes[1].Descriptor()
 }
 
 func (FileKind) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_workspace_proto_enumTypes[0]
+	return &file_agni_v1_webapi_workspace_proto_enumTypes[1]
 }
 
 func (x FileKind) Number() protoreflect.EnumNumber {
@@ -79,7 +136,7 @@ func (x FileKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use FileKind.Descriptor instead.
 func (FileKind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{1}
 }
 
 // Mount is one configured root folder. Clients reference it by name in later calls. root is a
@@ -93,7 +150,22 @@ type Mount struct {
 	// uri names the mount itself, "mount://<name>". The server sends it, so the client does not
 	// build it. A client that concatenates a scheme by hand can get the scheme wrong. Every other
 	// artifact reference the client makes is a child of this one.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	// kind says how the server reaches the mount's files.
+	Kind MountKind `protobuf:"varint,4,opt,name=kind,proto3,enum=agni.v1.webapi.MountKind" json:"kind,omitempty"`
+	// source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+	// GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+	Source string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	// ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+	Ref string `protobuf:"bytes,6,opt,name=ref,proto3" json:"ref,omitempty"`
+	// commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+	// that commit until it is made again.
+	Commit string `protobuf:"bytes,7,opt,name=commit,proto3" json:"commit,omitempty"`
+	// fixed marks a mount from the server's flags. DeleteMount refuses it.
+	Fixed bool `protobuf:"varint,8,opt,name=fixed,proto3" json:"fixed,omitempty"`
+	// writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+	// are written only by the server's own stores, so neither is writable.
+	Writable      bool `protobuf:"varint,9,opt,name=writable,proto3" json:"writable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -149,6 +221,193 @@ func (x *Mount) GetUri() string {
 	return ""
 }
 
+func (x *Mount) GetKind() MountKind {
+	if x != nil {
+		return x.Kind
+	}
+	return MountKind_MOUNT_KIND_UNSPECIFIED
+}
+
+func (x *Mount) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *Mount) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *Mount) GetCommit() string {
+	if x != nil {
+		return x.Commit
+	}
+	return ""
+}
+
+func (x *Mount) GetFixed() bool {
+	if x != nil {
+		return x.Fixed
+	}
+	return false
+}
+
+func (x *Mount) GetWritable() bool {
+	if x != nil {
+		return x.Writable
+	}
+	return false
+}
+
+type CreateMountRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the new mount's handle. It follows the rules of a mount:// authority.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
+	// makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+	Ref           string `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMountRequest) Reset() {
+	*x = CreateMountRequest{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMountRequest) ProtoMessage() {}
+
+func (x *CreateMountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMountRequest.ProtoReflect.Descriptor instead.
+func (*CreateMountRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreateMountRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateMountRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *CreateMountRequest) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+type DeleteMountRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the mount's handle.
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMountRequest) Reset() {
+	*x = DeleteMountRequest{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMountRequest) ProtoMessage() {}
+
+func (x *DeleteMountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMountRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMountRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *DeleteMountRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type DeleteMountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMountResponse) Reset() {
+	*x = DeleteMountResponse{}
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMountResponse) ProtoMessage() {}
+
+func (x *DeleteMountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMountResponse.ProtoReflect.Descriptor instead.
+func (*DeleteMountResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{3}
+}
+
 type GetMountRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the mount's handle, as Mount.name gives it.
@@ -159,7 +418,7 @@ type GetMountRequest struct {
 
 func (x *GetMountRequest) Reset() {
 	*x = GetMountRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -171,7 +430,7 @@ func (x *GetMountRequest) String() string {
 func (*GetMountRequest) ProtoMessage() {}
 
 func (x *GetMountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -184,7 +443,7 @@ func (x *GetMountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMountRequest.ProtoReflect.Descriptor instead.
 func (*GetMountRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetMountRequest) GetName() string {
@@ -212,7 +471,7 @@ type ListMountsRequest struct {
 
 func (x *ListMountsRequest) Reset() {
 	*x = ListMountsRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -224,7 +483,7 @@ func (x *ListMountsRequest) String() string {
 func (*ListMountsRequest) ProtoMessage() {}
 
 func (x *ListMountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -237,7 +496,7 @@ func (x *ListMountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMountsRequest.ProtoReflect.Descriptor instead.
 func (*ListMountsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListMountsRequest) GetOpens() []FileKind {
@@ -260,7 +519,7 @@ type ListMountsResponse struct {
 
 func (x *ListMountsResponse) Reset() {
 	*x = ListMountsResponse{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -272,7 +531,7 @@ func (x *ListMountsResponse) String() string {
 func (*ListMountsResponse) ProtoMessage() {}
 
 func (x *ListMountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -285,7 +544,7 @@ func (x *ListMountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMountsResponse.ProtoReflect.Descriptor instead.
 func (*ListMountsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListMountsResponse) GetMounts() []*Mount {
@@ -336,7 +595,7 @@ type DirEntry struct {
 
 func (x *DirEntry) Reset() {
 	*x = DirEntry{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -348,7 +607,7 @@ func (x *DirEntry) String() string {
 func (*DirEntry) ProtoMessage() {}
 
 func (x *DirEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -361,7 +620,7 @@ func (x *DirEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DirEntry.ProtoReflect.Descriptor instead.
 func (*DirEntry) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DirEntry) GetName() string {
@@ -433,7 +692,7 @@ type ListDirRequest struct {
 
 func (x *ListDirRequest) Reset() {
 	*x = ListDirRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -445,7 +704,7 @@ func (x *ListDirRequest) String() string {
 func (*ListDirRequest) ProtoMessage() {}
 
 func (x *ListDirRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -458,7 +717,7 @@ func (x *ListDirRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDirRequest.ProtoReflect.Descriptor instead.
 func (*ListDirRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListDirRequest) GetUri() string {
@@ -493,7 +752,7 @@ type ListDirResponse struct {
 
 func (x *ListDirResponse) Reset() {
 	*x = ListDirResponse{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -505,7 +764,7 @@ func (x *ListDirResponse) String() string {
 func (*ListDirResponse) ProtoMessage() {}
 
 func (x *ListDirResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -518,7 +777,7 @@ func (x *ListDirResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDirResponse.ProtoReflect.Descriptor instead.
 func (*ListDirResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListDirResponse) GetEntries() []*DirEntry {
@@ -538,7 +797,7 @@ type ListDesignFilesRequest struct {
 
 func (x *ListDesignFilesRequest) Reset() {
 	*x = ListDesignFilesRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +809,7 @@ func (x *ListDesignFilesRequest) String() string {
 func (*ListDesignFilesRequest) ProtoMessage() {}
 
 func (x *ListDesignFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +822,7 @@ func (x *ListDesignFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDesignFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListDesignFilesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListDesignFilesRequest) GetUri() string {
@@ -588,7 +847,7 @@ type ListDesignFilesResponse struct {
 
 func (x *ListDesignFilesResponse) Reset() {
 	*x = ListDesignFilesResponse{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -600,7 +859,7 @@ func (x *ListDesignFilesResponse) String() string {
 func (*ListDesignFilesResponse) ProtoMessage() {}
 
 func (x *ListDesignFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -613,7 +872,7 @@ func (x *ListDesignFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDesignFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListDesignFilesResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListDesignFilesResponse) GetMount() string {
@@ -655,7 +914,7 @@ type DesignFile struct {
 
 func (x *DesignFile) Reset() {
 	*x = DesignFile{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +926,7 @@ func (x *DesignFile) String() string {
 func (*DesignFile) ProtoMessage() {}
 
 func (x *DesignFile) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +939,7 @@ func (x *DesignFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DesignFile.ProtoReflect.Descriptor instead.
 func (*DesignFile) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DesignFile) GetPath() string {
@@ -724,7 +983,7 @@ type DeclareCompanionRequest struct {
 
 func (x *DeclareCompanionRequest) Reset() {
 	*x = DeclareCompanionRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -736,7 +995,7 @@ func (x *DeclareCompanionRequest) String() string {
 func (*DeclareCompanionRequest) ProtoMessage() {}
 
 func (x *DeclareCompanionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -749,7 +1008,7 @@ func (x *DeclareCompanionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclareCompanionRequest.ProtoReflect.Descriptor instead.
 func (*DeclareCompanionRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeclareCompanionRequest) GetDesignUri() string {
@@ -784,7 +1043,7 @@ type DeclareCompanionResponse struct {
 
 func (x *DeclareCompanionResponse) Reset() {
 	*x = DeclareCompanionResponse{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -796,7 +1055,7 @@ func (x *DeclareCompanionResponse) String() string {
 func (*DeclareCompanionResponse) ProtoMessage() {}
 
 func (x *DeclareCompanionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -809,7 +1068,7 @@ func (x *DeclareCompanionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclareCompanionResponse.ProtoReflect.Descriptor instead.
 func (*DeclareCompanionResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeclareCompanionResponse) GetDescriptorUri() string {
@@ -851,7 +1110,7 @@ type ProposeDesignsRequest struct {
 
 func (x *ProposeDesignsRequest) Reset() {
 	*x = ProposeDesignsRequest{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -863,7 +1122,7 @@ func (x *ProposeDesignsRequest) String() string {
 func (*ProposeDesignsRequest) ProtoMessage() {}
 
 func (x *ProposeDesignsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -876,7 +1135,7 @@ func (x *ProposeDesignsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeDesignsRequest.ProtoReflect.Descriptor instead.
 func (*ProposeDesignsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ProposeDesignsRequest) GetUri() string {
@@ -901,7 +1160,7 @@ type ProposeDesignsResponse struct {
 
 func (x *ProposeDesignsResponse) Reset() {
 	*x = ProposeDesignsResponse{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -913,7 +1172,7 @@ func (x *ProposeDesignsResponse) String() string {
 func (*ProposeDesignsResponse) ProtoMessage() {}
 
 func (x *ProposeDesignsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -926,7 +1185,7 @@ func (x *ProposeDesignsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeDesignsResponse.ProtoReflect.Descriptor instead.
 func (*ProposeDesignsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ProposeDesignsResponse) GetDesigns() []*ProposedDesign {
@@ -975,7 +1234,7 @@ type ProposedDesign struct {
 
 func (x *ProposedDesign) Reset() {
 	*x = ProposedDesign{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -987,7 +1246,7 @@ func (x *ProposedDesign) String() string {
 func (*ProposedDesign) ProtoMessage() {}
 
 func (x *ProposedDesign) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1000,7 +1259,7 @@ func (x *ProposedDesign) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposedDesign.ProtoReflect.Descriptor instead.
 func (*ProposedDesign) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ProposedDesign) GetFolder() string {
@@ -1056,7 +1315,7 @@ type UnreadFile struct {
 
 func (x *UnreadFile) Reset() {
 	*x = UnreadFile{}
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1068,7 +1327,7 @@ func (x *UnreadFile) String() string {
 func (*UnreadFile) ProtoMessage() {}
 
 func (x *UnreadFile) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_workspace_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1081,7 +1340,7 @@ func (x *UnreadFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnreadFile.ProtoReflect.Descriptor instead.
 func (*UnreadFile) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UnreadFile) GetPath() string {
@@ -1102,11 +1361,24 @@ var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"A\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\x1a\x1cagni/v1/webapi/project.proto\"\xe4\x01\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"%\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\x12-\n" +
+	"\x04kind\x18\x04 \x01(\x0e2\x19.agni.v1.webapi.MountKindR\x04kind\x12\x16\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\x12\x10\n" +
+	"\x03ref\x18\x06 \x01(\tR\x03ref\x12\x16\n" +
+	"\x06commit\x18\a \x01(\tR\x06commit\x12\x14\n" +
+	"\x05fixed\x18\b \x01(\bR\x05fixed\x12\x1a\n" +
+	"\bwritable\x18\t \x01(\bR\bwritable\"R\n" +
+	"\x12CreateMountRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12\x10\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\"(\n" +
+	"\x12DeleteMountRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x15\n" +
+	"\x13DeleteMountResponse\"%\n" +
 	"\x0fGetMountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"I\n" +
 	"\x11ListMountsRequest\x12.\n" +
@@ -1168,15 +1440,22 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
 	"UnreadFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason*T\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason*k\n" +
+	"\tMountKind\x12\x1a\n" +
+	"\x16MOUNT_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fMOUNT_KIND_FILE\x10\x01\x12\x16\n" +
+	"\x12MOUNT_KIND_UPLOADS\x10\x02\x12\x15\n" +
+	"\x11MOUNT_KIND_GITHUB\x10\x03*T\n" +
 	"\bFileKind\x12\x19\n" +
 	"\x15FILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10FILE_KIND_DESIGN\x10\x01\x12\x17\n" +
-	"\x13FILE_KIND_DATASHEET\x10\x022\xa3\x04\n" +
+	"\x13FILE_KIND_DATASHEET\x10\x022\xc5\x05\n" +
 	"\x10WorkspaceService\x12S\n" +
 	"\n" +
 	"ListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12B\n" +
-	"\bGetMount\x12\x1f.agni.v1.webapi.GetMountRequest\x1a\x15.agni.v1.webapi.Mount\x12J\n" +
+	"\bGetMount\x12\x1f.agni.v1.webapi.GetMountRequest\x1a\x15.agni.v1.webapi.Mount\x12H\n" +
+	"\vCreateMount\x12\".agni.v1.webapi.CreateMountRequest\x1a\x15.agni.v1.webapi.Mount\x12V\n" +
+	"\vDeleteMount\x12\".agni.v1.webapi.DeleteMountRequest\x1a#.agni.v1.webapi.DeleteMountResponse\x12J\n" +
 	"\aListDir\x12\x1e.agni.v1.webapi.ListDirRequest\x1a\x1f.agni.v1.webapi.ListDirResponse\x12b\n" +
 	"\x0fListDesignFiles\x12&.agni.v1.webapi.ListDesignFilesRequest\x1a'.agni.v1.webapi.ListDesignFilesResponse\x12_\n" +
 	"\x0eProposeDesigns\x12%.agni.v1.webapi.ProposeDesignsRequest\x1a&.agni.v1.webapi.ProposeDesignsResponse\x12e\n" +
@@ -1194,55 +1473,64 @@ func file_agni_v1_webapi_workspace_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_workspace_proto_rawDescData
 }
 
-var file_agni_v1_webapi_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_agni_v1_webapi_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_webapi_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_agni_v1_webapi_workspace_proto_goTypes = []any{
-	(FileKind)(0),                    // 0: agni.v1.webapi.FileKind
-	(*Mount)(nil),                    // 1: agni.v1.webapi.Mount
-	(*GetMountRequest)(nil),          // 2: agni.v1.webapi.GetMountRequest
-	(*ListMountsRequest)(nil),        // 3: agni.v1.webapi.ListMountsRequest
-	(*ListMountsResponse)(nil),       // 4: agni.v1.webapi.ListMountsResponse
-	(*DirEntry)(nil),                 // 5: agni.v1.webapi.DirEntry
-	(*ListDirRequest)(nil),           // 6: agni.v1.webapi.ListDirRequest
-	(*ListDirResponse)(nil),          // 7: agni.v1.webapi.ListDirResponse
-	(*ListDesignFilesRequest)(nil),   // 8: agni.v1.webapi.ListDesignFilesRequest
-	(*ListDesignFilesResponse)(nil),  // 9: agni.v1.webapi.ListDesignFilesResponse
-	(*DesignFile)(nil),               // 10: agni.v1.webapi.DesignFile
-	(*DeclareCompanionRequest)(nil),  // 11: agni.v1.webapi.DeclareCompanionRequest
-	(*DeclareCompanionResponse)(nil), // 12: agni.v1.webapi.DeclareCompanionResponse
-	(*ProposeDesignsRequest)(nil),    // 13: agni.v1.webapi.ProposeDesignsRequest
-	(*ProposeDesignsResponse)(nil),   // 14: agni.v1.webapi.ProposeDesignsResponse
-	(*ProposedDesign)(nil),           // 15: agni.v1.webapi.ProposedDesign
-	(*UnreadFile)(nil),               // 16: agni.v1.webapi.UnreadFile
-	(*Design)(nil),                   // 17: agni.v1.webapi.Design
+	(MountKind)(0),                   // 0: agni.v1.webapi.MountKind
+	(FileKind)(0),                    // 1: agni.v1.webapi.FileKind
+	(*Mount)(nil),                    // 2: agni.v1.webapi.Mount
+	(*CreateMountRequest)(nil),       // 3: agni.v1.webapi.CreateMountRequest
+	(*DeleteMountRequest)(nil),       // 4: agni.v1.webapi.DeleteMountRequest
+	(*DeleteMountResponse)(nil),      // 5: agni.v1.webapi.DeleteMountResponse
+	(*GetMountRequest)(nil),          // 6: agni.v1.webapi.GetMountRequest
+	(*ListMountsRequest)(nil),        // 7: agni.v1.webapi.ListMountsRequest
+	(*ListMountsResponse)(nil),       // 8: agni.v1.webapi.ListMountsResponse
+	(*DirEntry)(nil),                 // 9: agni.v1.webapi.DirEntry
+	(*ListDirRequest)(nil),           // 10: agni.v1.webapi.ListDirRequest
+	(*ListDirResponse)(nil),          // 11: agni.v1.webapi.ListDirResponse
+	(*ListDesignFilesRequest)(nil),   // 12: agni.v1.webapi.ListDesignFilesRequest
+	(*ListDesignFilesResponse)(nil),  // 13: agni.v1.webapi.ListDesignFilesResponse
+	(*DesignFile)(nil),               // 14: agni.v1.webapi.DesignFile
+	(*DeclareCompanionRequest)(nil),  // 15: agni.v1.webapi.DeclareCompanionRequest
+	(*DeclareCompanionResponse)(nil), // 16: agni.v1.webapi.DeclareCompanionResponse
+	(*ProposeDesignsRequest)(nil),    // 17: agni.v1.webapi.ProposeDesignsRequest
+	(*ProposeDesignsResponse)(nil),   // 18: agni.v1.webapi.ProposeDesignsResponse
+	(*ProposedDesign)(nil),           // 19: agni.v1.webapi.ProposedDesign
+	(*UnreadFile)(nil),               // 20: agni.v1.webapi.UnreadFile
+	(*Design)(nil),                   // 21: agni.v1.webapi.Design
 }
 var file_agni_v1_webapi_workspace_proto_depIdxs = []int32{
-	0,  // 0: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
-	1,  // 1: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
-	0,  // 2: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
-	0,  // 3: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
-	5,  // 4: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
-	10, // 5: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
-	15, // 6: agni.v1.webapi.ProposeDesignsResponse.designs:type_name -> agni.v1.webapi.ProposedDesign
-	16, // 7: agni.v1.webapi.ProposeDesignsResponse.unread:type_name -> agni.v1.webapi.UnreadFile
-	17, // 8: agni.v1.webapi.ProposedDesign.design:type_name -> agni.v1.webapi.Design
-	3,  // 9: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	2,  // 10: agni.v1.webapi.WorkspaceService.GetMount:input_type -> agni.v1.webapi.GetMountRequest
-	6,  // 11: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	8,  // 12: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
-	13, // 13: agni.v1.webapi.WorkspaceService.ProposeDesigns:input_type -> agni.v1.webapi.ProposeDesignsRequest
-	11, // 14: agni.v1.webapi.WorkspaceService.DeclareCompanion:input_type -> agni.v1.webapi.DeclareCompanionRequest
-	4,  // 15: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	1,  // 16: agni.v1.webapi.WorkspaceService.GetMount:output_type -> agni.v1.webapi.Mount
-	7,  // 17: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	9,  // 18: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
-	14, // 19: agni.v1.webapi.WorkspaceService.ProposeDesigns:output_type -> agni.v1.webapi.ProposeDesignsResponse
-	12, // 20: agni.v1.webapi.WorkspaceService.DeclareCompanion:output_type -> agni.v1.webapi.DeclareCompanionResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	0,  // 0: agni.v1.webapi.Mount.kind:type_name -> agni.v1.webapi.MountKind
+	1,  // 1: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
+	2,  // 2: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
+	1,  // 3: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
+	1,  // 4: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
+	9,  // 5: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
+	14, // 6: agni.v1.webapi.ListDesignFilesResponse.files:type_name -> agni.v1.webapi.DesignFile
+	19, // 7: agni.v1.webapi.ProposeDesignsResponse.designs:type_name -> agni.v1.webapi.ProposedDesign
+	20, // 8: agni.v1.webapi.ProposeDesignsResponse.unread:type_name -> agni.v1.webapi.UnreadFile
+	21, // 9: agni.v1.webapi.ProposedDesign.design:type_name -> agni.v1.webapi.Design
+	7,  // 10: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
+	6,  // 11: agni.v1.webapi.WorkspaceService.GetMount:input_type -> agni.v1.webapi.GetMountRequest
+	3,  // 12: agni.v1.webapi.WorkspaceService.CreateMount:input_type -> agni.v1.webapi.CreateMountRequest
+	4,  // 13: agni.v1.webapi.WorkspaceService.DeleteMount:input_type -> agni.v1.webapi.DeleteMountRequest
+	10, // 14: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
+	12, // 15: agni.v1.webapi.WorkspaceService.ListDesignFiles:input_type -> agni.v1.webapi.ListDesignFilesRequest
+	17, // 16: agni.v1.webapi.WorkspaceService.ProposeDesigns:input_type -> agni.v1.webapi.ProposeDesignsRequest
+	15, // 17: agni.v1.webapi.WorkspaceService.DeclareCompanion:input_type -> agni.v1.webapi.DeclareCompanionRequest
+	8,  // 18: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
+	2,  // 19: agni.v1.webapi.WorkspaceService.GetMount:output_type -> agni.v1.webapi.Mount
+	2,  // 20: agni.v1.webapi.WorkspaceService.CreateMount:output_type -> agni.v1.webapi.Mount
+	5,  // 21: agni.v1.webapi.WorkspaceService.DeleteMount:output_type -> agni.v1.webapi.DeleteMountResponse
+	11, // 22: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
+	13, // 23: agni.v1.webapi.WorkspaceService.ListDesignFiles:output_type -> agni.v1.webapi.ListDesignFilesResponse
+	18, // 24: agni.v1.webapi.WorkspaceService.ProposeDesigns:output_type -> agni.v1.webapi.ProposeDesignsResponse
+	16, // 25: agni.v1.webapi.WorkspaceService.DeclareCompanion:output_type -> agni.v1.webapi.DeclareCompanionResponse
+	18, // [18:26] is the sub-list for method output_type
+	10, // [10:18] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_workspace_proto_init() }
@@ -1256,8 +1544,8 @@ func file_agni_v1_webapi_workspace_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_workspace_proto_rawDesc), len(file_agni_v1_webapi_workspace_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   16,
+			NumEnums:      2,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

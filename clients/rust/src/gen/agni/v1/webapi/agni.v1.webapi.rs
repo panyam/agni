@@ -3885,6 +3885,49 @@ pub struct Mount {
     /// artifact reference the client makes is a child of this one.
     #[prost(string, tag="3")]
     pub uri: ::prost::alloc::string::String,
+    /// kind says how the server reaches the mount's files.
+    #[prost(enumeration="MountKind", tag="4")]
+    pub kind: i32,
+    /// source is where the files come from, as a URL: github://antmicro/jetson-orin-baseboard for a
+    /// GitHub mount, file:///srv/boards for a folder. Empty for the uploads mount.
+    #[prost(string, tag="5")]
+    pub source: ::prost::alloc::string::String,
+    /// ref is the tag, branch or commit CreateMount was given. Empty for a kind with no history.
+    #[prost(string, tag="6")]
+    pub r#ref: ::prost::alloc::string::String,
+    /// commit is the full commit ref resolved to when the server took its snapshot. The mount serves
+    /// that commit until it is made again.
+    #[prost(string, tag="7")]
+    pub commit: ::prost::alloc::string::String,
+    /// fixed marks a mount from the server's flags. DeleteMount refuses it.
+    #[prost(bool, tag="8")]
+    pub fixed: bool,
+    /// writable says whether the server writes into the mount. A GitHub snapshot and the uploads mount
+    /// are written only by the server's own stores, so neither is writable.
+    #[prost(bool, tag="9")]
+    pub writable: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateMountRequest {
+    /// name is the new mount's handle. It follows the rules of a mount:// authority.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// source names what to mount, as a URL. github://<owner>/<repo> is the one source this build
+    /// makes. A public repo needs no sign-in, and a private one waits on agni issue 1724.
+    #[prost(string, tag="2")]
+    pub source: ::prost::alloc::string::String,
+    /// ref is the tag, branch or commit to snapshot. Empty means the repo's default branch.
+    #[prost(string, tag="3")]
+    pub r#ref: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteMountRequest {
+    /// name is the mount's handle.
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteMountResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetMountRequest {
@@ -4099,6 +4142,43 @@ pub struct UnreadFile {
     pub path: ::prost::alloc::string::String,
     #[prost(string, tag="2")]
     pub reason: ::prost::alloc::string::String,
+}
+/// MountKind is how a mount's files are reached. S3, GCS and SharePoint come with agni issues 1729
+/// and 1730.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum MountKind {
+    Unspecified = 0,
+    /// MOUNT_KIND_FILE is a folder on the server's disk, from --mount or --mount-root.
+    File = 1,
+    /// MOUNT_KIND_UPLOADS is the views of designs users uploaded, kept in --uploads.
+    Uploads = 2,
+    /// MOUNT_KIND_GITHUB is a snapshot of a GitHub repo at one commit, kept in --uploads.
+    Github = 3,
+}
+impl MountKind {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "MOUNT_KIND_UNSPECIFIED",
+            Self::File => "MOUNT_KIND_FILE",
+            Self::Uploads => "MOUNT_KIND_UPLOADS",
+            Self::Github => "MOUNT_KIND_GITHUB",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "MOUNT_KIND_UNSPECIFIED" => Some(Self::Unspecified),
+            "MOUNT_KIND_FILE" => Some(Self::File),
+            "MOUNT_KIND_UPLOADS" => Some(Self::Uploads),
+            "MOUNT_KIND_GITHUB" => Some(Self::Github),
+            _ => None,
+        }
+    }
 }
 /// FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
 /// the READER. A browser cares which of its pages a file belongs to. It does not care whether the

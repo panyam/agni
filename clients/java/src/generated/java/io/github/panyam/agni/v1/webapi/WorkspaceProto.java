@@ -32,6 +32,21 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_agni_v1_webapi_Mount_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_CreateMountRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_CreateMountRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_DeleteMountRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_DeleteMountRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_agni_v1_webapi_DeleteMountResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_agni_v1_webapi_DeleteMountResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_agni_v1_webapi_GetMountRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -116,69 +131,84 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\036agni/v1/webapi/workspace.proto\022\016agni.v" +
-      "1.webapi\032\034agni/v1/webapi/project.proto\"A" +
-      "\n\005Mount\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004root\030\002 \001(" +
-      "\tR\004root\022\020\n\003uri\030\003 \001(\tR\003uri\"%\n\017GetMountReq" +
-      "uest\022\022\n\004name\030\001 \001(\tR\004name\"I\n\021ListMountsRe" +
-      "quest\022.\n\005opens\030\002 \003(\0162\030.agni.v1.webapi.Fi" +
-      "leKindR\005opensJ\004\010\001\020\002\"h\n\022ListMountsRespons" +
-      "e\022-\n\006mounts\030\001 \003(\0132\025.agni.v1.webapi.Mount" +
-      "R\006mounts\022#\n\rpruned_mounts\030\002 \001(\005R\014prunedM" +
-      "ounts\"\252\001\n\010DirEntry\022\022\n\004name\030\001 \001(\tR\004name\022\025" +
-      "\n\006is_dir\030\002 \001(\010R\005isDir\022\026\n\006format\030\003 \001(\tR\006f" +
-      "ormat\022\020\n\003uri\030\004 \001(\tR\003uri\022,\n\004kind\030\005 \001(\0162\030." +
-      "agni.v1.webapi.FileKindR\004kind\022\033\n\tboard_u" +
-      "ri\030\006 \001(\tR\010boardUri\"y\n\016ListDirRequest\022\020\n\003" +
-      "uri\030\001 \001(\tR\003uri\022.\n\005opens\030\003 \003(\0162\030.agni.v1." +
-      "webapi.FileKindR\005opens\022\037\n\013mark_boards\030\004 " +
-      "\001(\010R\nmarkBoardsJ\004\010\002\020\003\"E\n\017ListDirResponse" +
-      "\0222\n\007entries\030\001 \003(\0132\030.agni.v1.webapi.DirEn" +
-      "tryR\007entries\"*\n\026ListDesignFilesRequest\022\020" +
-      "\n\003uri\030\001 \001(\tR\003uri\"\200\001\n\027ListDesignFilesResp" +
-      "onse\022\024\n\005mount\030\001 \001(\tR\005mount\0220\n\005files\030\002 \003(" +
-      "\0132\032.agni.v1.webapi.DesignFileR\005files\022\035\n\n" +
-      "total_size\030\003 \001(\003R\ttotalSize\"b\n\nDesignFil" +
-      "e\022\022\n\004path\030\001 \001(\tR\004path\022\022\n\004size\030\002 \001(\003R\004siz" +
-      "e\022\026\n\006sha256\030\003 \001(\tR\006sha256\022\024\n\005board\030\004 \001(\010" +
-      "R\005board\"]\n\027DeclareCompanionRequest\022\035\n\nde" +
-      "sign_uri\030\001 \001(\tR\tdesignUri\022#\n\rcompanion_u" +
-      "ri\030\002 \001(\tR\014companionUri\"\226\001\n\030DeclareCompan" +
-      "ionResponse\022%\n\016descriptor_uri\030\001 \001(\tR\rdes" +
-      "criptorUri\022\037\n\013design_yaml\030\002 \001(\tR\ndesignY" +
-      "aml\022\030\n\007existed\030\003 \001(\010R\007existed\022\030\n\007changed" +
-      "\030\004 \001(\010R\007changed\")\n\025ProposeDesignsRequest" +
-      "\022\020\n\003uri\030\001 \001(\tR\003uri\"\240\001\n\026ProposeDesignsRes" +
-      "ponse\0228\n\007designs\030\001 \003(\0132\036.agni.v1.webapi." +
-      "ProposedDesignR\007designs\0222\n\006unread\030\002 \003(\0132" +
-      "\032.agni.v1.webapi.UnreadFileR\006unread\022\030\n\007s" +
-      "upport\030\003 \003(\tR\007support\"\277\001\n\016ProposedDesign" +
-      "\022\026\n\006folder\030\001 \001(\tR\006folder\022.\n\006design\030\002 \001(\013" +
-      "2\026.agni.v1.webapi.DesignR\006design\022\037\n\013desi" +
-      "gn_yaml\030\003 \001(\tR\ndesignYaml\022\024\n\005files\030\004 \003(\t" +
-      "R\005files\022\022\n\004note\030\005 \001(\tR\004note\022\032\n\010declared\030" +
-      "\006 \001(\010R\010declared\"8\n\nUnreadFile\022\022\n\004path\030\001 " +
-      "\001(\tR\004path\022\026\n\006reason\030\002 \001(\tR\006reason*T\n\010Fil" +
-      "eKind\022\031\n\025FILE_KIND_UNSPECIFIED\020\000\022\024\n\020FILE" +
-      "_KIND_DESIGN\020\001\022\027\n\023FILE_KIND_DATASHEET\020\0022" +
-      "\243\004\n\020WorkspaceService\022S\n\nListMounts\022!.agn" +
-      "i.v1.webapi.ListMountsRequest\032\".agni.v1." +
-      "webapi.ListMountsResponse\022B\n\010GetMount\022\037." +
-      "agni.v1.webapi.GetMountRequest\032\025.agni.v1" +
-      ".webapi.Mount\022J\n\007ListDir\022\036.agni.v1.webap" +
-      "i.ListDirRequest\032\037.agni.v1.webapi.ListDi" +
-      "rResponse\022b\n\017ListDesignFiles\022&.agni.v1.w" +
-      "ebapi.ListDesignFilesRequest\032\'.agni.v1.w" +
-      "ebapi.ListDesignFilesResponse\022_\n\016Propose" +
-      "Designs\022%.agni.v1.webapi.ProposeDesignsR" +
-      "equest\032&.agni.v1.webapi.ProposeDesignsRe" +
-      "sponse\022e\n\020DeclareCompanion\022\'.agni.v1.web" +
-      "api.DeclareCompanionRequest\032(.agni.v1.we" +
-      "bapi.DeclareCompanionResponseB\271\001\n\037io.git" +
-      "hub.panyam.agni.v1.webapiB\016WorkspaceProt" +
-      "oP\001Z,github.com/panyam/agni/gen/go/agni/" +
-      "v1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\" +
-      "V1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002" +
-      "\020Agni::V1::Webapib\006proto3"
+      "1.webapi\032\034agni/v1/webapi/project.proto\"\344" +
+      "\001\n\005Mount\022\022\n\004name\030\001 \001(\tR\004name\022\022\n\004root\030\002 \001" +
+      "(\tR\004root\022\020\n\003uri\030\003 \001(\tR\003uri\022-\n\004kind\030\004 \001(\016" +
+      "2\031.agni.v1.webapi.MountKindR\004kind\022\026\n\006sou" +
+      "rce\030\005 \001(\tR\006source\022\020\n\003ref\030\006 \001(\tR\003ref\022\026\n\006c" +
+      "ommit\030\007 \001(\tR\006commit\022\024\n\005fixed\030\010 \001(\010R\005fixe" +
+      "d\022\032\n\010writable\030\t \001(\010R\010writable\"R\n\022CreateM" +
+      "ountRequest\022\022\n\004name\030\001 \001(\tR\004name\022\026\n\006sourc" +
+      "e\030\002 \001(\tR\006source\022\020\n\003ref\030\003 \001(\tR\003ref\"(\n\022Del" +
+      "eteMountRequest\022\022\n\004name\030\001 \001(\tR\004name\"\025\n\023D" +
+      "eleteMountResponse\"%\n\017GetMountRequest\022\022\n" +
+      "\004name\030\001 \001(\tR\004name\"I\n\021ListMountsRequest\022." +
+      "\n\005opens\030\002 \003(\0162\030.agni.v1.webapi.FileKindR" +
+      "\005opensJ\004\010\001\020\002\"h\n\022ListMountsResponse\022-\n\006mo" +
+      "unts\030\001 \003(\0132\025.agni.v1.webapi.MountR\006mount" +
+      "s\022#\n\rpruned_mounts\030\002 \001(\005R\014prunedMounts\"\252" +
+      "\001\n\010DirEntry\022\022\n\004name\030\001 \001(\tR\004name\022\025\n\006is_di" +
+      "r\030\002 \001(\010R\005isDir\022\026\n\006format\030\003 \001(\tR\006format\022\020" +
+      "\n\003uri\030\004 \001(\tR\003uri\022,\n\004kind\030\005 \001(\0162\030.agni.v1" +
+      ".webapi.FileKindR\004kind\022\033\n\tboard_uri\030\006 \001(" +
+      "\tR\010boardUri\"y\n\016ListDirRequest\022\020\n\003uri\030\001 \001" +
+      "(\tR\003uri\022.\n\005opens\030\003 \003(\0162\030.agni.v1.webapi." +
+      "FileKindR\005opens\022\037\n\013mark_boards\030\004 \001(\010R\nma" +
+      "rkBoardsJ\004\010\002\020\003\"E\n\017ListDirResponse\0222\n\007ent" +
+      "ries\030\001 \003(\0132\030.agni.v1.webapi.DirEntryR\007en" +
+      "tries\"*\n\026ListDesignFilesRequest\022\020\n\003uri\030\001" +
+      " \001(\tR\003uri\"\200\001\n\027ListDesignFilesResponse\022\024\n" +
+      "\005mount\030\001 \001(\tR\005mount\0220\n\005files\030\002 \003(\0132\032.agn" +
+      "i.v1.webapi.DesignFileR\005files\022\035\n\ntotal_s" +
+      "ize\030\003 \001(\003R\ttotalSize\"b\n\nDesignFile\022\022\n\004pa" +
+      "th\030\001 \001(\tR\004path\022\022\n\004size\030\002 \001(\003R\004size\022\026\n\006sh" +
+      "a256\030\003 \001(\tR\006sha256\022\024\n\005board\030\004 \001(\010R\005board" +
+      "\"]\n\027DeclareCompanionRequest\022\035\n\ndesign_ur" +
+      "i\030\001 \001(\tR\tdesignUri\022#\n\rcompanion_uri\030\002 \001(" +
+      "\tR\014companionUri\"\226\001\n\030DeclareCompanionResp" +
+      "onse\022%\n\016descriptor_uri\030\001 \001(\tR\rdescriptor" +
+      "Uri\022\037\n\013design_yaml\030\002 \001(\tR\ndesignYaml\022\030\n\007" +
+      "existed\030\003 \001(\010R\007existed\022\030\n\007changed\030\004 \001(\010R" +
+      "\007changed\")\n\025ProposeDesignsRequest\022\020\n\003uri" +
+      "\030\001 \001(\tR\003uri\"\240\001\n\026ProposeDesignsResponse\0228" +
+      "\n\007designs\030\001 \003(\0132\036.agni.v1.webapi.Propose" +
+      "dDesignR\007designs\0222\n\006unread\030\002 \003(\0132\032.agni." +
+      "v1.webapi.UnreadFileR\006unread\022\030\n\007support\030" +
+      "\003 \003(\tR\007support\"\277\001\n\016ProposedDesign\022\026\n\006fol" +
+      "der\030\001 \001(\tR\006folder\022.\n\006design\030\002 \001(\0132\026.agni" +
+      ".v1.webapi.DesignR\006design\022\037\n\013design_yaml" +
+      "\030\003 \001(\tR\ndesignYaml\022\024\n\005files\030\004 \003(\tR\005files" +
+      "\022\022\n\004note\030\005 \001(\tR\004note\022\032\n\010declared\030\006 \001(\010R\010" +
+      "declared\"8\n\nUnreadFile\022\022\n\004path\030\001 \001(\tR\004pa" +
+      "th\022\026\n\006reason\030\002 \001(\tR\006reason*k\n\tMountKind\022" +
+      "\032\n\026MOUNT_KIND_UNSPECIFIED\020\000\022\023\n\017MOUNT_KIN" +
+      "D_FILE\020\001\022\026\n\022MOUNT_KIND_UPLOADS\020\002\022\025\n\021MOUN" +
+      "T_KIND_GITHUB\020\003*T\n\010FileKind\022\031\n\025FILE_KIND" +
+      "_UNSPECIFIED\020\000\022\024\n\020FILE_KIND_DESIGN\020\001\022\027\n\023" +
+      "FILE_KIND_DATASHEET\020\0022\305\005\n\020WorkspaceServi" +
+      "ce\022S\n\nListMounts\022!.agni.v1.webapi.ListMo" +
+      "untsRequest\032\".agni.v1.webapi.ListMountsR" +
+      "esponse\022B\n\010GetMount\022\037.agni.v1.webapi.Get" +
+      "MountRequest\032\025.agni.v1.webapi.Mount\022H\n\013C" +
+      "reateMount\022\".agni.v1.webapi.CreateMountR" +
+      "equest\032\025.agni.v1.webapi.Mount\022V\n\013DeleteM" +
+      "ount\022\".agni.v1.webapi.DeleteMountRequest" +
+      "\032#.agni.v1.webapi.DeleteMountResponse\022J\n" +
+      "\007ListDir\022\036.agni.v1.webapi.ListDirRequest" +
+      "\032\037.agni.v1.webapi.ListDirResponse\022b\n\017Lis" +
+      "tDesignFiles\022&.agni.v1.webapi.ListDesign" +
+      "FilesRequest\032\'.agni.v1.webapi.ListDesign" +
+      "FilesResponse\022_\n\016ProposeDesigns\022%.agni.v" +
+      "1.webapi.ProposeDesignsRequest\032&.agni.v1" +
+      ".webapi.ProposeDesignsResponse\022e\n\020Declar" +
+      "eCompanion\022\'.agni.v1.webapi.DeclareCompa" +
+      "nionRequest\032(.agni.v1.webapi.DeclareComp" +
+      "anionResponseB\271\001\n\037io.github.panyam.agni." +
+      "v1.webapiB\016WorkspaceProtoP\001Z,github.com/" +
+      "panyam/agni/gen/go/agni/v1/webapi\242\002\003AVW\252" +
+      "\002\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni" +
+      "\\V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::Webap" +
+      "ib\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -190,93 +220,111 @@ public final class WorkspaceProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_Mount_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_Mount_descriptor,
-        new java.lang.String[] { "Name", "Root", "Uri", });
-    internal_static_agni_v1_webapi_GetMountRequest_descriptor =
+        new java.lang.String[] { "Name", "Root", "Uri", "Kind", "Source", "Ref", "Commit", "Fixed", "Writable", });
+    internal_static_agni_v1_webapi_CreateMountRequest_descriptor =
       getDescriptor().getMessageType(1);
+    internal_static_agni_v1_webapi_CreateMountRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_CreateMountRequest_descriptor,
+        new java.lang.String[] { "Name", "Source", "Ref", });
+    internal_static_agni_v1_webapi_DeleteMountRequest_descriptor =
+      getDescriptor().getMessageType(2);
+    internal_static_agni_v1_webapi_DeleteMountRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_DeleteMountRequest_descriptor,
+        new java.lang.String[] { "Name", });
+    internal_static_agni_v1_webapi_DeleteMountResponse_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_agni_v1_webapi_DeleteMountResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_agni_v1_webapi_DeleteMountResponse_descriptor,
+        new java.lang.String[] { });
+    internal_static_agni_v1_webapi_GetMountRequest_descriptor =
+      getDescriptor().getMessageType(4);
     internal_static_agni_v1_webapi_GetMountRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_GetMountRequest_descriptor,
         new java.lang.String[] { "Name", });
     internal_static_agni_v1_webapi_ListMountsRequest_descriptor =
-      getDescriptor().getMessageType(2);
+      getDescriptor().getMessageType(5);
     internal_static_agni_v1_webapi_ListMountsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListMountsRequest_descriptor,
         new java.lang.String[] { "Opens", });
     internal_static_agni_v1_webapi_ListMountsResponse_descriptor =
-      getDescriptor().getMessageType(3);
+      getDescriptor().getMessageType(6);
     internal_static_agni_v1_webapi_ListMountsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListMountsResponse_descriptor,
         new java.lang.String[] { "Mounts", "PrunedMounts", });
     internal_static_agni_v1_webapi_DirEntry_descriptor =
-      getDescriptor().getMessageType(4);
+      getDescriptor().getMessageType(7);
     internal_static_agni_v1_webapi_DirEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DirEntry_descriptor,
         new java.lang.String[] { "Name", "IsDir", "Format", "Uri", "Kind", "BoardUri", });
     internal_static_agni_v1_webapi_ListDirRequest_descriptor =
-      getDescriptor().getMessageType(5);
+      getDescriptor().getMessageType(8);
     internal_static_agni_v1_webapi_ListDirRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListDirRequest_descriptor,
         new java.lang.String[] { "Uri", "Opens", "MarkBoards", });
     internal_static_agni_v1_webapi_ListDirResponse_descriptor =
-      getDescriptor().getMessageType(6);
+      getDescriptor().getMessageType(9);
     internal_static_agni_v1_webapi_ListDirResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListDirResponse_descriptor,
         new java.lang.String[] { "Entries", });
     internal_static_agni_v1_webapi_ListDesignFilesRequest_descriptor =
-      getDescriptor().getMessageType(7);
+      getDescriptor().getMessageType(10);
     internal_static_agni_v1_webapi_ListDesignFilesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListDesignFilesRequest_descriptor,
         new java.lang.String[] { "Uri", });
     internal_static_agni_v1_webapi_ListDesignFilesResponse_descriptor =
-      getDescriptor().getMessageType(8);
+      getDescriptor().getMessageType(11);
     internal_static_agni_v1_webapi_ListDesignFilesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListDesignFilesResponse_descriptor,
         new java.lang.String[] { "Mount", "Files", "TotalSize", });
     internal_static_agni_v1_webapi_DesignFile_descriptor =
-      getDescriptor().getMessageType(9);
+      getDescriptor().getMessageType(12);
     internal_static_agni_v1_webapi_DesignFile_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DesignFile_descriptor,
         new java.lang.String[] { "Path", "Size", "Sha256", "Board", });
     internal_static_agni_v1_webapi_DeclareCompanionRequest_descriptor =
-      getDescriptor().getMessageType(10);
+      getDescriptor().getMessageType(13);
     internal_static_agni_v1_webapi_DeclareCompanionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DeclareCompanionRequest_descriptor,
         new java.lang.String[] { "DesignUri", "CompanionUri", });
     internal_static_agni_v1_webapi_DeclareCompanionResponse_descriptor =
-      getDescriptor().getMessageType(11);
+      getDescriptor().getMessageType(14);
     internal_static_agni_v1_webapi_DeclareCompanionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_DeclareCompanionResponse_descriptor,
         new java.lang.String[] { "DescriptorUri", "DesignYaml", "Existed", "Changed", });
     internal_static_agni_v1_webapi_ProposeDesignsRequest_descriptor =
-      getDescriptor().getMessageType(12);
+      getDescriptor().getMessageType(15);
     internal_static_agni_v1_webapi_ProposeDesignsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ProposeDesignsRequest_descriptor,
         new java.lang.String[] { "Uri", });
     internal_static_agni_v1_webapi_ProposeDesignsResponse_descriptor =
-      getDescriptor().getMessageType(13);
+      getDescriptor().getMessageType(16);
     internal_static_agni_v1_webapi_ProposeDesignsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ProposeDesignsResponse_descriptor,
         new java.lang.String[] { "Designs", "Unread", "Support", });
     internal_static_agni_v1_webapi_ProposedDesign_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(17);
     internal_static_agni_v1_webapi_ProposedDesign_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ProposedDesign_descriptor,
         new java.lang.String[] { "Folder", "Design", "DesignYaml", "Files", "Note", "Declared", });
     internal_static_agni_v1_webapi_UnreadFile_descriptor =
-      getDescriptor().getMessageType(15);
+      getDescriptor().getMessageType(18);
     internal_static_agni_v1_webapi_UnreadFile_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_UnreadFile_descriptor,
