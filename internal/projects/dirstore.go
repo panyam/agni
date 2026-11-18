@@ -24,94 +24,207 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// DirStore is the folder adapter of service.DesignStore (agni issues 1693, 1696). It keeps each
-// design as one folder under its root, and each artifact as a subfolder holding the artifact's files.
-// The store writes the design's `design.yaml` itself, naming the artifact analysis reads as its entry
-// and the others as companions, so a stored design reads as a plain folder to the CLI and to the
-// mount the server serves it under. A design with no artifact a reader opens keeps its record in
-// `design.draft.yaml` instead, since a `design.yaml` must name an entry, and FSStore never lists it.
+// DirStore is the folder adapter of service.DesignStore (agni issues 1693, 1696, 1739). It keeps a
+// design's record apart from its files.
 //
-// A write builds the whole new folder in a dot-folder under the root and renames it into place, so a
-// reader sees the old design or the new one. Untouched artifacts are hard-linked into the new folder
-// rather than copied. Reads skip dot-folders, so a half-built one is never listed. One mutex
-// serialises every write, since a write is rare beside reads.
+// The record is one YAML file per design, `<id>.yaml` in the store's records folder. It holds the
+// design's title, series and flatten_hierarchy, and each artifact's type, entry and manifest of paths
+// and hashes. It holds no file bytes.
+//
+// The files live in the uploads mount. Each file's contents sit once in a BlobDir, by hash. A design
+// reads through a view, `<id>/<rev>/<artifact>/<path>` under the mount, whose files are hard links to
+// the blobs. The view also holds a `design.yaml` written from the record, so the engine finds the
+// design's entry and companions beside its files, as it does in any folder. The record stays the only
+// source, and the view is rebuilt from it and the blobs.
+//
+// A view is never changed once built. A write builds a new revision's view beside the old one, then
+// renames the record over its old version, so a reader sees the old design or the new one. An old
+// view stays until Sweep finds nothing pointing at it, so a snapshot read from it keeps answering.
+// One mutex serialises every write, since a write is rare beside reads.
 type DirStore struct {
-	root string
-	tree Tree
-	fs   *FSStore
-	mu   sync.Mutex
+	records string   // the records folder, one <id>.yaml per design
+	views   string   // the uploads mount's root, "" when the server keeps no files
+	blobs   *BlobDir // nil when the server keeps no files
+	mount   string
+	mu      sync.Mutex
+	now     func() time.Time // the clock writes are stamped with; time.Now when nil
 }
 
-// draftDescriptor holds the record of a design with no artifact a reader opens.
+func (s *DirStore) clock() time.Time {
+	if s.now != nil {
+		return s.now().UTC().Truncate(time.Second)
+	}
+	return time.Now().UTC().Truncate(time.Second)
+}
+
+// draftDescriptor names nothing on disk now. It stays an artifact id the store refuses, since a
+// folder store once kept a design with no readable artifact under that name.
 const draftDescriptor = "design.draft.yaml"
 
-// NewDirStore returns a store over root, created if absent. mount names the mount a server serves
-// root under, and each design's URIs are written against it.
-func NewDirStore(root, mount string) (*DirStore, error) {
-	abs, err := filepath.Abs(root)
+// viewsDir is the folder under the uploads folder that a server serves as the uploads mount.
+const viewsDir = "designs"
+
+// NewDirStore returns a store keeping records in records and files in uploads, each created if
+// absent. mount names the mount a server serves the views under, and each design's URIs are written
+// against it. With uploads empty the store keeps records only, and a write of an artifact's files is
+// FAILED_PRECONDITION.
+func NewDirStore(records, uploads, mount string) (*DirStore, error) {
+	recs, err := filepath.Abs(records)
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(abs, 0o750); err != nil {
+	if err := os.MkdirAll(recs, 0o750); err != nil {
 		return nil, err
 	}
-	t := Tree{Mount: mount, FS: os.DirFS(abs)}
-	return &DirStore{root: abs, tree: t, fs: NewFSStore(t)}, nil
+	s := &DirStore{records: recs, mount: mount}
+	if uploads == "" {
+		return s, nil
+	}
+	up, err := filepath.Abs(uploads)
+	if err != nil {
+		return nil, err
+	}
+	if s.blobs, err = NewBlobDir(up); err != nil {
+		return nil, err
+	}
+	s.views = filepath.Join(up, viewsDir)
+	if err := os.MkdirAll(s.views, 0o750); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
+
+// ViewsRoot is the folder a server serves as the uploads mount, or "" for a store with no uploads.
+func ViewsRoot(uploads string) string {
+	if uploads == "" {
+		return ""
+	}
+	return filepath.Join(uploads, viewsDir)
+}
+
+// Blobs is the store's blob folder, or nil for a store with no uploads. A server reads and writes
+// uploaded contents through it, so an upload outlives a restart.
+func (s *DirStore) Blobs() *BlobDir { return s.blobs }
 
 var _ service.DesignStore = (*DirStore)(nil)
 
-// Design reads one stored design.
+// recordYAML is a design's record as the store writes it.
+type recordYAML struct {
+	Title            string           `yaml:"title,omitempty"`
+	Series           string           `yaml:"series,omitempty"`
+	FlattenHierarchy bool             `yaml:"flatten_hierarchy,omitempty"`
+	Rev              string           `yaml:"rev,omitempty"`
+	UpdateTime       time.Time        `yaml:"update_time"`
+	Artifacts        []artifactRecord `yaml:"artifacts,omitempty"`
+}
+
+type artifactRecord struct {
+	ID         string       `yaml:"id"`
+	Type       string       `yaml:"type"`
+	Entry      string       `yaml:"entry,omitempty"`
+	Companions []string     `yaml:"companions,omitempty"`
+	UpdateTime time.Time    `yaml:"update_time"`
+	Files      []fileRecord `yaml:"files"`
+}
+
+type fileRecord struct {
+	Path   string `yaml:"path"`
+	Sha256 string `yaml:"sha256"`
+	Size   int64  `yaml:"size"`
+}
+
+func (a artifactRecord) role() artifactRole {
+	return artifactRole{id: a.ID, typ: webapi.ArtifactType(webapi.ArtifactType_value[a.Type]), entry: a.Entry, companions: a.Companions}
+}
+
+// Design reads one stored design from its record.
 func (s *DirStore) Design(_ context.Context, id string) (*webapi.Design, error) {
-	if !idPattern.MatchString(id) {
-		return nil, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
+	rec, err := s.load(id)
+	if err != nil {
+		return nil, err
+	}
+	return s.designOf(id, rec)
+}
+
+func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
+	entry, _, raw, err := describe(id, rec)
+	if err != nil {
+		return nil, err
 	}
 	var d *webapi.Design
-	switch {
-	case s.exists(path.Join(id, DesignDescriptor)):
-		var err error
-		if _, d, err = s.fs.loadDesign(s.tree, id); err != nil {
-			return nil, err
-		}
-	case s.exists(path.Join(id, draftDescriptor)):
-		rec, err := s.record(id)
-		if err != nil {
-			return nil, err
-		}
-		base, err := artifact.New(s.tree.Mount, id)
+	if entry == "" || rec.Rev == "" {
+		base, err := artifact.New(s.mount, id)
 		if err != nil {
 			return nil, err
 		}
 		d = &webapi.Design{Title: orName(rec.Title, id), Uri: base.String(), Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
-		if fi, err := os.Stat(s.abs(path.Join(id, draftDescriptor))); err == nil {
-			d.UpdateTime = timestamppb.New(fi.ModTime())
+	} else {
+		if _, d, _, err = ParseDesign(bytes.NewReader(raw)); err != nil {
+			return nil, err
 		}
-	default:
-		return nil, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
+		d.Series = rec.Series
+		base, err := artifact.New(s.mount, path.Join(id, rec.Rev))
+		if err != nil {
+			return nil, err
+		}
+		join := func(rel string) (string, error) {
+			u, err := base.Join(rel)
+			if err != nil {
+				return "", err
+			}
+			return u.String(), nil
+		}
+		d.Uri = base.String()
+		if d.EntryUri, err = join(d.GetEntryUri()); err != nil {
+			return nil, err
+		}
+		for i, c := range d.GetCompanionUris() {
+			if d.CompanionUris[i], err = join(c); err != nil {
+				return nil, err
+			}
+		}
 	}
 	d.Name = service.StandaloneDesignName(id)
-	arts, err := s.artifactIDs(id)
-	if err != nil {
-		return nil, err
+	if !rec.UpdateTime.IsZero() {
+		d.UpdateTime = timestamppb.New(rec.UpdateTime)
 	}
-	for _, a := range arts {
-		d.Artifacts = append(d.Artifacts, service.ArtifactName(id, a))
+	for _, a := range rec.Artifacts {
+		d.Artifacts = append(d.Artifacts, service.ArtifactName(id, a.ID))
 	}
 	return d, nil
 }
 
+// describe composes a record's entry and companions, and writes the descriptor its view holds. A
+// record with no artifact a reader opens has an empty entry and no descriptor.
+func describe(id string, rec recordYAML) (entry string, companions []string, raw []byte, err error) {
+	roles := make([]artifactRole, 0, len(rec.Artifacts))
+	for _, a := range rec.Artifacts {
+		roles = append(roles, a.role())
+	}
+	if entry, companions, err = composeDesign(roles); err != nil || entry == "" {
+		return entry, companions, nil, err
+	}
+	// The view's descriptor holds what reading the board needs. The series stays in the record alone,
+	// so moving a design to another series keeps its view.
+	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy}
+	if raw, err = yaml.Marshal(&y); err != nil {
+		return "", nil, nil, err
+	}
+	if _, _, _, err := ParseDesign(bytes.NewReader(raw)); err != nil {
+		return "", nil, nil, fmt.Errorf("%w: %v", service.ErrInvalidArgument, err)
+	}
+	return entry, companions, raw, nil
+}
+
 // Designs reads every stored design, ordered by name.
 func (s *DirStore) Designs(ctx context.Context) ([]*webapi.Design, error) {
-	entries, err := os.ReadDir(s.root)
+	ids, err := s.ids()
 	if err != nil {
 		return nil, err
 	}
-	var out []*webapi.Design
-	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || !s.isDesign(e.Name()) {
-			continue
-		}
-		d, err := s.Design(ctx, e.Name())
+	out := make([]*webapi.Design, 0, len(ids))
+	for _, id := range ids {
+		d, err := s.Design(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -120,80 +233,112 @@ func (s *DirStore) Designs(ctx context.Context) ([]*webapi.Design, error) {
 	return out, nil
 }
 
-// CreateDesign writes a new design folder holding only its record.
-func (s *DirStore) CreateDesign(ctx context.Context, id string, rec service.DesignRecord) (*webapi.Design, error) {
+// ids lists the designs the records folder holds, ordered by id.
+func (s *DirStore) ids() ([]string, error) {
+	entries, err := os.ReadDir(s.records)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, e := range entries {
+		id, ok := strings.CutSuffix(e.Name(), ".yaml")
+		if ok && !e.IsDir() && idPattern.MatchString(id) {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// CreateDesign writes a new design's record, with no artifacts.
+func (s *DirStore) CreateDesign(_ context.Context, id string, rec service.DesignRecord) (*webapi.Design, error) {
 	if !idPattern.MatchString(id) {
 		return nil, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-'", service.ErrInvalidArgument, id)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.exists(id) {
+	if _, err := s.load(id); err == nil {
 		return nil, fmt.Errorf("%w: %s", service.ErrAlreadyExists, service.StandaloneDesignName(id))
-	}
-	if err := s.rebuild(ctx, id, rec, nil, "", nil); err != nil {
+	} else if !errors.Is(err, service.ErrNotFound) {
 		return nil, err
 	}
-	return s.Design(ctx, id)
+	r := recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
+	if err := s.commit(id, &r); err != nil {
+		return nil, err
+	}
+	return s.designOf(id, r)
 }
 
 // UpdateDesign rewrites a design's record and keeps its artifacts.
-func (s *DirStore) UpdateDesign(ctx context.Context, id string, update func(*service.DesignRecord)) (*webapi.Design, error) {
+func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*service.DesignRecord)) (*webapi.Design, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rec, err := s.existing(id)
+	r, err := s.load(id)
 	if err != nil {
 		return nil, err
 	}
+	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy}
 	update(&rec)
-	have, err := s.artifactIDs(id)
-	if err != nil {
+	r.Title, r.Series, r.FlattenHierarchy = rec.Title, rec.Series, rec.FlattenHierarchy
+	if err := s.commit(id, &r); err != nil {
 		return nil, err
 	}
-	if err := s.rebuild(ctx, id, rec, nil, "", have); err != nil {
-		return nil, err
-	}
-	return s.Design(ctx, id)
+	return s.designOf(id, r)
 }
 
-// DeleteDesign removes a stored design's folder.
+// DeleteDesign removes a design's record. Its views and blobs stay until Sweep, so a snapshot read
+// from them keeps answering until then.
 func (s *DirStore) DeleteDesign(_ context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, err := s.existing(id); err != nil {
+	if _, err := s.load(id); err != nil {
 		return err
 	}
-	return s.remove(id)
+	return os.Remove(s.recordPath(id))
 }
 
-// Artifacts reads a design's artifacts, hashing each file and reading the files to find each one's
-// type and entry. An artifact's update_time is the newest of its files' modification times. A write
-// links untouched files into the new folder, so their times survive it.
+// Artifacts reads a design's artifacts from its record, ordered by id.
 func (s *DirStore) Artifacts(_ context.Context, id string) ([]*webapi.Artifact, error) {
-	if _, err := s.existing(id); err != nil {
+	rec, err := s.load(id)
+	if err != nil {
 		return nil, err
 	}
-	return s.readArtifacts(s.abs(id), id)
+	out := make([]*webapi.Artifact, 0, len(rec.Artifacts))
+	for _, a := range rec.Artifacts {
+		out = append(out, artifactOf(id, a))
+	}
+	return out, nil
 }
 
-// WriteArtifacts replaces or creates artifacts, in one rename of the design's folder.
+func artifactOf(id string, a artifactRecord) *webapi.Artifact {
+	out := &webapi.Artifact{Name: service.ArtifactName(id, a.ID), Type: webapi.ArtifactType(webapi.ArtifactType_value[a.Type]), Entry: a.Entry}
+	if !a.UpdateTime.IsZero() {
+		out.UpdateTime = timestamppb.New(a.UpdateTime)
+	}
+	for _, f := range a.Files {
+		out.Files = append(out.Files, &webapi.SnapshotFile{Path: f.Path, Sha256: f.Sha256, Size: f.Size})
+	}
+	return out
+}
+
+// WriteArtifacts replaces or creates artifacts in one write of the design's record.
 func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []service.ArtifactWrite, blobs service.BlobSource) ([]*webapi.Artifact, error) {
+	if s.blobs == nil {
+		return nil, fmt.Errorf("%w: this server keeps no uploaded files; start it with --uploads", service.ErrFailedPrecondition)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rec, err := s.existing(id)
+	rec, err := s.load(id)
 	if err != nil {
 		return nil, err
 	}
-	have, err := s.artifactIDs(id)
-	if err != nil {
-		return nil, err
-	}
-	put := map[string]map[string][]byte{}
+	written := map[string]artifactRecord{}
 	var missing []string
+	now := s.clock()
 	for _, w := range writes {
 		if !idPattern.MatchString(w.ID) || w.ID == DesignDescriptor || w.ID == draftDescriptor {
 			return nil, fmt.Errorf("%w: artifact id %q must be lowercase letters, digits, '.', '_' or '-', and not a descriptor's name", service.ErrInvalidArgument, w.ID)
 		}
-		if !w.AllowMissing && !slices.Contains(have, w.ID) {
+		if !w.AllowMissing && !slices.ContainsFunc(rec.Artifacts, func(a artifactRecord) bool { return a.ID == w.ID }) {
 			return nil, fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, w.ID))
 		}
 		files, lacking, err := s.contents(ctx, w, blobs)
@@ -201,101 +346,283 @@ func (s *DirStore) WriteArtifacts(ctx context.Context, id string, writes []servi
 			return nil, err
 		}
 		missing = append(missing, lacking...)
-		put[w.ID] = files
+		if len(lacking) > 0 {
+			continue
+		}
+		a, err := s.keep(w.ID, files, now)
+		if err != nil {
+			return nil, err
+		}
+		written[w.ID] = a
 	}
 	if len(missing) > 0 {
 		slices.Sort(missing)
 		return nil, &service.BlobsMissingError{Hashes: slices.Compact(missing)}
 	}
-	if err := s.rebuild(ctx, id, rec, put, "", have); err != nil {
-		return nil, err
+	next := rec
+	next.Artifacts = nil
+	for _, a := range rec.Artifacts {
+		if _, replaced := written[a.ID]; !replaced {
+			next.Artifacts = append(next.Artifacts, a)
+		}
 	}
-	all, err := s.readArtifacts(s.abs(id), id)
-	if err != nil {
+	for _, a := range written {
+		next.Artifacts = append(next.Artifacts, a)
+	}
+	slices.SortFunc(next.Artifacts, func(a, b artifactRecord) int { return strings.Compare(a.ID, b.ID) })
+	if err := s.commit(id, &next); err != nil {
 		return nil, err
 	}
 	out := make([]*webapi.Artifact, 0, len(writes))
 	for _, w := range writes {
-		for _, a := range all {
-			if a.GetName() == service.ArtifactName(id, w.ID) {
-				out = append(out, a)
-			}
-		}
+		out = append(out, artifactOf(id, written[w.ID]))
 	}
 	return out, nil
+}
+
+// keep stores an artifact's files as blobs and classifies them into its record.
+func (s *DirStore) keep(id string, files map[string][]byte, now time.Time) (artifactRecord, error) {
+	paths := make([]string, 0, len(files))
+	for p := range files {
+		paths = append(paths, p)
+	}
+	slices.Sort(paths)
+	a := artifactRecord{ID: id, UpdateTime: now}
+	for _, p := range paths {
+		h, err := s.blobs.Put(files[p])
+		if err != nil {
+			return artifactRecord{}, err
+		}
+		a.Files = append(a.Files, fileRecord{Path: p, Sha256: h, Size: int64(len(files[p]))})
+	}
+	role, err := classifyArtifact(id, paths, func(p string) ([]byte, error) {
+		if b, ok := files[p]; ok {
+			return b, nil
+		}
+		return nil, fs.ErrNotExist
+	})
+	if err != nil {
+		return artifactRecord{}, err
+	}
+	a.Type, a.Entry, a.Companions = role.typ.String(), role.entry, role.companions
+	return a, nil
 }
 
 // DeleteArtifact removes one artifact, rewriting the design's record without it.
-func (s *DirStore) DeleteArtifact(ctx context.Context, id, artifactID string) error {
+func (s *DirStore) DeleteArtifact(_ context.Context, id, artifactID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rec, err := s.existing(id)
+	rec, err := s.load(id)
 	if err != nil {
 		return err
 	}
-	have, err := s.artifactIDs(id)
-	if err != nil {
-		return err
-	}
-	if !slices.Contains(have, artifactID) {
+	i := slices.IndexFunc(rec.Artifacts, func(a artifactRecord) bool { return a.ID == artifactID })
+	if i < 0 {
 		return fmt.Errorf("%w: no artifact %s", service.ErrNotFound, service.ArtifactName(id, artifactID))
 	}
-	return s.rebuild(ctx, id, rec, nil, artifactID, have)
+	rec.Artifacts = slices.Delete(slices.Clone(rec.Artifacts), i, i+1)
+	return s.commit(id, &rec)
 }
 
-func (s *DirStore) abs(rel string) string { return filepath.Join(s.root, filepath.FromSlash(rel)) }
-
-func (s *DirStore) exists(rel string) bool {
-	_, err := os.Stat(s.abs(rel))
-	return err == nil
-}
-
-func (s *DirStore) isDesign(id string) bool {
-	return s.exists(path.Join(id, DesignDescriptor)) || s.exists(path.Join(id, draftDescriptor))
-}
-
-// existing returns the record of a design this store keeps, and ErrNotFound for any other id.
-func (s *DirStore) existing(id string) (service.DesignRecord, error) {
-	if !idPattern.MatchString(id) || !s.isDesign(id) {
-		return service.DesignRecord{}, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
-	}
-	return s.record(id)
-}
-
-// record reads the title, series and flatten_hierarchy a design's descriptor holds.
-func (s *DirStore) record(id string) (service.DesignRecord, error) {
-	name := path.Join(id, DesignDescriptor)
-	if !s.exists(name) {
-		name = path.Join(id, draftDescriptor)
-	}
-	raw, err := os.ReadFile(s.abs(name))
+// commit builds rec's view if it has an entry, then writes rec over the design's old record. The
+// view goes first, so a reader that reads the new record finds its files.
+func (s *DirStore) commit(id string, rec *recordYAML) error {
+	_, _, raw, err := describe(id, *rec)
 	if err != nil {
-		return service.DesignRecord{}, err
+		return err
 	}
-	var y descriptorYAML
-	if err := yaml.Unmarshal(raw, &y); err != nil {
-		return service.DesignRecord{}, fmt.Errorf("%s: %w", name, err)
-	}
-	return service.DesignRecord{Title: y.Title, Series: y.Series, FlattenHierarchy: y.FlattenHierarchy}, nil
-}
-
-// artifactIDs lists a design's artifact subfolders, ordered by name.
-func (s *DirStore) artifactIDs(id string) ([]string, error) {
-	entries, err := os.ReadDir(s.abs(id))
-	if err != nil {
-		return nil, err
-	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
-			out = append(out, e.Name())
+	rec.Rev = ""
+	if raw != nil {
+		if rec.Rev, err = s.buildView(id, *rec, raw); err != nil {
+			return err
 		}
 	}
-	return out, nil
+	rec.UpdateTime = s.clock()
+	out, err := yaml.Marshal(rec)
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(s.records, ".put-*")
+	if err != nil {
+		return err
+	}
+	if _, err := tmp.Write(out); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return os.Rename(tmp.Name(), s.recordPath(id))
+}
+
+// revOf names a view by what it holds: its descriptor and every artifact's paths and hashes. Two
+// writes that leave a design holding the same files share one view.
+func revOf(rec recordYAML, descriptor []byte) string {
+	h := sha256.New()
+	h.Write(descriptor)
+	for _, a := range rec.Artifacts {
+		for _, f := range a.Files {
+			fmt.Fprintf(h, "\x00%s/%s\x00%s", a.ID, f.Path, f.Sha256)
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))[:12]
+}
+
+// buildView writes the view for rec, unless one with its revision already exists, and returns the
+// revision. It builds the view in a dot-folder and renames it into place, so no reader sees half of
+// one.
+func (s *DirStore) buildView(id string, rec recordYAML, descriptor []byte) (string, error) {
+	if s.blobs == nil {
+		return "", fmt.Errorf("%w: this server keeps no uploaded files; start it with --uploads", service.ErrFailedPrecondition)
+	}
+	rev := revOf(rec, descriptor)
+	dst := filepath.Join(s.views, id, rev)
+	if _, err := os.Stat(dst); err == nil {
+		return rev, nil
+	}
+	if err := os.MkdirAll(filepath.Join(s.views, id), 0o750); err != nil {
+		return "", err
+	}
+	tmp, err := os.MkdirTemp(filepath.Join(s.views, id), ".new-")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(tmp)
+	for _, a := range rec.Artifacts {
+		for _, f := range a.Files {
+			to := filepath.Join(tmp, a.ID, filepath.FromSlash(f.Path))
+			if err := os.MkdirAll(filepath.Dir(to), 0o750); err != nil {
+				return "", err
+			}
+			if err := s.linkBlob(f.Sha256, to); err != nil {
+				return "", err
+			}
+		}
+	}
+	if err := os.WriteFile(filepath.Join(tmp, DesignDescriptor), descriptor, 0o600); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		return "", err
+	}
+	return rev, nil
+}
+
+// linkBlob hard-links a blob to `to`, copying it where the filesystem refuses a link.
+func (s *DirStore) linkBlob(hash, to string) error {
+	from, ok := s.blobs.Path(hash)
+	if !ok {
+		return fmt.Errorf("%w: %q is not a sha256 hash", service.ErrInvalidArgument, hash)
+	}
+	if err := os.Link(from, to); err == nil {
+		return nil
+	}
+	b, ok := s.blobs.Get(hash)
+	if !ok {
+		return fmt.Errorf("the store lost the contents of %s", hash)
+	}
+	return os.WriteFile(to, b, 0o600)
+}
+
+// Sweep removes views no record names and blobs nothing points at, each only once it is older than
+// grace. keep adds hashes something else holds, such as a snapshot sent as files. It returns how many
+// views and blobs it removed.
+func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration) (views, blobs int, err error) {
+	if s.blobs == nil {
+		return 0, 0, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	refs := map[string]bool{}
+	for h := range keep {
+		refs[h] = true
+	}
+	current := map[string]string{}
+	ids, err := s.ids()
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, id := range ids {
+		rec, err := s.load(id)
+		if err != nil {
+			return 0, 0, err
+		}
+		current[id] = rec.Rev
+		for _, a := range rec.Artifacts {
+			for _, f := range a.Files {
+				refs[f.Sha256] = true
+			}
+		}
+	}
+	cutoff := time.Now().Add(-grace)
+	designs, err := os.ReadDir(s.views)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, d := range designs {
+		if !d.IsDir() {
+			continue
+		}
+		dir := filepath.Join(s.views, d.Name())
+		revs, err := os.ReadDir(dir)
+		if err != nil {
+			return views, 0, err
+		}
+		left := len(revs)
+		for _, r := range revs {
+			if r.Name() == current[d.Name()] {
+				continue
+			}
+			fi, err := r.Info()
+			if err != nil || fi.ModTime().After(cutoff) {
+				continue
+			}
+			if err := os.RemoveAll(filepath.Join(dir, r.Name())); err != nil {
+				return views, 0, err
+			}
+			views++
+			left--
+		}
+		if left == 0 {
+			_ = os.Remove(dir)
+		}
+	}
+	blobs, err = s.blobs.Sweep(refs, grace)
+	return views, blobs, err
+}
+
+func (s *DirStore) recordPath(id string) string { return filepath.Join(s.records, id+".yaml") }
+
+// load reads a design's record, and ErrNotFound for an id the store does not hold. It reads through
+// an os.Root over the records folder, so a symlink there cannot lead a read outside it.
+func (s *DirStore) load(id string) (recordYAML, error) {
+	if !idPattern.MatchString(id) {
+		return recordYAML{}, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
+	}
+	r, err := os.OpenRoot(s.records)
+	if err != nil {
+		return recordYAML{}, err
+	}
+	defer r.Close()
+	raw, err := r.ReadFile(id + ".yaml")
+	if errors.Is(err, fs.ErrNotExist) {
+		return recordYAML{}, fmt.Errorf("%w: no stored design %s", service.ErrNotFound, service.StandaloneDesignName(id))
+	}
+	if err != nil {
+		return recordYAML{}, err
+	}
+	var rec recordYAML
+	if err := yaml.Unmarshal(raw, &rec); err != nil {
+		return recordYAML{}, fmt.Errorf("%s.yaml: %w", id, err)
+	}
+	return rec, nil
 }
 
 // contents checks one artifact's files and returns each file's bytes by its clean path, and the
-// hashes blobs lacks.
+// hashes neither blobs nor the store holds.
 func (s *DirStore) contents(ctx context.Context, w service.ArtifactWrite, blobs service.BlobSource) (map[string][]byte, []string, error) {
 	out := map[string][]byte{}
 	var missing []string
@@ -311,6 +638,9 @@ func (s *DirStore) contents(ctx context.Context, w service.ArtifactWrite, blobs 
 			return nil, nil, fmt.Errorf("%w: %q is listed twice", service.ErrInvalidArgument, f.GetPath())
 		}
 		b, ok := blobs(ctx, f.GetSha256())
+		if !ok {
+			b, ok = s.blobs.Get(f.GetSha256())
+		}
 		if !ok {
 			missing = append(missing, f.GetSha256())
 			out[p] = nil
@@ -329,176 +659,6 @@ func hashOf(b []byte) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// rebuild writes a design's whole new folder and renames it into place. The new folder holds every
-// artifact in have except drop and those put replaces, linked from the old folder, then put's files,
-// then a descriptor naming the composed entry and companions. A design no reader can open gets a
-// draft descriptor. Nothing is renamed until the new folder reads back.
-func (s *DirStore) rebuild(_ context.Context, id string, rec service.DesignRecord, put map[string]map[string][]byte, drop string, have []string) error {
-	tmp, err := os.MkdirTemp(s.root, ".new-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmp)
-	store, err := os.OpenRoot(s.root)
-	if err != nil {
-		return err
-	}
-	defer store.Close()
-	for _, a := range have {
-		if _, replaced := put[a]; replaced || a == drop {
-			continue
-		}
-		if err := linkTree(store, path.Join(id, a), path.Join(filepath.Base(tmp), a)); err != nil {
-			return err
-		}
-	}
-	for a, files := range put {
-		for p, b := range files {
-			dst := filepath.Join(tmp, a, filepath.FromSlash(p))
-			if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
-				return err
-			}
-			if err := os.WriteFile(dst, b, 0o600); err != nil {
-				return err
-			}
-		}
-	}
-	arts, err := s.readArtifacts(tmp, id)
-	if err != nil {
-		return err
-	}
-	roles, err := rolesOf(tmp, arts)
-	if err != nil {
-		return err
-	}
-	entry, companions, err := composeDesign(roles)
-	if err != nil {
-		return err
-	}
-	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
-	raw, err := yaml.Marshal(&y)
-	if err != nil {
-		return err
-	}
-	name := draftDescriptor
-	if entry != "" {
-		name = DesignDescriptor
-		if _, _, _, err := ParseDesign(bytes.NewReader(raw)); err != nil {
-			return fmt.Errorf("%w: %v", service.ErrInvalidArgument, err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(tmp, name), raw, 0o600); err != nil {
-		return err
-	}
-	return s.swap(tmp, id)
-}
-
-// readArtifacts reads the artifact subfolders of dir, a design folder, as the design id's artifacts.
-// It reads through an os.Root over dir, so a symlink in the store cannot lead a read outside it.
-func (s *DirStore) readArtifacts(dir, id string) ([]*webapi.Artifact, error) {
-	r, err := os.OpenRoot(dir)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	fsys := r.FS()
-	entries, err := fs.ReadDir(fsys, ".")
-	if err != nil {
-		return nil, err
-	}
-	var out []*webapi.Artifact
-	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		a := &webapi.Artifact{Name: service.ArtifactName(id, e.Name())}
-		sub, err := fs.Sub(fsys, e.Name())
-		if err != nil {
-			return nil, err
-		}
-		var newest time.Time
-		var paths []string
-		err = fs.WalkDir(sub, ".", func(p string, de fs.DirEntry, err error) error {
-			if err != nil || de.IsDir() {
-				return err
-			}
-			b, err := fs.ReadFile(sub, p)
-			if err != nil {
-				return err
-			}
-			paths = append(paths, p)
-			a.Files = append(a.Files, &webapi.SnapshotFile{Path: p, Sha256: hashOf(b), Size: int64(len(b))})
-			if fi, err := de.Info(); err == nil && fi.ModTime().After(newest) {
-				newest = fi.ModTime()
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		role, err := classifyArtifact(e.Name(), paths, func(p string) ([]byte, error) { return fs.ReadFile(sub, p) })
-		if err != nil {
-			return nil, err
-		}
-		a.Type, a.Entry = role.typ, role.entry
-		if !newest.IsZero() {
-			a.UpdateTime = timestamppb.New(newest)
-		}
-		out = append(out, a)
-	}
-	return out, nil
-}
-
-// rolesOf classifies each artifact read from dir, through an os.Root over it.
-func rolesOf(dir string, arts []*webapi.Artifact) ([]artifactRole, error) {
-	r, err := os.OpenRoot(dir)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	var out []artifactRole
-	for _, a := range arts {
-		_, id, _ := service.ArtifactID(a.GetName())
-		var paths []string
-		for _, f := range a.GetFiles() {
-			paths = append(paths, f.GetPath())
-		}
-		sub, err := fs.Sub(r.FS(), id)
-		if err != nil {
-			return nil, err
-		}
-		role, err := classifyArtifact(id, paths, func(p string) ([]byte, error) { return fs.ReadFile(sub, p) })
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, role)
-	}
-	return out, nil
-}
-
-// linkTree hard-links every file under src into dst, both relative to r, copying a file where the
-// filesystem refuses a link. Every operation goes through r, so a symlink in the store cannot lead
-// one outside it.
-func linkTree(r *os.Root, src, dst string) error {
-	return fs.WalkDir(r.FS(), src, func(p string, de fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		to := path.Join(dst, strings.TrimPrefix(strings.TrimPrefix(p, src), "/"))
-		if de.IsDir() {
-			return r.MkdirAll(to, 0o750)
-		}
-		if err := r.Link(p, to); err == nil {
-			return nil
-		}
-		b, err := r.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		return r.WriteFile(to, b, 0o600)
-	})
-}
-
 // storedPath cleans a file's path and refuses one that leaves its artifact or hides in a dot-folder.
 // FSStore skips dot-folders, so a file there would be written and never read.
 func storedPath(p string) (string, error) {
@@ -512,31 +672,4 @@ func storedPath(p string) (string, error) {
 		}
 	}
 	return clean, nil
-}
-
-// swap renames the built folder tmp to rel, moving whatever was there aside first.
-func (s *DirStore) swap(tmp, rel string) error {
-	dst := s.abs(rel)
-	if _, err := os.Stat(dst); errors.Is(err, fs.ErrNotExist) {
-		return os.Rename(tmp, dst)
-	}
-	old, err := os.MkdirTemp(s.root, ".old-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(old)
-	if err := os.Rename(dst, filepath.Join(old, "x")); err != nil {
-		return err
-	}
-	return os.Rename(tmp, dst)
-}
-
-// remove moves rel aside before deleting it, so a reader never lists a half-deleted folder.
-func (s *DirStore) remove(rel string) error {
-	old, err := os.MkdirTemp(s.root, ".old-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(old)
-	return os.Rename(s.abs(rel), filepath.Join(old, "x"))
 }

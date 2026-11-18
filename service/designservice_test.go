@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -46,13 +47,18 @@ func tutorial() projects.Tree {
 func designService(t *testing.T) (*service.DesignService, blobs, string) {
 	t.Helper()
 	root := t.TempDir()
-	store, err := projects.NewDirStore(root, "store")
+	store, err := projects.NewDirStore(filepath.Join(root, "records"), filepath.Join(root, "uploads"), "uploads")
 	if err != nil {
 		t.Fatal(err)
 	}
 	b := blobs{}
 	svc := service.NewDesignService(service.NewDesignCatalog(store, projects.NewMountedDesigns(tutorial())), b.source)
-	return svc, b, root
+	return svc, b, filepath.Join(root, "records")
+}
+
+// storedEntry matches a stored design's entry at rel in its current view.
+func storedEntry(id, rel string) *regexp.Regexp {
+	return regexp.MustCompile(`^mount://uploads/` + regexp.QuoteMeta(id) + `/[0-9a-f]{12}/` + regexp.QuoteMeta(rel) + `$`)
 }
 
 // newDesign creates a design in series and puts one netlist artifact holding contents, so it reads.
@@ -78,10 +84,20 @@ func putNetlist(t *testing.T, svc *service.DesignService, b blobs, id string, fi
 	return a
 }
 
-// setTime stamps a stored design's descriptor, so which design a series updated last is fixed.
-func setTime(t *testing.T, root, id string, at time.Time) {
+// setTime stamps a stored design's record, so which design a series updated last is fixed.
+func setTime(t *testing.T, records, id string, at time.Time) {
 	t.Helper()
-	if err := os.Chtimes(filepath.Join(root, id, "design.yaml"), at, at); err != nil {
+	p := filepath.Join(records, id+".yaml")
+	raw, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := regexp.MustCompile(`(?m)^update_time: .*$`)
+	if !line.Match(raw) {
+		t.Fatalf("%s has no update_time line:\n%s", p, raw)
+	}
+	raw = line.ReplaceAll(raw, []byte("update_time: "+at.UTC().Format(time.RFC3339)))
+	if err := os.WriteFile(p, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -101,7 +117,7 @@ func TestADesignIsCreatedReadListedChangedAndDeleted(t *testing.T) {
 		t.Errorf("put artifact = %v; want designs/memory_unit/artifacts/netlist, a netlist entered at a.edn", a)
 	}
 	got, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/memory_unit"})
-	if err != nil || got.GetEntryUri() != "mount://store/memory_unit/netlist/a.edn" || got.GetTitle() != "Memory unit" {
+	if err != nil || !storedEntry("memory_unit", "netlist/a.edn").MatchString(got.GetEntryUri()) || got.GetTitle() != "Memory unit" {
 		t.Errorf("GetDesign = %v, %v; want the netlist as entry and the title kept", got, err)
 	}
 	list, err := svc.ListDesigns(ctx, &webapi.ListDesignsRequest{})
@@ -366,7 +382,7 @@ func TestImportDesignFilesGroupsAFolderIntoArtifacts(t *testing.T) {
 		t.Errorf("unread = %v, want README.md", resp.GetUnread())
 	}
 	d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/bb"})
-	if err != nil || d.GetEntryUri() != "mount://store/bb/schematic/bb.kicad_sch" {
+	if err != nil || !storedEntry("bb", "schematic/bb.kicad_sch").MatchString(d.GetEntryUri()) {
 		t.Errorf("design = %v, %v; want the root sheet as entry", d, err)
 	}
 	two := b.files(map[string]string{"alpha.edn": "(edif alpha)", "beta.edn": "(edif beta)"})
@@ -398,7 +414,7 @@ func TestImportDesignFilesKeepsTheDesignItsDescriptorNames(t *testing.T) {
 	if len(resp.GetUnread()) != 1 || resp.GetUnread()[0] != "stray.kicad_sch" {
 		t.Errorf("unread = %v, want the stray sheet alone", resp.GetUnread())
 	}
-	if d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/bb"}); err != nil || d.GetEntryUri() != "mount://store/bb/schematic/bb.kicad_sch" {
+	if d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Name: "designs/bb"}); err != nil || !storedEntry("bb", "schematic/bb.kicad_sch").MatchString(d.GetEntryUri()) {
 		t.Errorf("design = %v, %v; want the descriptor's entry", d, err)
 	}
 	delete(folder, "design.yaml")

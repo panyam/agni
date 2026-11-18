@@ -22,7 +22,7 @@ func projectsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve that keeps the projects, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (webapiconnect.ProjectServiceClient, error) {
 		if remoteURL == "" {
-			return nil, fmt.Errorf("agni projects needs --remote, the URL of an agni serve started with --store-dir")
+			return nil, fmt.Errorf("agni projects needs --remote, the URL of an agni serve started with --store")
 		}
 		r, err := dialRemote(cmd.Context(), remoteURL)
 		if err != nil {

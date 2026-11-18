@@ -63,6 +63,14 @@ func (e *FilesWithheldError) Detail() *webapi.BlobsMissing {
 // takes no files from its clients.
 type UploadHost func(mount string, files map[string][]byte) (CacheableLoader, *ProjectResolver)
 
+// UploadStore keeps uploaded file contents by their hash, "sha256:<hex>", and outlives the process. Put stores
+// b and returns its hash, writing nothing when the contents are already held. Get reports false for a
+// hash it does not hold.
+type UploadStore interface {
+	Put(b []byte) (string, error)
+	Get(hash string) ([]byte, bool)
+}
+
 // defaultUploadBytes is how much uploaded content a host keeps when UploadMaxBytes is unset.
 const defaultUploadBytes = 1 << 30
 
@@ -92,6 +100,7 @@ type uploads struct {
 	max   int64
 	hosts map[string]*uploadHost
 	tick  uint64
+	disk  UploadStore
 }
 
 func (r *ProjectResolver) uploadsOf() *uploads {
@@ -102,7 +111,7 @@ func (r *ProjectResolver) uploadsOf() *uploads {
 		if max <= 0 {
 			max = defaultUploadBytes
 		}
-		r.ups = &uploads{blobs: map[string][]byte{}, order: map[string]uint64{}, max: max, hosts: map[string]*uploadHost{}}
+		r.ups = &uploads{blobs: map[string][]byte{}, order: map[string]uint64{}, max: max, hosts: map[string]*uploadHost{}, disk: r.Blobs}
 	}
 	return r.ups
 }
@@ -117,10 +126,22 @@ func (u *uploads) put(b []byte) (string, error) {
 	if int64(len(b)) > u.max {
 		return "", fmt.Errorf("%w: a file of %d bytes is over this host's %d-byte upload limit", ErrResourceExhausted, len(b), u.max)
 	}
+	if u.disk != nil {
+		if _, err := u.disk.Put(b); err != nil {
+			return "", err
+		}
+	}
+	u.remember(h, b)
+	return h, nil
+}
+
+// remember holds b in the in-memory cache under h, evicting the least recently used blobs past the
+// limit. The caller holds u.mu.
+func (u *uploads) remember(h string, b []byte) {
 	u.tick++
 	u.order[h] = u.tick
 	if _, ok := u.blobs[h]; ok {
-		return h, nil
+		return
 	}
 	u.blobs[h] = b
 	u.bytes += int64(len(b))
@@ -139,7 +160,24 @@ func (u *uploads) put(b []byte) (string, error) {
 		delete(u.blobs, oldest)
 		delete(u.order, oldest)
 	}
-	return h, nil
+}
+
+// get returns the contents under h from the cache, or from disk when the cache lacks them. The
+// caller holds u.mu.
+func (u *uploads) get(h string) ([]byte, bool) {
+	if b, ok := u.blobs[h]; ok {
+		u.tick++
+		u.order[h] = u.tick
+		return b, true
+	}
+	if u.disk == nil {
+		return nil, false
+	}
+	b, ok := u.disk.Get(h)
+	if ok && int64(len(b)) <= u.max {
+		u.remember(h, b)
+	}
+	return b, ok
 }
 
 // uploaded returns the host for a manifest of files in mount. It builds the host over the blobs the
@@ -181,12 +219,11 @@ func (r *ProjectResolver) uploaded(mount string, files []*webapi.SnapshotFile) (
 	contents := map[string][]byte{}
 	var missing []string
 	for _, f := range files {
-		b, ok := u.blobs[f.GetSha256()]
+		b, ok := u.get(f.GetSha256())
 		if !ok {
 			missing = append(missing, f.GetSha256())
 			continue
 		}
-		u.order[f.GetSha256()] = u.tick
 		contents[f.GetPath()] = b
 	}
 	if len(missing) > 0 {
@@ -254,10 +291,5 @@ func (r *ProjectResolver) Blob(_ context.Context, hash string) ([]byte, bool) {
 	u := r.uploadsOf()
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	b, ok := u.blobs[hash]
-	if ok {
-		u.tick++
-		u.order[hash] = u.tick
-	}
-	return b, ok
+	return u.get(hash)
 }

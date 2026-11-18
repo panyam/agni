@@ -149,7 +149,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
 
       # One platform, pushed with no tag, so the version tag only ever names a manifest holding both.
-      # The amd64 cache keeps the `agnids` scope the images workflow writes on a PR.
+      # The amd64 cache keeps the `agnids` scope the images-agnids workflow writes on main.
       - name: Build and push by digest
         id: digest
         if: matrix.kind == 'agnids'
@@ -170,7 +170,7 @@ jobs:
       # agnids' arm64 half is now run before it is published under the tag rather than never.
       # A published image that reports the wrong version is the specific failure this workflow was
       # built to prevent, so it is worth one pull to confirm rather than assume. hack/image_smoke.sh
-      # is the same check the `images` workflow runs on a PR, so the two cannot drift.
+      # is the same check the `images` and `images-agnids` workflows run, so the two cannot drift.
       - name: Verify the image reports the tag and works
         env:
           # Via env for the same reason as the tag. This value is validated, but keeping one rule

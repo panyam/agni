@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -45,15 +47,38 @@ func (u upload) source(_ context.Context, h string) ([]byte, bool) {
 	return b, ok
 }
 
-// dirStore is a DirStore over a fresh folder, served as mount "store".
-func dirStore(t *testing.T) (*DirStore, string) {
+// layout is where a test store keeps its records and its uploads.
+type layout struct{ records, uploads string }
+
+// views is the folder the uploads mount serves.
+func (l layout) views() string { return filepath.Join(l.uploads, "designs") }
+
+// dirStore is a DirStore over fresh folders, its views served as mount "uploads".
+func dirStore(t *testing.T) (*DirStore, layout) {
 	t.Helper()
-	root := t.TempDir()
-	ds, err := NewDirStore(root, "store")
+	l := layout{records: t.TempDir(), uploads: t.TempDir()}
+	ds, err := NewDirStore(l.records, l.uploads, "uploads")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ds, root
+	return ds, l
+}
+
+// revURI matches a stored design's base URI, its view of one revision.
+var revURI = regexp.MustCompile(`^mount://uploads/[a-z0-9._-]+/[0-9a-f]{12}$`)
+
+// inView is a file's URI in a design's current view, checking the view's URI first.
+func inView(t *testing.T, d *webapi.Design, rel string) string {
+	t.Helper()
+	if !revURI.MatchString(d.GetUri()) {
+		t.Fatalf("design uri = %q, want mount://uploads/<id>/<rev>", d.GetUri())
+	}
+	return d.GetUri() + "/" + rel
+}
+
+// viewDir is the folder of a design's current view on disk.
+func viewDir(l layout, d *webapi.Design) string {
+	return filepath.Join(l.uploads, "designs", filepath.FromSlash(strings.TrimPrefix(d.GetUri(), "mount://uploads/")))
 }
 
 // arts maps each artifact id to its files, path to contents.
@@ -94,7 +119,7 @@ func mustDesign(t *testing.T, ds service.DesignStore, id string, as arts) {
 
 func TestADesignReadsBackFromItsArtifacts(t *testing.T) {
 	ctx := context.Background()
-	ds, root := dirStore(t)
+	ds, l := dirStore(t)
 	if _, err := ds.CreateDesign(ctx, "memory_unit", service.DesignRecord{Title: "Memory unit", Series: "mem"}); err != nil {
 		t.Fatal(err)
 	}
@@ -110,24 +135,58 @@ func TestADesignReadsBackFromItsArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetEntryUri() != "mount://store/memory_unit/netlist/mem.edn" || !slices.Equal(d.GetCompanionUris(), []string{"mount://store/memory_unit/board/mem.kicad_pcb"}) {
+	if d.GetEntryUri() != inView(t, d, "netlist/mem.edn") || !slices.Equal(d.GetCompanionUris(), []string{inView(t, d, "board/mem.kicad_pcb")}) {
 		t.Errorf("design = entry %s, companions %v; want the netlist as entry and the board as its companion", d.GetEntryUri(), d.GetCompanionUris())
 	}
 	if d.GetTitle() != "Memory unit" || d.GetSeries() != "mem" || !slices.Equal(d.GetArtifacts(), []string{"designs/memory_unit/artifacts/board", "designs/memory_unit/artifacts/netlist"}) {
 		t.Errorf("design = title %q, series %q, artifacts %v; want the record kept and both artifacts named", d.GetTitle(), d.GetSeries(), d.GetArtifacts())
 	}
-	desc, err := os.ReadFile(filepath.Join(root, "memory_unit", "design.yaml"))
+	desc, err := os.ReadFile(filepath.Join(viewDir(l, d), "design.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(desc), "name: memory_unit") || strings.Contains(string(desc), "extends") {
-		t.Errorf("stored design.yaml should name memory_unit and extend nothing:\n%s", desc)
+		t.Errorf("the view's design.yaml should name memory_unit and extend nothing:\n%s", desc)
 	}
-	// The folder reads as a plain design, the way the CLI and the viewer's mount paths open it.
-	read := NewFSStore(Tree{Mount: "store", FS: os.DirFS(root)})
-	rd, rp, err := read.ResolveDesign(ctx, artifactURI(t, "mount://store/memory_unit/netlist/mem.edn"))
+	// The view reads as a plain design, the way the engine and the viewer's mount paths open it.
+	read := NewFSStore(Tree{Mount: "uploads", FS: os.DirFS(l.views())})
+	rd, rp, err := read.ResolveDesign(ctx, artifactURI(t, d.GetEntryUri()))
 	if err != nil || rd == nil || rp != nil || rd.GetTitle() != "Memory unit" {
-		t.Errorf("ResolveDesign on the stored folder = %v, %v, %v; want the design and no project", rd, rp, err)
+		t.Errorf("ResolveDesign on the view = %v, %v, %v; want the design and no project", rd, rp, err)
+	}
+}
+
+func TestTheStoreHoldsRecordsAndTheUploadsHoldFiles(t *testing.T) {
+	ds, l := dirStore(t)
+	const board = "(kicad_pcb board-bytes)"
+	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}, "board": {"a.kicad_pcb": board}})
+	if names := dirNames(t, l.records); !slices.Equal(names, []string{"mul.yaml"}) {
+		t.Errorf("records folder holds %v, want only mul.yaml", names)
+	}
+	rec, err := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(rec), "board-bytes") || !strings.Contains(string(rec), hashOf([]byte(board))) {
+		t.Errorf("the record should name the board by hash and hold none of its bytes:\n%s", rec)
+	}
+	b, ok := ds.Blobs().Get(hashOf([]byte(board)))
+	if !ok || string(b) != board {
+		t.Errorf("blob for the board = %q, %v; want its bytes", b, ok)
+	}
+}
+
+func TestAStoreWithoutUploadsKeepsRecordsOnly(t *testing.T) {
+	ctx := context.Background()
+	ds, err := NewDirStore(t.TempDir(), "", "uploads")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ds.CreateDesign(ctx, "mul", service.DesignRecord{Title: "Multiplier"}); err != nil {
+		t.Fatalf("CreateDesign with no uploads = %v, want the record written", err)
+	}
+	if _, err := put(ctx, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}}); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("a write of files with no uploads = %v, want ErrFailedPrecondition", err)
 	}
 }
 
@@ -146,33 +205,33 @@ func TestAKiCadSchematicAndItsSheetsAreOneArtifact(t *testing.T) {
 	if a.GetType() != webapi.ArtifactType_ARTIFACT_TYPE_SCHEMATIC || a.GetEntry() != "bb.kicad_sch" || len(a.GetFiles()) != 2 || a.GetFiles()[1].GetPath() != "sub/power.kicad_sch" {
 		t.Errorf("artifact = %v; want a schematic entered at bb.kicad_sch holding both sheets", a)
 	}
-	if d, err := ds.Design(ctx, "bb"); err != nil || d.GetEntryUri() != "mount://store/bb/schematic/bb.kicad_sch" {
+	if d, err := ds.Design(ctx, "bb"); err != nil || d.GetEntryUri() != inView(t, d, "schematic/bb.kicad_sch") {
 		t.Errorf("design = %v, %v; want the root sheet as entry", d, err)
 	}
 }
 
 func TestADesignNoReaderOpensIsADraft(t *testing.T) {
 	ctx := context.Background()
-	ds, root := dirStore(t)
+	ds, l := dirStore(t)
 	d, err := ds.CreateDesign(ctx, "mul", service.DesignRecord{Title: "Multiplier"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetEntryUri() != "" || d.GetTitle() != "Multiplier" || d.GetUri() != "mount://store/mul" {
+	if d.GetEntryUri() != "" || d.GetTitle() != "Multiplier" || d.GetUri() != "mount://uploads/mul" {
 		t.Errorf("new design = entry %q, title %q, uri %q; want no entry, its title, and its folder", d.GetEntryUri(), d.GetTitle(), d.GetUri())
 	}
 	got, err := put(ctx, ds, "mul", arts{"bom": {"bom.csv": "ref,mpn\n"}})
 	if err != nil || len(got) != 1 || got[0].GetType() != webapi.ArtifactType_ARTIFACT_TYPE_OTHER || got[0].GetEntry() != "" {
 		t.Fatalf("put bom = %v, %v; want one artifact of type other with no entry", got, err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "mul", "design.yaml")); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a design no reader opens has a design.yaml (%v); want only design.draft.yaml", err)
+	if _, err := os.Stat(filepath.Join(l.views(), "mul")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a design no reader opens has a view (%v); want none, since no reader opens it", err)
 	}
 	if all, err := ds.Designs(ctx); err != nil || len(all) != 1 || all[0].GetName() != "designs/mul" {
 		t.Errorf("designs = %v, %v; want the draft listed", all, err)
 	}
-	// A project walk over the store parses every design.yaml, and a draft must not break it.
-	read := NewFSStore(Tree{Mount: "store", FS: os.DirFS(root)})
+	// A project walk over the uploads mount parses every design.yaml, and a draft must not break it.
+	read := NewFSStore(Tree{Mount: "uploads", FS: os.DirFS(l.views())})
 	if _, err := read.Projects(ctx); err != nil {
 		t.Errorf("Projects over a store holding a draft = %v", err)
 	}
@@ -180,9 +239,9 @@ func TestADesignNoReaderOpensIsADraft(t *testing.T) {
 
 func TestAStoreRefusesADesignItCouldReadTwoWays(t *testing.T) {
 	ctx := context.Background()
-	ds, root := dirStore(t)
+	ds, l := dirStore(t)
 	mustDesign(t, ds, "mul", arts{"netlist": {"mul.edn": "(edif mul)"}})
-	before, _ := os.ReadFile(filepath.Join(root, "mul", "design.yaml"))
+	before, _ := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
 	for _, tc := range []struct {
 		name string
 		as   arts
@@ -196,9 +255,9 @@ func TestAStoreRefusesADesignItCouldReadTwoWays(t *testing.T) {
 			t.Errorf("%s = %v, want %v", tc.name, err, tc.want)
 		}
 	}
-	after, _ := os.ReadFile(filepath.Join(root, "mul", "design.yaml"))
-	if string(before) != string(after) {
-		t.Errorf("a refused write changed design.yaml:\n%s\nto\n%s", before, after)
+	after, _ := os.ReadFile(filepath.Join(l.records, "mul.yaml"))
+	if len(before) == 0 || string(before) != string(after) {
+		t.Errorf("a refused write changed the record:\n%s\nto\n%s", before, after)
 	}
 	if all, err := ds.Artifacts(ctx, "mul"); err != nil || len(all) != 1 {
 		t.Errorf("artifacts after refused writes = %v, %v; want only netlist", all, err)
@@ -258,13 +317,15 @@ func TestADirStoreAsksForContentsItLacks(t *testing.T) {
 
 func TestReplacingAnArtifactSwapsItsFilesAndKeepsTheOthers(t *testing.T) {
 	ctx := context.Background()
-	ds, root := dirStore(t)
+	ds, l := dirStore(t)
+	old := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	ds.now = func() time.Time { return old }
 	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}, "board": {"a.kicad_pcb": "(kicad_pcb)"}})
-	board := filepath.Join(root, "mul", "board", "a.kicad_pcb")
-	old := time.Now().Add(-time.Hour).Truncate(time.Second)
-	if err := os.Chtimes(board, old, old); err != nil {
+	first, err := ds.Design(ctx, "mul")
+	if err != nil {
 		t.Fatal(err)
 	}
+	ds.now = func() time.Time { return old.Add(time.Hour) }
 	if _, err := put(ctx, ds, "mul", arts{"netlist": {"b.edn": "(edif b)"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -272,18 +333,29 @@ func TestReplacingAnArtifactSwapsItsFilesAndKeepsTheOthers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetEntryUri() != "mount://store/mul/netlist/b.edn" || !slices.Equal(d.GetCompanionUris(), []string{"mount://store/mul/board/a.kicad_pcb"}) {
+	if d.GetEntryUri() != inView(t, d, "netlist/b.edn") || !slices.Equal(d.GetCompanionUris(), []string{inView(t, d, "board/a.kicad_pcb")}) {
 		t.Errorf("design = entry %s, companions %v; want netlist/b.edn and the board kept", d.GetEntryUri(), d.GetCompanionUris())
 	}
-	if names := dirNames(t, filepath.Join(root, "mul", "netlist")); !slices.Equal(names, []string{"b.edn"}) {
+	if names := dirNames(t, filepath.Join(viewDir(l, d), "netlist")); !slices.Equal(names, []string{"b.edn"}) {
 		t.Errorf("netlist holds %v, want only b.edn", names)
 	}
 	all, err := ds.Artifacts(ctx, "mul")
-	if err != nil || len(all) != 2 || !all[0].GetUpdateTime().AsTime().Equal(old) {
-		t.Errorf("artifacts = %v, %v; want the untouched board's update_time kept at %v", all, err, old)
+	if err != nil || len(all) != 2 || !all[0].GetUpdateTime().AsTime().Equal(old) || !all[1].GetUpdateTime().AsTime().Equal(old.Add(time.Hour)) {
+		t.Errorf("artifacts = %v, %v; want the untouched board's update_time kept at %v and the netlist's moved", all, err, old)
 	}
-	if top := dirNames(t, root); !slices.Equal(top, []string{"mul"}) {
-		t.Errorf("store root holds %v after a replace, want only mul (no temp or trash left)", top)
+	// The old revision's view is never changed, so a snapshot read from it keeps answering, and the
+	// replaced file's bytes stay until the sweep.
+	if first.GetUri() == d.GetUri() {
+		t.Fatalf("a replace kept the view %s, want a new revision", d.GetUri())
+	}
+	if names := dirNames(t, filepath.Join(viewDir(l, first), "netlist")); !slices.Equal(names, []string{"a.edn"}) {
+		t.Errorf("the old view's netlist holds %v, want a.edn still", names)
+	}
+	if _, ok := ds.Blobs().Get(hashOf([]byte("(edif a)"))); !ok {
+		t.Error("the replaced netlist's blob is gone before any sweep")
+	}
+	if revs := dirNames(t, filepath.Join(l.views(), "mul")); len(revs) != 2 {
+		t.Errorf("the design's views are %v, want the two revisions and no temp folder", revs)
 	}
 }
 
@@ -295,7 +367,7 @@ func TestUpdatingADesignKeepsItsArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetSeries() != "mul" || d.GetEntryUri() != "mount://store/mul/netlist/a.edn" || len(d.GetArtifacts()) != 1 {
+	if d.GetSeries() != "mul" || d.GetEntryUri() != inView(t, d, "netlist/a.edn") || len(d.GetArtifacts()) != 1 {
 		t.Errorf("updated design = series %q, entry %q, artifacts %v; want the series set and the netlist kept", d.GetSeries(), d.GetEntryUri(), d.GetArtifacts())
 	}
 }
@@ -307,7 +379,7 @@ func TestDeletingAnArtifactRecomposesTheDesign(t *testing.T) {
 	if err := ds.DeleteArtifact(ctx, "mul", "netlist"); err != nil {
 		t.Fatal(err)
 	}
-	if d, err := ds.Design(ctx, "mul"); err != nil || d.GetEntryUri() != "mount://store/mul/board/a.kicad_pcb" || len(d.GetCompanionUris()) != 0 {
+	if d, err := ds.Design(ctx, "mul"); err != nil || d.GetEntryUri() != inView(t, d, "board/a.kicad_pcb") || len(d.GetCompanionUris()) != 0 {
 		t.Errorf("design after deleting its netlist = %v, %v; want the board as entry", d, err)
 	}
 	if err := ds.DeleteArtifact(ctx, "mul", "netlist"); !errors.Is(err, service.ErrNotFound) {
@@ -315,9 +387,9 @@ func TestDeletingAnArtifactRecomposesTheDesign(t *testing.T) {
 	}
 }
 
-func TestDeletingADesignRemovesItsFolder(t *testing.T) {
+func TestDeletingADesignRemovesItsRecordAndTheSweepItsFiles(t *testing.T) {
 	ctx := context.Background()
-	ds, root := dirStore(t)
+	ds, l := dirStore(t)
 	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}})
 	if err := ds.DeleteDesign(ctx, "mul"); err != nil {
 		t.Fatal(err)
@@ -325,11 +397,59 @@ func TestDeletingADesignRemovesItsFolder(t *testing.T) {
 	if err := ds.DeleteDesign(ctx, "mul"); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("second DeleteDesign = %v, want ErrNotFound", err)
 	}
-	if top, _ := os.ReadDir(root); len(top) != 0 {
-		t.Errorf("store root holds %d entries after the delete, want none", len(top))
+	if top := dirNames(t, l.records); len(top) != 0 {
+		t.Errorf("records folder holds %v after the delete, want nothing", top)
 	}
 	if all, err := ds.Designs(ctx); err != nil || len(all) != 0 {
 		t.Errorf("designs after the delete = %v, %v; want none", all, err)
+	}
+	views, blobs, err := ds.Sweep(nil, 0)
+	if err != nil || views != 1 || blobs != 1 {
+		t.Errorf("Sweep after the delete = %d views, %d blobs, %v; want the one view and the one blob removed", views, blobs, err)
+	}
+	if top := dirNames(t, l.views()); len(top) != 0 {
+		t.Errorf("uploads mount holds %v after the sweep, want nothing", top)
+	}
+}
+
+func TestTheSweepKeepsWhatIsNamedAndWhatIsNew(t *testing.T) {
+	ctx := context.Background()
+	ds, l := dirStore(t)
+	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}})
+	if _, err := put(ctx, ds, "mul", arts{"netlist": {"b.edn": "(edif b)"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ds.Blobs().Put([]byte("kept by a snapshot")); err != nil {
+		t.Fatal(err)
+	}
+	if views, blobs, err := ds.Sweep(nil, time.Hour); err != nil || views != 0 || blobs != 0 {
+		t.Errorf("Sweep within the grace hour = %d views, %d blobs, %v; want nothing removed", views, blobs, err)
+	}
+	ago := time.Now().Add(-2 * time.Hour)
+	if err := filepath.WalkDir(l.uploads, func(p string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chtimes(p, ago, ago)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	snap := hashOf([]byte("kept by a snapshot"))
+	views, blobs, err := ds.Sweep(map[string]bool{snap: true}, time.Hour)
+	if err != nil || views != 1 || blobs != 1 {
+		t.Errorf("Sweep past the grace hour = %d views, %d blobs, %v; want the old view and a.edn's blob removed", views, blobs, err)
+	}
+	for h, want := range map[string]bool{hashOf([]byte("(edif a)")): false, hashOf([]byte("(edif b)")): true, snap: true} {
+		if _, ok := ds.Blobs().Get(h); ok != want {
+			t.Errorf("blob %s held = %v after the sweep, want %v", h, ok, want)
+		}
+	}
+	d, err := ds.Design(ctx, "mul")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(viewDir(l, d), "netlist", "b.edn")); err != nil {
+		t.Errorf("the current view lost its netlist in the sweep: %v", err)
 	}
 }
 

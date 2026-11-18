@@ -16,7 +16,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { start, freePort, type Server } from "./childserver.js";
 
@@ -94,7 +94,7 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--mount", "altium=tools/samples/altium",
       // A store, so the Review panel can run a checklist and save it (agni issue 1030). Fresh per run,
       // so no spec sees another run's reviews.
-      "--review-store", mkdtempSync(join(tmpdir(), "agni-browser-reviews-")),
+      "--store", pathToFileURL(mkdtempSync(join(tmpdir(), "agni-browser-store-"))).href,
       // Named explicitly because a flag wins outright over agni.yaml. Without it, suppose a
       // developer's ~/.config/agni/agni.yaml names a web_dir, say another checkout's. These tests
       // then run against THAT viewer, which passes or fails for reasons unrelated to this tree.

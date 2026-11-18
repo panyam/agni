@@ -8,10 +8,10 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
  * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
  * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
- * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
- * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
- * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
- * so each store decides how it keeps a design's files.
+ * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+ * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+ * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+ * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -428,10 +428,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public interface AsyncService {
@@ -440,7 +440,8 @@ public final class DesignServiceGrpc {
      * <pre>
      * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
      * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-     * --store-dir answers FAILED_PRECONDITION.
+     * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+     * same way.
      * </pre>
      */
     default void createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request,
@@ -576,10 +577,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public static abstract class DesignServiceImplBase
@@ -597,10 +598,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public static final class DesignServiceStub
@@ -620,7 +621,8 @@ public final class DesignServiceGrpc {
      * <pre>
      * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
      * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-     * --store-dir answers FAILED_PRECONDITION.
+     * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+     * same way.
      * </pre>
      */
     public void createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request,
@@ -767,10 +769,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public static final class DesignServiceBlockingV2Stub
@@ -790,7 +792,8 @@ public final class DesignServiceGrpc {
      * <pre>
      * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
      * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-     * --store-dir answers FAILED_PRECONDITION.
+     * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+     * same way.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request) throws io.grpc.StatusException {
@@ -926,10 +929,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public static final class DesignServiceBlockingStub
@@ -949,7 +952,8 @@ public final class DesignServiceGrpc {
      * <pre>
      * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
      * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-     * --store-dir answers FAILED_PRECONDITION.
+     * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+     * same way.
      * </pre>
      */
     public io.github.panyam.agni.v1.webapi.Design createDesign(io.github.panyam.agni.v1.webapi.CreateDesignRequest request) {
@@ -1085,10 +1089,10 @@ public final class DesignServiceGrpc {
    * A design is named "designs/{design}". It holds artifacts, each one source of the design such as a
    * schematic with its sheets, a board, or a BOM. It ties to no project, and a project lists it by
    * name. DesignViewService (design_view.proto) answers questions about a snapshot of a design instead.
-   * A server holds designs in two kinds of place. The store named by `agni serve --store-dir` keeps the
-   * designs callers create, and they can be changed and deleted. Mounted folders declare designs too,
-   * and those are read-only. A design id is unique across both. Nothing on this service names a folder,
-   * so each store decides how it keeps a design's files.
+   * A server holds designs in two kinds of place. The store named by `agni serve --store` keeps the
+   * designs callers create as records, and `--uploads` keeps their files. Those designs can be changed
+   * and deleted. Mounted folders declare designs too, and those are read-only. A design id is unique
+   * across both. Nothing on this service names a folder, so each store decides how it keeps a design.
    * </pre>
    */
   public static final class DesignServiceFutureStub
@@ -1108,7 +1112,8 @@ public final class DesignServiceGrpc {
      * <pre>
      * CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
      * from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
-     * --store-dir answers FAILED_PRECONDITION.
+     * --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
+     * same way.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Design> createDesign(

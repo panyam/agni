@@ -132,7 +132,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	}
 	designURI := snap.Design
 	// A validate_only run is never stored, so it needs no store, and a server started without
-	// --review-store still answers it.
+	// --store still answers it.
 	var store ReviewStore
 	if !req.GetValidateOnly() {
 		if store, err = s.reviewStore(); err != nil {

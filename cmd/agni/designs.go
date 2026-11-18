@@ -32,7 +32,7 @@ func designsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "designs",
 		Short: "Create, list and change the designs an agni server keeps, and put their artifacts",
-		Long: `designs manages the designs an agni serve started with --store-dir keeps. A design is
+		Long: `designs manages the designs an agni serve started with --store and --uploads keeps. A design is
 named designs/<id> and holds artifacts. An artifact is one source of the design: a schematic with its
 sheets, a netlist, a board, or files no reader opens, such as a BOM. The server reads each artifact
 to find its type, and reads the design from its netlist, else its schematic, else its board.
@@ -44,7 +44,7 @@ to find its type, and reads the design from its netlist, else its schematic, els
 	cmd.PersistentFlags().StringVar(&remoteURL, "remote", "", "the agni serve that keeps the designs, such as http://localhost:8080 (required)")
 	client := func(cmd *cobra.Command) (*designsClient, error) {
 		if remoteURL == "" {
-			return nil, fmt.Errorf("agni designs needs --remote, the URL of an agni serve started with --store-dir")
+			return nil, fmt.Errorf("agni designs needs --remote, the URL of an agni serve started with --store and --uploads")
 		}
 		r, err := dialRemote(cmd.Context(), remoteURL)
 		if err != nil {

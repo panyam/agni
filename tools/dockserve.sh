@@ -139,15 +139,15 @@ if [ -n "${OVERLAY_DIR:-}" ]; then
 	echo "dockserve: overlay ${overlay[*]}"
 fi
 
-# The review store crosses the way OVERLAY_DIR does, except WRITABLE: stored runs are the one thing
-# this server produces rather than reads. Created on the host first so the bind mount does not
-# materialize as a root-owned directory.
+# The store crosses the way OVERLAY_DIR does, except WRITABLE: its records, such as stored review
+# runs, are the one thing this server produces rather than reads. Created on the host first so the
+# bind mount does not materialize as a root-owned directory.
 review=()
-if [ -n "${REVIEW_STORE:-}" ]; then
-	r=$(abs "$REVIEW_STORE")
+if [ -n "${STORE:-}" ]; then
+	r=$(abs "$STORE")
 	mkdir -p "$r"
-	vols+=(-v "$r:/var/lib/agni/reviews")
-	review=(--review-store /var/lib/agni/reviews)
+	vols+=(-v "$r:/var/lib/agni/meta")
+	review=(--store file:///var/lib/agni/meta)
 fi
 
 port=${ADDR#:}

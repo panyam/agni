@@ -267,6 +267,30 @@ func TestAnEvictedBlobIsAskedForAgain(t *testing.T) {
 	}
 }
 
+// With a disk store the same eviction costs nothing, and an upload outlives the resolver that took
+// it, as a server's uploads outlive a restart (agni issue 1739).
+func TestAnUploadKeptOnDiskOutlivesEvictionAndARestart(t *testing.T) {
+	disk, err := projects.NewBlobDir(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newUploadFixture(t, 10)
+	f.res.Blobs = disk
+	one, two := []byte("0123456789"), []byte("abcdefghij")
+	if _, err := f.snaps.UploadBlobs(context.Background(), &webapi.UploadBlobsRequest{Contents: [][]byte{one, two}}); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string][]byte{"a.edn": one}
+	if _, err := f.snaps.Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/a.edn", Files: manifestOf(files)}}); err != nil {
+		t.Errorf("an ingest naming a blob the cache evicted but the disk holds answered %v; want it read from disk", err)
+	}
+	restarted := newUploadFixture(t, 0)
+	restarted.res.Blobs = disk
+	if b, ok := restarted.res.Blob(context.Background(), manifestOf(files)[0].GetSha256()); !ok || !bytes.Equal(b, one) {
+		t.Errorf("a new resolver over the same disk read %q, %v; want the earlier upload", b, ok)
+	}
+}
+
 func TestASnapshotKeepsItsUploadPastLaterOnes(t *testing.T) {
 	f := newUploadFixture(t, 0)
 	files := tutorialFiles(t)

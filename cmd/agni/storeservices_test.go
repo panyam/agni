@@ -5,8 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"regexp"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -19,17 +22,17 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// storeServer serves the project, design and snapshot services `agni serve` builds over dir, with
-// the tutorial project mounted beside it.
+// storeServer serves the project, design and snapshot services `agni serve --store --uploads`
+// builds over dir/store and dir/uploads, with the tutorial project mounted beside them.
 func storeServer(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
-	ms, err := withStoreMount([]mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, dir)
+	ms, err := withUploadsMount([]mounts.Mount{{Name: "tut", Root: "../../examples/tutorial-project"}}, filepath.Join(dir, "uploads"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
 	resolver := &service.ProjectResolver{Store: projectStore, Uploads: uploadedHost, UploadMaxBytes: 1 << 20}
-	projectSvc, designSvc, err := storeServices(ms, dir, projectStore, resolver)
+	projectSvc, designSvc, err := storeServices(ms, filepath.Join(dir, "store"), filepath.Join(dir, "uploads"), projectStore, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +44,7 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 }
 
 // A client makes a design, puts its netlist artifact, keeps it, groups it in a project, and finds both again after
-// the server restarts over the same --store-dir (agni issue 1694).
+// the server restarts over the same --store and --uploads (agni issues 1694, 1739).
 func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -94,7 +97,7 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 		t.Errorf("every design after a restart = %v, %v; want the mounted gateway and gateway-rev-b, and memory_unit", all.Msg.GetDesigns(), err)
 	}
 	d, err := designs.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Name: "designs/memory_unit"}))
-	if err != nil || d.Msg.GetEntryUri() != "mount://store/memory_unit/netlist/mem.edn" || len(d.Msg.GetCompanionUris()) != 1 || len(d.Msg.GetArtifacts()) != 2 {
+	if err != nil || !regexp.MustCompile(`^mount://uploads/memory_unit/[0-9a-f]{12}/netlist/mem.edn$`).MatchString(d.Msg.GetEntryUri()) || len(d.Msg.GetCompanionUris()) != 1 || len(d.Msg.GetArtifacts()) != 2 {
 		t.Errorf("memory_unit after a restart = %v, %v; want its netlist as entry, its board as companion, and both artifacts", d, err)
 	}
 	p, err := projectsClient.GetProject(ctx, connect.NewRequest(&webapi.GetProjectRequest{Name: "projects/b200"}))

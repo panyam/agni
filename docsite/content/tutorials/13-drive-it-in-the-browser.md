@@ -13,7 +13,7 @@ would be lying.
 ## Serve the project
 
 ```
-agni serve --addr :8090 --mount proj=. --review-store ./reviews --web-dir ../../web
+agni serve --addr :8090 --mount proj=. --store "file://$PWD/.agni-store" --web-dir ../../web
 ```
 
 Run it from the project root, `examples/jetson-project`. The flag list is short on purpose, because
@@ -40,8 +40,8 @@ mounts several project folders at once. Point it at the **project root**, not at
 `project.yaml` above the mount, where the server cannot reach it, and the Review panel then has no
 checklist to offer.
 
-`--review-store` is the only other flag. It names a place to keep review runs, and it is the one
-genuinely new thing here. The server discovers everything else this rung needs.
+`--store` is the only other flag. It names a folder to keep review runs in, as a `file://` URL, and
+it is the one genuinely new thing here. The server discovers everything else this rung needs.
 
 ## The tiers arrive on their own
 
@@ -177,7 +177,7 @@ spec there does not appear.
 in the **Diff** and **Changes** panels.
 
 **Review** is your checklist from [rung 8](../08-write-your-checklist/), scored in the browser. It
-needs no second server, because `--review-store` was on the command at the top, and `project.yaml`
+needs no second server, because `--store` was on the command at the top, and `project.yaml`
 sits at the project root, which is inside the mount.
 
 The checklist picker lists the project's checklists by name, in the order `project.yaml` declares

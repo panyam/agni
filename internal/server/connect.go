@@ -73,7 +73,7 @@ func ConnectError(err error) *connect.Error {
 	case errors.Is(err, service.ErrNativeNotFound):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, service.ErrReviewStoreNotConfigured):
-		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --review-store <dir>", err))
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --store <url>", err))
 	case errors.Is(err, service.ErrFailedPrecondition):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, service.ErrUnavailable):

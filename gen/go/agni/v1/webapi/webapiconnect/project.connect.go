@@ -62,7 +62,7 @@ type ProjectServiceClient interface {
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
 	// CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
 	// (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-	// without --store-dir answers FAILED_PRECONDITION.
+	// without --store answers FAILED_PRECONDITION.
 	CreateProject(context.Context, *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error)
 	// UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
 	// project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.
@@ -179,7 +179,7 @@ type ProjectServiceHandler interface {
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
 	// CreateProject stores a new project, a list of designs (agni issue 1694). The caller picks its id
 	// (AIP-122). An id a mounted project already declares is ALREADY_EXISTS, and a server started
-	// without --store-dir answers FAILED_PRECONDITION.
+	// without --store answers FAILED_PRECONDITION.
 	CreateProject(context.Context, *connect.Request[webapi.CreateProjectRequest]) (*connect.Response[webapi.Project], error)
 	// UpdateProject changes a stored project's title or its designs, the fields update_mask names. A
 	// project declared in a mounted folder is read-only, and a write to it is FAILED_PRECONDITION.

@@ -369,7 +369,7 @@ func (s *ProjectService) DeleteProject(ctx context.Context, req *webapi.DeletePr
 	return s.records.Delete(ctx, id)
 }
 
-var errNoProjectStore = fmt.Errorf("%w: this server keeps no projects; start it with --store-dir", ErrFailedPrecondition)
+var errNoProjectStore = fmt.Errorf("%w: this server keeps no projects; start it with --store", ErrFailedPrecondition)
 
 // stored returns a project the server stores, refusing one a mounted folder declares.
 func (s *ProjectService) stored(ctx context.Context, name string) (string, *webapi.Project, error) {

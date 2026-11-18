@@ -69,8 +69,8 @@ func TestPushKeepsAKiCadFolderAsASchematicAndABoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.Msg.GetTitle() != "Baseboard 1.1.3" || d.Msg.GetSeries() != "bb" ||
-		d.Msg.GetEntryUri() != "mount://store/bb-1.1.3/schematic/bb.kicad_sch" ||
-		!slices.Equal(d.Msg.GetCompanionUris(), []string{"mount://store/bb-1.1.3/board/bb.kicad_pcb"}) {
+		!inUploads("bb-1.1.3", "schematic/bb.kicad_sch").MatchString(d.Msg.GetEntryUri()) ||
+		len(d.Msg.GetCompanionUris()) != 1 || d.Msg.GetCompanionUris()[0] != d.Msg.GetUri()+"/board/bb.kicad_pcb" {
 		t.Errorf("pushed design = %v; want the descriptor's title and series, the root sheet as entry and the board as companion", d.Msg)
 	}
 	list, err := designs.ListArtifacts(ctx, connect.NewRequest(&webapi.ListArtifactsRequest{Parent: "designs/bb-1.1.3"}))

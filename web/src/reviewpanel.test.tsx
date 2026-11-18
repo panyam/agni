@@ -128,7 +128,7 @@ describe("reviewPanel empty states", () => {
   it("names the flag when the server keeps no reviews, and still offers a run", () => {
     const { el } = mount({ storeConfigured: false, checklists: [{ ref: "proj/review.yaml", label: "review.yaml" }], checklist: "proj/review.yaml" });
     expect(el.querySelector(".rv-note")!.textContent).toContain("lasts until you leave the page");
-    expect(el.textContent).toContain("--review-store");
+    expect(el.textContent).toContain("--store");
     expect((el.querySelector(".rv-run") as HTMLButtonElement).disabled).toBe(false);
     expect(el.querySelector(".rv-checklist")).not.toBeNull();
   });
@@ -136,14 +136,14 @@ describe("reviewPanel empty states", () => {
   it("names neither a server nor a flag on a static page, and still offers a run", () => {
     const { el } = mount({ storeConfigured: false, checklists: [{ ref: "proj/review.yaml", label: "review.yaml" }], checklist: "proj/review.yaml" }, true);
     expect(el.querySelector(".rv-note")!.textContent).toBe("This demo keeps no review runs, so a run here lasts until you leave the page.");
-    expect(el.textContent).not.toContain("--review-store");
+    expect(el.textContent).not.toContain("--store");
     expect((el.querySelector(".rv-run") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("invites a first run when the design simply has none", () => {
     const { el } = mount({ checklists: [{ ref: "proj/review.yaml", label: "review.yaml" }], checklist: "proj/review.yaml" });
     expect(el.textContent).toContain("No review runs for this design yet");
-    expect(el.textContent).not.toContain("--review-store");
+    expect(el.textContent).not.toContain("--store");
     expect((el.querySelector(".rv-run") as HTMLButtonElement).disabled).toBe(false);
   });
 

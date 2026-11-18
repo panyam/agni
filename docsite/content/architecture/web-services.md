@@ -37,10 +37,11 @@ whether the host holds it.
 
 The host keeps each snapshot's definition apart from the snapshot itself, in a `SnapshotStore` (agni
 issue 1639). A question on a snapshot the host evicted is then answered after the host ingests it
-again under its name, so the client does nothing. `agni serve --state-dir <dir>` keeps the
+again under its name, so the client does nothing. `agni serve --store <url>` keeps the
 definitions on disk, so a restarted server recovers too, and without it they live in memory. A
-snapshot of uploaded files is not recovered after a restart, since its files went with the process,
-and answers NOT_FOUND as before. A definition that sets `refresh` is read again when a file under it
+snapshot of uploaded files is recovered after a restart when the server has `--uploads`, which keeps
+the files by hash (agni issue 1739). Without it the files went with the process, and the snapshot
+answers NOT_FOUND as before. A definition that sets `refresh` is read again when a file under it
 changed, rather than refused as stale. The answer then carries an `Agni-Snapshot-Refreshed` response
 header naming the tiers that changed, so the caller still learns its earlier answers came from older
 files. `ServerService.GetServerInfo` names `snapshot_recovery` and `snapshot_store` among the host's
@@ -174,10 +175,10 @@ A few contract details bite if missed.
   following AIP. An operator declared the names of a project and its designs, so they get `Get` and
   `List` and no mutators. Every other rpc here is addressed by an artifact URI, so its arguments are
   its whole identity and a resource name would be ceremony. That split is CONSTRAINTS C23.
-- **Stored runs need a volume.** `agni serve --review-store <dir>` names a WRITABLE directory,
-  separate from the design mounts, so persisting a run never writes into a mount. In a container it
-  is a mounted volume. Without the flag the four review resource methods answer with a
-  failed-precondition naming it, rather than running the checks and dropping the result. Runs stored
+- **Stored runs need a volume.** `agni serve --store <url>` names a WRITABLE store, separate from
+  the design mounts, so persisting a run never writes into a mount. In a container it is a mounted
+  volume. Without the flag the four review resource methods answer with a failed-precondition
+  naming it, rather than running the checks and dropping the result. Runs stored
   there are visible to every client of the server; `agni serve` has no authentication yet.
 - **The viewer can ask under its own vocabulary.** A naming convention is picked from the mount,
   resolved server-side into a value, and carried on every rule-running request as an `OverlayConfig`.
