@@ -171,19 +171,39 @@ func (p *LibraryPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App
 
 // designsPrefix is the designs' URL space (agni issue 1719), the mirror of DESIGNS_PREFIX in
 // web/src/libraryupload.ts. /designs/ lists every design the server holds and /designs/<id> shows
-// one. A design id holds no slash, so a longer path is a link from before the folder browser moved
-// to /files/.
+// one. A design id holds no slash, so a longer path is a link from before the mount browser moved
+// out of /designs/.
 const designsPrefix = "/designs/"
 
-// filesPrefix is the folder browser's URL space, the mirror of the prefix web/src/router.ts builds.
-// /files/<mount>/<dir>/ is a folder, and /view or /load ends a file's work or Load page.
-const filesPrefix = "/files/"
+// mountsPrefix is the mount browser's URL space (agni issue 1734), the mirror of the prefix
+// web/src/router.ts builds. /mounts/<mount>/<dir>/ is a folder, and /view or /load ends a file's
+// work or Load page.
+const mountsPrefix = "/mounts/"
+
+// oldFilesPrefix is where the mount browser lived between agni issues 1719 and 1734.
+const oldFilesPrefix = "/files/"
+
+// toMounts redirects permanently to rest under /mounts/, query and all, so a shared link keeps
+// opening what it opened. A redirect is a plain handler rather than a proto service because it
+// serves no message, and C2 governs the API surface, not HTTP-level redirects.
+func toMounts(w http.ResponseWriter, r *http.Request, rest string) {
+	target := mountsPrefix + rest
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusMovedPermanently) // #nosec G710 -- target always starts /mounts/, so the redirect stays on this site
+}
+
+// oldFilesSpace redirects every /files/ link to the same path under /mounts/.
+func oldFilesSpace() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		toMounts(w, r, strings.TrimPrefix(r.URL.Path, oldFilesPrefix))
+	})
+}
 
 // designsSpace serves /designs/ and /designs/<id> with the designs page. Any longer path is a link
-// from when /designs/ held the folder browser, /designs/<mount>/<path>/view and the rest. It
-// redirects permanently to the same path under /files/, query and all, so a shared link keeps
-// opening what it opened. It is a plain handler rather than a proto service because it serves no
-// message, and C2 governs the API surface, not HTTP-level redirects.
+// from when /designs/ held the mount browser, /designs/<mount>/<path>/view and the rest, and it
+// redirects to the same path under /mounts/ in one hop.
 func designsSpace(designs http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, designsPrefix)
@@ -191,11 +211,7 @@ func designsSpace(designs http.Handler) http.Handler {
 			designs.ServeHTTP(w, r)
 			return
 		}
-		target := filesPrefix + rest
-		if r.URL.RawQuery != "" {
-			target += "?" + r.URL.RawQuery
-		}
-		http.Redirect(w, r, target, http.StatusMovedPermanently) // #nosec G710 -- target always starts /files/, so the redirect stays on this site
+		toMounts(w, r, rest)
 	})
 }
 
@@ -207,7 +223,7 @@ func newPageApp(dir string, sa *serveApp) *goal.App[*serveApp] {
 
 // viewSegment terminates a design's work-page URL, the mirror of VIEW_SEGMENT in web/src/router.ts.
 // It tells a design apart from a folder without depending on the path's shape, and here it is also
-// the routing discriminator (see designsRouter).
+// the routing discriminator (see mountsRouter).
 const viewSegment = "/view"
 
 // loadSegment terminates a design's Load page URL, the mirror of LOAD_SEGMENT in web/src/router.ts
@@ -218,17 +234,17 @@ const loadSegment = "/load"
 // pageHandler renders one goapplib page as a standalone http.Handler. goal.Register only registers
 // onto a mux, so the page gets a private mux whose single "/" pattern matches everything reaching
 // it. The browse/work split needs this because a ServeMux {path...} wildcard must be the LAST
-// segment, so "/files/{mount}/{rest...}/view" is not writable and one handler has to choose.
+// segment, so "/mounts/{mount}/{rest...}/view" is not writable and one handler has to choose.
 func pageHandler[V goal.View[*serveApp]](app *goal.App[*serveApp]) http.Handler {
 	return goal.Register[V](app, nil, "/")
 }
 
-// filesRouter splits the one /files/ URL space between its pages by the trailing verb. A
+// mountsRouter splits the one /mounts/ URL space between its pages by the trailing verb. A
 // design's work page ends in /view, its Load page in /load (or /load/, where files are dropped), and
 // everything else is a folder, which the browse page renders. Folders are the default, so the space
-// root and a bare mount root open the browser instead of 404ing. The space root is "/files/" and
+// root and a bare mount root open the browser instead of 404ing. The space root is "/mounts/" and
 // names no mount. This matches what router.ts's parseUrl treats as addressable.
-func filesRouter(browse, work, load http.Handler) http.Handler {
+func mountsRouter(browse, work, load http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, viewSegment):
@@ -243,14 +259,15 @@ func filesRouter(browse, work, load http.Handler) http.Handler {
 
 // registerPages mounts the viewer's server-rendered pages on mux. Routing is server-owned (C11)
 // but per-page state lives in the URL, so each shell is identical for every path it serves and the
-// frontend reads the URL on load to reopen the design or folder. The /files/ space carries three
-// pages behind one pattern (see filesRouter), and /designs/ the designs page (see designsSpace).
+// frontend reads the URL on load to reopen the design or folder. The /mounts/ space carries three
+// pages behind one pattern (see mountsRouter), and /designs/ the designs page (see designsSpace).
 //
 // "/" is the landing page and also the catch-all. So a URL matching no other pattern opens a page
 // offering the destinations rather than an empty file tree (#318).
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	mux.Handle("/", pageHandler[*LandingPage](app))
-	mux.Handle(filesPrefix, filesRouter(pageHandler[*BrowsePage](app), pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
+	mux.Handle(oldFilesPrefix, oldFilesSpace())
+	mux.Handle(mountsPrefix, mountsRouter(pageHandler[*BrowsePage](app), pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
 	mux.Handle(designsPrefix, designsSpace(pageHandler[*LibraryPage](app)))
 }
 

@@ -90,7 +90,7 @@ func mountURIAuthority(designURI string) string {
 // issue 489).
 //
 // When the halves were built separately, the path came from the ARGUMENT and the hash came from the
-// resolved ENTRY. A design FOLDER then linked to `/files/<mount>/<dir>/view`. The viewer reads
+// resolved ENTRY. A design FOLDER then linked to `/mounts/<mount>/<dir>/view`. The viewer reads
 // that as a file and refuses it. A declared COMPANION got the entry's hash, and the viewer drew the
 // stale-link banner over an in-sync design.
 func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, designURI string, selfServed bool) (mountPath, contentHash, why string) {

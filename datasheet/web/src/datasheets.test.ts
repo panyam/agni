@@ -47,7 +47,7 @@ vi.mock("./paramspanel.js", () => ({
 beforeAll(async () => {
   localStorage.clear();
   document.body.innerHTML = `<div id="ds-tree"></div><div id="ds-view"></div><div id="ds-params"></div>`;
-  window.history.replaceState(null, "", "/datasheets/files/ds/vendor/txb0104.pdf");
+  window.history.replaceState(null, "", "/datasheets/mounts/ds/vendor/txb0104.pdf");
   await import("./datasheets.js");
   await vi.waitFor(() => expect(calls.loaded.length).toBeGreaterThan(0), 3000);
 });
@@ -68,6 +68,6 @@ describe("the datasheets page boots from a deep link", () => {
   // The restore must not push a history entry for the URL it is replaying, or Back walks through
   // the same datasheet twice.
   it("leaves the URL it replayed alone", () => {
-    expect(window.location.pathname).toBe("/datasheets/files/ds/vendor/txb0104.pdf");
+    expect(window.location.pathname).toBe("/datasheets/mounts/ds/vendor/txb0104.pdf");
   });
 });

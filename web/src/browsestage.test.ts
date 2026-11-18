@@ -71,7 +71,7 @@ describe("browseStage", () => {
     h.stage.setTarget({ mount: "corpus", path: "boards/amp.kicad_sch" });
     h.els.open.click();
 
-    expect(h.navigate).toHaveBeenCalledWith("/files/corpus/boards/amp.kicad_sch/view");
+    expect(h.navigate).toHaveBeenCalledWith("/mounts/corpus/boards/amp.kicad_sch/view");
   });
 
   it("does nothing when Open fires with no design selected", () => {
@@ -82,11 +82,11 @@ describe("browseStage", () => {
 
 describe("designUrl", () => {
   it("builds the work-page URL the router parses back", () => {
-    expect(designUrl("corpus", "boards/amp.kicad_sch")).toBe("/files/corpus/boards/amp.kicad_sch/view");
-    expect(designUrl("corpus", "top.edn")).toBe("/files/corpus/top.edn/view");
+    expect(designUrl("corpus", "boards/amp.kicad_sch")).toBe("/mounts/corpus/boards/amp.kicad_sch/view");
+    expect(designUrl("corpus", "top.edn")).toBe("/mounts/corpus/top.edn/view");
   });
 
   it("encodes segments that are not path-safe", () => {
-    expect(designUrl("my mounts", "a b/c#d.kicad_sch")).toBe("/files/my%20mounts/a%20b/c%23d.kicad_sch/view");
+    expect(designUrl("my mounts", "a b/c#d.kicad_sch")).toBe("/mounts/my%20mounts/a%20b/c%23d.kicad_sch/view");
   });
 });

@@ -328,7 +328,7 @@ func DiffURL(meta, bmeta Report, renameApprox bool) string {
 	if meta.URLBase == "" || meta.MountPath == "" || bmeta.MountPath == "" || bmeta.URLBase != meta.URLBase {
 		return ""
 	}
-	u := meta.URLBase + "/files/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
+	u := meta.URLBase + "/mounts/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
 	if renameApprox {
 		u += "&rename_approx=1"
 	}
@@ -349,7 +349,7 @@ func TraceURL(meta Report, from, to string, hops int) string {
 	if meta.URLBase == "" || meta.MountPath == "" || from == "" || to == "" {
 		return ""
 	}
-	u := meta.URLBase + "/files/" + meta.MountPath + "/view?trace=" + url.QueryEscape(from+","+to)
+	u := meta.URLBase + "/mounts/" + meta.MountPath + "/view?trace=" + url.QueryEscape(from+","+to)
 	if hops > 0 {
 		u += "&hops=" + url.QueryEscape(strconv.Itoa(hops))
 	}
@@ -373,7 +373,7 @@ func QueryURL(meta Report, query, title string, binds []string) string {
 	for _, b := range binds {
 		v.Add("bind", b)
 	}
-	return meta.URLBase + "/files/" + meta.MountPath + "/view?" + v.Encode()
+	return meta.URLBase + "/mounts/" + meta.MountPath + "/view?" + v.Encode()
 }
 
 // QuerySetURL builds the link that opens one query of a project's query set in a running viewer, by
@@ -387,7 +387,7 @@ func QuerySetURL(meta Report, set, query string) string {
 	v := url.Values{}
 	v.Set("set", set)
 	v.Set("q", query)
-	return meta.URLBase + "/files/" + meta.MountPath + "/view?" + v.Encode()
+	return meta.URLBase + "/mounts/" + meta.MountPath + "/view?" + v.Encode()
 }
 
 // VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
@@ -403,7 +403,7 @@ func VerdictURL(meta Report, id, rule string, subjects []string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
 	}
-	u := meta.URLBase + "/files/" + meta.MountPath + "/view?verdict=" + url.QueryEscape(id)
+	u := meta.URLBase + "/mounts/" + meta.MountPath + "/view?verdict=" + url.QueryEscape(id)
 	if meta.ContentHash != "" {
 		u += "&hash=" + url.QueryEscape(meta.ContentHash)
 	}

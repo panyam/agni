@@ -10,13 +10,13 @@
     <!-- The way back. A design is the deepest page in the app and the only one you can reach by a
          shared link, so it is the page most likely to be somebody's first, and it had no route out
          of itself. "Files" returns to the folder browser, "Agni" to the landing page. -->
-    <nav class="vw-crumb"><a class="ld-home" href="{{ .Base }}">Agni</a> / <a class="ld-home" href="{{ .Base }}files/">Files</a></nav>
+    <nav class="vw-crumb"><a class="ld-home" href="{{ .Base }}">Agni</a> / <a class="ld-home" href="{{ .Base }}mounts/">Files</a></nav>
     <!-- agni issue 852: set when the page asked for the browser engine and a design went to the
          server instead, with the reason. -->
     <div id="engine-note" class="engine-note" role="status" hidden></div>
     <!-- agni issues 854 and 1072: files from the visitor's machine are dropped on the Load page,
          which keeps them and reads the design before the viewer opens it. -->
-    <a id="drop-open" class="drop-open" href="{{ .Base }}files/local/load/">Open files…</a>
+    <a id="drop-open" class="drop-open" href="{{ .Base }}mounts/local/load/">Open files…</a>
     <!-- agni issue 1154: under --viewer-rooms, the switch that lets an agent drive this tab. -->
     <div id="agents-switch" class="agents-switch" hidden></div>
     <!-- WS9-049: the visited-sheet tab strip island mounts here. It is NOT the design's sheet

@@ -216,7 +216,7 @@ describe("the browser-review walk", () => {
         ]);
       }
       await step("open", async () => {
-        await act(page, () => page.goto(`${base()}/files/${walk.mount}/${walk.path}/view?mode=svg&tour=review&tourpace=host`, { waitUntil: "networkidle" }));
+        await act(page, () => page.goto(`${base()}/mounts/${walk.mount}/${walk.path}/view?mode=svg&tour=review&tourpace=host`, { waitUntil: "networkidle" }));
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         await showPanel(page, "checks");
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {

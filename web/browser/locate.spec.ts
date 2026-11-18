@@ -22,7 +22,7 @@ afterAll(async () => {
 });
 
 async function open(page: Page): Promise<void> {
-  await page.goto(`${base()}/files/${DESIGN}/view?mode=svg`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/mounts/${DESIGN}/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
 }
 

@@ -509,7 +509,7 @@ for (const seed of seeds) {
 async function drop(design, input, files, markers) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  if (!(await visit(page, "files/local/load/", "2. drop", design))) {
+  if (!(await visit(page, "mounts/local/load/", "2. drop", design))) {
     await page.close();
     return;
   }

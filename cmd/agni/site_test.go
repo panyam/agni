@@ -61,12 +61,12 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 		}
 	}
 	// Each seed and the drop page open through the Load page (agni issue 1072).
-	for _, want := range []string{`href="/agni/demo/files/gateway/designs/gateway/load/"`, "Sample Board", `href="/agni/demo/files/local/load/"`} {
+	for _, want := range []string{`href="/agni/demo/mounts/gateway/designs/gateway/load/"`, "Sample Board", `href="/agni/demo/mounts/local/load/"`} {
 		if !strings.Contains(landing, want) {
 			t.Errorf("landing page lacks %s", want)
 		}
 	}
-	for _, page := range []string{"files/gateway/designs/gateway/view/index.html", "files/local/view/index.html"} {
+	for _, page := range []string{"mounts/gateway/designs/gateway/view/index.html", "mounts/local/view/index.html"} {
 		shell := read(page)
 		for _, want := range []string{`href="/agni/demo/static/app.css"`, `src="/agni/demo/static/app.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`} {
 			if !strings.Contains(shell, want) {
@@ -77,7 +77,7 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 			t.Errorf("%s loads an asset from the site root", page)
 		}
 	}
-	for _, page := range []string{"files/gateway/designs/gateway/load/index.html", "files/local/load/index.html"} {
+	for _, page := range []string{"mounts/gateway/designs/gateway/load/index.html", "mounts/local/load/index.html"} {
 		shell := read(page)
 		for _, want := range []string{`src="/agni/demo/static/load.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`, `data-build="`} {
 			if !strings.Contains(shell, want) {
@@ -152,12 +152,12 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, page := range []string{"view", "load"} {
-		if _, err := os.Stat(filepath.Join(out, "files", "gw", "gateway", page, "index.html")); err != nil {
+		if _, err := os.Stat(filepath.Join(out, "mounts", "gw", "gateway", page, "index.html")); err != nil {
 			t.Errorf("no %s page for the design: %v", page, err)
 		}
 	}
 	landing, err := os.ReadFile(filepath.Join(out, "index.html"))
-	if err != nil || !strings.Contains(string(landing), `href="/files/gw/gateway/load/"`) {
+	if err != nil || !strings.Contains(string(landing), `href="/mounts/gw/gateway/load/"`) {
 		t.Errorf("landing page does not link the design: %v", err)
 	}
 	b, err := os.ReadFile(filepath.Join(out, "files", "gw.json"))

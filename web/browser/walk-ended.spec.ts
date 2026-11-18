@@ -38,7 +38,7 @@ describe("a walk on a board", () => {
       const litOn = (sheet: string, net: string) => lit.some((l) => l.sheet === sheet && l.body.includes(`"${net}"`));
       // C44 decouples FTDI_3V3 on the Jetson cut, so one hop of Small parts reaches that rail's net and
       // GND, and stops on GND. The link opens the schematic sheet that draws the walk.
-      await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg&walk=C44&walk_kind=small-parts&walk_hops=1`, {
+      await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg&walk=C44&walk_kind=small-parts&walk_hops=1`, {
         waitUntil: "networkidle",
       });
       const ground = page.locator('.walk-net[data-walk-net="GND"]');

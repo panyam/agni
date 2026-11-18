@@ -136,7 +136,7 @@ beforeAll(async () => {
   // the mount. main.ts reads the URL at boot and replays it through presenter.restore, so
   // every client the open path needs gets used the way a deep-link refresh uses it.
   // It arrives as the Load page sends a reader once it has read the design (agni issue 1072).
-  window.history.replaceState(null, "", "/files/m/d/b.edn/view?loaded=1");
+  window.history.replaceState(null, "", "/mounts/m/d/b.edn/view?loaded=1");
   document.body.innerHTML = pageBody();
   await import("./main.js");
 

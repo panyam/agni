@@ -271,7 +271,7 @@ describe("the walk mission", () => {
 
     try {
       await step("open", {}, async () => {
-        await page.goto(`${base()}/files/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/mounts/${walk.mount}/${walk.path}/view?mode=svg`, { waitUntil: "networkidle" });
         await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 60_000 });
         await showPanel(page, "overview");
         await page.locator(`#sheet-overview .sheet-tile[title="/${walk.sheet}"]`).click({ timeout: 30_000 });

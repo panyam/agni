@@ -33,7 +33,7 @@ afterAll(async () => {
 
 // openViewer loads a design and waits for the query panel to mount.
 async function openViewer(page: Page, mount: string, file: string): Promise<void> {
-  await page.goto(`${base()}/files/${mount}/${file}/view?mode=svg`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/mounts/${mount}/${file}/view?mode=svg`, { waitUntil: "networkidle" });
   await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
 }
 
@@ -722,7 +722,7 @@ describe("a query link", () => {
   const linkTo = (query: string, binds: string[] = []) => {
     const params = new URLSearchParams({ query });
     for (const b of binds) params.append("bind", b);
-    return `${base()}/files/kicad/hier_bus_root.kicad_sch/view?mode=svg&${params}`;
+    return `${base()}/mounts/kicad/hier_bus_root.kicad_sch/view?mode=svg&${params}`;
   };
   // inFront reports whether a dock tab is the one its group shows.
   const inFront = (page: Page, title: string) =>
@@ -806,7 +806,7 @@ describe("the default dock", () => {
         });
       // Jetson's cut opened on its board takes long enough that its restore saved before the layout.
       for (const visit of ["first", "second"]) {
-        await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg&sheet=board`, { waitUntil: "networkidle", timeout: 120_000 });
+        await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg&sheet=board`, { waitUntil: "networkidle", timeout: 120_000 });
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         const s = await sizes();
         expect(s.rail, `the Properties rail's width on the ${visit} visit`).toBeGreaterThan(240);
@@ -910,7 +910,7 @@ describe("the default dock", () => {
 
   it("gives Changes its rail width when a comparison adds it back", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/tut/designs/gateway/gateway.edn/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/designs/gateway/gateway.edn/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
       const tab = page.locator(".dv-tab", { hasText: "Changes" });
       await tab.hover();
@@ -991,7 +991,7 @@ describe("a walk's goal question", () => {
   it("zooms the canvas to the part its route reaches", async () => {
     await withPage(browser, async (page) => {
       await page.setViewportSize({ width: 1100, height: 800 });
-      await page.goto(`${base()}/files/conformance/showcase.fires.kicad_sch/view?mode=svg&walk=U2.3&walk_goal=pull-up`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/conformance/showcase.fires.kicad_sch/view?mode=svg&walk=U2.3&walk_goal=pull-up`, { waitUntil: "networkidle" });
       await page.waitForSelector('.walk-goal[data-goal-outcome="routed"]', { timeout: 30_000 });
       await page.waitForFunction(() => {
         const host = document.querySelector("#svg-view")!.getBoundingClientRect();

@@ -29,7 +29,7 @@ func TestADiffLinksToTheViewersComparison(t *testing.T) {
 			withMount(t)
 			stdout, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn", "--format", format, "--server", urlBaseFlag)
 			u := linkIn(t, stderr, "look at it: ")
-			if u.Path != "/files/demo/crystal.fires.edn/view" || u.Query().Get("against") != "demo/crystal.passes.edn" {
+			if u.Path != "/mounts/demo/crystal.fires.edn/view" || u.Query().Get("against") != "demo/crystal.passes.edn" {
 				t.Errorf("link %s, want the earlier revision's view against demo/crystal.passes.edn", u)
 			}
 			if u.Query().Has("rename_approx") {

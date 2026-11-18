@@ -204,7 +204,7 @@ describe("a sheet view beside the canvas", () => {
         if (body.includes('"sheet":"board"')) boardSpecs.push(body);
         return route.continue();
       });
-      await page.goto(`${base()}/files/tut/designs/gateway/view?mode=svg&walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg&walk=R1&walk_kind=small-parts&walk_hops=2`, { waitUntil: "networkidle" });
       await page.waitForSelector(".walk-net-name", { timeout: 30_000 });
       const net = (await page.locator(".walk-net").first().getAttribute("data-walk-net"))!;
       await openBeside(page, "Board");
@@ -354,7 +354,7 @@ describe("the renderer a sheet view opens in", () => {
   it("draws the board in WebGL beside an SVG canvas on a hardware GPU, and a schematic in SVG", async () => {
     await withPage(browser, async (page) => {
       await page.addInitScript(hardwareGpu);
-      await page.goto(`${base()}/files/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();
@@ -371,7 +371,7 @@ describe("the renderer a sheet view opens in", () => {
 
   it("keeps the board in SVG on a software GPU", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/tut/designs/gateway/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await showPanel(page, "overview");
       await besideTile(page, /^Board$/).click();

@@ -50,12 +50,12 @@ describe("dropping files on the Load page", () => {
   it("opens a dropped zip's declared design and finds what the server finds in the same files", async () => {
     let served: string[] = [];
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/tut/designs/gateway/load`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/tut/designs/gateway/load`, { waitUntil: "domcontentloaded" });
       served = await runChecks(page);
     });
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-input", { name: "tutorial.zip", mimeType: "application/zip", buffer: storedZip(tutorial) });
 
@@ -83,7 +83,7 @@ describe("dropping files on the Load page", () => {
   it("opens a folder picked whole, with the design its design.yaml declares", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-folder-input", tutorial);
 
@@ -103,7 +103,7 @@ describe("dropping files on the Load page", () => {
   it("proposes a design.yaml for loose files and opens the design it declares", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       const loose = walk(gateway).filter((p) => !p.endsWith("design.yaml") && !p.includes(`${sep}symbols${sep}`));
       await page.setInputFiles("#drop-input", loose);
@@ -131,7 +131,7 @@ describe("dropping files on the Load page", () => {
   it("declares and opens a design proposed from a zip with no design.yaml", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       const zip = storedZip(gateway, (p) => !p.endsWith("design.yaml"));
       await page.setInputFiles("#drop-input", { name: "gateway.zip", mimeType: "application/zip", buffer: zip });
@@ -156,7 +156,7 @@ describe("dropping files on the Load page", () => {
   it("reopens a dropped design after a reload, from what the browser kept", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-folder-input", tutorial);
       const dialog = page.locator("#drop-dialog");
@@ -178,7 +178,7 @@ describe("dropping files on the Load page", () => {
 
       // The drop page lists it, and deleting it sends the next open of the design back to the Load
       // page, which says the files are gone.
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       const row = page.locator(".ld-drop").first();
       await expect.poll(() => row.textContent(), { timeout: 30_000 }).toContain("tutorial-project");
       await row.locator(".ld-drop-delete").click();
@@ -196,7 +196,7 @@ describe("dropping files on the Load page", () => {
   it("refuses a dropped design on the server engine instead of sending it", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/files/local/drop-x/board.edn/view`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/drop-x/board.edn/view`, { waitUntil: "domcontentloaded" });
       const note = page.locator("#engine-note");
       await expect.poll(() => note.isVisible(), { timeout: 60_000 }).toBe(true);
       expect(await note.textContent()).toContain("needs the browser engine");

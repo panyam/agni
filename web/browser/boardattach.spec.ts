@@ -28,7 +28,7 @@ const JOB = "common/odb/gateway-layout";
 const BOARD = `${JOB}/matrix/matrix`;
 
 async function open(page: Page, query = ""): Promise<void> {
-  await page.goto(`${base()}/files/${DESIGN}/view${query}`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/mounts/${DESIGN}/view${query}`, { waitUntil: "networkidle" });
   await page.waitForSelector(".sheet-tile", { state: "attached", timeout: 60_000 });
 }
 
@@ -89,7 +89,7 @@ describe("saving an attached board to the design's design.yaml", () => {
 
   it("writes a dropped design's descriptor, and the design then reads the board with no ?board=", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/mounts/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-folder-input", odbFolder);
       const dialog = page.locator("#drop-dialog");

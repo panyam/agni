@@ -1,8 +1,8 @@
 // The datasheets workbench's URL <-> state codec (WS13-006), the analogue of router.ts for the
 // viewer. Pure functions with no page imports, so it is testable and the viewer router never has
-// to know about the datasheets space. A datasheet lives at /datasheets/files/<mount>/<path...>,
-// mirroring the viewer's /files/<mount>/<path...>. parseDsUrl returns the empty location for any
-// path outside the datasheets space (including the viewer's /files/), so the two codecs never
+// to know about the datasheets space. A datasheet lives at /datasheets/mounts/<mount>/<path...>,
+// mirroring the viewer's /mounts/<mount>/<path...>. parseDsUrl returns the empty location for any
+// path outside the datasheets space (including the viewer's /mounts/), so the two codecs never
 // mis-parse each other's URLs.
 
 // DsLocation is the URL-addressable state of the workbench: which datasheet is open. Empty
@@ -12,7 +12,7 @@ export interface DsLocation {
   path: string;
 }
 
-const DS_FILES_PREFIX = "/datasheets/files/";
+const DS_MOUNTS_PREFIX = "/datasheets/mounts/";
 
 // emptyDs is the no-datasheet-open location (the /datasheets landing).
 export function emptyDs(): DsLocation {
@@ -29,16 +29,16 @@ export function hasDatasheet(loc: DsLocation): boolean {
 export function dsToUrl(loc: DsLocation): string {
   if (!hasDatasheet(loc)) return "/datasheets/";
   const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
-  return DS_FILES_PREFIX + segs.join("/");
+  return DS_MOUNTS_PREFIX + segs.join("/");
 }
 
-// parseDsUrl reads a location back out of a pathname. A path not under /datasheets/files/ (the
+// parseDsUrl reads a location back out of a pathname. A path not under /datasheets/mounts/ (the
 // bare /datasheets landing, or any viewer URL) yields the empty location. The first segment is the
 // mount; the rest, rejoined, is the mount-relative datasheet path (a datasheet needs both).
 export function parseDsUrl(pathname: string): DsLocation {
   const loc = emptyDs();
-  if (!pathname.startsWith(DS_FILES_PREFIX)) return loc;
-  const rest = pathname.slice(DS_FILES_PREFIX.length);
+  if (!pathname.startsWith(DS_MOUNTS_PREFIX)) return loc;
+  const rest = pathname.slice(DS_MOUNTS_PREFIX.length);
   const segs = rest.split("/").filter((s) => s !== "").map(decodeURIComponent);
   if (segs.length < 2) return loc; // a datasheet needs a mount and at least one path segment
   loc.mount = segs[0];

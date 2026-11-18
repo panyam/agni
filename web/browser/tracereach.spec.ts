@@ -27,7 +27,7 @@ async function hops(page: Page, n: number): Promise<void> {
 describe("the Trace panel's end pin list", () => {
   it("offers only the pins a trace from the start pin reaches, within the hops picked", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await page.locator(".dv-default-tab-content", { hasText: /^Trace$/ }).first().click();
       const [from, to] = [page.locator("input.trace-pin").nth(0), page.locator("input.trace-pin").nth(1)];

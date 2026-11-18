@@ -134,7 +134,7 @@ func TestAPIOnlyRootSaysWhatIsServed(t *testing.T) {
 	for _, tc := range []struct {
 		path string
 		code int
-	}{{"/", http.StatusOK}, {"/files/tut/board.edn/view", http.StatusNotFound}} {
+	}{{"/", http.StatusOK}, {"/mounts/tut/board.edn/view", http.StatusNotFound}} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", tc.path, nil))
 		if rec.Code != tc.code {

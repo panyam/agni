@@ -22,7 +22,7 @@ afterAll(async () => {
 describe("a net lit on the board", () => {
   it("fills its pads and vias on the board view rather than ringing them", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await openBeside(page, "Board");
       await page.keyboard.press("Control+f");

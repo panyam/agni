@@ -282,7 +282,7 @@ describe.runIf(trying)("a journey to try or record", () => {
     try {
       // A first visit reads the design on the Load page, out of the picture, so the journey opens the
       // viewer as a returning reader does.
-      await page.goto(`${base()}/files/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
+      await page.goto(`${base()}/mounts/${d.mount}/${d.path}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
       await page.waitForSelector("#svg-view svg", { timeout: 180_000 });
       if (headed) {
         cut = (Date.now() - began) / 1000;

@@ -92,11 +92,11 @@ func TestRenderCheckReportWritesTheVerdictPage(t *testing.T) {
 	if !strings.Contains(page, "i2c-pull-up") || !strings.Contains(page, "SDA") {
 		t.Error("the page does not name the rule and the subject the run failed")
 	}
-	if strings.Contains(page, "/files/") {
+	if strings.Contains(page, "/mounts/") {
 		t.Error("a page asked for no links carries one")
 	}
 	linked := render(&webapi.ReportLinks{UrlBase: "https://example.org/agni/demo/", DesignUri: "mount://gateway/designs/gateway"})
-	if !strings.Contains(linked, "https://example.org/agni/demo/files/gateway/designs/gateway/view") {
+	if !strings.Contains(linked, "https://example.org/agni/demo/mounts/gateway/designs/gateway/view") {
 		t.Error("a page asked for links against a base carries no link into that viewer")
 	}
 	withheld := render(&webapi.ReportLinks{Withheld: "this design was opened from your machine"})

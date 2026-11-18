@@ -53,7 +53,7 @@ afterEach(() => {
 describe("the Load page boots", () => {
   it("reads a design's drawing and board, shows each step done and records the read", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
-    const { called } = await boot("/files/m/d/b.edn/load?verdict=v&rule=r");
+    const { called } = await boot("/mounts/m/d/b.edn/load?verdict=v&rule=r");
     await vi.waitFor(() => expect(window.localStorage.getItem("agni.loaded")).not.toBeNull(), 5000);
     expect(document.getElementById("load-design")?.hidden).toBe(false);
     expect(document.getElementById("load-drop")?.hidden).toBe(true);
@@ -83,14 +83,14 @@ describe("the Load page boots", () => {
         const answer = method === "Ingest" ? { name: "snapshots/abc" } : (REPLIES[method] ?? {});
         return reply(req, answer);
       };
-      window.history.replaceState(null, "", "/files/m/d/b.edn/load?sheet=s1");
+      window.history.replaceState(null, "", "/mounts/m/d/b.edn/load?sheet=s1");
       document.body.innerHTML = pageBody();
       await import("./load.js");
       await vi.waitFor(() => expect(document.getElementById("load-failed")?.hidden).toBe(false), 5000);
       expect(document.getElementById("load-failed")?.textContent).toContain("no netlist");
       const anyway = document.getElementById("load-anyway") as HTMLAnchorElement;
       expect(anyway.hidden).toBe(false);
-      expect(new URL(anyway.href).pathname + new URL(anyway.href).search).toBe("/files/m/d/b.edn/view?sheet=s1&loaded=1");
+      expect(new URL(anyway.href).pathname + new URL(anyway.href).search).toBe("/mounts/m/d/b.edn/view?sheet=s1&loaded=1");
       expect(window.localStorage.getItem("agni.loaded")).toBeNull();
     } finally {
       (globalThis as unknown as { fetch: unknown }).fetch = fetchBefore;
@@ -99,7 +99,7 @@ describe("the Load page boots", () => {
   });
 
   it("shows the drop page at the browser mount's address, and says when it keeps nothing", async () => {
-    await boot("/files/local/load/");
+    await boot("/mounts/local/load/");
     await vi.waitFor(() => expect(document.querySelector("#saved-drops li")).not.toBeNull(), 5000);
     expect(document.getElementById("load-drop")?.hidden).toBe(false);
     expect(document.getElementById("load-design")?.hidden).toBe(true);
