@@ -248,10 +248,16 @@ reads the design under it:
 ```bash
 agni packs push ./b200 --remote http://localhost:8080
 agni check designs/memory_unit --pack b200 --remote http://localhost:8080
+agni review designs/memory_unit --pack b200 --remote http://localhost:8080
 ```
 
+`review` takes its checklist from the pack, the project's first one unless `--checklist` names
+another. When the folder's `design.yaml` extends the project, `agni designs push` keeps the project
+as the pack itself, under its `name:`, and says the `--pack` to use. A pack the server holds with the
+same hash is left alone, and `--no-pack` skips it.
+
 A report keeps such a check under the design, and says later whether the design's files or the pack
-changed since it ran:
+changed since it ran. A design in a mounted folder takes one too, hashed from the files in its folder:
 
 ```bash
 agni reports create designs/memory_unit --pack b200 --remote http://localhost:8080

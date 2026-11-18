@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
-# The design-store mission's exercise (agni issues 1691, 1696, 1739). It starts its own agni serve
-# over a fresh --store and --uploads in separate folders, pushes Jetson 1.1.2 and 1.1.3 as two designs of one series, replaces 1.1.3's
-# schematic, restarts the server over the same store, and lists everything again. Then it checks and
-# diffs the stored designs by name (agni issue 1695) and compares each answer with the same command on
-# the folders, and checks the store's folder holds records and no board file. #1704 adds packs. It
-# kills only the server it started.
+# The design-store mission's exercise (agni issues 1691, 1696, 1739, 1746). It starts its own agni
+# serve over a fresh --store and --uploads in separate folders. It pushes Jetson 1.1.2 and 1.1.3 from
+# examples/jetson-project as two designs of one series, and the push keeps the project they extend as
+# the pack jetson. It makes a project holding both with that pack as its default, and keeps a report
+# on 1.1.3 through the project. It checks and diffs the stored designs by name (agni issue 1695) and
+# compares each answer with the same command on the folders. Then it replaces 1.1.3's schematic,
+# restarts the server over the same store, and lists everything again. It checks that the report says
+# it ran on earlier files, and that the store's folder holds records and no board file. It kills only
+# the server it started.
 set -euo pipefail
 
 agni=${AGNI:-bin/agni}
 revs=${SAMPLES_REVISIONS:-tools/samples/revisions}
+# The project's design folders hold each revision's files beside a design.yaml that extends the
+# project; `make -C examples/jetson-project revision` copies them in.
+proj=${JETSON_PROJECT:-examples/jetson-project}
 out=${EXERCISE_OUT:-/tmp/agni-exercise}/design-store
 port=${EXERCISE_PORT:-18691}
 url=http://127.0.0.1:$port
 
 for r in 1.1.2 1.1.3; do
   [ -d "$revs/jetson-agx-thor-baseboard-$r" ] || { echo "missing $revs/jetson-agx-thor-baseboard-$r; run make samples-revisions" >&2; exit 1; }
+  [ -f "$proj/designs/jetson-$r/jetson-agx-thor-baseboard.kicad_sch" ] || { echo "missing $proj/designs/jetson-$r's files; run make -C $proj revision" >&2; exit 1; }
 done
 rm -rf "$out"
 mkdir -p "$out"
@@ -41,9 +48,9 @@ trap stop EXIT
 step() { printf '\n== %s\n' "$*"; }
 
 serve
-step "push 1.1.2 and 1.1.3 as two designs of the series jetson"
-"$agni" designs push "$revs/jetson-agx-thor-baseboard-1.1.2" --id bb-1.1.2 --series jetson --remote "$url"
-"$agni" designs push "$revs/jetson-agx-thor-baseboard-1.1.3" --id bb-1.1.3 --series jetson --remote "$url"
+step "push 1.1.2 and 1.1.3 as two designs of the series jetson, and their project as the pack jetson"
+"$agni" designs push "$proj/designs/jetson-1.1.2" --id bb-1.1.2 --series jetson --remote "$url" | tee "$out/push-1.1.2.txt"
+"$agni" designs push "$proj/designs/jetson-1.1.3" --id bb-1.1.3 --series jetson --remote "$url" | tee "$out/push-1.1.3.txt"
 
 step "list the series"
 "$agni" designs list --series jetson --remote "$url" | tee "$out/series-before.txt"
@@ -58,12 +65,21 @@ for k in ("componentStatus","netStatus"):
     for n,v in sorted(d.get(k,{}).items()):
         if v!="equal": print(k,n,v)'; }
 
-step "check bb-1.1.3 by name, with the folder's intent, against agni check on the folder"
+step "check bb-1.1.3 by name under the pack, against agni check on the folder in its project"
 f3=$revs/jetson-agx-thor-baseboard-1.1.3
-{ echo "name: jetson-agx-thor-baseboard-1.1.3"; awk '/^intent:/ { found=1 } found' "$f3/design.yaml"; } >"$out/intent-1.1.3.yaml"
-stored=$("$agni" check designs/bb-1.1.3 --intent-path "$out/intent-1.1.3.yaml" --remote "$url" --format json | findings)
-folder=$("$agni" check "$f3" --format json | findings)
+stored=$("$agni" check designs/bb-1.1.3 --pack jetson --remote "$url" --format json | findings)
+folder=$("$agni" check "$proj/designs/jetson-1.1.3" --format json | findings)
 echo "stored: $stored findings; folder: $folder findings"
+
+step "make the project bench, holding both designs, with the pack jetson as its default"
+"$agni" projects create bench --title "Jetson bench" --remote "$url"
+"$agni" projects add bench bb-1.1.2 bb-1.1.3 --remote "$url"
+"$agni" projects packs bench jetson --remote "$url"
+
+step "keep a report on bb-1.1.3 through the project"
+"$agni" reports create designs/bb-1.1.3 --project bench --id via-bench --remote "$url" | tee "$out/report.txt"
+reported=$(awk -F'\t' '{ print $3 }' "$out/report.txt" | grep -o '^[0-9]*')
+echo "report: $reported findings; folder: $folder findings"
 
 step "diff 1.1.2 and 1.1.3 by name against agni diff on the folders"
 "$agni" diff designs/bb-1.1.2 designs/bb-1.1.3 --remote "$url" --format json | changes >"$out/diff-stored.txt"
@@ -85,6 +101,8 @@ stop
 serve
 "$agni" designs list --series jetson --remote "$url" | tee "$out/series-after-restart.txt"
 "$agni" designs artifacts bb-1.1.3 --remote "$url" | tee "$out/artifacts-after-restart.txt"
+"$agni" projects get bench --remote "$url" | tee "$out/project-after-restart.txt"
+"$agni" reports list designs/bb-1.1.3 --remote "$url" | tee "$out/reports-after-restart.txt"
 
 step "result"
 before=$(grep -o 'content [0-9a-f]*' "$out/schematic-before.txt")
@@ -101,6 +119,20 @@ if [ "$stored" -gt 0 ] && [ "$stored" = "$folder" ]; then
   echo "PASS: a check on designs/bb-1.1.3 gives the folder's $folder findings"
 else
   echo "FAIL: a check on designs/bb-1.1.3 gives $stored findings, and the folder $folder" >&2
+  fail=1
+fi
+if [ -n "$reported" ] && [ "$reported" = "$folder" ]; then
+  echo "PASS: the report through projects/bench holds the folder's $folder findings"
+else
+  echo "FAIL: the report through projects/bench holds ${reported:-no} findings, and the folder $folder" >&2
+  fail=1
+fi
+if grep -q "via-bench.*packs/jetson.*run on earlier design files" "$out/reports-after-restart.txt" &&
+  grep -q "design	designs/bb-1.1.2" "$out/project-after-restart.txt" && grep -q "design	designs/bb-1.1.3" "$out/project-after-restart.txt" &&
+  grep -q "pack	packs/jetson" "$out/project-after-restart.txt"; then
+  echo "PASS: after the schematic was replaced and the server restarted, the report says it ran on earlier files, and bench still holds both designs and packs/jetson"
+else
+  echo "FAIL: after the restart, the report or the project differs; see $out/reports-after-restart.txt and $out/project-after-restart.txt" >&2
   fail=1
 fi
 if [ -s "$out/diff-stored.txt" ] && cmp -s "$out/diff-stored.txt" "$out/diff-folder.txt"; then

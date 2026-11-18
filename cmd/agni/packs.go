@@ -182,22 +182,39 @@ func printPackDetail(w io.Writer, p *webapi.Pack) {
 
 // push keeps a project.yaml's rules on the server as a pack.
 func (c *packsClient) push(ctx context.Context, w io.Writer, arg, id, title string) error {
+	pack, files, descriptor, err := localPack(arg, id, title)
+	if err != nil {
+		return err
+	}
+	out, err := c.write(ctx, pack, files)
+	if err != nil {
+		return fmt.Errorf("%s: %w", descriptor, err)
+	}
+	printPack(w, out)
+	printPackDetail(w, out)
+	return nil
+}
+
+// localPack reads the project.yaml at arg, or in the folder arg names, into the pack push sends, with
+// the files its relative tiers name. It returns the descriptor's path for messages. An empty id or
+// title takes the project's own.
+func localPack(arg, id, title string) (*webapi.Pack, fileSet, string, error) {
 	descriptor := arg
 	if fi, err := os.Stat(arg); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	} else if fi.IsDir() {
 		descriptor = filepath.Join(arg, projects.ProjectDescriptor)
 	}
 	raw, err := os.ReadFile(descriptor) // #nosec G304 -- the project.yaml the user named to send
 	if err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
 	declared, project, src, err := projects.ParseProject(bytes.NewReader(raw))
 	if err != nil {
-		return fmt.Errorf("%s: %w", descriptor, err)
+		return nil, fileSet{}, "", fmt.Errorf("%s: %w", descriptor, err)
 	}
 	if src.Extends != "" {
-		return fmt.Errorf("%s extends %s, and a pack extends nothing; push that one as its own pack and name both with --pack", descriptor, src.Extends)
+		return nil, fileSet{}, "", fmt.Errorf("%s extends %s, and a pack extends nothing; push that one as its own pack and name both with --pack", descriptor, src.Extends)
 	}
 	if id == "" {
 		id = declared
@@ -224,22 +241,27 @@ func (c *packsClient) push(ctx context.Context, w io.Writer, arg, id, title stri
 		return out, nil
 	}
 	if cfg.ProfileUris, err = tier(src.Profiles); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
 	if cfg.ParamUris, err = tier(src.Params); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
 	if cfg.SymbolPathUris, err = tier(src.Symbols); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
 	if cfg.LibraryUris, err = tier(src.Lib); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
 	if cfg.QuerySetUris, err = tier(src.Queries); err != nil {
-		return err
+		return nil, fileSet{}, "", err
 	}
-	pack := &webapi.Pack{Name: packName(id), Title: title, Config: cfg, Files: files.files}
-	write := func() (*webapi.Pack, error) {
+	return &webapi.Pack{Name: packName(id), Title: title, Config: cfg, Files: files.files}, files, descriptor, nil
+}
+
+// write creates pack, or replaces the server's pack of that name whole, uploading the contents the
+// server lacks.
+func (c *packsClient) write(ctx context.Context, pack *webapi.Pack, files fileSet) (*webapi.Pack, error) {
+	return retryUpload(ctx, c.up, files, func() (*webapi.Pack, error) {
 		_, err := unary(ctx, c.packs.GetPack, &webapi.GetPackRequest{Name: pack.GetName()})
 		if connect.CodeOf(err) == connect.CodeNotFound {
 			return unary(ctx, c.packs.CreatePack, &webapi.CreatePackRequest{PackId: strings.TrimPrefix(pack.GetName(), "packs/"), Pack: pack})
@@ -248,14 +270,7 @@ func (c *packsClient) push(ctx context.Context, w io.Writer, arg, id, title stri
 			return nil, err
 		}
 		return unary(ctx, c.packs.UpdatePack, &webapi.UpdatePackRequest{Pack: pack, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"title", "config", "files"}}})
-	}
-	out, err := retryUpload(ctx, c.up, files, write)
-	if err != nil {
-		return fmt.Errorf("%s: %w", descriptor, err)
-	}
-	printPack(w, out)
-	printPackDetail(w, out)
-	return nil
+	})
 }
 
 // addTier adds the file or every file under the folder at rel, relative to dir, each under its path
@@ -295,4 +310,13 @@ func addTier(files *fileSet, dir, rel string) error {
 		}
 	}
 	return nil
+}
+
+// getPack reads one pack the server keeps, by resource name.
+func (r *remoteServer) getPack(ctx context.Context, name string) (*webapi.Pack, error) {
+	resp, err := webapiconnect.NewPackServiceClient(r.http, r.url).GetPack(ctx, connect.NewRequest(&webapi.GetPackRequest{Name: name}))
+	if err != nil {
+		return nil, rpcFailed(err)
+	}
+	return resp.Msg, nil
 }

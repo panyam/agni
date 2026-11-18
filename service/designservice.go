@@ -25,6 +25,9 @@ type DesignService struct {
 	reports ReportStore
 	checks  *CheckService
 	packs   PackLookup
+	// mountedList and mountedRead hash a mounted design's files for a report (agni issue 1746).
+	mountedList DesignFileLister
+	mountedRead FileReader
 }
 
 // NewDesignService returns a DesignService over catalog, reading uploaded file contents from blobs.

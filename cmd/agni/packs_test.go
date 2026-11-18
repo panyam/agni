@@ -232,3 +232,145 @@ func TestASnapshotRereadsWhenItsPackChanges(t *testing.T) {
 		t.Errorf("ingest under a deleted pack = %v; want NOT_FOUND naming the pack", err)
 	}
 }
+
+// check --verdicts under a pack writes text and csv, and they match the same report on the folder
+// (agni issue 1746). The verdicts carry what each section shows, so the CLI needs none of the pack's
+// rules.
+func TestVerdictsUnderAPackMatchTheFolder(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	design := filepath.Join(project, "designs", "gw")
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
+	for _, format := range []string{"text", "csv"} {
+		underPack, err := runAgni(t, "check", "designs/gw", "--pack", "gateway", "--verdicts", "--format", format, "--remote", srv.URL)
+		if err != nil {
+			t.Fatalf("check --pack --verdicts --format %s: %v\n%s", format, err, underPack)
+		}
+		folder, err := runAgni(t, "check", design, "--verdicts", "--format", format)
+		if err != nil {
+			t.Fatalf("check --verdicts --format %s on the folder: %v\n%s", format, err, folder)
+		}
+		if !strings.Contains(folder, "gateway-profiles/") {
+			t.Fatalf("the folder's %s verdicts name no gateway-profiles rule, so this test proves nothing about the pack", format)
+		}
+		if underPack != folder {
+			t.Errorf("--verdicts --format %s under the pack differs from the folder's; want the same report", format)
+		}
+	}
+}
+
+// review designs/<d> --pack runs the pack's checklist, its first by default or one by name, and each
+// item reads as review on the folder reads it (agni issue 1746).
+func TestAReviewUnderAPackMatchesTheFolder(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	design := filepath.Join(project, "designs", "gw")
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
+	for _, named := range [][]string{nil, {"--checklist", "house"}} {
+		underPack := reviewOutcomes(t, append([]string{"review", "designs/gw", "--pack", "gateway", "--remote", srv.URL}, named...)...)
+		folder := reviewOutcomes(t, append([]string{"review", design}, named...)...)
+		if len(folder) == 0 || !slices.ContainsFunc(folder, func(k string) bool { return strings.HasSuffix(k, "|pass") || strings.HasSuffix(k, "|fail") }) {
+			t.Fatalf("review %v on the folder answered no item, so this test proves nothing: %v", named, folder)
+		}
+		if !slices.Equal(underPack, folder) {
+			t.Errorf("review %v under the pack differs from the folder\nonly under the pack: %v\nonly on the folder: %v", named, minus(underPack, folder), minus(folder, underPack))
+		}
+	}
+	if out, err := runAgni(t, "review", design, "--pack", "gateway", "--remote", srv.URL); err == nil || !strings.Contains(err.Error(), "designs/<id>") {
+		t.Errorf("review <folder> --pack = %v\n%s; want it refused, naming designs/<id>", err, out)
+	}
+}
+
+// reviewOutcomes runs agni with args and --format json, and returns each item as "id|outcome", sorted.
+func reviewOutcomes(t *testing.T, args ...string) []string {
+	t.Helper()
+	out, err := runAgni(t, append(args, "--format", "json")...)
+	if err != nil {
+		t.Fatalf("agni %v: %v\n%s", args, err, out)
+	}
+	var doc struct {
+		Results struct {
+			Areas []struct {
+				Items []struct {
+					ID      string `json:"id"`
+					Outcome string `json:"outcome"`
+				} `json:"items"`
+			} `json:"areas"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(out), &doc); err != nil {
+		t.Fatalf("agni %v printed no JSON: %v\n%s", args, err, out)
+	}
+	var keys []string
+	for _, a := range doc.Results.Areas {
+		for _, it := range a.Items {
+			keys = append(keys, it.ID+"|"+it.Outcome)
+		}
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+// designs push keeps the project.yaml a design extends as a pack, writes it again only when its hash
+// moves, and leaves it alone under --no-pack (agni issue 1746).
+func TestDesignsPushKeepsTheProjectItExtends(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	design := filepath.Join(project, "designs", "gw")
+	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
+	hash := func() string {
+		t.Helper()
+		p, err := packs.GetPack(ctx, connect.NewRequest(&webapi.GetPackRequest{Name: "packs/gateway"}))
+		if err != nil {
+			t.Fatalf("GetPack(packs/gateway): %v", err)
+		}
+		return p.Msg.GetHash()
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "plain", "--no-pack"); err != nil {
+		t.Fatalf("designs push --no-pack: %v\n%s", err, out)
+	}
+	if _, err := packs.GetPack(ctx, connect.NewRequest(&webapi.GetPackRequest{Name: "packs/gateway"})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("after push --no-pack, GetPack(packs/gateway) = %v; want NOT_FOUND", err)
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || !strings.Contains(out, "packs/gateway\t") || !strings.Contains(out, "--pack gateway") {
+		t.Fatalf("designs push = %q, %v; want packs/gateway kept and named for --pack", out, err)
+	}
+	first := hash()
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || !strings.Contains(out, "packs/gateway\tunchanged") {
+		t.Errorf("a second push = %q, %v; want packs/gateway unchanged", out, err)
+	}
+	profiles, err := filepath.Glob(filepath.Join(project, "profiles", "*.yaml"))
+	if err != nil || len(profiles) == 0 {
+		t.Fatalf("no profile to change under %s: %v", project, err)
+	}
+	f, err := os.OpenFile(profiles[0], os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("\n# changed\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || strings.Contains(out, "unchanged") {
+		t.Fatalf("a push after a profile changed = %q, %v; want the pack written again", out, err)
+	}
+	if hash() == first {
+		t.Error("after a profile changed and the design was pushed, the pack's hash did not move")
+	}
+	if under, local := findingKeys(t, "check", "designs/gw", "--pack", "gateway", "--remote", srv.URL), findingKeys(t, "check", design); !slices.Equal(under, local) {
+		t.Errorf("check under the pushed pack = %d findings, on the folder = %d; want the same set", len(under), len(local))
+	}
+}

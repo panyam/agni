@@ -18,14 +18,15 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 )
 
 // designServer serves what `agni serve --store <store> --uploads <uploads>` serves to a client that
 // checks, diffs and queries designs by name (agni issues 1695, 1739).
-func designServer(t *testing.T, store, uploads string) *httptest.Server {
+func designServer(t *testing.T, store, uploads string, mounted ...mounts.Mount) *httptest.Server {
 	t.Helper()
-	ms, err := withUploadsMount(nil, uploads)
+	ms, err := withUploadsMount(mounted, uploads)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +38,7 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 		t.Fatal(err)
 	}
 	resolver.Snapshots = snaps
-	checkSvc, _, err := serveRuleServices(loader, nil, nil, "", nil, resolver, io.Discard)
+	checkSvc, reviewSvc, err := serveRuleServices(loader, nil, nil, "", nil, resolver, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,6 +56,7 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 		Check:     checkSvc,
 		Diff:      service.NewDiffService(loader, resolver),
 		Query:     service.NewQueryService(loader, nil, resolver),
+		Review:    reviewSvc,
 	}.Register(mux)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

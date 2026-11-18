@@ -439,7 +439,11 @@ are each a `mount://` URI or a path among the pack's own files. `agni packs push
 `project.yaml` and sends the files its paths name. The folder adapter, `DirPacks`, keeps the record as
 `<id>.json` and links the files into a view, `@packs/<id>/<rev>/` in the uploads mount, which never
 changes once built. A pack's hash covers its config and its files' hashes, so a changed profile moves
-it.
+it. The startup sweep removes each view no pack reads now, once it is an hour old (agni issue 1746).
+
+`agni designs push` reads the `extends` of the folder's `design.yaml` too. When it names a
+`project.yaml`, push keeps that project as a pack under the project's name before it pushes the
+design, and leaves a pack the server holds with the same hash alone. `--no-pack` skips it.
 
 A snapshot names its packs on `Snapshot.packs`, and each read looks them up again. They layer between
 the design's own config and the request's, in the order named, each the way a request layers. A pack's
@@ -457,6 +461,10 @@ confidentiality boundary, so the server never generates one.
 A stored project names its default packs on `Project.default_packs`. `agni projects packs lab b200`
 sets them. A report that names the project applies them first, as the next section says.
 
+`agni check designs/<d> --pack <k>` and `agni review designs/<d> --pack <k>` read a stored design
+under packs from a terminal. Review takes its checklist from the packs, the first one unless
+`--checklist` names another. A later pack's checklist replaces an earlier one's of the same name.
+
 ## A report keeps a check of a design against packs
 
 Picture an engineer who checks rev 1.1.3 against the team's pack, then replaces its schematic with a
@@ -472,8 +480,10 @@ every artifact's files by path and hash. Every `GetReport` and `ListReports` com
 hashes now and sets `design_changed` and `packs_changed`. A report is never updated, since it is what
 the run found. `DeleteDesign` removes a design's reports with it.
 
-Only a stored design takes a report. A mounted design's files belong to its folder, and the server
-has no artifacts of it to hash. The folder adapter, `DirReports`, keeps each report as
+A mounted design takes a report too (agni issue 1746). It has no artifacts kept, so its hash groups
+the files in its folder into artifacts the way an import of that folder would, and hashes those. A
+file no reader opens, such as a README beside the board, is left out, and so are the project files
+outside the folder. The folder adapter, `DirReports`, keeps each report as
 `<design>/<report>.json` in the store. A report the server names gets an id that sorts by creation
 time, and `ListReports` returns the newest first.
 

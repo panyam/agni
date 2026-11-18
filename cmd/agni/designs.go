@@ -55,6 +55,7 @@ to find its type, and reads the design from its netlist, else its schematic, els
 		return &designsClient{
 			designs: webapiconnect.NewDesignServiceClient(r.http, r.url),
 			snaps:   webapiconnect.NewSnapshotServiceClient(r.http, r.url),
+			packs:   webapiconnect.NewPackServiceClient(r.http, r.url),
 		}, nil
 	}
 
@@ -197,6 +198,7 @@ from two releases. Only the contents the server lacks are uploaded.`,
 	}
 
 	var pushID, pushTitle, pushSeries string
+	var noPack bool
 	push := &cobra.Command{
 		Use:   "push <folder>",
 		Short: "Keep a design folder on the server, one artifact per source",
@@ -208,17 +210,33 @@ holding two designs is refused, naming both.
 The design is created when the server lacks it, and its artifacts are replaced in one write when it
 has it. An artifact the folder no longer holds is left in place; agni designs rm removes it. A
 design.yaml in the folder sets the default title and series, and its intent is kept as the design's
-own. A design.yaml with no intent leaves the stored intent as it was. Its extends is not followed:
-push the project.yaml with agni packs push, and check the design with --pack.`,
+own. A design.yaml with no intent leaves the stored intent as it was.
+
+When the design.yaml extends a project.yaml, push first keeps that project as a pack, the way agni
+packs push does, under the project's name. A pack the server already holds with the same hash is
+left alone. Check the design with --pack and that name. --no-pack skips it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client(cmd)
 			if err != nil {
 				return err
 			}
-			return c.push(cmd.Context(), cmd.OutOrStdout(), args[0], pushID, pushTitle, pushSeries)
+			pack := ""
+			if !noPack {
+				if pack, err = c.pushExtends(cmd.Context(), cmd.OutOrStdout(), args[0]); err != nil {
+					return err
+				}
+			}
+			if err := c.push(cmd.Context(), cmd.OutOrStdout(), args[0], pushID, pushTitle, pushSeries); err != nil {
+				return err
+			}
+			if pack != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "note: check it under its project's rules with --pack %s\n", strings.TrimPrefix(pack, "packs/"))
+			}
+			return nil
 		},
 	}
+	push.Flags().BoolVar(&noPack, "no-pack", false, "do not keep the project.yaml the design.yaml extends as a pack")
 	push.Flags().StringVar(&pushID, "id", "", "the design's id on the server; the folder's design.yaml name, else the folder's name")
 	push.Flags().StringVar(&pushTitle, "title", "", "the design's title, when the server makes the design")
 	push.Flags().StringVar(&pushSeries, "series", "", "the design's series, when the server makes the design")
@@ -231,6 +249,40 @@ push the project.yaml with agni packs push, and check the design with --pack.`,
 type designsClient struct {
 	designs webapiconnect.DesignServiceClient
 	snaps   webapiconnect.SnapshotServiceClient
+	packs   webapiconnect.PackServiceClient
+}
+
+// pushExtends keeps the project.yaml that dir's design.yaml extends as a pack, under the project's
+// name, and returns the pack's name (agni issue 1746). A design.yaml extending nothing returns "". A
+// pack the server holds with the same hash is not written again. An extends naming a mount:// URI
+// names a project this machine cannot read, so it is noted and skipped.
+func (c *designsClient) pushExtends(ctx context.Context, w io.Writer, dir string) (string, error) {
+	extends := readLocalDescriptor(filepath.Join(dir, service.DesignDescriptorName)).Extends
+	if extends == "" {
+		return "", nil
+	}
+	if strings.Contains(extends, "://") {
+		fmt.Fprintf(w, "note: the design extends %s, which push cannot read; keep it with agni packs push\n", extends)
+		return "", nil
+	}
+	pack, files, descriptor, err := localPack(filepath.Join(dir, filepath.FromSlash(extends)), "", "")
+	if err != nil {
+		return "", fmt.Errorf("the design's extends: %w (pass --no-pack to push the design alone)", err)
+	}
+	have, err := unary(ctx, c.packs.GetPack, &webapi.GetPackRequest{Name: pack.GetName()})
+	switch {
+	case err == nil && have.GetHash() == service.PackHash(pack):
+		fmt.Fprintf(w, "%s\tunchanged\n", pack.GetName())
+		return pack.GetName(), nil
+	case err != nil && connect.CodeOf(err) != connect.CodeNotFound:
+		return "", err
+	}
+	out, err := (&packsClient{packs: c.packs, up: c}).write(ctx, pack, files)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", descriptor, err)
+	}
+	printPack(w, out)
+	return out.GetName(), nil
 }
 
 func designName(arg string) string {
@@ -515,10 +567,11 @@ func (c *designsClient) push(ctx context.Context, w io.Writer, dir, id, title, s
 // ProposeDesigns does, since push sends no descriptor and internal/projects checks one strictly where
 // one is read as a design.
 type localDescriptor struct {
-	Name   string    `yaml:"name"`
-	Title  string    `yaml:"title"`
-	Series string    `yaml:"series"`
-	Intent yaml.Node `yaml:"intent"`
+	Name    string    `yaml:"name"`
+	Title   string    `yaml:"title"`
+	Series  string    `yaml:"series"`
+	Extends string    `yaml:"extends"`
+	Intent  yaml.Node `yaml:"intent"`
 }
 
 // intent binds the descriptor's intent section, nil when it has none. A section that does not bind

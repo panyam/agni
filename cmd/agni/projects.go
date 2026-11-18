@@ -109,6 +109,29 @@ design's own intent, before the packs the report names. Naming none clears the l
 			return nil
 		},
 	}
-	cmd.AddCommand(create, add, packs)
+	get := &cobra.Command{
+		Use:   "get <project>",
+		Short: "Print a project's designs and default packs, one per line",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := client(cmd)
+			if err != nil {
+				return err
+			}
+			p, err := unary(cmd.Context(), c.GetProject, &webapi.GetProjectRequest{Name: projectName(args[0])})
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%q\n", p.GetName(), p.GetTitle())
+			for _, d := range p.GetDesigns() {
+				fmt.Fprintf(cmd.OutOrStdout(), "  design\t%s\n", d)
+			}
+			for _, k := range p.GetDefaultPacks() {
+				fmt.Fprintf(cmd.OutOrStdout(), "  pack\t%s\n", k)
+			}
+			return nil
+		},
+	}
+	cmd.AddCommand(create, add, packs, get)
 	return cmd
 }
