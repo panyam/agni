@@ -50,7 +50,7 @@ agnids)
 	mkdir -p "$dir/smoke/PART" "$dir/corpus"
 	cp "$here/datasheet/tools/pdf2doc/testdata/warmup.pdf" "$dir/smoke/PART/part.pdf"
 	docker run -d --name "$name" --user "$(id -u):$(id -g)" -p 127.0.0.1:18090:8090 \
-		-v "$dir/smoke:/datasheets/smoke" -v "$dir/corpus:/corpus" "$img" >/dev/null
+		-v "$dir/smoke:/datasheets/smoke:ro" -v "$dir/corpus:/corpus" "$img" >/dev/null
 	for _ in $(seq 1 60); do
 		docker exec "$name" agnids healthcheck >/dev/null 2>&1 && break
 		sleep 1
@@ -62,10 +62,15 @@ agnids)
 		http://127.0.0.1:18090/agni.v1.dsapi.DatasheetService/ExtractDocIR \
 		-d '{"uri":"mount://smoke/PART/part.pdf"}')" || { echo "::error::ExtractDocIR failed"; docker logs "$name"; exit 1; }
 	echo "${resp:0:300}"
-	[ -s "$dir/smoke/PART/part.doc.textproto" ] || { echo "::error::Extract wrote no doc-IR"; docker logs "$name"; exit 1; }
-	grep -q 'agnids image warm-up page' "$dir/smoke/PART/part.doc.textproto" \
+	# The datasheet folder is mounted read-only, and the doc-IR goes in the corpus store under the
+	# PDF's hash (agni issue 1734).
+	sha="$( (sha256sum "$dir/smoke/PART/part.pdf" 2>/dev/null || shasum -a 256 "$dir/smoke/PART/part.pdf") | cut -d' ' -f1)"
+	docir="$dir/corpus/derived/$sha/doc.txtpb"
+	[ -s "$docir" ] || { echo "::error::Extract wrote no doc-IR at corpus/derived/$sha/doc.txtpb"; docker logs "$name"; exit 1; }
+	[ ! -e "$dir/smoke/PART/part.doc.textproto" ] || { echo "::error::Extract wrote into the datasheet mount"; exit 1; }
+	grep -q 'agnids image warm-up page' "$docir" \
 		|| { echo "::error::doc-IR does not carry the page's text"; exit 1; }
-	echo "agnids: Extract produced $(wc -c <"$dir/smoke/PART/part.doc.textproto") bytes of doc-IR offline"
+	echo "agnids: Extract produced $(wc -c <"$docir") bytes of doc-IR offline"
 	rpc() {
 		curl -sf -X POST -H 'Content-Type: application/json' "http://127.0.0.1:18090/$1" -d "$2" \
 			|| { echo "::error::$1 failed"; docker logs "$name"; exit 1; }
