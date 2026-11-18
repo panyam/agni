@@ -244,8 +244,11 @@ is at `/files/`, and an older `/designs/<mount>/<path>/view` link redirects ther
 artifact as a manifest of paths and hashes, and sends any contents the server asks for with
 `SnapshotService.UploadBlobs`, as `--remote` already does. A design or project in a mounted folder
 stays read-only, and a write to it is refused. A design id is unique on one server, across the store
-and every mount. In a container give the store a volume of its own, such as
-`-v agni-store:/var/lib/agni/store` with `--store-dir /var/lib/agni/store`.
+and every mount. In a container give the store a volume, such as
+`-v agni-store:/var/lib/agni/store` with `--store-dir /var/lib/agni/store`. The image makes
+`/var/lib/agni/store`, `state` and `reviews` owned by its user, so a named volume on any of them
+starts out writable. The compose bundle (`deploy/compose.yaml`) mounts one volume, `data`, on
+`/var/lib/agni` and keeps all three in it (agni issue 1698).
 
 ## Keeping review runs
 

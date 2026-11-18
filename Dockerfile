@@ -148,11 +148,12 @@ COPY            LICENSE NOTICE           /usr/share/agni/
 # owned by root. Override with `docker run --user $(id -u)` to have writes land as your
 # own uid.
 #
-# /var/lib/agni/reviews exists and belongs to agni so a NAMED volume mounted there, as the compose
-# bundle mounts one (deploy/compose.yaml), starts out writable: a named volume copies the ownership
-# of the path it is mounted over, and a path the image lacks comes up owned by root.
+# /var/lib/agni and the folders under it exist and belong to agni, so a NAMED volume mounted on any
+# of them starts out writable. A named volume copies the ownership of the path it is mounted over,
+# and a path the image lacks comes up owned by root. The compose bundle (deploy/compose.yaml) mounts
+# one volume on /var/lib/agni, and the guide's `docker run -v` examples mount one on each folder.
 RUN useradd --system --create-home --uid 10001 agni \
- && mkdir -p /workspace /var/lib/agni/reviews \
+ && mkdir -p /workspace /var/lib/agni/reviews /var/lib/agni/store /var/lib/agni/state \
  && chown -R agni:agni /workspace /var/lib/agni
 USER agni
 

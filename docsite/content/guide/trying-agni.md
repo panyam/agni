@@ -30,6 +30,27 @@ Open <http://localhost:8080>. The landing page lists your folder under `designs`
 volume in `compose.yaml` so the container may read it. `docker compose --profile datasheets up -d`
 also starts the datasheet workbench on port 8090, over a `./datasheets` folder.
 
+## Keeping your own designs
+
+Say you have a board that isn't in the designs folder. Open <http://localhost:8080/designs/>, give
+the design an id, and drop its folder on the form. The server keeps a copy in its store, and the
+designs page lists it beside the mounted ones. From a terminal, `agni designs push <folder> --remote
+http://localhost:8080` does the same.
+
+The store lives in the `data` volume, mounted at `/var/lib/agni`, along with review runs and the
+server's snapshots. So `docker compose down`, a restart and an upgrade all keep your designs.
+`docker compose down -v` deletes the volume and every design in it.
+
+Releases before agni issue 1698 kept review runs in a volume called `reviews`. To carry them over,
+start the new release once so the `data` volume exists, then copy them in:
+
+```bash
+docker compose up -d && docker compose stop agni
+docker run --rm --user root --entrypoint cp -v agni_reviews:/from -v agni_data:/var/lib/agni \
+  ghcr.io/panyam/agni -a /from/. /var/lib/agni/reviews/
+docker compose start agni
+```
+
 ## Run the guided trial
 
 ```bash

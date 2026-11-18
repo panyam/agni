@@ -6,18 +6,22 @@
 #   docker compose --profile datasheets up -d          also the datasheet workbench, on :8090
 #
 # Each release attaches this file with AGNI_VERSION pinned to that release. Copy env.example to .env
-# to change the defaults. Your designs are mounted read-only; review runs are kept in a volume.
+# to change the defaults. Your design folders are mounted read-only. The designs you upload on the
+# /designs/ page, review runs and snapshots are kept in the `data` volume, so they come back after a
+# restart or an upgrade. `docker compose down -v` deletes that volume and everything in it.
 name: agni
 
 services:
   agni:
     image: ${AGNI_IMAGE:-ghcr.io/panyam/agni}:${AGNI_VERSION:-latest}
-    command: ["serve", "--addr", ":8080", "--mount", "designs=/designs", "--review-store", "/var/lib/agni/reviews"]
+    command: ["serve", "--addr", ":8080", "--mount", "designs=/designs",
+              "--store-dir", "/var/lib/agni/store", "--state-dir", "/var/lib/agni/state",
+              "--review-store", "/var/lib/agni/reviews"]
     ports:
       - "${AGNI_PORT:-8080}:8080"
     volumes:
       - ${AGNI_DESIGNS:-./designs}:/designs:ro
-      - reviews:/var/lib/agni/reviews
+      - data:/var/lib/agni
     restart: unless-stopped
 
   # The guided trial, run on demand: `docker compose run --rm trial /designs/<board>`. It prints a
@@ -40,4 +44,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  reviews:
+  data:
