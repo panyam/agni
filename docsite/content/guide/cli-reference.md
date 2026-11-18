@@ -280,7 +280,7 @@ declare it.
 
 ### `designs`
 
-Create, list and change the designs an `agni serve --store-dir` keeps (agni issue 1696). Every
+Create, list and change the designs an `agni serve --store --uploads` keeps (agni issue 1696). Every
 subcommand needs `--remote <url>`. A design on a server holds artifacts, each one source of the
 design: a schematic with its sheets, a netlist, a board, or files no reader opens, such as a BOM. The
 server reads each artifact to find its type, and reads the design from its netlist, else its
@@ -298,7 +298,7 @@ schematic, else its board.
 
 ### `projects`
 
-Create projects on an `agni serve --store-dir` and list designs in them. Both subcommands need
+Create projects on an `agni serve --store` and list designs in them. Both subcommands need
 `--remote <url>`. A project there is a list of design names, so a design can sit in several.
 
 | subcommand | what it does |
@@ -662,8 +662,8 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--datasheets-url <url>` | where the datasheets workbench is served, such as `http://host:8090` for a running `agnids serve`; the landing page links its Datasheets card there, and hides it when this is empty |
-| `--store-dir <dir>` | a writable directory that keeps the designs and projects this server's users create, created if absent. Designs go in `<dir>/designs`, served as the mount `store`, and projects in `<dir>/projects` (see [Running the server](../running-the-server/)) |
-| `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
+| `--store <url>` | where the server keeps its records, as `file:///srv/agni/meta`, created if absent: stored designs and their manifests, projects, snapshot definitions and review runs, and no file bytes. Without it snapshots live in memory, review runs are not kept and no design can be created (see [Running the server](../running-the-server/#the-store-and-the-uploads)) |
+| `--uploads <url>` | where the server keeps uploaded designs' files, as `file:///srv/agni/files`, created if absent: each file once, by hash, served as the mount `uploads`. Needs `--store` |
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
 | `--design-cache <n>` | how many reads the server keeps between requests (a parse, a derived design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 15; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |

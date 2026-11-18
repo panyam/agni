@@ -10,9 +10,9 @@ actors:
 
 ## A design is its artifacts
 
-Picture an engineer with a board and no folder on the server. They want the server to keep the board under a name, across a restart, and to keep the next revision beside it. A server started with `--store-dir` does that (agni issue 1694).
+Picture an engineer with a board and no folder on the server. They want the server to keep the board under a name, across a restart, and to keep the next revision beside it. A server started with `--store` and `--uploads` does that (agni issues 1694, 1739).
 
-A design is named `designs/{design}` and holds artifacts (agni issue 1696). An artifact is one source of the design, such as a netlist, a schematic with its sheets, or a board, and replacing it replaces all its files. The server reads each artifact to find its type, and writes the design's `design.yaml` itself. A design ties to no project. A project is a title and a list of design names, so one design can sit in several projects. This walkthrough builds the same two services `agni serve --store-dir` builds, over a temporary folder, with the bundled demo project mounted read-only beside it.
+A design is named `designs/{design}` and holds artifacts (agni issue 1696). An artifact is one source of the design, such as a netlist, a schematic with its sheets, or a board, and replacing it replaces all its files. The server reads each artifact to find its type. It keeps the design's record in its store, and each file once, by hash, in its uploads. A design ties to no project. A project is a title and a list of design names, so one design can sit in several projects. This walkthrough builds the same two services `agni serve --store --uploads` builds, over a temporary folder, with the bundled demo project mounted read-only beside it.
 
 ## Keep the first revision {#keep}
 

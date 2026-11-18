@@ -54,9 +54,9 @@ the package it speaks (`agni.v1`), and the optional features it has on:
 | --- | --- |
 | `grpc` | The server answers gRPC and gRPC-Web beside Connect, on the same port. |
 | `snapshot_recovery` | A question on a snapshot the server evicted is answered after it ingests the snapshot again. |
-| `snapshot_store` | The server keeps snapshot definitions across a restart (`--state-dir`), so recovery works after one too. |
+| `snapshot_store` | The server keeps snapshot definitions across a restart (`--store`), so recovery works after one too. |
 
 A client tests for a feature by name rather than comparing versions. A feature can be off by
-configuration, such as `snapshot_store` on a server with no `--state-dir`, without the client
+configuration, such as `snapshot_store` on a server with no `--store`, without the client
 mistaking the server's age. A client that needs a feature the server lacks says so plainly, rather
 than failing at its first call.

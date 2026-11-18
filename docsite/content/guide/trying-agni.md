@@ -46,8 +46,8 @@ start the new release once so the `data` volume exists, then copy them in:
 
 ```bash
 docker compose up -d && docker compose stop agni
-docker run --rm --user root --entrypoint cp -v agni_reviews:/from -v agni_data:/var/lib/agni \
-  ghcr.io/panyam/agni -a /from/. /var/lib/agni/reviews/
+docker run --rm --user root --entrypoint sh -v agni_reviews:/from -v agni_data:/var/lib/agni \
+  ghcr.io/panyam/agni -c 'mkdir -p /var/lib/agni/meta/reviews && cp -a /from/. /var/lib/agni/meta/reviews/ && chown -R agni:agni /var/lib/agni/meta
 docker compose start agni
 ```
 

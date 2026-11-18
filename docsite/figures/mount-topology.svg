@@ -18,7 +18,7 @@
   <g fill="currentColor" font-size="11.5" opacity="0.85">
     <text x="20" y="96">~/boards</text>
     <text x="20" y="156">~/datasheets</text>
-    <text x="20" y="206">agni-reviews</text>
+    <text x="20" y="206">agni-data</text>
     <text x="226" y="96">/workspace/boards</text>
     <text x="226" y="156">/workspace/datasheets</text>
     <text x="226" y="206">/var/lib/agni/reviews</text>
@@ -52,7 +52,7 @@
   </g>
   <g fill="var(--accent-color)" font-size="11.5" font-weight="600" text-anchor="middle">
     <text x="216" y="268">--mount-root /workspace makes every subdirectory a mount</text>
-    <text x="558" y="268">--review-store</text>
+    <text x="558" y="268">--store</text>
   </g>
   <text x="320" y="288" text-anchor="middle" fill="currentColor" font-size="11.5" opacity="0.6">only the mount-relative tail crosses to the browser, never a host path</text>
 </svg>

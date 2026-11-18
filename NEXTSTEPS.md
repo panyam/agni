@@ -33,9 +33,8 @@ artifacts point into mounts (#1722).
 
 ## Open, ranked
 
-1. **#1732**: rename `--store-dir` to `--store <url>`. Compose and `writableFlags` in
-   `deploy/compose_test.go` follow. Then #1704 (packs and reports), #1697 (the viewer for them), and
-   #1734 (`/mounts/`).
+1. **#1739 and #1732** are in one PR: `--store` keeps records, `--uploads` keeps files by hash.
+   Then #1704 (packs and reports), #1697 (the viewer for them), and #1734 (`/mounts/`).
 2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
 3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
