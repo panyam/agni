@@ -264,6 +264,15 @@ func (c *DesignCatalog) DeleteArtifact(ctx context.Context, name string) error {
 	return c.store.DeleteArtifact(ctx, id, a)
 }
 
+// holder returns a design and whether the store holds it, rather than a mounted reader.
+func (c *DesignCatalog) holder(ctx context.Context, name string) (*webapi.Design, bool, error) {
+	d, r, err := c.find(ctx, name)
+	if err != nil {
+		return nil, false, err
+	}
+	return d, c.store != nil && r == DesignReader(c.store), nil
+}
+
 var errNoStore = fmt.Errorf("%w: this server keeps no designs; start it with --store", ErrFailedPrecondition)
 
 // writable returns the id of a design the store holds, refusing one only a mounted reader holds.

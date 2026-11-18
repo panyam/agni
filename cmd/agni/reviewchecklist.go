@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 
@@ -145,4 +146,39 @@ func noteChecklist(w io.Writer, note string) {
 	if note != "" {
 		fmt.Fprint(w, note)
 	}
+}
+
+// packChecklist returns the checklist name picks among the packs' checklists, the first one when
+// name is empty, and a note naming it (agni issue 1746). Packs layer in order, so a later pack's
+// checklist replaces an earlier one's of the same name, and keeps the earlier one's place.
+func packChecklist(ctx context.Context, get func(context.Context, string) (*webapi.Pack, error), packs []string, name string) (review.Manifest, string, error) {
+	var lists []*webapi.NamedChecklist
+	from := map[string]string{}
+	for _, n := range packs {
+		p, err := get(ctx, n)
+		if err != nil {
+			return review.Manifest{}, "", err
+		}
+		for _, c := range p.GetConfig().GetChecklists() {
+			i := slices.IndexFunc(lists, func(have *webapi.NamedChecklist) bool { return have.GetName() == c.GetName() })
+			if i < 0 {
+				lists = append(lists, c)
+			} else {
+				lists[i] = c
+			}
+			from[c.GetName()] = n
+		}
+	}
+	c := service.PickChecklist(lists, name)
+	if c == nil {
+		if name == "" {
+			return review.Manifest{}, "", fmt.Errorf("review: %s %s no checklist; pass --checklist <manifest.yaml>", strings.Join(packs, ", "), plural(len(packs), "declares", "declare"))
+		}
+		return review.Manifest{}, "", fmt.Errorf("review: no checklist named %q in %s, %s", name, strings.Join(packs, ", "), service.DeclaredChecklists(lists))
+	}
+	man := service.ManifestFromProto(c.GetManifest())
+	if err := review.ValidateStructure(man); err != nil {
+		return review.Manifest{}, "", fmt.Errorf("the checklist %q %s declares: %w", c.GetName(), from[c.GetName()], err)
+	}
+	return man, fmt.Sprintf("note: running the checklist %q %s declares; pass --checklist to run a different one.\n", c.GetName(), from[c.GetName()]), nil
 }

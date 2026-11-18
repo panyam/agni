@@ -721,8 +721,9 @@ step.
 
 **As amended by agni issue 1704, a pack is a full resource, and a run on a design no project owns
 nests under the design.** A pack, `packs/{pack}`, is config with a lifetime of its own, so it has all
-five standard methods. A report is a check of one stored design against packs, and it nests under
-that design, `designs/{d}/reports/{r}`. A review run nests under a project because it predates designs
+five standard methods. A report is a check of one design against packs, and it nests under that
+design, `designs/{d}/reports/{r}`. A design a mounted folder declares takes one too, since a report
+adds nothing to the folder (agni issue 1746). A review run nests under a project because it predates designs
 that stand alone. A stored design belongs to no project, and a run is about one design, so the design
 is the report's parent. The project whose default packs applied is a field on the report, not a
 parent. A report has `Create`, `Get`, `List` and `Delete` and no `Update`, since a run is what it

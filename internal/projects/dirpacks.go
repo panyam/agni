@@ -154,8 +154,8 @@ func (r *DirPacks) UpdatePack(ctx context.Context, id string, update func(*webap
 	return r.commit(ctx, id, next, blobs)
 }
 
-// DeletePack removes a pack's record. Its view stays, so a snapshot read under it keeps answering
-// until it is read again.
+// DeletePack removes a pack's record. Its views stay until the next Sweep, so a snapshot read under
+// it keeps answering until it is read again.
 func (r *DirPacks) DeletePack(_ context.Context, id string) error {
 	p, err := r.path(id)
 	if err != nil {
@@ -317,4 +317,69 @@ func (r *DirPacks) buildView(id, rev string, files []*webapi.SnapshotFile) error
 		}
 	}
 	return os.Rename(tmp, dst)
+}
+
+// Sweep removes each view under `@packs/` that no kept pack reads now (agni issue 1746). That is a
+// view of an earlier version of a pack, or every view of a deleted pack. A view newer than grace
+// stays, so a snapshot read under a pack a moment before a restart keeps its files until it is read
+// again. A pack's blobs stay, since the uploads sweep keeps the hashes Hashes returns. It reports how
+// many views it removed.
+func (r *DirPacks) Sweep(ctx context.Context, grace time.Duration) (int, error) {
+	if r.views == "" {
+		return 0, nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	current := map[string]string{}
+	all, err := r.Packs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for _, p := range all {
+		id, _ := service.PackID(p.GetName())
+		current[id] = path.Base(p.GetUri())
+	}
+	root, err := os.OpenRoot(r.views)
+	if err != nil {
+		return 0, err
+	}
+	defer root.Close()
+	packs, err := fs.ReadDir(root.FS(), packViewsDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	cutoff := time.Now().Add(-grace)
+	removed := 0
+	for _, p := range packs {
+		if !p.IsDir() || !idPattern.MatchString(p.Name()) {
+			continue
+		}
+		dir := path.Join(packViewsDir, p.Name())
+		revs, err := fs.ReadDir(root.FS(), dir)
+		if err != nil {
+			return removed, err
+		}
+		left := len(revs)
+		for _, rev := range revs {
+			if rev.Name() == current[p.Name()] {
+				continue
+			}
+			fi, err := rev.Info()
+			if err != nil || fi.ModTime().After(cutoff) {
+				continue
+			}
+			if err := root.RemoveAll(path.Join(dir, rev.Name())); err != nil {
+				return removed, err
+			}
+			removed++
+			left--
+		}
+		if left == 0 {
+			_ = root.Remove(dir)
+		}
+	}
+	return removed, nil
 }

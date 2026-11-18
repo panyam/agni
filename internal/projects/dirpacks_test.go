@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -211,5 +212,51 @@ func TestAStoredDesignKeepsItsIntent(t *testing.T) {
 	}
 	if d, _ := ds.Design(ctx, "gw"); d.GetConfig().GetIntent().GetNets()["VCC_3V3"] == nil {
 		t.Error("an update of the title dropped the intent")
+	}
+}
+
+// The pack sweep removes an earlier version's view and a deleted pack's views, and keeps the view a
+// pack reads now and any view younger than the grace (agni issue 1746).
+func TestThePackSweepKeepsOnlyCurrentViews(t *testing.T) {
+	ctx := context.Background()
+	ps, _, l := dirPacks(t)
+	cfg := &webapi.AnalysisConfig{ProfileUris: []string{"profiles"}}
+	v1 := uploadOf(map[string]string{"profiles/can.yaml": "name: can\n"})
+	first, err := ps.CreatePack(ctx, "house", &webapi.Pack{Config: cfg, Files: v1.files}, v1.source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v2 := uploadOf(map[string]string{"profiles/can.yaml": "name: can2\n"})
+	next, err := ps.UpdatePack(ctx, "house", func(p *webapi.Pack) error { p.Files = v2.files; return nil }, v2.source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone, err := ps.CreatePack(ctx, "gone", &webapi.Pack{Config: cfg, Files: v1.files}, v1.source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ps.DeletePack(ctx, "gone"); err != nil {
+		t.Fatal(err)
+	}
+	viewOf := func(p *webapi.Pack) string {
+		return filepath.Join(ViewsRoot(l.uploads), filepath.FromSlash(strings.TrimPrefix(p.GetUri(), "mount://uploads/")))
+	}
+	if n, err := ps.Sweep(ctx, time.Hour); err != nil || n != 0 {
+		t.Errorf("a sweep inside the grace = %d, %v; want nothing removed", n, err)
+	}
+	n, err := ps.Sweep(ctx, 0)
+	if err != nil || n != 2 {
+		t.Fatalf("Sweep = %d, %v; want the old house view and the gone view removed", n, err)
+	}
+	for _, p := range []*webapi.Pack{first, gone} {
+		if _, err := os.Stat(viewOf(p)); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("view %s is still there: %v", p.GetUri(), err)
+		}
+	}
+	if _, err := os.Stat(filepath.Dir(viewOf(gone))); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the deleted pack's folder is still there: %v", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(viewOf(next), "profiles", "can.yaml")); err != nil || string(b) != "name: can2\n" {
+		t.Errorf("the current view's file = %q, %v; want it kept", b, err)
 	}
 }

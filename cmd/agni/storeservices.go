@@ -70,12 +70,16 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 				return nil, nil, nil, err
 			}
 			maps.Copy(keep, packHashes)
+			packViews, err := packs.Sweep(context.Background(), sweepGrace)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("sweeping --uploads: %w", err)
+			}
 			views, removed, err := dirStore.Sweep(keep, sweepGrace)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("sweeping --uploads: %w", err)
 			}
-			if views+removed > 0 {
-				fmt.Fprintf(log, "note: swept %d old design views and %d files nothing names from --uploads\n", views, removed)
+			if views+packViews+removed > 0 {
+				fmt.Fprintf(log, "note: swept %d old design views, %d old pack views and %d files nothing names from --uploads\n", views, packViews, removed)
 			}
 		}
 	}
@@ -93,6 +97,8 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 	if reportStore != nil && checks != nil {
 		// A report runs a check under packs and keeps it under its design (agni issue 1704).
 		designSvc.WithReports(reportStore, checks, packSvc)
+		// A report on a mounted design hashes the files in its folder (agni issue 1746).
+		designSvc.WithMountedFiles(service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)), osFiles(ms))
 	}
 	return projectSvc, designSvc, packSvc, nil
 }
