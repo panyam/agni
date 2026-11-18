@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/mounts"
 )
 
 // mustURI builds a mount-relative URI a test names directly, failing the test rather than the
@@ -37,3 +38,6 @@ func sha256Hex(body string) string {
 	sum := sha256.Sum256([]byte(body))
 	return hex.EncodeToString(sum[:])
 }
+
+// tableOf is a fixed mount table over ms, as a server started with those flags serves.
+func tableOf(ms []mounts.Mount) *mounts.Table { return mounts.NewTable(ms...) }

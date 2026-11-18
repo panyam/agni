@@ -18,17 +18,18 @@ import (
 // os.DirFS, with symbol libraries spelled as host paths because the CLI's and the server's loaders
 // read the host filesystem.
 type osProjectConfig struct {
-	mounts []mounts.Mount
+	mounts *mounts.Table
 }
 
 // ResolveConfig loads what an AnalysisConfig's URIs point at. See fshost.ConfigResolver.
 func (c *osProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
-	ms := make([]fshost.Mount, 0, len(c.mounts))
-	for _, m := range c.mounts {
+	list := c.mounts.List()
+	ms := make([]fshost.Mount, 0, len(list))
+	for _, m := range list {
 		ms = append(ms, fshost.Mount{Name: m.Name, FS: os.DirFS(m.Root)})
 	}
 	r := &fshost.ConfigResolver{Mounts: ms, SymbolPath: func(u artifact.URI) (string, error) {
-		return mounts.Resolve(c.mounts, u)
+		return c.mounts.Resolve(u)
 	}}
 	return r.ResolveConfig(ctx, cfg, namespace)
 }
@@ -39,7 +40,7 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return mounts.Resolve(c.mounts, u)
+	return c.mounts.Resolve(u)
 }
 
 // refuseProfilePathTheProjectOwns rejects a --profile-path naming a profiles directory that the
@@ -67,7 +68,7 @@ func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath
 	if err != nil {
 		return nil
 	}
-	cfg := &osProjectConfig{mounts: ws.Mounts()}
+	cfg := &osProjectConfig{mounts: mounts.NewTable(ws.Mounts()...)}
 	for _, uri := range p.GetConfig().GetProfileUris() {
 		owned, err := cfg.dir(uri)
 		if err != nil {

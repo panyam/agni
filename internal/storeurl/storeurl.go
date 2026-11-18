@@ -1,4 +1,7 @@
-package main
+// Package storeurl reads the --store and --uploads URLs that agni serve and agnids share (agni
+// issues 1732, 1739, 1735). The scheme picks the adapter, so a later sqlite:// or s3:// registers
+// here without a new flag.
+package storeurl
 
 import (
 	"fmt"
@@ -7,9 +10,6 @@ import (
 	"sort"
 	"strings"
 )
-
-// The store and the uploads mount are named by URL (agni issues 1732, 1739). The scheme picks the
-// adapter, so a later sqlite:// or s3:// registers here without a new flag.
 
 // storeSchemes are the --store schemes this build knows, each with what it does or why it is refused.
 var storeSchemes = map[string]string{
@@ -74,10 +74,10 @@ func fileURL(abs string) string {
 	return "file:///" + strings.TrimPrefix(filepath.ToSlash(abs), "/")
 }
 
-// storeFolders reads --store and --uploads together. Uploads need a store to record what they hold,
+// Folders reads --store and --uploads together. Uploads need a store to record what they hold,
 // so --uploads alone is refused. A store alone keeps records, such as review runs and snapshots, and
 // refuses a design's files.
-func storeFolders(store, uploads string) (storeDir, uploadsDir string, err error) {
+func Folders(store, uploads string) (storeDir, uploadsDir string, err error) {
 	if storeDir, err = folderOf("store", store, storeSchemes); err != nil {
 		return "", "", err
 	}

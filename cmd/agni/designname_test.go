@@ -29,9 +29,9 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	loader := service.NewCachingLoader(&osLoader{mounts: ms, loader: newLoader()}, service.NewDesignCache(0))
+	loader := service.NewCachingLoader(&osLoader{mounts: tableOf(ms), loader: newLoader()}, service.NewDesignCache(0))
 	projectStore := projects.NewFSStore(projectTrees(ms)...)
-	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: ms}, Uploads: uploadedHost, UploadMaxBytes: 1 << 24}
+	resolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: tableOf(ms)}, Uploads: uploadedHost, UploadMaxBytes: 1 << 24}
 	snaps, err := newOSSnapshotStore(filepath.Join(store, storeSnapshotsDir))
 	if err != nil {
 		t.Fatal(err)
@@ -41,13 +41,13 @@ func designServer(t *testing.T, store, uploads string) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectSvc, designSvc, packSvc, err := storeServices(ms, store, uploads, projectStore, resolver, checkSvc, io.Discard)
+	projectSvc, designSvc, packSvc, err := storeServices(tableOf(ms), store, uploads, projectStore, resolver, checkSvc, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
 	server.API{
-		Workspace: service.NewWorkspaceService(osWorkspace(ms)),
+		Workspace: service.NewWorkspaceService(osWorkspace(tableOf(ms))),
 		Project:   projectSvc,
 		Design:    designSvc,
 		Pack:      packSvc,

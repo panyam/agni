@@ -36,6 +36,9 @@ type Tree struct {
 // edit to a descriptor is visible on the very next request. See cache.go.
 type FSStore struct {
 	trees []Tree
+	// treesFn, when set, replaces trees and is asked on every read, so a mount made at runtime is
+	// searched at once (agni issue 1735).
+	treesFn func() []Tree
 	// See cache.go for why discovery and content are keyed on different things.
 	walks    *walkCache
 	projectC *parseCache[*webapi.Project]
@@ -50,6 +53,23 @@ func NewFSStore(trees ...Tree) *FSStore {
 		projectC: newParseCache[*webapi.Project](),
 		designC:  newParseCache[*webapi.Design](),
 	}
+}
+
+// NewFSStoreFunc returns a store over the trees trees returns, asked again on every read. The cache
+// still revalidates against each tree's files, so a tree replaced under the same mount name is
+// walked afresh.
+func NewFSStoreFunc(trees func() []Tree) *FSStore {
+	s := NewFSStore()
+	s.treesFn = trees
+	return s
+}
+
+// list returns the trees to search now.
+func (s *FSStore) list() []Tree {
+	if s.treesFn != nil {
+		return s.treesFn()
+	}
+	return s.trees
 }
 
 // locatedProject pairs a parsed descriptor with where it was found.
@@ -80,7 +100,7 @@ func (s *FSStore) Project(ctx context.Context, name string) (*webapi.Project, er
 func (s *FSStore) Projects(context.Context) ([]*webapi.Project, error) {
 	var out []*webapi.Project
 	seen := map[string]string{}
-	for _, t := range s.trees {
+	for _, t := range s.list() {
 		found, err := s.projectsIn(t)
 		if err != nil {
 			return nil, err
@@ -135,7 +155,7 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 // descriptors, keyed by descriptor URI to project name, and returns them grouped by project name.
 func (s *FSStore) extending(byDescriptor map[string]string) (map[string][]*webapi.Design, error) {
 	out := map[string][]*webapi.Design{}
-	for _, t := range s.trees {
+	for _, t := range s.list() {
 		dirs, err := s.walks.find(t, ".", DesignDescriptor)
 		if err != nil {
 			return nil, err
@@ -459,7 +479,7 @@ func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, 
 }
 
 func (s *FSStore) tree(mount string) (Tree, bool) {
-	for _, t := range s.trees {
+	for _, t := range s.list() {
 		if t.Mount == mount {
 			return t, true
 		}

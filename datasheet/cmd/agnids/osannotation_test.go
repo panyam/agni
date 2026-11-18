@@ -31,7 +31,7 @@ func TestAnnotationsDirAndSafeAuthor(t *testing.T) {
 func TestOsAnnotationStoreUnion(t *testing.T) {
 	dir, corpus := t.TempDir(), t.TempDir()
 	writePDF(t, filepath.Join(dir, "d.pdf"), "pdf-d")
-	st := &osAnnotationStore{derived: derived{mounts: []mounts.Mount{{Name: "m", Root: dir}}, corpus: corpus}}
+	st := &osAnnotationStore{derived: derived{mounts: tableOf([]mounts.Mount{{Name: "m", Root: dir}}), corpus: corpus}}
 	ctx := context.Background()
 	region := func(id, typ string) []*dsapi.RegionAnnotation {
 		return []*dsapi.RegionAnnotation{{RegionId: id, Type: typ}}
@@ -95,7 +95,7 @@ func TestOsAnnotationStoreReadsTheOldLayout(t *testing.T) {
 		}
 	}
 	ms := []mounts.Mount{{Name: "m", Root: dir}}
-	st := &osAnnotationStore{derived: derived{mounts: ms, corpus: corpus}}
+	st := &osAnnotationStore{derived: derived{mounts: tableOf(ms), corpus: corpus}}
 	ctx := context.Background()
 	if err := st.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{DocId: "d", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "new.alice"}}}); err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestOsAnnotationStoreReadsTheOldLayout(t *testing.T) {
 	if len(sets) != 2 || sets[0].GetAnnotations()[0].GetRegionId() != "new.alice" || sets[1].GetAnnotations()[0].GetRegionId() != "old.carol" {
 		t.Fatalf("union = %v, want the store's alice and the old layout's carol", sets)
 	}
-	bare := &osAnnotationStore{derived: derived{mounts: ms}}
+	bare := &osAnnotationStore{derived: derived{mounts: tableOf(ms)}}
 	if err := bare.Save(ctx, mustURI("m", "d.pdf"), "alice", &dsapi.AnnotationSet{Author: "alice"}); !errors.Is(err, dsservice.ErrNoCorpus) {
 		t.Errorf("Save with no corpus = %v, want ErrNoCorpus", err)
 	}

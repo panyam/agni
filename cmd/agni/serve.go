@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -33,6 +34,7 @@ import (
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
@@ -67,6 +69,7 @@ func serveCmd() *cobra.Command {
 	var datasheetsURL string
 	var theme string
 	var paramsDir, paramsURL, profilePath, conventions string
+	var githubAPI string
 	var storeURL, uploadsURL string
 	var webDir string
 	var queryBudget, queryBudgetWarn int64
@@ -98,7 +101,7 @@ func serveCmd() *cobra.Command {
 			if viewerRooms && !mcp {
 				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
 			}
-			storeDir, uploadsDir, err := storeFolders(storeURL, uploadsURL)
+			storeDir, uploadsDir, err := storeurl.Folders(storeURL, uploadsURL)
 			if err != nil {
 				return err
 			}
@@ -108,6 +111,7 @@ func serveCmd() *cobra.Command {
 				profilePath: profilePath, conventions: conventions,
 				storeDir:       storeDir,
 				uploadsDir:     uploadsDir,
+				githubAPI:      githubAPI,
 				budget:         server.Budget{Enforce: queryBudget, Warn: queryBudgetWarn},
 				slowRequest:    slowRequest,
 				engine:         engine,
@@ -147,6 +151,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&storeURL, "store", "", "where this server keeps its records, as a URL: file:///srv/agni/meta keeps them as files in that folder, created if absent (agni issue 1732). The records are designs, each artifact's manifest of paths and hashes, projects, packs, each design's reports, snapshot definitions and review runs; they hold no file bytes. Without it, snapshots live in memory, review runs are not kept, and no design can be created. In a container, mount a volume here")
 	c.Flags().StringVar(&uploadsURL, "uploads", "", "where this server keeps the files of designs its users upload, as a URL: file:///srv/agni/files, created if absent (agni issue 1739). It keeps each file once, by hash, and never changes one, and serves each design's files as the mount \""+uploadsMount+"\". Needs --store. Without it, a design's files cannot be written")
+	c.Flags().StringVar(&githubAPI, "github-api", defaultGitHubAPI, "the GitHub REST API a github:// mount is read through; a test or a GitHub Enterprise server names its own")
+	_ = c.Flags().MarkHidden("github-api")
 	return c
 }
 
@@ -171,6 +177,8 @@ type viewerOpts struct {
 	storeDir string
 	// uploadsDir is --uploads' folder, where the server keeps uploaded files by hash.
 	uploadsDir string
+	// githubAPI is the GitHub REST API's base URL, which a github:// mount reads through.
+	githubAPI string
 	// budget is the work budget every query the server evaluates runs under, and the threshold above
 	// which a query's cost is logged (agni issue 792).
 	budget server.Budget
@@ -297,9 +305,21 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	}
 	// A caller-composed mount is layered in last, so `open`'s minted mount sits alongside anything a
 	// flag or an agni.yaml declared.
-	mounts := mounts.Merge(discovered, append(explicit, o.extraMounts...))
-	if mounts, err = withUploadsMount(mounts, o.uploadsDir); err != nil {
+	fixed := mounts.Merge(discovered, append(explicit, o.extraMounts...))
+	if fixed, err = withUploadsMount(fixed, o.uploadsDir); err != nil {
 		return err
+	}
+	// The table serves the fixed mounts and, with --store and --uploads, the ones CreateMount made,
+	// read back from --store so they outlive a restart (agni issue 1735).
+	table := mounts.NewTable(fixed...)
+	var maker *mountMaker
+	if o.storeDir != "" && o.uploadsDir != "" {
+		if maker, err = newMountMaker(table, filepath.Join(o.storeDir, storeMountsDir), o.uploadsDir, o.githubAPI); err != nil {
+			return err
+		}
+		if err := maker.restore(cmd.ErrOrStderr()); err != nil {
+			return err
+		}
 	}
 	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
 	// Absent --params leaves it nil, so the params RPC returns no joined specs and never an
@@ -330,7 +350,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// (/agni.v1.webapi.WorkspaceService/). Static assets live under /static/, and the goapplib
 	// page catches the rest at "/". The services are the transport-neutral service package
 	// implementations, which internal/server wraps for Connect (C13).
-	loader := service.NewCachingLoader(&osLoader{mounts: mounts, loader: newLoader()}, service.NewDesignCache(o.designCache))
+	loader := service.NewCachingLoader(&osLoader{mounts: table, loader: newLoader()}, service.NewDesignCache(o.designCache))
 	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT. If an operator names renderers
 	// with it, those are the whole set, and agni.yaml cannot widen it.
 	if len(nativeTools) == 0 {
@@ -340,7 +360,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	for _, t := range nativeTools {
 		enabledNative[t] = true
 	}
-	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
+	nativeR := &osNative{mounts: table, enabled: enabledNative, cache: native.NewCache()}
 	// ProjectService (agni issue 170) resolves the project/design descriptors in the mounts and
 	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
 	// reaches another project's design.
@@ -348,10 +368,10 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// Each mount becomes one tree in the filesystem-backed store. Only this line of the serve wiring
 	// knows that projects live in directories, so swapping in another service.ProjectStore changes
 	// this line alone.
-	projectStore := projects.NewFSStore(projectTrees(mounts)...)
+	projectStore := projects.NewFSStoreFunc(liveTrees(table))
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
 	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
-	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
+	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: table}}
 	if o.uploadMaxBytes > 0 {
 		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
 	}
@@ -401,12 +421,15 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		budget.Log("note: no query budget is enforced; queries costing more than %d work units are logged with a suggested cap. Pass --query-budget N to enforce one.", budget.Warn)
 	}
 	// A request that lists or reads a design warms its browser-engine seed (agni issue 1572).
-	workspace := service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts))
-	seedCache := newSeeds(workspace, mounts, wasmengine.StoreVersion)
+	workspace := service.NewWorkspaceService(osWorkspace(table)).WithDesignFiles(projectResolver, osFiles(table))
+	if maker != nil {
+		workspace.WithMountMaker(maker)
+	}
+	seedCache := newSeeds(workspace, table, wasmengine.StoreVersion)
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	projectSvc, designSvc, packSvc, err := storeServices(mounts, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
+	projectSvc, designSvc, packSvc, err := storeServices(table, o.storeDir, o.uploadsDir, projectStore, projectResolver, checkSvc, cmd.ErrOrStderr())
 	if err != nil {
 		return err
 	}
@@ -485,7 +508,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// A design's files, read-only, for a page analysing it in the browser (agni issue 853). The
 	// API already serves everything in a mount through its answers, so this exposes no file a client
 	// could not reach before; ListDesignFiles says which ones a design needs.
-	mux.Handle("GET /raw/", rawFileHandler(mounts))
+	mux.Handle("GET /raw/", rawFileHandler(table))
 	// A design's store as a browser worker would write it, so a first visit restores the parsed
 	// board rather than parsing it in the page (agni issue 1525).
 	mux.Handle("GET /seed/", seedCache)
@@ -494,18 +517,18 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer. %s.\n", defaultWebDir, envWebDir, assets.why)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: table, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
 	}
 
 	srv := newHTTPServer(addr, requestQoS(mux))
 	if o.banner != nil {
-		o.banner(urls, len(mounts))
+		o.banner(urls, len(table.List()))
 	} else {
 		what := dir
 		if !assets.viewer {
 			what = "the API"
 		}
-		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(mounts))
+		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(table.List()))
 		for _, u := range urls[1:] {
 			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
 		}
@@ -548,6 +571,7 @@ const (
 	storePacksDir     = "packs"
 	storeReportsDir   = "reports"
 	storeReviewsDir   = "reviews"
+	storeMountsDir    = mounts.RecordsDir
 )
 
 // withUploadsMount adds --uploads' design views as the mount "uploads", creating the folder (agni
@@ -566,7 +590,7 @@ func withUploadsMount(ms []mounts.Mount, dir string) ([]mounts.Mount, error) {
 	if err := os.MkdirAll(views, 0o750); err != nil {
 		return nil, fmt.Errorf("--uploads %q: %w", dir, err)
 	}
-	return append(ms, mounts.Mount{Name: uploadsMount, Root: views}), nil
+	return append(ms, mounts.Mount{Name: uploadsMount, Root: views, Kind: mounts.KindUploads}), nil
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
@@ -579,6 +603,31 @@ func projectTrees(ms []mounts.Mount) []projects.Tree {
 		out = append(out, projects.Tree{Mount: m.Name, FS: archivefs.Expand(os.DirFS(m.Root))})
 	}
 	return out
+}
+
+// liveTrees returns the project trees of the mounts t serves now. A tree is kept while its mount's
+// root is unchanged, so an archive in it is not opened again on every read.
+func liveTrees(t *mounts.Table) func() []projects.Tree {
+	var mu sync.Mutex
+	byRoot := map[string]projects.Tree{}
+	return func() []projects.Tree {
+		ms := t.List()
+		mu.Lock()
+		defer mu.Unlock()
+		out := make([]projects.Tree, 0, len(ms))
+		next := make(map[string]projects.Tree, len(ms))
+		for _, m := range ms {
+			key := m.Name + "\x00" + m.Root
+			tr, ok := byRoot[key]
+			if !ok {
+				tr = projectTrees([]mounts.Mount{m})[0]
+			}
+			next[key] = tr
+			out = append(out, tr)
+		}
+		byRoot = next
+		return out
+	}
 }
 
 // serveLoader is the intersection of what the two rule-running services need. The engine facade
@@ -927,10 +976,10 @@ func themeNames() []string {
 
 // osWorkspace is the OS-backed listing over a mount table. It is a function rather than a call at the
 // use site because runViewer's local mount table shadows the mounts package there.
-func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspace(ms) }
+func osWorkspace(ms *mounts.Table) service.Workspace { return mounts.NewWorkspace(ms) }
 
 // osFiles reads files inside the mounts, for ListDesignFiles.
-func osFiles(ms []mounts.Mount) service.FileReader { return mounts.NewWorkspace(ms) }
+func osFiles(ms *mounts.Table) service.FileReader { return mounts.NewWorkspace(ms) }
 
 // uploadedHost reads a design that a client sent as files (agni issue 1061). It serves the files as
 // the one mount they name, with the projects they declare. The browser engine reads its own files

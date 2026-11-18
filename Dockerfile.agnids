@@ -138,5 +138,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD ["agnids", "healthcheck"]
 
 ENTRYPOINT ["agnids"]
+# --store and --uploads name where the agni image keeps its records and files. Mount agni's volume
+# there read-only and the workbench also serves the mounts agni serve made at runtime, such as a
+# GitHub snapshot (agni issue 1735). With nothing mounted there, the folders are empty and add none.
+# Both images run as uid 10001, so agnids can read what agni wrote.
 CMD ["serve", "--addr", ":8090", "--mount-root", "/datasheets", "--web-dir", "/srv/agnids/web", \
-     "--corpus", "/corpus", "--pdf2doc", "/opt/docling/bin/python /opt/agnids/pdf2doc.py"]
+     "--corpus", "/corpus", "--pdf2doc", "/opt/docling/bin/python /opt/agnids/pdf2doc.py", \
+     "--store", "file:///var/lib/agni/meta", "--uploads", "file:///var/lib/agni/files"]

@@ -30,7 +30,7 @@ func TestOsDocExtractor(t *testing.T) {
 	corpus := t.TempDir()
 	writePDF(t, filepath.Join(dir, "LM1117.pdf"), "pdf-lm1117")
 	ms := []mounts.Mount{{Name: "m", Root: dir}}
-	e := &osDocExtractor{derived: derived{mounts: ms, corpus: corpus}, cmd: []string{stub}}
+	e := &osDocExtractor{derived: derived{mounts: tableOf(ms), corpus: corpus}, cmd: []string{stub}}
 	if !e.Available() {
 		t.Fatal("a configured cmd should be available")
 	}
@@ -51,7 +51,7 @@ func TestOsDocExtractor(t *testing.T) {
 	}
 
 	// With no corpus there is nowhere to keep the doc-IR (agni issue 1734).
-	bare := &osDocExtractor{derived: derived{mounts: ms}, cmd: []string{stub}}
+	bare := &osDocExtractor{derived: derived{mounts: tableOf(ms)}, cmd: []string{stub}}
 	if _, err := bare.Extract(context.Background(), mustURI("m", "LM1117.pdf")); !errors.Is(err, dsservice.ErrNoCorpus) {
 		t.Errorf("Extract with no corpus = %v, want ErrNoCorpus", err)
 	}

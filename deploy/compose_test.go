@@ -123,3 +123,49 @@ func indexOf(xs []string, x string) int {
 	}
 	return -1
 }
+
+// The workbench serves the mounts the agni service made at runtime by reading agni's records and
+// files (agni issue 1735). The agnids image's command names agni's --store and --uploads, so the
+// datasheets service must mount agni's named volume there, read-only, since agnids only reads them.
+func TestTheWorkbenchReadsTheAgniServicesMounts(t *testing.T) {
+	c := readCompose(t)
+	b, err := os.ReadFile("../Dockerfile.agnids")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	for _, flag := range []string{"store", "uploads"} {
+		m := regexp.MustCompile(`"--` + flag + `", "file://([^"]+)"`).FindSubmatch(b)
+		if m == nil {
+			t.Fatalf("the agnids image's command names no --%s", flag)
+		}
+		want = append(want, string(m[1]))
+	}
+	agni := namedTargets(t, c, "agni")
+	for _, dir := range want {
+		found := false
+		for _, v := range c.Services["datasheets"].Volumes {
+			parts := strings.Split(v, ":")
+			if _, named := c.Volumes[parts[0]]; !named || len(parts) < 3 || parts[2] != "ro" || !under(dir, parts[1]) {
+				continue
+			}
+			for _, target := range agni {
+				found = found || (target == parts[1] && namedVolumeAt(c, "agni", target) == parts[0])
+			}
+		}
+		if !found {
+			t.Errorf("the datasheets service mounts no read-only copy of the agni service's volume at %s", dir)
+		}
+	}
+}
+
+// namedVolumeAt is the named volume service mounts at target.
+func namedVolumeAt(c composeFile, service, target string) string {
+	for _, v := range c.Services[service].Volumes {
+		parts := strings.Split(v, ":")
+		if len(parts) >= 2 && parts[1] == target {
+			return parts[0]
+		}
+	}
+	return ""
+}

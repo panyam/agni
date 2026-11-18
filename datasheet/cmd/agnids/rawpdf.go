@@ -15,7 +15,7 @@ import (
 // and mounts.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
 // structured over DatasheetService. Rendering happens in the browser, so the document goes no
 // further than the local client (C16).
-func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
+func rawDatasheetHandler(ms *mounts.Table) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path is already stripped of the /datasheets/raw/ prefix, leaving "<mount>/<path...>".
 		mountName, rel, ok := strings.Cut(r.URL.Path, "/")
@@ -34,7 +34,7 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		abs, err := mounts.Resolve(ms, uri)
+		abs, err := ms.Resolve(uri)
 		if err != nil {
 			// An unknown mount and an escaping path get the same answer, and the host path is never echoed.
 			http.Error(w, "no such datasheet", http.StatusNotFound)

@@ -25,7 +25,7 @@ const derivedDir = "derived"
 // shares one doc-IR. A doc-IR or annotations written beside the PDF by `make pdf2doc` or an older
 // agnids are still read when the store has none.
 type derived struct {
-	mounts []mounts.Mount
+	mounts *mounts.Table
 	// corpus is the corpus store's folder. Empty means the server has no store, so nothing derived
 	// can be written.
 	corpus string
@@ -37,7 +37,7 @@ func (d derived) dir(uri artifact.URI) (string, error) {
 	if d.corpus == "" {
 		return "", dsservice.ErrNoCorpus
 	}
-	pdf, err := mounts.Resolve(d.mounts, uri)
+	pdf, err := d.mounts.Resolve(uri)
 	if err != nil {
 		return "", err
 	}

@@ -38,10 +38,13 @@ services:
     ports:
       - "${AGNI_DATASHEETS_PORT:-8090}:8090"
     # The datasheet folders are only read. Extracted doc-IR, annotations, drafts and published specs
-    # go in the corpus store, kept in the `corpus` volume (agni issue 1734).
+    # go in the corpus store, kept in the `corpus` volume (agni issue 1734). The agni service's `data`
+    # volume is read too, so a mount made on the agni service, such as a GitHub repo of datasheets,
+    # shows in the workbench (agni issue 1735).
     volumes:
       - ${AGNI_DATASHEETS:-./datasheets}:/datasheets:ro
       - corpus:/corpus
+      - data:/var/lib/agni:ro
     profiles: ["datasheets"]
     restart: unless-stopped
 

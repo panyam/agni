@@ -29,8 +29,8 @@ func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service
 		// The loader's newLoader() matches serve.go. Leaving it nil was survivable only because the
 		// edif fixtures resolve no external symbol library, so the nil reader was never
 		// dereferenced; a kicad schematic with a sym-lib reference panics on it.
-		&osLoader{mounts: mounts, loader: newLoader()},
-		&osNative{mounts: mounts, enabled: enabled, cache: native.NewCache()},
+		&osLoader{mounts: tableOf(mounts), loader: newLoader()},
+		&osNative{mounts: tableOf(mounts), enabled: enabled, cache: native.NewCache()},
 		render.Style{},
 		testProjectResolver(mounts),
 	)
@@ -42,13 +42,13 @@ func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service
 func testProjectResolver(ms []mounts.Mount) *service.ProjectResolver {
 	return &service.ProjectResolver{
 		Store:  projects.NewFSStore(projectTrees(ms)...),
-		Config: &osProjectConfig{mounts: ms},
+		Config: &osProjectConfig{mounts: tableOf(ms)},
 	}
 }
 
 // newCheckSvc builds a CheckService over the same os-backed loader, with the built-in catalog.
 func newCheckSvc(mounts []mounts.Mount) *service.CheckService {
-	return service.NewCheckService(&osLoader{mounts: mounts, loader: newLoader()}, check.DefaultCatalog(), nil, "", nil, nil)
+	return service.NewCheckService(&osLoader{mounts: tableOf(mounts), loader: newLoader()}, check.DefaultCatalog(), nil, "", nil, nil)
 }
 
 // designFixtureSvc mounts the shared edif testdata (basic.edn netlist, sample.eds geometry)

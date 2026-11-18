@@ -23,6 +23,7 @@ This file covers the datasheet tooling, the workbench's drafts, the corpus index
 - `PublishDraft` or `agnids publish <mpn> --corpus <dir>` validates a draft into `<mpn>.textproto` (agni 749).
 - **Never read drafts in `LoadSet`.** A half-finished transcription would fail the whole all-or-nothing load.
 - **agnids never writes into a mount.** A PDF's doc-IR and annotations go in `<corpus>/derived/<sha256 of the PDF>/` (`osderived.go`, agni 1734). One written beside the PDF by `make pdf2doc` is still read when the store has none. Nothing under the corpus may end in `.textproto` unless it is a PartSpec, since `param.LoadSet` reads every one, so the stored doc-IR is `doc.txtpb`.
+- **agnids reads `agni serve`'s runtime mounts** from `--store` and `--uploads` through a `mounts.Table`, and never makes one (agni 1735). Every adapter resolves through the table, never a `[]mounts.Mount` taken at startup.
 - **A PR does not build the agnids image** (`images-agnids.yml` runs on main, agni 1741). A PR that changes `Dockerfile.agnids` or the pdf2doc locks starts it by hand with `gh workflow run images-agnids.yml --ref <branch>`, which builds both architectures and runs `hack/image_smoke.sh` with the real docling.
 - The workbench saves nothing until an MPN is confirmed.
 - **Publishing and the corpus index belong to the datasheet service** (`datasheet/corpus`). Publishing writes `corpus.index.json` (MPN, file, hash, a generation) beside the specs.

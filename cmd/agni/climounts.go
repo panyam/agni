@@ -354,7 +354,7 @@ func (cliProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisC
 	if err != nil {
 		return service.ResolvedConfig{}, err
 	}
-	return (&osProjectConfig{mounts: ws.Mounts()}).ResolveConfig(ctx, cfg, namespace)
+	return (&osProjectConfig{mounts: mounts.NewTable(ws.Mounts()...)}).ResolveConfig(ctx, cfg, namespace)
 }
 
 // withProjectRules splices a design's project rules onto a catalog, for the CLI's own facet

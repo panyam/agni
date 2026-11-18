@@ -3,9 +3,12 @@ package mounts
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/internal/archivefs"
+	"path/filepath"
+	"strings"
 
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/archivefs"
 	"github.com/panyam/agni/service"
 )
 
@@ -14,26 +17,43 @@ import (
 // lists an archive as a folder. Both the engine's server and the datasheet service list folders
 // through it (agni issue 744).
 type Workspace struct {
-	ms []Mount
+	t *Table
 }
 
-// NewWorkspace lists folders inside ms, the mount table a server was started with.
-func NewWorkspace(ms []Mount) *Workspace { return &Workspace{ms: ms} }
+// NewWorkspace lists folders inside the mounts t serves, including any made at runtime.
+func NewWorkspace(t *Table) *Workspace { return &Workspace{t: t} }
 
-// Mounts returns the configured mounts as the port's runtime-neutral MountInfo.
+// Mounts returns the served mounts as the port's runtime-neutral MountInfo.
 func (w *Workspace) Mounts() []service.MountInfo {
-	out := make([]service.MountInfo, 0, len(w.ms))
-	for _, m := range w.ms {
-		out = append(out, service.MountInfo{Name: m.Name, Root: m.Root})
+	ms := w.t.List()
+	out := make([]service.MountInfo, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, Info(m))
 	}
 	return out
+}
+
+// Info is m as the service port describes it.
+func Info(m Mount) service.MountInfo {
+	kind := webapi.MountKind_MOUNT_KIND_FILE
+	switch m.Kind {
+	case KindUploads:
+		kind = webapi.MountKind_MOUNT_KIND_UPLOADS
+	case KindGitHub:
+		kind = webapi.MountKind_MOUNT_KIND_GITHUB
+	}
+	source := m.Source
+	if source == "" && m.Kind == KindFile {
+		source = "file:///" + strings.TrimPrefix(filepath.ToSlash(m.Root), "/")
+	}
+	return service.MountInfo{Name: m.Name, Root: m.Root, Kind: kind, Source: source, Ref: m.Ref, Commit: m.Commit, Fixed: !m.Runtime, Writable: m.Kind == KindFile}
 }
 
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping
 // service.ErrInvalidPath to InvalidArgument. It maps any other error to NotFound, including an
 // unknown mount or a missing directory.
 func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
-	abs, err := Resolve(w.ms, uri)
+	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +71,7 @@ func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirE
 
 // ReadFile reads one file inside its mount, for service.FileReader. A directory is an error.
 func (w *Workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error) {
-	abs, err := Resolve(w.ms, uri)
+	abs, err := w.t.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}

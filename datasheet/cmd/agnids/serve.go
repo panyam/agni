@@ -22,6 +22,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/param/paramconnect"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/internal/storeurl"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
@@ -32,7 +33,7 @@ import (
 // DatasheetService holds the workbench's whole API, including its folder tree, so agnids can be
 // hosted apart from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
-	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir string
+	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir, storeURL, uploadsURL string
 	var specs []string
 	c := &cobra.Command{
 		Use:   "serve",
@@ -42,7 +43,7 @@ func serveCmd() *cobra.Command {
 			"holding datasheets, and --web-dir for the built workbench assets.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ms, err := serveMounts(specs, mountRoot)
+			table, err := serveTable(specs, mountRoot, storeURL, uploadsURL)
 			if err != nil {
 				return err
 			}
@@ -67,11 +68,11 @@ func serveCmd() *cobra.Command {
 					return fmt.Errorf("--corpus %q: %w", corpusDir, err)
 				}
 			}
-			mux := newWorkbenchMux(ms, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
+			mux := newWorkbenchMux(table, webDir, strings.Fields(pdf2doc), strings.TrimSuffix(viewerURL, "/"), corpusDir, store)
 			if webDir == "" {
-				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheet API at http://%s/ with %d mount(s) (Ctrl-C to stop)\n", displayAddr(addr), len(ms))
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheet API at http://%s/ with %d mount(s) (Ctrl-C to stop)\n", displayAddr(addr), len(table.List()))
 			} else {
-				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(ms))
+				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(table.List()))
 			}
 			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second})
 		},
@@ -82,6 +83,8 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&webDir, "web-dir", "datasheet/web", "directory holding the workbench's built assets (templates/DatasheetsPage.html, static/datasheets.js, static/pdf.worker.js); the default is where a repo checkout keeps them, after `make ui`")
 	c.Flags().StringVar(&viewerURL, "viewer-url", "", "where the viewer (`agni serve`) is served, e.g. http://host:8080; the workbench's heading links home there, and is plain text when this is empty")
 	c.Flags().StringVar(&corpusDir, "corpus", "", "the corpus store: published PartSpecs with their corpus.index.json, served over PartSpecService for `agni serve --params-url`, and the workbench's drafts under drafts/. It is indexed at start when the index is missing or stale. Empty serves neither, and the workbench cannot save")
+	c.Flags().StringVar(&storeURL, "store", "", "agni serve's --store, as a URL such as file:///srv/agni/meta; with --uploads, the workbench also serves the mounts agni serve made at runtime, such as a GitHub snapshot, and sees a new one within a second. It only reads them")
+	c.Flags().StringVar(&uploadsURL, "uploads", "", "agni serve's --uploads, as a URL such as file:///srv/agni/files, where the runtime mounts' files are. Needs --store")
 	c.Flags().StringVar(&pdf2doc, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 datasheet/tools/pdf2doc/pdf2doc.py\"; empty disables the workbench's Extract (first pass) action")
 	return c
 }
@@ -89,7 +92,7 @@ func serveCmd() *cobra.Command {
 // newWorkbenchMux routes everything agnids serves: the DatasheetService API, the raw PDFs the
 // workbench renders, its static bundle, the page itself, and a liveness probe. It is separate from
 // serveCmd so a test can drive the real routes without a listener.
-func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
+func newWorkbenchMux(ms *mounts.Table, webDir string, pdf2doc []string, viewerURL string, corpusDir string, corpusStore param.Fetcher) *http.ServeMux {
 	mux := http.NewServeMux()
 	// Drafts live in the published corpus's store, so a server with no --corpus has none, and the
 	// draft rpcs say to start it with one.
@@ -206,6 +209,27 @@ func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 		}
 	}
 	return mounts.Merge(discovered, explicit), nil
+}
+
+// serveTable is the workbench's live mount table: the folders from --mount and --mount-root, and,
+// with agni serve's --store and --uploads, the mounts agni serve made at runtime, read from their
+// records (agni issue 1735). agnids only reads the records, and sees a new one within a second.
+func serveTable(specs []string, root, storeURL, uploadsURL string) (*mounts.Table, error) {
+	ms, err := serveMounts(specs, root)
+	if err != nil {
+		return nil, err
+	}
+	storeDir, uploadsDir, err := storeurl.Folders(storeURL, uploadsURL)
+	if err != nil {
+		return nil, err
+	}
+	table := mounts.NewTable(ms...)
+	if storeDir != "" && uploadsDir != "" {
+		if _, err := table.WithRecords(filepath.Join(storeDir, mounts.RecordsDir), uploadsDir); err != nil {
+			return nil, fmt.Errorf("--store: %w", err)
+		}
+	}
+	return table, nil
 }
 
 // displayAddr turns a listen address into one a browser can open, since ":8090" listens on every

@@ -30,6 +30,14 @@ var ErrInvalidPath = errors.New("invalid path")
 type MountInfo struct {
 	Name string
 	Root string
+	// Kind, Source, Ref and Commit are copied into webapi.Mount as they are.
+	Kind   webapi.MountKind
+	Source string
+	Ref    string
+	Commit string
+	// Fixed marks a mount from the server's flags, and Writable one the server writes into.
+	Fixed    bool
+	Writable bool
 }
 
 // DirEntry is one raw filesystem entry, before the service labels a file with its design format.
@@ -97,6 +105,76 @@ type WorkspaceService struct {
 	// projects and files serve ListDesignFiles, and are set by WithDesignFiles.
 	projects *ProjectResolver
 	files    FileReader
+	// maker makes and deletes runtime mounts, and is set by WithMountMaker.
+	maker MountMaker
+}
+
+// MountMaker is the port that makes and deletes runtime mounts (agni issue 1735). The server's
+// adapter snapshots the source into --uploads and keeps a record in --store. It classifies its
+// errors with this package's sentinels: ErrInvalidArgument for a bad name or source, ErrNotFound
+// for a source or ref that does not exist, ErrResourceExhausted for a source over the size cap, and
+// ErrFailedPrecondition for a mount it may not delete.
+type MountMaker interface {
+	CreateMount(ctx context.Context, name, source, ref string) (MountInfo, error)
+	DeleteMount(ctx context.Context, name string) error
+}
+
+// WithMountMaker lets the service make and delete runtime mounts through m. Without it, both RPCs
+// are ErrFailedPrecondition.
+func (s *WorkspaceService) WithMountMaker(m MountMaker) *WorkspaceService {
+	s.maker = m
+	return s
+}
+
+// noMaker is why a server without a MountMaker refuses CreateMount and DeleteMount.
+const noMaker = "this server makes no mounts at runtime; start it with --store and --uploads"
+
+// CreateMount makes a runtime mount through the MountMaker. A name the server already serves is
+// ErrAlreadyExists, checked here as well as in the adapter so the answer does not depend on it.
+func (s *WorkspaceService) CreateMount(ctx context.Context, req *webapi.CreateMountRequest) (*webapi.Mount, error) {
+	if s.maker == nil {
+		return nil, fmt.Errorf("%w: %s", ErrFailedPrecondition, noMaker)
+	}
+	for _, m := range s.ws.Mounts() {
+		if m.Name == req.GetName() {
+			return nil, fmt.Errorf("%w: a mount named %q is already served", ErrAlreadyExists, m.Name)
+		}
+	}
+	info, err := s.maker.CreateMount(ctx, req.GetName(), req.GetSource(), req.GetRef())
+	if err != nil {
+		return nil, err
+	}
+	return mountProto(info)
+}
+
+// DeleteMount deletes a runtime mount through the MountMaker. A mount from the flags is
+// ErrFailedPrecondition and an unknown name ErrNotFound.
+func (s *WorkspaceService) DeleteMount(ctx context.Context, req *webapi.DeleteMountRequest) (*webapi.DeleteMountResponse, error) {
+	if s.maker == nil {
+		return nil, fmt.Errorf("%w: %s", ErrFailedPrecondition, noMaker)
+	}
+	for _, m := range s.ws.Mounts() {
+		if m.Name != req.GetName() {
+			continue
+		}
+		if m.Fixed {
+			return nil, fmt.Errorf("%w: the mount %q comes from the server's flags", ErrFailedPrecondition, m.Name)
+		}
+		if err := s.maker.DeleteMount(ctx, m.Name); err != nil {
+			return nil, err
+		}
+		return &webapi.DeleteMountResponse{}, nil
+	}
+	return nil, fmt.Errorf("%w: no mount named %q", ErrNotFound, req.GetName())
+}
+
+// mountProto is m as the wire carries it.
+func mountProto(m MountInfo) (*webapi.Mount, error) {
+	uri, err := artifact.New(m.Name, "")
+	if err != nil {
+		return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
+	}
+	return &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String(), Kind: m.Kind, Source: m.Source, Ref: m.Ref, Commit: m.Commit, Fixed: m.Fixed, Writable: m.Writable}, nil
 }
 
 // NewWorkspaceService returns a WorkspaceService backed by ws.
@@ -117,15 +195,16 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
-		uri, err := artifact.New(m.Name, "")
+		mp, err := mountProto(m)
 		if err != nil {
-			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
+			return nil, err
 		}
+		uri, _ := artifact.New(m.Name, "")
 		if opens != nil && !s.hasOpenableFile(ctx, uri, opens, 0, &pruneBudget) {
 			resp.PrunedMounts++
 			continue
 		}
-		resp.Mounts = append(resp.Mounts, &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String()})
+		resp.Mounts = append(resp.Mounts, mp)
 	}
 	return resp, nil
 }
@@ -137,11 +216,7 @@ func (s *WorkspaceService) GetMount(_ context.Context, req *webapi.GetMountReque
 		if m.Name != req.GetName() {
 			continue
 		}
-		uri, err := artifact.New(m.Name, "")
-		if err != nil {
-			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
-		}
-		return &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String()}, nil
+		return mountProto(m)
 	}
 	return nil, fmt.Errorf("%w: no mount named %q", ErrNotFound, req.GetName())
 }

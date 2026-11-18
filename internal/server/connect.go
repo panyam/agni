@@ -127,6 +127,22 @@ func (a *Workspace) GetMount(ctx context.Context, req *connect.Request[webapi.Ge
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Workspace) CreateMount(ctx context.Context, req *connect.Request[webapi.CreateMountRequest]) (*connect.Response[webapi.Mount], error) {
+	resp, err := a.svc.CreateMount(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Workspace) DeleteMount(ctx context.Context, req *connect.Request[webapi.DeleteMountRequest]) (*connect.Response[webapi.DeleteMountResponse], error) {
+	resp, err := a.svc.DeleteMount(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Workspace) ListDir(ctx context.Context, req *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error) {
 	resp, err := a.svc.ListDir(ctx, req.Msg)
 	if err != nil {

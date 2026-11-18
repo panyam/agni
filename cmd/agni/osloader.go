@@ -23,12 +23,12 @@ import (
 // its mount root and reads it through the engine's formats.Loader, via service.LoaderIn, which also
 // records the files a cached read depends on (agni issue 895).
 type osLoader struct {
-	mounts []mounts.Mount
+	mounts *mounts.Table
 	loader *formats.Loader
 }
 
 func (l *osLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (l *osLoader) Design(ctx context.Context, uri artifact.URI, opts ...service
 }
 
 func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string
 }
 
 func (l *osLoader) Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (l *osLoader) Report(ctx context.Context, uri artifact.URI, faithfulSymbols
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
 // missing file returns (nil, nil). Only a bad URI or a malformed sidecar is an error.
 func (l *osLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func symbolsFor(faithful bool) string { return formats.SymbolsFor(faithful) }
 // Board resolves the physical board sidecar (WS1-006) through the formats registry. A format
 // without one yields (nil, nil), and the service then lists no board sheet.
 func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeom
 // BoardMeshes reads model meshes by the keys in a board's model_instances, and resolves each as the
 // board read resolved its model (agni issue 1652).
 func (l *osLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []string) (map[string]*mesh.Mesh, map[string]string, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +102,7 @@ func (l *osLoader) BoardMeshes(ctx context.Context, uri artifact.URI, keys []str
 // Expectations, a manifest is a required input, so an absent or malformed file is an error rather
 // than a review over no items reporting a hollow pass.
 func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -118,7 +118,7 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 // review manifest it is a required input once named, so an absent or malformed file is an error
 // rather than silently falling back to the server's vocabulary.
 func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.Na
 // escaping its mount is an error, since containment is a security boundary. An unreadable file
 // inside the mount yields "", as hashSource documents.
 func (l *osLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
-	abs, err := mounts.Resolve(l.mounts, uri)
+	abs, err := l.mounts.Resolve(uri)
 	if err != nil {
 		return "", err
 	}
