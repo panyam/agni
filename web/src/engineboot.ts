@@ -9,7 +9,7 @@ import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine 
 import { fetchFile } from "./wasm/fetchfile.js";
 import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { WorkspaceService } from "@panyam/agni-client/gen/agni/v1/webapi/workspace_pb";
-import { appBase, currentLocation, setBase, setStaticHost } from "./router.js";
+import { DESIGN_PARAM, appBase, currentLocation, setBase, setStaticHost } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { dropOf, type DropStore } from "./drops.js";
 import { filesStamp, type LoadedKey } from "./loaded.js";
@@ -49,6 +49,9 @@ export function withEngineParams(url: string): string {
 export function pageEngine(): string {
   // A page served as plain files has no server to analyse anything, so it runs in the browser.
   if (onStaticHost) return "wasm";
+  // A design read by name under packs resolves on the server, which holds the design and the packs.
+  // A browser worker has neither (agni issue 1697).
+  if (new URLSearchParams(window.location.search).has(DESIGN_PARAM)) return "server";
   return engineParams.get("engine") ?? document.querySelector<HTMLElement>(".app")?.dataset.engine ?? "server";
 }
 

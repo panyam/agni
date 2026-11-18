@@ -517,7 +517,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer. %s.\n", defaultWebDir, envWebDir, assets.why)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: table, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: table, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms, designs: projectResolver.Designs}), mux)
 	}
 
 	srv := newHTTPServer(addr, requestQoS(mux))

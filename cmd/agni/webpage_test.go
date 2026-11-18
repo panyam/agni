@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
 )
 
 func TestViewerPageRendersShell(t *testing.T) {
@@ -353,6 +357,44 @@ func TestLibrarySpaceServesTheLibraryPage(t *testing.T) {
 			if strings.Contains(body, d) {
 				t.Errorf("GET %s unexpectedly contains %q", tc.path, d)
 			}
+		}
+	}
+}
+
+// fakeDesigns answers one design by name, as the server's design catalog does.
+type fakeDesigns map[string]*webapi.Design
+
+func (f fakeDesigns) Design(_ context.Context, name string) (*webapi.Design, error) {
+	if d, ok := f[name]; ok {
+		return d, nil
+	}
+	return nil, fmt.Errorf("%w: no design %s", service.ErrNotFound, name)
+}
+
+// /designs/<id>/view opens the design's current entry in the viewer, named so the page reads it by
+// name, with the packs the link asked for kept (agni issue 1697). An older mount-browser link still
+// moves to /mounts/.
+func TestADesignsViewLinkOpensItsCurrentEntry(t *testing.T) {
+	mux := http.NewServeMux()
+	designs := fakeDesigns{
+		"designs/bb-1.1.3": {Name: "designs/bb-1.1.3", EntryUri: "mount://uploads/bb-1.1.3/1da1d231f2dc/schematic/jetson agx.kicad_sch"},
+		"designs/empty":    {Name: "designs/empty"},
+	}
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{designs: designs}), mux)
+	for _, tc := range []struct {
+		path string
+		code int
+		to   string
+	}{
+		{"/designs/bb-1.1.3/view?pack=jetson&pack=house", http.StatusFound, "/mounts/uploads/bb-1.1.3/1da1d231f2dc/schematic/jetson%20agx.kicad_sch/view?design=designs%2Fbb-1.1.3&pack=jetson&pack=house"},
+		{"/designs/none/view", http.StatusNotFound, ""},
+		{"/designs/empty/view", http.StatusNotFound, ""},
+		{"/designs/tut/gateway/gateway.edn/view", http.StatusMovedPermanently, "/mounts/tut/gateway/gateway.edn/view"},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != tc.code || rec.Header().Get("Location") != tc.to {
+			t.Errorf("GET %s = %d to %q; want %d to %q", tc.path, rec.Code, rec.Header().Get("Location"), tc.code, tc.to)
 		}
 	}
 }

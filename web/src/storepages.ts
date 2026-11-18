@@ -96,6 +96,15 @@ export function diffUrl(a: Design, b: Design): string {
   return locationToUrl({ ...emptyLocation(), mount: uriMount(a.entryUri), path: uriPath(a.entryUri), against: `${uriMount(b.entryUri)}/${uriPath(b.entryUri)}` });
 }
 
+// designViewUrl opens the viewer on a stored design read by name under packs, in order (agni issue
+// 1697). The server redirects it to the design's current entry.
+export function designViewUrl(design: string, packs: string[]): string {
+  const q = new URLSearchParams();
+  for (const k of packs) q.append("pack", lastSegment(k));
+  const qs = q.toString();
+  return `${DESIGNS}${encodeURIComponent(design.replace(/^designs\//, ""))}/view${qs ? `?${qs}` : ""}`;
+}
+
 // PacksClient is the part of PackService the packs page's upload calls.
 export interface PacksClient {
   importPackFiles(req: { packId: string; title: string; files: SnapshotFile[] }): Promise<Pack>;

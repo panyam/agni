@@ -14,7 +14,7 @@ import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
 import type { Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
 import { designClient, packClient, projectClient, uploadsClient } from "./api.js";
-import { diffUrl, filterDesigns, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
+import { designViewUrl, diffUrl, filterDesigns, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
 import { openUrl } from "./landingpanels.jsx";
 import { designId, groupBySeries, importFolder, libraryUrl, replaceArtifact, type DesignsClient, type Picked, type UploadsClient } from "./libraryupload.js";
 
@@ -438,6 +438,10 @@ function ReportView(props: { report: Report; onDelete: () => void }) {
         {reportState(props.report)}
       </p>
       <p class="lb-note">
+        <a class="lb-open" data-testid="report-view" href={designViewUrl(props.report.name.replace(/\/reports\/.*$/, ""), props.report.packs)}>
+          Open in the viewer under {props.report.packs.length ? "these packs" : "no pack"}
+        </a>
+        {" · "}
         {findings().length} findings from {groups().length} rules{" "}
         <button type="button" class="lb-delete" onClick={props.onDelete}>
           Delete report

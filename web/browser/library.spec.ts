@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { launch, withPage } from "./browser.js";
+import { hideDrawers, showPanel } from "./panels.js";
 import { freePort, start, type Server } from "./childserver.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -138,6 +139,17 @@ describe("the designs page", () => {
       expect(findings).toBeGreaterThan(0);
       expect(await page.locator(".lb-rule").count()).toBeGreaterThan(0);
       await shot(page, "report.png");
+
+      // The report opens the viewer on 1.1.3 read by name under the pack, and the viewer's own run
+      // checks it under the pack's convention, which a read by file address lacks.
+      await page.getByTestId("report-view").click();
+      await page.waitForURL(/\/mounts\/uploads\/bb-1\.1\.3\/[0-9a-f]{12}\/schematic\/.*\/view\?.*design=designs%2Fbb-1\.1\.3.*pack=jetson/, { timeout: 120_000 });
+      await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
+      await showPanel(page, "checks");
+      await page.click(".checks-run", { timeout: 120_000 });
+      await page.locator("text=jetson/active-low-overbar").first().waitFor({ state: "attached", timeout: 120_000 });
+      await hideDrawers(page);
+      await shot(page, "viewer-under-pack.png");
 
       // A project holds both designs, with the pack as its default.
       await page.goto(`${server.base}/projects/`);

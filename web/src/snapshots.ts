@@ -30,10 +30,20 @@ export interface SnapshotCalls {
 // A Definition is what a page ingests. It names a design, the config for its rule-running
 // questions, and whether its hierarchical netlist is read whole.
 interface Definition {
-  uri: string;
+  uri?: string;
+  design?: string;
+  packs?: string[];
   overlay?: OverlayConfig;
   flattenHierarchy?: boolean;
   boardUri?: string;
+}
+
+// PageDesign is a stored design the page reads by name under packs, at the entry uri it opened
+// (agni issue 1697). The page's other designs, such as one it compares against, are read by uri.
+export interface PageDesign {
+  uri: string;
+  name: string;
+  packs: string[];
 }
 
 // RegistryOptions apply to every snapshot that a page ingests.
@@ -45,6 +55,10 @@ export interface RegistryOptions {
   // board attaches a board to every design the page ingests (Snapshot.board_uri, agni issue 1367),
   // a mount:// URI. The page sets it from its address (pageBoard).
   board?: string;
+  // design names the page's own design and the packs it is read under, from its address
+  // (pageDesign). Its snapshots name the design rather than its files, so the server reads the
+  // design's current files and layers the packs.
+  design?: PageDesign;
 }
 
 // SnapshotSource names a design's snapshot under a config. A presenter asks the registry for
@@ -64,6 +78,7 @@ export interface SnapshotSource {
 export class SnapshotRegistry implements SnapshotSource {
   private readonly byKey = new Map<string, Promise<string>>();
   private readonly defs = new Map<string, Definition>(); // name -> definition
+  private readonly uris = new Map<string, string>(); // name -> the uri the page asked about
 
   constructor(
     private readonly calls: SnapshotCalls,
@@ -73,6 +88,12 @@ export class SnapshotRegistry implements SnapshotSource {
 
   // def returns the definition that the page ingests uri under.
   private def(uri: string, overlay?: OverlayConfig): Definition {
+    const d = this.options.design;
+    if (d && d.uri === uri) {
+      const def: Definition = { design: d.name, packs: d.packs, overlay };
+      if (this.options.flatten) def.flattenHierarchy = true;
+      return def;
+    }
     const def: Definition = this.options.flatten ? { uri, overlay, flattenHierarchy: true } : { uri, overlay };
     if (this.options.board) def.boardUri = this.options.board;
     return def;
@@ -87,6 +108,7 @@ export class SnapshotRegistry implements SnapshotSource {
       const def = this.def(uri, overlay);
       p = this.calls.ingest({ snapshot: def, snapshotId: this.newId() }).then((s) => {
         this.defs.set(s.name, def);
+        this.uris.set(s.name, uri);
         return s.name;
       });
       p.catch(() => this.byKey.delete(key));
@@ -105,7 +127,7 @@ export class SnapshotRegistry implements SnapshotSource {
   // uriOf returns the design that snapshot name names, if this page ingested it, and undefined
   // otherwise.
   uriOf(name: string): string | undefined {
-    return this.defs.get(name)?.uri;
+    return this.uris.get(name);
   }
 
   // recover makes name answerable again: ingested under its id when the host lost it, updated when its

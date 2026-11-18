@@ -3,10 +3,10 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { OverlayConfigSchema } from "@panyam/agni-client/gen/agni/v1/webapi/config_pb";
 import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
-import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
+import { SnapshotRegistry, recoveringInterceptor, type RegistryOptions } from "./snapshots.js";
 
 // A registry over recorded SnapshotService calls, minting ids in order.
-function registry(options: { flatten?: boolean; board?: string } = {}) {
+function registry(options: RegistryOptions = {}) {
   const ingests: unknown[] = [];
   const updates: unknown[] = [];
   let n = 0;
@@ -85,6 +85,21 @@ describe("SnapshotRegistry on a page attaching a board", () => {
     const { reg, ingests } = registry();
     await reg.of("mount://m/x.edn");
     expect(ingests).toEqual([{ snapshot: { uri: "mount://m/x.edn", overlay: undefined }, snapshotId: "id1" }]);
+  });
+});
+
+describe("SnapshotRegistry on a page reading a stored design by name", () => {
+  it("names the design and its packs for the page's own file, and reads any other file by uri (agni issue 1697)", async () => {
+    const { reg, ingests, updates } = registry({ board: "mount://m/other.kicad_pcb", design: { uri: "mount://uploads/bb/r/schematic/bb.kicad_sch", name: "designs/bb", packs: ["packs/jetson"] } });
+    const own = await reg.of("mount://uploads/bb/r/schematic/bb.kicad_sch", conv);
+    await reg.of("mount://uploads/old/r/schematic/old.kicad_sch");
+    expect(ingests).toEqual([
+      { snapshot: { design: "designs/bb", packs: ["packs/jetson"], overlay: conv }, snapshotId: "id1" },
+      { snapshot: { uri: "mount://uploads/old/r/schematic/old.kicad_sch", overlay: undefined, boardUri: "mount://m/other.kicad_pcb" }, snapshotId: "id2" },
+    ]);
+    expect(reg.uriOf(own)).toBe("mount://uploads/bb/r/schematic/bb.kicad_sch");
+    await reg.recover(own, SnapshotUnavailable_Reason.STALE);
+    expect(updates).toEqual([{ snapshot: { name: own, design: "designs/bb", packs: ["packs/jetson"], overlay: conv } }]);
   });
 });
 

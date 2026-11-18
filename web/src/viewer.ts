@@ -263,6 +263,10 @@ export class ViewerPresenter {
   // attachedBoard is the board the page attaches to its design, kept so every address it writes keeps
   // it (agni issue 1367). The page's snapshots read it from the address at boot.
   private attachedBoard = "";
+  // readDesign and readPacks are the stored design the page reads by name and its packs, kept so
+  // every address it writes keeps them (agni issue 1697).
+  private readDesign = "";
+  private readPacks: string[] = [];
   // servedDrawingNote is the open design's GetSummaryResponse.drawing_note, shown on each sheet but
   // the board.
   private servedDrawingNote = "";
@@ -954,6 +958,8 @@ export class ViewerPresenter {
     this.faithfulSymbols = loc.symbols;
     this.flattened = loc.flatten;
     this.attachedBoard = loc.board ?? "";
+    this.readDesign = loc.design ?? "";
+    this.readPacks = loc.packs ?? [];
     const sameFile = loc.mount === this.doc.mount && loc.path === this.doc.path && !loc.isDir;
     if (!sameFile) {
       await this.openFile(loc.mount, loc.path, loc.sheet, true);
@@ -1111,6 +1117,8 @@ export class ViewerPresenter {
       symbols: this.faithfulSymbols,
       flatten: this.flattened,
       board: this.attachedBoard,
+      design: this.readDesign,
+      packs: this.readPacks,
       verdict: this.focusedVerdict,
       hash: this.linkHash,
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by

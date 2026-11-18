@@ -2,11 +2,14 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 )
 
@@ -36,6 +39,9 @@ type serveApp struct {
 	siteSeeds []siteSeed
 	// socialImage is the absolute image URL for the link card of the static demo's landing page.
 	socialImage string
+	// designs looks up a design by name, so /designs/<id>/view opens its current files (agni issue
+	// 1697). Nil on a server that holds no designs by name.
+	designs service.DesignLookup
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template is
@@ -217,18 +223,48 @@ func oldFilesSpace() http.Handler {
 	})
 }
 
-// designsSpace serves /designs/ and /designs/<id> with the designs page. Any longer path is a link
-// from when /designs/ held the mount browser, /designs/<mount>/<path>/view and the rest, and it
-// redirects to the same path under /mounts/ in one hop.
-func designsSpace(designs http.Handler) http.Handler {
+// designsSpace serves /designs/ and /designs/<id> with the designs page. /designs/<id>/view opens
+// the design's current files in the viewer, read by the design's name (agni issue 1697). Any other
+// longer path is a link from when /designs/ held the mount browser, /designs/<mount>/<path>/view and
+// the rest, and it redirects to the same path under /mounts/ in one hop.
+func designsSpace(designs http.Handler, lookup service.DesignLookup) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, designsPrefix)
 		if !strings.Contains(rest, "/") {
 			designs.ServeHTTP(w, r)
 			return
 		}
+		// An old mount-browser link names a mount and a path, so its part before /view holds a slash.
+		if id, ok := strings.CutSuffix(rest, viewSegment); ok && lookup != nil && !strings.Contains(id, "/") {
+			viewDesign(w, r, lookup, id)
+			return
+		}
 		toMounts(w, r, rest)
 	})
+}
+
+// viewDesign redirects /designs/<id>/view to the viewer on the design's entry, with `design=` naming
+// the design so the page reads it by name, and the request's own query, such as `pack=`, kept. The
+// redirect is not permanent, since the entry moves to a new revision's folder on every write.
+func viewDesign(w http.ResponseWriter, r *http.Request, lookup service.DesignLookup, id string) {
+	name := service.StandaloneDesignName(id)
+	d, err := lookup.Design(r.Context(), name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	u, err := artifact.Parse(d.GetEntryUri())
+	if err != nil || d.GetEntryUri() == "" {
+		http.Error(w, name+" has no file a reader opens yet; put its netlist, schematic or board first", http.StatusNotFound)
+		return
+	}
+	segs := []string{url.PathEscape(u.Mount)}
+	for _, p := range strings.Split(u.Path, "/") {
+		segs = append(segs, url.PathEscape(p))
+	}
+	q := r.URL.Query()
+	q.Set("design", name)
+	http.Redirect(w, r, mountsPrefix+strings.Join(segs, "/")+viewSegment+"?"+q.Encode(), http.StatusFound) // #nosec G710 -- the target always starts /mounts/, so the redirect stays on this site
 }
 
 // newPageApp builds the goapplib App that renders the viewer's pages from templates under
@@ -284,7 +320,7 @@ func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	mux.Handle("/", pageHandler[*LandingPage](app))
 	mux.Handle(oldFilesPrefix, oldFilesSpace())
 	mux.Handle(mountsPrefix, mountsRouter(pageHandler[*BrowsePage](app), pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
-	mux.Handle(designsPrefix, designsSpace(pageHandler[*LibraryPage](app)))
+	mux.Handle(designsPrefix, designsSpace(pageHandler[*LibraryPage](app), app.Context.designs))
 	mux.Handle(projectsPrefix, pageHandler[*LibraryPage](app))
 	mux.Handle(packsPrefix, pageHandler[*LibraryPage](app))
 }

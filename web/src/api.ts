@@ -20,7 +20,7 @@ import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb"
 import { TableService } from "@panyam/agni-client/gen/agni/v1/webapi/tables_pb";
 import { SnapshotService } from "@panyam/agni-client/gen/agni/v1/webapi/snapshot_pb";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
-import { pageBoard, pageFlattens } from "./router.js";
+import { pageBoard, pageDesign, pageFlattens } from "./router.js";
 
 // When engineFetch is set, it answers every client's requests in place of the network. The
 // in-browser engine uses it to serve the same clients `agni serve` does (agni issue 178).
@@ -100,7 +100,12 @@ let registry: SnapshotRegistry | undefined;
 // snapshots is the page's one SnapshotRegistry, made on first use over the engine the page chose,
 // so every client asks about the same snapshots.
 export function snapshots(): SnapshotRegistry {
-  registry ??= new SnapshotRegistry(createClient(SnapshotService, newTransport("/", false)), undefined, { flatten: pageFlattens(globalThis.location?.search ?? ""), board: pageBoard(globalThis.location?.search ?? "") || undefined });
+  const search = globalThis.location?.search ?? "";
+  registry ??= new SnapshotRegistry(createClient(SnapshotService, newTransport("/", false)), undefined, {
+    flatten: pageFlattens(search),
+    board: pageBoard(search) || undefined,
+    design: pageDesign(globalThis.location?.pathname ?? "", search),
+  });
   return registry;
 }
 

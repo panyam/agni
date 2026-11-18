@@ -5,7 +5,7 @@ import { BlobsMissingSchema, type SnapshotFile } from "@panyam/agni-client/gen/a
 import { DesignSchema } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { ReportSchema } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import { PackSchema } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
-import { diffUrl, importPack, packUrl, projectUrl, reportState, storeRoute, whereOf } from "./storepages.js";
+import { designViewUrl, diffUrl, importPack, packUrl, projectUrl, reportState, storeRoute, whereOf } from "./storepages.js";
 import { moveUp } from "./storepanels.jsx";
 
 const bytes = (s: string) => new TextEncoder().encode(s);
@@ -41,6 +41,13 @@ describe("diffUrl", () => {
     const b = create(DesignSchema, { entryUri: "mount://uploads/bb-1.1.2/r2/schematic/bb.kicad_sch" });
     expect(diffUrl(a, b)).toBe("/mounts/uploads/bb-1.1.3/r3/schematic/bb.kicad_sch/view?against=uploads%2Fbb-1.1.2%2Fr2%2Fschematic%2Fbb.kicad_sch");
     expect(diffUrl(a, create(DesignSchema, {}))).toBe("");
+  });
+});
+
+describe("designViewUrl", () => {
+  it("names the design and each pack in order, as the server's redirect reads them", () => {
+    expect(designViewUrl("designs/bb-1.1.3", ["packs/jetson", "packs/house"])).toBe("/designs/bb-1.1.3/view?pack=jetson&pack=house");
+    expect(designViewUrl("designs/bb", [])).toBe("/designs/bb/view");
   });
 });
 
