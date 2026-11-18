@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -78,7 +79,7 @@ func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
 		{store: "file:///srv/agni/meta", wantStore: "/srv/agni/meta"},
 		{store: "file:///srv/agni/meta", uploads: "file:///srv/agni/files", wantStore: "/srv/agni/meta", wantUploads: "/srv/agni/files"},
 		{store: "file://localhost/srv/agni/meta", wantStore: "/srv/agni/meta"},
-		{store: "/srv/agni/meta", wantErr: "write it as file:///srv/agni/meta"},
+		{store: "/srv/agni/meta", wantErr: "names a path with no scheme; write it as file:///"},
 		{store: "sqlite:///srv/agni.db", wantErr: "agni issue 1733"},
 		{store: "postgres://db/agni", wantErr: "this build knows file://, sqlite://"},
 		{store: "file://server/srv/agni", wantErr: "names the host"},
@@ -95,6 +96,11 @@ func TestStoreAndUploadsTakeFileURLs(t *testing.T) {
 		}
 		if err != nil || store != filepath.FromSlash(tc.wantStore) || uploads != filepath.FromSlash(tc.wantUploads) {
 			t.Errorf("--store %q --uploads %q = %q, %q, %v; want %q, %q", tc.store, tc.uploads, store, uploads, err, tc.wantStore, tc.wantUploads)
+		}
+	}
+	if runtime.GOOS == "windows" {
+		if got, err := folderOf("store", "file:///C:/agni/meta", storeSchemes); err != nil || got != `C:\agni\meta` {
+			t.Errorf("--store file:///C:/agni/meta = %q, %v; want C:\\agni\\meta", got, err)
 		}
 	}
 }

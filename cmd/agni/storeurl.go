@@ -37,7 +37,7 @@ func folderOf(flag, value string, schemes map[string]string) (string, error) {
 		if err != nil {
 			abs = value
 		}
-		return "", fmt.Errorf("--%s %q names a path with no scheme; write it as file://%s", flag, value, filepath.ToSlash(abs))
+		return "", fmt.Errorf("--%s %q names a path with no scheme; write it as %s", flag, value, fileURL(abs))
 	}
 	why, known := schemes[scheme]
 	if !known {
@@ -61,7 +61,17 @@ func folderOf(flag, value string, schemes map[string]string) (string, error) {
 	if u.Path == "" || !strings.HasPrefix(u.Path, "/") {
 		return "", fmt.Errorf("--%s %q names no absolute folder; write it as file:///srv/agni", flag, value)
 	}
-	return filepath.FromSlash(u.Path), nil
+	p := u.Path
+	// A Windows file URL names its drive after the slash, file:///C:/agni, which is the folder C:\agni.
+	if len(p) >= 3 && p[2] == ':' && filepath.VolumeName(p[1:]) != "" {
+		p = p[1:]
+	}
+	return filepath.FromSlash(p), nil
+}
+
+// fileURL is the file:// URL of an absolute folder: file:///srv/agni, or file:///C:/agni on Windows.
+func fileURL(abs string) string {
+	return "file:///" + strings.TrimPrefix(filepath.ToSlash(abs), "/")
 }
 
 // storeFolders reads --store and --uploads together. Uploads need a store to record what they hold,

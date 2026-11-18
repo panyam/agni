@@ -228,7 +228,7 @@ func serve(agni, mount string) (string, func(), error) {
 	if err != nil {
 		return "", nil, err
 	}
-	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--store", "file://"+filepath.ToSlash(filepath.Join(work, "store"))) // #nosec G204 -- as above
+	cmd := exec.Command(agni, "serve", "--addr", addr, "--mount", mount, "--store", "file:///"+strings.TrimPrefix(filepath.ToSlash(filepath.Join(work, "store")), "/")) // #nosec G204 -- as above
 	cmd.Dir = work
 	var log bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &log, &log
