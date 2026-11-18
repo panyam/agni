@@ -1,19 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
@@ -195,121 +191,55 @@ func (c *packsClient) push(ctx context.Context, w io.Writer, arg, id, title stri
 	return nil
 }
 
-// localPack reads the project.yaml at arg, or in the folder arg names, into the pack push sends, with
-// the files its relative tiers name. It returns the descriptor's path for messages. An empty id or
-// title takes the project's own.
+// localPack reads the project.yaml at arg, or in the folder arg names, into the pack push sends, as
+// the server reads one (projects.PackFromFiles). files holds project.yaml and the files its relative
+// tiers name, and the pack's files carry their hashes. It returns the descriptor's path for messages.
+// An empty id or title takes the project's own.
 func localPack(arg, id, title string) (*webapi.Pack, fileSet, string, error) {
 	descriptor := arg
 	if fi, err := os.Stat(arg); err != nil {
 		return nil, fileSet{}, "", err
 	} else if fi.IsDir() {
 		descriptor = filepath.Join(arg, projects.ProjectDescriptor)
+	} else if filepath.Base(arg) != projects.ProjectDescriptor {
+		return nil, fileSet{}, "", fmt.Errorf("%s is not a %s", arg, projects.ProjectDescriptor)
 	}
-	raw, err := os.ReadFile(descriptor) // #nosec G304 -- the project.yaml the user named to send
+	dir := filepath.Dir(descriptor)
+	rels, err := walkLocal(dir)
 	if err != nil {
 		return nil, fileSet{}, "", err
 	}
-	declared, project, src, err := projects.ParseProject(bytes.NewReader(raw))
+	declared, pack, kept, err := projects.PackFromFiles(rels, func(rel string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel))) // #nosec G304 -- a file in the project folder the user named
+	})
 	if err != nil {
 		return nil, fileSet{}, "", fmt.Errorf("%s: %w", descriptor, err)
 	}
-	if src.Extends != "" {
-		return nil, fileSet{}, "", fmt.Errorf("%s extends %s, and a pack extends nothing; push that one as its own pack and name both with --pack", descriptor, src.Extends)
+	var files fileSet
+	for _, rel := range append([]string{projects.ProjectDescriptor}, kept...) {
+		if err := files.add(filepath.Join(dir, filepath.FromSlash(rel)), rel); err != nil {
+			return nil, fileSet{}, "", err
+		}
 	}
 	if id == "" {
 		id = declared
 	}
-	if title == "" {
-		title = project.GetTitle()
+	if title != "" {
+		pack.Title = title
 	}
-	cfg := project.GetConfig()
-	dir := filepath.Dir(descriptor)
-	var files fileSet
-	tier := func(refs []string) ([]string, error) {
-		var out []string
-		for _, r := range refs {
-			if strings.Contains(r, "://") {
-				out = append(out, r)
-				continue
-			}
-			rel := path.Clean(filepath.ToSlash(r))
-			if err := addTier(&files, dir, rel); err != nil {
-				return nil, err
-			}
-			out = append(out, rel)
-		}
-		return out, nil
-	}
-	if cfg.ProfileUris, err = tier(src.Profiles); err != nil {
-		return nil, fileSet{}, "", err
-	}
-	if cfg.ParamUris, err = tier(src.Params); err != nil {
-		return nil, fileSet{}, "", err
-	}
-	if cfg.SymbolPathUris, err = tier(src.Symbols); err != nil {
-		return nil, fileSet{}, "", err
-	}
-	if cfg.LibraryUris, err = tier(src.Lib); err != nil {
-		return nil, fileSet{}, "", err
-	}
-	if cfg.QuerySetUris, err = tier(src.Queries); err != nil {
-		return nil, fileSet{}, "", err
-	}
-	return &webapi.Pack{Name: packName(id), Title: title, Config: cfg, Files: files.files}, files, descriptor, nil
+	pack.Name = packName(id)
+	pack.Files = files.files[1:]
+	return pack, files, descriptor, nil
 }
 
-// write creates pack, or replaces the server's pack of that name whole, uploading the contents the
-// server lacks.
+// write keeps pack on the server from the folder's files, creating it or replacing it whole, and
+// uploads the contents the server asks for.
 func (c *packsClient) write(ctx context.Context, pack *webapi.Pack, files fileSet) (*webapi.Pack, error) {
 	return retryUpload(ctx, c.up, files, func() (*webapi.Pack, error) {
-		_, err := unary(ctx, c.packs.GetPack, &webapi.GetPackRequest{Name: pack.GetName()})
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return unary(ctx, c.packs.CreatePack, &webapi.CreatePackRequest{PackId: strings.TrimPrefix(pack.GetName(), "packs/"), Pack: pack})
-		}
-		if err != nil {
-			return nil, err
-		}
-		return unary(ctx, c.packs.UpdatePack, &webapi.UpdatePackRequest{Pack: pack, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"title", "config", "files"}}})
+		return unary(ctx, c.packs.ImportPackFiles, &webapi.ImportPackFilesRequest{
+			PackId: strings.TrimPrefix(pack.GetName(), "packs/"), Title: pack.GetTitle(), Files: files.files,
+		})
 	})
-}
-
-// addTier adds the file or every file under the folder at rel, relative to dir, each under its path
-// relative to dir.
-func addTier(files *fileSet, dir, rel string) error {
-	if rel == ".." || strings.HasPrefix(rel, "../") || path.IsAbs(rel) {
-		return fmt.Errorf("%s leaves the project's folder; a pack sends only files beside its project.yaml, so name it with a mount:// URI", rel)
-	}
-	abs := filepath.Join(dir, filepath.FromSlash(rel))
-	fi, err := os.Stat(abs)
-	if err != nil {
-		return err
-	}
-	have := func(p string) bool {
-		return slices.ContainsFunc(files.files, func(f *webapi.SnapshotFile) bool { return f.GetPath() == p })
-	}
-	if !fi.IsDir() {
-		if have(rel) {
-			return nil
-		}
-		return files.add(abs, rel)
-	}
-	rels, err := walkLocal(abs)
-	if err != nil {
-		return err
-	}
-	if len(rels) == 0 {
-		return fmt.Errorf("%s holds no files", rel)
-	}
-	for _, r := range rels {
-		// Two tiers may name one folder, as profiles and params sometimes share one, and its files go once.
-		if have(path.Join(rel, r)) {
-			continue
-		}
-		if err := files.add(filepath.Join(abs, filepath.FromSlash(r)), path.Join(rel, r)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // getPack reads one pack the server keeps, by resource name.

@@ -88,7 +88,7 @@ func storeServices(ms []mounts.Mount, storeDir, uploadsDir string, projectStore 
 		// A snapshot may name its design, designs/{d}, and Ingest looks it up here (agni issue 1695).
 		resolver.Designs = catalog
 	}
-	packSvc := service.NewPackService(packStore, resolver.Blob)
+	packSvc := service.NewPackService(packStore, resolver.Blob).WithImporter(projects.PackFromFiles)
 	if resolver != nil {
 		// A snapshot may name the packs it is read under, packs/{k} (agni issue 1704).
 		resolver.Packs = packSvc

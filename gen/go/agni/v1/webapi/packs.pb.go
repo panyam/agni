@@ -24,6 +24,71 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ImportPackFilesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+	// name.
+	PackId string `protobuf:"bytes,1,opt,name=pack_id,json=packId,proto3" json:"pack_id,omitempty"`
+	// files are the folder's files, each path relative to the folder, project.yaml among them at the
+	// top. The contents go up with SnapshotService.UploadBlobs.
+	Files []*SnapshotFile `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`
+	// title is the pack's title. Empty takes project.yaml's title.
+	Title         string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportPackFilesRequest) Reset() {
+	*x = ImportPackFilesRequest{}
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportPackFilesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportPackFilesRequest) ProtoMessage() {}
+
+func (x *ImportPackFilesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportPackFilesRequest.ProtoReflect.Descriptor instead.
+func (*ImportPackFilesRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ImportPackFilesRequest) GetPackId() string {
+	if x != nil {
+		return x.PackId
+	}
+	return ""
+}
+
+func (x *ImportPackFilesRequest) GetFiles() []*SnapshotFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *ImportPackFilesRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
 // Pack is a set of rules kept on a server, named "packs/{pack}".
 type Pack struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -53,7 +118,7 @@ type Pack struct {
 
 func (x *Pack) Reset() {
 	*x = Pack{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -65,7 +130,7 @@ func (x *Pack) String() string {
 func (*Pack) ProtoMessage() {}
 
 func (x *Pack) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[0]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -78,7 +143,7 @@ func (x *Pack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pack.ProtoReflect.Descriptor instead.
 func (*Pack) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Pack) GetName() string {
@@ -142,7 +207,7 @@ type CreatePackRequest struct {
 
 func (x *CreatePackRequest) Reset() {
 	*x = CreatePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -154,7 +219,7 @@ func (x *CreatePackRequest) String() string {
 func (*CreatePackRequest) ProtoMessage() {}
 
 func (x *CreatePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -167,7 +232,7 @@ func (x *CreatePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePackRequest.ProtoReflect.Descriptor instead.
 func (*CreatePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreatePackRequest) GetPackId() string {
@@ -193,7 +258,7 @@ type GetPackRequest struct {
 
 func (x *GetPackRequest) Reset() {
 	*x = GetPackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -205,7 +270,7 @@ func (x *GetPackRequest) String() string {
 func (*GetPackRequest) ProtoMessage() {}
 
 func (x *GetPackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +283,7 @@ func (x *GetPackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPackRequest.ProtoReflect.Descriptor instead.
 func (*GetPackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetPackRequest) GetName() string {
@@ -243,7 +308,7 @@ type ListPacksRequest struct {
 
 func (x *ListPacksRequest) Reset() {
 	*x = ListPacksRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +320,7 @@ func (x *ListPacksRequest) String() string {
 func (*ListPacksRequest) ProtoMessage() {}
 
 func (x *ListPacksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +333,7 @@ func (x *ListPacksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPacksRequest.ProtoReflect.Descriptor instead.
 func (*ListPacksRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListPacksRequest) GetPageSize() int32 {
@@ -303,7 +368,7 @@ type ListPacksResponse struct {
 
 func (x *ListPacksResponse) Reset() {
 	*x = ListPacksResponse{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -315,7 +380,7 @@ func (x *ListPacksResponse) String() string {
 func (*ListPacksResponse) ProtoMessage() {}
 
 func (x *ListPacksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -328,7 +393,7 @@ func (x *ListPacksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPacksResponse.ProtoReflect.Descriptor instead.
 func (*ListPacksResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListPacksResponse) GetPacks() []*Pack {
@@ -358,7 +423,7 @@ type UpdatePackRequest struct {
 
 func (x *UpdatePackRequest) Reset() {
 	*x = UpdatePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +435,7 @@ func (x *UpdatePackRequest) String() string {
 func (*UpdatePackRequest) ProtoMessage() {}
 
 func (x *UpdatePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +448,7 @@ func (x *UpdatePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePackRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpdatePackRequest) GetPack() *Pack {
@@ -409,7 +474,7 @@ type DeletePackRequest struct {
 
 func (x *DeletePackRequest) Reset() {
 	*x = DeletePackRequest{}
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +486,7 @@ func (x *DeletePackRequest) String() string {
 func (*DeletePackRequest) ProtoMessage() {}
 
 func (x *DeletePackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_packs_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_packs_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +499,7 @@ func (x *DeletePackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePackRequest.ProtoReflect.Descriptor instead.
 func (*DeletePackRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_packs_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeletePackRequest) GetName() string {
@@ -448,7 +513,11 @@ var File_agni_v1_webapi_packs_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/packs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n" +
+	"\x1aagni/v1/webapi/packs.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\x1a\x1dagni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"{\n" +
+	"\x16ImportPackFilesRequest\x12\x17\n" +
+	"\apack_id\x18\x01 \x01(\tR\x06packId\x122\n" +
+	"\x05files\x18\x02 \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\"\xff\x01\n" +
 	"\x04Pack\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x126\n" +
@@ -476,7 +545,7 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
 	"updateMask\"'\n" +
 	"\x11DeletePackRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2\xf7\x02\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name2\xc8\x03\n" +
 	"\vPackService\x12E\n" +
 	"\n" +
 	"CreatePack\x12!.agni.v1.webapi.CreatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12?\n" +
@@ -485,7 +554,8 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\n" +
 	"UpdatePack\x12!.agni.v1.webapi.UpdatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12G\n" +
 	"\n" +
-	"DeletePack\x12!.agni.v1.webapi.DeletePackRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"DeletePack\x12!.agni.v1.webapi.DeletePackRequest\x1a\x16.google.protobuf.Empty\x12O\n" +
+	"\x0fImportPackFiles\x12&.agni.v1.webapi.ImportPackFilesRequest\x1a\x14.agni.v1.webapi.PackB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_packs_proto_rawDescOnce sync.Once
@@ -499,44 +569,48 @@ func file_agni_v1_webapi_packs_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_packs_proto_rawDescData
 }
 
-var file_agni_v1_webapi_packs_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agni_v1_webapi_packs_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agni_v1_webapi_packs_proto_goTypes = []any{
-	(*Pack)(nil),                  // 0: agni.v1.webapi.Pack
-	(*CreatePackRequest)(nil),     // 1: agni.v1.webapi.CreatePackRequest
-	(*GetPackRequest)(nil),        // 2: agni.v1.webapi.GetPackRequest
-	(*ListPacksRequest)(nil),      // 3: agni.v1.webapi.ListPacksRequest
-	(*ListPacksResponse)(nil),     // 4: agni.v1.webapi.ListPacksResponse
-	(*UpdatePackRequest)(nil),     // 5: agni.v1.webapi.UpdatePackRequest
-	(*DeletePackRequest)(nil),     // 6: agni.v1.webapi.DeletePackRequest
-	(*AnalysisConfig)(nil),        // 7: agni.v1.webapi.AnalysisConfig
-	(*SnapshotFile)(nil),          // 8: agni.v1.webapi.SnapshotFile
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil), // 10: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),         // 11: google.protobuf.Empty
+	(*ImportPackFilesRequest)(nil), // 0: agni.v1.webapi.ImportPackFilesRequest
+	(*Pack)(nil),                   // 1: agni.v1.webapi.Pack
+	(*CreatePackRequest)(nil),      // 2: agni.v1.webapi.CreatePackRequest
+	(*GetPackRequest)(nil),         // 3: agni.v1.webapi.GetPackRequest
+	(*ListPacksRequest)(nil),       // 4: agni.v1.webapi.ListPacksRequest
+	(*ListPacksResponse)(nil),      // 5: agni.v1.webapi.ListPacksResponse
+	(*UpdatePackRequest)(nil),      // 6: agni.v1.webapi.UpdatePackRequest
+	(*DeletePackRequest)(nil),      // 7: agni.v1.webapi.DeletePackRequest
+	(*SnapshotFile)(nil),           // 8: agni.v1.webapi.SnapshotFile
+	(*AnalysisConfig)(nil),         // 9: agni.v1.webapi.AnalysisConfig
+	(*timestamppb.Timestamp)(nil),  // 10: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),  // 11: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),          // 12: google.protobuf.Empty
 }
 var file_agni_v1_webapi_packs_proto_depIdxs = []int32{
-	7,  // 0: agni.v1.webapi.Pack.config:type_name -> agni.v1.webapi.AnalysisConfig
-	8,  // 1: agni.v1.webapi.Pack.files:type_name -> agni.v1.webapi.SnapshotFile
-	9,  // 2: agni.v1.webapi.Pack.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 3: agni.v1.webapi.CreatePackRequest.pack:type_name -> agni.v1.webapi.Pack
-	0,  // 4: agni.v1.webapi.ListPacksResponse.packs:type_name -> agni.v1.webapi.Pack
-	0,  // 5: agni.v1.webapi.UpdatePackRequest.pack:type_name -> agni.v1.webapi.Pack
-	10, // 6: agni.v1.webapi.UpdatePackRequest.update_mask:type_name -> google.protobuf.FieldMask
-	1,  // 7: agni.v1.webapi.PackService.CreatePack:input_type -> agni.v1.webapi.CreatePackRequest
-	2,  // 8: agni.v1.webapi.PackService.GetPack:input_type -> agni.v1.webapi.GetPackRequest
-	3,  // 9: agni.v1.webapi.PackService.ListPacks:input_type -> agni.v1.webapi.ListPacksRequest
-	5,  // 10: agni.v1.webapi.PackService.UpdatePack:input_type -> agni.v1.webapi.UpdatePackRequest
-	6,  // 11: agni.v1.webapi.PackService.DeletePack:input_type -> agni.v1.webapi.DeletePackRequest
-	0,  // 12: agni.v1.webapi.PackService.CreatePack:output_type -> agni.v1.webapi.Pack
-	0,  // 13: agni.v1.webapi.PackService.GetPack:output_type -> agni.v1.webapi.Pack
-	4,  // 14: agni.v1.webapi.PackService.ListPacks:output_type -> agni.v1.webapi.ListPacksResponse
-	0,  // 15: agni.v1.webapi.PackService.UpdatePack:output_type -> agni.v1.webapi.Pack
-	11, // 16: agni.v1.webapi.PackService.DeletePack:output_type -> google.protobuf.Empty
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	8,  // 0: agni.v1.webapi.ImportPackFilesRequest.files:type_name -> agni.v1.webapi.SnapshotFile
+	9,  // 1: agni.v1.webapi.Pack.config:type_name -> agni.v1.webapi.AnalysisConfig
+	8,  // 2: agni.v1.webapi.Pack.files:type_name -> agni.v1.webapi.SnapshotFile
+	10, // 3: agni.v1.webapi.Pack.update_time:type_name -> google.protobuf.Timestamp
+	1,  // 4: agni.v1.webapi.CreatePackRequest.pack:type_name -> agni.v1.webapi.Pack
+	1,  // 5: agni.v1.webapi.ListPacksResponse.packs:type_name -> agni.v1.webapi.Pack
+	1,  // 6: agni.v1.webapi.UpdatePackRequest.pack:type_name -> agni.v1.webapi.Pack
+	11, // 7: agni.v1.webapi.UpdatePackRequest.update_mask:type_name -> google.protobuf.FieldMask
+	2,  // 8: agni.v1.webapi.PackService.CreatePack:input_type -> agni.v1.webapi.CreatePackRequest
+	3,  // 9: agni.v1.webapi.PackService.GetPack:input_type -> agni.v1.webapi.GetPackRequest
+	4,  // 10: agni.v1.webapi.PackService.ListPacks:input_type -> agni.v1.webapi.ListPacksRequest
+	6,  // 11: agni.v1.webapi.PackService.UpdatePack:input_type -> agni.v1.webapi.UpdatePackRequest
+	7,  // 12: agni.v1.webapi.PackService.DeletePack:input_type -> agni.v1.webapi.DeletePackRequest
+	0,  // 13: agni.v1.webapi.PackService.ImportPackFiles:input_type -> agni.v1.webapi.ImportPackFilesRequest
+	1,  // 14: agni.v1.webapi.PackService.CreatePack:output_type -> agni.v1.webapi.Pack
+	1,  // 15: agni.v1.webapi.PackService.GetPack:output_type -> agni.v1.webapi.Pack
+	5,  // 16: agni.v1.webapi.PackService.ListPacks:output_type -> agni.v1.webapi.ListPacksResponse
+	1,  // 17: agni.v1.webapi.PackService.UpdatePack:output_type -> agni.v1.webapi.Pack
+	12, // 18: agni.v1.webapi.PackService.DeletePack:output_type -> google.protobuf.Empty
+	1,  // 19: agni.v1.webapi.PackService.ImportPackFiles:output_type -> agni.v1.webapi.Pack
+	14, // [14:20] is the sub-list for method output_type
+	8,  // [8:14] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_packs_proto_init() }
@@ -552,7 +626,7 @@ func file_agni_v1_webapi_packs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_packs_proto_rawDesc), len(file_agni_v1_webapi_packs_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

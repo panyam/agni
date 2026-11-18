@@ -2100,6 +2100,10 @@ pub struct Design {
     /// only.
     #[prost(string, repeated, tag="13")]
     pub artifacts: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// read_only is true on a design a mounted folder declares, whose every write is refused, and false
+    /// on one the server stores (agni issue 1697). Output only.
+    #[prost(bool, tag="14")]
+    pub read_only: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {
@@ -3583,6 +3587,20 @@ impl LexiconSource {
             _ => None,
         }
     }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ImportPackFilesRequest {
+    /// pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+    /// name.
+    #[prost(string, tag="1")]
+    pub pack_id: ::prost::alloc::string::String,
+    /// files are the folder's files, each path relative to the folder, project.yaml among them at the
+    /// top. The contents go up with SnapshotService.UploadBlobs.
+    #[prost(message, repeated, tag="2")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// title is the pack's title. Empty takes project.yaml's title.
+    #[prost(string, tag="3")]
+    pub title: ::prost::alloc::string::String,
 }
 /// Pack is a set of rules kept on a server, named "packs/{pack}".
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -171,6 +171,9 @@ message Design {
   // by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
   // only.
   repeated string artifacts = 13;
+  // read_only is true on a design a mounted folder declares, whose every write is refused, and false
+  // on one the server stores (agni issue 1697). Output only.
+  bool read_only = 14;
 
   // intent_uri, which moved into config and is now config.intent. revisions, whose versions became
   // designs of their own named by series (agni issue 1692).

@@ -78,22 +78,27 @@ export async function withUploads<T>(uploads: UploadsClient, m: Manifest, write:
   } catch (err) {
     const missing = missingHashes(err);
     if (missing.length === 0) throw err;
-    let batch: Uint8Array[] = [];
-    let size = 0;
-    for (const h of missing) {
-      const b = m.byHash.get(h);
-      if (!b) throw new Error(`the server asked for contents this upload did not send (${h})`);
-      if (size + b.length > uploadBatchBytes && batch.length) {
-        await uploads.uploadBlobs({ contents: batch });
-        batch = [];
-        size = 0;
-      }
-      batch.push(b);
-      size += b.length;
-    }
-    if (batch.length) await uploads.uploadBlobs({ contents: batch });
+    await uploadMissing(uploads, m, missing);
     return await write();
   }
+}
+
+// uploadMissing sends the contents of the hashes named, from the manifest, in batches.
+export async function uploadMissing(uploads: UploadsClient, m: Manifest, missing: string[]): Promise<void> {
+  let batch: Uint8Array[] = [];
+  let size = 0;
+  for (const h of missing) {
+    const b = m.byHash.get(h);
+    if (!b) throw new Error(`the server asked for contents this upload did not send (${h})`);
+    if (size + b.length > uploadBatchBytes && batch.length) {
+      await uploads.uploadBlobs({ contents: batch });
+      batch = [];
+      size = 0;
+    }
+    batch.push(b);
+    size += b.length;
+  }
+  if (batch.length) await uploads.uploadBlobs({ contents: batch });
 }
 
 // DesignsClient is the part of DesignService the library page calls.

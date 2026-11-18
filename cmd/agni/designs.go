@@ -441,35 +441,46 @@ func walkLocal(dir string) ([]string, error) {
 }
 
 // retryUpload makes a write, and when the server answers that it lacks contents, uploads them from
-// have and makes the write again.
+// have and makes the write again. A write may name its contents in rounds, as ImportPackFiles asks
+// for project.yaml before the files it names, so it repeats while each answer asks for contents not
+// sent yet.
 func retryUpload[T any](ctx context.Context, c *designsClient, have fileSet, write func() (T, error)) (T, error) {
-	out, err := write()
-	var ce *connect.Error
-	if err == nil || !errors.As(err, &ce) {
-		return out, err
-	}
-	var missing []string
-	for _, d := range ce.Details() {
-		if v, derr := d.Value(); derr == nil {
-			if bm, ok := v.(*webapi.BlobsMissing); ok {
-				missing = append(missing, bm.GetSha256()...)
+	sent := map[string]bool{}
+	for {
+		out, err := write()
+		var ce *connect.Error
+		if err == nil || !errors.As(err, &ce) {
+			return out, err
+		}
+		var missing []string
+		for _, d := range ce.Details() {
+			if v, derr := d.Value(); derr == nil {
+				if bm, ok := v.(*webapi.BlobsMissing); ok {
+					for _, h := range bm.GetSha256() {
+						if !sent[h] {
+							missing = append(missing, h)
+						}
+					}
+				}
 			}
 		}
-	}
-	if len(missing) == 0 {
-		return out, err
-	}
-	read := func(h string) ([]byte, error) {
-		b, ok := have.byHash[h]
-		if !ok {
-			return nil, fmt.Errorf("the server asked for contents this push did not send (%s)", h)
+		if len(missing) == 0 {
+			return out, err
 		}
-		return b, nil
+		read := func(h string) ([]byte, error) {
+			b, ok := have.byHash[h]
+			if !ok {
+				return nil, fmt.Errorf("the server asked for contents this push did not send (%s)", h)
+			}
+			return b, nil
+		}
+		if err := (remoteSnapshot{c.snaps}).upload(ctx, missing, read); err != nil {
+			return out, err
+		}
+		for _, h := range missing {
+			sent[h] = true
+		}
 	}
-	if err := (remoteSnapshot{c.snaps}).upload(ctx, missing, read); err != nil {
-		return out, err
-	}
-	return write()
 }
 
 // push keeps a folder's design on the server.

@@ -338,4 +338,15 @@ public interface DesignOrBuilder extends
    */
   com.google.protobuf.ByteString
       getArtifactsBytes(int index);
+
+  /**
+   * <pre>
+   * read_only is true on a design a mounted folder declares, whose every write is refused, and false
+   * on one the server stores (agni issue 1697). Output only.
+   * </pre>
+   *
+   * <code>bool read_only = 14 [json_name = "readOnly"];</code>
+   * @return The readOnly.
+   */
+  boolean getReadOnly();
 }

@@ -333,6 +333,10 @@ func TestLibrarySpaceServesTheLibraryPage(t *testing.T) {
 		{"/designs/", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
 		{"/designs/bb-1.1.3", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/landing.js", "/static/app.js"}},
 		{"/mounts/", []string{"/static/browse.js"}, []string{"/static/library.js"}},
+		// The projects and packs pages share the shell (agni issue 1697).
+		{"/projects/", []string{`id="library"`, "/static/library.js", "<title>Agni projects"}, []string{"/static/browse.js", "/static/app.js"}},
+		{"/projects/bench", []string{`id="library"`, "/static/library.js"}, []string{"/static/browse.js", "/static/app.js"}},
+		{"/packs/jetson", []string{`id="library"`, "/static/library.js", "<title>Agni packs"}, []string{"/static/browse.js", "/static/app.js"}},
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))

@@ -16,7 +16,42 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/packs.proto.
  */
 export const file_agni_v1_webapi_packs: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9wYWNrcy5wcm90bxIOYWduaS52MS53ZWJhcGkizAEKBFBhY2sSDAoEbmFtZRgBIAEoCRINCgV0aXRsZRgCIAEoCRIuCgZjb25maWcYAyABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIrCgVmaWxlcxgEIAMoCzIcLmFnbmkudjEud2ViYXBpLlNuYXBzaG90RmlsZRILCgN1cmkYBSABKAkSDAoEaGFzaBgGIAEoCRIvCgt1cGRhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiSAoRQ3JlYXRlUGFja1JlcXVlc3QSDwoHcGFja19pZBgBIAEoCRIiCgRwYWNrGAIgASgLMhQuYWduaS52MS53ZWJhcGkuUGFjayIeCg5HZXRQYWNrUmVxdWVzdBIMCgRuYW1lGAEgASgJIkkKEExpc3RQYWNrc1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlEKEUxpc3RQYWNrc1Jlc3BvbnNlEiMKBXBhY2tzGAEgAygLMhQuYWduaS52MS53ZWJhcGkuUGFjaxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiaAoRVXBkYXRlUGFja1JlcXVlc3QSIgoEcGFjaxgBIAEoCzIULmFnbmkudjEud2ViYXBpLlBhY2sSLwoLdXBkYXRlX21hc2sYAiABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrIiEKEURlbGV0ZVBhY2tSZXF1ZXN0EgwKBG5hbWUYASABKAky9wIKC1BhY2tTZXJ2aWNlEkUKCkNyZWF0ZVBhY2sSIS5hZ25pLnYxLndlYmFwaS5DcmVhdGVQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSPwoHR2V0UGFjaxIeLmFnbmkudjEud2ViYXBpLkdldFBhY2tSZXF1ZXN0GhQuYWduaS52MS53ZWJhcGkuUGFjaxJQCglMaXN0UGFja3MSIC5hZ25pLnYxLndlYmFwaS5MaXN0UGFja3NSZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuTGlzdFBhY2tzUmVzcG9uc2USRQoKVXBkYXRlUGFjaxIhLmFnbmkudjEud2ViYXBpLlVwZGF0ZVBhY2tSZXF1ZXN0GhQuYWduaS52MS53ZWJhcGkuUGFjaxJHCgpEZWxldGVQYWNrEiEuYWduaS52MS53ZWJhcGkuRGVsZXRlUGFja1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_config, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9wYWNrcy5wcm90bxIOYWduaS52MS53ZWJhcGkiZQoWSW1wb3J0UGFja0ZpbGVzUmVxdWVzdBIPCgdwYWNrX2lkGAEgASgJEisKBWZpbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlEg0KBXRpdGxlGAMgASgJIswBCgRQYWNrEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSLgoGY29uZmlnGAMgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSKwoFZmlsZXMYBCADKAsyHC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdEZpbGUSCwoDdXJpGAUgASgJEgwKBGhhc2gYBiABKAkSLwoLdXBkYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIkgKEUNyZWF0ZVBhY2tSZXF1ZXN0Eg8KB3BhY2tfaWQYASABKAkSIgoEcGFjaxgCIAEoCzIULmFnbmkudjEud2ViYXBpLlBhY2siHgoOR2V0UGFja1JlcXVlc3QSDAoEbmFtZRgBIAEoCSJJChBMaXN0UGFja3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJRChFMaXN0UGFja3NSZXNwb25zZRIjCgVwYWNrcxgBIAMoCzIULmFnbmkudjEud2ViYXBpLlBhY2sSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJImgKEVVwZGF0ZVBhY2tSZXF1ZXN0EiIKBHBhY2sYASABKAsyFC5hZ25pLnYxLndlYmFwaS5QYWNrEi8KC3VwZGF0ZV9tYXNrGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzayIhChFEZWxldGVQYWNrUmVxdWVzdBIMCgRuYW1lGAEgASgJMsgDCgtQYWNrU2VydmljZRJFCgpDcmVhdGVQYWNrEiEuYWduaS52MS53ZWJhcGkuQ3JlYXRlUGFja1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrEj8KB0dldFBhY2sSHi5hZ25pLnYxLndlYmFwaS5HZXRQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSUAoJTGlzdFBhY2tzEiAuYWduaS52MS53ZWJhcGkuTGlzdFBhY2tzUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkxpc3RQYWNrc1Jlc3BvbnNlEkUKClVwZGF0ZVBhY2sSIS5hZ25pLnYxLndlYmFwaS5VcGRhdGVQYWNrUmVxdWVzdBoULmFnbmkudjEud2ViYXBpLlBhY2sSRwoKRGVsZXRlUGFjaxIhLmFnbmkudjEud2ViYXBpLkRlbGV0ZVBhY2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ek8KD0ltcG9ydFBhY2tGaWxlcxImLmFnbmkudjEud2ViYXBpLkltcG9ydFBhY2tGaWxlc1JlcXVlc3QaFC5hZ25pLnYxLndlYmFwaS5QYWNrQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_config, file_agni_v1_webapi_snapshot, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp]);
+
+/**
+ * @generated from message agni.v1.webapi.ImportPackFilesRequest
+ */
+export type ImportPackFilesRequest = Message<"agni.v1.webapi.ImportPackFilesRequest"> & {
+  /**
+   * pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+   * name.
+   *
+   * @generated from field: string pack_id = 1;
+   */
+  packId: string;
+
+  /**
+   * files are the folder's files, each path relative to the folder, project.yaml among them at the
+   * top. The contents go up with SnapshotService.UploadBlobs.
+   *
+   * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 2;
+   */
+  files: SnapshotFile[];
+
+  /**
+   * title is the pack's title. Empty takes project.yaml's title.
+   *
+   * @generated from field: string title = 3;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ImportPackFilesRequest.
+ * Use `create(ImportPackFilesRequestSchema)` to create a new message.
+ */
+export const ImportPackFilesRequestSchema: GenMessage<ImportPackFilesRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_packs, 0);
 
 /**
  * Pack is a set of rules kept on a server, named "packs/{pack}".
@@ -86,7 +121,7 @@ export type Pack = Message<"agni.v1.webapi.Pack"> & {
  * Use `create(PackSchema)` to create a new message.
  */
 export const PackSchema: GenMessage<Pack> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 0);
+  messageDesc(file_agni_v1_webapi_packs, 1);
 
 /**
  * @generated from message agni.v1.webapi.CreatePackRequest
@@ -112,7 +147,7 @@ export type CreatePackRequest = Message<"agni.v1.webapi.CreatePackRequest"> & {
  * Use `create(CreatePackRequestSchema)` to create a new message.
  */
 export const CreatePackRequestSchema: GenMessage<CreatePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 1);
+  messageDesc(file_agni_v1_webapi_packs, 2);
 
 /**
  * @generated from message agni.v1.webapi.GetPackRequest
@@ -131,7 +166,7 @@ export type GetPackRequest = Message<"agni.v1.webapi.GetPackRequest"> & {
  * Use `create(GetPackRequestSchema)` to create a new message.
  */
 export const GetPackRequestSchema: GenMessage<GetPackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 2);
+  messageDesc(file_agni_v1_webapi_packs, 3);
 
 /**
  * @generated from message agni.v1.webapi.ListPacksRequest
@@ -165,7 +200,7 @@ export type ListPacksRequest = Message<"agni.v1.webapi.ListPacksRequest"> & {
  * Use `create(ListPacksRequestSchema)` to create a new message.
  */
 export const ListPacksRequestSchema: GenMessage<ListPacksRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 3);
+  messageDesc(file_agni_v1_webapi_packs, 4);
 
 /**
  * @generated from message agni.v1.webapi.ListPacksResponse
@@ -189,7 +224,7 @@ export type ListPacksResponse = Message<"agni.v1.webapi.ListPacksResponse"> & {
  * Use `create(ListPacksResponseSchema)` to create a new message.
  */
 export const ListPacksResponseSchema: GenMessage<ListPacksResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 4);
+  messageDesc(file_agni_v1_webapi_packs, 5);
 
 /**
  * @generated from message agni.v1.webapi.UpdatePackRequest
@@ -216,7 +251,7 @@ export type UpdatePackRequest = Message<"agni.v1.webapi.UpdatePackRequest"> & {
  * Use `create(UpdatePackRequestSchema)` to create a new message.
  */
 export const UpdatePackRequestSchema: GenMessage<UpdatePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 5);
+  messageDesc(file_agni_v1_webapi_packs, 6);
 
 /**
  * @generated from message agni.v1.webapi.DeletePackRequest
@@ -235,7 +270,7 @@ export type DeletePackRequest = Message<"agni.v1.webapi.DeletePackRequest"> & {
  * Use `create(DeletePackRequestSchema)` to create a new message.
  */
 export const DeletePackRequestSchema: GenMessage<DeletePackRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_packs, 6);
+  messageDesc(file_agni_v1_webapi_packs, 7);
 
 /**
  * This file defines PackService, which keeps the packs a server holds (agni issue 1704). A pack is
@@ -303,6 +338,22 @@ export const PackService: GenService<{
     methodKind: "unary";
     input: typeof DeletePackRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+   * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+   * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+   * designs, are left out, and their contents are never asked for. Contents the server lacks are
+   * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+   * so a client sends what is named and asks again until the call succeeds. A folder with no
+   * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+   *
+   * @generated from rpc agni.v1.webapi.PackService.ImportPackFiles
+   */
+  importPackFiles: {
+    methodKind: "unary";
+    input: typeof ImportPackFilesRequestSchema;
+    output: typeof PackSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_packs, 0);

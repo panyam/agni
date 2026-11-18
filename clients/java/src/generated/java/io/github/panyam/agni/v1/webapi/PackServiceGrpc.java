@@ -176,6 +176,37 @@ public final class PackServiceGrpc {
     return getDeletePackMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportPackFilesRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getImportPackFilesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ImportPackFiles",
+      requestType = io.github.panyam.agni.v1.webapi.ImportPackFilesRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Pack.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportPackFilesRequest,
+      io.github.panyam.agni.v1.webapi.Pack> getImportPackFilesMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ImportPackFilesRequest, io.github.panyam.agni.v1.webapi.Pack> getImportPackFilesMethod;
+    if ((getImportPackFilesMethod = PackServiceGrpc.getImportPackFilesMethod) == null) {
+      synchronized (PackServiceGrpc.class) {
+        if ((getImportPackFilesMethod = PackServiceGrpc.getImportPackFilesMethod) == null) {
+          PackServiceGrpc.getImportPackFilesMethod = getImportPackFilesMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.ImportPackFilesRequest, io.github.panyam.agni.v1.webapi.Pack>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ImportPackFiles"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.ImportPackFilesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Pack.getDefaultInstance()))
+              .setSchemaDescriptor(new PackServiceMethodDescriptorSupplier("ImportPackFiles"))
+              .build();
+        }
+      }
+    }
+    return getImportPackFilesMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -301,6 +332,22 @@ public final class PackServiceGrpc {
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeletePackMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+     * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+     * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+     * designs, are left out, and their contents are never asked for. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+     * so a client sends what is named and asks again until the call succeeds. A folder with no
+     * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    default void importPackFiles(io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getImportPackFilesMethod(), responseObserver);
+    }
   }
 
   /**
@@ -406,6 +453,23 @@ public final class PackServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeletePackMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+     * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+     * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+     * designs, are left out, and their contents are never asked for. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+     * so a client sends what is named and asks again until the call succeeds. A folder with no
+     * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public void importPackFiles(io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getImportPackFilesMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -486,6 +550,22 @@ public final class PackServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeletePackMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+     * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+     * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+     * designs, are left out, and their contents are never asked for. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+     * so a client sends what is named and asks again until the call succeeds. A folder with no
+     * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack importPackFiles(io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getImportPackFilesMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -565,6 +645,22 @@ public final class PackServiceGrpc {
     public com.google.protobuf.Empty deletePack(io.github.panyam.agni.v1.webapi.DeletePackRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeletePackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+     * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+     * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+     * designs, are left out, and their contents are never asked for. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+     * so a client sends what is named and asks again until the call succeeds. A folder with no
+     * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Pack importPackFiles(io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getImportPackFilesMethod(), getCallOptions(), request);
     }
   }
 
@@ -651,6 +747,23 @@ public final class PackServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeletePackMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+     * (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+     * profile, param, symbol, library and query tiers name. The folder's other files, such as its
+     * designs, are left out, and their contents are never asked for. Contents the server lacks are
+     * FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+     * so a client sends what is named and asks again until the call succeeds. A folder with no
+     * project.yaml, or one that extends another, is INVALID_ARGUMENT.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Pack> importPackFiles(
+        io.github.panyam.agni.v1.webapi.ImportPackFilesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getImportPackFilesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_PACK = 0;
@@ -658,6 +771,7 @@ public final class PackServiceGrpc {
   private static final int METHODID_LIST_PACKS = 2;
   private static final int METHODID_UPDATE_PACK = 3;
   private static final int METHODID_DELETE_PACK = 4;
+  private static final int METHODID_IMPORT_PACK_FILES = 5;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -695,6 +809,10 @@ public final class PackServiceGrpc {
         case METHODID_DELETE_PACK:
           serviceImpl.deletePack((io.github.panyam.agni.v1.webapi.DeletePackRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_IMPORT_PACK_FILES:
+          serviceImpl.importPackFiles((io.github.panyam.agni.v1.webapi.ImportPackFilesRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Pack>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -749,6 +867,13 @@ public final class PackServiceGrpc {
               io.github.panyam.agni.v1.webapi.DeletePackRequest,
               com.google.protobuf.Empty>(
                 service, METHODID_DELETE_PACK)))
+        .addMethod(
+          getImportPackFilesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.ImportPackFilesRequest,
+              io.github.panyam.agni.v1.webapi.Pack>(
+                service, METHODID_IMPORT_PACK_FILES)))
         .build();
   }
 
@@ -802,6 +927,7 @@ public final class PackServiceGrpc {
               .addMethod(getListPacksMethod())
               .addMethod(getUpdatePackMethod())
               .addMethod(getDeletePackMethod())
+              .addMethod(getImportPackFilesMethod())
               .build();
         }
       }

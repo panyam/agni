@@ -44,6 +44,9 @@ const (
 	PackServiceUpdatePackProcedure = "/agni.v1.webapi.PackService/UpdatePack"
 	// PackServiceDeletePackProcedure is the fully-qualified name of the PackService's DeletePack RPC.
 	PackServiceDeletePackProcedure = "/agni.v1.webapi.PackService/DeletePack"
+	// PackServiceImportPackFilesProcedure is the fully-qualified name of the PackService's
+	// ImportPackFiles RPC.
+	PackServiceImportPackFilesProcedure = "/agni.v1.webapi.PackService/ImportPackFiles"
 )
 
 // PackServiceClient is a client for the agni.v1.webapi.PackService service.
@@ -62,6 +65,14 @@ type PackServiceClient interface {
 	UpdatePack(context.Context, *connect.Request[webapi.UpdatePackRequest]) (*connect.Response[webapi.Pack], error)
 	// DeletePack removes a pack. A snapshot that names it then fails to read, naming the pack.
 	DeletePack(context.Context, *connect.Request[webapi.DeletePackRequest]) (*connect.Response[emptypb.Empty], error)
+	// ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+	// (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+	// profile, param, symbol, library and query tiers name. The folder's other files, such as its
+	// designs, are left out, and their contents are never asked for. Contents the server lacks are
+	// FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+	// so a client sends what is named and asks again until the call succeeds. A folder with no
+	// project.yaml, or one that extends another, is INVALID_ARGUMENT.
+	ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error)
 }
 
 // NewPackServiceClient constructs a client for the agni.v1.webapi.PackService service. By default,
@@ -105,16 +116,23 @@ func NewPackServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(packServiceMethods.ByName("DeletePack")),
 			connect.WithClientOptions(opts...),
 		),
+		importPackFiles: connect.NewClient[webapi.ImportPackFilesRequest, webapi.Pack](
+			httpClient,
+			baseURL+PackServiceImportPackFilesProcedure,
+			connect.WithSchema(packServiceMethods.ByName("ImportPackFiles")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // packServiceClient implements PackServiceClient.
 type packServiceClient struct {
-	createPack *connect.Client[webapi.CreatePackRequest, webapi.Pack]
-	getPack    *connect.Client[webapi.GetPackRequest, webapi.Pack]
-	listPacks  *connect.Client[webapi.ListPacksRequest, webapi.ListPacksResponse]
-	updatePack *connect.Client[webapi.UpdatePackRequest, webapi.Pack]
-	deletePack *connect.Client[webapi.DeletePackRequest, emptypb.Empty]
+	createPack      *connect.Client[webapi.CreatePackRequest, webapi.Pack]
+	getPack         *connect.Client[webapi.GetPackRequest, webapi.Pack]
+	listPacks       *connect.Client[webapi.ListPacksRequest, webapi.ListPacksResponse]
+	updatePack      *connect.Client[webapi.UpdatePackRequest, webapi.Pack]
+	deletePack      *connect.Client[webapi.DeletePackRequest, emptypb.Empty]
+	importPackFiles *connect.Client[webapi.ImportPackFilesRequest, webapi.Pack]
 }
 
 // CreatePack calls agni.v1.webapi.PackService.CreatePack.
@@ -142,6 +160,11 @@ func (c *packServiceClient) DeletePack(ctx context.Context, req *connect.Request
 	return c.deletePack.CallUnary(ctx, req)
 }
 
+// ImportPackFiles calls agni.v1.webapi.PackService.ImportPackFiles.
+func (c *packServiceClient) ImportPackFiles(ctx context.Context, req *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error) {
+	return c.importPackFiles.CallUnary(ctx, req)
+}
+
 // PackServiceHandler is an implementation of the agni.v1.webapi.PackService service.
 type PackServiceHandler interface {
 	// CreatePack keeps a new pack. An id a pack already holds is ALREADY_EXISTS. A server started
@@ -158,6 +181,14 @@ type PackServiceHandler interface {
 	UpdatePack(context.Context, *connect.Request[webapi.UpdatePackRequest]) (*connect.Response[webapi.Pack], error)
 	// DeletePack removes a pack. A snapshot that names it then fails to read, naming the pack.
 	DeletePack(context.Context, *connect.Request[webapi.DeletePackRequest]) (*connect.Response[emptypb.Empty], error)
+	// ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+	// (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+	// profile, param, symbol, library and query tiers name. The folder's other files, such as its
+	// designs, are left out, and their contents are never asked for. Contents the server lacks are
+	// FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+	// so a client sends what is named and asks again until the call succeeds. A folder with no
+	// project.yaml, or one that extends another, is INVALID_ARGUMENT.
+	ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error)
 }
 
 // NewPackServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -197,6 +228,12 @@ func NewPackServiceHandler(svc PackServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(packServiceMethods.ByName("DeletePack")),
 		connect.WithHandlerOptions(opts...),
 	)
+	packServiceImportPackFilesHandler := connect.NewUnaryHandler(
+		PackServiceImportPackFilesProcedure,
+		svc.ImportPackFiles,
+		connect.WithSchema(packServiceMethods.ByName("ImportPackFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.PackService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PackServiceCreatePackProcedure:
@@ -209,6 +246,8 @@ func NewPackServiceHandler(svc PackServiceHandler, opts ...connect.HandlerOption
 			packServiceUpdatePackHandler.ServeHTTP(w, r)
 		case PackServiceDeletePackProcedure:
 			packServiceDeletePackHandler.ServeHTTP(w, r)
+		case PackServiceImportPackFilesProcedure:
+			packServiceImportPackFilesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -236,4 +275,8 @@ func (UnimplementedPackServiceHandler) UpdatePack(context.Context, *connect.Requ
 
 func (UnimplementedPackServiceHandler) DeletePack(context.Context, *connect.Request[webapi.DeletePackRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.DeletePack is not implemented"))
+}
+
+func (UnimplementedPackServiceHandler) ImportPackFiles(context.Context, *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.PackService.ImportPackFiles is not implemented"))
 }

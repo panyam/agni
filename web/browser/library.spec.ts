@@ -1,7 +1,11 @@
 // The designs page uploads designs to a server's store, and they come back after a restart (agni
-// issue 1719). It drives the page as a person does: two Jetson baseboards uploaded as two designs of
-// one series through the new-design form, one schematic replaced on its design's page, the server
-// restarted over the same --store and --uploads, and the newer design opened in the viewer.
+// issues 1719, 1697). It drives the pages as a person does. Two Jetson baseboards go up as two designs
+// of one series through the new-design form. The Jetson project's rules go up as a pack from its
+// folder, and the newer design is validated against it, which keeps a report. The two designs go
+// into a project with the pack as its default, and the newer one is diffed against the older. Its
+// schematic is replaced on its page, which marks the report as run on earlier files. The server
+// restarts over the same --store and --uploads, everything reads back, and the newer design opens
+// in the viewer.
 //
 // It uploads the Jetson revisions 1.1.2 and 1.1.3 when `make samples-revisions` fetched them, and
 // otherwise the oracle corpus's Jetson board twice, so the gate runs it without the revisions.
@@ -108,6 +112,54 @@ describe("the designs page", () => {
       expect(await page.locator('[data-design="designs/bb-1.1.2"] .lb-latest').count()).toBe(0);
       await shot(page, "library.png");
 
+      // The Jetson project's rules go up as a pack from a copy of its folder holding a design too.
+      // The server keeps the files project.yaml names and never asks for the design's.
+      const project = mkdtempSync(join(tmpdir(), "agni-library-project-"));
+      for (const f of ["project.yaml", "profiles", "params"]) cpSync(join(repoRoot, "examples", "jetson-project", f), join(project, f), { recursive: true });
+      mkdirSync(join(project, "designs", "big"), { recursive: true });
+      cpSync(join(newer, "jetson-agx-thor-baseboard.kicad_pcb"), join(project, "designs", "big", "jetson-agx-thor-baseboard.kicad_pcb"));
+      await page.goto(`${server.base}/packs/`);
+      await page.getByTestId("pack-files-folder").setInputFiles(project);
+      await page.getByTestId("pack-upload").locator("text=files picked").waitFor();
+      await page.getByTestId("pack-upload").locator("button.lb-submit").click();
+      await page.waitForURL(`${server.base}/packs/jetson`, { timeout: 60_000 });
+      await expect.poll(() => page.locator("[data-testid=pack-tiers] tr").allTextContents()).toContain("Profilesprofiles");
+      expect(await page.locator(".lb-files li").allTextContents()).not.toContain("designs/big/jetson-agx-thor-baseboard.kicad_pcb");
+      await shot(page, "pack.png");
+
+      // Validate 1.1.3 against the pack, which keeps a report as a tab.
+      await page.goto(`${server.base}/designs/bb-1.1.3`);
+      await page.getByTestId("validate").locator("summary").click();
+      await page.locator('input[name="pack"][value="packs/jetson"]').check();
+      await page.getByTestId("validate").locator("button.lb-submit").click();
+      await page.getByTestId("report").waitFor({ timeout: 120_000 });
+      expect(await page.getByTestId("report-state").textContent()).toBe("current");
+      const findings = Number(await page.getByTestId("report").getAttribute("data-total"));
+      expect(findings).toBeGreaterThan(0);
+      expect(await page.locator(".lb-rule").count()).toBeGreaterThan(0);
+      await shot(page, "report.png");
+
+      // A project holds both designs, with the pack as its default.
+      await page.goto(`${server.base}/projects/`);
+      await page.getByTestId("new-project").locator('input[name="id"]').fill("bench");
+      await page.getByTestId("new-project").locator("button.lb-submit").click();
+      await page.waitForURL(`${server.base}/projects/bench`);
+      for (const d of ["designs/bb-1.1.2", "designs/bb-1.1.3"]) {
+        await page.getByTestId("add-design").locator("select").selectOption(d);
+        await page.getByTestId("add-design").locator("button").click();
+        await page.locator(`.lb-row[data-design="${d}"]`).waitFor();
+      }
+      await page.getByTestId("add-pack").locator("select").selectOption("packs/jetson");
+      await page.getByTestId("add-pack").locator("button").click();
+      await page.locator('[data-testid=project-packs] li[data-pack="packs/jetson"]').waitFor();
+      await shot(page, "project.png");
+
+      // The newer design diffs against the older from its page.
+      await page.goto(`${server.base}/designs/bb-1.1.3`);
+      await page.getByTestId("diff-with").locator("select").selectOption("designs/bb-1.1.2");
+      const diff = await page.getByTestId("diff-with").locator("a.lb-open").getAttribute("href");
+      expect(diff).toMatch(/\/mounts\/uploads\/bb-1\.1\.3\/.*\/view\?against=uploads%2Fbb-1\.1\.2%2F/);
+
       // Replace 1.1.3's schematic with the files it holds, one sheet edited. A folder's stray sheets
       // stay out, as the server left them out of the artifact.
       const before = await artifactFiles("designs/bb-1.1.3/artifacts/schematic");
@@ -119,6 +171,8 @@ describe("the designs page", () => {
       await expect.poll(async () => (await artifactFiles("designs/bb-1.1.3/artifacts/schematic"))["power.kicad_sch"], { timeout: 60_000 }).not.toBe(before["power.kicad_sch"]);
       const after = await artifactFiles("designs/bb-1.1.3/artifacts/schematic");
       expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+      await page.reload();
+      await expect.poll(() => page.getByTestId("report-state").textContent(), { timeout: 30_000 }).toBe("run on earlier design files");
 
       // The server restarts over the same store, and the page reads everything back.
       await server.stop();
@@ -127,8 +181,16 @@ describe("the designs page", () => {
       await page.locator('[data-design="designs/bb-1.1.3"]').waitFor({ timeout: 30_000 });
       expect(await page.locator(".lb-row").count()).toBe(2);
       expect(await page.locator('[data-design="designs/bb-1.1.3"] .lb-latest').count()).toBe(1);
+      await page.goto(`${server.base}/projects/bench`);
+      await page.locator('.lb-row[data-design="designs/bb-1.1.2"]').waitFor({ timeout: 30_000 });
+      expect(await page.locator(".lb-row").count()).toBe(2);
+      expect(await page.locator("[data-testid=project-packs] li").count()).toBe(1);
+      await page.goto(`${server.base}/designs/bb-1.1.3`);
+      await expect.poll(() => page.getByTestId("report-state").textContent(), { timeout: 30_000 }).toBe("run on earlier design files");
+      expect(Number(await page.getByTestId("report").getAttribute("data-total"))).toBe(findings);
 
       // The newer design opens in the viewer through its view in the uploads mount.
+      await page.goto(`${server.base}/designs/`);
       await page.locator('[data-design="designs/bb-1.1.3"] a.lb-open').click();
       await page.waitForURL(/\/mounts\/uploads\/bb-1\.1\.3\/[0-9a-f]{12}\/schematic\/.*\/view/);
       await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
