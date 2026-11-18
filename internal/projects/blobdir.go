@@ -103,16 +103,19 @@ func (d *BlobDir) Get(hash string) ([]byte, bool) {
 // named in a write.
 func (d *BlobDir) Sweep(keep map[string]bool, grace time.Duration) (int, error) {
 	cutoff := time.Now().Add(-grace)
+	r, err := os.OpenRoot(d.root)
+	if err != nil {
+		return 0, err
+	}
+	defer r.Close()
+	// Every read and removal goes through r, so a symlink planted in the folder cannot lead the sweep
+	// outside it.
 	removed := 0
-	err := filepath.WalkDir(d.root, func(p string, de fs.DirEntry, err error) error {
+	err = fs.WalkDir(r.FS(), ".", func(p string, de fs.DirEntry, err error) error {
 		if err != nil || de.IsDir() || strings.HasPrefix(de.Name(), ".") {
 			return err
 		}
-		rel, err := filepath.Rel(d.root, p)
-		if err != nil {
-			return err
-		}
-		h := "sha256:" + strings.ReplaceAll(filepath.ToSlash(rel), "/", "")
+		h := "sha256:" + strings.ReplaceAll(p, "/", "")
 		if keep[h] {
 			return nil
 		}
@@ -120,7 +123,7 @@ func (d *BlobDir) Sweep(keep map[string]bool, grace time.Duration) (int, error) 
 		if err != nil || fi.ModTime().After(cutoff) {
 			return err
 		}
-		if err := os.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := r.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("sweeping %s: %w", p, err)
 		}
 		removed++
