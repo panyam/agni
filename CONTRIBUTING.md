@@ -90,7 +90,9 @@ against unmodified `main` before reporting a regression. It also covers what a r
 the rules for generated code.
 
 - **From a worktree, run `make -k testall`.** A plain `make` stops at the first failure, and then
-  `python-test`, `tutorial-runs-check` and `docsite-images-check` never run.
+  `python-test`, `tutorial-runs-check` and `docsite-images-check` never run. Run
+  `pnpm install --frozen-lockfile` in a new worktree first, or `proto-check` fails on a missing
+  `protoc-gen-es`.
 - **Build in a worktree with the default Go, never `GOTOOLCHAIN=go1.26.9`.** Go 1.26 finds a
   repository only by a `.git` directory. A linked worktree's `.git` is a file, so Go 1.26 runs no git
   and stamps `(devel)` (golang/go#58218, fixed in go1.27). A `(devel)` wasm has an empty
@@ -313,6 +315,8 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   the tree. The edit reported success, so the damage was only visible by reading the result back.
   Quote the delimiter whenever the body is prose, and read the output back before pushing it.
   `gh pr edit` fed that way returns 0 with the body damaged, so read a PR body back after every edit.
+- **zsh ties `$path` to `$PATH`.** A loop variable named `path` replaces the search path, and every
+  command after it fails with `command not found`. Name it anything else.
 - **zsh reads `$var:r` as a history modifier.** `git push origin $c:refs/heads/x` strips the
   colon and what follows from `$c` and pushes a nonsense refspec. Write `"${c}:refs/heads/x"`.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates

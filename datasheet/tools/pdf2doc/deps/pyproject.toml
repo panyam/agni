@@ -1,7 +1,9 @@
 # What the agnids image installs for pdf2doc. It is never built or installed as a package. `make
 # pdf2doc-lock` compiles it with hashes into one lock per platform: requirements-amd64.txt and
 # requirements-arm64.txt for the Linux image, requirements-darwin-arm64.txt for `make setup`. Each
-# is installed with --require-hashes (C37).
+# is installed with --require-hashes (C37). Never compile with --emit-index-url. pip lets an index
+# line inside a requirements file replace the command line's --extra-index-url, and then it cannot
+# find the `+cpu` torch wheels.
 #
 # On Linux, torch and torchvision come from PyTorch's CPU index, which keeps the CUDA libraries out
 # of the image. That index is explicit, so nothing else is taken from it, and every other package
