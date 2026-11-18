@@ -13,6 +13,16 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class ImportPackFilesRequest(_message.Message):
+    __slots__ = ("pack_id", "files", "title")
+    PACK_ID_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    pack_id: str
+    files: _containers.RepeatedCompositeFieldContainer[_snapshot_pb2.SnapshotFile]
+    title: str
+    def __init__(self, pack_id: _Optional[str] = ..., files: _Optional[_Iterable[_Union[_snapshot_pb2.SnapshotFile, _Mapping]]] = ..., title: _Optional[str] = ...) -> None: ...
+
 class Pack(_message.Message):
     __slots__ = ("name", "title", "config", "files", "uri", "hash", "update_time")
     NAME_FIELD_NUMBER: _ClassVar[int]

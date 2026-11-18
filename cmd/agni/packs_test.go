@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -372,5 +374,117 @@ func TestDesignsPushKeepsTheProjectItExtends(t *testing.T) {
 	}
 	if under, local := findingKeys(t, "check", "designs/gw", "--pack", "gateway", "--remote", srv.URL), findingKeys(t, "check", design); !slices.Equal(under, local) {
 		t.Errorf("check under the pushed pack = %d findings, on the folder = %d; want the same set", len(under), len(local))
+	}
+}
+
+// ImportPackFiles reads a whole project folder into a pack. It asks for project.yaml's contents
+// first, then for the files its tiers name, and never for a design's files beside them (agni issue
+// 1697).
+func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	all, err := localFiles(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashOf := map[string]string{}
+	for _, f := range all.files {
+		hashOf[f.GetPath()] = f.GetSha256()
+	}
+	if hashOf["designs/gw/gateway.edn"] == "" || hashOf["project.yaml"] == "" {
+		t.Fatalf("the folder lacks the files this test reads: %v", hashOf)
+	}
+	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
+	snaps := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
+	var rounds [][]string
+	var made *webapi.Pack
+	for range 4 {
+		resp, err := packs.ImportPackFiles(ctx, connect.NewRequest(&webapi.ImportPackFilesRequest{Files: all.files}))
+		if err == nil {
+			made = resp.Msg
+			break
+		}
+		var ce *connect.Error
+		if !errors.As(err, &ce) {
+			t.Fatal(err)
+		}
+		var missing []string
+		for _, d := range ce.Details() {
+			if v, derr := d.Value(); derr == nil {
+				if bm, ok := v.(*webapi.BlobsMissing); ok {
+					missing = append(missing, bm.GetSha256()...)
+				}
+			}
+		}
+		if len(missing) == 0 {
+			t.Fatalf("ImportPackFiles = %v; want BlobsMissing or success", err)
+		}
+		rounds = append(rounds, missing)
+		var contents [][]byte
+		for _, h := range missing {
+			contents = append(contents, all.byHash[h])
+		}
+		if _, err := snaps.UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if made == nil || len(rounds) != 2 {
+		t.Fatalf("ImportPackFiles took %d rounds of missing contents and made %q; want project.yaml, then its files, then the pack", len(rounds), made.GetName())
+	}
+	if !slices.Equal(rounds[0], []string{hashOf["project.yaml"]}) {
+		t.Errorf("the first round asked for %v; want project.yaml's contents alone", rounds[0])
+	}
+	for _, h := range rounds[1] {
+		if h == hashOf["designs/gw/gateway.edn"] || h == hashOf["designs/gw/gateway.kicad_pcb"] {
+			t.Errorf("the second round asked for a design's file (%s); want the pack's files alone", h)
+		}
+	}
+	if made.GetName() != "packs/gateway" || made.GetTitle() != "Sample Board review project" || len(made.GetFiles()) == 0 {
+		t.Errorf("pack = %s %q with %d files; want packs/gateway titled from project.yaml, with its tiers' files", made.GetName(), made.GetTitle(), len(made.GetFiles()))
+	}
+	for _, f := range made.GetFiles() {
+		if strings.HasPrefix(f.GetPath(), "designs/") || f.GetPath() == "project.yaml" {
+			t.Errorf("the pack keeps %s; want only the files its tiers name", f.GetPath())
+		}
+	}
+	local, _, _, err := localPack(project, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if service.PackHash(local) != made.GetHash() {
+		t.Errorf("the CLI's hash of the folder %s differs from the server's %s; want one reading of a folder", service.PackHash(local), made.GetHash())
+	}
+}
+
+// A folder dropped in the viewer goes up through ImportDesignFiles alone, and the design keeps the
+// intent its design.yaml declares, as `designs push` keeps it (agni issue 1697).
+func TestImportDesignFilesKeepsTheDeclaredIntent(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	folder, err := localFiles(filepath.Join(tutorialProject(t), "designs", "gw"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contents [][]byte
+	for _, f := range folder.files {
+		contents = append(contents, folder.byHash[f.GetSha256()])
+	}
+	if _, err := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL).UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
+		t.Fatal(err)
+	}
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "gw"})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := designs.ImportDesignFiles(ctx, connect.NewRequest(&webapi.ImportDesignFilesRequest{Parent: "designs/gw", Files: folder.files})); err != nil {
+		t.Fatal(err)
+	}
+	d, err := designs.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Name: "designs/gw"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := d.Msg.GetConfig().GetIntent(); got == nil || gproto.Size(got) == 0 {
+		t.Fatalf("after ImportDesignFiles, intent = %v; want design.yaml's", got)
 	}
 }

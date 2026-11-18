@@ -28,13 +28,37 @@
   .lb-artifacts { border-collapse: collapse; width: 100%; margin: 12px 0; }
   .lb-artifacts th, .lb-artifacts td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 13px; }
   .lb-artifacts .lb-drop { padding: 4px 6px; font-size: 12px; }
+  .lb-nav { display: flex; gap: 14px; margin: 0 0 14px; font-size: 14px; }
+  .lb-nav-link { color: #2563eb; text-decoration: none; }
+  .lb-nav-here { color: #222; font-weight: 600; }
+  .lb-filter { display: flex; gap: 8px; margin: 8px 0; }
+  .lb-filter input { flex: 1; padding: 4px 6px; }
+  .lb-where { font-size: 11px; color: #555; background: #f1f5f9; border-radius: 3px; padding: 1px 6px; }
+  .lb-info { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 8px 0; }
+  .lb-info label { display: flex; gap: 6px; align-items: baseline; }
+  .lb-validate { margin: 8px 0 14px; }
+  .lb-validate fieldset { border: 1px solid #e5e5e5; display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+  .lb-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid #e5e5e5; margin: 10px 0; }
+  .lb-tab { border: 1px solid #e5e5e5; border-bottom: 0; background: #fafafa; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .lb-tab-on { background: #fff; font-weight: 600; }
+  .lb-tab.lb-stale { color: #9a3412; }
+  .lb-state { font-size: 12px; color: #166534; margin: 4px 0; }
+  .lb-state.lb-stale { color: #9a3412; }
+  .lb-packs { margin: 4px 0 8px; padding-left: 20px; }
+  .lb-files { font-size: 12px; color: #555; }
+  .lb-rule { border-bottom: 1px solid #f0f0f0; padding: 4px 0; font-size: 13px; }
+  .lb-rule ul { margin: 4px 0 6px; padding-left: 22px; color: #444; }
+  .lb-subject { font-family: ui-monospace, monospace; font-size: 12px; }
+  .lb-sev { font-size: 11px; border-radius: 3px; padding: 0 5px; background: #f1f5f9; color: #555; }
+  .lb-sev-error { background: #fee2e2; color: #991b1b; }
+  .lb-sev-warning { background: #fef3c7; color: #92400e; }
+  @media (max-width: 600px) { .lb-row { flex-wrap: wrap; } .lb-filter { flex-direction: column; } }
 </style>
 {{ end }}
 
 {{ define "Body" }}
 <div class="lb-app">
-  <h1><a class="ld-home" href="/">Agni</a> / <a class="ld-home" href="/designs/">Designs</a></h1>
-  <p class="lb-tagline">The designs this server holds, kept here or in a mounted folder. <a class="ld-home" href="/mounts/">Browse the mounted folders</a> for a file that is not a design yet.</p>
+  <h1><a class="ld-home" href="/">Agni</a></h1>
   <div id="library" data-component="library"></div>
 </div>
 {{ end }}

@@ -173,6 +173,7 @@ func (c *DesignCatalog) Designs(ctx context.Context) (designs []*webapi.Design, 
 			return nil, nil, err
 		}
 		for _, d := range ds {
+			d.ReadOnly = c.store == nil || r != DesignReader(c.store)
 			count[d.GetName()]++
 			all = append(all, d)
 		}
@@ -311,6 +312,9 @@ func (c *DesignCatalog) find(ctx context.Context, name string) (*webapi.Design, 
 			return nil, nil, fmt.Errorf("%w: two stores hold %s; a design id is unique per server", ErrFailedPrecondition, name)
 		}
 		found, holder = d, r
+	}
+	if found != nil {
+		found.ReadOnly = c.store == nil || holder != DesignReader(c.store)
 	}
 	if found == nil {
 		return nil, nil, fmt.Errorf("%w: no design %s", ErrNotFound, name)

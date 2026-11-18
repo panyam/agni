@@ -586,6 +586,22 @@ private static final long serialVersionUID = 0L;
     return artifacts_.getByteString(index);
   }
 
+  public static final int READ_ONLY_FIELD_NUMBER = 14;
+  private boolean readOnly_ = false;
+  /**
+   * <pre>
+   * read_only is true on a design a mounted folder declares, whose every write is refused, and false
+   * on one the server stores (agni issue 1697). Output only.
+   * </pre>
+   *
+   * <code>bool read_only = 14 [json_name = "readOnly"];</code>
+   * @return The readOnly.
+   */
+  @java.lang.Override
+  public boolean getReadOnly() {
+    return readOnly_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -632,6 +648,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < artifacts_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 13, artifacts_.getRaw(i));
+    }
+    if (readOnly_ != false) {
+      output.writeBool(14, readOnly_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -683,6 +702,10 @@ private static final long serialVersionUID = 0L;
       }
       size += dataSize;
       size += 1 * getArtifactsList().size();
+    }
+    if (readOnly_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(14, readOnly_);
     }
     return size;
   }
@@ -736,6 +759,8 @@ private static final long serialVersionUID = 0L;
         != other.getSeriesLatest()) return false;
     if (!getArtifactsList()
         .equals(other.getArtifactsList())) return false;
+    if (getReadOnly()
+        != other.getReadOnly()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -779,6 +804,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ARTIFACTS_FIELD_NUMBER;
       hash = (53 * hash) + getArtifactsList().hashCode();
     }
+    hash = (37 * hash) + READ_ONLY_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getReadOnly());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -946,6 +974,7 @@ private static final long serialVersionUID = 0L;
       seriesLatest_ = false;
       artifacts_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      readOnly_ = false;
       return this;
     }
 
@@ -1021,6 +1050,9 @@ private static final long serialVersionUID = 0L;
         artifacts_.makeImmutable();
         result.artifacts_ = artifacts_;
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.readOnly_ = readOnly_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1092,6 +1124,9 @@ private static final long serialVersionUID = 0L;
           artifacts_.addAll(other.artifacts_);
         }
         onChanged();
+      }
+      if (other.getReadOnly() != false) {
+        setReadOnly(other.getReadOnly());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1176,6 +1211,11 @@ private static final long serialVersionUID = 0L;
               artifacts_.add(input.readStringRequireUtf8());
               break;
             } // case 106
+            case 112: {
+              readOnly_ = input.readBool();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 112
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2524,6 +2564,53 @@ private static final long serialVersionUID = 0L;
       ensureArtifactsIsMutable();
       artifacts_.add(value);
       bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+
+    private boolean readOnly_ ;
+    /**
+     * <pre>
+     * read_only is true on a design a mounted folder declares, whose every write is refused, and false
+     * on one the server stores (agni issue 1697). Output only.
+     * </pre>
+     *
+     * <code>bool read_only = 14 [json_name = "readOnly"];</code>
+     * @return The readOnly.
+     */
+    @java.lang.Override
+    public boolean getReadOnly() {
+      return readOnly_;
+    }
+    /**
+     * <pre>
+     * read_only is true on a design a mounted folder declares, whose every write is refused, and false
+     * on one the server stores (agni issue 1697). Output only.
+     * </pre>
+     *
+     * <code>bool read_only = 14 [json_name = "readOnly"];</code>
+     * @param value The readOnly to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReadOnly(boolean value) {
+
+      readOnly_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * read_only is true on a design a mounted folder declares, whose every write is refused, and false
+     * on one the server stores (agni issue 1697). Output only.
+     * </pre>
+     *
+     * <code>bool read_only = 14 [json_name = "readOnly"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReadOnly() {
+      bitField0_ = (bitField0_ & ~0x00000800);
+      readOnly_ = false;
       onChanged();
       return this;
     }

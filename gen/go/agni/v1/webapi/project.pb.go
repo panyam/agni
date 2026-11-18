@@ -202,7 +202,10 @@ type Design struct {
 	// artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
 	// by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
 	// only.
-	Artifacts     []string `protobuf:"bytes,13,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
+	Artifacts []string `protobuf:"bytes,13,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
+	// read_only is true on a design a mounted folder declares, whose every write is refused, and false
+	// on one the server stores (agni issue 1697). Output only.
+	ReadOnly      bool `protobuf:"varint,14,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -312,6 +315,13 @@ func (x *Design) GetArtifacts() []string {
 		return x.Artifacts
 	}
 	return nil
+}
+
+func (x *Design) GetReadOnly() bool {
+	if x != nil {
+		return x.ReadOnly
+	}
+	return false
 }
 
 type GetProjectRequest struct {
@@ -758,7 +768,7 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12\x18\n" +
 	"\adesigns\x18\n" +
 	" \x03(\tR\adesigns\x12#\n" +
-	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x9c\x03\n" +
+	"\rdefault_packs\x18\v \x03(\tR\fdefaultPacksJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xb9\x03\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -772,7 +782,8 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x12#\n" +
 	"\rseries_latest\x18\f \x01(\bR\fseriesLatest\x12\x1c\n" +
-	"\tartifacts\x18\r \x03(\tR\tartifactsJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
+	"\tartifacts\x18\r \x03(\tR\tartifacts\x12\x1b\n" +
+	"\tread_only\x18\x0e \x01(\bR\breadOnlyJ\x04\b\x06\x10\aJ\x04\b\b\x10\tR\trevisions\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +

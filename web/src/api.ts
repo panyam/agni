@@ -13,6 +13,7 @@ import { DesignViewService } from "@panyam/agni-client/gen/agni/v1/webapi/design
 import { CheckService } from "@panyam/agni-client/gen/agni/v1/webapi/checks_pb";
 import { DiffService } from "@panyam/agni-client/gen/agni/v1/webapi/diff_pb";
 import { ProjectService } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
+import { PackService } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
 import { DesignService } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
 import { QueryService } from "@panyam/agni-client/gen/agni/v1/webapi/query_pb";
 import { ReviewService } from "@panyam/agni-client/gen/agni/v1/webapi/review_pb";
@@ -145,6 +146,12 @@ export function projectClient(baseUrl?: string): Client<typeof ProjectService> {
 // "designs/{design}" (agni issue 1694).
 export function designClient(baseUrl?: string): Client<typeof DesignService> {
   return createClient(DesignService, newTransport(baseUrl));
+}
+
+// packClient returns a typed client for PackService, the packs of rules a server keeps, "packs/{pack}"
+// (agni issues 1704, 1697).
+export function packClient(baseUrl?: string): Client<typeof PackService> {
+  return createClient(PackService, newTransport(baseUrl));
 }
 
 // uploadsClient is the SnapshotService the library page sends file contents through (UploadBlobs,

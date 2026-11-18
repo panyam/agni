@@ -155,17 +155,25 @@ func (p *LandingPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App
 	return nil, false
 }
 
-// LibraryPage is the server-rendered shell of /designs/, the designs a server holds (agni issue
-// 1719). /designs/ lists them, stored and mounted, and holds the form to make one, and /designs/<id>
-// shows one design's artifacts. The page's bundle (static/library.js) reads which from the URL, so the
-// shell is the same for every path. goapplib maps this type to LibraryPage.html by name.
+// LibraryPage is the server-rendered shell of the store's pages (agni issues 1719, 1697). /designs/
+// lists the designs a server holds, stored and mounted, and holds the form to make one, and
+// /designs/<id> shows one design's artifacts and reports. /projects/ and /packs/ do the same for
+// projects and packs. The page's bundle (static/library.js) reads which from the URL, so the shell is
+// the same for every path. goapplib maps this type to LibraryPage.html by name.
 type LibraryPage struct {
 	Title string
 }
 
 // Load populates the library page before render. The designs arrive over the Connect API.
 func (p *LibraryPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
-	p.Title = "Agni designs"
+	switch {
+	case strings.HasPrefix(r.URL.Path, projectsPrefix):
+		p.Title = "Agni projects"
+	case strings.HasPrefix(r.URL.Path, packsPrefix):
+		p.Title = "Agni packs"
+	default:
+		p.Title = "Agni designs"
+	}
 	return nil, false
 }
 
@@ -174,6 +182,14 @@ func (p *LibraryPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App
 // one. A design id holds no slash, so a longer path is a link from before the mount browser moved
 // out of /designs/.
 const designsPrefix = "/designs/"
+
+// projectsPrefix and packsPrefix are the store's other two URL spaces (agni issue 1697), the mirrors
+// of PROJECTS_PREFIX and PACKS_PREFIX in web/src/storepages.ts. Each lists its resources and shows
+// one by id, through the designs page's shell.
+const (
+	projectsPrefix = "/projects/"
+	packsPrefix    = "/packs/"
+)
 
 // mountsPrefix is the mount browser's URL space (agni issue 1734), the mirror of the prefix
 // web/src/router.ts builds. /mounts/<mount>/<dir>/ is a folder, and /view or /load ends a file's
@@ -269,6 +285,8 @@ func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	mux.Handle(oldFilesPrefix, oldFilesSpace())
 	mux.Handle(mountsPrefix, mountsRouter(pageHandler[*BrowsePage](app), pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
 	mux.Handle(designsPrefix, designsSpace(pageHandler[*LibraryPage](app)))
+	mux.Handle(projectsPrefix, pageHandler[*LibraryPage](app))
+	mux.Handle(packsPrefix, pageHandler[*LibraryPage](app))
 }
 
 // basePath is the path the pages are served under, "/" unless set, always ending in "/".
