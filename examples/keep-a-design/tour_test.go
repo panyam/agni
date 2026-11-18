@@ -15,11 +15,11 @@ func TestTheTourKeepsTwoRevisionsAndRefusesTheMountedDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, asked, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"); err != nil || asked != 2 {
-		t.Fatalf("keep rev A = asked %d, %v; want both contents asked for", asked, err)
+	if _, asked, err := tr.keep(ctx, "mixer-rev-a", "Mixer rev A", "../common/designs/rev-a.edn"); err != nil || asked != 1 {
+		t.Fatalf("keep rev A = asked %d, %v; want the netlist's contents asked for", asked, err)
 	}
-	if _, asked, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"); err != nil || asked != 2 {
-		t.Fatalf("keep rev B = asked %d, %v; want its descriptor and netlist asked for", asked, err)
+	if _, asked, err := tr.keep(ctx, "mixer-rev-b", "Mixer rev B", "../common/designs/rev-b.edn"); err != nil || asked != 1 {
+		t.Fatalf("keep rev B = asked %d, %v; want its netlist's contents asked for", asked, err)
 	}
 	if _, err := tr.projects.CreateProject(ctx, &webapi.CreateProjectRequest{ProjectId: "lab", Project: &webapi.Project{Designs: []string{"designs/mixer", "designs/mixer-rev-a", "designs/mixer-rev-b"}}}); err != nil {
 		t.Fatal(err)

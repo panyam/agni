@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/service"
 )
 
 // --store-dir mounts its designs folder as "store", and the server's project store reads a design a
@@ -31,18 +32,21 @@ func TestStoreDirServesAsTheStoreMount(t *testing.T) {
 	}
 	var files []*webapi.SnapshotFile
 	blobs := map[string][]byte{}
-	for _, f := range []struct{ path, body string }{{"design.yaml", "title: Memory unit\nentry: mem.edn\n"}, {"mem.edn", "(edif mem)"}} {
+	for _, f := range []struct{ path, body string }{{"mem.edn", "(edif mem)"}} {
 		sum := sha256.Sum256([]byte(f.body))
 		h := "sha256:" + hex.EncodeToString(sum[:])
 		files = append(files, &webapi.SnapshotFile{Path: f.path, Sha256: h, Size: int64(len(f.body))})
 		blobs[h] = []byte(f.body)
 	}
 	source := func(_ context.Context, h string) ([]byte, bool) { b, ok := blobs[h]; return b, ok }
-	if _, err := ds.CreateDesign(context.Background(), "memory_unit", files, source); err != nil {
+	if _, err := ds.CreateDesign(context.Background(), "memory_unit", service.DesignRecord{Title: "Memory unit"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ds.WriteArtifacts(context.Background(), "memory_unit", []service.ArtifactWrite{{ID: "netlist", Files: files, AllowMissing: true}}, source); err != nil {
 		t.Fatal(err)
 	}
 	read := projects.NewFSStore(projectTrees(ms)...)
-	u, err := artifact.Parse("mount://store/memory_unit/mem.edn")
+	u, err := artifact.Parse("mount://store/memory_unit/netlist/mem.edn")
 	if err != nil {
 		t.Fatal(err)
 	}

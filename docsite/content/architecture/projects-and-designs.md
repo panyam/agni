@@ -384,13 +384,38 @@ name, across a restart, and a stored design is that place.
 A design is named `designs/{design}` and ties to no project (agni issue 1694). A stored project is a
 title and a list of design names, so a design can sit in many projects, and deleting a project
 deletes none of them. A mounted project lists the designs whose `extends` names it. `DesignService`
-creates, reads, replaces and deletes designs, and `ProjectService` does the same for stored projects.
+creates, reads, changes and deletes designs, and `ProjectService` does the same for stored projects.
 `agni serve --store-dir` keeps both. A design id is unique per server, so an id two mounted folders
 both declare is left out of a listing and named in its `unreachable`.
 
+## A stored design holds artifacts
+
+Picture an engineer who fixes one sheet of a KiCad schematic and wants the server's copy to match.
+They replace the schematic, every sheet at once, and leave the board alone. So a stored design holds
+artifacts, `designs/{design}/artifacts/{artifact}` (agni issue 1696). An artifact is one source of
+the design: a netlist, a schematic with its sheets, a board such as a `.kicad_pcb` or an ODB++ job,
+or files no reader opens, such as a BOM. It holds one file or several, each by its path relative to
+the artifact, since a KiCad root sheet finds its child sheets by filename. `UpdateArtifact` replaces
+all of an artifact's files in one write, and `BatchUpdateArtifacts` replaces several artifacts in
+one write.
+
+The server reads each artifact to find its type and its entry, with the grouping `ProposeDesigns`
+uses on a dropped folder. Files that make two designs are refused, since the artifact would hold two
+sources. From the types it picks the file analysis reads: the netlist, else the schematic, else the
+board (C21). Every other artifact a reader opens is a companion. Two artifacts of the winning type
+are refused, and so are two boards, because the server could not tell which one to read. The viewer
+and the checks then read one design built from all the artifacts, and a finding names its file as
+`{artifact}/{path}`.
+
+Nothing on the wire names a folder. The folder adapter, `internal/projects.DirStore`, keeps each
+artifact as a subfolder and writes the design's `design.yaml` itself, naming the entry and the
+companions. A design with no artifact a reader opens keeps its record in `design.draft.yaml`
+instead, since a `design.yaml` must name an entry. A database adapter would keep the same artifacts
+as rows. A mounted design has no artifacts, because its folder's `design.yaml` names its files.
+
 Scaffolding design intent is still not a server operation. Writing `intent:` from a design is a
-judgment step with a confidentiality boundary, so the server never generates one. A user may upload
-an intent they wrote, as part of a project or design.
+judgment step with a confidentiality boundary, so the server never generates one. A stored design
+carries no intent of its own yet. A pack will carry it to a design at report time (agni issue 1704).
 
 That makes `Project` and `Design` the declared-identity case in
 [C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md), with two homes. A mounted one has

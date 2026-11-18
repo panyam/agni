@@ -278,6 +278,34 @@ declare it.
 |---|---|
 | `--format <fmt>` | `text` (each `design.yaml`, then what is not read) or `json` (the `ProposeDesignsResponse` the `ProposeDesigns` rpc returns) |
 
+### `designs`
+
+Create, list and change the designs an `agni serve --store-dir` keeps (agni issue 1696). Every
+subcommand needs `--remote <url>`. A design on a server holds artifacts, each one source of the
+design: a schematic with its sheets, a netlist, a board, or files no reader opens, such as a BOM. The
+server reads each artifact to find its type, and reads the design from its netlist, else its
+schematic, else its board.
+
+| subcommand | what it does |
+|---|---|
+| `create <id> [--title] [--series]` | make a design with no artifacts |
+| `list [--series <s>] [--project <p>]` | list the designs the server holds, stored and mounted, with each series' latest marked |
+| `get <id>` | print a design and its artifacts |
+| `artifacts <id>` | list a design's artifacts, each with its type, entry, file count and a short content digest |
+| `put <id> <artifact> <file-or-folder>` | create an artifact, or replace all its files; a folder sends every file under it by its relative path |
+| `rm <id> [<artifact>]` | delete a design, or one artifact |
+| `push <folder> [--id] [--title] [--series]` | find the folder's design as `propose` does and put each source as an artifact named for its type, all in one write; a `design.yaml` there gives the default id, title and series, and its intent is not sent |
+
+### `projects`
+
+Create projects on an `agni serve --store-dir` and list designs in them. Both subcommands need
+`--remote <url>`. A project there is a list of design names, so a design can sit in several.
+
+| subcommand | what it does |
+|---|---|
+| `create <id> [--title]` | make a project listing no designs |
+| `add <project> <design>...` | list designs in a project, each as `<id>` or `designs/<id>` |
+
 ### `site <outdir>`
 
 Write the browser-only demo as plain files for a static host: a landing page listing the seeded

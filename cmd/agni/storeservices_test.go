@@ -34,13 +34,13 @@ func storeServer(t *testing.T, dir string) *httptest.Server {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	server.API{Project: projectSvc, Design: designSvc, Snapshot: service.NewSnapshotService(nil, resolver, nil, "")}.Register(mux)
+	server.API{Workspace: service.NewWorkspaceService(osWorkspace(ms)), Project: projectSvc, Design: designSvc, Snapshot: service.NewSnapshotService(nil, resolver, nil, "")}.Register(mux)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv
 }
 
-// A client uploads a design's files, keeps it, groups it in a project, and finds both again after
+// A client makes a design, puts its netlist artifact, keeps it, groups it in a project, and finds both again after
 // the server restarts over the same --store-dir (agni issue 1694).
 func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 	ctx := context.Background()
@@ -52,27 +52,34 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 
 	var files []*webapi.SnapshotFile
 	var contents [][]byte
-	for _, f := range []struct{ path, body string }{{"design.yaml", "title: Memory unit\nentry: mem.edn\nseries: memory_unit\n"}, {"mem.edn", "(edif mem)"}} {
+	for _, f := range []struct{ path, body string }{{"mem.edn", "(edif mem)"}, {"mem.kicad_pcb", "(kicad_pcb)"}} {
 		sum := sha256.Sum256([]byte(f.body))
 		files = append(files, &webapi.SnapshotFile{Path: f.path, Sha256: "sha256:" + hex.EncodeToString(sum[:]), Size: int64(len(f.body))})
 		contents = append(contents, []byte(f.body))
 	}
-	_, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "memory_unit", Files: files}))
+	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "memory_unit", Design: &webapi.Design{Title: "Memory unit", Series: "memory_unit"}})); err != nil {
+		t.Fatal(err)
+	}
+	put := connect.NewRequest(&webapi.BatchUpdateArtifactsRequest{Parent: "designs/memory_unit", Requests: []*webapi.UpdateArtifactRequest{
+		{Artifact: &webapi.Artifact{Name: "designs/memory_unit/artifacts/netlist", Files: files[:1]}, AllowMissing: true},
+		{Artifact: &webapi.Artifact{Name: "designs/memory_unit/artifacts/board", Files: files[1:]}, AllowMissing: true},
+	}})
+	_, err := designs.BatchUpdateArtifacts(ctx, put)
 	var ce *connect.Error
 	if !errors.As(err, &ce) || ce.Code() != connect.CodeFailedPrecondition || len(ce.Details()) != 1 {
-		t.Fatalf("CreateDesign before the contents are sent = %v, want FAILED_PRECONDITION with a BlobsMissing detail", err)
+		t.Fatalf("BatchUpdateArtifacts before the contents are sent = %v, want FAILED_PRECONDITION with a BlobsMissing detail", err)
 	}
 	if _, err := snaps.UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "memory_unit", Files: files})); err != nil {
+	if _, err := designs.BatchUpdateArtifacts(ctx, put); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := projectsClient.CreateProject(ctx, connect.NewRequest(&webapi.CreateProjectRequest{ProjectId: "b200", Project: &webapi.Project{Title: "B200", Designs: []string{"designs/memory_unit"}}})); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := designs.UpdateDesign(ctx, connect.NewRequest(&webapi.UpdateDesignRequest{Name: "designs/gateway", Files: files})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Errorf("UpdateDesign of the mounted gateway = %v, want FAILED_PRECONDITION", err)
+	if _, err := designs.UpdateArtifact(ctx, connect.NewRequest(&webapi.UpdateArtifactRequest{Artifact: &webapi.Artifact{Name: "designs/gateway/artifacts/netlist", Files: files[:1]}, AllowMissing: true})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("UpdateArtifact of the mounted gateway = %v, want FAILED_PRECONDITION", err)
 	}
 
 	again := storeServer(t, dir)
@@ -85,6 +92,10 @@ func TestAServerKeepsADesignAndAProjectAcrossARestart(t *testing.T) {
 	all, err := designs.ListDesigns(ctx, connect.NewRequest(&webapi.ListDesignsRequest{}))
 	if err != nil || len(all.Msg.GetDesigns()) != 3 {
 		t.Errorf("every design after a restart = %v, %v; want the mounted gateway and gateway-rev-b, and memory_unit", all.Msg.GetDesigns(), err)
+	}
+	d, err := designs.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Name: "designs/memory_unit"}))
+	if err != nil || d.Msg.GetEntryUri() != "mount://store/memory_unit/netlist/mem.edn" || len(d.Msg.GetCompanionUris()) != 1 || len(d.Msg.GetArtifacts()) != 2 {
+		t.Errorf("memory_unit after a restart = %v, %v; want its netlist as entry, its board as companion, and both artifacts", d, err)
 	}
 	p, err := projectsClient.GetProject(ctx, connect.NewRequest(&webapi.GetProjectRequest{Name: "projects/b200"}))
 	if err != nil || p.Msg.GetTitle() != "B200" {

@@ -29,7 +29,6 @@ private static final long serialVersionUID = 0L;
   }
   private CreateDesignRequest() {
     designId_ = "";
-    files_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -50,6 +49,7 @@ private static final long serialVersionUID = 0L;
             io.github.panyam.agni.v1.webapi.CreateDesignRequest.class, io.github.panyam.agni.v1.webapi.CreateDesignRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int DESIGN_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object designId_ = "";
@@ -97,65 +97,42 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int FILES_FIELD_NUMBER = 2;
-  @SuppressWarnings("serial")
-  private java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> files_;
+  public static final int DESIGN_FIELD_NUMBER = 3;
+  private io.github.panyam.agni.v1.webapi.Design design_;
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return Whether the design field is set.
    */
   @java.lang.Override
-  public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> getFilesList() {
-    return files_;
+  public boolean hasDesign() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return The design.
    */
   @java.lang.Override
-  public java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-      getFilesOrBuilderList() {
-    return files_;
+  public io.github.panyam.agni.v1.webapi.Design getDesign() {
+    return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
   }
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
    */
   @java.lang.Override
-  public int getFilesCount() {
-    return files_.size();
-  }
-  /**
-   * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index) {
-    return files_.get(index);
-  }
-  /**
-   * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  @java.lang.Override
-  public io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-      int index) {
-    return files_.get(index);
+  public io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder() {
+    return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -175,8 +152,8 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(designId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, designId_);
     }
-    for (int i = 0; i < files_.size(); i++) {
-      output.writeMessage(2, files_.get(i));
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(3, getDesign());
     }
     getUnknownFields().writeTo(output);
   }
@@ -185,15 +162,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(designId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(1, designId_);
     }
-
-        {
-          final int count = files_.size();
-          for (int i = 0; i < count; i++) {
-            size += com.google.protobuf.CodedOutputStream
-              .computeMessageSizeNoTag(files_.get(i));
-          }
-          size += 1 * count;
-        }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(3, getDesign());
+    }
     return size;
   }
   @java.lang.Override
@@ -220,8 +192,11 @@ private static final long serialVersionUID = 0L;
 
     if (!getDesignId()
         .equals(other.getDesignId())) return false;
-    if (!getFilesList()
-        .equals(other.getFilesList())) return false;
+    if (hasDesign() != other.hasDesign()) return false;
+    if (hasDesign()) {
+      if (!getDesign()
+          .equals(other.getDesign())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -235,9 +210,9 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + DESIGN_ID_FIELD_NUMBER;
     hash = (53 * hash) + getDesignId().hashCode();
-    if (getFilesCount() > 0) {
-      hash = (37 * hash) + FILES_FIELD_NUMBER;
-      hash = (53 * hash) + getFilesList().hashCode();
+    if (hasDesign()) {
+      hash = (37 * hash) + DESIGN_FIELD_NUMBER;
+      hash = (53 * hash) + getDesign().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -358,26 +333,30 @@ private static final long serialVersionUID = 0L;
 
     // Construct using io.github.panyam.agni.v1.webapi.CreateDesignRequest.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetDesignFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
       designId_ = "";
-      if (filesBuilder_ == null) {
-        files_ = java.util.Collections.emptyList();
-      } else {
-        files_ = null;
-        filesBuilder_.clear();
+      design_ = null;
+      if (designBuilder_ != null) {
+        designBuilder_.dispose();
+        designBuilder_ = null;
       }
-      bitField0_ = (bitField0_ & ~0x00000002);
       return this;
     }
 
@@ -404,22 +383,9 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public io.github.panyam.agni.v1.webapi.CreateDesignRequest buildPartial() {
       io.github.panyam.agni.v1.webapi.CreateDesignRequest result = new io.github.panyam.agni.v1.webapi.CreateDesignRequest(this);
-      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
-    }
-
-    private void buildPartialRepeatedFields(io.github.panyam.agni.v1.webapi.CreateDesignRequest result) {
-      if (filesBuilder_ == null) {
-        if (((bitField0_ & 0x00000002) != 0)) {
-          files_ = java.util.Collections.unmodifiableList(files_);
-          bitField0_ = (bitField0_ & ~0x00000002);
-        }
-        result.files_ = files_;
-      } else {
-        result.files_ = filesBuilder_.build();
-      }
     }
 
     private void buildPartial0(io.github.panyam.agni.v1.webapi.CreateDesignRequest result) {
@@ -427,6 +393,14 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.designId_ = designId_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.design_ = designBuilder_ == null
+            ? design_
+            : designBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -446,31 +420,8 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000001;
         onChanged();
       }
-      if (filesBuilder_ == null) {
-        if (!other.files_.isEmpty()) {
-          if (files_.isEmpty()) {
-            files_ = other.files_;
-            bitField0_ = (bitField0_ & ~0x00000002);
-          } else {
-            ensureFilesIsMutable();
-            files_.addAll(other.files_);
-          }
-          onChanged();
-        }
-      } else {
-        if (!other.files_.isEmpty()) {
-          if (filesBuilder_.isEmpty()) {
-            filesBuilder_.dispose();
-            filesBuilder_ = null;
-            files_ = other.files_;
-            bitField0_ = (bitField0_ & ~0x00000002);
-            filesBuilder_ = 
-              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                 internalGetFilesFieldBuilder() : null;
-          } else {
-            filesBuilder_.addAllMessages(other.files_);
-          }
-        }
+      if (other.hasDesign()) {
+        mergeDesign(other.getDesign());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -501,19 +452,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 10
-            case 18: {
-              io.github.panyam.agni.v1.webapi.SnapshotFile m =
-                  input.readMessage(
-                      io.github.panyam.agni.v1.webapi.SnapshotFile.parser(),
-                      extensionRegistry);
-              if (filesBuilder_ == null) {
-                ensureFilesIsMutable();
-                files_.add(m);
-              } else {
-                filesBuilder_.addMessage(m);
-              }
+            case 26: {
+              input.readMessage(
+                  internalGetDesignFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000002;
               break;
-            } // case 18
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -623,310 +568,159 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> files_ =
-      java.util.Collections.emptyList();
-    private void ensureFilesIsMutable() {
-      if (!((bitField0_ & 0x00000002) != 0)) {
-        files_ = new java.util.ArrayList<io.github.panyam.agni.v1.webapi.SnapshotFile>(files_);
+    private io.github.panyam.agni.v1.webapi.Design design_;
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder> designBuilder_;
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     * @return Whether the design field is set.
+     */
+    public boolean hasDesign() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     * @return The design.
+     */
+    public io.github.panyam.agni.v1.webapi.Design getDesign() {
+      if (designBuilder_ == null) {
+        return design_ == null ? io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
+      } else {
+        return designBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public Builder setDesign(io.github.panyam.agni.v1.webapi.Design value) {
+      if (designBuilder_ == null) {
+        java.util.Objects.requireNonNull(value);
+        design_ = value;
+      } else {
+        designBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public Builder setDesign(
+        io.github.panyam.agni.v1.webapi.Design.Builder builderForValue) {
+      if (designBuilder_ == null) {
+        design_ = builderForValue.build();
+      } else {
+        designBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public Builder mergeDesign(io.github.panyam.agni.v1.webapi.Design value) {
+      if (designBuilder_ == null) {
+        if (((bitField0_ & 0x00000002) != 0) &&
+          design_ != null &&
+          design_ != io.github.panyam.agni.v1.webapi.Design.getDefaultInstance()) {
+          getDesignBuilder().mergeFrom(value);
+        } else {
+          design_ = value;
+        }
+      } else {
+        designBuilder_.mergeFrom(value);
+      }
+      if (design_ != null) {
         bitField0_ |= 0x00000002;
-       }
-    }
-
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> filesBuilder_;
-
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> getFilesList() {
-      if (filesBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(files_);
-      } else {
-        return filesBuilder_.getMessageList();
-      }
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public int getFilesCount() {
-      if (filesBuilder_ == null) {
-        return files_.size();
-      } else {
-        return filesBuilder_.getCount();
-      }
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index) {
-      if (filesBuilder_ == null) {
-        return files_.get(index);
-      } else {
-        return filesBuilder_.getMessage(index);
-      }
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder setFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.set(index, value);
         onChanged();
-      } else {
-        filesBuilder_.setMessage(index, value);
       }
       return this;
     }
     /**
      * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public Builder setFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.set(index, builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.setMessage(index, builderForValue.build());
+    public Builder clearDesign() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      design_ = null;
+      if (designBuilder_ != null) {
+        designBuilder_.dispose();
+        designBuilder_ = null;
       }
+      onChanged();
       return this;
     }
     /**
      * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public Builder addFiles(io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.add(value);
-        onChanged();
+    public io.github.panyam.agni.v1.webapi.Design.Builder getDesignBuilder() {
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return internalGetDesignFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * </pre>
+     *
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+     */
+    public io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder() {
+      if (designBuilder_ != null) {
+        return designBuilder_.getMessageOrBuilder();
       } else {
-        filesBuilder_.addMessage(value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile value) {
-      if (filesBuilder_ == null) {
-        java.util.Objects.requireNonNull(value);
-        ensureFilesIsMutable();
-        files_.add(index, value);
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(index, value);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.add(builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addFiles(
-        int index, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder builderForValue) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.add(index, builderForValue.build());
-        onChanged();
-      } else {
-        filesBuilder_.addMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder addAllFiles(
-        java.lang.Iterable<? extends io.github.panyam.agni.v1.webapi.SnapshotFile> values) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, files_);
-        onChanged();
-      } else {
-        filesBuilder_.addAllMessages(values);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder clearFiles() {
-      if (filesBuilder_ == null) {
-        files_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-      } else {
-        filesBuilder_.clear();
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public Builder removeFiles(int index) {
-      if (filesBuilder_ == null) {
-        ensureFilesIsMutable();
-        files_.remove(index);
-        onChanged();
-      } else {
-        filesBuilder_.remove(index);
-      }
-      return this;
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder getFilesBuilder(
-        int index) {
-      return internalGetFilesFieldBuilder().getBuilder(index);
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-        int index) {
-      if (filesBuilder_ == null) {
-        return files_.get(index);  } else {
-        return filesBuilder_.getMessageOrBuilder(index);
+        return design_ == null ?
+            io.github.panyam.agni.v1.webapi.Design.getDefaultInstance() : design_;
       }
     }
     /**
      * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
      * </pre>
      *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+     * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
      */
-    public java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-         getFilesOrBuilderList() {
-      if (filesBuilder_ != null) {
-        return filesBuilder_.getMessageOrBuilderList();
-      } else {
-        return java.util.Collections.unmodifiableList(files_);
-      }
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder addFilesBuilder() {
-      return internalGetFilesFieldBuilder().addBuilder(
-          io.github.panyam.agni.v1.webapi.SnapshotFile.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public io.github.panyam.agni.v1.webapi.SnapshotFile.Builder addFilesBuilder(
-        int index) {
-      return internalGetFilesFieldBuilder().addBuilder(
-          index, io.github.panyam.agni.v1.webapi.SnapshotFile.getDefaultInstance());
-    }
-    /**
-     * <pre>
-     * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-     * </pre>
-     *
-     * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-     */
-    public java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile.Builder> 
-         getFilesBuilderList() {
-      return internalGetFilesFieldBuilder().getBuilderList();
-    }
-    private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-        internalGetFilesFieldBuilder() {
-      if (filesBuilder_ == null) {
-        filesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.panyam.agni.v1.webapi.SnapshotFile, io.github.panyam.agni.v1.webapi.SnapshotFile.Builder, io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder>(
-                files_,
-                ((bitField0_ & 0x00000002) != 0),
+    private com.google.protobuf.SingleFieldBuilder<
+        io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder> 
+        internalGetDesignFieldBuilder() {
+      if (designBuilder_ == null) {
+        designBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder>(
+                getDesign(),
                 getParentForChildren(),
                 isClean());
-        files_ = null;
+        design_ = null;
       }
-      return filesBuilder_;
+      return designBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:agni.v1.webapi.CreateDesignRequest)

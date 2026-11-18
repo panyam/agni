@@ -1564,6 +1564,128 @@ pub mod design_service_client {
                 .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "DeleteDesign"));
             self.inner.unary(req, path, codec).await
         }
+        pub async fn get_artifact(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetArtifactRequest>,
+        ) -> std::result::Result<tonic::Response<super::Artifact>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/GetArtifact",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.DesignService", "GetArtifact"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn list_artifacts(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListArtifactsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListArtifactsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/ListArtifacts",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignService", "ListArtifacts"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn update_artifact(
+            &mut self,
+            request: impl tonic::IntoRequest<super::UpdateArtifactRequest>,
+        ) -> std::result::Result<tonic::Response<super::Artifact>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/UpdateArtifact",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignService", "UpdateArtifact"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn batch_update_artifacts(
+            &mut self,
+            request: impl tonic::IntoRequest<super::BatchUpdateArtifactsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::BatchUpdateArtifactsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/BatchUpdateArtifacts",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "agni.v1.webapi.DesignService",
+                        "BatchUpdateArtifacts",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn delete_artifact(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeleteArtifactRequest>,
+        ) -> std::result::Result<tonic::Response<::pbjson_types::Empty>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.DesignService/DeleteArtifact",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("agni.v1.webapi.DesignService", "DeleteArtifact"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated client implementations.

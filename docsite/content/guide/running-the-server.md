@@ -204,16 +204,27 @@ memory. Like the review store, it wants a writable volume of its own in a contai
 ## Keeping designs
 
 `serve --store-dir <dir>` gives the server a folder of its own for designs and projects (agni issues
-1693, 1694). It keeps designs in `<dir>/designs`, served as the mount `store` beside the folders
+1693, 1694, 1696). It keeps designs in `<dir>/designs`, served as the mount `store` beside the folders
 you mount, and projects in `<dir>/projects`.
 
-Say a user keeps a design `memory_unit`. The store then holds `designs/memory_unit/` with the
-design's `design.yaml` and its files. A stored design belongs to no project, so
-`agni check <dir>/designs/memory_unit` reads it like any other design folder. A project is a title
-and a list of design names, kept as `projects/<id>.json`, so one design can sit in several projects.
+Say a user keeps a design `memory_unit` from a KiCad folder:
 
-`DesignService` and `ProjectService` create, replace and delete them over the wire. A client sends a
-design as a manifest of paths and hashes, and sends any contents the server asks for with
+```bash
+agni designs push ./memory_unit --series b200 --remote http://localhost:8080
+agni designs list --series b200 --remote http://localhost:8080
+agni designs put memory_unit schematic ./memory_unit-fixed/ --remote http://localhost:8080
+```
+
+`push` puts the folder's schematic, with its sheets, and its board as two artifacts of the design.
+`put` later replaces the schematic, every sheet in one write, and leaves the board alone. The store
+then holds `designs/memory_unit/` with a folder per artifact and a `design.yaml` the server wrote.
+A stored design belongs to no project, so `agni check <dir>/designs/memory_unit` reads it like any
+other design folder. A project is a title and a list of design names, kept as
+`projects/<id>.json`, so one design can sit in several projects. `agni projects create` and
+`agni projects add` make one and list designs in it.
+
+`DesignService` and `ProjectService` create, change and delete them over the wire. A client sends an
+artifact as a manifest of paths and hashes, and sends any contents the server asks for with
 `SnapshotService.UploadBlobs`, as `--remote` already does. A design or project in a mounted folder
 stays read-only, and a write to it is refused. A design id is unique on one server, across the store
 and every mount. In a container give the store a volume of its own, such as

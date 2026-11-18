@@ -23,8 +23,10 @@ func TestACatalogListsStoredAndMountedDesignsByOneName(t *testing.T) {
 	ctx := context.Background()
 	ds, _ := dirStore(t)
 	cat := service.NewDesignCatalog(ds, NewMountedDesigns(tutorial()))
-	u := uploadOf(map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
-	if _, err := cat.CreateDesign(ctx, "mul", u.files, u.source); err != nil {
+	if _, err := cat.CreateDesign(ctx, "mul", service.DesignRecord{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := put(ctx, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}}); err != nil {
 		t.Fatal(err)
 	}
 	all, unreachable, err := cat.Designs(ctx)
@@ -34,7 +36,7 @@ func TestACatalogListsStoredAndMountedDesignsByOneName(t *testing.T) {
 	if all[0].GetConfig().GetExtends() != "projects/tut" || all[0].GetEntryUri() != "mount://tut/designs/g/g.edn" {
 		t.Errorf("mounted design g = extends %q at %s; want projects/tut at mount://tut/designs/g/g.edn", all[0].GetConfig().GetExtends(), all[0].GetEntryUri())
 	}
-	if d, err := cat.Design(ctx, "designs/mul"); err != nil || d.GetEntryUri() != "mount://store/mul/a.edn" {
+	if d, err := cat.Design(ctx, "designs/mul"); err != nil || d.GetEntryUri() != "mount://store/mul/netlist/a.edn" {
 		t.Errorf("catalog design mul = %v, %v; want it read from the store", d, err)
 	}
 	if _, err := cat.Design(ctx, "projects/tut/designs/g"); !errors.Is(err, service.ErrInvalidArgument) {
@@ -46,14 +48,23 @@ func TestACatalogRefusesWritesToAMountedDesign(t *testing.T) {
 	ctx := context.Background()
 	ds, _ := dirStore(t)
 	cat := service.NewDesignCatalog(ds, NewMountedDesigns(tutorial()))
-	u := uploadOf(map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
-	if _, err := cat.ReplaceDesign(ctx, "designs/g", u.files, u.source); !errors.Is(err, service.ErrFailedPrecondition) {
-		t.Errorf("ReplaceDesign on a mounted design = %v, want ErrFailedPrecondition", err)
+	u := uploadOf(map[string]string{"a.edn": "(edif a)"})
+	if _, err := cat.WriteArtifacts(ctx, "designs/g", []service.ArtifactWrite{{ID: "netlist", Files: u.files, AllowMissing: true}}, u.source); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("WriteArtifacts on a mounted design = %v, want ErrFailedPrecondition", err)
+	}
+	if _, err := cat.UpdateDesign(ctx, "designs/g", func(*service.DesignRecord) {}); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("UpdateDesign on a mounted design = %v, want ErrFailedPrecondition", err)
+	}
+	if err := cat.DeleteArtifact(ctx, "designs/g/artifacts/netlist"); !errors.Is(err, service.ErrFailedPrecondition) {
+		t.Errorf("DeleteArtifact on a mounted design = %v, want ErrFailedPrecondition", err)
+	}
+	if as, err := cat.Artifacts(ctx, "designs/g"); err != nil || len(as) != 0 {
+		t.Errorf("Artifacts of a mounted design = %v, %v; want none", as, err)
 	}
 	if err := cat.DeleteDesign(ctx, "designs/g"); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("DeleteDesign on a mounted design = %v, want ErrFailedPrecondition", err)
 	}
-	if _, err := cat.CreateDesign(ctx, "g", u.files, u.source); !errors.Is(err, service.ErrAlreadyExists) {
+	if _, err := cat.CreateDesign(ctx, "g", service.DesignRecord{}); !errors.Is(err, service.ErrAlreadyExists) {
 		t.Errorf("CreateDesign over a mounted design's id = %v, want ErrAlreadyExists", err)
 	}
 	if err := cat.DeleteDesign(ctx, "designs/none"); !errors.Is(err, service.ErrNotFound) {
@@ -65,8 +76,8 @@ func TestACatalogRefusesWritesToAMountedDesign(t *testing.T) {
 func TestACatalogLeavesOutAnIdTwoStoresHold(t *testing.T) {
 	ctx := context.Background()
 	ds, _ := dirStore(t)
-	mustDesign(t, ds, "g", map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
-	mustDesign(t, ds, "mul", map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
+	mustDesign(t, ds, "g", arts{"netlist": {"a.edn": "(edif a)"}})
+	mustDesign(t, ds, "mul", arts{"netlist": {"a.edn": "(edif a)"}})
 	cat := service.NewDesignCatalog(ds, NewMountedDesigns(tutorial()))
 	if _, err := cat.Design(ctx, "designs/g"); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("Design of an id two stores hold = %v, want ErrFailedPrecondition", err)
@@ -100,8 +111,7 @@ func TestTwoMountedFoldersDeclaringOneIdLeaveItUnreachable(t *testing.T) {
 func TestACatalogWithNoStoreRefusesWrites(t *testing.T) {
 	ctx := context.Background()
 	cat := service.NewDesignCatalog(nil, NewMountedDesigns(tutorial()))
-	u := uploadOf(map[string]string{"design.yaml": "entry: a.edn\n", "a.edn": "(edif a)"})
-	if _, err := cat.CreateDesign(ctx, "mul", u.files, u.source); !errors.Is(err, service.ErrFailedPrecondition) {
+	if _, err := cat.CreateDesign(ctx, "mul", service.DesignRecord{}); !errors.Is(err, service.ErrFailedPrecondition) {
 		t.Errorf("CreateDesign with no store = %v, want ErrFailedPrecondition", err)
 	}
 	if all, _, err := cat.Designs(ctx); err != nil || len(all) != 1 {

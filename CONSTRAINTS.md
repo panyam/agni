@@ -702,9 +702,14 @@ updates and deletes it, and still picks its id (AIP-122). Imagine an engineer wi
 server who uploads a board's files. Without a stored home, the upload has nothing to be a design of,
 and it is gone at the next restart. A write that names a mounted resource is refused rather than
 written. Scaffolding design intent stays out of scope either way. Writing `intent:` from a design is a
-judgment step with a confidentiality boundary, so the server never generates one, though a user may
-upload an intent they wrote. A later version of a board is a design of its own, and designs that
-name one `series` group as its versions.
+judgment step with a confidentiality boundary, so the server never generates one. A stored design
+carries no intent yet, and agni issue 1704 decides how a user's own intent reaches one. A later
+version of a board is a design of its own, and designs that name one `series` group as its versions.
+A stored design's files are its ARTIFACTS, a child resource `designs/{d}/artifacts/{a}` (agni issue
+1696), each one source such as a schematic with its sheets. An artifact has `Get`, `List`, `Delete`,
+and `UpdateArtifact` with `allow_missing` in place of `Create` (AIP-134), since a client puts the
+same files whether or not the server holds them yet. `BatchUpdateArtifacts` writes several in one
+step.
 
 **A snapshot is a full resource whose create is a custom method, `Ingest`** (agni issue 1061, AIP-136).
 It is the server's state: a loaded design with its tiers and config resolved, held until it is

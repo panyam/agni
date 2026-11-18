@@ -32,45 +32,28 @@ public interface CreateDesignRequestOrBuilder extends
 
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return Whether the design field is set.
    */
-  java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> 
-      getFilesList();
+  boolean hasDesign();
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return The design.
    */
-  io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index);
+  io.github.panyam.agni.v1.webapi.Design getDesign();
   /**
    * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
+   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
    */
-  int getFilesCount();
-  /**
-   * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-      getFilesOrBuilderList();
-  /**
-   * <pre>
-   * files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-      int index);
+  io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder();
 }

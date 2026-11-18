@@ -2089,6 +2089,11 @@ pub struct Design {
     /// design with no series. Output only.
     #[prost(bool, tag="12")]
     pub series_latest: bool,
+    /// artifacts names a stored design's artifacts, each "designs/{design}/artifacts/{artifact}", ordered
+    /// by name (agni issue 1696). A mounted design has none, since its folder names its files. Output
+    /// only.
+    #[prost(string, repeated, tag="13")]
+    pub artifacts: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetProjectRequest {
@@ -2427,9 +2432,9 @@ pub struct CreateDesignRequest {
     /// design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
     #[prost(string, tag="1")]
     pub design_id: ::prost::alloc::string::String,
-    /// files are the design's files, one of them `design.yaml`, as paths within the design's folder.
-    #[prost(message, repeated, tag="2")]
-    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+    #[prost(message, optional, tag="3")]
+    pub design: ::core::option::Option<Design>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetDesignRequest {
@@ -2465,18 +2470,145 @@ pub struct ListDesignsResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateDesignRequest {
-    /// "designs/{design}"
-    #[prost(string, tag="1")]
-    pub name: ::prost::alloc::string::String,
-    /// files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-    #[prost(message, repeated, tag="2")]
-    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// design names the design to change, "designs/{design}", and carries the new values.
+    #[prost(message, optional, tag="3")]
+    pub design: ::core::option::Option<Design>,
+    /// update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+    /// empty mask changes all three. Any other path is INVALID_ARGUMENT.
+    #[prost(message, optional, tag="4")]
+    pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DeleteDesignRequest {
     /// "designs/{design}"
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
+}
+/// Artifact is one source of a design, such as a schematic with its sheets, a board, or a BOM. It is
+/// named "designs/{design}/artifacts/{artifact}". It holds one file or several, and replacing it
+/// replaces all of them, so a schematic never holds sheets from two releases.
+///
+/// A design is read as one IR built from all its artifacts. The server works out which artifact
+/// analysis reads: the netlist, else the schematic, else the board. The others are views of the same
+/// design. Provenance names a file as "{artifact}/{path}".
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Artifact {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// files are the artifact's files. Each path is relative to the artifact, and readers find one file
+    /// from another by it, as a KiCad root sheet names its child sheets by filename.
+    #[prost(message, repeated, tag="2")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// type is what the server found the artifact to hold. It is output only.
+    #[prost(enumeration="ArtifactType", tag="3")]
+    pub r#type: i32,
+    /// entry is the path among files that a reader opens first, such as a KiCad root sheet. It is empty
+    /// for an artifact no reader opens, such as a BOM. It is output only.
+    #[prost(string, tag="4")]
+    pub entry: ::prost::alloc::string::String,
+    /// update_time is when the artifact's files last changed. It is output only.
+    #[prost(message, optional, tag="5")]
+    pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetArtifactRequest {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListArtifactsRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// page_size is the maximum number of artifacts to return. 0 uses the server default.
+    #[prost(int32, tag="2")]
+    pub page_size: i32,
+    /// page_token continues a previous call. An empty token starts at the first artifact.
+    #[prost(string, tag="3")]
+    pub page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListArtifactsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub artifacts: ::prost::alloc::vec::Vec<Artifact>,
+    /// next_page_token is empty when the last page has been reached.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateArtifactRequest {
+    /// artifact names the artifact and carries its new files. Its type, entry and update_time are
+    /// ignored, since the server works them out.
+    #[prost(message, optional, tag="1")]
+    pub artifact: ::core::option::Option<Artifact>,
+    /// allow_missing creates the artifact when the design has none of that name (AIP-134). Without it,
+    /// a missing artifact is NOT_FOUND.
+    #[prost(bool, tag="2")]
+    pub allow_missing: bool,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchUpdateArtifactsRequest {
+    /// "designs/{design}"
+    #[prost(string, tag="1")]
+    pub parent: ::prost::alloc::string::String,
+    /// requests each name an artifact of parent. Two naming one artifact is INVALID_ARGUMENT.
+    #[prost(message, repeated, tag="2")]
+    pub requests: ::prost::alloc::vec::Vec<UpdateArtifactRequest>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchUpdateArtifactsResponse {
+    /// artifacts are the written artifacts, in the order of the requests.
+    #[prost(message, repeated, tag="1")]
+    pub artifacts: ::prost::alloc::vec::Vec<Artifact>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteArtifactRequest {
+    /// "designs/{design}/artifacts/{artifact}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+/// ArtifactType is what an artifact holds, found from its entry's format.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ArtifactType {
+    Unspecified = 0,
+    /// ARTIFACT_TYPE_NETLIST is a netlist with no drawing, such as an EDIF `.edn`.
+    Netlist = 1,
+    /// ARTIFACT_TYPE_SCHEMATIC is a drawn schematic, such as a KiCad root sheet and its child sheets.
+    Schematic = 2,
+    /// ARTIFACT_TYPE_BOARD is a board layout, such as a `.kicad_pcb` or an ODB++ job.
+    Board = 3,
+    /// ARTIFACT_TYPE_OTHER is files no reader opens, such as a BOM or a PDF. They are kept with the
+    /// design and never read.
+    Other = 4,
+}
+impl ArtifactType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ARTIFACT_TYPE_UNSPECIFIED",
+            Self::Netlist => "ARTIFACT_TYPE_NETLIST",
+            Self::Schematic => "ARTIFACT_TYPE_SCHEMATIC",
+            Self::Board => "ARTIFACT_TYPE_BOARD",
+            Self::Other => "ARTIFACT_TYPE_OTHER",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ARTIFACT_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "ARTIFACT_TYPE_NETLIST" => Some(Self::Netlist),
+            "ARTIFACT_TYPE_SCHEMATIC" => Some(Self::Schematic),
+            "ARTIFACT_TYPE_BOARD" => Some(Self::Board),
+            "ARTIFACT_TYPE_OTHER" => Some(Self::Other),
+            _ => None,
+        }
+    }
 }
 /// DiffDesignsRequest names the two designs. a is the old revision and b the new, each as a
 /// snapshot.

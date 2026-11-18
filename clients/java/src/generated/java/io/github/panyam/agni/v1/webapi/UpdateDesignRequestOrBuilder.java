@@ -12,65 +12,58 @@ public interface UpdateDesignRequestOrBuilder extends
 
   /**
    * <pre>
-   * "designs/{design}"
+   * design names the design to change, "designs/{design}", and carries the new values.
    * </pre>
    *
-   * <code>string name = 1 [json_name = "name"];</code>
-   * @return The name.
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return Whether the design field is set.
    */
-  java.lang.String getName();
+  boolean hasDesign();
   /**
    * <pre>
-   * "designs/{design}"
+   * design names the design to change, "designs/{design}", and carries the new values.
    * </pre>
    *
-   * <code>string name = 1 [json_name = "name"];</code>
-   * @return The bytes for name.
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   * @return The design.
    */
-  com.google.protobuf.ByteString
-      getNameBytes();
+  io.github.panyam.agni.v1.webapi.Design getDesign();
+  /**
+   * <pre>
+   * design names the design to change, "designs/{design}", and carries the new values.
+   * </pre>
+   *
+   * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
+   */
+  io.github.panyam.agni.v1.webapi.DesignOrBuilder getDesignOrBuilder();
 
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+   * @return Whether the updateMask field is set.
    */
-  java.util.List<io.github.panyam.agni.v1.webapi.SnapshotFile> 
-      getFilesList();
+  boolean hasUpdateMask();
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
+   * @return The updateMask.
    */
-  io.github.panyam.agni.v1.webapi.SnapshotFile getFiles(int index);
+  com.google.protobuf.FieldMask getUpdateMask();
   /**
    * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
+   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
+   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
    * </pre>
    *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
+   * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
    */
-  int getFilesCount();
-  /**
-   * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  java.util.List<? extends io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder> 
-      getFilesOrBuilderList();
-  /**
-   * <pre>
-   * files replace the design's whole file set, on the terms of CreateDesignRequest.files.
-   * </pre>
-   *
-   * <code>repeated .agni.v1.webapi.SnapshotFile files = 2 [json_name = "files"];</code>
-   */
-  io.github.panyam.agni.v1.webapi.SnapshotFileOrBuilder getFilesOrBuilder(
-      int index);
+  com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
 }
