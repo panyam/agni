@@ -24,7 +24,7 @@ the full list and the ways a run misreads.
 
 ## Read this first
 
-- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C36). They keep
+- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C37). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change. If a PR
   violates one, the review asks it to change, or to justify amending the constraint.
 - The [docs site](https://panyam.github.io/agni/overview/) is the engineering source of truth, and

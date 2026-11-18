@@ -1,0 +1,5 @@
+# make python-test installs this with pyproject.toml's test extra, compiled with hashes into
+# requirements-test.txt (C37) by `make python-client-lock`. setuptools is the build backend.
+# Installing it from the lock lets the editable install skip the isolated build environment, which
+# would fetch it with no hash check.
+setuptools>=69

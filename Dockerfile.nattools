@@ -8,12 +8,12 @@
 # natrender/natopen wrappers.
 # See docs/NATIVE_VERIFICATION.md.
 
-FROM golang:1.26-bookworm AS build
+FROM golang:1.26-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS build
 WORKDIR /src
 COPY . .
 RUN CGO_ENABLED=0 go build -o /out/agni ./cmd/agni
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
 # EDA tools + an SSH server with X11 forwarding (ssh -X carries the GUI to the host's XQuartz);
 # x11-apps gives xeyes for a forwarding smoke test.
 RUN apt-get update \

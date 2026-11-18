@@ -1,0 +1,23 @@
+# What the agnids image installs for pdf2doc. It is never built or installed as a package. `make
+# pdf2doc-lock` compiles it with hashes into one lock per platform: requirements-amd64.txt and
+# requirements-arm64.txt for the Linux image, requirements-darwin-arm64.txt for `make setup`. Each
+# is installed with --require-hashes (C37).
+#
+# On Linux, torch and torchvision come from PyTorch's CPU index, which keeps the CUDA libraries out
+# of the image. That index is explicit, so nothing else is taken from it, and every other package
+# comes from PyPI. macOS takes torch from PyPI, whose macOS wheels are CPU-only. `make setup`
+# installs requirements-darwin-arm64.txt.
+[project]
+name = "agnids-pdf2doc"
+version = "0"
+requires-python = "==3.12.*"
+dependencies = ["torch==2.14.1", "torchvision==0.29.1", "docling==2.132.0"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }
+torchvision = { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
