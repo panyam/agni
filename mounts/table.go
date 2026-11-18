@@ -27,7 +27,8 @@ type Table struct {
 	records string
 	uploads string
 	runtime []Mount
-	stamp   time.Time
+	// stamp is what the records folder held at the last read, by stampOf.
+	stamp   string
 	checked time.Time
 	// lastErr is the last reload's error, kept so a bad record does not empty the list.
 	lastErr error
@@ -60,7 +61,7 @@ func (t *Table) List() []Mount {
 	defer t.mu.Unlock()
 	if t.records != "" && time.Since(t.checked) >= t.every {
 		t.checked = time.Now()
-		if fi, err := os.Stat(t.records); err == nil && !fi.ModTime().Equal(t.stamp) {
+		if stampOf(t.records) != t.stamp {
 			_ = t.reloadLocked()
 		}
 	}
@@ -94,7 +95,7 @@ func (t *Table) reloadLocked() error {
 	if t.records == "" {
 		return nil
 	}
-	fi, statErr := os.Stat(t.records)
+	stamp := stampOf(t.records)
 	recs, err := ReadRecords(t.records)
 	if err != nil {
 		t.lastErr = err
@@ -107,12 +108,31 @@ func (t *Table) reloadLocked() error {
 		}
 		runtime = append(runtime, r.Mount(t.uploads))
 	}
-	t.runtime, t.lastErr = runtime, nil
-	if statErr == nil {
-		t.stamp = fi.ModTime()
-	}
+	t.runtime, t.lastErr, t.stamp = runtime, nil, stamp
 	t.checked = time.Now()
 	return nil
+}
+
+// stampOf describes the records folder by each record's name, size and modification time. A folder's
+// own modification time is not enough, since Windows does not always move it when a file is renamed
+// into the folder. A missing folder stamps as "".
+func stampOf(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		fi, err := e.Info()
+		if err != nil {
+			continue
+		}
+		fmt.Fprintf(&b, "%s\x00%d\x00%d\n", e.Name(), fi.Size(), fi.ModTime().UnixNano())
+	}
+	return b.String()
 }
 
 // Record is a runtime mount as --store keeps it, in <store>/mounts/<name>.yaml. Files lists every
