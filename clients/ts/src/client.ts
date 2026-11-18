@@ -10,6 +10,7 @@ import { DesignService } from "./gen/agni/v1/webapi/designs_pb.js";
 import { DesignViewService } from "./gen/agni/v1/webapi/design_view_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { LexiconService } from "./gen/agni/v1/webapi/lexicon_pb.js";
+import { PackService } from "./gen/agni/v1/webapi/packs_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
@@ -61,6 +62,7 @@ export class AgniClient {
   readonly query: Client<typeof QueryService>;
   readonly diff: Client<typeof DiffService>;
   readonly lexicon: Client<typeof LexiconService>;
+  readonly pack: Client<typeof PackService>;
   readonly project: Client<typeof ProjectService>;
   readonly review: Client<typeof ReviewService>;
   readonly table: Client<typeof TableService>;
@@ -78,6 +80,7 @@ export class AgniClient {
     this.query = createClient(QueryService, transport);
     this.diff = createClient(DiffService, transport);
     this.lexicon = createClient(LexiconService, transport);
+    this.pack = createClient(PackService, transport);
     this.project = createClient(ProjectService, transport);
     this.review = createClient(ReviewService, transport);
     this.table = createClient(TableService, transport);

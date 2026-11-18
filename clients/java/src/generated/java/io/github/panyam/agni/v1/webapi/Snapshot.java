@@ -41,6 +41,8 @@ private static final long serialVersionUID = 0L;
     project_ = "";
     files_ = java.util.Collections.emptyList();
     design_ = "";
+    packs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -682,6 +684,79 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int PACKS_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList packs_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return A list containing the packs.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getPacksList() {
+    return packs_;
+  }
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return The count of packs.
+   */
+  public int getPacksCount() {
+    return packs_.size();
+  }
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the element to return.
+   * @return The packs at the given index.
+   */
+  public java.lang.String getPacks(int index) {
+    return packs_.get(index);
+  }
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the packs at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getPacksBytes(int index) {
+    return packs_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -737,6 +812,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(design_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 14, design_);
+    }
+    for (int i = 0; i < packs_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, packs_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -795,6 +873,14 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(design_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(14, design_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < packs_.size(); i++) {
+        dataSize += computeStringSizeNoTag(packs_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getPacksList().size();
     }
     return size;
   }
@@ -857,6 +943,8 @@ private static final long serialVersionUID = 0L;
         != other.getRefresh()) return false;
     if (!getDesign()
         .equals(other.getDesign())) return false;
+    if (!getPacksList()
+        .equals(other.getPacksList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -907,6 +995,10 @@ private static final long serialVersionUID = 0L;
         getRefresh());
     hash = (37 * hash) + DESIGN_FIELD_NUMBER;
     hash = (53 * hash) + getDesign().hashCode();
+    if (getPacksCount() > 0) {
+      hash = (37 * hash) + PACKS_FIELD_NUMBER;
+      hash = (53 * hash) + getPacksList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1084,6 +1176,8 @@ private static final long serialVersionUID = 0L;
       flattenHierarchy_ = false;
       refresh_ = false;
       design_ = "";
+      packs_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1179,6 +1273,10 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00002000) != 0)) {
         result.design_ = design_;
       }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        packs_.makeImmutable();
+        result.packs_ = packs_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1271,6 +1369,16 @@ private static final long serialVersionUID = 0L;
       if (!other.getDesign().isEmpty()) {
         design_ = other.design_;
         bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.packs_.isEmpty()) {
+        if (packs_.isEmpty()) {
+          packs_ = other.packs_;
+          bitField0_ |= 0x00004000;
+        } else {
+          ensurePacksIsMutable();
+          packs_.addAll(other.packs_);
+        }
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1381,6 +1489,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00002000;
               break;
             } // case 114
+            case 122: {
+              ensurePacksIsMutable();
+              packs_.add(input.readStringRequireUtf8());
+              break;
+            } // case 122
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3156,6 +3269,198 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       design_ = value;
       bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList packs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensurePacksIsMutable() {
+      if (!packs_.isModifiable()) {
+        packs_ = new com.google.protobuf.LazyStringArrayList(packs_);
+      }
+      bitField0_ |= 0x00004000;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @return A list containing the packs.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getPacksList() {
+      packs_.makeImmutable();
+      return packs_;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @return The count of packs.
+     */
+    public int getPacksCount() {
+      return packs_.size();
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param index The index of the element to return.
+     * @return The packs at the given index.
+     */
+    public java.lang.String getPacks(int index) {
+      return packs_.get(index);
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the packs at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getPacksBytes(int index) {
+      return packs_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param index The index to set the value at.
+     * @param value The packs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPacks(
+        int index, java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensurePacksIsMutable();
+      packs_.set(index, value);
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param value The packs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addPacks(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      ensurePacksIsMutable();
+      packs_.add(value);
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param values The packs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllPacks(
+        java.lang.Iterable<java.lang.String> values) {
+      ensurePacksIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, packs_);
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPacks() {
+      packs_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00004000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+     * layer over the design's own config in the order named, and the overlay's config layers over them.
+     * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+     * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+     * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+     * changed since is read as it is now. Part of the definition.
+     * </pre>
+     *
+     * <code>repeated string packs = 15 [json_name = "packs"];</code>
+     * @param value The bytes of the packs to add.
+     * @return This builder for chaining.
+     */
+    public Builder addPacksBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      ensurePacksIsMutable();
+      packs_.add(value);
+      bitField0_ |= 0x00004000;
       onChanged();
       return this;
     }

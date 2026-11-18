@@ -39,8 +39,10 @@ public interface UpdateDesignRequestOrBuilder extends
 
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+   * under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -49,8 +51,10 @@ public interface UpdateDesignRequestOrBuilder extends
   boolean hasUpdateMask();
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+   * under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>
@@ -59,8 +63,10 @@ public interface UpdateDesignRequestOrBuilder extends
   com.google.protobuf.FieldMask getUpdateMask();
   /**
    * <pre>
-   * update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-   * empty mask changes all three. Any other path is INVALID_ARGUMENT.
+   * update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+   * `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+   * INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+   * under.
    * </pre>
    *
    * <code>.google.protobuf.FieldMask update_mask = 4 [json_name = "updateMask"];</code>

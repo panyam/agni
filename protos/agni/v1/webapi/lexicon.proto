@@ -49,6 +49,9 @@ enum LexiconSource {
   LEXICON_SOURCE_DESIGN = 4;
   // The request. The CLI sends its --conventions file this way.
   LEXICON_SOURCE_REQUEST = 5;
+  // A pack the snapshot was read under, packs/{pack} (agni issue 1704). A later pack's convention
+  // replaces an earlier one's, and the request's replaces a pack's.
+  LEXICON_SOURCE_PACK = 6;
 }
 
 // LexiconEntry is one pattern, exclusion, prefix, family or switch of the effective lexicon.

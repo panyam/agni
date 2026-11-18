@@ -375,4 +375,65 @@ public interface SnapshotOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDesignBytes();
+
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return A list containing the packs.
+   */
+  java.util.List<java.lang.String>
+      getPacksList();
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @return The count of packs.
+   */
+  int getPacksCount();
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the element to return.
+   * @return The packs at the given index.
+   */
+  java.lang.String getPacks(int index);
+  /**
+   * <pre>
+   * packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+   * layer over the design's own config in the order named, and the overlay's config layers over them.
+   * A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+   * a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+   * that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+   * changed since is read as it is now. Part of the definition.
+   * </pre>
+   *
+   * <code>repeated string packs = 15 [json_name = "packs"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the packs at the given index.
+   */
+  com.google.protobuf.ByteString
+      getPacksBytes(int index);
 }

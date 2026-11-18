@@ -2258,6 +2258,14 @@ pub struct Snapshot {
     /// every client that opens one design share one snapshot. Part of the definition.
     #[prost(string, tag="14")]
     pub design: ::prost::alloc::string::String,
+    /// packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+    /// layer over the design's own config in the order named, and the overlay's config layers over them.
+    /// A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+    /// a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+    /// that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+    /// changed since is read as it is now. Part of the definition.
+    #[prost(string, repeated, tag="15")]
+    pub packs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// SnapshotFile is one file of a design that a client sends, named within its mount.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2353,9 +2361,9 @@ pub struct UpdateSnapshotRequest {
     /// snapshot holds the new definition and names the snapshot to update.
     #[prost(message, optional, tag="1")]
     pub snapshot: ::core::option::Option<Snapshot>,
-    /// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-    /// overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-    /// files again, and that refreshes a stale snapshot.
+    /// update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+    /// as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+    /// Sending the same definition again reads the files again, and that refreshes a stale snapshot.
     #[prost(message, optional, tag="2")]
     pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
     /// read_board is as on IngestRequest.
@@ -2441,7 +2449,8 @@ pub struct CreateDesignRequest {
     /// design_id is the new design's id, lowercase letters, digits, '.', '_' or '-'.
     #[prost(string, tag="1")]
     pub design_id: ::prost::alloc::string::String,
-    /// design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+    /// design carries the new design's title, series and flatten_hierarchy, and its config's intent
+    /// (agni issue 1704). Its name is ignored.
     #[prost(message, optional, tag="3")]
     pub design: ::core::option::Option<Design>,
 }
@@ -2482,8 +2491,10 @@ pub struct UpdateDesignRequest {
     /// design names the design to change, "designs/{design}", and carries the new values.
     #[prost(message, optional, tag="3")]
     pub design: ::core::option::Option<Design>,
-    /// update_mask names the fields to change, among `title`, `series` and `flatten_hierarchy`. An
-    /// empty mask changes all three. Any other path is INVALID_ARGUMENT.
+    /// update_mask names the fields to change, among `title`, `series`, `flatten_hierarchy` and
+    /// `config.intent` (agni issue 1704). An empty mask changes the first three. Any other path is
+    /// INVALID_ARGUMENT, since the rest of a stored design's config comes from the packs it is read
+    /// under.
     #[prost(message, optional, tag="4")]
     pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
 }
@@ -3440,6 +3451,9 @@ pub enum LexiconSource {
     Design = 4,
     /// The request. The CLI sends its --conventions file this way.
     Request = 5,
+    /// A pack the snapshot was read under, packs/{pack} (agni issue 1704). A later pack's convention
+    /// replaces an earlier one's, and the request's replaces a pack's.
+    Pack = 6,
 }
 impl LexiconSource {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -3454,6 +3468,7 @@ impl LexiconSource {
             Self::Project => "LEXICON_SOURCE_PROJECT",
             Self::Design => "LEXICON_SOURCE_DESIGN",
             Self::Request => "LEXICON_SOURCE_REQUEST",
+            Self::Pack => "LEXICON_SOURCE_PACK",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -3465,9 +3480,94 @@ impl LexiconSource {
             "LEXICON_SOURCE_PROJECT" => Some(Self::Project),
             "LEXICON_SOURCE_DESIGN" => Some(Self::Design),
             "LEXICON_SOURCE_REQUEST" => Some(Self::Request),
+            "LEXICON_SOURCE_PACK" => Some(Self::Pack),
             _ => None,
         }
     }
+}
+/// Pack is a set of rules kept on a server, named "packs/{pack}".
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Pack {
+    /// "packs/{pack}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// title is the human-readable label, falling back to the id.
+    #[prost(string, tag="2")]
+    pub title: ::prost::alloc::string::String,
+    /// config is what the pack checks a design against, in the shape `project.yaml` binds to. Its
+    /// conventions, checklists and intent are values. Its file tiers, such as profile_uris and
+    /// param_uris, are each a `mount://` URI or a path relative to the pack's own files. A relative path
+    /// must name a file or folder among files. Its extends must be empty, since a pack layers by the order
+    /// a snapshot names packs and inherits from none.
+    #[prost(message, optional, tag="3")]
+    pub config: ::core::option::Option<AnalysisConfig>,
+    /// files are the pack's own files, such as a profiles folder and a params folder, each with its path
+    /// relative to the pack. The contents go up with SnapshotService.UploadBlobs.
+    #[prost(message, repeated, tag="4")]
+    pub files: ::prost::alloc::vec::Vec<SnapshotFile>,
+    /// uri is the folder the server reads the pack's files from, against which config's relative paths
+    /// resolve. It is empty for a pack with no files. Output only.
+    #[prost(string, tag="5")]
+    pub uri: ::prost::alloc::string::String,
+    /// hash names the pack's config and files as they are now, "sha256:<hex>". Two packs with the same
+    /// config and the same files have the same hash. Output only.
+    #[prost(string, tag="6")]
+    pub hash: ::prost::alloc::string::String,
+    /// update_time is when the pack last changed. Output only.
+    #[prost(message, optional, tag="7")]
+    pub update_time: ::core::option::Option<::pbjson_types::Timestamp>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreatePackRequest {
+    /// pack_id is the new pack's id, lowercase letters, digits, '.', '_' or '-'.
+    #[prost(string, tag="1")]
+    pub pack_id: ::prost::alloc::string::String,
+    /// pack carries the new pack's title, config and files. Its name is ignored.
+    #[prost(message, optional, tag="2")]
+    pub pack: ::core::option::Option<Pack>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetPackRequest {
+    /// "packs/{pack}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListPacksRequest {
+    /// page_size is the maximum number of packs to return. 0 uses the server default.
+    #[prost(int32, tag="1")]
+    pub page_size: i32,
+    /// page_token continues a previous call. An empty token starts at the first pack.
+    #[prost(string, tag="2")]
+    pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+    /// rather than ignored, since a client that believed it had filtered would read the wrong packs.
+    #[prost(string, tag="3")]
+    pub filter: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListPacksResponse {
+    #[prost(message, repeated, tag="1")]
+    pub packs: ::prost::alloc::vec::Vec<Pack>,
+    /// next_page_token is empty when the last page has been reached.
+    #[prost(string, tag="2")]
+    pub next_page_token: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdatePackRequest {
+    /// pack names the pack to change, "packs/{pack}", and carries the new values.
+    #[prost(message, optional, tag="1")]
+    pub pack: ::core::option::Option<Pack>,
+    /// update_mask names the fields to change, among `title`, `config` and `files`. An empty mask changes
+    /// all three. Any other path is INVALID_ARGUMENT.
+    #[prost(message, optional, tag="2")]
+    pub update_mask: ::core::option::Option<::pbjson_types::FieldMask>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeletePackRequest {
+    /// "packs/{pack}"
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetServerInfoRequest {

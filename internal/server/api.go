@@ -25,6 +25,9 @@ type API struct {
 	// Design serves the stored designs, "designs/{design}" (agni issue 1694). Nil serves an empty
 	// catalog that refuses every write.
 	Design *service.DesignService
+	// Pack serves the stored packs, "packs/{pack}" (agni issue 1704). Nil serves none and refuses
+	// every write.
+	Pack   *service.PackService
 	Check  *service.CheckService
 	Diff   *service.DiffService
 	Query  *service.QueryService
@@ -61,6 +64,11 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 		design = service.NewDesignService(nil, nil)
 	}
 	add(webapiconnect.NewDesignServiceHandler(NewDesign(design), timed))
+	pack := a.Pack
+	if pack == nil {
+		pack = service.NewPackService(nil, nil)
+	}
+	add(webapiconnect.NewPackServiceHandler(NewPack(pack), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
 	// The lexicon questions run the check service's catalog over its loader, so they are built from
 	// the check service. A field would let a host fill in a different catalog (agni issue 1266).

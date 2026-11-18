@@ -8,6 +8,8 @@ import (
 
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -46,7 +48,10 @@ func (s *DesignService) CreateDesign(ctx context.Context, req *webapi.CreateDesi
 		return nil, fmt.Errorf("%w: design id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, req.GetDesignId())
 	}
 	d := req.GetDesign()
-	rec := DesignRecord{Title: d.GetTitle(), Series: d.GetSeries(), FlattenHierarchy: d.GetFlattenHierarchy()}
+	rec := DesignRecord{Title: d.GetTitle(), Series: d.GetSeries(), FlattenHierarchy: d.GetFlattenHierarchy(), Intent: d.GetConfig().GetIntent()}
+	if err := checkDesignConfig(d.GetConfig()); err != nil {
+		return nil, err
+	}
 	out, err := s.catalog.CreateDesign(ctx, req.GetDesignId(), rec)
 	if err != nil {
 		return nil, err
@@ -89,7 +94,8 @@ func (s *DesignService) ListDesigns(ctx context.Context, req *webapi.ListDesigns
 	return resp, nil
 }
 
-// UpdateDesign changes a stored design's title, series or flatten_hierarchy, as update_mask names.
+// UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, as update_mask
+// names. The intent's path is `config.intent`, and an empty mask leaves the intent alone.
 func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesignRequest) (*webapi.Design, error) {
 	in := req.GetDesign()
 	paths := req.GetUpdateMask().GetPaths()
@@ -97,8 +103,13 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 		paths = []string{"title", "series", "flatten_hierarchy"}
 	}
 	for _, p := range paths {
-		if p != "title" && p != "series" && p != "flatten_hierarchy" {
-			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series and flatten_hierarchy can be changed", ErrInvalidArgument, p)
+		if p != "title" && p != "series" && p != "flatten_hierarchy" && p != "config.intent" {
+			return nil, fmt.Errorf("%w: update_mask path %q; a design's title, series, flatten_hierarchy and config.intent can be changed", ErrInvalidArgument, p)
+		}
+	}
+	if slices.Contains(paths, "config.intent") {
+		if err := checkDesignConfig(&webapi.AnalysisConfig{Intent: in.GetConfig().GetIntent()}); err != nil {
+			return nil, err
 		}
 	}
 	d, err := s.catalog.UpdateDesign(ctx, in.GetName(), func(r *DesignRecord) {
@@ -110,6 +121,8 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 				r.Series = in.GetSeries()
 			case "flatten_hierarchy":
 				r.FlattenHierarchy = in.GetFlattenHierarchy()
+			case "config.intent":
+				r.Intent = in.GetConfig().GetIntent()
 			}
 		}
 	})
@@ -117,6 +130,24 @@ func (s *DesignService) UpdateDesign(ctx context.Context, req *webapi.UpdateDesi
 		return nil, err
 	}
 	return s.withLatest(ctx, d)
+}
+
+// checkDesignConfig refuses config a stored design cannot keep. A stored design keeps its intent,
+// and the rest of its config comes from the packs it is read under. An intent that does not compile
+// is refused here, so a bad one fails the write rather than every later read.
+func checkDesignConfig(cfg *webapi.AnalysisConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	rest := proto.Clone(cfg).(*webapi.AnalysisConfig)
+	rest.Intent = nil
+	if !proto.Equal(rest, &webapi.AnalysisConfig{}) {
+		return fmt.Errorf("%w: a stored design keeps its intent alone; put conventions, checklists, profiles and params in a pack", ErrInvalidArgument)
+	}
+	if _, err := intentSource(cfg, "design"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteDesign removes a stored design.

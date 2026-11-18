@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/panyam/agni/service"
 )
 
 // BlobDir keeps file contents by their SHA-256, one file each, under blobs/sha256/ab/cdef... in the
@@ -130,4 +132,21 @@ func (d *BlobDir) Sweep(keep map[string]bool, grace time.Duration) (int, error) 
 		return nil
 	})
 	return removed, err
+}
+
+// Link hard-links the blob for hash to `to`, copying it where the filesystem refuses a link. A view
+// built from links keeps its files when the sweep later removes the blob.
+func (d *BlobDir) Link(hash, to string) error {
+	from, ok := d.Path(hash)
+	if !ok {
+		return fmt.Errorf("%w: %q is not a sha256 hash", service.ErrInvalidArgument, hash)
+	}
+	if err := os.Link(from, to); err == nil {
+		return nil
+	}
+	b, ok := d.Get(hash)
+	if !ok {
+		return fmt.Errorf("the store lost the contents of %s", hash)
+	}
+	return os.WriteFile(to, b, 0o600)
 }

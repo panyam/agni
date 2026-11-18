@@ -16,12 +16,15 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/artifact"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // DirStore is the folder adapter of service.DesignStore (agni issues 1693, 1696, 1739). It keeps a
@@ -113,6 +116,7 @@ type recordYAML struct {
 	Title            string           `yaml:"title,omitempty"`
 	Series           string           `yaml:"series,omitempty"`
 	FlattenHierarchy bool             `yaml:"flatten_hierarchy,omitempty"`
+	Intent           yaml.Node        `yaml:"intent,omitempty"`
 	Rev              string           `yaml:"rev,omitempty"`
 	UpdateTime       time.Time        `yaml:"update_time"`
 	Artifacts        []artifactRecord `yaml:"artifacts,omitempty"`
@@ -158,6 +162,13 @@ func (s *DirStore) designOf(id string, rec recordYAML) (*webapi.Design, error) {
 			return nil, err
 		}
 		d = &webapi.Design{Title: orName(rec.Title, id), Uri: base.String(), Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
+		in, err := decodeIntent(rec.Intent)
+		if err != nil {
+			return nil, err
+		}
+		if in != nil {
+			d.Config = &webapi.AnalysisConfig{Intent: in}
+		}
 	} else {
 		if _, d, _, err = ParseDesign(bytes.NewReader(raw)); err != nil {
 			return nil, err
@@ -206,7 +217,7 @@ func describe(id string, rec recordYAML) (entry string, companions []string, raw
 	}
 	// The view's descriptor holds what reading the board needs. The series stays in the record alone,
 	// so moving a design to another series keeps its view.
-	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy}
+	y := descriptorYAML{Name: id, Title: rec.Title, Entry: entry, Companions: companions, FlattenHierarchy: rec.FlattenHierarchy, Intent: rec.Intent}
 	if raw, err = yaml.Marshal(&y); err != nil {
 		return "", nil, nil, err
 	}
@@ -262,6 +273,10 @@ func (s *DirStore) CreateDesign(_ context.Context, id string, rec service.Design
 		return nil, err
 	}
 	r := recordYAML{Title: rec.Title, Series: rec.Series, FlattenHierarchy: rec.FlattenHierarchy}
+	var err error
+	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
+		return nil, err
+	}
 	if err := s.commit(id, &r); err != nil {
 		return nil, err
 	}
@@ -277,8 +292,14 @@ func (s *DirStore) UpdateDesign(_ context.Context, id string, update func(*servi
 		return nil, err
 	}
 	rec := service.DesignRecord{Title: r.Title, Series: r.Series, FlattenHierarchy: r.FlattenHierarchy}
+	if rec.Intent, err = decodeIntent(r.Intent); err != nil {
+		return nil, err
+	}
 	update(&rec)
 	r.Title, r.Series, r.FlattenHierarchy = rec.Title, rec.Series, rec.FlattenHierarchy
+	if r.Intent, err = encodeIntent(rec.Intent); err != nil {
+		return nil, err
+	}
 	if err := s.commit(id, &r); err != nil {
 		return nil, err
 	}
@@ -512,20 +533,7 @@ func (s *DirStore) buildView(id string, rec recordYAML, descriptor []byte) (stri
 }
 
 // linkBlob hard-links a blob to `to`, copying it where the filesystem refuses a link.
-func (s *DirStore) linkBlob(hash, to string) error {
-	from, ok := s.blobs.Path(hash)
-	if !ok {
-		return fmt.Errorf("%w: %q is not a sha256 hash", service.ErrInvalidArgument, hash)
-	}
-	if err := os.Link(from, to); err == nil {
-		return nil
-	}
-	b, ok := s.blobs.Get(hash)
-	if !ok {
-		return fmt.Errorf("the store lost the contents of %s", hash)
-	}
-	return os.WriteFile(to, b, 0o600)
-}
+func (s *DirStore) linkBlob(hash, to string) error { return s.blobs.Link(hash, to) }
 
 // Sweep removes views no record names and blobs nothing points at, each only once it is older than
 // grace. keep adds hashes something else holds, such as a snapshot sent as files. It returns how many
@@ -563,7 +571,9 @@ func (s *DirStore) Sweep(keep map[string]bool, grace time.Duration) (views, blob
 		return 0, 0, err
 	}
 	for _, d := range designs {
-		if !d.IsDir() {
+		// A folder whose name no design id can take, such as the packs' views, belongs to another
+		// store, which sweeps it itself.
+		if !d.IsDir() || !idPattern.MatchString(d.Name()) {
 			continue
 		}
 		dir := filepath.Join(s.views, d.Name())
@@ -652,6 +662,43 @@ func (s *DirStore) contents(ctx context.Context, w service.ArtifactWrite, blobs 
 		out[p] = b
 	}
 	return out, missing, nil
+}
+
+// encodeIntent writes an intent as the YAML a descriptor's `intent:` section holds, with each key a
+// proto field name, so ParseDesign binds it back to the same message. Nil writes no section.
+func encodeIntent(in *configpb.DesignIntent) (yaml.Node, error) {
+	if in == nil {
+		return yaml.Node{}, nil
+	}
+	b, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(in)
+	if err != nil {
+		return yaml.Node{}, err
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return yaml.Node{}, err
+	}
+	if len(doc.Content) != 1 {
+		return yaml.Node{}, fmt.Errorf("intent encoded to %d YAML documents", len(doc.Content))
+	}
+	return *styleBlock(doc.Content[0]), nil
+}
+
+// styleBlock clears the flow style JSON parses into, so a record and its view read as block YAML.
+func styleBlock(n *yaml.Node) *yaml.Node {
+	n.Style &^= yaml.FlowStyle
+	for _, c := range n.Content {
+		styleBlock(c)
+	}
+	return n
+}
+
+// decodeIntent reads a record's intent section, nil when it has none.
+func decodeIntent(n yaml.Node) (*configpb.DesignIntent, error) {
+	if n.IsZero() || n.Tag == "!!null" {
+		return nil, nil
+	}
+	return intent.DecodeSection(&n)
 }
 
 func hashOf(b []byte) string {

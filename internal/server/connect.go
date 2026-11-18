@@ -768,3 +768,51 @@ func (a *ServerInfo) GetServerInfo(ctx context.Context, req *connect.Request[web
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// Pack adapts service.PackService to the generated Connect handler interface (agni issue 1704).
+type Pack struct {
+	webapiconnect.UnimplementedPackServiceHandler
+	svc *service.PackService
+}
+
+// NewPack wraps svc for Connect.
+func NewPack(svc *service.PackService) *Pack { return &Pack{svc: svc} }
+
+func (a *Pack) CreatePack(ctx context.Context, req *connect.Request[webapi.CreatePackRequest]) (*connect.Response[webapi.Pack], error) {
+	resp, err := a.svc.CreatePack(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Pack) GetPack(ctx context.Context, req *connect.Request[webapi.GetPackRequest]) (*connect.Response[webapi.Pack], error) {
+	resp, err := a.svc.GetPack(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Pack) ListPacks(ctx context.Context, req *connect.Request[webapi.ListPacksRequest]) (*connect.Response[webapi.ListPacksResponse], error) {
+	resp, err := a.svc.ListPacks(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Pack) UpdatePack(ctx context.Context, req *connect.Request[webapi.UpdatePackRequest]) (*connect.Response[webapi.Pack], error) {
+	resp, err := a.svc.UpdatePack(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Pack) DeletePack(ctx context.Context, req *connect.Request[webapi.DeletePackRequest]) (*connect.Response[emptypb.Empty], error) {
+	if err := a.svc.DeletePack(ctx, req.Msg); err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(&emptypb.Empty{}), nil
+}

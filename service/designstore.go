@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -73,6 +74,9 @@ type DesignRecord struct {
 	Title            string
 	Series           string
 	FlattenHierarchy bool
+	// Intent is the design's declared architecture (agni issue 1704), as `intent:` in a design.yaml.
+	// Nil declares none. A pack's intent, or a request's, replaces it for one read.
+	Intent *configpb.DesignIntent
 }
 
 // ArtifactWrite is one artifact's new files. AllowMissing creates the artifact when the design has

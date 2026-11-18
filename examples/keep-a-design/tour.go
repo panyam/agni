@@ -8,17 +8,21 @@ import (
 	"os"
 	"path/filepath"
 
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
 )
 
-// tour holds the two services a server answers designs and projects with, over a store in a
+// tour holds the services a server answers designs, projects and packs with, over a store in a
 // temporary folder and the bundled demo project mounted read-only. uploaded is the server's upload
 // store, the contents a client sent with UploadBlobs, by hash.
 type tour struct {
 	designs  *service.DesignService
 	projects *service.ProjectService
+	packs    *service.PackService
 	uploaded map[string][]byte
 	root     string
 }
@@ -38,6 +42,11 @@ func newTour(root, mounted string) (*tour, error) {
 	t.projects = service.NewProjectService(projects.NewFSStore(tree)).WithRecords(records)
 	catalog := service.NewDesignCatalog(store, projects.NewMountedDesigns(tree))
 	t.designs = service.NewDesignService(catalog, t.blob).WithProjects(t.projects)
+	packs, err := projects.NewDirPacks(filepath.Join(root, "packs"), store.Blobs(), projects.ViewsRoot(filepath.Join(root, "uploads")), "uploads")
+	if err != nil {
+		return nil, err
+	}
+	t.packs = service.NewPackService(packs, t.blob)
 	return t, nil
 }
 
@@ -88,4 +97,20 @@ func (t *tour) keep(ctx context.Context, id, title, netlist string) (*webapi.Des
 	}
 	d, err := t.designs.GetDesign(ctx, &webapi.GetDesignRequest{Name: service.StandaloneDesignName(id)})
 	return d, asked, err
+}
+
+// houseRules is a pack's convention: the house names a rail by its voltage after an underscore.
+func houseRules(pattern string) *webapi.AnalysisConfig {
+	return &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{Name: "house", Lexicon: &configpb.NamingLexicon{
+		Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{pattern}}}}}}
+}
+
+// keepPack keeps the house rules as packs/house, then changes its rail pattern, and returns the pack
+// before and after (agni issue 1704).
+func (t *tour) keepPack(ctx context.Context) (before, after *webapi.Pack, err error) {
+	if before, err = t.packs.CreatePack(ctx, &webapi.CreatePackRequest{PackId: "house", Pack: &webapi.Pack{Title: "House rules", Config: houseRules("_[0-9]+V[0-9]$")}}); err != nil {
+		return nil, nil, err
+	}
+	after, err = t.packs.UpdatePack(ctx, &webapi.UpdatePackRequest{Pack: &webapi.Pack{Name: "packs/house", Config: houseRules("^(VCC|VDD)_")}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config"}}})
+	return before, after, err
 }

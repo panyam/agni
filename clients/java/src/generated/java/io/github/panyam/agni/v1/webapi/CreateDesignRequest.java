@@ -101,7 +101,8 @@ private static final long serialVersionUID = 0L;
   private io.github.panyam.agni.v1.webapi.Design design_;
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -113,7 +114,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -125,7 +127,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -573,7 +576,8 @@ private static final long serialVersionUID = 0L;
         io.github.panyam.agni.v1.webapi.Design, io.github.panyam.agni.v1.webapi.Design.Builder, io.github.panyam.agni.v1.webapi.DesignOrBuilder> designBuilder_;
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -584,7 +588,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -599,7 +604,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -617,7 +623,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -635,7 +642,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -660,7 +668,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -677,7 +686,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -689,7 +699,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -704,7 +715,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+     * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+     * (agni issue 1704). Its name is ignored.
      * </pre>
      *
      * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>

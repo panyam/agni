@@ -32,7 +32,8 @@ public interface CreateDesignRequestOrBuilder extends
 
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -41,7 +42,8 @@ public interface CreateDesignRequestOrBuilder extends
   boolean hasDesign();
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>
@@ -50,7 +52,8 @@ public interface CreateDesignRequestOrBuilder extends
   io.github.panyam.agni.v1.webapi.Design getDesign();
   /**
    * <pre>
-   * design carries the new design's title, series and flatten_hierarchy. Its name is ignored.
+   * design carries the new design's title, series and flatten_hierarchy, and its config's intent
+   * (agni issue 1704). Its name is ignored.
    * </pre>
    *
    * <code>.agni.v1.webapi.Design design = 3 [json_name = "design"];</code>

@@ -70,8 +70,8 @@ const (
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
 type DesignServiceClient interface {
-	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+	// CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+	// intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
 	// --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
 	// same way.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
@@ -80,7 +80,7 @@ type DesignServiceClient interface {
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs this server holds, ordered by resource name.
 	ListDesigns(context.Context, *connect.Request[webapi.ListDesignsRequest]) (*connect.Response[webapi.ListDesignsResponse], error)
-	// UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+	// UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
 	// update_mask names. A design declared in a mounted folder is read-only, and a write to it is
 	// FAILED_PRECONDITION.
 	UpdateDesign(context.Context, *connect.Request[webapi.UpdateDesignRequest]) (*connect.Response[webapi.Design], error)
@@ -270,8 +270,8 @@ func (c *designServiceClient) DeleteArtifact(ctx context.Context, req *connect.R
 
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
 type DesignServiceHandler interface {
-	// CreateDesign makes a new design with no artifacts. Its title, series and flatten_hierarchy come
-	// from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
+	// CreateDesign makes a new design with no artifacts. Its title, series, flatten_hierarchy and
+	// intent come from `design`. An id any design already holds is ALREADY_EXISTS. A server started without
 	// --store answers FAILED_PRECONDITION, and one without --uploads refuses an artifact's files the
 	// same way.
 	CreateDesign(context.Context, *connect.Request[webapi.CreateDesignRequest]) (*connect.Response[webapi.Design], error)
@@ -280,7 +280,7 @@ type DesignServiceHandler interface {
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs this server holds, ordered by resource name.
 	ListDesigns(context.Context, *connect.Request[webapi.ListDesignsRequest]) (*connect.Response[webapi.ListDesignsResponse], error)
-	// UpdateDesign changes a stored design's title, series or flatten_hierarchy, the fields
+	// UpdateDesign changes a stored design's title, series, flatten_hierarchy or intent, the fields
 	// update_mask names. A design declared in a mounted folder is read-only, and a write to it is
 	// FAILED_PRECONDITION.
 	UpdateDesign(context.Context, *connect.Request[webapi.UpdateDesignRequest]) (*connect.Response[webapi.Design], error)

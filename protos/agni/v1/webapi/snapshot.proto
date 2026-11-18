@@ -120,6 +120,13 @@ message Snapshot {
   // opens yet is FAILED_PRECONDITION. The snapshot id `DesignSnapshotID` derives from the name lets
   // every client that opens one design share one snapshot. Part of the definition.
   string design = 14;
+  // packs names the packs this snapshot is read under, each "packs/{pack}" (agni issue 1704). They
+  // layer over the design's own config in the order named, and the overlay's config layers over them.
+  // A later pack's convention and intent replace an earlier one's, and their file tiers accumulate, as
+  // a request's config layers over a project's. A name the host does not hold is NOT_FOUND, and a host
+  // that keeps no packs answers FAILED_PRECONDITION. Each read looks the packs up again, so a pack
+  // changed since is read as it is now. Part of the definition.
+  repeated string packs = 15;
 }
 
 // SnapshotFile is one file of a design that a client sends, named within its mount.
@@ -193,9 +200,9 @@ message ListSnapshotsResponse {
 message UpdateSnapshotRequest {
   // snapshot holds the new definition and names the snapshot to update.
   Snapshot snapshot = 1;
-  // update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-  // overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition. Sending the same definition again reads the
-  // files again, and that refreshes a stale snapshot.
+  // update_mask names the definition fields to replace (uri, design, packs, board_uri, geometry_uri,
+  // as_named, overlay, files, flatten_hierarchy, refresh). Empty replaces the whole definition.
+  // Sending the same definition again reads the files again, and that refreshes a stale snapshot.
   google.protobuf.FieldMask update_mask = 2;
   // read_board is as on IngestRequest.
   bool read_board = 3;
