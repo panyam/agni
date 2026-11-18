@@ -14,9 +14,10 @@ Last pruned 2026-11-17, at `28bc4cf0`.
 ## At a glance
 
 **#1691 `mission_design_store`** (keep projects and designs on an agni server, and come back to every
-one) is active, at 0 of 7. The mission body states the model: a store port with a filesystem
-adapter first, editable designs, a computed `series` in place of `revisions:`, and reviews under the
-project. Its exercise (`make exercise-design-store`) does not exist yet, and #1696 writes it.
+one) is active, at 8 of 14. PR #1731 merged on 2026-11-18 and closed #1698, so the compose bundle
+keeps the store on one volume. `make exercise-design-store` exists. On 2026-11-18 the model gained
+mounts. `--store <url>` picks the store (#1732), `/mounts/` replaces `/files/` (#1734), and linked
+artifacts point into mounts (#1722).
 
 - **#1625 `mission_clients`** is active, at 12 of 13. Its last ticket is #1627 (TLS and tokens). The
   pushdowns are tagged as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3, and agni still pins
@@ -32,8 +33,9 @@ project. Its exercise (`make exercise-design-store`) does not exist yet, and #16
 
 ## Open, ranked
 
-1. **#1692 and #1693**, in parallel. #1692 amends C23 and drops `revisions:` (a breaking proto change),
-   and #1693 builds the read-write store port. #1694, #1695, #1696 and #1697 wait on #1693's port.
+1. **#1732**: rename `--store-dir` to `--store <url>`. Compose and `writableFlags` in
+   `deploy/compose_test.go` follow. Then #1704 (packs and reports), #1697 (the viewer for them), and
+   #1734 (`/mounts/`).
 2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
 3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
