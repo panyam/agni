@@ -14,10 +14,10 @@ Last pruned 2026-11-17, at `28bc4cf0`.
 ## At a glance
 
 **#1691 `mission_design_store`** (keep projects and designs on an agni server, and come back to every
-one) is active, at 8 of 14. PR #1731 merged on 2026-11-18 and closed #1698, so the compose bundle
-keeps the store on one volume. `make exercise-design-store` exists. On 2026-11-18 the model gained
+one) is active, at 8 of 15. `make exercise-design-store` exists. On 2026-11-18 the model gained
 mounts. `--store <url>` picks the store (#1732), `/mounts/` replaces `/files/` (#1734), and linked
-artifacts point into mounts (#1722).
+artifacts point into mounts (#1722). PR #1740 merged C37, so every action, base image, pip install
+and Gradle build is pinned by hash.
 
 - **#1625 `mission_clients`** is active, at 12 of 13. Its last ticket is #1627 (TLS and tokens). The
   pushdowns are tagged as panyam/oneauth v0.3.3 and panyam/servicekit v0.2.3, and agni still pins
@@ -33,12 +33,16 @@ artifacts point into mounts (#1722).
 
 ## Open, ranked
 
-1. **#1732**: rename `--store-dir` to `--store <url>`. Compose and `writableFlags` in
-   `deploy/compose_test.go` follow. Then #1704 (packs and reports), #1697 (the viewer for them), and
-   #1734 (`/mounts/`).
-2. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
+1. **#1732** (`--store <url>`) is in another session, with its PR nearly out. #1739 (uploads to a
+   writable mount by hash) follows it. Then #1704 (packs and reports) and #1697 (the viewer for them).
+2. **#1734 then #1735**, in the `~/projects/Agni/main` clone. The plan was approved on 2026-11-18.
+   A GitHub mount is a snapshot of the repo at its commit, kept in the store, so `osLoader` reads it
+   and #864 is not needed. Open question: the user asked whether datasheets should use the same
+   mounts, with datasheet metadata in the store and the PDFs in mounts, so both share one mounts
+   client. Settle that before PR A decides what happens to `/datasheets/files/`.
+3. **#1627**: bump oneauth and servicekit to their new tags, then TLS and tokens on `agni serve`. Then a
    ticket for the gRPC clients to trust a CA, which closes #1625.
-3. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
+4. **Then #1611.** Make it active with `/retriage`, and start at #1612 and #1613.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`), #370 then
 #373, #380, #456, #374, #716 and #739 (read a Datalog-derived relation from Go). The query language
