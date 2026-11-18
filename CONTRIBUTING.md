@@ -122,6 +122,8 @@ The Makefile pins `STATICCHECK`, `GOSEC`, `GITLEAKS` and `GOVULNCHECK`, and each
   in the Makefile. The annotation carries the reason to an outside scanner too.
 - **gosec runs under the Go version that `go.mod` names (`GOTOOLCHAIN`).** Under a newer Go its SSA
   rules (G115, G703, G710, G112, G122) skip silently, and a local run reads clean.
+- G122 flags an `os.Remove` or `os.Open` on a path a `filepath.WalkDir` callback hands it. Walk and
+  remove through an `os.Root` instead, as `internal/projects/blobdir.go`'s `Sweep` does (#1741).
 - A narrowing of a count or coordinate goes through `core/num`, which saturates. A design file can
   come from anyone, and a wrapped `int32` reads as a real value.
 - gitleaks installs as `github.com/zricethezav/gitleaks/v8`. That is its module path, whatever its
