@@ -9,7 +9,7 @@ Enforceable architectural rules for this project. Background and rationale in
 
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`)
 fails on a rule without one. A rule with nothing to run is not enforceable, and C6 went unchecked
-that way. A Verify is one of two things. Twenty-two are TESTS the gate runs, so a violation turns CI
+that way. A Verify is one of two things. Twenty-three are TESTS the gate runs, so a violation turns CI
 red. Thirteen are REVIEW questions, and each says what a reviewer should ask instead. Watch that
 second number. C32 once joined the review column because its test was missing, not because a machine
 could not answer it, and it left again once the test existed. So a review question means either "no
@@ -1250,3 +1250,23 @@ bullet and nothing moved one out (agni 1490).
 dot directories, `node_modules` and `tools/samples`, and fails on any `CLAUDE.md` over 10,000
 characters. It fails outright when it finds no root `CLAUDE.md`, so a walk that matches nothing
 cannot read as clean.
+
+## C37: Every third-party download is checked against a hash
+**Rule:** Every `uses:` in `.github/workflows/` and `.github/actions/` names a full 40-character
+commit SHA, with the tag it came from in a trailing comment, or a local `./` path. Every Dockerfile
+`FROM` names an image as `tag@sha256:<digest>`, using the multi-platform index digest, or names an
+earlier stage of the same file. Every `pip install` in a Dockerfile or the Makefile installs from a
+lock compiled with `--generate-hashes` and runs with `--require-hashes`, or installs a local package
+with `--no-deps`. Every Gradle build carries `gradle/verification-metadata.xml` with SHA-256
+checksums. Go, pnpm and Cargo already check hashes through `go.sum`, `pnpm-lock.yaml` and
+`Cargo.lock`. Dependabot moves the action SHAs and image digests (`.github/dependabot.yml`), and
+`make python-client-lock` and `make pdf2doc-lock` regenerate the pip locks.
+**Why:** a tag, a branch or a version number can be moved to other bytes by whoever controls the
+action's repo, the image's registry entry or the package. The moved code runs with this repo's
+token, and in the release job with the PyPI publish credentials (agni 1737, 1738).
+**Verify:** `TestC37ActionsArePinnedToACommit`, `TestC37BaseImagesArePinnedToADigest`,
+`TestC37PipInstallsCheckHashes` and `TestC37GradleBuildsVerifyDependencies` (`internal/constraints`)
+read every workflow, composite action, `Dockerfile*`, the Makefile and every Gradle settings file,
+and name each line or build that breaks the rule. Each fails outright when it reads too little, so a
+path change cannot make it pass by reading nothing. `hack/python_dist_smoke.sh` is outside the rule
+on purpose. It installs the built wheel the way a stranger would, resolving protobuf fresh.

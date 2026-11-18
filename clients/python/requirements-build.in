@@ -1,0 +1,5 @@
+# make python-dist builds the wheel with these, compiled with hashes into requirements-build.txt
+# (C37) by `make python-client-lock`. It runs python -m build --no-isolation, so nothing else is
+# fetched.
+build
+setuptools>=69
