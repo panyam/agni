@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private ListPacksRequest() {
     pageToken_ = "";
+    filter_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -111,6 +112,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int FILTER_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object filter_ = "";
+  /**
+   * <pre>
+   * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+   * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+   * </pre>
+   *
+   * <code>string filter = 3 [json_name = "filter"];</code>
+   * @return The filter.
+   */
+  @java.lang.Override
+  public java.lang.String getFilter() {
+    java.lang.Object ref = filter_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      filter_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+   * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+   * </pre>
+   *
+   * <code>string filter = 3 [json_name = "filter"];</code>
+   * @return The bytes for filter.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFilterBytes() {
+    java.lang.Object ref = filter_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      filter_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -131,6 +181,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(pageToken_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, pageToken_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(filter_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, filter_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -141,6 +194,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(pageToken_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, pageToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(filter_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, filter_);
     }
     return size;
   }
@@ -170,6 +226,8 @@ private static final long serialVersionUID = 0L;
         != other.getPageSize()) return false;
     if (!getPageToken()
         .equals(other.getPageToken())) return false;
+    if (!getFilter()
+        .equals(other.getFilter())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -185,6 +243,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getPageSize();
     hash = (37 * hash) + PAGE_TOKEN_FIELD_NUMBER;
     hash = (53 * hash) + getPageToken().hashCode();
+    hash = (37 * hash) + FILTER_FIELD_NUMBER;
+    hash = (53 * hash) + getFilter().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -318,6 +378,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       pageSize_ = 0;
       pageToken_ = "";
+      filter_ = "";
       return this;
     }
 
@@ -357,6 +418,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.pageToken_ = pageToken_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.filter_ = filter_;
+      }
     }
 
     @java.lang.Override
@@ -377,6 +441,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getPageToken().isEmpty()) {
         pageToken_ = other.pageToken_;
         bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      if (!other.getFilter().isEmpty()) {
+        filter_ = other.filter_;
+        bitField0_ |= 0x00000004;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -413,6 +482,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 26: {
+              filter_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -562,6 +636,103 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       pageToken_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object filter_ = "";
+    /**
+     * <pre>
+     * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+     * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+     * </pre>
+     *
+     * <code>string filter = 3 [json_name = "filter"];</code>
+     * @return The filter.
+     */
+    public java.lang.String getFilter() {
+      java.lang.Object ref = filter_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        filter_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+     * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+     * </pre>
+     *
+     * <code>string filter = 3 [json_name = "filter"];</code>
+     * @return The bytes for filter.
+     */
+    public com.google.protobuf.ByteString
+        getFilterBytes() {
+      java.lang.Object ref = filter_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        filter_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+     * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+     * </pre>
+     *
+     * <code>string filter = 3 [json_name = "filter"];</code>
+     * @param value The filter to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFilter(
+        java.lang.String value) {
+      java.util.Objects.requireNonNull(value);
+      filter_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+     * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+     * </pre>
+     *
+     * <code>string filter = 3 [json_name = "filter"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFilter() {
+      filter_ = getDefaultInstance().getFilter();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+     * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+     * </pre>
+     *
+     * <code>string filter = 3 [json_name = "filter"];</code>
+     * @param value The bytes for filter to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFilterBytes(
+        com.google.protobuf.ByteString value) {
+      java.util.Objects.requireNonNull(value);
+      checkByteStringIsUtf8(value);
+      filter_ = value;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }

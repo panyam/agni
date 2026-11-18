@@ -696,9 +696,9 @@ func checkCmd() *cobra.Command {
 			// by name, so without the project's rules `--rule gateway/signal-net-naming` would report "no
 			// rules selected" for a rule that runs.
 			var names []string
-			// runRules are the rules the run's catalog holds, for the coverage line and the verdict
-			// report, and rulesRun how many the run selected. Under --pack the catalog is the server's,
-			// so runRules stays nil and rulesRun is counted from the server's listing below.
+			// runRules are the rules the run's catalog holds, for the verdict report, and rulesRun how
+			// many the run selected. Under --pack the catalog is the server's, so runRules stays nil, the
+			// coverage line counts the verdicts alone, and rulesRun is counted from the server's listing.
 			var runRules []*check.Rule
 			rulesRun := 0
 			if len(packs) > 0 {
@@ -1021,11 +1021,8 @@ func writeCoverage(w io.Writer, t *rpt.Totals) {
 // coverageOf is a run's coverage as the verdict report counts it (service.VerdictReport), so the
 // default output's coverage line and the --verdicts footer state one set of numbers (agni issue 1045).
 //
-// No rules gives no coverage, as for a --pack run whose catalog this process never saw.
+// It counts the run's verdicts, so a --pack run, whose catalog this process never saw, passes no rules.
 func coverageOf(resp *webapi.CheckDesignResponse, rules []*check.Rule) *rpt.Totals {
-	if rules == nil {
-		return nil
-	}
 	t := service.VerdictReport(resp, rules, rpt.Report{}).Totals
 	return &t
 }

@@ -233,7 +233,10 @@ type ListPacksRequest struct {
 	// page_size is the maximum number of packs to return. 0 uses the server default.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token continues a previous call. An empty token starts at the first pack.
-	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+	// rather than ignored, since a client that believed it had filtered would read the wrong packs.
+	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -278,6 +281,13 @@ func (x *ListPacksRequest) GetPageSize() int32 {
 func (x *ListPacksRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListPacksRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
 	}
 	return ""
 }
@@ -452,11 +462,12 @@ const file_agni_v1_webapi_packs_proto_rawDesc = "" +
 	"\apack_id\x18\x01 \x01(\tR\x06packId\x12(\n" +
 	"\x04pack\x18\x02 \x01(\v2\x14.agni.v1.webapi.PackR\x04pack\"$\n" +
 	"\x0eGetPackRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"N\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"f\n" +
 	"\x10ListPacksRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x02 \x01(\tR\tpageToken\"g\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n" +
+	"\x06filter\x18\x03 \x01(\tR\x06filter\"g\n" +
 	"\x11ListPacksResponse\x12*\n" +
 	"\x05packs\x18\x01 \x03(\v2\x14.agni.v1.webapi.PackR\x05packs\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"z\n" +

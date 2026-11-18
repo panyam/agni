@@ -79,6 +79,9 @@ message ListPacksRequest {
   int32 page_size = 1;
   // page_token continues a previous call. An empty token starts at the first pack.
   string page_token = 2;
+  // filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+  // rather than ignored, since a client that believed it had filtered would read the wrong packs.
+  string filter = 3;
 }
 
 message ListPacksResponse {

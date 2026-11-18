@@ -84,30 +84,31 @@ public final class PacksProto extends com.google.protobuf.GeneratedFile {
       "estampR\nupdateTime\"V\n\021CreatePackRequest\022" +
       "\027\n\007pack_id\030\001 \001(\tR\006packId\022(\n\004pack\030\002 \001(\0132\024" +
       ".agni.v1.webapi.PackR\004pack\"$\n\016GetPackReq" +
-      "uest\022\022\n\004name\030\001 \001(\tR\004name\"N\n\020ListPacksReq" +
+      "uest\022\022\n\004name\030\001 \001(\tR\004name\"f\n\020ListPacksReq" +
       "uest\022\033\n\tpage_size\030\001 \001(\005R\010pageSize\022\035\n\npag" +
-      "e_token\030\002 \001(\tR\tpageToken\"g\n\021ListPacksRes" +
-      "ponse\022*\n\005packs\030\001 \003(\0132\024.agni.v1.webapi.Pa" +
-      "ckR\005packs\022&\n\017next_page_token\030\002 \001(\tR\rnext" +
-      "PageToken\"z\n\021UpdatePackRequest\022(\n\004pack\030\001" +
-      " \001(\0132\024.agni.v1.webapi.PackR\004pack\022;\n\013upda" +
-      "te_mask\030\002 \001(\0132\032.google.protobuf.FieldMas" +
-      "kR\nupdateMask\"\'\n\021DeletePackRequest\022\022\n\004na" +
-      "me\030\001 \001(\tR\004name2\367\002\n\013PackService\022E\n\nCreate" +
-      "Pack\022!.agni.v1.webapi.CreatePackRequest\032" +
-      "\024.agni.v1.webapi.Pack\022?\n\007GetPack\022\036.agni." +
-      "v1.webapi.GetPackRequest\032\024.agni.v1.webap" +
-      "i.Pack\022P\n\tListPacks\022 .agni.v1.webapi.Lis" +
-      "tPacksRequest\032!.agni.v1.webapi.ListPacks" +
-      "Response\022E\n\nUpdatePack\022!.agni.v1.webapi." +
-      "UpdatePackRequest\032\024.agni.v1.webapi.Pack\022" +
-      "G\n\nDeletePack\022!.agni.v1.webapi.DeletePac" +
-      "kRequest\032\026.google.protobuf.EmptyB\265\001\n\037io." +
-      "github.panyam.agni.v1.webapiB\nPacksProto" +
-      "P\001Z,github.com/panyam/agni/gen/go/agni/v" +
-      "1/webapi\242\002\003AVW\252\002\016Agni.V1.Webapi\312\002\016Agni\\V" +
-      "1\\Webapi\342\002\032Agni\\V1\\Webapi\\GPBMetadata\352\002\020" +
-      "Agni::V1::Webapib\006proto3"
+      "e_token\030\002 \001(\tR\tpageToken\022\026\n\006filter\030\003 \001(\t" +
+      "R\006filter\"g\n\021ListPacksResponse\022*\n\005packs\030\001" +
+      " \003(\0132\024.agni.v1.webapi.PackR\005packs\022&\n\017nex" +
+      "t_page_token\030\002 \001(\tR\rnextPageToken\"z\n\021Upd" +
+      "atePackRequest\022(\n\004pack\030\001 \001(\0132\024.agni.v1.w" +
+      "ebapi.PackR\004pack\022;\n\013update_mask\030\002 \001(\0132\032." +
+      "google.protobuf.FieldMaskR\nupdateMask\"\'\n" +
+      "\021DeletePackRequest\022\022\n\004name\030\001 \001(\tR\004name2\367" +
+      "\002\n\013PackService\022E\n\nCreatePack\022!.agni.v1.w" +
+      "ebapi.CreatePackRequest\032\024.agni.v1.webapi" +
+      ".Pack\022?\n\007GetPack\022\036.agni.v1.webapi.GetPac" +
+      "kRequest\032\024.agni.v1.webapi.Pack\022P\n\tListPa" +
+      "cks\022 .agni.v1.webapi.ListPacksRequest\032!." +
+      "agni.v1.webapi.ListPacksResponse\022E\n\nUpda" +
+      "tePack\022!.agni.v1.webapi.UpdatePackReques" +
+      "t\032\024.agni.v1.webapi.Pack\022G\n\nDeletePack\022!." +
+      "agni.v1.webapi.DeletePackRequest\032\026.googl" +
+      "e.protobuf.EmptyB\265\001\n\037io.github.panyam.ag" +
+      "ni.v1.webapiB\nPacksProtoP\001Z,github.com/p" +
+      "anyam/agni/gen/go/agni/v1/webapi\242\002\003AVW\252\002" +
+      "\016Agni.V1.Webapi\312\002\016Agni\\V1\\Webapi\342\002\032Agni\\" +
+      "V1\\Webapi\\GPBMetadata\352\002\020Agni::V1::Webapi" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -141,7 +142,7 @@ public final class PacksProto extends com.google.protobuf.GeneratedFile {
     internal_static_agni_v1_webapi_ListPacksRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_agni_v1_webapi_ListPacksRequest_descriptor,
-        new java.lang.String[] { "PageSize", "PageToken", });
+        new java.lang.String[] { "PageSize", "PageToken", "Filter", });
     internal_static_agni_v1_webapi_ListPacksResponse_descriptor =
       getDescriptor().getMessageType(4);
     internal_static_agni_v1_webapi_ListPacksResponse_fieldAccessorTable = new

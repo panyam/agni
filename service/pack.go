@@ -173,6 +173,15 @@ func checkPack(p *webapi.Pack) error {
 	return nil
 }
 
+// noFilter refuses any AIP-160 filter on a listing that implements none, so a client that believed it
+// had filtered never reads the whole listing as the filtered one (C23).
+func noFilter(what, filter string) error {
+	if strings.TrimSpace(filter) != "" {
+		return fmt.Errorf("%w: a listing of %s takes no filter yet, and got %q", ErrInvalidArgument, what, filter)
+	}
+	return nil
+}
+
 // PackService serves the pack resource, "packs/{pack}", over a PackStore (agni issue 1704). It does
 // no I/O itself. It validates requests and applies AIP-158 pagination.
 type PackService struct {
@@ -218,6 +227,9 @@ func (s *PackService) GetPack(ctx context.Context, req *webapi.GetPackRequest) (
 
 // ListPacks returns the packs this server holds, ordered by name.
 func (s *PackService) ListPacks(ctx context.Context, req *webapi.ListPacksRequest) (*webapi.ListPacksResponse, error) {
+	if err := noFilter("packs", req.GetFilter()); err != nil {
+		return nil, err
+	}
 	if s.store == nil {
 		return &webapi.ListPacksResponse{}, nil
 	}

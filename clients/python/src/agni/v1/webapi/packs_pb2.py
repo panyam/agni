@@ -29,7 +29,7 @@ from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mas
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1a\x61gni/v1/webapi/packs.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/config.proto\x1a\x1d\x61gni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n\x04Pack\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x36\n\x06\x63onfig\x18\x03 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12\x32\n\x05\x66iles\x18\x04 \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\x12\x10\n\x03uri\x18\x05 \x01(\tR\x03uri\x12\x12\n\x04hash\x18\x06 \x01(\tR\x04hash\x12;\n\x0bupdate_time\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nupdateTime\"V\n\x11\x43reatePackRequest\x12\x17\n\x07pack_id\x18\x01 \x01(\tR\x06packId\x12(\n\x04pack\x18\x02 \x01(\x0b\x32\x14.agni.v1.webapi.PackR\x04pack\"$\n\x0eGetPackRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"N\n\x10ListPacksRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\"g\n\x11ListPacksResponse\x12*\n\x05packs\x18\x01 \x03(\x0b\x32\x14.agni.v1.webapi.PackR\x05packs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"z\n\x11UpdatePackRequest\x12(\n\x04pack\x18\x01 \x01(\x0b\x32\x14.agni.v1.webapi.PackR\x04pack\x12;\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMask\"\'\n\x11\x44\x65letePackRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name2\xf7\x02\n\x0bPackService\x12\x45\n\nCreatePack\x12!.agni.v1.webapi.CreatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12?\n\x07GetPack\x12\x1e.agni.v1.webapi.GetPackRequest\x1a\x14.agni.v1.webapi.Pack\x12P\n\tListPacks\x12 .agni.v1.webapi.ListPacksRequest\x1a!.agni.v1.webapi.ListPacksResponse\x12\x45\n\nUpdatePack\x12!.agni.v1.webapi.UpdatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12G\n\nDeletePack\x12!.agni.v1.webapi.DeletePackRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1a\x61gni/v1/webapi/packs.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/config.proto\x1a\x1d\x61gni/v1/webapi/snapshot.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n\x04Pack\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12\x36\n\x06\x63onfig\x18\x03 \x01(\x0b\x32\x1e.agni.v1.webapi.AnalysisConfigR\x06\x63onfig\x12\x32\n\x05\x66iles\x18\x04 \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\x12\x10\n\x03uri\x18\x05 \x01(\tR\x03uri\x12\x12\n\x04hash\x18\x06 \x01(\tR\x04hash\x12;\n\x0bupdate_time\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nupdateTime\"V\n\x11\x43reatePackRequest\x12\x17\n\x07pack_id\x18\x01 \x01(\tR\x06packId\x12(\n\x04pack\x18\x02 \x01(\x0b\x32\x14.agni.v1.webapi.PackR\x04pack\"$\n\x0eGetPackRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"f\n\x10ListPacksRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"g\n\x11ListPacksResponse\x12*\n\x05packs\x18\x01 \x03(\x0b\x32\x14.agni.v1.webapi.PackR\x05packs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"z\n\x11UpdatePackRequest\x12(\n\x04pack\x18\x01 \x01(\x0b\x32\x14.agni.v1.webapi.PackR\x04pack\x12;\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMask\"\'\n\x11\x44\x65letePackRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name2\xf7\x02\n\x0bPackService\x12\x45\n\nCreatePack\x12!.agni.v1.webapi.CreatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12?\n\x07GetPack\x12\x1e.agni.v1.webapi.GetPackRequest\x1a\x14.agni.v1.webapi.Pack\x12P\n\tListPacks\x12 .agni.v1.webapi.ListPacksRequest\x1a!.agni.v1.webapi.ListPacksResponse\x12\x45\n\nUpdatePack\x12!.agni.v1.webapi.UpdatePackRequest\x1a\x14.agni.v1.webapi.Pack\x12G\n\nDeletePack\x12!.agni.v1.webapi.DeletePackRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -44,13 +44,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETPACKREQUEST']._serialized_start=548
   _globals['_GETPACKREQUEST']._serialized_end=584
   _globals['_LISTPACKSREQUEST']._serialized_start=586
-  _globals['_LISTPACKSREQUEST']._serialized_end=664
-  _globals['_LISTPACKSRESPONSE']._serialized_start=666
-  _globals['_LISTPACKSRESPONSE']._serialized_end=769
-  _globals['_UPDATEPACKREQUEST']._serialized_start=771
-  _globals['_UPDATEPACKREQUEST']._serialized_end=893
-  _globals['_DELETEPACKREQUEST']._serialized_start=895
-  _globals['_DELETEPACKREQUEST']._serialized_end=934
-  _globals['_PACKSERVICE']._serialized_start=937
-  _globals['_PACKSERVICE']._serialized_end=1312
+  _globals['_LISTPACKSREQUEST']._serialized_end=688
+  _globals['_LISTPACKSRESPONSE']._serialized_start=690
+  _globals['_LISTPACKSRESPONSE']._serialized_end=793
+  _globals['_UPDATEPACKREQUEST']._serialized_start=795
+  _globals['_UPDATEPACKREQUEST']._serialized_end=917
+  _globals['_DELETEPACKREQUEST']._serialized_start=919
+  _globals['_DELETEPACKREQUEST']._serialized_end=958
+  _globals['_PACKSERVICE']._serialized_start=961
+  _globals['_PACKSERVICE']._serialized_end=1336
 # @@protoc_insertion_point(module_scope)

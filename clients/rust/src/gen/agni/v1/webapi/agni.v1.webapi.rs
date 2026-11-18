@@ -3540,6 +3540,10 @@ pub struct ListPacksRequest {
     /// page_token continues a previous call. An empty token starts at the first pack.
     #[prost(string, tag="2")]
     pub page_token: ::prost::alloc::string::String,
+    /// filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+    /// rather than ignored, since a client that believed it had filtered would read the wrong packs.
+    #[prost(string, tag="3")]
+    pub filter: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListPacksResponse {

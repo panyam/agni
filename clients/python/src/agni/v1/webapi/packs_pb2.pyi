@@ -46,12 +46,14 @@ class GetPackRequest(_message.Message):
     def __init__(self, name: _Optional[str] = ...) -> None: ...
 
 class ListPacksRequest(_message.Message):
-    __slots__ = ("page_size", "page_token")
+    __slots__ = ("page_size", "page_token", "filter")
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    FILTER_FIELD_NUMBER: _ClassVar[int]
     page_size: int
     page_token: str
-    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+    filter: str
+    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., filter: _Optional[str] = ...) -> None: ...
 
 class ListPacksResponse(_message.Message):
     __slots__ = ("packs", "next_page_token")

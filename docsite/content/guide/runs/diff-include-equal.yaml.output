@@ -1,4 +1,4 @@
-#agni-run c1d1a0b6d4b50ec9
+#agni-run 6f24f908929df5af
 diff designs/gateway/gateway.edn -> designs/gateway-rev-b/gateway-rev-b.edn
 
 Components: +2  -0  ~0

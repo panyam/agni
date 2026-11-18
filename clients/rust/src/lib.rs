@@ -43,6 +43,7 @@ use tonic::{Code, Request, Status};
 use agni::v1::webapi::check_service_client::CheckServiceClient;
 use agni::v1::webapi::design_service_client::DesignServiceClient;
 use agni::v1::webapi::design_view_service_client::DesignViewServiceClient;
+use agni::v1::webapi::pack_service_client::PackServiceClient;
 use agni::v1::webapi::query_service_client::QueryServiceClient;
 use agni::v1::webapi::server_service_client::ServerServiceClient;
 use agni::v1::webapi::snapshot_service_client::SnapshotServiceClient;
@@ -132,6 +133,11 @@ impl Client {
     /// `agni.v1.webapi.DesignService`, the designs a server holds (agni issue 1694).
     pub fn designs(&self) -> DesignServiceClient<Transport> {
         DesignServiceClient::new(self.transport())
+    }
+
+    /// `agni.v1.webapi.PackService`, the packs of rules a server keeps (agni issue 1704).
+    pub fn packs(&self) -> PackServiceClient<Transport> {
+        PackServiceClient::new(self.transport())
     }
 
     /// `agni.v1.webapi.DesignViewService`.

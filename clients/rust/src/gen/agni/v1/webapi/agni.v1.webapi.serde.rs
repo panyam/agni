@@ -13228,12 +13228,18 @@ impl serde::Serialize for ListPacksRequest {
         if !self.page_token.is_empty() {
             len += 1;
         }
+        if !self.filter.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ListPacksRequest", len)?;
         if self.page_size != 0 {
             struct_ser.serialize_field("pageSize", &self.page_size)?;
         }
         if !self.page_token.is_empty() {
             struct_ser.serialize_field("pageToken", &self.page_token)?;
+        }
+        if !self.filter.is_empty() {
+            struct_ser.serialize_field("filter", &self.filter)?;
         }
         struct_ser.end()
     }
@@ -13249,12 +13255,14 @@ impl<'de> serde::Deserialize<'de> for ListPacksRequest {
             "pageSize",
             "page_token",
             "pageToken",
+            "filter",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PageSize,
             PageToken,
+            Filter,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -13278,6 +13286,7 @@ impl<'de> serde::Deserialize<'de> for ListPacksRequest {
                         match value {
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "filter" => Ok(GeneratedField::Filter),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -13299,6 +13308,7 @@ impl<'de> serde::Deserialize<'de> for ListPacksRequest {
             {
                 let mut page_size__ = None;
                 let mut page_token__ = None;
+                let mut filter__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PageSize => {
@@ -13315,11 +13325,18 @@ impl<'de> serde::Deserialize<'de> for ListPacksRequest {
                             }
                             page_token__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(ListPacksRequest {
                     page_size: page_size__.unwrap_or_default(),
                     page_token: page_token__.unwrap_or_default(),
+                    filter: filter__.unwrap_or_default(),
                 })
             }
         }

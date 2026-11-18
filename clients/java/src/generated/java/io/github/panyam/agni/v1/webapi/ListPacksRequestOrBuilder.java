@@ -39,4 +39,26 @@ public interface ListPacksRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPageTokenBytes();
+
+  /**
+   * <pre>
+   * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+   * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+   * </pre>
+   *
+   * <code>string filter = 3 [json_name = "filter"];</code>
+   * @return The filter.
+   */
+  java.lang.String getFilter();
+  /**
+   * <pre>
+   * filter narrows the listing (AIP-160). None is supported yet, so any filter is INVALID_ARGUMENT
+   * rather than ignored, since a client that believed it had filtered would read the wrong packs.
+   * </pre>
+   *
+   * <code>string filter = 3 [json_name = "filter"];</code>
+   * @return The bytes for filter.
+   */
+  com.google.protobuf.ByteString
+      getFilterBytes();
 }

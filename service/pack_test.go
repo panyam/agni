@@ -148,6 +148,9 @@ func TestPackServiceRefusesBadRequests(t *testing.T) {
 	if resp, err := none.ListPacks(ctx, &webapi.ListPacksRequest{}); err != nil || len(resp.GetPacks()) != 0 {
 		t.Errorf("list with no store = %v, %v; want empty", resp, err)
 	}
+	if _, err := none.ListPacks(ctx, &webapi.ListPacksRequest{Filter: `title = "a"`}); !errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("list with a filter = %v; want ErrInvalidArgument, as none is implemented", err)
+	}
 	if _, err := none.GetPack(ctx, &webapi.GetPackRequest{Name: "projects/a"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("get projects/a = %v; want ErrInvalidArgument", err)
 	}
