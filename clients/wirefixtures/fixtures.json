@@ -421,7 +421,8 @@
         "config": {
           "extends": "projects/cross-probe"
         },
-        "updateTime": "2026-11-17T19:17:01.470872491Z"
+        "updateTime": "2026-11-18T16:47:10.295986303Z",
+        "readOnly": true
       },
       "ignore": [
         "update_time"

@@ -4140,6 +4140,9 @@ impl serde::Serialize for Design {
         if !self.artifacts.is_empty() {
             len += 1;
         }
+        if self.read_only {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.Design", len)?;
         if !self.name.is_empty() {
             struct_ser.serialize_field("name", &self.name)?;
@@ -4174,6 +4177,9 @@ impl serde::Serialize for Design {
         if !self.artifacts.is_empty() {
             struct_ser.serialize_field("artifacts", &self.artifacts)?;
         }
+        if self.read_only {
+            struct_ser.serialize_field("readOnly", &self.read_only)?;
+        }
         struct_ser.end()
     }
 }
@@ -4200,6 +4206,8 @@ impl<'de> serde::Deserialize<'de> for Design {
             "series_latest",
             "seriesLatest",
             "artifacts",
+            "read_only",
+            "readOnly",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4215,6 +4223,7 @@ impl<'de> serde::Deserialize<'de> for Design {
             UpdateTime,
             SeriesLatest,
             Artifacts,
+            ReadOnly,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -4247,6 +4256,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                             "updateTime" | "update_time" => Ok(GeneratedField::UpdateTime),
                             "seriesLatest" | "series_latest" => Ok(GeneratedField::SeriesLatest),
                             "artifacts" => Ok(GeneratedField::Artifacts),
+                            "readOnly" | "read_only" => Ok(GeneratedField::ReadOnly),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -4277,6 +4287,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                 let mut update_time__ = None;
                 let mut series_latest__ = None;
                 let mut artifacts__ = None;
+                let mut read_only__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Name => {
@@ -4345,6 +4356,12 @@ impl<'de> serde::Deserialize<'de> for Design {
                             }
                             artifacts__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::ReadOnly => {
+                            if read_only__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readOnly"));
+                            }
+                            read_only__ = Some(map_.next_value()?);
+                        }
                     }
                 }
                 Ok(Design {
@@ -4359,6 +4376,7 @@ impl<'de> serde::Deserialize<'de> for Design {
                     update_time: update_time__,
                     series_latest: series_latest__.unwrap_or_default(),
                     artifacts: artifacts__.unwrap_or_default(),
+                    read_only: read_only__.unwrap_or_default(),
                 })
             }
         }
@@ -11663,6 +11681,132 @@ impl<'de> serde::Deserialize<'de> for ImportDesignFilesResponse {
             }
         }
         deserializer.deserialize_struct("agni.v1.webapi.ImportDesignFilesResponse", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ImportPackFilesRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.pack_id.is_empty() {
+            len += 1;
+        }
+        if !self.files.is_empty() {
+            len += 1;
+        }
+        if !self.title.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("agni.v1.webapi.ImportPackFilesRequest", len)?;
+        if !self.pack_id.is_empty() {
+            struct_ser.serialize_field("packId", &self.pack_id)?;
+        }
+        if !self.files.is_empty() {
+            struct_ser.serialize_field("files", &self.files)?;
+        }
+        if !self.title.is_empty() {
+            struct_ser.serialize_field("title", &self.title)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ImportPackFilesRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "pack_id",
+            "packId",
+            "files",
+            "title",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            PackId,
+            Files,
+            Title,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "packId" | "pack_id" => Ok(GeneratedField::PackId),
+                            "files" => Ok(GeneratedField::Files),
+                            "title" => Ok(GeneratedField::Title),
+                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ImportPackFilesRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct agni.v1.webapi.ImportPackFilesRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ImportPackFilesRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut pack_id__ = None;
+                let mut files__ = None;
+                let mut title__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::PackId => {
+                            if pack_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("packId"));
+                            }
+                            pack_id__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Files => {
+                            if files__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("files"));
+                            }
+                            files__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::Title => {
+                            if title__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("title"));
+                            }
+                            title__ = Some(map_.next_value()?);
+                        }
+                    }
+                }
+                Ok(ImportPackFilesRequest {
+                    pack_id: pack_id__.unwrap_or_default(),
+                    files: files__.unwrap_or_default(),
+                    title: title__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("agni.v1.webapi.ImportPackFilesRequest", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for IngestRequest {

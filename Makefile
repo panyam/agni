@@ -402,10 +402,12 @@ EXERCISE_OUT ?= /tmp/agni-exercise
 exercise-revision-audit: agni python-venv
 	$(PY_VENV)/bin/python $(PY_CLIENT)/examples/revision_audit.py --agni $(CURDIR)/bin/agni -o $(EXERCISE_OUT)/revision-audit.xlsx
 
-# The design-store mission's exercise (agni issues 1691, 1696): Jetson 1.1.2 and 1.1.3 pushed to a
-# server as two designs of one series, 1.1.3's schematic replaced, and the store read back after a
-# restart. It runs the checkout's binary on its own port and writes under EXERCISE_OUT.
+# The design-store mission's exercise (agni issues 1691, 1696, 1746): Jetson 1.1.2 and 1.1.3 pushed to
+# a server as two designs of one series with their project as a pack, a report kept through a project,
+# 1.1.3's schematic replaced, and the store read back after a restart. It runs the checkout's binary on
+# its own port and writes under EXERCISE_OUT.
 exercise-design-store: agni samples-revisions
+	$(MAKE) -C examples/jetson-project revision
 	AGNI=$(CURDIR)/bin/agni EXERCISE_OUT=$(EXERCISE_OUT) ./hack/exercise_design_store.sh
 
 # The runtime-mounts exercise (agni issue 1735): a GitHub mount over Antmicro's Jetson baseboard at

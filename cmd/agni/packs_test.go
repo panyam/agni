@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -230,5 +232,259 @@ func TestASnapshotRereadsWhenItsPackChanges(t *testing.T) {
 	}
 	if _, err := ingest(); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Errorf("ingest under a deleted pack = %v; want NOT_FOUND naming the pack", err)
+	}
+}
+
+// check --verdicts under a pack writes text and csv, and they match the same report on the folder
+// (agni issue 1746). The verdicts carry what each section shows, so the CLI needs none of the pack's
+// rules.
+func TestVerdictsUnderAPackMatchTheFolder(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	design := filepath.Join(project, "designs", "gw")
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
+	for _, format := range []string{"text", "csv"} {
+		underPack, err := runAgni(t, "check", "designs/gw", "--pack", "gateway", "--verdicts", "--format", format, "--remote", srv.URL)
+		if err != nil {
+			t.Fatalf("check --pack --verdicts --format %s: %v\n%s", format, err, underPack)
+		}
+		folder, err := runAgni(t, "check", design, "--verdicts", "--format", format)
+		if err != nil {
+			t.Fatalf("check --verdicts --format %s on the folder: %v\n%s", format, err, folder)
+		}
+		if !strings.Contains(folder, "gateway-profiles/") {
+			t.Fatalf("the folder's %s verdicts name no gateway-profiles rule, so this test proves nothing about the pack", format)
+		}
+		if underPack != folder {
+			t.Errorf("--verdicts --format %s under the pack differs from the folder's; want the same report", format)
+		}
+	}
+}
+
+// review designs/<d> --pack runs the pack's checklist, its first by default or one by name, and each
+// item reads as review on the folder reads it (agni issue 1746).
+func TestAReviewUnderAPackMatchesTheFolder(t *testing.T) {
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	if out, err := runPacks(t, srv.URL, "push", project); err != nil {
+		t.Fatalf("packs push: %v\n%s", err, out)
+	}
+	design := filepath.Join(project, "designs", "gw")
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil {
+		t.Fatalf("designs push: %v\n%s", err, out)
+	}
+	for _, named := range [][]string{nil, {"--checklist", "house"}} {
+		underPack := reviewOutcomes(t, append([]string{"review", "designs/gw", "--pack", "gateway", "--remote", srv.URL}, named...)...)
+		folder := reviewOutcomes(t, append([]string{"review", design}, named...)...)
+		if len(folder) == 0 || !slices.ContainsFunc(folder, func(k string) bool { return strings.HasSuffix(k, "|pass") || strings.HasSuffix(k, "|fail") }) {
+			t.Fatalf("review %v on the folder answered no item, so this test proves nothing: %v", named, folder)
+		}
+		if !slices.Equal(underPack, folder) {
+			t.Errorf("review %v under the pack differs from the folder\nonly under the pack: %v\nonly on the folder: %v", named, minus(underPack, folder), minus(folder, underPack))
+		}
+	}
+	if out, err := runAgni(t, "review", design, "--pack", "gateway", "--remote", srv.URL); err == nil || !strings.Contains(err.Error(), "designs/<id>") {
+		t.Errorf("review <folder> --pack = %v\n%s; want it refused, naming designs/<id>", err, out)
+	}
+}
+
+// reviewOutcomes runs agni with args and --format json, and returns each item as "id|outcome", sorted.
+func reviewOutcomes(t *testing.T, args ...string) []string {
+	t.Helper()
+	out, err := runAgni(t, append(args, "--format", "json")...)
+	if err != nil {
+		t.Fatalf("agni %v: %v\n%s", args, err, out)
+	}
+	var doc struct {
+		Results struct {
+			Areas []struct {
+				Items []struct {
+					ID      string `json:"id"`
+					Outcome string `json:"outcome"`
+				} `json:"items"`
+			} `json:"areas"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(out), &doc); err != nil {
+		t.Fatalf("agni %v printed no JSON: %v\n%s", args, err, out)
+	}
+	var keys []string
+	for _, a := range doc.Results.Areas {
+		for _, it := range a.Items {
+			keys = append(keys, it.ID+"|"+it.Outcome)
+		}
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+// designs push keeps the project.yaml a design extends as a pack, writes it again only when its hash
+// moves, and leaves it alone under --no-pack (agni issue 1746).
+func TestDesignsPushKeepsTheProjectItExtends(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	design := filepath.Join(project, "designs", "gw")
+	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
+	hash := func() string {
+		t.Helper()
+		p, err := packs.GetPack(ctx, connect.NewRequest(&webapi.GetPackRequest{Name: "packs/gateway"}))
+		if err != nil {
+			t.Fatalf("GetPack(packs/gateway): %v", err)
+		}
+		return p.Msg.GetHash()
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "plain", "--no-pack"); err != nil {
+		t.Fatalf("designs push --no-pack: %v\n%s", err, out)
+	}
+	if _, err := packs.GetPack(ctx, connect.NewRequest(&webapi.GetPackRequest{Name: "packs/gateway"})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("after push --no-pack, GetPack(packs/gateway) = %v; want NOT_FOUND", err)
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || !strings.Contains(out, "packs/gateway\t") || !strings.Contains(out, "--pack gateway") {
+		t.Fatalf("designs push = %q, %v; want packs/gateway kept and named for --pack", out, err)
+	}
+	first := hash()
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || !strings.Contains(out, "packs/gateway\tunchanged") {
+		t.Errorf("a second push = %q, %v; want packs/gateway unchanged", out, err)
+	}
+	profiles, err := filepath.Glob(filepath.Join(project, "profiles", "*.yaml"))
+	if err != nil || len(profiles) == 0 {
+		t.Fatalf("no profile to change under %s: %v", project, err)
+	}
+	f, err := os.OpenFile(profiles[0], os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("\n# changed\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := runDesigns(t, srv.URL, "push", design, "--id", "gw"); err != nil || strings.Contains(out, "unchanged") {
+		t.Fatalf("a push after a profile changed = %q, %v; want the pack written again", out, err)
+	}
+	if hash() == first {
+		t.Error("after a profile changed and the design was pushed, the pack's hash did not move")
+	}
+	if under, local := findingKeys(t, "check", "designs/gw", "--pack", "gateway", "--remote", srv.URL), findingKeys(t, "check", design); !slices.Equal(under, local) {
+		t.Errorf("check under the pushed pack = %d findings, on the folder = %d; want the same set", len(under), len(local))
+	}
+}
+
+// ImportPackFiles reads a whole project folder into a pack. It asks for project.yaml's contents
+// first, then for the files its tiers name, and never for a design's files beside them (agni issue
+// 1697).
+func TestImportPackFilesAsksOnlyForWhatThePackHolds(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	project := tutorialProject(t)
+	all, err := localFiles(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashOf := map[string]string{}
+	for _, f := range all.files {
+		hashOf[f.GetPath()] = f.GetSha256()
+	}
+	if hashOf["designs/gw/gateway.edn"] == "" || hashOf["project.yaml"] == "" {
+		t.Fatalf("the folder lacks the files this test reads: %v", hashOf)
+	}
+	packs := webapiconnect.NewPackServiceClient(http.DefaultClient, srv.URL)
+	snaps := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
+	var rounds [][]string
+	var made *webapi.Pack
+	for range 4 {
+		resp, err := packs.ImportPackFiles(ctx, connect.NewRequest(&webapi.ImportPackFilesRequest{Files: all.files}))
+		if err == nil {
+			made = resp.Msg
+			break
+		}
+		var ce *connect.Error
+		if !errors.As(err, &ce) {
+			t.Fatal(err)
+		}
+		var missing []string
+		for _, d := range ce.Details() {
+			if v, derr := d.Value(); derr == nil {
+				if bm, ok := v.(*webapi.BlobsMissing); ok {
+					missing = append(missing, bm.GetSha256()...)
+				}
+			}
+		}
+		if len(missing) == 0 {
+			t.Fatalf("ImportPackFiles = %v; want BlobsMissing or success", err)
+		}
+		rounds = append(rounds, missing)
+		var contents [][]byte
+		for _, h := range missing {
+			contents = append(contents, all.byHash[h])
+		}
+		if _, err := snaps.UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if made == nil || len(rounds) != 2 {
+		t.Fatalf("ImportPackFiles took %d rounds of missing contents and made %q; want project.yaml, then its files, then the pack", len(rounds), made.GetName())
+	}
+	if !slices.Equal(rounds[0], []string{hashOf["project.yaml"]}) {
+		t.Errorf("the first round asked for %v; want project.yaml's contents alone", rounds[0])
+	}
+	for _, h := range rounds[1] {
+		if h == hashOf["designs/gw/gateway.edn"] || h == hashOf["designs/gw/gateway.kicad_pcb"] {
+			t.Errorf("the second round asked for a design's file (%s); want the pack's files alone", h)
+		}
+	}
+	if made.GetName() != "packs/gateway" || made.GetTitle() != "Sample Board review project" || len(made.GetFiles()) == 0 {
+		t.Errorf("pack = %s %q with %d files; want packs/gateway titled from project.yaml, with its tiers' files", made.GetName(), made.GetTitle(), len(made.GetFiles()))
+	}
+	for _, f := range made.GetFiles() {
+		if strings.HasPrefix(f.GetPath(), "designs/") || f.GetPath() == "project.yaml" {
+			t.Errorf("the pack keeps %s; want only the files its tiers name", f.GetPath())
+		}
+	}
+	local, _, _, err := localPack(project, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if service.PackHash(local) != made.GetHash() {
+		t.Errorf("the CLI's hash of the folder %s differs from the server's %s; want one reading of a folder", service.PackHash(local), made.GetHash())
+	}
+}
+
+// A folder dropped in the viewer goes up through ImportDesignFiles alone, and the design keeps the
+// intent its design.yaml declares, as `designs push` keeps it (agni issue 1697).
+func TestImportDesignFilesKeepsTheDeclaredIntent(t *testing.T) {
+	ctx := context.Background()
+	srv := designServer(t, t.TempDir(), t.TempDir())
+	folder, err := localFiles(filepath.Join(tutorialProject(t), "designs", "gw"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contents [][]byte
+	for _, f := range folder.files {
+		contents = append(contents, folder.byHash[f.GetSha256()])
+	}
+	if _, err := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL).UploadBlobs(ctx, connect.NewRequest(&webapi.UploadBlobsRequest{Contents: contents})); err != nil {
+		t.Fatal(err)
+	}
+	designs := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
+	if _, err := designs.CreateDesign(ctx, connect.NewRequest(&webapi.CreateDesignRequest{DesignId: "gw"})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := designs.ImportDesignFiles(ctx, connect.NewRequest(&webapi.ImportDesignFilesRequest{Parent: "designs/gw", Files: folder.files})); err != nil {
+		t.Fatal(err)
+	}
+	d, err := designs.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Name: "designs/gw"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := d.Msg.GetConfig().GetIntent(); got == nil || gproto.Size(got) == 0 {
+		t.Fatalf("after ImportDesignFiles, intent = %v; want design.yaml's", got)
 	}
 }

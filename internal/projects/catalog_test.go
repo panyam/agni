@@ -39,6 +39,12 @@ func TestACatalogListsStoredAndMountedDesignsByOneName(t *testing.T) {
 	if d, err := cat.Design(ctx, "designs/mul"); err != nil || d.GetEntryUri() != inView(t, d, "netlist/a.edn") {
 		t.Errorf("catalog design mul = %v, %v; want it read from the store", d, err)
 	}
+	if !all[0].GetReadOnly() || all[1].GetReadOnly() {
+		t.Errorf("read_only = g %v, mul %v; want the mounted g read-only and the stored mul not (agni issue 1697)", all[0].GetReadOnly(), all[1].GetReadOnly())
+	}
+	if g, err := cat.Design(ctx, "designs/g"); err != nil || !g.GetReadOnly() {
+		t.Errorf("catalog design g = %v, %v; want it read-only", g, err)
+	}
 	if _, err := cat.Design(ctx, "projects/tut/designs/g"); !errors.Is(err, service.ErrInvalidArgument) {
 		t.Errorf("a nested name = %v, want ErrInvalidArgument", err)
 	}

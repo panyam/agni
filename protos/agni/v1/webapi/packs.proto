@@ -37,6 +37,26 @@ service PackService {
 
   // DeletePack removes a pack. A snapshot that names it then fails to read, naming the pack.
   rpc DeletePack(DeletePackRequest) returns (google.protobuf.Empty);
+
+  // ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole
+  // (agni issues 1697, 1746). The server reads the folder's project.yaml and keeps the files its
+  // profile, param, symbol, library and query tiers name. The folder's other files, such as its
+  // designs, are left out, and their contents are never asked for. Contents the server lacks are
+  // FAILED_PRECONDITION with a BlobsMissing detail, project.yaml's first and then the tiers' files,
+  // so a client sends what is named and asks again until the call succeeds. A folder with no
+  // project.yaml, or one that extends another, is INVALID_ARGUMENT.
+  rpc ImportPackFiles(ImportPackFilesRequest) returns (Pack);
+}
+
+message ImportPackFilesRequest {
+  // pack_id is the pack's id, lowercase letters, digits, '.', '_' or '-'. Empty takes project.yaml's
+  // name.
+  string pack_id = 1;
+  // files are the folder's files, each path relative to the folder, project.yaml among them at the
+  // top. The contents go up with SnapshotService.UploadBlobs.
+  repeated SnapshotFile files = 2;
+  // title is the pack's title. Empty takes project.yaml's title.
+  string title = 3;
 }
 
 // Pack is a set of rules kept on a server, named "packs/{pack}".

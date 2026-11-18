@@ -3,15 +3,18 @@
 // design's own page lists its artifacts, and replaces or deletes one. Files go up as the CLI's
 // `agni designs push` sends them (libraryupload.ts), and the server groups a folder into artifacts.
 
-import { createSignal, For, Show, type JSX } from "solid-js";
+import { createMemo, createSignal, For, Show, type JSX } from "solid-js";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland } from "@panyam/tsappkit-solid";
 import { filesFromDrop, filesFromFileList } from "@panyam/tsappkit/wasmhost";
 import type { Design } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
-import { ArtifactType, type Artifact } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import { ArtifactType, type Artifact, type Report } from "@panyam/agni-client/gen/agni/v1/webapi/designs_pb";
+import type { Pack } from "@panyam/agni-client/gen/agni/v1/webapi/packs_pb";
+import type { Project } from "@panyam/agni-client/gen/agni/v1/webapi/project_pb";
 import { uriMount, uriPath } from "@agni/web-shared/uri.js";
-import { designClient, uploadsClient } from "./api.js";
+import { designClient, packClient, projectClient, uploadsClient } from "./api.js";
+import { diffUrl, filterDesigns, KEPT_HERE, lastSegment, packUrl, projectUrl, reportState, wheres } from "./storepages.js";
 import { openUrl } from "./landingpanels.jsx";
 import { designId, groupBySeries, importFolder, libraryUrl, replaceArtifact, type DesignsClient, type Picked, type UploadsClient } from "./libraryupload.js";
 
@@ -39,7 +42,7 @@ export function typeWord(t: ArtifactType): string {
   }
 }
 
-function when(d: { updateTime?: { seconds: bigint } }): string {
+export function when(d: { updateTime?: { seconds: bigint } }): string {
   const s = d.updateTime?.seconds;
   return s === undefined ? "" : new Date(Number(s) * 1000).toLocaleString();
 }
@@ -56,14 +59,14 @@ function viewerLink(d: Design): JSX.Element {
   );
 }
 
-// listAll pages through every design the server holds.
-async function listAll(): Promise<{ designs: Design[]; unreachable: string[] }> {
+// listAll pages through every design the server holds, or those filter keeps.
+export async function listAll(filter = ""): Promise<{ designs: Design[]; unreachable: string[] }> {
   const c = designClient();
   const designs: Design[] = [];
   const unreachable: string[] = [];
   let pageToken = "";
   for (let pages = 0; pages < 1000; pages++) {
-    const r = await c.listDesigns({ pageToken });
+    const r = await c.listDesigns({ pageToken, filter });
     designs.push(...r.designs);
     unreachable.push(...r.unreachable);
     pageToken = r.nextPageToken;
@@ -72,9 +75,60 @@ async function listAll(): Promise<{ designs: Design[]; unreachable: string[] }> 
   return { designs, unreachable };
 }
 
+// StoreNav links the store's three lists, marking the one shown.
+export function StoreNav(props: { here: "designs" | "projects" | "packs" }) {
+  const link = (k: "designs" | "projects" | "packs", label: string) => (
+    <a class="lb-nav-link" classList={{ "lb-nav-here": props.here === k }} href={`/${k}/`}>
+      {label}
+    </a>
+  );
+  return (
+    <nav class="lb-nav" data-testid="store-nav">
+      {link("designs", "Designs")}
+      {link("projects", "Projects")}
+      {link("packs", "Packs")}
+    </nav>
+  );
+}
+
+// DesignList shows designs grouped by series with each series' latest marked. action, when given,
+// adds a control to each row.
+export function DesignList(props: { designs: Design[]; action?: (d: Design) => JSX.Element }) {
+  return (
+    <For each={groupBySeries(props.designs)}>
+      {(g) => (
+        <section class="lb-series" data-series={g.series}>
+          <h2>{g.series ? `Series ${g.series}` : "No series"}</h2>
+          <ul class="lb-list">
+            <For each={g.designs}>
+              {(d) => (
+                <li class="lb-row" data-design={d.name}>
+                  <a class="lb-link" href={libraryUrl(designId(d.name))}>
+                    <span class="lb-label">{d.title || designId(d.name)}</span>
+                    <span class="lb-id">{designId(d.name)}</span>
+                  </a>
+                  <Show when={d.seriesLatest}>
+                    <span class="lb-latest">latest</span>
+                  </Show>
+                  <Show when={d.readOnly}>
+                    <span class="lb-where">{uriMount(d.uri || d.entryUri)}</span>
+                  </Show>
+                  <span class="lb-when">{when(d)}</span>
+                  {viewerLink(d)}
+                  {props.action?.(d)}
+                </li>
+              )}
+            </For>
+          </ul>
+        </section>
+      )}
+    </For>
+  );
+}
+
 // FilePicker is a pair of buttons that pick files or a whole folder, and a drop zone, each handing
 // what it read to onPick.
-function FilePicker(props: { label: string; onPick: (files: Picked) => void; testid: string }) {
+export function FilePicker(props: { label: string; onPick: (files: Picked) => void; testid: string }) {
   let files!: HTMLInputElement;
   let folder!: HTMLInputElement;
   const [over, setOver] = createSignal(false);
@@ -204,11 +258,16 @@ function NewDesign(props: { onDone: (id: string) => void }) {
   );
 }
 
-// Library lists the server's designs by series, with the form to make one.
+// ALL_WHERES is the filter value that keeps designs wherever they are kept.
+const ALL_WHERES = "*";
+
+// Library lists the server's designs by series, with a filter and the form to make one.
 function Library() {
   const [designs, setDesigns] = createSignal<Design[]>([]);
   const [unreachable, setUnreachable] = createSignal<string[]>([]);
   const [status, setStatus] = createSignal("Loading…");
+  const [text, setText] = createSignal("");
+  const [where, setWhere] = createSignal(ALL_WHERES);
   void listAll()
     .then((r) => {
       setDesigns(r.designs);
@@ -216,35 +275,28 @@ function Library() {
       setStatus(r.designs.length ? "" : "No designs yet.");
     })
     .catch((err) => setStatus(explain(err)));
+  const shown = createMemo(() => filterDesigns(designs(), { text: text(), where: where() === ALL_WHERES ? undefined : where() }));
   return (
     <div class="lb-library">
+      <StoreNav here="designs" />
+      <p class="lb-tagline">
+        The designs this server holds, kept here or in a mounted folder. <a href="/mounts/">Browse the mounted folders</a> for a file that is not a design yet.
+      </p>
+      <div class="lb-filter" data-testid="design-filter">
+        <input type="search" name="text" placeholder="Filter by id, title or series" value={text()} onInput={(e) => setText(e.currentTarget.value)} />
+        <select name="where" value={where()} onChange={(e) => setWhere(e.currentTarget.value)}>
+          <option value={ALL_WHERES}>Kept anywhere</option>
+          <option value={KEPT_HERE}>Kept on this server</option>
+          <For each={wheres(designs())}>{(m) => <option value={m}>In the mount {m}</option>}</For>
+        </select>
+      </div>
       <p class="lb-status" data-testid="library-status">
         {status()}
       </p>
-      <For each={groupBySeries(designs())}>
-        {(g) => (
-          <section class="lb-series" data-series={g.series}>
-            <h2>{g.series ? `Series ${g.series}` : "No series"}</h2>
-            <ul class="lb-list">
-              <For each={g.designs}>
-                {(d) => (
-                  <li class="lb-row" data-design={d.name}>
-                    <a class="lb-link" href={libraryUrl(designId(d.name))}>
-                      <span class="lb-label">{d.title || designId(d.name)}</span>
-                      <span class="lb-id">{designId(d.name)}</span>
-                    </a>
-                    <Show when={d.seriesLatest}>
-                      <span class="lb-latest">latest</span>
-                    </Show>
-                    <span class="lb-when">{when(d)}</span>
-                    {viewerLink(d)}
-                  </li>
-                )}
-              </For>
-            </ul>
-          </section>
-        )}
-      </For>
+      <Show when={designs().length > 0 && shown().length === 0}>
+        <p class="lb-note">No design matches the filter.</p>
+      </Show>
+      <DesignList designs={shown()} />
       <Show when={unreachable().length > 0}>
         <p class="lb-note">Left out, as two mounted folders declare each: {unreachable().join(", ")}</p>
       </Show>
@@ -253,8 +305,298 @@ function Library() {
   );
 }
 
-// DesignPage shows one design and its artifacts. A design declared in a mounted folder has no
-// artifacts and is read-only.
+// DesignInfo edits a stored design's title and series.
+function DesignInfo(props: { design: Design; onSaved: (d: Design) => void }) {
+  const [title, setTitle] = createSignal(props.design.title);
+  const [series, setSeries] = createSignal(props.design.series);
+  const [status, setStatus] = createSignal("");
+  const save = async () => {
+    setStatus("Saving…");
+    try {
+      const d = await designClient().updateDesign({ design: { name: props.design.name, title: title(), series: series() }, updateMask: { paths: ["title", "series"] } });
+      setStatus("Saved.");
+      props.onSaved(d);
+    } catch (err) {
+      setStatus(explain(err));
+    }
+  };
+  return (
+    <form
+      class="lb-info"
+      data-testid="design-info"
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        void save();
+      }}
+    >
+      <label>
+        Title <input name="title" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
+      </label>
+      <label>
+        Series <input name="series" value={series()} onInput={(e) => setSeries(e.currentTarget.value)} />
+      </label>
+      <button type="submit">Save</button>
+      <span class="lb-note">{status()}</span>
+    </form>
+  );
+}
+
+// DiffWith picks another design and opens the viewer comparing this one against it.
+function DiffWith(props: { design: Design }) {
+  const [others, setOthers] = createSignal<Design[]>([]);
+  const [chosen, setChosen] = createSignal("");
+  void listAll()
+    .then((r) => setOthers(r.designs.filter((d) => d.name !== props.design.name && d.entryUri)))
+    .catch(() => setOthers([]));
+  const href = () => {
+    const b = others().find((d) => d.name === chosen());
+    return b ? diffUrl(props.design, b) : "";
+  };
+  return (
+    <Show when={props.design.entryUri && others().length > 0}>
+      <p class="lb-diff" data-testid="diff-with">
+        Diff with{" "}
+        <select name="against" value={chosen()} onChange={(e) => setChosen(e.currentTarget.value)}>
+          <option value="">choose a design</option>
+          <For each={others()}>{(d) => <option value={d.name}>{d.title || designId(d.name)}</option>}</For>
+        </select>{" "}
+        <Show when={href()}>
+          <a class="lb-open" href={href()}>
+            Open the diff
+          </a>
+        </Show>
+      </p>
+    </Show>
+  );
+}
+
+// listReports pages through a design's reports, newest first.
+async function listReports(parent: string): Promise<Report[]> {
+  const out: Report[] = [];
+  let pageToken = "";
+  for (let pages = 0; pages < 1000; pages++) {
+    const r = await designClient().listReports({ parent, pageToken });
+    out.push(...r.reports);
+    pageToken = r.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
+// listPacks and listProjects page through what the server keeps, for the Validate form.
+async function listPacks(): Promise<Pack[]> {
+  const out: Pack[] = [];
+  let pageToken = "";
+  for (let pages = 0; pages < 1000; pages++) {
+    const r = await packClient().listPacks({ pageToken });
+    out.push(...r.packs);
+    pageToken = r.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
+export async function listProjects(): Promise<Project[]> {
+  const out: Project[] = [];
+  let pageToken = "";
+  for (let pages = 0; pages < 1000; pages++) {
+    const r = await projectClient().listProjects({ pageToken });
+    out.push(...r.projects);
+    pageToken = r.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
+export { listPacks };
+
+// ReportView shows one kept report: what it ran against, whether that changed since, and its findings
+// grouped by rule, each rule folded open on its subjects.
+function ReportView(props: { report: Report; onDelete: () => void }) {
+  const findings = () => props.report.results?.findings ?? [];
+  const groups = createMemo(() => findingsByRule(findings()));
+  return (
+    <div class="lb-report" data-testid="report" data-report={props.report.name} data-total={findings().length}>
+      <p class="lb-meta">
+        {props.report.packs.length ? "Packs " : "No pack"}
+        <For each={props.report.packs}>
+          {(k, i) => (
+            <>
+              {i() > 0 ? ", " : ""}
+              <a href={packUrl(lastSegment(k))}>{k}</a>
+            </>
+          )}
+        </For>
+        <Show when={props.report.project}>
+          {" · through "}
+          <a href={projectUrl(lastSegment(props.report.project))}>{props.report.project}</a>
+        </Show>
+        {" · ran "}
+        {props.report.createTime ? new Date(Number(props.report.createTime.seconds) * 1000).toLocaleString() : ""}
+      </p>
+      <p class="lb-state" classList={{ "lb-stale": reportState(props.report) !== "current" }} data-testid="report-state">
+        {reportState(props.report)}
+      </p>
+      <p class="lb-note">
+        {findings().length} findings from {groups().length} rules{" "}
+        <button type="button" class="lb-delete" onClick={props.onDelete}>
+          Delete report
+        </button>
+      </p>
+      <div class="lb-findings">
+        <For each={groups()}>
+          {(g) => (
+            <details class="lb-rule" data-rule={g.rule}>
+              <summary>
+                <span class={`lb-sev lb-sev-${g.severity}`}>{g.severity}</span> <span class="lb-label">{g.rule}</span> <span class="lb-id">{g.findings.length}</span>
+              </summary>
+              <ul>
+                <For each={g.findings}>
+                  {(f) => (
+                    <li>
+                      <span class="lb-subject">{f.subject ? `${f.subject.kind} ${f.subject.ref}` : "design"}</span> {f.message}
+                    </li>
+                  )}
+                </For>
+              </ul>
+            </details>
+          )}
+        </For>
+      </div>
+    </div>
+  );
+}
+
+type Finding = NonNullable<Report["results"]>["findings"][number];
+
+// severityRank orders a report's rules, errors first.
+const severityRank: Record<string, number> = { error: 0, warning: 1, info: 2 };
+
+// findingsByRule groups a report's findings by rule, errors first, then the rules with most findings.
+export function findingsByRule(findings: Finding[]): { rule: string; severity: string; findings: Finding[] }[] {
+  const by = new Map<string, Finding[]>();
+  for (const f of findings) by.set(f.rule, [...(by.get(f.rule) ?? []), f]);
+  return [...by.entries()]
+    .map(([rule, fs]) => ({ rule, severity: fs[0].severity, findings: fs }))
+    .sort((a, b) => (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3) || b.findings.length - a.findings.length || a.rule.localeCompare(b.rule));
+}
+
+// Validate picks packs, and a project whose default packs apply first, and keeps a new report.
+function Validate(props: { design: string; onMade: (r: Report) => void }) {
+  const [packs, setPacks] = createSignal<Pack[]>([]);
+  const [projects, setProjects] = createSignal<Project[]>([]);
+  const [chosen, setChosen] = createSignal<string[]>([]);
+  const [project, setProject] = createSignal("");
+  const [status, setStatus] = createSignal("");
+  const [busy, setBusy] = createSignal(false);
+  const load = () => {
+    void listPacks().then(setPacks).catch((err) => setStatus(explain(err)));
+    void listProjects()
+      .then((ps) => setProjects(ps.filter((p) => p.designs.includes(props.design) || p.defaultPacks.length > 0)))
+      .catch(() => setProjects([]));
+  };
+  const toggle = (name: string, on: boolean) => setChosen(on ? [...chosen(), name] : chosen().filter((n) => n !== name));
+  const run = async () => {
+    setBusy(true);
+    setStatus("Running the check…");
+    try {
+      const r = await designClient().createReport({ parent: props.design, project: project(), report: { packs: chosen() } });
+      setStatus("");
+      props.onMade(r);
+    } catch (err) {
+      setStatus(explain(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <details class="lb-validate" data-testid="validate" onToggle={(e) => e.currentTarget.open && load()}>
+      <summary>Validate against…</summary>
+      <Show when={packs().length > 0} fallback={<p class="lb-note">No packs on this server yet. <a href="/packs/">Add one</a>.</p>}>
+        <fieldset>
+          <legend>Packs, in the order they layer</legend>
+          <For each={packs()}>
+            {(k) => (
+              <label>
+                <input type="checkbox" name="pack" value={k.name} checked={chosen().includes(k.name)} onChange={(e) => toggle(k.name, e.currentTarget.checked)} /> {k.title || lastSegment(k.name)}{" "}
+                <span class="lb-id">{k.name}</span>
+              </label>
+            )}
+          </For>
+        </fieldset>
+      </Show>
+      <label>
+        Project{" "}
+        <select name="project" value={project()} onChange={(e) => setProject(e.currentTarget.value)}>
+          <option value="">none</option>
+          <For each={projects()}>
+            {(p) => (
+              <option value={p.name}>
+                {p.title || lastSegment(p.name)}
+                {p.defaultPacks.length ? ` (applies ${p.defaultPacks.join(", ")} first)` : ""}
+              </option>
+            )}
+          </For>
+        </select>
+      </label>
+      <button type="button" class="lb-submit" disabled={busy()} onClick={() => void run()}>
+        Run and keep the report
+      </button>
+      <p class="lb-status" data-testid="validate-status">
+        {status()}
+      </p>
+    </details>
+  );
+}
+
+// Reports shows a design's kept reports as tabs, newest first, with the form that runs a new one.
+function Reports(props: { design: string }) {
+  const [reports, setReports] = createSignal<Report[]>([]);
+  const [selected, setSelected] = createSignal("");
+  const [status, setStatus] = createSignal("");
+  const load = async (select?: string) => {
+    const rs = await listReports(props.design);
+    setReports(rs);
+    if (select) setSelected(select);
+    else if (!rs.some((r) => r.name === selected())) setSelected(rs[0]?.name ?? "");
+  };
+  void load().catch((err) => setStatus(explain(err)));
+  const current = () => reports().find((r) => r.name === selected());
+  return (
+    <section class="lb-reports" data-testid="reports">
+      <h2>Reports</h2>
+      <Validate design={props.design} onMade={(r) => void load(r.name).catch((err) => setStatus(explain(err)))} />
+      <Show when={reports().length > 0} fallback={<p class="lb-note">No reports yet.</p>}>
+        <div class="lb-tabs" role="tablist">
+          <For each={reports()}>
+            {(r) => (
+              <button type="button" role="tab" class="lb-tab" classList={{ "lb-tab-on": r.name === selected(), "lb-stale": reportState(r) !== "current" }} aria-selected={r.name === selected()} data-report={r.name} onClick={() => setSelected(r.name)}>
+                {lastSegment(r.name)}
+              </button>
+            )}
+          </For>
+        </div>
+        <Show when={current()}>
+          {(r) => (
+            <ReportView
+              report={r()}
+              onDelete={() =>
+                void designClient()
+                  .deleteReport({ name: r().name })
+                  .then(() => load())
+                  .catch((err) => setStatus(explain(err)))
+              }
+            />
+          )}
+        </Show>
+      </Show>
+      <p class="lb-status">{status()}</p>
+    </section>
+  );
+}
+
+// DesignPage shows one design: its title and series, its artifacts, a diff with another design, and
+// its reports. A design declared in a mounted folder has no artifacts and is read-only.
 function DesignPage(props: { id: string }) {
   const name = `designs/${props.id}`;
   const [design, setDesign] = createSignal<Design | null>(null);
@@ -283,12 +625,10 @@ function DesignPage(props: { id: string }) {
       .then(load)
       .catch((err) => setStatus(explain(err)));
   };
-  const mounted = () => {
-    const d = design();
-    return d !== null && artifacts().length === 0 && d.entryUri !== "";
-  };
+  const mounted = () => design()?.readOnly ?? false;
   return (
     <div class="lb-design" data-testid="design-page">
+      <StoreNav here="designs" />
       <Show when={design()}>
         {(d) => (
           <>
@@ -304,6 +644,10 @@ function DesignPage(props: { id: string }) {
               {when(d())}
             </p>
             <p>{viewerLink(d())}</p>
+            <Show when={!d().readOnly}>
+              <DesignInfo design={d()} onSaved={setDesign} />
+            </Show>
+            <DiffWith design={d()} />
           </>
         )}
       </Show>
@@ -358,6 +702,9 @@ function DesignPage(props: { id: string }) {
       <p class="lb-status" data-testid="design-status">
         {status()}
       </p>
+      <Show when={design()}>
+        <Reports design={name} />
+      </Show>
     </div>
   );
 }

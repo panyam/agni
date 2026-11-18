@@ -857,6 +857,14 @@ func (a *Pack) UpdatePack(ctx context.Context, req *connect.Request[webapi.Updat
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Pack) ImportPackFiles(ctx context.Context, req *connect.Request[webapi.ImportPackFilesRequest]) (*connect.Response[webapi.Pack], error) {
+	resp, err := a.svc.ImportPackFiles(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Pack) DeletePack(ctx context.Context, req *connect.Request[webapi.DeletePackRequest]) (*connect.Response[emptypb.Empty], error) {
 	if err := a.svc.DeletePack(ctx, req.Msg); err != nil {
 		return nil, toConnectErr(err)

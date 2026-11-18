@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"path"
 	"slices"
@@ -185,8 +186,9 @@ func noFilter(what, filter string) error {
 // PackService serves the pack resource, "packs/{pack}", over a PackStore (agni issue 1704). It does
 // no I/O itself. It validates requests and applies AIP-158 pagination.
 type PackService struct {
-	store PackStore
-	blobs BlobSource
+	store    PackStore
+	blobs    BlobSource
+	importer PackImporter
 }
 
 // NewPackService returns a PackService over store, reading uploaded file contents from blobs. A nil
@@ -289,4 +291,84 @@ func (s *PackService) DeletePack(ctx context.Context, req *webapi.DeletePackRequ
 		return fmt.Errorf("%w: no pack %s", ErrNotFound, req.GetName())
 	}
 	return s.store.DeletePack(ctx, id)
+}
+
+// PackImporter reads the pack a project folder's files make. It takes the folder's paths and a reader
+// of one file, and returns the project's id, the pack with its config and its files' paths, and the
+// paths it kept. internal/projects.PackFromFiles is the one `agni serve` uses.
+type PackImporter func(files []string, read func(string) ([]byte, error)) (id string, pack *webapi.Pack, kept []string, err error)
+
+// WithImporter lets ImportPackFiles read a project folder through imp, and returns s. Without one,
+// ImportPackFiles answers FAILED_PRECONDITION.
+func (s *PackService) WithImporter(imp PackImporter) *PackService {
+	s.importer = imp
+	return s
+}
+
+// missingContent is a file whose contents the server lacks, met while reading a folder.
+type missingContent struct{ hash string }
+
+func (m *missingContent) Error() string { return "contents " + m.hash + " are missing" }
+
+// ImportPackFiles keeps the pack a project folder's files make, creating it or replacing it whole.
+func (s *PackService) ImportPackFiles(ctx context.Context, req *webapi.ImportPackFilesRequest) (*webapi.Pack, error) {
+	if s.store == nil {
+		return nil, errNoPackStore
+	}
+	if s.importer == nil {
+		return nil, fmt.Errorf("%w: this server reads no project folders into packs", ErrFailedPrecondition)
+	}
+	byPath := map[string]*webapi.SnapshotFile{}
+	paths := make([]string, 0, len(req.GetFiles()))
+	for _, f := range req.GetFiles() {
+		if _, dup := byPath[f.GetPath()]; dup {
+			return nil, fmt.Errorf("%w: %q is listed twice", ErrInvalidArgument, f.GetPath())
+		}
+		byPath[f.GetPath()] = f
+		paths = append(paths, f.GetPath())
+	}
+	read := func(p string) ([]byte, error) {
+		f := byPath[p]
+		b, ok := s.blobs(ctx, f.GetSha256())
+		if !ok {
+			return nil, &missingContent{hash: f.GetSha256()}
+		}
+		return b, nil
+	}
+	id, pack, kept, err := s.importer(paths, read)
+	var missing *missingContent
+	if errors.As(err, &missing) {
+		return nil, &BlobsMissingError{Hashes: []string{missing.hash}}
+	}
+	if err != nil {
+		return nil, err
+	}
+	if req.GetPackId() != "" {
+		id = req.GetPackId()
+	}
+	if !newIDPattern.MatchString(id) {
+		return nil, fmt.Errorf("%w: pack id %q must be lowercase letters, digits, '.', '_' or '-', starting with a letter or digit", ErrInvalidArgument, id)
+	}
+	if req.GetTitle() != "" {
+		pack.Title = req.GetTitle()
+	}
+	pack.Name = PackName(id)
+	pack.Files = nil
+	for _, p := range kept {
+		pack.Files = append(pack.Files, byPath[p])
+	}
+	if err := checkPack(pack); err != nil {
+		return nil, err
+	}
+	_, err = s.store.Pack(ctx, id)
+	if errors.Is(err, ErrNotFound) {
+		return s.store.CreatePack(ctx, id, pack, s.blobs)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.store.UpdatePack(ctx, id, func(p *webapi.Pack) error {
+		p.Title, p.Config, p.Files = pack.GetTitle(), pack.GetConfig(), pack.GetFiles()
+		return nil
+	}, s.blobs)
 }

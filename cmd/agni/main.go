@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -708,9 +709,6 @@ func checkCmd() *cobra.Command {
 				if len(tagPairs) > 0 {
 					return fmt.Errorf("--tag selects rules from a catalog this process builds, and --pack builds the run's catalog on the server; name the rules with --rule")
 				}
-				if verdicts && format != "json" {
-					return fmt.Errorf("--verdicts reports against the rules of a catalog this process builds, and --pack builds the run's catalog on the server; use --verdicts --format json")
-				}
 				names = ruleNames
 			} else {
 				resolveAgainst, _, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
@@ -1062,7 +1060,7 @@ func reviewCmd() *cobra.Command {
 	var ratifiedFloor float64
 	var failOnOutcome string
 	var minAnswered int
-	var reviewLibs, orderBy, externalPaths []string
+	var reviewLibs, orderBy, externalPaths, packs []string
 	var remoteURL string
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
@@ -1103,11 +1101,23 @@ func reviewCmd() *cobra.Command {
 			// The checklist travels as a value and where it came from is the caller's business
 			// (WS9-050). With no --checklist the design's PROJECT supplies one, and the note names it,
 			// since a checklist nobody typed cannot be recovered from the outcomes.
-			man, checklistNote, err := reviewManifestFor(cmd.Context(), checklist, cmd.InOrStdin(), args)
-			if err != nil {
-				return err
+			// Under --pack the designs are ones a server keeps, and a checklist named or left out
+			// comes from the packs, once the server is dialled below (agni issue 1746).
+			if len(packs) > 0 {
+				if remoteURL == "" || slices.ContainsFunc(args, func(a string) bool { return !storedDesignArg(a) }) {
+					return fmt.Errorf("--pack names a pack an agni server keeps, so it applies to designs that server keeps: agni review designs/<id> --pack <k> --remote <url>")
+				}
 			}
-			noteChecklist(cmd.ErrOrStderr(), checklistNote)
+			fromPacks := len(packs) > 0 && checklist != "-" && !isChecklistFile(checklist)
+			var man review.Manifest
+			if !fromPacks {
+				var checklistNote string
+				man, checklistNote, err = reviewManifestFor(cmd.Context(), checklist, cmd.InOrStdin(), args)
+				if err != nil {
+					return err
+				}
+				noteChecklist(cmd.ErrOrStderr(), checklistNote)
+			}
 			// A thin client of the in-process ReviewService, the same service the web calls (WS9-048).
 			// The CLI composes the design-independent inputs and renders the proto response.
 			catalog, byName, err := composeReviewInputs(profilePath)
@@ -1165,6 +1175,13 @@ func reviewCmd() *cobra.Command {
 					return err
 				}
 				svc, snaps, addr = r.review(), r.snapshots(), r.uri
+				if fromPacks {
+					var checklistNote string
+					if man, checklistNote, err = packChecklist(cmd.Context(), r.getPack, packNames(packs), checklist); err != nil {
+						return err
+					}
+					noteChecklist(cmd.ErrOrStderr(), checklistNote)
+				}
 			}
 			// An imported report is about one design, so it cannot be shared across several (agni
 			// issue 152).
@@ -1210,7 +1227,7 @@ func reviewCmd() *cobra.Command {
 				}
 				// --conventions travels in the snapshot's definition as a value, and the service composes
 				// it (WS3-102).
-				snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, BoardUri: boardURI, AsNamed: readAsNamed, Overlay: overlay})
+				snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, BoardUri: boardURI, AsNamed: readAsNamed, Overlay: overlay, Packs: packNames(packs)})
 				if err != nil {
 					return rpcFailed(err)
 				}
@@ -1340,6 +1357,7 @@ func reviewCmd() *cobra.Command {
 	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	remoteFlag(cmd, &remoteURL)
+	cmd.Flags().StringArrayVar(&packs, "pack", nil, "review designs an agni server keeps, designs/<id>, against this pack the server keeps, as <k> or packs/<k> (agni issue 1746). Repeatable: each pack layers over the one before. With no --checklist, or a checklist name, the checklist comes from the packs. Needs --remote")
 	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
