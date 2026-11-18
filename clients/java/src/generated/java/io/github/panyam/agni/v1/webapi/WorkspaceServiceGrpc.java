@@ -49,6 +49,37 @@ public final class WorkspaceServiceGrpc {
     return getListMountsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetMountRequest,
+      io.github.panyam.agni.v1.webapi.Mount> getGetMountMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetMount",
+      requestType = io.github.panyam.agni.v1.webapi.GetMountRequest.class,
+      responseType = io.github.panyam.agni.v1.webapi.Mount.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetMountRequest,
+      io.github.panyam.agni.v1.webapi.Mount> getGetMountMethod() {
+    io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.GetMountRequest, io.github.panyam.agni.v1.webapi.Mount> getGetMountMethod;
+    if ((getGetMountMethod = WorkspaceServiceGrpc.getGetMountMethod) == null) {
+      synchronized (WorkspaceServiceGrpc.class) {
+        if ((getGetMountMethod = WorkspaceServiceGrpc.getGetMountMethod) == null) {
+          WorkspaceServiceGrpc.getGetMountMethod = getGetMountMethod =
+              io.grpc.MethodDescriptor.<io.github.panyam.agni.v1.webapi.GetMountRequest, io.github.panyam.agni.v1.webapi.Mount>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetMount"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.GetMountRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  io.github.panyam.agni.v1.webapi.Mount.getDefaultInstance()))
+              .setSchemaDescriptor(new WorkspaceServiceMethodDescriptorSupplier("GetMount"))
+              .build();
+        }
+      }
+    }
+    return getGetMountMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<io.github.panyam.agni.v1.webapi.ListDirRequest,
       io.github.panyam.agni.v1.webapi.ListDirResponse> getListDirMethod;
 
@@ -256,6 +287,18 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+     * that opens on a mount's address reads that mount alone. A name the server does not serve is
+     * NOT_FOUND.
+     * </pre>
+     */
+    default void getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMountMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -368,6 +411,19 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+     * that opens on a mount's address reads that mount alone. A name the server does not serve is
+     * NOT_FOUND.
+     * </pre>
+     */
+    public void getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request,
+        io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetMountMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -466,6 +522,18 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+     * that opens on a mount's address reads that mount alone. A name the server does not serve is
+     * NOT_FOUND.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Mount getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetMountMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -556,6 +624,18 @@ public final class WorkspaceServiceGrpc {
     public io.github.panyam.agni.v1.webapi.ListMountsResponse listMounts(io.github.panyam.agni.v1.webapi.ListMountsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getListMountsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+     * that opens on a mount's address reads that mount alone. A name the server does not serve is
+     * NOT_FOUND.
+     * </pre>
+     */
+    public io.github.panyam.agni.v1.webapi.Mount getMount(io.github.panyam.agni.v1.webapi.GetMountRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetMountMethod(), getCallOptions(), request);
     }
 
     /**
@@ -655,6 +735,19 @@ public final class WorkspaceServiceGrpc {
 
     /**
      * <pre>
+     * GetMount returns one mount by its name, the handle ListMounts gives (agni issue 1734). A page
+     * that opens on a mount's address reads that mount alone. A name the server does not serve is
+     * NOT_FOUND.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<io.github.panyam.agni.v1.webapi.Mount> getMount(
+        io.github.panyam.agni.v1.webapi.GetMountRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetMountMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
      * file is labeled with the reader that would open it. The client addresses a location by an
      * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
@@ -718,10 +811,11 @@ public final class WorkspaceServiceGrpc {
   }
 
   private static final int METHODID_LIST_MOUNTS = 0;
-  private static final int METHODID_LIST_DIR = 1;
-  private static final int METHODID_LIST_DESIGN_FILES = 2;
-  private static final int METHODID_PROPOSE_DESIGNS = 3;
-  private static final int METHODID_DECLARE_COMPANION = 4;
+  private static final int METHODID_GET_MOUNT = 1;
+  private static final int METHODID_LIST_DIR = 2;
+  private static final int METHODID_LIST_DESIGN_FILES = 3;
+  private static final int METHODID_PROPOSE_DESIGNS = 4;
+  private static final int METHODID_DECLARE_COMPANION = 5;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -743,6 +837,10 @@ public final class WorkspaceServiceGrpc {
         case METHODID_LIST_MOUNTS:
           serviceImpl.listMounts((io.github.panyam.agni.v1.webapi.ListMountsRequest) request,
               (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.ListMountsResponse>) responseObserver);
+          break;
+        case METHODID_GET_MOUNT:
+          serviceImpl.getMount((io.github.panyam.agni.v1.webapi.GetMountRequest) request,
+              (io.grpc.stub.StreamObserver<io.github.panyam.agni.v1.webapi.Mount>) responseObserver);
           break;
         case METHODID_LIST_DIR:
           serviceImpl.listDir((io.github.panyam.agni.v1.webapi.ListDirRequest) request,
@@ -785,6 +883,13 @@ public final class WorkspaceServiceGrpc {
               io.github.panyam.agni.v1.webapi.ListMountsRequest,
               io.github.panyam.agni.v1.webapi.ListMountsResponse>(
                 service, METHODID_LIST_MOUNTS)))
+        .addMethod(
+          getGetMountMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              io.github.panyam.agni.v1.webapi.GetMountRequest,
+              io.github.panyam.agni.v1.webapi.Mount>(
+                service, METHODID_GET_MOUNT)))
         .addMethod(
           getListDirMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -862,6 +967,7 @@ public final class WorkspaceServiceGrpc {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new WorkspaceServiceFileDescriptorSupplier())
               .addMethod(getListMountsMethod())
+              .addMethod(getGetMountMethod())
               .addMethod(getListDirMethod())
               .addMethod(getListDesignFilesMethod())
               .addMethod(getProposeDesignsMethod())

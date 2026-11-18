@@ -149,7 +149,7 @@ func TestRenderReviewReportWritesTheChecklistPage(t *testing.T) {
 // page, since whoever opens the file later never saw it (agni issue 626).
 func TestRenderReviewReportLinksOrSaysWhyNot(t *testing.T) {
 	page := string(renderReview(t, &webapi.ReportLinks{UrlBase: "http://localhost:8080/", DesignUri: "mount://gw/board.edn"}).GetContent())
-	if !strings.Contains(page, "http://localhost:8080/files/gw/board.edn/view?") || !strings.Contains(page, "abc123") {
+	if !strings.Contains(page, "http://localhost:8080/mounts/gw/board.edn/view?") || !strings.Contains(page, "abc123") {
 		t.Errorf("a linked page does not link into the viewer at the run's revision:\n%s", page)
 	}
 	withheld := string(renderReview(t, &webapi.ReportLinks{UrlBase: "http://localhost:8080", Withheld: "mount gw is not served there"}).GetContent())

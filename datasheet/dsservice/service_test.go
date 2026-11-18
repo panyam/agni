@@ -7,27 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/protobuf/proto"
 
 	"github.com/panyam/agni/core/param"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
-
-// fakeWorkspace is a fixed two-mount listing, so the folder-tree rpcs can be checked against the
-// engine's WorkspaceService over the same port.
-type fakeWorkspace struct{}
-
-func (fakeWorkspace) Mounts() []service.MountInfo {
-	return []service.MountInfo{{Name: "ds", Root: "/ds"}, {Name: "boards", Root: "/boards"}}
-}
-
-func (fakeWorkspace) ListDir(context.Context, artifact.URI) ([]service.DirEntry, error) {
-	return []service.DirEntry{{Name: "LM1117.pdf"}, {Name: "ti", IsDir: true}}, nil
-}
 
 // fakeDocLoader is a DocLoader whose result is fixed per test, so GetDocument's classification and
 // extracted/not-extracted mapping are exercised without the OS adapter.
@@ -92,9 +78,10 @@ func (f *fakeDocExtractor) Extract(context.Context, artifact.URI) (*docpb.Docume
 // fakeAnnotationStore stands in for the OS annotation store. Get returns `sets` as the union, and
 // `saved`/`author` capture the last SaveAnnotations for assertions.
 type fakeAnnotationStore struct {
-	sets   []*dsapi.AnnotationSet
-	saved  *dsapi.AnnotationSet
-	author string
+	sets    []*dsapi.AnnotationSet
+	saved   *dsapi.AnnotationSet
+	author  string
+	saveErr error
 }
 
 func (f *fakeAnnotationStore) Get(context.Context, artifact.URI) ([]*dsapi.AnnotationSet, error) {
@@ -104,12 +91,12 @@ func (f *fakeAnnotationStore) Get(context.Context, artifact.URI) ([]*dsapi.Annot
 func (f *fakeAnnotationStore) Save(_ context.Context, _ artifact.URI, author string, set *dsapi.AnnotationSet) error {
 	f.author = author
 	f.saved = set
-	return nil
+	return f.saveErr
 }
 
 // newDS builds a DatasheetService with throwaway store/extractor for the GetDocument-focused tests.
 func newDS(l DocLoader) *DatasheetService {
-	return NewDatasheetService(l, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	return NewDatasheetService(l, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 }
 
 func TestGetDocumentExtracted(t *testing.T) {
@@ -156,7 +143,7 @@ func TestGetDocumentClassifiesErrors(t *testing.T) {
 
 func TestGetDraftFound(t *testing.T) {
 	store := &fakeDraftStore{draft: &dsapi.Draft{Mpn: "LM1117", Spec: &parampb.PartSpec{Mpn: "LM1117"}, Version: "v1"}, found: true}
-	svc := NewDatasheetService(&fakeDocLoader{}, store, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, store, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	resp, err := svc.GetDraft(context.Background(), &dsapi.GetDraftRequest{Mpn: "LM1117"})
 	if err != nil {
 		t.Fatalf("GetDraft: %v", err)
@@ -172,11 +159,11 @@ func TestSaveDraftConflictAndShape(t *testing.T) {
 		return &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{Mpn: key, Spec: &parampb.PartSpec{Mpn: specMPN}, DocumentUris: []string{"mount://m/d.pdf"}}}
 	}
 	// A store conflict propagates as ErrConflict (the transport maps it to Aborted, "refetch").
-	conflict := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	conflict := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	if _, err := conflict.SaveDraft(ctx, draft("X", "X")); !errors.Is(err, ErrConflict) {
 		t.Errorf("store conflict => %v, want ErrConflict", err)
 	}
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	for name, req := range map[string]*dsapi.SaveDraftRequest{
 		"no draft":                     {},
 		"no mpn":                       draft("", ""),
@@ -196,7 +183,7 @@ func TestSaveDraftConflictAndShape(t *testing.T) {
 // Every draft rpc on a server with no corpus says so, rather than reading as no drafts.
 func TestDraftRPCsNeedACorpus(t *testing.T) {
 	ctx := context.Background()
-	svc := NewDatasheetService(&fakeDocLoader{}, nil, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, nil, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	_, e1 := svc.GetDraft(ctx, &dsapi.GetDraftRequest{Mpn: "X"})
 	_, e2 := svc.ListDrafts(ctx, &dsapi.ListDraftsRequest{DocumentUri: "mount://m/d.pdf"})
 	_, e3 := svc.SaveDraft(ctx, &dsapi.SaveDraftRequest{})
@@ -213,16 +200,16 @@ func TestDraftRPCsNeedACorpus(t *testing.T) {
 func TestPublishDraftReportsARefusal(t *testing.T) {
 	ctx := context.Background()
 	refused := &PublishRefused{Reason: "not ready", Problems: []param.Problem{{Kind: param.ProblemCompleteness, Message: "no provenance"}}}
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: refused}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: refused}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	resp, err := svc.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"})
 	if err != nil || resp.GetPublished() || resp.GetReason() != "not ready" || len(resp.GetProblems()) != 1 {
 		t.Errorf("refusal = %v, %v", resp, err)
 	}
-	ok := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	ok := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	if resp, err := ok.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"}); err != nil || !resp.GetPublished() || resp.GetGeneration() != 7 {
 		t.Errorf("publish = %v, %v", resp, err)
 	}
-	failing := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: errors.New("disk full")}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	failing := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{publishErr: errors.New("disk full")}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	if _, err := failing.PublishDraft(ctx, &dsapi.PublishDraftRequest{Mpn: "X"}); err == nil {
 		t.Error("a store failure was answered as a refusal")
 	}
@@ -230,13 +217,13 @@ func TestPublishDraftReportsARefusal(t *testing.T) {
 
 func TestExtractDocIRGated(t *testing.T) {
 	// No producer configured -> ErrExtractNotEnabled (transport maps it to FailedPrecondition).
-	off := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: false}, &fakeAnnotationStore{}, fakeWorkspace{})
+	off := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: false}, &fakeAnnotationStore{})
 	if _, err := off.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"}); !errors.Is(err, ErrExtractNotEnabled) {
 		t.Errorf("disabled => %v, want ErrExtractNotEnabled", err)
 	}
 	// Configured -> returns the produced doc-IR.
 	produced := &docpb.Document{ContentHash: "sha256:x", Producer: "docling"}
-	on := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: true, doc: produced}, &fakeAnnotationStore{}, fakeWorkspace{})
+	on := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: true, doc: produced}, &fakeAnnotationStore{})
 	resp, err := on.ExtractDocIR(context.Background(), &dsapi.ExtractDocIRRequest{Uri: "mount://m/d.pdf"})
 	if err != nil || resp.GetDocument().GetContentHash() != "sha256:x" {
 		t.Fatalf("extract: resp=%v err=%v", resp, err)
@@ -244,7 +231,7 @@ func TestExtractDocIRGated(t *testing.T) {
 }
 
 func TestGetDocumentReportsExtractAvailable(t *testing.T) {
-	on := NewDatasheetService(&fakeDocLoader{doc: nil}, &fakeDraftStore{}, &fakeDocExtractor{available: true}, &fakeAnnotationStore{}, fakeWorkspace{})
+	on := NewDatasheetService(&fakeDocLoader{doc: nil}, &fakeDraftStore{}, &fakeDocExtractor{available: true}, &fakeAnnotationStore{})
 	resp, _ := on.GetDocument(context.Background(), &dsapi.GetDocumentRequest{Uri: "mount://m/d.pdf"})
 	if !resp.ExtractAvailable {
 		t.Error("extract_available should be true when a producer is configured")
@@ -257,7 +244,7 @@ func TestGetDocumentReportsExtractAvailable(t *testing.T) {
 }
 
 func TestSaveAnnotationsValidation(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	// A nil set is rejected before the store.
 	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, service.ErrInvalidArgument) {
 		t.Errorf("nil set => %v, want service.ErrInvalidArgument", err)
@@ -271,7 +258,7 @@ func TestSaveAnnotationsValidation(t *testing.T) {
 
 func TestSaveAndGetAnnotations(t *testing.T) {
 	store := &fakeAnnotationStore{}
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, store, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, store)
 	set := &dsapi.AnnotationSet{DocId: "LM1117", Author: "alice", Annotations: []*dsapi.RegionAnnotation{{RegionId: "p4.t1", Type: "table"}}}
 	if _, err := svc.SaveAnnotations(context.Background(), &dsapi.SaveAnnotationsRequest{Uri: "mount://m/d.pdf", Set: set}); err != nil {
 		t.Fatalf("SaveAnnotations: %v", err)
@@ -299,7 +286,7 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 // reads *.textproto, so a draft cannot reach the corpus by sitting on disk. Publishing is a
 // separate step, and param.Validate belongs there.
 func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	save := func(spec *parampb.PartSpec) error {
 		spec.Mpn = "D1" // the key; everything else is whatever the author has so far
 		_, err := svc.SaveDraft(context.Background(), &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{Mpn: "D1", Spec: spec}})
@@ -335,7 +322,7 @@ func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
 // distinguishable. Structural problems are worth interrupting for. Completeness problems are the
 // ordinary state of unfinished work.
 func TestSaveDraftReportsClassifiedProblems(t *testing.T) {
-	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	resp, err := svc.SaveDraft(context.Background(), &dsapi.SaveDraftRequest{Draft: &dsapi.Draft{
 		Mpn: "D1",
 		Spec: &parampb.PartSpec{ // a row with no provenance (incomplete) AND a duplicate pin id (incoherent)
@@ -383,28 +370,18 @@ func cleanSpec() *parampb.PartSpec {
 	}
 }
 
-// The workbench's folder tree answers exactly as the viewer's. Both list through one port with the
-// engine's WorkspaceService (agni issue 744).
-func TestFolderTreeAnswersAsWorkspaceServiceDoes(t *testing.T) {
+// A server with no corpus has nowhere to keep a derived doc-IR or an annotation (agni issue 1734).
+// Both calls say so, so the workbench can tell the operator to start agnids with --corpus.
+func TestExtractAndAnnotateReportAMissingCorpus(t *testing.T) {
 	ctx := context.Background()
-	ds := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
-	ws := service.NewWorkspaceService(fakeWorkspace{})
-
-	gotM, err := ds.ListMounts(ctx, &webapi.ListMountsRequest{})
-	if err != nil {
-		t.Fatal(err)
+	uri := "mount://ds/ti/LM1117.pdf"
+	ex := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{available: true, err: ErrNoCorpus}, &fakeAnnotationStore{})
+	if _, err := ex.ExtractDocIR(ctx, &dsapi.ExtractDocIRRequest{Uri: uri}); !errors.Is(err, ErrNoCorpus) {
+		t.Errorf("ExtractDocIR with no corpus = %v, want ErrNoCorpus", err)
 	}
-	wantM, _ := ws.ListMounts(ctx, &webapi.ListMountsRequest{})
-	if len(gotM.GetMounts()) != 2 || !proto.Equal(gotM, wantM) {
-		t.Errorf("ListMounts = %v, want %v", gotM, wantM)
-	}
-	req := &webapi.ListDirRequest{Uri: "mount://ds/"}
-	gotD, err := ds.ListDir(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantD, _ := ws.ListDir(ctx, req)
-	if len(gotD.GetEntries()) == 0 || !proto.Equal(gotD, wantD) {
-		t.Errorf("ListDir = %v, want %v", gotD, wantD)
+	an := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{saveErr: ErrNoCorpus})
+	set := &dsapi.AnnotationSet{Author: "alice"}
+	if _, err := an.SaveAnnotations(ctx, &dsapi.SaveAnnotationsRequest{Uri: uri, Set: set}); !errors.Is(err, ErrNoCorpus) {
+		t.Errorf("SaveAnnotations with no corpus = %v, want ErrNoCorpus", err)
 	}
 }

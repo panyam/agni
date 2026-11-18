@@ -23,6 +23,8 @@ breaking:
   # ListDesigns, which DesignService replaces. buf matches a service and a message by full name, so
   # designs.proto's DesignService and GetDesignRequest read as changes to v0.8.0's view service and its
   # request. Remove its entries at the first release tag after v0.8.0.
+  # agni 1734 removed DatasheetService's ListMounts and ListDir, since agnids now serves the
+  # engine's WorkspaceService. Remove its entry at the first release tag after v0.8.0.
   ignore_only:
     FILE_NO_DELETE:
       - protos/agni/v1/webapi/design.proto
@@ -36,6 +38,7 @@ breaking:
     RPC_NO_DELETE:
       - protos/agni/v1/webapi/project.proto
       - protos/agni/v1/webapi/designs.proto
+      - datasheet/protos/agni/v1/dsapi/datasheet.proto
     RPC_SAME_RESPONSE_TYPE:
       - protos/agni/v1/webapi/designs.proto
     FIELD_SAME_NAME:

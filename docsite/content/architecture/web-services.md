@@ -65,6 +65,7 @@ dropped files already reach it through its `local` mount.
 | Service | RPC | What it does |
 |---|---|---|
 | Workspace | ListMounts | the mount names to root a tree on; `opens` drops each mount holding nothing that client can open and returns how many it dropped. So when an operator configured a mount and cannot find it, the sidebar can account for it |
+| Workspace | GetMount | one mount by its name, the handle ListMounts gives; a name the server does not serve is NOT_FOUND |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open. The server then drops each folder with none of it anywhere beneath, through a bounded server-side walk, since one level of listing cannot see that far. So the two trees prune the same mounts to opposite answers |
 | Workspace | ListDesignFiles | every file read by a design's analysis (its folder, its project's descriptor, the config directories the project names), with a size and hash each. A page analysing the design in the browser fetches them from `/raw/<mount>/<path>`. Refused over 256 MB |
 | Workspace | ProposeDesigns | the designs in a folder of files, each with the `design.yaml` that would declare it, and every file left unread by any design, with the reason; a folder holding a `design.yaml` is reported as declared, and an archive reads as a folder |
@@ -113,11 +114,11 @@ dropped files already reach it through its `local` mount.
 
 `DatasheetService` is not in this table, because it is the datasheet producer's API (`agni.v1.dsapi`)
 rather than the engine's, and `agnids` serves it rather than `agni serve` (C34, agni issue 744). It
-carries the workbench's whole surface: the doc-IR and running the configured `--pdf2doc` producer
-(`GetDocument`, `ExtractDocIR`), the drafts keyed by MPN (`GetDraft`, `ListDrafts`, `SaveDraft`,
-`PublishDraft`, which need `agnids serve --corpus`), the
-per-author annotations (`GetAnnotations`, `SaveAnnotations`), and the folder tree (`ListMounts`,
-`ListDir`, which take the engine's workspace messages and answer exactly as `WorkspaceService` does).
+carries the doc-IR and running the configured `--pdf2doc` producer (`GetDocument`, `ExtractDocIR`),
+the drafts keyed by MPN (`GetDraft`, `ListDrafts`, `SaveDraft`, `PublishDraft`), and the per-author
+annotations (`GetAnnotations`, `SaveAnnotations`). Every write needs `agnids serve --corpus`, since
+the corpus store keeps a PDF's doc-IR and annotations mounts are only read. `agnids` also serves the engine's own `WorkspaceService` over its mounts, and
+the workbench lists its folder tree through it, as the viewer does (agni issue 1734).
 
 A few contract details bite if missed.
 
@@ -247,13 +248,13 @@ the same messages. The page's clients reach the worker through the `fetch` funct
 Connect transport, so no panel knows which host answered (agni issue 178).
 
 A design keeps one URL whichever engine reads it, because the two choices are separate (agni issue
-853). The MOUNT in `/files/<mount>/<path>` says where the design's files live, and the ENGINE,
+853). The MOUNT in `/mounts/<mount>/<path>` says where the design's files live, and the ENGINE,
 `server` or `wasm`, says who analyses them. `agni serve --engine wasm` writes the engine into the
 viewer's shell, and a page's `?engine=` overrides it.
 
 ```
 make wasm serve EXTRA_MOUNTS="--mount tut=examples/tutorial-project"
-open http://localhost:8080/files/tut/designs/gateway/view?engine=wasm
+open http://localhost:8080/mounts/tut/designs/gateway/view?engine=wasm
 ```
 
 An engine can only analyse files it can reach. On the `wasm` engine the page brings a design's
@@ -269,7 +270,7 @@ timeout of its own. Before this, seeds on the deployed demo timed out at 180 s o
 with nothing saying why. Under `?timing` the page logs each file as `agni fetch <file>` with its
 size, time and attempts.
 
-A visitor can drop files on the Load page's drop target (`/files/local/load/`), or pick them with
+A visitor can drop files on the Load page's drop target (`/mounts/local/load/`), or pick them with
 its "Open files" and "Open folder" buttons. The files go into the browser mount `local` under a
 folder of their own and into the browser's IndexedDB, and nowhere else (agni issues 854 and 1072). A
 `.zip`, `.tar`, `.7z` or compressed tar among them reads as the folder it was made from. The page asks the worker for
@@ -383,7 +384,7 @@ the browser rather than from the contract.
   at 548 MB was replaced after every request, and each query fetched the design's files again and
   restored its board.
 - **A design is read on its Load page before the viewer opens it** (agni issue 1072). A design's
-  address has two pages, `/files/<mount>/<path>/load` and `/view`, with the same query. The Load
+  address has two pages, `/mounts/<mount>/<path>/load` and `/view`, with the same query. The Load
   page asks `GetDesign`, which parses the drawing, and then sends an `Ingest` with `read_board`,
   which builds the same model as a `CheckDesign`, board included, and runs nothing. The page answers
   that `Ingest` on a third lane, `prepare`. The lane starts a worker for the request and ends it

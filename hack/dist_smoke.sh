@@ -75,13 +75,13 @@ grep -q "i2c-pull-up: /SCL" check.txt || { echo "dist_smoke: check found no i2c-
 pid=$!
 url=""
 for _ in $(seq 1 100); do
-  url=$(grep -o 'http://127\.0\.0\.1:[0-9]*/files/[^ ]*' open.log | head -1 || true)
+  url=$(grep -o 'http://127\.0\.0\.1:[0-9]*/mounts/[^ ]*' open.log | head -1 || true)
   [ -n "$url" ] && break
   kill -0 "$pid" 2>/dev/null || { echo "dist_smoke: open exited:"; cat open.log; exit 1; }
   sleep 0.1
 done
 [ -n "$url" ] || { echo "dist_smoke: open printed no URL:"; cat open.log; exit 1; }
-base=${url%%/files/*}
+base=${url%%/mounts/*}
 for path in "${url#"$base"}" /static/app.js /static/app.css; do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$base$path")
   [ "$code" = 200 ] || { echo "dist_smoke: GET $path answered $code"; cat open.log; exit 1; }

@@ -2,7 +2,7 @@
 //
 // The wire names an artifact with one string, `mount://<mount>/<path>`. The viewer keeps the mount
 // and path as separate state, because they are separate in the bookmarkable URL
-// (`/files/<mount>/<path...>/view`) and the file tree navigates by path within a mount. This
+// (`/mounts/<mount>/<path...>/view`) and the file tree navigates by path within a mount. This
 // module converts between the two, so the assembly happens in one place.
 //
 // Nothing here validates. The server decides containment when it parses the URI, and a check here

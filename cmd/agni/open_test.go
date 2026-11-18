@@ -17,7 +17,7 @@ import (
 func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 	var b bytes.Buffer
 	m := mounts.Mount{Name: "gateway", Root: "/boards/gw"}
-	openBanner(&b, "http://127.0.0.1:5000/", m, "mount://gateway/designs/gw.edn", "/files/gateway/designs/gw.edn/view")
+	openBanner(&b, "http://127.0.0.1:5000/", m, "mount://gateway/designs/gw.edn", "/mounts/gateway/designs/gw.edn/view")
 	out := b.String()
 
 	if !strings.Contains(out, "--mount gateway=/boards/gw") {
@@ -35,7 +35,7 @@ func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 // in --server.
 func TestOpenBannerTrimsTheTrailingSlash(t *testing.T) {
 	var b bytes.Buffer
-	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"}, "mount://m/x.edn", "/files/m/x.edn/view")
+	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"}, "mount://m/x.edn", "/mounts/m/x.edn/view")
 	if strings.Contains(b.String(), "5000//designs") {
 		t.Errorf("doubled slash in the design URL:\n%s", b.String())
 	}
@@ -95,7 +95,7 @@ func TestFreePortIsBindable(t *testing.T) {
 func TestOpenBannerNamesNoRemovedFlag(t *testing.T) {
 	var b bytes.Buffer
 	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"},
-		"mount://m/board.edn", "/files/m/board.edn/view")
+		"mount://m/board.edn", "/mounts/m/board.edn/view")
 	known := knownFlags(rootCmd())
 	for _, m := range regexp.MustCompile(`--[a-z][a-z0-9-]*`).FindAllString(b.String(), -1) {
 		if !known[m] {

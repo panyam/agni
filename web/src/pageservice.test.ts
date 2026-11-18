@@ -110,7 +110,7 @@ describe("pageDispatcher", () => {
 });
 
 describe("ApplyLocation with a link", () => {
-  const link = "http://localhost:8080/files/kicad/hier_numeric_root.kicad_sch/view?verdict=duplicate-ref-des%3A%28component%3AR2%29&rule=duplicate-ref-des&subject=component%3AR2";
+  const link = "http://localhost:8080/mounts/kicad/hier_numeric_root.kicad_sch/view?verdict=duplicate-ref-des%3A%28component%3AR2%29&rule=duplicate-ref-des&subject=component%3AR2";
 
   it("applies the fields the link sets, read by the page's own parser", async () => {
     const api = fakeApi();
@@ -136,7 +136,7 @@ describe("ApplyLocation with a link", () => {
 
   it("refuses a link to no design, and a request naming both a link and a location", async () => {
     const dispatch = pageDispatcher(fakeApi());
-    await expect(dispatch("ApplyLocation", { url: "http://localhost:8080/files/kicad/" })).rejects.toMatchObject({ code: Code.InvalidArgument });
+    await expect(dispatch("ApplyLocation", { url: "http://localhost:8080/mounts/kicad/" })).rejects.toMatchObject({ code: Code.InvalidArgument });
     await expect(dispatch("ApplyLocation", { url: "https://example.com/elsewhere" })).rejects.toMatchObject({ code: Code.InvalidArgument });
     await expect(dispatch("ApplyLocation", { url: link, location: { sheet: "s1" } })).rejects.toMatchObject({ code: Code.InvalidArgument });
   });

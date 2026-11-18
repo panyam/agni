@@ -239,6 +239,23 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 
 // TestListMounts preserves configuration order (the command line's mount order is the UI's
 // sidebar order) and maps both fields to the wire form.
+func TestGetMountReturnsOneMountByName(t *testing.T) {
+	ws := &memWorkspace{mounts: []MountInfo{{Name: "z", Root: "/data/z"}, {Name: "a", Root: "/data/a"}}}
+	svc := NewWorkspaceService(ws)
+	m, err := svc.GetMount(context.Background(), &webapi.GetMountRequest{Name: "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.GetName() != "a" || m.GetRoot() != "/data/a" || m.GetUri() != "mount://a" {
+		t.Errorf("GetMount(a) = %+v, want a at /data/a, mount://a", m)
+	}
+	for _, name := range []string{"nope", ""} {
+		if _, err := svc.GetMount(context.Background(), &webapi.GetMountRequest{Name: name}); !errors.Is(err, ErrNotFound) {
+			t.Errorf("GetMount(%q) error = %v, want ErrNotFound", name, err)
+		}
+	}
+}
+
 func TestListMounts(t *testing.T) {
 	ws := &memWorkspace{mounts: []MountInfo{{Name: "z", Root: "/data/z"}, {Name: "a", Root: "/data/a"}}}
 	resp, err := NewWorkspaceService(ws).ListMounts(context.Background(), &webapi.ListMountsRequest{})

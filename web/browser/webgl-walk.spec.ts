@@ -129,7 +129,7 @@ const sheetParam = (name: string): string => (name === "Board" ? "board" : `/${n
 // draws nothing (agni issue 1479), so a compare step waits for its old side instead.
 async function open(page: Page, walk: Walk, mode: Mode, sheet: string, extra = "", view = "canvas"): Promise<void> {
   const q = `mode=${mode}&sheet=${encodeURIComponent(sheetParam(sheet))}${extra}`;
-  await page.goto(`${base()}/files/${walk.mount}/${walk.path}/view?${q}`, { waitUntil: "networkidle", timeout: 180_000 });
+  await page.goto(`${base()}/mounts/${walk.mount}/${walk.path}/view?${q}`, { waitUntil: "networkidle", timeout: 180_000 });
   await drawnSince(page, mode, 0, view);
   await idle(page);
 }
@@ -572,7 +572,7 @@ async function readLit(page: Page, mode: Mode): Promise<string[]> {
 async function compareLit(page: Page, walk: Walk, extra: string): Promise<string> {
   const got: { sheet: string; lit: string[] }[] = [];
   for (const mode of MODES) {
-    await page.goto(`${base()}/files/${walk.mount}/${walk.path}/view?mode=${mode}${extra}`, { waitUntil: "networkidle", timeout: 180_000 });
+    await page.goto(`${base()}/mounts/${walk.mount}/${walk.path}/view?mode=${mode}${extra}`, { waitUntil: "networkidle", timeout: 180_000 });
     await drawnSince(page, mode, 0);
     const lit = await litSubjects(page, mode);
     const sheet = ((await page.locator(".sheet-tile.active .sheet-tile-name").textContent().catch(() => "")) ?? "").trim();

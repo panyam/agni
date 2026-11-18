@@ -11,31 +11,48 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/mounts"
 )
 
-// docSiblingSuffix is the extension of a datasheet's doc-IR sibling, so LM1117.pdf pairs with
-// LM1117.doc.textproto. The file is produced offline (tools/pdf2doc, docling) and this loader only
-// reads it, since no Go PDF->doc-IR producer exists (WS13-006).
+// docSiblingSuffix is the extension of a doc-IR an older layout wrote beside its PDF, so LM1117.pdf
+// paired with LM1117.doc.textproto. `make pdf2doc` still writes one, and the loader reads it when the
+// store has none.
 const docSiblingSuffix = ".doc.textproto"
 
-// osDocLoader is the OS-backed dsservice.DocLoader. It resolves a datasheet's source path to its
-// sibling doc-IR file under the mount and parses it with doc.Load. A datasheet with no sibling yet
-// is not an error, and the service reports it as extracted=false.
+// docFile is the doc-IR's name inside a datasheet's derived folder. It is textproto, named .txtpb
+// rather than .textproto, because param's corpus walk reads every *.textproto under the corpus as a
+// PartSpec, and one doc-IR read that way would stop the whole corpus loading.
+const docFile = "doc.txtpb"
+
+// osDocLoader is the OS-backed dsservice.DocLoader. It reads a datasheet's doc-IR from the corpus
+// store, or from beside the PDF when the store has none, and parses it with doc.Load. A datasheet
+// with no doc-IR yet is not an error, and the service reports it as extracted=false.
 type osDocLoader struct {
-	mounts []mounts.Mount
+	derived derived
 }
 
-// Document resolves the sibling doc-IR for the datasheet at uri and parses it. mounts.Resolve already
-// classifies an unknown mount or a path escaping the mount, as service.ErrNotFound or ErrInvalidPath.
-// A missing sibling returns (nil, nil). An unparseable one returns a parse error, and the service
-// classifies it as invalid.
+// Document reads the doc-IR for the datasheet at uri. mounts.Resolve classifies an unknown mount or
+// a path escaping the mount, as service.ErrNotFound or ErrInvalidPath. No doc-IR returns (nil, nil).
+// An unparseable one returns a parse error, and the service classifies it as invalid.
 func (l *osDocLoader) Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
-	abs, err := resolveSibling(l.mounts, uri, docSibling)
+	if l.derived.corpus != "" {
+		dir, err := l.derived.dir(uri)
+		if err != nil {
+			return nil, err
+		}
+		if d, err := loadDoc(filepath.Join(dir, docFile)); d != nil || err != nil {
+			return d, err
+		}
+	}
+	abs, err := l.derived.legacy(uri, docSibling)
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(abs) // #nosec G304 -- abs comes from resolveSibling, which resolves inside the mount
+	return loadDoc(abs)
+}
+
+// loadDoc parses the doc-IR at abs. A missing file returns (nil, nil).
+func loadDoc(abs string) (*docpb.Document, error) {
+	f, err := os.Open(abs) // #nosec G304 -- abs is under the corpus store or comes from resolveSibling, which resolves inside the mount
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil // not yet extracted

@@ -14,7 +14,6 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
-	"github.com/panyam/agni/mounts"
 )
 
 // annotationsDirSuffix names the per-datasheet directory holding one region-annotation file per
@@ -24,15 +23,18 @@ import (
 const annotationsDirSuffix = ".annotations"
 
 // osAnnotationStore is the OS-backed dsservice.AnnotationStore. It writes per-author
-// region-annotation overlays under the mount. It follows the stores' shared I/O discipline of
-// mounts.Resolve containment, a per-file lock and protojson, with two differences. There is NO
-// compare-and-swap, since each author owns their file. And Get UNIONS every author's file for one
-// datasheet. Anyone who mounts the folder sees every overlay, because the author is a namespace and
-// not an authentication. The mounts are the security boundary.
+// region-annotation overlays into the corpus store, in an annotations folder under the datasheet's
+// derived folder (see derived). It follows the stores' shared I/O discipline of a per-file lock and
+// protojson, with two differences. There is NO compare-and-swap, since each author owns their file.
+// And Get UNIONS every author's file for one datasheet. Anyone who can read the datasheet sees every
+// overlay, because the author is a namespace and not an authentication.
 type osAnnotationStore struct {
-	mounts []mounts.Mount
-	locks  sync.Map // abs author-file path -> *sync.Mutex
+	derived derived
+	locks   sync.Map // abs author-file path -> *sync.Mutex
 }
+
+// annotationsFolder is the annotations' folder inside a datasheet's derived folder.
+const annotationsFolder = "annotations"
 
 func (s *osAnnotationStore) lockFor(abs string) *sync.Mutex {
 	m, _ := s.locks.LoadOrStore(abs, &sync.Mutex{})
@@ -65,48 +67,65 @@ func safeAuthor(author string) string {
 	return b.String()
 }
 
-// Get returns every author's overlay for the datasheet, ordered by author for a stable union. For a
-// datasheet nobody has annotated, the directory does not exist and Get returns (nil, nil). That is a
-// normal state.
+// Get returns every author's overlay for the datasheet, ordered by author for a stable union. It
+// reads the store, then the folder an older agnids wrote beside the PDF, and an author's overlay in
+// the store wins over the same author's beside the PDF. For a datasheet nobody has annotated, Get
+// returns (nil, nil). That is a normal state.
 func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error) {
-	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
-	if err != nil {
-		return nil, err
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var sets []*dsapi.AnnotationSet
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- reads the annotation store under a corpus the server was started with
+	var dirs []string
+	if s.derived.corpus != "" {
+		dir, err := s.derived.dir(uri)
 		if err != nil {
 			return nil, err
 		}
-		set := &dsapi.AnnotationSet{}
-		if err := protojson.Unmarshal(data, set); err != nil {
+		dirs = append(dirs, filepath.Join(dir, annotationsFolder))
+	}
+	old, err := s.derived.legacy(uri, annotationsDir)
+	if err != nil {
+		return nil, err
+	}
+	dirs = append(dirs, old)
+	byFile := map[string]*dsapi.AnnotationSet{}
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
 			return nil, err
 		}
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") || byFile[e.Name()] != nil {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- reads an annotation folder under the corpus or the mount
+			if err != nil {
+				return nil, err
+			}
+			set := &dsapi.AnnotationSet{}
+			if err := protojson.Unmarshal(data, set); err != nil {
+				return nil, err
+			}
+			byFile[e.Name()] = set
+		}
+	}
+	var sets []*dsapi.AnnotationSet
+	for _, set := range byFile {
 		sets = append(sets, set)
 	}
 	sort.Slice(sets, func(i, j int) bool { return sets[i].GetAuthor() < sets[j].GetAuthor() })
 	return sets, nil
 }
 
-// Save writes one author's overlay, creating the annotation directory on first write and
-// overwriting just that author's file. The per-file lock only serializes one author's concurrent
-// writes, and there is no compare-and-swap.
+// Save writes one author's overlay into the store, creating the annotation folder on first write and
+// overwriting just that author's file. A server with no corpus returns dsservice.ErrNoCorpus. The
+// per-file lock only serializes one author's concurrent writes, and there is no compare-and-swap.
 func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *dsapi.AnnotationSet) error {
-	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
+	derivedDir, err := s.derived.dir(uri)
 	if err != nil {
 		return err
 	}
+	dir := filepath.Join(derivedDir, annotationsFolder)
 	file := filepath.Join(dir, safeAuthor(author)+".json")
 	lock := s.lockFor(file)
 	lock.Lock()

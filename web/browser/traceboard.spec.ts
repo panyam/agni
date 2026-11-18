@@ -22,7 +22,7 @@ afterAll(async () => {
 describe("a trace beside the board", () => {
   it("lights the route on the board view and frames it", async () => {
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/files/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
+      await page.goto(`${base()}/mounts/probe/designs/jetson-cut/view?mode=svg`, { waitUntil: "networkidle" });
       await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
       await openBeside(page, "Board");
       const overlay = `${PANE} .highlight-overlay svg`;

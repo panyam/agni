@@ -57,7 +57,7 @@ async function activeTile(frame: Frame): Promise<string> {
 describe("a parent page on another origin", () => {
   it("drives the framed viewer's sheet and reads where it landed", async () => {
     await withPage(browser, async (page) => {
-      const design = `${viewer.base}/files/kicad/hier_numeric_root.kicad_sch/view`;
+      const design = `${viewer.base}/mounts/kicad/hier_numeric_root.kicad_sch/view`;
       await page.goto(`${parent.base}parent.html?viewer=${encodeURIComponent(design)}`);
       const frame = page.frameLocator("#viewer");
       await frame.locator(".sheet-tile-name").nth(4).waitFor({ state: "attached", timeout: 60_000 });
@@ -127,7 +127,7 @@ describe("a check report beside the viewer", () => {
 
   it("moves the viewer beside it without reloading it", async () => {
     await withPage(browser, async (page) => {
-      const viewerUrl = `${viewerBase}/files/kicad/${design}/view`;
+      const viewerUrl = `${viewerBase}/mounts/kicad/${design}/view`;
       await page.goto(`${site.base}two-pane.html?viewer=${encodeURIComponent(viewerUrl)}&report=report.html`);
       const viewer = page.frameLocator("#viewer");
       await viewer.locator(".sheet-tile-name").nth(4).waitFor({ state: "attached", timeout: 60_000 });
@@ -149,7 +149,7 @@ describe("a check report beside the viewer", () => {
       const opened = page.context().waitForEvent("page");
       await page.locator(ioLink).first().click();
       const tab = await opened;
-      await tab.waitForURL(/\/files\/kicad\/hier_numeric_root\.kicad_sch\/(view|load)/, { timeout: 30_000 });
+      await tab.waitForURL(/\/mounts\/kicad\/hier_numeric_root\.kicad_sch\/(view|load)/, { timeout: 30_000 });
       expect(page.url(), "the report itself navigated away").toBe(`${site.base}report.html`);
       await tab.close();
     });

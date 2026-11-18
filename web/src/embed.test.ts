@@ -103,7 +103,7 @@ describe("listenForHosts", () => {
 
   // A report opened from disk has an opaque origin, and no server names it. Loading the link in the
   // viewer's window would do the same as this request, so the page takes it and answers only ok.
-  const LINK = "http://127.0.0.1:8080/files/kicad/hier_numeric_root.kicad_sch/view?sheet=%2FIO";
+  const LINK = "http://127.0.0.1:8080/mounts/kicad/hier_numeric_root.kicad_sch/view?sheet=%2FIO";
   for (const origin of ["null", PORTAL]) {
     it(`takes a link-only ApplyLocation from ${origin}, and answers without the location`, async () => {
       const p = pair(origin);

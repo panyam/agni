@@ -130,6 +130,22 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 	return resp, nil
 }
 
+// GetMount returns the mount named req.Name, as ListMounts would list it with no pruning. A name
+// the server does not serve, the empty name included, is ErrNotFound.
+func (s *WorkspaceService) GetMount(_ context.Context, req *webapi.GetMountRequest) (*webapi.Mount, error) {
+	for _, m := range s.ws.Mounts() {
+		if m.Name != req.GetName() {
+			continue
+		}
+		uri, err := artifact.New(m.Name, "")
+		if err != nil {
+			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
+		}
+		return &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String()}, nil
+	}
+	return nil, fmt.Errorf("%w: no mount named %q", ErrNotFound, req.GetName())
+}
+
 // The two prune flags ask for a subtree walk, and these bound it. The walk is depth-first and exits
 // on the first openable file, so a normal design folder settles in a listing or two. The bounds are
 // for a vendored tree or a source checkout under a mount, where proving a folder empty means reading

@@ -130,7 +130,7 @@ describe("the designs page", () => {
 
       // The newer design opens in the viewer through its view in the uploads mount.
       await page.locator('[data-design="designs/bb-1.1.3"] a.lb-open').click();
-      await page.waitForURL(/\/files\/uploads\/bb-1\.1\.3\/[0-9a-f]{12}\/schematic\/.*\/view/);
+      await page.waitForURL(/\/mounts\/uploads\/bb-1\.1\.3\/[0-9a-f]{12}\/schematic\/.*\/view/);
       await page.locator(".sheet-tile-name").first().waitFor({ state: "attached", timeout: 120_000 });
       await shot(page, "viewer.png");
     });

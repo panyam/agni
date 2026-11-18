@@ -15,7 +15,6 @@ import (
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
 
@@ -98,32 +97,21 @@ type AnnotationStore interface {
 // DatasheetService serves a datasheet's doc-IR and its saved PartSpec to the extraction workbench
 // (the /datasheets page, WS13-006) over injected ports (CONSTRAINTS C13). It is the document
 // analogue of DesignViewService, plus the manual backend's read/write side for the shared PartSpec.
-// It performs no file I/O and knows no transport. Directory listing goes through the engine's
-// WorkspaceService over the same Workspace port, so the workbench's folder tree answers exactly as
-// the viewer's does. Per-user workbench UI state is kept in the client (localStorage), never here.
+// It performs no file I/O and knows no transport. The workbench lists its folders through the
+// engine's own WorkspaceService, which agnids serves beside this one (agni issue 1734). Per-user
+// workbench UI state is kept in the client (localStorage), never here.
 type DatasheetService struct {
 	loader      DocLoader
 	drafts      DraftStore
 	extractor   DocExtractor
 	annotations AnnotationStore
-	workspace   *service.WorkspaceService
 }
 
 // NewDatasheetService returns a DatasheetService backed by the given doc-IR loader, draft store,
-// doc-IR extractor, per-author annotation store, and folder listing. drafts may be nil, for a server
-// started without a corpus; the draft rpcs then report ErrNoCorpus.
-func NewDatasheetService(loader DocLoader, drafts DraftStore, extractor DocExtractor, annotations AnnotationStore, workspace service.Workspace) *DatasheetService {
-	return &DatasheetService{loader: loader, drafts: drafts, extractor: extractor, annotations: annotations, workspace: service.NewWorkspaceService(workspace)}
-}
-
-// ListMounts answers as the engine's WorkspaceService.ListMounts does, over this service's mounts.
-func (s *DatasheetService) ListMounts(ctx context.Context, req *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
-	return s.workspace.ListMounts(ctx, req)
-}
-
-// ListDir answers as the engine's WorkspaceService.ListDir does, over this service's mounts.
-func (s *DatasheetService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
-	return s.workspace.ListDir(ctx, req)
+// doc-IR extractor and per-author annotation store. drafts may be nil, for a server started without
+// a corpus; the draft rpcs then report ErrNoCorpus.
+func NewDatasheetService(loader DocLoader, drafts DraftStore, extractor DocExtractor, annotations AnnotationStore) *DatasheetService {
+	return &DatasheetService{loader: loader, drafts: drafts, extractor: extractor, annotations: annotations}
 }
 
 // GetDocument returns the doc-IR for the datasheet at the request's URI. A datasheet with no
@@ -147,8 +135,9 @@ func (s *DatasheetService) GetDocument(ctx context.Context, req *dsapi.GetDocume
 
 // ExtractDocIR runs the configured doc-IR producer over the datasheet and returns the produced
 // doc-IR (the "first pass" the workbench then shows for review). A server with no producer
-// configured rejects it as ErrExtractNotEnabled (FailedPrecondition). A producer run or parse
-// failure is a server-side error (Internal), and a bad URI keeps its classification.
+// configured rejects it as ErrExtractNotEnabled, and one with no corpus to keep the doc-IR in as
+// ErrNoCorpus (both FailedPrecondition). A producer run or parse failure is a server-side error
+// (Internal), and a bad URI keeps its classification.
 func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *dsapi.ExtractDocIRRequest) (*dsapi.ExtractDocIRResponse, error) {
 	u, err := service.ParseArtifactURI(req.GetUri())
 	if err != nil {
@@ -159,7 +148,7 @@ func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *dsapi.ExtractD
 	}
 	d, err := s.extractor.Extract(ctx, u)
 	if err != nil {
-		if errors.Is(err, service.ErrNotFound) || errors.Is(err, service.ErrInvalidPath) {
+		if errors.Is(err, service.ErrNotFound) || errors.Is(err, service.ErrInvalidPath) || errors.Is(err, ErrNoCorpus) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("%w: doc-IR extraction failed: %s", service.ErrInternal, err)
@@ -294,7 +283,8 @@ func (s *DatasheetService) GetAnnotations(ctx context.Context, req *dsapi.GetAnn
 
 // SaveAnnotations persists one author's overlay, replacing that author's prior overlay for the
 // datasheet. There is no optimistic concurrency: each author owns their own file. An absent set or
-// an empty author is an invalid argument (the author names the file and cannot be inferred).
+// an empty author is an invalid argument (the author names the file and cannot be inferred). A server
+// with no corpus to keep annotations in reports ErrNoCorpus.
 func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *dsapi.SaveAnnotationsRequest) (*dsapi.SaveAnnotationsResponse, error) {
 	u, err := service.ParseArtifactURI(req.GetUri())
 	if err != nil {
@@ -308,6 +298,9 @@ func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *dsapi.SaveA
 		return nil, fmt.Errorf("%w: SaveAnnotations requires a non-empty author", service.ErrInvalidArgument)
 	}
 	if err := s.annotations.Save(ctx, u, set.GetAuthor(), set); err != nil {
+		if errors.Is(err, ErrNoCorpus) {
+			return nil, err
+		}
 		return nil, service.ClassifyLoadErr(err)
 	}
 	return &dsapi.SaveAnnotationsResponse{}, nil

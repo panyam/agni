@@ -145,7 +145,7 @@ describe("the static demo under /agni/demo/", () => {
         await page.goto(base, { waitUntil: "domcontentloaded" });
         await page.click(`text=${title}`);
         expect(await checks(page)).toBeGreaterThan(0);
-        expect(new URL(page.url()).pathname).toContain(`${prefix}files/${mount}/`);
+        expect(new URL(page.url()).pathname).toContain(`${prefix}mounts/${mount}/`);
         expect(await page.locator(DESIGN_SUMMARY).textContent()).toContain("faithful");
         expect(await serverOrFlagText(page)).toEqual([]);
         expect(log.api).toEqual([]);
@@ -251,7 +251,7 @@ describe("the static demo under /agni/demo/", () => {
       expect(html.text).toContain("<html");
       expect(rows).toBeGreaterThan(0);
       // Its rows link back into this viewer, under the demo's own prefix.
-      expect(html.text).toMatch(new RegExp(`${prefix}files/gateway/[^"]*/view\\?verdict=`));
+      expect(html.text).toMatch(new RegExp(`${prefix}mounts/gateway/[^"]*/view\\?verdict=`));
       expect(log.api).toEqual([]);
       expect(log.errors).toEqual([]);
     });
@@ -326,7 +326,7 @@ describe("the static demo under /agni/demo/", () => {
       // A static host serves only the pages `agni site` wrote, so a dropped design's path goes in
       // the query string of the browser mount's one viewer page (agni issue 1072).
       const at = new URL(page.url());
-      expect(at.pathname).toBe(`${prefix}files/local/view/`);
+      expect(at.pathname).toBe(`${prefix}mounts/local/view/`);
       expect(at.searchParams.get("d") ?? "").toMatch(/^drop-[a-z0-9]+\/companion-demo\.edn$/);
       expect(log.failed).toEqual([]);
       expect(log.errors).toEqual([]);

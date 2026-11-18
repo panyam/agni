@@ -53,7 +53,7 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   // A first visit reads the design on the Load page, then opens the viewer.
-  await page.goto(`${base}/files/smoke/${design}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
+  await page.goto(`${base}/mounts/smoke/${design}/view?mode=svg`, { waitUntil: "networkidle", timeout: 180_000 });
   await page.waitForFunction(() => document.querySelectorAll("#svg-view svg *").length > 0, null, { timeout: 180_000 });
   const drawn = await page.evaluate(() => document.querySelectorAll("#svg-view svg *").length);
   if (errors.length) throw new Error(`the page logged errors: ${errors.join("; ")}`);

@@ -31,7 +31,7 @@ export interface ViewerLocation {
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
   // It is SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET
-  // /checks/<id>` would need a fixed-arity design identity, and `/files/<mount>/<path...>/` has a
+  // /checks/<id>` would need a fixed-arity design identity, and `/mounts/<mount>/<path...>/` has a
   // variable-length path, so a two-segment verb suffix cannot be told from a folder without the
   // trailing slash.
   verdict: string;
@@ -122,8 +122,8 @@ export function appBase(): string {
   return base;
 }
 
-function designsPrefix(): string {
-  return `${base}files/`;
+function mountsPrefix(): string {
+  return `${base}mounts/`;
 }
 
 // VIEW_SEGMENT terminates a design's work-page URL, telling a FILE location from a FOLDER one
@@ -172,13 +172,13 @@ function isRenderMode(s: string | null): s is RenderMode {
 }
 
 // locationToUrl renders a location as a root-relative URL (pathname + search). A design's work
-// page lives at /files/<mount>/<path...>/view, with the sheet and view knobs in the query string
+// page lives at /mounts/<mount>/<path...>/view, with the sheet and view knobs in the query string
 // because sheet ids and layout names are not guaranteed path-safe. A folder is the same path with a
-// trailing slash (/files/<mount>/ for a mount root) and no query. With neither it is "/".
+// trailing slash (/mounts/<mount>/ for a mount root) and no query. With neither it is "/".
 export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGMENT): string {
   if (hasDir(loc)) {
     const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
-    return designsPrefix() + segs.join("/") + "/";
+    return mountsPrefix() + segs.join("/") + "/";
   }
   if (!hasFile(loc)) return base;
   const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
@@ -214,10 +214,10 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.against && loc.renameApprox) params.set("rename_approx", "1");
   if (staticHost && loc.mount === BROWSER_MOUNT) {
     const all = new URLSearchParams([[DROP_PARAM, loc.path], ...params]);
-    return `${designsPrefix()}${BROWSER_MOUNT}/${page}/?${all.toString()}`;
+    return `${mountsPrefix()}${BROWSER_MOUNT}/${page}/?${all.toString()}`;
   }
   const q = params.toString();
-  return designsPrefix() + segs.join("/") + "/" + page + (q ? `?${q}` : "");
+  return mountsPrefix() + segs.join("/") + "/" + page + (q ? `?${q}` : "");
 }
 
 // FLATTEN_PARAM is the query parameter asking for a design's hierarchical netlist read whole.
@@ -270,7 +270,7 @@ export function keepTiming(url: string, search: string): string {
 // dropPageUrl is where files are dropped or picked, the browser mount's Load page with no design. It
 // ends in a slash on every host, since a static host serves it as a folder's index.html.
 export function dropPageUrl(): string {
-  return `${designsPrefix()}${BROWSER_MOUNT}/${LOAD_SEGMENT}/`;
+  return `${mountsPrefix()}${BROWSER_MOUNT}/${LOAD_SEGMENT}/`;
 }
 
 // swapPage is the address of the other page of the design at pathname+search, the query kept whole
@@ -292,13 +292,13 @@ export function pageOf(pathname: string): DesignPage | "" {
 
 // parseUrl reads a location back out of a pathname+search pair (as read from window.location). The
 // first path segment is the mount and the rest, rejoined, is the path within it. A trailing slash
-// marks a folder (mount root is /files/<mount>/, path ""), and a trailing /view marks a design,
+// marks a folder (mount root is /mounts/<mount>/, path ""), and a trailing /view marks a design,
 // which needs at least one path segment and carries the knobs from the query. Anything else yields
 // the empty location.
 export function parseUrl(pathname: string, search: string): ViewerLocation {
   const loc = emptyLocation();
-  if (!pathname.startsWith(designsPrefix())) return loc;
-  let rest = pathname.slice(designsPrefix().length);
+  if (!pathname.startsWith(mountsPrefix())) return loc;
+  let rest = pathname.slice(mountsPrefix().length);
   if (staticHost && (rest.endsWith(`/${VIEW_SEGMENT}/`) || rest.endsWith(`/${LOAD_SEGMENT}/`))) rest = rest.slice(0, -1);
   const isDir = rest.endsWith("/");
   const segs = rest

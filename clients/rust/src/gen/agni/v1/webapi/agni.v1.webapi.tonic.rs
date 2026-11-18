@@ -2775,6 +2775,27 @@ pub mod workspace_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn get_mount(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetMountRequest>,
+        ) -> std::result::Result<tonic::Response<super::Mount>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/agni.v1.webapi.WorkspaceService/GetMount",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("agni.v1.webapi.WorkspaceService", "GetMount"));
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn list_dir(
             &mut self,
             request: impl tonic::IntoRequest<super::ListDirRequest>,

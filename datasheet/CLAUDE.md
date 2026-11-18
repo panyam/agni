@@ -22,6 +22,7 @@ This file covers the datasheet tooling, the workbench's drafts, the corpus index
 - **A workbench draft is a DRAFT that no check reads.** It is saved unvalidated on purpose, keyed by MPN and citing its datasheets, at `<corpus>/drafts/<MPN>.draft.json` under `agnids serve --corpus`.
 - `PublishDraft` or `agnids publish <mpn> --corpus <dir>` validates a draft into `<mpn>.textproto` (agni 749).
 - **Never read drafts in `LoadSet`.** A half-finished transcription would fail the whole all-or-nothing load.
+- **agnids never writes into a mount.** A PDF's doc-IR and annotations go in `<corpus>/derived/<sha256 of the PDF>/` (`osderived.go`, agni 1734). One written beside the PDF by `make pdf2doc` is still read when the store has none. Nothing under the corpus may end in `.textproto` unless it is a PartSpec, since `param.LoadSet` reads every one, so the stored doc-IR is `doc.txtpb`.
 - The workbench saves nothing until an MPN is confirmed.
 - **Publishing and the corpus index belong to the datasheet service** (`datasheet/corpus`). Publishing writes `corpus.index.json` (MPN, file, hash, a generation) beside the specs.
 - `agnids index [--check]` rebuilds or verifies the index, and `agnids serve --corpus` refreshes it at start.

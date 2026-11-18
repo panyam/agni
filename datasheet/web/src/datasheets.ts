@@ -1,6 +1,6 @@
 // Entry point for the extraction workbench (the /datasheets page, WS13-006). A tree selection loads
 // a datasheet into the region viewer. The URL holds the open datasheet
-// (/datasheets/files/<mount>/<path>), so a refresh or a shared link reopens it. The page shapes are
+// (/datasheets/mounts/<mount>/<path>), so a refresh or a shared link reopens it. The page shapes are
 // in docsite/content/architecture/web-app.md#the-pages.
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";

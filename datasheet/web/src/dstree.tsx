@@ -3,9 +3,8 @@ import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import { FileKind, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
-import { DatasheetService } from "./gen/agni/v1/dsapi/datasheet_pb.js";
-import { datasheetClient } from "./api.js";
+import { FileKind, WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { workspaceClient } from "./api.js";
 import { hiddenNote } from "@agni/web-shared/treeprune.js";
 
 // DATASHEET_OPENS is what this tree passes as `opens`, one constant so the request and the view
@@ -13,7 +12,7 @@ import { hiddenNote } from "@agni/web-shared/treeprune.js";
 // would hide folders it then showed files from.
 const DATASHEET_OPENS = [FileKind.DATASHEET];
 
-type DsClient = Client<typeof DatasheetService>;
+type DsClient = Client<typeof WorkspaceService>;
 
 // DsTreeState is the open datasheet the tree highlights (mount + mount-relative path), pushed by
 // the boot code so a deep-link restore highlights and reveals the datasheet without a click.
@@ -150,7 +149,7 @@ export function dsTreeIsland(
   onSelect: (mount: string, path: string) => void,
 ): { island: SolidIsland; view: DsTreeView } {
   const [active, setActive] = signalView<DsTreeState>({ mount: "", path: "" });
-  const ctx: Ctx = { client: datasheetClient(), active, onSelect };
+  const ctx: Ctx = { client: workspaceClient(), active, onSelect };
   const island = new SolidIsland("ds-tree", el, () => <DatasheetTree ctx={ctx} />, eventBus);
   return { island, view: { setState: setActive } };
 }

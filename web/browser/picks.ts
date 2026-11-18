@@ -12,7 +12,7 @@ export const PANE = "[data-sheetview]";
 export const TITLE = '[data-component="properties"] .pr-title';
 
 export async function openViewer(page: Page, design: string): Promise<void> {
-  await page.goto(`${base()}/files/${design}/view`, { waitUntil: "networkidle" });
+  await page.goto(`${base()}/mounts/${design}/view`, { waitUntil: "networkidle" });
   await page.waitForSelector("#svg-view svg", { timeout: 30_000 });
 }
 

@@ -1281,7 +1281,8 @@ PDF2DOC_PY ?= $(if $(wildcard $(VENV_DIR)/bin/python),$(VENV_DIR)/bin/python,pyt
 DATASHEET_DIR ?= datasheets
 
 # Derive doc-IR from one PDF and validate it against the contract. OUT is conventionally the PDF's
-# sibling <stem>.doc.textproto, which is where the datasheets workbench (agnids) looks for it.
+# sibling <stem>.doc.textproto. The workbench (agnids) reads it when its corpus store has no doc-IR
+# for that PDF.
 #   make pdf2doc PDF=datasheets/ti/LM1117/LM1117.pdf OUT=datasheets/ti/LM1117/LM1117.doc.textproto
 pdf2doc:
 	@[ -n "$(PDF)" ] && [ -n "$(OUT)" ] || { echo "usage: make pdf2doc PDF=<file.pdf> OUT=<file.doc.textproto>"; exit 2; }

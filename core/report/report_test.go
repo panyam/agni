@@ -119,7 +119,7 @@ func TestNoLinksWithoutABase(t *testing.T) {
 
 	linked := Build(vs, nil, rules(), Report{URLBase: "http://h:1", MountPath: "m/d", ContentHash: "abc"})
 	url := linked.Rules[0].Rows[0].URL
-	for _, want := range []string{"http://h:1/files/m/d/view", "verdict=", "hash=abc"} {
+	for _, want := range []string{"http://h:1/mounts/m/d/view", "verdict=", "hash=abc"} {
 		if !strings.Contains(url, want) {
 			t.Errorf("url %q missing %q", url, want)
 		}
@@ -165,7 +165,7 @@ func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
 func TestTraceURL(t *testing.T) {
 	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
 	got := TraceURL(meta, "U1.3", "J1.1", 3)
-	want := "http://h:8080/files/m/b.edn/view?trace=U1.3%2CJ1.1&hops=3"
+	want := "http://h:8080/mounts/m/b.edn/view?trace=U1.3%2CJ1.1&hops=3"
 	if got != want {
 		t.Errorf("TraceURL = %q, want %q", got, want)
 	}
@@ -202,7 +202,7 @@ func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
 func TestDiffURL(t *testing.T) {
 	a := Report{URLBase: "http://h:8080", MountPath: "m/d/b.edn"}
 	b := Report{URLBase: "http://h:8080", MountPath: "m/d/b-rev-c.edn"}
-	want := "http://h:8080/files/m/d/b.edn/view?against=m%2Fd%2Fb-rev-c.edn"
+	want := "http://h:8080/mounts/m/d/b.edn/view?against=m%2Fd%2Fb-rev-c.edn"
 	if got := DiffURL(a, b, false); got != want {
 		t.Errorf("DiffURL = %q, want %q", got, want)
 	}
@@ -241,7 +241,7 @@ func TestDiffURLRefusesWhatItCannotPromise(t *testing.T) {
 func TestVerdictURLCarriesTheRule(t *testing.T) {
 	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
 	got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "i2c-pull-up", nil)
-	want := "http://h:8080/files/m/b.edn/view?verdict=i2c-pull-up%3A%28net%3ASDA%29&rule=i2c-pull-up"
+	want := "http://h:8080/mounts/m/b.edn/view?verdict=i2c-pull-up%3A%28net%3ASDA%29&rule=i2c-pull-up"
 	if got != want {
 		t.Errorf("VerdictURL = %q, want %q", got, want)
 	}
@@ -260,7 +260,7 @@ func TestVerdictURLCarriesTheRule(t *testing.T) {
 func TestVerdictURLCarriesTheSubjects(t *testing.T) {
 	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
 	got := VerdictURL(meta, "copper-clearance:(net:A,net:B)", "copper-clearance", []string{"net:A", "pin:U7.3"})
-	want := "http://h:8080/files/m/b.edn/view?verdict=copper-clearance%3A%28net%3AA%2Cnet%3AB%29&rule=copper-clearance&subject=net%3AA&subject=pin%3AU7.3"
+	want := "http://h:8080/mounts/m/b.edn/view?verdict=copper-clearance%3A%28net%3AA%2Cnet%3AB%29&rule=copper-clearance&subject=net%3AA&subject=pin%3AU7.3"
 	if got != want {
 		t.Errorf("VerdictURL = %q, want %q", got, want)
 	}

@@ -13,7 +13,9 @@ import (
 
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/datasheet/corpus"
+	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 	"github.com/panyam/agni/internal/paramclient"
+	"github.com/panyam/agni/mounts"
 )
 
 // This test covers the whole read path of `agni serve --params-url`. agnids serves a published
@@ -89,6 +91,33 @@ func TestServeWithNoWebDirIsTheAPIAlone(t *testing.T) {
 
 // A fresh corpus is indexed at start, so a new volume or directory needs no separate step, and a
 // corpus that does not validate fails start by name rather than serving around a bad file.
+// The corpus store also holds each PDF's derived doc-IR and annotations (agni issue 1734). param's
+// corpus walk reads every *.textproto as a PartSpec, so a derived file must never look like one, or
+// one Extract would stop the corpus loading.
+func TestADerivedDocIRLeavesTheCorpusLoadable(t *testing.T) {
+	dir := draftCorpus(t)
+	mount := t.TempDir()
+	writePDF(t, filepath.Join(mount, "LM1117.pdf"), "pdf-lm1117")
+	stub := filepath.Join(t.TempDir(), "stub.sh")
+	if err := os.WriteFile(stub, []byte(stubProducer), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d := derived{mounts: []mounts.Mount{{Name: "m", Root: mount}}, corpus: dir}
+	if _, err := (&osDocExtractor{derived: d, cmd: []string{stub}}).Extract(context.Background(), mustURI("m", "LM1117.pdf")); err != nil {
+		t.Fatal(err)
+	}
+	if err := (&osAnnotationStore{derived: d}).Save(context.Background(), mustURI("m", "LM1117.pdf"), "alice", &dsapi.AnnotationSet{Author: "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	var notes strings.Builder
+	if _, err := openCorpus(dir, &notes); err != nil {
+		t.Fatalf("the corpus stopped loading once it held a derived doc-IR: %v", err)
+	}
+	if !strings.Contains(notes.String(), "1 specs") {
+		t.Errorf("start note = %q, want the one published spec and nothing derived", notes.String())
+	}
+}
+
 func TestServeIndexesTheCorpusAtStart(t *testing.T) {
 	dir := draftCorpus(t)
 	var notes strings.Builder
